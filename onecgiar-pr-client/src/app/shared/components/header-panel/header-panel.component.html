@@ -42,8 +42,8 @@
         #whatsNewLink
         (keydown.space)="$event.preventDefault(); whatsNewLink.click()"
         routerLink="/whats-new"
-        pTooltip="What's new?"
-        tooltipPosition="bottom"
+        prTooltip="What's new?"
+        prTooltipPosition="bottom"
         routerLinkActive="section_active"
         style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
         <i class="material-icons-round info_icon" routerLinkActive="info_icon_active">rocket_launch</i>
@@ -85,7 +85,7 @@
         (click)="userInfoPopover.toggle()"
         (keydown.space)="$event.preventDefault(); userMenuTrigger.click()"
         (keydown.enter)="$event.preventDefault(); userMenuTrigger.click()">
-        <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ width: '32px', height: '32px', cursor: 'pointer' }" />
+        <span class="pr-avatar" [style]="{ width: '32px', height: '32px', cursor: 'pointer' }">{{ getUserInitials() }}</span>
 
         <span class="user_identity_text">
           <span class="user_identity_name_row">
@@ -112,7 +112,7 @@
   <div class="overlay_panel" [style]="{ width: '250px' }">
     <div class="overlay_panel_header">
       <div class="overlay_panel_header_userInfo">
-        <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ minWidth: '36px', maxWidth: '36px', minHeight: '36px', maxHeight: '36px' }" />
+        <span class="pr-avatar" [style]="{ minWidth: '36px', maxWidth: '36px', minHeight: '36px', maxHeight: '36px' }">{{ getUserInitials() }}</span>
 
         <div class="overlay_panel_header_userInfo_content">
           <p class="overlay_panel_header_userInfo_content_name">{{ this.api.authSE.localStorageUser?.user_name }}</p>

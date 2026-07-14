@@ -12,7 +12,6 @@ import { SelectModule } from 'primeng/select';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { CentersService } from '../../../../../../../../../../shared/services/global/centers.service';
-import { TooltipModule } from 'primeng/tooltip';
 
 interface CreateResultBody {
   handler: string;
@@ -34,7 +33,6 @@ interface CreateResultBody {
     ButtonModule,
     SelectModule,
     InputNumberModule,
-    TooltipModule
   ],
   templateUrl: './aow-hlo-create-modal.component.html',
   styleUrl: './aow-hlo-create-modal.component.scss',

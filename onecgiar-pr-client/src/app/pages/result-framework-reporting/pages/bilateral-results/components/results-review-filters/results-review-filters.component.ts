@@ -10,7 +10,6 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { MultiSelectModule } from 'primeng/multiselect';
 import { ButtonModule } from 'primeng/button';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
-import { ChipModule } from 'primeng/chip';
 @Component({
   selector: 'app-results-review-filters',
   imports: [
@@ -22,7 +21,6 @@ import { ChipModule } from 'primeng/chip';
     MultiSelectModule,
     ButtonModule,
     OverlayBadgeModule,
-    ChipModule,
     CustomFieldsModule
   ],
   templateUrl: './results-review-filters.component.html',

@@ -12,7 +12,6 @@ import { SimilarResultsPipe } from './components/similar-results/pipes/similar-r
 import { MenuModule } from 'primeng/menu';
 import { RetrieveModalModule } from '../result-detail/components/retrieve-modal/retrieve-modal.module';
 import { AlertGlobalInfoModule } from '../../../../shared/components/alert-global-info/alert-global-info.module';
-import { TooltipModule } from 'primeng/tooltip';
 import { ResultAiAssistantComponent } from './components/result-ai-assistant/result-ai-assistant.component';
 import { TermPipe } from '../../../../internationalization/term.pipe';
 import { ReportResultFormComponent } from './components/report-result-form/report-result-form.component';
@@ -22,7 +21,6 @@ import { ReportResultFormComponent } from './components/report-result-form/repor
   imports: [
     CommonModule,
     ResultCreatorRoutingModule,
-    TooltipModule,
     CustomFieldsModule,
     FormsModule,
     MenuModule,

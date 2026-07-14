@@ -1,10 +1,9 @@
+import { PrTooltipDirectiveModule } from '../../../../../../../../shared/directives/pr-tooltip-directive.module';
 import { ChangeDetectionStrategy, Component, computed, inject, Input, signal } from '@angular/core';
 import { TableModule } from 'primeng/table';
 import { EntityAowService } from '../../../../services/entity-aow.service';
-import { ProgressBarModule } from 'primeng/progressbar';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
 import { AowHloCreateModalComponent } from './components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 import { ResultLevelService } from '../../../../../../../results/pages/result-creator/services/result-level.service';
 import { AowViewResultsDrawerComponent } from './components/aow-view-results-drawer/aow-view-results-drawer.component';
@@ -20,12 +19,10 @@ export interface ColumnOrder {
 
 @Component({
   selector: 'app-aow-hlo-table',
-  imports: [
+  imports: [PrTooltipDirectiveModule, 
     CommonModule,
     TableModule,
-    ProgressBarModule,
     ButtonModule,
-    TooltipModule,
     AowHloCreateModalComponent,
     AowViewResultsDrawerComponent,
     AowTargetDetailsDrawerComponent

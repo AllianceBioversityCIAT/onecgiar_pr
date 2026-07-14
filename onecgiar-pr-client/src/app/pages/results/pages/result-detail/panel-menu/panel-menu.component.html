@@ -36,12 +36,12 @@
       @if (this.api.dataControlSE?.currentResult?.result_type_id != 6 && this.dataControlSE?.currentResult?.status_id == 1) {
         <div
           style="width: 100%"
-          [pTooltip]="
+          [prTooltip]="
             this.dataControlSE?.currentResult?.status_id == 1 && !this.greenChecksSE.submit
               ? 'This button will become available once all sections are completed.'
               : ''
           "
-          tooltipPosition="right">
+          prTooltipPosition="right">
           <div
             class="ai-review-button"
             [ngClass]="{
@@ -69,12 +69,12 @@
       ) {
         <div
           style="width: 100%"
-          [pTooltip]="
+          [prTooltip]="
             this.dataControlSE?.currentResult?.status_id == 1 && !this.greenChecksSE.submit
               ? 'This button will become available once all sections are completed.'
               : ''
           "
-          tooltipPosition="right">
+          prTooltipPosition="right">
           <app-pr-button
             [ngClass]="{
               globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)

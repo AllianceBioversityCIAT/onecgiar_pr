@@ -8,7 +8,6 @@ import { FilterIndicatorBySearchPipe } from '../../pipes/filter-indicator-by-sea
 import { CustomSpinnerModule } from '../../../../shared/components/custom-spinner/custom-spinner.module';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
-import { TooltipModule } from 'primeng/tooltip';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { MessageService } from 'primeng/api';
@@ -23,7 +22,6 @@ import { MessageService } from 'primeng/api';
         RouterLink,
         FilterIndicatorBySearchPipe,
         FormsModule,
-        TooltipModule,
         CustomFieldsModule
     ],
     templateUrl: './wp-home.component.html',

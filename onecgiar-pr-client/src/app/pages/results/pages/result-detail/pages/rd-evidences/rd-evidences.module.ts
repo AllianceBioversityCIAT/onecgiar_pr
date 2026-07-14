@@ -6,7 +6,6 @@ import { RdEvidencesComponent } from './rd-evidences.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { EvidenceItemComponent } from './evidence-item/evidence-item.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
-import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 
 @NgModule({
@@ -16,7 +15,6 @@ import { DialogModule } from 'primeng/dialog';
     RdEvidencesRoutingModule,
     CustomFieldsModule,
     FeedbackValidationDirectiveModule,
-    TooltipModule,
     DialogModule,
   ]
 })

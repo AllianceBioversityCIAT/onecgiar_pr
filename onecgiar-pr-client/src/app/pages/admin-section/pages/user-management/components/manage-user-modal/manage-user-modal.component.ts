@@ -9,7 +9,6 @@ import { SearchUserSelectComponent } from '../../../../../../shared/components/s
 import { SearchUser } from '../../../../../../shared/interfaces/search-user.interface';
 import { InitiativesService } from '../../../../../../shared/services/global/initiatives.service';
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { UserRolesInfoModalComponent } from '../../../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
 import { SelectModule } from 'primeng/select';
 
@@ -37,7 +36,6 @@ interface AddUserForm {
     DialogModule,
     CustomFieldsModule,
     SearchUserSelectComponent,
-    ProgressSpinnerModule,
     SelectModule,
     UserRolesInfoModalComponent
   ],

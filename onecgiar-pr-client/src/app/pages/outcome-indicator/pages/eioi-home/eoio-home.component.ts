@@ -8,7 +8,6 @@ import { OutcomeIndicatorService } from '../../services/outcome-indicator.servic
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FilterIndicatorBySearchPipe } from '../../pipes/filter-indicator-by-search.pipe';
 import { FormsModule } from '@angular/forms';
-import { TooltipModule } from 'primeng/tooltip';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { MessageService } from 'primeng/api';
@@ -23,7 +22,6 @@ import { MessageService } from 'primeng/api';
         RouterLink,
         FilterIndicatorBySearchPipe,
         FormsModule,
-        TooltipModule,
         CustomFieldsModule
     ],
     providers: [MessageService],

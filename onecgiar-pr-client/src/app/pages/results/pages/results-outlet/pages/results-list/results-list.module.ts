@@ -11,7 +11,6 @@ import { ReportNewResultButtonComponent } from './components/report-new-result-b
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ResultsListFilterPipeModule } from './pipes/results-list-filter-pipe.module';
-import { TooltipModule } from 'primeng/tooltip';
 import { ResultsToUpdateModalModule } from './components/results-to-update-modal/results-to-update-modal.module';
 import { ChangePhaseModalModule } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.module';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
@@ -33,7 +32,6 @@ import { PopoverModule } from 'primeng/popover';
     CustomFieldsModule,
     ResultsListFilterPipeModule,
     PdfIconModule,
-    TooltipModule,
     PopoverModule,
     ResultsListFiltersComponent
   ]

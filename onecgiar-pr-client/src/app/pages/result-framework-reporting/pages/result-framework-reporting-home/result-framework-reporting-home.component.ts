@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { ProgressBarModule } from 'primeng/progressbar';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultFrameworkReportingCardItemComponent } from './components/result-framework-reporting-card-item/result-framework-reporting-card-item.component';
 import { ResultFrameworkReportingRecentItemComponent } from './components/result-framework-reporting-recent-item/result-framework-reporting-recent-item.component';
@@ -12,7 +11,6 @@ import { AlertGlobalInfoModule } from '../../../../shared/components/alert-globa
   selector: 'app-result-framework-reporting-home',
   imports: [
     CommonModule,
-    ProgressBarModule,
     ResultFrameworkReportingCardItemComponent,
     ResultFrameworkReportingRecentItemComponent,
     CustomFieldsModule,

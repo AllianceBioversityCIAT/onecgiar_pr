@@ -8,7 +8,6 @@ import { InstitutionsPipesModule } from '../rd-general-information/pipes/institu
 import { NormalSelectorComponent } from './components/normal-selector/normal-selector.component';
 import { KnowledgeProductSelectorComponent } from './components/knowledge-product-selector/knowledge-product-selector.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
-import { TooltipModule } from 'primeng/tooltip';
 import { FormsModule } from '@angular/forms';
 
 @NgModule({
@@ -19,7 +18,6 @@ import { FormsModule } from '@angular/forms';
     CustomFieldsModule,
     InstitutionsPipesModule,
     FeedbackValidationDirectiveModule,
-    TooltipModule,
     FormsModule
   ],
   exports: [InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent]

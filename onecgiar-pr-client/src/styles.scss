@@ -549,3 +549,71 @@ body {
 @apply bg-background text-foreground;
 }
 }
+/* Chip / avatar / progress / spinner — PrimeNG leaf replacements (0 PrimeNG). */
+.pr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  background-color: var(--pr-color-accents-2, #eaeaea);
+  color: var(--pr-color-secondary-400, #2a2e45);
+  font-size: 12px;
+  line-height: 1.2;
+}
+.pr-chip .pr-chip-remove {
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--pr-color-accents-5, #666);
+}
+
+.pr-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--pr-color-primary-300, #5569dd);
+  color: var(--pr-color-white, #fff);
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.pr-progress-bar-indeterminate {
+  position: relative;
+  height: 6px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 3px;
+  background-color: var(--pr-color-accents-2, #eaeaea);
+}
+.pr-progress-bar-indeterminate::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 40%;
+  border-radius: 3px;
+  background-color: var(--pr-color-primary-300, #5569dd);
+  animation: pr-progress-indet 1.2s infinite ease-in-out;
+}
+@keyframes pr-progress-indet {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+.pr-spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--pr-color-accents-2, #eaeaea);
+  border-top-color: var(--pr-color-primary-300, #5569dd);
+  border-radius: 50%;
+  animation: pr-spin 0.8s linear infinite;
+}
+@keyframes pr-spin {
+  to { transform: rotate(360deg); }
+}

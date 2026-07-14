@@ -25,8 +25,8 @@
             class="material-icons-round ev_lock"
             [class.public]="evidence.is_public_file"
             [class.private]="!evidence.is_public_file"
-            [pTooltip]="evidence.is_public_file ? 'Public' : 'Private'"
-            tooltipPosition="top">
+            [prTooltip]="evidence.is_public_file ? 'Public' : 'Private'"
+            prTooltipPosition="top">
             {{ evidence.is_public_file ? 'lock_open' : 'lock' }}
           </i>
           <span class="ev_date" *ngIf="evidence.creation_date || evidence.last_updated_date">
@@ -35,10 +35,10 @@
           </span>
         </div>
         <div class="ev_actions" *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status">
-          <button type="button" class="ev_edit" pTooltip="Edit evidence" tooltipPosition="top" (click)="editEvidence(i)">
+          <button type="button" class="ev_edit" prTooltip="Edit evidence" prTooltipPosition="top" (click)="editEvidence(i)">
             <i class="material-icons-round">edit</i>
           </button>
-          <button type="button" class="ev_delete" pTooltip="Delete evidence" tooltipPosition="top" (click)="deleteEvidenceWithConfirm(i)">
+          <button type="button" class="ev_delete" prTooltip="Delete evidence" prTooltipPosition="top" (click)="deleteEvidenceWithConfirm(i)">
             <i class="material-icons-round">delete</i>
           </button>
         </div>
@@ -118,7 +118,7 @@
   <div class="evidence_modal">
     <div class="modal_header">
       <div class="modal_title">{{ isEditingEvidence ? 'Edit Evidence' : 'Add New Evidence' }}</div>
-      <button type="button" class="modal_close" pTooltip="Close" (click)="cancelCreateEvidence()">
+      <button type="button" class="modal_close" prTooltip="Close" (click)="cancelCreateEvidence()">
         <i class="material-icons-round">close</i>
       </button>
     </div>

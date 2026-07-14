@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, Input, signal, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { CreateResultManagementService } from '../../../../services/create-result-management.service';
 import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AIAssistantResult } from '../../../../../../../../shared/interfaces/AIAssistantResult';
@@ -16,7 +15,7 @@ import { CustomizedAlertsFeService } from '../../../../../../../../shared/servic
   selector: 'app-result-ai-item',
   templateUrl: './result-ai-item.component.html',
   styleUrl: './result-ai-item.component.scss',
-  imports: [CommonModule, ButtonModule, TooltipModule, FormsModule, CustomFieldsModule, TextareaModule],
+  imports: [CommonModule, ButtonModule, FormsModule, CustomFieldsModule, TextareaModule],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush
 })

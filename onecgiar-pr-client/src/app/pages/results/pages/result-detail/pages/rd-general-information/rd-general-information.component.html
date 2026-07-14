@@ -63,13 +63,13 @@
       <div class="radioButtonList">
         @for (option of optionsList; track option.id; let i = $index) {
           <div class="radioButton">
-            <p-checkbox
-              [binary]="true"
-              [inputId]="prefix + '_checkbox_' + i"
+            <input
+              type="checkbox"
+              class="pr-native-check"
+              [id]="prefix + '_checkbox_' + i"
               [ngModel]="this.isImpactAreaSelected(fieldName, option.id)"
               (ngModelChange)="this.toggleImpactAreaSelection(fieldName, option.id)"
-              [disabled]="this.rolesSE.readOnly">
-            </p-checkbox>
+              [disabled]="this.rolesSE.readOnly" />
             <label [for]="prefix + '_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
           </div>
         }

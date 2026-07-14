@@ -35,7 +35,6 @@ import { CentersService } from '../../../../../../../../shared/services/global/c
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { Router } from '@angular/router';
 import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
-import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -55,7 +54,6 @@ import { TooltipModule } from 'primeng/tooltip';
     SaveChangesJustificationDialogComponent,
     CustomFieldsModule,
     RdContributorsAndPartnersModule,
-    TooltipModule,
   ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',

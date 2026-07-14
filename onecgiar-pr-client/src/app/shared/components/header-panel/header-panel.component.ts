@@ -7,7 +7,6 @@ import { environment } from '../../../../environments/environment';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
 import { Router, RouterModule } from '@angular/router';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
-import { AvatarModule } from 'primeng/avatar';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { CommonModule } from '@angular/common';
@@ -22,7 +21,6 @@ import { NavigationBarComponent } from '../navigation-bar/navigation-bar.compone
   standalone: true,
   imports: [
     CommonModule,
-    AvatarModule,
     SatPopoverModule,
     OverlayBadgeModule,
     PopUpNotificationItemComponent,

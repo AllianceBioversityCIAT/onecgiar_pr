@@ -49,8 +49,8 @@
         <td>
           <a
             class="subResults"
-            pTooltip="Click to view the pdf"
-            tooltipPosition="bottom"
+            prTooltip="Click to view the pdf"
+            prTooltipPosition="bottom"
             *ngFor="let subResult of result['results']"
             [href]="'/reports/ipsr-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
             target="_blank"
@@ -80,8 +80,8 @@
     @if (item.visible) {
       <div
         class="table_menu_item"
-        [pTooltip]="item.disabled ? item.tooltipText : null"
-        tooltipPosition="bottom"
+        [prTooltip]="item.disabled ? item.tooltipText : null"
+        prTooltipPosition="bottom"
         [ngClass]="{ itemDisabled: item.disabled }"
         (click)="item.disabled ? null : item.command(); menu.toggle($event)">
         <i [class]="item.icon"></i>

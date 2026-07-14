@@ -59,8 +59,8 @@
           <td style="text-align: center">{{ product.contributing_indicator ?? '' }}</td>
           <td style="text-align: center" (click)="$event.stopPropagation()">
             <a
-              pTooltip="Click to view the pdf"
-              tooltipPosition="bottom"
+              prTooltip="Click to view the pdf"
+              prTooltipPosition="bottom"
               href="/reports/result-details/{{ product.result_code }}?phase={{ product.version_id }}"
               target="_blank"
               rel="noopener noreferrer">

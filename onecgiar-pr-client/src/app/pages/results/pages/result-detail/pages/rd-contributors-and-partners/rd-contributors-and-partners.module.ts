@@ -4,7 +4,6 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { FormsModule } from '@angular/forms';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { InstitutionsPipesModule } from '../rd-general-information/pipes/institutions-pipes.module';
-import { TooltipModule } from 'primeng/tooltip';
 import { RdContributorsAndPartnersComponent } from './rd-contributors-and-partners.component';
 import { RdContributorsAndPartnersRoutingModule } from './rd-contributors-and-partners-routing.module';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
@@ -32,7 +31,6 @@ import { SelectModule } from 'primeng/select';
     CustomFieldsModule,
     InstitutionsPipesModule,
     FeedbackValidationDirectiveModule,
-    TooltipModule,
     FormsModule,
     TermPipe,
     RdTheoryOfChangeModule,

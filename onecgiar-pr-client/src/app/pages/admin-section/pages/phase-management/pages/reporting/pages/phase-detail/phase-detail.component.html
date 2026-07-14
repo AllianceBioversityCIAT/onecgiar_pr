@@ -121,8 +121,8 @@
                   [(ngModel)]="program.reporting_enabled"
                   (ngModelChange)="onToggleProgram(program)"
                   [disabled]="!phaseDetail().status"
-                  [pTooltip]="!phaseDetail().status ? 'Phase is closed' : program.reporting_enabled ? 'Click to close reporting' : 'Click to open reporting'"
-                  tooltipPosition="top">
+                  [prTooltip]="!phaseDetail().status ? 'Phase is closed' : program.reporting_enabled ? 'Click to close reporting' : 'Click to open reporting'"
+                  prTooltipPosition="top">
                 </p-toggleswitch>
                 <span
                   class="sp-card__status"

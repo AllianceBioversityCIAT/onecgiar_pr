@@ -12,7 +12,7 @@
   [style]="{ width: '600px' }">
   @if (loadingUserRole()) {
     <div class="loading-user-role">
-      <p-progressSpinner ariaLabel="Loading user role" styleClass="loading-user-role-spinner" />
+      <span class="pr-spinner loading-user-role-spinner" role="status" aria-label="Loading user role"></span>
     </div>
   } @else {
     <div class="modal-content">

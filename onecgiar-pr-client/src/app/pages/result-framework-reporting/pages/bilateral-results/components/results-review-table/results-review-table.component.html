@@ -86,8 +86,8 @@
             variant="outlined"
             class="review-result-button"
             (click)="reviewResult(result)"
-            [pTooltip]="isPendingReview && canReviewResults() ? 'Review result' : 'See result'"
-            tooltipPosition="top">
+            [prTooltip]="isPendingReview && canReviewResults() ? 'Review result' : 'See result'"
+            prTooltipPosition="top">
             <i class="material-icons-outlined">{{ isPendingReview && canReviewResults() ? 'edit' : 'visibility' }}</i>
             {{ isPendingReview && canReviewResults() ? 'Review result' : 'See result' }}
           </button>

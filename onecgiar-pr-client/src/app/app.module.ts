@@ -28,7 +28,6 @@ import { MessageService } from 'primeng/api';
 // import { WebsocketService } from './sockets/websocket.service';
 // import { environment } from '../environments/environment';
 import { ClarityService } from './shared/services/clarity.service';
-import { TooltipModule } from 'primeng/tooltip';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
 import { reportingTheme } from './theme/reportingTheme';
@@ -60,7 +59,6 @@ function initializeClarityService(clarityService: ClarityService) {
     TawkComponent,
     FormatTimeAgoPipe,
     ToastModule,
-    TooltipModule,
     PopUpNotificationItemComponent,
     UserRolesInfoModalComponent
     // SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })

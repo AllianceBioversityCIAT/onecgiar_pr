@@ -1,10 +1,10 @@
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
-import { ProgressBarModule } from 'primeng/progressbar';
 import { EntityAowCardComponent } from './components/entity-aow-card/entity-aow-card.component';
 import { EntityResultsByIndicatorCategoryCardComponent } from './components/entity-results-by-indicator-category-card/entity-results-by-indicator-category-card.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
@@ -14,7 +14,6 @@ import { Chart, ChartData, ChartDataset, ChartOptions } from 'chart.js';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { SplitButtonModule } from 'primeng/splitbutton';
-import { TooltipModule } from 'primeng/tooltip';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
 import { BilateralResultsReviewComponent } from './components/bilateral-results-review/bilateral-results-review.component';
@@ -23,19 +22,17 @@ import { ResultFrameworkReportingHomeService } from '../result-framework-reporti
 
 @Component({
   selector: 'app-entity-details',
-  imports: [
+  imports: [PrTooltipDirectiveModule, 
     CommonModule,
     FormsModule,
     SelectModule,
     RouterModule,
-    ProgressBarModule,
     EntityAowCardComponent,
     EntityResultsByIndicatorCategoryCardComponent,
     ChartModule,
     ButtonModule,
     DialogModule,
     SplitButtonModule,
-    TooltipModule,
     ResultCreatorModule,
     BilateralResultsReviewComponent
   ],

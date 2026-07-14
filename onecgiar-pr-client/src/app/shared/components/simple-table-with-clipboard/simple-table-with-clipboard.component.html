@@ -1,5 +1,5 @@
 <div class="box" [ngClass]="{ flatFormat: flatFormat }">
-  <div class="copy_to_clipboard_button" (click)="copyTable(tableOne)" pTooltip="Copy to clipboard" tooltipPosition="left">
+  <div class="copy_to_clipboard_button" (click)="copyTable(tableOne)" prTooltip="Copy to clipboard" prTooltipPosition="left">
     Copy <i class="material-icons-round"> content_paste </i>
   </div>
   <table #tableOne class="distribution-{{ this.distribution }} simple-table-wc">
@@ -10,7 +10,7 @@
       <th [attr.colspan]="header?.length" id="loading_data">
         <div class="loader_info">
           Loading data
-          <p-progressBar mode="indeterminate"></p-progressBar>
+          <div class="pr-progress-bar-indeterminate"></div>
         </div>
       </th>
     </tr>

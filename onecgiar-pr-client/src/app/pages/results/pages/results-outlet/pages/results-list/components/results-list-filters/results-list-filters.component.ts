@@ -26,10 +26,8 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { ChipModule } from 'primeng/chip';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
-import { TooltipModule } from 'primeng/tooltip';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
 const P25_REQUIRED_EXPORT_COLUMNS: string[] = [
@@ -275,10 +273,8 @@ const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
     InputIconModule,
     InputTextModule,
     ButtonModule,
-    ChipModule,
     CheckboxModule,
     ReversePipe,
-    TooltipModule
   ]
 })
 export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy {

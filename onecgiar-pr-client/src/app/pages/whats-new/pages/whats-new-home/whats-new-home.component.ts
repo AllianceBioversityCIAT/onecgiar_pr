@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TooltipModule } from 'primeng/tooltip';
 import { WhatsNewCardComponent } from './components/whats-new-card/whats-new-card.component';
 import { RouterModule } from '@angular/router';
 import { WhatsNewService } from '../../services/whats-new.service';
 import { WhatsNewListItemComponent } from './components/whats-new-list-item/whats-new-list-item.component';
 @Component({
     selector: 'app-whats-new-home',
-    imports: [CommonModule, TooltipModule, WhatsNewCardComponent, RouterModule, WhatsNewListItemComponent],
+    imports: [CommonModule, WhatsNewCardComponent, RouterModule, WhatsNewListItemComponent],
     templateUrl: './whats-new-home.component.html',
     styleUrl: './whats-new-home.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

@@ -435,8 +435,8 @@
           (click)="canApprove() ? onApprove() : null"
           icon="pi pi-check-circle"
           variant="outlined"
-          [pTooltip]="getApproveButtonTooltip()"
-          tooltipPosition="top"
+          [prTooltip]="getApproveButtonTooltip()"
+          prTooltipPosition="top"
           size="large" />
         <p-button label="REJECT" styleClass="reject-button" (click)="onReject()" icon="pi pi-times-circle" variant="outlined" size="large" />
       </div>

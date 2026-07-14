@@ -53,8 +53,8 @@
     </div>
 
     <div
-      [pTooltip]="!this.resultsNotificationsSE.phaseFilter ? 'Please select a phase first to enable this filter' : ''"
-      tooltipPosition="right">
+      [prTooltip]="!this.resultsNotificationsSE.phaseFilter ? 'Please select a phase first to enable this filter' : ''"
+      prTooltipPosition="right">
       <app-pr-field-header [label]="entityLabel"></app-pr-field-header>
       <p-select
         [options]="this.filteredInitiatives"

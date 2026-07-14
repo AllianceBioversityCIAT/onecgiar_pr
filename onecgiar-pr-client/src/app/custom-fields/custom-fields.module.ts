@@ -16,7 +16,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ListFilterByTextAndAttrPipe } from './pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
 import { SaveButtonComponent } from './save-button/save-button.component';
 import { PrButtonComponent } from './pr-button/pr-button.component';
-import { PrTooltipDirective } from './pr-button/pr-tooltip.directive';
+import { PrTooltipDirectiveModule } from '../shared/directives/pr-tooltip-directive.module';
 import { AlertStatusComponent } from './alert-status/alert-status.component';
 import { EditOrDeleteItemButtonComponent } from './edit-or-delete-item-button/edit-or-delete-item-button.component';
 import { AddButtonComponent } from './add-button/add-button.component';
@@ -57,7 +57,6 @@ const fieldComponents = [
 @NgModule({
   declarations: [
     ...fieldComponents,
-    PrTooltipDirective,
     CustomValidationTooltipComponent,
     PrFieldValidationsComponent,
     PrWordCounterComponent,
@@ -66,7 +65,7 @@ const fieldComponents = [
     LabelNamePipe,
     YesOrNotByBooleanPipe
   ],
-  exports: [...fieldComponents, FormsModule],
-  imports: [CommonModule, FormsModule, ScrollingModule, HlmInput]
+  exports: [...fieldComponents, FormsModule, PrTooltipDirectiveModule],
+  imports: [CommonModule, FormsModule, ScrollingModule, HlmInput, PrTooltipDirectiveModule]
 })
 export class CustomFieldsModule {}

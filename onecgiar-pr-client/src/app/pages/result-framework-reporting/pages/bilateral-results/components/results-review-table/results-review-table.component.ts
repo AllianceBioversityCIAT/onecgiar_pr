@@ -1,8 +1,8 @@
+import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { Component, signal, computed, inject, effect, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
 import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
 import { ResultToReview, GroupedResult } from './components/result-review-drawer/result-review-drawer.interfaces';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -10,7 +10,7 @@ import { BilateralResultsService } from '../../bilateral-results.service';
 
 @Component({
   selector: 'app-results-review-table',
-  imports: [CommonModule, TableModule, ButtonModule, TooltipModule, ResultReviewDrawerComponent],
+  imports: [PrTooltipDirectiveModule, CommonModule, TableModule, ButtonModule, ResultReviewDrawerComponent],
   templateUrl: './results-review-table.component.html',
   styleUrl: './results-review-table.component.scss'
 })

@@ -12,8 +12,8 @@
 
   <div
     class="description"
-    pTooltip="Welcome to the user management panel, here you can manage the users and their roles within the platform."
-    tooltipPosition="bottom">
+    prTooltip="Welcome to the user management panel, here you can manage the users and their roles within the platform."
+    prTooltipPosition="bottom">
     Welcome to the user management panel, here you can manage the users and their roles within the platform.
   </div>
 
@@ -204,7 +204,7 @@
           <td>
             <div class="action-buttons" [class.inactive-user]="!user.isActive">
               @if (user.isActive) {
-                <button type="button" class="action-btn" (click)="onEditUser(user)" pTooltip="Edit user" tooltipPosition="top">
+                <button type="button" class="action-btn" (click)="onEditUser(user)" prTooltip="Edit user" prTooltipPosition="top">
                   <i class="material-icons-round">edit</i>
                 </button>
               }
@@ -212,8 +212,8 @@
                 type="button"
                 class="action-btn action-btn-toggle"
                 (click)="onToggleUserStatus(user)"
-                [pTooltip]="user.isActive ? 'Deactivate user' : 'Activate user'"
-                tooltipPosition="top">
+                [prTooltip]="user.isActive ? 'Deactivate user' : 'Activate user'"
+                prTooltipPosition="top">
                 <i class="material-icons-round">{{ user.isActive ? 'person_off' : 'person' }}</i>
               </button>
             </div>

@@ -19,8 +19,8 @@
     <div class="centers chips_container">
       <div
         class="center pr_chip_selected"
-        [pTooltip]="this.disabledText"
-        [tooltipDisabled]="!center.from_cgspace"
+        [prTooltip]="this.disabledText"
+        [prTooltipDisabled]="!center.from_cgspace"
         *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
         <div class="name" [innerHtml]="center?.name"></div>
         <i

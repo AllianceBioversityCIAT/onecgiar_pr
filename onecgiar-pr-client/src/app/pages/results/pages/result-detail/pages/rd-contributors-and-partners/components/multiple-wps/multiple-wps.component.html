@@ -11,8 +11,8 @@
             @if (editable && initiative?.result_toc_results.length !== 1) {
               <a
                 (click)="onDeleteTab(tab, $index + 1)"
-                pTooltip="Delete TOC contributio"
-                tooltipPosition="top"
+                prTooltip="Delete TOC contributio"
+                prTooltipPosition="top"
                 class="material-icons-round close_icon tab-delete-button-item">
                 backspace
               </a>
@@ -25,7 +25,7 @@
           <i
             class="material-icons-round close_icon tab-add-button-item"
             style="font-size: 16px; color: var(--pr-color-primary-300)"
-            pTooltip="Add other TOC result">
+            prTooltip="Add other TOC result">
             add
           </i>
         </a>

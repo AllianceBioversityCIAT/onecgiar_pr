@@ -1,15 +1,15 @@
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WhatsNewService } from '../../services/whats-new.service';
 import { CommonModule, Location } from '@angular/common';
 import { DynamicNotionBlockComponent } from '../../../../shared/components/dynamic-notion-block/dynamic-notion-block.component';
 import { Subscription } from 'rxjs';
-import { TooltipModule } from 'primeng/tooltip';
 import { WhatsNewPageDetailsLoadingComponent } from './components/whats-new-page-details-loading/whats-new-page-details-loading.component';
 
 @Component({
     selector: 'app-whats-new-page-details',
-    imports: [CommonModule, DynamicNotionBlockComponent, TooltipModule, WhatsNewPageDetailsLoadingComponent],
+    imports: [PrTooltipDirectiveModule, CommonModule, DynamicNotionBlockComponent, WhatsNewPageDetailsLoadingComponent],
     templateUrl: './whats-new-page-details.component.html',
     styleUrls: ['./whats-new-page-details.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

@@ -65,12 +65,12 @@
 
           <div class="line"></div>
 
-          <div class="percentage" pTooltip="Uploading" *ngIf="this.evidence?.percentage !== 100 && !this.evidence.link; else fileloaded">
+          <div class="percentage" prTooltip="Uploading" *ngIf="this.evidence?.percentage !== 100 && !this.evidence.link; else fileloaded">
             {{ this.evidence?.percentage }}
             <div *ngIf="this.evidence?.percentage">%</div>
           </div>
           <ng-template #fileloaded>
-            <i class="material-icons-round" pTooltip="Uploaded" style="margin-right: 5px" (click)="onDeleteSPLink()"> check_circle </i>
+            <i class="material-icons-round" prTooltip="Uploaded" style="margin-right: 5px" (click)="onDeleteSPLink()"> check_circle </i>
           </ng-template>
           <i class="material-icons-round" style="cursor: pointer" (click)="onDeleteSPLink()" *ngIf="!this.api.rolesSE.readOnly"> delete </i>
         </div>

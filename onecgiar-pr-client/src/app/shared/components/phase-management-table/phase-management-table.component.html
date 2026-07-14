@@ -150,26 +150,25 @@
         <td [style.width.px]="85">
           <div class="actions" *ngIf="!phase.editing">
             <div class="action_button edit" (click)="getFeedback() ? null : (phase.editing = true)" [ngClass]="{ disabled: getFeedback() }">
-              <i class="material-icons-round" [pTooltip]="getFeedback() ? this.disabledActionsText : null" tooltipPosition="top">edit</i>
+              <i class="material-icons-round" [prTooltip]="getFeedback() ? this.disabledActionsText : null" prTooltipPosition="top">edit</i>
             </div>
             <div
               class="action_button delete"
               [ngClass]="{ disabled: getFeedback() || !phase?.can_be_deleted }"
               (click)="getFeedback() ? null : phase?.can_be_deleted ? this.deletePhase(phase) : null"
-              [pTooltip]="
+              [prTooltip]="
                 getFeedback() ? this.disabledActionsText : !phase?.can_be_deleted ? 'The phase has active results therefore cannot be eliminated' : ''
               "
-              tooltipPosition="top">
+              prTooltipPosition="top">
               <i class="material-icons-round">delete</i>
             </div>
           </div>
           <div class="actions" *ngIf="phase.editing">
             <div
               class="action_button save"
-              tooltipPosition="top"
+              prTooltipPosition="top"
               [ngClass]="{ disabled: phase?.isNew && getMandatoryIncompleteFields(phase) }"
-              [pTooltip]="phase?.isNew ? getMandatoryIncompleteFields(phase) : null"
-              [escape]="false"
+              [prTooltip]="phase?.isNew ? getMandatoryIncompleteFields(phase) : null"
               (click)="phase?.isNew && getMandatoryIncompleteFields(phase) ? null : phase?.isNew ? createPhase(phase) : savePhase(phase)">
               <i class="material-icons-round">{{ phase?.isNew ? 'add_circle' : 'save' }}</i>
             </div>
