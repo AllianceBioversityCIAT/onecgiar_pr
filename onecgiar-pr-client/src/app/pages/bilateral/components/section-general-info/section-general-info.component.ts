@@ -79,7 +79,8 @@ export class SectionGeneralInfoComponent implements OnInit {
     effect(() => {
       const t = this.title();
       const d = this.description();
-      const filled = (t.trim() ? 1 : 0) + (d.trim() ? 1 : 0);
+      const isPlaceholderTitle = /^Bilateral Draft #\d+$/.test(t.trim());
+      const filled = (!isPlaceholderTitle && t.trim() ? 1 : 0) + (d.trim() ? 1 : 0);
       this.mdsTracker.updateSection('general-info', filled);
     });
 

@@ -37,10 +37,17 @@ describe('BilateralMdsTrackerService', () => {
     expect(info?.filledFields).toBe(2);
   });
 
+  it('should cap contributors at 3', () => {
+    service.updateSection('contributors', 6);
+    const contrib = service.sectionStatus().find(s => s.sectionName === 'contributors');
+    expect(contrib?.filledFields).toBe(3);
+    expect(contrib?.totalFields).toBe(3);
+  });
+
   it('should compute overall percentage', () => {
     service.updateSection('general-info', 2);
     service.updateSection('contributors', 2);
-    expect(service.overallPercentage()).toBe(24);
+    expect(service.overallPercentage()).toBe(33);
   });
 
   it('should return partial status at 50%', () => {
@@ -50,11 +57,10 @@ describe('BilateralMdsTrackerService', () => {
 
   it('should return complete status at 100%', () => {
     service.updateSection('general-info', 2);
-    service.updateSection('contributors', 4);
+    service.updateSection('contributors', 3);
     service.updateSection('geography', 3);
-    service.updateSection('evidence', 2);
+    service.updateSection('evidence', 1);
     service.updateSection('type-specific', 5);
-    service.updateSection('contributors', 6);
     expect(service.overallPercentage()).toBe(100);
     expect(service.overallStatus()).toBe('complete');
   });

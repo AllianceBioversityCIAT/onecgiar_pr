@@ -13,8 +13,8 @@ export interface MdsSectionStatus {
 
 const MDS_FIELD_DEFS: Record<string, { totalFields: number }> = {
   'general-info': { totalFields: 2 },
-  contributors: { totalFields: 6 },
-  geography: { totalFields: 3 },
+  contributors: { totalFields: 3 },
+  geography: { totalFields: 1 },
   evidence: { totalFields: 1 },
   'type-specific': { totalFields: 5 }
 };

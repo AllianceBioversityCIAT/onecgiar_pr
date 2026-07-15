@@ -106,8 +106,14 @@
   }
 }
 
-.bp-chevron {
+.bp-tracker-group {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bp-chevron {
   font-size: 20px;
   color: #90A4AE;
   transition: transform 250ms ease, color 200ms ease;

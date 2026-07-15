@@ -2,20 +2,22 @@
   <div class="bp-accordion-header" (click)="toggle()" role="button" tabindex="0" (keydown.enter)="toggle()" (keydown.space)="toggle()">
     <i class="material-icons-round bp-section-icon">{{ sectionIcon() }}</i>
     <span class="bp-section-label">{{ sectionLabel() }}</span>
-    <span
-      class="bp-completion-dot"
-      [class.bp-completion-dot--complete]="mdsStatus() === 'complete'"
-      [class.bp-completion-dot--partial]="mdsStatus() === 'partial'"
-      [class.bp-completion-dot--empty]="mdsStatus() === 'empty'"
-    ></span>
-    <span class="bp-field-count">{{ filledFields() }}/{{ totalFields() }} fields</span>
-    <div class="bp-micro-progress">
-      <div
-        class="bp-micro-progress-fill"
-        [style.width.%]="totalFields() > 0 ? (filledFields() / totalFields()) * 100 : 0"
-      ></div>
+    <div class="bp-tracker-group">
+      <span
+        class="bp-completion-dot"
+        [class.bp-completion-dot--complete]="mdsStatus() === 'complete'"
+        [class.bp-completion-dot--partial]="mdsStatus() === 'partial'"
+        [class.bp-completion-dot--empty]="mdsStatus() === 'empty'"
+      ></span>
+      <span class="bp-field-count">{{ filledFields() }}/{{ totalFields() }} fields</span>
+      <div class="bp-micro-progress">
+        <div
+          class="bp-micro-progress-fill"
+          [style.width.%]="totalFields() > 0 ? (filledFields() / totalFields()) * 100 : 0"
+        ></div>
+      </div>
+      <i class="material-icons-round bp-chevron" [class.bp-chevron--rotated]="isOpen">expand_more</i>
     </div>
-    <i class="material-icons-round bp-chevron" [class.bp-chevron--rotated]="isOpen">expand_more</i>
   </div>
 
   @if (isOpen) {
