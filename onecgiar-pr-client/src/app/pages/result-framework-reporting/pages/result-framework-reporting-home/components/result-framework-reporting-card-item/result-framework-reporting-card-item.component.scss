@@ -13,3 +13,72 @@ h3,
 p {
   margin: 0;
 }
+
+// Status bar + chips block: animates open/closed with the page-wide Compact
+// toggle. The reveal is a LEFT-TO-RIGHT wipe (clip-path) that runs across the
+// whole animation, while the row height (grid-template-rows 0fr→1fr) + top
+// spacing grow/collapse in parallel so the card actually shrinks.
+.pr-card-meta {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 0.5rem;
+
+  &__inner {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  // animate.enter — block appears (Expanded view): wipe left → right
+  &--enter {
+    animation: pr-card-meta-in 360ms cubic-bezier(0.33, 0, 0.2, 1);
+  }
+
+  // animate.leave — block hides (Compact view): wipe erases left → right.
+  // `forwards` holds the end state until Angular removes the node on animationend.
+  &--leave {
+    animation: pr-card-meta-out 320ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+  }
+}
+
+// inset(top right bottom left): right:100% keeps only the left edge visible;
+// animating right 100% → 0 reveals the content left-to-right.
+@keyframes pr-card-meta-in {
+  from {
+    grid-template-rows: 0fr;
+    margin-top: 0;
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.5;
+  }
+  to {
+    grid-template-rows: 1fr;
+    margin-top: 0.5rem;
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+// left:100% eats the content from the left edge, so the wipe erases left-to-right.
+@keyframes pr-card-meta-out {
+  from {
+    grid-template-rows: 1fr;
+    margin-top: 0.5rem;
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+  to {
+    grid-template-rows: 0fr;
+    margin-top: 0;
+    clip-path: inset(0 0 0 100%);
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-card-meta--enter,
+  .pr-card-meta--leave {
+    animation-duration: 1ms;
+  }
+}

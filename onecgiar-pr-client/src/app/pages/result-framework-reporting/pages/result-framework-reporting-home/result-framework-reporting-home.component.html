@@ -23,6 +23,30 @@
       </div>
     </section>
 
+    <!-- Page-wide density toggle (charts + card details) -->
+    @if (!resultFrameworkReportingHomeService.isLoadingSPLists() &&
+      (resultFrameworkReportingHomeService.mySPsList().length > 0 || resultFrameworkReportingHomeService.otherSPsList().length > 0)) {
+      <div class="-mt-6 flex justify-start max-[1115px]:-mt-4">
+        <button
+          type="button"
+          class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors"
+          [ngClass]="resultFrameworkReportingHomeService.compactView()
+            ? 'border-brand-300 bg-brand-300 text-white hover:bg-brand-400'
+            : 'border-brand-200 bg-brand-25 text-brand-400 hover:bg-brand-50'"
+          [attr.aria-pressed]="resultFrameworkReportingHomeService.compactView()"
+          [prTooltip]="resultFrameworkReportingHomeService.compactView()
+            ? 'Show the full view again: charts in the overview and the status breakdown on every program card.'
+            : 'Minimal view: hides the charts and the status bars/chips on the cards, keeping only the key numbers.'"
+          prTooltipPosition="bottom"
+          (click)="resultFrameworkReportingHomeService.toggleCompactView()">
+          <i class="material-icons-round text-[16px]" aria-hidden="true">
+            {{ resultFrameworkReportingHomeService.compactView() ? 'unfold_more' : 'unfold_less' }}
+          </i>
+          {{ resultFrameworkReportingHomeService.compactView() ? 'Expanded view' : 'Compact view' }}
+        </button>
+      </div>
+    }
+
     <div class="flex flex-col gap-10 max-[1115px]:gap-8">
       <!-- My Science Programs/Accelerators -->
       <section class="flex flex-col gap-4">
@@ -60,6 +84,9 @@
           }
         </div>
       </section>
+
+      <!-- Reporting overview (mobile/tablet) -->
+      <app-result-framework-reporting-insights class="min-[1115px]:hidden" />
 
       <!-- Recent activity (mobile/tablet) -->
       <section class="framework-reporting_right h-fit w-full rounded-xl border border-[var(--pr-color-accents-2)] bg-white min-[1115px]:hidden">
@@ -118,27 +145,31 @@
     </div>
   </div>
 
-  <!-- Recent activity (desktop sidebar) -->
-  <section class="framework-reporting_right h-fit w-full rounded-xl border border-[var(--pr-color-accents-2)] bg-white max-[1115px]:hidden">
-    <div class="flex h-[46px] items-center border-b border-[var(--pr-color-accents-2)] px-5">
-      <h2 class="m-0 text-[15px] font-semibold text-[var(--pr-color-secondary-400)]">Recent activity</h2>
-    </div>
+  <!-- Right column (desktop sidebar): reporting overview + recent activity -->
+  <div class="flex h-fit w-full flex-col gap-5 max-[1115px]:hidden">
+    <app-result-framework-reporting-insights />
 
-    <div class="flex flex-col gap-3 px-4 pb-7 pt-4">
-      @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
-        @for (item of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; track $index) {
-          <div class="pr-skeleton" style="width:100%;height:72px"></div>
+    <section class="framework-reporting_right h-fit w-full rounded-xl border border-[var(--pr-color-accents-2)] bg-white">
+      <div class="flex h-[46px] items-center border-b border-[var(--pr-color-accents-2)] px-5">
+        <h2 class="m-0 text-[15px] font-semibold text-[var(--pr-color-secondary-400)]">Recent activity</h2>
+      </div>
+
+      <div class="flex flex-col gap-3 px-4 pb-7 pt-4">
+        @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
+          @for (item of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; track $index) {
+            <div class="pr-skeleton" style="width:100%;height:72px"></div>
+          }
+        } @else {
+          @for (item of resultFrameworkReportingHomeService.recentActivityList(); track $index) {
+            <app-result-framework-reporting-recent-item [item]="item" />
+          } @empty {
+            <div class="flex flex-col items-center justify-center gap-2 py-10 text-center text-[var(--pr-color-accents-5)]">
+              <i class="material-icons-round text-[32px]">history</i>
+              <p class="m-0 text-sm">No recent activity yet</p>
+            </div>
+          }
         }
-      } @else {
-        @for (item of resultFrameworkReportingHomeService.recentActivityList(); track $index) {
-          <app-result-framework-reporting-recent-item [item]="item" />
-        } @empty {
-          <div class="flex flex-col items-center justify-center gap-2 py-10 text-center text-[var(--pr-color-accents-5)]">
-            <i class="material-icons-round text-[32px]">history</i>
-            <p class="m-0 text-sm">No recent activity yet</p>
-          </div>
-        }
-      }
-    </div>
-  </section>
+      </div>
+    </section>
+  </div>
 </div>

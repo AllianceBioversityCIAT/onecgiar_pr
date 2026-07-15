@@ -31,33 +31,45 @@
 
   <h3 class="m-0 line-clamp-2 text-[15px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">{{ displayName }}</h3>
 
-  <div class="mt-auto flex flex-col gap-2 pt-1">
+  <div class="mt-auto flex flex-col pt-1">
     @if (totalResults > 0) {
       <div class="flex items-baseline gap-1">
         <span class="text-base font-bold text-[var(--pr-color-secondary-400)]">{{ totalResults }}</span>
         <span class="text-xs text-[var(--pr-color-accents-5)]">{{ totalResults === 1 ? 'result' : 'results' }} this phase</span>
       </div>
 
-      <div class="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]" aria-hidden="true">
-        @for (segment of statusSegments(); track segment.statusId) {
-          <div class="h-full" [class]="segment.barClass" [style.width.%]="segment.pct"></div>
-        }
-      </div>
+      @if (!homeService.compactView()) {
+        <div class="pr-card-meta" animate.enter="pr-card-meta--enter" animate.leave="pr-card-meta--leave">
+          <div class="pr-card-meta__inner">
+            <div class="flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]" aria-hidden="true">
+              @for (segment of statusSegments(); track segment.statusId) {
+                <div class="h-full" [class]="segment.barClass" [style.width.%]="segment.pct"></div>
+              }
+            </div>
 
-      <div class="flex flex-wrap gap-1">
-        @for (segment of statusSegments(); track segment.statusId) {
-          <span
-            class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold"
-            [class]="segment.chipClass"
-            [title]="segment.count + ' ' + segment.fullLabel">
-            <span class="size-1.5 rounded-full" [class]="segment.dotClass" aria-hidden="true"></span>
-            {{ segment.count }} {{ segment.label }}
-          </span>
-        }
-      </div>
+            <div class="flex flex-wrap gap-1">
+              @for (segment of statusSegments(); track segment.statusId) {
+                <span
+                  class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold"
+                  [class]="segment.chipClass"
+                  [title]="segment.count + ' ' + segment.fullLabel">
+                  <span class="size-1.5 rounded-full" [class]="segment.dotClass" aria-hidden="true"></span>
+                  {{ segment.count }} {{ segment.label }}
+                </span>
+              }
+            </div>
+          </div>
+        </div>
+      }
     } @else {
       <p class="m-0 text-xs italic text-[var(--pr-color-accents-5)]">No results reported yet</p>
-      <div class="h-1.5 w-full rounded-full bg-[var(--pr-color-accents-2)]" aria-hidden="true"></div>
+      @if (!homeService.compactView()) {
+        <div class="pr-card-meta" animate.enter="pr-card-meta--enter" animate.leave="pr-card-meta--leave">
+          <div class="pr-card-meta__inner">
+            <div class="h-1.5 w-full rounded-full bg-[var(--pr-color-accents-2)]" aria-hidden="true"></div>
+          </div>
+        </div>
+      }
     }
   </div>
 </div>

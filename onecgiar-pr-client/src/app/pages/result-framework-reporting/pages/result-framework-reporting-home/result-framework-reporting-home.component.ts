@@ -2,19 +2,23 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultFrameworkReportingCardItemComponent } from './components/result-framework-reporting-card-item/result-framework-reporting-card-item.component';
+import { ResultFrameworkReportingInsightsComponent } from './components/result-framework-reporting-insights/result-framework-reporting-insights.component';
 import { ResultFrameworkReportingRecentItemComponent } from './components/result-framework-reporting-recent-item/result-framework-reporting-recent-item.component';
 import { ResultFrameworkReportingHomeService } from './services/result-framework-reporting-home.service';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { AlertGlobalInfoModule } from '../../../../shared/components/alert-global-info/alert-global-info.module';
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 
 @Component({
   selector: 'app-result-framework-reporting-home',
   imports: [
     CommonModule,
     ResultFrameworkReportingCardItemComponent,
+    ResultFrameworkReportingInsightsComponent,
     ResultFrameworkReportingRecentItemComponent,
     CustomFieldsModule,
-    AlertGlobalInfoModule
+    AlertGlobalInfoModule,
+    PrTooltipDirectiveModule
   ],
   templateUrl: './result-framework-reporting-home.component.html',
   styleUrl: './result-framework-reporting-home.component.scss',
