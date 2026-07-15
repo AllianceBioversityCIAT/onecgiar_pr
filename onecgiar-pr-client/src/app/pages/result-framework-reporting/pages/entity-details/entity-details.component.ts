@@ -190,6 +190,13 @@ export class EntityDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
 
   showBilateralResultsReview = computed(() => this.entityAowService.entityId() !== 'SGP-02');
 
+  // P2-3139: AVISA (SGP-02) is a deactivated project — its results can only be viewed, not created.
+  // Hide the "Report Emerging results" pathway so no new results can be reported for it.
+  isAvisaEntity = computed(() => {
+    const entityId = this.entityAowService.entityId();
+    return entityId === 'SGP-02' || entityId === 'SGP02';
+  });
+
   groupedIndicatorSummaries = computed(() => {
     const summaries = this.entityAowService.indicatorSummaries().filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
 
@@ -319,8 +326,10 @@ export class EntityDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       }
       const mySPs = this.resultFrameworkReportingHomeService.mySPsList() ?? [];
       const otherSPs = this.resultFrameworkReportingHomeService.otherSPsList() ?? [];
-      const sp = [...mySPs, ...otherSPs].find(
-        (item: { initiativeCode?: string }) => item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02'
+      const otherProjects = this.resultFrameworkReportingHomeService.otherProjectsList() ?? [];
+      const sp = [...mySPs, ...otherSPs, ...otherProjects].find(
+        (item: { initiativeId?: number; initiativeCode?: string }) =>
+          item?.initiativeId === 41 || item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02'
       );
       if (sp) {
         const raw = sp as { initiativeShortName?: string; initiativeName?: string };
@@ -345,6 +354,8 @@ export class EntityDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   onReportRequested(item: any) {
+    // P2-3139: never open the report/create flow for AVISA (deactivated project — view only).
+    if (this.isAvisaEntity()) return;
     this.resultLevelSE.setPendingResultType(item?.resultTypeId, item?.resultTypeName);
     this.showReportModal.set(true);
   }

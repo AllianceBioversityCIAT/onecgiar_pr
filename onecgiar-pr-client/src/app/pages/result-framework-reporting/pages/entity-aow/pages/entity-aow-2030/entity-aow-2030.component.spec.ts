@@ -16,6 +16,7 @@ describe('EntityAow2030Component', () => {
       currentAowSelected: jest.fn(() => ({})),
       get2030Outcomes: jest.fn(),
       tocResults2030Outcomes: signal<any[]>([]),
+      searchText: signal<string>(''),
       isLoadingTocResults2030Outcomes: signal<boolean>(false),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: signal<boolean>(false),
@@ -43,6 +44,14 @@ describe('EntityAow2030Component', () => {
   });
 
   describe('ngOnInit', () => {
+    it('should reset searchText on init (P2-3141)', () => {
+      mockEntityAowService.searchText.set('stale query');
+
+      component.ngOnInit();
+
+      expect(mockEntityAowService.searchText()).toBe('');
+    });
+
     it('should call get2030Outcomes with entityId from service', () => {
       const entityId = 'test-entity-id';
       mockEntityAowService.entityId.set(entityId);

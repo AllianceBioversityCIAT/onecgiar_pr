@@ -5,6 +5,7 @@ import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-ch
 import { RdTheoryOfChangesServicesService } from '../../../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { ResultLevelService } from '../../../../../../../../../../pages/results/pages/result-creator/services/result-level.service';
 import { FieldsManagerService } from '../../../../../../../../../../shared/services/fields-manager.service';
+import { RdContributorsAndPartnersService } from '../../../../rd-contributors-and-partners.service';
 
 interface TocResultItem {
   toc_result_id: string;
@@ -48,18 +49,121 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Output() tocResultChanged = new EventEmitter<void>();
   reusltlevelSE = inject(ResultLevelService);
   fieldsManagerSE = inject(FieldsManagerService);
+  rdPartnersSE = inject(RdContributorsAndPartnersService);
   resultLevelIdSignal = signal<number | string | undefined>(undefined);
   indicatorsList = signal<any[]>([]);
   indicatorView = false;
   showIndicators = signal<boolean>(false);
   selectedIndicatorData = signal<IndicatorItem | null>(null);
 
+  // P2-2998: reactive trigger for syncTocReferenceIds. `allTabsCreated` is a plain @Input() array whose
+  // in-place mutations (HLO/Outcome or KPI selection) don't notify the effect. Bumping this signal from the
+  // selection handlers forces the centers reference set to recompute on selection, not only on tab switch.
+  selectionVersion = signal<number>(0);
+
   secondFieldLabel = computed(() => {
     return this.tocResultListFiltered().find(item => item.toc_level_id === this.activeTabSignal()?.toc_level_id)?.name;
   });
 
+  // P2-3036: the 2026 redesign (labels/help/wording) applies only to phase 2026+. 2025 keeps the legacy copy.
+  isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
+
+  indicatorLabel = computed(() => (this.isCP2026() ? 'KPI Statement/description' : 'Indicator'));
+
+  indicatorHelp = computed(() => (this.isCP2026() ? 'Maps to TOC: [KPI Statement – deliverable short name and indicator description]' : ''));
+
+  contributionTargetNote = computed(() =>
+    this.isCP2026()
+      ? 'Indicate the numerical value that this result contributes toward the 2026 indicator target, using the same unit of measurement as the indicator itself.<br><br><strong>Examples:</strong> If the indicator measures number of farmers, enter the number of farmers reached or benefiting from this result. If the indicator measures USD invested or leveraged, enter the corresponding monetary value. If the indicator measures number of workshops, trainings, or events, enter the number delivered. Apply the same logic for any other unit of measurement specified by the indicator.<br><br>If you are reporting a Knowledge Product and have mapped it to a TOC KPI/indicator, enter <strong>1</strong> as the contribution to target. If the KP does not count independently toward the yearly target — for example, because it serves as a complementary result supporting the achievement of another result that carries the count — enter <strong>0</strong>.<br><br>Values entered here will be aggregated across results at the end of the reporting cycle to assess progress toward the planned 2026 KPIs and indicator targets.'
+      : 'Indicate in this box the numerical value that your result contributes toward the 2025 target of the indicator.<br><br><strong>Example:</strong> If the 2025 indicator target is 200 (people trained) and your result (e.g., a capacity-sharing activity) provides evidence of 90 people trained, enter <strong>90</strong> in this box.<br><br>The values entered here will be aggregated at the end of the reporting cycle to assess progress toward the planned 2025 target for the indicator.'
+  );
+
+  // P2-3063 (L3): read-only statement of the selected HLO/Intermediate Outcome/2030 Outcome node.
+  // The data already comes from the TOC control list (Juan David's enrichment, df27cc55a): each node carries
+  // `outcome_statement` (mapped from the TOC board `description`). We find the selected node by toc_result_id
+  // in the list that matches the chosen level (1=output, 2=outcome, 3=eoi), mirroring updateSelectedIndicatorData().
+  private selectedTocNode = computed(() => {
+    const id = this.activeTabSignal()?.toc_result_id ?? this.activeTab?.toc_result_id;
+    if (id === null || id === undefined) return null;
+    switch (this.activeTabSignal()?.toc_level_id) {
+      case 3:
+        return this.eoiList().find((item: any) => item.toc_result_id === id) ?? null;
+      case 2:
+        return this.outcomeList().find((item: any) => item.toc_result_id === id) ?? null;
+      case 1:
+        return this.outputList().find((item: any) => item.toc_result_id === id) ?? null;
+    }
+    return null;
+  });
+
+  // Label mirrors the chosen level name ("High Level Output" / "Intermediate Outcome" / "2030 Outcome") + " Statement".
+  hloStatementLabel = computed(() => {
+    const levelName = this.secondFieldLabel();
+    return levelName ? `${levelName} Statement` : '';
+  });
+
+  hloStatementValue = computed(() => {
+    const node: any = this.selectedTocNode();
+    return node?.outcome_statement ?? node?.description ?? '';
+  });
+
+  hloStatementTooltip = computed(() => (this.isCP2026() ? 'Maps to TOC: Output or Outcome statement' : ''));
+
+  // P2-3063 (L3): read-only Indicator Typology = the "Type" of the selected KPI in TOC.
+  // Comes as `indicator_typology` (alias of `type_value`) on the selected indicator (Juan David's enrichment df27cc55a).
+  // `selectedIndicatorData()` already holds the selected indicator (set by updateSelectedIndicatorData()).
+  indicatorTypologyValue = computed(() => {
+    const ind: any = this.selectedIndicatorData();
+    return ind?.indicator_typology ?? ind?.type_value ?? '';
+  });
+
+  indicatorTypologyTooltip = computed(() => (this.isCP2026() ? 'Maps to TOC: [Type]' : ''));
+
   onChangesActiveTab = effect(() => {
     this.getIndicatorsList();
+  });
+
+  // P2-2998 / P2-2929 (2026): feed the parent the institutionIds / initiative-ids referenced by the TOC.
+  // Per Juan David: the front applies NO precedence logic (the backend resolves the 4 KPI/HLO scenarios); it just
+  // UNIONS + dedupes across ALL selected nodes/tabs:
+  //   - Centers  = toc_partners (per node) ∪ toc_target_center_ids (per selected indicator)  → cross CLARISA by institutionId
+  //   - Science Programs = contributing_synergy_program_initiative_ids (per node)            → cross /clarisa/initiatives by id
+  // Visual layer only. SAVE NOT ADDRESSED YET.
+  syncTocReferenceIds = effect(() => {
+    if (!this.isCP2026()) return;
+    // dependencies: lists + active tab signal (re-run on load and on selection changes)
+    const out = this.outputList();
+    const oc = this.outcomeList();
+    const eoi = this.eoiList();
+    this.activeTabSignal();
+    // P2-2998: subscribe to in-tab HLO/KPI selection changes (see selectionVersion + getIndicatorsList/mapTocResultsIndicatorId).
+    this.selectionVersion();
+    const tabs: any[] = this.allTabsCreated ?? [];
+    const listForLevel = (lvl: any): any[] => (lvl === 3 ? eoi : lvl === 2 ? oc : lvl === 1 ? out : []);
+    const num = (v: any) => Number(v);
+    const centerIds = new Set<number>();
+    const synergyIds = new Set<number>();
+    // P2-3066: toc_partners holds ALL partners (centers + external). We feed them to both center and partner sets;
+    // each consumer cross-references its own catalog (centers list vs institutions-without-centers list) to keep only its own.
+    const partnerIds = new Set<number>();
+    for (const tab of tabs) {
+      const node: any = listForLevel(tab?.toc_level_id)?.find((n: any) => n.toc_result_id === tab?.toc_result_id);
+      if (!node) continue;
+      (node.toc_partners ?? []).forEach((p: any) => {
+        const n = num(p?.code);
+        if (!Number.isNaN(n)) {
+          centerIds.add(n);
+          partnerIds.add(n);
+        }
+      });
+      (node.contributing_synergy_program_initiative_ids ?? []).forEach((id: any) => { const n = num(id); if (!Number.isNaN(n)) synergyIds.add(n); });
+      const indId = tab?.indicators?.[0]?.related_node_id;
+      const ind: any = (node.indicators ?? []).find((i: any) => i.related_node_id === indId);
+      (ind?.toc_target_center_ids ?? []).forEach((id: any) => { const n = num(id); if (!Number.isNaN(n)) centerIds.add(n); });
+    }
+    this.rdPartnersSE.tocReferenceCenterInstitutionIds.set(Array.from(centerIds));
+    this.rdPartnersSE.tocReferenceSynergyInitiativeIds.set(Array.from(synergyIds));
+    this.rdPartnersSE.tocReferencePartnerInstitutionIds.set(Array.from(partnerIds));
   });
 
   ngOnChanges(): void {
@@ -143,6 +247,15 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     }
     this.hideIndicators();
     this.updateSelectedIndicatorData();
+    // P2-2998: HLO/Outcome node changed → recompute the centers reference set now (don't wait for a tab switch).
+    this.selectionVersion.update(v => v + 1);
+  }
+
+  // P2-3115: called ONLY from the template (ngModelChange) on the HLO/KPI dropdowns, so it fires on genuine user
+  // selection (not on the load-time getIndicatorsList() driven by the onChangesActiveTab effect). This authorizes the
+  // parent's ToC prefill to (re)populate the chips — a deliberate user action, unlike a cold reload.
+  markUserTocSelection() {
+    if (this.isCP2026()) this.rdPartnersSE.tocSelectionTouched.set(true);
   }
 
   hideIndicators() {
@@ -158,6 +271,8 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.fieldsManagerSE.hasSelectedIndicator.set(true);
     this.activeTab.indicators[0].toc_results_indicator_id = this.activeTab.indicators[0].related_node_id;
     this.updateSelectedIndicatorData();
+    // P2-2998: KPI Statement changed → union the indicator's toc_target_center_ids into the centers reference set now.
+    this.selectionVersion.update(v => v + 1);
   }
 
   updateSelectedIndicatorData() {

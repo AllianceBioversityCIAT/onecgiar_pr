@@ -26,6 +26,7 @@ import { CapSharingContentComponent } from './components/cap-sharing-content/cap
 import { PolicyChangeContentComponent } from './components/policy-change-content/policy-change-content.component';
 import { InnovationUseContentComponent } from './components/innovation-use-content/innovation-use-content.component';
 import { SaveChangesJustificationDialogComponent } from './components/save-changes-justification-dialog/save-changes-justification-dialog.component';
+import { filterOutAvisaInitiatives } from '../../../../../../../../shared/utils/avisa-initiative.util';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { BilateralResultsService } from '../../../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
@@ -1043,7 +1044,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio || 'SP';
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe({
           next: ({ response }) => {
-            this.contributingInitiativesList.set(response || []);
+            this.contributingInitiativesList.set(filterOutAvisaInitiatives(response || []));
             if (!primaryInitiativeId && response && response.length > 0 && response[0].id) {
               primaryInitiativeId = response[0].id;
             }

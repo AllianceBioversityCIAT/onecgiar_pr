@@ -51,7 +51,7 @@ export class AowViewResultsDrawerComponent implements OnInit, OnDestroy {
     { title: 'Code', attr: 'result_code', width: '10%' },
     { title: 'Title', attr: 'title' },
     { title: 'Status', attr: 'status_name', width: '130px' },
-    { title: 'Target achieved', attr: 'contributing_indicator', width: '130px' }
+    { title: 'Achieved value', attr: 'contributing_indicator', width: '130px' }
   ]);
 
   actionItems = signal<ActionItem[]>([{ icon: 'pi pi-eye', label: 'View', command: () => this.navigateToResult() }]);

@@ -72,3 +72,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 .husky/pre-commit
 # git worktrees de Claude Code
 .claude/worktrees/
+
+# Cursor (local IDE config)
+.cursor/

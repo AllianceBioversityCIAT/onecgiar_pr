@@ -142,6 +142,32 @@
           }
         </div>
       </section>
+
+      <!-- Other projects (AVISA-excluded initiatives) -->
+      @if (resultFrameworkReportingHomeService.isLoadingSPLists() || resultFrameworkReportingHomeService.otherProjectsList().length > 0) {
+        <section class="flex flex-col gap-4">
+          <div class="flex items-baseline gap-2.5">
+            <h2 class="m-0 text-xl font-bold text-[var(--pr-color-secondary-400)]">Other projects</h2>
+            @if (!resultFrameworkReportingHomeService.isLoadingSPLists() && resultFrameworkReportingHomeService.otherProjectsList().length > 0) {
+              <span class="rounded-full bg-[var(--pr-color-accents-2)] px-2 py-0.5 text-xs font-semibold text-[var(--pr-color-accents-6)]">
+                {{ resultFrameworkReportingHomeService.otherProjectsList().length }}
+              </span>
+            }
+          </div>
+
+          <div class="grid grid-cols-[repeat(auto-fill,minmax(315px,1fr))] gap-4 min-[1500px]:grid-cols-3">
+            @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
+              @for (item of [0, 1, 2]; track $index) {
+                <div class="pr-skeleton" style="width:100%;height:156px"></div>
+              }
+            } @else {
+              @for (item of resultFrameworkReportingHomeService.otherProjectsList(); track $index) {
+                <app-result-framework-reporting-card-item [item]="item" />
+              }
+            }
+          </div>
+        </section>
+      }
     </div>
   </div>
 

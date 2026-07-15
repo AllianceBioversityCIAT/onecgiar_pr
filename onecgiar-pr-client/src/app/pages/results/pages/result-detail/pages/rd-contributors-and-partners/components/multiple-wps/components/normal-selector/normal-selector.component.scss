@@ -89,3 +89,24 @@
     margin-left: 0;
   }
 }
+
+// Empty-state note ("No External Partners related to the established HLO/Outcomes were found").
+// Mirrors `.pr-message` from rd-contributors-and-partners.component.scss so this note (rendered
+// in a different component) gets the same peach box as the Centers / Science Programs notes.
+// Angular's emulated view encapsulation scopes styles per component, so the rule must live here too.
+.pr-message {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--pr-color-orange-100);
+  padding: 10px 15px;
+  border-radius: 5px;
+  color: var(--pr-color-black);
+  margin-top: 1rem;
+  margin-bottom: 30px;
+
+  p {
+    margin: 0;
+  }
+}

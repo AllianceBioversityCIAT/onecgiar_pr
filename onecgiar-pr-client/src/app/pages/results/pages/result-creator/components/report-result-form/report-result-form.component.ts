@@ -7,6 +7,10 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
 import { EntityAowService } from '../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
 import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, of, switchMap, takeUntil, timer } from 'rxjs';
+import {
+  filterOutAvisaFromGroupedInitiativeOptions,
+  filterOutAvisaInitiatives
+} from '../../../../../../shared/utils/avisa-initiative.util';
 
 @Component({
   selector: 'app-report-result-form',
@@ -71,23 +75,21 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     this.applyPendingResultTypeSelection();
     this.api.updateUserData(() => {
       if (!this.api.rolesSE.isAdmin) {
-        this.availableInitiativesSig.set(
-          Array.isArray(this.api.dataControlSE.myInitiativesListReportingByPortfolio)
-            ? [...this.api.dataControlSE.myInitiativesListReportingByPortfolio]
-            : []
-        );
-        if (this._selectedInitiativeId == null && this.api.dataControlSE.myInitiativesListReportingByPortfolio?.length === 1) {
-          this._selectedInitiativeId =
-            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.initiative_id ||
-            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.id;
+        const initiatives = this.selectableInitiatives;
+        this.availableInitiativesSig.set(initiatives);
+        if (this._selectedInitiativeId == null && initiatives.length === 1) {
+          this._selectedInitiativeId = initiatives[0]?.initiative_id || initiatives[0]?.id;
         }
         this.tryApplySelectedInitiative();
       }
       if (this._selectedInitiativeId != null) {
         this.resultLevelSE.resultBody.initiative_id = this._selectedInitiativeId as any;
         this.tryApplySelectedInitiative();
-      } else if (this.api.dataControlSE.myInitiativesListReportingByPortfolio.length == 1) {
-        this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0].id;
+      } else {
+        const initiatives = this.selectableInitiatives;
+        if (initiatives.length == 1) {
+          this.resultLevelSE.resultBody.initiative_id = initiatives[0].id;
+        }
       }
     });
 
@@ -97,7 +99,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   onSelectInit() {
-    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio) || []).find(
+    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.selectableInitiatives) || []).find(
       init => init.id == this.resultLevelSE.resultBody.initiative_id
     );
     if (!init) return;
@@ -145,10 +147,10 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
           const groupList = entityTypesResponse;
           const resultList = [];
           groupList?.forEach(groupItem => {
-            const initsGroup = this.allInitiatives.filter(item => item.typeCode == groupItem.code);
+            const initsGroup = filterOutAvisaInitiatives(this.allInitiatives.filter(item => item.typeCode == groupItem.code));
             if (initsGroup?.length) resultList.push(groupItem, ...initsGroup);
           });
-          this.allInitiatives = resultList;
+          this.allInitiatives = filterOutAvisaFromGroupedInitiativeOptions(resultList);
           this.availableInitiativesSig.set(this.allInitiatives);
           this.tryApplySelectedInitiative();
         });
@@ -164,6 +166,10 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
   get isKnowledgeProduct() {
     return this.resultLevelSE.resultBody.result_type_id == 6;
+  }
+
+  get selectableInitiatives() {
+    return filterOutAvisaInitiatives(this.api.dataControlSE.myInitiativesListReportingByPortfolio);
   }
 
   get resultTypeNamePlaceholder(): string {
