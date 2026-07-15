@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, HostListener, Input, Output, booleanAttribute } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnDestroy, Output, booleanAttribute } from '@angular/core';
 
 /**
  * app-pr-dialog — PRMS reusable dialog wrapper (PrimeNG p-dialog replacement).
@@ -25,9 +25,22 @@ import { Component, EventEmitter, HostListener, Input, Output, booleanAttribute 
   templateUrl: './pr-dialog.component.html',
   styleUrl: './pr-dialog.component.scss'
 })
-export class PrDialogComponent {
-  /** Two-way: `[(visible)]`. */
-  @Input({ transform: booleanAttribute }) visible = false;
+export class PrDialogComponent implements OnDestroy {
+  /** Number of open pr-dialogs — used to lock body scroll while any is open. */
+  private static openCount = 0;
+  private lockedScroll = false;
+
+  private _visible = false;
+  /** Two-way: `[(visible)]`. Toggling also locks/unlocks background scroll. */
+  @Input({ transform: booleanAttribute })
+  set visible(value: boolean) {
+    if (value === this._visible) return;
+    this._visible = value;
+    value ? this.lockBodyScroll() : this.unlockBodyScroll();
+  }
+  get visible(): boolean {
+    return this._visible;
+  }
   @Output() visibleChange = new EventEmitter<boolean>();
 
   /** Dim + block the background. */
@@ -52,6 +65,29 @@ export class PrDialogComponent {
     this.visible = false;
     this.visibleChange.emit(false);
     this.onHide.emit();
+  }
+
+  ngOnDestroy(): void {
+    // Guard against a dialog destroyed while still open (e.g. route change).
+    this.unlockBodyScroll();
+  }
+
+  /** Lock <body> scroll while a modal is open (PrimeNG p-dialog did this). Ref-counted for stacked dialogs. */
+  private lockBodyScroll(): void {
+    if (this.lockedScroll) return;
+    this.lockedScroll = true;
+    if (PrDialogComponent.openCount++ === 0) {
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  private unlockBodyScroll(): void {
+    if (!this.lockedScroll) return;
+    this.lockedScroll = false;
+    if (--PrDialogComponent.openCount <= 0) {
+      PrDialogComponent.openCount = 0;
+      document.body.style.overflow = '';
+    }
   }
 
   onMaskClick(): void {
