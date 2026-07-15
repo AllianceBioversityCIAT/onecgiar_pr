@@ -1,9 +1,9 @@
 @let unreadNotifications = this.resultsNotificationsSE.updatesPopUpData;
 
 @if (!this.dataControlSE.show_qa_full_screen) {
-  <div class="header_spacer pointer-events-none h-[78px] w-full" aria-hidden="true"></div>
+  <div class="header_spacer pointer-events-none h-[70px] w-full" aria-hidden="true"></div>
   <div
-    class="header_panel_container fixed right-2.5 top-2.5 z-[100] flex h-14 items-center justify-between rounded-xl border border-white/10 bg-[var(--pr-color-primary-900)] px-2.5 shadow-[0_14px_34px_rgba(var(--pr-color-black-rgb),0.4),inset_0_1px_0_rgba(var(--pr-color-white-rgb),0.08)] transition-[translate,left] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] max-md:right-2 max-md:top-2 max-md:px-3"
+    class="header_panel_container fixed right-4 top-2 z-[100] flex h-[58px] items-center justify-between gap-3 transition-[translate,left] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] max-md:right-2 max-md:top-2"
     [ngClass]="{ '-translate-y-[calc(100%+16px)]': isHidden() }"
     [style.left.px]="navbarLeft()">
     <a
@@ -14,56 +14,68 @@
       (keydown.space)="$event.preventDefault(); homeLink.click()"
       (keydown.enter)="homeLink.click()">
       <img
-        class="cgiar_logo box-border h-11 w-11 rounded-full bg-white object-contain p-[7px] ring-1 ring-white/15 max-md:h-[30px] max-md:w-[30px]"
+        class="cgiar_logo box-border h-[52px] w-[52px] object-contain max-md:h-10 max-md:w-10"
         src="/assets/PR_logo.svg"
         alt="Reporting Tool Logo" />
 
-      <div class="logo_content flex flex-col items-start justify-center text-white max-lg:hidden">
+      <div class="logo_content flex flex-col items-start justify-center text-[var(--pr-color-secondary-400)] max-lg:hidden">
         <p class="m-0 whitespace-nowrap text-sm font-semibold leading-tight">{{ this.internationalizationData.global.platformName }}</p>
         @if (reportingPhaseLabel()) {
-          <p class="m-0 whitespace-nowrap text-[10px] font-normal leading-tight text-white/65">{{ reportingPhaseLabel() }}</p>
+          <p class="m-0 whitespace-nowrap text-[10px] font-normal leading-tight text-[var(--pr-color-secondary-300)]">{{ reportingPhaseLabel() }}</p>
         }
       </div>
     </a>
 
-    <div class="nav_group flex items-center gap-2" [ngClass]="isSearchMode() ? 'flex-1 mx-[16px]' : ''">
+    <div class="nav_group flex min-w-0 items-center gap-2.5" [ngClass]="isSearchMode() ? 'flex-1 mx-[16px]' : ''">
       <button
         type="button"
-        class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
-        [ngClass]="isSearchMode() ? 'bg-[rgba(var(--pr-color-primary-rgb),0.3)] text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.35)]' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'"
+        class="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+        [ngClass]="
+          isSearchMode()
+            ? 'border border-transparent bg-[linear-gradient(90deg,#6b6dc4,#6461bc,#6461bc)] text-white shadow-[0_4px_12px_rgba(100,97,188,0.4)]'
+            : 'border border-[#e6e3db] bg-white text-[#1e202f] hover:bg-[#f7f6f2]'
+        "
         (click)="toggleSearch()"
+        [prTooltip]="isSearchMode() ? 'Close search' : 'Search sections'"
+        prTooltipPosition="bottom"
         [attr.aria-label]="isSearchMode() ? 'Close search' : 'Search sections'">
         <i class="material-icons-round text-[20px]" aria-hidden="true">{{ isSearchMode() ? 'close' : 'search' }}</i>
-        <span class="text-[9px] font-medium leading-none tracking-[0.2px]">{{ isSearchMode() ? 'Close' : 'Search' }}</span>
       </button>
 
-      <app-navigation-bar [isSearchMode]="isSearchMode()" (searchClosed)="isSearchMode.set(false)"></app-navigation-bar>
+      <div
+        class="nav_pill flex h-12 min-w-0 items-center rounded-full bg-[linear-gradient(90deg,#1e202f,#1f2233,#1f2235)] px-1.5 py-1.5 shadow-[0_6px_18px_rgba(30,32,47,0.28)]"
+        [ngClass]="isSearchMode() ? 'flex-1' : ''">
+        <app-navigation-bar [isSearchMode]="isSearchMode()" (searchClosed)="isSearchMode.set(false)"></app-navigation-bar>
+      </div>
     </div>
 
-    <div class="information flex items-center gap-3 max-md:gap-2">
+    <div class="information flex items-center gap-2.5 max-md:gap-2">
       <a
         #whatsNewLink
-        class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
-        [ngClass]="rlaWhatsNew.isActive ? 'bg-[rgba(var(--pr-color-primary-rgb),0.3)] text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.35)]' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'"
+        class="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+        [ngClass]="rlaWhatsNew.isActive ? 'border border-transparent bg-[linear-gradient(90deg,#6b6dc4,#6461bc,#6461bc)] text-white shadow-[0_4px_12px_rgba(100,97,188,0.4)]' : 'border border-[#e6e3db] bg-white text-[#1e202f] hover:bg-[#f7f6f2]'"
         (keydown.space)="$event.preventDefault(); whatsNewLink.click()"
         routerLink="/whats-new"
         routerLinkActive
         #rlaWhatsNew="routerLinkActive"
+        prTooltip="What's new"
+        prTooltipPosition="bottom"
         aria-label="What's new">
         <i class="material-icons-round text-[20px]" aria-hidden="true">rocket_launch</i>
-        <span class="text-[9px] font-medium leading-none tracking-[0.2px]">What's new</span>
       </a>
 
       <button
         type="button"
-        class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
-        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'bg-[rgba(var(--pr-color-primary-rgb),0.3)] text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.35)]' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'"
+        class="relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'border border-transparent bg-[linear-gradient(90deg,#6b6dc4,#6461bc,#6461bc)] text-white shadow-[0_4px_12px_rgba(100,97,188,0.4)]' : 'border border-[#e6e3db] bg-white text-[#1e202f] hover:bg-[#f7f6f2]'"
         cdkOverlayOrigin
         #notifTrigger="cdkOverlayOrigin"
         (click)="notificationsOpen.set(!notificationsOpen())"
         aria-label="Notifications"
         aria-haspopup="true"
         [attr.aria-expanded]="notificationsOpen()"
+        prTooltip="Alerts"
+        prTooltipPosition="bottom"
         aria-controls="notifications-popover">
         @if (unreadNotifications.length === 0) {
           <i class="material-icons-round text-[20px]" aria-hidden="true">notifications</i>
@@ -73,29 +85,29 @@
             <span class="pr-overlay-badge" *ngIf="notificationBadgeLength()">{{ notificationBadgeLength() }}</span>
           </span>
         }
-        <span class="text-[9px] font-medium leading-none tracking-[0.2px]">Alerts</span>
       </button>
 
       <button
         #settingsTrigger
         type="button"
-        class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
-        [ngClass]="settingsMenuOpen() ? 'bg-[rgba(var(--pr-color-primary-rgb),0.3)] text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.35)]' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'"
+        class="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+        [ngClass]="settingsMenuOpen() ? 'border border-transparent bg-[linear-gradient(90deg,#6b6dc4,#6461bc,#6461bc)] text-white shadow-[0_4px_12px_rgba(100,97,188,0.4)]' : 'border border-[#e6e3db] bg-white text-[#1e202f] hover:bg-[#f7f6f2]'"
         cdkOverlayOrigin
         #settingsOrigin="cdkOverlayOrigin"
         (click)="settingsMenuOpen.set(!settingsMenuOpen())"
         aria-label="Text size"
         aria-haspopup="menu"
         [attr.aria-expanded]="settingsMenuOpen()"
+        prTooltip="Text size"
+        prTooltipPosition="bottom"
         aria-controls="settings-popover">
         <i class="material-icons-round text-[20px]" aria-hidden="true">format_size</i>
-        <span class="text-[9px] font-medium leading-none tracking-[0.2px]">Text size</span>
       </button>
 
       <button
         #userMenuTrigger
         type="button"
-        class="user_identity flex max-w-[340px] cursor-pointer items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.07] py-1 pl-1 pr-3.5 shadow-[inset_0_1px_0_rgba(var(--pr-color-white-rgb),0.06)] transition-colors duration-200 hover:bg-white/[0.12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 max-md:max-w-none max-md:gap-1.5"
+        class="user_identity flex h-12 max-w-[340px] cursor-pointer items-center gap-2 rounded-full border border-[#e6e3db] bg-white py-1.5 pl-1.5 pr-3.5 shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 hover:bg-[#f7f6f2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 max-md:max-w-none max-md:gap-1.5"
         aria-label="User menu"
         aria-haspopup="true"
         aria-controls="user-info-popover"
@@ -105,25 +117,25 @@
         (click)="userMenuOpen.set(!userMenuOpen())"
         (keydown.space)="$event.preventDefault(); userMenuTrigger.click()"
         (keydown.enter)="$event.preventDefault(); userMenuTrigger.click()">
-        <span class="pr-avatar" [style]="{ width: '32px', height: '32px', cursor: 'pointer' }">{{ getUserInitials() }}</span>
+        <span class="pr-avatar" [style]="{ width: '36px', height: '36px', cursor: 'pointer' }">{{ getUserInitials() }}</span>
 
         <span class="user_identity_text flex min-w-0 max-w-60 flex-col items-start overflow-hidden leading-tight max-md:hidden">
           <span class="user_identity_name_row flex max-w-full items-center gap-1.5 overflow-hidden">
-            <span class="user_identity_name min-w-0 shrink truncate text-xs font-semibold text-white">{{
+            <span class="user_identity_name min-w-0 shrink truncate text-xs font-semibold text-[var(--pr-color-secondary-400)]">{{
               this.api.authSE.localStorageUser?.user_name
             }}</span>
             <span
-              class="user_identity_role shrink-0 truncate rounded bg-[rgba(var(--pr-color-primary-rgb),0.3)] px-1.5 py-px text-[10px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-100)]"
+              class="user_identity_role shrink-0 truncate rounded bg-[var(--pr-color-primary-50)] px-1.5 py-px text-[10px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-700)]"
               >{{ getPlatformRole() }}</span
             >
           </span>
-          <span class="user_identity_email max-w-full truncate text-[10px] font-normal text-white/55">{{
+          <span class="user_identity_email max-w-full truncate text-[10px] font-normal text-[var(--pr-color-accents-5)]">{{
             this.api.authSE.localStorageUser?.email
           }}</span>
         </span>
 
         <i
-          class="material-icons-round user_identity_chevron text-[20px] text-white/70 transition-transform duration-200"
+          class="material-icons-round user_identity_chevron text-[20px] text-[var(--pr-color-secondary-400)] transition-transform duration-200"
           [ngClass]="{ 'rotate-180': userMenuOpen() }"
           aria-hidden="true"
           >expand_more</i

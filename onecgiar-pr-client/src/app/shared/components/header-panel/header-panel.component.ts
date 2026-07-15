@@ -14,6 +14,7 @@ import { CommonModule } from '@angular/common';
 import { PopUpNotificationItemComponent } from './components/pop-up-notification-item/pop-up-notification-item.component';
 import { TawkComponent } from '../tawk/tawk.component';
 import { NavigationBarComponent } from '../navigation-bar/navigation-bar.component';
+import { PrTooltipDirectiveModule } from '../../directives/pr-tooltip-directive.module';
 
 @Component({
   selector: 'app-header-panel',
@@ -27,7 +28,8 @@ import { NavigationBarComponent } from '../navigation-bar/navigation-bar.compone
     PopUpNotificationItemComponent,
     TawkComponent,
     NavigationBarComponent,
-    RouterModule
+    RouterModule,
+    PrTooltipDirectiveModule
   ]
 })
 export class HeaderPanelComponent implements OnInit {
@@ -142,19 +144,31 @@ export class HeaderPanelComponent implements OnInit {
   }
 
   getUserInitials() {
-    if (this.api.authSE.localStorageUser?.user_acronym) {
-      return this.api.authSE.localStorageUser?.user_acronym;
+    const user = this.api.authSE.localStorageUser;
+
+    if (user?.user_acronym) {
+      return user.user_acronym;
     }
 
-    const userName = this.api.authSE.localStorageUser?.user_name ?? '';
-    const initials = userName
+    const fromName = (user?.user_name ?? '')
       .split(' ')
       .filter(name => !!name)
       .map(name => name[0])
       .join('')
-      .toUpperCase();
+      .toUpperCase()
+      .slice(0, 2);
+    if (fromName) return fromName;
 
-    return initials.slice(0, 2);
+    // Fallback when the user object has no name/acronym: derive from the email
+    // local-part (e.g. "y.zuniga@..." -> "YZ") so the avatar is never blank.
+    const localPart = (user?.email ?? '').split('@')[0] ?? '';
+    return localPart
+      .split(/[._-]+/)
+      .filter(part => !!part)
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   }
 
   getPlatformRole() {

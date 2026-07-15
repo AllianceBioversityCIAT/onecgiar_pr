@@ -19,8 +19,8 @@
   // Premium dark chrome: a deep indigo-black surface lit by a soft accent glow at the
   // top edge (depth, never flat), refined light edges that catch the light, and a deep
   // elevation shadow. This is the "command console" — sophisticated, not the old texture.
-  background-color: var(--pr-color-primary-900);
-  background-image: radial-gradient(135% 85% at 50% -8%, rgba(var(--pr-color-primary-rgb), 0.28) 0%, rgba(var(--pr-color-primary-rgb), 0) 58%);
+  background-color: #1f2233;
+  background-image: radial-gradient(135% 85% at 50% -8%, rgba(100, 97, 188, 0.32) 0%, rgba(100, 97, 188, 0) 58%);
   border: 1px solid rgba(var(--pr-color-white-rgb), 0.09);
   box-shadow:
     0 22px 50px rgba(var(--pr-color-black-rgb), 0.42),

@@ -1,5 +1,5 @@
 <nav
-  class="navigation_bar relative flex h-14 items-center justify-center gap-1 px-2"
+  class="navigation_bar relative flex items-center justify-center gap-1 px-1"
   aria-label="Primary navigation"
   [class.flex-1]="isSearchMode()"
   [class.justify-stretch]="isSearchMode()">
@@ -45,10 +45,10 @@
           [routerLink]="navOption.path"
           routerLinkActive
           #rla="routerLinkActive"
-          class="navigation_bar_item relative flex h-9 cursor-pointer items-center justify-center self-center whitespace-nowrap rounded-[10px] px-4 text-sm tracking-[0.2px] no-underline transition-colors duration-200"
+          class="navigation_bar_item relative flex h-9 cursor-pointer items-center justify-center self-center whitespace-nowrap rounded-full px-4 text-sm tracking-[0.2px] no-underline transition-colors duration-200"
           [ngClass]="
             rla.isActive && !isActiveMuted(navOption)
-              ? 'bg-[linear-gradient(180deg,var(--pr-color-primary-300)_0%,var(--pr-color-primary-400)_100%)] font-semibold text-white shadow-[0_4px_14px_rgba(var(--pr-color-primary-rgb),0.5),inset_0_1px_0_rgba(var(--pr-color-white-rgb),0.2)]'
+              ? 'bg-[linear-gradient(90deg,#6b6dc4,#6461bc,#6461bc)] font-semibold text-white shadow-[0_4px_14px_rgba(100,97,188,0.5),inset_0_1px_0_rgba(255,255,255,0.2)]'
               : 'font-medium text-white/65 hover:bg-white/[0.08] hover:text-white'
           "
           [class.pr-10]="navOption?.underConstruction"
