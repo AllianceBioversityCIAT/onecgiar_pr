@@ -36,7 +36,7 @@
 
     <div class="section_container">
       <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
-      <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
+      <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection()">
         <div class="info">
           <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
           <div class="text">Loading section...</div>

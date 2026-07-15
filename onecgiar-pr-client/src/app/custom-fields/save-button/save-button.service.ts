@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { tap, catchError, throwError, pipe } from 'rxjs';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 
@@ -7,7 +7,14 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
 })
 export class SaveButtonService {
   isSaving = false;
-  isGettingSection = false;
+  /**
+   * Signal (not a plain boolean) so the spinner *ngIf reacts to changes directly.
+   * The flag is flipped inside a Promise microtask; on Angular 21 + Spartan the
+   * implicit global CD tick that used to render a plain-boolean flip is no longer
+   * guaranteed, which left the loading spinner stuck. A signal read registers a
+   * reactive consumer, so CD is notified regardless of zone/scheduler timing.
+   */
+  isGettingSection = signal(false);
   constructor(private customizedAlertsFeSE: CustomizedAlertsFeService) {}
 
   /** Parses Nest/Angular HTTP error bodies for a user-facing message. */
@@ -38,17 +45,17 @@ export class SaveButtonService {
 
   isGettingSectionPipe(): any {
     Promise.resolve().then(() => {
-      this.isGettingSection = true;
+      this.isGettingSection.set(true);
     });
     return pipe(
       tap(resp => {
         Promise.resolve().then(() => {
-          this.isGettingSection = false;
+          this.isGettingSection.set(false);
         });
       }),
       catchError(err => {
         Promise.resolve().then(() => {
-          this.isGettingSection = false;
+          this.isGettingSection.set(false);
         });
         return throwError(() => err);
       })

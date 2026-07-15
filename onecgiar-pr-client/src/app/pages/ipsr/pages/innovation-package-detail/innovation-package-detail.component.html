@@ -64,7 +64,7 @@
     @if (this.ipsrDataControlSE.resultInnovationId && this.fieldsManagerSE.porfolioExists()) {
       <router-outlet></router-outlet>
     }
-    <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
+    <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection()">
       <div class="info">
         <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
         <div class="text">Loading section...</div>
