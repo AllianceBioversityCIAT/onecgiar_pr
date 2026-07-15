@@ -61,6 +61,26 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   availableProjects = signal<ProjectOption[]>([]);
   selectedProjectIds: number[] = [];
 
+  readonly availableProjectsComputed = computed(() => {
+    const leadProj = this.creationService.selectedProject();
+    const leadId = leadProj?.id ? Number(leadProj.id) : null;
+    return this.availableProjects().map(p => ({
+      ...p,
+      disabled: Number(p.id) === leadId
+    }));
+  });
+
+  readonly availableCentersComputed = computed(() => {
+    const project = this.creationService.selectedProject();
+    const resultLeadCenterId = this.creationService.resultLeadCenterId();
+    const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
+    const leadInstId = leadCenterId ? Number(leadCenterId) : null;
+    return this.availableCenters.map(c => ({
+      ...c,
+      disabled: Number(c.institutionId) === leadInstId
+    }));
+  });
+
   readonlyLeadCenterInstitutionId: number | null = null;
 
   private readonly leadCenterEffect = effect(() => {

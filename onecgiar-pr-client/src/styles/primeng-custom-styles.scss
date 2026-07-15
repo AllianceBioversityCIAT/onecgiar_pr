@@ -48,3 +48,15 @@
 .p-select-option {
   white-space: normal !important;
 }
+
+.sc-dropdown-panel {
+  max-width: 480px !important;
+  width: 100% !important;
+
+  .p-multiselect-option, .p-multiselect-item, .p-multiselect-list-item {
+    white-space: normal !important;
+    word-break: break-word !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+  }
+}
