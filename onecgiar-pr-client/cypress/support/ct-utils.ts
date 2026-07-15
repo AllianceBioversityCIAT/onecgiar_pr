@@ -2,14 +2,13 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { Type } from '@angular/core';
-import { MessageService } from 'primeng/api';
 import { RolesService } from '../../src/app/shared/services/global/roles.service';
 import { CustomFieldsModule } from '../../src/app/custom-fields/custom-fields.module';
 
 /** Shared imports + providers every custom-fields CT spec needs. */
 export const CF_TEST_IMPORTS = [CustomFieldsModule, HttpClientTestingModule, NoopAnimationsModule] as const;
 
-export const CF_TEST_PROVIDERS = [provideRouter([]), MessageService] as const;
+export const CF_TEST_PROVIDERS = [provideRouter([])] as const;
 
 /**
  * Shared mount helper for custom-fields component tests.
