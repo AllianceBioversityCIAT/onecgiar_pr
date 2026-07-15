@@ -55,6 +55,7 @@ export const routingApp: PrRoute[] = [
     prHide: false,
     canActivate: [CheckLoginGuard],
     path: 'init-admin-module',
+    data: { sidebar: { width: 300 } },
     loadChildren: () => import('../../pages/init-admin-section/init-admin-section.module').then(m => m.InitAdminSectionModule)
   },
   {
@@ -104,6 +105,7 @@ export const extraRoutingApp: PrRoute[] = [
     canActivate: [CheckAdminGuard],
     prHide: false,
     path: 'admin-module',
+    data: { sidebar: { width: 300 } },
     loadChildren: () => import('../../pages/admin-section/admin-section.module').then(m => m.AdminSectionModule)
   }
 ];

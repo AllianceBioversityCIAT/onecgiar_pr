@@ -1,0 +1,18 @@
+<aside class="premium_sidebar">
+  <div class="premium_sidebar_header">
+    <span class="eyebrow" *ngIf="eyebrow()">{{ eyebrow() }}</span>
+    <h2 class="title">{{ title() }}</h2>
+  </div>
+
+  <nav class="premium_sidebar_menu">
+    <a
+      class="menu_item"
+      *ngFor="let option of options()"
+      [routerLink]="option.path"
+      routerLinkActive="section_active">
+      <i class="material-icons-round" *ngIf="option.icon">{{ option.icon }}</i>
+      <span class="label">{{ option.name }}</span>
+      <img class="under_construction" *ngIf="option.underConstruction" src="assets/work-in-progress.png" alt="" />
+    </a>
+  </nav>
+</aside>

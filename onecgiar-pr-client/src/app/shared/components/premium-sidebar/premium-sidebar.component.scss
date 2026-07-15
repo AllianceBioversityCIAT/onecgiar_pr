@@ -1,0 +1,118 @@
+@use '../../../../styles/fonts.scss' as fonts;
+
+// Premium dark "command console" sidebar — a faithful reuse of the Result Detail
+// surface (result-detail.component.scss .rd_sidebar + panel-menu .section_active),
+// extracted so admin shells share the exact same look/structure.
+.premium_sidebar {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  bottom: 10px;
+  width: 300px;
+  box-sizing: border-box;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: 16px;
+  // Deep indigo-black surface lit by a soft accent glow at the top edge, refined
+  // light edges, and a deep elevation shadow.
+  background-color: #1f2233;
+  background-image: radial-gradient(135% 85% at 50% -8%, rgba(100, 97, 188, 0.32) 0%, rgba(100, 97, 188, 0) 58%);
+  border: 1px solid rgba(var(--pr-color-white-rgb), 0.09);
+  box-shadow:
+    0 22px 50px rgba(var(--pr-color-black-rgb), 0.42),
+    inset 0 1px 0 rgba(var(--pr-color-white-rgb), 0.08);
+
+  .premium_sidebar_header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px 14px;
+    border-bottom: 1px solid rgba(var(--pr-color-white-rgb), 0.1);
+
+    .eyebrow {
+      @include fonts.pr-typography('body-3');
+      font-weight: 700;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--pr-color-primary-200);
+    }
+
+    .title {
+      margin: 0;
+      @include fonts.pr-typography('h2');
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      text-wrap: balance;
+      color: var(--pr-color-white);
+    }
+  }
+
+  .premium_sidebar_menu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    // The signature moment: the active item lifts off the surface with an indigo
+    // gradient, a colored glow and a top inner highlight. Ring + glow are
+    // box-shadows so there is zero layout shift.
+    .section_active {
+      background-image: linear-gradient(180deg, #6b6dc4 0%, #6461bc 100%);
+      color: var(--pr-color-white);
+      font-weight: 600;
+      box-shadow:
+        0 8px 20px rgba(100, 97, 188, 0.5),
+        inset 0 0 0 1px rgba(var(--pr-color-white-rgb), 0.14),
+        inset 0 1px 0 rgba(var(--pr-color-white-rgb), 0.28);
+
+      &:hover {
+        background-image: linear-gradient(180deg, #6b6dc4 0%, #6461bc 100%);
+        color: var(--pr-color-white);
+      }
+    }
+
+    .menu_item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: rgba(var(--pr-color-white-rgb), 0.74);
+      font-weight: 500;
+      padding: 11px 16px;
+      border-radius: 10px;
+      // Every row is a subtle raised surface with a hairline edge, so the list
+      // reads as defined items even when none is selected.
+      background-color: rgba(var(--pr-color-white-rgb), 0.035);
+      box-shadow: inset 0 0 0 1px rgba(var(--pr-color-white-rgb), 0.05);
+      transition: background-color ease-in-out 0.2s, color ease-in-out 0.2s;
+      position: relative;
+      overflow: hidden;
+
+      i.material-icons-round {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+
+      .label {
+        @include fonts.pr-typography('body-1');
+        font-weight: inherit;
+      }
+
+      .under_construction {
+        position: absolute;
+        width: 20px;
+        right: 12px;
+      }
+
+      &:hover {
+        background-color: rgba(var(--pr-color-white-rgb), 0.09);
+        color: var(--pr-color-white);
+      }
+    }
+  }
+}

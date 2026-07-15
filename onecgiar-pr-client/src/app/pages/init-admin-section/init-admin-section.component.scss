@@ -1,4 +1,9 @@
+// Dashboard layout: the premium fixed sidebar owns the left column (300px + 10px
+// margins), the routed content is shifted right and cleared below the floating navbar.
 .local_container {
-    display: grid;
-    grid-template-columns: auto 1fr;
+    .router {
+        margin-left: 320px; // sidebar margin (10) + width (300) + gap (10)
+        padding-top: 78px; // clear the fixed floating navbar (top 8 + height 58 + gap)
+        box-sizing: border-box;
+    }
 }
