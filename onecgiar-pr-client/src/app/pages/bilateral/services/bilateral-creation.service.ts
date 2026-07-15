@@ -53,6 +53,7 @@ export class BilateralCreationService {
 
   loadResult(resultId: number): void {
     this.currentResultId.set(resultId);
+    this.api.resultsSE.currentResultId = resultId;
     this.isLoadingResult.set(true);
     this.resultContributingCenterIds.set([]);
     this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`).subscribe({

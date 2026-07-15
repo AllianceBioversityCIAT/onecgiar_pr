@@ -35,6 +35,8 @@ export class BilateralAutoSaveService {
   private _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private _blurSubject = new Subject<{ fieldPath: string; value: unknown }>();
 
+  readonly manualSave$ = new Subject<void>();
+
   fieldStatus = signal<Record<string, FieldStatus>>({});
   hasPendingSaves = signal(false);
 

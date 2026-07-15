@@ -197,23 +197,62 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.bcr-floating-save {
+.bcr-floating-save-wrapper {
   position: fixed;
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
+  gap: 12px;
+  z-index: 1000;
+}
+
+.bcr-floating-btn-save {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 20px;
+  height: 40px;
+  border-radius: 24px;
+  background: #1565C0;
+  border: none;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(21, 101, 192, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 250ms ease;
+
+  .material-icons-round {
+    font-size: 16px;
+  }
+
+  &:hover {
+    background: #0D47A1;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(21, 101, 192, 0.35), 0 2px 4px rgba(0, 0, 0, 0.12);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.bcr-floating-save {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 0 20px;
+  height: 40px;
   border-radius: 24px;
   background: #FFFFFF;
   border: 1.5px solid #E0E0E0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
-  z-index: 100;
   transition: border-color 300ms ease, background 300ms ease, box-shadow 300ms ease;
   pointer-events: none;
   user-select: none;
+  box-sizing: border-box;
 
   &--saving {
     background: #FFF8E1;
@@ -262,5 +301,5 @@
 
 @keyframes bcr-save-spin {
   from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  to { transform: rotate(-360deg); }
 }

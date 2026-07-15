@@ -1,13 +1,94 @@
 .sg-fields {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.sg-card {
+  background: #FFFFFF;
+  border: 1px solid #E0E0E0;
+  border-radius: 10px;
+  overflow: visible;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #F5F5F5, #FAFAFA);
+    border-bottom: 1px solid #E0E0E0;
+    border-top-left-radius: 9px;
+    border-top-right-radius: 9px;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #37474F;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  &__icon {
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    position: relative;
+    border-radius: 2px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+  }
+
+  &__body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+.geo-icon {
+  background: linear-gradient(135deg, #2E7D32, #4CAF50);
+  &::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z'/%3E%3C/svg%3E");
+    transform: scale(0.7);
+  }
+}
+
+.extra-icon {
+  background: linear-gradient(135deg, #1565C0, #1976D2);
+  &::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z'/%3E%3C/svg%3E");
+    transform: scale(0.7);
+  }
 }
 
 .sg-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+
+  &--toggle {
+    gap: 8px;
+  }
 }
 
 .sg-label {
@@ -16,23 +97,27 @@
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: #607D8B;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .sg-required {
-  color: #E53935;
-  font-weight: 700;
+  color: #D32F2F;
 }
 
 .sg-select {
   padding: 10px 12px;
   border: 1.5px solid #E0E0E0;
   border-radius: 6px;
-  font-size: 14px;
-  color: #212121;
+  font-size: 13.5px;
+  color: #263238;
   background: #FFFFFF;
   font-family: inherit;
   cursor: pointer;
   transition: border-color 150ms ease, box-shadow 150ms ease;
+  width: 100%;
+  max-width: 320px;
 
   &:focus {
     outline: none;
@@ -41,24 +126,170 @@
   }
 }
 
-.sg-status {
-  font-size: 10px;
-  color: #90A4AE;
-  letter-spacing: 0.3px;
-  transition: color 200ms ease;
+.sg-toggle-buttons {
+  display: flex;
+  gap: 8px;
+}
 
-  &--saved {
-    color: #43A047;
+.sg-toggle-btn {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 20px;
+  border: 1.5px solid #CFD8DC;
+  background: #FFFFFF;
+  color: #546E7A;
+  cursor: pointer;
+  transition: all 200ms ease;
+
+  &:hover {
+    background: #ECEFF1;
+    border-color: #B0BEC5;
   }
 
-  &--error {
-    color: #E53935;
+  &--active {
+    background: #E3F2FD;
+    border-color: #1E88E5;
+    color: #0D47A1;
+    box-shadow: 0 2px 6px rgba(30, 136, 229, 0.12);
+
+    &:hover {
+      background: #E3F2FD;
+      border-color: #1E88E5;
+    }
   }
 }
 
-.sg-hint {
+.sg-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sg-btn-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 4px;
+  border: 1.5px solid #1565C0;
+  background: #FFFFFF;
+  color: #1565C0;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:hover:not(:disabled) {
+    background: #E3F2FD;
+    border-color: #0D47A1;
+    color: #0D47A1;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.sg-status {
+  font-size: 11px;
+  font-weight: 500;
+  color: #78909C;
+
+  &--saved {
+    color: #2E7D32;
+  }
+
+  &--error {
+    color: #C62828;
+  }
+}
+
+.sg-subnational-container {
+  margin-top: 8px;
+  border-top: 1px solid #ECEFF1;
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sg-subnational-title {
   font-size: 12px;
-  color: #CFD8DC;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #37474F;
+  letter-spacing: 0.5px;
   margin: 0;
-  font-style: italic;
+}
+
+.sg-subnational-card {
+  background: #FAFAFA;
+  border: 1px solid #ECEFF1;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+::v-deep .p-multiselect {
+  width: 100%;
+  max-width: 480px;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 6px;
+  transition: border-color 150ms ease;
+
+  &:hover {
+    border-color: #B0BEC5;
+  }
+
+  &.p-focus {
+    border-color: #1565C0;
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
+  }
+}
+
+.sg-selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #E8F5E9;
+  border: 1px solid #C8E6C9;
+  color: #2E7D32;
+  transition: all 150ms ease;
+
+  &:hover {
+    background: #E8F5E9;
+  }
+}
+
+.sg-chip-remove {
+  background: none;
+  border: none;
+  color: #D32F2F;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 150ms ease;
+
+  &:hover {
+    color: #C62828;
+  }
 }

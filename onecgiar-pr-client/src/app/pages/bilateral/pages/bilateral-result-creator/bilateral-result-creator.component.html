@@ -60,26 +60,31 @@
   }
 
   @if (!isCreating() && resultId()) {
-    <div class="bcr-floating-save"
-      [class.bcr-floating-save--saving]="autoSaveService.globalSaveState() === 'saving'"
-      [class.bcr-floating-save--saved]="autoSaveService.globalSaveState() === 'saved'"
-      [class.bcr-floating-save--error]="autoSaveService.globalSaveState() === 'error'">
-      <i class="material-icons-round bcr-floating-save-icon">
-        @switch (autoSaveService.globalSaveState()) {
-          @case ('saving') { sync }
-          @case ('saved') { cloud_done }
-          @case ('error') { error_outline }
-          @default { cloud }
-        }
-      </i>
-      <span class="bcr-floating-save-text">
-        @switch (autoSaveService.globalSaveState()) {
-          @case ('saving') { Saving&hellip; }
-          @case ('saved') { All changes saved }
-          @case ('error') { Save failed }
-          @default { Ready }
-        }
-      </span>
+    <div class="bcr-floating-save-wrapper">
+      <div class="bcr-floating-save"
+        [class.bcr-floating-save--saving]="autoSaveService.globalSaveState() === 'saving'"
+        [class.bcr-floating-save--saved]="autoSaveService.globalSaveState() === 'saved'"
+        [class.bcr-floating-save--error]="autoSaveService.globalSaveState() === 'error'">
+        <i class="material-icons-round bcr-floating-save-icon">
+          @switch (autoSaveService.globalSaveState()) {
+            @case ('saving') { sync }
+            @case ('saved') { cloud_done }
+            @case ('error') { error_outline }
+            @default { cloud }
+          }
+        </i>
+        <span class="bcr-floating-save-text">
+          @switch (autoSaveService.globalSaveState()) {
+            @case ('saving') { Saving&hellip; }
+            @case ('saved') { All changes saved }
+            @case ('error') { Save failed }
+            @default { Ready }
+          }
+        </span>
+      </div>
+      <button type="button" class="bcr-floating-btn-save" (click)="triggerManualSave()">
+        <i class="material-icons-round">save</i> Save
+      </button>
     </div>
 
     <div id="bcr-accordions">

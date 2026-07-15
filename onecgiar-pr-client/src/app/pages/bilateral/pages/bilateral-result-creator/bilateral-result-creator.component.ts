@@ -190,6 +190,17 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     });
   }
 
+  triggerManualSave(): void {
+    this.autoSaveService.flush();
+    this.autoSaveService.manualSave$.next();
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'All changes saved successfully.',
+      life: 2000
+    });
+  }
+
   ngOnDestroy(): void {
     const url = this.router.url;
     if (!url.startsWith('/bilateral/')) {
