@@ -2,18 +2,15 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { IpsrUnsubmitModalComponent } from './ipsr-unsubmit-modal.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrButtonComponent } from '../../../../../../custom-fields/pr-button/pr-button.component';
-import { TooltipModule } from 'primeng/tooltip';
 import { PrTextareaComponent } from '../../../../../../custom-fields/pr-textarea/pr-textarea.component';
 import { PrWordCounterComponent } from '../../../../../../custom-fields/pr-word-counter/pr-word-counter.component';
 import { FormsModule } from '@angular/forms';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
-import { DialogModule } from 'primeng/dialog';
 import { PrFieldValidationsComponent } from '../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { TextareaModule } from 'primeng/textarea';
 
 describe('IpsrUnsubmitModalComponent', () => {
   let component: IpsrUnsubmitModalComponent;
@@ -55,11 +52,8 @@ describe('IpsrUnsubmitModalComponent', () => {
       ],
       imports: [
         HttpClientTestingModule,
-        TooltipModule,
         FormsModule,
-        DialogModule,
-        BrowserAnimationsModule,
-        TextareaModule
+        BrowserAnimationsModule
       ],
       providers: [
         {

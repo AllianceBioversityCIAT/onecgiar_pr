@@ -2,13 +2,11 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PrDialogComponent } from '../../../../../../../../../../shared/components/pr-dialog/pr-dialog.component';
-import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
-import { TextareaModule } from 'primeng/textarea';
 
 @Component({
   selector: 'app-save-changes-justification-dialog',
-  imports: [CommonModule, FormsModule, PrDialogComponent, ButtonModule, HlmButton, TextareaModule],
+  imports: [CommonModule, FormsModule, PrDialogComponent, HlmButton],
   templateUrl: './save-changes-justification-dialog.component.html',
   styleUrl: '../../result-review-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

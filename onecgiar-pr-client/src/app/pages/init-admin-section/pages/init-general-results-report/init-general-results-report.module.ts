@@ -5,12 +5,11 @@ import { InitGeneralResultsReportRoutingModule } from './init-general-results-re
 import { InitGeneralResultsReportComponent } from './init-general-results-report.component';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { FilterInitWithRoleCoordAndLeadModule } from '../../pipes/filter-init-with-role-coord-and-lead/filter-init-with-role-coord-and-lead.module';
-import { TableModule } from 'primeng/table';
 import { FilterByTextModule } from '../../../../shared/pipes/filter-by-text.module';
 import { FilterByAttrWithValueModule } from '../../../../shared/pipes/filter-by-attr-with-value/filter-by-attr-with-value.module';
 
 @NgModule({
   declarations: [InitGeneralResultsReportComponent],
-  imports: [CommonModule, InitGeneralResultsReportRoutingModule, CustomFieldsModule, FilterInitWithRoleCoordAndLeadModule, TableModule, FilterByTextModule, FilterByAttrWithValueModule]
+  imports: [CommonModule, InitGeneralResultsReportRoutingModule, CustomFieldsModule, FilterInitWithRoleCoordAndLeadModule, FilterByTextModule, FilterByAttrWithValueModule]
 })
 export class InitGeneralResultsReportModule {}

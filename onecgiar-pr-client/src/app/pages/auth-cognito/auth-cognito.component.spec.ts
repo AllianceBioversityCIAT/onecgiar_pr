@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AuthCognitoComponent } from './auth-cognito.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { MessageService } from 'primeng/api';
 import { AuthService } from '../../shared/services/api/auth.service';
 import { signal } from '@angular/core';
 
@@ -20,7 +19,6 @@ describe('AuthCognitoComponent', () => {
     await TestBed.configureTestingModule({
       imports: [HttpClientTestingModule, RouterTestingModule],
       providers: [
-        MessageService,
         {
           provide: AuthService,
           useValue: authServiceMock

@@ -1,34 +1,48 @@
 import { CommonModule } from '@angular/common';
 import { Component, ContentChild, Input, booleanAttribute, computed, forwardRef, signal } from '@angular/core';
-import { PrTableBodyDirective, PrTableEmptyDirective, PrTableHeaderDirective, PrTableLoadingDirective } from './pr-table.directives';
+import {
+  PrTableEmptyDirective,
+  PrTableExpandedRowDirective,
+  PrTableGroupHeaderDirective,
+  PrTableHeaderDirective,
+  PrTableLoadingDirective
+} from './pr-table.directives';
 import { PR_TABLE_HOST } from './pr-table.host';
 
 /**
- * app-pr-table — PRMS reusable data table (PrimeNG p-table replacement).
+ * app-pr-group-table — PRMS grouped/expandable data table (PrimeNG p-table
+ * `rowGroupMode="subheader"` replacement).
  *
- * Mirrors the common p-table declarative API so migration is close to 1:1:
- *   <app-pr-table [value]="rows" [paginator]="true" [rows]="5"
- *                 [rowsPerPageOptions]="[5,10,15]" sortField="code" [sortOrder]="-1">
- *     <ng-template prTableHeader> <tr>…<th prSortableColumn="code"><pr-sort-icon field="code"/>Code</th></tr> </ng-template>
- *     <ng-template prTableBody let-row let-i="index"> <tr>…</tr> </ng-template>
- *     <ng-template prTableEmpty> <tr><td>No data</td></tr> </ng-template>
- *   </app-pr-table>
+ * In every PRMS consumer each item of `[value]` already IS a group (with nested
+ * children rendered by the expanded-row template), so this renders, per item:
+ *   1. the group-header row (prTableGroupHeader, ctx { $implicit, expanded, rowIndex })
+ *   2. when expanded, the expanded-row block (prTableExpandedRow, ctx { $implicit })
  *
- * Handles sorting (single column), client-side pagination, the empty state, a
- * loading slot (prTableLoading), imperative reset(), the [first] page-reset hook
- * and vertical scroll + sticky header ([scrollable]/scrollHeight) in one place.
- * Row grouping / expansion live in the sibling app-pr-group-table; column
- * filtering is owned by the consuming page.
+ *   <app-pr-group-table [value]="groups" dataKey="key" [expandedRowKeys]="expanded()"
+ *                       sortField="key" [sortOrder]="1" [loading]="loading()">
+ *     <ng-template prTableHeader> <tr>…</tr> </ng-template>
+ *     <ng-template prTableGroupHeader let-item let-expanded="expanded">
+ *       <tr><td [prRowToggler]="item">…{{ expanded ? '▾' : '▸' }}…</td></tr>
+ *     </ng-template>
+ *     <ng-template prTableExpandedRow let-item> …rows… </ng-template>
+ *     <ng-template prTableEmpty> … </ng-template>
+ *     <ng-template prTableLoading> … </ng-template>
+ *   </app-pr-group-table>
+ *
+ * Expansion state is seeded from `[expandedRowKeys]` (keys with a truthy value)
+ * and thereafter owned internally — toggled via the `[prRowToggler]` directive.
+ * Re-seeding only happens when the input reference changes (e.g. data reload or
+ * expandAll/collapseAll), matching the previous PrimeNG behaviour.
  */
 @Component({
-  selector: 'app-pr-table',
+  selector: 'app-pr-group-table',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './pr-table.component.html',
+  templateUrl: './pr-group-table.component.html',
   styleUrl: './pr-table.component.scss',
-  providers: [{ provide: PR_TABLE_HOST, useExisting: forwardRef(() => PrTableComponent) }]
+  providers: [{ provide: PR_TABLE_HOST, useExisting: forwardRef(() => PrGroupTableComponent) }]
 })
-export class PrTableComponent {
+export class PrGroupTableComponent {
   @Input() set value(v: unknown[] | null | undefined) {
     this._value.set(Array.isArray(v) ? v : []);
     if (this.page() > this.lastPage()) this.page.set(0);
@@ -38,16 +52,13 @@ export class PrTableComponent {
   }
   private readonly _value = signal<unknown[]>([]);
 
-  /** Initial / active sort column. Empty = keep source order. */
   @Input() set sortField(f: string) {
     this._sortField.set(f ?? '');
     this._defaultSortField = f ?? '';
   }
   private readonly _sortField = signal('');
-  /** Snapshot of the bound default, restored by reset(). */
   private _defaultSortField = '';
 
-  /** 1 = ascending, -1 = descending (matches PrimeNG). */
   @Input() set sortOrder(o: number) {
     const v = Number(o) === -1 ? -1 : 1;
     this._sortOrder.set(v);
@@ -58,7 +69,6 @@ export class PrTableComponent {
 
   @Input({ transform: booleanAttribute }) paginator = false;
 
-  /** Rows per page. */
   @Input() set rows(r: number) {
     this._rows.set(Number(r) || 0);
   }
@@ -66,39 +76,45 @@ export class PrTableComponent {
 
   @Input() rowsPerPageOptions: number[] | null = null;
   @Input() styleClass = '';
-  @Input() selectionMode: 'single' | 'multiple' | null = null;
   @Input({ transform: booleanAttribute }) loading = false;
-  /** Accepted for API parity; layout scroll is handled by css. */
+
+  /** Field identifying each group (used for expansion keys). Falls back to groupRowsBy. */
   @Input() dataKey = '';
+  @Input() groupRowsBy = '';
 
-  /** Enables the vertical-scroll body with a sticky header (mirrors p-table [scrollable]). */
-  @Input({ transform: booleanAttribute }) scrollable = false;
-  /** Max height of the scroll viewport, e.g. 'calc(100vh - 303px)' (mirrors p-table scrollHeight). */
-  @Input() scrollHeight = '';
-
-  /**
-   * First-record index (mirrors PrimeNG [first]). Setting it moves to the page
-   * containing that record — used with `[first]="searchText && 0"` to jump back
-   * to page 0 when a search starts/clears. Angular only calls this on value
-   * change, so it does not fight manual pagination.
-   */
   @Input() set first(v: number | string | null | undefined) {
     const n = Number(v) || 0;
     const size = this.effectiveRows() || this._rows() || 1;
     this.page.set(Math.floor(n / size));
   }
 
+  /** Seed the expansion state; keys with a truthy value start expanded. */
+  @Input() set expandedRowKeys(rec: Record<string, boolean> | null | undefined) {
+    const next = new Set<string>();
+    if (rec) {
+      for (const key of Object.keys(rec)) {
+        if (rec[key]) next.add(key);
+      }
+    }
+    this.expanded.set(next);
+  }
+
   @ContentChild(PrTableHeaderDirective) headerTpl?: PrTableHeaderDirective;
-  @ContentChild(PrTableBodyDirective) bodyTpl?: PrTableBodyDirective;
+  @ContentChild(PrTableGroupHeaderDirective) groupHeaderTpl?: PrTableGroupHeaderDirective;
+  @ContentChild(PrTableExpandedRowDirective) expandedRowTpl?: PrTableExpandedRowDirective;
   @ContentChild(PrTableEmptyDirective) emptyTpl?: PrTableEmptyDirective;
   @ContentChild(PrTableLoadingDirective) loadingTpl?: PrTableLoadingDirective;
 
   readonly page = signal(0);
   private readonly pageSizeOverride = signal<number | null>(null);
+  private readonly expanded = signal<Set<string>>(new Set());
+
+  get keyField(): string {
+    return this.dataKey || this.groupRowsBy;
+  }
 
   readonly activeSortField = computed(() => this._sortField());
   readonly activeSortOrder = computed(() => this._sortOrder());
-
   readonly effectiveRows = computed(() => this.pageSizeOverride() ?? this._rows());
 
   private readonly sortedValue = computed(() => {
@@ -144,7 +160,23 @@ export class PrTableComponent {
     return `${start} – ${end} of ${total}`;
   });
 
-  /** Called by prSortableColumn on header click. */
+  keyOf(item: unknown): string {
+    return String(this.resolve(item, this.keyField));
+  }
+
+  isExpanded(key: string): boolean {
+    return this.expanded().has(key);
+  }
+
+  /** Toggle a group's expansion (called by the prRowToggler directive). */
+  toggle(item: unknown): void {
+    const key = this.keyOf(item);
+    const next = new Set(this.expanded());
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    this.expanded.set(next);
+  }
+
   sort(field: string): void {
     if (!field) return;
     if (this._sortField() === field) {
@@ -156,11 +188,6 @@ export class PrTableComponent {
     this.page.set(0);
   }
 
-  /**
-   * Public imperative reset (mirrors PrimeNG Table.reset()): restore the bound
-   * default sort and jump back to the first page. Grabbable via
-   * `@ViewChild(PrTableComponent)` or a template ref on <app-pr-table>.
-   */
   reset(): void {
     this._sortField.set(this._defaultSortField);
     this._sortOrder.set(this._defaultSortOrder);
@@ -177,7 +204,7 @@ export class PrTableComponent {
   }
 
   private resolve(row: unknown, field: string): unknown {
-    if (row == null) return null;
+    if (row == null || !field) return null;
     if (!field.includes('.')) return (row as Record<string, unknown>)[field];
     return field.split('.').reduce<unknown>((acc, key) => (acc == null ? acc : (acc as Record<string, unknown>)[key]), row);
   }

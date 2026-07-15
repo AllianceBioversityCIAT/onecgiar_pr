@@ -8,7 +8,6 @@ import { InstitutionsPipesModule } from './pipes/institutions-pipes.module';
 import { RdAnnualUpdatingComponent } from './components/rd-annual-updating/rd-annual-updating.component';
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
 import { PrDialogComponent } from '../../../../../../shared/components/pr-dialog/pr-dialog.component';
-import { TableModule } from 'primeng/table';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
 import { ConfirmationKPComponent } from './components/confirmation-kp/confirmation-kp.component';
 import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
@@ -24,7 +23,6 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../shared/dire
     InstitutionsPipesModule,
     FeedbackValidationDirectiveModule,
     PrDialogComponent,
-    TableModule,
     PdfIconModule,
   ]
 })

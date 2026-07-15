@@ -1,5 +1,5 @@
 import { Component, Input, computed, inject } from '@angular/core';
-import { PrTableComponent } from './pr-table.component';
+import { PR_TABLE_HOST } from './pr-table.host';
 
 /**
  * pr-sort-icon — mirrors PrimeNG `<p-sortIcon field="x">`. Reads the parent
@@ -21,7 +21,7 @@ import { PrTableComponent } from './pr-table.component';
   ]
 })
 export class PrSortIconComponent {
-  private readonly table = inject(PrTableComponent);
+  private readonly table = inject(PR_TABLE_HOST);
   @Input() field = '';
 
   readonly state = computed(() => (this.table.activeSortField() === this.field ? this.table.activeSortOrder() : 0));

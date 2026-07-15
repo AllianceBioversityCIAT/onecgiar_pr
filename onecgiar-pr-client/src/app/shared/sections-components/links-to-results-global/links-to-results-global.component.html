@@ -13,34 +13,32 @@
     <i class="material-icons-round">search</i>
     <input type="text" placeholder="Find result..." [(ngModel)]="this.text_to_search" />
   </div>
-  <p-table
+  <app-pr-table
     id="resultListTable"
     sortField="result_code"
     [sortOrder]="-1"
     [value]="
       this.api.dataControlSE.resultsList | filterResultNotLinked: this.linksToResultsBody.links : this.combine : counterPipe : this.text_to_search
     "
-    responsiveLayout="scroll"
     [paginator]="
       (this.api.dataControlSE.resultsList | filterResultNotLinked: this.linksToResultsBody.links : this.combine : counterPipe : this.text_to_search)
         ?.length
     "
     [rows]="5"
-    styleClass="p-datatable-gridlines p-datatable-sm"
     selectionMode="single"
     [rowsPerPageOptions]="[5, 50, 100]">
-    <ng-template pTemplate="header">
+    <ng-template prTableHeader>
       <tr>
-        <th id="result_code" (click)="validateOrder('result_code')" pSortableColumn="result_code">
-          <p-sortIcon field="result_code"></p-sortIcon>Result code
+        <th id="result_code" (click)="validateOrder('result_code')" prSortableColumn="result_code">
+          <pr-sort-icon field="result_code"></pr-sort-icon>Result code
         </th>
-        <th [id]="column.attr" (click)="validateOrder(column.attr)" pSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
-          <p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}
+        <th [id]="column.attr" (click)="validateOrder(column.attr)" [prSortableColumn]="column.attr" *ngFor="let column of columnOrder">
+          <pr-sort-icon [field]="column.attr"></pr-sort-icon>{{ column.title }}
         </th>
         <th id="action">Action</th>
       </tr>
     </ng-template>
-    <ng-template pTemplate="body" let-result>
+    <ng-template prTableBody let-result>
       <tr>
         <td>
           {{ result?.result_code }}
@@ -55,7 +53,7 @@
 
               <div class="new_tag pr-body-3" *ngIf="i == 0 && subResult.is_new">New</div>
 
-              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd') }}
+              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd') }}
             </a>
           </ng-container>
         </td>
@@ -82,7 +80,7 @@
         </td>
       </tr>
     </ng-template>
-  </p-table>
+  </app-pr-table>
 
   <div
     class="total"

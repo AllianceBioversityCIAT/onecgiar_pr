@@ -43,7 +43,7 @@
           @for (column of columnOrder; track $index) {
             <td [class]="column.attr" style="min-height: 72px; height: 100%">
               <a [class]="column.class">
-                {{ column.attr !== 'created_date' ? result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd') }}
+                {{ column.attr !== 'created_date' ? result[column.attr] : (result[column.attr] | date: 'yyyy-MM-dd') }}
               </a>
 
               <div class="transparent_text">

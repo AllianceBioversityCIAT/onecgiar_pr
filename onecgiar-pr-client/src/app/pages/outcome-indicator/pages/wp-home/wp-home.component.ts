@@ -6,9 +6,18 @@ import { OutcomeIndicatorService } from '../../services/outcome-indicator.servic
 import { FormsModule } from '@angular/forms';
 import { FilterIndicatorBySearchPipe } from '../../pipes/filter-indicator-by-search.pipe';
 import { CustomSpinnerModule } from '../../../../shared/components/custom-spinner/custom-spinner.module';
-import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
-import { TableModule } from 'primeng/table';
+import {
+  PrGroupTableComponent,
+  PrTableHeaderDirective,
+  PrTableGroupHeaderDirective,
+  PrTableExpandedRowDirective,
+  PrTableEmptyDirective,
+  PrTableLoadingDirective,
+  PrSortableColumnDirective,
+  PrSortIconComponent,
+  PrRowTogglerDirective
+} from '../../../../shared/components/pr-table';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { PrToastService } from 'src/app/shared/components/pr-toast';
@@ -17,8 +26,15 @@ import { PrToastService } from 'src/app/shared/components/pr-toast';
     selector: 'app-wp-home',
     imports: [
         CommonModule,
-        TableModule,
-        ButtonModule,
+        PrGroupTableComponent,
+        PrTableHeaderDirective,
+        PrTableGroupHeaderDirective,
+        PrTableExpandedRowDirective,
+        PrTableEmptyDirective,
+        PrTableLoadingDirective,
+        PrSortableColumnDirective,
+        PrSortIconComponent,
+        PrRowTogglerDirective,
         HlmButton,
         CustomSpinnerModule,
         RouterLink,

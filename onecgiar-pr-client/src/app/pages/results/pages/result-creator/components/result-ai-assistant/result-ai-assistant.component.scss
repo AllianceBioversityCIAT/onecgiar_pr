@@ -128,3 +128,41 @@ p {
   width: 100%;
   padding-top: 10px;
 }
+
+.pr-mini-paginator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--pr-color-accents-2);
+    border-radius: 6px;
+    background: var(--pr-color-white);
+    cursor: pointer;
+    color: var(--pr-color-secondary-400);
+    transition: background-color 0.15s ease-in-out;
+
+    &:hover:not(:disabled) {
+      background: var(--pr-color-accents-1);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    i {
+      font-size: 18px;
+    }
+  }
+
+  &__label {
+    font-size: 12px;
+    color: var(--pr-color-accents-6);
+  }
+}

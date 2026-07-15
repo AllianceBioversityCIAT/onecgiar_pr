@@ -3,6 +3,17 @@
 .pr-table-wrap {
   width: 100%;
   overflow-x: auto;
+
+  // Vertical-scroll mode ([scrollable] / scrollHeight): the header stays put.
+  &--scroll {
+    overflow-y: auto;
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+  }
 }
 
 .pr-table {

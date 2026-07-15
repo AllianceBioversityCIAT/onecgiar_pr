@@ -7,7 +7,13 @@ import { TargetIndicatorComponent } from './target-indicator/target-indicator.co
 import { ImpactAreaTargetsComponent } from './impact-area-targets/impact-area-targets.component';
 import { SdgTargetsComponent } from './sdg-targets/sdg-targets.component';
 import { ActionAreaOutcomeComponent } from './action-area-outcome/action-area-outcome.component';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective
+} from 'src/app/shared/components/pr-table';
 import { RouterModule } from '@angular/router';
 import { MultipleWPsComponent } from './multiple-wps/multiple-wps.component';
 import { MultipleWPsContentComponent } from './multiple-wps/components/multiple-wps-content/multiple-wps-content.component';
@@ -30,6 +36,17 @@ import { FilterOutcomeLevelByBooleanPipe } from './multiple-wps/components/multi
     FilterOutcomeLevelByBooleanPipe
   ],
   exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent],
-  imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule, RouterModule, PrDialogComponent]
+  imports: [
+    CommonModule,
+    CustomFieldsModule,
+    FeedbackValidationDirectiveModule,
+    PrTableComponent,
+    PrSortIconComponent,
+    PrSortableColumnDirective,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    RouterModule,
+    PrDialogComponent
+  ]
 })
 export class TocInitiativeOutModule {}

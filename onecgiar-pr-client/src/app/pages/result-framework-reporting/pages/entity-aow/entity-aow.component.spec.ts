@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { EntityAowComponent } from './entity-aow.component';
-import { ProgressBarModule } from 'primeng/progressbar';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { EntityAowService } from './services/entity-aow.service';
@@ -21,7 +20,7 @@ describe('EntityAowComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [EntityAowComponent, ProgressBarModule, RouterTestingModule, HttpClientTestingModule],
+      imports: [EntityAowComponent, RouterTestingModule, HttpClientTestingModule],
       providers: [{ provide: EntityAowService, useValue: entityAowServiceMock }]
     }).compileComponents();
 

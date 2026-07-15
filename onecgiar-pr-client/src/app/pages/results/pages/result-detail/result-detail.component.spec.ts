@@ -3,8 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ResultDetailComponent } from './result-detail.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
 import { NoEditContainerComponent } from './components/no-edit-container/no-edit-container.component';
 import { PartnersRequestComponent } from './components/partners-request/partners-request.component';
 import { UnsubmitModalComponent } from './components/unsubmit-modal/unsubmit-modal.component';
@@ -18,7 +16,6 @@ import { PrFieldValidationsComponent } from '../../../../custom-fields/pr-field-
 import { PrFieldHeaderComponent } from '../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PdfIconComponent } from '../../../../shared/icon-components/pdf-icon/pdf-icon.component';
 import { PanelMenuPipe } from './panel-menu/pipes/panel-menu.pipe';
-import { DialogModule } from 'primeng/dialog';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CurrentResultService } from '../../../../shared/services/current-result.service';
 import { GreenChecksService } from '../../../../shared/services/global/green-checks.service';
@@ -117,13 +114,10 @@ describe('ResultDetailComponent', () => {
       imports: [
         HttpClientTestingModule,
         RouterTestingModule,
-        ToastModule,
-        DialogModule,
         PageHeaderComponent,
         ClipboardModule
       ],
       providers: [
-        MessageService,
         {
           provide: ApiService,
           useValue: mockApiService

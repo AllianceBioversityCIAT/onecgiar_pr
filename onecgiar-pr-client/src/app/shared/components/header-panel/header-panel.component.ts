@@ -7,7 +7,7 @@ import { environment } from '../../../../environments/environment';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
 import { Router, RouterModule } from '@angular/router';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
-import { SatPopoverModule } from '@ncstate/sat-popover';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { CommonModule } from '@angular/common';
 import { PopUpNotificationItemComponent } from './components/pop-up-notification-item/pop-up-notification-item.component';
 import { TawkComponent } from '../tawk/tawk.component';
@@ -20,7 +20,7 @@ import { NavigationBarComponent } from '../navigation-bar/navigation-bar.compone
   standalone: true,
   imports: [
     CommonModule,
-    SatPopoverModule,
+    OverlayModule,
     PopUpNotificationItemComponent,
     TawkComponent,
     NavigationBarComponent,
@@ -33,6 +33,14 @@ export class HeaderPanelComponent implements OnInit {
   myInitiativesListP22 = computed(() => this.api.dataControlSE.myInitiativesList);
   closedInitiativeCodes = new Set<string>();
   isSearchMode = signal(false);
+
+  // CDK Overlay open state (replaces sat-popover ref.isOpen())
+  userMenuOpen = signal(false);
+  notificationsOpen = signal(false);
+
+  // Overlay connected positions (mirror the previous sat-popover alignment)
+  readonly userMenuPositions: ConnectedPosition[] = [{ originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top' }];
+  readonly notificationsPositions: ConnectedPosition[] = [{ originX: 'center', overlayX: 'center', originY: 'bottom', overlayY: 'top' }];
 
   // Dashboard layout: shift the navbar to the right of a full-height sidebar
   private readonly layoutSE = inject(LayoutService);

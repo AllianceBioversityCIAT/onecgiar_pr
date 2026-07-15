@@ -4,7 +4,6 @@ import { StepN3Component } from './step-n3.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { Router } from '@angular/router';
-import { CheckboxModule } from 'primeng/checkbox';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { StepN4ReferenceMaterialLinksComponent } from '../step-n4/components/step-n4-reference-material-links/step-n4-reference-material-links.component';
 
@@ -21,7 +20,7 @@ describe('StepN3Component', () => {
 
     await TestBed.configureTestingModule({
       declarations: [StepN3Component, StepN4ReferenceMaterialLinksComponent],
-      imports: [HttpClientTestingModule, CheckboxModule, CustomFieldsModule],
+      imports: [HttpClientTestingModule, CustomFieldsModule],
       providers: [
         {
           provide: Router,

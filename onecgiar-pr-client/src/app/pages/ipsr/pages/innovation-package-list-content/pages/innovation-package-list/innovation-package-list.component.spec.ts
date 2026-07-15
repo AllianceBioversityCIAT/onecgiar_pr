@@ -1,6 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TableModule } from 'primeng/table';
-import { MenuModule } from 'primeng/menu';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
@@ -18,7 +16,6 @@ import { PrButtonComponent } from '../../../../../../custom-fields/pr-button/pr-
 import { SectionHeaderComponent } from '../../../../components/section-header/section-header.component';
 import { InnovationPackageListFilterPipe } from './components/innovation-package-custom-table/pipes/innovation-package-list-filter.pipe';
 import { UpdateIpsrResultModalComponent } from './components/update-ipsr-result-modal/update-ipsr-result-modal.component';
-import { DialogModule } from 'primeng/dialog';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { IpsrToUpdateFilterPipe } from './components/update-ipsr-result-modal/ipsr-to-update-filter.pipe';
 import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
@@ -63,7 +60,7 @@ describe('InnovationPackageListComponent', () => {
           }
         }
       ],
-      imports: [HttpClientTestingModule, TableModule, MenuModule, DialogModule]
+      imports: [HttpClientTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(InnovationPackageListComponent);

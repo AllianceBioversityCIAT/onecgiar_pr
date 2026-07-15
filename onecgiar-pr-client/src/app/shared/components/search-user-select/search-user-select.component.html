@@ -1,68 +1,71 @@
 <div class="select-container">
-  <label class="select-label" for="user-select-dropdown"> Select a user: <span class="required">*</span> </label>
+  <label class="select-label" for="user-search-trigger"> Select a user: <span class="required">*</span> </label>
 
-  <p-select
-    id="user-select-dropdown"
-    [options]="options()"
-    [(ngModel)]="selectedUser"
-    placeholder="Select a user"
-    optionLabel="formattedName"
-    [filter]="true"
-    [loading]="isLoading()"
-    (onShow)="onDropdownShow()"
-    (onHide)="onDropdownHide()"
-    (onChange)="onUserChange($event.value)"
-    [style]="{ width: '100%' }">
-    <!-- Custom Filter Template -->
-    <ng-template pTemplate="filter" let-options="options">
-      <div class="custom-filter-container" (click)="$event.stopPropagation()">
-        <p-iconfield [style]="{ width: '100%' }">
-          <p-inputicon styleClass="pi pi-search" />
+  <div class="custom_select">
+    <a class="field" tabindex="0" id="user-search-trigger" (focus)="onDropdownShow()">
+      <div class="text pr-body-2" [ngClass]="{ select_placeholder: !selectedUser() }">
+        @if (selectedUser()) {
+          {{ selectedUser().sn }}, {{ selectedUser().givenName }} ({{ selectedUser().mail }})
+        } @else {
+          Select a user
+        }
+      </div>
+
+      <div class="icon_container"></div>
+      <i class="pi pi-chevron-down icon_dropdown"></i>
+
+      <div class="remove_focus" (click)="removeFocus()"></div>
+
+      <div class="options">
+        <!-- Search input (native) -->
+        <div class="search_input_container" (click)="$event.stopPropagation()">
+          <span class="material-icons-round search_icon">search</span>
           <input
             type="text"
-            pInputText
+            hlmInput
             placeholder="Search users... (min 3 characters)"
             [(ngModel)]="filterValue"
-            (keyup)="customFilterFunction($event, options)"
-            style="height: 38px; width: 100%" />
-        </p-iconfield>
-        @if (filterValue) {
-          <button hlmBtn variant="ghost" size="icon-sm" (click)="resetFilter(options)"><i class="pi pi-times"></i></button>
-        }
-      </div>
-    </ng-template>
+            (keyup)="customFilterFunction($event)"
+            style="width: 100%" />
+          @if (filterValue) {
+            <button hlmBtn variant="ghost" size="icon-sm" class="reset_button" (click)="resetFilter()"><i class="pi pi-times"></i></button>
+          }
+        </div>
 
-    <!-- Item Template -->
-    <ng-template let-option pTemplate="item">
-      <div class="user-option">
-        <div class="user-display-name">{{ option.sn }}, {{ option.givenName }} ({{ option.mail }})</div>
-      </div>
-    </ng-template>
-
-    <!-- Empty Template -->
-    <ng-template pTemplate="empty">
-      <div class="empty-message">
-        @if (isLoading()) {
-          <div>
-            <i class="pi pi-spin pi-spinner"></i>
-            <span>Searching users...</span>
-          </div>
-        } @else {
-          @if (showMinCharsMessage()) {
-            <div>
-              <i class="pi pi-info-circle"></i>
-              <span>Please enter at least 3 characters to search</span>
+        <!-- Options list -->
+        <div class="options_list custom_scroll">
+          @if (isLoading()) {
+            <div class="empty-message">
+              <div>
+                <i class="pi pi-spin pi-spinner"></i>
+                <span>Searching users...</span>
+              </div>
             </div>
+          } @else if (options().length) {
+            @for (option of options(); track option) {
+              <div class="option pr-body-2" (click)="onUserChange(option); removeFocus()">
+                <div class="user-display-name">{{ option.sn }}, {{ option.givenName }} ({{ option.mail }})</div>
+              </div>
+            }
           } @else {
-            <div>
-              <i class="pi pi-exclamation-triangle"></i>
-              <span>No users found. Try a different search term.</span>
+            <div class="empty-message">
+              @if (showMinCharsMessage()) {
+                <div>
+                  <i class="pi pi-info-circle"></i>
+                  <span>Please enter at least 3 characters to search</span>
+                </div>
+              } @else {
+                <div>
+                  <i class="pi pi-exclamation-triangle"></i>
+                  <span>No users found. Try a different search term.</span>
+                </div>
+              }
             </div>
           }
-        }
+        </div>
       </div>
-    </ng-template>
-  </p-select>
+    </a>
+  </div>
 </div>
 
 <!-- Expandable space INSTANT (no animation) -->

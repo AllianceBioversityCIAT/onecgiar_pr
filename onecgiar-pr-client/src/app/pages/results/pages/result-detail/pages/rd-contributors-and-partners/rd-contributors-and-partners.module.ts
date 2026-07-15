@@ -12,10 +12,15 @@ import { CPMultipleWPsComponent } from './components/multiple-wps/multiple-wps.c
 import { CPMultipleWPsContentComponent } from './components/multiple-wps/components/multiple-wps-content/multiple-wps-content.component';
 import { CPMappedResultsModalComponent } from './components/multiple-wps/components/mapped-results-modal/mapped-results-modal.component';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective
+} from 'src/app/shared/components/pr-table';
 import { CPKnowledgeProductSelectorComponent } from './components/multiple-wps/components/knowledge-product-selector/knowledge-product-selector.component';
 import { CPNormalSelectorComponent } from './components/multiple-wps/components/normal-selector/normal-selector.component';
-import { SelectModule } from 'primeng/select';
 @NgModule({
   declarations: [
     RdContributorsAndPartnersComponent,
@@ -35,9 +40,12 @@ import { SelectModule } from 'primeng/select';
     TermPipe,
     RdTheoryOfChangeModule,
     PrDialogComponent,
-    TableModule,
-    JsonPipe,
-    SelectModule
+    PrTableComponent,
+    PrSortIconComponent,
+    PrSortableColumnDirective,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    JsonPipe
   ],
   exports: [CPMultipleWPsComponent, CPKnowledgeProductSelectorComponent, CPNormalSelectorComponent]
 })

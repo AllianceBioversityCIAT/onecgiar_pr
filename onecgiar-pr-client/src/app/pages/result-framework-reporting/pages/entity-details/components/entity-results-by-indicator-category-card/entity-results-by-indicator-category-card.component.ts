@@ -1,12 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, Input, output } from '@angular/core';
-import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
 import { CommonModule } from '@angular/common';
 import { EntityAowService } from '../../../entity-aow/services/entity-aow.service';
 
 @Component({
   selector: 'app-entity-results-by-indicator-category-card',
-  imports: [ButtonModule, HlmButton, CommonModule],
+  imports: [HlmButton, CommonModule],
   templateUrl: './entity-results-by-indicator-category-card.component.html',
   styleUrl: './entity-results-by-indicator-category-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

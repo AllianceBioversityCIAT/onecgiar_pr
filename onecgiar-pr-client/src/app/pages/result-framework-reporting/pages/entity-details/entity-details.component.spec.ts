@@ -414,21 +414,13 @@ describe('EntityDetailsComponent', () => {
     });
   });
 
-  describe('SplitButton', () => {
-    it('should have reportMenuItems configured correctly', () => {
-      expect(component.reportMenuItems).toBeDefined();
-      expect(component.reportMenuItems.length).toBe(3);
-      expect(component.reportMenuItems[0].label).toBe('AI Assistant');
-      expect(component.reportMenuItems[0].disabled).toBe(true);
-      expect(component.reportMenuItems[2].label).toBe('Unplanned result');
-    });
+  describe('onReportRequested', () => {
+    it('should open the report modal and set the pending result type', () => {
+      const item = { resultTypeId: 7, resultTypeName: 'Innovation development' };
 
-    it('should open modal when Unplanned result menu item command is executed', () => {
-      const unplannedResultItem = component.reportMenuItems[2];
-      expect(unplannedResultItem.command).toBeDefined();
+      component.onReportRequested(item);
 
-      const mockEvent = { item: unplannedResultItem } as any;
-      unplannedResultItem.command?.(mockEvent);
+      expect(resultLevelServiceMock.setPendingResultType).toHaveBeenCalledWith(7, 'Innovation development');
       expect(component.showReportModal()).toBe(true);
     });
   });

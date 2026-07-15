@@ -2,8 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MappedResultsModalComponent } from './mapped-results-modal.component';
 import { MappedResultsModalServiceService } from './mapped-results-modal-service.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { TableModule } from 'primeng/table';
-import { DialogModule } from 'primeng/dialog';
 
 jest.useFakeTimers();
 
@@ -22,7 +20,7 @@ describe('MappedResultsModalComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [MappedResultsModalComponent],
-      imports: [HttpClientTestingModule, TableModule, DialogModule],
+      imports: [HttpClientTestingModule],
       providers: [{ provide: 'Window', useValue: window }]
     }).compileComponents();
 

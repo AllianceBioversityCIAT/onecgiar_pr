@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { SaveButtonComponent } from './save-button.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { MessageService } from 'primeng/api';
 
 describe('SaveButtonComponent', () => {
   let component: SaveButtonComponent;
@@ -12,7 +11,7 @@ describe('SaveButtonComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [SaveButtonComponent],
       imports: [HttpClientTestingModule],
-      providers: [MessageService]
+      providers: []
     }).compileComponents();
 
     fixture = TestBed.createComponent(SaveButtonComponent);

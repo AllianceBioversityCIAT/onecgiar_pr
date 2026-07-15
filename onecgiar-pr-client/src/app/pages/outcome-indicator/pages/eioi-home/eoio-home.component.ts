@@ -1,8 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective,
+  PrTableLoadingDirective
+} from '../../../../shared/components/pr-table';
 import { ApiService } from '../../../../shared/services/api/api.service';
-import { ButtonModule } from 'primeng/button';
 import { CustomSpinnerModule } from '../../../../shared/components/custom-spinner/custom-spinner.module';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -16,8 +23,13 @@ import { PrToastService } from 'src/app/shared/components/pr-toast';
     selector: 'app-eioi-home',
     imports: [
         CommonModule,
-        TableModule,
-        ButtonModule,
+        PrTableComponent,
+        PrSortIconComponent,
+        PrSortableColumnDirective,
+        PrTableHeaderDirective,
+        PrTableBodyDirective,
+        PrTableEmptyDirective,
+        PrTableLoadingDirective,
         CustomSpinnerModule,
         RouterLink,
         FilterIndicatorBySearchPipe,

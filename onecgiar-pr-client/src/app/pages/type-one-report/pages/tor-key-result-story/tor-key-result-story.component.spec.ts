@@ -9,7 +9,6 @@ import { TypeOneReportService } from '../../type-one-report.service';
 import { SaveButtonComponent } from '../../../../custom-fields/save-button/save-button.component';
 import { SimpleTableWithClipboardComponent } from '../../../../shared/components/simple-table-with-clipboard/simple-table-with-clipboard.component';
 import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
-import { TooltipModule } from 'primeng/tooltip';
 import { TorKrsPrimaryImpactAreaSelectorComponent } from '../../../../shared/components/simple-table-with-clipboard/components/tor-krs-primary-impact-area-selector/tor-krs-primary-impact-area-selector.component';
 import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select.component';
 import { LabelNamePipe } from '../../../../custom-fields/pr-select/label-name.pipe';
@@ -17,7 +16,6 @@ import { ListFilterByTextAndAttrPipe } from '../../../../custom-fields/pr-multi-
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { FormsModule } from '@angular/forms';
 import { PrFieldHeaderComponent } from '../../../../custom-fields/pr-field-header/pr-field-header.component';
-import { ToastModule } from 'primeng/toast';
 import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
 
 describe('TorKeyResultStoryComponent', () => {
@@ -73,7 +71,7 @@ describe('TorKeyResultStoryComponent', () => {
         ListFilterByTextAndAttrPipe,
         PrFieldHeaderComponent
       ],
-      imports: [HttpClientTestingModule, TooltipModule, ScrollingModule, FormsModule, ToastModule],
+      imports: [HttpClientTestingModule, ScrollingModule, FormsModule],
       providers: [
         {
           provide: ApiService,

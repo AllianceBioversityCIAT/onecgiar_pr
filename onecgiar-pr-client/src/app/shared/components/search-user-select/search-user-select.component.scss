@@ -18,22 +18,146 @@
   margin-left: 2px;
 }
 
-.user-option {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 0;
-}
+// Native select (mirrors custom-fields/pr-select — focus-within opens the panel)
+.custom_select {
+  .field {
+    display: flex;
+    justify-content: space-between;
+    border: 1px solid var(--pr-color-neutral-1000);
+    padding: 8px 10px;
+    padding-right: 15px;
+    border-radius: 5px;
+    align-items: center;
+    position: relative;
+    background-color: var(--pr-color-white);
+    @include fonts.pr-typography('body-1');
+    font-family: 'Poppins', sans-serif !important;
+    width: 100%;
+    cursor: pointer;
+    outline: none;
 
-.user-display-name {
-  font-weight: 500;
-  color: var(--pr-color-accents-7);
-  @include fonts.pr-typography('body-2');
-}
+    .text {
+      padding-right: 15px;
 
-.user-email {
-  @include fonts.pr-typography('body-2');
-  color: var(--pr-color-accents-5);
+      &.select_placeholder {
+        color: var(--pr-color-accents-5);
+      }
+    }
+
+    .remove_focus {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    &:focus-within {
+      .options {
+        display: flex;
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      .remove_focus {
+        display: block;
+      }
+    }
+
+    .options {
+      transform: scale(0);
+      opacity: 0;
+      position: absolute;
+      background-color: var(--pr-color-white);
+      max-height: 300px;
+      box-shadow: 0px 0px 5px var(--pr-color-neutral-1000);
+      width: 100%;
+      left: 0;
+      top: calc(100% + 4px);
+      z-index: 3;
+      flex-direction: column;
+
+      .search_input_container {
+        width: 100%;
+        padding: 8px 10px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--pr-color-accents-2);
+
+        .search_icon {
+          position: absolute;
+          left: 18px;
+          font-size: 18px;
+          color: var(--pr-color-accents-4);
+          pointer-events: none;
+        }
+
+        input {
+          padding-left: 32px;
+        }
+
+        .reset_button {
+          height: 32px;
+          width: 32px;
+          min-width: 32px;
+          padding: 0;
+          flex-shrink: 0;
+        }
+      }
+
+      .options_list {
+        max-height: 240px;
+        width: 100%;
+        overflow-y: auto;
+
+        .option {
+          cursor: pointer;
+          color: var(--pr-color-accents-5);
+          text-align: left;
+          padding: 8px 10px;
+          display: flex;
+          align-items: center;
+          position: relative;
+
+          &:hover {
+            background-color: var(--pr-color-accents-1);
+          }
+
+          .user-display-name {
+            font-weight: 500;
+            color: var(--pr-color-accents-7);
+            @include fonts.pr-typography('body-2');
+          }
+        }
+      }
+    }
+
+    i {
+      color: var(--pr-color-secondary-300);
+      height: min-content;
+    }
+  }
+
+  .icon_container {
+    position: absolute;
+    right: 0;
+    background-color: var(--pr-color-primary-300);
+    width: 43px;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 3px;
+  }
+
+  .icon_dropdown {
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
+    color: var(--pr-color-white) !important;
+  }
 }
 
 .empty-message {
@@ -48,12 +172,12 @@
   div {
     display: flex;
     align-items: center;
-    gap: 12px; // Aumenté de 8px a 12px para más espacio
+    gap: 12px;
   }
 
   i {
     font-size: 16px;
-    flex-shrink: 0; // Evita que el ícono se comprima
+    flex-shrink: 0;
 
     &.pi-spin {
       color: var(--pr-color-blue-500);
@@ -65,7 +189,7 @@
 
     &.pi-exclamation-triangle {
       color: var(--pr-color-red-300);
-      margin-right: 4px; // Margen adicional específico para el ícono de advertencia
+      margin-right: 4px;
     }
   }
 }
@@ -76,52 +200,8 @@
   height: 0;
   overflow: hidden;
   background: transparent;
-  // NO transition = instant expansion
 
   &.expanded {
     height: 300px;
-  }
-}
-
-// Fixed height for testing - no animation
-.expandable-space-fixed {
-  width: 100%;
-  height: 300px;
-  background: transparent;
-}
-
-// Custom filter container
-.custom-filter-container {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 12px;
-  background: var(--pr-color-accents-1);
-  border-bottom: 1px solid var(--pr-color-accents-2);
-
-  .p-inputgroup {
-    flex: 1;
-  }
-
-  .p-inputgroup-addon {
-    background: var(--pr-color-accents-2);
-    border-color: var(--pr-color-neutral-1000);
-    color: var(--pr-color-secondary-200);
-  }
-
-  .p-inputtext {
-    border-color: var(--pr-color-neutral-1000);
-
-    &:focus {
-      border-color: var(--pr-color-blue-500);
-      box-shadow: 0 0 0 2px rgba(var(--pr-color-blue-rgb), 0.1);
-    }
-  }
-
-  .p-button {
-    height: 32px;
-    width: 32px;
-    padding: 0;
-    min-width: 32px;
   }
 }

@@ -10,7 +10,6 @@ import { SearchUser } from '../../../../../../shared/interfaces/search-user.inte
 import { InitiativesService } from '../../../../../../shared/services/global/initiatives.service';
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 import { UserRolesInfoModalComponent } from '../../../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
-import { SelectModule } from 'primeng/select';
 
 interface AddUserForm {
   activate: boolean;
@@ -36,7 +35,6 @@ interface AddUserForm {
     PrDialogComponent,
     CustomFieldsModule,
     SearchUserSelectComponent,
-    SelectModule,
     UserRolesInfoModalComponent
   ],
   templateUrl: './manage-user-modal.component.html',
@@ -161,6 +159,21 @@ export class ManageUserModalComponent {
     }
 
     return result;
+  }
+
+  // Reshape the nested groups from getAvailableEntities() into the FLAT list that
+  // app-pr-select [group] expects: an {isLabel:true, name} header row per group,
+  // followed by its entity rows (each with a precomputed `display_label`).
+  getGroupedEntities(currentIndex: number) {
+    const groups = this.getAvailableEntities(currentIndex);
+    const flat: any[] = [];
+    groups.forEach(group => {
+      flat.push({ isLabel: true, name: group.name });
+      (group.entities || []).forEach(entity => {
+        flat.push({ ...entity, display_label: `${entity.official_code} ${entity.name}` });
+      });
+    });
+    return flat;
   }
 
   onRoleEntityChange(event: number, index: number): void {

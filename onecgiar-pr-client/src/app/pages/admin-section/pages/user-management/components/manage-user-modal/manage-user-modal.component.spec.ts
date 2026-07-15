@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ManageUserModalComponent } from './manage-user-modal.component';
-import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { SearchUserSelectComponent } from '../../../../../../shared/components/search-user-select/search-user-select.component';
 import { InitiativesService } from '../../../../../../shared/services/global/initiatives.service';
@@ -56,7 +55,6 @@ describe('ManageUserModalComponent', () => {
         ManageUserModalComponent,
         CommonModule,
         FormsModule,
-        DialogModule,
         CustomFieldsModule,
         SearchUserSelectComponent,
         HttpClientTestingModule

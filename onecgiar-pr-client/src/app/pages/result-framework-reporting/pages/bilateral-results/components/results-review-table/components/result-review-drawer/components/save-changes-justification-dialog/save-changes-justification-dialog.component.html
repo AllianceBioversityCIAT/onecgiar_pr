@@ -16,7 +16,6 @@
     <div class="modal-field">
       <label class="modal-label required" for="saveChangesJustification">Reason</label>
       <textarea
-        pTextarea
         [ngModel]="justification"
         (ngModelChange)="justificationChange.emit($event)"
         id="saveChangesJustification"

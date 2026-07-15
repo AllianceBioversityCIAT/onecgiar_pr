@@ -1,13 +1,13 @@
 import { Directive, HostBinding, HostListener, Input, inject } from '@angular/core';
-import { PrTableComponent } from './pr-table.component';
+import { PR_TABLE_HOST } from './pr-table.host';
 
 /**
  * prSortableColumn — mirrors PrimeNG `pSortableColumn="field"` on a <th>.
- * Clicking toggles the parent app-pr-table sort for that field.
+ * Clicking toggles the parent table (app-pr-table or app-pr-group-table) sort.
  */
 @Directive({ selector: '[prSortableColumn]', standalone: true })
 export class PrSortableColumnDirective {
-  private readonly table = inject(PrTableComponent);
+  private readonly table = inject(PR_TABLE_HOST);
   @Input('prSortableColumn') field = '';
 
   @HostBinding('style.cursor') readonly cursor = 'pointer';

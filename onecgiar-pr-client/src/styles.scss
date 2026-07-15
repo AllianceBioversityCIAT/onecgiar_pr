@@ -12,6 +12,10 @@
 /* You can add global styles to this file, and also import other style files */
 @import 'primeicons/primeicons.css';
 
+// CDK Overlay positioning styles — required for cdkConnectedOverlay panels
+// (header-panel user menu + notifications) to float anchored to their trigger.
+@import '@angular/cdk/overlay-prebuilt.css';
+
 .globalDisabled {
 opacity: 0.5;
 pointer-events: none;
@@ -96,10 +100,6 @@ color: var(--pr-color-red-500);
 }
 }
 
-.no-margin-top {
-margin-top: 0px !important;
-}
-
 .m-0 {
 margin: 0;
 }
@@ -124,20 +124,6 @@ border: none;
 width: 100%;
 color: var(--pr-color-accents-4);
 }
-}
-
-.w50vw {
-width: 50vw !important;
-}
-
-.w20vw {
-width: 20vw !important;
-}
-
-.divider-50 {
-@extend .dividerStyles;
-margin-top: 40px;
-margin-bottom: 50px;
 }
 
 .divider-20 {
@@ -210,12 +196,6 @@ padding: 0px 10px;
 @include fonts.pr-typography('body-3');
 }
 
-.result-list-state {
-@extend .label-status-styles;
-@include fonts.pr-typography('body-3');
-padding: 3px 10px;
-}
-
 .completeness-submitted {
 background-color: var(--pr-color-primary-300);
 }
@@ -234,14 +214,6 @@ background-color: var(--pr-color-blue-500);
 
 .completeness-discontinued {
 background-color: var(--pr-color-orange-500);
-}
-
-.support_information .p-dialog .p-dialog-content {
-overflow-y: auto !important;
-}
-
-.support_information .p-dialog {
-border: none !important;
 }
 
 .toc_button {
@@ -268,33 +240,6 @@ background-color: var(--pr-color-white);
 border-radius: 10px;
 padding: 2px;
 }
-}
-
-.under-construction-t1r {
-margin-top: 5px;
-display: flex;
-align-items: center;
-gap: 5px;
-font-style: italic;
-color: var(--pr-color-white);
-font-weight: 700;
-background-color: var(--pr-color-primary-200);
-border-radius: 5px 100px 100px 5px;
-width: max-content;
-padding: 2px 5px;
-cursor: default;
-@include fonts.pr-typography('body-3');
-
-img {
-width: 17px;
-background-color: var(--pr-color-white);
-border-radius: 100px;
-padding: 1px;
-}
-}
-
-.p-progressbar.p-component.p-progressbar-indeterminate {
-height: 10px;
 }
 
 .section_final_space {
@@ -353,28 +298,8 @@ border-radius: 10px;
 display: none !important;
 }
 
-.phase_table {
-.p-datatable-wrapper {
-padding-bottom: 250px !important;
-}
-}
-
-.p-calendar {
-input {
-cursor: pointer !important;
-}
-}
-
-.tooltip-w-500 {
-min-width: 500px !important;
-}
-
 .tooltip-w-300 {
 min-width: 300px !important;
-}
-
-.text-underline {
-text-decoration: underline;
 }
 
 .text-semibold {
@@ -392,29 +317,6 @@ color: var(--pr-color-accents-5);
 text-decoration: underline;
 word-break: break-all;
 word-break: break-word;
-}
-
-.p-datatable-tbody > tr > td {
-@include fonts.pr-typography('body-2');
-font-weight: 400;
-}
-
-.p-datatable-thead > tr > th {
-@include fonts.pr-typography('body-2');
-font-weight: 500 !important;
-padding: 0.375rem 0.75rem !important;
-}
-
-.p-datatable-table {
-border-radius: 5px;
-overflow: hidden;
-}
-
-.init-mapped {
-background-color: var(--pr-color-primary-300);
-padding: 0px 7px;
-border-radius: 3px;
-margin-right: 5px;
 }
 
 @function generate-margin-right($value) {
@@ -464,15 +366,6 @@ margin-bottom: generate-margin-right($i) !important;
 html.pr-p25-drawer-scroll-lock,
 body.pr-p25-drawer-scroll-lock {
 overscroll-behavior: none;
-}
-
-body.pr-p25-drawer-scroll-lock {
-.p-datatable-scrollable .p-datatable-wrapper,
-.p-datatable-scrollable .p-datatable-scrollable-body,
-.p-datatable-scrollable .p-datatable-table-container,
-.p-datatable .p-datatable-table-container {
-overflow: hidden !important;
-}
 }
 
 

@@ -55,7 +55,7 @@
 
                 <div class="new_tag" *ngIf="i == 0 && result.is_new && !result.legacy_id">New</div>
                 <div class="new_tag pre" *ngIf="i == 0 && result.legacy_id">Pre 2022</div>
-                {{ column.attr !== 'created_date' ? result[column.attr] : (result[column.attr] | date: 'YYYY-MM-dd') }}
+                {{ column.attr !== 'created_date' ? result[column.attr] : (result[column.attr] | date: 'yyyy-MM-dd') }}
               </a>
             </ng-container>
           </td>

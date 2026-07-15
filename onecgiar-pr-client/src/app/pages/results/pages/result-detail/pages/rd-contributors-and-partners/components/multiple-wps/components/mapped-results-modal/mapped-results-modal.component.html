@@ -32,24 +32,24 @@
         <h1 class="target_info_content_title">Results contributing to the target:</h1>
       </div>
 
-      <p-table id="mappedResultTable" sortField="result_code" [sortOrder]="-1" responsiveLayout="scroll" [rows]="5"
-        styleClass="p-datatable-gridlines" selectionMode="single" [rowsPerPageOptions]="[5,10,15]"
+      <app-pr-table id="mappedResultTable" sortField="result_code" [sortOrder]="-1" [rows]="5"
+        selectionMode="single" [rowsPerPageOptions]="[5,10,15]"
         [value]="this.mappedResultService.isTarget ? this.mappedResultService.targetData.contributors : activeTab?.wpinformation?.wp_info"
         [paginator]="this.mappedResultService.targetData.contributors.length > 5">
 
-        <ng-template pTemplate="header">
+        <ng-template prTableHeader>
           <tr>
-            <th (click)="validateOrder(column.attr)" pSortableColumn="{{column.attr}}"
+            <th (click)="validateOrder(column.attr)" [prSortableColumn]="column.attr"
               *ngFor="let column of this.mappedResultService.columnsOrder" id="{{column.attr}}">
               <p style="margin: 0;">
-                <p-sortIcon field="{{column.attr}}"></p-sortIcon>
+                <pr-sort-icon [field]="column.attr"></pr-sort-icon>
                 {{column.title}}
               </p>
             </th>
           </tr>
         </ng-template>
 
-        <ng-template pTemplate="body" let-target>
+        <ng-template prTableBody let-target>
           <tr>
             <td *ngFor="let column of this.mappedResultService.columnsOrder" class="{{column.attr}}">
               <p [ngClass]="{'open_route': column.link}"
@@ -59,7 +59,7 @@
             </td>
           </tr>
         </ng-template>
-      </p-table>
+      </app-pr-table>
 
       <div *ngIf="this.mappedResultService.isTarget" class="overall_progress_container">
         <h1 class="target_info_content_title">Overall progress against planned target:</h1>

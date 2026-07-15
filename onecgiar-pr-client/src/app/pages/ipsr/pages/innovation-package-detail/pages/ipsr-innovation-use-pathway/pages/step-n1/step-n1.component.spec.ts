@@ -2,13 +2,11 @@ import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testin
 import { StepN1Component } from './step-n1.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-button/pr-button.component';
-import { TooltipModule } from 'primeng/tooltip';
 import { StepN1ConsensusAndConsultationComponent } from './components/step-n1-consensus-and-consultation/step-n1-consensus-and-consultation.component';
 import { PrRadioButtonComponent } from '../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
 import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { FormsModule } from '@angular/forms';
 import { StepN1ExpertsComponent } from './components/step-n1-experts/step-n1-experts.component';
-import { RadioButtonModule } from 'primeng/radiobutton';
 import { NoDataTextComponent } from '../../../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { StepN1ScalingAmbitionBlurbComponent } from './components/step-n1-scaling-ambition-blurb/step-n1-scaling-ambition-blurb.component';
 import { CdkCopyToClipboard } from '@angular/cdk/clipboard';
@@ -18,7 +16,6 @@ import { InnovationUseFormComponent } from '../../../../../../../../shared/compo
 import { StepN1SdgTargetsComponent } from './components/step-n1-sdg-targets/step-n1-sdg-targets.component';
 import { StepN1ImpactAreasComponent } from './components/step-n1-impact-areas/step-n1-impact-areas.component';
 import { GeoscopeManagementComponent } from '../../../../../../../../shared/components/geoscope-management/geoscope-management.component';
-import { ToastModule } from 'primeng/toast';
 import { SaveButtonComponent } from '../../../../../../../../custom-fields/save-button/save-button.component';
 import { FeedbackValidationDirective } from '../../../../../../../../shared/directives/feedback-validation.directive';
 import { of } from 'rxjs';
@@ -134,7 +131,7 @@ describe('StepN1Component', () => {
         SaveButtonComponent,
         FeedbackValidationDirective
       ],
-      imports: [HttpClientTestingModule, TooltipModule, FormsModule, RadioButtonModule, ToastModule, CdkCopyToClipboard, TermPipe],
+      imports: [HttpClientTestingModule, FormsModule, CdkCopyToClipboard, TermPipe],
       providers: [
         {
           provide: ApiService,

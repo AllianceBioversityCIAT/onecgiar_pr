@@ -6,7 +6,7 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
-import { Table } from 'primeng/table';
+import { PrTableComponent } from '../../../../../../shared/components/pr-table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 import { ResultsListFilterService } from './services/results-list-filter.service';
 import { Router } from '@angular/router';
@@ -122,7 +122,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   ];
 
-  @ViewChild('table') table: Table;
+  @ViewChild('table') table: PrTableComponent;
 
   // Action menu overlay state (replaces PrimeNG p-popover)
   menuOpen = signal(false);
@@ -241,14 +241,10 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   private applyDefaultSort(): void {
     if (!this.table) return;
 
-    this.table.sortField = 'result_code';
-    this.table.sortOrder = -1;
-
-    if (typeof this.table.sortSingle === 'function') {
-      this.table.sortSingle();
-    } else if (typeof this.table.sort === 'function') {
-      this.table.sort({ field: 'result_code', order: -1 });
-    }
+    // app-pr-table has no sortSingle/sort({field,order}); the bound [sortField]="result_code"
+    // + [sortOrder]="-1" inputs define the default, and reset() re-asserts that default sort
+    // (and jumps to page 0). See wrapper PrTableComponent.reset().
+    this.table.reset();
   }
 
   unSelectInits() {

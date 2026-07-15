@@ -34,12 +34,11 @@
         [style]="{ marginBottom: '10px', width: 'max-content' }"></app-pr-button>
     </div>
 
-    <p-table
+    <app-pr-table
       id="resultListTable"
       #dt1
       sortField="submitter"
       [sortOrder]="1"
-      responsiveLayout="scroll"
       [value]="this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value"
       [paginator]="
         (this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value)?.length
@@ -48,7 +47,7 @@
       styleClass="p-datatable-gridlines p-datatable-sm"
       [rowsPerPageOptions]="[10, 50, 100]"
       [first]="this.indicatorDetailsService.textToSearch().value && 0">
-      <ng-template pTemplate="header">
+      <ng-template prTableHeader>
         <tr>
           @for (column of columnOrder; track column.attr; let i = $index) {
             @switch (i) {
@@ -99,7 +98,7 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="body" let-result>
+      <ng-template prTableBody let-result>
         <tr style="height: 62px">
           @for (column of columnOrder; track column.attr) {
             <td [class]="column.attr" style="max-width: 440px">
@@ -110,7 +109,7 @@
                       {{ result[column.attr] }} {{ result['create_last_name'] }}
                     }
                     @case ('created_date') {
-                      {{ result[column.attr] | date: 'YYYY-MM-dd' }}
+                      {{ result[column.attr] | date: 'yyyy-MM-dd' }}
                     }
                     @default {
                       {{ result[column.attr] }}
@@ -143,12 +142,12 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="emptymessage">
+      <ng-template prTableEmpty>
         <tr style="height: 200px">
           <td colspan="9" class="modal_noDataText">There are no results for the selected filters.</td>
         </tr>
       </ng-template>
-    </p-table>
+    </app-pr-table>
 
     @if ((this.indicatorDetailsService.indicatorResults() | appFilterIndicatorResults: this.indicatorDetailsService.textToSearch().value)?.length) {
       <div class="modal_total">

@@ -39,7 +39,7 @@
       <td class="text-center" [ngClass]="{ removed: item?.is_active === false }">{{ item?.status_name }}</td>
       @if (item?.is_added) {
         <td class="text-center" style="white-space: nowrap" [ngClass]="{ removed: item?.is_active === false }">
-          {{ item?.created_date | date: 'YYYY-MM-dd' }}
+          {{ item?.created_date | date: 'yyyy-MM-dd' }}
         </td>
       } @else {
         <td class="text-center" style="white-space: nowrap" [ngClass]="{ removed: item?.is_active === false }">{{ item?.created_date }}</td>

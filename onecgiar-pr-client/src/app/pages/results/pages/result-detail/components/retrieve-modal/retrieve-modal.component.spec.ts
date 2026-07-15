@@ -6,10 +6,8 @@ import { PrButtonComponent } from '../../../../../../custom-fields/pr-button/pr-
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { LabelNamePipe } from '../../../../../../custom-fields/pr-select/label-name.pipe';
 import { ListFilterByTextAndAttrPipe } from '../../../../../../custom-fields/pr-multi-select/pipes/list-filter-by-text-and-attr.pipe';
-import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
 import { ScrollingModule } from '@angular/cdk/scrolling';
-import { TooltipModule } from 'primeng/tooltip';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
@@ -73,9 +71,7 @@ describe('RetrieveModalComponent', () => {
       imports: [
         HttpClientTestingModule,
         FormsModule,
-        DialogModule,
         ScrollingModule,
-        TooltipModule,
         RouterTestingModule,
       ],
       providers: [

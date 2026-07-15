@@ -4,7 +4,6 @@ import { StepN4PartnerCoInvestmentTableComponent } from './step-n4-partner-co-in
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { StepN4AddPartnerComponent } from './modal/step-n4-add-partner/step-n4-add-partner.component';
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
-import { DialogModule } from 'primeng/dialog';
 
 describe('StepN4PartnerCoInvestmentTableComponent', () => {
   let component: StepN4PartnerCoInvestmentTableComponent;
@@ -13,7 +12,7 @@ describe('StepN4PartnerCoInvestmentTableComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [StepN4PartnerCoInvestmentTableComponent, StepN4AddPartnerComponent],
-      imports: [HttpClientTestingModule, CustomFieldsModule, DialogModule]
+      imports: [HttpClientTestingModule, CustomFieldsModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(StepN4PartnerCoInvestmentTableComponent);

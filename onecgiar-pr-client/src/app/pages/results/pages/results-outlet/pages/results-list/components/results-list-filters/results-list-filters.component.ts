@@ -19,12 +19,7 @@ import { CommonModule } from '@angular/common';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { PrFilterMultiselectModule } from '../../../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../../../shared/enum/api.enum';
-import { BadgeModule } from 'primeng/badge';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { InputTextModule } from 'primeng/inputtext';
 import { switchMap } from 'rxjs';
-import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
 import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
@@ -266,11 +261,6 @@ const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
     FormsModule,
     PrFilterMultiselectModule,
     CustomFieldsModule,
-    BadgeModule,
-    IconFieldModule,
-    InputIconModule,
-    InputTextModule,
-    ButtonModule,
     HlmButton,
     ReversePipe,
   ]

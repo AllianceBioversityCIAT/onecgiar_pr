@@ -3,8 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TorFactSheetComponent } from './tor-fact-sheet.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { SimpleTableWithClipboardComponent } from '../../../../shared/components/simple-table-with-clipboard/simple-table-with-clipboard.component';
-import { ProgressBarModule } from 'primeng/progressbar';
-import { ToastModule } from 'primeng/toast';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
@@ -76,7 +74,7 @@ describe('TorFactSheetComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [TorFactSheetComponent, SimpleTableWithClipboardComponent, AlertStatusComponent],
-      imports: [HttpClientTestingModule, ProgressBarModule, ToastModule],
+      imports: [HttpClientTestingModule],
       providers: [
         {
           provide: ApiService,

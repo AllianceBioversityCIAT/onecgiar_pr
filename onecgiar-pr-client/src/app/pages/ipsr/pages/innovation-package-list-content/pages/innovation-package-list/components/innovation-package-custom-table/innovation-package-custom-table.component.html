@@ -38,7 +38,7 @@
                 <i class="pi pi-exclamation-triangle"></i>
               </div>
 
-              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd') }}
+              {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd') }}
             </a>
           </ng-container>
         </td>

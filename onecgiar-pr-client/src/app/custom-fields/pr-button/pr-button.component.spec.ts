@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TooltipModule } from 'primeng/tooltip';
 import { PrButtonComponent } from './pr-button.component';
 
 describe('PrButtonComponent', () => {
@@ -9,7 +8,7 @@ describe('PrButtonComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PrButtonComponent],
-      imports: [TooltipModule]
+      imports: []
     }).compileComponents();
 
     fixture = TestBed.createComponent(PrButtonComponent);

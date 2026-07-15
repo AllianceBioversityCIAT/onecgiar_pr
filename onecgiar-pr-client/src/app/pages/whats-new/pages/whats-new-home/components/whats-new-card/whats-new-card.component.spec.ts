@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WhatsNewCardComponent } from './whats-new-card.component';
 import { WhatsNewService } from '../../../../services/whats-new.service';
-import { TooltipModule } from 'primeng/tooltip';
 import { CommonModule } from '@angular/common';
 
 describe('WhatsNewCardComponent', () => {
@@ -15,7 +14,7 @@ describe('WhatsNewCardComponent', () => {
     } as unknown as jest.Mocked<WhatsNewService>;
 
     await TestBed.configureTestingModule({
-      imports: [WhatsNewCardComponent, TooltipModule, CommonModule],
+      imports: [WhatsNewCardComponent, CommonModule],
       providers: [{ provide: WhatsNewService, useValue: whatsNewService }]
     }).compileComponents();
 

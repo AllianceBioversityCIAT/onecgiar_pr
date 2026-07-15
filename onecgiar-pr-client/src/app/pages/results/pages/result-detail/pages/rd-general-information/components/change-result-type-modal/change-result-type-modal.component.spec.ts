@@ -6,7 +6,6 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { ResultsListFilterService } from '../../../../../results-outlet/pages/results-list/services/results-list-filter.service';
 import { ChangeResultTypeServiceService } from '../../services/change-result-type-service.service';
 import { Router } from '@angular/router';
-import { DialogModule } from 'primeng/dialog';
 import { PrInputComponent } from '../../../../../../../../custom-fields/pr-input/pr-input.component';
 import { PrFieldHeaderComponent } from '../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { YesOrNotByBooleanPipe } from '../../../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
@@ -78,7 +77,6 @@ describe('ChangeResultTypeModalComponent', () => {
       ],
       imports: [
         HttpClientTestingModule,
-        DialogModule,
         FormsModule
       ],
     })

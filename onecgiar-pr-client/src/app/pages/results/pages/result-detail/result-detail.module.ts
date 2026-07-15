@@ -9,7 +9,6 @@ import { PartnersRequestModule } from './components/partners-request/partners-re
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { BreadcrumbModule } from '../../../../shared/components/breadcrumb/breadcrumb.module';
 import { NoEditContainerComponent } from './components/no-edit-container/no-edit-container.component';
-import { ButtonModule } from 'primeng/button';
 import { SubmissionModalModule } from './components/submission-modal/submission-modal.module';
 import { UnsubmitModalModule } from './components/unsubmit-modal/unsubmit-modal.module';
 import { PdfActionsModule } from './components/pdf-actions/pdf-actions.module';
@@ -27,7 +26,6 @@ import { ClipboardModule } from '@angular/cdk/clipboard';
     PartnersRequestModule,
     CustomFieldsModule,
     BreadcrumbModule,
-    ButtonModule,
     SubmissionModalModule,
     UnsubmitModalModule,
     PdfActionsModule,

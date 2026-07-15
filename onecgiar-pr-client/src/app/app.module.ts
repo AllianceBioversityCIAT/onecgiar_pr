@@ -17,20 +17,14 @@ import { ShareRequestModalModule } from './pages/results/pages/result-detail/com
 import { YmzListStructureItemModule } from './shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { ChangePhaseModalModule } from './shared/components/change-phase-modal/change-phase-modal.module';
 import { FooterModule } from './shared/components/footer/footer.module';
-import { DialogModule } from 'primeng/dialog';
 import { PrDialogComponent } from './shared/components/pr-dialog/pr-dialog.component';
 import { PrToastComponent } from './shared/components/pr-toast';
-import { BadgeModule } from 'primeng/badge';
-import { OverlayBadgeModule } from 'primeng/overlaybadge';
-import { SatPopoverModule } from '@ncstate/sat-popover';
 import { PopUpNotificationItemComponent } from './shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
 // import { SocketIoModule } from 'ngx-socket-io';
 // import { WebsocketService } from './sockets/websocket.service';
 // import { environment } from '../environments/environment';
 import { ClarityService } from './shared/services/clarity.service';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { providePrimeNG } from 'primeng/config';
-import { reportingTheme } from './theme/reportingTheme';
 import { UserRolesInfoModalComponent } from './shared/components/user-roles-info-modal/user-roles-info-modal.component';
 import { FormatTimeAgoPipe } from './shared/pipes/format-time-ago/format-time-ago.pipe';
 
@@ -50,12 +44,8 @@ function initializeClarityService(clarityService: ClarityService) {
     YmzListStructureItemModule,
     ChangePhaseModalModule,
     FooterModule,
-    DialogModule,
     PrDialogComponent,
     PrToastComponent,
-    BadgeModule,
-    OverlayBadgeModule,
-    SatPopoverModule,
     HeaderPanelComponent,
     NavigationBarComponent,
     TawkComponent,
@@ -72,14 +62,6 @@ function initializeClarityService(clarityService: ClarityService) {
     provideAppInitializer(() => {
       const initializerFn = initializeClarityService(inject(ClarityService));
       return initializerFn();
-    }),
-    providePrimeNG({
-      theme: {
-        preset: reportingTheme,
-        options: {
-          darkModeSelector: 'light'
-        }
-      }
     })
     // WebsocketService
   ]

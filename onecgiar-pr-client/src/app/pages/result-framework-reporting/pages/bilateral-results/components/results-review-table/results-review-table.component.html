@@ -1,17 +1,14 @@
-<p-table
+<app-pr-group-table
   styleClass="p-datatable-gridlines p-datatable-sm bilateral-results-table"
   [value]="filteredTableData()"
   sortField="project_name"
   [sortOrder]="1"
-  responsiveLayout="scroll"
   dataKey="project_name"
-  sortMode="single"
-  rowGroupMode="subheader"
   groupRowsBy="project_name"
   [expandedRowKeys]="expandedRowKeys()"
   [loading]="isLoading()">
   <!-- Header -->
-  <ng-template pTemplate="header">
+  <ng-template prTableHeader>
     <tr>
       <th id="code" style="width: 5%">Code</th>
       <th id="title" style="width: 15%">Title</th>
@@ -28,10 +25,10 @@
   </ng-template>
 
   <!-- Group Header -->
-  <ng-template pTemplate="groupheader" let-item let-expanded="expanded">
+  <ng-template prTableGroupHeader let-item let-expanded="expanded">
     <tr>
       <td [attr.colspan]="this.bilateralResultsService.currentCenterSelected().length > 1 ? 9 : 8" class="group-header-cell">
-        <div class="group-header-content" pRipple [pRowToggler]="item">
+        <div class="group-header-content" [prRowToggler]="item">
           <button type="button" hlmBtn variant="ghost" size="icon-sm">
             <i class="pi" [ngClass]="expanded ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
           </button>
@@ -43,7 +40,7 @@
   </ng-template>
 
   <!-- Expanded Rows -->
-  <ng-template #expandedrow let-group>
+  <ng-template prTableExpandedRow let-group>
     @for (result of group.results; track result.id) {
       <tr>
         <td class="code-cell">{{ result.result_code }}</td>
@@ -95,14 +92,14 @@
   </ng-template>
 
   <!-- Empty Message -->
-  <ng-template pTemplate="emptymessage">
+  <ng-template prTableEmpty>
     <tr style="height: 200px">
       <td [attr.colspan]="this.bilateralResultsService.currentCenterSelected().length > 1 ? 9 : 8" style="text-align: center; font-weight: 600">
         No results available.
       </td>
     </tr>
   </ng-template>
-</p-table>
+</app-pr-group-table>
 
 @if (bilateralResultsService.showReviewDrawer()) {
   <app-result-review-drawer

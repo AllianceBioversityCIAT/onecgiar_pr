@@ -3,8 +3,15 @@ import { CommonModule } from '@angular/common';
 
 import { ResultsListRoutingModule } from './results-list-routing.module';
 import { ResultsListComponent } from './results-list.component';
-import { TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective,
+  PrTableLoadingDirective
+} from '../../../../../../shared/components/pr-table';
 import { RouterModule } from '@angular/router';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 import { ReportNewResultButtonComponent } from './components/report-new-result-button/report-new-result-button.component';
@@ -22,8 +29,13 @@ import { CustomSpinnerModule } from '../../../../../../shared/components/custom-
     CommonModule,
     ResultsListRoutingModule,
     CustomSpinnerModule,
-    TableModule,
-    ButtonModule,
+    PrTableComponent,
+    PrSortIconComponent,
+    PrSortableColumnDirective,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective,
+    PrTableLoadingDirective,
     ResultsToUpdateModalModule,
     ChangePhaseModalModule,
     RouterModule,

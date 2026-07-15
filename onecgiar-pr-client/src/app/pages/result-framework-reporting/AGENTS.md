@@ -791,7 +791,7 @@ The table groups by `project_name` (PrimeNG `rowGroupMode="subheader"`).
   - Outputs: `'Innovation development'`, `'Knowledge product'`, `'Capacity sharing for development'`, `'Other output'`.
   - Outcomes: `'Innovation use'`, `'Policy change'`, `'Other outcome'`.
 - `showBilateralResultsReview` (computed) — `entityAowService.entityId() !== 'SGP-02'`. SGP-02 has no bilateral review.
-- `showReportModal` + `reportMenuItems` → a hidden `p-splitbutton` ("Report") with three menu items: AI Assistant (disabled), separator, "Unplanned result" (opens `<p-dialog>` with `app-report-result-form` from `ResultCreatorModule`).
+- `showReportModal` → opened by `onReportRequested(item)` (fired from the indicator category card's `reportRequested` output), which also calls `resultLevelSE.setPendingResultType(...)`. Drives the report `<p-dialog>` with `app-report-result-form` from `ResultCreatorModule`.
 - `ngOnInit`:
   1. `initChart()` (Chart.js plugin).
   2. Subscribes to `route.params`:

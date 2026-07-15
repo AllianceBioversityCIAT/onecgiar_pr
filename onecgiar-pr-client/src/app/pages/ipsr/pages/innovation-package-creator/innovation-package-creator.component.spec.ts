@@ -7,19 +7,15 @@ import { ListFilterByTextAndAttrPipe } from '../../../../custom-fields/pr-multi-
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { FormsModule } from '@angular/forms';
 import { PrFieldHeaderComponent } from '../../../../custom-fields/pr-field-header/pr-field-header.component';
-import { DialogModule } from 'primeng/dialog';
 import { SaveButtonComponent } from '../../../../custom-fields/save-button/save-button.component';
 import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
 import { SectionHeaderComponent } from '../../components/section-header/section-header.component';
-import { TooltipModule } from 'primeng/tooltip';
 import { FeedbackValidationDirective } from '../../../../shared/directives/feedback-validation.directive';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { jest } from '@jest/globals';
 import { Router } from '@angular/router';
 import { TermPipe } from '../../../../internationalization/term.pipe';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
 
 describe('InnovationPackageCreatorComponent', () => {
   let component: InnovationPackageCreatorComponent;
@@ -87,7 +83,7 @@ describe('InnovationPackageCreatorComponent', () => {
         SectionHeaderComponent,
         FeedbackValidationDirective
       ],
-      imports: [HttpClientTestingModule, ScrollingModule, FormsModule, DialogModule, TooltipModule, TermPipe, IconFieldModule, InputIconModule],
+      imports: [HttpClientTestingModule, ScrollingModule, FormsModule, TermPipe],
       providers: [
         {
           provide: ApiService,

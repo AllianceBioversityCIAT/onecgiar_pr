@@ -4,8 +4,6 @@ import { MultipleWPsComponent } from './multiple-wps.component';
 import { jest } from '@jest/globals';
 import { MultipleWPsContentComponent } from './components/multiple-wps-content/multiple-wps-content.component';
 import { MappedResultsModalComponent } from './components/mapped-results-modal/mapped-results-modal.component';
-import { DialogModule } from 'primeng/dialog';
-import { TableModule } from 'primeng/table';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 
 jest.useFakeTimers();
@@ -56,7 +54,7 @@ describe('MultipleWPsComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [MultipleWPsComponent, MultipleWPsContentComponent, MappedResultsModalComponent],
-      imports: [HttpClientTestingModule, DialogModule, TableModule],
+      imports: [HttpClientTestingModule],
       providers: [
         {
           provide: RdTheoryOfChangesServicesService,

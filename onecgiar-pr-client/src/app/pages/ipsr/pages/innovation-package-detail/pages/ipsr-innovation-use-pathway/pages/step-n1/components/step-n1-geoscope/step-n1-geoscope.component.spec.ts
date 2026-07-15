@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
-import { RadioButtonModule } from 'primeng/radiobutton';
 import { StepN1GeoscopeComponent } from './step-n1-geoscope.component';
 import { PrRadioButtonComponent } from '../../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
 import { PrFieldHeaderComponent } from '../../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
@@ -13,7 +12,7 @@ describe('StepN1GeoscopeComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [StepN1GeoscopeComponent, PrRadioButtonComponent, PrFieldHeaderComponent],
-      imports: [HttpClientTestingModule, RadioButtonModule, FormsModule]
+      imports: [HttpClientTestingModule, FormsModule]
     }).compileComponents();
   });
 

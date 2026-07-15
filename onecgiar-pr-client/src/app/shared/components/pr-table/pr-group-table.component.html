@@ -1,8 +1,5 @@
-<div
-  class="pr-table-wrap {{ styleClass }}"
-  [class.pr-table-wrap--scroll]="scrollable || scrollHeight"
-  [style.max-height]="scrollHeight || null">
-  <table class="pr-table" [class.pr-table--selectable]="selectionMode">
+<div class="pr-table-wrap {{ styleClass }}">
+  <table class="pr-table">
     <thead>
       @if (headerTpl) {
         <ng-container *ngTemplateOutlet="headerTpl.tpl"></ng-container>
@@ -18,9 +15,13 @@
           <ng-container *ngTemplateOutlet="emptyTpl.tpl"></ng-container>
         }
       } @else {
-        @for (row of pagedValue(); track $index; let i = $index) {
-          @if (bodyTpl) {
-            <ng-container *ngTemplateOutlet="bodyTpl.tpl; context: { $implicit: row, index: i, rowIndex: i }"></ng-container>
+        @for (item of pagedValue(); track $index; let i = $index) {
+          @if (groupHeaderTpl) {
+            <ng-container
+              *ngTemplateOutlet="groupHeaderTpl.tpl; context: { $implicit: item, expanded: isExpanded(keyOf(item)), rowIndex: i }"></ng-container>
+          }
+          @if (isExpanded(keyOf(item)) && expandedRowTpl) {
+            <ng-container *ngTemplateOutlet="expandedRowTpl.tpl; context: { $implicit: item }"></ng-container>
           }
         }
       }

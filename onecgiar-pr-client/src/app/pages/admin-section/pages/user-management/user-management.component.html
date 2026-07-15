@@ -111,7 +111,7 @@
 
   <!-- Users table -->
   <div class="table-container">
-    <p-table
+    <app-pr-table
       #userTable
       [value]="this.users()"
       [loading]="this.loading()"
@@ -119,26 +119,25 @@
       [rows]="10"
       [rowsPerPageOptions]="[10, 25, 50]"
       styleClass="p-datatable-gridlines p-datatable-sm user-table"
-      responsiveLayout="scroll"
       [style]="{
         'min-width': '200px',
         'max-width': this.dynamicPanelService.showCompletePanel() ? 'calc(100vw - 365px)' : 'calc(100vw - 178px)',
         transition: 'max-width 0.3s ease-in-out'
       }">
-      <ng-template pTemplate="header">
+      <ng-template prTableHeader>
         <tr style="height: 54px">
           @for (column of columns; track column.key) {
-            <th [style.width]="column.width" [pSortableColumn]="column.key" scope="col">
+            <th [style.width]="column.width" [prSortableColumn]="column.key" scope="col">
               <div class="header-content">
                 {{ column.label }}
-                <p-sortIcon [field]="column.key"></p-sortIcon>
+                <pr-sort-icon [field]="column.key"></pr-sort-icon>
               </div>
             </th>
           }
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="body" let-user let-i="rowIndex">
+      <ng-template prTableBody let-user let-i="index">
         <tr>
           <td>{{ user.firstName }} {{ user.lastName }}</td>
           <td>{{ user.emailAddress }}</td>
@@ -199,12 +198,12 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="emptymessage">
+      <ng-template prTableEmpty>
         <tr>
           <td [attr.colspan]="columns.length" class="no-data">No users match the entered criteria</td>
         </tr>
       </ng-template>
-    </p-table>
+    </app-pr-table>
 
     <!-- Floating counter like in global-completeness-status -->
     <div class="counter">

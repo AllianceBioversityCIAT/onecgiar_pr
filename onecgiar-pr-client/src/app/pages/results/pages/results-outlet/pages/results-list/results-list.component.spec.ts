@@ -3,9 +3,6 @@ import { ResultsListComponent } from './results-list.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ResultsListFilterPipe } from './pipes/results-list-filter.pipe';
 import { ResultsToUpdateModalComponent } from './components/results-to-update-modal/results-to-update-modal.component';
-import { MenuModule } from 'primeng/menu';
-import { TableModule } from 'primeng/table';
-import { DialogModule } from 'primeng/dialog';
 import { ResultsToUpdateFilterPipe } from './components/results-to-update-modal/results-to-update-filter.pipe';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 import { ReportNewResultButtonComponent } from './components/report-new-result-button/report-new-result-button.component';
@@ -17,7 +14,6 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { ResultsListService } from './services/results-list.service';
 import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
-import { PopoverModule } from 'primeng/popover';
 import { ResultsListFilterService } from './services/results-list-filter.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
@@ -127,7 +123,7 @@ describe('ResultsListComponent', () => {
         ReportNewResultButtonComponent,
         ChangePhaseModalComponent
       ],
-      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule, PopoverModule, ResultsListFiltersComponent],
+      imports: [HttpClientTestingModule, ResultsListFiltersComponent],
       schemas: [NO_ERRORS_SCHEMA],
       providers: [
         { provide: ApiService, useValue: mockApiService },
@@ -508,58 +504,23 @@ describe('ResultsListComponent', () => {
   });
 
   describe('applyDefaultSort()', () => {
-    it('should call sortSingle when available', () => {
+    it('should reset the app-pr-table so it re-asserts the default sort', () => {
       const mockTableWithSort = {
-        reset: jest.fn(),
-        sortField: '',
-        sortOrder: 1,
-        sortSingle: jest.fn(),
-        sort: jest.fn()
+        reset: jest.fn()
       };
       component.table = mockTableWithSort as any;
 
       (component as any).applyDefaultSort();
 
-      expect(mockTableWithSort.sortField).toBe('result_code');
-      expect(mockTableWithSort.sortOrder).toBe(-1);
-      expect(mockTableWithSort.sortSingle).toHaveBeenCalled();
-      expect(mockTableWithSort.sort).not.toHaveBeenCalled();
-    });
-
-    it('should call sort when sortSingle is not a function', () => {
-      const mockTableWithSort = {
-        reset: jest.fn(),
-        sortField: '',
-        sortOrder: 1,
-        sortSingle: 'not-a-function',
-        sort: jest.fn()
-      };
-      component.table = mockTableWithSort as any;
-
-      (component as any).applyDefaultSort();
-
-      expect(mockTableWithSort.sort).toHaveBeenCalledWith({ field: 'result_code', order: -1 });
+      // app-pr-table has no sortSingle/sort({field,order}); the bound [sortField]/[sortOrder]
+      // inputs define the default and reset() re-asserts it (+ page 0).
+      expect(mockTableWithSort.reset).toHaveBeenCalled();
     });
 
     it('should do nothing when table is undefined', () => {
       component.table = undefined;
 
       expect(() => (component as any).applyDefaultSort()).not.toThrow();
-    });
-
-    it('should handle table with neither sortSingle nor sort as functions', () => {
-      const mockTableNoSort = {
-        reset: jest.fn(),
-        sortField: '',
-        sortOrder: 1,
-        sortSingle: null,
-        sort: null
-      };
-      component.table = mockTableNoSort as any;
-
-      expect(() => (component as any).applyDefaultSort()).not.toThrow();
-      expect(mockTableNoSort.sortField).toBe('result_code');
-      expect(mockTableNoSort.sortOrder).toBe(-1);
     });
   });
 

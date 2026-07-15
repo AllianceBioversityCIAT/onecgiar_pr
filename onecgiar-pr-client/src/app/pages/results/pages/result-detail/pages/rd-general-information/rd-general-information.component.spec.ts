@@ -19,7 +19,6 @@ import { PrFieldValidationsComponent } from './../../../../../../custom-fields/p
 import { DetailSectionTitleComponent } from './../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { YesOrNotByBooleanPipe } from './../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
-import { DialogModule } from 'primeng/dialog';
 import { CustomizedAlertsFeService } from './../../../../../../shared/services/customized-alerts-fe.service';
 import { UserSearchService } from './services/user-search-service.service';
 import { DataControlService } from './../../../../../../shared/services/data-control.service';
@@ -259,7 +258,7 @@ describe('RdGeneralInformationComponent', () => {
           useValue: mockPusherService
         }
       ],
-      imports: [HttpClientTestingModule, FormsModule, DialogModule]
+      imports: [HttpClientTestingModule, FormsModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(RdGeneralInformationComponent);

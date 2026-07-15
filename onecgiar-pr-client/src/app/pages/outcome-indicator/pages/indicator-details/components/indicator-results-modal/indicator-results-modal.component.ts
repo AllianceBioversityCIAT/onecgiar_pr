@@ -1,27 +1,31 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Table, TableModule } from 'primeng/table';
+import { ChangeDetectionStrategy, Component, QueryList, ViewChildren, inject } from '@angular/core';
+import {
+  PrTableComponent,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective
+} from 'src/app/shared/components/pr-table';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { IndicatorDetailsService } from '../../services/indicator-details.service';
 import { RouterModule } from '@angular/router';
 import { FilterIndicatorResultsPipe } from './pipes/filter-indicator-results.pipe';
-import { MultiSelectModule } from 'primeng/multiselect';
 import { OutcomeIndicatorService } from '../../../../services/outcome-indicator.service';
 import { ColumnFilterComponent } from './column-filter/column-filter.component';
-import { ButtonModule } from 'primeng/button';
 
 @Component({
   selector: 'app-indicator-results-modal',
   imports: [
     CommonModule,
-    TableModule,
+    PrTableComponent,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective,
     PrDialogComponent,
     CustomFieldsModule,
     RouterModule,
     FilterIndicatorResultsPipe,
-    MultiSelectModule,
-    ButtonModule,
     ColumnFilterComponent
   ],
   templateUrl: './indicator-results-modal.component.html',
@@ -56,8 +60,11 @@ export class IndicatorResultsModalComponent {
   outcomeIndicatorService = inject(OutcomeIndicatorService);
   indicatorDetailsService = inject(IndicatorDetailsService);
 
-  clear(table: Table) {
-    table.clear();
+  @ViewChildren(ColumnFilterComponent) columnFilters!: QueryList<ColumnFilterComponent>;
+
+  clear(table: PrTableComponent) {
+    table.reset();
+    this.columnFilters?.forEach(cf => cf.reset());
     this.indicatorDetailsService.textToSearch.set({ value: '' });
   }
 

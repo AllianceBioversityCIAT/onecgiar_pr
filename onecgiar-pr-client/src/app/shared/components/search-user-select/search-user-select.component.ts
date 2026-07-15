@@ -1,23 +1,21 @@
-import { Component, inject, signal, Output, EventEmitter } from '@angular/core';
+import { Component, inject, signal, Output, EventEmitter, ElementRef, HostListener } from '@angular/core';
 import { UserSearchService } from '../../../pages/results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
-import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
-import { InputTextModule } from 'primeng/inputtext';
+import { HlmInput } from '@spartan/input';
 import { FormsModule } from '@angular/forms';
+import { NgClass } from '@angular/common';
 import { SearchUser } from '../../interfaces/search-user.interface';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { SelectModule } from 'primeng/select';
 
 @Component({
   selector: 'app-search-user-select',
   standalone: true,
-  imports: [ButtonModule, HlmButton, InputTextModule, FormsModule, IconFieldModule, InputIconModule, SelectModule],
+  imports: [HlmButton, HlmInput, FormsModule, NgClass],
   templateUrl: './search-user-select.component.html',
   styleUrl: './search-user-select.component.scss'
 })
 export class SearchUserSelectComponent {
   userSearchService = inject(UserSearchService);
+  private readonly elementRef = inject(ElementRef);
   selectedUser = signal<SearchUser | null>(null);
   options = signal<SearchUser[]>([]);
   isDropdownOpen = signal<boolean>(false);
@@ -33,6 +31,13 @@ export class SearchUserSelectComponent {
     // Do NOT load initial users - only search when user types 3+ characters
   }
 
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    if (this.isDropdownOpen() && !this.elementRef.nativeElement.contains(event.target)) {
+      this.isDropdownOpen.set(false);
+    }
+  }
+
   onDropdownShow() {
     this.isDropdownOpen.set(true);
   }
@@ -41,7 +46,13 @@ export class SearchUserSelectComponent {
     this.isDropdownOpen.set(false);
   }
 
-  customFilterFunction(event: any, options: any) {
+  removeFocus() {
+    const element: any = document.getElementById('user-search-trigger');
+    element?.blur();
+    this.onDropdownHide();
+  }
+
+  customFilterFunction(event: any, options?: any) {
     const query = event.target.value || '';
     this.currentQuery.set(query);
 
@@ -67,7 +78,7 @@ export class SearchUserSelectComponent {
     }, 500);
   }
 
-  resetFilter(options: any) {
+  resetFilter(options?: any) {
     this.filterValue = '';
     this.currentQuery.set('');
     this.options.set([]);

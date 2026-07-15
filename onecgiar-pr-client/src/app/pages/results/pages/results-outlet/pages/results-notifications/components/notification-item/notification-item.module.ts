@@ -7,13 +7,12 @@ import { FilterNotificationByInitiativePipe } from '../../pipes/filter-notificat
 import { FilterNotificationBySearchPipe } from '../../pipes/filter-notification-by-search.pipe';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
-import { ButtonModule } from 'primeng/button';
 
 const modules = [NotificationItemComponent, FilterNotificationByPhasePipe, FilterNotificationByInitiativePipe, FilterNotificationBySearchPipe];
 
 @NgModule({
   declarations: [...modules],
-  imports: [CommonModule, CustomFieldsModule, FormatTimeAgoPipe, PrDialogComponent, ButtonModule],
+  imports: [CommonModule, CustomFieldsModule, FormatTimeAgoPipe, PrDialogComponent],
   exports: [...modules]
 })
 export class NotificationItemModule {}

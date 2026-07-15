@@ -8,7 +8,6 @@ import { SyncButtonComponent } from '../../../../../../custom-fields/sync-button
 import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
 import { DetailSectionTitleComponent } from '../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { FormsModule } from '@angular/forms';
-import { RadioButtonModule } from 'primeng/radiobutton';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
@@ -55,7 +54,7 @@ describe('RdGeographicLocationComponent', () => {
         AlertStatusComponent,
         DetailSectionTitleComponent
       ],
-      imports: [HttpClientTestingModule, FormsModule, RadioButtonModule],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [
         {
           provide: ApiService,

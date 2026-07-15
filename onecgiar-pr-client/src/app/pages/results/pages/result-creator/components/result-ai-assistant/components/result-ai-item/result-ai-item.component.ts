@@ -1,21 +1,19 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, Input, signal, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { CreateResultManagementService } from '../../../../services/create-result-management.service';
-import { ButtonModule } from 'primeng/button';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AIAssistantResult } from '../../../../../../../../shared/interfaces/AIAssistantResult';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { EXPANDED_ITEM_DETAILS, getIndicatorTypeIcon, INDICATOR_TYPE_ICONS } from '../../../../../../../../shared/constants/result-ai.constants';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
-import { TextareaModule } from 'primeng/textarea';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-result-ai-item',
   templateUrl: './result-ai-item.component.html',
   styleUrl: './result-ai-item.component.scss',
-  imports: [CommonModule, ButtonModule, FormsModule, CustomFieldsModule, TextareaModule],
+  imports: [CommonModule, FormsModule, CustomFieldsModule],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush
 })

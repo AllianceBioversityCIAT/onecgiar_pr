@@ -18,7 +18,6 @@ import { LabelNamePipe } from '../../../../../../../custom-fields/pr-select/labe
 import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
 import { PrInputComponent } from '../../../../../../../custom-fields/pr-input/pr-input.component';
 import { YesOrNotByBooleanPipe } from '../../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
-import { RadioButtonModule } from 'primeng/radiobutton';
 import { NoDataTextComponent } from '../../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { FormsModule } from '@angular/forms';
 import { FeedbackValidationDirective } from '../../../../../../../shared/directives/feedback-validation.directive';
@@ -373,7 +372,7 @@ describe('InnovationDevInfoComponent', () => {
         AddButtonComponent,
         MegatrendsComponent
       ],
-      imports: [HttpClientTestingModule, RadioButtonModule, FormsModule, TermPipe],
+      imports: [HttpClientTestingModule, FormsModule, TermPipe],
       providers: [
         {
           provide: ApiService,

@@ -12,9 +12,7 @@ import { PrFieldValidationsComponent } from '../../../../../../custom-fields/pr-
 import { LabelNamePipe } from '../../../../../../custom-fields/pr-select/label-name.pipe';
 import { YesOrNotByBooleanPipe } from '../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
 import { IpsrDataControlService } from '../../../../../../pages/ipsr/services/ipsr-data-control.service';
-import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
-import { TooltipModule } from 'primeng/tooltip';
 import { jest } from '@jest/globals';
 
 jest.useFakeTimers();
@@ -94,9 +92,7 @@ describe('PartnersRequestComponent', () => {
       ],
       imports: [
         HttpClientTestingModule,
-        DialogModule,
         FormsModule,
-        TooltipModule
       ],
       providers: [
         {

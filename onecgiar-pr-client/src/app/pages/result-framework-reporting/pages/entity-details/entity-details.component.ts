@@ -17,7 +17,6 @@ import {
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { EntityAowCardComponent } from './components/entity-aow-card/entity-aow-card.component';
 import { EntityResultsByIndicatorCategoryCardComponent } from './components/entity-results-by-indicator-category-card/entity-results-by-indicator-category-card.component';
@@ -25,26 +24,20 @@ import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Chart } from 'chart.js/auto';
 import { ChartData, ChartDataset, ChartOptions } from 'chart.js';
-import { ButtonModule } from 'primeng/button';
-import { HlmButton } from '@spartan/button';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
-import { MenuItem } from 'primeng/api';
 import { BilateralResultsReviewComponent } from './components/bilateral-results-review/bilateral-results-review.component';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 
 @Component({
   selector: 'app-entity-details',
-  imports: [PrTooltipDirectiveModule, 
+  imports: [PrTooltipDirectiveModule,
     CommonModule,
     FormsModule,
-    SelectModule,
     RouterModule,
     EntityAowCardComponent,
     EntityResultsByIndicatorCategoryCardComponent,
-    ButtonModule,
-    HlmButton,
     PrDialogComponent,
     ResultCreatorModule,
     BilateralResultsReviewComponent
@@ -86,24 +79,6 @@ export class EntityDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
   }
 
   showReportModal = signal(false);
-  reportMenuOpen = signal(false);
-  reportMenuItems: MenuItem[] = [
-    {
-      label: 'AI Assistant',
-      icon: 'pi pi-sparkles',
-      disabled: true
-    },
-    {
-      separator: true
-    },
-    {
-      label: 'Unplanned result',
-      icon: 'pi pi-file-plus',
-      command: () => {
-        this.showReportModal.set(true);
-      }
-    }
-  ];
 
   private readonly axisPaddingValue = 10;
 
@@ -399,10 +374,5 @@ export class EntityDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     if (!canvas) return existing;
     existing?.destroy();
     return new Chart(canvas, { type: 'bar', data, options });
-  }
-
-  onReportMenuItemClick(item: MenuItem): void {
-    this.reportMenuOpen.set(false);
-    item.command?.({});
   }
 }

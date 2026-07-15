@@ -33,33 +33,31 @@
       inlineStyles="margin: 0 0 16px 0 !important;"></app-alert-status>
   }
   <div class="table">
-    <p-table
+    <app-pr-table
       id="resultListTable"
       #table
       sortField="result_code"
       [sortOrder]="-1"
       [value]="filteredResults"
       [loading]="this.resultsListService.showDeletingResultSpinner || (this.resultsListService.showLoadingResultSpinner && !filteredResults?.length)"
-      [showLoader]="false"
       [paginator]="filteredResults?.length"
-      responsiveLayout="scroll"
       [rows]="10"
       styleClass="p-datatable-gridlines p-datatable-sm"
       selectionMode="single"
       [first]="this.resultsListFilterSE.text_to_search() && 0"
       [rowsPerPageOptions]="[10, 50, 100]">
-      <ng-template pTemplate="header">
+      <ng-template prTableHeader>
         <tr>
           @for (column of columnOrder; track column.attr) {
             <th
               (click)="validateOrder(column.attr)"
               (keydown.enter)="validateOrder(column.attr)"
               tabindex="0"
-              [pSortableColumn]="column.attr"
+              [prSortableColumn]="column.attr"
               [id]="column.attr"
               [style.width]="column.width">
               <div class="align-center">
-                <p-sortIcon [field]="column.attr"></p-sortIcon>
+                <pr-sort-icon [field]="column.attr"></pr-sort-icon>
                 {{ column.title }}
               </div>
             </th>
@@ -73,7 +71,7 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="body" let-result>
+      <ng-template prTableBody let-result>
         <tr>
           @for (column of columnOrder; track column.attr; let i = $index) {
             <td
@@ -123,7 +121,7 @@
                     <div
                       [prTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
                       [ngClass]="{ 'flex items-center justify-center w-full': column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
-                      [innerHTML]="column.attr === 'lead_center' ? (subResult.lead_center || '') : (column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd'))"></div>
+                      [innerHTML]="column.attr === 'lead_center' ? (subResult.lead_center || '') : (column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd'))"></div>
                   }
                 </a>
               }
@@ -165,7 +163,7 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="loadingbody">
+      <ng-template prTableLoading>
         <div
           [style]="{
             height: filteredResults?.length ? '100%' : '400px'
@@ -174,12 +172,12 @@
         </div>
       </ng-template>
 
-      <ng-template pTemplate="emptymessage">
+      <ng-template prTableEmpty>
         <tr style="height: 200px">
           <td [attr.colspan]="columnOrder.length + 2" class="noDataText">There are no results for the selected filters.</td>
         </tr>
       </ng-template>
-    </p-table>
+    </app-pr-table>
 
     @if (filteredResults?.length) {
       <div class="total" style="margin-top: 10px">

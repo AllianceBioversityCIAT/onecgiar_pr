@@ -1,8 +1,14 @@
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { Component, signal, computed, inject, effect, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
+import {
+  PrGroupTableComponent,
+  PrTableHeaderDirective,
+  PrTableGroupHeaderDirective,
+  PrTableExpandedRowDirective,
+  PrTableEmptyDirective,
+  PrRowTogglerDirective
+} from '../../../../../../shared/components/pr-table';
 import { HlmButton } from '@spartan/button';
 import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
 import { ResultToReview, GroupedResult } from './components/result-review-drawer/result-review-drawer.interfaces';
@@ -11,7 +17,18 @@ import { BilateralResultsService } from '../../bilateral-results.service';
 
 @Component({
   selector: 'app-results-review-table',
-  imports: [PrTooltipDirectiveModule, CommonModule, TableModule, ButtonModule, HlmButton, ResultReviewDrawerComponent],
+  imports: [
+    PrTooltipDirectiveModule,
+    CommonModule,
+    PrGroupTableComponent,
+    PrTableHeaderDirective,
+    PrTableGroupHeaderDirective,
+    PrTableExpandedRowDirective,
+    PrTableEmptyDirective,
+    PrRowTogglerDirective,
+    HlmButton,
+    ResultReviewDrawerComponent
+  ],
   templateUrl: './results-review-table.component.html',
   styleUrl: './results-review-table.component.scss'
 })

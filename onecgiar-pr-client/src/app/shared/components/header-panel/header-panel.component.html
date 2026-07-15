@@ -51,22 +51,23 @@
 
       <button
         type="button"
-        [satPopoverAnchor]="notificationsPopover"
-        (click)="notificationsPopover.toggle()"
+        cdkOverlayOrigin
+        #notifTrigger="cdkOverlayOrigin"
+        (click)="notificationsOpen.set(!notificationsOpen())"
         aria-label="Notifications"
         aria-haspopup="true"
-        [attr.aria-expanded]="notificationsPopover.isOpen()"
+        [attr.aria-expanded]="notificationsOpen()"
         aria-controls="notifications-popover"
         [ngStyle]="{ 'margin-top': unreadNotifications.length > 0 ? '-5px' : '0' }"
         [ngClass]="{ section_active: isInNotificationsRoute() }"
         style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
         @if (unreadNotifications.length === 0) {
-          <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true">
+          <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsOpen() }" aria-hidden="true">
             notifications
           </i>
         } @else {
           <span class="pr-overlay-badge-wrap">
-            <i class="material-icons-round animate_bell info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true">
+            <i class="material-icons-round animate_bell info_icon" [ngClass]="{ info_icon_active: notificationsOpen() }" aria-hidden="true">
               notifications
             </i>
             <span class="pr-overlay-badge" *ngIf="notificationBadgeLength()">{{ notificationBadgeLength() }}</span>
@@ -81,9 +82,10 @@
         aria-label="User menu"
         aria-haspopup="true"
         aria-controls="user-info-popover"
-        [attr.aria-expanded]="userInfoPopover.isOpen()"
-        [satPopoverAnchor]="userInfoPopover"
-        (click)="userInfoPopover.toggle()"
+        [attr.aria-expanded]="userMenuOpen()"
+        cdkOverlayOrigin
+        #userTrigger="cdkOverlayOrigin"
+        (click)="userMenuOpen.set(!userMenuOpen())"
         (keydown.space)="$event.preventDefault(); userMenuTrigger.click()"
         (keydown.enter)="$event.preventDefault(); userMenuTrigger.click()">
         <span class="pr-avatar" [style]="{ width: '32px', height: '32px', cursor: 'pointer' }">{{ getUserInitials() }}</span>
@@ -96,21 +98,20 @@
           <span class="user_identity_email">{{ this.api.authSE.localStorageUser?.email }}</span>
         </span>
 
-        <i class="material-icons-round user_identity_chevron" [ngClass]="{ chevron_open: userInfoPopover.isOpen() }" aria-hidden="true">expand_more</i>
+        <i class="material-icons-round user_identity_chevron" [ngClass]="{ chevron_open: userMenuOpen() }" aria-hidden="true">expand_more</i>
       </button>
     </div>
   </div>
-}
 
-<sat-popover
-  #userInfoPopover
-  id="user-info-popover"
-  hasBackdrop
-  horizontalAlign="end"
-  verticalAlign="below"
-  scrollStrategy="close"
-  [autoFocus]="false">
-  <div class="overlay_panel" [style]="{ width: '250px' }">
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="userTrigger"
+  [cdkConnectedOverlayOpen]="userMenuOpen()"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  [cdkConnectedOverlayPositions]="userMenuPositions"
+  (backdropClick)="userMenuOpen.set(false)">
+  <div class="overlay_panel" id="user-info-popover" [style]="{ width: '250px' }">
     <div class="overlay_panel_header">
       <div class="overlay_panel_header_userInfo">
         <span class="pr-avatar" [style]="{ minWidth: '36px', maxWidth: '36px', minHeight: '36px', maxHeight: '36px' }">{{ getUserInitials() }}</span>
@@ -146,7 +147,7 @@
           #adminLink
           (keydown.space)="$event.preventDefault(); adminLink.click()"
           (keydown.enter)="adminLink.click()"
-          (click)="userInfoPopover.toggle()">
+          (click)="userMenuOpen.set(false)">
           <i class="pi pi-wrench admin_module_icon" aria-hidden="true"></i>
           <p class="overlay_panel_admin_module_title">Admin module</p>
         </a>
@@ -158,24 +159,23 @@
     <button
       type="button"
       class="overlay_panel_footer footer_userInfo"
-      (click)="userInfoPopover.toggle(); this.api.authSE.logout()"
+      (click)="userMenuOpen.set(false); this.api.authSE.logout()"
       aria-label="Log out">
       <i class="material-icons-round logout_icon" aria-hidden="true">logout</i>
       <p class="logout_button">Log out</p>
     </button>
   </div>
-</sat-popover>
+</ng-template>
 
-<sat-popover
-  #notificationsPopover
-  id="notifications-popover"
-  hasBackdrop
-  horizontalAlign="center"
-  verticalAlign="below"
-  scrollStrategy="close"
-  [autoFocus]="false"
-  (closed)="handleClosePopUp()">
-  <div class="overlay_panel" [style]="{ width: '340px' }">
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="notifTrigger"
+  [cdkConnectedOverlayOpen]="notificationsOpen()"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  [cdkConnectedOverlayPositions]="notificationsPositions"
+  (backdropClick)="notificationsOpen.set(false); handleClosePopUp()">
+  <div class="overlay_panel" id="notifications-popover" [style]="{ width: '340px' }">
     <div class="overlay_panel_header">
       <h1 class="overlay_panel_header_title">Notifications</h1>
     </div>
@@ -189,7 +189,7 @@
     } @else {
       <div class="notifications_list">
         @for (notification of unreadNotifications; track $index) {
-          <app-pop-up-notification-item [notification]="notification" (click)="notificationsPopover.toggle()"></app-pop-up-notification-item>
+          <app-pop-up-notification-item [notification]="notification" (click)="notificationsOpen.set(false); handleClosePopUp()"></app-pop-up-notification-item>
         }
       </div>
     }
@@ -200,13 +200,14 @@
       <button
         type="button"
         class="see_all_notifications"
-        (click)="goToNotifications(); notificationsPopover.toggle()"
+        (click)="goToNotifications(); notificationsOpen.set(false); handleClosePopUp()"
         aria-label="See all the notifications">
         See all the notifications
       </button>
     </div>
   </div>
-</sat-popover>
+</ng-template>
+}
 
 <app-tawk
   *ngIf="this.api.authSE.localStorageUser?.user_name && this.api.authSE.localStorageUser?.email && !inLocal"

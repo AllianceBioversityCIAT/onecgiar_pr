@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { TooltipModule } from 'primeng/tooltip';
 import { InitAdminSectionComponent } from './init-admin-section.component';
 import { DynamicPanelMenuComponent } from '../../shared/components/dynamic-panel-menu/dynamic-panel-menu.component';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -18,7 +17,7 @@ describe('InitAdminSectionComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [InitAdminSectionComponent, DynamicPanelMenuComponent],
-      imports: [HttpClientTestingModule, TooltipModule, RouterTestingModule],
+      imports: [HttpClientTestingModule, RouterTestingModule],
       providers: [
         {
           provide: DataControlService,

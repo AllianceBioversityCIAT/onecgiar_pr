@@ -1,17 +1,14 @@
-<p-table
+<app-pr-group-table
   id="tocResultsByAowIdTable"
   styleClass="p-datatable-gridlines p-datatable-sm"
   [value]="tableData()"
   [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes()"
   sortField="result_title"
   [sortOrder]="1"
-  responsiveLayout="scroll"
   dataKey="result_title"
-  sortMode="single"
-  rowGroupMode="subheader"
   groupRowsBy="result_title"
   [expandedRowKeys]="expandedRowKeys()">
-  <ng-template pTemplate="header">
+  <ng-template prTableHeader>
     <tr>
       @for (column of columnOrder(); track column.attr) {
         <th [id]="column.attr" style="text-align: center" [style.width]="column.width">
@@ -22,11 +19,11 @@
     </tr>
   </ng-template>
 
-  <ng-template #groupheader let-item let-rowIndex="rowIndex" let-expanded="expanded">
+  <ng-template prTableGroupHeader let-item let-rowIndex="rowIndex" let-expanded="expanded">
     <tr>
       <td colspan="8" style="background: var(--pr-color-primary-25); border-bottom: 1px solid var(--pr-color-secondary-50)">
         <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding-right: 20px">
-          <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem; cursor: pointer" pRipple [pRowToggler]="item">
+          <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem; cursor: pointer" [prRowToggler]="item">
             <button type="button" hlmBtn variant="ghost" size="icon-sm">
               <i class="pi" [ngClass]="expanded ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
             </button>
@@ -38,7 +35,7 @@
     </tr>
   </ng-template>
 
-  <ng-template #expandedrow let-item>
+  <ng-template prTableExpandedRow let-item>
     @if (item.indicators.length) {
       @for (result of item.indicators; track $index) {
         <tr>
@@ -116,12 +113,12 @@
     }
   </ng-template>
 
-  <ng-template #emptymessage>
+  <ng-template prTableEmpty>
     <tr style="height: 200px">
       <td colspan="8" class="tab-content_empty">There are no High-Level Outputs Indicators found.</td>
     </tr>
   </ng-template>
-</p-table>
+</app-pr-group-table>
 
 @if (entityAowService.showReportResultModal()) {
   <app-aow-hlo-create-modal></app-aow-hlo-create-modal>

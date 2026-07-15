@@ -9,8 +9,6 @@ import { PhaseSwitcherComponent } from '../../../../shared/components/phase-swit
 import { PdfActionsComponent } from '../../../results/pages/result-detail/components/pdf-actions/pdf-actions.component';
 import { IpsrDetailTopMenuComponent } from './components/ipsr-detail-top-menu/ipsr-detail-top-menu.component';
 import { PartnersRequestComponent } from '../../../results/pages/result-detail/components/partners-request/partners-request.component';
-import { ToastModule } from 'primeng/toast';
-import { DialogModule } from 'primeng/dialog';
 import { PrTextareaComponent } from '../../../../custom-fields/pr-textarea/pr-textarea.component';
 import { PdfIconComponent } from '../../../../shared/icon-components/pdf-icon/pdf-icon.component';
 import { PrFieldHeaderComponent } from '../../../../custom-fields/pr-field-header/pr-field-header.component';
@@ -36,7 +34,7 @@ describe('InnovationPackageDetailComponent', () => {
         PrFieldHeaderComponent,
         PrFieldValidationsComponent
       ],
-      imports: [HttpClientTestingModule, ToastModule, DialogModule],
+      imports: [HttpClientTestingModule],
       providers: [
         {
           provide: ActivatedRoute,

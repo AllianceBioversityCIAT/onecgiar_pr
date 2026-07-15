@@ -1,17 +1,19 @@
 import { Component, OnInit, OnDestroy, ViewChild, inject, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Table, TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { DialogModule } from 'primeng/dialog';
+import {
+  PrTableComponent,
+  PrSortableColumnDirective,
+  PrSortIconComponent,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective
+} from '../../../../shared/components/pr-table';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
 
 import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
@@ -42,16 +44,16 @@ interface CgiarOption {
   imports: [
     CommonModule,
     FormsModule,
-    TableModule,
-    ButtonModule,
-    InputTextModule,
-    DialogModule,
     CustomFieldsModule,
-    IconFieldModule,
-    InputIconModule,
     ManageUserModalComponent,
     PrFilterMultiselectModule,
-    UserRolesInfoModalComponent
+    UserRolesInfoModalComponent,
+    PrTableComponent,
+    PrSortableColumnDirective,
+    PrSortIconComponent,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
@@ -69,7 +71,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   @ViewChild('entitiesSelect') entitiesSelect!: any; // PrMultiSelectComponent
   @ViewChild('userSearchSelect') userSearchSelect!: PrSelectComponent;
   @ViewChild('manageUserModal') manageUserModal!: ManageUserModalComponent;
-  @ViewChild('userTable') userTable!: Table;
+  @ViewChild('userTable') userTable!: PrTableComponent;
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);

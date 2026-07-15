@@ -2,8 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MultipleWPsContentComponent } from './multiple-wps-content.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { MappedResultsModalComponent } from '../mapped-results-modal/mapped-results-modal.component';
-import { TableModule } from 'primeng/table';
-import { DialogModule } from 'primeng/dialog';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 
@@ -72,8 +70,6 @@ describe('MultipleWPsContentComponent', () => {
       ],
       imports: [
         HttpClientTestingModule,
-        TableModule,
-        DialogModule
       ],
       providers: [
         {

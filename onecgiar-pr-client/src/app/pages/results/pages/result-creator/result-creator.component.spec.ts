@@ -8,7 +8,6 @@ import { ResultLevelButtonsComponent } from './components/result-level-buttons/r
 import { SaveButtonComponent } from '../../../../custom-fields/save-button/save-button.component';
 import { RetrieveModalComponent } from '../result-detail/components/retrieve-modal/retrieve-modal.component';
 import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
-import { DialogModule } from 'primeng/dialog';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { jest } from '@jest/globals';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
@@ -97,7 +96,7 @@ describe('ResultCreatorComponent', () => {
         RetrieveModalComponent,
         AlertStatusComponent
       ],
-      imports: [HttpClientTestingModule, DialogModule, RouterTestingModule, TermPipe, CustomFieldsModule],
+      imports: [HttpClientTestingModule, RouterTestingModule, TermPipe, CustomFieldsModule],
       providers: [
         ResultsApiService,
         {

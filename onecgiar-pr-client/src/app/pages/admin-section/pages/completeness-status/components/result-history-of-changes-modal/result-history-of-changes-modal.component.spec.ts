@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ResultHistoryOfChangesModalComponent } from './result-history-of-changes-modal.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { NoDataTextComponent } from '../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
@@ -19,7 +18,7 @@ describe('ResultHistoryOfChangesModalComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ResultHistoryOfChangesModalComponent, NoDataTextComponent],
-      imports: [HttpClientTestingModule, DialogModule, CustomFieldsModule],
+      imports: [HttpClientTestingModule, CustomFieldsModule],
       providers: [{ provide: ExportTablesService, useValue: mockExportTablesService }]
     }).compileComponents();
 

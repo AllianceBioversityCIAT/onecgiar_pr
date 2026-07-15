@@ -104,41 +104,6 @@
           class="pi pi-question-circle entity-details_card_header_info"
           prTooltip="Report achievements that were not originally included in the {{ entityAowService.reportingPhaseYear }} Theory of Change, but emerged as valuable results during the year."
           prTooltipPosition="top"></i>
-        <!-- Original was <p-splitbutton [hidden]="true">; kept hidden to preserve exact behavior. -->
-        <div class="entity-report-actions" [hidden]="true">
-          <button hlmBtn type="button" class="entity-report-splitbutton-main">
-            <i class="pi pi-plus-circle"></i>
-            Report
-          </button>
-          <button
-            hlmBtn
-            type="button"
-            class="entity-report-splitbutton-toggle"
-            aria-haspopup="true"
-            aria-label="Report options"
-            [attr.aria-expanded]="reportMenuOpen()"
-            (click)="reportMenuOpen.set(!reportMenuOpen())">
-            <i class="pi pi-chevron-down"></i>
-          </button>
-          @if (reportMenuOpen()) {
-            <div class="entity-report-menu-overlay">
-              @for (item of reportMenuItems; track $index) {
-                @if (item.separator) {
-                  <div class="entity-report-menu-separator"></div>
-                } @else {
-                  <button
-                    type="button"
-                    class="entity-report-menu-item"
-                    [disabled]="item.disabled"
-                    (click)="onReportMenuItemClick(item)">
-                    <i class="pi" [ngClass]="item.icon"></i>
-                    <span>{{ item.label }}</span>
-                  </button>
-                }
-              }
-            </div>
-          }
-        </div>
       </div>
 
       <div class="entity-details_card_content">

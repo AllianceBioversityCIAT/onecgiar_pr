@@ -6,7 +6,6 @@ import { ApiService } from '../../services/api/api.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module';
-import { DialogModule } from 'primeng/dialog';
 
 describe('ChangePhaseModalComponent', () => {
   let component: ChangePhaseModalComponent;
@@ -46,7 +45,7 @@ describe('ChangePhaseModalComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ChangePhaseModalComponent],
-      imports: [HttpClientTestingModule, CustomFieldsModule, DialogModule],
+      imports: [HttpClientTestingModule, CustomFieldsModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: Router, useValue: mockRouter },

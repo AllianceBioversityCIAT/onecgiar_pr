@@ -23,7 +23,7 @@
   <input type="text" placeholder="Find indicator..." [(ngModel)]="this.outcomeIService.searchText" />
 </div>
 
-<p-table
+<app-pr-table
   id="resultListTable"
   #table
   [value]="this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText()"
@@ -31,16 +31,13 @@
   [sortOrder]="1"
   styleClass="p-datatable-gridlines p-datatable-sm"
   [rows]="8"
-  responsiveLayout="scroll"
   [rowsPerPageOptions]="[8, 12, 20]"
   [loading]="this.outcomeIService.loading()"
-  [showLoader]="false"
   [first]="this.outcomeIService.searchText() && 0"
-  [paginator]="(this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText())?.length > 8"
-  [tableStyle]="{ 'min-width': '80rem' }">
-  <ng-template pTemplate="header">
+  [paginator]="(this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText())?.length > 8">
+  <ng-template prTableHeader>
     <tr>
-      <th pSortableColumn="toc_result_title" style="width: 26%" id="outcome-header">EOI Outcome <p-sortIcon field="toc_result_title" /></th>
+      <th prSortableColumn="toc_result_title" style="width: 26%" id="outcome-header">EOI Outcome <pr-sort-icon field="toc_result_title" /></th>
       <th style="width: 25%" id="indicator-header">Indicator</th>
       <th style="width: 20%" id="indicator-type-header">Indicator Type</th>
       <th style="width: 8%" id="expected-target-header">Expected Target</th>
@@ -50,7 +47,7 @@
     </tr>
   </ng-template>
 
-  <ng-template pTemplate="body" let-item>
+  <ng-template prTableBody let-item>
     @if (!item.indicators.length) {
       <tr style="height: 50px">
         <td>{{ item?.toc_result_title }}</td>
@@ -100,13 +97,13 @@
     }
   </ng-template>
 
-  <ng-template pTemplate="emptymessage">
+  <ng-template prTableEmpty>
     <tr style="height: 200px">
       <td colspan="7" class="noDataText">There are no results for the selected filters.</td>
     </tr>
   </ng-template>
 
-  <ng-template pTemplate="loadingbody">
+  <ng-template prTableLoading>
     <tr
       [style]="{
         height: (this.outcomeIService.eoisData | appFilterIndicatorBySearch: this.outcomeIService.searchText())?.length ? '100%' : '400px'
@@ -116,4 +113,4 @@
       </td>
     </tr>
   </ng-template>
-</p-table>
+</app-pr-table>

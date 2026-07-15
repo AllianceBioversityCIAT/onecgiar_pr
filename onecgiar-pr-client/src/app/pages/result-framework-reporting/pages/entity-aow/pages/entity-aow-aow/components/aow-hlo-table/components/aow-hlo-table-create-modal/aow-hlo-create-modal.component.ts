@@ -6,10 +6,8 @@ import { EntityAowService } from '../../../../../../services/entity-aow.service'
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { CommonModule } from '@angular/common';
-import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
 import { Router } from '@angular/router';
-import { SelectModule } from 'primeng/select';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { CentersService } from '../../../../../../../../../../shared/services/global/centers.service';
 
@@ -30,9 +28,7 @@ interface CreateResultBody {
     CustomFieldsModule,
     PrFilterMultiselectModule,
     FormsModule,
-    ButtonModule,
     HlmButton,
-    SelectModule,
   ],
   templateUrl: './aow-hlo-create-modal.component.html',
   styleUrl: './aow-hlo-create-modal.component.scss',

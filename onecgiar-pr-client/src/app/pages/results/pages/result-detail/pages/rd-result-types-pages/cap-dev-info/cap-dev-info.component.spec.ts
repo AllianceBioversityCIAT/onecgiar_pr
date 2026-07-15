@@ -9,7 +9,6 @@ import { AlertStatusComponent } from '../../../../../../../custom-fields/alert-s
 import { YesOrNotByBooleanPipe } from '../../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
-import { RadioButtonModule } from 'primeng/radiobutton';
 import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
@@ -52,7 +51,7 @@ describe('CapDevInfoComponent', () => {
         PrFieldValidationsComponent,
         DetailSectionTitleComponent
       ],
-      imports: [HttpClientTestingModule, RadioButtonModule, FormsModule],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [{ provide: ApiService, useValue: mockApiService }]
     }).compileComponents();
 

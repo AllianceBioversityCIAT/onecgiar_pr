@@ -1,9 +1,15 @@
 import { PrTooltipDirectiveModule } from '../../../../../../../../shared/directives/pr-tooltip-directive.module';
 import { ChangeDetectionStrategy, Component, computed, inject, Input, signal } from '@angular/core';
-import { TableModule } from 'primeng/table';
+import {
+  PrGroupTableComponent,
+  PrTableHeaderDirective,
+  PrTableGroupHeaderDirective,
+  PrTableExpandedRowDirective,
+  PrTableEmptyDirective,
+  PrRowTogglerDirective
+} from '../../../../../../../../shared/components/pr-table';
 import { EntityAowService } from '../../../../services/entity-aow.service';
 import { CommonModule } from '@angular/common';
-import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
 import { AowHloCreateModalComponent } from './components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 import { ResultLevelService } from '../../../../../../../results/pages/result-creator/services/result-level.service';
@@ -20,10 +26,14 @@ export interface ColumnOrder {
 
 @Component({
   selector: 'app-aow-hlo-table',
-  imports: [PrTooltipDirectiveModule, 
+  imports: [PrTooltipDirectiveModule,
     CommonModule,
-    TableModule,
-    ButtonModule,
+    PrGroupTableComponent,
+    PrTableHeaderDirective,
+    PrTableGroupHeaderDirective,
+    PrTableExpandedRowDirective,
+    PrTableEmptyDirective,
+    PrRowTogglerDirective,
     HlmButton,
     AowHloCreateModalComponent,
     AowViewResultsDrawerComponent,

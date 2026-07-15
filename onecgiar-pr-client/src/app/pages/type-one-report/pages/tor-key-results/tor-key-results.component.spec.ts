@@ -6,7 +6,6 @@ import { ExportTablesService } from '../../../../shared/services/export-tables.s
 import { of, throwError } from 'rxjs';
 import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
 import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
-import { TooltipModule } from 'primeng/tooltip';
 
 describe('TorKeyResultsComponent', () => {
   let component: TorKeyResultsComponent;
@@ -33,7 +32,7 @@ describe('TorKeyResultsComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [TorKeyResultsComponent, AlertStatusComponent, PrButtonComponent],
-      imports: [HttpClientTestingModule, TooltipModule],
+      imports: [HttpClientTestingModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ExportTablesService, useValue: mockExportTablesService }

@@ -1,25 +1,17 @@
 import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { InputTextModule } from 'primeng/inputtext';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BilateralResultsService } from '../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
-import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
 @Component({
   selector: 'app-results-review-filters',
   imports: [
     CommonModule,
-    IconFieldModule,
-    InputIconModule,
-    InputTextModule,
     FormsModule,
     PrFilterMultiselectModule,
-    ButtonModule,
     HlmButton,
     CustomFieldsModule
   ],

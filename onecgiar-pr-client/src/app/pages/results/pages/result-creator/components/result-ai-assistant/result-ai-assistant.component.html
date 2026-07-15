@@ -89,14 +89,29 @@
         }
         @if (createResultManagementService.items().length > 0) {
           <div class="paginator_container">
-            <p-paginator
-              (onPageChange)="onPageChange($event)"
-              [first]="first()"
-              [rows]="rows()"
-              [totalRecords]="createResultManagementService.items().length"
-              [showCurrentPageReport]="true"
-              [showJumpToPageDropdown]="false"
-              currentPageReportTemplate="Showing {first} to {last} of {totalRecords}" />
+            <div class="pr-mini-paginator">
+              <button
+                type="button"
+                class="pr-mini-paginator__btn"
+                [disabled]="!canPrevPage"
+                (click)="prevPage()"
+                aria-label="Previous page">
+                <i class="material-icons-round">chevron_left</i>
+              </button>
+
+              <span class="pr-mini-paginator__label">
+                Showing {{ pageFirstRecord }} to {{ pageLastRecord }} of {{ createResultManagementService.items().length }}
+              </span>
+
+              <button
+                type="button"
+                class="pr-mini-paginator__btn"
+                [disabled]="!canNextPage"
+                (click)="nextPage()"
+                aria-label="Next page">
+                <i class="material-icons-round">chevron_right</i>
+              </button>
+            </div>
           </div>
         }
       </section>
@@ -107,7 +122,7 @@
     }
   </div>
 
-  <ng-template pTemplate="footer">
+  <div pr-dialog-footer>
     @if (
       !this.createResultManagementService.analyzingDocument() &&
       !this.createResultManagementService.documentAnalyzed() &&
@@ -124,5 +139,5 @@
     }
 
     @if (this.createResultManagementService.documentAnalyzed()) {}
-  </ng-template>
+  </div>
 </app-pr-dialog>

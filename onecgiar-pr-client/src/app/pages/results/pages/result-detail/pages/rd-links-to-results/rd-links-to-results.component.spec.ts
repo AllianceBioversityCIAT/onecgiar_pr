@@ -5,7 +5,6 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { FilterResultNotLinkedPipe } from './pipe/filter-result-not-linked.pipe';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
-import { TableModule } from 'primeng/table';
 import { DetailSectionTitleComponent } from '../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 describe('RdLinksToResultsComponent', () => {
   let component: RdLinksToResultsComponent;
@@ -22,8 +21,7 @@ describe('RdLinksToResultsComponent', () => {
         DetailSectionTitleComponent
       ],
       imports: [
-        HttpClientTestingModule,
-        TableModule
+        HttpClientTestingModule
       ],
     }).compileComponents();
 
