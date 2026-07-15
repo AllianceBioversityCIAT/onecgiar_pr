@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultFrameworkReportingCardItemComponent } from './components/result-framework-reporting-card-item/result-framework-reporting-card-item.component';
 import { ResultFrameworkReportingInsightsComponent } from './components/result-framework-reporting-insights/result-framework-reporting-insights.component';
 import { ResultFrameworkReportingRecentItemComponent } from './components/result-framework-reporting-recent-item/result-framework-reporting-recent-item.component';
+import { ResultFrameworkReportingGalaxyComponent } from './components/result-framework-reporting-galaxy/result-framework-reporting-galaxy.component';
 import { ResultFrameworkReportingHomeService } from './services/result-framework-reporting-home.service';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { AlertGlobalInfoModule } from '../../../../shared/components/alert-global-info/alert-global-info.module';
@@ -16,6 +17,7 @@ import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-toolt
     ResultFrameworkReportingCardItemComponent,
     ResultFrameworkReportingInsightsComponent,
     ResultFrameworkReportingRecentItemComponent,
+    ResultFrameworkReportingGalaxyComponent,
     CustomFieldsModule,
     AlertGlobalInfoModule,
     PrTooltipDirectiveModule
@@ -27,6 +29,9 @@ import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-toolt
 export class ResultFrameworkReportingHomeComponent {
   api = inject(ApiService);
   resultFrameworkReportingHomeService = inject(ResultFrameworkReportingHomeService);
+
+  /** Toggles the full-screen 3D "Framework Galaxy" overlay. */
+  readonly show3D = signal(false);
 
   // reportingCurrentPhase is a plain object; depend on the version signal so the
   // hero chip renders once phases finish loading (zoneless CD)

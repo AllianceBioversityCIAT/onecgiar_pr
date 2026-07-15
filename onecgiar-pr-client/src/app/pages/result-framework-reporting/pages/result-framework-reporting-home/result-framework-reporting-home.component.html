@@ -26,7 +26,7 @@
     <!-- Page-wide density toggle (charts + card details) -->
     @if (!resultFrameworkReportingHomeService.isLoadingSPLists() &&
       (resultFrameworkReportingHomeService.mySPsList().length > 0 || resultFrameworkReportingHomeService.otherSPsList().length > 0)) {
-      <div class="-mt-6 flex justify-start max-[1115px]:-mt-4">
+      <div class="-mt-6 flex flex-wrap items-center justify-start gap-2 max-[1115px]:-mt-4">
         <button
           type="button"
           class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors"
@@ -43,6 +43,17 @@
             {{ resultFrameworkReportingHomeService.compactView() ? 'unfold_more' : 'unfold_less' }}
           </i>
           {{ resultFrameworkReportingHomeService.compactView() ? 'Expanded view' : 'Compact view' }}
+        </button>
+
+        <!-- Explore the portfolio in 3D -->
+        <button
+          type="button"
+          class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-transparent bg-gradient-to-r from-[var(--pr-color-primary-300)] to-[#5457b0] px-3 py-1.5 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(107,109,196,0.35)] transition-[filter] hover:brightness-110"
+          prTooltip="Explore your Science Programs and their Result Framework in an interactive 3D view."
+          prTooltipPosition="bottom"
+          (click)="show3D.set(true)">
+          <i class="material-icons-round text-[16px]" aria-hidden="true">view_in_ar</i>
+          Explore in 3D
         </button>
       </div>
     }
@@ -173,3 +184,8 @@
     </section>
   </div>
 </div>
+
+<!-- Full-screen 3D "Framework Galaxy" overlay -->
+@if (show3D()) {
+  <app-result-framework-reporting-galaxy (closed)="show3D.set(false)" />
+}

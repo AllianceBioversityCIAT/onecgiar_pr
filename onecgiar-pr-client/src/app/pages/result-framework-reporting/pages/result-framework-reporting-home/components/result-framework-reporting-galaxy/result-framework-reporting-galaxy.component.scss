@@ -1,0 +1,133 @@
+// Full-screen 3D overlay. ViewEncapsulation.None → styles are global; all classes are cf- prefixed.
+
+.cf-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: radial-gradient(120% 120% at 50% 15%, #1e202f 0%, #12131c 70%);
+  overflow: hidden;
+  animation: cf-overlay-in 0.35s ease;
+}
+@keyframes cf-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+
+.cf-stage {
+  position: absolute;
+  inset: 0;
+  canvas { position: absolute; inset: 0; }
+}
+
+// --- top bar ---
+.cf-topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 20;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 18px 24px;
+  pointer-events: none;
+}
+.cf-title {
+  pointer-events: none;
+  b { color: #fff; font-size: 16px; font-weight: 600; }
+  .cf-sub { display: block; color: rgba(255, 255, 255, 0.55); font-size: 12px; margin-top: 3px; }
+}
+.cf-crumbs { display: block; margin-top: 4px; font-size: 12px; color: rgba(255, 255, 255, 0.55); }
+.cf-crumb-cur { color: #fff; font-weight: 600; }
+.cf-crumb-sep { margin: 0 7px; opacity: 0.5; }
+.cf-actions { display: flex; gap: 10px; pointer-events: auto; }
+.cf-btn {
+  cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 15px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.14); transition: filter 0.2s, background 0.2s;
+}
+.cf-ghost { background: rgba(255, 255, 255, 0.08); color: #fff; backdrop-filter: blur(8px); }
+.cf-ghost:hover { background: rgba(255, 255, 255, 0.16); }
+.cf-solid { background: linear-gradient(135deg, var(--pr-color-primary-300), #5457b0); color: #fff; box-shadow: 0 8px 24px rgba(107, 109, 196, 0.4); }
+.cf-solid:hover { filter: brightness(1.1); }
+
+// --- level colour key + hint ---
+.cf-levels {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 20; display: flex; gap: 15px; align-items: center;
+  color: rgba(255, 255, 255, 0.72); font-size: 11px; pointer-events: none;
+  background: rgba(18, 19, 28, 0.55); border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 7px 16px; border-radius: 999px; backdrop-filter: blur(8px);
+  .cf-ldot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+}
+.cf-hint {
+  position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%);
+  z-index: 20; color: rgba(255, 255, 255, 0.4); font-size: 11px; margin: 0; pointer-events: none; white-space: nowrap;
+}
+
+// ============ CSS3D node cards (created imperatively) ============
+.cf-node2 {
+  --cf-accent: #8a8ce0;
+  width: 250px; border-radius: 16px; padding: 13px 15px 13px 17px; cursor: pointer; user-select: none; color: #f4f5fb;
+  background: linear-gradient(160deg, rgba(40, 44, 68, 0.94), rgba(24, 26, 40, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 3px solid var(--cf-accent);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+
+  &:hover { box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5); }
+  &.sel {
+    border-color: var(--cf-accent);
+    box-shadow: 0 18px 52px color-mix(in srgb, var(--cf-accent) 40%, transparent), 0 0 0 1px var(--cf-accent) inset;
+  }
+  &.prog { width: 290px; }
+  &.hub2 {
+    width: 310px;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--cf-accent) 26%, rgba(26, 28, 44, 0.96)), rgba(24, 26, 40, 0.97));
+    border-left-width: 4px;
+  }
+}
+.cf-n2head { display: flex; align-items: center; gap: 11px; }
+.cf-ico { width: 42px; height: 42px; border-radius: 11px; background: rgba(255, 255, 255, 0.94); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; overflow: hidden;
+  img { width: 34px; height: 34px; object-fit: contain; } }
+.cf-n2meta { min-width: 0; }
+.cf-kind { display: block; font-size: 9.5px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--cf-accent); font-weight: 700; }
+.cf-n2title { display: block; font-size: 14px; font-weight: 600; line-height: 1.2; margin-top: 1px; }
+.cf-node2.prog .cf-n2title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.cf-total { margin-top: 11px; display: flex; align-items: baseline; gap: 6px;
+  b { font-size: 24px; font-weight: 700; }
+  span { font-size: 11px; color: rgba(255, 255, 255, 0.6); } }
+.cf-bar { margin-top: 9px; height: 7px; border-radius: 999px; overflow: hidden; display: flex; background: rgba(255, 255, 255, 0.07);
+  i { height: 100%; display: block; } }
+.cf-prog { margin-top: 10px; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden;
+  i { display: block; height: 100%; } }
+.cf-pmeta { margin-top: 5px; font-size: 10px; color: rgba(255, 255, 255, 0.6); display: flex; justify-content: space-between; gap: 8px; }
+.cf-ind { margin-top: 10px; font-size: 10.5px; color: rgba(255, 255, 255, 0.6); }
+.cf-desc { line-height: 1.3; }
+.cf-kpi { margin-top: 6px; display: flex; align-items: center; gap: 8px; }
+.cf-pill { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px; }
+.cf-frac { color: #fff; font-weight: 600; }
+.cf-hublink { margin-top: 10px; }
+.cf-open { color: var(--cf-accent); text-decoration: none; font-weight: 600; font-size: 12px; }
+.cf-open:hover { text-decoration: underline; }
+
+// --- hub control bar (Back / Exit) anchored to the focused card ---
+.cf-hubbar { display: flex; gap: 8px; margin: -3px 0 11px; }
+.cf-hubbtn {
+  cursor: pointer; flex: 1; border-radius: 9px; padding: 6px 10px; font-size: 11px; font-weight: 700; line-height: 1;
+  border: 1px solid rgba(255, 255, 255, 0.16); transition: background 0.15s, filter 0.15s;
+}
+.cf-hubback { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.cf-hubback:hover { background: rgba(255, 255, 255, 0.2); }
+.cf-hubexit { background: rgba(240, 90, 90, 0.16); color: #ffb4b4; border-color: rgba(240, 90, 90, 0.3); }
+.cf-hubexit:hover { filter: brightness(1.12); }
+
+// --- inline nav footer (only on the selected node) ---
+.cf-nav { display: none; margin-top: 12px; padding-top: 11px; border-top: 1px solid rgba(255, 255, 255, 0.09); align-items: center; justify-content: space-between; gap: 8px; }
+.cf-node2.sel .cf-nav { display: flex; }
+.cf-navbtn {
+  cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.07); color: #fff;
+  border-radius: 9px; padding: 6px 11px; font-size: 13px; font-weight: 700; line-height: 1; transition: background 0.15s;
+}
+.cf-navbtn:hover { background: rgba(255, 255, 255, 0.16); }
+.cf-open2 {
+  flex: 1; text-align: center; font-size: 12px; letter-spacing: 0.3px;
+  background: linear-gradient(135deg, var(--cf-accent), color-mix(in srgb, var(--cf-accent) 60%, #000));
+  border-color: transparent; color: #10121b;
+}
+.cf-open2:hover { filter: brightness(1.08); background: linear-gradient(135deg, var(--cf-accent), color-mix(in srgb, var(--cf-accent) 60%, #000)); }
+.cf-leaf-tag { flex: 1; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255, 255, 255, 0.35); }
