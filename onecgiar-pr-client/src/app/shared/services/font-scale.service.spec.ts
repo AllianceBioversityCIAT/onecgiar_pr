@@ -18,10 +18,10 @@ describe('FontScaleService', () => {
   });
 
   describe('FONT_SCALE_OPTIONS', () => {
-    it('exposes the four expected steps with their factors', () => {
-      expect(FONT_SCALE_OPTIONS.map(o => o.value)).toEqual(['default', 'large', 'larger', 'largest']);
-      expect(FONT_SCALE_OPTIONS.map(o => o.factor)).toEqual([1, 1.15, 1.3, 1.5]);
-      expect(FONT_SCALE_OPTIONS.map(o => o.label)).toEqual(['Default', 'Large', 'Larger', 'Largest']);
+    it('exposes the five expected steps with their factors', () => {
+      expect(FONT_SCALE_OPTIONS.map(o => o.value)).toEqual(['small', 'default', 'large', 'larger', 'largest']);
+      expect(FONT_SCALE_OPTIONS.map(o => o.factor)).toEqual([0.9, 1, 1.15, 1.3, 1.5]);
+      expect(FONT_SCALE_OPTIONS.map(o => o.label)).toEqual(['Small', 'Default', 'Large', 'Larger', 'Largest']);
     });
   });
 

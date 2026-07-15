@@ -13,7 +13,7 @@
     <script>
       (function () {
         try {
-          var factors = { default: 1, large: 1.15, larger: 1.3, largest: 1.5 };
+          var factors = { small: 0.9, default: 1, large: 1.15, larger: 1.3, largest: 1.5 };
           var saved = localStorage.getItem('pr.a11y.fontScale');
           document.documentElement.style.setProperty('--pr-font-scale', String(factors[saved] || 1));
         } catch (e) {}

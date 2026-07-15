@@ -12,7 +12,7 @@ import { effect, Injectable, signal } from '@angular/core';
  * The choice is persisted in localStorage and re-applied on bootstrap (an inline
  * script in index.html applies it before first paint to avoid a flash).
  */
-export type FontScale = 'default' | 'large' | 'larger' | 'largest';
+export type FontScale = 'small' | 'default' | 'large' | 'larger' | 'largest';
 
 export interface FontScaleOption {
   value: FontScale;
@@ -22,6 +22,7 @@ export interface FontScaleOption {
 }
 
 export const FONT_SCALE_OPTIONS: readonly FontScaleOption[] = [
+  { value: 'small', label: 'Small', factor: 0.9 },
   { value: 'default', label: 'Default', factor: 1 },
   { value: 'large', label: 'Large', factor: 1.15 },
   { value: 'larger', label: 'Larger', factor: 1.3 },
