@@ -18,10 +18,16 @@
         src="/assets/PR_logo.svg"
         alt="Reporting Tool Logo" />
 
-      <div class="logo_content flex flex-col items-start justify-center text-[var(--pr-color-secondary-400)] max-lg:hidden">
-        <p class="m-0 whitespace-nowrap text-sm font-semibold leading-tight">{{ this.internationalizationData.global.platformName }}</p>
+      <div class="logo_content flex flex-col items-start justify-center gap-0.5 max-lg:hidden">
+        <p class="m-0 flex items-baseline gap-1 whitespace-nowrap text-[15px] font-extrabold leading-tight tracking-tight">
+          <span class="text-[#1e202f]">PRMS</span>
+          <span class="text-brand-300">Reporting</span>
+        </p>
         @if (reportingPhaseLabel()) {
-          <p class="m-0 whitespace-nowrap text-[10px] font-normal leading-tight text-[var(--pr-color-secondary-300)]">{{ reportingPhaseLabel() }}</p>
+          <span
+            class="whitespace-nowrap rounded-full bg-brand-50 px-2 py-px text-[9px] font-semibold uppercase leading-[1.5] tracking-[0.4px] text-brand-600"
+            >{{ reportingPhaseLabel() }}</span
+          >
         }
       </div>
     </a>
