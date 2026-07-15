@@ -70,6 +70,8 @@ tr {
 }
 
 .table {
+  // overrides Tailwind's `.table` utility (display:table) that collides with this class
+  display: block;
   position: relative;
   margin-bottom: 40px;
 

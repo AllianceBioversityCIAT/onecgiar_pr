@@ -32,6 +32,9 @@
 }
 
 .table {
+  // display:block overrides Tailwind's `.table` utility (display:table), which
+  // collided with this semantic class and shrank the container to its content.
+  display: block;
   padding-bottom: 100px;
   position: relative;
 

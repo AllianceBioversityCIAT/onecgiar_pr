@@ -26,6 +26,8 @@ i {
 }
 
 .table {
+  // overrides Tailwind's `.table` utility (display:table) that collides with this class
+  display: block;
   padding-bottom: 100px;
   position: relative;
 }
