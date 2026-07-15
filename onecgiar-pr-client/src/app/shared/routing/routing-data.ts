@@ -95,6 +95,14 @@ export const routingApp: PrRoute[] = [
     path: 'qa-status',
     loadComponent: () => import('../../pages/qa-status/qa-status.component').then(m => m.QaStatusComponent)
   },
+  {
+    // Dev-only local storage bridge (no CheckLoginGuard so you can paste into a fresh browser).
+    // Copy/paste the whole localStorage to share a session across browsers. Blocked in prod by the component.
+    prName: 'Local storage bridge',
+    prHide: true,
+    path: 'locals',
+    loadComponent: () => import('../../pages/locals/locals.component').then(m => m.LocalsComponent)
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result-framework-reporting', prHide: true }
 ];
 
