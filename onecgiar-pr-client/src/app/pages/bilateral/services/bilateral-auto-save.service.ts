@@ -23,6 +23,8 @@ const FIELD_ENDPOINTS: Record<string, string> = {
   poverty_impact_area_ids: 'bilateral/general-info/{id}',
   planned_result: '../bilateral/center/planned-result/{id}',
   programCode: '../bilateral/center/planned-result/{id}',
+  toc_mapping: '../bilateral/center/toc-mapping/{id}',
+  contributors: '../bilateral/center/contributors/{id}',
 };
 
 @Injectable({ providedIn: 'root' })
@@ -153,5 +155,89 @@ export class BilateralAutoSaveService {
     this._pendingFields.set(fieldPath, { fieldPath, value, fieldType: 'text' });
     this.hasPendingSaves.set(true);
     this.flush();
+  }
+
+  saveTocMapping(tocData: {
+    planned_result?: boolean;
+    toc_level_id?: number | string;
+    toc_result_id?: number | string;
+    toc_progressive_narrative?: string;
+    indicator_id?: number | string;
+    contributing_indicator?: number | string;
+  }): void {
+    const resultId = this._currentResultId();
+    if (!resultId) return;
+
+    const tocLevelId = tocData.toc_level_id ? Number(tocData.toc_level_id) : undefined;
+    const tocResultId = tocData.toc_result_id ? Number(tocData.toc_result_id) : undefined;
+    const indicatorId = tocData.indicator_id ? Number(tocData.indicator_id) : undefined;
+    const contributing = tocData.contributing_indicator !== undefined && tocData.contributing_indicator !== null
+      ? Number(tocData.contributing_indicator) : undefined;
+
+    const body: any = {
+      result_toc_result: {
+        planned_result: tocData.planned_result,
+        result_toc_results: [{
+          toc_level_id: tocLevelId,
+          toc_result_id: tocResultId,
+          toc_progressive_narrative: tocData.toc_progressive_narrative,
+          ...(indicatorId && {
+            indicators: [{
+              id: indicatorId,
+              targets: contributing !== undefined ? [{
+                targetId: 0,
+                contributing_indicator: contributing,
+              }] : [],
+            }],
+          }),
+        }],
+      },
+    };
+
+    const url = `${environment.apiBaseUrl}api/results/../bilateral/center/toc-mapping/${resultId}`;
+
+    this.fieldStatus.update(s => ({ ...s, toc_mapping: 'saving' }));
+    this.http.patch(url, body).subscribe({
+      next: () => {
+        this.fieldStatus.update(s => ({ ...s, toc_mapping: 'saved' }));
+        setTimeout(() => {
+          this.fieldStatus.update(s => {
+            const next = { ...s };
+            if (next['toc_mapping'] === 'saved') next['toc_mapping'] = 'idle';
+            return next;
+          });
+        }, 2000);
+      },
+      error: () => {
+        this.fieldStatus.update(s => ({ ...s, toc_mapping: 'error' }));
+      },
+    });
+  }
+
+  saveContributors(contributorsData: {
+    contributing_center?: { institution_id: number }[];
+    contributing_bilateral_projects?: { project_id: number; is_lead?: boolean }[];
+  }): void {
+    const resultId = this._currentResultId();
+    if (!resultId) return;
+
+    const url = `${environment.apiBaseUrl}api/results/../bilateral/center/contributors/${resultId}`;
+
+    this.fieldStatus.update(s => ({ ...s, contributors: 'saving' }));
+    this.http.patch(url, contributorsData).subscribe({
+      next: () => {
+        this.fieldStatus.update(s => ({ ...s, contributors: 'saved' }));
+        setTimeout(() => {
+          this.fieldStatus.update(s => {
+            const next = { ...s };
+            if (next['contributors'] === 'saved') next['contributors'] = 'idle';
+            return next;
+          });
+        }, 2000);
+      },
+      error: () => {
+        this.fieldStatus.update(s => ({ ...s, contributors: 'error' }));
+      },
+    });
   }
 }

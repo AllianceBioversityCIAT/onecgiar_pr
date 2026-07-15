@@ -34,6 +34,8 @@ export class BilateralCreationService {
   resultInitiativeId = signal<number | null>(null);
   resultLevelId = signal<number | null>(null);
   resultTypeId = signal<number | null>(null);
+  resultLeadCenterId = signal<number | null>(null);
+  resultProjectId = signal<number | null>(null);
 
   getProjects(centerId: string | number): void {
     this.isLoadingProjects.set(true);
@@ -58,6 +60,12 @@ export class BilateralCreationService {
           this.resultLeadContact.set(cf.lead_contact_person ?? '');
           this.resultLevelId.set(cf.result_level_id ?? null);
           this.resultTypeId.set(cf.result_type_id ?? null);
+          if (cf.project_id) {
+            this.resultProjectId.set(Number(cf.project_id));
+          }
+          if (cf.lead_center_id) {
+            this.resultLeadCenterId.set(Number(cf.lead_center_id));
+          }
           const dacLevels: Record<string, number> = {};
           if (cf.gender_tag_level_id != null) dacLevels['gender'] = Number(cf.gender_tag_level_id);
           if (cf.climate_change_tag_level_id != null) dacLevels['climate_change'] = Number(cf.climate_change_tag_level_id);
@@ -85,6 +93,30 @@ export class BilateralCreationService {
         if (primaryInit?.id) {
           this.resultInitiativeId.set(primaryInit.id);
         }
+
+        if (response?.contributingProjects && response.contributingProjects.length) {
+          const leadProject = response.contributingProjects.find((p: any) => p.is_lead);
+          if (leadProject?.obj_clarisa_project) {
+            const proj = leadProject.obj_clarisa_project;
+            this.selectedProject.set({
+              id: proj.id,
+              shortName: proj.shortName,
+              fullName: proj.fullName,
+              summary: proj.summary,
+              description: proj.description,
+              leadCenter: proj.obj_organization ? {
+                id: proj.obj_organization.id,
+                name: proj.obj_organization.name,
+                acronym: proj.obj_organization.acronym,
+              } : null,
+              sciencePrograms: [],
+            });
+            if (proj.obj_organization?.id) {
+              this.resultLeadCenterId.set(proj.obj_organization.id);
+            }
+          }
+        }
+
         this.isLoadingResult.set(false);
       },
       error: () => { this.isLoadingResult.set(false); }

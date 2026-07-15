@@ -6,6 +6,7 @@ import { BilateralCreationService } from '../../services/bilateral-creation.serv
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { RolesService } from '../../../../shared/services/global/roles.service';
+import { CentersService } from '../../../../shared/services/global/centers.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 
@@ -15,6 +16,7 @@ describe('BilateralResultCreatorComponent', () => {
   let mdsTracker: any;
   let autoSaveService: any;
   let rolesService: any;
+  let centersService: any;
   let mockRoute: any;
   let mockRouter: any;
 
@@ -54,12 +56,19 @@ describe('BilateralResultCreatorComponent', () => {
       getMyCenters: jest.fn().mockReturnValue([]),
     };
 
+    centersService = {
+      centersList: [],
+      loadedCenters: { subscribe: jest.fn() },
+      getData: jest.fn(),
+    };
+
     mockRoute = {
       params: of({}),
     };
 
     mockRouter = {
       navigate: jest.fn().mockResolvedValue(true),
+      url: '/bilateral/test',
     };
 
     await TestBed.configureTestingModule({
@@ -71,6 +80,7 @@ describe('BilateralResultCreatorComponent', () => {
         { provide: BilateralMdsTrackerService, useValue: mdsTracker },
         { provide: BilateralAutoSaveService, useValue: autoSaveService },
         { provide: RolesService, useValue: rolesService },
+        { provide: CentersService, useValue: centersService },
       ],
     }).compileComponents();
 

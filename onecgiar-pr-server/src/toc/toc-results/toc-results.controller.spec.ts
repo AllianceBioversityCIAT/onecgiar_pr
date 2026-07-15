@@ -40,7 +40,13 @@ describe('TocResultsController', () => {
 
   it('delegates findAllV2 with numeric params', () => {
     controller.findAllV2('4', '5', '6', true);
-    expect(service.findTocResultByConfigV2).toHaveBeenCalledWith(4, 5, 6, true, undefined);
+    expect(service.findTocResultByConfigV2).toHaveBeenCalledWith(
+      4,
+      5,
+      6,
+      true,
+      undefined,
+    );
   });
 
   it('delegates getTocResultByInitiativeAndLevelsV2', () => {

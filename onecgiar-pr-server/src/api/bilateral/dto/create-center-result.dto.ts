@@ -19,7 +19,8 @@ export class CreateCenterResultDto {
   result_type_id: number;
 
   @ApiPropertyOptional({
-    description: 'Science Program code (official_code from clarisa_initiatives)',
+    description:
+      'Science Program code (official_code from clarisa_initiatives)',
     example: 'SP01',
   })
   @IsString()

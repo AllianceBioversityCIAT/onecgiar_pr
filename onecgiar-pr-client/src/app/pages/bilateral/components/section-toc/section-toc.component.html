@@ -161,7 +161,7 @@
           <label class="st-label">Explanation of how the result aligns with the ToC pathway</label>
           <textarea class="st-textarea" rows="4" autocomplete="off" [ngModel]="narrative()"
             placeholder="Describe how this result contributes to the selected ToC element (max 150 words)…"
-            (input)="narrative.set($any($event.target).value)"></textarea>
+            (input)="onNarrativeInput($any($event.target).value)"></textarea>
         </div>
       }
     } @else {

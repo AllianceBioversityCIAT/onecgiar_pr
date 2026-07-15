@@ -11,32 +11,116 @@
       </div>
     </div>
 
-    <app-section-toc [resultLevelId]="creationService.resultLevelId()"></app-section-toc>
-  }
-
-  @if (creationService.selectedSecondarySps().length) {
-    <div class="sc-field">
-      <label class="sc-label">Contributing Science Programs</label>
-      <div class="sc-chips">
-        @for (sp of creationService.selectedSecondarySps(); track sp.programId) {
-          <span class="sc-sp-badge">
-            {{ sp.programCode }}
-            @if (sp.allocation) {
-              <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
-            }
-          </span>
-        }
+    <div class="sc-card">
+      <div class="sc-card__header">
+        <div class="sc-card__title">
+          <span class="sc-card__icon">🔗</span>
+          <span>Theory of Change Alignment</span>
+        </div>
+      </div>
+      <div class="sc-card__body">
+        <app-section-toc [resultLevelId]="creationService.resultLevelId()"></app-section-toc>
       </div>
     </div>
+
+    @if (creationService.selectedSecondarySps().length) {
+      <div class="sc-card">
+        <div class="sc-card__header">
+          <div class="sc-card__title">
+            <span class="sc-card__icon">🔬</span>
+            <span>Contributing Science Programs</span>
+          </div>
+        </div>
+        <div class="sc-card__body">
+          <div class="sc-chips">
+            @for (sp of creationService.selectedSecondarySps(); track sp.programId) {
+              <span class="sc-sp-badge">
+                {{ sp.programCode }}
+                @if (sp.allocation) {
+                  <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
+                }
+              </span>
+            }
+          </div>
+        </div>
+      </div>
+    }
   }
 
-  <div class="sc-field">
-    <label class="sc-label">Lead Center</label>
-    <span class="sc-lead">{{ creationService.selectedProject()?.leadCenter?.acronym || 'Auto-assigned from project' }}</span>
+  <div class="sc-card sc-card--lead-center">
+    <div class="sc-card__header">
+      <div class="sc-card__title">
+        <span class="sc-card__icon">⭐</span>
+        <span>Lead Center</span>
+      </div>
+      <span class="sc-card__badge">Read only</span>
+    </div>
+    <div class="sc-card__body">
+      <span class="sc-lead">{{ creationService.selectedProject()?.leadCenter?.acronym }} - {{ creationService.selectedProject()?.leadCenter?.name }}</span>
+    </div>
   </div>
 
-  <div class="sc-field">
-    <label class="sc-label">Contributing Projects</label>
-    <span class="sc-value">{{ creationService.selectedProject()?.shortName || 'Selected project' }}</span>
+  <div class="sc-card">
+    <div class="sc-card__header">
+      <div class="sc-card__title">
+        <span class="sc-card__icon">🏛️</span>
+        <span>Contributing CGIAR Centers</span>
+      </div>
+    </div>
+    <div class="sc-card__body">
+      <p-multiSelect
+        [options]="availableCenters"
+        [(ngModel)]="selectedCenterInstitutionIds"
+        optionLabel="full_name"
+        optionValue="institutionId"
+        placeholder="Select contributing centers"
+        [style]="{ width: '100%' }"
+        (onChange)="onCentersChange($event.value)"
+        [showClear]="true">
+      </p-multiSelect>
+      @if (selectedCenterInstitutionIds.length) {
+        <div class="sc-selected-chips">
+          @for (id of selectedCenterInstitutionIds; track id) {
+            <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id)">
+              {{ getCenterDisplayName(id) }}
+              @if (!isLeadCenter(id)) {
+                <button type="button" class="sc-chip-remove" (click)="removeCenter(id)">×</button>
+              }
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="sc-card">
+    <div class="sc-card__header">
+      <div class="sc-card__title">
+        <span class="sc-card__icon">📁</span>
+        <span>Contributing Projects</span>
+      </div>
+    </div>
+    <div class="sc-card__body">
+      <p-multiSelect
+        [options]="availableProjects"
+        [(ngModel)]="selectedProjectIds"
+        optionLabel="fullName"
+        optionValue="id"
+        placeholder="Select contributing projects"
+        [style]="{ width: '100%' }"
+        (onChange)="onProjectsChange($event.value)"
+        [showClear]="true">
+      </p-multiSelect>
+      @if (selectedProjectIds.length) {
+        <div class="sc-selected-chips">
+          @for (id of selectedProjectIds; track id) {
+            <span class="sc-chip sc-chip--project">
+              {{ getProjectDisplayName(id) }}
+              <button type="button" class="sc-chip-remove" (click)="removeProject(id)">×</button>
+            </span>
+          }
+        </div>
+      }
+    </div>
   </div>
 </div>

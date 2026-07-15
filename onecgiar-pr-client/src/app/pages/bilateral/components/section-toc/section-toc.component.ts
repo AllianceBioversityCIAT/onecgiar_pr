@@ -157,6 +157,22 @@ export class SectionTocComponent implements OnInit {
     }
   }
 
+  private _tocSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private saveTocDebounced(): void {
+    if (this._tocSaveTimer) clearTimeout(this._tocSaveTimer);
+    this._tocSaveTimer = setTimeout(() => {
+      this.autoSave.saveTocMapping({
+        planned_result: this.isPlanned() ?? undefined,
+        toc_level_id: this.selectedLevelId() ?? undefined,
+        toc_result_id: this.selectedTocResultId() ?? undefined,
+        indicator_id: this.selectedIndicatorId() ?? undefined,
+        contributing_indicator: this.contributionValue() ?? undefined,
+        toc_progressive_narrative: this.narrative() || undefined,
+      });
+    }, 1000);
+  }
+
   private loadTocLevels(): void {
     this.api.tocApiSE.GET_AllTocLevels(true).subscribe({
       next: ({ response }) => this.tocLevels.set(response ?? []),
@@ -215,6 +231,7 @@ export class SectionTocComponent implements OnInit {
     this.selectedTocResultId.set(null);
     this.selectedIndicatorId.set(null);
     this.contributionValue.set(null);
+    this.saveTocDebounced();
   }
 
   onTocResultSelect(tocResultId: number | string): void {
@@ -222,11 +239,13 @@ export class SectionTocComponent implements OnInit {
       this.selectedTocResultId() == tocResultId ? null : tocResultId
     );
     this.selectedIndicatorId.set(null);
+    this.saveTocDebounced();
   }
 
   onIndicatorSelect(relatedNodeId: number | string): void {
     this.selectedIndicatorId.set(relatedNodeId);
     this.contributionValue.set(null);
+    this.saveTocDebounced();
   }
 
   getIndicatorMatchInfo(indicator: any): { label: string; cssClass: string } {
@@ -251,6 +270,15 @@ export class SectionTocComponent implements OnInit {
     if (val === null || val === '' || val === undefined) { this.contributionValue.set(null); return; }
     const n = Number(val);
     this.contributionValue.set(isNaN(n) ? null : n);
+    this.saveTocDebounced();
+  }
+
+  private _narrativeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  onNarrativeInput(value: string): void {
+    this.narrative.set(value);
+    if (this._narrativeTimer) clearTimeout(this._narrativeTimer);
+    this._narrativeTimer = setTimeout(() => this.saveTocDebounced(), 1500);
   }
 
   getDisplayLabel(item: any): string {

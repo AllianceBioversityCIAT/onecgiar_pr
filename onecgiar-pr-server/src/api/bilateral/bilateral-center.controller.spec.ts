@@ -10,6 +10,8 @@ import { ResultsTocResultsService } from '../results/results-toc-results/results
 import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { ResultsCenterRepository } from '../results/results-centers/results-centers.repository';
+import { ResultsByProjectsRepository } from '../results/results_by_projects/results_by_projects.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 describe('BilateralCenterController', () => {
@@ -79,6 +81,20 @@ describe('BilateralCenterController', () => {
         {
           provide: ClarisaInitiativesRepository,
           useValue: {},
+        },
+        {
+          provide: ResultsCenterRepository,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue(null),
+            save: jest.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: ResultsByProjectsRepository,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue(null),
+            save: jest.fn().mockResolvedValue({}),
+          },
         },
       ],
     }).compile();
