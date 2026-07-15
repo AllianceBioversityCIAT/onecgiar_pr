@@ -9,6 +9,7 @@ import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
 import { SectionTocComponent } from '../section-toc/section-toc.component';
+import { ApiService } from '../../../../shared/services/api/api.service';
 
 interface CenterOption {
   institutionId: number;
@@ -35,6 +36,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly mdsTracker = inject(BilateralMdsTrackerService);
   readonly autoSave = inject(BilateralAutoSaveService);
   readonly centersService = inject(CentersService);
+  readonly api = inject(ApiService);
 
   private centersSubscription?: Subscription;
 
@@ -56,7 +58,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   availableCenters: CenterOption[] = [];
   selectedCenterInstitutionIds: number[] = [];
 
-  availableProjects: ProjectOption[] = [];
+  availableProjects = signal<ProjectOption[]>([]);
   selectedProjectIds: number[] = [];
 
   readonlyLeadCenterInstitutionId: number | null = null;
@@ -103,16 +105,16 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   private readonly leadProjectEffect = effect(() => {
     const project = this.creationService.selectedProject();
-    if (project?.id && this.availableProjects.length) {
+    if (project?.id && this.availableProjects().length) {
       const leadProjId = Number(project.id);
-      const projectExists = this.availableProjects.some(p => p.id === leadProjId);
+      const projectExists = this.availableProjects().some(p => p.id === leadProjId);
       if (projectExists && !this.readonlyLeadProjectId) {
         this.readonlyLeadProjectId = leadProjId;
         if (!this.selectedProjectIds.includes(leadProjId)) {
           this.selectedProjectIds = [leadProjId, ...this.selectedProjectIds];
           const currentProjectId = this.creationService.selectedProject()?.id;
           const selectedProjects = this.selectedProjectIds.map(id => {
-            const p = this.availableProjects.find(p => p.id === id);
+            const p = this.availableProjects().find(p => p.id === id);
             return p ? {
               project_id: id,
               is_lead: id === currentProjectId,
@@ -128,15 +130,35 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   private readonly savedContributingProjectsEffect = effect(() => {
     const savedIds = this.creationService.resultContributingProjectIds();
-    if (!savedIds.length || !this.availableProjects.length) return;
+    if (!savedIds.length || !this.availableProjects().length) return;
     const toAdd = savedIds.filter(id => !this.selectedProjectIds.includes(id));
     if (!toAdd.length) return;
     this.selectedProjectIds = [...this.selectedProjectIds, ...toAdd];
   });
 
   ngOnInit(): void {
+    console.log('SectionContributorsComponent ngOnInit started!');
     this.loadCenters();
     this.loadProjects();
+  }
+
+  private loadProjects(): void {
+    console.log('loadProjects started');
+    this.api.resultsSE.GET_ClarisaProjects().subscribe({
+      next: ({ response }) => {
+        console.log('loadProjects got response:', response ? response.length : 0);
+        this.availableProjects.set(
+          (response ?? []).map((p: any) => ({
+            id: p.id,
+            shortName: p.shortName,
+            fullName: p.fullName,
+          }))
+        );
+      },
+      error: (err) => {
+        console.error('loadProjects failed:', err);
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -187,15 +209,6 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadProjects(): void {
-    const projects = this.creationService.projects();
-    this.availableProjects = projects.map(p => ({
-      id: p.id,
-      shortName: p.shortName,
-      fullName: p.fullName,
-    }));
-  }
-
   onCentersChange(ids: number[]): void {
     let finalIds = ids ?? [];
     if (this.readonlyLeadCenterInstitutionId && !finalIds.includes(this.readonlyLeadCenterInstitutionId)) {
@@ -220,7 +233,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     this.selectedProjectIds = finalIds;
     const currentProjectId = this.creationService.selectedProject()?.id;
     const selectedProjects = this.selectedProjectIds.map(id => {
-      const project = this.availableProjects.find(p => p.id === id);
+      const project = this.availableProjects().find(p => p.id === id);
       return project ? {
         project_id: id,
         is_lead: id === currentProjectId,
@@ -249,8 +262,19 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   }
 
   getProjectDisplayName(id: number): string {
-    const project = this.availableProjects.find(p => p.id === id);
-    return project ? (project.shortName || project.fullName || String(id)) : String(id);
+    const project = this.availableProjects().find(p => p.id === id);
+    if (project) {
+      return project.shortName || project.fullName;
+    }
+    const loadedProj = this.creationService.resultContributingProjects().find(p => p.id === id);
+    if (loadedProj) {
+      return loadedProj.shortName || loadedProj.fullName;
+    }
+    const leadProj = this.creationService.selectedProject();
+    if (leadProj && leadProj.id === id) {
+      return leadProj.shortName || leadProj.fullName;
+    }
+    return '';
   }
 
   isLeadCenterItem(option: CenterOption): boolean {

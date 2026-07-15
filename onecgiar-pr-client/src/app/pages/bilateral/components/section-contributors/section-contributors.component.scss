@@ -382,10 +382,12 @@
 :host ::ng-deep {
   .p-multiselect {
     width: 100%;
+    max-width: 480px;
     z-index: 10;
   }
 
   .p-multiselect-panel {
     z-index: 1000 !important;
+    max-width: 480px;
   }
 }

@@ -38,6 +38,7 @@ export class BilateralCreationService {
   resultContributingCenterIds = signal<number[]>([]);
   resultProjectId = signal<number | null>(null);
   resultContributingProjectIds = signal<number[]>([]);
+  resultContributingProjects = signal<{ id: number; shortName: string; fullName: string }[]>([]);
 
   getProjects(centerId: string | number): void {
     this.isLoadingProjects.set(true);
@@ -122,6 +123,15 @@ export class BilateralCreationService {
             .filter((p: any) => p.project_id != null)
             .map((p: any) => Number(p.project_id));
           this.resultContributingProjectIds.set(pIds);
+
+          const pProjects = response.contributingProjects
+            .filter((p: any) => p.project_id != null)
+            .map((p: any) => ({
+              id: Number(p.project_id),
+              shortName: p.obj_clarisa_project?.shortName ?? '',
+              fullName: p.obj_clarisa_project?.fullName ?? ''
+            }));
+          this.resultContributingProjects.set(pProjects);
         }
 
         const contributingCenterIds = (response?.contributingCenters ?? [])

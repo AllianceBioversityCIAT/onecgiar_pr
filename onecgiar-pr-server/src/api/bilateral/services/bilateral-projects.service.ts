@@ -19,10 +19,20 @@ export class BilateralProjectsService {
   ) {}
 
   async getProjectsByCenter(centerId: number | string) {
-    const center = await this.centerRepo.findOne({
-      where: { code: String(centerId) },
-      relations: { clarisa_institution: true },
-    });
+    let center = null;
+    const centerIdNum = Number(centerId);
+    if (!isNaN(centerIdNum)) {
+      center = await this.centerRepo.findOne({
+        where: { institutionId: centerIdNum },
+        relations: { clarisa_institution: true },
+      });
+    }
+    if (!center) {
+      center = await this.centerRepo.findOne({
+        where: { code: String(centerId) },
+        relations: { clarisa_institution: true },
+      });
+    }
 
     if (!center) {
       this.logger.warn(`Center not found for code: ${centerId}`);
