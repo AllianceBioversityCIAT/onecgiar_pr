@@ -91,6 +91,14 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     }
   });
 
+  private readonly savedContributingCentersEffect = effect(() => {
+    const savedIds = this.creationService.resultContributingCenterIds();
+    if (!savedIds.length || !this.availableCenters.length) return;
+    const toAdd = savedIds.filter(id => !this.selectedCenterInstitutionIds.includes(id));
+    if (!toAdd.length) return;
+    this.selectedCenterInstitutionIds = [...this.selectedCenterInstitutionIds, ...toAdd];
+  });
+
   ngOnInit(): void {
     this.loadCenters();
     this.loadProjects();

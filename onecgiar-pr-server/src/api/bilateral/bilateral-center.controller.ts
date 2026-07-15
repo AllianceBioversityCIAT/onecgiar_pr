@@ -226,9 +226,10 @@ export class BilateralCenterController {
       let indicatorId: number | null = null;
       if (activeRecord.result_toc_result_id) {
         const indicatorQuery = `
-          SELECT rtri.result_toc_result_indicator_id as id
+          SELECT rtri.toc_results_indicator_id as id
           FROM results_toc_result_indicators rtri
           WHERE rtri.results_toc_results_id = ?
+            and rtri.is_active = 1
           LIMIT 1
         `;
         const indicatorResult: { id: number }[] =
@@ -374,7 +375,12 @@ export class BilateralCenterController {
     @Body() dto: SaveBilateralContributorsDto,
     @UserToken() user: TokenDto,
   ) {
-    const result: any = { savedCenters: [], failedCenters: [], savedProjects: [], failedProjects: [] };
+    const result: any = {
+      savedCenters: [],
+      failedCenters: [],
+      savedProjects: [],
+      failedProjects: [],
+    };
 
     try {
       const bilResult = await this.resultRepository.findOne({
@@ -391,7 +397,10 @@ export class BilateralCenterController {
       if (dto.contributing_center?.length) {
         for (const center of dto.contributing_center) {
           if (center.institution_id === undefined) {
-            result.failedCenters.push({ institution_id: center.institution_id, reason: 'No institution_id provided' });
+            result.failedCenters.push({
+              institution_id: center.institution_id,
+              reason: 'No institution_id provided',
+            });
             continue;
           }
 
@@ -399,7 +408,10 @@ export class BilateralCenterController {
             where: { id: center.institution_id },
           });
           if (!inst) {
-            result.failedCenters.push({ institution_id: center.institution_id, reason: 'Institution not found in clarisa_institutions' });
+            result.failedCenters.push({
+              institution_id: center.institution_id,
+              reason: 'Institution not found in clarisa_institutions',
+            });
             continue;
           }
 
@@ -407,7 +419,10 @@ export class BilateralCenterController {
             where: { institutionId: inst.id },
           });
           if (!clarisaCenters || clarisaCenters.length === 0) {
-            result.failedCenters.push({ institution_id: center.institution_id, reason: 'Institution has no clarisa_center record' });
+            result.failedCenters.push({
+              institution_id: center.institution_id,
+              reason: 'Institution has no clarisa_center record',
+            });
             continue;
           }
 
@@ -428,9 +443,16 @@ export class BilateralCenterController {
               is_active: true,
               created_by: user.id,
             });
-            result.savedCenters.push({ institution_id: center.institution_id, centerCode });
+            result.savedCenters.push({
+              institution_id: center.institution_id,
+              centerCode,
+            });
           } else {
-            result.savedCenters.push({ institution_id: center.institution_id, centerCode, alreadyExists: true });
+            result.savedCenters.push({
+              institution_id: center.institution_id,
+              centerCode,
+              alreadyExists: true,
+            });
           }
         }
       }
@@ -453,19 +475,27 @@ export class BilateralCenterController {
               });
               result.savedProjects.push({ project_id: project.project_id });
             } else {
-              result.savedProjects.push({ project_id: project.project_id, alreadyExists: true });
+              result.savedProjects.push({
+                project_id: project.project_id,
+                alreadyExists: true,
+              });
             }
           } catch {
-            result.failedProjects.push({ project_id: project.project_id, reason: 'Save failed' });
+            result.failedProjects.push({
+              project_id: project.project_id,
+              reason: 'Save failed',
+            });
           }
         }
       }
 
       return {
         response: { resultId, ...result },
-        message: result.failedCenters.length === 0 && result.failedProjects.length === 0
-          ? 'Contributors saved successfully'
-          : `Contributors saved with ${result.failedCenters.length} failed centers and ${result.failedProjects.length} failed projects`,
+        message:
+          result.failedCenters.length === 0 &&
+          result.failedProjects.length === 0
+            ? 'Contributors saved successfully'
+            : `Contributors saved with ${result.failedCenters.length} failed centers and ${result.failedProjects.length} failed projects`,
       };
     } catch (error) {
       return {

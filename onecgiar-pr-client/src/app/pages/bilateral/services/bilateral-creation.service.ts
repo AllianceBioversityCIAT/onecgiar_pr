@@ -35,6 +35,7 @@ export class BilateralCreationService {
   resultLevelId = signal<number | null>(null);
   resultTypeId = signal<number | null>(null);
   resultLeadCenterId = signal<number | null>(null);
+  resultContributingCenterIds = signal<number[]>([]);
   resultProjectId = signal<number | null>(null);
 
   getProjects(centerId: string | number): void {
@@ -51,6 +52,7 @@ export class BilateralCreationService {
   loadResult(resultId: number): void {
     this.currentResultId.set(resultId);
     this.isLoadingResult.set(true);
+    this.resultContributingCenterIds.set([]);
     this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`).subscribe({
       next: ({ response }) => {
         if (response?.commonFields) {
@@ -117,6 +119,15 @@ export class BilateralCreationService {
           }
         }
 
+        const contributingCenterIds = (response?.contributingCenters ?? [])
+          .filter((c: any) => c.is_leading_result === 0 || c.is_leading_result === false)
+          .map((c: any) => {
+            if (c.institutionId != null) return Number(c.institutionId);
+            return null;
+          })
+          .filter((id: number | null): id is number => id !== null);
+        this.resultContributingCenterIds.set(contributingCenterIds);
+
         this.isLoadingResult.set(false);
       },
       error: () => { this.isLoadingResult.set(false); }
@@ -140,6 +151,8 @@ export class BilateralCreationService {
     this.selectedProject.set(null);
     this.selectedPrimarySp.set(null);
     this.selectedSecondarySps.set([]);
+    this.resultLeadCenterId.set(null);
+    this.resultContributingCenterIds.set([]);
     localStorage.removeItem(LS_PROJECT_KEY);
     localStorage.removeItem(LS_SP_KEY);
     localStorage.removeItem(LS_SECONDARY_SP_KEY);

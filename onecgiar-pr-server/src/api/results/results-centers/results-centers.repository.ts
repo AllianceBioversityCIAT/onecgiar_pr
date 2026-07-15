@@ -144,7 +144,8 @@ export class ResultsCenterRepository
       rc.center_id as code,
       ci.name,
       ci.acronym,
-      rc.is_leading_result
+      rc.is_leading_result,
+      cc.institutionId
       from results_center rc 
         left join clarisa_center cc on rc.center_id = cc.code 
       	left join clarisa_institutions ci on ci.id = cc.institutionId 

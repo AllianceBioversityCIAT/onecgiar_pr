@@ -176,6 +176,7 @@ export class BilateralAutoSaveService {
 
     const body: any = {
       result_toc_result: {
+        planned_result: tocData.planned_result !== undefined ? tocData.planned_result : true,
         result_toc_results: [{
           toc_level_id: tocLevelId,
           toc_result_id: tocResultId,

@@ -1880,6 +1880,43 @@ export class ResultsTocResultsService {
         result?.initiative_id,
       );
 
+      let isPlannedValue = resultTocResult?.planned_result;
+      if (isPlannedValue === undefined || isPlannedValue === null) {
+        const activeRecord = await this._resultsTocResultRepository.findOne({
+          where: {
+            result_id: resultId,
+            initiative_ids: primaryInitiativeId,
+            is_active: true,
+          },
+        });
+        isPlannedValue = activeRecord?.planned_result ?? true;
+        if (resultTocResult) {
+          resultTocResult.planned_result = isPlannedValue;
+        }
+      }
+
+      if (resultTocResult?.result_toc_results?.length) {
+        for (const t of resultTocResult.result_toc_results) {
+          if (t && !(t as any).initiative_id) {
+            (t as any).initiative_id = primaryInitiativeId;
+          }
+          if (t && !t.result_toc_result_id) {
+            const activeRecord = await this._resultsTocResultRepository.findOne(
+              {
+                where: {
+                  result_id: resultId,
+                  initiative_ids: (t as any).initiative_id,
+                  is_active: true,
+                },
+              },
+            );
+            if (activeRecord) {
+              t.result_toc_result_id = activeRecord.result_toc_result_id;
+            }
+          }
+        }
+      }
+
       const incomingIds = this._extractIncomingIds(resultTocResult);
       await this._deactivateMissingRecords(resultId, incomingIds, user);
 

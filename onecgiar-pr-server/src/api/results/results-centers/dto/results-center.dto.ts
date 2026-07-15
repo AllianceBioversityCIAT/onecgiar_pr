@@ -64,4 +64,9 @@ export class ResultsCenterDto {
       'Flag that marks whether the center is leading the reported result.',
   })
   is_leading_result: boolean;
+
+  @ApiProperty({
+    description: 'Unique institution identifier associated with the center.',
+  })
+  institutionId: number;
 }

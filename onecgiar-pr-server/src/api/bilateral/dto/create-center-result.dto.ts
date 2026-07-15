@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -8,7 +14,10 @@ export class LeadCenterDto {
   @IsOptional()
   institution_id?: number;
 
-  @ApiPropertyOptional({ description: 'Institution name', example: 'Alliance Bioversity - CIAT' })
+  @ApiPropertyOptional({
+    description: 'Institution name',
+    example: 'Alliance Bioversity - CIAT',
+  })
   @IsString()
   @IsOptional()
   name?: string;
