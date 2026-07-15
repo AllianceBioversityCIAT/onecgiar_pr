@@ -161,6 +161,8 @@
             </div>
             <input type="number" class="st-input" [ngModel]="contributionValue()"
               placeholder="Enter your contribution…"
+              step="1"
+              pattern="[0-9]*"
               (ngModelChange)="setContributionValue($event)" />
           </div>
         }

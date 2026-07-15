@@ -150,6 +150,15 @@ export class BilateralCenterController {
       );
     }
 
+    if (dto.project_id) {
+      await this.resultsByProjectsRepository.save({
+        result_id: result.id,
+        project_id: dto.project_id,
+        created_by: user.id,
+        is_lead: true,
+      });
+    }
+
     return {
       response: {
         id: result.id,
@@ -223,21 +232,38 @@ export class BilateralCenterController {
         };
       }
 
-      let indicatorId: number | null = null;
+      let indicatorId: string | null = null;
+      let contributingIndicator: number | null = null;
       if (activeRecord.result_toc_result_id) {
         const indicatorQuery = `
-          SELECT rtri.toc_results_indicator_id as id
+          SELECT 
+            rtri.toc_results_indicator_id as id,
+            rtri.result_toc_result_indicator_id as rtri_id
           FROM results_toc_result_indicators rtri
           WHERE rtri.results_toc_results_id = ?
             and rtri.is_active = 1
           LIMIT 1
         `;
-        const indicatorResult: { id: number }[] =
+        const indicatorResult: { id: string; rtri_id: number }[] =
           await this.resultsTocResultRepository.query(indicatorQuery, [
             activeRecord.result_toc_result_id,
           ]);
         if (indicatorResult?.length) {
           indicatorId = indicatorResult[0].id;
+          const targetQuery = `
+            SELECT rit.contributing_indicator
+            FROM result_indicators_targets rit
+            WHERE rit.result_toc_result_indicator_id = ?
+              and rit.is_active = 1
+            LIMIT 1
+          `;
+          const targetResult: { contributing_indicator: number }[] =
+            await this.resultsTocResultRepository.query(targetQuery, [
+              indicatorResult[0].rtri_id,
+            ]);
+          if (targetResult?.length) {
+            contributingIndicator = targetResult[0].contributing_indicator;
+          }
         }
       }
 
@@ -247,6 +273,7 @@ export class BilateralCenterController {
           toc_level_id: activeRecord.toc_level_id ?? null,
           toc_result_id: activeRecord.toc_result_id ?? null,
           indicator_id: indicatorId,
+          contributing_indicator: contributingIndicator,
           toc_progressive_narrative:
             activeRecord.toc_progressive_narrative ?? null,
         },

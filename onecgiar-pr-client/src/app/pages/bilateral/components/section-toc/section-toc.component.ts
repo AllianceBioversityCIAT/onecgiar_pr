@@ -173,6 +173,9 @@ export class SectionTocComponent implements OnInit {
     if (state.indicator_id !== null) {
       this.selectedIndicatorId.set(state.indicator_id);
     }
+    if (state.contributing_indicator !== null) {
+      this.contributionValue.set(state.contributing_indicator);
+    }
     if (state.toc_progressive_narrative !== null) {
       this.narrative.set(state.toc_progressive_narrative);
     }
@@ -289,7 +292,7 @@ export class SectionTocComponent implements OnInit {
 
   setContributionValue(val: number | string | null): void {
     if (val === null || val === '' || val === undefined) { this.contributionValue.set(null); return; }
-    const n = Number(val);
+    const n = Math.round(Number(val));
     this.contributionValue.set(isNaN(n) ? null : n);
     this.saveTocDebounced();
   }

@@ -170,7 +170,7 @@ export class BilateralAutoSaveService {
 
     const tocLevelId = tocData.toc_level_id ? Number(tocData.toc_level_id) : undefined;
     const tocResultId = tocData.toc_result_id ? Number(tocData.toc_result_id) : undefined;
-    const indicatorId = tocData.indicator_id ? Number(tocData.indicator_id) : undefined;
+    const indicatorId = tocData.indicator_id ? String(tocData.indicator_id) : undefined;
     const contributing = tocData.contributing_indicator !== undefined && tocData.contributing_indicator !== null
       ? Number(tocData.contributing_indicator) : undefined;
 
@@ -246,6 +246,7 @@ export class BilateralAutoSaveService {
     toc_level_id: number | null;
     toc_result_id: number | null;
     indicator_id: number | null;
+    contributing_indicator: number | null;
     toc_progressive_narrative: string | null;
   }> {
     const resultId = this._currentResultId();
@@ -255,6 +256,7 @@ export class BilateralAutoSaveService {
         toc_level_id: null,
         toc_result_id: null,
         indicator_id: null,
+        contributing_indicator: null,
         toc_progressive_narrative: null,
       });
     }
@@ -268,6 +270,7 @@ export class BilateralAutoSaveService {
             toc_level_id: response?.toc_level_id ?? null,
             toc_result_id: response?.toc_result_id ?? null,
             indicator_id: response?.indicator_id ?? null,
+            contributing_indicator: response?.contributing_indicator ?? null,
             toc_progressive_narrative: response?.toc_progressive_narrative ?? null,
           });
         },
@@ -277,6 +280,7 @@ export class BilateralAutoSaveService {
             toc_level_id: null,
             toc_result_id: null,
             indicator_id: null,
+            contributing_indicator: null,
             toc_progressive_narrative: null,
           });
         },

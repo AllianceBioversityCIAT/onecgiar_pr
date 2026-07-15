@@ -74,6 +74,8 @@
         optionLabel="full_name"
         optionValue="institutionId"
         placeholder="Select contributing centers"
+        [maxSelectedLabels]="0"
+        selectedItemsLabel="Select contributing centers"
         [style]="{ width: '100%' }"
         (onChange)="onCentersChange($event.value)"
         [showClear]="true"
@@ -108,6 +110,8 @@
         optionLabel="fullName"
         optionValue="id"
         placeholder="Select contributing projects"
+        [maxSelectedLabels]="0"
+        selectedItemsLabel="Select contributing projects"
         [style]="{ width: '100%' }"
         (onChange)="onProjectsChange($event.value)"
         [showClear]="true"
@@ -116,9 +120,11 @@
       @if (selectedProjectIds.length) {
         <div class="sc-selected-chips">
           @for (id of selectedProjectIds; track id) {
-            <span class="sc-chip sc-chip--project">
+            <span class="sc-chip sc-chip--project" [class.sc-chip-readonly]="isLeadProject(id)">
               {{ getProjectDisplayName(id) }}
-              <button type="button" class="sc-chip-remove" (click)="removeProject(id)">×</button>
+              @if (!isLeadProject(id)) {
+                <button type="button" class="sc-chip-remove" (click)="removeProject(id)">×</button>
+              }
             </span>
           }
         </div>

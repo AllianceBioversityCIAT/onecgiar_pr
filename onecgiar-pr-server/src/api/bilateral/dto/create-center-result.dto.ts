@@ -62,4 +62,12 @@ export class CreateCenterResultDto {
   @Type(() => LeadCenterDto)
   @IsOptional()
   lead_center?: LeadCenterDto;
+
+  @ApiPropertyOptional({
+    description: 'Primary project ID from clarisa_projects',
+    example: 1,
+  })
+  @IsNumber()
+  @IsOptional()
+  project_id?: number;
 }

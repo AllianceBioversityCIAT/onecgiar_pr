@@ -37,6 +37,7 @@ export class BilateralCreationService {
   resultLeadCenterId = signal<number | null>(null);
   resultContributingCenterIds = signal<number[]>([]);
   resultProjectId = signal<number | null>(null);
+  resultContributingProjectIds = signal<number[]>([]);
 
   getProjects(centerId: string | number): void {
     this.isLoadingProjects.set(true);
@@ -117,6 +118,10 @@ export class BilateralCreationService {
               this.resultLeadCenterId.set(proj.obj_organization.id);
             }
           }
+          const pIds = response.contributingProjects
+            .filter((p: any) => p.project_id != null)
+            .map((p: any) => Number(p.project_id));
+          this.resultContributingProjectIds.set(pIds);
         }
 
         const contributingCenterIds = (response?.contributingCenters ?? [])
@@ -193,6 +198,10 @@ export class BilateralCreationService {
         name: leadCenter.name,
         acronym: leadCenter.acronym,
       };
+    }
+    const project = this.selectedProject();
+    if (project?.id) {
+      body['project_id'] = Number(project.id);
     }
     return this.http.post(`${environment.apiBaseUrl}api/bilateral/center/create-header`, body);
   }

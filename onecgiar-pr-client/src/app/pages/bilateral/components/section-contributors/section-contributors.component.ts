@@ -99,6 +99,41 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     this.selectedCenterInstitutionIds = [...this.selectedCenterInstitutionIds, ...toAdd];
   });
 
+  readonlyLeadProjectId: number | null = null;
+
+  private readonly leadProjectEffect = effect(() => {
+    const project = this.creationService.selectedProject();
+    if (project?.id && this.availableProjects.length) {
+      const leadProjId = Number(project.id);
+      const projectExists = this.availableProjects.some(p => p.id === leadProjId);
+      if (projectExists && !this.readonlyLeadProjectId) {
+        this.readonlyLeadProjectId = leadProjId;
+        if (!this.selectedProjectIds.includes(leadProjId)) {
+          this.selectedProjectIds = [leadProjId, ...this.selectedProjectIds];
+          const currentProjectId = this.creationService.selectedProject()?.id;
+          const selectedProjects = this.selectedProjectIds.map(id => {
+            const p = this.availableProjects.find(p => p.id === id);
+            return p ? {
+              project_id: id,
+              is_lead: id === currentProjectId,
+            } : null;
+          }).filter(Boolean);
+          this.autoSave.saveContributors({
+            contributing_bilateral_projects: selectedProjects as { project_id: number; is_lead?: boolean }[],
+          });
+        }
+      }
+    }
+  });
+
+  private readonly savedContributingProjectsEffect = effect(() => {
+    const savedIds = this.creationService.resultContributingProjectIds();
+    if (!savedIds.length || !this.availableProjects.length) return;
+    const toAdd = savedIds.filter(id => !this.selectedProjectIds.includes(id));
+    if (!toAdd.length) return;
+    this.selectedProjectIds = [...this.selectedProjectIds, ...toAdd];
+  });
+
   ngOnInit(): void {
     this.loadCenters();
     this.loadProjects();
@@ -178,7 +213,11 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   }
 
   onProjectsChange(ids: number[]): void {
-    this.selectedProjectIds = ids ?? [];
+    let finalIds = ids ?? [];
+    if (this.readonlyLeadProjectId && !finalIds.includes(this.readonlyLeadProjectId)) {
+      finalIds = [this.readonlyLeadProjectId, ...finalIds];
+    }
+    this.selectedProjectIds = finalIds;
     const currentProjectId = this.creationService.selectedProject()?.id;
     const selectedProjects = this.selectedProjectIds.map(id => {
       const project = this.availableProjects.find(p => p.id === id);
@@ -222,6 +261,10 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     return id === this.readonlyLeadCenterInstitutionId;
   }
 
+  isLeadProject(id: number): boolean {
+    return id === this.readonlyLeadProjectId;
+  }
+
   removeCenter(id: number): void {
     if (id === this.readonlyLeadCenterInstitutionId) {
       return;
@@ -230,6 +273,9 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   }
 
   removeProject(id: number): void {
+    if (id === this.readonlyLeadProjectId) {
+      return;
+    }
     this.onProjectsChange(this.selectedProjectIds.filter(p => p !== id));
   }
 }
