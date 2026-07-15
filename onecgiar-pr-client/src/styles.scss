@@ -481,6 +481,11 @@ color-scheme: dark;
 }
 body {
 @apply bg-background text-foreground;
+// Subtle canvas texture over the base background (repeats + stays fixed on scroll).
+background-image: url('assets/texture-bg.webp');
+background-repeat: repeat;
+background-size: 641px 900px;
+background-attachment: fixed;
 }
 }
 /* Chip / avatar / progress / spinner — PrimeNG leaf replacements (0 PrimeNG). */
