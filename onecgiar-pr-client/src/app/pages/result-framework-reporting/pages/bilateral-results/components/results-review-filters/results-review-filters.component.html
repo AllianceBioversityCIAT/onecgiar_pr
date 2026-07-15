@@ -13,8 +13,8 @@
           style="width: 350px" />
       </span>
 
-      <!-- Apply filters button -->
-      <span class="pr-overlay-badge-wrap">
+      <!-- Apply filters button (active-filters dot on the top-right corner) -->
+      <span class="relative inline-flex">
         <app-pr-button
           (click)="openFiltersDrawer()"
           (keydown.enter)="openFiltersDrawer()"
@@ -22,7 +22,10 @@
           [verticalMargin]="-6"
           icon="filter_alt"
           [reverse]="true" />
-        <span class="pr-overlay-badge" *ngIf="filtersCount() > 0"></span>
+        <span
+          *ngIf="filtersCount() > 0"
+          class="absolute -top-[8px] -right-[3px] h-[9px] w-[9px] rounded-full bg-[var(--pr-color-red-300)] ring-2 ring-white"
+          aria-hidden="true"></span>
       </span>
       <!-- Clear filters -->
       <app-pr-button
