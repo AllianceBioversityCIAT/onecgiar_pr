@@ -50,7 +50,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     { title: 'Center', attr: 'lead_center', center: true, width: '100px' },
     { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
     { title: 'Indicator category', attr: 'result_type', center: true, width: '100px' },
-    { title: 'Submitter', attr: 'submitter', center: true, width: '30px' },
+    { title: 'Submitter', attr: 'submitter', center: true, width: '75px' },
     { title: 'Status', attr: 'full_status_name_html', center: true, width: '124px' },
     { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
     { title: 'Created by	', attr: 'full_name', width: '120px' }

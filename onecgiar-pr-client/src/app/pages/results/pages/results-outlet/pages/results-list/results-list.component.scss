@@ -38,6 +38,22 @@
   padding-bottom: 100px;
   position: relative;
 
+  // Restore the pre-redesign table behavior: honor the fixed column widths so the columns
+  // stay compact (collapse to their defined size) instead of auto-stretching to fit content.
+  // With table-layout:auto the browser ignores the widths and widens each column to its
+  // content; `fixed` respects them, and `min-width` makes the wrapper's overflow-x kick in
+  // automatically once the viewport can't fit the whole table.
+  ::ng-deep .pr-table {
+    table-layout: fixed;
+    min-width: 1300px;
+
+    // With fixed widths the header labels (previously nowrap) would overflow their column and
+    // overlap the next header — let them wrap by words within their own column instead.
+    thead th {
+      white-space: normal;
+    }
+  }
+
   .align-center {
     display: flex;
     gap: 10px;
