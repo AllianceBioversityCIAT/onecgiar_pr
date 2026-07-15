@@ -79,3 +79,16 @@ p {
     padding: 4px 20px;
   }
 }
+
+/* Restore compact fixed-width columns + automatic horizontal scroll (pre-redesign behavior).
+   The Spartan app-pr-table renders with table-layout:auto, which ignores the defined column
+   widths and stretches each column to its content; `fixed` honors the widths and `min-width`
+   makes the wrapper's overflow-x kick in once the viewport can't fit the whole table. */
+:host ::ng-deep .pr-table {
+  table-layout: fixed;
+  min-width: 900px;
+
+  thead th {
+    white-space: normal;
+  }
+}

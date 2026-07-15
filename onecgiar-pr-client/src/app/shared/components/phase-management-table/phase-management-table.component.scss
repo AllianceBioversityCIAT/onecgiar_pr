@@ -159,8 +159,9 @@
   margin-top: 0;
 }
 
-::ng-deep {
-  .pr-table-wrap {
-    overflow: unset !important;
-  }
+// Scoped to :host — this table keeps its inline-edit dropdowns un-clipped (overflow visible).
+// Previously this was a bare ::ng-deep rule, so it leaked GLOBALLY and disabled the horizontal
+// scroll of every other .pr-table-wrap in the app whenever this component was loaded.
+:host ::ng-deep .pr-table-wrap {
+  overflow: unset !important;
 }
