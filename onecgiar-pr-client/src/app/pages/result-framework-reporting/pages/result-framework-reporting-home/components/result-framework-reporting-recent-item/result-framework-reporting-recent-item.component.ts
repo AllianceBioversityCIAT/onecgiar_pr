@@ -22,4 +22,11 @@ export class ResultFrameworkReportingRecentItemComponent {
   getTooltipText() {
     return `View result: ${this.item?.resultCode} - ${this.item?.resultTitle}`;
   }
+
+  // "RESULT_CREATED" → "Result created"; falls back to the historical label
+  getEventLabel(): string {
+    const raw = this.item?.eventType?.replace(/_/g, ' ').trim();
+    if (!raw) return 'Result created';
+    return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  }
 }

@@ -62,6 +62,9 @@ export class DataControlService {
   tocUrl = environment?.tocUrl;
   reportingCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null, portfolioAcronym: null, portfolioId: null };
   reportingStatusVersion = signal(0);
+  // Bumped when getCurrentPhases() refreshes reportingCurrentPhase (plain object):
+  // zoneless templates derive computeds from this to re-render the phase label.
+  reportingPhaseVersion = signal(0);
 
   notifyReportingStatusChanged(): void {
     this.reportingStatusVersion.update(v => v + 1);
@@ -83,6 +86,11 @@ export class DataControlService {
         this.reportingCurrentPhase.phaseId = response[0]?.id;
         this.reportingCurrentPhase.portfolioAcronym = response[0]?.obj_portfolio?.acronym;
         this.reportingCurrentPhase.portfolioId = response[0]?.portfolio_id;
+
+        // reportingCurrentPhase is a plain (non-signal) object: bump the dedicated
+        // version signal so zoneless templates re-render once phases load
+        // (NOT reportingStatusVersion — that one drives reporting-access effects)
+        this.reportingPhaseVersion.update(v => v + 1);
 
         if (response[0]?.obj_previous_phase) {
           this.previousReportingPhase.phaseYear = response[0]?.obj_previous_phase.phase_year;

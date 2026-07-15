@@ -1,7 +1,34 @@
+<div class="mb-3 flex flex-wrap items-center gap-2">
+  <div class="relative min-w-[240px] max-w-[400px] flex-1">
+    <i class="material-icons-round pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-[var(--pr-color-accents-4)]" aria-hidden="true">search</i>
+    <input
+      type="text"
+      class="h-9 w-full rounded-lg border border-[var(--pr-color-accents-2)] bg-white pl-8 pr-3 text-xs text-[var(--pr-color-secondary-400)] outline-none transition-colors placeholder:text-[var(--pr-color-accents-4)] focus:border-brand-300"
+      placeholder="Search by HLO or KPI statement…"
+      aria-label="Search indicators"
+      [value]="searchQuery()"
+      (input)="searchQuery.set($any($event.target).value)" />
+  </div>
+
+  <select
+    class="h-9 min-w-[140px] shrink-0 cursor-pointer rounded-lg border border-[var(--pr-color-accents-2)] bg-white px-2.5 text-xs text-[var(--pr-color-secondary-400)] outline-none focus:border-brand-300"
+    aria-label="Filter by status"
+    (change)="statusFilter.set($any($event.target).value)">
+    <option value="all">All statuses</option>
+    <option value="Not started">Not started</option>
+    <option value="In progress">In progress</option>
+    <option value="Achieved">Achieved</option>
+    <option value="Overachieved">Overachieved</option>
+  </select>
+
+  <span class="ml-auto text-xs font-semibold text-[var(--pr-color-accents-5)]">
+    {{ filteredIndicatorCount() }} {{ filteredIndicatorCount() === 1 ? 'indicator' : 'indicators' }}
+  </span>
+</div>
+
 <app-pr-group-table
   id="tocResultsByAowIdTable"
-  styleClass="p-datatable-gridlines p-datatable-sm"
-  [value]="tableData()"
+  [value]="filteredTableData()"
   [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes()"
   sortField="result_title"
   [sortOrder]="1"

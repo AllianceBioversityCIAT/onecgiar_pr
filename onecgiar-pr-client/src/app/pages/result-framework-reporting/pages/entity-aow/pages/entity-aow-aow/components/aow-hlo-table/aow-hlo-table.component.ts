@@ -62,9 +62,33 @@ export class AowHloTableComponent {
     }
   });
 
+  // Client-side toolbar filters (search across HLO title + KPI statement, status chip)
+  searchQuery = signal('');
+  statusFilter = signal<'all' | 'Not started' | 'In progress' | 'Achieved' | 'Overachieved'>('all');
+
+  filteredTableData = computed(() => {
+    const query = this.searchQuery().toLowerCase().trim();
+    const status = this.statusFilter();
+
+    return this.tableData()
+      .map((group: any) => {
+        const titleMatches = !query || group.result_title?.toLowerCase().includes(query);
+        const indicators = (group.indicators ?? []).filter((indicator: any) => {
+          const queryMatches = titleMatches || indicator.indicator_description?.toLowerCase().includes(query);
+          const statusMatches = status === 'all' || this.getStatusLabel(indicator.progress_percentage) === status;
+          return queryMatches && statusMatches;
+        });
+
+        return { ...group, indicators };
+      })
+      .filter((group: any) => group.indicators.length > 0 || (!query && this.statusFilter() === 'all'));
+  });
+
+  filteredIndicatorCount = computed(() => this.filteredTableData().reduce((sum: number, g: any) => sum + (g.indicators?.length ?? 0), 0));
+
   expandedRowKeys = computed(() => {
     const expanded: { [key: string]: boolean } = {};
-    this.tableData().forEach((item: any) => {
+    this.filteredTableData().forEach((item: any) => {
       expanded[item.result_title] = true;
     });
     return expanded;

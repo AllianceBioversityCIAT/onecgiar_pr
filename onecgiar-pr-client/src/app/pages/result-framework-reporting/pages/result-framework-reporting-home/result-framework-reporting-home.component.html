@@ -1,21 +1,48 @@
-<div class="framework-reporting_welcome">Welcome, {{ this.api.authSE.localStorageUser?.user_name }}!</div>
-
 <app-alert-global-info className="section_container"></app-alert-global-info>
-<div class="framework-reporting_container">
-  <div class="framework-reporting_left">
-    <div class="framework-reporting_left_header">
-      <h1 class="framework-reporting_left_header_title">Your innovative digital reporting solution</h1>
-      <p class="framework-reporting_left_header_description">Welcome to PRMS! Explore, create, and manage your projects and results with ease.</p>
-    </div>
+<div class="framework-reporting_container mx-auto grid min-h-screen max-w-[1600px] grid-cols-[1fr_380px] gap-5 px-[30px] pb-[120px] pt-5 max-[1115px]:grid-cols-1">
+  <div class="flex min-w-0 flex-col gap-10 max-[1115px]:gap-8">
+    <!-- Hero -->
+    <section class="relative overflow-hidden rounded-xl bg-brand-900 px-10 py-8 max-md:px-6" aria-label="Welcome">
+      <div
+        class="pointer-events-none absolute inset-0 bg-[radial-gradient(115%_190%_at_88%_-25%,rgba(var(--pr-color-primary-rgb),0.55)_0%,rgba(var(--pr-color-primary-rgb),0.18)_38%,transparent_68%)]"
+        aria-hidden="true"></div>
 
-    <div class="framework-reporting_left_content">
-      <div class="framework-reporting_left_content_mySPs">
-        <h2 class="framework-reporting_left_content_title">My Science Programs/Accelerators</h2>
+      <div class="relative flex flex-col items-start gap-2.5">
+        @if (phaseLabel()) {
+          <span class="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.2px] text-white/90">
+            {{ phaseLabel() }}
+          </span>
+        }
 
-        <div class="framework-reporting_left_content_mySPs_items" [ngClass]="{ empty: resultFrameworkReportingHomeService.mySPsList().length === 0 }">
+        <h1 class="m-0 text-[26px] font-bold leading-tight text-balance text-white">
+          Welcome{{ api.authSE.localStorageUser?.user_name ? ', ' + api.authSE.localStorageUser?.user_name : '' }}!
+        </h1>
+        <p class="m-0 max-w-[65ch] text-[15px] font-normal leading-relaxed text-white/80">
+          Explore, create, and manage your Science Program results with ease.
+        </p>
+      </div>
+    </section>
+
+    <div class="flex flex-col gap-10 max-[1115px]:gap-8">
+      <!-- My Science Programs/Accelerators -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-baseline gap-2.5">
+          <h2 class="m-0 text-xl font-bold text-[var(--pr-color-secondary-400)]">My Science Programs/Accelerators</h2>
+          @if (!resultFrameworkReportingHomeService.isLoadingSPLists() && resultFrameworkReportingHomeService.mySPsList().length > 0) {
+            <span class="rounded-full bg-[var(--pr-color-accents-2)] px-2 py-0.5 text-xs font-semibold text-[var(--pr-color-accents-6)]">
+              {{ resultFrameworkReportingHomeService.mySPsList().length }}
+            </span>
+          }
+        </div>
+
+        <div
+          class="grid gap-4"
+          [ngClass]="resultFrameworkReportingHomeService.mySPsList().length === 0 && !resultFrameworkReportingHomeService.isLoadingSPLists()
+            ? 'grid-cols-1'
+            : 'grid-cols-[repeat(auto-fill,minmax(315px,1fr))]'">
           @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
             @for (item of [0, 1]; track $index) {
-              <div class="pr-skeleton" style="width:100%;height:136px"></div>
+              <div class="pr-skeleton" style="width:100%;height:156px"></div>
             }
           } @else {
             @if (resultFrameworkReportingHomeService.mySPsList().length > 0) {
@@ -23,7 +50,7 @@
                 <app-result-framework-reporting-card-item [item]="item" />
               }
             } @else {
-              <div class="framework-reporting_left_content_mySPs_items_empty">
+              <div>
                 <app-alert-status
                   inlineStyles="background-color: var(--pr-color-white); margin: 0;"
                   description=" You currently do not have a member role in any Science Program or Accelerator. If you require access or permissions, please contact
@@ -32,16 +59,17 @@
             }
           }
         </div>
-      </div>
+      </section>
 
-      <div class="framework-reporting_right responsive-down">
-        <div class="framework-reporting_right_header">
-          <h2 class="framework-reporting_right_header_title">Recent activity</h2>
+      <!-- Recent activity (mobile/tablet) -->
+      <section class="framework-reporting_right h-fit w-full rounded-xl border border-[var(--pr-color-accents-2)] bg-white min-[1115px]:hidden">
+        <div class="flex h-[46px] items-center border-b border-[var(--pr-color-accents-2)] px-5">
+          <h2 class="m-0 text-[15px] font-semibold text-[var(--pr-color-secondary-400)]">Recent activity</h2>
         </div>
 
-        <div class="framework-reporting_right_content">
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(305px,1fr))] gap-3 px-4 pb-6 pt-4">
           @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
-            @for (item of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; track $index) {
+            @for (item of [0, 1, 2, 3]; track $index) {
               <div class="pr-skeleton" style="width:100%;height:72px"></div>
             }
           } @else {
@@ -55,37 +83,48 @@
             }
           }
         </div>
-      </div>
+      </section>
 
-      <div class="framework-reporting_left_content_otherSPs">
-        <div class="framework-reporting_left_content_header">
-          <h2 class="framework-reporting_left_content_title">Other Science Programs/Accelerators</h2>
-          <p class="framework-reporting_left_content_desc">
+      <!-- Other Science Programs/Accelerators -->
+      <section class="flex flex-col gap-4">
+        <div class="flex flex-col gap-0.5">
+          <div class="flex items-baseline gap-2.5">
+            <h2 class="m-0 text-xl font-bold text-[var(--pr-color-secondary-400)]">Other Science Programs/Accelerators</h2>
+            @if (!resultFrameworkReportingHomeService.isLoadingSPLists() && resultFrameworkReportingHomeService.otherSPsList().length > 0) {
+              <span class="rounded-full bg-[var(--pr-color-accents-2)] px-2 py-0.5 text-xs font-semibold text-[var(--pr-color-accents-6)]">
+                {{ resultFrameworkReportingHomeService.otherSPsList().length }}
+              </span>
+            }
+          </div>
+          <p class="m-0 text-[15px] font-normal text-[var(--pr-color-accents-6)]">
             Explore other Science Programs and Accelerators driving research, innovation, and impact.
           </p>
         </div>
 
-        <div class="framework-reporting_left_content_otherSPs_items">
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(315px,1fr))] gap-4 min-[1500px]:grid-cols-3">
           @if (resultFrameworkReportingHomeService.isLoadingSPLists()) {
             @for (item of [0, 1, 2, 3, 4, 5]; track $index) {
-              <div class="pr-skeleton" style="width:100%;height:136px"></div>
+              <div class="pr-skeleton" style="width:100%;height:156px"></div>
             }
           } @else {
             @for (item of resultFrameworkReportingHomeService.otherSPsList(); track $index) {
               <app-result-framework-reporting-card-item [item]="item" />
+            } @empty {
+              <p class="m-0 text-sm text-[var(--pr-color-accents-5)]">No other Science Programs or Accelerators to show.</p>
             }
           }
         </div>
-      </div>
+      </section>
     </div>
   </div>
 
-  <div class="framework-reporting_right responsive-right">
-    <div class="framework-reporting_right_header">
-      <h2 class="framework-reporting_right_header_title">Recent activity</h2>
+  <!-- Recent activity (desktop sidebar) -->
+  <section class="framework-reporting_right h-fit w-full rounded-xl border border-[var(--pr-color-accents-2)] bg-white max-[1115px]:hidden">
+    <div class="flex h-[46px] items-center border-b border-[var(--pr-color-accents-2)] px-5">
+      <h2 class="m-0 text-[15px] font-semibold text-[var(--pr-color-secondary-400)]">Recent activity</h2>
     </div>
 
-    <div class="framework-reporting_right_content">
+    <div class="flex flex-col gap-3 px-4 pb-7 pt-4">
       @if (resultFrameworkReportingHomeService.isLoadingRecentActivity()) {
         @for (item of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; track $index) {
           <div class="pr-skeleton" style="width:100%;height:72px"></div>
@@ -101,5 +140,5 @@
         }
       }
     </div>
-  </div>
+  </section>
 </div>

@@ -105,7 +105,9 @@ p {
 }
 
 .entity-aow_main {
-  width: calc(100vw - 253px);
+  // Grid column is already 1fr — a fixed 100vw-based width overflowed the page
+  // (100vw includes the scrollbar and ignored the real sidebar width).
+  min-width: 0;
   padding: 30px;
 }
 

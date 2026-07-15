@@ -1,6 +1,6 @@
 <div
   #recentActivityCard
-  class="recent-activity-card"
+  class="recent-activity-card flex min-h-0 flex-1 cursor-pointer flex-col gap-1.5 rounded-[10px] border border-transparent bg-[var(--pr-color-accents-1)] p-3 transition-colors duration-200 hover:border-brand-100 hover:bg-brand-25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
   [routerLink]="getResultUrl()"
   [queryParams]="{ phase: item?.phase }"
   [attr.aria-label]="getTooltipText()"
@@ -9,21 +9,27 @@
   (keydown.enter)="recentActivityCard.click()"
   [prTooltip]="getTooltipText()"
   prTooltipPosition="bottom">
-  <div class="recent-activity-card__row">
-    <div class="recent-activity-card__row_left">
-      <i class="pi pi-info-circle" style="font-size: 16px; color: var(--pr-color-neutral-200)"></i>
-
-      <span class="recent-activity-card__title">
-        Result created: <span class="font-weight-500">{{ item?.initiativeName }}</span></span
-      >
+  <div class="flex items-center justify-between gap-2">
+    <div class="flex min-w-0 items-center gap-2">
+      @if (item?.resultCode) {
+        <span class="shrink-0 rounded border border-[var(--pr-color-accents-2)] bg-white px-1.5 py-px text-[11px] font-semibold text-brand-400">
+          {{ item?.resultCode }}
+        </span>
+      }
+      <span class="truncate text-[13px] font-medium text-[var(--pr-color-secondary-400)]">
+        {{ getEventLabel() }}@if (item?.initiativeOfficialCode) {<span class="text-[var(--pr-color-accents-5)]"> · {{ item?.initiativeOfficialCode }}</span>}
+      </span>
     </div>
 
-    <span class="recent-activity-card__time">
-      <i class="pi pi-clock" style="font-size: 12px"></i>
-
+    <span class="flex shrink-0 items-center gap-1 text-[11px] text-[var(--pr-color-accents-5)]">
+      <i class="material-icons-round text-[12px]" aria-hidden="true">schedule</i>
       {{ item?.createdAt | appFormatTimeAgo: 0 : false }}
     </span>
   </div>
 
-  <div class="recent-activity-card__desc">{{ item?.message }}</div>
+  <div class="line-clamp-2 text-xs leading-relaxed text-[var(--pr-color-accents-6)]">{{ item?.message }}</div>
+
+  @if (item?.emitterName) {
+    <div class="text-[11px] text-[var(--pr-color-accents-5)]">by {{ item?.emitterName }}</div>
+  }
 </div>

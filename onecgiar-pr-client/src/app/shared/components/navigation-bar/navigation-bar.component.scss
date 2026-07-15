@@ -1,3 +1,6 @@
+// Visual styling lives in Tailwind utilities on the template.
+// Only host sizing and entrance keyframes (not expressible as utilities) remain here.
+
 :host {
   display: flex;
   align-items: center;
@@ -9,170 +12,12 @@
   }
 }
 
-.navigation_bar {
-  position: relative;
-  display: flex;
-  gap: 2px;
-  height: 56px;
-  align-items: stretch;
-  justify-content: center;
-  padding: 0px 8px;
-
-  &.nav_searching {
-    flex: 1;
-    justify-content: stretch;
-  }
-
-  .navigation_bar_item {
-    position: relative;
-    z-index: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.2px;
-    text-decoration: none;
-    cursor: pointer;
-    color: rgba(var(--pr-color-white-rgb), 0.82);
-    height: 56px;
-    padding: 0 18px;
-    transition: color 0.2s ease;
-
-    &:hover {
-      color: var(--pr-color-white);
-    }
-
-    img {
-      position: absolute;
-      right: 5px;
-      top: 50%;
-      transform: translateY(-50%);
-      height: 30px;
-    }
-  }
-
-  // Active section — a darker recessed box behind the text (same bar color, darker + shadow)
-  .section_active {
-    color: var(--pr-color-white) !important;
-    font-weight: 600 !important;
-
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 8px 4px;
-      z-index: -1;
-      border-radius: 10px;
-      background: linear-gradient(135deg, var(--pr-color-primary-400) 0%, var(--pr-color-primary-300) 100%);
-      box-shadow: 0 2px 8px rgba(var(--pr-color-primary-rgb), 0.45);
-    }
-
-    &.hide_active_in_notifications {
-      font-weight: 500 !important;
-
-      &::before {
-        display: none;
-      }
-    }
-  }
-
-  .nav_search_container {
-    position: relative;
-    display: flex;
-    align-items: center;
-    flex: 1;
-    height: 100%;
-    animation: searchIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
-
-    .nav_search_icon {
-      position: absolute;
-      left: 14px;
-      color: rgba(var(--pr-color-white-rgb), 0.5);
-      font-size: 18px;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    .nav_search_input {
-      width: 100%;
-      height: 36px;
-      border: none;
-      border-radius: 999px;
-      background: rgba(var(--pr-color-white-rgb), 0.12);
-      color: var(--pr-color-white);
-      font-family: 'Poppins', sans-serif;
-      font-size: 13px;
-      font-weight: 400;
-      padding: 0 16px 0 42px;
-      outline: none;
-      transition: background 0.2s ease;
-
-      &::placeholder {
-        color: rgba(var(--pr-color-white-rgb), 0.45);
-      }
-
-      &:focus {
-        background: rgba(var(--pr-color-white-rgb), 0.18);
-      }
-    }
-
-    .nav_search_dropdown {
-      position: absolute;
-      top: calc(100% - 4px);
-      left: 0;
-      right: 0;
-      z-index: 200;
-      background: var(--pr-color-white);
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-      padding: 6px;
-      max-height: 320px;
-      overflow-y: auto;
-      animation: dropdownIn 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
-
-      .nav_search_result {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-        padding: 10px 12px;
-        border: none;
-        border-radius: 8px;
-        background: none;
-        cursor: pointer;
-        font-family: 'Poppins', sans-serif;
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--pr-color-secondary-400);
-        text-align: left;
-        transition: background 0.15s ease;
-
-        i {
-          font-size: 14px;
-          color: var(--pr-color-primary-300);
-          transform: rotate(45deg);
-        }
-
-        &:hover,
-        &:focus-visible {
-          background: var(--pr-color-primary-25);
-          outline: none;
-        }
-      }
-
-      .nav_search_no_results {
-        padding: 12px;
-        font-size: 12px;
-        font-weight: 400;
-        color: var(--pr-color-accents-5);
-        text-align: center;
-      }
-    }
-  }
+.nav_search_container {
+  animation: searchIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
-.padding-right-40 {
-  padding-right: 40px !important;
+.nav_search_dropdown {
+  animation: dropdownIn 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 @keyframes searchIn {
@@ -194,5 +39,12 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav_search_container,
+  .nav_search_dropdown {
+    animation: none;
   }
 }

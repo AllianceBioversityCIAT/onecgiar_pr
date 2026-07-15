@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultFrameworkReportingCardItemComponent } from './components/result-framework-reporting-card-item/result-framework-reporting-card-item.component';
 import { ResultFrameworkReportingRecentItemComponent } from './components/result-framework-reporting-recent-item/result-framework-reporting-recent-item.component';
@@ -23,4 +23,12 @@ import { AlertGlobalInfoModule } from '../../../../shared/components/alert-globa
 export class ResultFrameworkReportingHomeComponent {
   api = inject(ApiService);
   resultFrameworkReportingHomeService = inject(ResultFrameworkReportingHomeService);
+
+  // reportingCurrentPhase is a plain object; depend on the version signal so the
+  // hero chip renders once phases finish loading (zoneless CD)
+  readonly phaseLabel = computed(() => {
+    this.api.dataControlSE.reportingPhaseVersion();
+    const phase = this.api.dataControlSE.reportingCurrentPhase;
+    return phase?.portfolioAcronym && phase?.phaseName ? `${phase.portfolioAcronym} · ${phase.phaseName}` : '';
+  });
 }

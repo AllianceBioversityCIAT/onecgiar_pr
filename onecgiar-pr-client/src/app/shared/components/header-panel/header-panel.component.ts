@@ -1,4 +1,5 @@
-import { Component, computed, effect, HostListener, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, ElementRef, HostListener, inject, OnInit, signal, viewChildren } from '@angular/core';
+import { FontScale, FONT_SCALE_OPTIONS, FontScaleService } from '../../services/font-scale.service';
 import { LayoutService } from '../../services/layout.service';
 import { internationalizationData } from '../../data/internationalization-data';
 import { ApiService } from '../../services/api/api.service';
@@ -31,16 +32,31 @@ export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;
   inLocal = (environment as any)?.inLocal;
   myInitiativesListP22 = computed(() => this.api.dataControlSE.myInitiativesList);
+
+  // reportingCurrentPhase is a plain object; depend on the version signal so the
+  // label re-renders when phases finish loading (zoneless CD)
+  readonly reportingPhaseLabel = computed(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    const phase = this.dataControlSE.reportingCurrentPhase;
+    return phase?.portfolioAcronym && phase?.phaseName ? `${phase.portfolioAcronym} - ${phase.phaseName}` : '';
+  });
   closedInitiativeCodes = new Set<string>();
   isSearchMode = signal(false);
 
   // CDK Overlay open state (replaces sat-popover ref.isOpen())
   userMenuOpen = signal(false);
   notificationsOpen = signal(false);
+  settingsMenuOpen = signal(false);
 
   // Overlay connected positions (mirror the previous sat-popover alignment)
   readonly userMenuPositions: ConnectedPosition[] = [{ originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top' }];
   readonly notificationsPositions: ConnectedPosition[] = [{ originX: 'center', overlayX: 'center', originY: 'bottom', overlayY: 'top' }];
+  readonly settingsMenuPositions: ConnectedPosition[] = [{ originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top' }];
+
+  // Accessibility — text-size control (WCAG 1.4.4). Lives in the kebab menu.
+  readonly fontScaleSE = inject(FontScaleService);
+  readonly fontScaleOptions = FONT_SCALE_OPTIONS;
+  readonly fontRadios = viewChildren<ElementRef<HTMLButtonElement>>('fontRadio');
 
   // Dashboard layout: shift the navbar to the right of a full-height sidebar
   private readonly layoutSE = inject(LayoutService);
@@ -164,5 +180,44 @@ export class HeaderPanelComponent implements OnInit {
 
   isInNotificationsRoute(): boolean {
     return this.router.url.includes('results-notifications');
+  }
+
+  // --- Text-size radiogroup: roving-tabindex keyboard nav (WCAG 2.2) ---
+  selectFontScale(value: FontScale): void {
+    this.fontScaleSE.set(value);
+  }
+
+  onFontRadioKeydown(event: KeyboardEvent, currentIndex: number): void {
+    const last = this.fontScaleOptions.length - 1;
+    let nextIndex: number | null = null;
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextIndex = currentIndex >= last ? 0 : currentIndex + 1;
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextIndex = currentIndex <= 0 ? last : currentIndex - 1;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = last;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    const option = this.fontScaleOptions[nextIndex];
+    this.fontScaleSE.set(option.value);
+    this.fontRadios()[nextIndex]?.nativeElement.focus();
+  }
+
+  closeSettingsAndRefocus(trigger: HTMLElement): void {
+    this.settingsMenuOpen.set(false);
+    trigger.focus();
   }
 }

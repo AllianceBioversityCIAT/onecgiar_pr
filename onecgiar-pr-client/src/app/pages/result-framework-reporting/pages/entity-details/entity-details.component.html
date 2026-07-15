@@ -27,42 +27,40 @@
   <div class="entity-details_card">
     <div class="entity-details_card_header">Insights</div>
 
-    <div class="entity-details_card_content_graph">
-      <div class="entity-details_card_content_graph_item">
-        @for (item of summaryInsightsData(); track $index) {
-          <div class="entity-details_card_content_graph_item_content">
-            <img [src]="item.icon" alt="{{ item.label }} Icon" class="entity-details_card_content_graph_item_icon" />
+    <div class="grid grid-cols-[minmax(230px,300px)_minmax(0,1fr)] gap-6 p-6 max-lg:grid-cols-1 max-md:p-4">
+      <div class="relative flex flex-col justify-center gap-5 overflow-hidden rounded-xl bg-brand-900 px-6 py-7">
+        <div
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_170%_at_90%_-25%,rgba(var(--pr-color-primary-rgb),0.5)_0%,rgba(var(--pr-color-primary-rgb),0.15)_42%,transparent_70%)]"
+          aria-hidden="true"></div>
 
-            <div>
-              <h3 class="entity-details_card_content_graph_item_value">{{ item.value }}</h3>
-              <p class="entity-details_card_content_graph_item_label">{{ item.label }}</p>
+        <p class="relative m-0 text-xs font-bold uppercase tracking-[0.4px] text-white/60">Summary</p>
+
+        @for (item of summaryInsightsData(); track $index) {
+          <div class="relative flex flex-col">
+            <span class="text-[28px] font-bold leading-tight text-white">{{ item.value }}</span>
+            <span class="text-[13px] font-medium text-white/75">{{ item.label }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="flex min-w-0 flex-col gap-3">
+        <p class="m-0 text-[15px] font-bold text-[var(--pr-color-secondary-400)]">Results by indicator category</p>
+
+        <div class="grid flex-1 grid-cols-2 gap-5 max-md:grid-cols-1">
+          <div class="flex min-w-0 flex-col gap-2 rounded-xl border border-[var(--pr-color-accents-2)] p-4">
+            <h3 class="m-0 text-[13px] font-semibold text-[var(--pr-color-accents-6)]">Outputs</h3>
+            <div class="entity-details_chart">
+              <canvas #outputsCanvas></canvas>
             </div>
           </div>
 
-          @if ($index < summaryInsightsData().length - 1) {
-            <div class="entity-details_card_content_graph_item_separator"></div>
-          }
-        }
-
-        <div class="entity-details_card_content_graph_item_title_absolute bottom_title">Summary</div>
-      </div>
-
-      <div class="entity-details_card_content_graph_item entity-details_card_content_graph_item--charts">
-        <div>
-          <h3 class="details_card_content_graph_item_title">Outputs</h3>
-          <div class="entity-details_chart">
-            <canvas #outputsCanvas></canvas>
+          <div class="flex min-w-0 flex-col gap-2 rounded-xl border border-[var(--pr-color-accents-2)] p-4">
+            <h3 class="m-0 text-[13px] font-semibold text-[var(--pr-color-accents-6)]">Outcomes</h3>
+            <div class="entity-details_chart">
+              <canvas #outcomesCanvas></canvas>
+            </div>
           </div>
         </div>
-
-        <div>
-          <h3 class="details_card_content_graph_item_title">Outcomes</h3>
-          <div class="entity-details_chart">
-            <canvas #outcomesCanvas></canvas>
-          </div>
-        </div>
-
-        <div class="entity-details_card_content_graph_item_title_absolute top_title">Results by Indicator Category</div>
       </div>
     </div>
   </div>

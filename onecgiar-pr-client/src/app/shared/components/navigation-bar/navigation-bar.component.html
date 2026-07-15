@@ -1,10 +1,14 @@
-<nav class="navigation_bar" aria-label="Primary navigation" [class.nav_searching]="isSearchMode()">
+<nav
+  class="navigation_bar relative flex h-14 items-center justify-center gap-1 px-2"
+  aria-label="Primary navigation"
+  [class.flex-1]="isSearchMode()"
+  [class.justify-stretch]="isSearchMode()">
   @if (isSearchMode()) {
-    <div class="nav_search_container">
-      <i class="material-icons-round nav_search_icon" aria-hidden="true">search</i>
+    <div class="nav_search_container relative flex h-full flex-1 items-center">
+      <i class="material-icons-round pointer-events-none absolute left-3.5 z-[1] text-[18px] text-white/50" aria-hidden="true">search</i>
       <input
         #searchInput
-        class="nav_search_input"
+        class="nav_search_input h-9 w-full rounded-full border-none bg-white/12 pl-10 pr-4 text-[13px] font-normal text-white outline-none transition-colors duration-200 placeholder:text-white/45 focus:bg-white/18"
         type="text"
         placeholder="Search sections…"
         [(ngModel)]="searchQuery"
@@ -13,14 +17,14 @@
         autocomplete="off" />
 
       @if (filteredSections().length > 0) {
-        <div class="nav_search_dropdown">
+        <div class="nav_search_dropdown absolute inset-x-0 top-[calc(100%-4px)] z-[200] max-h-80 overflow-y-auto rounded-xl bg-white p-1.5 shadow-[0_8px_24px_rgba(var(--pr-color-black-rgb),0.18)]">
           @for (section of filteredSections(); track section.path) {
             <button
               type="button"
-              class="nav_search_result"
+              class="nav_search_result flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-none bg-transparent px-3 py-2.5 text-left text-[13px] font-medium text-[var(--pr-color-secondary-400)] transition-colors duration-150 hover:bg-brand-25 focus-visible:bg-brand-25 focus-visible:outline-none"
               (click)="selectSection(section)"
               (keydown.enter)="selectSection(section)">
-              <i class="material-icons-round" aria-hidden="true">north_sharp</i>
+              <i class="material-icons-round text-[14px] text-brand-300" aria-hidden="true">north_east</i>
               <span>{{ section.prName }}</span>
             </button>
           }
@@ -28,8 +32,8 @@
       }
 
       @if (searchQuery() && filteredSections().length === 0) {
-        <div class="nav_search_dropdown">
-          <div class="nav_search_no_results">No sections found</div>
+        <div class="nav_search_dropdown absolute inset-x-0 top-[calc(100%-4px)] z-[200] rounded-xl bg-white p-1.5 shadow-[0_8px_24px_rgba(var(--pr-color-black-rgb),0.18)]">
+          <div class="p-3 text-center text-xs font-normal text-[var(--pr-color-accents-5)]">No sections found</div>
         </div>
       }
     </div>
@@ -39,18 +43,21 @@
         <a
           #navLink
           [routerLink]="navOption.path"
-          routerLinkActive="section_active"
-          class="pr-body-1 navigation_bar_item"
-          [ngClass]="{
-            'padding-right-40': navOption?.underConstruction,
-            hide_active_in_notifications: navOption.path === 'result' && router.url.includes('results-notifications')
-          }"
+          routerLinkActive
+          #rla="routerLinkActive"
+          class="navigation_bar_item relative flex h-9 cursor-pointer items-center justify-center self-center whitespace-nowrap rounded-[10px] px-4 text-sm tracking-[0.2px] no-underline transition-colors duration-200"
+          [ngClass]="
+            rla.isActive && !isActiveMuted(navOption)
+              ? 'bg-brand-300 font-semibold text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.45)]'
+              : 'font-medium text-white/75 hover:bg-white/10 hover:text-white'
+          "
+          [class.pr-10]="navOption?.underConstruction"
           (keydown.space)="$event.preventDefault(); navLink.click()"
           (keydown.enter)="navLink.click()">
           {{ navOption.prName }}
 
           @if (navOption?.underConstruction) {
-            <img src="assets/work-in-progress.png" alt="Under construction" srcset="" />
+            <img class="absolute right-1 top-1/2 h-[30px] -translate-y-1/2" src="assets/work-in-progress.png" alt="Under construction" srcset="" />
           }
         </a>
       }

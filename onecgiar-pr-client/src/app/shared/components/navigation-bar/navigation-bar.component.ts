@@ -69,6 +69,11 @@ export class NavigationBarComponent {
     }
   }
 
+  // "Results Center" stays visually inactive while browsing results-notifications
+  isActiveMuted(option: PrRoute): boolean {
+    return option.path === 'result' && this.router.url.includes('results-notifications');
+  }
+
   validateAdminModuleAndRole(option: PrRoute): boolean {
     if (option?.onlyTest && environment.production) return true;
 

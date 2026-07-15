@@ -1,75 +1,73 @@
 @let unreadNotifications = this.resultsNotificationsSE.updatesPopUpData;
 
 @if (!this.dataControlSE.show_qa_full_screen) {
-  <div class="header_spacer" aria-hidden="true"></div>
-  <div class="header_panel_container" [class.header_hidden]="isHidden()" [style.left.px]="navbarLeft()">
+  <div class="header_spacer pointer-events-none h-[78px] w-full" aria-hidden="true"></div>
+  <div
+    class="header_panel_container fixed right-2.5 top-2.5 z-[100] flex h-14 items-center justify-between rounded-2xl border border-white/10 bg-[linear-gradient(160deg,var(--pr-color-primary-800)_0%,var(--pr-color-primary-950)_100%)] px-2.5 shadow-[0_8px_24px_rgba(var(--pr-color-black-rgb),0.28)] transition-[translate,left] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] max-md:right-2 max-md:top-2 max-md:px-3"
+    [ngClass]="{ '-translate-y-[calc(100%+16px)]': isHidden() }"
+    [style.left.px]="navbarLeft()">
     <a
-      class="logo_container"
+      class="logo_container flex cursor-pointer items-center gap-3 max-md:gap-2.5"
       routerLink="/"
       aria-label="Go to home"
       #homeLink
       (keydown.space)="$event.preventDefault(); homeLink.click()"
       (keydown.enter)="homeLink.click()">
-      <img class="cgiar_logo" src="/assets/PR_logo.svg" alt="Reporting Tool Logo" />
+      <img class="cgiar_logo box-border h-11 w-11 rounded-full bg-white object-contain p-[7px] max-md:h-[30px] max-md:w-[30px]" src="/assets/PR_logo.svg" alt="Reporting Tool Logo" />
 
-      <div class="logo_content">
-        <p class="logo_platform_name">{{ this.internationalizationData.global.platformName }}</p>
-        <p class="logo_platform_name_secondary">
-          {{ this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym }} - {{ this.api.dataControlSE?.reportingCurrentPhase?.phaseName }}
-        </p>
+      <div class="logo_content flex flex-col items-start justify-center text-white max-lg:hidden">
+        <p class="m-0 whitespace-nowrap text-sm font-semibold leading-tight">{{ this.internationalizationData.global.platformName }}</p>
+        @if (reportingPhaseLabel()) {
+          <p class="m-0 whitespace-nowrap text-[10px] font-light leading-tight text-white/75">{{ reportingPhaseLabel() }}</p>
+        }
       </div>
     </a>
 
-    <div class="nav_group">
+    <div class="nav_group flex items-center gap-2" [ngClass]="isSearchMode() ? 'flex-1 mx-[16px]' : ''">
       <button
         type="button"
+        class="grid size-9 cursor-pointer place-items-center rounded-full transition-colors duration-200"
+        [ngClass]="isSearchMode() ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'"
         (click)="toggleSearch()"
         aria-label="Search sections"
-        title="Search sections"
-        [ngClass]="{ section_active: isSearchMode() }"
-        style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
-        <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: isSearchMode() }" aria-hidden="true">
-          {{ isSearchMode() ? 'close' : 'search' }}
-        </i>
+        title="Search sections">
+        <i class="material-icons-round text-[22px]" aria-hidden="true">{{ isSearchMode() ? 'close' : 'search' }}</i>
       </button>
 
       <app-navigation-bar [isSearchMode]="isSearchMode()" (searchClosed)="isSearchMode.set(false)"></app-navigation-bar>
     </div>
 
-    <div class="information">
-
+    <div class="information flex items-center gap-3 max-md:gap-2">
       <a
         #whatsNewLink
+        class="grid size-9 cursor-pointer place-items-center rounded-full transition-colors duration-200"
+        [ngClass]="rlaWhatsNew.isActive ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'"
         (keydown.space)="$event.preventDefault(); whatsNewLink.click()"
         routerLink="/whats-new"
         prTooltip="What's new?"
         prTooltipPosition="bottom"
-        routerLinkActive="section_active"
-        style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
-        <i class="material-icons-round info_icon" routerLinkActive="info_icon_active">rocket_launch</i>
+        routerLinkActive
+        #rlaWhatsNew="routerLinkActive"
+        aria-label="What's new">
+        <i class="material-icons-round text-[22px]" aria-hidden="true">rocket_launch</i>
       </a>
 
       <button
         type="button"
+        class="grid size-9 cursor-pointer place-items-center rounded-full transition-colors duration-200"
+        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'"
         cdkOverlayOrigin
         #notifTrigger="cdkOverlayOrigin"
         (click)="notificationsOpen.set(!notificationsOpen())"
         aria-label="Notifications"
         aria-haspopup="true"
         [attr.aria-expanded]="notificationsOpen()"
-        aria-controls="notifications-popover"
-        [ngStyle]="{ 'margin-top': unreadNotifications.length > 0 ? '-5px' : '0' }"
-        [ngClass]="{ section_active: isInNotificationsRoute() }"
-        style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
+        aria-controls="notifications-popover">
         @if (unreadNotifications.length === 0) {
-          <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsOpen() }" aria-hidden="true">
-            notifications
-          </i>
+          <i class="material-icons-round text-[22px]" aria-hidden="true">notifications</i>
         } @else {
-          <span class="pr-overlay-badge-wrap">
-            <i class="material-icons-round animate_bell info_icon" [ngClass]="{ info_icon_active: notificationsOpen() }" aria-hidden="true">
-              notifications
-            </i>
+          <span class="pr-overlay-badge-wrap relative inline-flex">
+            <i class="material-icons-round animate_bell text-[22px]" aria-hidden="true">notifications</i>
             <span class="pr-overlay-badge" *ngIf="notificationBadgeLength()">{{ notificationBadgeLength() }}</span>
           </span>
         }
@@ -78,7 +76,7 @@
       <button
         #userMenuTrigger
         type="button"
-        class="user_identity"
+        class="user_identity flex max-w-[340px] cursor-pointer items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 max-md:max-w-none max-md:gap-1.5"
         aria-label="User menu"
         aria-haspopup="true"
         aria-controls="user-info-popover"
@@ -90,15 +88,27 @@
         (keydown.enter)="$event.preventDefault(); userMenuTrigger.click()">
         <span class="pr-avatar" [style]="{ width: '32px', height: '32px', cursor: 'pointer' }">{{ getUserInitials() }}</span>
 
-        <span class="user_identity_text">
-          <span class="user_identity_name_row">
-            <span class="user_identity_name">{{ this.api.authSE.localStorageUser?.user_name }}</span>
-            <span class="user_identity_role">{{ getPlatformRole() }}</span>
+        <span class="user_identity_text flex min-w-0 max-w-60 flex-col items-start overflow-hidden leading-tight max-md:hidden">
+          <span class="user_identity_name_row flex max-w-full items-center gap-1.5 overflow-hidden">
+            <span class="user_identity_name min-w-0 shrink truncate text-xs font-semibold text-[var(--pr-color-secondary-400)]">{{
+              this.api.authSE.localStorageUser?.user_name
+            }}</span>
+            <span
+              class="user_identity_role shrink-0 truncate rounded bg-brand-50 px-1.5 py-px text-[10px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-brand-700"
+              >{{ getPlatformRole() }}</span
+            >
           </span>
-          <span class="user_identity_email">{{ this.api.authSE.localStorageUser?.email }}</span>
+          <span class="user_identity_email max-w-full truncate text-[10px] font-normal text-[var(--pr-color-accents-5)]">{{
+            this.api.authSE.localStorageUser?.email
+          }}</span>
         </span>
 
-        <i class="material-icons-round user_identity_chevron" [ngClass]="{ chevron_open: userMenuOpen() }" aria-hidden="true">expand_more</i>
+        <i
+          class="material-icons-round user_identity_chevron text-[20px] text-[var(--pr-color-secondary-400)] transition-transform duration-200"
+          [ngClass]="{ 'rotate-180': userMenuOpen() }"
+          aria-hidden="true"
+          >expand_more</i
+        >
       </button>
     </div>
   </div>
@@ -106,107 +116,111 @@
   <ng-template
     cdkConnectedOverlay
     [cdkConnectedOverlayOrigin]="userTrigger"
-  [cdkConnectedOverlayOpen]="userMenuOpen()"
-  [cdkConnectedOverlayHasBackdrop]="true"
-  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
-  [cdkConnectedOverlayPositions]="userMenuPositions"
-  (backdropClick)="userMenuOpen.set(false)">
-  <div class="overlay_panel" id="user-info-popover" [style]="{ width: '250px' }">
-    <div class="overlay_panel_header">
-      <div class="overlay_panel_header_userInfo">
-        <span class="pr-avatar" [style]="{ minWidth: '36px', maxWidth: '36px', minHeight: '36px', maxHeight: '36px' }">{{ getUserInitials() }}</span>
+    [cdkConnectedOverlayOpen]="userMenuOpen()"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    [cdkConnectedOverlayPositions]="userMenuPositions"
+    (backdropClick)="userMenuOpen.set(false)">
+    <div class="overlay_panel mt-2.5 w-[250px] rounded-2xl bg-white shadow-[4px_4px_10px_4px_rgba(var(--pr-color-black-rgb),0.25)]" id="user-info-popover">
+      <div class="flex items-center px-3.5 pt-3.5">
+        <div class="flex items-center gap-2.5">
+          <span class="pr-avatar" [style]="{ minWidth: '36px', maxWidth: '36px', minHeight: '36px', maxHeight: '36px' }">{{ getUserInitials() }}</span>
 
-        <div class="overlay_panel_header_userInfo_content">
-          <p class="overlay_panel_header_userInfo_content_name">{{ this.api.authSE.localStorageUser?.user_name }}</p>
-          <p class="overlay_panel_header_userInfo_content_email">{{ this.api.authSE.localStorageUser?.email }}</p>
+          <div class="flex flex-col">
+            <p class="m-0 text-sm font-semibold text-[var(--pr-color-secondary-400)]">{{ this.api.authSE.localStorageUser?.user_name }}</p>
+            <p class="m-0 text-[10px] font-light text-[var(--pr-color-accents-5)]">{{ this.api.authSE.localStorageUser?.email }}</p>
+          </div>
         </div>
       </div>
+
+      <div class="mx-3.5 my-2.5 h-px bg-[var(--pr-color-accents-2)]"></div>
+
+      <div class="flex flex-col gap-3.5 px-3.5 pb-3">
+        @if (this.getInitiativeSeparatedByPortfolio().length > 0) {
+          <div class="flex flex-col gap-1">
+            <p class="m-0 text-xs font-semibold text-[var(--pr-color-accents-5)]">My Science Programs/Accelerators</p>
+
+            @for (item of this.getInitiativeSeparatedByPortfolio(); track $index) {
+              <p
+                class="m-0 text-xs font-medium text-[var(--pr-color-secondary-300)]"
+                [style.opacity]="isInitiativeClosed(item.official_code) ? '0.5' : '1'">
+                {{ item.official_code }} - {{ item.role }}
+                @if (isInitiativeClosed(item.official_code)) {
+                  <span class="text-[11px] font-semibold text-[var(--pr-color-red-300)]"> (Closed)</span>
+                }
+              </p>
+            }
+          </div>
+        }
+
+        @if (this.api.rolesSE.isAdmin) {
+          <a
+            class="group flex cursor-pointer items-center gap-1.5"
+            routerLink="/admin-module"
+            role="menuitem"
+            #adminLink
+            (keydown.space)="$event.preventDefault(); adminLink.click()"
+            (keydown.enter)="adminLink.click()"
+            (click)="userMenuOpen.set(false)">
+            <i class="pi pi-wrench text-[15px] text-brand-200 transition-colors duration-300 group-hover:text-brand-300" aria-hidden="true"></i>
+            <p class="m-0 text-xs font-medium text-brand-200 transition-colors duration-300 group-hover:text-brand-300">Admin module</p>
+          </a>
+        }
+      </div>
+
+      <div class="mx-3.5 h-px bg-[var(--pr-color-accents-2)]"></div>
+
+      <button
+        type="button"
+        class="group flex w-full cursor-pointer items-center gap-1.5 px-3.5 pb-4 pt-2.5 focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+        (click)="userMenuOpen.set(false); this.api.authSE.logout()"
+        aria-label="Log out">
+        <i class="material-icons-round text-[15px] text-[var(--pr-color-red-300)] transition-colors duration-300 group-hover:text-[var(--pr-color-red-500)]" aria-hidden="true">logout</i>
+        <p class="m-0 text-xs font-normal text-[var(--pr-color-red-300)] transition-colors duration-300 group-hover:text-[var(--pr-color-red-500)]">Log out</p>
+      </button>
     </div>
+  </ng-template>
 
-    <div class="overlay_panel_userInfo_content">
-      @if (this.getInitiativeSeparatedByPortfolio().length > 0) {
-        <div class="overlay_panel_userInfo_content_item">
-          <p class="overlay_panel_userInfo_content_item_title">My Science Programs/Accelerators</p>
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="notifTrigger"
+    [cdkConnectedOverlayOpen]="notificationsOpen()"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    [cdkConnectedOverlayPositions]="notificationsPositions"
+    (backdropClick)="notificationsOpen.set(false); handleClosePopUp()">
+    <div class="overlay_panel mt-2.5 w-[340px] rounded-2xl bg-white shadow-[4px_4px_10px_4px_rgba(var(--pr-color-black-rgb),0.25)]" id="notifications-popover">
+      <div class="flex items-center px-3.5 pt-3.5">
+        <h1 class="m-0 text-base font-semibold text-[var(--pr-color-secondary-400)]">Notifications</h1>
+      </div>
 
-          @for (item of this.getInitiativeSeparatedByPortfolio(); track $index) {
-            <p class="overlay_panel_userInfo_content_item_desc" [style.opacity]="isInitiativeClosed(item.official_code) ? '0.5' : '1'">
-              {{ item.official_code }} - {{ item.role }}
-              @if (isInitiativeClosed(item.official_code)) {
-                <span style="color: var(--pr-color-error); font-size: 11px; font-weight: 600"> (Closed)</span>
-              }
-            </p>
+      <div class="mx-3.5 mt-2.5 h-px bg-[var(--pr-color-accents-2)]" [ngClass]="{ 'mb-0': unreadNotifications.length > 0, 'mb-2.5': unreadNotifications.length === 0 }"></div>
+
+      @if (unreadNotifications.length === 0) {
+        <p class="m-0 px-3.5 py-2.5 text-xs font-medium text-pretty text-[var(--pr-color-accents-6)]">
+          You have not received any new notifications. Go to the notifications section to see all of your latest notifications.
+        </p>
+      } @else {
+        <div class="notifications_list flex max-h-[500px] flex-col overflow-auto">
+          @for (notification of unreadNotifications; track $index) {
+            <app-pop-up-notification-item [notification]="notification" (click)="notificationsOpen.set(false); handleClosePopUp()"></app-pop-up-notification-item>
           }
         </div>
       }
 
-      @if (this.api.rolesSE.isAdmin) {
-        <a
-          class="overlay_panel_admin_module"
-          routerLink="/admin-module"
-          role="menuitem"
-          #adminLink
-          (keydown.space)="$event.preventDefault(); adminLink.click()"
-          (keydown.enter)="adminLink.click()"
-          (click)="userMenuOpen.set(false)">
-          <i class="pi pi-wrench admin_module_icon" aria-hidden="true"></i>
-          <p class="overlay_panel_admin_module_title">Admin module</p>
-        </a>
-      }
-    </div>
+      <div class="mx-3.5 h-px bg-[var(--pr-color-accents-2)]" *ngIf="unreadNotifications.length === 0"></div>
 
-    <div class="overlay_panel_separator"></div>
-
-    <button
-      type="button"
-      class="overlay_panel_footer footer_userInfo"
-      (click)="userMenuOpen.set(false); this.api.authSE.logout()"
-      aria-label="Log out">
-      <i class="material-icons-round logout_icon" aria-hidden="true">logout</i>
-      <p class="logout_button">Log out</p>
-    </button>
-  </div>
-</ng-template>
-
-<ng-template
-  cdkConnectedOverlay
-  [cdkConnectedOverlayOrigin]="notifTrigger"
-  [cdkConnectedOverlayOpen]="notificationsOpen()"
-  [cdkConnectedOverlayHasBackdrop]="true"
-  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
-  [cdkConnectedOverlayPositions]="notificationsPositions"
-  (backdropClick)="notificationsOpen.set(false); handleClosePopUp()">
-  <div class="overlay_panel" id="notifications-popover" [style]="{ width: '340px' }">
-    <div class="overlay_panel_header">
-      <h1 class="overlay_panel_header_title">Notifications</h1>
-    </div>
-
-    <div class="overlay_panel_separator" [ngStyle]="{ 'margin-bottom': unreadNotifications.length > 0 && '0' }"></div>
-
-    @if (unreadNotifications.length === 0) {
-      <p class="no_notifications">
-        You have not received any new notifications. Go to the notifications section to see all of your latest notifications.
-      </p>
-    } @else {
-      <div class="notifications_list">
-        @for (notification of unreadNotifications; track $index) {
-          <app-pop-up-notification-item [notification]="notification" (click)="notificationsOpen.set(false); handleClosePopUp()"></app-pop-up-notification-item>
-        }
+      <div class="flex items-center justify-center pb-4" [ngClass]="unreadNotifications.length > 0 ? 'pt-[15px]' : 'pt-1.5'">
+        <button
+          type="button"
+          class="see_all_notifications m-0 w-fit cursor-pointer text-xs font-medium text-brand-300 hover:text-brand-400 focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+          (click)="goToNotifications(); notificationsOpen.set(false); handleClosePopUp()"
+          aria-label="See all the notifications">
+          See all the notifications
+        </button>
       </div>
-    }
-
-    <div class="overlay_panel_separator" *ngIf="unreadNotifications.length === 0"></div>
-
-    <div class="overlay_panel_footer" [ngStyle]="{ 'padding-top': unreadNotifications.length > 0 && '15px' }">
-      <button
-        type="button"
-        class="see_all_notifications"
-        (click)="goToNotifications(); notificationsOpen.set(false); handleClosePopUp()"
-        aria-label="See all the notifications">
-        See all the notifications
-      </button>
     </div>
-  </div>
-</ng-template>
+  </ng-template>
 }
 
 <app-tawk
