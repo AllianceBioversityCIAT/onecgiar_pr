@@ -1,10 +1,14 @@
-// Shared "field card" design — colored status header + bone-grey border + small description.
-// Used by pr-input, pr-textarea (and future field components). State classes: fc-optional|pending|done|error.
+// Shared "field card" design — subtle, compact wrapper whose STATE colour reads
+// on the PARENT card border + a very-light tinted header (no loud full-colour bar).
+// The projected control keeps its own neutral border (state is NOT painted on the input).
+// Used by pr-input, pr-textarea (and future field components).
+// State classes: fc-optional | fc-pending | fc-done | fc-error.
 .field_card {
-  border: 1px solid var(--pr-color-accents-2);
+  border: 1.5px solid var(--pr-color-accents-2);
   border-radius: 12px;
   background-color: var(--pr-color-white);
   margin: 18px 0; // vertical separation from siblings
+  transition: border-color 0.2s ease;
 
   .field_card_header {
     display: flex;
@@ -14,10 +18,11 @@
     font-size: 13px;
     font-weight: 600;
     line-height: 1.25;
-    color: var(--pr-color-white);
-    background-color: var(--pr-color-blue-500); // overridden per state
+    color: var(--pr-color-accents-7); // dark ink on light tint (was white on saturated bg)
+    background-color: var(--pr-color-accents-1); // very light neutral; tinted per state below
+    border-bottom: 1px solid var(--pr-color-accents-2);
     border-radius: 11px 11px 0 0; // round top corners (card no longer clips with overflow)
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 
     .fch_title {
       min-width: 0;
@@ -30,10 +35,11 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.4px;
-      padding: 1px 7px;
-      border-radius: 6px;
-      background-color: rgba(var(--pr-color-white-rgb), 0.22);
-      color: inherit;
+      padding: 1px 8px;
+      border-radius: 999px; // pill
+      border: 1px solid var(--pr-color-accents-2);
+      background-color: var(--pr-color-white);
+      color: var(--pr-color-accents-5); // tinted per state below
     }
 
     // Info button + custom color-legend popover (pushed to the right)
@@ -47,7 +53,8 @@
       .fch_info {
         font-size: 16px;
         cursor: help;
-        opacity: 0.85;
+        color: var(--pr-color-accents-4);
+        opacity: 0.9;
 
         &:hover {
           opacity: 1;
@@ -110,7 +117,7 @@
   }
 
   .field_card_desc {
-    padding: 16px 14px 0;
+    padding: 12px 14px 0;
     font-size: 11px;
     line-height: 1.35;
     color: var(--pr-color-accents-5);
@@ -121,7 +128,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.4px;
-      color: var(--pr-color-accents-4);
+      color: var(--pr-color-accents-5);
       border: 1px solid var(--pr-color-accents-2);
       border-radius: 6px;
       padding: 1px 8px;
@@ -142,24 +149,46 @@
     padding: 8px 14px 8px;
   }
 
-  // Status → header color
-  &.fc-optional .field_card_header {
-    background-color: var(--pr-color-blue-500); // blue (distinct from brand indigo): not required
-    color: var(--pr-color-white);
+  // ── Status → card border + header tint + tag colour ─────────────────────
+  // State lives on the PARENT only; the input keeps its neutral border.
+
+  &.fc-optional {
+    border-color: var(--pr-color-blue-500); // blue: not required
+    .field_card_header {
+      background-color: var(--pr-color-blue-50);
+    }
+    .fch_tag {
+      color: var(--pr-color-blue-700);
+    }
   }
 
-  &.fc-pending .field_card_header {
-    background-color: var(--pr-color-orange-600); // dark orange so white reads well: required, empty
-    color: var(--pr-color-white);
+  &.fc-pending {
+    border-color: var(--pr-color-orange-600); // orange: required, empty
+    .field_card_header {
+      background-color: var(--pr-color-orange-50);
+    }
+    .fch_tag {
+      color: var(--pr-color-orange-700);
+    }
   }
 
-  &.fc-done .field_card_header {
-    background-color: var(--pr-color-green-500); // green: required, filled
-    color: var(--pr-color-white);
+  &.fc-done {
+    border-color: var(--pr-color-green-500); // green: required, filled / valid
+    .field_card_header {
+      background-color: var(--pr-color-green-50);
+    }
+    .fch_tag {
+      color: var(--pr-color-green-700);
+    }
   }
 
-  &.fc-error .field_card_header {
-    background-color: var(--pr-color-red-300); // red: over limit / invalid
-    color: var(--pr-color-white);
+  &.fc-error {
+    border-color: var(--pr-color-red-300); // red: over limit / invalid
+    .field_card_header {
+      background-color: var(--pr-color-red-50);
+    }
+    .fch_tag {
+      color: var(--pr-color-red-400);
+    }
   }
 }
