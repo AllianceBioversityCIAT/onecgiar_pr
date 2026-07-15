@@ -6,7 +6,8 @@ import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
 import { GlobalLinksService } from '../../services/variables/global-links.service';
-import { Router, RouterModule } from '@angular/router';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { A11yModule } from '@angular/cdk/a11y';
@@ -15,6 +16,8 @@ import { PopUpNotificationItemComponent } from './components/pop-up-notification
 import { TawkComponent } from '../tawk/tawk.component';
 import { NavigationBarComponent } from '../navigation-bar/navigation-bar.component';
 import { PrTooltipDirectiveModule } from '../../directives/pr-tooltip-directive.module';
+
+type TestLabelPos = 'default' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 @Component({
   selector: 'app-header-panel',
@@ -35,6 +38,52 @@ import { PrTooltipDirectiveModule } from '../../directives/pr-tooltip-directive.
 export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;
   inLocal = (environment as any)?.inLocal;
+  isProduction = environment.production;
+  // Non-production "Testing environment" ribbon.
+  showTestLabel = signal(true);
+  testMenuOpen = signal(false);
+  // Manual resting spot. Defaults to 'default' (beside the title). Not persisted:
+  // on reload the effective spot is recomputed from the current route/search.
+  testLabelPos = signal<TestLabelPos>('default');
+  // Current router URL, kept in a signal so the effective position reacts to nav.
+  private readonly currentUrl = signal('');
+  // Auto-detect: the tag lives beside the title by default, but gets out of the
+  // way when it would collide — bottom-left while the search overlay is open,
+  // bottom-right inside a Result Detail (where the header is cramped). Otherwise
+  // it sits at the manual resting spot (default = beside the title).
+  readonly effectiveTestLabelPos = computed<TestLabelPos>(() => {
+    if (this.isSearchMode()) return 'bottom-left';
+    if (this.currentUrl().includes('/result/result-detail/')) return 'bottom-right';
+    return this.testLabelPos();
+  });
+  // Whether the effective spot is one of the viewport-fixed corners (rendered
+  // outside the transformed header) vs. the inline slot beside the title.
+  readonly testLabelIsFixed = computed(() => this.effectiveTestLabelPos() !== 'default');
+  // Positioning classes for the fixed-corner slot (bottom corners share a
+  // left anchor and slide via a CSS translate; top-right uses its own anchor).
+  readonly testFixedPosClass = computed(() =>
+    this.effectiveTestLabelPos() === 'top-right' ? 'fixed top-3 right-4' : 'fixed bottom-4 left-4'
+  );
+  // Popover alignment: opens downward for top spots, upward for bottom spots,
+  // and hugs the side the tag rests on.
+  readonly testMenuClass = computed(() => {
+    const pos = this.effectiveTestLabelPos();
+    const vertical = pos.startsWith('bottom') ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]';
+    const horizontal = pos === 'top-right' || pos === 'bottom-right' ? 'right-0' : 'left-0';
+    return `${vertical} ${horizontal}`;
+  });
+  setTestLabelPos(pos: TestLabelPos): void {
+    this.testLabelPos.set(pos);
+    this.testMenuOpen.set(false);
+  }
+  hideTestLabel(): void {
+    this.showTestLabel.set(false);
+    this.testMenuOpen.set(false);
+  }
+  @HostListener('document:click')
+  onDocumentClickCloseTestMenu(): void {
+    if (this.testMenuOpen()) this.testMenuOpen.set(false);
+  }
   myInitiativesListP22 = computed(() => this.api.dataControlSE.myInitiativesList);
 
   // reportingCurrentPhase is a plain object; depend on the version signal so the
@@ -112,6 +161,13 @@ export class HeaderPanelComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Track the current URL so the test-label auto-detect reacts to navigation
+    // (e.g. entering a Result Detail sends the tag to the bottom-right corner).
+    this.currentUrl.set(this.router.url);
+    this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe(() => this.currentUrl.set(this.router.url));
+
     this.api.updateUserData(() => {
       this.resultsNotificationsSE.get_updates_notifications();
       this.resultsNotificationsSE.get_updates_pop_up_notifications();

@@ -2,10 +2,87 @@
 
 @if (!this.dataControlSE.show_qa_full_screen) {
   <div class="header_spacer pointer-events-none h-[70px] w-full" aria-hidden="true"></div>
+
+  <!-- Non-production "Testing environment" ribbon. Its markup is defined once here
+       and projected into one of two slots depending on the effective position:
+       - beside the title (inline slot, inside the brand block) when 'default';
+       - a viewport-fixed corner (fixed slot, below) otherwise.
+       The auto-detect (search open → bottom-left, Result Detail → bottom-right)
+       lives in effectiveTestLabelPos(). The fixed slot is a SIBLING of the navbar
+       (never inside it): the navbar uses a -translate on scroll, which would
+       otherwise capture a position: fixed child and break its anchoring. -->
+  <ng-template #testTag>
+    <span
+      class="test-label-pill relative flex w-max cursor-pointer items-center gap-1.5 rounded-full border border-amber-300/70 bg-amber-50/95 py-[3px] pl-[3px] pr-2.5 shadow-[0_6px_18px_-6px_rgba(217,119,6,0.5)] backdrop-blur-sm transition-colors duration-150 hover:bg-amber-100"
+      (click)="$event.stopPropagation(); testMenuOpen.set(!testMenuOpen())"
+      [attr.aria-expanded]="testMenuOpen()"
+      title="Testing environment — this is NOT the live production site. Everything here is for testing only and may be changed, reset or deleted at any time. Click the tag for options.">
+      <span
+        class="flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white">
+        <i class="material-icons-round text-[13px] leading-none" aria-hidden="true">priority_high</i>
+      </span>
+      <span class="text-[12px] font-bold leading-none tracking-tight text-amber-800">Testing environment</span>
+
+      @if (testMenuOpen()) {
+        <div
+          class="absolute z-[102] flex w-max min-w-[190px] cursor-default flex-col overflow-hidden rounded-xl border border-amber-200 bg-white py-1 shadow-[0_12px_34px_-10px_rgba(30,32,47,0.35)]"
+          [ngClass]="testMenuClass()"
+          (click)="$event.stopPropagation()">
+          <p class="m-0 px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.4px] text-amber-700/70">Move tag</p>
+          <button
+            type="button"
+            (click)="setTestLabelPos('default')"
+            class="flex items-center gap-2 px-3 py-1.5 text-left text-[12px] font-medium transition-colors hover:bg-amber-50"
+            [ngClass]="testLabelPos() === 'default' ? 'text-amber-700' : 'text-[#1e202f]'">
+            <i class="material-icons-round text-[16px] leading-none">title</i> Beside the title
+          </button>
+          <button
+            type="button"
+            (click)="setTestLabelPos('top-right')"
+            class="flex items-center gap-2 px-3 py-1.5 text-left text-[12px] font-medium transition-colors hover:bg-amber-50"
+            [ngClass]="testLabelPos() === 'top-right' ? 'text-amber-700' : 'text-[#1e202f]'">
+            <i class="material-icons-round text-[16px] leading-none">north_east</i> Top-right corner
+          </button>
+          <button
+            type="button"
+            (click)="setTestLabelPos('bottom-left')"
+            class="flex items-center gap-2 px-3 py-1.5 text-left text-[12px] font-medium transition-colors hover:bg-amber-50"
+            [ngClass]="testLabelPos() === 'bottom-left' ? 'text-amber-700' : 'text-[#1e202f]'">
+            <i class="material-icons-round text-[16px] leading-none">south_west</i> Bottom-left corner
+          </button>
+          <button
+            type="button"
+            (click)="setTestLabelPos('bottom-right')"
+            class="flex items-center gap-2 px-3 py-1.5 text-left text-[12px] font-medium transition-colors hover:bg-amber-50"
+            [ngClass]="testLabelPos() === 'bottom-right' ? 'text-amber-700' : 'text-[#1e202f]'">
+            <i class="material-icons-round text-[16px] leading-none">south_east</i> Bottom-right corner
+          </button>
+          <div class="my-1 h-px bg-amber-100"></div>
+          <button
+            type="button"
+            (click)="hideTestLabel()"
+            class="flex items-center gap-2 px-3 py-1.5 text-left text-[12px] font-medium text-[#d00416] transition-colors hover:bg-red-50">
+            <i class="material-icons-round text-[16px] leading-none">visibility_off</i> Hide
+          </button>
+        </div>
+      }
+    </span>
+  </ng-template>
+
+  @if (!isProduction && showTestLabel() && testLabelIsFixed()) {
+    <div
+      class="test-label-anchor z-[101] w-max max-lg:hidden"
+      [ngClass]="testFixedPosClass()"
+      [attr.data-pos]="effectiveTestLabelPos()">
+      <ng-container [ngTemplateOutlet]="testTag"></ng-container>
+    </div>
+  }
+
   <div
     class="header_panel_container fixed right-4 top-2 z-[100] flex h-[58px] items-center justify-between gap-3 transition-[translate,left] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] max-md:right-2 max-md:top-2"
     [ngClass]="{ '-translate-y-[calc(100%+16px)]': isHidden() }"
     [style.left.px]="navbarLeft()">
+    <div class="brand_anchor relative flex items-center">
     <a
       class="logo_container flex cursor-pointer items-center gap-3 max-md:gap-2.5"
       routerLink="/"
@@ -31,6 +108,13 @@
         }
       </div>
     </a>
+
+      @if (!isProduction && showTestLabel() && !testLabelIsFixed()) {
+        <span class="absolute left-full top-1/2 z-[101] ml-6 -translate-y-1/2 max-lg:hidden">
+          <ng-container [ngTemplateOutlet]="testTag"></ng-container>
+        </span>
+      }
+    </div>
 
     <div class="nav_group flex min-w-0 items-center gap-2.5" [ngClass]="isSearchMode() ? 'flex-1 mx-[16px]' : ''">
       <button
@@ -160,7 +244,7 @@
     (backdropClick)="settingsMenuOpen.set(false)"
     (detach)="settingsMenuOpen.set(false)">
     <div
-      class="overlay_panel mt-2.5 w-[260px] rounded-2xl bg-white p-3.5 shadow-[4px_4px_10px_4px_rgba(var(--pr-color-black-rgb),0.25)]"
+      class="overlay_panel mt-2.5 w-[300px] rounded-2xl bg-white p-3.5 shadow-[4px_4px_10px_4px_rgba(var(--pr-color-black-rgb),0.25)]"
       id="settings-popover"
       cdkTrapFocus
       cdkTrapFocusAutoCapture
@@ -176,7 +260,7 @@
       <div
         role="radiogroup"
         aria-label="Text size"
-        class="grid grid-cols-4 gap-1.5 rounded-xl bg-[var(--pr-color-accents-1)] p-1">
+        class="grid grid-cols-5 gap-1 rounded-xl bg-[var(--pr-color-accents-1)] p-1">
         @for (option of fontScaleOptions; track option.value; let i = $index) {
           <button
             #fontRadio
@@ -188,7 +272,7 @@
             class="flex flex-col items-center gap-1 rounded-lg py-2 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-300"
             [ngClass]="
               fontScaleSE.scale() === option.value
-                ? 'bg-white text-brand-600 shadow-[0_1px_3px_rgba(var(--pr-color-primary-rgb),0.25)]'
+                ? 'bg-white text-brand-600 ring-1 ring-brand-300 shadow-[0_1px_3px_rgba(var(--pr-color-primary-rgb),0.25)]'
                 : 'text-[var(--pr-color-accents-6)] hover:bg-white/70'
             "
             (click)="selectFontScale(option.value)"

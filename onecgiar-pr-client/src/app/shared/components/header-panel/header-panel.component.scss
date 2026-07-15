@@ -13,6 +13,51 @@
   font-family: 'Manrope', 'Poppins', sans-serif;
 }
 
+// --- Non-production "Testing environment" ribbon ---
+// The fixed slot anchors at bottom-left; the bottom corners are expressed as a
+// horizontal translate so switching between them (e.g. opening the search while
+// inside a Result Detail) glides across the screen instead of jumping.
+// (top-right gets its own anchor via testFixedPosClass and no translate.)
+.test-label-anchor {
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+
+  &[data-pos='bottom-left'] {
+    transform: translateX(0);
+  }
+  &[data-pos='bottom-right'] {
+    // 100% = the tag's own width; 2rem = the 1rem left inset + a matching 1rem right gap.
+    transform: translateX(calc(100vw - 100% - 2rem));
+  }
+}
+
+// The pill slides up + fades in the first time it mounts, so it never just
+// pops into existence. Runs on the inner element to keep its transform
+// independent of the anchor's horizontal slide.
+.test-label-pill {
+  animation: test-label-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes test-label-enter {
+  from {
+    opacity: 0;
+    transform: translateY(60%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .test-label-anchor {
+    transition: none;
+  }
+  .test-label-pill {
+    animation: none;
+  }
+}
+
 .notifications_list {
   scrollbar-width: thin;
   scrollbar-color: var(--pr-color-primary-300) var(--pr-color-primary-25);
