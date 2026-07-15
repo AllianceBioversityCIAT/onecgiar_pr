@@ -19,6 +19,7 @@ import { filter } from 'rxjs';
 export class AppComponent implements OnInit {
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
+  aiAssistantEnabled = environment.aiAssistant?.enabled ?? false;
 
   readonly layoutSE = inject(LayoutService);
   private readonly router = inject(Router);

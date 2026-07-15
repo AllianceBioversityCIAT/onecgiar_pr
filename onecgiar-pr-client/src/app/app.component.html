@@ -5,9 +5,7 @@
   <app-header-panel></app-header-panel>
 }
 <router-outlet *ngIf="this.rolesSE.firstValidationOfReadOnly"></router-outlet>
-<app-external-tools></app-external-tools>
-<app-test-environment-label *ngIf="!isProduction"></app-test-environment-label>
-<app-share-request-modal></app-share-request-modal>
+<app-external-tools></app-external-tools><app-share-request-modal></app-share-request-modal>
 @if (!this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
   <app-footer></app-footer>
 }
@@ -35,3 +33,6 @@
 </app-pr-dialog>
 
 <app-pr-toast key="globalUserNotification" />
+@if (aiAssistantEnabled && !this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
+  <app-ai-assistant-panel />
+}

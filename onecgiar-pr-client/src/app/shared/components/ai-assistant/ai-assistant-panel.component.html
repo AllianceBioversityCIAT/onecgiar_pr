@@ -1,0 +1,161 @@
+<!-- Launcher FAB -->
+<button
+  type="button"
+  class="fixed bottom-24 right-5 z-[1050] flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
+  style="background: linear-gradient(135deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
+  [attr.aria-expanded]="assistant.isOpen()"
+  aria-label="Open assistant"
+  (click)="toggle()">
+  <i class="material-icons-round text-[26px]">{{ assistant.isOpen() ? 'close' : 'auto_awesome' }}</i>
+</button>
+
+<!-- Right-docked panel -->
+<section
+  class="fixed inset-y-0 right-0 z-[1050] flex w-[400px] max-w-[92vw] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out"
+  [class.translate-x-0]="assistant.isOpen()"
+  [class.translate-x-full]="!assistant.isOpen()"
+  style="transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1)"
+  role="dialog"
+  aria-label="PRMS assistant">
+  <!-- Header -->
+  <header
+    class="flex items-center gap-2 px-4 py-3 text-white"
+    style="background: linear-gradient(135deg, var(--pr-color-primary-300), var(--pr-color-primary-400))">
+    <i class="material-icons-round">auto_awesome</i>
+    <span class="pr-h4 font-weight-600 flex-1">PRMS Assistant</span>
+    <button type="button" class="material-icons-round opacity-80 hover:opacity-100" aria-label="Close" (click)="assistant.close()">close</button>
+  </header>
+
+  <div class="flex flex-1 flex-col overflow-hidden">
+    @switch (assistant.status()) {
+      <!-- Detecting -->
+      @case ('detecting') {
+        <div class="flex flex-1 items-center justify-center text-center text-neutral-500">
+          <span class="pr-body-2">Checking your device…</span>
+        </div>
+      }
+
+      <!-- Unsupported -->
+      @case ('unsupported') {
+        <div class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <i class="material-icons-round text-4xl text-neutral-400">desktop_access_disabled</i>
+          <p class="pr-body-1 font-weight-600">Assistant not available on this device</p>
+          <p class="pr-body-2 text-neutral-500">
+            The assistant needs WebGPU, available on recent Chrome or Edge on desktop. / El asistente necesita WebGPU (Chrome o Edge de escritorio recientes).
+          </p>
+        </div>
+      }
+
+      <!-- Opt-in to download -->
+      @case ('needs-optin') {
+        <div class="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+          <i class="material-icons-round text-4xl text-brand-300">cloud_download</i>
+          <p class="pr-body-1 font-weight-600">Enable the assistant</p>
+          <p class="pr-body-2 text-neutral-500">
+            One-time download of ~{{ downloadMB() }} MB. It runs 100% in your browser — nothing is sent to a server. / Descarga única de ~{{ downloadMB() }} MB, corre 100% local.
+          </p>
+          <div class="flex gap-2">
+            <button type="button" class="rounded-md px-4 py-2 text-white" style="background: var(--pr-color-primary-300)" (click)="startDownload()">Download</button>
+            <button type="button" class="rounded-md border border-neutral-300 px-4 py-2 text-neutral-600" (click)="assistant.close()">Not now</button>
+          </div>
+        </div>
+      }
+
+      <!-- Downloading -->
+      @case ('downloading') {
+        <div class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <i class="material-icons-round text-4xl text-brand-300">downloading</i>
+          <p class="pr-body-1 font-weight-600">Preparing the assistant…</p>
+          <div class="h-2 w-full max-w-[240px] overflow-hidden rounded-full bg-neutral-200">
+            <div class="h-full rounded-full transition-all" style="background: var(--pr-color-primary-300)" [style.width.%]="progressPct()"></div>
+          </div>
+          <p class="pr-body-3 text-neutral-500">{{ progressPct() }}% — {{ assistant.progress()?.text }}</p>
+        </div>
+      }
+
+      <!-- Error -->
+      @case ('error') {
+        <div class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <i class="material-icons-round text-4xl text-red-500">error_outline</i>
+          <p class="pr-body-1 font-weight-600">Something went wrong</p>
+          <p class="pr-body-2 text-neutral-500">The model could not be loaded. Please check your connection and try again. / No se pudo cargar el modelo.</p>
+          @if (assistant.errorDetail(); as detail) {
+            <p class="max-w-[320px] break-words rounded-md bg-neutral-100 px-3 py-2 pr-body-3 text-red-500">{{ detail }}</p>
+          }
+          <button type="button" class="rounded-md px-4 py-2 text-white" style="background: var(--pr-color-primary-300)" (click)="retry()">Retry</button>
+        </div>
+      }
+
+      <!-- Chat (ready / thinking) -->
+      @default {
+        <div class="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+          @for (msg of assistant.messages(); track $index) {
+            <div class="flex" [class.justify-end]="msg.role === 'user'">
+              <div
+                class="max-w-[85%] rounded-2xl px-3 py-2 pr-body-2"
+                [class]="msg.role === 'user' ? 'bg-brand-300 text-white' : 'bg-neutral-100 text-neutral-800'">
+                <span>{{ msg.text }}</span>
+                @if (msg.action) {
+                  <span class="mt-1 flex items-center gap-1 pr-body-3 opacity-80">
+                    <i class="material-icons-round text-[14px]">arrow_forward</i>{{ msg.action }}
+                  </span>
+                }
+                @if (msg.cards?.length) {
+                  <div class="mt-2 flex flex-col gap-1.5">
+                    @for (card of msg.cards; track card.code) {
+                      <button
+                        type="button"
+                        class="flex items-start gap-2 rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-left transition-colors hover:border-brand-300 hover:bg-brand-25"
+                        (click)="open(card.url)">
+                        <i class="material-icons-round text-[16px] text-brand-300">description</i>
+                        <span class="flex flex-col">
+                          <span class="pr-body-3 font-weight-600 text-neutral-800">{{ card.code }}</span>
+                          <span class="pr-body-3 text-neutral-500 line-clamp-2">{{ card.title }}</span>
+                          @if (card.status) {
+                            <span class="pr-body-3 text-brand-400">{{ card.status }}</span>
+                          }
+                        </span>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @if (assistant.status() === 'thinking') {
+            <div class="flex">
+              <div class="flex items-center gap-2 rounded-2xl bg-neutral-100 px-3 py-2 pr-body-3 text-neutral-500">
+                @if (assistant.activity(); as activity) {
+                  <i class="material-icons-round animate-spin text-[14px]">progress_activity</i>
+                  <span>{{ activity }}</span>
+                } @else {
+                  <span>…</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <form class="flex items-center gap-2 border-t border-neutral-200 p-3" (ngSubmit)="submit()">
+          <input
+            type="text"
+            class="flex-1 rounded-full border border-neutral-300 px-4 py-2 pr-body-2 focus:border-brand-300 focus:outline-none"
+            placeholder="Ask me to take you somewhere…"
+            [ngModel]="draft()"
+            (ngModelChange)="draft.set($event)"
+            name="assistantDraft"
+            [disabled]="assistant.status() === 'thinking'"
+            autocomplete="off" />
+          <button
+            type="submit"
+            class="flex h-9 w-9 items-center justify-center rounded-full text-white disabled:opacity-40"
+            style="background: var(--pr-color-primary-300)"
+            [disabled]="assistant.status() === 'thinking' || !draft().trim()"
+            aria-label="Send">
+            <i class="material-icons-round text-[20px]">send</i>
+          </button>
+        </form>
+      }
+    }
+  </div>
+</section>

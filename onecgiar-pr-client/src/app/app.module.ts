@@ -27,6 +27,11 @@ import { ClarityService } from './shared/services/clarity.service';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { UserRolesInfoModalComponent } from './shared/components/user-roles-info-modal/user-roles-info-modal.component';
 import { FormatTimeAgoPipe } from './shared/pipes/format-time-ago/format-time-ago.pipe';
+import { AiAssistantPanelComponent } from './shared/components/ai-assistant/ai-assistant-panel.component';
+import { ASSISTANT_ENGINE } from './shared/components/ai-assistant/engine/assistant-engine.types';
+import { WebLlmEngineService } from './shared/components/ai-assistant/engine/web-llm-engine.service';
+import { RouteReuseStrategy } from '@angular/router';
+import { PrmsRouteReuseStrategy } from './shared/components/ai-assistant/prms-route-reuse.strategy';
 
 function initializeClarityService(clarityService: ClarityService) {
   return () => clarityService.init();
@@ -51,12 +56,15 @@ function initializeClarityService(clarityService: ClarityService) {
     TawkComponent,
     FormatTimeAgoPipe,
     PopUpNotificationItemComponent,
-    UserRolesInfoModalComponent
+    UserRolesInfoModalComponent,
+    AiAssistantPanelComponent
     // SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
   ],
   providers: [
     { provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true },
     provideHttpClient(withInterceptorsFromDi()),
+    { provide: ASSISTANT_ENGINE, useExisting: WebLlmEngineService },
+    { provide: RouteReuseStrategy, useClass: PrmsRouteReuseStrategy },
     ClarityService,
     provideAnimationsAsync(),
     provideAppInitializer(() => {
