@@ -1,16 +1,5 @@
 <div class="sc-fields" data-section="contributors">
   @if (primarySpData(); as sp) {
-    <div class="sc-sp-header">
-      <img class="sc-sp-icon" [src]="sp.iconSrc" width="32" height="32" alt="" />
-      <div class="sc-sp-info">
-        <span class="sc-sp-code">{{ sp.programCode }}</span>
-        <span class="sc-sp-name">{{ sp.shortName }}</span>
-        @if (sp.allocation) {
-          <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
-        }
-      </div>
-    </div>
-
     <div class="sc-card sc-card--toc">
       <div class="sc-card__header">
         <div class="sc-card__title">
@@ -19,6 +8,15 @@
         </div>
       </div>
       <div class="sc-card__body">
+        <div class="sc-sp-header">
+          <img class="sc-sp-icon" [src]="sp.iconSrc" width="32" height="32" alt="" />
+          <div class="sc-sp-info">
+            <span class="sc-sp-code">{{ sp.programCode }} — {{ sp.name || sp.shortName }}</span>
+            @if (sp.allocation) {
+              <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
+            }
+          </div>
+        </div>
         <app-section-toc [resultLevelId]="creationService.resultLevelId()"></app-section-toc>
       </div>
     </div>

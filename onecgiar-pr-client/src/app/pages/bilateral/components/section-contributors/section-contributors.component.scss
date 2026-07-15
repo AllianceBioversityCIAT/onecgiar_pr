@@ -2,6 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .sc-card {
@@ -151,6 +153,7 @@
   background: linear-gradient(135deg, #F3F9FF, #E8F0FE);
   border: 1.5px solid #BBDEFB;
   border-radius: 10px;
+  margin-bottom: 16px;
 }
 
 .sc-sp-icon {
@@ -230,6 +233,12 @@
       margin-right: 2px;
       font-size: 10px;
     }
+  }
+
+  &--project.sc-chip-readonly {
+    background: linear-gradient(135deg, #EF6C00, #FF9800) !important;
+    color: #FFFFFF !important;
+    border-color: transparent !important;
   }
 }
 

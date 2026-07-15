@@ -16,7 +16,7 @@ export class BilateralCreationService {
 
   projects = signal<BilateralProject[]>([]);
   selectedProject = signal<BilateralProject | null>(this.loadFromStorage<BilateralProject>(LS_PROJECT_KEY));
-  selectedPrimarySp = signal<{ programId: number; programCode: string; allocation: string } | null>(
+  selectedPrimarySp = signal<{ programId: number; programCode: string; allocation: string; name?: string; shortName?: string } | null>(
     this.loadFromStorage(LS_SP_KEY)
   );
   selectedSecondarySps = signal<{ programId: number; programCode: string; allocation: string }[]>(
@@ -96,6 +96,13 @@ export class BilateralCreationService {
         const primaryInit = response?.contributingInitiatives?.contributing_and_primary_initiative?.[0];
         if (primaryInit?.id) {
           this.resultInitiativeId.set(primaryInit.id);
+          this.selectedPrimarySp.set({
+            programId: Number(primaryInit.id),
+            programCode: primaryInit.official_code,
+            allocation: '100', // Default allocation
+            name: primaryInit.initiative_name || primaryInit.short_name,
+            shortName: primaryInit.short_name
+          });
         }
 
         if (response?.contributingProjects && response.contributingProjects.length) {

@@ -292,9 +292,20 @@ export class SectionTocComponent implements OnInit {
 
   setContributionValue(val: number | string | null): void {
     if (val === null || val === '' || val === undefined) { this.contributionValue.set(null); return; }
-    const n = Math.round(Number(val));
-    this.contributionValue.set(isNaN(n) ? null : n);
+    let n = Math.round(Number(val));
+    if (isNaN(n)) {
+      this.contributionValue.set(null);
+    } else {
+      n = Math.max(0, n);
+      this.contributionValue.set(n);
+    }
     this.saveTocDebounced();
+  }
+
+  preventInvalidKeys(event: KeyboardEvent): void {
+    if (['-', '+', '.', ',', 'e', 'E'].includes(event.key)) {
+      event.preventDefault();
+    }
   }
 
   private _narrativeTimer: ReturnType<typeof setTimeout> | null = null;

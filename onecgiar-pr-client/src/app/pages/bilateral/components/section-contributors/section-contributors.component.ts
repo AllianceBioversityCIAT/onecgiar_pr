@@ -49,8 +49,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     return {
       programCode: sp.programCode,
       allocation: sp.allocation,
-      shortName: full?.spShortName ?? '',
-      name: full?.spName ?? '',
+      shortName: sp.shortName || full?.spShortName || '',
+      name: sp.name || full?.spName || '',
       iconSrc: `assets/result-framework-reporting/SPs-Icons/${sp.programCode}.png`,
     };
   });
@@ -169,7 +169,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
         console.log('loadProjects got response:', response ? response.length : 0);
         this.availableProjects.set(
           (response ?? []).map((p: any) => ({
-            id: p.id,
+            id: Number(p.id),
             shortName: p.shortName,
             fullName: p.fullName,
           }))

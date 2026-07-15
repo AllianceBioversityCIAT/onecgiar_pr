@@ -162,7 +162,9 @@
             <input type="number" class="st-input" [ngModel]="contributionValue()"
               placeholder="Enter your contribution…"
               step="1"
+              min="0"
               pattern="[0-9]*"
+              (keypress)="preventInvalidKeys($event)"
               (ngModelChange)="setContributionValue($event)" />
           </div>
         }
