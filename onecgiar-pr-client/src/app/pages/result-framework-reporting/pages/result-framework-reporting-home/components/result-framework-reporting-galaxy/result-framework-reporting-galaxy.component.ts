@@ -96,6 +96,9 @@ export class ResultFrameworkReportingGalaxyComponent implements AfterViewInit, O
   private readonly _pv = new THREE.Matrix4();
   private disposed = false;
   private opacityTweens: { el: HTMLElement; from: number; to: number; t0: number; dur: number; onDone?: () => void }[] = [];
+  private posTweens: { obj: THREE.Object3D; from: THREE.Vector3; to: THREE.Vector3; t0: number; dur: number }[] = [];
+  private trackLines: { line: THREE.Line; a: THREE.Vector3; obj: THREE.Object3D }[] = [];
+  private readonly CENTER = new THREE.Vector3(0, 2.5, 0);
 
   // navigation state
   private stack: StackEntry[] = [];
@@ -220,19 +223,26 @@ export class ResultFrameworkReportingGalaxyComponent implements AfterViewInit, O
     const specs = this.childSpecs;
     const R = hasHub ? 6.2 : 9;
     const n = Math.max(specs.length, 1);
+    this.trackLines = [];
     specs.forEach((spec, i) => {
       const ang = (i / n) * Math.PI * 2 - (hasHub ? Math.PI / 2 : 0);
       const y = center.y + (i % 2 ? 1.3 : -1.1);
-      const pos = hasHub
+      const finalPos = hasHub
         ? new THREE.Vector3(Math.cos(ang) * R, y, Math.sin(ang) * R)
         : new THREE.Vector3(Math.sin(ang) * R, y, Math.cos(ang) * R);
       const el = this.makeCard(spec, false, i);
-      const o = this.css(el, pos.x, pos.y, pos.z, 0.012);
+      // Children are born AT the hub centre and burst outward in real time — no page-like fade swap.
+      const o = this.css(el, center.x, center.y, center.z, 0.012);
       o.userData = { i };
-      this.groupB.add(o); this.childObjs.push(o); this.childPos.push(pos);
-      this.fadeEl(el, 0, 1, 440, 180 + i * 55);
-      this.glow(pos, this.color(LEVEL_ACCENT[spec.kind], '#999'));
-      if (hasHub) this.linesB.add(this.line(center, pos));
+      this.groupB.add(o); this.childObjs.push(o); this.childPos.push(finalPos);
+      this.fadeEl(el, 0, 1, 380, 40 + i * 45);
+      this.movePos(o, center, finalPos, 660, 40 + i * 45);
+      this.glow(finalPos, this.color(LEVEL_ACCENT[spec.kind], '#999'));
+      if (hasHub) {
+        const ln = this.line(center, center);
+        this.linesB.add(ln);
+        this.trackLines.push({ line: ln, a: center.clone(), obj: o });
+      }
     });
 
     this.groupB.visible = true;
@@ -344,7 +354,7 @@ export class ResultFrameworkReportingGalaxyComponent implements AfterViewInit, O
     const spec = this.childSpecs[this.selIndex];
     if (!spec.hasChildren) return;
     this.stack.push({ kind: spec.kind, title: spec.title, code: spec.code, programCode: spec.programCode, aowCode: spec.aowCode });
-    this.fadeGroupCards(this.groupB, 0, 260);
+    this.collapseCurrent();
     this.updateHeader();
     this.loadChildren();
     this.tweenCam(new THREE.Vector3(0, 3.5, 13), new THREE.Vector3(0, 2.5, 0), 850);
@@ -353,7 +363,7 @@ export class ResultFrameworkReportingGalaxyComponent implements AfterViewInit, O
   private goBack(): void {
     if (!this.stack.length) return;
     this.stack.pop();
-    this.fadeGroupCards(this.groupB, 0, 240);
+    this.collapseCurrent();
     this.updateHeader();
     this.loadChildren();
     this.tweenCam(this.stack.length ? new THREE.Vector3(0, 3.5, 13) : new THREE.Vector3(0, 4, 17), new THREE.Vector3(0, 2.5, 0), 820);
@@ -500,10 +510,20 @@ export class ResultFrameworkReportingGalaxyComponent implements AfterViewInit, O
     this.opacityTweens.push({ el, from, to, t0: performance.now() + delay, dur, onDone });
     this.needsRender = true;
   }
-  private fadeGroupCards(group: THREE.Group, to: number, dur: number, onDone?: () => void): void {
-    const els = group.children.map(c => (c as any).element as HTMLElement | undefined).filter((e): e is HTMLElement => !!e);
-    if (!els.length) { onDone?.(); return; }
-    els.forEach((el, i) => this.fadeEl(el, parseFloat(el.style.opacity || '1'), to, dur, i * 15, i === els.length - 1 ? onDone : undefined));
+  /** Tween a 3D object's position (used to burst children out from / collapse them into the hub). */
+  private movePos(obj: THREE.Object3D, from: THREE.Vector3, to: THREE.Vector3, dur: number, delay = 0): void {
+    obj.position.copy(from);
+    this.posTweens.push({ obj, from: from.clone(), to: to.clone(), t0: performance.now() + delay, dur });
+    this.needsRender = true;
+  }
+  /** Collapse every current card into the hub centre + fade it — the dynamic "leave" motion (no flat page fade). */
+  private collapseCurrent(): void {
+    for (const o of this.groupB.children) {
+      this.movePos(o as THREE.Object3D, (o as THREE.Object3D).position.clone(), this.CENTER, 300);
+      const el = (o as any).element as HTMLElement | undefined;
+      if (el) this.fadeEl(el, parseFloat(el.style.opacity || '1'), 0, 300);
+    }
+    this.trackLines = [];
   }
 
   private billboardAndCull(): void {
@@ -536,6 +556,16 @@ export class ResultFrameworkReportingGalaxyComponent implements AfterViewInit, O
         if (t >= 1) { tw.onDone?.(); return false; }
         return true;
       });
+      this.needsRender = true;
+    }
+    if (this.posTweens.length) {
+      const now = performance.now();
+      this.posTweens = this.posTweens.filter(tw => {
+        const t = Math.min(Math.max((now - tw.t0) / tw.dur, 0), 1), e = this.easeInOut(t);
+        tw.obj.position.lerpVectors(tw.from, tw.to, e);
+        return t < 1;
+      });
+      for (const tl of this.trackLines) tl.line.geometry.setFromPoints([tl.a, tl.obj.position]); // lines grow with the cards
       this.needsRender = true;
     }
     if (this.controls?.autoRotate) this.needsRender = true; // keep the slow idle spin alive under on-demand rendering
