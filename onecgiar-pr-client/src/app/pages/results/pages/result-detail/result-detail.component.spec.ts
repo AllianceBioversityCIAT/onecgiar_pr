@@ -160,97 +160,35 @@ describe('ResultDetailComponent', () => {
     });
   });
 
-  describe('togglePdfMenu()', () => {
-    it('should toggle showPdfMenu from false to true', () => {
-      component.showPdfMenu = false;
-      component.togglePdfMenu();
-      expect(component.showPdfMenu).toBe(true);
-    });
-
-    it('should toggle showPdfMenu from true to false', () => {
-      component.showPdfMenu = true;
-      component.togglePdfMenu();
-      expect(component.showPdfMenu).toBe(false);
-    });
-  });
-
-  describe('onDocumentClick()', () => {
-    it('should close menu when clicking outside', () => {
-      component.showPdfMenu = true;
-      const mockEvent = {
-        target: document.createElement('div')
-      } as Partial<MouseEvent>;
-
-      component.onDocumentClick(mockEvent as MouseEvent);
-
-      expect(component.showPdfMenu).toBe(false);
-    });
-
-    it('should not close menu when clicking inside', () => {
-      component.showPdfMenu = true;
-      const container = fixture.nativeElement.querySelector('.pdf-menu-container');
-      const mockEvent = {
-        target: container || fixture.nativeElement
-      } as Partial<MouseEvent>;
-
-      component.onDocumentClick(mockEvent as MouseEvent);
-
-      expect(component.showPdfMenu).toBe(true);
-    });
-
-    it('should do nothing if menu is already closed', () => {
-      component.showPdfMenu = false;
-      const mockEvent = {
-        target: document.createElement('div')
-      } as Partial<MouseEvent>;
-
-      component.onDocumentClick(mockEvent as MouseEvent);
-
-      expect(component.showPdfMenu).toBe(false);
-    });
-  });
-
-  describe('viewPdf()', () => {
-    it('should open PDF in new window and close menu', () => {
-      const windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
-      const testLink = 'https://test-link.com';
-      jest.spyOn(component, 'getPdfLink').mockReturnValue(testLink);
-      component.showPdfMenu = true;
-
-      component.viewPdf();
-
-      expect(windowOpenSpy).toHaveBeenCalledWith(testLink, '_blank');
-      expect(component.showPdfMenu).toBe(false);
-    });
-  });
-
-  describe('getPdfLink()', () => {
-    it('should return the correct PDF link', () => {
+  // PDF export actions (view/copy/toggle) moved to PdfExportService — see pdf-export.service.spec.ts.
+  // The component only wires the service: enables it with the link on load, disables it on destroy.
+  describe('PDF export wiring (PdfExportService)', () => {
+    it('should build the correct PDF link from the current result', () => {
       mockApiService.resultsSE.currentResultCode = 'TEST-123';
       mockApiService.resultsSE.currentResultPhase = '2024';
       const expectedLink = `${environment.frontBaseUrl}reports/result-details/TEST-123?phase=2024`;
-      expect(component.getPdfLink()).toBe(expectedLink);
+      expect((component as any).getPdfLink()).toBe(expectedLink);
     });
-  });
 
-  describe('copyPdfLink()', () => {
-    it('should copy PDF link to clipboard, show success message and close menu', () => {
-      const mockClipboard = { copy: jest.fn() };
-      (component as any).clipboard = mockClipboard;
-      const spyMessageAdd = jest.spyOn(component['messageSE'], 'add');
-      const testLink = 'https://test-link.com';
-      jest.spyOn(component, 'getPdfLink').mockReturnValue(testLink);
-      component.showPdfMenu = true;
+    it('should enable the PDF export with the current link on getData()', async () => {
+      await component.getData();
 
-      component.copyPdfLink();
+      const pdfSE = (component as any).pdfSE;
+      expect(pdfSE.enabled()).toBe(true);
+      expect(pdfSE.link()).toContain(`${environment.frontBaseUrl}reports/result-details/`);
+    });
 
-      expect(mockClipboard.copy).toHaveBeenCalledWith(testLink);
-      expect(spyMessageAdd).toHaveBeenCalledWith({
-        key: 'copyResultLinkPdf',
-        severity: 'success',
-        summary: 'PDF link copied'
-      });
-      expect(component.showPdfMenu).toBe(false);
+    it('should disable the PDF export on ngOnDestroy()', () => {
+      const pdfSE = (component as any).pdfSE;
+      pdfSE.enabled.set(true);
+      pdfSE.link.set('https://test-link.com');
+      pdfSE.menuOpen.set(true);
+
+      component.ngOnDestroy();
+
+      expect(pdfSE.enabled()).toBe(false);
+      expect(pdfSE.menuOpen()).toBe(false);
+      expect(pdfSE.link()).toBe('');
     });
   });
 
