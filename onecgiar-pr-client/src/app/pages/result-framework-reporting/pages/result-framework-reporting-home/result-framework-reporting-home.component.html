@@ -47,6 +47,11 @@
           } @else {
             @for (item of resultFrameworkReportingHomeService.recentActivityList().slice(0, 6); track $index) {
               <app-result-framework-reporting-recent-item [item]="item" />
+            } @empty {
+              <div class="flex flex-col items-center justify-center gap-2 py-10 text-center text-[var(--pr-color-accents-5)]">
+                <i class="material-icons-round text-[32px]">history</i>
+                <p class="m-0 text-sm">No recent activity yet</p>
+              </div>
             }
           }
         </div>
@@ -88,6 +93,11 @@
       } @else {
         @for (item of resultFrameworkReportingHomeService.recentActivityList(); track $index) {
           <app-result-framework-reporting-recent-item [item]="item" />
+        } @empty {
+          <div class="flex flex-col items-center justify-center gap-2 py-10 text-center text-[var(--pr-color-accents-5)]">
+            <i class="material-icons-round text-[32px]">history</i>
+            <p class="m-0 text-sm">No recent activity yet</p>
+          </div>
         }
       }
     </div>
