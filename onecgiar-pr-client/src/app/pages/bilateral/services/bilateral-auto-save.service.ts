@@ -176,7 +176,6 @@ export class BilateralAutoSaveService {
 
     const body: any = {
       result_toc_result: {
-        planned_result: tocData.planned_result,
         result_toc_results: [{
           toc_level_id: tocLevelId,
           toc_result_id: tocResultId,
@@ -238,6 +237,49 @@ export class BilateralAutoSaveService {
       error: () => {
         this.fieldStatus.update(s => ({ ...s, contributors: 'error' }));
       },
+    });
+  }
+
+  loadTocState(): Promise<{
+    planned_result: boolean | null;
+    toc_level_id: number | null;
+    toc_result_id: number | null;
+    indicator_id: number | null;
+    toc_progressive_narrative: string | null;
+  }> {
+    const resultId = this._currentResultId();
+    if (!resultId) {
+      return Promise.resolve({
+        planned_result: null,
+        toc_level_id: null,
+        toc_result_id: null,
+        indicator_id: null,
+        toc_progressive_narrative: null,
+      });
+    }
+
+    const url = `${environment.apiBaseUrl}api/bilateral/center/toc-state/${resultId}`;
+    return new Promise((resolve) => {
+      this.http.get<any>(url).subscribe({
+        next: ({ response }) => {
+          resolve({
+            planned_result: response?.planned_result ?? null,
+            toc_level_id: response?.toc_level_id ?? null,
+            toc_result_id: response?.toc_result_id ?? null,
+            indicator_id: response?.indicator_id ?? null,
+            toc_progressive_narrative: response?.toc_progressive_narrative ?? null,
+          });
+        },
+        error: () => {
+          resolve({
+            planned_result: null,
+            toc_level_id: null,
+            toc_result_id: null,
+            indicator_id: null,
+            toc_progressive_narrative: null,
+          });
+        },
+      });
     });
   }
 }

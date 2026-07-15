@@ -3903,7 +3903,7 @@ export class BilateralService {
     return value;
   }
 
-  private async handleLeadCenter(
+  async handleLeadCenter(
     resultId: number,
     leadCenter: { name?: string; acronym?: string; institution_id?: number },
     userId: number,

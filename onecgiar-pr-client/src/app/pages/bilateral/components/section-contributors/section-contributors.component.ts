@@ -84,6 +84,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     }
   });
 
+  private readonly leadCenterIdChangeEffect = effect(() => {
+    const resultLeadCenterId = this.creationService.resultLeadCenterId();
+    if (resultLeadCenterId && this.availableCenters.length && !this.readonlyLeadCenterInstitutionId) {
+      this.ensureLeadCenterSaved();
+    }
+  });
+
   ngOnInit(): void {
     this.loadCenters();
     this.loadProjects();
@@ -113,6 +120,28 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       acronym: (c as any).acronym || c.code,
       full_name: `${(c as any).acronym || c.code} - ${c.name}`,
     }));
+    this.ensureLeadCenterSaved();
+  }
+
+  private ensureLeadCenterSaved(): void {
+    const project = this.creationService.selectedProject();
+    const resultLeadCenterId = this.creationService.resultLeadCenterId();
+    const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
+    if (!leadCenterId || this.readonlyLeadCenterInstitutionId) return;
+    const leadInstitutionId = Number(leadCenterId);
+    const centerExists = this.availableCenters.some(c => c.institutionId === leadInstitutionId);
+    if (!centerExists) return;
+    this.readonlyLeadCenterInstitutionId = leadInstitutionId;
+    if (!this.selectedCenterInstitutionIds.includes(leadInstitutionId)) {
+      this.selectedCenterInstitutionIds = [leadInstitutionId, ...this.selectedCenterInstitutionIds];
+    }
+    const selectedCenters = this.selectedCenterInstitutionIds.map(id => {
+      const c = this.availableCenters.find(c => c.institutionId === id);
+      return c ? { institution_id: c.institutionId } : null;
+    }).filter(Boolean);
+    this.autoSave.saveContributors({
+      contributing_center: selectedCenters as { institution_id: number }[],
+    });
   }
 
   private loadProjects(): void {

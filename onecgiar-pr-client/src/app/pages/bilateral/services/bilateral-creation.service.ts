@@ -173,6 +173,14 @@ export class BilateralCreationService {
     if (programCode) {
       body['program_code'] = programCode;
     }
+    const leadCenter = this.selectedProject()?.leadCenter;
+    if (leadCenter) {
+      body['lead_center'] = {
+        institution_id: leadCenter.id,
+        name: leadCenter.name,
+        acronym: leadCenter.acronym,
+      };
+    }
     return this.http.post(`${environment.apiBaseUrl}api/bilateral/center/create-header`, body);
   }
 

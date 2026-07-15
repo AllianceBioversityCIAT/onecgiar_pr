@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { BilateralProjectsService } from './services/bilateral-projects.service';
+import { BilateralService } from './bilateral.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -32,6 +33,7 @@ import { ResultsTocResultRepository } from '../results/results-toc-results/repos
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaCentersRepository } from '../../clarisa/clarisa-centers/clarisa-centers.repository';
+import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 
 @Controller('center')
 @ApiTags('Bilateral Center')
@@ -39,6 +41,7 @@ import { ClarisaCentersRepository } from '../../clarisa/clarisa-centers/clarisa-
 export class BilateralCenterController {
   constructor(
     private readonly bilateralProjectsService: BilateralProjectsService,
+    private readonly bilateralService: BilateralService,
     private readonly versioningService: VersioningService,
     private readonly resultRepository: ResultRepository,
     private readonly resultByLevelRepository: ResultByLevelRepository,
@@ -48,6 +51,7 @@ export class BilateralCenterController {
     private readonly resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly clarisaCentersRepository: ClarisaCentersRepository,
+    private readonly clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly resultsCenterRepository: ResultsCenterRepository,
     private readonly resultsByProjectsRepository: ResultsByProjectsRepository,
   ) {}
@@ -138,6 +142,14 @@ export class BilateralCenterController {
       }
     }
 
+    if (dto.lead_center) {
+      await this.bilateralService.handleLeadCenter(
+        result.id,
+        dto.lead_center,
+        user.id,
+      );
+    }
+
     return {
       response: {
         id: result.id,
@@ -165,6 +177,92 @@ export class BilateralCenterController {
         initiativeName: owner?.initiative_name ?? null,
       },
     };
+  }
+
+  @Get('toc-state/:resultId')
+  @ApiOperation({
+    summary:
+      'Get TOC state (planned_result, level, result, indicator) for a bilateral result',
+  })
+  async getTocState(@Param('resultId') resultId: number) {
+    try {
+      const owner =
+        await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
+          resultId,
+        );
+
+      if (!owner?.id) {
+        return {
+          response: {
+            planned_result: null,
+            toc_level_id: null,
+            toc_result_id: null,
+            indicator_id: null,
+            toc_progressive_narrative: null,
+          },
+        };
+      }
+
+      const activeRecord = await this.resultsTocResultRepository.findOne({
+        where: {
+          result_id: resultId,
+          initiative_ids: owner.id,
+          is_active: true,
+        },
+      });
+
+      if (!activeRecord) {
+        return {
+          response: {
+            planned_result: null,
+            toc_level_id: null,
+            toc_result_id: null,
+            indicator_id: null,
+            toc_progressive_narrative: null,
+          },
+        };
+      }
+
+      let indicatorId: number | null = null;
+      if (activeRecord.result_toc_result_id) {
+        const indicatorQuery = `
+          SELECT rtri.result_toc_result_indicator_id as id
+          FROM results_toc_result_indicators rtri
+          WHERE rtri.results_toc_results_id = ?
+          LIMIT 1
+        `;
+        const indicatorResult: { id: number }[] =
+          await this.resultsTocResultRepository.query(indicatorQuery, [
+            activeRecord.result_toc_result_id,
+          ]);
+        if (indicatorResult?.length) {
+          indicatorId = indicatorResult[0].id;
+        }
+      }
+
+      return {
+        response: {
+          planned_result: activeRecord.planned_result,
+          toc_level_id: activeRecord.toc_level_id ?? null,
+          toc_result_id: activeRecord.toc_result_id ?? null,
+          indicator_id: indicatorId,
+          toc_progressive_narrative:
+            activeRecord.toc_progressive_narrative ?? null,
+        },
+      };
+    } catch (error) {
+      return {
+        response: {
+          planned_result: null,
+          toc_level_id: null,
+          toc_result_id: null,
+          indicator_id: null,
+          toc_progressive_narrative: null,
+        },
+        message:
+          error instanceof Error ? error.message : 'Failed to load TOC state',
+      };
+    }
   }
 
   @Patch('planned-result/:resultId')
@@ -276,11 +374,13 @@ export class BilateralCenterController {
     @Body() dto: SaveBilateralContributorsDto,
     @UserToken() user: TokenDto,
   ) {
+    const result: any = { savedCenters: [], failedCenters: [], savedProjects: [], failedProjects: [] };
+
     try {
-      const result = await this.resultRepository.findOne({
+      const bilResult = await this.resultRepository.findOne({
         where: { id: resultId, source: SourceEnum.Bilateral },
       });
-      if (!result) {
+      if (!bilResult) {
         return {
           response: { resultId },
           message: 'Bilateral result not found',
@@ -289,73 +389,83 @@ export class BilateralCenterController {
       }
 
       if (dto.contributing_center?.length) {
-        const institutionIds = dto.contributing_center
-          .map((c) => c.institution_id)
-          .filter((id): id is number => id !== undefined);
-
-        if (institutionIds.length > 0) {
-          const centerCodesQuery = `
-            SELECT code, "institutionId" as institution_id
-            FROM clarisa_center
-            WHERE "institutionId" IN (${institutionIds.join(',')})
-          `;
-          const centerCodesResults: { code: string; institution_id: number }[] =
-            await this.clarisaCentersRepository.query(centerCodesQuery);
-
-          const codeByInstitutionId = new Map<number, string>();
-          for (const row of centerCodesResults) {
-            codeByInstitutionId.set(row.institution_id, row.code);
+        for (const center of dto.contributing_center) {
+          if (center.institution_id === undefined) {
+            result.failedCenters.push({ institution_id: center.institution_id, reason: 'No institution_id provided' });
+            continue;
           }
 
-          for (const center of dto.contributing_center) {
-            if (center.institution_id === undefined) continue;
+          const inst = await this.clarisaInstitutionsRepository.findOne({
+            where: { id: center.institution_id },
+          });
+          if (!inst) {
+            result.failedCenters.push({ institution_id: center.institution_id, reason: 'Institution not found in clarisa_institutions' });
+            continue;
+          }
 
-            const centerCode = codeByInstitutionId.get(center.institution_id);
-            if (!centerCode) continue;
+          const clarisaCenters = await this.clarisaCentersRepository.find({
+            where: { institutionId: inst.id },
+          });
+          if (!clarisaCenters || clarisaCenters.length === 0) {
+            result.failedCenters.push({ institution_id: center.institution_id, reason: 'Institution has no clarisa_center record' });
+            continue;
+          }
 
-            const existing = await this.resultsCenterRepository.findOne({
-              where: {
-                result_id: resultId,
-                center_id: centerCode,
-              },
+          const centerCode = clarisaCenters[0].code;
+          const existing = await this.resultsCenterRepository.findOne({
+            where: {
+              result_id: resultId,
+              center_id: centerCode,
+            },
+          });
+          if (!existing) {
+            await this.resultsCenterRepository.save({
+              result_id: resultId,
+              center_id: centerCode,
+              is_primary: false,
+              is_leading_result: false,
+              from_cgspace: false,
+              is_active: true,
+              created_by: user.id,
             });
-            if (!existing) {
-              await this.resultsCenterRepository.save({
-                result_id: resultId,
-                center_id: centerCode,
-                is_primary: false,
-                is_leading_result: false,
-                from_cgspace: false,
-                is_active: true,
-                created_by: user.id,
-              });
-            }
+            result.savedCenters.push({ institution_id: center.institution_id, centerCode });
+          } else {
+            result.savedCenters.push({ institution_id: center.institution_id, centerCode, alreadyExists: true });
           }
         }
       }
 
       if (dto.contributing_bilateral_projects?.length) {
         for (const project of dto.contributing_bilateral_projects) {
-          const existing = await this.resultsByProjectsRepository.findOne({
-            where: { result_id: resultId, project_id: project.project_id },
-          });
-          if (!existing) {
-            await this.resultsByProjectsRepository.save({
-              result_id: resultId,
-              project_id: project.project_id,
-              is_lead:
-                project.is_lead === true || project.is_lead === 1
-                  ? true
-                  : false,
-              created_by: user.id,
+          try {
+            const existing = await this.resultsByProjectsRepository.findOne({
+              where: { result_id: resultId, project_id: project.project_id },
             });
+            if (!existing) {
+              await this.resultsByProjectsRepository.save({
+                result_id: resultId,
+                project_id: project.project_id,
+                is_lead:
+                  project.is_lead === true || project.is_lead === 1
+                    ? true
+                    : false,
+                created_by: user.id,
+              });
+              result.savedProjects.push({ project_id: project.project_id });
+            } else {
+              result.savedProjects.push({ project_id: project.project_id, alreadyExists: true });
+            }
+          } catch {
+            result.failedProjects.push({ project_id: project.project_id, reason: 'Save failed' });
           }
         }
       }
 
       return {
-        response: { resultId, saved: true },
-        message: 'Contributors saved successfully',
+        response: { resultId, ...result },
+        message: result.failedCenters.length === 0 && result.failedProjects.length === 0
+          ? 'Contributors saved successfully'
+          : `Contributors saved with ${result.failedCenters.length} failed centers and ${result.failedProjects.length} failed projects`,
       };
     } catch (error) {
       return {

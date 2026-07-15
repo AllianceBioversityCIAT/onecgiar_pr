@@ -147,6 +147,7 @@ export class SectionTocComponent implements OnInit {
       if (!iId) return;
       this.loadTocLevels();
       this.fetchLists();
+      this.loadTocState();
     });
   }
 
@@ -154,6 +155,26 @@ export class SectionTocComponent implements OnInit {
     if (this.initiativeId()) {
       this.loadTocLevels();
       this.fetchLists();
+      this.loadTocState();
+    }
+  }
+
+  private async loadTocState(): Promise<void> {
+    const state = await this.autoSave.loadTocState();
+    if (state.planned_result !== null) {
+      this.isPlanned.set(state.planned_result);
+    }
+    if (state.toc_level_id !== null) {
+      this.selectedLevelId.set(state.toc_level_id);
+    }
+    if (state.toc_result_id !== null) {
+      this.selectedTocResultId.set(state.toc_result_id);
+    }
+    if (state.indicator_id !== null) {
+      this.selectedIndicatorId.set(state.indicator_id);
+    }
+    if (state.toc_progressive_narrative !== null) {
+      this.narrative.set(state.toc_progressive_narrative);
     }
   }
 
