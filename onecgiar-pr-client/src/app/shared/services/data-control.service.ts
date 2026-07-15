@@ -26,7 +26,12 @@ export class DataControlService {
   currentResultSignal: WritableSignal<CurrentResult> = signal({});
   showSectionSpinner = false;
   currentSectionName = '';
-  fieldFeedbackList = [];
+  /**
+   * Mandatory-field feedback labels for the "X alerts" box (save-button).
+   * Signal so the box re-renders reactively when the scan output changes,
+   * instead of being recomputed on every change-detection cycle. (P2-2967/P2-2969)
+   */
+  readonly fieldFeedbackList = signal<string[]>([]);
   showShareRequest = false;
   chagePhaseModal = false;
   updateResultModal = false;
@@ -35,7 +40,20 @@ export class DataControlService {
   inNotifications = false;
   currentNotification = null;
   currentResultSectionName = signal('');
-  green_checks = null;
+  /**
+   * Backend section-completeness indicator. Signal-backed (transparent getter/setter
+   * keeps existing call sites working) so `greenChecksString` can be a memoized
+   * `computed` instead of a per-CD `JSON.stringify` in panel-menu. (P2-2967/P2-2970)
+   */
+  private readonly _greenChecks = signal<any>(null);
+  get green_checks() {
+    return this._greenChecks();
+  }
+  set green_checks(value: any) {
+    this._greenChecks.set(value);
+  }
+  /** Memoized JSON snapshot of green_checks; recomputes only when green_checks changes. */
+  readonly greenChecksString = computed(() => JSON.stringify(this._greenChecks()));
   show_qa_full_screen = false;
   showResultHistoryOfChangesModal = false;
   resultPhaseList = [];
@@ -164,9 +182,12 @@ export class DataControlService {
   }
 
   someMandatoryFieldIncompleteResultDetail(container) {
-    this.fieldFeedbackList = [];
     const htmlContainer = document.querySelector(container);
-    if (!htmlContainer) return true;
+    if (!htmlContainer) {
+      if (this.fieldFeedbackList().length) this.fieldFeedbackList.set([]);
+      return true;
+    }
+    const feedback: string[] = [];
     let inputs;
     let selects;
     try {
@@ -174,7 +195,7 @@ export class DataControlService {
         const tagValue = field?.parentElement?.parentElement?.parentElement?.querySelector('.pr_label')?.innerText;
         const isEmpty = !field?.innerText;
 
-        if (tagValue && isEmpty) this.fieldFeedbackList.push(tagValue);
+        if (tagValue && isEmpty) feedback.push(tagValue);
 
         return isEmpty;
       });
@@ -183,13 +204,24 @@ export class DataControlService {
         tagValue = tagValue?.innerText;
         const isIncomplete = !field.classList.contains('complete');
 
-        if (tagValue && isIncomplete) this.fieldFeedbackList.push(tagValue);
+        if (tagValue && isIncomplete) feedback.push(tagValue);
         return isIncomplete;
       });
     } catch (error) {
       console.error(error);
     }
+    // Update the signal only when the list actually changed: avoids needless
+    // notifications/renders and lets callers compare by reference to know if it changed.
+    if (!this.sameFeedback(this.fieldFeedbackList(), feedback)) {
+      this.fieldFeedbackList.set(feedback);
+    }
     return Boolean(inputs) || Boolean(selects);
+  }
+
+  private sameFeedback(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
   }
 
   detailSectionTitle(sectionName, title?) {

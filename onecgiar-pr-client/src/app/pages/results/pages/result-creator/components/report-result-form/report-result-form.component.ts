@@ -1,4 +1,4 @@
-import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal, OnDestroy } from '@angular/core';
+import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal, OnDestroy, NgZone, inject } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 import { Router } from '@angular/router';
@@ -274,8 +274,47 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     });
   }
 
+  /** Throttle for the mandatory-field DOM scan (was running synchronously on every CD cycle). */
+  private static readonly SCAN_THROTTLE_MS = 150;
+  private lastScanAt = 0;
+  private scanScheduled = false;
+  private trailingScanId: any = null;
+  private readonly ngZone = inject(NgZone);
+
   ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.report_container');
+    // Same fix as Result Detail (P2-2967/P2-2971): throttle (leading + trailing edge) the DOM scan,
+    // coalesce into one rAF run OUTSIDE Angular's zone, tick only when it changed.
+    if (this.scanScheduled) return;
+    const elapsed = Date.now() - this.lastScanAt;
+    if (elapsed >= ReportResultFormComponent.SCAN_THROTTLE_MS) {
+      this.runFeedbackScan();
+    } else if (this.trailingScanId === null) {
+      this.ngZone.runOutsideAngular(() => {
+        this.trailingScanId = setTimeout(() => {
+          this.trailingScanId = null;
+          this.runFeedbackScan();
+        }, ReportResultFormComponent.SCAN_THROTTLE_MS - elapsed);
+      });
+    }
+  }
+
+  private runFeedbackScan(): void {
+    if (this.trailingScanId !== null) {
+      clearTimeout(this.trailingScanId);
+      this.trailingScanId = null;
+    }
+    this.lastScanAt = Date.now();
+    this.scanScheduled = true;
+    this.ngZone.runOutsideAngular(() => {
+      requestAnimationFrame(() => {
+        this.scanScheduled = false;
+        const before = this.api.dataControlSE.fieldFeedbackList();
+        this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.report_container');
+        if (this.api.dataControlSE.fieldFeedbackList() !== before) {
+          this.ngZone.run(() => {});
+        }
+      });
+    });
   }
 
   GET_mqapValidation() {

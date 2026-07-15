@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit } from '@angular/core';
+import { Component, DoCheck, OnInit, NgZone } from '@angular/core';
 import { internationalizationData } from '../../../../shared/data/internationalization-data';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
@@ -40,7 +40,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     public createResultManagementService: CreateResultManagementService,
     public terminologyService: TerminologyService,
     private router: Router,
-    private phasesService: PhasesService
+    private phasesService: PhasesService,
+    private readonly ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -234,8 +235,46 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     }
   }
 
+  /** Throttle for the mandatory-field DOM scan (was running synchronously on every CD cycle). */
+  private static readonly SCAN_THROTTLE_MS = 150;
+  private lastScanAt = 0;
+  private scanScheduled = false;
+  private trailingScanId: any = null;
+
   ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
+    // Same fix as Result Detail (P2-2967/P2-2971): throttle (leading + trailing edge) the DOM-scanning
+    // mandatory-field check, coalesce into one rAF run OUTSIDE Angular's zone, tick only when it changed.
+    if (this.scanScheduled) return;
+    const elapsed = Date.now() - this.lastScanAt;
+    if (elapsed >= ResultCreatorComponent.SCAN_THROTTLE_MS) {
+      this.runFeedbackScan();
+    } else if (this.trailingScanId === null) {
+      this.ngZone.runOutsideAngular(() => {
+        this.trailingScanId = setTimeout(() => {
+          this.trailingScanId = null;
+          this.runFeedbackScan();
+        }, ResultCreatorComponent.SCAN_THROTTLE_MS - elapsed);
+      });
+    }
+  }
+
+  private runFeedbackScan(): void {
+    if (this.trailingScanId !== null) {
+      clearTimeout(this.trailingScanId);
+      this.trailingScanId = null;
+    }
+    this.lastScanAt = Date.now();
+    this.scanScheduled = true;
+    this.ngZone.runOutsideAngular(() => {
+      requestAnimationFrame(() => {
+        this.scanScheduled = false;
+        const before = this.api.dataControlSE.fieldFeedbackList();
+        this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
+        if (this.api.dataControlSE.fieldFeedbackList() !== before) {
+          this.ngZone.run(() => {});
+        }
+      });
+    });
   }
 
   GET_mqapValidation() {

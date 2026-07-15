@@ -44,6 +44,9 @@ describe('ResultCreatorComponent', () => {
       updateUserData: jest.fn(() => {
         mockResultLevelService.resultBody.initiative_id = mockApiService.dataControlSE.myInitiativesList[0].id;
       }),
+      authSE: {
+        localStorageUser: { user_name: 'test-user' }
+      },
       rolesSE: {
         validateReadOnly: jest.fn(() => Promise.resolve()),
         isAdmin: true
@@ -56,7 +59,9 @@ describe('ResultCreatorComponent', () => {
       },
       dataControlSE: {
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        fieldFeedbackList: jest.fn(() => []),
         myInitiativesList: myInitiativesList,
+        myInitiativesListText: jest.fn(() => ''),
         validateBody: jest.fn(),
         getCurrentPhases: jest.fn(() => of({}))
       },
@@ -71,6 +76,8 @@ describe('ResultCreatorComponent', () => {
     };
     mockResultLevelService = {
       cleanData: jest.fn(),
+      resultLevelListSig: jest.fn(() => []),
+      onSelectResultLevel: jest.fn(),
       resultBody: {
         initiative_id: 1,
         result_type_id: 1,
@@ -137,7 +144,9 @@ describe('ResultCreatorComponent', () => {
 
       component.ngOnInit();
 
-      jest.runAllTimers();
+      // runOnlyPendingTimers: with Angular's timer-based CD scheduler + the throttled
+      // ngDoCheck scan (P2-2969), runAllTimers loops forever (each tick re-schedules timers).
+      jest.runOnlyPendingTimers();
 
       expect(component.resultLevelSE.resultLevelList[0].selected).toBeFalsy();
       expect(component.resultLevelSE.currentResultTypeList).toEqual([]);
@@ -397,12 +406,20 @@ describe('ResultCreatorComponent', () => {
   });
 
   describe('ngDoCheck()', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail when ngDoCheck is triggered', () => {
+    it('should call someMandatoryFieldIncompleteResultDetail in a coalesced rAF', () => {
       const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncompleteResultDetail');
+      // Scan is now throttled + coalesced into a requestAnimationFrame run outside Angular's zone (P2-2971).
+      const rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: any) => {
+        cb(0);
+        return 0;
+      });
+      (component as any).lastScanAt = 0;
+      (component as any).scanScheduled = false;
 
       component.ngDoCheck();
 
       expect(spy).toHaveBeenCalledWith('.local_container');
+      rafSpy.mockRestore();
     });
   });
 

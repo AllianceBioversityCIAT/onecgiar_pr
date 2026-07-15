@@ -87,6 +87,13 @@ export const routingApp: PrRoute[] = [
     path: 'reports/ipsr-details/:id',
     loadChildren: () => import('../../pages/pdf-reports/pdf-reports.module').then(m => m.PdfReportsModule)
   },
+  {
+    // Public QA status board (no CheckLoginGuard) — see onecgiar-pr-client/docs/qa-status-board.md
+    prName: 'QA Status',
+    prHide: true,
+    path: 'qa-status',
+    loadComponent: () => import('../../pages/qa-status/qa-status.component').then(m => m.QaStatusComponent)
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result-framework-reporting', prHide: true }
 ];
 

@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit, signal } from '@angular/core';
+import { Component, DoCheck, OnInit, signal, NgZone, inject } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { InnovationPackageCreatorBody } from './model/innovation-package-creator.model';
 import { Router } from '@angular/router';
@@ -22,6 +22,7 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
   reportingAccessLoaded = signal<boolean>(false);
   sourceInitiatives = signal<any[]>([]);
   closedOptions: any[] = [];
+  private readonly ngZone = inject(NgZone);
 
   constructor(
     public api: ApiService,
@@ -171,7 +172,45 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
     });
   }
 
+  /** Throttle for the mandatory-field DOM scan (was running synchronously on every CD cycle). */
+  private static readonly SCAN_THROTTLE_MS = 150;
+  private lastScanAt = 0;
+  private scanScheduled = false;
+  private trailingScanId: any = null;
+
   ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+    // Same fix as Result Detail (P2-2967/P2-2972): throttle (leading + trailing edge) the DOM scan,
+    // coalesce into one rAF run OUTSIDE Angular's zone, tick only when it changed.
+    if (this.scanScheduled) return;
+    const elapsed = Date.now() - this.lastScanAt;
+    if (elapsed >= InnovationPackageCreatorComponent.SCAN_THROTTLE_MS) {
+      this.runFeedbackScan();
+    } else if (this.trailingScanId === null) {
+      this.ngZone.runOutsideAngular(() => {
+        this.trailingScanId = setTimeout(() => {
+          this.trailingScanId = null;
+          this.runFeedbackScan();
+        }, InnovationPackageCreatorComponent.SCAN_THROTTLE_MS - elapsed);
+      });
+    }
+  }
+
+  private runFeedbackScan(): void {
+    if (this.trailingScanId !== null) {
+      clearTimeout(this.trailingScanId);
+      this.trailingScanId = null;
+    }
+    this.lastScanAt = Date.now();
+    this.scanScheduled = true;
+    this.ngZone.runOutsideAngular(() => {
+      requestAnimationFrame(() => {
+        this.scanScheduled = false;
+        const before = this.api.dataControlSE.fieldFeedbackList();
+        this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+        if (this.api.dataControlSE.fieldFeedbackList() !== before) {
+          this.ngZone.run(() => {});
+        }
+      });
+    });
   }
 }

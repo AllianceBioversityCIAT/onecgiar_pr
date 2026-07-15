@@ -34,4 +34,8 @@ export class SaveButtonComponent {
     const insidePdf = this.elementRef.nativeElement.querySelector('.pdf-menu-container')?.contains(event.target as Node);
     if (!insidePdf) this.pdfSE.close();
   }
+
+  trackByFeedback(_index: number, item: string): string {
+    return item;
+  }
 }

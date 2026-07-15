@@ -39,6 +39,7 @@
       sortField="result_code"
       [sortOrder]="-1"
       [value]="filteredResults"
+      dataKey="result_code"
       [loading]="this.resultsListService.showDeletingResultSpinner || (this.resultsListService.showLoadingResultSpinner && !filteredResults?.length)"
       [paginator]="filteredResults?.length"
       [rows]="10"
@@ -80,7 +81,7 @@
               [style.max-width]="column.width"
               [style.min-width]="column.width"
               style="cursor: pointer">
-              @for (subResult of result['results']; track subResult) {
+              @for (subResult of result['results']; track subResult.id) {
                 <a [class]="column.class" (click)="navigateToResult(subResult)">
                   @if (i == 1) {
                     @if (subResult.is_new && !subResult.legacy_id) {
@@ -130,7 +131,7 @@
 
           <td>
             <div class="subResults">
-              @for (subResult of result['results']; track subResult) {
+              @for (subResult of result['results']; track subResult.id) {
                 <a
                   prTooltip="Click to view the pdf"
                   prTooltipPosition="bottom"
@@ -146,7 +147,7 @@
           @if (!this.api.rolesSE.platformIsClosed) {
             <td>
               <div class="subResults">
-                @for (subResult of result['results']; track subResult) {
+                @for (subResult of result['results']; track subResult.id) {
                   <div class="icon_container text-center" aria-hidden="false">
                     <button
                       type="button"
