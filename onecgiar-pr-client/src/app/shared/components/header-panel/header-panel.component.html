@@ -117,7 +117,7 @@
         (click)="userMenuOpen.set(!userMenuOpen())"
         (keydown.space)="$event.preventDefault(); userMenuTrigger.click()"
         (keydown.enter)="$event.preventDefault(); userMenuTrigger.click()">
-        <span class="pr-avatar" [style]="{ width: '36px', height: '36px', cursor: 'pointer' }">{{ getUserInitials() }}</span>
+        <span class="pr-avatar" [style]="{ width: '30px', height: '30px', cursor: 'pointer' }">{{ getUserInitials() }}</span>
 
         <span class="user_identity_text flex min-w-0 max-w-60 flex-col items-start overflow-hidden leading-tight max-md:hidden">
           <span class="user_identity_name_row flex max-w-full items-center gap-1.5 overflow-hidden">
