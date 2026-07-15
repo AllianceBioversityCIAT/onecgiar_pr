@@ -19,13 +19,12 @@ import { ChangePhaseModalModule } from './shared/components/change-phase-modal/c
 import { FooterModule } from './shared/components/footer/footer.module';
 import { DialogModule } from 'primeng/dialog';
 import { PrDialogComponent } from './shared/components/pr-dialog/pr-dialog.component';
+import { PrToastComponent } from './shared/components/pr-toast';
 import { BadgeModule } from 'primeng/badge';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { PopUpNotificationItemComponent } from './shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
 // import { SocketIoModule } from 'ngx-socket-io';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
 // import { WebsocketService } from './sockets/websocket.service';
 // import { environment } from '../environments/environment';
 import { ClarityService } from './shared/services/clarity.service';
@@ -53,6 +52,7 @@ function initializeClarityService(clarityService: ClarityService) {
     FooterModule,
     DialogModule,
     PrDialogComponent,
+    PrToastComponent,
     BadgeModule,
     OverlayBadgeModule,
     SatPopoverModule,
@@ -60,7 +60,6 @@ function initializeClarityService(clarityService: ClarityService) {
     NavigationBarComponent,
     TawkComponent,
     FormatTimeAgoPipe,
-    ToastModule,
     PopUpNotificationItemComponent,
     UserRolesInfoModalComponent
     // SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
@@ -68,7 +67,6 @@ function initializeClarityService(clarityService: ClarityService) {
   providers: [
     { provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true },
     provideHttpClient(withInterceptorsFromDi()),
-    MessageService,
     ClarityService,
     provideAnimationsAsync(),
     provideAppInitializer(() => {

@@ -10,7 +10,7 @@ import { FilterIndicatorBySearchPipe } from '../../pipes/filter-indicator-by-sea
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 
 @Component({
     selector: 'app-eioi-home',
@@ -24,7 +24,6 @@ import { MessageService } from 'primeng/api';
         FormsModule,
         CustomFieldsModule
     ],
-    providers: [MessageService],
     templateUrl: './eoio-home.component.html',
     styleUrl: './eoio-home.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -35,7 +34,7 @@ export class EoioHomeComponent implements OnDestroy, OnInit {
   outcomeIService = inject(OutcomeIndicatorService);
   activatedRoute = inject(ActivatedRoute);
   exportTablesSE = inject(ExportTablesService);
-  messageService = inject(MessageService);
+  messageService = inject(PrToastService);
 
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('End of initiative outcome indicators list');

@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Clipboard } from '@angular/cdk/clipboard';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 
 /**
  * Holds the floating PDF-export action so it can live INSIDE the save-button's
@@ -10,7 +10,7 @@ import { MessageService } from 'primeng/api';
 @Injectable({ providedIn: 'root' })
 export class PdfExportService {
   private readonly clipboard = inject(Clipboard);
-  private readonly messageSE = inject(MessageService);
+  private readonly messageSE = inject(PrToastService);
 
   /** Whether the PDF export button should be shown (set by the host page). */
   readonly enabled = signal(false);

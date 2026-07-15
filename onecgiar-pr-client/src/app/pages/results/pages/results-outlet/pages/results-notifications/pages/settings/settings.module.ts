@@ -3,12 +3,10 @@ import { CommonModule } from '@angular/common';
 import { SettingsComponent } from './settings.component';
 import { SettingsRoutingModule } from './settings-routing.module';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { PrToastComponent } from 'src/app/shared/components/pr-toast';
 
 @NgModule({
   declarations: [SettingsComponent],
-  imports: [CommonModule, SettingsRoutingModule, CustomFieldsModule, ToastModule],
-  providers: [MessageService]
+  imports: [CommonModule, SettingsRoutingModule, CustomFieldsModule, PrToastComponent]
 })
 export class SettingsModule {}

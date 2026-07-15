@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 
 interface Header {
   attr: string;
@@ -11,7 +11,6 @@ interface Header {
     selector: 'app-simple-table-with-clipboard',
     templateUrl: './simple-table-with-clipboard.component.html',
     styleUrls: ['./simple-table-with-clipboard.component.scss'],
-    providers: [MessageService],
     standalone: false
 })
 export class SimpleTableWithClipboardComponent {
@@ -22,7 +21,7 @@ export class SimpleTableWithClipboardComponent {
   @Input() data = [];
   flatFormat = false;
 
-  constructor(private readonly messageService: MessageService) {}
+  constructor(private readonly messageService: PrToastService) {}
 
   copyTable(table) {
     this.flatFormat = true;

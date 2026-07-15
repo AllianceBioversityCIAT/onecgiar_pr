@@ -5,13 +5,11 @@ import { KnowledgeProductsRoutingModule } from './knowledge-products-routing.mod
 import { KnowledgeProductsComponent } from './knowledge-products.component';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ButtonModule } from 'primeng/button';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { PrToastComponent } from 'src/app/shared/components/pr-toast';
 
 @NgModule({
   declarations: [KnowledgeProductsComponent],
   exports: [KnowledgeProductsComponent],
-  imports: [CommonModule, KnowledgeProductsRoutingModule, ButtonModule, CustomFieldsModule, ToastModule],
-  providers: [MessageService]
+  imports: [CommonModule, KnowledgeProductsRoutingModule, ButtonModule, CustomFieldsModule, PrToastComponent]
 })
 export class KnowledgeProductsModule {}

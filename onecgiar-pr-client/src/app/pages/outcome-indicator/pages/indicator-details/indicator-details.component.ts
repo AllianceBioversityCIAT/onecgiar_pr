@@ -6,8 +6,7 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ActivatedRoute } from '@angular/router';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { PrToastComponent, PrToastService } from 'src/app/shared/components/pr-toast';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
 import { IndicatorDetailsService } from './services/indicator-details.service';
 import { DetailsTableComponent } from './components/details-table/details-table.component';
@@ -21,11 +20,10 @@ import { IndicatorResultsModalComponent } from './components/indicator-results-m
         CustomFieldsModule,
         TableModule,
         ButtonModule,
-        ToastModule,
+        PrToastComponent,
         DetailsTableComponent,
         IndicatorResultsModalComponent
     ],
-    providers: [MessageService],
     templateUrl: './indicator-details.component.html',
     styleUrls: ['./indicator-details.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -44,7 +42,7 @@ export class IndicatorDetailsComponent implements OnInit, OnDestroy {
     public location: Location,
     public api: ApiService,
     public activatedRoute: ActivatedRoute,
-    public messageService: MessageService,
+    public messageService: PrToastService,
     public outcomeIService: OutcomeIndicatorService,
     public indicatorDetailsService: IndicatorDetailsService
   ) {}

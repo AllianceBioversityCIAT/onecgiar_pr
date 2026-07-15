@@ -13,7 +13,7 @@ import { ButtonModule } from 'primeng/button';
 import { SubmissionModalModule } from './components/submission-modal/submission-modal.module';
 import { UnsubmitModalModule } from './components/unsubmit-modal/unsubmit-modal.module';
 import { PdfActionsModule } from './components/pdf-actions/pdf-actions.module';
-import { ToastModule } from 'primeng/toast';
+import { PrToastComponent } from 'src/app/shared/components/pr-toast';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
 import { AiReviewComponent } from './components/ai-review/ai-review.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
@@ -31,7 +31,7 @@ import { ClipboardModule } from '@angular/cdk/clipboard';
     SubmissionModalModule,
     UnsubmitModalModule,
     PdfActionsModule,
-    ToastModule,
+    PrToastComponent,
     PhaseSwitcherModule,
     AiReviewComponent,
     PageHeaderComponent,

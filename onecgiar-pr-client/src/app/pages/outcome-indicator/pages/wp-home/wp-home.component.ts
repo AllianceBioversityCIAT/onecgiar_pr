@@ -11,7 +11,7 @@ import { HlmButton } from '@spartan/button';
 import { TableModule } from 'primeng/table';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 
 @Component({
     selector: 'app-wp-home',
@@ -28,7 +28,6 @@ import { MessageService } from 'primeng/api';
     ],
     templateUrl: './wp-home.component.html',
     styleUrl: './wp-home.component.scss',
-    providers: [MessageService],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WpHomeComponent implements OnDestroy, OnInit {
@@ -37,7 +36,7 @@ export class WpHomeComponent implements OnDestroy, OnInit {
   outcomeIService = inject(OutcomeIndicatorService);
   activatedRoute = inject(ActivatedRoute);
   exportTablesSE = inject(ExportTablesService);
-  messageService = inject(MessageService);
+  messageService = inject(PrToastService);
 
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Work package outcome indicators list');

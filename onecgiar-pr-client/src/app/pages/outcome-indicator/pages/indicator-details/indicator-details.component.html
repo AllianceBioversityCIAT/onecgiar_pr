@@ -107,7 +107,7 @@
     [tooltipText]="!isSubmitted && isSubmitDisabled() && 'Please complete all mandatory fields before submitting.'"></app-pr-button>
 </div>
 
-<p-toast position="bottom-right" key="br" />
+<app-pr-toast key="br"></app-pr-toast>
 
 @if (this.loading()) {
   <div class="spinner" style="position: fixed">

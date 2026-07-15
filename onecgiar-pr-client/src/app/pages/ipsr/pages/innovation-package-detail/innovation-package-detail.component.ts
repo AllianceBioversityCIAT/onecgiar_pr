@@ -6,14 +6,13 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { SaveButtonService } from '../../../../custom-fields/save-button/save-button.service';
 import { IpsrCompletenessStatusService } from '../../services/ipsr-completeness-status.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 import { FieldsManagerService } from '../../../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-innovation-package-detail',
   templateUrl: './innovation-package-detail.component.html',
   styleUrls: ['./innovation-package-detail.component.scss'],
-  providers: [MessageService],
   standalone: false
 })
 export class InnovationPackageDetailComponent implements OnInit, DoCheck {
@@ -21,7 +20,7 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
 
   constructor(
     private readonly activatedRoute: ActivatedRoute,
-    private readonly messageSE: MessageService,
+    private readonly messageSE: PrToastService,
     public ipsrDataControlSE: IpsrDataControlService,
     public api: ApiService,
     public saveButtonSE: SaveButtonService,
