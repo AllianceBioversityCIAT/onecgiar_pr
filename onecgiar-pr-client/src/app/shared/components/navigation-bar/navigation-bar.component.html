@@ -5,10 +5,10 @@
   [class.justify-stretch]="isSearchMode()">
   @if (isSearchMode()) {
     <div class="nav_search_container relative flex h-full flex-1 items-center">
-      <i class="material-icons-round pointer-events-none absolute left-3.5 z-[1] text-[18px] text-white/50" aria-hidden="true">search</i>
+      <i class="material-icons-round pointer-events-none absolute left-3.5 z-[1] text-[18px] text-[var(--pr-color-accents-5)]" aria-hidden="true">search</i>
       <input
         #searchInput
-        class="nav_search_input h-9 w-full rounded-full border-none bg-white/12 pl-10 pr-4 text-[13px] font-normal text-white outline-none transition-colors duration-200 placeholder:text-white/45 focus:bg-white/18"
+        class="nav_search_input h-9 w-full rounded-full border border-[color:var(--pr-color-primary-100)] bg-[var(--pr-color-primary-25)] pl-10 pr-4 text-[13px] font-normal text-[var(--pr-color-secondary-400)] outline-none transition-colors duration-200 placeholder:text-[var(--pr-color-accents-5)] focus:border-[color:var(--pr-color-primary-300)] focus:bg-white"
         type="text"
         placeholder="Search sections…"
         [(ngModel)]="searchQuery"
@@ -48,8 +48,8 @@
           class="navigation_bar_item relative flex h-9 cursor-pointer items-center justify-center self-center whitespace-nowrap rounded-[10px] px-4 text-sm tracking-[0.2px] no-underline transition-colors duration-200"
           [ngClass]="
             rla.isActive && !isActiveMuted(navOption)
-              ? 'bg-brand-300 font-semibold text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.45)]'
-              : 'font-medium text-white/75 hover:bg-white/10 hover:text-white'
+              ? 'bg-brand-300 font-semibold text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.35)]'
+              : 'font-medium text-[var(--pr-color-secondary-300)] hover:bg-[var(--pr-color-primary-25)] hover:text-[var(--pr-color-primary-600)]'
           "
           [class.pr-10]="navOption?.underConstruction"
           (keydown.space)="$event.preventDefault(); navLink.click()"

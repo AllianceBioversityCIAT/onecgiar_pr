@@ -3,7 +3,7 @@
 @if (!this.dataControlSE.show_qa_full_screen) {
   <div class="header_spacer pointer-events-none h-[78px] w-full" aria-hidden="true"></div>
   <div
-    class="header_panel_container fixed right-2.5 top-2.5 z-[100] flex h-14 items-center justify-between rounded-2xl border border-white/10 bg-[linear-gradient(160deg,var(--pr-color-primary-800)_0%,var(--pr-color-primary-950)_100%)] px-2.5 shadow-[0_8px_24px_rgba(var(--pr-color-black-rgb),0.28)] transition-[translate,left] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] max-md:right-2 max-md:top-2 max-md:px-3"
+    class="header_panel_container fixed right-2.5 top-2.5 z-[100] flex h-14 items-center justify-between rounded-xl border border-[color:var(--pr-color-primary-100)] bg-white px-2.5 shadow-[0_6px_20px_rgba(var(--pr-color-primary-rgb),0.12)] transition-[translate,left] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] max-md:right-2 max-md:top-2 max-md:px-3"
     [ngClass]="{ '-translate-y-[calc(100%+16px)]': isHidden() }"
     [style.left.px]="navbarLeft()">
     <a
@@ -13,12 +13,15 @@
       #homeLink
       (keydown.space)="$event.preventDefault(); homeLink.click()"
       (keydown.enter)="homeLink.click()">
-      <img class="cgiar_logo box-border h-11 w-11 rounded-full bg-white object-contain p-[7px] max-md:h-[30px] max-md:w-[30px]" src="/assets/PR_logo.svg" alt="Reporting Tool Logo" />
+      <img
+        class="cgiar_logo box-border h-11 w-11 rounded-full bg-white object-contain p-[7px] ring-1 ring-[color:var(--pr-color-primary-100)] max-md:h-[30px] max-md:w-[30px]"
+        src="/assets/PR_logo.svg"
+        alt="Reporting Tool Logo" />
 
-      <div class="logo_content flex flex-col items-start justify-center text-white max-lg:hidden">
+      <div class="logo_content flex flex-col items-start justify-center text-[color:var(--pr-color-secondary-400)] max-lg:hidden">
         <p class="m-0 whitespace-nowrap text-sm font-semibold leading-tight">{{ this.internationalizationData.global.platformName }}</p>
         @if (reportingPhaseLabel()) {
-          <p class="m-0 whitespace-nowrap text-[10px] font-light leading-tight text-white/75">{{ reportingPhaseLabel() }}</p>
+          <p class="m-0 whitespace-nowrap text-[10px] font-normal leading-tight text-[color:var(--pr-color-secondary-300)]">{{ reportingPhaseLabel() }}</p>
         }
       </div>
     </a>
@@ -26,12 +29,12 @@
     <div class="nav_group flex items-center gap-2" [ngClass]="isSearchMode() ? 'flex-1 mx-[16px]' : ''">
       <button
         type="button"
-        class="grid size-9 cursor-pointer place-items-center rounded-full transition-colors duration-200"
-        [ngClass]="isSearchMode() ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'"
+        class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
+        [ngClass]="isSearchMode() ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-color-secondary-300)] hover:bg-[var(--pr-color-primary-25)] hover:text-[var(--pr-color-primary-600)]'"
         (click)="toggleSearch()"
-        aria-label="Search sections"
-        title="Search sections">
-        <i class="material-icons-round text-[22px]" aria-hidden="true">{{ isSearchMode() ? 'close' : 'search' }}</i>
+        [attr.aria-label]="isSearchMode() ? 'Close search' : 'Search sections'">
+        <i class="material-icons-round text-[20px]" aria-hidden="true">{{ isSearchMode() ? 'close' : 'search' }}</i>
+        <span class="text-[9px] font-medium leading-none tracking-[0.2px]">{{ isSearchMode() ? 'Close' : 'Search' }}</span>
       </button>
 
       <app-navigation-bar [isSearchMode]="isSearchMode()" (searchClosed)="isSearchMode.set(false)"></app-navigation-bar>
@@ -40,22 +43,21 @@
     <div class="information flex items-center gap-3 max-md:gap-2">
       <a
         #whatsNewLink
-        class="grid size-9 cursor-pointer place-items-center rounded-full transition-colors duration-200"
-        [ngClass]="rlaWhatsNew.isActive ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'"
+        class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
+        [ngClass]="rlaWhatsNew.isActive ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-color-secondary-300)] hover:bg-[var(--pr-color-primary-25)] hover:text-[var(--pr-color-primary-600)]'"
         (keydown.space)="$event.preventDefault(); whatsNewLink.click()"
         routerLink="/whats-new"
-        prTooltip="What's new?"
-        prTooltipPosition="bottom"
         routerLinkActive
         #rlaWhatsNew="routerLinkActive"
         aria-label="What's new">
-        <i class="material-icons-round text-[22px]" aria-hidden="true">rocket_launch</i>
+        <i class="material-icons-round text-[20px]" aria-hidden="true">rocket_launch</i>
+        <span class="text-[9px] font-medium leading-none tracking-[0.2px]">What's new</span>
       </a>
 
       <button
         type="button"
-        class="grid size-9 cursor-pointer place-items-center rounded-full transition-colors duration-200"
-        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'"
+        class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
+        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-color-secondary-300)] hover:bg-[var(--pr-color-primary-25)] hover:text-[var(--pr-color-primary-600)]'"
         cdkOverlayOrigin
         #notifTrigger="cdkOverlayOrigin"
         (click)="notificationsOpen.set(!notificationsOpen())"
@@ -64,19 +66,36 @@
         [attr.aria-expanded]="notificationsOpen()"
         aria-controls="notifications-popover">
         @if (unreadNotifications.length === 0) {
-          <i class="material-icons-round text-[22px]" aria-hidden="true">notifications</i>
+          <i class="material-icons-round text-[20px]" aria-hidden="true">notifications</i>
         } @else {
           <span class="pr-overlay-badge-wrap relative inline-flex">
-            <i class="material-icons-round animate_bell text-[22px]" aria-hidden="true">notifications</i>
+            <i class="material-icons-round animate_bell text-[20px]" aria-hidden="true">notifications</i>
             <span class="pr-overlay-badge" *ngIf="notificationBadgeLength()">{{ notificationBadgeLength() }}</span>
           </span>
         }
+        <span class="text-[9px] font-medium leading-none tracking-[0.2px]">Alerts</span>
+      </button>
+
+      <button
+        #settingsTrigger
+        type="button"
+        class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
+        [ngClass]="settingsMenuOpen() ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-color-secondary-300)] hover:bg-[var(--pr-color-primary-25)] hover:text-[var(--pr-color-primary-600)]'"
+        cdkOverlayOrigin
+        #settingsOrigin="cdkOverlayOrigin"
+        (click)="settingsMenuOpen.set(!settingsMenuOpen())"
+        aria-label="Text size"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="settingsMenuOpen()"
+        aria-controls="settings-popover">
+        <i class="material-icons-round text-[20px]" aria-hidden="true">format_size</i>
+        <span class="text-[9px] font-medium leading-none tracking-[0.2px]">Text size</span>
       </button>
 
       <button
         #userMenuTrigger
         type="button"
-        class="user_identity flex max-w-[340px] cursor-pointer items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 max-md:max-w-none max-md:gap-1.5"
+        class="user_identity flex max-w-[340px] cursor-pointer items-center gap-2 rounded-full border border-[color:var(--pr-color-primary-100)] bg-[var(--pr-color-primary-25)] py-1 pl-1 pr-3.5 transition-colors duration-200 hover:bg-[var(--pr-color-primary-50)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 max-md:max-w-none max-md:gap-1.5"
         aria-label="User menu"
         aria-haspopup="true"
         aria-controls="user-info-popover"
@@ -112,6 +131,74 @@
       </button>
     </div>
   </div>
+
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="settingsOrigin"
+    [cdkConnectedOverlayOpen]="settingsMenuOpen()"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    [cdkConnectedOverlayPositions]="settingsMenuPositions"
+    (backdropClick)="settingsMenuOpen.set(false)"
+    (detach)="settingsMenuOpen.set(false)">
+    <div
+      class="overlay_panel mt-2.5 w-[260px] rounded-2xl bg-white p-3.5 shadow-[4px_4px_10px_4px_rgba(var(--pr-color-black-rgb),0.25)]"
+      id="settings-popover"
+      cdkTrapFocus
+      cdkTrapFocusAutoCapture
+      (keydown.escape)="closeSettingsAndRefocus(settingsTrigger)">
+      <div class="mb-1 flex items-center gap-1.5">
+        <i class="material-icons-round text-[18px] text-brand-300" aria-hidden="true">format_size</i>
+        <p class="m-0 text-sm font-semibold text-[var(--pr-color-secondary-400)]">Text size</p>
+      </div>
+      <p class="m-0 mb-2.5 text-[11px] leading-snug text-[var(--pr-color-accents-5)]">
+        Make text across the platform larger. Your browser zoom still works on top of this.
+      </p>
+
+      <div
+        role="radiogroup"
+        aria-label="Text size"
+        class="grid grid-cols-4 gap-1.5 rounded-xl bg-[var(--pr-color-accents-1)] p-1">
+        @for (option of fontScaleOptions; track option.value; let i = $index) {
+          <button
+            #fontRadio
+            role="radio"
+            type="button"
+            [attr.aria-checked]="fontScaleSE.scale() === option.value"
+            [attr.aria-label]="option.label + ' text size'"
+            [tabindex]="fontScaleSE.scale() === option.value ? 0 : -1"
+            class="flex flex-col items-center gap-1 rounded-lg py-2 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-300"
+            [ngClass]="
+              fontScaleSE.scale() === option.value
+                ? 'bg-white text-brand-600 shadow-[0_1px_3px_rgba(var(--pr-color-primary-rgb),0.25)]'
+                : 'text-[var(--pr-color-accents-6)] hover:bg-white/70'
+            "
+            (click)="selectFontScale(option.value)"
+            (keydown)="onFontRadioKeydown($event, i)">
+            <span
+              class="font-bold leading-none"
+              [style.font-size.px]="12 + i * 3"
+              aria-hidden="true"
+              >A</span
+            >
+            <span class="text-[10px] font-medium leading-none">{{ option.label }}</span>
+          </button>
+        }
+      </div>
+
+      @if (fontScaleSE.scale() !== 'default') {
+        <button
+          type="button"
+          class="mt-2.5 flex w-full items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-medium text-brand-400 transition-colors hover:bg-brand-25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-300"
+          (click)="fontScaleSE.reset()">
+          <i class="material-icons-round text-[14px]" aria-hidden="true">restart_alt</i>
+          Reset to default
+        </button>
+      }
+
+      <span aria-live="polite" class="sr-only">Text size: {{ fontScaleSE.currentLabel() }}</span>
+    </div>
+  </ng-template>
 
   <ng-template
     cdkConnectedOverlay

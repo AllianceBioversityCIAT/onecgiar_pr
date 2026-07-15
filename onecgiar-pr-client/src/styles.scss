@@ -41,6 +41,19 @@ opacity: 0.5;
 pointer-events: none;
 }
 
+/* Screen-reader-only content (Tailwind preflight is not imported, so define it here). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Skeleton loading placeholder (PrimeNG p-skeleton replacement — 0 PrimeNG).
    Sizing comes from inline width/height/style on each element; this only owns
    the base color + shimmer sweep. Default 1rem height / full width / 4px radius. */

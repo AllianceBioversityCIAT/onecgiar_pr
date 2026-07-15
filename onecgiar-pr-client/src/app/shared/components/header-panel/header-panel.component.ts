@@ -9,6 +9,7 @@ import { GlobalLinksService } from '../../services/variables/global-links.servic
 import { Router, RouterModule } from '@angular/router';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { A11yModule } from '@angular/cdk/a11y';
 import { CommonModule } from '@angular/common';
 import { PopUpNotificationItemComponent } from './components/pop-up-notification-item/pop-up-notification-item.component';
 import { TawkComponent } from '../tawk/tawk.component';
@@ -22,6 +23,7 @@ import { NavigationBarComponent } from '../navigation-bar/navigation-bar.compone
   imports: [
     CommonModule,
     OverlayModule,
+    A11yModule,
     PopUpNotificationItemComponent,
     TawkComponent,
     NavigationBarComponent,

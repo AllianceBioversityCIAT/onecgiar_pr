@@ -307,6 +307,7 @@ PRMS is used internally by multilingual, multi-region CGIAR staff and partners. 
 | **Focus visibility** | Focus rings MUST be visible (no `outline: 0` without a visible replacement). Use `--pr-color-primary-300` for focus accents. |
 | **Forms** | Every form control MUST have a programmatic label (PrimeNG `for=`). Error messages MUST be associated via `aria-describedby`. |
 | **Status & live regions** | Toast notifications, autosave confirmations, and validation errors MUST use ARIA live regions so screen readers announce them. |
+| **User text-size control** | The top navigation MUST offer a user-controlled text-size control (Default / Large / Larger / Largest) so low-vision users can enlarge the whole app (WCAG 2.2 §1.4.4 Resize Text). It scales via `--pr-font-scale` (root `zoom`), persists in `localStorage`, and MUST NOT disable native browser zoom (which stacks on top). The control is a `radiogroup` with roving `tabindex`, arrow-key nav, `aria-checked`, an `aria-live` announcement, focus trap, and `Escape`-to-close. See **DD-11**. |
 | **Images & icons** | Decorative icons `aria-hidden="true"`; semantic icons (status chips, severity) carry an accessible label. |
 | **Internationalization** | All user-facing strings go through `src/app/internationalization/`; no hard-coded English. Direction support (RTL) is not in scope today but localization keys MUST be ready for it. |
 | **Time & dates** | Display in the user's locale; ToC and reporting **phase boundaries** are reported in UTC under the hood — show timezone hints when ambiguous. |
@@ -375,6 +376,10 @@ All copy goes through the i18n folder. **Why:** PRMS users span many CGIAR count
 
 In-app (sockets / Pusher) and email (microservice) — gated by `user-notification-settings`. The UI MUST respect user preferences and never surface unmuted email-only fallback.
 
+### DD-11 — Whole-app text scaling via root `zoom`, not root `font-size`
+
+User text-size scaling (§10) is driven by one lever: `--pr-font-scale` on `:root`, consumed by `html { zoom: var(--pr-font-scale) }` (`styles.scss`), owned by `FontScaleService` (signal + `localStorage['pr.a11y.fontScale']`), applied flash-free by an inline script in `index.html`. **Why `zoom`, not root `font-size`:** the type scale is authored across ~200+ hardcoded `px` sites, so a root font-size lever would not cascade; `zoom` scales px/em/rem **and** CDK overlays/dialogs uniformly from a single point, and — because containers grow with their text — avoids the clipped-fixed-height class of bugs that font-only scaling causes in a dense app. Steps are capped at 1.5× (native browser zoom covers beyond, and is never disabled). **Related:** the shell's navbar action icons (Search / What's new / Alerts / Text size) carry a text label beneath the glyph for comprehension, and the text-size control uses the `format_size` glyph. **Deferred (not committed):** the 12px base stays for now; raising the default baseline (a `px→rem` migration to body ~14–16px, tables 13–14px) is a separate future change — see §13.
+
 ---
 
 ## 13. Open Gaps / Open Questions
@@ -387,6 +392,7 @@ In-app (sockets / Pusher) and email (microservice) — gated by `user-notificati
 - **OG-6** Iconography is split between **PrimeIcons** and custom `shared/icon-components/`; we should document when to use which.
 - **OG-7** **AI-assisted authoring UI** (under `api/ai`) doesn't yet have a documented UX contract — what does an AI-suggested field look like in the form? what's the disclosure?
 - **OG-8** **Print / PDF rendering** styles (`pages/pdf-reports`) are diverging from the web styles — needs a shared print stylesheet strategy.
+- **OG-9** **Base font size is 12px** (below the 16px web/WCAG-informed body floor). Mitigated for now by the user text-size control (DD-11), but the *default* baseline still under-serves readability. A deferred `px→rem` migration should raise the default (body ~14–16px, dense tables 13–14px) so the type scale responds to the user's browser default too — tracked as a separate future change.
 
 ---
 
