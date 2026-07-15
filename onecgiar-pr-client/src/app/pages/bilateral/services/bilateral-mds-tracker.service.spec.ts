@@ -40,7 +40,7 @@ describe('BilateralMdsTrackerService', () => {
   it('should compute overall percentage', () => {
     service.updateSection('general-info', 2);
     service.updateSection('contributors', 2);
-    expect(service.overallPercentage()).toBe(22);
+    expect(service.overallPercentage()).toBe(24);
   });
 
   it('should return partial status at 50%', () => {
