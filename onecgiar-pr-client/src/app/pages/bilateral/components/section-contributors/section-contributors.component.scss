@@ -243,6 +243,124 @@
   color: #F44336;
 }
 
+.toc-icon {
+  background: linear-gradient(135deg, #7B1FA2, #9C27B0);
+  border-radius: 3px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+  }
+}
+
+.sp-icon {
+  background: linear-gradient(135deg, #00897B, #26A69A);
+  border-radius: 50%;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 12px;
+    height: 6px;
+    background: white;
+    border-radius: 3px 3px 0 0;
+  }
+}
+
+.lead-icon {
+  background: linear-gradient(135deg, #F9A825, #FDD835);
+  border-radius: 2px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 6px;
+    height: 6px;
+    background: #F57F17;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 7px solid #F57F17;
+  }
+}
+
+.center-icon {
+  background: linear-gradient(135deg, #1565C0, #42A5F5);
+  border-radius: 4px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid white;
+  }
+}
+
+.project-icon {
+  background: linear-gradient(135deg, #EF6C00, #FF9800);
+  border-radius: 2px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 5px;
+    height: 12px;
+    background: white;
+    border-radius: 1px;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 5px;
+    height: 5px;
+    background: white;
+    border-radius: 50%;
+  }
+}
+
 :host ::ng-deep {
   .p-multiselect {
     width: 100%;
