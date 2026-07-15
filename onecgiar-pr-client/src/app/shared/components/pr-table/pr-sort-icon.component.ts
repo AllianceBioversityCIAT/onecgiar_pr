@@ -11,12 +11,12 @@ import { PR_TABLE_HOST } from './pr-table.host';
   template: `<i class="material-icons-round pr-sort-icon" [class.pr-sort-icon--active]="state() !== 0">{{ icon() }}</i>`,
   styles: [
     `.pr-sort-icon {
-      font-size: 16px;
+      font-size: 14px;
       vertical-align: middle;
-      color: var(--pr-color-accents-5);
+      color: rgba(var(--pr-color-white-rgb), 0.6);
     }
     .pr-sort-icon--active {
-      color: var(--pr-color-primary-300);
+      color: var(--pr-color-white);
     }`
   ]
 })

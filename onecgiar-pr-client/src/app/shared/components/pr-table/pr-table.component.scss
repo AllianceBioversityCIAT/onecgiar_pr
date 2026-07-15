@@ -20,21 +20,37 @@
 // so emulated encapsulation never matched them — these styles must pierce.
 .pr-table {
   width: 100%;
-  border-collapse: collapse;
+  // separate (not collapse) so the header's top corners can be rounded
+  border-collapse: separate;
+  border-spacing: 0;
   @include fonts.pr-typography('body-2');
 }
 
 :host ::ng-deep .pr-table {
-  // Tinted brand header: visually separates the column header row from data
-  // (restores the colored header lost in the PrimeNG → Spartan migration)
+  // Dark "chrome" header: the same navy-carbon gradient as the rebrand navbar/nav-pill,
+  // with white text and a violet accent edge. Compact uppercase "label" typography keeps
+  // long titles on one line (or a short 2-line wrap) instead of blowing up the header
+  // height on narrow fixed columns.
   thead th {
     text-align: left;
     font-weight: 700;
-    color: var(--pr-color-primary-600);
-    background: var(--pr-color-primary-50);
-    padding: 10px 12px;
-    border-bottom: 2px solid var(--pr-color-primary-100);
-    white-space: nowrap;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    line-height: 1;
+    vertical-align: middle;
+    color: var(--pr-color-white);
+    background: linear-gradient(90deg, #1e202f, #1f2233, #1f2235);
+    padding: 3px 12px;
+    border-bottom: 2px solid var(--pr-color-primary-400);
+
+    &:first-child {
+      border-top-left-radius: 10px;
+    }
+
+    &:last-child {
+      border-top-right-radius: 10px;
+    }
   }
 
   tbody td {
