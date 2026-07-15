@@ -1,0 +1,120 @@
+:host {
+  display: contents;
+}
+
+/* ── Launcher FAB ─────────────────────────────────────────────────────────── */
+.pr-ai-fab {
+  // Violet-tinted layered depth instead of the default gray drop-shadow.
+  box-shadow:
+    0 8px 22px -6px rgba(107, 109, 196, 0.55),
+    0 3px 8px -3px rgba(30, 32, 47, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 6px rgba(30, 32, 47, 0.25);
+}
+
+.pr-ai-fab::after {
+  // Soft top highlight so the disc reads as a lit sphere, not a flat circle.
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 90% at 32% 22%, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+}
+
+.pr-ai-halo {
+  // Pulsing aura behind the FAB.
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(107, 109, 196, 0.45), rgba(107, 109, 196, 0) 70%);
+  z-index: -1;
+  animation: pr-ai-halo 3.6s ease-in-out infinite;
+}
+
+.pr-ai-fab-icon {
+  animation: pr-ai-twinkle 3.6s ease-in-out infinite;
+}
+
+/* ── Floating window ──────────────────────────────────────────────────────── */
+.pr-ai-window {
+  box-shadow:
+    0 24px 60px -18px rgba(30, 32, 47, 0.42),
+    0 8px 20px -10px rgba(30, 32, 47, 0.28);
+  border: 1px solid rgba(30, 32, 47, 0.08);
+  animation: pr-ai-pop 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  transform-origin: bottom right;
+}
+
+.pr-ai-header {
+  cursor: grab;
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+/* Chat surface: a faint violet-tinted wash so bubbles read with depth. */
+.pr-ai-chat {
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(107, 109, 196, 0.06), rgba(107, 109, 196, 0) 60%),
+    linear-gradient(180deg, #f7f7fb 0%, #fbfbfd 100%);
+}
+
+.pr-ai-grip {
+  // 6-dot drag affordance.
+  background-image: radial-gradient(currentColor 1.15px, transparent 1.2px);
+  background-size: 5px 5px;
+}
+
+/* ── Resize handles ───────────────────────────────────────────────────────── */
+.rh {
+  position: absolute;
+  z-index: 6;
+  touch-action: none;
+}
+.rh-n { top: -3px; left: 14px; right: 14px; height: 9px; cursor: ns-resize; }
+.rh-s { bottom: -3px; left: 14px; right: 14px; height: 9px; cursor: ns-resize; }
+.rh-e { top: 14px; bottom: 14px; right: -3px; width: 9px; cursor: ew-resize; }
+.rh-w { top: 14px; bottom: 14px; left: -3px; width: 9px; cursor: ew-resize; }
+.rh-ne { top: -4px; right: -4px; width: 18px; height: 18px; cursor: nesw-resize; }
+.rh-nw { top: -4px; left: -4px; width: 18px; height: 18px; cursor: nwse-resize; }
+.rh-se { bottom: -4px; right: -4px; width: 18px; height: 18px; cursor: nwse-resize; }
+.rh-sw { bottom: -4px; left: -4px; width: 18px; height: 18px; cursor: nesw-resize; }
+
+/* Subtle corner grip on the bottom-right handle (the conventional resize spot). */
+.rh-se::before {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid rgba(30, 32, 47, 0.28);
+  border-bottom: 2px solid rgba(30, 32, 47, 0.28);
+  border-bottom-right-radius: 3px;
+}
+
+@keyframes pr-ai-twinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.94; }
+  50% { transform: scale(1.12) rotate(5deg); opacity: 1; }
+}
+
+@keyframes pr-ai-halo {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.16); }
+}
+
+@keyframes pr-ai-pop {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-ai-fab-icon,
+  .pr-ai-halo,
+  .pr-ai-window {
+    animation: none !important;
+  }
+}
