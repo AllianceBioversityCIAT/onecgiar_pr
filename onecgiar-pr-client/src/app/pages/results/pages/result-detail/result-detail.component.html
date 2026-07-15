@@ -9,23 +9,28 @@
     <!-- Result metadata at the bottom of the sidebar — wraps, never pushes the list -->
     <div class="rd_metadata">
       <div class="item">
-        Result code: <span>{{ this.api.resultsSE.currentResultCode }}</span>
+        <span class="label">Result code</span>
+        <span class="value">{{ this.api.resultsSE.currentResultCode }}</span>
       </div>
       <div class="item">
-        Status: <span>{{ this.dataControlSE?.currentResult?.status_name }}</span>
+        <span class="label">Status</span>
+        <span class="value">{{ this.dataControlSE?.currentResult?.status_name }}</span>
       </div>
       <div class="item">
-        Result level: <span>{{ this.dataControlSE.currentResult?.result_level_name }}</span>
+        <span class="label">Result level</span>
+        <span class="value">{{ this.dataControlSE.currentResult?.result_level_name }}</span>
       </div>
       <div class="item">
-        Indicator category: <span>{{ this.dataControlSE.currentResult?.result_type_name }}</span>
+        <span class="label">Indicator category</span>
+        <span class="value">{{ this.dataControlSE.currentResult?.result_type_name }}</span>
       </div>
       <div class="item">
-        Submitter:
-        <span>{{ this.dataControlSE.currentResult?.initiative_official_code }} - {{ this.dataControlSE.currentResult?.initiative_name }}</span>
+        <span class="label">Submitter</span>
+        <span class="value">{{ this.dataControlSE.currentResult?.initiative_official_code }} - {{ this.dataControlSE.currentResult?.initiative_name }}</span>
       </div>
       <div class="item">
-        Funding source: <span>{{ this.dataControlSE.currentResult?.source_name }}</span>
+        <span class="label">Funding source</span>
+        <span class="value">{{ this.dataControlSE.currentResult?.source_name }}</span>
       </div>
     </div>
   </aside>

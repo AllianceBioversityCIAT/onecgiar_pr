@@ -3,7 +3,7 @@
 @if (!this.dataControlSE.show_qa_full_screen) {
   <div class="header_spacer pointer-events-none h-[78px] w-full" aria-hidden="true"></div>
   <div
-    class="header_panel_container fixed right-2.5 top-2.5 z-[100] flex h-14 items-center justify-between rounded-xl border border-[color:var(--pr-color-primary-100)] bg-white px-2.5 shadow-[0_6px_20px_rgba(var(--pr-color-primary-rgb),0.12)] transition-[translate,left] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] max-md:right-2 max-md:top-2 max-md:px-3"
+    class="header_panel_container fixed right-2.5 top-2.5 z-[100] flex h-14 items-center justify-between rounded-xl border border-white/10 bg-[var(--pr-color-primary-900)] px-2.5 shadow-[0_14px_34px_rgba(var(--pr-color-black-rgb),0.4),inset_0_1px_0_rgba(var(--pr-color-white-rgb),0.08)] transition-[translate,left] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)] max-md:right-2 max-md:top-2 max-md:px-3"
     [ngClass]="{ '-translate-y-[calc(100%+16px)]': isHidden() }"
     [style.left.px]="navbarLeft()">
     <a
@@ -14,14 +14,14 @@
       (keydown.space)="$event.preventDefault(); homeLink.click()"
       (keydown.enter)="homeLink.click()">
       <img
-        class="cgiar_logo box-border h-11 w-11 rounded-full bg-white object-contain p-[7px] ring-1 ring-[color:var(--pr-color-primary-100)] max-md:h-[30px] max-md:w-[30px]"
+        class="cgiar_logo box-border h-11 w-11 rounded-full bg-white object-contain p-[7px] ring-1 ring-white/15 max-md:h-[30px] max-md:w-[30px]"
         src="/assets/PR_logo.svg"
         alt="Reporting Tool Logo" />
 
-      <div class="logo_content flex flex-col items-start justify-center text-[color:var(--pr-color-secondary-400)] max-lg:hidden">
+      <div class="logo_content flex flex-col items-start justify-center text-white max-lg:hidden">
         <p class="m-0 whitespace-nowrap text-sm font-semibold leading-tight">{{ this.internationalizationData.global.platformName }}</p>
         @if (reportingPhaseLabel()) {
-          <p class="m-0 whitespace-nowrap text-[10px] font-normal leading-tight text-[color:var(--pr-color-secondary-300)]">{{ reportingPhaseLabel() }}</p>
+          <p class="m-0 whitespace-nowrap text-[10px] font-normal leading-tight text-white/65">{{ reportingPhaseLabel() }}</p>
         }
       </div>
     </a>
@@ -30,7 +30,7 @@
       <button
         type="button"
         class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
-        [ngClass]="isSearchMode() ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-color-secondary-300)] hover:bg-[var(--pr-color-primary-25)] hover:text-[var(--pr-color-primary-600)]'"
+        [ngClass]="isSearchMode() ? 'bg-[rgba(var(--pr-color-primary-rgb),0.3)] text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.35)]' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'"
         (click)="toggleSearch()"
         [attr.aria-label]="isSearchMode() ? 'Close search' : 'Search sections'">
         <i class="material-icons-round text-[20px]" aria-hidden="true">{{ isSearchMode() ? 'close' : 'search' }}</i>
@@ -44,7 +44,7 @@
       <a
         #whatsNewLink
         class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
-        [ngClass]="rlaWhatsNew.isActive ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-color-secondary-300)] hover:bg-[var(--pr-color-primary-25)] hover:text-[var(--pr-color-primary-600)]'"
+        [ngClass]="rlaWhatsNew.isActive ? 'bg-[rgba(var(--pr-color-primary-rgb),0.3)] text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.35)]' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'"
         (keydown.space)="$event.preventDefault(); whatsNewLink.click()"
         routerLink="/whats-new"
         routerLinkActive
@@ -57,7 +57,7 @@
       <button
         type="button"
         class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
-        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-color-secondary-300)] hover:bg-[var(--pr-color-primary-25)] hover:text-[var(--pr-color-primary-600)]'"
+        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'bg-[rgba(var(--pr-color-primary-rgb),0.3)] text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.35)]' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'"
         cdkOverlayOrigin
         #notifTrigger="cdkOverlayOrigin"
         (click)="notificationsOpen.set(!notificationsOpen())"
@@ -80,7 +80,7 @@
         #settingsTrigger
         type="button"
         class="flex min-w-[46px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 transition-colors duration-200"
-        [ngClass]="settingsMenuOpen() ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]' : 'text-[var(--pr-color-secondary-300)] hover:bg-[var(--pr-color-primary-25)] hover:text-[var(--pr-color-primary-600)]'"
+        [ngClass]="settingsMenuOpen() ? 'bg-[rgba(var(--pr-color-primary-rgb),0.3)] text-white shadow-[0_2px_10px_rgba(var(--pr-color-primary-rgb),0.35)]' : 'text-white/65 hover:bg-white/[0.08] hover:text-white'"
         cdkOverlayOrigin
         #settingsOrigin="cdkOverlayOrigin"
         (click)="settingsMenuOpen.set(!settingsMenuOpen())"
@@ -95,7 +95,7 @@
       <button
         #userMenuTrigger
         type="button"
-        class="user_identity flex max-w-[340px] cursor-pointer items-center gap-2 rounded-full border border-[color:var(--pr-color-primary-100)] bg-[var(--pr-color-primary-25)] py-1 pl-1 pr-3.5 transition-colors duration-200 hover:bg-[var(--pr-color-primary-50)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 max-md:max-w-none max-md:gap-1.5"
+        class="user_identity flex max-w-[340px] cursor-pointer items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.07] py-1 pl-1 pr-3.5 shadow-[inset_0_1px_0_rgba(var(--pr-color-white-rgb),0.06)] transition-colors duration-200 hover:bg-white/[0.12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 max-md:max-w-none max-md:gap-1.5"
         aria-label="User menu"
         aria-haspopup="true"
         aria-controls="user-info-popover"
@@ -109,21 +109,21 @@
 
         <span class="user_identity_text flex min-w-0 max-w-60 flex-col items-start overflow-hidden leading-tight max-md:hidden">
           <span class="user_identity_name_row flex max-w-full items-center gap-1.5 overflow-hidden">
-            <span class="user_identity_name min-w-0 shrink truncate text-xs font-semibold text-[var(--pr-color-secondary-400)]">{{
+            <span class="user_identity_name min-w-0 shrink truncate text-xs font-semibold text-white">{{
               this.api.authSE.localStorageUser?.user_name
             }}</span>
             <span
-              class="user_identity_role shrink-0 truncate rounded bg-brand-50 px-1.5 py-px text-[10px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-brand-700"
+              class="user_identity_role shrink-0 truncate rounded bg-[rgba(var(--pr-color-primary-rgb),0.3)] px-1.5 py-px text-[10px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-100)]"
               >{{ getPlatformRole() }}</span
             >
           </span>
-          <span class="user_identity_email max-w-full truncate text-[10px] font-normal text-[var(--pr-color-accents-5)]">{{
+          <span class="user_identity_email max-w-full truncate text-[10px] font-normal text-white/55">{{
             this.api.authSE.localStorageUser?.email
           }}</span>
         </span>
 
         <i
-          class="material-icons-round user_identity_chevron text-[20px] text-[var(--pr-color-secondary-400)] transition-transform duration-200"
+          class="material-icons-round user_identity_chevron text-[20px] text-white/70 transition-transform duration-200"
           [ngClass]="{ 'rotate-180': userMenuOpen() }"
           aria-hidden="true"
           >expand_more</i
