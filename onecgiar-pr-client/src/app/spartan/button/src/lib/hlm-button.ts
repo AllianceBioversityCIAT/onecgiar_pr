@@ -1,6 +1,6 @@
-import { Directive, input, signal } from '@angular/core';
+import { Directive, computed, input, signal } from '@angular/core';
 import { BrnButton } from '@spartan-ng/brain/button';
-import { classes } from '@spartan/utils';
+import { hlm } from '@spartan/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { ClassValue } from 'clsx';
 import { injectBrnButtonConfig } from './hlm-button.token';
@@ -45,7 +45,10 @@ export type ButtonVariants = VariantProps<typeof buttonVariants>;
   selector: 'button[hlmBtn], a[hlmBtn]',
   exportAs: 'hlmBtn',
   hostDirectives: [{ directive: BrnButton, inputs: ['disabled'] }],
-  host: { 'data-slot': 'button' }
+  host: {
+    'data-slot': 'button',
+    '[class]': '_computedClass()'
+  }
 })
 export class HlmButton {
   private readonly _config = injectBrnButtonConfig();
@@ -56,9 +59,12 @@ export class HlmButton {
 
   public readonly size = input<ButtonVariants['size']>(this._config.size);
 
-  constructor() {
-    classes(() => [buttonVariants({ variant: this.variant(), size: this.size() }), this._additionalClasses()]);
-  }
+  // Static host [class] binding instead of the reactive classes() util: classes()
+  // installs a document-wide MutationObserver that, on class-heavy pages (p-table),
+  // drives an infinite change-detection loop (same issue that froze hlmInput, fix 64d68f283).
+  protected readonly _computedClass = computed(() =>
+    hlm(buttonVariants({ variant: this.variant(), size: this.size() }), this._additionalClasses())
+  );
 
   setClass(classes: string): void {
     this._additionalClasses.set(classes);
