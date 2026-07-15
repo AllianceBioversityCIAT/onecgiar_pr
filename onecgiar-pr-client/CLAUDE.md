@@ -4,6 +4,13 @@ This is the **package-level guide** for the PRMS Angular client. It complements 
 
 > 🚧 **ACTIVE MAJOR REFACTOR (branch `front-redesign-fields`)** — Angular 21 upgrade + PrimeNG → Spartan UI/Tailwind migration is in progress on this branch. If you're on `front-redesign-fields`, **read [`docs/refactor-angular21-spartan-migration.md`](./docs/refactor-angular21-spartan-migration.md) first** — it covers the branch state, what's done (Angular 21, Spartan foundation, pr-input/pr-select migrated), the Angular-22-blocked-by-PrimeNG situation, and the current open runtime bug. Note: on this branch the stack is **Angular 21 + Tailwind 4 + Spartan**, not the "Angular 19 + PrimeNG" described below.
 
+> 🅰️ **MANDATORY — Spartan MCP + skill for ANY frontend work (no exceptions).** This package ships spartan/ui (`@spartan-ng/brain` + `@spartan-ng/cli`, `components.json`). Two assistant tools are installed at the client level to make UI development correct and faster — **use them every time you touch the UI, before writing any component/markup/style:**
+>
+> - **Spartan MCP** (`spartan-ui`, registered in [`.mcp.json`](./.mcp.json)) — 17 tools that fetch **live** spartan/ui component APIs, blocks, and docs from spartan.ng. Query it for the real API/props/usage of any Spartan component **instead of guessing or relying on memory**. Approve the server once (`claude` prompts for project-scoped MCP approval on start).
+> - **Spartan skill** (`.claude/skills/spartan` → `.agents/skills/spartan`) — procedural knowledge of the Brain (headless) / Helm (styled) two-layer architecture, the `@spartan-ng/cli` generators, and composition patterns. Auto-activates in any folder with a `components.json` (i.e. this client).
+>
+> **Rule:** adding, composing, migrating (PrimeNG → Spartan), fixing, or styling any component → consult the Spartan MCP for the current component contract and follow the skill's patterns/generators. Do **not** hand-author Spartan components from memory or hallucinate props. If a session runs from the monorepo root instead of `onecgiar-pr-client/`, these tools may not auto-load — start UI work from the client folder so they engage.
+
 > **Always read the root guide first.** Frontend work MUST follow the SDD methodology:
 >
 > - [`../docs/prd.md`](../docs/prd.md) — product baseline (personas, goals, `AC-1..AC-9`).
