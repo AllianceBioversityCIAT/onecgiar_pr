@@ -43,7 +43,8 @@
             optionLabel="name"
             optionValue="toc_level_id"
             placeholder="Select level"
-            [style]="{ width: '100%' }">
+            [style]="{ width: '100%' }"
+            appendTo="body">
           </p-select>
         </div>
       } @else if (resultLevelId() === 1 && isPlanned() === true) {
@@ -63,7 +64,8 @@
             optionLabel="toc_result_id"
             optionValue="toc_result_id"
             placeholder="Select {{ selectedLevelName() }}"
-            [style]="{ width: '100%' }">
+            [style]="{ width: '100%' }"
+            appendTo="body">
             <ng-template pTemplate="item" let-item>
               <div class="st-select-item">
                 <div class="st-select-item-row">
@@ -114,7 +116,8 @@
                 optionLabel="indicator_description"
               optionValue="related_node_id"
               placeholder="Select an indicator"
-              [style]="{ width: '100%' }">
+              [style]="{ width: '100%' }"
+              appendTo="body">
               <ng-template pTemplate="item" let-ind>
                 <div class="st-select-item">
                   <span class="st-select-item-desc">{{ ind.indicator_description || 'Unnamed' }}</span>

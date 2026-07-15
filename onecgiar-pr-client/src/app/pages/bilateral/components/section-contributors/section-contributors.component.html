@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <div class="sc-card">
+    <div class="sc-card sc-card--toc">
       <div class="sc-card__header">
         <div class="sc-card__title">
           <span class="sc-card__icon toc-icon"></span>
@@ -60,7 +60,7 @@
     </div>
   </div>
 
-  <div class="sc-card">
+  <div class="sc-card sc-card--centers">
     <div class="sc-card__header">
       <div class="sc-card__title">
         <span class="sc-card__icon center-icon"></span>
@@ -76,7 +76,8 @@
         placeholder="Select contributing centers"
         [style]="{ width: '100%' }"
         (onChange)="onCentersChange($event.value)"
-        [showClear]="true">
+        [showClear]="true"
+        appendTo="body">
       </p-multiSelect>
       @if (selectedCenterInstitutionIds.length) {
         <div class="sc-selected-chips">
@@ -93,7 +94,7 @@
     </div>
   </div>
 
-  <div class="sc-card">
+  <div class="sc-card sc-card--projects">
     <div class="sc-card__header">
       <div class="sc-card__title">
         <span class="sc-card__icon project-icon"></span>
@@ -109,7 +110,8 @@
         placeholder="Select contributing projects"
         [style]="{ width: '100%' }"
         (onChange)="onProjectsChange($event.value)"
-        [showClear]="true">
+        [showClear]="true"
+        appendTo="body">
       </p-multiSelect>
       @if (selectedProjectIds.length) {
         <div class="sc-selected-chips">
