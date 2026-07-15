@@ -1,0 +1,19 @@
+@use '../section-type-shared';
+
+.tsf-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+  color: #90A4AE;
+  font-size: 13px;
+
+  i {
+    animation: tsf-spin 1s linear infinite;
+  }
+}
+
+@keyframes tsf-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

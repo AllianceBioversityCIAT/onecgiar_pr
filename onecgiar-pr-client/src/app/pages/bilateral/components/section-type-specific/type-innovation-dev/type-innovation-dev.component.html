@@ -1,0 +1,34 @@
+<div class="tsf-fields">
+  <div class="tsf-field">
+    <label class="tsf-label">Short Title <span class="tsf-required">*</span></label>
+    <input class="tsf-input" type="text" [(ngModel)]="body.short_title" (ngModelChange)="updateMds()" placeholder="Enter short title" />
+  </div>
+
+  <div class="tsf-field">
+    <label class="tsf-label">Innovation Typology <span class="tsf-required">*</span></label>
+    <select class="tsf-select" [(ngModel)]="body.innovation_characterization_id" (ngModelChange)="updateMds()">
+      <option [ngValue]="null" disabled>Select typology</option>
+      <option *ngFor="let t of typologies" [ngValue]="t.code">{{ t.label }}</option>
+    </select>
+  </div>
+
+  <div class="tsf-field">
+    <label class="tsf-label">Readiness Level <span class="tsf-required">*</span></label>
+    <select class="tsf-select" [(ngModel)]="body.innovation_readiness_level_id" (ngModelChange)="updateMds()">
+      <option [ngValue]="null" disabled>Select readiness level</option>
+    </select>
+  </div>
+
+  <div class="tsf-field">
+    <label class="tsf-label">Innovation Developers <span class="tsf-required">*</span></label>
+    <p class="tsf-hint">Full name(s) and organizational affiliation(s) of key developers</p>
+    <textarea class="tsf-textarea" [(ngModel)]="body.innovation_developers" (ngModelChange)="updateMds()" placeholder="Enter innovation developers..."></textarea>
+  </div>
+</div>
+
+<div class="tsf-actions">
+  <button class="tsf-save-btn" [disabled]="saving()" (click)="onSave()">
+    <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
+    {{ saving() ? 'Saving...' : 'Save' }}
+  </button>
+</div>

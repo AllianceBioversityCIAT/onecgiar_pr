@@ -1,0 +1,10 @@
+@use '../section-type-shared';
+
+.tsf-row {
+  display: flex;
+  gap: 12px;
+}
+
+.tsf-field--half {
+  flex: 1;
+}

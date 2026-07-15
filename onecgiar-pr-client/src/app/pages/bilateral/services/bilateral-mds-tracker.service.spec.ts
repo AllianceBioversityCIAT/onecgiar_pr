@@ -47,7 +47,8 @@ describe('BilateralMdsTrackerService', () => {
   it('should compute overall percentage', () => {
     service.updateSection('general-info', 2);
     service.updateSection('contributors', 2);
-    expect(service.overallPercentage()).toBe(33);
+    // general-info 2/2 + contributors 2/3 + geography 0/1 + evidence 0/1 + type-specific 0/0 = 4/7
+    expect(service.overallPercentage()).toBe(57);
   });
 
   it('should return partial status at 50%', () => {
@@ -56,6 +57,7 @@ describe('BilateralMdsTrackerService', () => {
   });
 
   it('should return complete status at 100%', () => {
+    service.setTotalFields('type-specific', 5);
     service.updateSection('general-info', 2);
     service.updateSection('contributors', 3);
     service.updateSection('geography', 3);
@@ -63,6 +65,36 @@ describe('BilateralMdsTrackerService', () => {
     service.updateSection('type-specific', 5);
     expect(service.overallPercentage()).toBe(100);
     expect(service.overallStatus()).toBe('complete');
+  });
+
+  it('should use dynamic totalFields via setTotalFields override', () => {
+    service.setTotalFields('type-specific', 3);
+    const ts = service.sectionStatus().find(s => s.sectionName === 'type-specific');
+    expect(ts?.totalFields).toBe(3);
+
+    service.updateSection('type-specific', 2);
+    const tsAfter = service.sectionStatus().find(s => s.sectionName === 'type-specific');
+    expect(tsAfter?.filledFields).toBe(2);
+    expect(tsAfter?.percentage).toBe(67);
+    expect(tsAfter?.status).toBe('partial');
+  });
+
+  it('should cap type-specific at overridden totalFields', () => {
+    service.setTotalFields('type-specific', 3);
+    service.updateSection('type-specific', 10);
+    const ts = service.sectionStatus().find(s => s.sectionName === 'type-specific');
+    expect(ts?.filledFields).toBe(3);
+    expect(ts?.percentage).toBe(100);
+    expect(ts?.status).toBe('complete');
+  });
+
+  it('should reset overrides on reset()', () => {
+    service.setTotalFields('type-specific', 4);
+    service.updateSection('type-specific', 4);
+    service.reset();
+    const ts = service.sectionStatus().find(s => s.sectionName === 'type-specific');
+    expect(ts?.totalFields).toBe(0);
+    expect(ts?.filledFields).toBe(0);
   });
 
   it('should reset all sections to zero', () => {

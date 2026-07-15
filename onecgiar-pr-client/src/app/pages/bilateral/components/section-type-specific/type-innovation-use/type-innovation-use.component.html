@@ -1,0 +1,30 @@
+<div class="tsf-fields">
+  <div class="tsf-field">
+    <label class="tsf-label">Innovation Use to be Determined <span class="tsf-required">*</span></label>
+    <div class="tsf-radio-group">
+      <label class="tsf-radio-label">
+        <input type="radio" name="tbd" [value]="true" [(ngModel)]="body.innov_use_to_be_determined" (ngModelChange)="updateMds()" />
+        Yes
+      </label>
+      <label class="tsf-radio-label">
+        <input type="radio" name="tbd" [value]="false" [(ngModel)]="body.innov_use_to_be_determined" (ngModelChange)="updateMds()" />
+        No
+      </label>
+    </div>
+  </div>
+
+  @if (body.innov_use_to_be_determined === false) {
+    <div class="tsf-field">
+      <label class="tsf-label">Actors <span class="tsf-required">*</span></label>
+      <p class="tsf-hint">Describe the actors involved in innovation use</p>
+      <textarea class="tsf-textarea" [(ngModel)]="body.actors" (ngModelChange)="updateMds()" placeholder="Enter actors..."></textarea>
+    </div>
+  }
+</div>
+
+<div class="tsf-actions">
+  <button class="tsf-save-btn" [disabled]="saving()" (click)="onSave()">
+    <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
+    {{ saving() ? 'Saving...' : 'Save' }}
+  </button>
+</div>

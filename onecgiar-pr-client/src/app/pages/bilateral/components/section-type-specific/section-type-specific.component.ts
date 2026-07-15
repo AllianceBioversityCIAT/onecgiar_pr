@@ -1,32 +1,41 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
+import { BilateralCreationService } from '../../services/bilateral-creation.service';
+import { TypePolicyChangeComponent } from './type-policy-change/type-policy-change.component';
+import { TypeInnovationUseComponent } from './type-innovation-use/type-innovation-use.component';
+import { TypeCapacitySharingComponent } from './type-capacity-sharing/type-capacity-sharing.component';
+import { TypeKnowledgeProductComponent } from './type-knowledge-product/type-knowledge-product.component';
+import { TypeInnovationDevComponent } from './type-innovation-dev/type-innovation-dev.component';
 
-const RESULT_TYPES = [
-  { id: 1, label: 'Policy Change' },
-  { id: 2, label: 'Innovation Use' },
-  { id: 5, label: 'Capacity Sharing' },
-  { id: 6, label: 'Knowledge Product' },
-  { id: 7, label: 'Innovation Development' },
-  { id: 4, label: 'Other Outcome' },
-  { id: 8, label: 'Other Output' }
-];
+const TYPE_LABELS: Record<number, string> = {
+  1: 'Policy Change',
+  2: 'Innovation Use',
+  4: 'Other Outcome',
+  5: 'Capacity Sharing for Development',
+  6: 'Knowledge Product',
+  7: 'Innovation Development',
+  8: 'Other Output',
+};
+
+const NO_TYPE_SPECIFIC = new Set([4, 8, 9]);
 
 @Component({
   selector: 'app-section-type-specific',
-  imports: [CommonModule],
+  imports: [
+    CommonModule,
+    TypePolicyChangeComponent,
+    TypeInnovationUseComponent,
+    TypeCapacitySharingComponent,
+    TypeKnowledgeProductComponent,
+    TypeInnovationDevComponent,
+  ],
   templateUrl: './section-type-specific.component.html',
-  styleUrl: './section-type-specific.component.scss'
+  styleUrl: './section-type-specific.component.scss',
 })
 export class SectionTypeSpecificComponent {
-  private readonly mdsTracker = inject(BilateralMdsTrackerService);
+  private readonly creationService = inject(BilateralCreationService);
 
-  resultTypeId = signal<number | null>(null);
-  resultTypes = RESULT_TYPES;
-
-  onTypeChange(event: Event): void {
-    const value = Number((event.target as HTMLSelectElement).value);
-    this.resultTypeId.set(value || null);
-    this.mdsTracker.updateSection('type-specific', value ? 1 : 0);
-  }
+  resultTypeId = computed(() => this.creationService.resultTypeId());
+  typeLabel = computed(() => TYPE_LABELS[this.resultTypeId() ?? 0] ?? 'Unknown');
+  hasNoTypeSpecific = computed(() => NO_TYPE_SPECIFIC.has(this.resultTypeId() ?? 0));
 }

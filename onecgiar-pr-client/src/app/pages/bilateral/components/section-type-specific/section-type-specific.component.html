@@ -1,27 +1,24 @@
-<div class="sts-fields">
-  <div class="sts-field">
-    <label class="sts-label">Result Type <span class="sts-required">*</span></label>
-    <select class="sts-select" (change)="onTypeChange($event)">
-      <option value="" disabled [selected]="!resultTypeId()">Select result type</option>
-      @for (type of resultTypes; track type.id) {
-        <option [value]="type.id" [selected]="resultTypeId() === type.id">
-          {{ type.label }}
-        </option>
-      }
-    </select>
-  </div>
+<div class="sts-container">
+  @if (hasNoTypeSpecific()) {
+    <div class="sts-empty">
+      <i class="material-icons-round sts-empty-icon">check_circle</i>
+      <p class="sts-empty-title">No type-specific fields required</p>
+      <p class="sts-empty-desc">
+        <strong>{{ typeLabel() }}</strong> does not require additional type-specific information.
+      </p>
+    </div>
+  } @else {
+    <div class="sts-type-badge">
+      <i class="material-icons-round">category</i>
+      <span>{{ typeLabel() }}</span>
+    </div>
 
-  @if (resultTypeId()) {
-    <p class="sts-hint">Type-specific fields for {{ resultTypeId() | json }} will be rendered here.</p>
-    <p class="sts-hint">
-      @switch (resultTypeId()) {
-        @case (1) { Policy Change: policy title, type, stage, evidence link }
-        @case (2) { Innovation Use: title, type, adoption stage, scale, beneficiaries }
-        @case (5) { Capacity Sharing: training title, type, participants, partners }
-        @case (6) { Knowledge Product: handle, title, type, authors, DOI }
-        @case (7) { Innovation Development: title, phase, readiness level, typology }
-        @default { Other: core sections only, no type-specific page }
-      }
-    </p>
+    @switch (resultTypeId()) {
+      @case (1) { <app-type-policy-change /> }
+      @case (2) { <app-type-innovation-use /> }
+      @case (5) { <app-type-capacity-sharing /> }
+      @case (6) { <app-type-knowledge-product /> }
+      @case (7) { <app-type-innovation-dev /> }
+    }
   }
 </div>
