@@ -121,12 +121,17 @@
               <ng-template pTemplate="item" let-ind>
                 <div class="st-select-item">
                   <span class="st-select-item-desc">{{ ind.indicator_description || 'Unnamed' }}</span>
-                  @if (ind.matchInfo.cssClass === 'bp-toc-match--match') {
-                    <span class="st-select-badge st-select-badge--match">[{{ resultTypeLabel() }}]</span>
-                  }
-                  @else if (ind.matchInfo.cssClass === 'bp-toc-match--other') {
-                    <span class="st-select-badge st-select-badge--other">[{{ ind.matchInfo.label }}]</span>
-                  }
+                  <div class="st-select-item-row" style="margin-top: 2px;">
+                    @if (ind.matchInfo.cssClass === 'bp-toc-match--match') {
+                      @if (ind.unit_messurament) {
+                        <span class="st-target-unit" style="font-size: 9px; padding: 1px 6px; margin-top: 2px;">{{ ind.unit_messurament }}</span>
+                      }
+                      <span class="st-select-badge st-select-badge--match">Target: {{ ind.targets?.[0]?.target_value ?? 'N/A' }}</span>
+                    }
+                    @else if (ind.matchInfo.cssClass === 'bp-toc-match--other') {
+                      <span class="st-select-badge st-select-badge--other">[{{ ind.matchInfo.label }}]</span>
+                    }
+                  </div>
                 </div>
               </ng-template>
               <ng-template pTemplate="selectedItem" let-ind>
