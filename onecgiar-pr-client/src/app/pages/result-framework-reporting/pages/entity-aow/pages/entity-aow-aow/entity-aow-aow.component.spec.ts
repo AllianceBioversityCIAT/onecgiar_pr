@@ -22,6 +22,7 @@ describe('EntityAowAowComponent', () => {
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
+      searchText: signal<string>(''),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: signal<boolean>(false),
       isLoadingTocResults2030Outcomes: signal<boolean>(false),
@@ -91,6 +92,15 @@ describe('EntityAowAowComponent', () => {
       component.ngOnInit();
 
       expect(mockEntityAowService.aowId()).toBe(aowId);
+    });
+
+    it('should reset searchText when route params emit (P2-3141)', () => {
+      mockEntityAowService.searchText.set('stale query');
+      mockActivatedRoute.params = of({ aowId: 'another-aow' });
+
+      component.ngOnInit();
+
+      expect(mockEntityAowService.searchText()).toBe('');
     });
   });
 
@@ -242,6 +252,14 @@ describe('EntityAowAowComponent', () => {
       component.ngOnDestroy();
 
       expect(mockEntityAowService.aowId()).toBe('');
+    });
+
+    it('should reset searchText on destroy (P2-3141)', () => {
+      mockEntityAowService.searchText.set('stale query');
+
+      component.ngOnDestroy();
+
+      expect(mockEntityAowService.searchText()).toBe('');
     });
   });
 });

@@ -2,12 +2,13 @@
   <div class="relative min-w-[240px] max-w-[400px] flex-1">
     <i class="material-icons-round pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-[var(--pr-color-accents-4)]" aria-hidden="true">search</i>
     <input
+      id="aowIndicatorSearchInput"
       type="text"
       class="h-9 w-full rounded-lg border border-[var(--pr-color-accents-2)] bg-white pl-8 pr-3 text-xs text-[var(--pr-color-secondary-400)] outline-none transition-colors placeholder:text-[var(--pr-color-accents-4)] focus:border-brand-300"
       placeholder="Search by HLO or KPI statement…"
       aria-label="Search indicators"
-      [value]="searchQuery()"
-      (input)="searchQuery.set($any($event.target).value)" />
+      [value]="entityAowService.searchText()"
+      (input)="entityAowService.searchText.set($any($event.target).value)" />
   </div>
 
   <select
@@ -142,7 +143,13 @@
 
   <ng-template prTableEmpty>
     <tr style="height: 200px">
-      <td colspan="8" class="tab-content_empty">There are no High-Level Outputs Indicators found.</td>
+      <td colspan="8" class="tab-content_empty">
+        @if (entityAowService.searchText().trim()) {
+          No indicators match your search.
+        } @else {
+          There are no High-Level Outputs Indicators found.
+        }
+      </td>
     </tr>
   </ng-template>
 </app-pr-group-table>

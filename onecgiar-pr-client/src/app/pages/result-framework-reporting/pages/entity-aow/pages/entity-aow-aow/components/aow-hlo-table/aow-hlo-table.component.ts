@@ -62,26 +62,40 @@ export class AowHloTableComponent {
     }
   });
 
-  // Client-side toolbar filters (search across HLO title + KPI statement, status chip)
-  searchQuery = signal('');
+  // Client-side toolbar filters: status chip is local to this table; the search text is the
+  // AoW-level signal on the service (P2-3141) so it also drives the empty-state message.
   statusFilter = signal<'all' | 'Not started' | 'In progress' | 'Achieved' | 'Overachieved'>('all');
 
+  // P2-3141: filter groups/indicators by the AoW-level search text (HLO title + KPI statement +
+  // indicator typology) without mutating the service signals, combined with the redesign status chip.
   filteredTableData = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
+    const query = this.entityAowService.searchText().toLowerCase().trim();
     const status = this.statusFilter();
+
+    // No search and no status chip → return the data untouched (same reference, no allocation).
+    if (!query && status === 'all') return this.tableData();
+
+    const byStatus = (indicators: any[]) =>
+      status === 'all' ? indicators : indicators.filter((indicator: any) => this.getStatusLabel(indicator.progress_percentage) === status);
 
     return this.tableData()
       .map((group: any) => {
-        const titleMatches = !query || group.result_title?.toLowerCase().includes(query);
-        const indicators = (group.indicators ?? []).filter((indicator: any) => {
-          const queryMatches = titleMatches || indicator.indicator_description?.toLowerCase().includes(query);
-          const statusMatches = status === 'all' || this.getStatusLabel(indicator.progress_percentage) === status;
-          return queryMatches && statusMatches;
-        });
+        const titleMatches = !!query && (group.result_title || '').toLowerCase().includes(query);
+        // Title matches → keep the whole group (all its indicators); otherwise keep only the
+        // indicators matching the query. The status chip is applied on top of either set.
+        const searched = titleMatches
+          ? group.indicators || []
+          : (group.indicators || []).filter(
+              (indicator: any) =>
+                !query ||
+                (indicator.indicator_description || '').toLowerCase().includes(query) ||
+                (indicator.type_name || '').toLowerCase().includes(query)
+            );
 
-        return { ...group, indicators };
+        return { group, indicators: byStatus(searched), titleMatches };
       })
-      .filter((group: any) => group.indicators.length > 0 || (!query && this.statusFilter() === 'all'));
+      .filter((entry: any) => entry.indicators.length > 0 || entry.titleMatches)
+      .map((entry: any) => ({ ...entry.group, indicators: entry.indicators }));
   });
 
   filteredIndicatorCount = computed(() => this.filteredTableData().reduce((sum: number, g: any) => sum + (g.indicators?.length ?? 0), 0));
@@ -95,11 +109,16 @@ export class AowHloTableComponent {
   });
 
   // P2-3053: agreed nomenclature + dynamic phase year ("<year> target") instead of hardcoded "2025".
+  // P2-3133: the 2030 Outcomes view shows a cumulative "2030 target"; "Achieved value" replaces "Achieved target" globally.
   columnOrder = computed<ColumnOrder[]>(() => [
     { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
     { title: 'Indicator typology', attr: 'type_name', width: '10%' },
-    { title: `${this.entityAowService.reportingPhaseYear} target`.trim(), attr: 'target_value_sum', width: '10%' },
-    { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
+    {
+      title: this.tableType === '2030-outcomes' ? '2030 target' : `${this.entityAowService.reportingPhaseYear} target`.trim(),
+      attr: 'target_value_sum',
+      width: '10%'
+    },
+    { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
     { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
 

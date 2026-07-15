@@ -7,6 +7,10 @@ import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { CreateResultManagementService } from './services/create-result-management.service';
 import { TerminologyService } from '../../../../internationalization/terminology.service';
+import {
+  filterOutAvisaFromGroupedInitiativeOptions,
+  filterOutAvisaInitiatives
+} from '../../../../shared/utils/avisa-initiative.util';
 
 @Component({
   selector: 'app-result-creator',
@@ -65,8 +69,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
     this.resultLevelSE.cleanData();
     this.api.updateUserData(() => {
-      if (this.api.dataControlSE.myInitiativesListReportingByPortfolio.length == 1)
-        this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0].id;
+      const initiatives = this.selectableInitiatives;
+      if (initiatives.length == 1) this.resultLevelSE.resultBody.initiative_id = initiatives[0].id;
     });
 
     setTimeout(() => {
@@ -75,7 +79,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   }
 
   onSelectInit() {
-    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio) || []).find(
+    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.selectableInitiatives) || []).find(
       init => init.id == this.resultLevelSE.resultBody.initiative_id
     );
     const resultType = this.cgiarEntityTypes.find(type => type.code == init.typeCode);
@@ -122,10 +126,10 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
           const groupList = entityTypesResponse;
           const resultList = [];
           groupList?.forEach(groupItem => {
-            const initsGroup = this.allInitiatives.filter(item => item.typeCode == groupItem.code);
+            const initsGroup = filterOutAvisaInitiatives(this.allInitiatives.filter(item => item.typeCode == groupItem.code));
             if (initsGroup?.length) resultList.push(groupItem, ...initsGroup);
           });
-          this.allInitiatives = resultList;
+          this.allInitiatives = filterOutAvisaFromGroupedInitiativeOptions(resultList);
         });
       },
       error: err => {
@@ -139,6 +143,10 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
 
   get isKnowledgeProduct() {
     return this.resultLevelSE.resultBody.result_type_id == 6;
+  }
+
+  get selectableInitiatives() {
+    return filterOutAvisaInitiatives(this.api.dataControlSE.myInitiativesListReportingByPortfolio);
   }
 
   get resultTypeNamePlaceholder(): string {

@@ -1,161 +1,250 @@
 <!-- Launcher FAB -->
 <button
   type="button"
-  class="fixed bottom-24 right-5 z-[1050] flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
-  style="background: linear-gradient(135deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
-  [attr.aria-expanded]="assistant.isOpen()"
-  aria-label="Open assistant"
+  class="pr-ai-fab fixed bottom-24 right-5 z-[1050] flex h-14 w-14 items-center justify-center rounded-full text-white transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 focus-visible:ring-offset-2"
+  [class.scale-0]="assistant.isOpen()"
+  [class.opacity-0]="assistant.isOpen()"
+  [class.pointer-events-none]="assistant.isOpen()"
+  style="background: linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
+  aria-label="Open PRMS assistant"
   (click)="toggle()">
-  <i class="material-icons-round text-[26px]">{{ assistant.isOpen() ? 'close' : 'auto_awesome' }}</i>
+  <span class="pr-ai-halo" aria-hidden="true"></span>
+  <i class="pr-ai-fab-icon material-icons-round relative text-[26px]">auto_awesome</i>
 </button>
 
-<!-- Right-docked panel -->
-<section
-  class="fixed inset-y-0 right-0 z-[1050] flex w-[400px] max-w-[92vw] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out"
-  [class.translate-x-0]="assistant.isOpen()"
-  [class.translate-x-full]="!assistant.isOpen()"
-  style="transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1)"
-  role="dialog"
-  aria-label="PRMS assistant">
-  <!-- Header -->
-  <header
-    class="flex items-center gap-2 px-4 py-3 text-white"
-    style="background: linear-gradient(135deg, var(--pr-color-primary-300), var(--pr-color-primary-400))">
-    <i class="material-icons-round">auto_awesome</i>
-    <span class="pr-h4 font-weight-600 flex-1">PRMS Assistant</span>
-    <button type="button" class="material-icons-round opacity-80 hover:opacity-100" aria-label="Close" (click)="assistant.close()">close</button>
-  </header>
+<!-- Free-floating, draggable + resizable window -->
+@if (assistant.isOpen()) {
+  <section
+    class="pr-ai-window fixed z-[1050] flex flex-col overflow-hidden rounded-2xl bg-white"
+    [style]="winStyle()"
+    role="dialog"
+    aria-label="PRMS assistant">
+    <!-- Resize handles (frame) -->
+    <span class="rh rh-n" (pointerdown)="onResizePointerDown($event, 'n')"></span>
+    <span class="rh rh-s" (pointerdown)="onResizePointerDown($event, 's')"></span>
+    <span class="rh rh-e" (pointerdown)="onResizePointerDown($event, 'e')"></span>
+    <span class="rh rh-w" (pointerdown)="onResizePointerDown($event, 'w')"></span>
+    <span class="rh rh-ne" (pointerdown)="onResizePointerDown($event, 'ne')"></span>
+    <span class="rh rh-nw" (pointerdown)="onResizePointerDown($event, 'nw')"></span>
+    <span class="rh rh-se" (pointerdown)="onResizePointerDown($event, 'se')"></span>
+    <span class="rh rh-sw" (pointerdown)="onResizePointerDown($event, 'sw')"></span>
 
-  <div class="flex flex-1 flex-col overflow-hidden">
-    @switch (assistant.status()) {
-      <!-- Detecting -->
-      @case ('detecting') {
-        <div class="flex flex-1 items-center justify-center text-center text-neutral-500">
-          <span class="pr-body-2">Checking your device…</span>
-        </div>
-      }
+    <!-- Header (drag handle) -->
+    <header
+      class="pr-ai-header relative flex items-center gap-2.5 px-4 py-3 text-white select-none"
+      style="background: linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
+      (pointerdown)="onHeaderPointerDown($event)">
+      <span class="pr-ai-grip h-3.5 w-2 text-white/50" aria-hidden="true"></span>
+      <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/25">
+        <i class="material-icons-round text-[19px]">smart_toy</i>
+      </span>
+      <span class="flex flex-1 flex-col leading-none">
+        <span class="pr-body-1 font-weight-700">PRMS Assistant</span>
+        <span class="pr-body-3 text-white/70">Your in-browser guide</span>
+      </span>
+      <button
+        type="button"
+        class="flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        aria-label="Reset window position"
+        title="Reset position &amp; size"
+        (click)="resetWindow()">
+        <i class="material-icons-round text-[19px]">restart_alt</i>
+      </button>
+      <button
+        type="button"
+        class="flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        aria-label="Close assistant"
+        (click)="assistant.close()">
+        <i class="material-icons-round text-[20px]">close</i>
+      </button>
+    </header>
 
-      <!-- Unsupported -->
-      @case ('unsupported') {
-        <div class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-          <i class="material-icons-round text-4xl text-neutral-400">desktop_access_disabled</i>
-          <p class="pr-body-1 font-weight-600">Assistant not available on this device</p>
-          <p class="pr-body-2 text-neutral-500">
-            The assistant needs WebGPU, available on recent Chrome or Edge on desktop. / El asistente necesita WebGPU (Chrome o Edge de escritorio recientes).
-          </p>
-        </div>
-      }
-
-      <!-- Opt-in to download -->
-      @case ('needs-optin') {
-        <div class="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-          <i class="material-icons-round text-4xl text-brand-300">cloud_download</i>
-          <p class="pr-body-1 font-weight-600">Enable the assistant</p>
-          <p class="pr-body-2 text-neutral-500">
-            One-time download of ~{{ downloadMB() }} MB. It runs 100% in your browser — nothing is sent to a server. / Descarga única de ~{{ downloadMB() }} MB, corre 100% local.
-          </p>
-          <div class="flex gap-2">
-            <button type="button" class="rounded-md px-4 py-2 text-white" style="background: var(--pr-color-primary-300)" (click)="startDownload()">Download</button>
-            <button type="button" class="rounded-md border border-neutral-300 px-4 py-2 text-neutral-600" (click)="assistant.close()">Not now</button>
+    <div class="flex flex-1 flex-col overflow-hidden">
+      @switch (assistant.status()) {
+        <!-- Detecting -->
+        @case ('detecting') {
+          <div class="flex flex-1 flex-col items-center justify-center gap-3 text-center text-accent-5">
+            <i class="material-icons-round animate-spin text-[28px] text-brand-300">progress_activity</i>
+            <span class="pr-body-2">Checking your device…</span>
           </div>
-        </div>
-      }
+        }
 
-      <!-- Downloading -->
-      @case ('downloading') {
-        <div class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-          <i class="material-icons-round text-4xl text-brand-300">downloading</i>
-          <p class="pr-body-1 font-weight-600">Preparing the assistant…</p>
-          <div class="h-2 w-full max-w-[240px] overflow-hidden rounded-full bg-neutral-200">
-            <div class="h-full rounded-full transition-all" style="background: var(--pr-color-primary-300)" [style.width.%]="progressPct()"></div>
+        <!-- Unsupported -->
+        @case ('unsupported') {
+          <div class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+            <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-100">
+              <i class="material-icons-round text-[30px] text-accent-4">desktop_access_disabled</i>
+            </span>
+            <p class="pr-body-1 font-weight-600 text-secondary-400">Assistant not available on this device</p>
+            <p class="pr-body-2 max-w-[300px] text-accent-5">
+              The assistant needs WebGPU, available on recent Chrome or Edge on desktop. / El asistente necesita WebGPU (Chrome o Edge de escritorio recientes).
+            </p>
           </div>
-          <p class="pr-body-3 text-neutral-500">{{ progressPct() }}% — {{ assistant.progress()?.text }}</p>
-        </div>
-      }
+        }
 
-      <!-- Error -->
-      @case ('error') {
-        <div class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-          <i class="material-icons-round text-4xl text-red-500">error_outline</i>
-          <p class="pr-body-1 font-weight-600">Something went wrong</p>
-          <p class="pr-body-2 text-neutral-500">The model could not be loaded. Please check your connection and try again. / No se pudo cargar el modelo.</p>
-          @if (assistant.errorDetail(); as detail) {
-            <p class="max-w-[320px] break-words rounded-md bg-neutral-100 px-3 py-2 pr-body-3 text-red-500">{{ detail }}</p>
-          }
-          <button type="button" class="rounded-md px-4 py-2 text-white" style="background: var(--pr-color-primary-300)" (click)="retry()">Retry</button>
-        </div>
-      }
+        <!-- Opt-in to download -->
+        @case ('needs-optin') {
+          <div class="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+            <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-25">
+              <i class="material-icons-round text-[30px] text-brand-300">cloud_download</i>
+            </span>
+            <p class="pr-body-1 font-weight-600 text-secondary-400">Enable the assistant</p>
+            <p class="pr-body-2 max-w-[300px] text-accent-5">
+              One-time download of ~{{ downloadMB() }} MB. It runs 100% in your browser — nothing is sent to a server. / Descarga única de ~{{ downloadMB() }} MB, corre 100% local.
+            </p>
+            <div class="mt-1 flex gap-2">
+              <button
+                type="button"
+                class="rounded-lg px-4 py-2 pr-body-2 font-weight-600 text-white shadow-sm transition-all hover:-translate-y-px hover:shadow-md active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 focus-visible:ring-offset-2"
+                style="background: linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
+                (click)="startDownload()">
+                Download
+              </button>
+              <button
+                type="button"
+                class="rounded-lg border border-neutral-300 px-4 py-2 pr-body-2 font-weight-600 text-accent-6 transition-colors hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300"
+                (click)="assistant.close()">
+                Not now
+              </button>
+            </div>
+          </div>
+        }
 
-      <!-- Chat (ready / thinking) -->
-      @default {
-        <div class="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
-          @for (msg of assistant.messages(); track $index) {
-            <div class="flex" [class.justify-end]="msg.role === 'user'">
+        <!-- Downloading -->
+        @case ('downloading') {
+          <div class="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+            <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-25">
+              <i class="material-icons-round animate-pulse text-[30px] text-brand-300">downloading</i>
+            </span>
+            <p class="pr-body-1 font-weight-600 text-secondary-400">Preparing the assistant…</p>
+            <div class="h-2 w-full max-w-[260px] overflow-hidden rounded-full bg-neutral-200">
               <div
-                class="max-w-[85%] rounded-2xl px-3 py-2 pr-body-2"
-                [class]="msg.role === 'user' ? 'bg-brand-300 text-white' : 'bg-neutral-100 text-neutral-800'">
-                <span>{{ msg.text }}</span>
-                @if (msg.action) {
-                  <span class="mt-1 flex items-center gap-1 pr-body-3 opacity-80">
-                    <i class="material-icons-round text-[14px]">arrow_forward</i>{{ msg.action }}
-                  </span>
-                }
-                @if (msg.cards?.length) {
-                  <div class="mt-2 flex flex-col gap-1.5">
-                    @for (card of msg.cards; track card.code) {
-                      <button
-                        type="button"
-                        class="flex items-start gap-2 rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-left transition-colors hover:border-brand-300 hover:bg-brand-25"
-                        (click)="open(card.url)">
-                        <i class="material-icons-round text-[16px] text-brand-300">description</i>
-                        <span class="flex flex-col">
-                          <span class="pr-body-3 font-weight-600 text-neutral-800">{{ card.code }}</span>
-                          <span class="pr-body-3 text-neutral-500 line-clamp-2">{{ card.title }}</span>
-                          @if (card.status) {
-                            <span class="pr-body-3 text-brand-400">{{ card.status }}</span>
-                          }
-                        </span>
-                      </button>
-                    }
-                  </div>
-                }
-              </div>
+                class="h-full rounded-full transition-all duration-300 ease-out"
+                style="background: linear-gradient(90deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
+                [style.width.%]="progressPct()"></div>
             </div>
-          }
-          @if (assistant.status() === 'thinking') {
-            <div class="flex">
-              <div class="flex items-center gap-2 rounded-2xl bg-neutral-100 px-3 py-2 pr-body-3 text-neutral-500">
-                @if (assistant.activity(); as activity) {
-                  <i class="material-icons-round animate-spin text-[14px]">progress_activity</i>
-                  <span>{{ activity }}</span>
-                } @else {
-                  <span>…</span>
-                }
-              </div>
-            </div>
-          }
-        </div>
+            <p class="pr-body-3 text-accent-5">{{ progressPct() }}% — {{ assistant.progress()?.text }}</p>
+          </div>
+        }
 
-        <form class="flex items-center gap-2 border-t border-neutral-200 p-3" (ngSubmit)="submit()">
-          <input
-            type="text"
-            class="flex-1 rounded-full border border-neutral-300 px-4 py-2 pr-body-2 focus:border-brand-300 focus:outline-none"
-            placeholder="Ask me to take you somewhere…"
-            [ngModel]="draft()"
-            (ngModelChange)="draft.set($event)"
-            name="assistantDraft"
-            [disabled]="assistant.status() === 'thinking'"
-            autocomplete="off" />
-          <button
-            type="submit"
-            class="flex h-9 w-9 items-center justify-center rounded-full text-white disabled:opacity-40"
-            style="background: var(--pr-color-primary-300)"
-            [disabled]="assistant.status() === 'thinking' || !draft().trim()"
-            aria-label="Send">
-            <i class="material-icons-round text-[20px]">send</i>
-          </button>
-        </form>
+        <!-- Error -->
+        @case ('error') {
+          <div class="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+            <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
+              <i class="material-icons-round text-[30px] text-red-500">error_outline</i>
+            </span>
+            <p class="pr-body-1 font-weight-600 text-secondary-400">Something went wrong</p>
+            <p class="pr-body-2 max-w-[300px] text-accent-5">The model could not be loaded. Please check your connection and try again. / No se pudo cargar el modelo.</p>
+            @if (assistant.errorDetail(); as detail) {
+              <p class="max-w-[320px] break-words rounded-md bg-neutral-100 px-3 py-2 pr-body-3 text-red-500">{{ detail }}</p>
+            }
+            <button
+              type="button"
+              class="mt-1 rounded-lg px-4 py-2 pr-body-2 font-weight-600 text-white shadow-sm transition-all hover:-translate-y-px hover:shadow-md active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 focus-visible:ring-offset-2"
+              style="background: linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
+              (click)="retry()">
+              Retry
+            </button>
+          </div>
+        }
+
+        <!-- Chat (ready / thinking) -->
+        @default {
+          <div class="pr-ai-chat flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+            @for (msg of assistant.messages(); track $index) {
+              <div class="flex items-end gap-2" [class.flex-row-reverse]="msg.role === 'user'">
+                <!-- Avatar: robot for the assistant, person for the user; each its own color -->
+                <span
+                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow-sm ring-2 ring-white"
+                  [style.background]="msg.role === 'user'
+                    ? 'linear-gradient(140deg, #3a3f5f, var(--pr-color-secondary-400))'
+                    : 'linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))'">
+                  <i class="material-icons-round text-[18px]">{{ msg.role === 'user' ? 'person' : 'smart_toy' }}</i>
+                </span>
+                <!-- Bubble -->
+                <div
+                  class="max-w-[76%] px-3.5 py-2.5 pr-body-2 shadow-sm"
+                  [class]="msg.role === 'user'
+                    ? 'rounded-2xl rounded-br-sm text-white'
+                    : 'rounded-2xl rounded-bl-sm border border-brand-100 bg-white text-secondary-400'"
+                  [style.background]="msg.role === 'user' ? 'linear-gradient(140deg, #3a3f5f, var(--pr-color-secondary-400))' : null">
+                  <span class="whitespace-pre-line">{{ msg.text }}</span>
+                  @if (msg.action) {
+                    <span
+                      class="mt-1.5 flex items-center gap-1 rounded-full px-2 py-0.5 pr-body-3 font-weight-600"
+                      [class]="msg.role === 'user' ? 'bg-white/15 text-white' : 'bg-brand-25 text-brand-400'">
+                      <i class="material-icons-round text-[14px]">arrow_forward</i>{{ msg.action }}
+                    </span>
+                  }
+                  @if (msg.cards?.length) {
+                    <div class="mt-2.5 flex flex-col gap-2">
+                      @for (card of msg.cards; track card.code) {
+                        <button
+                          type="button"
+                          class="group flex items-start gap-2.5 rounded-xl border border-brand-100 bg-brand-25 px-3 py-2.5 text-left transition-all hover:-translate-y-px hover:border-brand-300 hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
+                          (click)="open(card.url)">
+                          <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-brand-300 shadow-sm ring-1 ring-brand-100">
+                            <i class="material-icons-round text-[15px]">description</i>
+                          </span>
+                          <span class="flex min-w-0 flex-col">
+                            <span class="pr-body-3 font-weight-700 text-secondary-400">{{ card.code }}</span>
+                            <span class="pr-body-3 text-accent-5 line-clamp-2">{{ card.title }}</span>
+                            @if (card.status) {
+                              <span class="mt-1 inline-flex w-fit items-center rounded-full bg-brand-50 px-1.5 py-0.5 pr-body-3 font-weight-600 text-brand-400">{{ card.status }}</span>
+                            }
+                          </span>
+                          <i class="material-icons-round ml-auto self-center text-[16px] text-accent-4 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-300">chevron_right</i>
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+            @if (assistant.status() === 'thinking') {
+              <div class="flex items-end gap-2">
+                <span
+                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow-sm ring-2 ring-white"
+                  style="background: linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))">
+                  <i class="material-icons-round text-[18px]">smart_toy</i>
+                </span>
+                <div class="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-brand-100 bg-white px-3.5 py-2.5 pr-body-2 text-accent-5 shadow-sm">
+                  @if (assistant.activity(); as activity) {
+                    <i class="material-icons-round animate-spin text-[16px] text-brand-300">progress_activity</i>
+                    <span>{{ activity }}</span>
+                  } @else {
+                    <span class="flex items-center gap-1">
+                      <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-300 [animation-delay:-0.3s]"></span>
+                      <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-300 [animation-delay:-0.15s]"></span>
+                      <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-300"></span>
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <form class="flex items-center gap-2 border-t border-neutral-200 bg-white p-3" (ngSubmit)="submit()">
+            <input
+              type="text"
+              class="flex-1 rounded-full border border-neutral-300 bg-neutral-50 px-4 py-2 pr-body-2 transition-colors focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100"
+              placeholder="Ask me to take you somewhere…"
+              [ngModel]="draft()"
+              (ngModelChange)="draft.set($event)"
+              name="assistantDraft"
+              [disabled]="assistant.status() === 'thinking'"
+              autocomplete="off" />
+            <button
+              type="submit"
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-all hover:-translate-y-px hover:shadow-md active:translate-y-0 disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 focus-visible:ring-offset-2"
+              style="background: linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
+              [disabled]="assistant.status() === 'thinking' || !draft().trim()"
+              aria-label="Send">
+              <i class="material-icons-round text-[20px]">send</i>
+            </button>
+          </form>
+        }
       }
-    }
-  </div>
-</section>
+    </div>
+  </section>
+}

@@ -165,6 +165,7 @@ describe('AowHloTableComponent', () => {
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
       tocResults2030Outcomes: signal<any[]>([]),
+      searchText: signal<string>(''),
       isLoadingTocResults2030Outcomes: signal<boolean>(false),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: mockShowReportResultModal,
@@ -229,7 +230,7 @@ describe('AowHloTableComponent', () => {
         { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
         { title: 'Indicator typology', attr: 'type_name', width: '10%' },
         { title: '2026 target', attr: 'target_value_sum', width: '10%' },
-        { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
+        { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
         { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
       ]);
     });
@@ -261,7 +262,7 @@ describe('AowHloTableComponent', () => {
         width: '10%'
       });
       expect(columns[3]).toEqual({
-        title: 'Achieved target',
+        title: 'Achieved value',
         attr: 'actual_achieved_value_sum',
         width: '10%'
       });
@@ -561,6 +562,125 @@ describe('AowHloTableComponent', () => {
         'Result 1': true,
         'Result 2': true
       });
+    });
+  });
+
+  describe('filteredTableData computed (P2-3141 search)', () => {
+    const searchMockData = [
+      {
+        result_title: 'Climate adaptation outcome',
+        indicators: [
+          { indicator_id: 'ind-1', indicator_description: 'Number of farmers trained', type_name: 'Capacity sharing' },
+          { indicator_id: 'ind-2', indicator_description: 'Policies influenced', type_name: 'Policy change' }
+        ]
+      },
+      {
+        result_title: 'Gender equality outcome',
+        indicators: [{ indicator_id: 'ind-3', indicator_description: 'Number of women reached', type_name: 'Knowledge products' }]
+      },
+      {
+        result_title: 'Empty group outcome',
+        indicators: []
+      }
+    ];
+
+    beforeEach(() => {
+      mockEntityAowService.tocResultsOutputsByAowId.set(searchMockData);
+      component.tableType = 'outputs';
+      mockEntityAowService.searchText.set('');
+    });
+
+    it('should return tableData untouched (same reference) when search is empty', () => {
+      expect(component.filteredTableData()).toBe(component.tableData());
+    });
+
+    it('should return tableData untouched when search is only whitespace', () => {
+      mockEntityAowService.searchText.set('   ');
+      expect(component.filteredTableData()).toBe(component.tableData());
+    });
+
+    it('should filter indicators by indicator_description and drop groups without matches', () => {
+      mockEntityAowService.searchText.set('Number of');
+
+      const result = component.filteredTableData();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].result_title).toBe('Climate adaptation outcome');
+      expect(result[0].indicators).toEqual([
+        { indicator_id: 'ind-1', indicator_description: 'Number of farmers trained', type_name: 'Capacity sharing' }
+      ]);
+      expect(result[1].result_title).toBe('Gender equality outcome');
+      expect(result[1].indicators).toHaveLength(1);
+    });
+
+    it('should filter indicators by type_name (Indicator typology)', () => {
+      mockEntityAowService.searchText.set('Policy change');
+
+      const result = component.filteredTableData();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].result_title).toBe('Climate adaptation outcome');
+      expect(result[0].indicators).toEqual([
+        { indicator_id: 'ind-2', indicator_description: 'Policies influenced', type_name: 'Policy change' }
+      ]);
+    });
+
+    it('should keep the whole group with all indicators when the group title matches', () => {
+      mockEntityAowService.searchText.set('Climate adaptation');
+
+      const result = component.filteredTableData();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].indicators).toHaveLength(2);
+    });
+
+    it('should match case-insensitively', () => {
+      mockEntityAowService.searchText.set('nUmBeR oF wOmEn');
+
+      const result = component.filteredTableData();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].result_title).toBe('Gender equality outcome');
+    });
+
+    it('should return empty array when nothing matches', () => {
+      mockEntityAowService.searchText.set('zzz-no-match');
+
+      expect(component.filteredTableData()).toEqual([]);
+    });
+
+    it('should keep a title-matching group even if it has no indicators', () => {
+      mockEntityAowService.searchText.set('Empty group');
+
+      const result = component.filteredTableData();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].result_title).toBe('Empty group outcome');
+      expect(result[0].indicators).toEqual([]);
+    });
+
+    it('should not mutate the source data held in the service signal', () => {
+      mockEntityAowService.searchText.set('Policies');
+
+      component.filteredTableData();
+
+      const source = mockEntityAowService.tocResultsOutputsByAowId();
+      expect(source[0].indicators).toHaveLength(2);
+      expect(source).toEqual(searchMockData);
+    });
+
+    it('should restore the full table when the search is cleared', () => {
+      mockEntityAowService.searchText.set('Policies');
+      expect(component.filteredTableData()).toHaveLength(1);
+
+      mockEntityAowService.searchText.set('');
+      expect(component.filteredTableData()).toEqual(searchMockData);
+    });
+
+    it('should drive expandedRowKeys from the filtered data', () => {
+      mockEntityAowService.searchText.set('Gender');
+
+      expect(component.expandedRowKeys()).toEqual({ 'Gender equality outcome': true });
     });
   });
 

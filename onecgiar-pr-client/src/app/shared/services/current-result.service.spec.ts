@@ -147,4 +147,26 @@ describe('CurrentResultService', () => {
 
     expect(mockApiService.rolesSE.readOnly).toBe(false);
   }));
+
+  it('should force readOnly when result primary initiative is AVISA', fakeAsync(() => {
+    mockApiService.rolesSE.readOnly = false;
+    mockApiService.rolesSE.isAdmin = true;
+    const response = {
+      result_level_name: 'level1',
+      result_level_id: 'id1',
+      result_type_id: 'type1',
+      is_phase_open: 1,
+      status_id: 1,
+      is_discontinued: false,
+      initiative_id: 41,
+      initiative_official_code: 'SGP-02'
+    };
+
+    mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));
+
+    service.GET_resultById();
+    tick();
+
+    expect(mockApiService.rolesSE.readOnly).toBe(true);
+  }));
 });

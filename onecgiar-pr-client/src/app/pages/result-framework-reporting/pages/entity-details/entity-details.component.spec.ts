@@ -425,6 +425,32 @@ describe('EntityDetailsComponent', () => {
     });
   });
 
+  describe('AVISA entity — P2-3139 (view only, no result creation)', () => {
+    it('isAvisaEntity is true for SGP-02 / SGP02 and false for a normal Science Program', () => {
+      entityAowServiceMock.entityId.set('SGP-02');
+      expect(component.isAvisaEntity()).toBe(true);
+      entityAowServiceMock.entityId.set('SGP02');
+      expect(component.isAvisaEntity()).toBe(true);
+      entityAowServiceMock.entityId.set('SP01');
+      expect(component.isAvisaEntity()).toBe(false);
+    });
+
+    it('onReportRequested does NOT open the report modal for AVISA', () => {
+      entityAowServiceMock.entityId.set('SGP-02');
+      component.showReportModal.set(false);
+      component.onReportRequested({ resultTypeId: 1, resultTypeName: 'Innovation development' });
+      expect(component.showReportModal()).toBe(false);
+      expect(resultLevelServiceMock.setPendingResultType).not.toHaveBeenCalled();
+    });
+
+    it('onReportRequested opens the report modal for a normal Science Program', () => {
+      entityAowServiceMock.entityId.set('SP01');
+      component.onReportRequested({ resultTypeId: 1, resultTypeName: 'Innovation development' });
+      expect(component.showReportModal()).toBe(true);
+      expect(resultLevelServiceMock.setPendingResultType).toHaveBeenCalledWith(1, 'Innovation development');
+    });
+  });
+
   describe('Indicator Summaries Integration', () => {
     it('should have indicatorSummaries signal available', () => {
       const mockSummaries = [

@@ -55,7 +55,6 @@ module.exports = defineConfig({
               'src/styles/fonts.scss',
               'src/styles/colors.scss',
               'src/styles/transitions.scss',
-              'src/styles/primeng-custom-styles.scss',
               'src/app/custom-fields/custom-fields.scss'
             ],
             scripts: []

@@ -392,4 +392,32 @@ describe('NotificationItemComponent', () => {
       expect(emitSpy).toHaveBeenCalled();
     });
   });
+
+  describe('tocReview getter (P2-3085)', () => {
+    it('should return [] when toc_contribution_review is absent', () => {
+      component.notification = { is_map_to_toc: true };
+      expect(component.tocReview).toEqual([]);
+    });
+
+    it('should return [] when notification is null', () => {
+      component.notification = null;
+      expect(component.tocReview).toEqual([]);
+    });
+
+    it('should return the review entries when present', () => {
+      const entry = {
+        level: 'Output',
+        outcome_label: 'HLO1.AOW1.IO1',
+        outcome_statement: 'Statement text',
+        indicator_typology: 'Number of knowledge products',
+        unit_of_measurement: 'Number',
+        target: 6,
+        contribution_target: 2
+      };
+      component.notification = { is_map_to_toc: true, toc_contribution_review: [entry] };
+      expect(component.tocReview.length).toBe(1);
+      expect(component.tocReview[0].outcome_label).toBe('HLO1.AOW1.IO1');
+      expect(component.tocReview[0].contribution_target).toBe(2);
+    });
+  });
 });

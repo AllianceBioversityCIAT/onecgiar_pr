@@ -4,6 +4,7 @@ import { RdContributorsAndPartnersService } from './rd-contributors-and-partners
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 
 describe('RdContributorsAndPartnersService', () => {
@@ -46,7 +47,8 @@ describe('RdContributorsAndPartnersService', () => {
         RdContributorsAndPartnersService,
         { provide: ApiService, useValue: mockApi },
         { provide: InstitutionsService, useValue: mockInstitutionsSE },
-        { provide: CentersService, useValue: mockCentersSE }
+        { provide: CentersService, useValue: mockCentersSE },
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => false } }
       ]
     });
 
@@ -159,6 +161,123 @@ describe('RdContributorsAndPartnersService', () => {
       service.setPossibleLeadCenters(false, true);
 
       expect(service.leadCenterCode).toBe('C1');
+    });
+  });
+
+  // P2-3115: the ToC prefill must never resurrect a deliberately-emptied, saved selection.
+  // These cover the mechanism's foundation (the hydration flag lifecycle). The effect-level guard behavior
+  // (cold-load stays empty vs. user-driven selection prefills) is exercised end-to-end in the browser.
+  describe('P2-3115 — ToC prefill resurrection guards', () => {
+    const set2026 = (value: boolean) => jest.spyOn((service as any).fieldsManagerSE, 'isContributorsPartners2026').mockReturnValue(value);
+
+    it('starts with both prefill guards false', () => {
+      expect(service.sectionHydratedFromToc()).toBe(false);
+      expect(service.tocSelectionTouched()).toBe(false);
+    });
+
+    it('applyTocMappingOnLoad marks the section hydrated in 2026 (persisted state becomes authoritative)', () => {
+      set2026(true);
+      service.applyTocMappingOnLoad();
+      expect(service.sectionHydratedFromToc()).toBe(true);
+    });
+
+    it('applyTocMappingOnLoad leaves the guard untouched in the 2025 legacy path', () => {
+      set2026(false);
+      service.applyTocMappingOnLoad();
+      expect(service.sectionHydratedFromToc()).toBe(false);
+    });
+
+    it('resetState clears both guards so state does not leak across results', () => {
+      service.sectionHydratedFromToc.set(true);
+      service.tocSelectionTouched.set(true);
+      service.resetState();
+      expect(service.sectionHydratedFromToc()).toBe(false);
+      expect(service.tocSelectionTouched()).toBe(false);
+    });
+  });
+
+  describe('P2-3001 — W3/Bilateral projects by Science Program (2026)', () => {
+    const set2026 = (value: boolean) => jest.spyOn((service as any).fieldsManagerSE, 'isContributorsPartners2026').mockReturnValue(value);
+
+    const spProjects = [
+      { project_id: '8', project_name: 'Project 8' },
+      { project_id: '9', project_name: 'Project 9' }
+    ];
+
+    beforeEach(() => {
+      (mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram = jest.fn().mockReturnValue(of({ response: spProjects }));
+      (mockApi.resultsSE as any).GET_W3BilateralProjects = jest.fn().mockReturnValue(of({ response: [] }));
+      (mockApi as any).dataControlSE = { currentResult: null, currentResultSignal: () => null };
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+
+    const setPrimaryInit = (officialCode: string | null) => {
+      service.partnersBody.contributing_and_primary_initiative = [{ id: 50, official_code: officialCode }] as any;
+      service.partnersBody.result_toc_result = { initiative_id: 50, result_toc_results: [] } as any;
+    };
+
+    it('2026: loads the full SP list via by-program with the primary initiative official code', () => {
+      set2026(true);
+      setPrimaryInit('SP01');
+
+      service.loadFilteredBilateralProjects();
+
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram).toHaveBeenCalledWith('SP01');
+      expect(service.clarisaProjectsList.map(p => p.fullName)).toEqual(['Project 8', 'Project 9']);
+      expect(service.hasTocResultMapped()).toBe(true);
+      expect(service.loadingBilateralProjects()).toBe(false);
+    });
+
+    it('2026: falls back to dataControlSE.currentResult.initiative_official_code when there is no primary initiative match', () => {
+      set2026(true);
+      service.partnersBody.contributing_and_primary_initiative = [] as any;
+      service.partnersBody.result_toc_result = { initiative_id: 50, result_toc_results: [] } as any;
+      (mockApi as any).dataControlSE = { currentResult: { initiative_official_code: 'SP02' }, currentResultSignal: () => null };
+
+      service.loadFilteredBilateralProjects();
+
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram).toHaveBeenCalledWith('SP02');
+    });
+
+    it('2026: unresolvable programId degrades to an empty list without calling the API', () => {
+      set2026(true);
+      service.partnersBody.contributing_and_primary_initiative = [] as any;
+      service.partnersBody.result_toc_result = { initiative_id: 50, result_toc_results: [] } as any;
+
+      service.loadFilteredBilateralProjects();
+
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram).not.toHaveBeenCalled();
+      expect(service.clarisaProjectsList).toEqual([]);
+      expect(service.loadingBilateralProjects()).toBe(false);
+    });
+
+    it('2026: tocResultChanged is a no-op once loaded — no refetch and the user selection survives', () => {
+      set2026(true);
+      setPrimaryInit('SP01');
+      service.loadFilteredBilateralProjects();
+      service.partnersBody.bilateral_projects = [{ project_id: '8' }] as any;
+
+      service.loadFilteredBilateralProjects(true); // template handler: (tocResultChanged) → loadFilteredBilateralProjects(true)
+
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram).toHaveBeenCalledTimes(1);
+      expect(service.partnersBody.bilateral_projects).toEqual([{ project_id: '8' }]);
+    });
+
+    it('2025: keeps the legacy per-tocResultId fan-out with dedup and clearSelection', () => {
+      set2026(false);
+      (mockApi.resultsSE as any).GET_W3BilateralProjects = jest
+        .fn()
+        .mockReturnValueOnce(of({ response: [{ project_id: '1', project_name: 'P1' }] }))
+        .mockReturnValueOnce(of({ response: [{ project_id: '1', project_name: 'P1' }, { project_id: '2', project_name: 'P2' }] }));
+      service.partnersBody.result_toc_result = { result_toc_results: [{ toc_result_id: 101 }, { toc_result_id: 102 }] } as any;
+      service.partnersBody.bilateral_projects = [{ project_id: '9' }] as any;
+
+      service.loadFilteredBilateralProjects(true);
+
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjects).toHaveBeenCalledTimes(2);
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram).not.toHaveBeenCalled();
+      expect(service.partnersBody.bilateral_projects).toEqual([]);
+      expect(service.clarisaProjectsList.map(p => p.project_id)).toEqual(['1', '2']);
     });
   });
 });

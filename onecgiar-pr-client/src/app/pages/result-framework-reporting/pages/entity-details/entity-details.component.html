@@ -95,6 +95,8 @@
         }
       </div>
     </div>
+    <!-- P2-3139: hide the "Report Emerging results" (create) pathway for AVISA (SGP-02) — view only. -->
+    @if (!isAvisaEntity()) {
     <div class="entity-details_card">
       <div class="entity-details_card_header">
         Report Emerging results
@@ -138,6 +140,7 @@
         }
       </div>
     </div>
+    }
   </div>
 </div>
 

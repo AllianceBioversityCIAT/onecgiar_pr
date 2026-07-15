@@ -23,6 +23,8 @@ export class PrSelectComponent implements ControlValueAccessor {
   readonly placeholder = input<string>();
   readonly label = input<string>();
   readonly description = input<string>();
+  // P2-3061: optional info tooltip rendered next to the label (forwarded to app-pr-field-header).
+  readonly tooltip = input<string>('');
   readonly readOnly = input<boolean>();
   readonly isStatic = input<boolean>();
   readonly required = input<boolean>(true);

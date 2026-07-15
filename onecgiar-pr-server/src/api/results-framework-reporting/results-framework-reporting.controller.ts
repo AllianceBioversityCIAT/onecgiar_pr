@@ -191,6 +191,27 @@ export class ResultsFrameworkReportingController {
     );
   }
 
+  @Get('bilateral-projects/by-program')
+  @ApiOperation({
+    summary: 'List bilateral projects for a science program',
+    description:
+      'Returns all bilateral projects registered in the Project Registry for the given science program (official code) in the active reporting phase, without filtering by ToC result or indicator.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Science program official code (e.g. SP01).',
+  })
+  @ApiOkResponse({
+    description: 'Bilateral projects retrieved successfully.',
+  })
+  getBilateralProjectsByProgram(@Query('programId') programId: string) {
+    return this.resultsFrameworkReportingService.getBilateralProjectsByScienceProgram(
+      programId,
+    );
+  }
+
   @Get('bilateral-projects')
   @ApiOperation({
     summary: 'List bilateral projects for a program and toc result',
