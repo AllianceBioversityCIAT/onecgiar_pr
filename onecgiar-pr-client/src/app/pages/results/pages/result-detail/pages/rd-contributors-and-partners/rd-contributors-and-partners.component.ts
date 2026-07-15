@@ -199,7 +199,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     const removed = (this.rdPartnersSE.otherCentersSelected || [])[index];
     this.rdPartnersSE.otherCentersSelected = (this.rdPartnersSE.otherCentersSelected || []).filter((_: any, i: number) => i !== index);
     // Parity with deleteContributingCenter: if the removed "Other" center was the lead, clear the lead so we don't save an orphaned lead.
-    if (removed && this.rdPartnersSE.leadCenterCode === removed.code) {
+    if (this.rdPartnersSE.leadCenterCode === removed?.code) {
       this.rdPartnersSE.leadCenterCode = null;
     }
     // Recompute lead-center eligibility now that an "Other" center is gone.
@@ -326,7 +326,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         confirmText: 'Yes, sync information'
       },
       () => {
-        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(() => {
           this.rdPartnersSE.getSectionInformation();
         });
       }
@@ -488,7 +488,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
   }
 
-  toggleActiveContributor(item) {
+  toggleActiveContributor(item: any) {
     item.is_active = !item.is_active;
   }
 

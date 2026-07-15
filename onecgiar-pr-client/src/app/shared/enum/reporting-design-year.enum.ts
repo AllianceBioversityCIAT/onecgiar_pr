@@ -17,6 +17,8 @@ export enum ReportingDesignYear {
   /**
    * Geographic location "location of benefit" wording (P2-3036 AC9) ships in the 2026 cycle
    * for P25 Innovation results. Earlier phases keep the "geographic focus" wording.
+   * Shares the 2026 threshold with ContributorsPartnersRedesign — referenced (not re-literalled)
+   * so the two thresholds stay in lock-step and avoid a duplicate enum value.
    */
-  GeographicLocationRedesign = 2026
+  GeographicLocationRedesign = ContributorsPartnersRedesign
 }
