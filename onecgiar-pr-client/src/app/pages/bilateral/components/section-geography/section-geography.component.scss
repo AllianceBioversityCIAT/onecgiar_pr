@@ -106,21 +106,18 @@
   color: #D32F2F;
 }
 
-.sg-select {
-  padding: 10px 12px;
+::ng-deep .p-select {
+  width: 100%;
+  max-width: 480px;
   border: 1.5px solid #E0E0E0;
   border-radius: 6px;
-  font-size: 13.5px;
-  color: #263238;
-  background: #FFFFFF;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-  width: 100%;
-  max-width: 320px;
+  transition: border-color 150ms ease;
 
-  &:focus {
-    outline: none;
+  &:hover {
+    border-color: #B0BEC5;
+  }
+
+  &.p-focus {
     border-color: #1565C0;
     box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
   }

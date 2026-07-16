@@ -16,12 +16,17 @@
     <div class="sg-card__body">
       <div class="sg-field">
         <label class="sg-label">Geographic Scope <span class="sg-required">*</span></label>
-        <select class="sg-select" [ngModel]="geographicLocationBody.geo_scope_id" (ngModelChange)="onScopeChange($event)">
-          <option [value]="undefined" disabled selected>Select scope</option>
-          @for (opt of geoscopeOptions; track opt.id) {
-            <option [value]="opt.id">{{ opt.name }}</option>
-          }
-        </select>
+        <p-select
+          [options]="geoscopeOptions"
+          [ngModel]="geographicLocationBody.geo_scope_id"
+          (ngModelChange)="onScopeChange($event)"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="Select scope"
+          [style]="{ width: '100%', 'max-width': '480px' }"
+          appendTo="body"
+          panelStyleClass="sc-dropdown-panel">
+        </p-select>
       </div>
 
       <!-- Region questions and select -->
@@ -146,12 +151,17 @@
         @if (extraGeographicLocationBody.has_extra_geo_scope) {
           <div class="sg-field">
             <label class="sg-label">Extra Geographic Scope <span class="sg-required">*</span></label>
-            <select class="sg-select" [ngModel]="extraGeographicLocationBody.geo_scope_id" (ngModelChange)="onExtraScopeChange($event)">
-              <option [value]="undefined" disabled selected>Select scope</option>
-              @for (opt of extraGeoscopeOptions; track opt.id) {
-                <option [value]="opt.id">{{ opt.name }}</option>
-              }
-            </select>
+            <p-select
+              [options]="extraGeoscopeOptions"
+              [ngModel]="extraGeographicLocationBody.geo_scope_id"
+              (ngModelChange)="onExtraScopeChange($event)"
+              optionLabel="name"
+              optionValue="id"
+              placeholder="Select scope"
+              [style]="{ width: '100%', 'max-width': '480px' }"
+              appendTo="body"
+              panelStyleClass="sc-dropdown-panel">
+            </p-select>
           </div>
 
           <!-- Extra Regions select -->

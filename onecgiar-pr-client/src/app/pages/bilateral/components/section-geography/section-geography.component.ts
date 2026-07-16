@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { SelectModule } from 'primeng/select';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { RegionsCountriesService } from '../../../../shared/services/global/regions-countries.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -17,6 +18,7 @@ import { GeoscopeManagementModule } from '../../../../shared/components/geoscope
     CommonModule,
     FormsModule,
     MultiSelectModule,
+    SelectModule,
     GeoscopeManagementModule
   ],
   templateUrl: './section-geography.component.html',
