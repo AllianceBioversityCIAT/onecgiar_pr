@@ -1,0 +1,230 @@
+<div class="rfr-x">
+  <!-- Ambient grid + glow -->
+  <div class="rfr-x__bg" aria-hidden="true"></div>
+
+  <!-- Language switch (floating) -->
+  <div class="rfr-x__lang">
+    <button
+      type="button"
+      class="rfr-x__lang-btn"
+      [class.is-active]="lang() === 'en'"
+      (click)="setLang('en')">
+      EN
+    </button>
+    <button
+      type="button"
+      class="rfr-x__lang-btn"
+      [class.is-active]="lang() === 'es'"
+      (click)="setLang('es')">
+      ES
+    </button>
+  </div>
+
+  <div class="rfr-x__wrap">
+    <!-- ============ HERO ============ -->
+    <header class="rfr-x__hero">
+      <span class="rfr-x__kicker">{{ L(hero.kicker) }}</span>
+      <h1 class="rfr-x__title">{{ L(hero.title) }}</h1>
+      <p class="rfr-x__subtitle">{{ L(hero.subtitle) }}</p>
+    </header>
+
+    <!-- ============ WHAT IS IT ============ -->
+    <section class="rfr-x__section">
+      <h2 class="rfr-x__h2">{{ L(what.heading) }}</h2>
+      <p class="rfr-x__lead">{{ L(what.lead) }}</p>
+
+      <div class="rfr-x__analogy">
+        <span class="material-icons-round rfr-x__analogy-icon">school</span>
+        <div>
+          <p class="rfr-x__analogy-title">{{ L(what.analogyTitle) }}</p>
+          <p class="rfr-x__analogy-body">{{ L(what.analogy) }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ MENTAL CHAIN ============ -->
+    <section class="rfr-x__section">
+      <h2 class="rfr-x__h2">
+        {{ lang() === 'en' ? 'The mental chain' : 'La cadena mental' }}
+      </h2>
+      <div class="rfr-x__chain">
+        @for (node of chain; track node.label.en; let last = $last) {
+          <div class="rfr-x__chain-node">
+            <div class="rfr-x__chain-card">
+              <span class="material-icons-round rfr-x__chain-icon">{{ node.icon }}</span>
+              <span class="rfr-x__chain-label">{{ L(node.label) }}</span>
+              <span class="rfr-x__chain-desc">{{ L(node.desc) }}</span>
+            </div>
+            @if (!last) {
+              <span class="material-icons-round rfr-x__chain-arrow">arrow_forward</span>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ============ OUTPUT vs OUTCOME ============ -->
+    <section class="rfr-x__section">
+      <h2 class="rfr-x__h2">{{ L(oo.heading) }}</h2>
+      <p class="rfr-x__section-sub">{{ L(oo.sub) }}</p>
+
+      <div class="rfr-x__oo">
+        <div class="rfr-x__oo-card rfr-x__oo-card--output">
+          <span class="rfr-x__oo-tag">{{ L(oo.output.tag) }}</span>
+          <p class="rfr-x__oo-title">{{ L(oo.output.title) }}</p>
+          <p class="rfr-x__oo-body">{{ L(oo.output.body) }}</p>
+          <p class="rfr-x__oo-dev">{{ L(oo.output.dev) }}</p>
+        </div>
+
+        <span class="material-icons-round rfr-x__oo-link">east</span>
+
+        <div class="rfr-x__oo-card rfr-x__oo-card--outcome">
+          <span class="rfr-x__oo-tag">{{ L(oo.outcome.tag) }}</span>
+          <p class="rfr-x__oo-title">{{ L(oo.outcome.title) }}</p>
+          <p class="rfr-x__oo-body">{{ L(oo.outcome.body) }}</p>
+          <p class="rfr-x__oo-dev">{{ L(oo.outcome.dev) }}</p>
+        </div>
+      </div>
+
+      <div class="rfr-x__rule">
+        <span class="material-icons-round">bolt</span>
+        <p>{{ L(oo.rule) }}</p>
+      </div>
+    </section>
+
+    <!-- ============ 4 STEPS ============ -->
+    <section class="rfr-x__section">
+      <h2 class="rfr-x__h2">
+        {{ lang() === 'en' ? 'The reporting flow — 4 steps' : 'El flujo de reporte — 4 pasos' }}
+      </h2>
+      <div class="rfr-x__steps">
+        @for (step of steps; track step.n) {
+          <div class="rfr-x__step">
+            <div class="rfr-x__step-num">{{ step.n }}</div>
+            <span class="material-icons-round rfr-x__step-icon">{{ step.icon }}</span>
+            <p class="rfr-x__step-title">{{ L(step.title) }}</p>
+            <p class="rfr-x__step-body">{{ L(step.body) }}</p>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ============ PLANNED vs EMERGING ============ -->
+    <section class="rfr-x__section">
+      <h2 class="rfr-x__h2">{{ L(paths.heading) }}</h2>
+      <p class="rfr-x__section-sub">{{ L(paths.sub) }}</p>
+
+      <div class="rfr-x__paths">
+        <!-- Planned -->
+        <div class="rfr-x__path rfr-x__path--planned">
+          <div class="rfr-x__path-head">
+            <span class="material-icons-round">{{ paths.planned.icon }}</span>
+            <span class="rfr-x__path-tag">{{ L(paths.planned.tag) }}</span>
+          </div>
+          <p class="rfr-x__path-title">{{ L(paths.planned.title) }}</p>
+          <ul class="rfr-x__path-list">
+            @for (p of paths.planned.points; track p.en) {
+              <li>{{ L(p) }}</li>
+            }
+          </ul>
+          <div class="rfr-x__path-dev">
+            <span class="rfr-x__path-dev-label">{{ lang() === 'en' ? 'Dev analogy' : 'Analogía dev' }}</span>
+            {{ L(paths.planned.dev) }}
+          </div>
+        </div>
+
+        <!-- Emerging -->
+        <div class="rfr-x__path rfr-x__path--emerging">
+          <div class="rfr-x__path-head">
+            <span class="material-icons-round">{{ paths.emerging.icon }}</span>
+            <span class="rfr-x__path-tag">{{ L(paths.emerging.tag) }}</span>
+          </div>
+          <p class="rfr-x__path-title">{{ L(paths.emerging.title) }}</p>
+          <ul class="rfr-x__path-list">
+            @for (p of paths.emerging.points; track p.en) {
+              <li>{{ L(p) }}</li>
+            }
+          </ul>
+          <div class="rfr-x__path-dev">
+            <span class="rfr-x__path-dev-label">{{ lang() === 'en' ? 'Dev analogy' : 'Analogía dev' }}</span>
+            {{ L(paths.emerging.dev) }}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ REAL EXAMPLE ============ -->
+    <section class="rfr-x__section">
+      <h2 class="rfr-x__h2">{{ L(example.heading) }}</h2>
+      <div class="rfr-x__example-badge">
+        <span class="material-icons-round">grass</span>
+        {{ L(example.program) }}
+      </div>
+
+      <div class="rfr-x__example-flow">
+        @for (f of example.flow; track f.label.en; let last = $last) {
+          <div class="rfr-x__example-item">
+            <span class="material-icons-round rfr-x__example-icon">{{ f.icon }}</span>
+            <div>
+              <p class="rfr-x__example-label">{{ L(f.label) }}</p>
+              <p class="rfr-x__example-text">{{ L(f.text) }}</p>
+            </div>
+          </div>
+          @if (!last) {
+            <span class="material-icons-round rfr-x__example-arrow">south</span>
+          }
+        }
+      </div>
+    </section>
+
+    <!-- ============ HIERARCHY TREE ============ -->
+    <section class="rfr-x__section">
+      <h2 class="rfr-x__h2">{{ L(tree.heading) }}</h2>
+      <p class="rfr-x__section-sub">{{ L(tree.sub) }}</p>
+
+      <div class="rfr-x__tree">
+        <!-- Root -->
+        <div class="rfr-x__tree-root">{{ L(tree.root) }}</div>
+        <div class="rfr-x__tree-connect"></div>
+
+        <!-- Branch: planned / emerging -->
+        <div class="rfr-x__tree-branch">
+          <div class="rfr-x__tree-box rfr-x__tree-box--planned">{{ L(tree.planned) }}</div>
+          <div class="rfr-x__tree-box rfr-x__tree-box--emerging">
+            {{ L(tree.emerging) }}
+            <span class="rfr-x__tree-note">{{ lang() === 'en' ? 'no ToC link' : 'sin vínculo ToC' }}</span>
+          </div>
+        </div>
+
+        <div class="rfr-x__tree-connect rfr-x__tree-connect--left"></div>
+
+        <!-- AOW -->
+        <div class="rfr-x__tree-box rfr-x__tree-box--aow">{{ L(tree.aow) }}</div>
+        <div class="rfr-x__tree-connect"></div>
+
+        <!-- Three ToC levels -->
+        <div class="rfr-x__tree-levels">
+          @for (lvl of tree.levels; track lvl.en) {
+            <div class="rfr-x__tree-col">
+              <div class="rfr-x__tree-box rfr-x__tree-box--level">{{ L(lvl) }}</div>
+              <div class="rfr-x__tree-connect rfr-x__tree-connect--sm"></div>
+              <div class="rfr-x__tree-box rfr-x__tree-box--kpi">{{ L(tree.kpi) }}</div>
+              <div class="rfr-x__tree-connect rfr-x__tree-connect--sm"></div>
+              <div class="rfr-x__tree-typo">
+                <div class="rfr-x__tree-chip rfr-x__tree-chip--ok">
+                  <span class="material-icons-round">check_circle</span>{{ L(tree.identified) }}
+                </div>
+                <div class="rfr-x__tree-chip rfr-x__tree-chip--no">
+                  <span class="material-icons-round">help</span>{{ L(tree.notIdentified) }}
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="rfr-x__footer">{{ L(footer) }}</footer>
+  </div>
+</div>

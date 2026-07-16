@@ -103,6 +103,13 @@ export const routingApp: PrRoute[] = [
     path: 'locals',
     loadComponent: () => import('../../pages/locals/locals.component').then(m => m.LocalsComponent)
   },
+  {
+    // Public conceptual guide (bilingual EN/ES infographic) of the Results Framework & Reporting flow.
+    prName: 'RFR Explanation',
+    prHide: true,
+    path: 'rfr-explanation',
+    loadComponent: () => import('../../pages/rfr-explanation/rfr-explanation.component').then(m => m.RfrExplanationComponent)
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result-framework-reporting', prHide: true }
 ];
 
