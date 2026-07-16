@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -7,7 +7,6 @@ import { BilateralCreationService } from '../../services/bilateral-creation.serv
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralEvidenceItem, BilateralEvidenceBody } from './section-evidence.model';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
-import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-section-evidence',
@@ -86,7 +85,7 @@ export class SectionEvidenceComponent implements OnInit {
   sortEvidences(): void {
     const ts = (e: BilateralEvidenceItem) => {
       const d = e?.last_updated_date || e?.creation_date;
-      const t = d ? new Date(d).getTime() : NaN;
+      const t = d ? new Date(d).getTime() : Number.NaN;
       return Number.isNaN(t) ? null : t;
     };
     this.evidenceBody.update(body => ({
@@ -134,8 +133,7 @@ export class SectionEvidenceComponent implements OnInit {
 
   isValidUrl(link: string): boolean {
     if (!link) return false;
-    const regex =
-      /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/\S*)?$/i;
+    const regex = /^(https?:\/\/(www\.)?)?[a-z0-9]+([.-][a-z0-9]+)*\.[a-z]{2,6}(:\d{1,5})?(\/\S*)?$/i;
     return regex.test(link.trim());
   }
 
@@ -302,7 +300,7 @@ export class SectionEvidenceComponent implements OnInit {
     }
   }
 
-  // ── Confirm draft (add to local list before section save) ───────────
+  // ── Confirm draft (add to local list, then persist) ─────────────────
 
   confirmDraft(): void {
     if (!this.isDraftValid) return;
@@ -328,6 +326,7 @@ export class SectionEvidenceComponent implements OnInit {
 
     this.cancelDraft();
     this.updateTracker();
+    void this.saveSection();
   }
 
   // ── Delete ──────────────────────────────────────────────────────────
@@ -340,6 +339,7 @@ export class SectionEvidenceComponent implements OnInit {
       evidences: body.evidences.filter(e => e !== item)
     }));
     this.updateTracker();
+    void this.saveSection();
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────

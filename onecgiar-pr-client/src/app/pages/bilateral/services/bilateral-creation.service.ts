@@ -1,9 +1,8 @@
 import { Injectable, signal, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { BilateralProject } from './bilateral-creation.interfaces';
-import { environment } from '../../../../environments/environment';
 
 const LS_PROJECT_KEY = 'bp_project';
 const LS_SP_KEY = 'bp_primary_sp';
@@ -12,7 +11,7 @@ const LS_SECONDARY_SP_KEY = 'bp_secondary_sps';
 @Injectable({ providedIn: 'root' })
 export class BilateralCreationService {
   private readonly api = inject(ApiService);
-  private readonly http = inject(HttpClient);
+  private readonly bilateralApi = inject(BilateralApiService);
 
   projects = signal<BilateralProject[]>([]);
   selectedProject = signal<BilateralProject | null>(this.loadFromStorage<BilateralProject>(LS_PROJECT_KEY));
@@ -42,7 +41,7 @@ export class BilateralCreationService {
 
   getProjects(centerId: string | number): void {
     this.isLoadingProjects.set(true);
-    this.api.resultsSE.GET_bilateralProjects(centerId).subscribe({
+    this.bilateralApi.GET_bilateralProjects(centerId).subscribe({
       next: ({ response }) => {
         this.projects.set(response.projects);
         this.isLoadingProjects.set(false);
@@ -56,7 +55,7 @@ export class BilateralCreationService {
     this.api.resultsSE.currentResultId = resultId;
     this.isLoadingResult.set(true);
     this.resultContributingCenterIds.set([]);
-    this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`).subscribe({
+    this.bilateralApi.GET_BilateralResultDetail(resultId).subscribe({
       next: ({ response }) => {
         if (response?.commonFields) {
           const cf = response.commonFields;
@@ -100,13 +99,13 @@ export class BilateralCreationService {
           this.selectedPrimarySp.set({
             programId: Number(primaryInit.id),
             programCode: primaryInit.official_code,
-            allocation: '100', // Default allocation
+            allocation: '100',
             name: primaryInit.initiative_name || primaryInit.short_name,
             shortName: primaryInit.short_name
           });
         }
 
-        if (response?.contributingProjects && response.contributingProjects.length) {
+        if (response?.contributingProjects?.length) {
           const leadProject = response.contributingProjects.find((p: any) => p.is_lead);
           if (leadProject?.obj_clarisa_project) {
             const proj = leadProject.obj_clarisa_project;
@@ -188,8 +187,7 @@ export class BilateralCreationService {
 
   toggleSecondarySp(sp: { programId: number; programCode: string; allocation: string }): void {
     const current = this.selectedSecondarySps();
-    const existing = current.find(s => s.programId === sp.programId);
-    if (existing) {
+    if (current.some(s => s.programId === sp.programId)) {
       const next = current.filter(s => s.programId !== sp.programId);
       this.selectedSecondarySps.set(next);
       this.saveToStorage(LS_SECONDARY_SP_KEY, next);
@@ -221,14 +219,14 @@ export class BilateralCreationService {
     if (project?.id) {
       body['project_id'] = Number(project.id);
     }
-    return this.http.post(`${environment.apiBaseUrl}api/bilateral/center/create-header`, body);
+    return this.bilateralApi.POST_createBilateralHeader(body);
   }
 
   submitResult(resultId: number): Observable<any> {
-    return this.http.patch(
-      `${environment.apiBaseUrl}api/results/bilateral/${resultId}/review-decision`,
-      { decision: 'APPROVE', justification: 'Submitted by Center User' }
-    );
+    return this.bilateralApi.PATCH_BilateralReviewDecision(resultId, {
+      decision: 'APPROVE',
+      justification: 'Submitted by Center User'
+    });
   }
 
   private saveToStorage<T>(key: string, value: T): void {

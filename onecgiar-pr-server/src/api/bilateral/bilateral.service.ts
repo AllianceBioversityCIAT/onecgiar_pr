@@ -475,7 +475,9 @@ export class BilateralService {
         );
       } catch (error) {
         this.logger.error('Error creating bilateral', error);
-        this.logger.error(error.stack);
+        this.logger.error(
+          error instanceof Error ? error.stack : JSON.stringify(error),
+        );
         throw error;
       }
     }
@@ -3903,7 +3905,7 @@ export class BilateralService {
     return value;
   }
 
-  async handleLeadCenter(
+  public async handleLeadCenter(
     resultId: number,
     leadCenter: { name?: string; acronym?: string; institution_id?: number },
     userId: number,

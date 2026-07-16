@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 import { ResultsApiService } from './results-api.service';
+import { BilateralApiService } from './bilateral-api.service';
 import { DataControlService } from '../data-control.service';
 import { RolesService } from '../global/roles.service';
 import { Title } from '@angular/platform-browser';
@@ -119,6 +120,7 @@ describe('ApiService', () => {
         ApiService,
         { provide: AuthService, useValue: authServiceSpy },
         { provide: ResultsApiService, useValue: resultsApiServiceSpy },
+        { provide: BilateralApiService, useValue: {} },
         { provide: DataControlService, useValue: dataControlServiceSpy },
         { provide: RolesService, useValue: rolesServiceSpy },
         { provide: Title, useValue: titleServiceSpy },

@@ -50,6 +50,7 @@ import { ClarisaApiKeyValidationService } from './services/clarisa-api-key-valid
 import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
 import { BilateralCenterController } from './bilateral-center.controller';
 import { BilateralProjectsService } from './services/bilateral-projects.service';
+import { BilateralCenterService } from './services/bilateral-center.service';
 import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
@@ -105,6 +106,7 @@ import { ResultByLevelModule } from '../results/result-by-level/result-by-level.
     ClarisaApiKeyGuard,
     BilateralService,
     BilateralProjectsService,
+    BilateralCenterService,
     KnowledgeProductBilateralHandler,
     CapacityChangeBilateralHandler,
     InnovationDevelopmentBilateralHandler,

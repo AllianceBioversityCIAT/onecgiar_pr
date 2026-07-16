@@ -1,35 +1,44 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { of } from 'rxjs';
 import { BilateralCreationService } from './bilateral-creation.service';
 import { ApiService } from '../../../shared/services/api/api.service';
-import { environment } from '../../../../environments/environment';
+import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 
 describe('BilateralCreationService', () => {
   let service: BilateralCreationService;
-  let httpMock: HttpTestingController;
+  let mockBilateralApi: jest.Mocked<Pick<
+    BilateralApiService,
+    'GET_bilateralProjects' | 'GET_BilateralResultDetail' | 'POST_createBilateralHeader' | 'PATCH_BilateralReviewDecision'
+  >>;
   let mockApiService: Partial<ApiService>;
 
   beforeEach(() => {
+    localStorage.removeItem('bp_project');
+    localStorage.removeItem('bp_primary_sp');
+    localStorage.removeItem('bp_secondary_sps');
+
+    mockBilateralApi = {
+      GET_bilateralProjects: jest.fn(),
+      GET_BilateralResultDetail: jest.fn(),
+      POST_createBilateralHeader: jest.fn().mockReturnValue(of({})),
+      PATCH_BilateralReviewDecision: jest.fn().mockReturnValue(of({})),
+    };
+
     mockApiService = {
       resultsSE: {
-        GET_bilateralProjects: jest.fn(),
+        currentResultId: null,
       } as any,
     };
 
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
       providers: [
         BilateralCreationService,
         { provide: ApiService, useValue: mockApiService },
+        { provide: BilateralApiService, useValue: mockBilateralApi },
       ],
     });
 
     service = TestBed.inject(BilateralCreationService);
-    httpMock = TestBed.inject(HttpTestingController);
-  });
-
-  afterEach(() => {
-    httpMock.verify();
   });
 
   it('should be created', () => {
@@ -44,17 +53,18 @@ describe('BilateralCreationService', () => {
         ],
       },
     };
-    jest.spyOn(mockApiService.resultsSE as any, 'GET_bilateralProjects').mockReturnValue({
+    mockBilateralApi.GET_bilateralProjects.mockReturnValue({
       subscribe: ({ next }: any) => next(mockResponse),
     } as any);
 
     service.getProjects('CENTER-01');
     expect(service.isLoadingProjects()).toBe(false);
     expect(service.projects()).toEqual(mockResponse.response.projects);
+    expect(mockBilateralApi.GET_bilateralProjects).toHaveBeenCalledWith('CENTER-01');
   });
 
   it('should handle empty project list', () => {
-    jest.spyOn(mockApiService.resultsSE as any, 'GET_bilateralProjects').mockReturnValue({
+    mockBilateralApi.GET_bilateralProjects.mockReturnValue({
       subscribe: ({ next }: any) => next({ response: { projects: [] } }),
     } as any);
 
@@ -88,19 +98,22 @@ describe('BilateralCreationService', () => {
     expect(service.selectedSecondarySps()).toEqual([sp2]);
   });
 
-  it('should create a result via POST', () => {
+  it('should create a result via POST_createBilateralHeader', () => {
+    service.resetWizard();
     service.selectPrimarySp({ programId: 100, programCode: 'P11', allocation: '45.00' });
     service.createResult(1, 2).subscribe();
-    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/create-header`);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ result_level_id: 1, result_type_id: 2, program_code: 'P11' });
-    req.flush({});
+    expect(mockBilateralApi.POST_createBilateralHeader).toHaveBeenCalledWith({
+      result_level_id: 1,
+      result_type_id: 2,
+      program_code: 'P11',
+    });
   });
 
-  it('should submit a result via PATCH', () => {
+  it('should submit a result via PATCH_BilateralReviewDecision', () => {
     service.submitResult(123).subscribe();
-    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/bilateral/123/review-decision`);
-    expect(req.request.method).toBe('PATCH');
-    req.flush({});
+    expect(mockBilateralApi.PATCH_BilateralReviewDecision).toHaveBeenCalledWith(123, {
+      decision: 'APPROVE',
+      justification: 'Submitted by Center User',
+    });
   });
 });

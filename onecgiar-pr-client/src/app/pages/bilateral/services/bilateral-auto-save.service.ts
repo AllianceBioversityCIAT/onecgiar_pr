@@ -1,39 +1,40 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { debounceTime, Subject } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';
+import { Observable, debounceTime, Subject } from 'rxjs';
+import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 
 export type FieldType = 'text' | 'select' | 'checkbox';
 export type FieldStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type GlobalSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-const FIELD_ENDPOINTS: Record<string, string> = {
-  title: 'bilateral/general-info/{id}',
-  description: 'bilateral/general-info/{id}',
-  lead_contact_person: 'bilateral/general-info/{id}',
-  gender_tag_level_id: 'bilateral/general-info/{id}',
-  climate_change_tag_level_id: 'bilateral/general-info/{id}',
-  nutrition_tag_level_id: 'bilateral/general-info/{id}',
-  environmental_biodiversity_tag_level_id: 'bilateral/general-info/{id}',
-  poverty_tag_level_id: 'bilateral/general-info/{id}',
-  gender_impact_area_ids: 'bilateral/general-info/{id}',
-  climate_impact_area_ids: 'bilateral/general-info/{id}',
-  nutrition_impact_area_ids: 'bilateral/general-info/{id}',
-  environmental_biodiversity_impact_area_ids: 'bilateral/general-info/{id}',
-  poverty_impact_area_ids: 'bilateral/general-info/{id}',
-  planned_result: '../bilateral/center/planned-result/{id}',
-  programCode: '../bilateral/center/planned-result/{id}',
-  toc_mapping: '../bilateral/center/toc-mapping/{id}',
-  contributors: '../bilateral/center/contributors/{id}',
+type EndpointKey = 'generalInfo' | 'plannedResult' | 'tocMapping' | 'contributors';
+
+const FIELD_ENDPOINT_KEYS: Record<string, EndpointKey> = {
+  title: 'generalInfo',
+  description: 'generalInfo',
+  lead_contact_person: 'generalInfo',
+  gender_tag_level_id: 'generalInfo',
+  climate_change_tag_level_id: 'generalInfo',
+  nutrition_tag_level_id: 'generalInfo',
+  environmental_biodiversity_tag_level_id: 'generalInfo',
+  poverty_tag_level_id: 'generalInfo',
+  gender_impact_area_ids: 'generalInfo',
+  climate_impact_area_ids: 'generalInfo',
+  nutrition_impact_area_ids: 'generalInfo',
+  environmental_biodiversity_impact_area_ids: 'generalInfo',
+  poverty_impact_area_ids: 'generalInfo',
+  planned_result: 'plannedResult',
+  programCode: 'plannedResult',
+  toc_mapping: 'tocMapping',
+  contributors: 'contributors',
 };
 
 @Injectable({ providedIn: 'root' })
 export class BilateralAutoSaveService {
-  private readonly http = inject(HttpClient);
+  private readonly bilateralApi = inject(BilateralApiService);
 
-  private _pendingFields = new Map<string, { fieldPath: string; value: unknown; fieldType: FieldType }>();
-  private _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-  private _blurSubject = new Subject<{ fieldPath: string; value: unknown }>();
+  private readonly _pendingFields = new Map<string, { fieldPath: string; value: unknown; fieldType: FieldType }>();
+  private readonly _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly _blurSubject = new Subject<{ fieldPath: string; value: unknown }>();
 
   readonly manualSave$ = new Subject<void>();
 
@@ -42,8 +43,8 @@ export class BilateralAutoSaveService {
 
   globalSaveState = computed<GlobalSaveState>(() => {
     const statuses = Object.values(this.fieldStatus());
-    if (statuses.some(s => s === 'saving')) return 'saving';
-    if (statuses.some(s => s === 'error')) return 'error';
+    if (statuses.includes('saving')) return 'saving';
+    if (statuses.includes('error')) return 'error';
     if (statuses.length > 0 && statuses.every(s => s === 'idle' || s === 'saved')) return 'saved';
     return 'idle';
   });
@@ -87,46 +88,27 @@ export class BilateralAutoSaveService {
     this._pendingFields.clear();
     this.hasPendingSaves.set(false);
 
-    const byEndpoint = new Map<string, { fields: string[]; body: Record<string, unknown> }>();
+    const byEndpoint = new Map<EndpointKey, { fields: string[]; body: Record<string, unknown> }>();
     for (const [_key, entry] of pending) {
-      const endpoint = FIELD_ENDPOINTS[entry.fieldPath];
-      if (!endpoint) continue;
-      let batch = byEndpoint.get(endpoint);
+      const endpointKey = FIELD_ENDPOINT_KEYS[entry.fieldPath];
+      if (!endpointKey) continue;
+      let batch = byEndpoint.get(endpointKey);
       if (!batch) {
         batch = { fields: [], body: {} };
-        byEndpoint.set(endpoint, batch);
+        byEndpoint.set(endpointKey, batch);
       }
       batch.fields.push(entry.fieldPath);
       batch.body[entry.fieldPath] = entry.value;
     }
 
-    for (const [endpoint, batch] of byEndpoint) {
-      const url = `${environment.apiBaseUrl}api/results/${endpoint.replace('{id}', String(resultId))}`;
-
+    for (const [endpointKey, batch] of byEndpoint) {
       try {
-        this.http.patch(url, batch.body).subscribe({
-          next: () => {
-            batch.fields.forEach(field => {
-              this.fieldStatus.update(s => ({ ...s, [field]: 'saved' }));
-              setTimeout(() => {
-                this.fieldStatus.update(s => {
-                  const next = { ...s };
-                  if (next[field] === 'saved') next[field] = 'idle';
-                  return next;
-                });
-              }, 2000);
-            });
-          },
-          error: () => {
-            batch.fields.forEach(field => {
-              this.fieldStatus.update(s => ({ ...s, [field]: 'error' }));
-            });
-          }
+        this.patchByEndpoint(endpointKey, resultId, batch.body).subscribe({
+          next: () => this.markFieldsSavedThenIdle(batch.fields),
+          error: () => this.setFieldStatuses(batch.fields, 'error'),
         });
       } catch {
-        batch.fields.forEach(field => {
-          this.fieldStatus.update(s => ({ ...s, [field]: 'error' }));
-        });
+        this.setFieldStatuses(batch.fields, 'error');
       }
     }
   }
@@ -148,7 +130,7 @@ export class BilateralAutoSaveService {
     this.hasPendingSaves.set(false);
   }
 
-  private _currentResultId = signal<number | null>(null);
+  private readonly _currentResultId = signal<number | null>(null);
   setResultId(id: number): void {
     this._currentResultId.set(id);
   }
@@ -157,6 +139,44 @@ export class BilateralAutoSaveService {
     this._pendingFields.set(fieldPath, { fieldPath, value, fieldType: 'text' });
     this.hasPendingSaves.set(true);
     this.flush();
+  }
+
+  private setFieldStatuses(fields: string[], status: FieldStatus): void {
+    for (const field of fields) {
+      this.fieldStatus.update(s => ({ ...s, [field]: status }));
+    }
+  }
+
+  private markFieldsSavedThenIdle(fields: string[]): void {
+    this.setFieldStatuses(fields, 'saved');
+    for (const field of fields) {
+      this.scheduleSavedToIdle(field);
+    }
+  }
+
+  private scheduleSavedToIdle(field: string): void {
+    setTimeout(() => this.revertSavedToIdle(field), 2000);
+  }
+
+  private revertSavedToIdle(field: string): void {
+    this.fieldStatus.update(s => {
+      const next = { ...s };
+      if (next[field] === 'saved') next[field] = 'idle';
+      return next;
+    });
+  }
+
+  private patchByEndpoint(endpointKey: EndpointKey, resultId: number, body: Record<string, unknown>): Observable<any> {
+    switch (endpointKey) {
+      case 'generalInfo':
+        return this.bilateralApi.PATCH_generalInfo(resultId, body);
+      case 'plannedResult':
+        return this.bilateralApi.PATCH_plannedResult(resultId, body);
+      case 'tocMapping':
+        return this.bilateralApi.PATCH_tocMapping(resultId, body);
+      case 'contributors':
+        return this.bilateralApi.PATCH_contributors(resultId, body);
+    }
   }
 
   saveTocMapping(tocData: {
@@ -176,9 +196,9 @@ export class BilateralAutoSaveService {
     const contributing = tocData.contributing_indicator !== undefined && tocData.contributing_indicator !== null
       ? Number(tocData.contributing_indicator) : undefined;
 
-    const body: any = {
+    const body: Record<string, unknown> = {
       result_toc_result: {
-        planned_result: tocData.planned_result !== undefined ? tocData.planned_result : true,
+        planned_result: tocData.planned_result ?? true,
         result_toc_results: [{
           toc_level_id: tocLevelId,
           toc_result_id: tocResultId,
@@ -196,19 +216,11 @@ export class BilateralAutoSaveService {
       },
     };
 
-    const url = `${environment.apiBaseUrl}api/results/../bilateral/center/toc-mapping/${resultId}`;
-
     this.fieldStatus.update(s => ({ ...s, toc_mapping: 'saving' }));
-    this.http.patch(url, body).subscribe({
+    this.bilateralApi.PATCH_tocMapping(resultId, body).subscribe({
       next: () => {
         this.fieldStatus.update(s => ({ ...s, toc_mapping: 'saved' }));
-        setTimeout(() => {
-          this.fieldStatus.update(s => {
-            const next = { ...s };
-            if (next['toc_mapping'] === 'saved') next['toc_mapping'] = 'idle';
-            return next;
-          });
-        }, 2000);
+        this.scheduleSavedToIdle('toc_mapping');
       },
       error: () => {
         this.fieldStatus.update(s => ({ ...s, toc_mapping: 'error' }));
@@ -223,19 +235,11 @@ export class BilateralAutoSaveService {
     const resultId = this._currentResultId();
     if (!resultId) return;
 
-    const url = `${environment.apiBaseUrl}api/results/../bilateral/center/contributors/${resultId}`;
-
     this.fieldStatus.update(s => ({ ...s, contributors: 'saving' }));
-    this.http.patch(url, contributorsData).subscribe({
+    this.bilateralApi.PATCH_contributors(resultId, contributorsData).subscribe({
       next: () => {
         this.fieldStatus.update(s => ({ ...s, contributors: 'saved' }));
-        setTimeout(() => {
-          this.fieldStatus.update(s => {
-            const next = { ...s };
-            if (next['contributors'] === 'saved') next['contributors'] = 'idle';
-            return next;
-          });
-        }, 2000);
+        this.scheduleSavedToIdle('contributors');
       },
       error: () => {
         this.fieldStatus.update(s => ({ ...s, contributors: 'error' }));
@@ -263,9 +267,8 @@ export class BilateralAutoSaveService {
       });
     }
 
-    const url = `${environment.apiBaseUrl}api/bilateral/center/toc-state/${resultId}`;
     return new Promise((resolve) => {
-      this.http.get<any>(url).subscribe({
+      this.bilateralApi.GET_tocState(resultId).subscribe({
         next: ({ response }) => {
           resolve({
             planned_result: response?.planned_result ?? null,
