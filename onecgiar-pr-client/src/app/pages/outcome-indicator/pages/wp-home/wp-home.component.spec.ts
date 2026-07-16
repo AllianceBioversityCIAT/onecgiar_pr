@@ -61,7 +61,7 @@ describe('WpHomeComponent', () => {
         { header: 'Supporting results', key: 'indicator_supporting_results', width: 60 }
       ];
 
-      outcomeIndicatorService.wpsData = [{ indicators: [{ indicator_name: 'test' }] }];
+      outcomeIndicatorService.wpsData = [{ toc_results: [], indicators: [{ indicator_name: 'test' }] }];
       outcomeIndicatorService.loadingWPs.set(false);
       outcomeIndicatorService.initiativeIdFilter = 'test';
 

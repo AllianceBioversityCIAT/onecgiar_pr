@@ -124,6 +124,8 @@
     "moduleNameMapper": {
       "@microsoft/clarity": "<rootDir>/tests/mocks/clarityMock.ts",
       "@mlc-ai/web-llm": "<rootDir>/tests/mocks/webLlmMock.ts",
+      "^three$": "<rootDir>/tests/mocks/threeMock.ts",
+      "^three/examples/jsm/.*$": "<rootDir>/tests/mocks/threeMock.ts",
       "@spartan/input": "<rootDir>/src/app/spartan/input/src/index.ts",
       "@spartan/utils": "<rootDir>/src/app/spartan/utils/src/index.ts",
       "@spartan/button": "<rootDir>/src/app/spartan/button/src/index.ts",

@@ -134,7 +134,6 @@ describe('PartnersRequestComponent', () => {
 
       expect(component.showForm).toBeFalsy();
       jest.runAllTimers();
-      fixture.detectChanges();
 
       expect(component.showForm).toBeTruthy();
     });

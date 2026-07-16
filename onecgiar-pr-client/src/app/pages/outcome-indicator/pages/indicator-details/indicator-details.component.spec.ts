@@ -121,10 +121,14 @@ describe('IndicatorDetailsComponent', () => {
 
   it('should update initiativeIdFilter and call getWorkPackagesData and getEOIsData after timeout when initiativeIdFilter is different', done => {
     const response = { response: { initiative_official_code: '456' } };
+    // Angular 21 auto-CD triggers the component's first change detection (and ngOnInit)
+    // when the setTimeout fires. Stub getIndicatorData so that incidental init-time data
+    // fetch does not reset indicatorData back to undefined and corrupt this test's state.
+    jest.spyOn(component, 'getIndicatorData').mockImplementation(() => {});
     component.outcomeIService.initiativeIdFilter = '123';
     component.indicatorDetailsService.indicatorData.set({ initiative_official_code: '456' } as any);
-    jest.spyOn(component.outcomeIService, 'getWorkPackagesData');
-    jest.spyOn(component.outcomeIService, 'getEOIsData');
+    jest.spyOn(component.outcomeIService, 'getWorkPackagesData').mockImplementation(() => {});
+    jest.spyOn(component.outcomeIService, 'getEOIsData').mockImplementation(() => {});
 
     component.updateIndicatorData(response);
 

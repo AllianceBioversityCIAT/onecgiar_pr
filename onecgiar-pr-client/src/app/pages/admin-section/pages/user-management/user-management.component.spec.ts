@@ -546,20 +546,23 @@ describe('UserManagementComponent', () => {
   });
 
   describe('showEntityOverlay', () => {
-    it('should toggle overlay when entities has more than 2', () => {
-      const overlay = { toggle: jest.fn() };
-      const event = {};
+    it('should open overlay when entities has more than 2', () => {
+      const event = {
+        stopPropagation: jest.fn(),
+        currentTarget: { getBoundingClientRect: () => ({ bottom: 10, right: 20 }) }
+      } as any;
       const entities = ['E1', 'E2', 'E3'];
-      component.showEntityOverlay(event, overlay, entities);
-      expect(overlay.toggle).toHaveBeenCalledWith(event);
+      component.showEntityOverlay(event, entities);
+      expect(event.stopPropagation).toHaveBeenCalled();
+      expect(component.entitiesOverlayOpen()).toBe(true);
+      expect(component.overlayEntities()).toEqual(entities);
     });
 
-    it('should not toggle overlay when entities has 2 or less', () => {
-      const overlay = { toggle: jest.fn() };
-      const event = {};
+    it('should not open overlay when entities has 2 or less', () => {
+      const event = { stopPropagation: jest.fn() } as any;
       const entities = ['E1', 'E2'];
-      component.showEntityOverlay(event, overlay, entities);
-      expect(overlay.toggle).not.toHaveBeenCalled();
+      component.showEntityOverlay(event, entities);
+      expect(component.entitiesOverlayOpen()).toBe(false);
     });
   });
 

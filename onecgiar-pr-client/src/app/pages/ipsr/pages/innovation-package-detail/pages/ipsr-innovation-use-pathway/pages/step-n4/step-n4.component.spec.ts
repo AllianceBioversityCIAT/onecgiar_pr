@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { StepN4Component } from './step-n4.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-button/pr-button.component';
@@ -26,21 +27,8 @@ describe('StepN4Component', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [HttpClientTestingModule, FormsModule, TermPipe],
-      declarations: [
-        StepN4Component,
-        PrButtonComponent,
-        StepN4InitiativeInvestmentTableComponent,
-        LabelNamePipe,
-        StepN4BilateralInvestmentTableComponent,
-        StepN4PartnerCoInvestmentTableComponent,
-        PrRadioButtonComponent,
-        SaveButtonComponent,
-        PrFieldHeaderComponent,
-        StepN4AddBilateralComponent,
-        StepN4AddPartnerComponent,
-        NoDataTextComponent,
-        PrSelectComponent
-      ]
+      declarations: [StepN4Component, LabelNamePipe],
+      schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
     fixture = TestBed.createComponent(StepN4Component);

@@ -33,6 +33,9 @@ describe('EvidenceItemComponent', () => {
     mockApiService = {
       alertsFe: {
         show: jest.fn()
+      },
+      rolesSE: {
+        readOnly: false
       }
     };
 

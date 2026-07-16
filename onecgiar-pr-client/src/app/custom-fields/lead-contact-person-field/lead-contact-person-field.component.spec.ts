@@ -776,20 +776,20 @@ describe('LeadContactPersonFieldComponent', () => {
 
   describe('P25 required field header', () => {
     it('should show required marker on label when required input is true', () => {
-      component.required = true;
+      fixture.componentRef.setInput('required', true);
       component.body = { lead_contact_person: null, lead_contact_person_data: null };
       fixture.detectChanges();
 
-      const label = fixture.nativeElement.querySelector('.pr_label.required');
-      expect(label).toBeTruthy();
-      expect(label.textContent).toContain('Lead contact person');
+      const tag = fixture.nativeElement.querySelector('.fch_tag');
+      expect(tag?.textContent).toContain('Mandatory');
+      expect(fixture.nativeElement.querySelector('.fch_title')?.textContent).toContain('Lead contact person');
     });
 
     it('should not show required marker when required input is false', () => {
-      component.required = false;
+      fixture.componentRef.setInput('required', false);
       fixture.detectChanges();
 
-      expect(fixture.nativeElement.querySelector('.pr_label.required')).toBeFalsy();
+      expect(fixture.nativeElement.querySelector('.fch_tag')?.textContent).toContain('Optional');
     });
   });
 

@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 import { SettingsComponent } from './settings.component';
 
 describe('SettingsComponent', () => {
@@ -44,7 +45,8 @@ describe('SettingsComponent', () => {
       providers: [
         { provide: ApiService, useValue: apiServiceMock },
         { provide: ActivatedRoute, useValue: activatedRouteMock },
-        { provide: Router, useValue: routerMock }
+        { provide: Router, useValue: routerMock },
+        { provide: PrToastService, useValue: messageServiceMock }
       ]
     }).compileComponents();
   });

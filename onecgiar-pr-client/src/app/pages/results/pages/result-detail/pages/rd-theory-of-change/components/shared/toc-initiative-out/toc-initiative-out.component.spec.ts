@@ -21,6 +21,9 @@ describe('TocInitiativeOutComponent', () => {
     mockApiService = {
       resultsSE: {
         get_vesrsionDashboard: () => of({ response: mockResponse })
+      },
+      dataControlSE: {
+        tocUrl: ''
       }
     };
 

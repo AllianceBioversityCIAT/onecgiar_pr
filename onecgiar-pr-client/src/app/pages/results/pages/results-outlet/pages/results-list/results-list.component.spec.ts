@@ -17,9 +17,24 @@ import { ChangePhaseModalComponent } from '../../../../../../shared/components/c
 import { ResultsListFilterService } from './services/results-list-filter.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
-import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { Component, NO_ERRORS_SCHEMA, signal } from '@angular/core';
 
 jest.useFakeTimers();
+
+/**
+ * Stub for <app-pr-table>. In Angular 21 the zone tick during jest.runAllTimers() renders the
+ * template, so the `#table` ViewChild resolves during change detection. Without a real component
+ * on that element it would resolve to the native element (no `.reset()`), crashing the effects.
+ * This stub gives the ViewChild an instance with the `reset()` method the component calls.
+ */
+@Component({
+  selector: 'app-pr-table',
+  template: '',
+  standalone: true
+})
+class PrTableStubComponent {
+  reset = jest.fn();
+}
 
 describe('ResultsListComponent', () => {
   let component: ResultsListComponent;
@@ -47,6 +62,12 @@ describe('ResultsListComponent', () => {
         GET_versioning: () => of({ response: [{ phase_year: 2023 }] }),
         GET_allRequest: () => of({}),
         GET_requestStatus: () => of({}),
+        // Methods consumed by the child <app-results-list-filters> during render (ngOnChanges/ngOnInit)
+        GET_AllInitiatives: () => of({ response: [] }),
+        GET_ClarisaPortfolios: () => of([]),
+        GET_AllCLARISACenters: () => of({ response: [] }),
+        GET_allResultStatuses: () => of({ response: [] }),
+        ipsrDataControlSE: { inIpsr: false },
         currentResultId: 1
       },
       dataControlSE: {
@@ -56,6 +77,8 @@ describe('ResultsListComponent', () => {
           phase_year: 2023
         },
         currentResultSignal: signal({}),
+        resultsListSignal: signal([]),
+        resultsListNoDataMessage: signal(''),
         myInitiativesList: [
           { id: 1, selected: false },
           { id: 2, selected: false }
@@ -95,16 +118,10 @@ describe('ResultsListComponent', () => {
       showDeletingResultSpinner: false
     };
 
-    mockResultsListFilterService = {
-      text_to_search: jest.fn(() => ''),
-      selectedPhases: jest.fn(() => []),
-      selectedSubmitters: jest.fn(() => []),
-      selectedSubmittersAdmin: jest.fn(() => []),
-      selectedIndicatorCategories: jest.fn(() => []),
-      selectedStatus: jest.fn(() => []),
-      filterCreatedByMe: jest.fn(() => false),
-      filterSubmittedByMe: jest.fn(() => false)
-    };
+    // Use a real ResultsListFilterService instance: the child <app-results-list-filters> renders
+    // during zone ticks and calls `.set()` on these signals (which jest.fn stubs don't have).
+    // Real signals default to the same empty values the previous stubs returned.
+    mockResultsListFilterService = new ResultsListFilterService();
 
     mockPhasesService = {};
 
@@ -123,7 +140,7 @@ describe('ResultsListComponent', () => {
         ReportNewResultButtonComponent,
         ChangePhaseModalComponent
       ],
-      imports: [HttpClientTestingModule, ResultsListFiltersComponent],
+      imports: [HttpClientTestingModule, ResultsListFiltersComponent, PrTableStubComponent],
       schemas: [NO_ERRORS_SCHEMA],
       providers: [
         { provide: ApiService, useValue: mockApiService },
@@ -454,7 +471,7 @@ describe('ResultsListComponent', () => {
         { title: 'Center', attr: 'lead_center', center: true, width: '100px' },
         { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
         { title: 'Indicator category', attr: 'result_type', center: true, width: '100px' },
-        { title: 'Submitter', attr: 'submitter', center: true, width: '30px' },
+        { title: 'Submitter', attr: 'submitter', center: true, width: '75px' },
         { title: 'Status', attr: 'full_status_name_html', center: true, width: '124px' },
         { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
         { title: 'Created by	', attr: 'full_name', width: '120px' }
@@ -892,7 +909,7 @@ describe('ResultsListComponent', () => {
 
   describe('onDeleteREsult() - with selected phases', () => {
     it('should refresh the list after delete using current filter params', () => {
-      mockResultsListFilterService.selectedPhases = jest.fn(() => [{ id: 1 }, { id: 2 }]);
+      mockResultsListFilterService.selectedPhases.set([{ id: 1 }, { id: 2 }]);
       mockApiService.buildResultsListSearchParams = jest.fn(() => ({ version_id: '1,2' }));
       const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
 

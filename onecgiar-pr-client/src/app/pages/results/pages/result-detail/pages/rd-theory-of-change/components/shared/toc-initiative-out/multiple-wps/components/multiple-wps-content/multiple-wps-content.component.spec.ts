@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MultipleWPsContentComponent } from './multiple-wps-content.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { MappedResultsModalComponent } from '../mapped-results-modal/mapped-results-modal.component';
+import { FilterOutcomeLevelByBooleanPipe } from './pipes/filter-outcome-level-by-boolean.pipe';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 
@@ -66,7 +67,8 @@ describe('MultipleWPsContentComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [
         MultipleWPsContentComponent,
-        MappedResultsModalComponent
+        MappedResultsModalComponent,
+        FilterOutcomeLevelByBooleanPipe
       ],
       imports: [
         HttpClientTestingModule,
@@ -117,6 +119,7 @@ describe('MultipleWPsContentComponent', () => {
   describe('getIndicator()', () => {
     it('should set indicatorView to true after successful Get_indicator call', () => {
       component.activeTab = {};
+      component.initiative = {};
       const spy = jest.spyOn(mockApiService.resultsSE, 'Get_indicator');
 
       component.getIndicator();
@@ -150,6 +153,7 @@ describe('MultipleWPsContentComponent', () => {
     });
     it('should set indicatorView to true after successful Get_indicator call when wpinformation?.extraInformation?.wp_acronym is undefined', () => {
       component.activeTab = {};
+      component.initiative = {};
       mockResponse.wpinformation.extraInformation.wp_acronym = undefined
       const spy = jest.spyOn(mockApiService.resultsSE, 'Get_indicator');
 

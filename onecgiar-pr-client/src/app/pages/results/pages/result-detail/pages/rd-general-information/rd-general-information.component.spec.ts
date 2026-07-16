@@ -108,7 +108,7 @@ describe('RdGeneralInformationComponent', () => {
     mockApiService = {
       resultsSE: {
         GET_impactAreasScoresComponentsAll: jest.fn(() => {
-          return of({ response: {} });
+          return of({ response: [] });
         }),
         GET_generalInformationByResultId: jest.fn(() => {
           return of({ response: mockGET_generalInformationByResultIdResponse });
@@ -181,8 +181,10 @@ describe('RdGeneralInformationComponent', () => {
 
     mockDataControlService = {
       isKnowledgeProduct: false,
+      isKnowledgeProductSignal: () => false,
       currentResultSignal: signal<any>({}),
       currentResultSectionName: signal<string>('General information'),
+      fieldFeedbackList: () => [],
       currentResult: {
         result_type_id: 1,
         status: false,
@@ -1087,11 +1089,15 @@ describe('RdGeneralInformationComponent', () => {
       component.generalInfoBody.result_code = '123';
       const spy = jest.spyOn(component, 'getSectionInformation');
 
-      // Trigger the effect by creating a new component - the effect runs during construction
-      // We test the existing component instead
+      // In Angular 21 the constructor effect runs on flush; with result_code set the guard passes
+      // and getSectionInformation is invoked. Flush also triggers change detection: the
+      // change-result-type modal is bound to generalInfoBody and, on ngOnChanges, syncs
+      // result_code from resultsSE.currentResultCode — provide it so the value is preserved.
+      mockApiService.resultsSE.currentResultCode = '123';
+
       TestBed.flushEffects();
-      // The effect ran during component creation with no result_code, so it won't call getSectionInformation
-      // We verify the method exists and the result_code guard works
+
+      expect(spy).toHaveBeenCalled();
       expect(component.generalInfoBody.result_code).toBe('123');
     });
   });

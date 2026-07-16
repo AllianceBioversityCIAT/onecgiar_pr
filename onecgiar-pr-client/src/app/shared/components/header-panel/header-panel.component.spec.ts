@@ -31,6 +31,7 @@ describe('HeaderPanelComponent', () => {
     component.inLocal = true;
     component.api.authSE.localStorageUser = { user_name: 'Yeckzin Zuñiga', email: 'y.zuniga@cgiar.org' } as any;
     component.api.rolesSE.roles = { application: { description: 'Admin' } } as any;
+    fixture.changeDetectorRef.markForCheck();
     fixture.detectChanges();
 
     const trigger: HTMLElement = fixture.nativeElement.querySelector('.user_identity');
