@@ -82,28 +82,34 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   });
 
   readonlyLeadCenterInstitutionId: number | null = null;
+  readonlyLeadProjectId: number | null = null;
 
   private readonly leadCenterEffect = effect(() => {
     const project = this.creationService.selectedProject();
     const resultLeadCenterId = this.creationService.resultLeadCenterId();
     const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
-    if (leadCenterId && this.availableCenters.length) {
-      const leadInstitutionId = Number(leadCenterId);
-      const centerExists = this.availableCenters.some(c => c.institutionId === leadInstitutionId);
-      if (centerExists && !this.readonlyLeadCenterInstitutionId) {
-        this.readonlyLeadCenterInstitutionId = leadInstitutionId;
-        if (!this.selectedCenterInstitutionIds.includes(leadInstitutionId)) {
-          this.selectedCenterInstitutionIds = [leadInstitutionId, ...this.selectedCenterInstitutionIds];
-          const selectedCenters = this.selectedCenterInstitutionIds.map(id => {
-            const c = this.availableCenters.find(c => c.institutionId === id);
-            return c ? { institution_id: c.institutionId } : null;
-          }).filter(Boolean);
-          this.autoSave.saveContributors({
-            contributing_center: selectedCenters as { institution_id: number }[],
-          });
-        }
-      }
+    if (!leadCenterId || !this.availableCenters.length) return;
+
+    const leadInstitutionId = Number(leadCenterId);
+    if (!this.availableCenters.some(c => c.institutionId === leadInstitutionId)) return;
+    if (this.readonlyLeadCenterInstitutionId === leadInstitutionId) return;
+
+    if (this.readonlyLeadCenterInstitutionId != null) {
+      this.selectedCenterInstitutionIds = this.selectedCenterInstitutionIds.filter(
+        id => id !== this.readonlyLeadCenterInstitutionId
+      );
     }
+    this.readonlyLeadCenterInstitutionId = leadInstitutionId;
+    if (!this.selectedCenterInstitutionIds.includes(leadInstitutionId)) {
+      this.selectedCenterInstitutionIds = [leadInstitutionId, ...this.selectedCenterInstitutionIds];
+    }
+    const selectedCenters = this.selectedCenterInstitutionIds.map(id => {
+      const c = this.availableCenters.find(c => c.institutionId === id);
+      return c ? { institution_id: c.institutionId } : null;
+    }).filter(Boolean);
+    this.autoSave.saveContributors({
+      contributing_center: selectedCenters as { institution_id: number }[],
+    });
   });
 
   private readonly leadCenterIdChangeEffect = effect(() => {
@@ -115,58 +121,57 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   private readonly savedContributingCentersEffect = effect(() => {
     const savedIds = this.creationService.resultContributingCenterIds();
-    if (!savedIds.length || !this.availableCenters.length) return;
-    const toAdd = savedIds.filter(id => !this.selectedCenterInstitutionIds.includes(id));
-    if (!toAdd.length) return;
-    this.selectedCenterInstitutionIds = [...this.selectedCenterInstitutionIds, ...toAdd];
+    if (!this.availableCenters.length) return;
+    const leadId = this.readonlyLeadCenterInstitutionId;
+    const merged = new Set<number>(savedIds);
+    if (leadId != null) merged.add(leadId);
+    this.selectedCenterInstitutionIds = Array.from(merged);
   });
-
-  readonlyLeadProjectId: number | null = null;
 
   private readonly leadProjectEffect = effect(() => {
     const project = this.creationService.selectedProject();
-    if (project?.id && this.availableProjects().length) {
-      const leadProjId = Number(project.id);
-      const projectExists = this.availableProjects().some(p => p.id === leadProjId);
-      if (projectExists && !this.readonlyLeadProjectId) {
-        this.readonlyLeadProjectId = leadProjId;
-        if (!this.selectedProjectIds.includes(leadProjId)) {
-          this.selectedProjectIds = [leadProjId, ...this.selectedProjectIds];
-          const currentProjectId = this.creationService.selectedProject()?.id;
-          const selectedProjects = this.selectedProjectIds.map(id => {
-            const p = this.availableProjects().find(p => p.id === id);
-            return p ? {
-              project_id: id,
-              is_lead: id === currentProjectId,
-            } : null;
-          }).filter(Boolean);
-          this.autoSave.saveContributors({
-            contributing_bilateral_projects: selectedProjects as { project_id: number; is_lead?: boolean }[],
-          });
-        }
-      }
+    if (!project?.id || !this.availableProjects().length) return;
+
+    const leadProjId = Number(project.id);
+    if (!this.availableProjects().some(p => p.id === leadProjId)) return;
+    if (this.readonlyLeadProjectId === leadProjId) return;
+
+    if (this.readonlyLeadProjectId != null) {
+      this.selectedProjectIds = this.selectedProjectIds.filter(id => id !== this.readonlyLeadProjectId);
     }
+    this.readonlyLeadProjectId = leadProjId;
+    if (!this.selectedProjectIds.includes(leadProjId)) {
+      this.selectedProjectIds = [leadProjId, ...this.selectedProjectIds];
+    }
+    const selectedProjects = this.selectedProjectIds.map(id => {
+      const p = this.availableProjects().find(p => p.id === id);
+      return p ? {
+        project_id: id,
+        is_lead: id === leadProjId,
+      } : null;
+    }).filter(Boolean);
+    this.autoSave.saveContributors({
+      contributing_bilateral_projects: selectedProjects as { project_id: number; is_lead?: boolean }[],
+    });
   });
 
   private readonly savedContributingProjectsEffect = effect(() => {
     const savedIds = this.creationService.resultContributingProjectIds();
-    if (!savedIds.length || !this.availableProjects().length) return;
-    const toAdd = savedIds.filter(id => !this.selectedProjectIds.includes(id));
-    if (!toAdd.length) return;
-    this.selectedProjectIds = [...this.selectedProjectIds, ...toAdd];
+    if (!this.availableProjects().length) return;
+    const leadId = this.readonlyLeadProjectId;
+    const merged = new Set<number>(savedIds);
+    if (leadId != null) merged.add(leadId);
+    this.selectedProjectIds = Array.from(merged);
   });
 
   ngOnInit(): void {
-    console.log('SectionContributorsComponent ngOnInit started!');
     this.loadCenters();
     this.loadProjects();
   }
 
   private loadProjects(): void {
-    console.log('loadProjects started');
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
       next: ({ response }) => {
-        console.log('loadProjects got response:', response ? response.length : 0);
         this.availableProjects.set(
           (response ?? []).map((p: any) => ({
             id: Number(p.id),
@@ -175,8 +180,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
           }))
         );
       },
-      error: (err) => {
-        console.error('loadProjects failed:', err);
+      error: () => {
+        this.availableProjects.set([]);
       }
     });
   }
@@ -253,7 +258,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     this.selectedProjectIds = finalIds;
     const currentProjectId = this.creationService.selectedProject()?.id;
     const selectedProjects = this.selectedProjectIds.map(id => {
-      const project = this.availableProjects().find(p => p.id === id);
+      const project = this.availableProjects().some(p => p.id === id);
       return project ? {
         project_id: id,
         is_lead: id === currentProjectId,
@@ -267,7 +272,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   formatAlloc(value: string | null | undefined): string {
     if (!value) return '';
-    const n = parseFloat(value);
+    const n = Number.parseFloat(value);
     return Number.isNaN(n) ? value : String(Math.round(n));
   }
 
@@ -291,7 +296,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       return loadedProj.shortName || loadedProj.fullName;
     }
     const leadProj = this.creationService.selectedProject();
-    if (leadProj && leadProj.id === id) {
+    if (leadProj?.id === id) {
       return leadProj.shortName || leadProj.fullName;
     }
     return '';

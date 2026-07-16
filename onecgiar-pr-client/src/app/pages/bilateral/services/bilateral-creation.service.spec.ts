@@ -81,6 +81,38 @@ describe('BilateralCreationService', () => {
     expect(service.selectedSecondarySps()).toEqual([]);
   });
 
+  it('clearEditorState should wipe description and contributing project ids', () => {
+    service.resultDescription.set('stale description');
+    service.resultContributingProjectIds.set([99, 100]);
+    service.resultTitle.set('stale title');
+    service.clearEditorState();
+    expect(service.resultDescription()).toBe('');
+    expect(service.resultTitle()).toBe('');
+    expect(service.resultContributingProjectIds()).toEqual([]);
+  });
+
+  it('loadResult should clear editor state before applying the payload', () => {
+    service.resultDescription.set('from previous result');
+    service.resultContributingProjectIds.set([55]);
+    mockBilateralApi.GET_BilateralResultDetail.mockReturnValue({
+      subscribe: ({ next }: any) =>
+        next({
+          response: {
+            commonFields: { result_title: 'New', result_description: '' },
+            contributingProjects: [],
+            contributingCenters: [],
+          },
+        }),
+    } as any);
+
+    service.loadResult(7);
+
+    expect(service.resultDescription()).toBe('');
+    expect(service.resultContributingProjectIds()).toEqual([]);
+    expect(service.resultTitle()).toBe('New');
+    expect(mockBilateralApi.GET_BilateralResultDetail).toHaveBeenCalledWith(7);
+  });
+
   it('should select a primary SP', () => {
     const sp = { programId: 100, programCode: 'P11', allocation: '45.00' };
     service.selectPrimarySp(sp);

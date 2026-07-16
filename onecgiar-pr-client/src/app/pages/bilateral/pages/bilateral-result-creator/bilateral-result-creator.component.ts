@@ -1,7 +1,6 @@
 import { Component, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
-import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { filter } from 'rxjs/operators';
 import { MessageService } from 'primeng/api';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-mds-tracker.service';
@@ -82,10 +81,14 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.route.params.subscribe(params => {
       const id = params['id'];
       if (id) {
-        this.resultId.set(Number(id));
+        const resultId = Number(id);
+        this.resultId.set(resultId);
         this.isCreating.set(false);
-        this.autoSaveService.setResultId(Number(id));
-        this.creationService.loadResult(Number(id));
+        // Drop pending writes from a previous result before binding the new id.
+        this.autoSaveService.reset();
+        this.mdsTracker.reset();
+        this.autoSaveService.setResultId(resultId);
+        this.creationService.loadResult(resultId);
       }
     });
   }
@@ -140,6 +143,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Result created but no ID returned' });
           return;
         }
+        this.creationService.clearEditorState();
+        this.autoSaveService.reset();
+        this.mdsTracker.reset();
         this.autoSaveService.setResultId(response.id);
         this.router.navigate(['/bilateral/result', response.id]);
       },

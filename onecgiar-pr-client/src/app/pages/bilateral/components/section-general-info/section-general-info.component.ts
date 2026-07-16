@@ -65,7 +65,7 @@ export class SectionGeneralInfoComponent implements OnInit {
   selectedDacLevels = signal<Record<string, number>>({});
   isLoadingDac = signal(true);
 
-  private leadSearchSubject = new Subject<string>();
+  private readonly leadSearchSubject = new Subject<string>();
 
   constructor() {
     this.autoSaveService.registerField('title', 'text');
@@ -85,35 +85,33 @@ export class SectionGeneralInfoComponent implements OnInit {
     });
 
     effect(() => {
-      const st = this.creationService.resultTitle();
-      if (st) { this.title.set(st); }
+      this.title.set(this.creationService.resultTitle());
     });
     effect(() => {
-      const sd = this.creationService.resultDescription();
-      if (sd) { this.description.set(sd); }
+      this.description.set(this.creationService.resultDescription());
     });
     effect(() => {
       const lc = this.creationService.resultLeadContact();
+      this.leadContactPerson.set(lc);
+      this.leadContactSearchQuery = lc;
       if (lc) {
-        this.leadContactPerson.set(lc);
-        this.leadContactSearchQuery = lc;
         this.leadContactSelected = { display_name: lc, mail: '', title: '' };
         this.showAllFields.set(true);
+      } else {
+        this.leadContactSelected = null;
       }
     });
 
     effect(() => {
       const levels = this.creationService.resultDacLevels();
-      const keys = Object.keys(levels);
-      if (keys.length > 0) {
-        this.selectedDacLevels.set(levels);
+      this.selectedDacLevels.set(levels);
+      if (Object.keys(levels).length > 0) {
         this.showAllFields.set(true);
       }
     });
 
     effect(() => {
-      const subs = this.creationService.resultDacSubScores();
-      this.selectedSubScores.set(subs);
+      this.selectedSubScores.set(this.creationService.resultDacSubScores());
     });
 
     this.leadSearchSubject.pipe(
@@ -159,8 +157,10 @@ export class SectionGeneralInfoComponent implements OnInit {
             if (!item.is_active) continue;
             const key = DAC_AREAS.find(a => this.matchArea(a.key, item.impact_area))?.key;
             if (!key) continue;
-            if (!scores[key]) scores[key] = [];
-                scores[key].push({ id: Number(item.id), title: item.name, name: item.name });
+            if (!scores[key]) {
+              scores[key] = [];
+            }
+            scores[key].push({ id: Number(item.id), title: item.name, name: item.name });
           }
           this.impactAreaSubScores.set(scores);
         }

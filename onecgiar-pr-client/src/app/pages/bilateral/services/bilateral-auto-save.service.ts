@@ -128,6 +128,7 @@ export class BilateralAutoSaveService {
     this._debounceTimers.clear();
     this.fieldStatus.set({});
     this.hasPendingSaves.set(false);
+    this._currentResultId.set(null);
   }
 
   private readonly _currentResultId = signal<number | null>(null);

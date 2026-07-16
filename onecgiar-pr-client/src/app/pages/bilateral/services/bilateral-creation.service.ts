@@ -50,11 +50,28 @@ export class BilateralCreationService {
     });
   }
 
+  /** Clears editor signals so a previous result cannot leak into a new one. */
+  clearEditorState(): void {
+    this.resultTitle.set('');
+    this.resultDescription.set('');
+    this.resultLeadContact.set('');
+    this.resultDacLevels.set({});
+    this.resultDacSubScores.set({});
+    this.resultInitiativeId.set(null);
+    this.resultLevelId.set(null);
+    this.resultTypeId.set(null);
+    this.resultLeadCenterId.set(null);
+    this.resultContributingCenterIds.set([]);
+    this.resultProjectId.set(null);
+    this.resultContributingProjectIds.set([]);
+    this.resultContributingProjects.set([]);
+  }
+
   loadResult(resultId: number): void {
     this.currentResultId.set(resultId);
     this.api.resultsSE.currentResultId = resultId;
     this.isLoadingResult.set(true);
-    this.resultContributingCenterIds.set([]);
+    this.clearEditorState();
     this.bilateralApi.GET_BilateralResultDetail(resultId).subscribe({
       next: ({ response }) => {
         if (response?.commonFields) {
@@ -173,8 +190,8 @@ export class BilateralCreationService {
     this.selectedProject.set(null);
     this.selectedPrimarySp.set(null);
     this.selectedSecondarySps.set([]);
-    this.resultLeadCenterId.set(null);
-    this.resultContributingCenterIds.set([]);
+    this.clearEditorState();
+    this.currentResultId.set(null);
     localStorage.removeItem(LS_PROJECT_KEY);
     localStorage.removeItem(LS_SP_KEY);
     localStorage.removeItem(LS_SECONDARY_SP_KEY);
