@@ -66,24 +66,22 @@
       </div>
     </div>
     <div class="sc-card__body">
-      <p-multiSelect
-        [options]="availableCentersComputed()"
-        [(ngModel)]="selectedCenterInstitutionIds"
-        optionLabel="full_name"
-        optionValue="institutionId"
-        optionDisabled="disabled"
-        placeholder="Select contributing centers"
-        [maxSelectedLabels]="0"
-        selectedItemsLabel="Select contributing centers"
-        [style]="{ width: '100%', 'max-width': '480px' }"
-        (onChange)="onCentersChange($event.value)"
-        [showClear]="true"
-        appendTo="body"
-        panelStyleClass="sc-dropdown-panel">
-      </p-multiSelect>
-      @if (selectedCenterInstitutionIds.length) {
+      <div class="w-full max-w-[480px]">
+        <app-pr-multi-select
+          [options]="availableCentersComputed()"
+          [disableOptions]="disabledCenterOptions()"
+          [ngModel]="selectedCenterInstitutionIds()"
+          (ngModelChange)="onCentersModelChange($event)"
+          optionLabel="full_name"
+          optionValue="institutionId"
+          placeholder="Select contributing centers"
+          [required]="false"
+          [isStatic]="true">
+        </app-pr-multi-select>
+      </div>
+      @if (selectedCenterInstitutionIds().length) {
         <div class="sc-selected-chips">
-          @for (id of selectedCenterInstitutionIds; track id) {
+          @for (id of selectedCenterInstitutionIds(); track id) {
             <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id)">
               {{ getCenterDisplayName(id) }}
               @if (!isLeadCenter(id)) {
@@ -104,24 +102,22 @@
       </div>
     </div>
     <div class="sc-card__body">
-      <p-multiSelect
-        [options]="availableProjectsComputed()"
-        [(ngModel)]="selectedProjectIds"
-        optionLabel="fullName"
-        optionValue="id"
-        optionDisabled="disabled"
-        placeholder="Select contributing projects"
-        [maxSelectedLabels]="0"
-        selectedItemsLabel="Select contributing projects"
-        [style]="{ width: '100%', 'max-width': '480px' }"
-        (onChange)="onProjectsChange($event.value)"
-        [showClear]="true"
-        appendTo="body"
-        panelStyleClass="sc-dropdown-panel">
-      </p-multiSelect>
-      @if (selectedProjectIds.length) {
+      <div class="w-full max-w-[480px]">
+        <app-pr-multi-select
+          [options]="availableProjectsComputed()"
+          [disableOptions]="disabledProjectOptions()"
+          [ngModel]="selectedProjectIds()"
+          (ngModelChange)="onProjectsModelChange($event)"
+          optionLabel="fullName"
+          optionValue="id"
+          placeholder="Select contributing projects"
+          [required]="false"
+          [isStatic]="true">
+        </app-pr-multi-select>
+      </div>
+      @if (selectedProjectIds().length) {
         <div class="sc-selected-chips">
-          @for (id of selectedProjectIds; track id) {
+          @for (id of selectedProjectIds(); track id) {
             <span class="sc-chip sc-chip--project" [class.sc-chip-readonly]="isLeadProject(id)">
               {{ getProjectDisplayName(id) }}
               @if (!isLeadProject(id)) {

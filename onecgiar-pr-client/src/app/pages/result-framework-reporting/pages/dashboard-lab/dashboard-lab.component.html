@@ -1,60 +1,282 @@
-<!-- ==================== SIDEBAR (master) — premium surface reuse ==================== -->
-<aside class="lab-sidebar">
-  <div class="lab-sidebar__head">
-    <span class="lab-eyebrow">Reporting workspace</span>
-    <h2 class="lab-title">Science Programs</h2>
+<!-- ==================== SIDEBAR (master) — premium surface reuse (Tailwind) ==================== -->
+<aside
+  class="fixed top-[10px] left-[10px] bottom-[10px] z-[5] box-border flex w-[300px] flex-col gap-[14px] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#1f2233] bg-[radial-gradient(135%_85%_at_50%_-8%,rgba(100,97,188,0.32)_0%,rgba(100,97,188,0)_58%)] px-[14px] py-4 shadow-[0_22px_50px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] max-[900px]:static max-[900px]:m-[10px] max-[900px]:inset-auto max-[900px]:max-h-[320px] max-[900px]:w-auto">
+  <div class="flex flex-col gap-0.5 border-b border-white/10 px-2 pb-3.5 pt-1.5">
+    <span class="text-[10px] font-bold uppercase tracking-[1.4px] text-[var(--pr-color-primary-200)]">Reporting workspace</span>
+    <h2 class="m-0 text-[18px] font-bold leading-[1.15] tracking-[-0.01em] text-white">Science Programs</h2>
     @if (phaseLabel()) {
-      <span class="lab-chip">{{ phaseLabel() }}</span>
+      <span
+        class="mt-2 self-start rounded-full bg-[linear-gradient(135deg,#6b6dc4_0%,#6461bc_100%)] px-2.5 py-[3px] text-[10px] font-semibold tracking-[0.02em] text-white shadow-[0_2px_8px_rgba(100,97,188,0.45)]">
+        {{ phaseLabel() }}
+      </span>
     }
   </div>
 
   <!-- search -->
-  <div class="lab-search">
-    <span class="material-icons-round">search</span>
+  <div class="flex items-center gap-2 rounded-[10px] bg-white/[0.06] px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+    <span class="material-icons-round text-[16px] text-white/40">search</span>
     <input
       type="text"
       placeholder="Filter programs…"
       [value]="query()"
       (input)="onQuery($any($event.target).value)"
-      aria-label="Filter Science Programs" />
+      aria-label="Filter Science Programs"
+      class="flex-1 appearance-none border-none bg-transparent text-[12px] text-white outline-none placeholder:text-white/40" />
   </div>
 
   <!-- list -->
-  <div class="lab-list custom_scroll">
+  <div class="custom_scroll flex flex-1 flex-col gap-1 overflow-y-auto pr-0.5">
     @if (homeSE.isLoadingSPLists()) {
       @for (s of [1, 2, 3, 4, 5]; track s) {
-        <div class="lab-skeleton"></div>
+        <div class="h-[44px] animate-pulse rounded-[10px] bg-white/[0.06]"></div>
       }
     } @else {
       @for (group of groups(); track group.label) {
-        <p class="lab-group-label">{{ group.label }}</p>
+        <p class="px-2 pb-1 pt-2.5 text-[9px] font-bold uppercase tracking-[0.09em] text-white/40">{{ group.label }}</p>
         @for (sp of group.items; track sp.initiativeId) {
-          <button type="button" class="lab-item" [class.lab-item--active]="isActive(sp)" (click)="select(sp)">
+          <button
+            type="button"
+            (click)="select(sp)"
+            class="grid w-full appearance-none grid-cols-[auto_auto_1fr_auto] items-center gap-2.5 rounded-[10px] border-none px-3 py-2.5 text-left transition-colors duration-200"
+            [class]="
+              isActive(sp)
+                ? 'text-white bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] shadow-[0_8px_20px_rgba(100,97,188,0.5),inset_0_0_0_1px_rgba(255,255,255,0.14),inset_0_1px_0_rgba(255,255,255,0.28)]'
+                : 'text-white/[0.78] bg-white/[0.035] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] hover:bg-white/[0.09] hover:text-white'
+            ">
             @if (!iconErrors().has(sp.initiativeCode)) {
-              <img class="lab-item__icon" [src]="iconSrc(sp)" [alt]="sp.initiativeCode" width="22" height="22" (error)="onIconError(sp.initiativeCode)" />
+              <img
+                class="size-[22px] shrink-0 rounded-md bg-white/[0.08] object-cover"
+                [src]="iconSrc(sp)"
+                [alt]="sp.initiativeCode"
+                width="22"
+                height="22"
+                (load)="extractAccent($event, sp.initiativeCode)"
+                (error)="onIconError(sp.initiativeCode)" />
             } @else {
-              <span class="lab-item__icon lab-item__icon--fallback"><i class="material-icons-round">hub</i></span>
+              <span class="inline-flex size-[22px] shrink-0 items-center justify-center rounded-md bg-white/[0.08]">
+                <i class="material-icons-round text-[14px] text-white/60">hub</i>
+              </span>
             }
-            <span class="lab-item__code">{{ sp.initiativeCode }}</span>
-            <span class="lab-item__name">{{ sp.initiativeShortName || sp.initiativeName }}</span>
-            <span class="lab-item__count">{{ totalResults(sp) }}</span>
+            <span class="text-[12px] font-semibold text-inherit">{{ sp.initiativeCode }}</span>
+            <span
+              class="overflow-hidden text-ellipsis whitespace-nowrap text-[11px]"
+              [class]="isActive(sp) ? 'text-white/80' : 'text-white/50'">
+              {{ sp.initiativeShortName || sp.initiativeName }}
+            </span>
+            <span
+              class="rounded-full px-2 py-0.5 text-[10px] font-bold"
+              [class]="isActive(sp) ? 'bg-white/20 text-white' : 'bg-white/10 text-white/75'">
+              {{ totalResults(sp) }}
+            </span>
           </button>
         }
       }
 
       @if (!groups().length) {
-        <p class="lab-list__empty">No programs match your filter.</p>
+        <p class="px-3 py-6 text-center text-[11px] text-white/40">No programs match your filter.</p>
       }
     }
   </div>
 </aside>
 
-<!-- ==================== DETAIL (right panel) — blank canvas for AOWs / indicators ==================== -->
-<section class="lab-detail">
-  @if (selected()) {
-    <!-- intentionally left blank -->
+<!-- ==================== DETAIL (right panel) — bento dashboard (Tailwind) ==================== -->
+<section class="ml-[320px] box-border min-h-[calc(100vh-20px)] bg-[#eef0f3] px-6 pb-10 pt-5 max-[900px]:ml-0">
+  @if (selected(); as sp) {
+    <div class="grid grid-cols-4 items-stretch gap-4 max-[1180px]:grid-cols-2 max-[620px]:grid-cols-1">
+      <!-- Card 1 — Science Program hero + report actions (dark, accent glow, spans 2) -->
+      <article
+        class="relative col-span-2 flex min-h-[168px] flex-col justify-between gap-4 overflow-hidden rounded-[20px] border border-white/[0.07] bg-[linear-gradient(150deg,#23252f_0%,#16171d_100%)] px-5 py-5 max-[620px]:col-span-1">
+        <div class="pointer-events-none absolute inset-0" [style.background]="accentTheme().glow"></div>
+
+        <div class="relative z-[1] flex items-center gap-3">
+          @if (!iconErrors().has(sp.initiativeCode)) {
+            <img
+              class="size-11 shrink-0 rounded-xl bg-white/[0.08] object-cover"
+              [src]="iconSrc(sp)"
+              [alt]="sp.initiativeCode"
+              (load)="extractAccent($event, sp.initiativeCode)"
+              (error)="onIconError(sp.initiativeCode)" />
+          } @else {
+            <span class="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.08]">
+              <i class="material-icons-round text-[22px] text-white/70">hub</i>
+            </span>
+          }
+          <div class="min-w-0">
+            <p class="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-medium text-white/55">
+              {{ sp.initiativeCode }} · {{ sp.entityTypeName }}@if (phaseLabel()) {<span> · {{ phaseLabel() }}</span>}
+            </p>
+            <h1 class="mt-0.5 text-[22px] font-bold leading-[1.15] tracking-[-0.01em] text-white">
+              {{ sp.initiativeShortName || sp.initiativeName }}
+            </h1>
+          </div>
+          <a
+            class="ml-auto inline-flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-white/[0.08] text-white/75 transition-colors hover:bg-white/[0.16] hover:text-white"
+            [routerLink]="['/result-framework-reporting/entity-details', sp.initiativeCode]">
+            <span class="material-icons-round text-[18px]">open_in_new</span>
+          </a>
+        </div>
+
+        <div class="relative z-[1]">
+          <p class="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-white/45">Report a result</p>
+          <div class="flex flex-wrap gap-2.5">
+            <a
+              class="inline-flex items-center gap-[7px] rounded-[11px] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-transform hover:-translate-y-px"
+              [style.background]="accentTheme().gradient"
+              [style.boxShadow]="accentTheme().buttonShadow"
+              [routerLink]="['/result-framework-reporting/entity-details', sp.initiativeCode, 'aow', 'all']">
+              <span class="material-icons-round text-[17px]">flag</span>
+              Planned
+            </a>
+            <a
+              class="inline-flex items-center gap-[7px] rounded-[11px] bg-white/[0.08] px-[18px] py-2.5 text-[13px] font-semibold text-white/90 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)] transition-colors hover:bg-white/[0.16] hover:text-white"
+              [routerLink]="['/result-framework-reporting/entity-details', sp.initiativeCode, 'aow', 'unplanned']">
+              <span class="material-icons-round text-[17px]">bolt</span>
+              In progress
+            </a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Card 2 — Reported donut (accent-filled pop) -->
+      <article
+        class="flex min-h-[168px] flex-col items-center rounded-[20px] px-5 py-5 text-center"
+        [style.background]="accentTheme().gradient"
+        [style.boxShadow]="accentTheme().cardShadow">
+        <p class="self-start text-[10px] font-bold uppercase tracking-[0.08em] text-white/85">Reported</p>
+        <div
+          class="my-auto flex size-[112px] items-center justify-center rounded-full"
+          [style.background]="'conic-gradient(#ffffff ' + submittedPct() + '%, rgba(255,255,255,0.3) 0)'">
+          <div class="flex size-[78px] items-center justify-center rounded-full shadow-[inset_0_0_0_1px_rgba(255,255,255,0.25)]" [style.background]="accentTheme().gradient">
+            <span class="text-[23px] font-extrabold text-white">{{ submittedPct() }}%</span>
+          </div>
+        </div>
+        <p class="text-[11px] text-white/85">QAed + Submitted</p>
+      </article>
+
+      <!-- Card 3 — Total results (white, accent number) -->
+      <article class="flex min-h-[168px] flex-col justify-center rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-5 py-5 shadow-[0_8px_22px_rgba(30,32,47,0.06)]">
+        <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Results this phase</p>
+        <p class="my-1 text-[52px] font-extrabold leading-none" [style.color]="accentTheme().solid">{{ selectedTotal() }}</p>
+        <p class="text-[11px] text-[var(--pr-color-accents-5)]">{{ statusCategories() }} status categories</p>
+      </article>
+
+      <!-- Card 4 — Results by status, vertical bars (white, tight, spans 2) -->
+      <article class="col-span-2 flex min-h-[168px] flex-col gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-5 py-5 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[620px]:col-span-1">
+        <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Results by status</p>
+        @if (statusRows().length) {
+          <div class="flex flex-1 items-end justify-center gap-7">
+            @for (row of statusRows(); track row.statusId) {
+              <div class="flex w-[56px] flex-col items-center gap-2">
+                <span class="text-[14px] font-extrabold text-[var(--pr-color-secondary-400)]">{{ row.count }}</span>
+                <div class="flex h-[110px] w-full items-end justify-center border-b border-[rgba(30,32,47,0.08)]">
+                  <div
+                    class="w-[38px] min-h-[4px] rounded-[7px_7px_0_0] transition-[height] duration-500"
+                    [style.height.%]="row.barPct || 3"
+                    [style.background]="row.barGradient"></div>
+                </div>
+                <span class="text-center text-[10px] font-semibold text-[var(--pr-color-accents-6)]">{{ row.label }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">No results reported yet for this phase.</p>
+        }
+      </article>
+
+      <!-- Card 5 — Breakdown (white, stacked bar + legend, spans 2) -->
+      <article class="col-span-2 flex min-h-[168px] flex-col rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-5 py-5 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[620px]:col-span-1">
+        <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Breakdown</p>
+        @if (statusRows().length) {
+          <div class="mt-4 flex h-3.5 w-full overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]">
+            @for (row of statusRows(); track row.statusId) {
+              <span
+                class="h-full transition-[width] duration-500"
+                [style.width.%]="row.sharePct"
+                [style.background]="row.color"
+                [title]="row.label + ': ' + row.count"></span>
+            }
+          </div>
+          <div class="mt-auto flex flex-wrap gap-x-6 gap-y-3 pt-4">
+            @for (row of statusRows(); track row.statusId) {
+              <div class="flex items-center gap-2">
+                <span class="size-2.5 shrink-0 rounded-full" [style.background]="row.color"></span>
+                <span class="text-[12px] font-medium text-[var(--pr-color-secondary-400)]">{{ row.label }}</span>
+                <span class="text-[13px] font-extrabold text-[var(--pr-color-secondary-400)]">{{ row.count }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">Nothing reported yet.</p>
+        }
+      </article>
+    </div>
+
+    <!-- ==================== AREAS OF WORK ==================== -->
+    <div class="mt-6">
+      <div class="mb-3 flex items-center gap-2">
+        <h2 class="text-[14px] font-bold text-[var(--pr-color-secondary-400)]">Areas of Work</h2>
+        <span
+          class="rounded-full border border-[rgba(30,32,47,0.06)] bg-white px-2 py-0.5 text-[11px] font-bold text-[var(--pr-color-accents-6)]">
+          {{ aows().length }}
+        </span>
+      </div>
+
+      @if (loadingAows()) {
+        <div class="grid grid-cols-3 gap-4 max-[1180px]:grid-cols-2 max-[720px]:grid-cols-1">
+          @for (s of [1, 2, 3]; track s) {
+            <div class="h-[132px] animate-pulse rounded-[18px] bg-white/70"></div>
+          }
+        </div>
+      } @else if (aows().length) {
+        <div class="grid grid-cols-3 gap-4 max-[1180px]:grid-cols-2 max-[720px]:grid-cols-1">
+          @for (aow of aows(); track aow.id) {
+            <a
+              class="group flex flex-col gap-3 rounded-[18px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(30,32,47,0.1)]"
+              [routerLink]="['/result-framework-reporting/entity-details', sp.initiativeCode, 'aow', aow.code]">
+              <div class="flex items-center justify-between">
+                <span
+                  class="rounded-md px-2 py-0.5 text-[11px] font-bold"
+                  [style.color]="accentTheme().solid"
+                  [style.background]="accentTheme().soft">
+                  {{ aow.code }}
+                </span>
+                <span
+                  class="material-icons-round text-[16px] text-[var(--pr-color-accents-3)] transition-colors group-hover:text-[color:var(--hover)]"
+                  [style.--hover]="accentTheme().solid">
+                  arrow_outward
+                </span>
+              </div>
+
+              <h3 class="line-clamp-2 text-[14px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">{{ aow.name }}</h3>
+
+              <div class="mt-auto">
+                <div class="mb-1.5 flex items-center justify-between text-[11px]">
+                  <span class="text-[var(--pr-color-accents-5)]">Progress</span>
+                  <span class="font-bold" [style.color]="accentTheme().solid">{{ aow.progress || 0 }}%</span>
+                </div>
+                <div class="h-1.5 w-full overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]">
+                  <div class="h-full rounded-full transition-[width] duration-500" [style.width.%]="aow.progress || 0" [style.background]="accentTheme().gradient"></div>
+                </div>
+
+                @if (aow.resultsCount) {
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <span class="rounded-full bg-[#fef3c7] px-2.5 py-1 text-[11px] font-semibold text-[#92400e]">{{ aow.resultsCount.editing }} editing</span>
+                    <span class="rounded-full bg-[#dcfce7] px-2.5 py-1 text-[11px] font-semibold text-[#166534]">{{ aow.resultsCount.submitted }} submitted</span>
+                  </div>
+                }
+              </div>
+            </a>
+          }
+        </div>
+      } @else {
+        <div class="rounded-[18px] border border-dashed border-[rgba(30,32,47,0.14)] bg-white/60 px-6 py-10 text-center">
+          <span class="material-icons-round text-[26px] text-[var(--pr-color-accents-3)]">account_tree</span>
+          <p class="mt-1 text-[13px] text-[var(--pr-color-accents-5)]">No areas of work for this program yet.</p>
+        </div>
+      }
+    </div>
   } @else if (!homeSE.isLoadingSPLists()) {
-    <div class="lab-empty">
+    <div class="flex min-h-[60vh] flex-col items-center justify-center text-center">
       <span class="material-icons-round text-[32px] text-[var(--pr-color-accents-4)]">inbox</span>
       <p class="mt-2 text-[13px] font-medium text-[var(--pr-color-secondary-400)]">No Science Programs found</p>
       <p class="text-[11px] text-[var(--pr-color-accents-5)]">You are not a member of any program yet.</p>

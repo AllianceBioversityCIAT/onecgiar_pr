@@ -20,10 +20,6 @@
 
   &--centers {
     z-index: 100;
-
-    .p-multiselect-panel {
-      z-index: 101 !important;
-    }
   }
 
   &--projects {
@@ -385,26 +381,5 @@
     height: 5px;
     background: white;
     border-radius: 50%;
-  }
-}
-
-:host ::ng-deep {
-  .p-multiselect {
-    width: 100%;
-    max-width: 480px;
-    z-index: 10;
-  }
-
-  .p-multiselect-panel {
-    z-index: 1000 !important;
-    max-width: 480px;
-    width: 100%;
-    
-    .p-multiselect-option, .p-multiselect-item, .p-multiselect-list-item {
-      white-space: normal !important;
-      word-break: break-word !important;
-      font-size: 13px !important;
-      line-height: 1.4 !important;
-    }
   }
 }

@@ -36,16 +36,16 @@
       @if (showLevelSelector()) {
         <div class="st-field">
           <label class="st-label">Level <span style="color:#C62828">*</span></label>
-          <p-select
+          <app-pr-select
             [options]="filteredLevels()"
             [ngModel]="selectedLevelId()"
-            (ngModelChange)="onLevelChange($event)"
+            (selectOptionEvent)="onLevelChange($event?.toc_level_id)"
             optionLabel="name"
             optionValue="toc_level_id"
             placeholder="Select level"
-            [style]="{ width: '100%' }"
-            appendTo="body">
-          </p-select>
+            [editable]="true"
+            [overlayToBody]="true">
+          </app-pr-select>
         </div>
       } @else if (resultLevelId() === 1 && isPlanned() === true) {
         <div class="st-field">
@@ -57,44 +57,16 @@
       @if (selectedLevelName() && selectedLevelId()) {
         <div class="st-field">
           <label class="st-label">{{ selectedLevelName() }} <span style="color:#C62828">*</span></label>
-          <p-select
+          <app-pr-select
             [options]="tocResultItems()"
             [ngModel]="selectedTocResultId()"
-            (ngModelChange)="onTocResultSelect($event)"
-            optionLabel="toc_result_id"
+            (selectOptionEvent)="onTocResultSelect($event?.toc_result_id)"
+            optionLabel="select_label"
             optionValue="toc_result_id"
             placeholder="Select {{ selectedLevelName() }}"
-            [style]="{ width: '100%' }"
-            appendTo="body">
-            <ng-template pTemplate="item" let-item>
-              <div class="st-select-item">
-                <div class="st-select-item-row">
-                  <span class="st-select-item-code">{{ item.wp_short_name || item.extraInformation || 'AOW' }}</span>
-                  @if (item.hasMatch) {
-                    <span class="st-select-badge st-select-badge--match">Match [{{ resultTypeLabel() }}]</span>
-                  }
-                  @else if (item.hasOther) {
-                    <span class="st-select-badge st-select-badge--other">Review needed</span>
-                  }
-                </div>
-                <span class="st-select-item-desc">{{ item.title || item.extraInformation }}</span>
-              </div>
-            </ng-template>
-            <ng-template pTemplate="selectedItem" let-item>
-              <div class="st-select-item">
-                <div class="st-select-item-row">
-                  <span class="st-select-item-code">{{ item.wp_short_name || item.extraInformation || 'AOW' }}</span>
-                  @if (item.hasMatch) {
-                    <span class="st-select-badge st-select-badge--match">Match [{{ resultTypeLabel() }}]</span>
-                  }
-                  @else if (item.hasOther) {
-                    <span class="st-select-badge st-select-badge--other">Review needed</span>
-                  }
-                </div>
-                <span class="st-select-item-desc">{{ item.title || item.extraInformation }}</span>
-              </div>
-            </ng-template>
-          </p-select>
+            [editable]="true"
+            [overlayToBody]="true">
+          </app-pr-select>
         </div>
       }
 
@@ -109,37 +81,16 @@
         @if (indicatorsList().length) {
           <div class="st-field">
             <label class="st-label">Indicator <span style="color:#C62828">*</span></label>
-            <p-select
+            <app-pr-select
               [options]="indicatorsList()"
               [ngModel]="selectedIndicatorId()"
-              (ngModelChange)="onIndicatorSelect($event)"
-                optionLabel="indicator_description"
+              (selectOptionEvent)="onIndicatorSelect($event?.related_node_id)"
+              optionLabel="select_label"
               optionValue="related_node_id"
               placeholder="Select an indicator"
-              [style]="{ width: '100%' }"
-              appendTo="body">
-              <ng-template pTemplate="item" let-ind>
-                <div class="st-select-item">
-                  <span class="st-select-item-desc">{{ ind.indicator_description || 'Unnamed' }}</span>
-                  <div class="st-select-item-row" style="margin-top: 2px;">
-                    @if (ind.matchInfo.cssClass === 'bp-toc-match--match') {
-                      @if (ind.unit_messurament) {
-                        <span class="st-target-unit" style="font-size: 9px; padding: 1px 6px; margin-top: 2px;">{{ ind.unit_messurament }}</span>
-                      }
-                      <span class="st-select-badge st-select-badge--match">Target: {{ ind.targets?.[0]?.target_value ?? 'N/A' }}</span>
-                    }
-                    @else if (ind.matchInfo.cssClass === 'bp-toc-match--other') {
-                      <span class="st-select-badge st-select-badge--other">[{{ ind.matchInfo.label }}]</span>
-                    }
-                  </div>
-                </div>
-              </ng-template>
-              <ng-template pTemplate="selectedItem" let-ind>
-                <div class="st-select-item">
-                  <span class="st-select-item-desc">{{ ind.indicator_description || 'Unnamed' }}</span>
-                </div>
-              </ng-template>
-            </p-select>
+              [editable]="true"
+              [overlayToBody]="true">
+            </app-pr-select>
           </div>
         } @else {
           <div class="st-no-indicators">No indicators available for this {{ selectedLevelName() }}.</div>

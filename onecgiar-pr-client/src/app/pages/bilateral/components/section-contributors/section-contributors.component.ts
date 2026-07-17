@@ -1,9 +1,8 @@
 import { Component, inject, computed, signal, effect, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SelectModule } from 'primeng/select';
-import { MultiSelectModule } from 'primeng/multiselect';
 import { Subscription } from 'rxjs';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
@@ -27,7 +26,7 @@ interface ProjectOption {
 
 @Component({
   selector: 'app-section-contributors',
-  imports: [CommonModule, FormsModule, SelectModule, MultiSelectModule, SectionTocComponent],
+  imports: [CommonModule, FormsModule, CustomFieldsModule, SectionTocComponent],
   templateUrl: './section-contributors.component.html',
   styleUrl: './section-contributors.component.scss'
 })
@@ -55,11 +54,11 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     };
   });
 
-  availableCenters: CenterOption[] = [];
-  selectedCenterInstitutionIds: number[] = [];
+  availableCenters = signal<CenterOption[]>([]);
+  selectedCenterInstitutionIds = signal<number[]>([]);
 
   availableProjects = signal<ProjectOption[]>([]);
-  selectedProjectIds: number[] = [];
+  selectedProjectIds = signal<number[]>([]);
 
   readonly availableProjectsComputed = computed(() => {
     const leadProj = this.creationService.selectedProject();
@@ -75,11 +74,14 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     const resultLeadCenterId = this.creationService.resultLeadCenterId();
     const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
     const leadInstId = leadCenterId ? Number(leadCenterId) : null;
-    return this.availableCenters.map(c => ({
+    return this.availableCenters().map(c => ({
       ...c,
       disabled: Number(c.institutionId) === leadInstId
     }));
   });
+
+  readonly disabledCenterOptions = computed(() => this.availableCentersComputed().filter(c => c.disabled));
+  readonly disabledProjectOptions = computed(() => this.availableProjectsComputed().filter(p => p.disabled));
 
   readonlyLeadCenterInstitutionId: number | null = null;
   readonlyLeadProjectId: number | null = null;
@@ -88,23 +90,24 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     const project = this.creationService.selectedProject();
     const resultLeadCenterId = this.creationService.resultLeadCenterId();
     const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
-    if (!leadCenterId || !this.availableCenters.length) return;
+    const centers = this.availableCenters();
+    if (!leadCenterId || !centers.length) return;
 
     const leadInstitutionId = Number(leadCenterId);
-    if (!this.availableCenters.some(c => c.institutionId === leadInstitutionId)) return;
+    if (!centers.some(c => c.institutionId === leadInstitutionId)) return;
     if (this.readonlyLeadCenterInstitutionId === leadInstitutionId) return;
 
     if (this.readonlyLeadCenterInstitutionId != null) {
-      this.selectedCenterInstitutionIds = this.selectedCenterInstitutionIds.filter(
-        id => id !== this.readonlyLeadCenterInstitutionId
+      this.selectedCenterInstitutionIds.set(
+        this.selectedCenterInstitutionIds().filter(id => id !== this.readonlyLeadCenterInstitutionId)
       );
     }
     this.readonlyLeadCenterInstitutionId = leadInstitutionId;
-    if (!this.selectedCenterInstitutionIds.includes(leadInstitutionId)) {
-      this.selectedCenterInstitutionIds = [leadInstitutionId, ...this.selectedCenterInstitutionIds];
+    if (!this.selectedCenterInstitutionIds().includes(leadInstitutionId)) {
+      this.selectedCenterInstitutionIds.set([leadInstitutionId, ...this.selectedCenterInstitutionIds()]);
     }
-    const selectedCenters = this.selectedCenterInstitutionIds.map(id => {
-      const c = this.availableCenters.find(c => c.institutionId === id);
+    const selectedCenters = this.selectedCenterInstitutionIds().map(id => {
+      const c = centers.find(c => c.institutionId === id);
       return c ? { institution_id: c.institutionId } : null;
     }).filter(Boolean);
     this.autoSave.saveContributors({
@@ -114,18 +117,18 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   private readonly leadCenterIdChangeEffect = effect(() => {
     const resultLeadCenterId = this.creationService.resultLeadCenterId();
-    if (resultLeadCenterId && this.availableCenters.length && !this.readonlyLeadCenterInstitutionId) {
+    if (resultLeadCenterId && this.availableCenters().length && !this.readonlyLeadCenterInstitutionId) {
       this.ensureLeadCenterSaved();
     }
   });
 
   private readonly savedContributingCentersEffect = effect(() => {
     const savedIds = this.creationService.resultContributingCenterIds();
-    if (!this.availableCenters.length) return;
+    if (!this.availableCenters().length) return;
     const leadId = this.readonlyLeadCenterInstitutionId;
     const merged = new Set<number>(savedIds);
     if (leadId != null) merged.add(leadId);
-    this.selectedCenterInstitutionIds = Array.from(merged);
+    this.selectedCenterInstitutionIds.set(Array.from(merged));
   });
 
   private readonly leadProjectEffect = effect(() => {
@@ -137,13 +140,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     if (this.readonlyLeadProjectId === leadProjId) return;
 
     if (this.readonlyLeadProjectId != null) {
-      this.selectedProjectIds = this.selectedProjectIds.filter(id => id !== this.readonlyLeadProjectId);
+      this.selectedProjectIds.set(this.selectedProjectIds().filter(id => id !== this.readonlyLeadProjectId));
     }
     this.readonlyLeadProjectId = leadProjId;
-    if (!this.selectedProjectIds.includes(leadProjId)) {
-      this.selectedProjectIds = [leadProjId, ...this.selectedProjectIds];
+    if (!this.selectedProjectIds().includes(leadProjId)) {
+      this.selectedProjectIds.set([leadProjId, ...this.selectedProjectIds()]);
     }
-    const selectedProjects = this.selectedProjectIds.map(id => {
+    const selectedProjects = this.selectedProjectIds().map(id => {
       const p = this.availableProjects().find(p => p.id === id);
       return p ? {
         project_id: id,
@@ -161,7 +164,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     const leadId = this.readonlyLeadProjectId;
     const merged = new Set<number>(savedIds);
     if (leadId != null) merged.add(leadId);
-    this.selectedProjectIds = Array.from(merged);
+    this.selectedProjectIds.set(Array.from(merged));
   });
 
   ngOnInit(): void {
@@ -203,13 +206,15 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
 
   private mapCenters(): void {
     const centers = this.centersService.centersList ?? [];
-    this.availableCenters = centers.map(c => ({
-      institutionId: c.institutionId,
-      code: c.code,
-      name: c.name,
-      acronym: (c as any).acronym || c.code,
-      full_name: `${(c as any).acronym || c.code} - ${c.name}`,
-    }));
+    this.availableCenters.set(
+      centers.map(c => ({
+        institutionId: c.institutionId,
+        code: c.code,
+        name: c.name,
+        acronym: (c as any).acronym || c.code,
+        full_name: `${(c as any).acronym || c.code} - ${c.name}`,
+      }))
+    );
     this.ensureLeadCenterSaved();
   }
 
@@ -219,14 +224,14 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
     if (!leadCenterId || this.readonlyLeadCenterInstitutionId) return;
     const leadInstitutionId = Number(leadCenterId);
-    const centerExists = this.availableCenters.some(c => c.institutionId === leadInstitutionId);
+    const centerExists = this.availableCenters().some(c => c.institutionId === leadInstitutionId);
     if (!centerExists) return;
     this.readonlyLeadCenterInstitutionId = leadInstitutionId;
-    if (!this.selectedCenterInstitutionIds.includes(leadInstitutionId)) {
-      this.selectedCenterInstitutionIds = [leadInstitutionId, ...this.selectedCenterInstitutionIds];
+    if (!this.selectedCenterInstitutionIds().includes(leadInstitutionId)) {
+      this.selectedCenterInstitutionIds.set([leadInstitutionId, ...this.selectedCenterInstitutionIds()]);
     }
-    const selectedCenters = this.selectedCenterInstitutionIds.map(id => {
-      const c = this.availableCenters.find(c => c.institutionId === id);
+    const selectedCenters = this.selectedCenterInstitutionIds().map(id => {
+      const c = this.availableCenters().find(c => c.institutionId === id);
       return c ? { institution_id: c.institutionId } : null;
     }).filter(Boolean);
     this.autoSave.saveContributors({
@@ -234,14 +239,24 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     });
   }
 
+  onCentersModelChange(selected: any[]): void {
+    const ids = (selected ?? []).map(item => (typeof item === 'object' && item !== null ? Number(item.institutionId) : Number(item)));
+    this.onCentersChange(ids);
+  }
+
+  onProjectsModelChange(selected: any[]): void {
+    const ids = (selected ?? []).map(item => (typeof item === 'object' && item !== null ? Number(item.id) : Number(item)));
+    this.onProjectsChange(ids);
+  }
+
   onCentersChange(ids: number[]): void {
     let finalIds = ids ?? [];
     if (this.readonlyLeadCenterInstitutionId && !finalIds.includes(this.readonlyLeadCenterInstitutionId)) {
       finalIds = [this.readonlyLeadCenterInstitutionId, ...finalIds];
     }
-    this.selectedCenterInstitutionIds = finalIds;
-    const selectedCenters = this.selectedCenterInstitutionIds.map(id => {
-      const center = this.availableCenters.find(c => c.institutionId === id);
+    this.selectedCenterInstitutionIds.set(finalIds);
+    const selectedCenters = this.selectedCenterInstitutionIds().map(id => {
+      const center = this.availableCenters().find(c => c.institutionId === id);
       return center ? { institution_id: center.institutionId } : null;
     }).filter(Boolean);
 
@@ -255,9 +270,9 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     if (this.readonlyLeadProjectId && !finalIds.includes(this.readonlyLeadProjectId)) {
       finalIds = [this.readonlyLeadProjectId, ...finalIds];
     }
-    this.selectedProjectIds = finalIds;
+    this.selectedProjectIds.set(finalIds);
     const currentProjectId = this.creationService.selectedProject()?.id;
-    const selectedProjects = this.selectedProjectIds.map(id => {
+    const selectedProjects = this.selectedProjectIds().map(id => {
       const project = this.availableProjects().some(p => p.id === id);
       return project ? {
         project_id: id,
@@ -282,7 +297,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   }
 
   getCenterDisplayName(id: number): string {
-    const center = this.availableCenters.find(c => c.institutionId === id);
+    const center = this.availableCenters().find(c => c.institutionId === id);
     return center ? (center.acronym || center.code) : String(id);
   }
 
@@ -318,13 +333,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     if (id === this.readonlyLeadCenterInstitutionId) {
       return;
     }
-    this.onCentersChange(this.selectedCenterInstitutionIds.filter(i => i !== id));
+    this.onCentersChange(this.selectedCenterInstitutionIds().filter(i => i !== id));
   }
 
   removeProject(id: number): void {
     if (id === this.readonlyLeadProjectId) {
       return;
     }
-    this.onProjectsChange(this.selectedProjectIds.filter(p => p !== id));
+    this.onProjectsChange(this.selectedProjectIds().filter(p => p !== id));
   }
 }

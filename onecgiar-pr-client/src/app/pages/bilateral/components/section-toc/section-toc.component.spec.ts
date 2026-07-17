@@ -23,7 +23,18 @@ describe('SectionTocComponent', () => {
       selectedPrimarySp: signal({ programId: 456, programCode: 'SP01', allocation: '40' }),
     };
 
-    autoSave = { updateFieldsBatch: jest.fn() };
+    autoSave = {
+      updateFieldsBatch: jest.fn(),
+      saveTocMapping: jest.fn(),
+      loadTocState: jest.fn().mockResolvedValue({
+        planned_result: null,
+        toc_level_id: null,
+        toc_result_id: null,
+        indicator_id: null,
+        contributing_indicator: null,
+        toc_progressive_narrative: null,
+      }),
+    };
 
     api = {
       dataControlSE: {

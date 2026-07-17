@@ -326,30 +326,6 @@
   margin-top: 4px;
 }
 
-.st-select {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1.5px solid #CFD8DC;
-  border-radius: 8px;
-  font-family: 'Poppins', sans-serif;
-  font-size: 12px;
-  color: #37474F;
-  background: #FFFFFF;
-  outline: none;
-  transition: border-color 200ms ease;
-  cursor: pointer;
-
-  &:focus {
-    border-color: #42A5F5;
-    box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.12);
-  }
-
-  option {
-    font-size: 12px;
-  }
-}
-
 .st-input {
   width: 100%;
   box-sizing: border-box;
@@ -391,52 +367,6 @@
   font-size: 11px;
   color: #E65100;
   line-height: 1.5;
-}
-
-.st-select-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 2px 0;
-}
-
-.st-select-item-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.st-select-item-code {
-  font-size: 10px;
-  font-weight: 700;
-  color: #1565C0;
-  font-family: 'JetBrains Mono', 'SF Mono', monospace;
-}
-
-.st-select-item-desc {
-  font-size: 12px;
-  color: #37474F;
-  line-height: 1.4;
-}
-
-.st-select-badge {
-  display: inline-flex;
-  font-size: 10px;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 10px;
-  margin-top: 2px;
-
-  &--match {
-    background: #E8F5E9;
-    color: #2E7D32;
-  }
-
-  &--other {
-    background: #FFF3E0;
-    color: #E65100;
-  }
 }
 
 .st-target-display {

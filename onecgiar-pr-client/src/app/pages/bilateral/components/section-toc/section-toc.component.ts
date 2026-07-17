@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnInit, effect, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SelectModule } from 'primeng/select';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
@@ -25,7 +25,7 @@ const INDICATOR_TYPE_TO_RESULT_NAME: Record<string, string> = {
 
 @Component({
   selector: 'app-section-toc',
-  imports: [CommonModule, FormsModule, FormSkeletonComponent, SelectModule],
+  imports: [CommonModule, FormsModule, FormSkeletonComponent, CustomFieldsModule],
   templateUrl: './section-toc.component.html',
   styleUrl: './section-toc.component.scss',
 })
@@ -106,7 +106,16 @@ export class SectionTocComponent implements OnInit {
         const info = this.getIndicatorMatchInfo(ind);
         return info.cssClass === 'bp-toc-match--other';
       });
-      return { ...item, hasMatch, hasOther };
+      const code = this.escapeHtml(item.wp_short_name || item.extraInformation || 'AOW');
+      const title = this.escapeHtml(item.title || item.extraInformation || '');
+      let badge = '';
+      if (hasMatch) {
+        badge = ` <span class="inline-flex rounded-[10px] bg-[#E8F5E9] px-[6px] text-[10px] font-medium text-[#2E7D32]">Match [${this.escapeHtml(this.resultTypeLabel())}]</span>`;
+      } else if (hasOther) {
+        badge = ` <span class="inline-flex rounded-[10px] bg-[#FFF3E0] px-[6px] text-[10px] font-medium text-[#E65100]">Review needed</span>`;
+      }
+      const select_label = `<b class="text-[10px] text-[#1565C0]">${code}</b>${badge} — ${title}`;
+      return { ...item, hasMatch, hasOther, select_label };
     });
   });
 
@@ -114,11 +123,32 @@ export class SectionTocComponent implements OnInit {
     const resultId = this.selectedTocResultId();
     if (!resultId) return [];
     const result = this.activeList().find((r: any) => String(r.toc_result_id) === String(resultId));
-    return (result?.indicators ?? []).map((ind: any) => ({
-      ...ind,
-      matchInfo: this.getIndicatorMatchInfo(ind),
-    }));
+    return (result?.indicators ?? []).map((ind: any) => {
+      const matchInfo = this.getIndicatorMatchInfo(ind);
+      let badges = '';
+      if (matchInfo.cssClass === 'bp-toc-match--match') {
+        if (ind.unit_messurament) {
+          badges += ` <span class="inline-flex rounded-[10px] bg-[#FFECB3] px-[6px] text-[9px] font-medium text-[#795548]">${this.escapeHtml(ind.unit_messurament)}</span>`;
+        }
+        badges += ` <span class="inline-flex rounded-[10px] bg-[#E8F5E9] px-[6px] text-[10px] font-medium text-[#2E7D32]">Target: ${this.escapeHtml(String(ind.targets?.[0]?.target_value ?? 'N/A'))}</span>`;
+      } else if (matchInfo.cssClass === 'bp-toc-match--other') {
+        badges += ` <span class="inline-flex rounded-[10px] bg-[#FFF3E0] px-[6px] text-[10px] font-medium text-[#E65100]">[${this.escapeHtml(matchInfo.label)}]</span>`;
+      }
+      return {
+        ...ind,
+        matchInfo,
+        select_label: `${this.escapeHtml(ind.indicator_description || 'Unnamed')}${badges}`,
+      };
+    });
   });
+
+  private escapeHtml(value: string): string {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
   readonly selectedIndicatorData = computed(() => {
     const id = this.selectedIndicatorId();

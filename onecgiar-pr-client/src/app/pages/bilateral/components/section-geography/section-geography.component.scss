@@ -106,23 +106,6 @@
   color: #D32F2F;
 }
 
-::ng-deep .p-select {
-  width: 100%;
-  max-width: 480px;
-  border: 1.5px solid #E0E0E0;
-  border-radius: 6px;
-  transition: border-color 150ms ease;
-
-  &:hover {
-    border-color: #B0BEC5;
-  }
-
-  &.p-focus {
-    border-color: #1565C0;
-    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
-  }
-}
-
 .sg-toggle-buttons {
   display: flex;
   gap: 8px;
@@ -228,23 +211,6 @@
   border: 1px solid #ECEFF1;
   border-radius: 8px;
   padding: 12px;
-}
-
-::v-deep .p-multiselect {
-  width: 100%;
-  max-width: 480px;
-  border: 1.5px solid #E0E0E0;
-  border-radius: 6px;
-  transition: border-color 150ms ease;
-
-  &:hover {
-    border-color: #B0BEC5;
-  }
-
-  &.p-focus {
-    border-color: #1565C0;
-    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
-  }
 }
 
 .sg-selected-chips {

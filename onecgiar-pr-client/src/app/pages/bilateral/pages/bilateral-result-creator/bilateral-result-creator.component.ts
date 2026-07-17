@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { MessageService } from 'primeng/api';
+import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
@@ -48,13 +48,12 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     SectionTypeSpecificComponent
   ],
   templateUrl: './bilateral-result-creator.component.html',
-  styleUrl: './bilateral-result-creator.component.scss',
-  providers: [MessageService]
+  styleUrl: './bilateral-result-creator.component.scss'
 })
 export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly api = inject(ApiService);
   readonly creationService = inject(BilateralCreationService);
   readonly mdsTracker = inject(BilateralMdsTrackerService);
   readonly autoSaveService = inject(BilateralAutoSaveService);
@@ -140,7 +139,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       next: ({ response }) => {
         this.isCreatingResult.set(false);
         if (!response?.id) {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Result created but no ID returned' });
+          this.api.alertsFe.show({ id: 'bilateralCreateNoId', title: 'Error', description: 'Result created but no ID returned', status: 'error' });
           return;
         }
         this.creationService.clearEditorState();
@@ -152,7 +151,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       error: (err: HttpErrorResponse) => {
         this.isCreatingResult.set(false);
         const detail = err.error?.message || err.statusText || 'Unknown error';
-        this.messageService.add({ severity: 'error', summary: 'Failed to create result', detail, life: 5000 });
+        this.api.alertsFe.show({ id: 'bilateralCreateError', title: 'Failed to create result', description: detail, status: 'error', closeIn: 5000 });
       }
     });
   }
@@ -186,12 +185,12 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.creationService.submitResult(rid).subscribe({
       next: () => {
         this.isSubmitting.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Submitted', detail: 'Result submitted successfully' });
+        this.api.alertsFe.show({ id: 'bilateralSubmitSuccess', title: 'Submitted', description: 'Result submitted successfully', status: 'success' });
       },
       error: (err: HttpErrorResponse) => {
         this.isSubmitting.set(false);
         const detail = err.error?.message || err.statusText || 'Unknown error';
-        this.messageService.add({ severity: 'error', summary: 'Submit failed', detail, life: 5000 });
+        this.api.alertsFe.show({ id: 'bilateralSubmitError', title: 'Submit failed', description: detail, status: 'error', closeIn: 5000 });
       }
     });
   }
@@ -199,11 +198,12 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   triggerManualSave(): void {
     this.autoSaveService.flush();
     this.autoSaveService.manualSave$.next();
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'All changes saved successfully.',
-      life: 2000
+    this.api.alertsFe.show({
+      id: 'bilateralManualSave',
+      title: 'Success',
+      description: 'All changes saved successfully.',
+      status: 'success',
+      closeIn: 2000
     });
   }
 

@@ -617,7 +617,6 @@ styles/
 ├── fonts.scss              # ★ Poppins, typography scale, color/weight utilities
 ├── containers.scss         # Container/layout helpers
 ├── filters-list.scss       # Filter strip styling
-├── primeng-custom-styles.scss  # PrimeNG overrides
 ├── table-custom-styles.scss    # Table overrides
 ├── custom-alert.scss       # Project alert / toast variants
 ├── ipsr.scss               # IPSR-specific styling

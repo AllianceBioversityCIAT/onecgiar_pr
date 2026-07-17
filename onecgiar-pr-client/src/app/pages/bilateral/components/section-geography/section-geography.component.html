@@ -16,49 +16,47 @@
     <div class="sg-card__body">
       <div class="sg-field">
         <label class="sg-label">Geographic Scope <span class="sg-required">*</span></label>
-        <p-select
+        <app-pr-select
+          class="block w-full max-w-[480px]"
           [options]="geoscopeOptions"
-          [ngModel]="geographicLocationBody.geo_scope_id"
+          [ngModel]="geographicLocationBody().geo_scope_id"
           (ngModelChange)="onScopeChange($event)"
           optionLabel="name"
           optionValue="id"
           placeholder="Select scope"
-          [style]="{ width: '100%', 'max-width': '480px' }"
-          appendTo="body"
-          panelStyleClass="sc-dropdown-panel">
-        </p-select>
+          [editable]="true"
+          [overlayToBody]="true">
+        </app-pr-select>
       </div>
 
       <!-- Region questions and select -->
-      @if (geographicLocationBody.geo_scope_id && geographicLocationBody.geo_scope_id !== 1 && geographicLocationBody.geo_scope_id !== 50) {
-        @if (geographicLocationBody.geo_scope_id !== 2) {
+      @if (geographicLocationBody().geo_scope_id && geographicLocationBody().geo_scope_id !== 1 && geographicLocationBody().geo_scope_id !== 50) {
+        @if (geographicLocationBody().geo_scope_id !== 2) {
           <div class="sg-field sg-field--toggle">
             <label class="sg-label">Are there any regions that you wish to specify for this result? <span class="sg-required">*</span></label>
             <div class="sg-toggle-buttons">
-              <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="geographicLocationBody.has_regions === true" (click)="setHasRegions(true)">Yes</button>
-              <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="geographicLocationBody.has_regions === false" (click)="setHasRegions(false)">No</button>
+              <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="geographicLocationBody().has_regions === true" (click)="setHasRegions(true)">Yes</button>
+              <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="geographicLocationBody().has_regions === false" (click)="setHasRegions(false)">No</button>
             </div>
           </div>
         }
 
-        @if (geographicLocationBody.geo_scope_id === 2 || geographicLocationBody.has_regions) {
+        @if (geographicLocationBody().geo_scope_id === 2 || geographicLocationBody().has_regions) {
           <div class="sg-field">
             <label class="sg-label">Select regions <span class="sg-required">*</span></label>
-            <p-multiSelect
+            <app-pr-multi-select
+              class="block w-full max-w-[480px]"
               [options]="regionsCountriesSE.regionsList"
               optionLabel="name"
+              optionValue="id"
               placeholder="Select regions"
-              dataKey="id"
-              [maxSelectedLabels]="0"
-              selectedItemsLabel="{0} selected"
-              [(ngModel)]="geographicLocationBody.regions"
-              (ngModelChange)="saveGeography()"
-              panelStyleClass="sc-dropdown-panel"
-              appendTo="body">
-            </p-multiSelect>
-            @if (geographicLocationBody.regions?.length) {
+              [isStatic]="true"
+              [ngModel]="geographicLocationBody().regions"
+              (ngModelChange)="onRegionsChange($event)">
+            </app-pr-multi-select>
+            @if (geographicLocationBody().regions?.length) {
               <div class="sg-selected-chips">
-                @for (reg of geographicLocationBody.regions; track reg.id) {
+                @for (reg of geographicLocationBody().regions; track reg.id) {
                   <span class="sg-chip">
                     {{ reg.name }}
                     <button type="button" class="sg-chip-remove" (click)="removeRegion(reg)">×</button>
@@ -70,34 +68,32 @@
         }
 
         <!-- Country questions and select -->
-        @if (geographicLocationBody.geo_scope_id !== 3 && geographicLocationBody.geo_scope_id !== 5) {
+        @if (geographicLocationBody().geo_scope_id !== 3 && geographicLocationBody().geo_scope_id !== 5) {
           <div class="sg-field sg-field--toggle">
             <label class="sg-label">Are there any countries that you wish to specify for this result? <span class="sg-required">*</span></label>
             <div class="sg-toggle-buttons">
-              <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="geographicLocationBody.has_countries === true" (click)="setHasCountries(true)">Yes</button>
-              <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="geographicLocationBody.has_countries === false" (click)="setHasCountries(false)">No</button>
+              <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="geographicLocationBody().has_countries === true" (click)="setHasCountries(true)">Yes</button>
+              <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="geographicLocationBody().has_countries === false" (click)="setHasCountries(false)">No</button>
             </div>
           </div>
         }
 
-        @if (geographicLocationBody.geo_scope_id === 3 || geographicLocationBody.geo_scope_id === 5 || geographicLocationBody.has_countries) {
+        @if (geographicLocationBody().geo_scope_id === 3 || geographicLocationBody().geo_scope_id === 5 || geographicLocationBody().has_countries) {
           <div class="sg-field">
             <label class="sg-label">Select countries <span class="sg-required">*</span></label>
-            <p-multiSelect
+            <app-pr-multi-select
+              class="block w-full max-w-[480px]"
               [options]="regionsCountriesSE.countriesList"
               optionLabel="full_name"
+              optionValue="id"
               placeholder="Select countries"
-              dataKey="id"
-              [maxSelectedLabels]="0"
-              selectedItemsLabel="{0} selected"
-              [(ngModel)]="geographicLocationBody.countries"
-              (ngModelChange)="saveGeography()"
-              panelStyleClass="sc-dropdown-panel"
-              appendTo="body">
-            </p-multiSelect>
-            @if (geographicLocationBody.countries?.length) {
+              [isStatic]="true"
+              [ngModel]="geographicLocationBody().countries"
+              (ngModelChange)="onCountriesChange($event)">
+            </app-pr-multi-select>
+            @if (geographicLocationBody().countries?.length) {
               <div class="sg-selected-chips">
-                @for (c of geographicLocationBody.countries; track c.id) {
+                @for (c of geographicLocationBody().countries; track c.id) {
                   <span class="sg-chip">
                     {{ c.full_name || c.name }}
                     <button type="button" class="sg-chip-remove" (click)="removeCountry(c)">×</button>
@@ -109,15 +105,15 @@
         }
 
         <!-- Sub-national section -->
-        @if (geographicLocationBody.geo_scope_id === 5 && geographicLocationBody.countries.length) {
+        @if (geographicLocationBody().geo_scope_id === 5 && geographicLocationBody().countries.length) {
           <div class="sg-subnational-container">
             <h4 class="sg-subnational-title">Sub-national Details</h4>
-            @for (country of geographicLocationBody.countries; track country.id; let idx = $index) {
+            @for (country of geographicLocationBody().countries; track country.id; let idx = $index) {
               <div class="sg-subnational-card">
                 <app-sub-geoscope
                   [obj_country]="country"
                   [index]="idx"
-                  [obj_countrySelected]="geographicLocationBody.countries"
+                  [obj_countrySelected]="geographicLocationBody().countries"
                   [name]="country.name"
                   [readOnly]="false">
                 </app-sub-geoscope>
@@ -130,7 +126,7 @@
   </div>
 
   <!-- Card 2: Potential Impact in other geographic areas (Extra Scope) -->
-  @if (geographicLocationBody.geo_scope_id && geographicLocationBody.geo_scope_id !== 1 && geographicLocationBody.geo_scope_id !== 50) {
+  @if (geographicLocationBody().geo_scope_id && geographicLocationBody().geo_scope_id !== 1 && geographicLocationBody().geo_scope_id !== 50) {
     <div class="sg-card">
       <div class="sg-card__header">
         <div class="sg-card__title">
@@ -143,46 +139,44 @@
         <div class="sg-field sg-field--toggle">
           <label class="sg-label">Are there any extra regions or countries that you wish to specify? <span class="sg-required">*</span></label>
           <div class="sg-toggle-buttons">
-            <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="extraGeographicLocationBody.has_extra_geo_scope === true" (click)="setHasExtraScope(true)">Yes</button>
-            <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="extraGeographicLocationBody.has_extra_geo_scope === false" (click)="setHasExtraScope(false)">No</button>
+            <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="extraGeographicLocationBody().has_extra_geo_scope === true" (click)="setHasExtraScope(true)">Yes</button>
+            <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="extraGeographicLocationBody().has_extra_geo_scope === false" (click)="setHasExtraScope(false)">No</button>
           </div>
         </div>
 
-        @if (extraGeographicLocationBody.has_extra_geo_scope) {
+        @if (extraGeographicLocationBody().has_extra_geo_scope) {
           <div class="sg-field">
             <label class="sg-label">Extra Geographic Scope <span class="sg-required">*</span></label>
-            <p-select
+            <app-pr-select
+              class="block w-full max-w-[480px]"
               [options]="extraGeoscopeOptions"
-              [ngModel]="extraGeographicLocationBody.geo_scope_id"
+              [ngModel]="extraGeographicLocationBody().geo_scope_id"
               (ngModelChange)="onExtraScopeChange($event)"
               optionLabel="name"
               optionValue="id"
               placeholder="Select scope"
-              [style]="{ width: '100%', 'max-width': '480px' }"
-              appendTo="body"
-              panelStyleClass="sc-dropdown-panel">
-            </p-select>
+              [editable]="true"
+              [overlayToBody]="true">
+            </app-pr-select>
           </div>
 
           <!-- Extra Regions select -->
-          @if (extraGeographicLocationBody.geo_scope_id === 2 || extraGeographicLocationBody.has_regions) {
+          @if (extraGeographicLocationBody().geo_scope_id === 2 || extraGeographicLocationBody().has_regions) {
             <div class="sg-field">
               <label class="sg-label">Select extra regions <span class="sg-required">*</span></label>
-              <p-multiSelect
+              <app-pr-multi-select
+                class="block w-full max-w-[480px]"
                 [options]="regionsCountriesSE.regionsList"
                 optionLabel="name"
+                optionValue="id"
                 placeholder="Select extra regions"
-                dataKey="id"
-                [maxSelectedLabels]="0"
-                selectedItemsLabel="{0} selected"
-                [(ngModel)]="extraGeographicLocationBody.regions"
-                (ngModelChange)="saveGeography()"
-                panelStyleClass="sc-dropdown-panel"
-                appendTo="body">
-              </p-multiSelect>
-              @if (extraGeographicLocationBody.regions?.length) {
+                [isStatic]="true"
+                [ngModel]="extraGeographicLocationBody().regions"
+                (ngModelChange)="onExtraRegionsChange($event)">
+              </app-pr-multi-select>
+              @if (extraGeographicLocationBody().regions?.length) {
                 <div class="sg-selected-chips">
-                  @for (reg of extraGeographicLocationBody.regions; track reg.id) {
+                  @for (reg of extraGeographicLocationBody().regions; track reg.id) {
                     <span class="sg-chip">
                       {{ reg.name }}
                       <button type="button" class="sg-chip-remove" (click)="removeExtraRegion(reg)">×</button>
@@ -194,24 +188,22 @@
           }
 
           <!-- Extra Countries select -->
-          @if (extraGeographicLocationBody.geo_scope_id === 3 || extraGeographicLocationBody.geo_scope_id === 5 || extraGeographicLocationBody.has_countries) {
+          @if (extraGeographicLocationBody().geo_scope_id === 3 || extraGeographicLocationBody().geo_scope_id === 5 || extraGeographicLocationBody().has_countries) {
             <div class="sg-field">
               <label class="sg-label">Select extra countries <span class="sg-required">*</span></label>
-              <p-multiSelect
+              <app-pr-multi-select
+                class="block w-full max-w-[480px]"
                 [options]="regionsCountriesSE.countriesList"
                 optionLabel="full_name"
+                optionValue="id"
                 placeholder="Select extra countries"
-                dataKey="id"
-                [maxSelectedLabels]="0"
-                selectedItemsLabel="{0} selected"
-                [(ngModel)]="extraGeographicLocationBody.countries"
-                (ngModelChange)="saveGeography()"
-                panelStyleClass="sc-dropdown-panel"
-                appendTo="body">
-              </p-multiSelect>
-              @if (extraGeographicLocationBody.countries?.length) {
+                [isStatic]="true"
+                [ngModel]="extraGeographicLocationBody().countries"
+                (ngModelChange)="onExtraCountriesChange($event)">
+              </app-pr-multi-select>
+              @if (extraGeographicLocationBody().countries?.length) {
                 <div class="sg-selected-chips">
-                  @for (c of extraGeographicLocationBody.countries; track c.id) {
+                  @for (c of extraGeographicLocationBody().countries; track c.id) {
                     <span class="sg-chip">
                       {{ c.full_name || c.name }}
                       <button type="button" class="sg-chip-remove" (click)="removeExtraCountry(c)">×</button>
@@ -223,15 +215,15 @@
           }
 
           <!-- Extra Sub-national section -->
-          @if (extraGeographicLocationBody.geo_scope_id === 5 && extraGeographicLocationBody.countries.length) {
+          @if (extraGeographicLocationBody().geo_scope_id === 5 && extraGeographicLocationBody().countries.length) {
             <div class="sg-subnational-container">
               <h4 class="sg-subnational-title">Extra Sub-national Details</h4>
-              @for (country of extraGeographicLocationBody.countries; track country.id; let idx = $index) {
+              @for (country of extraGeographicLocationBody().countries; track country.id; let idx = $index) {
                 <div class="sg-subnational-card">
                   <app-sub-geoscope
                     [obj_country]="country"
                     [index]="idx"
-                    [obj_countrySelected]="extraGeographicLocationBody.countries"
+                    [obj_countrySelected]="extraGeographicLocationBody().countries"
                     [name]="country.name"
                     [readOnly]="false">
                   </app-sub-geoscope>
