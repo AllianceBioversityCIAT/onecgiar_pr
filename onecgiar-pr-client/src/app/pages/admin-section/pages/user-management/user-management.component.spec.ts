@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { By } from '@angular/platform-browser';
 
 import UserManagementComponent from './user-management.component';
+import { PrFilterMultiselectComponent } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
@@ -327,6 +329,35 @@ describe('UserManagementComponent', () => {
       expect(component.selectedStatus()).toBe('Inactive');
       expect(getUsersSpy).toHaveBeenCalled();
       expect(component.userTable.reset).toHaveBeenCalled();
+    });
+  });
+
+  describe('onEntitiesChange', () => {
+    it('should set selectedEntities and call getUsers', () => {
+      const getUsersSpy = jest.spyOn(component, 'getUsers').mockImplementation(() => {});
+      component.userTable = { reset: jest.fn() } as any;
+      component.onEntitiesChange([1, 2]);
+      expect(component.selectedEntities()).toEqual([1, 2]);
+      expect(getUsersSpy).toHaveBeenCalled();
+      expect(component.userTable.reset).toHaveBeenCalled();
+    });
+
+    it('should default to an empty array when value is null', () => {
+      jest.spyOn(component, 'getUsers').mockImplementation(() => {});
+      component.onEntitiesChange(null as any);
+      expect(component.selectedEntities()).toEqual([]);
+    });
+
+    it('should write the entity selection back and send it to GET_searchUser', () => {
+      const searchSpy = jest.spyOn(mockResultsApiService, 'GET_searchUser');
+      const multiselect = fixture.debugElement.query(By.directive(PrFilterMultiselectComponent))
+        .componentInstance as PrFilterMultiselectComponent;
+      const entity = { id: 5, official_code: 'SP05' };
+
+      multiselect.toggle(entity);
+
+      expect(component.selectedEntities()).toEqual([entity]);
+      expect(searchSpy).toHaveBeenCalledWith('', '', '', [entity]);
     });
   });
 

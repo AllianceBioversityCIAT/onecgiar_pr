@@ -165,6 +165,13 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.userTable?.reset();
   }
 
+  // Method to handle entity filter changes
+  onEntitiesChange(value: number[]) {
+    this.selectedEntities.set(value ?? []);
+    this.getUsers();
+    this.userTable?.reset();
+  }
+
   // Method to clear all filters
   onClearFilters() {
     // Clear search timeout if exists

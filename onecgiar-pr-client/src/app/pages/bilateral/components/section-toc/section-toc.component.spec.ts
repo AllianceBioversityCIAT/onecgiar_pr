@@ -13,6 +13,7 @@ describe('SectionTocComponent', () => {
   let creationService: any;
   let autoSave: any;
   let api: any;
+  let mdsTracker: any;
 
   beforeEach(async () => {
     creationService = {
@@ -21,7 +22,13 @@ describe('SectionTocComponent', () => {
       resultTypeId: signal(1),
       resultInitiativeId: signal(42),
       selectedPrimarySp: signal({ programId: 456, programCode: 'SP01', allocation: '40' }),
+      selectedProject: signal(null),
+      resultLeadCenterId: signal(null),
+      resultContributingCenterIds: signal<number[]>([]),
+      resultContributingProjectIds: signal<number[]>([]),
     };
+
+    mdsTracker = { updateSection: jest.fn() };
 
     autoSave = {
       updateFieldsBatch: jest.fn(),
@@ -57,7 +64,7 @@ describe('SectionTocComponent', () => {
       providers: [
         { provide: BilateralCreationService, useValue: creationService },
         { provide: BilateralAutoSaveService, useValue: autoSave },
-        { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn() } },
+        { provide: BilateralMdsTrackerService, useValue: mdsTracker },
         { provide: ApiService, useValue: api },
       ],
     }).compileComponents();
@@ -108,5 +115,58 @@ describe('SectionTocComponent', () => {
     creationService.resultTypeId.set(1);
     const info = component.getIndicatorMatchInfo({ type_value: '%Number of innovations%' });
     expect(info.cssClass).toBe('bp-toc-match--other');
+  });
+
+  it('should ignore re-selecting the already-selected level', () => {
+    component.selectedLevelId.set(2);
+    component.selectedTocResultId.set(10);
+    component.selectedIndicatorId.set('ind-1');
+    component.onLevelChange(2);
+    expect(component.selectedTocResultId()).toBe(10);
+    expect(component.selectedIndicatorId()).toBe('ind-1');
+    expect(autoSave.saveTocMapping).not.toHaveBeenCalled();
+  });
+
+  it('should ignore re-selecting the already-selected ToC result', () => {
+    component.selectedTocResultId.set(10);
+    component.selectedIndicatorId.set('ind-1');
+    component.onTocResultSelect(10);
+    expect(component.selectedTocResultId()).toBe(10);
+    expect(component.selectedIndicatorId()).toBe('ind-1');
+  });
+
+  it('should ignore re-selecting the already-selected indicator', () => {
+    component.selectedIndicatorId.set('ind-1');
+    component.contributionValue.set(5);
+    component.onIndicatorSelect('ind-1');
+    expect(component.contributionValue()).toBe(5);
+  });
+
+  it('should not refetch lists when isPlanned changes outside onPlannedChange', () => {
+    fixture.detectChanges();
+    const callsAfterInit = api.tocApiSE.GET_AllTocLevels.mock.calls.length;
+    component.isPlanned.set(true);
+    fixture.detectChanges();
+    expect(api.tocApiSE.GET_AllTocLevels.mock.calls.length).toBe(callsAfterInit);
+  });
+
+  it('should build plain-text select labels without HTML markup', () => {
+    component.selectedLevelId.set(1);
+    component.outputList.set([
+      { toc_result_id: 1, wp_short_name: 'WP1', title: 'Output 1', indicators: [{ type_value: '%Number of Policy%' }] },
+    ]);
+    const label = component.tocResultItems()[0].select_label;
+    expect(label).not.toContain('<');
+    expect(label).toContain('WP1');
+    expect(label).toContain('Output 1');
+  });
+
+  it('should report contributors progress from real state instead of hardcoding 3/3', () => {
+    fixture.detectChanges();
+    expect(mdsTracker.updateSection).toHaveBeenLastCalledWith('contributors', 0);
+    creationService.resultContributingCenterIds.set([99]);
+    component.isPlanned.set(false);
+    fixture.detectChanges();
+    expect(mdsTracker.updateSection).toHaveBeenLastCalledWith('contributors', 2);
   });
 });

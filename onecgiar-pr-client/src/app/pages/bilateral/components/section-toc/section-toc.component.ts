@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, effect, input } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, effect, input, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
@@ -110,11 +110,11 @@ export class SectionTocComponent implements OnInit {
       const title = this.escapeHtml(item.title || item.extraInformation || '');
       let badge = '';
       if (hasMatch) {
-        badge = ` <span class="inline-flex rounded-[10px] bg-[#E8F5E9] px-[6px] text-[10px] font-medium text-[#2E7D32]">Match [${this.escapeHtml(this.resultTypeLabel())}]</span>`;
+        badge = ` · Match [${this.escapeHtml(this.resultTypeLabel())}]`;
       } else if (hasOther) {
-        badge = ` <span class="inline-flex rounded-[10px] bg-[#FFF3E0] px-[6px] text-[10px] font-medium text-[#E65100]">Review needed</span>`;
+        badge = ' · Review needed';
       }
-      const select_label = `<b class="text-[10px] text-brand-400">${code}</b>${badge} — ${title}`;
+      const select_label = `${code}${badge} — ${title}`;
       return { ...item, hasMatch, hasOther, select_label };
     });
   });
@@ -128,11 +128,11 @@ export class SectionTocComponent implements OnInit {
       let badges = '';
       if (matchInfo.cssClass === 'bp-toc-match--match') {
         if (ind.unit_messurament) {
-          badges += ` <span class="inline-flex rounded-[10px] bg-[#FFECB3] px-[6px] text-[9px] font-medium text-[#795548]">${this.escapeHtml(ind.unit_messurament)}</span>`;
+          badges += ` · ${this.escapeHtml(ind.unit_messurament)}`;
         }
-        badges += ` <span class="inline-flex rounded-[10px] bg-[#E8F5E9] px-[6px] text-[10px] font-medium text-[#2E7D32]">Target: ${this.escapeHtml(String(ind.targets?.[0]?.target_value ?? 'N/A'))}</span>`;
+        badges += ` · Target: ${this.escapeHtml(String(ind.targets?.[0]?.target_value ?? 'N/A'))}`;
       } else if (matchInfo.cssClass === 'bp-toc-match--other') {
-        badges += ` <span class="inline-flex rounded-[10px] bg-[#FFF3E0] px-[6px] text-[10px] font-medium text-[#E65100]">[${this.escapeHtml(matchInfo.label)}]</span>`;
+        badges += ` · [${this.escapeHtml(matchInfo.label)}]`;
       }
       return {
         ...ind,
@@ -163,7 +163,15 @@ export class SectionTocComponent implements OnInit {
   });
 
   constructor() {
-    this.mdsTracker.updateSection('contributors', 3);
+    effect(() => {
+      const leadCenterId = this.creationService.selectedProject()?.leadCenter?.id ?? this.creationService.resultLeadCenterId();
+      const centersFilled = leadCenterId != null || this.creationService.resultContributingCenterIds().length > 0;
+      const projectsFilled = this.creationService.selectedProject() != null || this.creationService.resultContributingProjectIds().length > 0;
+      const planned = this.isPlanned();
+      const tocFilled = planned === false || (planned === true && this.selectedTocResultId() != null);
+      const filled = [centersFilled, projectsFilled, tocFilled].filter(Boolean).length;
+      this.mdsTracker.updateSection('contributors', filled);
+    });
 
     effect(() => {
       const iId = this.creationService.resultInitiativeId();
@@ -175,9 +183,11 @@ export class SectionTocComponent implements OnInit {
     effect(() => {
       const iId = this.initiativeId();
       if (!iId) return;
-      this.loadTocLevels();
-      this.fetchLists();
-      this.loadTocState();
+      untracked(() => {
+        this.loadTocLevels();
+        this.fetchLists();
+        this.loadTocState();
+      });
     });
   }
 
@@ -281,6 +291,7 @@ export class SectionTocComponent implements OnInit {
   }
 
   onLevelChange(levelId: number): void {
+    if (this.selectedLevelId() == levelId) return;
     this.selectedLevelId.set(levelId);
     this.selectedTocResultId.set(null);
     this.selectedIndicatorId.set(null);
@@ -289,14 +300,14 @@ export class SectionTocComponent implements OnInit {
   }
 
   onTocResultSelect(tocResultId: number | string): void {
-    this.selectedTocResultId.set(
-      this.selectedTocResultId() == tocResultId ? null : tocResultId
-    );
+    if (this.selectedTocResultId() == tocResultId) return;
+    this.selectedTocResultId.set(tocResultId);
     this.selectedIndicatorId.set(null);
     this.saveTocDebounced();
   }
 
   onIndicatorSelect(relatedNodeId: number | string): void {
+    if (this.selectedIndicatorId() == relatedNodeId) return;
     this.selectedIndicatorId.set(relatedNodeId);
     this.contributionValue.set(null);
     this.saveTocDebounced();

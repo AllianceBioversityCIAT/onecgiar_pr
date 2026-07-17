@@ -81,8 +81,8 @@
               [options]="initiativesService.allInitiatives()"
               optionLabel="official_code"
               placeholder="All"
-              (changed)="getUsers()"
               [ngModel]="selectedEntities()"
+              (ngModelChange)="onEntitiesChange($event)"
               [group]="true"
               optionGroupChildren="entities"
               optionGroupLabel="name">
