@@ -38,6 +38,17 @@ interface StatusRow {
   barGradient: string;
 }
 
+/** One indicator category (result type) with its reporting counts. */
+interface IndicatorCategory {
+  resultTypeId: number;
+  resultTypeName: string;
+  editing: number;
+  submitted: number;
+}
+
+const OUTPUT_NAMES = ['Innovation development', 'Knowledge product', 'Capacity sharing for development', 'Other output'];
+const OUTCOME_NAMES = ['Innovation use', 'Policy change', 'Other outcome'];
+
 /** Accent palette derived from a program's icon dominant color. */
 interface AccentTheme {
   solid: string;
@@ -78,17 +89,61 @@ export class DashboardLabComponent implements OnInit {
   /** Dominant accent color extracted from each program's icon, keyed by code. */
   readonly accentColors = signal<Map<string, string>>(new Map());
 
-  /** Areas of Work for the selected program (loaded on demand, cached by code). */
-  readonly aows = signal<Unit[]>([]);
-  readonly loadingAows = signal<boolean>(false);
-  private readonly aowCache = new Map<string, Unit[]>();
+  /** Areas of Work cached by program code (signal-backed for template reactivity). */
+  readonly aowsByCode = signal<Map<string, Unit[]>>(new Map());
+  private readonly loadingCodes = signal<Set<string>>(new Set());
+
+  /** AOWs + loading state for the currently selected program. */
+  readonly aows = computed(() => {
+    const code = this.selected()?.initiativeCode;
+    return code ? this.aowsByCode().get(code) ?? [] : [];
+  });
+  readonly loadingAows = computed(() => {
+    const code = this.selected()?.initiativeCode;
+    return !!code && this.loadingCodes().has(code) && !this.aowsByCode().has(code);
+  });
+
+  /** Sidebar hover flyout (interactive): hovered program, its AOWs, vertical anchor. */
+  readonly hoveredProgram = signal<SPProgress | null>(null);
+  readonly hoverTop = signal<number>(0);
+  readonly hoveredAows = computed(() => {
+    const code = this.hoveredProgram()?.initiativeCode;
+    return code ? this.aowsByCode().get(code) ?? [] : [];
+  });
+  readonly hoveredLoading = computed(() => {
+    const code = this.hoveredProgram()?.initiativeCode;
+    return !!code && this.loadingCodes().has(code) && !this.aowsByCode().has(code);
+  });
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Indicator categories cached by program code + active Outputs/Outcomes tab. */
+  readonly summariesByCode = signal<Map<string, IndicatorCategory[]>>(new Map());
+  private readonly loadingSummaryCodes = signal<Set<string>>(new Set());
+  readonly categoryTab = signal<'outputs' | 'outcomes'>('outputs');
+
+  /** Selected program's categories, split into outputs / outcomes. */
+  readonly groupedSummaries = computed(() => {
+    const code = this.selected()?.initiativeCode;
+    const all = (code ? this.summariesByCode().get(code) : []) ?? [];
+    const summaries = all.filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
+    return {
+      outputs: summaries.filter(item => OUTPUT_NAMES.includes(item?.resultTypeName)),
+      outcomes: summaries.filter(item => OUTCOME_NAMES.includes(item?.resultTypeName))
+    };
+  });
+  readonly loadingSummaries = computed(() => {
+    const code = this.selected()?.initiativeCode;
+    return !!code && this.loadingSummaryCodes().has(code) && !this.summariesByCode().has(code);
+  });
 
   constructor() {
-    // Load the selected program's Areas of Work whenever the selection changes.
+    // Load the selected program's Areas of Work + indicator categories on selection change.
     effect(() => {
       const code = this.selected()?.initiativeCode;
-      if (code) this.loadAows(code);
-      else this.aows.set([]);
+      if (code) {
+        this.loadAows(code);
+        this.loadSummaries(code);
+      }
     });
   }
 
@@ -175,14 +230,19 @@ export class DashboardLabComponent implements OnInit {
   });
 
   /** Accent hex for the selected program (icon-derived, orange fallback). */
-  readonly accent = computed(() => {
-    const sp = this.selected();
-    return (sp && this.accentColors().get(sp.initiativeCode)) || FALLBACK_ACCENT;
-  });
+  readonly accent = computed(() => this.accentHex(this.selected()?.initiativeCode));
 
-  /** Ready-to-bind accent surfaces derived from the current accent. */
-  readonly accentTheme = computed<AccentTheme>(() => {
-    const base = this.accent();
+  /** Ready-to-bind accent surfaces for the selected program. */
+  readonly accentTheme = computed<AccentTheme>(() => this.themeFor(this.accent()));
+
+  /** Accent surfaces for the hovered program (drives the flyout). */
+  readonly hoveredTheme = computed<AccentTheme>(() => this.themeFor(this.accentHex(this.hoveredProgram()?.initiativeCode)));
+
+  private accentHex(code: string | undefined): string {
+    return (code && this.accentColors().get(code)) || FALLBACK_ACCENT;
+  }
+
+  private themeFor(base: string): AccentTheme {
     return {
       solid: base,
       soft: this.rgba(base, 0.14),
@@ -191,7 +251,7 @@ export class DashboardLabComponent implements OnInit {
       buttonShadow: `0 8px 20px ${this.rgba(base, 0.42)}`,
       cardShadow: `0 14px 30px ${this.rgba(base, 0.32)}`
     };
-  });
+  }
 
   ngOnInit(): void {
     if (this.allPrograms().length === 0) {
@@ -205,30 +265,89 @@ export class DashboardLabComponent implements OnInit {
 
   /** Fetch (and cache) the Areas of Work for a program by its official code. */
   private loadAows(code: string): void {
-    const cached = this.aowCache.get(code);
-    if (cached) {
-      this.aows.set(cached);
-      this.loadingAows.set(false);
-      return;
-    }
-    this.loadingAows.set(true);
-    this.aows.set([]);
+    if (this.aowsByCode().has(code) || this.loadingCodes().has(code)) return;
+    this.loadingCodes.update(set => new Set(set).add(code));
     this.api.resultsSE.GET_ClarisaGlobalUnits(code).subscribe({
-      next: ({ response }) => {
-        const units = response?.units ?? [];
-        this.aowCache.set(code, units);
-        if (this.selected()?.initiativeCode === code) {
-          this.aows.set(units);
-          this.loadingAows.set(false);
-        }
-      },
-      error: () => {
-        if (this.selected()?.initiativeCode === code) {
-          this.aows.set([]);
-          this.loadingAows.set(false);
-        }
-      }
+      next: ({ response }) => this.cacheAows(code, response?.units ?? []),
+      error: () => this.cacheAows(code, [])
     });
+  }
+
+  private cacheAows(code: string, units: Unit[]): void {
+    this.aowsByCode.update(map => new Map(map).set(code, units));
+    this.loadingCodes.update(set => {
+      const next = new Set(set);
+      next.delete(code);
+      return next;
+    });
+  }
+
+  /** Fetch (and cache) the indicator-contribution summary (result-type categories). */
+  private loadSummaries(code: string): void {
+    if (this.summariesByCode().has(code) || this.loadingSummaryCodes().has(code)) return;
+    this.loadingSummaryCodes.update(set => new Set(set).add(code));
+    this.api.resultsSE.GET_IndicatorContributionSummary(code).subscribe({
+      next: (res: { response?: { totalsByType?: IndicatorCategory[] } }) => this.cacheSummaries(code, res?.response?.totalsByType ?? []),
+      error: () => this.cacheSummaries(code, [])
+    });
+  }
+
+  private cacheSummaries(code: string, items: IndicatorCategory[]): void {
+    this.summariesByCode.update(map => new Map(map).set(code, items));
+    this.loadingSummaryCodes.update(set => {
+      const next = new Set(set);
+      next.delete(code);
+      return next;
+    });
+  }
+
+  setCategoryTab(tab: 'outputs' | 'outcomes'): void {
+    this.categoryTab.set(tab);
+  }
+
+  /** Material icon per result-type id (mirrors the entity-details PrimeIcons map). */
+  categoryIcon(resultTypeId: number): string {
+    switch (resultTypeId) {
+      case 7:
+        return 'flag';
+      case 6:
+        return 'menu_book';
+      case 5:
+        return 'groups';
+      case 2:
+        return 'wb_sunny';
+      case 1:
+        return 'folder_open';
+      default:
+        return 'folder';
+    }
+  }
+
+  onHoverProgram(sp: SPProgress, event: MouseEvent): void {
+    if (this.hideTimer) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
+    this.hoveredProgram.set(sp);
+    this.hoverTop.set((event.currentTarget as HTMLElement).getBoundingClientRect().top);
+    this.loadAows(sp.initiativeCode);
+  }
+
+  /** Delay hiding so the pointer can travel into the interactive flyout. */
+  onLeaveProgram(): void {
+    if (this.hideTimer) clearTimeout(this.hideTimer);
+    this.hideTimer = setTimeout(() => this.hoveredProgram.set(null), 160);
+  }
+
+  onFlyoutEnter(): void {
+    if (this.hideTimer) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
+  }
+
+  onFlyoutLeave(): void {
+    this.hoveredProgram.set(null);
   }
 
   onQuery(value: string): void {

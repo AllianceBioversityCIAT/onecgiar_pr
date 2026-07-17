@@ -36,6 +36,21 @@
 // (header-panel user menu + notifications) to float anchored to their trigger.
 @import '@angular/cdk/overlay-prebuilt.css';
 
+// Neutralize the native OS button chrome. Tailwind's full preflight is disabled above
+// (it would reset PrimeNG), so raw <button>s render with the grey system look + native
+// border. This restores the ONE preflight rule we need. It MUST live in @layer base so
+// Tailwind's `bg-*` / `border-*` utilities (in @layer utilities) still win — styled
+// buttons (PrimeNG, Spartan, any bg-/border- utility) keep their look; only unstyled
+// buttons stop showing the native grey chrome. Add explicit backgrounds where a fill is wanted.
+@layer base {
+  button {
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: transparent;
+    border-width: 0;
+  }
+}
+
 .globalDisabled {
 opacity: 0.5;
 pointer-events: none;
