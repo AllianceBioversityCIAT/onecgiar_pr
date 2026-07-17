@@ -14,3 +14,10 @@
     transform: translateX(0) scale(1);
   }
 }
+
+// app-pr-select's inner .field is `width:100%` + padding + border; without a global
+// box-sizing:border-box it overflows a width-constrained wrapper and the chevron box
+// sticks out. Scope-fix box-sizing for the pr-selects rendered inside this component.
+:host ::ng-deep .custom_select .field {
+  box-sizing: border-box;
+}

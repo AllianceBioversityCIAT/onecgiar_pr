@@ -176,127 +176,244 @@
 <section class="ml-[320px] box-border min-h-[calc(100vh-20px)] bg-[#eef0f3] px-6 pb-10 pt-5 max-[900px]:ml-0">
   @if (selected(); as sp) {
     @if (viewMode() === 'aow') {
-      <!-- ==================== AOW DETAIL — indicators ==================== -->
-      <div class="mb-4">
-        <p class="text-[11px] font-medium text-[var(--pr-color-accents-5)]">{{ sp.initiativeCode }} · {{ sp.initiativeShortName || sp.initiativeName }}</p>
-        <h1 class="text-[20px] font-bold leading-tight text-[var(--pr-color-secondary-400)]">
-          <span [style.color]="accentTheme().solid">{{ activeAowCode() }}</span> · {{ activeAow()?.name || 'Area of Work' }}
-        </h1>
-      </div>
-
-      <!-- tabs -->
-      <div class="mb-3 flex max-w-md gap-1 rounded-xl bg-white p-1 shadow-[0_4px_14px_rgba(30,32,47,0.05)]">
-        <button
-          type="button"
-          (click)="setIndicatorTab('outputs')"
-          class="flex-1 appearance-none rounded-lg border-0 py-2 text-[13px] font-semibold transition-all duration-200"
-          [class]="indicatorTab() === 'outputs' ? 'bg-[#23252f] text-white shadow-[0_2px_8px_rgba(30,32,47,0.25)]' : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'">
-          High-Level Outputs ({{ indicatorCounts().outputs }})
-        </button>
-        <button
-          type="button"
-          (click)="setIndicatorTab('outcomes')"
-          class="flex-1 appearance-none rounded-lg border-0 py-2 text-[13px] font-semibold transition-all duration-200"
-          [class]="indicatorTab() === 'outcomes' ? 'bg-[#23252f] text-white shadow-[0_2px_8px_rgba(30,32,47,0.25)]' : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'">
-          Outcomes ({{ indicatorCounts().outcomes }})
-        </button>
-      </div>
-
-      <!-- filters -->
-      <div class="mb-4 flex flex-wrap items-center gap-2">
-        <div class="w-[240px]">
-          <app-pr-select
-            [options]="typologySelectOptions()"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="All typologies"
-            [editable]="true"
-            [required]="false"
-            [ngModel]="typologyFilter() || ''"
-            [ngModelOptions]="{ standalone: true }"
-            (selectOptionEvent)="typologyFilter.set($event?.value || null)">
-          </app-pr-select>
+      <!-- ==================== AOW DETAIL — header ==================== -->
+      <div class="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div class="min-w-0">
+          <p class="m-0 flex items-center gap-1 text-[11px] font-medium text-[var(--pr-color-accents-5)]">
+            <span class="font-bold text-[var(--pr-color-secondary-400)]">{{ sp.initiativeCode }}</span>
+            <span class="material-icons-round text-[13px] text-[var(--pr-color-accents-3)]">chevron_right</span>
+            {{ sp.initiativeShortName || sp.initiativeName }}
+          </p>
+          <h1 class="m-0 mt-1 text-[20px] font-bold leading-tight text-[var(--pr-color-secondary-400)] [text-wrap:balance]">
+            <span [style.color]="accentTheme().solid">{{ activeAowCode() }}</span> · {{ activeAow()?.name || 'Area of Work' }}
+          </h1>
         </div>
-        <div class="w-[190px]">
-          <app-pr-select
-            [options]="statusSelectOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="All statuses"
-            [editable]="true"
-            [required]="false"
-            [ngModel]="statusFilter() || ''"
-            [ngModelOptions]="{ standalone: true }"
-            (selectOptionEvent)="statusFilter.set($event?.value || null)">
-          </app-pr-select>
-        </div>
-        @if (typologyFilter() || statusFilter()) {
-          <button
-            type="button"
-            (click)="typologyFilter.set(null); statusFilter.set(null)"
-            class="rounded-lg px-3 py-2 text-[12px] font-semibold text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]">
-            Clear filters
-          </button>
+
+        @if (activeAow(); as aow) {
+          <div class="flex items-center gap-4">
+            @if (aow.resultsCount) {
+              <div class="flex items-center gap-3 text-[11px] text-[var(--pr-color-accents-5)]">
+                <span class="flex items-center gap-1.5">
+                  <span class="size-1.5 rounded-full bg-[var(--pr-color-yellow-300)]"></span>Editing
+                  <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ aow.resultsCount.editing }}</b>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <span class="size-1.5 rounded-full bg-[var(--pr-color-green-500)]"></span>Submitted
+                  <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ aow.resultsCount.submitted }}</b>
+                </span>
+              </div>
+              <span class="h-9 w-px bg-[rgba(30,32,47,0.1)]"></span>
+            }
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-baseline justify-between gap-6">
+                <span class="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-5)]">AOW progress</span>
+                <span class="text-[13px] font-extrabold tabular-nums" [style.color]="accentTheme().solid">{{ aow.progress || 0 }}%</span>
+              </div>
+              <div class="h-1.5 w-[190px] overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]">
+                <div
+                  class="h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none"
+                  [style.width.%]="aow.progress || 0"
+                  [style.background]="accentTheme().gradient"></div>
+              </div>
+            </div>
+          </div>
         }
       </div>
 
-      <!-- indicators -->
+      <!-- ==================== toolbar — tabs + filters ==================== -->
+      <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex gap-1 rounded-xl bg-white p-1 shadow-[0_4px_14px_rgba(30,32,47,0.05)]">
+          <button
+            type="button"
+            (click)="setIndicatorTab('outputs')"
+            class="flex appearance-none items-center gap-1.5 rounded-lg border-0 px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200"
+            [class]="
+              indicatorTab() === 'outputs'
+                ? 'bg-[#23252f] text-white shadow-[0_2px_8px_rgba(30,32,47,0.25)]'
+                : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'
+            ">
+            <span class="material-icons-round text-[16px]">inventory_2</span>
+            High-Level Outputs
+            <span
+              class="rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums"
+              [class]="indicatorTab() === 'outputs' ? 'bg-white/20 text-white' : 'bg-[var(--pr-color-accents-2)] text-[var(--pr-color-accents-6)]'">
+              {{ indicatorCounts().outputs }}
+            </span>
+          </button>
+          <button
+            type="button"
+            (click)="setIndicatorTab('outcomes')"
+            class="flex appearance-none items-center gap-1.5 rounded-lg border-0 px-3.5 py-2 text-[12.5px] font-semibold transition-all duration-200"
+            [class]="
+              indicatorTab() === 'outcomes'
+                ? 'bg-[#23252f] text-white shadow-[0_2px_8px_rgba(30,32,47,0.25)]'
+                : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'
+            ">
+            <span class="material-icons-round text-[16px]">track_changes</span>
+            Outcomes
+            <span
+              class="rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums"
+              [class]="indicatorTab() === 'outcomes' ? 'bg-white/20 text-white' : 'bg-[var(--pr-color-accents-2)] text-[var(--pr-color-accents-6)]'">
+              {{ indicatorCounts().outcomes }}
+            </span>
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="w-[230px] max-[560px]:w-full">
+            <app-pr-select
+              [options]="typologySelectOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="All typologies"
+              [editable]="true"
+              [required]="false"
+              [ngModel]="typologyFilter() || ''"
+              [ngModelOptions]="{ standalone: true }"
+              (selectOptionEvent)="typologyFilter.set($event?.value || null)">
+            </app-pr-select>
+          </div>
+          <div class="w-[180px] max-[560px]:w-full">
+            <app-pr-select
+              [options]="statusSelectOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="All statuses"
+              [editable]="true"
+              [required]="false"
+              [ngModel]="statusFilter() || ''"
+              [ngModelOptions]="{ standalone: true }"
+              (selectOptionEvent)="statusFilter.set($event?.value || null)">
+            </app-pr-select>
+          </div>
+          @if (typologyFilter() || statusFilter()) {
+            <button
+              type="button"
+              (click)="typologyFilter.set(null); statusFilter.set(null)"
+              class="flex appearance-none items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-[12px] font-semibold text-[var(--pr-color-accents-6)] transition-colors hover:text-[var(--pr-color-secondary-400)]">
+              <span class="material-icons-round text-[15px]">close</span>
+              Clear
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- ==================== indicators ==================== -->
       @if (loadingToc()) {
-        <div class="grid grid-cols-2 gap-3 max-[1180px]:grid-cols-1">
-          @for (s of [1, 2, 3, 4]; track s) {
-            <div class="h-[128px] animate-pulse rounded-2xl bg-white/70"></div>
+        <div class="flex flex-col gap-7">
+          @for (g of [1, 2]; track g) {
+            <div>
+              <div class="mb-3 h-[18px] w-1/3 animate-pulse rounded-md bg-white/70"></div>
+              <div class="divide-y divide-[rgba(30,32,47,0.06)] overflow-hidden rounded-xl border border-[rgba(30,32,47,0.08)] bg-white">
+                @for (s of [1, 2, 3, 4]; track s) {
+                  <div class="flex items-center gap-4 px-4 py-3">
+                    <div class="size-2 shrink-0 animate-pulse rounded-full bg-[var(--pr-color-accents-2)]"></div>
+                    <div class="flex-1">
+                      <div class="h-[12px] w-1/2 animate-pulse rounded bg-[var(--pr-color-accents-1)]"></div>
+                      <div class="mt-1.5 h-[9px] w-1/4 animate-pulse rounded bg-[var(--pr-color-accents-1)]"></div>
+                    </div>
+                    <div class="hidden h-[6px] w-[124px] animate-pulse rounded-full bg-[var(--pr-color-accents-2)] md:block"></div>
+                  </div>
+                }
+              </div>
+            </div>
           }
         </div>
       } @else if (indicatorGroups().length) {
-        <div class="flex flex-col gap-5">
+        <div class="flex flex-col gap-7">
           @for (group of indicatorGroups(); track group.result_title) {
-            <div>
-              <h3 class="mb-2 text-[13px] font-bold text-[var(--pr-color-secondary-400)]">{{ group.result_title }}</h3>
+            @let titleParts = splitGroupTitle(group.result_title);
+            <section>
+              <button
+                type="button"
+                (click)="toggleGroup(group.result_title)"
+                class="mb-3 flex w-full appearance-none items-center gap-2.5 border-0 border-b border-[rgba(30,32,47,0.08)] pb-2.5 text-left">
+                <span
+                  class="material-icons-round shrink-0 text-[18px] text-[var(--pr-color-accents-5)] transition-transform duration-200"
+                  [class.-rotate-90]="isGroupCollapsed(group.result_title)">
+                  expand_more
+                </span>
+                @if (titleParts.code) {
+                  <span class="shrink-0 rounded-md bg-[var(--pr-color-secondary-400)] px-1.5 py-0.5 text-[10.5px] font-bold tracking-[0.02em] text-white">
+                    {{ titleParts.code }}
+                  </span>
+                }
+                <h3 class="m-0 min-w-0 flex-1 text-[13px] font-bold leading-snug text-[var(--pr-color-secondary-400)]">{{ titleParts.name }}</h3>
+                <span class="shrink-0 text-[11px] font-medium tabular-nums text-[var(--pr-color-accents-5)]">
+                  {{ group.indicators.length }} indicator{{ group.indicators.length === 1 ? '' : 's' }}
+                </span>
+              </button>
+              @if (!isGroupCollapsed(group.result_title)) {
               @if (group.indicators?.length) {
-                <div class="grid grid-cols-2 gap-3 max-[1180px]:grid-cols-1">
+                <div class="divide-y divide-[rgba(30,32,47,0.06)] overflow-hidden rounded-xl border border-[rgba(30,32,47,0.08)] bg-white shadow-[0_1px_2px_rgba(30,32,47,0.04)]">
                   @for (ind of group.indicators; track ind.indicator_id) {
-                    <div class="group/ind relative flex flex-col gap-2 rounded-2xl border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_4px_14px_rgba(30,32,47,0.04)] transition-shadow duration-200 hover:shadow-[0_12px_28px_rgba(30,32,47,0.1)]">
-                      <div class="flex items-start justify-between gap-2">
-                        <p class="text-[13px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">{{ ind.indicator_description }}</p>
-                        <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold {{ statusChip(ind.progress_percentage) }}">{{ statusLabel(ind.progress_percentage) }}</span>
+                    <div class="group/row relative flex items-center gap-4 px-4 py-3 transition-colors duration-150 hover:bg-[var(--pr-color-accents-1)]">
+                      <span class="size-2 shrink-0 rounded-full {{ statusDot(ind.progress_percentage) }}" [title]="statusLabel(ind.progress_percentage)"></span>
+
+                      <div class="min-w-0 flex-1">
+                        <p class="m-0 truncate text-[13px] font-semibold leading-tight text-[var(--pr-color-secondary-400)]">{{ ind.indicator_description }}</p>
+                        <p class="m-0 mt-0.5 truncate text-[11px] text-[var(--pr-color-accents-5)]">{{ ind.type_name || 'Not provided' }}</p>
                       </div>
-                      <span class="w-fit rounded-md bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[10px] font-semibold text-[var(--pr-color-accents-6)]">{{ ind.type_name || 'Not provided' }}</span>
-                      <div class="mt-1 flex items-end gap-6">
-                        <div>
-                          <p class="text-[9px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">Target</p>
-                          <p class="text-[18px] font-extrabold leading-none text-[var(--pr-color-secondary-400)]">{{ ind.target_value_sum ?? 0 }}</p>
-                        </div>
-                        <div>
-                          <p class="text-[9px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">Achieved</p>
-                          <p class="text-[18px] font-extrabold leading-none" [style.color]="accentTheme().solid">{{ ind.actual_achieved_value_sum ?? 0 }}</p>
-                        </div>
+
+                      <div class="hidden shrink-0 items-baseline gap-5 lg:flex">
+                        <span class="text-[11px] text-[var(--pr-color-accents-5)]">Target <b class="ml-0.5 text-[13px] tabular-nums text-[var(--pr-color-secondary-400)]">{{ (ind.target_value_sum ?? 0) | number }}</b></span>
+                        <span class="text-[11px] text-[var(--pr-color-accents-5)]">Achieved <b class="ml-0.5 text-[13px] tabular-nums" [style.color]="achievedColor(ind.actual_achieved_value_sum)">{{ (ind.actual_achieved_value_sum ?? 0) | number }}</b></span>
                       </div>
-                      <!-- hover actions -->
-                      <div class="mt-1 flex gap-2 opacity-0 transition-opacity duration-200 group-hover/ind:opacity-100">
+
+                      <div class="hidden w-[124px] shrink-0 items-center gap-2 md:flex">
+                        <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]">
+                          <div
+                            class="h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none"
+                            [style.width.%]="progressBarPct(ind.progress_percentage)"
+                            [style.background]="accentTheme().gradient"></div>
+                        </div>
+                        <span class="w-9 shrink-0 text-right text-[11px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ progressValue(ind.progress_percentage) }}%</span>
+                      </div>
+
+                      <span class="hidden shrink-0 items-center rounded-full px-2.5 py-1 text-[10px] font-bold sm:inline-flex {{ statusChip(ind.progress_percentage) }}">
+                        {{ statusLabel(ind.progress_percentage) }}
+                      </span>
+
+                      <!-- hover / focus actions slide in over the right columns -->
+                      <div
+                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center gap-1.5 pl-12 pr-4 opacity-0 transition-opacity duration-200 group-hover/row:pointer-events-auto group-hover/row:opacity-100 group-focus-within/row:pointer-events-auto group-focus-within/row:opacity-100"
+                        [style.background]="'linear-gradient(to left, var(--pr-color-accents-1) 74%, transparent)'">
                         <a
-                          class="flex-1 rounded-lg bg-[linear-gradient(135deg,#6b6dc4_0%,#6461bc_100%)] py-1.5 text-center text-[11px] font-semibold text-white"
+                          class="rounded-lg bg-[linear-gradient(135deg,#6b6dc4_0%,#6461bc_100%)] px-3 py-1.5 text-[11px] font-semibold text-white"
                           [routerLink]="['/result-framework-reporting/entity-details', sp.initiativeCode, 'aow', activeAowCode()]">
-                          Report result
+                          Report
                         </a>
                         <a
-                          class="flex-1 rounded-lg border border-[rgba(30,32,47,0.14)] py-1.5 text-center text-[11px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]"
+                          class="rounded-lg border border-[rgba(30,32,47,0.14)] bg-white px-3 py-1.5 text-[11px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]"
                           [routerLink]="['/result-framework-reporting/entity-details', sp.initiativeCode, 'aow', activeAowCode()]">
-                          View results
+                          View
                         </a>
                       </div>
                     </div>
                   }
                 </div>
               } @else {
-                <p class="rounded-xl bg-white px-4 py-3 text-[12px] text-[var(--pr-color-accents-5)]">No indicators in this group.</p>
+                <p class="m-0 rounded-xl bg-white px-4 py-3 text-[12px] text-[var(--pr-color-accents-5)]">No indicators in this group.</p>
               }
-            </div>
+              }
+            </section>
           }
         </div>
       } @else {
         <div class="rounded-[18px] border border-dashed border-[rgba(30,32,47,0.14)] bg-white/60 px-6 py-12 text-center">
-          <span class="material-icons-round text-[26px] text-[var(--pr-color-accents-3)]">filter_alt</span>
-          <p class="mt-1 text-[13px] text-[var(--pr-color-accents-5)]">No indicators match the current filters.</p>
+          <span class="material-icons-round text-[26px] text-[var(--pr-color-accents-3)]">{{ typologyFilter() || statusFilter() ? 'filter_alt' : 'inventory_2' }}</span>
+          <p class="m-0 mt-1 text-[13px] text-[var(--pr-color-accents-5)]">
+            {{ typologyFilter() || statusFilter() ? 'No indicators match the current filters.' : 'No indicators in this area of work yet.' }}
+          </p>
+          @if (typologyFilter() || statusFilter()) {
+            <button
+              type="button"
+              (click)="typologyFilter.set(null); statusFilter.set(null)"
+              class="mx-auto mt-3 flex appearance-none items-center gap-1 rounded-lg border-0 bg-white px-3 py-2 text-[12px] font-semibold text-[var(--pr-color-secondary-400)] shadow-[0_2px_8px_rgba(30,32,47,0.08)] transition-transform hover:-translate-y-px">
+              <span class="material-icons-round text-[15px]">close</span>
+              Clear filters
+            </button>
+          }
         </div>
       }
     } @else {

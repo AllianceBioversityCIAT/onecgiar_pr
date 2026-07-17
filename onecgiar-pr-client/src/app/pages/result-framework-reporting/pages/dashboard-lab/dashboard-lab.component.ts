@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.interface';
@@ -72,7 +73,7 @@ interface AccentTheme {
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
-  imports: [RouterLink, CustomFieldsModule],
+  imports: [RouterLink, CustomFieldsModule, DecimalPipe],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -143,6 +144,8 @@ export class DashboardLabComponent implements OnInit {
   readonly indicatorTab = signal<'outputs' | 'outcomes'>('outputs');
   readonly typologyFilter = signal<string | null>(null);
   readonly statusFilter = signal<string | null>(null);
+  /** HLO group titles that are collapsed (default: all expanded). */
+  readonly collapsedGroups = signal<Set<string>>(new Set());
 
   /** ToC results (indicator groups) cached by `${program}::${aow}`. */
   readonly tocByKey = signal<Map<string, { outputs: any[]; outcomes: any[] }>>(new Map());
@@ -411,6 +414,18 @@ export class DashboardLabComponent implements OnInit {
     this.indicatorTab.set(tab);
   }
 
+  isGroupCollapsed(title: string): boolean {
+    return this.collapsedGroups().has(title);
+  }
+
+  toggleGroup(title: string): void {
+    this.collapsedGroups.update(set => {
+      const next = new Set(set);
+      next.has(title) ? next.delete(title) : next.add(title);
+      return next;
+    });
+  }
+
   /** Status label derived from progress_percentage (mirrors entity-aow-aow). */
   statusLabel(pct: string | number | null | undefined): string {
     const p = typeof pct === 'number' ? pct : parseFloat(String(pct ?? 0)) || 0;
@@ -420,18 +435,56 @@ export class DashboardLabComponent implements OnInit {
     return 'Overachieved';
   }
 
-  /** Tailwind classes for the status chip. */
+  /** Tailwind classes for the status chip (project tokens, ≥4.5:1 text contrast). */
   statusChip(pct: string | number | null | undefined): string {
     switch (this.statusLabel(pct)) {
       case 'Achieved':
-        return 'bg-[#dcfce7] text-[#166534]';
+        return 'bg-[var(--pr-color-green-50)] text-[var(--pr-color-green-700)]';
       case 'Overachieved':
-        return 'bg-[#dbeafe] text-[#1e40af]';
+        return 'bg-[var(--pr-color-blue-50)] text-[var(--pr-color-blue-800)]';
       case 'In progress':
-        return 'bg-[#fef3c7] text-[#92400e]';
+        return 'bg-[var(--pr-color-yellow-75)] text-[var(--pr-color-yellow-600)]';
       default:
-        return 'bg-[var(--pr-color-accents-1)] text-[var(--pr-color-accents-6)]';
+        return 'bg-[var(--pr-color-accents-2)] text-[var(--pr-color-accents-6)]';
     }
+  }
+
+  /** Tailwind class for the status chip's leading dot. */
+  statusDot(pct: string | number | null | undefined): string {
+    switch (this.statusLabel(pct)) {
+      case 'Achieved':
+        return 'bg-[var(--pr-color-green-500)]';
+      case 'Overachieved':
+        return 'bg-[var(--pr-color-blue-500)]';
+      case 'In progress':
+        return 'bg-[var(--pr-color-yellow-300)]';
+      default:
+        return 'bg-[var(--pr-color-accents-3)]';
+    }
+  }
+
+  /** Raw progress rounded for the % label (may exceed 100 when overachieved). */
+  progressValue(pct: string | number | null | undefined): number {
+    const p = typeof pct === 'number' ? pct : parseFloat(String(pct ?? 0)) || 0;
+    return Math.round(p);
+  }
+
+  /** Progress clamped to 0–100 for the bar width. */
+  progressBarPct(pct: string | number | null | undefined): number {
+    return Math.min(Math.max(this.progressValue(pct), 0), 100);
+  }
+
+  /** Achieved number color: program accent when there is progress, neutral gray for zero. */
+  achievedColor(value: string | number | null | undefined): string {
+    const n = typeof value === 'number' ? value : parseFloat(String(value ?? 0)) || 0;
+    return n > 0 ? this.accentTheme().solid : 'var(--pr-color-accents-4)';
+  }
+
+  /** Split an HLO group title like "2.2.2: Policy engagement…" into code + name. */
+  splitGroupTitle(title: string | null | undefined): { code: string | null; name: string } {
+    const text = String(title ?? '').trim();
+    const match = /^([\d.]+)\s*[:–-]\s*(.+)$/.exec(text);
+    return match ? { code: match[1], name: match[2] } : { code: null, name: text };
   }
 
   /** Program dropdown change (AOW mode). */
