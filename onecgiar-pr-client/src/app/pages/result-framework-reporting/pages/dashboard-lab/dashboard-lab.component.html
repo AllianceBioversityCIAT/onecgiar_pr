@@ -1,0 +1,63 @@
+<!-- ==================== SIDEBAR (master) — premium surface reuse ==================== -->
+<aside class="lab-sidebar">
+  <div class="lab-sidebar__head">
+    <span class="lab-eyebrow">Reporting workspace</span>
+    <h2 class="lab-title">Science Programs</h2>
+    @if (phaseLabel()) {
+      <span class="lab-chip">{{ phaseLabel() }}</span>
+    }
+  </div>
+
+  <!-- search -->
+  <div class="lab-search">
+    <span class="material-icons-round">search</span>
+    <input
+      type="text"
+      placeholder="Filter programs…"
+      [value]="query()"
+      (input)="onQuery($any($event.target).value)"
+      aria-label="Filter Science Programs" />
+  </div>
+
+  <!-- list -->
+  <div class="lab-list custom_scroll">
+    @if (homeSE.isLoadingSPLists()) {
+      @for (s of [1, 2, 3, 4, 5]; track s) {
+        <div class="lab-skeleton"></div>
+      }
+    } @else {
+      @for (group of groups(); track group.label) {
+        <p class="lab-group-label">{{ group.label }}</p>
+        @for (sp of group.items; track sp.initiativeId) {
+          <button type="button" class="lab-item" [class.lab-item--active]="isActive(sp)" (click)="select(sp)">
+            @if (!iconErrors().has(sp.initiativeCode)) {
+              <img class="lab-item__icon" [src]="iconSrc(sp)" [alt]="sp.initiativeCode" width="22" height="22" (error)="onIconError(sp.initiativeCode)" />
+            } @else {
+              <span class="lab-item__icon lab-item__icon--fallback"><i class="material-icons-round">hub</i></span>
+            }
+            <span class="lab-item__code">{{ sp.initiativeCode }}</span>
+            <span class="lab-item__name">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+            <span class="lab-item__count">{{ totalResults(sp) }}</span>
+          </button>
+        }
+      }
+
+      @if (!groups().length) {
+        <p class="lab-list__empty">No programs match your filter.</p>
+      }
+    }
+  </div>
+</aside>
+
+<!-- ==================== DETAIL (right panel) — blank canvas for AOWs / indicators ==================== -->
+<section class="lab-detail">
+  @if (selected()) {
+    <!-- intentionally left blank -->
+  } @else if (!homeSE.isLoadingSPLists()) {
+    <div class="lab-empty">
+      <span class="material-icons-round text-[32px] text-[var(--pr-color-accents-4)]">inbox</span>
+      <p class="mt-2 text-[13px] font-medium text-[var(--pr-color-secondary-400)]">No Science Programs found</p>
+      <p class="text-[11px] text-[var(--pr-color-accents-5)]">You are not a member of any program yet.</p>
+    </div>
+  }
+</section>

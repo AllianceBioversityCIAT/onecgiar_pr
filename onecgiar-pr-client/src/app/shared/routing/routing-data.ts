@@ -495,6 +495,14 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
       )
   },
   {
+    prName: 'Dashboard lab (experimental)',
+    path: 'dashboard-lab',
+    onlyTest: true,
+    data: { sidebar: { width: 300 } },
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.component').then(m => m.DashboardLabComponent)
+  },
+  {
     prName: 'Entity details',
     path: 'entity-details/:entityId',
     loadComponent: () =>

@@ -1,0 +1,267 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
+:host {
+  display: block;
+}
+
+/* ==================== SIDEBAR — premium "command console" surface ==================== */
+/* Faithful reuse of the premium-sidebar surface (result-detail / admin look). */
+.lab-sidebar {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  bottom: 10px;
+  width: 300px;
+  box-sizing: border-box;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 14px;
+  overflow: hidden;
+  border-radius: 16px;
+  background-color: #1f2233;
+  background-image: radial-gradient(135% 85% at 50% -8%, rgba(100, 97, 188, 0.32) 0%, rgba(100, 97, 188, 0) 58%);
+  border: 1px solid rgba(var(--pr-color-white-rgb), 0.09);
+  box-shadow:
+    0 22px 50px rgba(var(--pr-color-black-rgb), 0.42),
+    inset 0 1px 0 rgba(var(--pr-color-white-rgb), 0.08);
+
+  &__head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px 14px;
+    border-bottom: 1px solid rgba(var(--pr-color-white-rgb), 0.1);
+  }
+
+  &__list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+}
+
+.lab-eyebrow {
+  @include fonts.pr-typography('body-3');
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--pr-color-primary-200);
+}
+
+.lab-title {
+  margin: 0;
+  @include fonts.pr-typography('h2');
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--pr-color-white);
+}
+
+.lab-chip {
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--pr-color-white);
+  background-image: linear-gradient(135deg, #6b6dc4 0%, #6461bc 100%);
+  box-shadow: 0 2px 8px rgba(100, 97, 188, 0.45);
+}
+
+/* search */
+.lab-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background-color: rgba(var(--pr-color-white-rgb), 0.06);
+  box-shadow: inset 0 0 0 1px rgba(var(--pr-color-white-rgb), 0.08);
+
+  .material-icons-round {
+    font-size: 16px;
+    color: rgba(var(--pr-color-white-rgb), 0.42);
+  }
+
+  input {
+    flex: 1;
+    appearance: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--pr-color-white);
+    font-size: 12px;
+
+    &::placeholder {
+      color: rgba(var(--pr-color-white-rgb), 0.4);
+    }
+  }
+}
+
+.lab-group-label {
+  padding: 10px 8px 4px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: rgba(var(--pr-color-white-rgb), 0.4);
+}
+
+/* items — appearance:none kills the native gray button surface */
+.lab-item {
+  appearance: none;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
+  color: rgba(var(--pr-color-white-rgb), 0.78);
+  background-color: rgba(var(--pr-color-white-rgb), 0.035);
+  box-shadow: inset 0 0 0 1px rgba(var(--pr-color-white-rgb), 0.05);
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+
+  &:hover {
+    background-color: rgba(var(--pr-color-white-rgb), 0.09);
+    color: var(--pr-color-white);
+  }
+
+  &__icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    object-fit: cover;
+    background-color: rgba(var(--pr-color-white-rgb), 0.08);
+
+    &--fallback {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      i.material-icons-round {
+        font-size: 14px;
+        color: rgba(var(--pr-color-white-rgb), 0.6);
+      }
+    }
+  }
+
+  &__code {
+    font-size: 12px;
+    font-weight: 600;
+    color: inherit;
+  }
+
+  &__name {
+    font-size: 11px;
+    color: rgba(var(--pr-color-white-rgb), 0.55);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__count {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background-color: rgba(var(--pr-color-white-rgb), 0.1);
+    color: rgba(var(--pr-color-white-rgb), 0.8);
+  }
+
+  /* signature active moment — indigo gradient lift + glow (zero layout shift) */
+  &--active {
+    color: var(--pr-color-white);
+    background-image: linear-gradient(180deg, #6b6dc4 0%, #6461bc 100%);
+    background-color: transparent;
+    box-shadow:
+      0 8px 20px rgba(100, 97, 188, 0.5),
+      inset 0 0 0 1px rgba(var(--pr-color-white-rgb), 0.14),
+      inset 0 1px 0 rgba(var(--pr-color-white-rgb), 0.28);
+
+    &:hover {
+      background-color: transparent;
+    }
+
+    .lab-item__name {
+      color: rgba(var(--pr-color-white-rgb), 0.82);
+    }
+    .lab-item__count {
+      background-color: rgba(var(--pr-color-white-rgb), 0.22);
+      color: var(--pr-color-white);
+    }
+  }
+}
+
+.lab-list__empty {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(var(--pr-color-white-rgb), 0.4);
+}
+
+.lab-skeleton {
+  height: 44px;
+  border-radius: 10px;
+  background-image: linear-gradient(
+    90deg,
+    rgba(var(--pr-color-white-rgb), 0.05) 25%,
+    rgba(var(--pr-color-white-rgb), 0.11) 37%,
+    rgba(var(--pr-color-white-rgb), 0.05) 63%
+  );
+  background-size: 400% 100%;
+  animation: lab-shimmer 1.4s ease infinite;
+}
+
+@keyframes lab-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* ==================== DETAIL — shifted right, cleared below the floating navbar ==================== */
+/* Blank canvas: content (AOWs / indicators) will be built here. */
+.lab-detail {
+  margin-left: 320px; // sidebar margin (10) + width (300) + gap (10)
+  padding: 22px 26px 40px;
+  box-sizing: border-box;
+  min-height: calc(100vh - 20px);
+  background: #fff;
+}
+
+.lab-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 900px) {
+  .lab-sidebar {
+    position: static;
+    width: auto;
+    inset: auto;
+    margin: 10px;
+    max-height: 320px;
+  }
+  .lab-detail {
+    margin-left: 0;
+  }
+}
