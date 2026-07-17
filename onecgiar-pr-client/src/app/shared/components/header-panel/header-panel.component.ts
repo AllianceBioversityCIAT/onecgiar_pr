@@ -199,6 +199,10 @@ export class HeaderPanelComponent implements OnInit {
     return this.api.dataControlSE.myInitiativesList.filter(item => item.portfolio_id == 3);
   }
 
+  getMyCenters() {
+    return this.api.rolesSE.getMyCenters();
+  }
+
   getUserInitials() {
     const user = this.api.authSE.localStorageUser;
 

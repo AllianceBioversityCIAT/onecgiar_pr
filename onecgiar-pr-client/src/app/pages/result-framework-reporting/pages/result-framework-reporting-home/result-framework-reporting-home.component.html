@@ -59,6 +59,34 @@
     }
 
     <div class="flex flex-col gap-10 max-[1115px]:gap-8">
+      <!-- My CGIAR Centers -->
+      <section class="flex flex-col gap-4">
+        <div class="flex items-baseline gap-2.5">
+          <h2 class="m-0 text-xl font-bold text-[var(--pr-color-secondary-400)]">My CGIAR Centers</h2>
+          @if (myCentersList().length > 0) {
+            <span class="rounded-full bg-[var(--pr-color-accents-2)] px-2 py-0.5 text-xs font-semibold text-[var(--pr-color-accents-6)]">
+              {{ myCentersList().length }}
+            </span>
+          }
+        </div>
+
+        <div
+          class="grid gap-4"
+          [ngClass]="myCentersList().length === 0 ? 'grid-cols-1' : 'grid-cols-[repeat(auto-fill,minmax(315px,1fr))]'">
+          @if (myCentersList().length > 0) {
+            @for (item of myCentersList(); track item.center_id) {
+              <app-result-framework-reporting-center-card-item [item]="item" />
+            }
+          } @else {
+            <div>
+              <app-alert-status
+                inlineStyles="background-color: var(--pr-color-white); margin: 0;"
+                description="You currently do not have a Center User role in any CGIAR Center. If you require access, please contact your system administrator."></app-alert-status>
+            </div>
+          }
+        </div>
+      </section>
+
       <!-- My Science Programs/Accelerators -->
       <section class="flex flex-col gap-4">
         <div class="flex items-baseline gap-2.5">

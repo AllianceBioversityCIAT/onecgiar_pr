@@ -23,6 +23,7 @@ import { ReviewDecisionDto } from './dto/review-decision.dto';
 import { ReviewUpdateDto } from './dto/review-update.dto';
 import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 import { UpdateResultTitleDto } from './dto/update-result-title.dto';
+import { UpdateBilateralGeneralInfoDto } from './dto/update-bilateral-general-info.dto';
 import { BasicReportFiltersDto } from './dto/basic-report-filters.dto';
 import { ReportingFullMetadataExportService } from './services/reporting-full-metadata-export.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
@@ -875,5 +876,21 @@ export class ResultsController {
       updateResultTitleDto.title,
       user,
     );
+  }
+
+  @Patch('bilateral/general-info/:resultId')
+  @ApiOperation({
+    summary: 'Update bilateral result general info',
+    description:
+      'Updates the title and/or description of a W3/bilateral result. Each field is optional.',
+  })
+  @ApiParam({ name: 'resultId', type: Number, required: true })
+  @ApiBody({ type: UpdateBilateralGeneralInfoDto })
+  async updateBilateralGeneralInfo(
+    @Param('resultId') resultId: number,
+    @Body() dto: UpdateBilateralGeneralInfoDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.updateBilateralGeneralInfo(resultId, dto, user);
   }
 }

@@ -106,6 +106,7 @@ import {
   ReviewDecisionEnum,
 } from './dto/review-decision.dto';
 import { ReviewUpdateDto } from './dto/review-update.dto';
+import { UpdateBilateralGeneralInfoDto } from './dto/update-bilateral-general-info.dto';
 import {
   ResultReviewHistory,
   ReviewActionEnum,
@@ -3096,6 +3097,14 @@ export class ResultsService {
 
       const tocResponse = (tocMetadata?.response as Record<string, any>) ?? {};
 
+      const impactAreaScores = await this._resultImpactAreaScoresService.find(
+        resultId,
+        undefined,
+        {
+          impact_area_score: true,
+        },
+      );
+
       const mappedResult = {
         commonFields: commonFields ?? null,
         tocMetadata: tocResponse.result_toc_result ?? null,
@@ -3108,6 +3117,12 @@ export class ResultsService {
         contributingInitiatives: contributingInitiatives ?? [],
         evidence: evidence ?? [],
         resultTypeResponse: resultTypeResponse ?? [],
+        impactAreaScores: (impactAreaScores ?? []).map((r: any) => ({
+          id: r.id,
+          impact_area_score_id: r.impact_area_score_id,
+          impact_area: r.impact_area_score?.impact_area ?? null,
+          name: r.impact_area_score?.name ?? null,
+        })),
       };
 
       return {
@@ -4583,6 +4598,181 @@ export class ResultsService {
       return {
         response: { id: parsedResultId, title: title.trim() },
         message: 'Result title updated successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateBilateralGeneralInfo(
+    resultId: number,
+    dto: UpdateBilateralGeneralInfoDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (
+        !dto.title?.trim() &&
+        !dto.description?.trim() &&
+        dto.lead_contact_person === undefined &&
+        dto.gender_tag_level_id === undefined &&
+        dto.climate_change_tag_level_id === undefined &&
+        dto.nutrition_tag_level_id === undefined &&
+        dto.environmental_biodiversity_tag_level_id === undefined &&
+        dto.poverty_tag_level_id === undefined &&
+        dto.gender_impact_area_ids === undefined &&
+        dto.climate_impact_area_ids === undefined &&
+        dto.nutrition_impact_area_ids === undefined &&
+        dto.environmental_biodiversity_impact_area_ids === undefined &&
+        dto.poverty_impact_area_ids === undefined
+      ) {
+        return {
+          response: {},
+          message: 'At least one field must be provided.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const bilateralResult = await this._resultRepository.findOne({
+        where: { id: parsedResultId, is_active: true },
+        select: ['id', 'version_id', 'source', 'title'],
+      });
+      if (!bilateralResult) {
+        return {
+          response: {},
+          message: 'Result not found.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const updates: Partial<Result> = {};
+
+      if (dto.title?.trim()) {
+        if (dto.title.trim() !== bilateralResult.title) {
+          const existing = await this._resultRepository.findOne({
+            where: {
+              title: dto.title.trim(),
+              is_active: true,
+              version_id: bilateralResult.version_id,
+            },
+          });
+          if (existing?.id && existing.id !== parsedResultId) {
+            return {
+              response: {},
+              message: 'A result with this title already exists.',
+              status: HttpStatus.CONFLICT,
+            };
+          }
+          (updates as any).title = dto.title.trim();
+        }
+      }
+
+      if (dto.description?.trim() !== undefined) {
+        (updates as any).description = dto.description.trim();
+      }
+
+      if (dto.lead_contact_person !== undefined) {
+        (updates as any).lead_contact_person = dto.lead_contact_person || null;
+      }
+
+      const DAC_TAG_FIELDS: { dtoKey: string; col: string }[] = [
+        { dtoKey: 'gender_tag_level_id', col: 'gender_tag_level_id' },
+        {
+          dtoKey: 'climate_change_tag_level_id',
+          col: 'climate_change_tag_level_id',
+        },
+        { dtoKey: 'nutrition_tag_level_id', col: 'nutrition_tag_level_id' },
+        {
+          dtoKey: 'environmental_biodiversity_tag_level_id',
+          col: 'environmental_biodiversity_tag_level_id',
+        },
+        { dtoKey: 'poverty_tag_level_id', col: 'poverty_tag_level_id' },
+      ];
+      for (const { dtoKey, col } of DAC_TAG_FIELDS) {
+        if ((dto as any)[dtoKey] !== undefined) {
+          (updates as any)[col] = (dto as any)[dtoKey];
+        }
+      }
+
+      const DAC_IMPACT_FIELDS = [
+        { dtoKey: 'gender_impact_area_ids' },
+        { dtoKey: 'climate_impact_area_ids' },
+        { dtoKey: 'nutrition_impact_area_ids' },
+        { dtoKey: 'environmental_biodiversity_impact_area_ids' },
+        { dtoKey: 'poverty_impact_area_ids' },
+      ];
+      const hasImpactAreaUpdates = DAC_IMPACT_FIELDS.some(
+        (f) => (dto as any)[f.dtoKey] !== undefined,
+      );
+
+      if (Object.keys(updates).length === 0 && !hasImpactAreaUpdates) {
+        return {
+          response: { id: parsedResultId },
+          message: 'No changes to apply.',
+          status: HttpStatus.OK,
+        };
+      }
+
+      await this._dataSource.transaction(async (manager) => {
+        await this._validateBilateralResultForUpdate(
+          manager,
+          parsedResultId,
+          user,
+        );
+
+        if (Object.keys(updates).length > 0) {
+          await manager.update(Result, parsedResultId, updates);
+        }
+
+        const hasAnyImpactUpdate = DAC_IMPACT_FIELDS.some(
+          (f) => (dto as any)[f.dtoKey] !== undefined,
+        );
+
+        if (hasAnyImpactUpdate) {
+          const allScores: { impact_area_score_id: number }[] = [];
+          for (const { dtoKey } of DAC_IMPACT_FIELDS) {
+            const ids = (dto as any)[dtoKey];
+            if (ids && Array.isArray(ids)) {
+              for (const id of ids) {
+                allScores.push({ impact_area_score_id: Number(id) });
+              }
+            }
+          }
+          await this._resultImpactAreaScoresService.create(
+            parsedResultId,
+            allScores,
+            'impact_area_score_id',
+            { userId: user.id, manager },
+          );
+        }
+      });
+
+      return {
+        response: { id: parsedResultId, ...updates },
+        message: 'General info updated successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {

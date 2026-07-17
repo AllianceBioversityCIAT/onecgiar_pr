@@ -281,6 +281,7 @@ describe('TocResultsService', () => {
         1,
         true,
         'phase-2030',
+        undefined,
       );
       expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith({
         result: resultRecord,
@@ -291,6 +292,7 @@ describe('TocResultsService', () => {
         resultId: 1,
         initId: 2,
         includeInactiveIndicators: false,
+        bilateral: undefined,
       });
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(1, 2, [
         10,
@@ -364,6 +366,7 @@ describe('TocResultsService', () => {
         resultId: 4,
         initId: 5,
         includeInactiveIndicators: false,
+        bilateral: undefined,
       });
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(4, 5, [
         20,
@@ -597,6 +600,7 @@ describe('TocResultsService', () => {
         resultId: 11021,
         initId: 62,
         includeInactiveIndicators: true,
+        bilateral: undefined,
       });
     });
 
@@ -628,6 +632,7 @@ describe('TocResultsService', () => {
         4,
         true,
         'phase-2025',
+        undefined,
       );
     });
   });

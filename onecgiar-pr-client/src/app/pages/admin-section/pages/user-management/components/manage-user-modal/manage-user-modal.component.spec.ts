@@ -6,6 +6,7 @@ import { ManageUserModalComponent } from './manage-user-modal.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { SearchUserSelectComponent } from '../../../../../../shared/components/search-user-select/search-user-select.component';
 import { InitiativesService } from '../../../../../../shared/services/global/initiatives.service';
+import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
@@ -38,6 +39,10 @@ const mockInitiativesService = {
   ])
 };
 
+const mockCentersService = {
+  centersList: [{ code: 'CIMMYT', name: 'CIMMYT', acronym: 'CIMMYT' }]
+};
+
 const mockGetRolesService = {
   roles: signal([
     { role_id: 1, role_description: 'Admin' },
@@ -63,6 +68,7 @@ describe('ManageUserModalComponent', () => {
         { provide: ApiService, useValue: mockApiService },
         { provide: ResultsApiService, useValue: mockResultsApiService },
         { provide: InitiativesService, useValue: mockInitiativesService },
+        { provide: CentersService, useValue: mockCentersService },
         { provide: GetRolesService, useValue: mockGetRolesService }
       ]
     }).compileComponents();
@@ -97,6 +103,7 @@ describe('ManageUserModalComponent', () => {
       email: 'john@example.com',
       role_platform: 1,
       role_assignments: [{ role_id: 1, entity_id: 1 }],
+      center_assignments: [],
       activate: false
     });
 
@@ -418,6 +425,26 @@ describe('ManageUserModalComponent', () => {
       expect(component.managedUser.emit).toHaveBeenCalled();
     });
 
+    it('should send center_assignments in PATCH_updateUserRoles payload', () => {
+      component.addUserForm.set({
+        ...component.addUserForm(),
+        email: 'test@test.com',
+        first_name: 'John',
+        last_name: 'Doe',
+        role_platform: 2,
+        role_assignments: [],
+        center_assignments: [{ center_id: 'CIMMYT' }]
+      });
+
+      component.onUpdateUserRoles();
+
+      expect(mockResultsApiService.PATCH_updateUserRoles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          center_assignments: [{ center_id: 'CIMMYT' }]
+        })
+      );
+    });
+
     it('should handle 409 error and show confirm alert', () => {
       mockResultsApiService.PATCH_updateUserRoles.mockReturnValueOnce(
         throwError(() => ({ status: 409, error: { message: 'Conflict error' } }))
@@ -523,6 +550,13 @@ describe('ManageUserModalComponent', () => {
   });
 
   describe('onCreateUser', () => {
+    beforeEach(() => {
+      mockResultsApiService.POST_createUser = jest.fn(() =>
+        of({ message: 'User created', response: { first_name: 'John', last_name: 'Doe' } })
+      );
+      mockApiService.alertsFe.show.mockReset();
+    });
+
     it('should create user successfully and reset form', () => {
       component.addUserForm.set({
         ...component.addUserForm(),
@@ -705,30 +739,36 @@ describe('ManageUserModalComponent', () => {
 
     it('should return false when a role assignment is missing an entity', () => {
       component.addUserForm.set({
+        activate: true,
         is_cgiar: true,
         email: 'test@cgiar.org',
         role_platform: 2,
-        role_assignments: [{ role_id: 3, entity_id: null as any }]
+        role_assignments: [{ role_id: 3, entity_id: null as any }],
+        center_assignments: []
       });
       expect(component.isFormValid()).toBe(false);
     });
 
     it('should return false when a role assignment is missing a role', () => {
       component.addUserForm.set({
+        activate: true,
         is_cgiar: true,
         email: 'test@cgiar.org',
         role_platform: 2,
-        role_assignments: [{ role_id: null as any, entity_id: 1 }]
+        role_assignments: [{ role_id: null as any, entity_id: 1 }],
+        center_assignments: []
       });
       expect(component.isFormValid()).toBe(false);
     });
 
     it('should return true when role assignments are complete', () => {
       component.addUserForm.set({
+        activate: true,
         is_cgiar: true,
         email: 'test@cgiar.org',
         role_platform: 2,
-        role_assignments: [{ role_id: 3, entity_id: 1 }]
+        role_assignments: [{ role_id: 3, entity_id: 1 }],
+        center_assignments: []
       });
       expect(component.isFormValid()).toBe(true);
     });

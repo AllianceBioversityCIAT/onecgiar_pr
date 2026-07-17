@@ -9,6 +9,8 @@ import {
 } from 'typeorm';
 import { ResultsByProjects } from '../../../api/results/results_by_projects/entities/results_by_projects.entity';
 import { ClarisaInstitution } from '../../clarisa-institutions/entities/clarisa-institution.entity';
+import { ClarisaProjectCountry } from './clarisa-project-country.entity';
+import { ClarisaProjectMapping } from './clarisa-project-mapping.entity';
 
 @Entity('clarisa_projects')
 export class ClarisaProject {
@@ -120,4 +122,10 @@ export class ClarisaProject {
     (resultProject) => resultProject.obj_clarisa_project,
   )
   obj_results_by_projects: ResultsByProjects[];
+
+  @OneToMany(() => ClarisaProjectMapping, (mapping) => mapping.obj_project)
+  obj_project_mappings: ClarisaProjectMapping[];
+
+  @OneToMany(() => ClarisaProjectCountry, (country) => country.obj_project)
+  obj_project_countries: ClarisaProjectCountry[];
 }

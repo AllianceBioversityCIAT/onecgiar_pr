@@ -1,0 +1,69 @@
+<div class="sps-selector">
+  @if (availableSps().length === 0) {
+    <p class="sps-empty">Select a project to see available Science Programs</p>
+  } @else {
+    <div class="sps-section">
+      <label class="sps-label">Primary Contributing Science Program <span class="sps-required">*</span></label>
+      <div class="sps-field" (click)="togglePrimary()" tabindex="0" role="combobox">
+        @if (selectedPrimaryIcon(); as icon) {
+          <img class="sps-field-icon" [src]="icon" width="24" height="24" alt="" />
+        }
+        <span class="sps-field-text" [class.sps-placeholder]="!creationService.selectedPrimarySp()">
+          {{ selectedPrimaryLabel() }}
+        </span>
+        <i class="material-icons-round sps-chevron" [class.sps-chevron--open]="showPrimaryDropdown()">expand_more</i>
+      </div>
+
+      @if (showPrimaryDropdown()) {
+        <div class="sps-dropdown-overlay" (click)="closeDropdowns()"></div>
+        <div class="sps-dropdown">
+          @for (sp of availableSps(); track sp.programId) {
+            <div
+              class="sps-option"
+              [class.sps-option--selected]="creationService.selectedPrimarySp()?.programId === sp.programId"
+              (click)="selectPrimary(sp.programId, sp.programCode, sp.allocation ?? '')"
+            >
+              <img class="sps-option-icon" [src]="spIconSrc(sp.programCode)" width="24" height="24" alt="" />
+              <span class="sps-option-code">{{ sp.programCode }}</span>
+              <span class="sps-option-name">{{ sp.spShortName }} — {{ sp.spName }}</span>
+              @if (sp.allocation) {
+                <span class="sps-option-pct">{{ formatAllocation(sp.allocation) }}%</span>
+              }
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+
+    @if (availableSecondarySps().length > 0 && creationService.selectedPrimarySp()) {
+      <div class="sps-section">
+        <label class="sps-label">Contributing Science Programs</label>
+        <p class="sps-help">
+          <i class="material-icons-round sps-help-icon">info</i>
+          Select any contributing Science Programs below. You can also add or change them later in the form.
+        </p>
+        <div class="sps-chip-grid">
+          @for (sp of availableSecondarySps(); track sp.programId) {
+            <button
+              class="sps-chip"
+              [class.sps-chip--selected]="isSecondarySelected(sp.programId)"
+              (click)="toggleSecondary(sp.programId, sp.programCode, sp.allocation ?? '')"
+              type="button"
+            >
+              <img class="sps-chip-sp-icon" [src]="spIconSrc(sp.programCode)" width="20" height="20" alt="" />
+              <i class="material-icons-round sps-chip-icon">
+                {{ isSecondarySelected(sp.programId) ? 'check_box' : 'check_box_outline_blank' }}
+              </i>
+              <span class="sps-chip-code">{{ sp.programCode }}</span>
+              <span class="sps-chip-name">{{ sp.spShortName }}</span>
+              @if (sp.allocation) {
+                <span class="sps-chip-pct">{{ formatAllocation(sp.allocation) }}%</span>
+              }
+            </button>
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

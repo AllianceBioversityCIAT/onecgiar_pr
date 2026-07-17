@@ -45,7 +45,9 @@
             {{ addUserForm().displayName }}
 
             @if (!editingMode()) {
-              <i class="pi pi-times remove-user-btn" (click)="removeUser()"></i>
+              <button type="button" class="remove-user-btn" aria-label="Remove selected user" (click)="removeUser()">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
             }
           </div>
         </div>
@@ -98,56 +100,119 @@
           <app-user-roles-info-modal type="text"></app-user-roles-info-modal>
         </div>
 
-        <div class="assignments-headers">
-          <div class="header-item">Entity</div>
-          <div class="header-item">Role</div>
-          <div class="header-item actions"></div>
+        <div class="assignment-tabs">
+          <button
+            type="button"
+            class="assignment-tab"
+            [class.assignment-tab--active]="activeAssignmentTab() === 'science-program'"
+            (click)="setAssignmentTab('science-program')">
+            Science Program
+          </button>
+          <button
+            type="button"
+            class="assignment-tab"
+            [class.assignment-tab--active]="activeAssignmentTab() === 'center'"
+            (click)="setAssignmentTab('center')">
+            Center
+          </button>
         </div>
 
-        @for (assignment of addUserForm().role_assignments; track $index) {
-          <div class="selects-item">
-            @if (loadingRoleAssignment()) {
+        @if (activeAssignmentTab() === 'science-program') {
+          <div class="assignments-headers">
+            <div class="header-item">Entity</div>
+            <div class="header-item">Role</div>
+            <div class="header-item actions"></div>
+          </div>
+
+          @for (assignment of addUserForm().role_assignments; track $index) {
+            <div class="selects-item">
+              @if (loadingRoleAssignment()) {
+                <div style="width: 45%">
+                  <app-pr-select
+                    [options]="getGroupedEntities($index)"
+                    [group]="true"
+                    groupName="name"
+                    optionLabel="display_label"
+                    optionValue="initiative_id"
+                    placeholder="Select entity"
+                    [(ngModel)]="assignment.entity_id"
+                    (ngModelChange)="onRoleEntityChange($event, $index)"
+                    [indexReference]="$index + 1"
+                    [required]="false"></app-pr-select>
+                </div>
+              }
+
               <div style="width: 45%">
                 <app-pr-select
-                  [options]="getGroupedEntities($index)"
-                  [group]="true"
-                  groupName="name"
+                  [options]="getRolesService.roles()"
+                  [ngClass]="{ globalDisabled: !addUserForm().is_cgiar }"
+                  optionLabel="role_description"
+                  optionValue="role_id"
+                  placeholder="Select role"
+                  [ngModel]="assignment.role_id"
+                  (ngModelChange)="onRoleAssignmentChange($event, $index)"
+                  [indexReference]="($index + 1) * 11"
+                  [required]="false"></app-pr-select>
+              </div>
+
+              <div style="width: 10%" class="remove-button-container">
+                <button type="button" class="remove-role-btn" (click)="removeRoleAssignment($index)" title="Remove role">
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+            </div>
+            <br />
+          }
+
+          <button type="button" class="add-role-assignment" (click)="addRoleAssignment()">
+            <i class="pi pi-plus-circle" aria-hidden="true"></i>
+            {{ addUserForm().role_assignments.length ? 'Add other role' : 'Add role' }}
+          </button>
+        } @else {
+          <div class="assignments-headers center-tab-headers">
+            <div class="header-item center-header-item">Center</div>
+            <div class="header-item center-header-item">Role</div>
+            <div class="header-item actions"></div>
+          </div>
+
+          @for (assignment of addUserForm().center_assignments; track $index) {
+            <div class="selects-item">
+              <div style="width: 45%">
+                <app-pr-select
+                  [options]="getAvailableCenters($index)"
                   optionLabel="display_label"
-                  optionValue="initiative_id"
-                  placeholder="Select entity"
-                  [(ngModel)]="assignment.entity_id"
-                  (ngModelChange)="onRoleEntityChange($event, $index)"
+                  optionValue="code"
+                  placeholder="Select center"
+                  [(ngModel)]="assignment.center_id"
+                  (ngModelChange)="onCenterAssignmentChange($event, $index)"
                   [indexReference]="$index + 1"
                   [required]="false"></app-pr-select>
               </div>
-            }
 
-            <div style="width: 45%">
-              <app-pr-select
-                [options]="getRolesService.roles()"
-                [ngClass]="{ globalDisabled: !addUserForm().is_cgiar }"
-                optionLabel="role_description"
-                optionValue="role_id"
-                placeholder="Select role"
-                [ngModel]="assignment.role_id"
-                (ngModelChange)="onRoleAssignmentChange($event, $index)"
-                [indexReference]="($index + 1) * 11"
-                [required]="false"></app-pr-select>
-            </div>
+              <div style="width: 45%">
+                <label class="sr-only-label" [for]="'center-user-role-' + $index">Role</label>
+                <input
+                  type="text"
+                  class="form-input globalDisabled"
+                  [id]="'center-user-role-' + $index"
+                  value="Center User"
+                  readonly />
+              </div>
 
-            <div style="width: 10%" class="remove-button-container">
-              <button type="button" class="remove-role-btn" (click)="removeRoleAssignment($index)" title="Remove role">
-                <i class="pi pi-times"></i>
-              </button>
+              <div style="width: 10%" class="remove-button-container">
+                <button type="button" class="remove-role-btn" (click)="removeCenterAssignment($index)" title="Remove center">
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
             </div>
-          </div>
-          <br />
+            <br />
+          }
+
+          <button type="button" class="add-role-assignment" (click)="addCenterAssignment()">
+            <i class="pi pi-plus-circle" aria-hidden="true"></i>
+            {{ addUserForm().center_assignments.length ? 'Add other center' : 'Add center' }}
+          </button>
         }
-
-        <div class="add-role-assignment" (click)="addRoleAssignment()">
-          <i class="pi pi-plus-circle"></i>
-          {{ addUserForm().role_assignments.length ? 'Add other role' : 'Add role' }}
-        </div>
       }
 
       <!-- Show remaining fields only when user is selected (CGIAR) or when it's non-CGIAR -->
@@ -185,21 +250,24 @@
 
   <div pr-dialog-footer>
     <div class="modal-footer">
-      <button type="button" class="cancel-btn" (click)="onCancelAddUser()" [disabled]="isLoading()" [ngClass]="{ globalDisabled: isLoading() }">
+      <button type="button" class="cancel-btn" (click)="onCancelAddUser()" [disabled]="isLoading()">
         Cancel
       </button>
       <button
         type="button"
         class="save-btn"
+        [class.save-btn--loading]="isLoading()"
         [disabled]="
-          userActivatorMode() ? !isFormValid() || this.addUserForm().role_assignments.length <= 0 || isLoading() : !isFormValid() || isLoading()
+          userActivatorMode()
+            ? (!isFormValid() ||
+                (this.addUserForm().role_assignments.length <= 0 &&
+                  this.addUserForm().center_assignments.length <= 0) ||
+                isLoading())
+            : !isFormValid() || isLoading()
         "
-        [ngClass]="{ globalDisabled: isLoading() }"
         (click)="manageUser()">
-        {{ userActivatorMode() ? 'Activate' : editingMode() ? 'Update' : 'Save' }}
-        @if (isLoading()) {
-          <i class="pi pi-spin pi-spinner"></i>
-        }
+        <span class="save-btn__label">{{ userActivatorMode() ? 'Activate' : editingMode() ? 'Update' : 'Save' }}</span>
+        <i class="pi pi-spin pi-spinner save-btn__spinner" aria-hidden="true"></i>
       </button>
     </div>
   </div>

@@ -1,0 +1,204 @@
+<div class="sev-fields">
+  @if (isLoading()) {
+    <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="true" [extraRows]="3" />
+  } @else {
+    @if (evidences.length === 0 && !showDraft()) {
+      <div class="sev-empty">
+        <i class="material-icons-round sev-empty-icon">attachment</i>
+        <p class="sev-empty-text">No evidence added yet.</p>
+        <p class="sev-empty-hint">Add links or files that support this result (max {{ maxItems }}).</p>
+      </div>
+    }
+
+    @for (item of evidences; track $index) {
+      <div class="sev-card">
+        <div class="sev-card-top">
+          <span class="sev-card-index">{{ $index + 1 }}</span>
+          <span class="sev-card-type">
+            <i class="material-icons-round sev-card-type-icon">{{ isFileEvidence(item) ? 'description' : 'link' }}</i>
+            {{ isFileEvidence(item) ? 'File' : 'Link' }}
+          </span>
+          @if (item.creation_date || item.last_updated_date) {
+            <span class="sev-card-date">
+              @if (item.creation_date) { Added: {{ item.creation_date | date:'MMM d, y' }} }
+              @if (item.last_updated_date) { | Updated: {{ item.last_updated_date | date:'MMM d, y' }} }
+            </span>
+          }
+          <div class="sev-card-actions">
+            <button type="button" class="sev-icon-btn sev-icon-btn--edit" title="Edit" (click)="editItem(item)">
+              <i class="material-icons-round">edit</i>
+            </button>
+            <button type="button" class="sev-icon-btn sev-icon-btn--delete" title="Delete" (click)="deleteItem(item)">
+              <i class="material-icons-round">delete</i>
+            </button>
+          </div>
+        </div>
+        <div class="sev-card-body">
+          <span class="sev-card-main">
+            <i class="material-icons-round sev-card-main-icon">{{ isFileEvidence(item) ? 'description' : 'link' }}</i>
+            @if (item.link) {
+              <a [href]="item.link" target="_blank" rel="noopener noreferrer" class="sev-card-link">{{ evidenceDisplayName(item) }}</a>
+            } @else {
+              <span class="sev-card-name">{{ evidenceDisplayName(item) || '—' }}</span>
+            }
+          </span>
+          @if (item.description) {
+            <span class="sev-card-detail">
+              <i class="material-icons-round">notes</i>
+              {{ item.description }}
+            </span>
+          }
+        </div>
+      </div>
+    }
+
+    @if (showDraft()) {
+      <div class="sev-draft">
+        <div class="sev-draft-header">
+          <span class="sev-draft-title">{{ editingId() !== null ? 'Edit Evidence' : 'Add New Evidence' }}</span>
+          <button type="button" class="sev-icon-btn" (click)="cancelDraft()">
+            <i class="material-icons-round">close</i>
+          </button>
+        </div>
+
+        <div class="sev-draft-body">
+          <div class="sev-draft-field">
+            <label class="sev-draft-label">Source <span class="sev-required">*</span></label>
+            <div class="sev-draft-radios">
+              <button type="button" class="sev-radio" [class.sev-radio--selected]="!draftItem().is_sharepoint" (click)="setDraftLinkMode()">
+                <i class="material-icons-round">link</i> Link
+              </button>
+              <button type="button" class="sev-radio" [class.sev-radio--selected]="draftItem().is_sharepoint" (click)="setDraftFileMode()">
+                <i class="material-icons-round">upload_file</i> Upload File
+              </button>
+            </div>
+          </div>
+
+          @if (!draftItem().is_sharepoint) {
+            <div class="sev-draft-field">
+              <label class="sev-draft-label">Link <span class="sev-required">*</span></label>
+              <input
+                type="url"
+                class="sev-draft-input"
+                [value]="draftItem().link ?? ''"
+                (input)="onDraftLinkInput($event)"
+                placeholder="https://..."
+              />
+              @if (draftItem().link) {
+                @if (isCloudLink(draftItem().link!) && !isCgSpaceLink(draftItem().link!)) {
+                  <div class="sev-validation sev-validation--warn">
+                    <i class="material-icons-round">warning</i>
+                    Links to file storage platforms (Google Drive, Dropbox, SharePoint, OneDrive) are not accepted. Use "Upload File" instead.
+                  </div>
+                } @else if (isCgSpaceLink(draftItem().link!)) {
+                  <div class="sev-validation sev-validation--info">
+                    <i class="material-icons-round">info</i>
+                    This CGSpace link will be automatically replaced by its permanent link once you save.
+                  </div>
+                } @else if (!isValidUrl(draftItem().link!)) {
+                  <div class="sev-validation sev-validation--error">
+                    <i class="material-icons-round">error</i>
+                    Invalid URL format.
+                  </div>
+                } @else if (draftLinkError.includes('already exists')) {
+                  <div class="sev-validation sev-validation--error">
+                    <i class="material-icons-round">error</i>
+                    {{ draftLinkError }}
+                  </div>
+                }
+              }
+            </div>
+          } @else {
+            <div class="sev-draft-field">
+              <label class="sev-draft-label">File <span class="sev-required">*</span></label>
+              @if (draftItem().sp_file_name) {
+                <div class="sev-draft-file">
+                  <i class="material-icons-round">description</i>
+                  <span class="sev-draft-file-name">{{ draftItem().sp_file_name }}</span>
+                  <button type="button" class="sev-icon-btn sev-icon-btn--delete" (click)="removeDraftFile()">
+                    <i class="material-icons-round">delete</i>
+                  </button>
+                </div>
+              } @else {
+                <div
+                  class="sev-draft-dropzone"
+                  (drop)="onFileDropped($event)"
+                  (dragover)="onDragOver($event)"
+                  (dragleave)="onDragLeave($event)"
+                >
+                  <i class="material-icons-round sev-draft-dropzone-icon">cloud_upload</i>
+                  <span class="sev-draft-dropzone-text">Select a file or drag and drop</span>
+                  <span class="sev-draft-dropzone-hint">jpg, png, doc, xlsx or PDF, max 1 GB</span>
+                  <button type="button" class="sev-draft-dropzone-btn" (click)="fileInput.click()">Select file</button>
+                </div>
+                <input
+                  #fileInput
+                  type="file"
+                  class="sev-hidden-input"
+                  (change)="onFileSelected($event)"
+                  accept=".jpg, .png, .pdf, .doc, .docx, .pptx, .jpeg, .xlsx, .xlsm"
+                />
+              }
+            </div>
+          }
+
+          <div class="sev-draft-field">
+            <label class="sev-draft-label">Description (optional)</label>
+            <textarea
+              class="sev-draft-textarea"
+              [value]="draftItem().description ?? ''"
+              (input)="onDraftDescriptionInput($event)"
+              placeholder="e.g. page number, slide number, table number"
+              rows="3"
+              maxlength="500"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="sev-draft-footer">
+          <button type="button" class="sev-btn sev-btn--secondary" (click)="cancelDraft()">Cancel</button>
+          <button type="button" class="sev-btn sev-btn--primary" [disabled]="!isDraftValid" (click)="confirmDraft()">
+            {{ editingId() !== null ? 'Save Changes' : 'Add Evidence' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (canAddMore && !showDraft()) {
+      <button type="button" class="sev-add-trigger" (click)="addNew()">
+        <i class="material-icons-round">add</i>
+        Add evidence
+      </button>
+    }
+
+    @if (evidences.length >= maxItems) {
+      <div class="sev-limit">Maximum of {{ maxItems }} evidence items reached.</div>
+    }
+  }
+</div>
+
+@if (!isLoading()) {
+  <div class="sev-save-bar" [class.sev-save-bar--saving]="saveStatus() === 'saving'" [class.sev-save-bar--saved]="saveStatus() === 'saved'" [class.sev-save-bar--error]="saveStatus() === 'error'">
+    <div class="sev-save-bar-inner">
+      <i class="material-icons-round sev-save-bar-icon">
+        @switch (saveStatus()) {
+          @case ('saving') { sync }
+          @case ('saved') { cloud_done }
+          @case ('error') { error_outline }
+          @default { cloud }
+        }
+      </i>
+      <span class="sev-save-bar-text">
+        @switch (saveStatus()) {
+          @case ('saving') { Saving... }
+          @case ('saved') { Evidence saved }
+          @case ('error') { Save failed }
+          @default { }
+        }
+      </span>
+    </div>
+    <button type="button" class="sev-save-btn" [disabled]="saveStatus() === 'saving'" (click)="saveSection()">
+      <i class="material-icons-round">save</i> Save Evidence
+    </button>
+  </div>
+}

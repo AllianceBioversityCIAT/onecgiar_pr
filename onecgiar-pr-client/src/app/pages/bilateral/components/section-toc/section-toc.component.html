@@ -1,0 +1,186 @@
+<div class="st-fields" data-section="toc">
+  <div class="st-field">
+    <label class="st-label">Can this result be mapped to a planned TOC KPI or indicator?</label>
+    <div class="st-toggle-group">
+      <button type="button" class="st-toggle-btn" [class.st-toggle-btn--active]="isPlanned() === true" (click)="onPlannedChange(true)">
+        <i class="material-icons-round st-toggle-icon">event_repeat</i>
+        <span>Yes</span>
+      </button>
+      <button type="button" class="st-toggle-btn" [class.st-toggle-btn--active]="isPlanned() === false" (click)="onPlannedChange(false)">
+        <i class="material-icons-round st-toggle-icon">event_busy</i>
+        <span>No</span>
+      </button>
+    </div>
+  </div>
+
+  @if (showWhyReported()) {
+    <div class="st-field">
+      <label class="st-label">Why is this result being reported? <span style="color:#C62828">*</span></label>
+      <textarea class="st-textarea" rows="3" [ngModel]="whyReported()"
+        placeholder="Explain why this unplanned result is being reported (max 30 words)…"
+        (input)="whyReported.set($any($event.target).value)"></textarea>
+    </div>
+  }
+
+  @if (isPlanned() === null) {
+    <div class="st-empty">
+      <i class="material-icons-round st-empty-icon">help_outline</i>
+      <span>Please select "Yes" or "No" above to continue.</span>
+    </div>
+  }
+
+  @if (isPlanned() === true) {
+    @if (isLoading()) {
+      <app-form-skeleton [rows]="3" [hasLabel]="true" [hasExtra]="true" [extraRows]="4" />
+    } @else if (initiativeId()) {
+      @if (showLevelSelector()) {
+        <div class="st-field">
+          <label class="st-label">Level <span style="color:#C62828">*</span></label>
+          <p-select
+            [options]="filteredLevels()"
+            [ngModel]="selectedLevelId()"
+            (ngModelChange)="onLevelChange($event)"
+            optionLabel="name"
+            optionValue="toc_level_id"
+            placeholder="Select level"
+            [style]="{ width: '100%' }"
+            appendTo="body">
+          </p-select>
+        </div>
+      } @else if (resultLevelId() === 1 && isPlanned() === true) {
+        <div class="st-field">
+          <label class="st-label">Level</label>
+          <span class="st-level-fixed">High Level Output</span>
+        </div>
+      }
+
+      @if (selectedLevelName() && selectedLevelId()) {
+        <div class="st-field">
+          <label class="st-label">{{ selectedLevelName() }} <span style="color:#C62828">*</span></label>
+          <p-select
+            [options]="tocResultItems()"
+            [ngModel]="selectedTocResultId()"
+            (ngModelChange)="onTocResultSelect($event)"
+            optionLabel="toc_result_id"
+            optionValue="toc_result_id"
+            placeholder="Select {{ selectedLevelName() }}"
+            [style]="{ width: '100%' }"
+            appendTo="body">
+            <ng-template pTemplate="item" let-item>
+              <div class="st-select-item">
+                <div class="st-select-item-row">
+                  <span class="st-select-item-code">{{ item.wp_short_name || item.extraInformation || 'AOW' }}</span>
+                  @if (item.hasMatch) {
+                    <span class="st-select-badge st-select-badge--match">Match [{{ resultTypeLabel() }}]</span>
+                  }
+                  @else if (item.hasOther) {
+                    <span class="st-select-badge st-select-badge--other">Review needed</span>
+                  }
+                </div>
+                <span class="st-select-item-desc">{{ item.title || item.extraInformation }}</span>
+              </div>
+            </ng-template>
+            <ng-template pTemplate="selectedItem" let-item>
+              <div class="st-select-item">
+                <div class="st-select-item-row">
+                  <span class="st-select-item-code">{{ item.wp_short_name || item.extraInformation || 'AOW' }}</span>
+                  @if (item.hasMatch) {
+                    <span class="st-select-badge st-select-badge--match">Match [{{ resultTypeLabel() }}]</span>
+                  }
+                  @else if (item.hasOther) {
+                    <span class="st-select-badge st-select-badge--other">Review needed</span>
+                  }
+                </div>
+                <span class="st-select-item-desc">{{ item.title || item.extraInformation }}</span>
+              </div>
+            </ng-template>
+          </p-select>
+        </div>
+      }
+
+      @if (selectedTocResultId()) {
+        @if (hasNoMatchingIndicator()) {
+          <div class="st-warning">
+            <i class="material-icons-round st-warning-icon">info</i>
+            <span>None of the indicators below directly match {{ resultTypeLabel() }}. You can still select any indicator.</span>
+          </div>
+        }
+
+        @if (indicatorsList().length) {
+          <div class="st-field">
+            <label class="st-label">Indicator <span style="color:#C62828">*</span></label>
+            <p-select
+              [options]="indicatorsList()"
+              [ngModel]="selectedIndicatorId()"
+              (ngModelChange)="onIndicatorSelect($event)"
+                optionLabel="indicator_description"
+              optionValue="related_node_id"
+              placeholder="Select an indicator"
+              [style]="{ width: '100%' }"
+              appendTo="body">
+              <ng-template pTemplate="item" let-ind>
+                <div class="st-select-item">
+                  <span class="st-select-item-desc">{{ ind.indicator_description || 'Unnamed' }}</span>
+                  <div class="st-select-item-row" style="margin-top: 2px;">
+                    @if (ind.matchInfo.cssClass === 'bp-toc-match--match') {
+                      @if (ind.unit_messurament) {
+                        <span class="st-target-unit" style="font-size: 9px; padding: 1px 6px; margin-top: 2px;">{{ ind.unit_messurament }}</span>
+                      }
+                      <span class="st-select-badge st-select-badge--match">Target: {{ ind.targets?.[0]?.target_value ?? 'N/A' }}</span>
+                    }
+                    @else if (ind.matchInfo.cssClass === 'bp-toc-match--other') {
+                      <span class="st-select-badge st-select-badge--other">[{{ ind.matchInfo.label }}]</span>
+                    }
+                  </div>
+                </div>
+              </ng-template>
+              <ng-template pTemplate="selectedItem" let-ind>
+                <div class="st-select-item">
+                  <span class="st-select-item-desc">{{ ind.indicator_description || 'Unnamed' }}</span>
+                </div>
+              </ng-template>
+            </p-select>
+          </div>
+        } @else {
+          <div class="st-no-indicators">No indicators available for this {{ selectedLevelName() }}.</div>
+        }
+
+        @if (selectedIndicatorData(); as ind) {
+          <div class="st-target-display">
+            @if (ind.unit_messurament) {
+              <span class="st-target-unit">{{ ind.unit_messurament }}</span>
+            }
+            <span class="st-target-label">Target</span>
+            <span class="st-target-value">{{ ind.targets?.[0]?.target_value ?? 'N/A' }}</span>
+          </div>
+
+          <div class="st-field">
+            <label class="st-label st-label--sub">Contribution to indicator target</label>
+            <div class="st-info">
+              Indicate the numerical value that your result contributes toward the target of the indicator.
+            </div>
+            <input type="number" class="st-input" [ngModel]="contributionValue()"
+              placeholder="Enter your contribution…"
+              step="1"
+              min="0"
+              pattern="[0-9]*"
+              (keypress)="preventInvalidKeys($event)"
+              (ngModelChange)="setContributionValue($event)" />
+          </div>
+        }
+
+        <div class="st-field st-field--narrative">
+          <label class="st-label">Explanation of how the result aligns with the ToC pathway</label>
+          <textarea class="st-textarea" rows="4" autocomplete="off" [ngModel]="narrative()"
+            placeholder="Describe how this result contributes to the selected ToC element (max 150 words)…"
+            (input)="onNarrativeInput($any($event.target).value)"></textarea>
+        </div>
+      }
+    } @else {
+      <div class="st-empty">
+        <i class="material-icons-round st-empty-icon">info</i>
+        <span>Initiative not found for program code {{ programCode() }}. ToC alignment is unavailable.</span>
+      </div>
+    }
+  }
+</div>

@@ -1,0 +1,24 @@
+<div class="sts-container">
+  @if (hasNoTypeSpecific()) {
+    <div class="sts-empty">
+      <i class="material-icons-round sts-empty-icon">check_circle</i>
+      <p class="sts-empty-title">No type-specific fields required</p>
+      <p class="sts-empty-desc">
+        <strong>{{ typeLabel() }}</strong> does not require additional type-specific information.
+      </p>
+    </div>
+  } @else {
+    <div class="sts-type-badge">
+      <i class="material-icons-round">category</i>
+      <span>{{ typeLabel() }}</span>
+    </div>
+
+    @switch (resultTypeId()) {
+      @case (1) { <app-type-policy-change /> }
+      @case (2) { <app-type-innovation-use /> }
+      @case (5) { <app-type-capacity-sharing /> }
+      @case (6) { <app-type-knowledge-product /> }
+      @case (7) { <app-type-innovation-dev /> }
+    }
+  }
+</div>

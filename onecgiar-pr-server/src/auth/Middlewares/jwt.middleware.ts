@@ -41,6 +41,20 @@ export class JwtMiddleware implements NestMiddleware {
 
       if (isPublicRoute) {
         this.logger.debug(`Public route accessed: ${req.path}`);
+        const authToken: string = req.headers['auth'] as string;
+        if (authToken) {
+          try {
+            const jwtPayload = await this._jwtService.verifyAsync(authToken, {
+              secret: env.JWT_SKEY,
+            });
+            if (jwtPayload?.id && jwtPayload?.email) {
+              req['user'] = jwtPayload;
+              res.locals.jwtPayload = jwtPayload;
+            }
+          } catch {
+            // Silently ignore invalid tokens on public routes
+          }
+        }
         return next();
       }
 

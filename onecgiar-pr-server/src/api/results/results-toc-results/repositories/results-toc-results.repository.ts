@@ -1754,7 +1754,8 @@ export class ResultsTocResultRepository
       for (const itemIndicator of targetsIndicator) {
         const indicatorId =
           itemIndicator.toc_results_indicator_id ||
-          itemIndicator.related_node_id;
+          itemIndicator.related_node_id ||
+          itemIndicator.id;
         if (!indicatorId) continue;
 
         const targetIndicators =

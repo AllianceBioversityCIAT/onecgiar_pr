@@ -19,6 +19,9 @@ import {
 } from './clarisa-global-unit/entities/clarisa-global-unit-lineage.entity';
 import { ClarisaProject } from './clarisa-projects/entity/clarisa-projects.entity';
 import { ClarisaProjectDto } from './dtos/clarisa-project.dto';
+import { ClarisaProjectMapping } from './clarisa-projects/entity/clarisa-project-mapping.entity';
+import { ClarisaProjectCountry } from './clarisa-projects/entity/clarisa-project-country.entity';
+import { ClarisaCountry } from './clarisa-countries/entities/clarisa-country.entity';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -646,50 +649,77 @@ export class ClarisaTaskService {
         return [];
       });
 
-    let transformedData: DeepPartial<ClarisaProject>[];
-    if (projectsEndpoint.mapper) {
-      transformedData = projectsEndpoint.mapper(data);
-    } else {
-      transformedData = data as unknown as DeepPartial<ClarisaProject>[];
-    }
+    this._logger.log(
+      `>>>[${index}] Received ${data?.length ?? 0} projects from CLARISA API. Starting database transaction...`,
+    );
 
     const results: ClarisaProject[] = [];
 
-    // Process in a transaction to ensure consistency
     await this.dataSource.transaction(async (manager) => {
       const projectRepo = manager.getRepository(ClarisaProject);
+      const mappingRepo = manager.getRepository(ClarisaProjectMapping);
+      const countryRepo = manager.getRepository(ClarisaProjectCountry);
+      const countryList = await manager
+        .getRepository(ClarisaCountry)
+        .find({ select: ['id'] });
+      const validCountryIds = new Set(countryList.map((c) => c.id));
 
-      for (const item of transformedData) {
+      let count = 0;
+      for (const rawItem of data) {
+        count++;
+        if (count % 50 === 0 || count === data.length) {
+          this._logger.log(
+            `>>>[${index}] Processing project ${count}/${data.length}...`,
+          );
+        }
         try {
-          const itemId = item.id;
+          const itemId = rawItem.id;
           if (itemId === undefined || itemId === null) {
             this._logger.warn(
-              `[${index}] Skipping project without ID: ${JSON.stringify(item)}`,
+              `[${index}] Skipping project without ID: ${JSON.stringify(rawItem)}`,
             );
             continue;
           }
+
+          const mappedScalars = projectsEndpoint.mapper
+            ? projectsEndpoint.mapper([rawItem])[0]
+            : (rawItem as unknown as DeepPartial<ClarisaProject>);
 
           const existing = await projectRepo.findOne({
             where: { id: itemId },
           });
 
+          let savedProject: ClarisaProject | null = null;
           if (existing) {
-            const updateData = { ...item };
+            const updateData = { ...mappedScalars };
             delete updateData.id;
             await projectRepo.update({ id: itemId }, updateData);
-            const updated = await projectRepo.findOne({
+            savedProject = await projectRepo.findOne({
               where: { id: itemId },
             });
-            if (updated) {
-              results.push(updated);
-            }
           } else {
-            const saved = await projectRepo.save(item);
-            results.push(saved);
+            savedProject = await projectRepo.save(mappedScalars);
+          }
+
+          if (savedProject) {
+            results.push(savedProject);
+          }
+
+          await mappingRepo.delete({ projectId: itemId });
+          await countryRepo.delete({ projectId: itemId });
+
+          const mappings = this.mapProjectMappings(rawItem);
+          if (mappings.length) {
+            await mappingRepo.save(mappings, { chunk: 500 });
+          }
+
+          const countries = this.mapProjectCountries(rawItem, validCountryIds);
+          if (countries.length) {
+            await countryRepo.save(countries, { chunk: 500 });
           }
         } catch (err) {
           this._logger.error(
-            `[${index}] Error saving project with id: ${item.id}`,
+            `[${index}] Error saving project with id: ${rawItem.id}`,
           );
           this._logger.error(err);
         }
@@ -700,6 +730,53 @@ export class ClarisaTaskService {
       `[${index}] Data successfully saved for ${projectsEndpoint.entity.name}!`,
     );
     return results;
+  }
+
+  private mapProjectMappings(
+    item: ClarisaProjectDto,
+  ): DeepPartial<ClarisaProjectMapping>[] {
+    const rows = item.project_mappings_array ?? [];
+    return rows
+      .filter((row) => row?.id != null && row.project_id != null)
+      .map((row) => ({
+        id: row.id,
+        projectId: row.project_id,
+        programId: row.program_id,
+        programCode: row.global_unit_object?.smo_code ?? null,
+        allocation:
+          row.allocation === null || row.allocation === undefined
+            ? null
+            : String(row.allocation),
+        complementarity: row.complementarity ?? null,
+        efficiencies: row.efficiencies ?? null,
+        comments: row.comments ?? null,
+        status: row.status ?? null,
+      }));
+  }
+
+  private mapProjectCountries(
+    item: ClarisaProjectDto,
+    validCountryIds: Set<number>,
+  ): DeepPartial<ClarisaProjectCountry>[] {
+    const rows = item.project_countries_array ?? [];
+    return rows
+      .map((row) => {
+        const countryCode =
+          row.country_code ?? row.country_object?.iso_numeric ?? null;
+        return {
+          id: row?.id,
+          projectId: row?.project_id,
+          countryId: countryCode,
+          countryCode: countryCode,
+        };
+      })
+      .filter(
+        (row) =>
+          row.id != null &&
+          row.projectId != null &&
+          row.countryId != null &&
+          validCountryIds.has(row.countryId),
+      );
   }
 
   private cgiarEntityInitiativeMapper(

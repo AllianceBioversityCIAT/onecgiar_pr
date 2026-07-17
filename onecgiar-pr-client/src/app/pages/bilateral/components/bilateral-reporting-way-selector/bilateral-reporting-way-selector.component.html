@@ -1,0 +1,35 @@
+<div class="brws">
+  <label class="brws-label">Choose how you would like to create and report your bilateral result in PRMS.</label>
+
+  <div class="brws-grid">
+    @for (option of options; track option.id) {
+      <div
+        class="brws-card"
+        [class.brws-card--disabled]="!option.enabled"
+        [class.brws-card--loading]="option.enabled && isLoading()"
+        (click)="selectWay(option)"
+        role="button"
+        [attr.tabindex]="option.enabled ? 0 : -1"
+        [attr.aria-disabled]="!option.enabled"
+      >
+        <div class="brws-card-header">
+          <div class="brws-icon">
+            <i class="material-icons-round">{{ option.icon }}</i>
+          </div>
+          <i class="material-icons-round brws-arrow">chevron_right</i>
+        </div>
+
+        <div class="brws-card-body">
+          @if (option.badge) {
+            <span class="brws-badge">{{ option.badge }}</span>
+          }
+          <h4 class="brws-title">{{ option.label }}</h4>
+          <p class="brws-subtitle">{{ option.title }}</p>
+          @if (option.description) {
+            <p class="brws-description">{{ option.description }}</p>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

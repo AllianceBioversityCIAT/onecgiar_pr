@@ -2887,6 +2887,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         cp.short_name AS project_name,
         ci.id AS center_id,
         ci.acronym AS center_name,
+        ci_lead.id AS lead_center_id,
+        ci_lead.acronym AS lead_center_name,
         r.id,
         r.result_code,
         r.external_submitter,
@@ -2896,7 +2898,14 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.title AS result_title,
         r.description AS result_description,
         rt.name AS result_category,
-        r.status_id 
+        r.status_id,
+        r.lead_contact_person,
+        r.lead_contact_person_id,
+        r.gender_tag_level_id,
+        r.climate_change_tag_level_id,
+        r.nutrition_tag_level_id,
+        r.environmental_biodiversity_tag_level_id,
+        r.poverty_tag_level_id
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
@@ -2913,7 +2922,15 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ON rc.center_id = cc.code
       LEFT JOIN clarisa_institutions ci
         ON cc.institutionId = ci.id
-      LEFT JOIN users u 
+      LEFT JOIN results_center rc_lead
+        ON r.id = rc_lead.result_id
+        AND rc_lead.is_active = 1
+        AND rc_lead.is_leading_result = true
+      LEFT JOIN clarisa_center cc_lead
+        ON rc_lead.center_id = cc_lead.code
+      LEFT JOIN clarisa_institutions ci_lead
+        ON cc_lead.institutionId = ci_lead.id
+      LEFT JOIN users u
         ON r.external_submitter = u.id
       WHERE
         r.id = ?

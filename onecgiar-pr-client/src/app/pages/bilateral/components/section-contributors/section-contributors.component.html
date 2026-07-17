@@ -1,0 +1,136 @@
+<div class="sc-fields" data-section="contributors">
+  @if (primarySpData(); as sp) {
+    <div class="sc-card sc-card--toc">
+      <div class="sc-card__header">
+        <div class="sc-card__title">
+          <span class="sc-card__icon toc-icon"></span>
+          <span>Theory of Change Alignment</span>
+        </div>
+      </div>
+      <div class="sc-card__body">
+        <div class="sc-sp-header">
+          <img class="sc-sp-icon" [src]="sp.iconSrc" width="32" height="32" alt="" />
+          <div class="sc-sp-info">
+            <span class="sc-sp-code">{{ sp.programCode }} — {{ sp.name || sp.shortName }}</span>
+            @if (sp.allocation) {
+              <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
+            }
+          </div>
+        </div>
+        <app-section-toc [resultLevelId]="creationService.resultLevelId()"></app-section-toc>
+      </div>
+    </div>
+
+    @if (creationService.selectedSecondarySps().length) {
+      <div class="sc-card">
+        <div class="sc-card__header">
+          <div class="sc-card__title">
+            <span class="sc-card__icon sp-icon"></span>
+            <span>Contributing Science Programs</span>
+          </div>
+        </div>
+        <div class="sc-card__body">
+          <div class="sc-chips">
+            @for (sp of creationService.selectedSecondarySps(); track sp.programId) {
+              <span class="sc-sp-badge">
+                {{ sp.programCode }}
+                @if (sp.allocation) {
+                  <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
+                }
+              </span>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+  <div class="sc-card sc-card--lead-center">
+    <div class="sc-card__header">
+      <div class="sc-card__title">
+        <span class="sc-card__icon lead-icon"></span>
+        <span>Lead Center</span>
+      </div>
+      <span class="sc-card__badge">Read only</span>
+    </div>
+    <div class="sc-card__body">
+      <span class="sc-lead">{{ creationService.selectedProject()?.leadCenter?.acronym }} - {{ creationService.selectedProject()?.leadCenter?.name }}</span>
+    </div>
+  </div>
+
+  <div class="sc-card sc-card--centers">
+    <div class="sc-card__header">
+      <div class="sc-card__title">
+        <span class="sc-card__icon center-icon"></span>
+        <span>Contributing CGIAR Centers</span>
+      </div>
+    </div>
+    <div class="sc-card__body">
+      <p-multiSelect
+        [options]="availableCentersComputed()"
+        [(ngModel)]="selectedCenterInstitutionIds"
+        optionLabel="full_name"
+        optionValue="institutionId"
+        optionDisabled="disabled"
+        placeholder="Select contributing centers"
+        [maxSelectedLabels]="0"
+        selectedItemsLabel="Select contributing centers"
+        [style]="{ width: '100%', 'max-width': '480px' }"
+        (onChange)="onCentersChange($event.value)"
+        [showClear]="true"
+        appendTo="body"
+        panelStyleClass="sc-dropdown-panel">
+      </p-multiSelect>
+      @if (selectedCenterInstitutionIds.length) {
+        <div class="sc-selected-chips">
+          @for (id of selectedCenterInstitutionIds; track id) {
+            <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id)">
+              {{ getCenterDisplayName(id) }}
+              @if (!isLeadCenter(id)) {
+                <button type="button" class="sc-chip-remove" (click)="removeCenter(id)">×</button>
+              }
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="sc-card sc-card--projects">
+    <div class="sc-card__header">
+      <div class="sc-card__title">
+        <span class="sc-card__icon project-icon"></span>
+        <span>Contributing Projects</span>
+      </div>
+    </div>
+    <div class="sc-card__body">
+      <p-multiSelect
+        [options]="availableProjectsComputed()"
+        [(ngModel)]="selectedProjectIds"
+        optionLabel="fullName"
+        optionValue="id"
+        optionDisabled="disabled"
+        placeholder="Select contributing projects"
+        [maxSelectedLabels]="0"
+        selectedItemsLabel="Select contributing projects"
+        [style]="{ width: '100%', 'max-width': '480px' }"
+        (onChange)="onProjectsChange($event.value)"
+        [showClear]="true"
+        appendTo="body"
+        panelStyleClass="sc-dropdown-panel">
+      </p-multiSelect>
+      @if (selectedProjectIds.length) {
+        <div class="sc-selected-chips">
+          @for (id of selectedProjectIds; track id) {
+            <span class="sc-chip sc-chip--project" [class.sc-chip-readonly]="isLeadProject(id)">
+              {{ getProjectDisplayName(id) }}
+              @if (!isLeadProject(id)) {
+                <button type="button" class="sc-chip-remove" (click)="removeProject(id)">×</button>
+              }
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

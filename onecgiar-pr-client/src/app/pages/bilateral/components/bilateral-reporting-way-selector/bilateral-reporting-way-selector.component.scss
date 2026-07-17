@@ -1,0 +1,125 @@
+.brws {
+  margin: 24px 0;
+}
+
+.brws-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #37474F;
+  margin-bottom: 16px;
+}
+
+.brws-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.brws-card {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: #FFFFFF;
+  border: 1.5px solid #E8ECEE;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+
+  &:hover:not(&--disabled):not(&--loading) {
+    border-color: #90CAF9;
+    box-shadow: 0 4px 16px rgba(21, 101, 192, 0.12);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #1565C0;
+    outline-offset: 1px;
+  }
+
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #FAFBFC;
+  }
+
+  &--loading {
+    cursor: wait;
+  }
+}
+
+.brws-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.brws-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+  color: #1565C0;
+
+  i {
+    font-size: 22px;
+  }
+}
+
+.brws-arrow {
+  font-size: 20px;
+  color: #90A4AE;
+}
+
+.brws-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.brws-badge {
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #607D8B;
+  background: #ECEFF1;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.brws-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #263238;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.brws-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: #455A64;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.brws-description {
+  font-size: 11px;
+  color: #78909C;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .brws-grid {
+    grid-template-columns: 1fr;
+  }
+}

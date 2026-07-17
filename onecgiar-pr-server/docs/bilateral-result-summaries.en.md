@@ -421,7 +421,7 @@ Other bilateral-supported types (e.g. other output / other outcome) may **not** 
 
 | Date (approx.) | Change |
 |----------------|--------|
-| 2026 | Expanded **Common fields on `data`** with tables + reference JSON fragment (identity, TOC, geography, centres, DAC, status, evidences, links, etc.). |
+| 2026-07 | AI workflow spec ([bilateral-ai-workflow-spec.md](../../docs/specs/bilateral-ai-workflow/bilateral-ai-workflow-spec.md)) introduces: **secondary/contributing SPs** (multi-select from W3 Registry, expected field `contributing_programs[]`), **Draft (8) status** for AI-assisted results (internal — not in bilateral payload), and **`source` values** for W3/bilateral. Payload will be updated additively as implementation (P2-3100, P2-3101, P2-3122–3127, In Progress) lands. |
 | 2026 | Policy change: `result_related_to` from `ResultQuestionsService`; removed duplicate engagement-only field from bilateral JSON. |
 | 2026 | Policy change & capacity sharing summaries: omit `created_date` / `last_updated_date` on the **type summary** object only (core `data` still carries result-level dates). |
 | 2026 | `leading_result` reflects `is_lead_by_partner` (partner vs centre); `last_submission` for status QA/Submitted; Clarisa `id` on policy type/stage, implementing orgs, innovation typology; KP summary = `handle` only; cap sharing `institutions` renamed to `on_behalf_organizations`; policy change implementing orgs as `policy_implementing_organizations`. |

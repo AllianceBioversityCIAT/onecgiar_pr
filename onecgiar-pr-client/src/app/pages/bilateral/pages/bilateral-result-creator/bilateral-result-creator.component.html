@@ -1,0 +1,124 @@
+<div class="bilateral-creator">
+  <nav class="bcr-breadcrumb">
+    <span>CGIAR Center</span>
+    <span>&rsaquo;</span>
+    @if (creationService.selectedProject(); as p) {
+      @if (p.leadCenter) {
+        <strong>{{ p.leadCenter.name }} ({{ p.leadCenter.acronym }})</strong>
+      }
+    }
+  </nav>
+
+  @if (isCreating()) {
+    <app-bilateral-project-selector (projectSelected)="onProjectSelected($event)"></app-bilateral-project-selector>
+
+    @if (creationService.selectedProject()) {
+      <div id="bcr-sp-section">
+        <app-bilateral-sp-selector (primarySelected)="onPrimarySelected()"></app-bilateral-sp-selector>
+      </div>
+    }
+  }
+
+  @if (creationService.selectedPrimarySp() && isCreating()) {
+    <div id="bcr-reporting-way">
+      <app-bilateral-reporting-way-selector
+        [isLoading]="isCreatingResult()"
+        (waySelected)="onReportingWaySelected($event)"
+      ></app-bilateral-reporting-way-selector>
+    </div>
+  }
+
+  @if (isCreating() && selectedReportingWay() === 'manual') {
+    <div id="bcr-level-section">
+      <hr class="bcr-divider" />
+
+      <app-bilateral-result-level-selector
+        [resultLevelId]="resultLevelId()"
+        (levelSelected)="onLevelSelected($event)"
+      ></app-bilateral-result-level-selector>
+
+      @if (resultLevelId()) {
+        <div id="bcr-type-section" class="bcr-type-section">
+          <label class="bcr-label">Result Type <span style="color:#C62828">*</span></label>
+          <select class="bcr-select" (change)="onTypeSelected($event)">
+            <option value="" disabled [selected]="!resultTypeId()">Select result type</option>
+            @for (type of availableResultTypes(); track type.id) {
+              <option [value]="type.id" [selected]="resultTypeId() === type.id">{{ type.label }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      @if (canCreate) {
+        <div class="bcr-actions">
+          <button class="bcr-create-btn" (click)="onNext()" [disabled]="isCreatingResult()" type="button">
+            {{ isCreatingResult() ? 'Creating result...' : 'Next' }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  @if (!isCreating() && resultId()) {
+    <div class="bcr-floating-save-wrapper">
+      <div class="bcr-floating-save"
+        [class.bcr-floating-save--saving]="autoSaveService.globalSaveState() === 'saving'"
+        [class.bcr-floating-save--saved]="autoSaveService.globalSaveState() === 'saved'"
+        [class.bcr-floating-save--error]="autoSaveService.globalSaveState() === 'error'">
+        <i class="material-icons-round bcr-floating-save-icon">
+          @switch (autoSaveService.globalSaveState()) {
+            @case ('saving') { sync }
+            @case ('saved') { cloud_done }
+            @case ('error') { error_outline }
+            @default { cloud }
+          }
+        </i>
+        <span class="bcr-floating-save-text">
+          @switch (autoSaveService.globalSaveState()) {
+            @case ('saving') { Saving&hellip; }
+            @case ('saved') { All changes saved }
+            @case ('error') { Save failed }
+            @default { Ready }
+          }
+        </span>
+      </div>
+      <button type="button" class="bcr-floating-btn-save" (click)="triggerManualSave()">
+        <i class="material-icons-round">save</i> Save
+      </button>
+    </div>
+
+    <div id="bcr-accordions">
+    <app-section-zero-dashboard (submitRequested)="submitResult()"></app-section-zero-dashboard>
+
+    <app-bilateral-accordion sectionName="general-info" sectionLabel="General Information" sectionIcon="description"
+      [totalFields]="getSectionTotal('general-info')" [filledFields]="getSectionFilled('general-info')"
+      [mdsStatus]="getSectionMdsStatus('general-info')" [resultId]="resultId()" [(openSectionName)]="openSectionName">
+      <app-section-general-info></app-section-general-info>
+    </app-bilateral-accordion>
+
+    <app-bilateral-accordion sectionName="contributors" sectionLabel="Contributors & Partners" sectionIcon="people"
+      [totalFields]="getSectionTotal('contributors')" [filledFields]="getSectionFilled('contributors')"
+      [mdsStatus]="getSectionMdsStatus('contributors')" [resultId]="resultId()" [(openSectionName)]="openSectionName">
+      <app-section-contributors></app-section-contributors>
+    </app-bilateral-accordion>
+
+    <app-bilateral-accordion sectionName="geography" sectionLabel="Geographic Location" sectionIcon="map"
+      [totalFields]="getSectionTotal('geography')" [filledFields]="getSectionFilled('geography')"
+      [mdsStatus]="getSectionMdsStatus('geography')" [resultId]="resultId()" [(openSectionName)]="openSectionName">
+      <app-section-geography></app-section-geography>
+    </app-bilateral-accordion>
+
+    <app-bilateral-accordion sectionName="evidence" sectionLabel="Evidence" sectionIcon="attachment"
+      [totalFields]="getSectionTotal('evidence')" [filledFields]="getSectionFilled('evidence')"
+      [mdsStatus]="getSectionMdsStatus('evidence')" [resultId]="resultId()" [(openSectionName)]="openSectionName">
+      <app-section-evidence></app-section-evidence>
+    </app-bilateral-accordion>
+
+    <app-bilateral-accordion sectionName="type-specific" sectionLabel="Type-Specific Details" sectionIcon="category"
+      [totalFields]="getSectionTotal('type-specific')" [filledFields]="getSectionFilled('type-specific')"
+      [mdsStatus]="getSectionMdsStatus('type-specific')" [resultId]="resultId()" [(openSectionName)]="openSectionName">
+      <app-section-type-specific></app-section-type-specific>
+    </app-bilateral-accordion>
+    </div>
+  }
+</div>

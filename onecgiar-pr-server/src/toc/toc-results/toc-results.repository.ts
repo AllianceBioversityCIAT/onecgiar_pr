@@ -23,6 +23,7 @@ export type GetTocIndicatorsByResultIdsParams = {
   resultId?: number;
   initId?: number;
   includeInactiveIndicators?: boolean;
+  bilateral?: boolean;
 };
 
 @Injectable()
@@ -636,8 +637,10 @@ export class TocResultsRepository extends Repository<TocResult> {
     resultTypeId: number | undefined,
     resultId: number | undefined,
     params: (string | number)[],
+    bilateral?: boolean,
   ): string {
     if (
+      bilateral ||
       !isPlanned ||
       !resultTypeId ||
       !RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
@@ -660,6 +663,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     resultId?: number,
     planned?: boolean | string,
     explicitTocPhaseId?: string | number,
+    bilateral?: boolean,
   ) {
     const isPlanned = planned === true || planned === 'true';
     const category = this._resolveTocCategory(toc_level);
@@ -686,6 +690,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       resultTypeId,
       resultId,
       params,
+      bilateral,
     );
 
     const queryData = `
@@ -779,8 +784,10 @@ export class TocResultsRepository extends Repository<TocResult> {
     queryParams: unknown[],
     resultTypeId: number | undefined,
     isUnplanned: boolean,
+    bilateral?: boolean,
   ): void {
     if (
+      bilateral ||
       isUnplanned ||
       !resultTypeId ||
       !RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
@@ -882,6 +889,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       resultId,
       initId,
       includeInactiveIndicators = false,
+      bilateral,
     } = params;
 
     const numericIds = (tocResultIds ?? [])
@@ -903,6 +911,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       queryParams,
       resultTypeId,
       isUnplanned,
+      bilateral,
     );
 
     const normalizedLinkedIndicators = this._normalizeLinkedIndicatorNodeIds(

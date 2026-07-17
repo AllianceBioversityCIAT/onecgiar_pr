@@ -48,10 +48,23 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
 import { PathwayModule } from '../ipsr-framework/pathway/pathway.module';
 import { ClarisaApiKeyValidationService } from './services/clarisa-api-key-validation.service';
 import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
+import { BilateralCenterController } from './bilateral-center.controller';
+import { BilateralProjectsService } from './services/bilateral-projects.service';
+import { BilateralCenterService } from './services/bilateral-center.service';
+import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
+import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ResultByLevelModule } from '../results/result-by-level/result-by-level.module';
 
 @Module({
   imports: [
     HttpModule,
+    TypeOrmModule.forFeature([
+      ClarisaProject,
+      ClarisaInitiative,
+      ClarisaCenter,
+    ]),
     ResultsModule,
     VersioningModule,
     UserModule,
@@ -85,12 +98,15 @@ import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
     ResultsByInititiativesModule,
     ShareResultRequestModule,
     PathwayModule,
+    ResultByLevelModule,
   ],
-  controllers: [BilateralController],
+  controllers: [BilateralCenterController, BilateralController],
   providers: [
     ClarisaApiKeyValidationService,
     ClarisaApiKeyGuard,
     BilateralService,
+    BilateralProjectsService,
+    BilateralCenterService,
     KnowledgeProductBilateralHandler,
     CapacityChangeBilateralHandler,
     InnovationDevelopmentBilateralHandler,

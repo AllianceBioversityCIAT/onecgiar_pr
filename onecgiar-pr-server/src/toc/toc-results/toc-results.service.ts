@@ -112,6 +112,7 @@ export class TocResultsService {
     init_id: number,
     toc_level: number,
     planned?: boolean,
+    bilateral?: boolean,
   ) {
     try {
       const result = await this._resultRepository.findOne({
@@ -181,6 +182,7 @@ export class TocResultsService {
         result_id,
         planned ?? true,
         tocPhaseId,
+        bilateral,
       );
 
       let enrichedResults;
@@ -223,6 +225,7 @@ export class TocResultsService {
               resultId: result_id,
               initId: init_id,
               includeInactiveIndicators,
+              bilateral,
             });
 
           const indicatorMap = new Map<
