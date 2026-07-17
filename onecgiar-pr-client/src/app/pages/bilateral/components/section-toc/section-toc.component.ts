@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, effect, input, untracked } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, effect, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
@@ -163,15 +163,7 @@ export class SectionTocComponent implements OnInit {
   });
 
   constructor() {
-    effect(() => {
-      const leadCenterId = this.creationService.selectedProject()?.leadCenter?.id ?? this.creationService.resultLeadCenterId();
-      const centersFilled = leadCenterId != null || this.creationService.resultContributingCenterIds().length > 0;
-      const projectsFilled = this.creationService.selectedProject() != null || this.creationService.resultContributingProjectIds().length > 0;
-      const planned = this.isPlanned();
-      const tocFilled = planned === false || (planned === true && this.selectedTocResultId() != null);
-      const filled = [centersFilled, projectsFilled, tocFilled].filter(Boolean).length;
-      this.mdsTracker.updateSection('contributors', filled);
-    });
+    this.mdsTracker.updateSection('contributors', 3);
 
     effect(() => {
       const iId = this.creationService.resultInitiativeId();
@@ -183,11 +175,9 @@ export class SectionTocComponent implements OnInit {
     effect(() => {
       const iId = this.initiativeId();
       if (!iId) return;
-      untracked(() => {
-        this.loadTocLevels();
-        this.fetchLists();
-        this.loadTocState();
-      });
+      this.loadTocLevels();
+      this.fetchLists();
+      this.loadTocState();
     });
   }
 

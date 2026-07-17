@@ -284,7 +284,7 @@ export class SectionEvidenceComponent implements OnInit {
     for (const evidence of this.evidences) {
       if (!evidence.file || evidence.link) continue;
       try {
-        const { response: uploadUrl } = await this.api.resultsSE.POST_createUploadSession({
+        const uploadUrl = await this.api.resultsSE.POST_createUploadSession({
             resultId,
             fileName: evidence.file.name,
             count: 0

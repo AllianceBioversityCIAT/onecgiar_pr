@@ -185,8 +185,8 @@ export class SectionGeographyComponent implements OnInit, OnDestroy {
       this.extraGeographicLocationBody.update(b => ({
         ...b,
         geo_scope_id: scopeId,
-        has_countries: false,
-        has_regions: false,
+        has_extra_countries: false,
+        has_extra_regions: false,
         regions: [],
         countries: []
       }));
@@ -194,16 +194,16 @@ export class SectionGeographyComponent implements OnInit, OnDestroy {
       this.extraGeographicLocationBody.update(b => ({
         ...b,
         geo_scope_id: scopeId,
-        has_regions: true,
-        has_countries: false,
+        has_extra_regions: true,
+        has_extra_countries: false,
         countries: []
       }));
     } else if (scopeId === GeoScopeEnum.COUNTRY || scopeId === GeoScopeEnum.SUB_NATIONAL) {
       this.extraGeographicLocationBody.update(b => ({
         ...b,
         geo_scope_id: scopeId,
-        has_countries: true,
-        has_regions: false,
+        has_extra_countries: true,
+        has_extra_regions: false,
         regions: []
       }));
     } else {
@@ -255,6 +255,24 @@ export class SectionGeographyComponent implements OnInit, OnDestroy {
     if (!val) {
       this.resetExtraScope();
     }
+    this.saveGeography();
+  }
+
+  setHasExtraRegions(val: boolean): void {
+    this.extraGeographicLocationBody.update(b => ({
+      ...b,
+      has_regions: val,
+      regions: val ? b.regions : []
+    }));
+    this.saveGeography();
+  }
+
+  setHasExtraCountries(val: boolean): void {
+    this.extraGeographicLocationBody.update(b => ({
+      ...b,
+      has_countries: val,
+      countries: val ? b.countries : []
+    }));
     this.saveGeography();
   }
 
