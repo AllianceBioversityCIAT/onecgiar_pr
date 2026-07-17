@@ -4,6 +4,7 @@ import { ResultFrameworkReportingHomeService } from '../result-framework-reporti
 import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.interface';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 
 /** Vibrant, high-contrast palette for the status charts (no pastels). */
 const STATUS_COLOR: Record<number, string> = {
@@ -71,7 +72,7 @@ interface AccentTheme {
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, CustomFieldsModule],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -136,6 +137,81 @@ export class DashboardLabComponent implements OnInit {
     return !!code && this.loadingSummaryCodes().has(code) && !this.summariesByCode().has(code);
   });
 
+  // ---- AOW detail view (indicators) ----
+  readonly viewMode = signal<'home' | 'aow'>('home');
+  readonly activeAowCode = signal<string | null>(null);
+  readonly indicatorTab = signal<'outputs' | 'outcomes'>('outputs');
+  readonly typologyFilter = signal<string | null>(null);
+  readonly statusFilter = signal<string | null>(null);
+
+  /** ToC results (indicator groups) cached by `${program}::${aow}`. */
+  readonly tocByKey = signal<Map<string, { outputs: any[]; outcomes: any[] }>>(new Map());
+  private readonly loadingTocKeys = signal<Set<string>>(new Set());
+
+  readonly activeAow = computed<Unit | null>(() => {
+    const code = this.activeAowCode();
+    return code ? this.aows().find(a => a.code === code) ?? null : null;
+  });
+
+  private readonly currentToc = computed(() => {
+    const sp = this.selected();
+    const aow = this.activeAowCode();
+    if (!sp || !aow) return { outputs: [] as any[], outcomes: [] as any[] };
+    return this.tocByKey().get(`${sp.initiativeCode}::${aow}`) ?? { outputs: [] as any[], outcomes: [] as any[] };
+  });
+
+  readonly loadingToc = computed(() => {
+    const sp = this.selected();
+    const aow = this.activeAowCode();
+    if (!sp || !aow) return false;
+    const key = `${sp.initiativeCode}::${aow}`;
+    return this.loadingTocKeys().has(key) && !this.tocByKey().has(key);
+  });
+
+  readonly indicatorCounts = computed(() => {
+    const toc = this.currentToc();
+    const count = (groups: any[]) => groups.reduce((n, g) => n + (g?.indicators?.length ?? 0), 0);
+    return { outputs: count(toc.outputs), outcomes: count(toc.outcomes) };
+  });
+
+  /** Indicator typologies present in the active tab (for the filter dropdown). */
+  readonly typologyOptions = computed(() => {
+    const groups = this.indicatorTab() === 'outputs' ? this.currentToc().outputs : this.currentToc().outcomes;
+    const set = new Set<string>();
+    groups.forEach(g => (g?.indicators ?? []).forEach((i: any) => i?.type_name && set.add(i.type_name)));
+    return [...set];
+  });
+  readonly statusOptions = ['Not started', 'In progress', 'Achieved', 'Overachieved'];
+
+  // Option arrays shaped for <app-pr-select> ({label,value} pairs).
+  readonly programSelectOptions = computed(() =>
+    this.allPrograms().map(p => ({ label: `${p.initiativeCode} — ${p.initiativeShortName || p.initiativeName}`, id: p.initiativeId }))
+  );
+  readonly typologySelectOptions = computed(() => [
+    { label: 'All typologies', value: '' },
+    ...this.typologyOptions().map(t => ({ label: t, value: t }))
+  ]);
+  readonly statusSelectOptions = [
+    { label: 'All statuses', value: '' },
+    ...this.statusOptions.map(s => ({ label: s, value: s }))
+  ];
+
+  /** HLO groups for the active tab, filtered by typology + status; empty groups dropped. */
+  readonly indicatorGroups = computed(() => {
+    const groups = this.indicatorTab() === 'outputs' ? this.currentToc().outputs : this.currentToc().outcomes;
+    const typ = this.typologyFilter();
+    const st = this.statusFilter();
+    if (!typ && !st) return groups;
+    return groups
+      .map(g => ({
+        ...g,
+        indicators: (g?.indicators ?? []).filter(
+          (i: any) => (!typ || i?.type_name === typ) && (!st || this.statusLabel(i?.progress_percentage) === st)
+        )
+      }))
+      .filter(g => (g.indicators ?? []).length > 0);
+  });
+
   constructor() {
     // Load the selected program's Areas of Work + indicator categories on selection change.
     effect(() => {
@@ -143,6 +219,16 @@ export class DashboardLabComponent implements OnInit {
       if (code) {
         this.loadAows(code);
         this.loadSummaries(code);
+      }
+    });
+
+    // In AOW mode, keep a valid AOW selected when the program changes.
+    effect(() => {
+      if (this.viewMode() !== 'aow') return;
+      const list = this.aows();
+      const active = this.activeAowCode();
+      if (list.length && !list.some(a => a.code === active)) {
+        this.openAow(list[0].code);
       }
     });
   }
@@ -161,7 +247,7 @@ export class DashboardLabComponent implements OnInit {
     ].filter(group => group.items.length)
   );
 
-  private readonly allPrograms = computed(() => [
+  readonly allPrograms = computed(() => [
     ...this.homeSE.mySPsList(),
     ...this.homeSE.otherSPsList(),
     ...this.homeSE.otherProjectsList()
@@ -303,6 +389,74 @@ export class DashboardLabComponent implements OnInit {
 
   setCategoryTab(tab: 'outputs' | 'outcomes'): void {
     this.categoryTab.set(tab);
+  }
+
+  /** Enter the AOW detail view and lazy-load its indicators. */
+  openAow(aowCode: string): void {
+    this.activeAowCode.set(aowCode);
+    this.viewMode.set('aow');
+    this.typologyFilter.set(null);
+    this.statusFilter.set(null);
+    this.indicatorTab.set('outputs');
+    const sp = this.selected();
+    if (sp) this.loadToc(sp.initiativeCode, aowCode);
+  }
+
+  backToHome(): void {
+    this.viewMode.set('home');
+    this.activeAowCode.set(null);
+  }
+
+  setIndicatorTab(tab: 'outputs' | 'outcomes'): void {
+    this.indicatorTab.set(tab);
+  }
+
+  /** Status label derived from progress_percentage (mirrors entity-aow-aow). */
+  statusLabel(pct: string | number | null | undefined): string {
+    const p = typeof pct === 'number' ? pct : parseFloat(String(pct ?? 0)) || 0;
+    if (p <= 0) return 'Not started';
+    if (p <= 99) return 'In progress';
+    if (p === 100) return 'Achieved';
+    return 'Overachieved';
+  }
+
+  /** Tailwind classes for the status chip. */
+  statusChip(pct: string | number | null | undefined): string {
+    switch (this.statusLabel(pct)) {
+      case 'Achieved':
+        return 'bg-[#dcfce7] text-[#166534]';
+      case 'Overachieved':
+        return 'bg-[#dbeafe] text-[#1e40af]';
+      case 'In progress':
+        return 'bg-[#fef3c7] text-[#92400e]';
+      default:
+        return 'bg-[var(--pr-color-accents-1)] text-[var(--pr-color-accents-6)]';
+    }
+  }
+
+  /** Program dropdown change (AOW mode). */
+  changeProgram(id: number): void {
+    this.selectedId.set(id);
+  }
+
+  private loadToc(program: string, aow: string): void {
+    const key = `${program}::${aow}`;
+    if (this.tocByKey().has(key) || this.loadingTocKeys().has(key)) return;
+    this.loadingTocKeys.update(s => new Set(s).add(key));
+    this.api.resultsSE.GET_TocResultsByAowId(program, aow).subscribe({
+      next: (res: { response?: { tocResultsOutputs?: any[]; tocResultsOutcomes?: any[] } }) =>
+        this.cacheToc(key, { outputs: res?.response?.tocResultsOutputs ?? [], outcomes: res?.response?.tocResultsOutcomes ?? [] }),
+      error: () => this.cacheToc(key, { outputs: [], outcomes: [] })
+    });
+  }
+
+  private cacheToc(key: string, data: { outputs: any[]; outcomes: any[] }): void {
+    this.tocByKey.update(m => new Map(m).set(key, data));
+    this.loadingTocKeys.update(s => {
+      const next = new Set(s);
+      next.delete(key);
+      return next;
+    });
   }
 
   /** Material icon per result-type id (mirrors the entity-details PrimeIcons map). */

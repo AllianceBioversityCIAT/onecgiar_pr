@@ -238,6 +238,8 @@ Poppins, loaded from Google Fonts. Base size **12px**. Use the `pr-typography($t
 
 Do **not** author new `.pr-*`-style SCSS class blocks for layout/spacing/color/typography — use utilities. Arbitrary values are fine (`bg-[#1f2233]`, `shadow-[...]`, `bg-[radial-gradient(...)]`). PRMS brand tokens are exposed as utilities (`bg-brand-300`, `text-brand-400`, …) and CSS vars work in arbitrary values (`text-[var(--pr-color-secondary-400)]`). Keep the component's `.scss` as small as possible; an empty-but-for-`:host` file is the norm for new components. (Existing SCSS-heavy components are legacy — migrate opportunistically, don't add to them.)
 
+**Interactive controls — never raw native, always the design system.** For selects, inputs, checkboxes, radios, dialogs, tooltips, etc. use the project primitives — the **`custom-fields` components** (`app-pr-select`, `app-pr-input`, `app-pr-textarea`, `app-pr-checkbox`, …; import `CustomFieldsModule`, and pass `[editable]="true"` — `RolesService.readOnly` defaults to `true` and hides the control otherwise) or a **Spartan** component. **Before building ANY component, consult the Spartan MCP (`spartan-ui`) + the `spartan` skill for the real contract — do not hand-author from memory, and do not drop a bare `<select>`/`<input>` (it renders with the native OS look and breaks the design line).** `app-pr-select` API: `[options]`, `optionLabel`, `optionValue`, `placeholder`, `[required]="false"`, `[showClear]`, `(selectOptionEvent)`.
+
 ### A11y, responsive, i18n
 
 - A11y expectations: [`../docs/system-design/design.md` §10](../docs/system-design/design.md). Focus states use `--pr-color-primary-300`. Don't kill outlines.
