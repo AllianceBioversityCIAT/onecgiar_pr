@@ -165,6 +165,15 @@ export class DashboardLabComponent implements OnInit {
   /** Number of distinct status categories present. */
   readonly statusCategories = computed(() => this.statusRows().length);
 
+  /** Aggregate stats over the selected program's Areas of Work. */
+  readonly aowStats = computed(() => {
+    const list = this.aows();
+    if (!list.length) return { count: 0, avgProgress: 0, active: 0 };
+    const sum = list.reduce((acc, u) => acc + (u.progress || 0), 0);
+    const active = list.filter(u => (u.resultsCount?.editing || 0) + (u.resultsCount?.submitted || 0) > 0).length;
+    return { count: list.length, avgProgress: Math.round(sum / list.length), active };
+  });
+
   /** Accent hex for the selected program (icon-derived, orange fallback). */
   readonly accent = computed(() => {
     const sp = this.selected();

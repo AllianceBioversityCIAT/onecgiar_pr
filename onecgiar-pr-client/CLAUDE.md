@@ -227,6 +227,17 @@ Poppins, loaded from Google Fonts. Base size **12px**. Use the `pr-typography($t
 - Tables MUST use `src/styles/table-custom-styles.scss`; filter strips MUST use `src/styles/filters-list.scss`; alerts MUST use `src/styles/custom-alert.scss`.
 - Layout patterns: page-shell + panel-menu for multi-section editors (Result Detail, IPSR); drawer for review; modal for confirm/destroy.
 
+### Styling — Tailwind-first (hard rule)
+
+**All NEW styling goes in Tailwind utilities in the template. Reach for SCSS only when it's genuinely necessary** — i.e. something Tailwind can't express cleanly:
+
+- `@keyframes` and other at-rules, complex multi-stop custom animations.
+- Pseudo-elements/selectors that would be unreadable as `before:`/`after:` arbitrary utilities.
+- `:host` box setup, and styles that must target projected/3rd-party DOM.
+- Data-driven values (dynamic gradients/colors from a signal) go via `[style.*]` bindings — not new SCSS classes.
+
+Do **not** author new `.pr-*`-style SCSS class blocks for layout/spacing/color/typography — use utilities. Arbitrary values are fine (`bg-[#1f2233]`, `shadow-[...]`, `bg-[radial-gradient(...)]`). PRMS brand tokens are exposed as utilities (`bg-brand-300`, `text-brand-400`, …) and CSS vars work in arbitrary values (`text-[var(--pr-color-secondary-400)]`). Keep the component's `.scss` as small as possible; an empty-but-for-`:host` file is the norm for new components. (Existing SCSS-heavy components are legacy — migrate opportunistically, don't add to them.)
+
 ### A11y, responsive, i18n
 
 - A11y expectations: [`../docs/system-design/design.md` §10](../docs/system-design/design.md). Focus states use `--pr-color-primary-300`. Don't kill outlines.
@@ -372,6 +383,7 @@ npm run test:ct            # runs all src/**/*.cy.ts headless — expect "All sp
 | **Auth header** | `auth: <JWT>`. NOT `Authorization: Bearer`. The interceptor handles it. |
 | **API method names** | `HTTP_METHOD_descriptiveName` (`GET_allRequest`, `PATCH_readNotification`). |
 | **Strings** | Always via `src/app/internationalization/`. No hard-coded English. |
+| **Styling** | Tailwind utilities for all NEW styling. SCSS only when necessary (keyframes, pseudo-elements, `:host`, projected DOM). Dynamic values → `[style.*]` bindings. Don't add new `.pr-*` SCSS class blocks. |
 | **Theming** | PrimeNG + `reportingTheme`. Update `src/styles/colors.scss` first, mirror in TS. |
 | **Tokens / utilities** | Prefix `--pr-*` and `.pr-*`. Don't collide with PrimeNG variables. |
 | **Page modules** | Each feature owns `<feature>.module.ts` + `<feature>-routing.module.ts` + `components/`, `pages/`, `services/`. |
