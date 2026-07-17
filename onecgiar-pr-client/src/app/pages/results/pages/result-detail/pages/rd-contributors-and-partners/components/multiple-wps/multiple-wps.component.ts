@@ -174,11 +174,19 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   completnessStatusValidation(tab) {
-    if (this.resultLevelId === 1) {
-      return tab.toc_result_id !== null;
+    const baseComplete = this.resultLevelId === 1 ? tab.toc_result_id !== null : tab.toc_level_id !== null && tab.toc_result_id !== null;
+
+    // P2-3171 (AC6): in 2026, when a KPI indicator is selected the "contribution to target" field is mandatory
+    // (see multiple-wps-content.component.html), so the tab must not be marked complete (green) while it is empty.
+    // Other reuse contexts (2025, IPSR, bilateral, share-request, or no indicator selected) keep the previous behavior.
+    const indicatorSelected = tab?.indicators?.[0]?.related_node_id;
+    if (this.isCP2026() && indicatorSelected) {
+      const contribution = tab?.indicators?.[0]?.targets?.[0]?.contributing_indicator;
+      const contributionFilled = contribution !== null && contribution !== undefined && contribution !== '';
+      return baseComplete && contributionFilled;
     }
 
-    return tab.toc_level_id !== null && tab.toc_result_id !== null;
+    return baseComplete;
   }
 
   onActiveTab(tab: any, index: number) {

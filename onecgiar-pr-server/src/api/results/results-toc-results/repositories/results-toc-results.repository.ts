@@ -548,10 +548,9 @@ export class ResultsTocResultRepository
               : null,
           target: targetValue ?? numberTarget,
           contribution_target: this.toNumberOrNull(row?.contribution_target),
-          toc_results_indicator_id:
-            row?.toc_results_indicator_id != null
-              ? String(row.toc_results_indicator_id)
-              : null,
+          toc_results_indicator_id: this.toStringOrNull(
+            row?.toc_results_indicator_id,
+          ),
         };
       });
     } catch (error) {
@@ -2461,6 +2460,14 @@ select *
     if (value === null || value === undefined) return null;
     const num = Number(value);
     return Number.isFinite(num) ? num : null;
+  }
+
+  private toStringOrNull(value: unknown): string | null {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    return null;
   }
 
   private extractYear(value: any): number | null {

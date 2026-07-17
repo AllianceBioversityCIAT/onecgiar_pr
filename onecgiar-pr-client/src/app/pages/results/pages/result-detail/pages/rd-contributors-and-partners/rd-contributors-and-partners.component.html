@@ -413,6 +413,10 @@
 
   <!-- Contributing Centers end -->
 
+  <!-- P2-3171 (AC5): External Partners are inherited from the HLO/Outcome level in the ToC. P25 (2026) only. -->
+  @if (isCP2026()) {
+    <app-alert-status [description]="externalPartnersInfoNote"></app-alert-status>
+  }
   <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
   <app-normal-selector></app-normal-selector>
 

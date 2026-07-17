@@ -110,13 +110,16 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
   tocQuestionLabel = computed(() =>
     this.isCP2026()
-      ? 'Can this result be mapped to a planned TOC KPI or indicator?'
+      ? 'Can this result be mapped to a ToC KPI?'
       : "Does this result align with the Program's planned TOC indicators?"
   );
 
+  // P2-3171 (AC5): inform the user that External Partners are inherited from the HLO/Outcome level in the ToC.
+  externalPartnersInfoNote = 'Partner information is inherited/sourced from the HLO/Outcome level in the ToC.';
+
   tocQuestionInfoNote = computed(() =>
     this.isCP2026()
-      ? 'If <strong>Yes</strong>, please select the relevant level, KPI and indicator, and indicate the result contribution to the indicator target. If <strong>No</strong>, please provide a short justification explaining why this result is being reported outside the 2026 TOC KPI/indicators. No-mapped results will be shared with the Program team for consideration as part of the adaptive management process, and may feed into updates to the Program’s 2027 TOC.'
+      ? 'If <strong>Yes</strong>, please select the relevant level, KPI and indicator, and indicate the result contribution to the indicator target. If <strong>No</strong>, please provide a short justification explaining why this result is being reported outside the 2026 TOC KPI. No-mapped results will be shared with the Program team for consideration as part of the adaptive management process, and may feed into updates to the Program’s 2027 TOC.'
       : 'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These “No”-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program’s 2026 ToC and planned indicators.'
   );
 
@@ -204,7 +207,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     const removed = (this.rdPartnersSE.otherCentersSelected || [])[index];
     this.rdPartnersSE.otherCentersSelected = (this.rdPartnersSE.otherCentersSelected || []).filter((_: any, i: number) => i !== index);
     // Parity with deleteContributingCenter: if the removed "Other" center was the lead, clear the lead so we don't save an orphaned lead.
-    if (removed && this.rdPartnersSE.leadCenterCode === removed.code) {
+    if (this.rdPartnersSE.leadCenterCode === removed?.code) {
       this.rdPartnersSE.leadCenterCode = null;
     }
     // Recompute lead-center eligibility now that an "Other" center is gone.
@@ -331,7 +334,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         confirmText: 'Yes, sync information'
       },
       () => {
-        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(() => {
           this.rdPartnersSE.getSectionInformation();
         });
       }
@@ -528,7 +531,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
   }
 
-  toggleActiveContributor(item) {
+  toggleActiveContributor(item: any) {
     item.is_active = !item.is_active;
   }
 

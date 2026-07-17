@@ -22,11 +22,11 @@
 ## 4. Backend — hand-off (⚠️ server code; requires Yeck's go-ahead)
 
 - [x] 4.1 Hand off / get authorization for the server change: expose `toc_partner_institution_ids: number[]` per AoW toc-result node in `onecgiar-pr-server/src/api/results-framework-reporting/results-framework-reporting.service.ts`, reusing `TocResultsRepository.getTocPartnersByResultIds` (mirror of the P2-3114 `contributing_synergy_program_initiative_ids` enrichment, commit `bad223a34`); map partner `code` → CLARISA institution id
-- [ ] 4.2 Confirm the field arrives in the AoW payload once deployed (see 5.2)
+- [x] 4.2 ~~Confirm the field arrives in the AoW payload once deployed~~ **DESCOPED 2026-07-14**: JuanDa/Angel decided no backend work is needed; point 4 discarded by business. Frontend union code stays (defensive no-op without the field).
 
 ## 5. Verification
 
 - [x] 5.1 UI: `npm start` in `onecgiar-pr-client`, open an Entity AoW page, click "Report result" on (a) a node with ToC SPs/Centers → blue notes visible, preselection correct; (b) a node without them → orange notes visible, Other(s) dropdowns active, SP headers separated
-- [ ] 5.2 API: `curl` GET (prtest, `auth` header) the AoW toc-results endpoint for an SP01 "Steer to Impact" node and confirm `toc_partner_institution_ids` lists the expected partners (Alliance, IFPRI, CIMMYT, IITA) once the backend ships
-- [ ] 5.3 End-to-end: create a result from an SP01 node and confirm the partner-derived centers land pre-selected in the popup and, after redirect, in the C&P ToC bucket (no re-bucketing as Other)
+- [x] 5.2 ~~DESCOPED (see 4.2)~~ API: `curl` GET (prtest, `auth` header) the AoW toc-results endpoint for an SP01 "Steer to Impact" node and confirm `toc_partner_institution_ids` lists the expected partners (Alliance, IFPRI, CIMMYT, IITA) once the backend ships
+- [x] 5.3 ~~DESCOPED (see 4.2)~~ End-to-end: create a result from an SP01 node and confirm the partner-derived centers land pre-selected in the popup and, after redirect, in the C&P ToC bucket (no re-bucketing as Other)
 - [x] 5.4 Client gates: `npm run test` + `npm run lint:fix` green

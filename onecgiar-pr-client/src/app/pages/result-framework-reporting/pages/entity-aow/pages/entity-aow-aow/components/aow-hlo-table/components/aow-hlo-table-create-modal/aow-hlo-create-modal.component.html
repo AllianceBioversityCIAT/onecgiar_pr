@@ -96,25 +96,6 @@
         <div class="separator"></div>
 
         <div>
-          <app-pr-field-header
-            [label]="'Explanation of how the result aligns with/contributes to the Program’s TOC pathway'"
-            [required]="false"
-            [labelDescInlineStyles]="'margin-top: 0 !important'">
-          </app-pr-field-header>
-          <app-alert-status
-            status="info"
-            description="Where results are qualitative and do not contribute numerically to the indicator target, provide here a short explanation of how the result supports or aligns with the Program’s TOC pathway."
-            inlineStyles="margin: 0; margin: 10px 0;"></app-alert-status>
-
-          <app-pr-textarea
-            [isStatic]="true"
-            placeholder="Provide input here..."
-            [(ngModel)]="createResultBody().toc_progressive_narrative"
-            type="text"
-            [disabled]="creatingResult()"></app-pr-textarea>
-        </div>
-
-        <div>
           <app-pr-field-header label="Contribution to indicator target" [required]="false" [labelDescInlineStyles]="'margin-top: 0 !important'">
           </app-pr-field-header>
 

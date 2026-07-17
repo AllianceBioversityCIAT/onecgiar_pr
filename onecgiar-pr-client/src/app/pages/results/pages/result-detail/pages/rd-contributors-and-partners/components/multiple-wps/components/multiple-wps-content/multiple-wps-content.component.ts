@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, WritableSignal, computed, effect, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, WritableSignal, computed, effect, inject, signal } from '@angular/core';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-change/components/toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
@@ -139,7 +139,12 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     // P2-2998: subscribe to in-tab HLO/KPI selection changes (see selectionVersion + getIndicatorsList/mapTocResultsIndicatorId).
     this.selectionVersion();
     const tabs: any[] = this.allTabsCreated ?? [];
-    const listForLevel = (lvl: any): any[] => (lvl === 3 ? eoi : lvl === 2 ? oc : lvl === 1 ? out : []);
+    const listForLevel = (lvl: any): any[] => {
+      if (lvl === 3) return eoi;
+      if (lvl === 2) return oc;
+      if (lvl === 1) return out;
+      return [];
+    };
     const num = (v: any) => Number(v);
     const centerIds = new Set<number>();
     const synergyIds = new Set<number>();
@@ -225,9 +230,9 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   ) {}
 
   getIndicatorsList() {
-    const filterIndicators = list => {
+    const filterIndicators = (list: any[]) => {
       if (!list.length) return;
-      const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
+      const itemSelected = list.find((item: any) => item.toc_result_id === this.activeTab.toc_result_id);
       this.indicatorsList.set(itemSelected?.indicators || []);
       this.fieldsManagerSE.activeIndicatorsLength.set(this.indicatorsList().length);
 
@@ -416,8 +421,8 @@ export class CPMultipleWPsContentComponent implements OnChanges {
       return false;
     }
 
-    return this.activeTab.indicators.some(indicator => {
-      return indicator.targets?.some(target => target.indicator_question === false);
+    return this.activeTab.indicators.some((indicator: any) => {
+      return indicator.targets?.some((target: any) => target.indicator_question === false);
     });
   }
 }
