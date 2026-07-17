@@ -15,7 +15,7 @@
 
   @if (showWhyReported()) {
     <div class="st-field">
-      <label class="st-label">Why is this result being reported? <span style="color:#C62828">*</span></label>
+      <label class="st-label">Why is this result being reported? <span class="text-(--pr-color-red-300)">*</span></label>
       <textarea class="st-textarea" rows="3" [ngModel]="whyReported()"
         placeholder="Explain why this unplanned result is being reported (max 30 words)…"
         (input)="whyReported.set($any($event.target).value)"></textarea>
@@ -35,7 +35,7 @@
     } @else if (initiativeId()) {
       @if (showLevelSelector()) {
         <div class="st-field">
-          <label class="st-label">Level <span style="color:#C62828">*</span></label>
+          <label class="st-label">Level <span class="text-(--pr-color-red-300)">*</span></label>
           <app-pr-select
             [options]="filteredLevels()"
             [ngModel]="selectedLevelId()"
@@ -56,7 +56,7 @@
 
       @if (selectedLevelName() && selectedLevelId()) {
         <div class="st-field">
-          <label class="st-label">{{ selectedLevelName() }} <span style="color:#C62828">*</span></label>
+          <label class="st-label">{{ selectedLevelName() }} <span class="text-(--pr-color-red-300)">*</span></label>
           <app-pr-select
             [options]="tocResultItems()"
             [ngModel]="selectedTocResultId()"
@@ -80,7 +80,7 @@
 
         @if (indicatorsList().length) {
           <div class="st-field">
-            <label class="st-label">Indicator <span style="color:#C62828">*</span></label>
+            <label class="st-label">Indicator <span class="text-(--pr-color-red-300)">*</span></label>
             <app-pr-select
               [options]="indicatorsList()"
               [ngModel]="selectedIndicatorId()"

@@ -248,7 +248,12 @@
 
   <!-- "View all" assignments overlay (replaces PrimeNG p-popover) -->
   @if (assignmentOverlayOpen()) {
-    <div class="pr-entities-panel" [style.top.px]="overlayTop" [style.left.px]="overlayLeft" (click)="$event.stopPropagation()">
+    <div
+      class="pr-entities-panel"
+      [style.top.px]="overlayFlippedAbove ? null : overlayTop"
+      [style.bottom.px]="overlayFlippedAbove ? overlayBottom : null"
+      [style.left.px]="overlayLeft"
+      (click)="$event.stopPropagation()">
       <div class="overlay-assignments-container">
         <div class="overlay-title">{{ assignmentOverlayTitle() }}</div>
         <ul class="overlay-assignments-list">

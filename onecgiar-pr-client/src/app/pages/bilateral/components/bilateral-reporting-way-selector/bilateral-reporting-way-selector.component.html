@@ -7,6 +7,7 @@
         class="brws-card"
         [class.brws-card--disabled]="!option.enabled"
         [class.brws-card--loading]="option.enabled && isLoading()"
+        [ngClass]="selectedWay() === option.id ? '!border-brand-300 !bg-brand-25 ring-1 ring-brand-300' : ''"
         (click)="selectWay(option)"
         role="button"
         [attr.tabindex]="option.enabled ? 0 : -1"

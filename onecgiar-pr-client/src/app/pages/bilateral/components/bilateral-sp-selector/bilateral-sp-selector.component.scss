@@ -18,7 +18,7 @@
 }
 
 .sps-required {
-  color: #C62828;
+  color: var(--pr-color-red-300);
 }
 
 .sps-empty {
@@ -61,8 +61,8 @@
   }
 
   &:focus-within {
-    border-color: #1565C0;
-    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.1);
     outline: none;
   }
 }
@@ -132,7 +132,7 @@
   }
 
   &--selected {
-    background: #E3F2FD;
+    background: var(--pr-color-primary-50);
   }
 }
 
@@ -140,7 +140,7 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   font-weight: 600;
-  color: #1565C0;
+  color: var(--pr-color-primary-400);
   min-width: 48px;
 }
 
@@ -192,8 +192,8 @@
   }
 
   &--selected {
-    background: #E3F2FD;
-    border-color: #90CAF9;
+    background: var(--pr-color-primary-50);
+    border-color: var(--pr-color-primary-200);
   }
 }
 
@@ -203,7 +203,7 @@
   flex-shrink: 0;
 
   .sps-chip--selected & {
-    color: #1565C0;
+    color: var(--pr-color-primary-300);
   }
 }
 
@@ -218,7 +218,7 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   font-weight: 600;
-  color: #1565C0;
+  color: var(--pr-color-primary-600);
   min-width: 48px;
 }
 

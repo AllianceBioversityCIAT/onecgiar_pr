@@ -33,7 +33,7 @@
           <span class="bp-breakdown-name">{{ s.sectionLabel }}</span>
           <span class="bp-breakdown-count">{{ s.filledFields }}/{{ s.totalFields }}</span>
           <div class="bp-breakdown-bar">
-            <div class="bp-breakdown-fill" [style.width.%]="s.percentage"></div>
+            <div class="bp-breakdown-fill" [class.bp-breakdown-fill--complete]="s.percentage >= 100" [style.width.%]="s.percentage"></div>
           </div>
         </div>
       }

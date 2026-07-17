@@ -1,6 +1,6 @@
 <div class="bilateral-creator">
   <nav class="bcr-breadcrumb">
-    <span>CGIAR Center</span>
+    <span class="text-brand-400">CGIAR Center</span>
     <span>&rsaquo;</span>
     @if (creationService.selectedProject(); as p) {
       @if (p.leadCenter) {
@@ -23,6 +23,7 @@
     <div id="bcr-reporting-way">
       <app-bilateral-reporting-way-selector
         [isLoading]="isCreatingResult()"
+        [selectedWay]="selectedReportingWay()"
         (waySelected)="onReportingWaySelected($event)"
       ></app-bilateral-reporting-way-selector>
     </div>
@@ -39,7 +40,7 @@
 
       @if (resultLevelId()) {
         <div id="bcr-type-section" class="bcr-type-section">
-          <label class="bcr-label">Result Type <span style="color:#C62828">*</span></label>
+          <label class="bcr-label">Result Type <span style="color: var(--pr-color-red-300)">*</span></label>
           <select class="bcr-select" (change)="onTypeSelected($event)">
             <option value="" disabled [selected]="!resultTypeId()">Select result type</option>
             @for (type of availableResultTypes(); track type.id) {

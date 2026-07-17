@@ -56,8 +56,8 @@
   }
 
   &--active {
-    background: #E3F2FD;
-    color: #1565C0;
+    background: var(--pr-color-primary-50);
+    color: var(--pr-color-primary-400);
     font-weight: 600;
   }
 
@@ -91,7 +91,7 @@
 .st-level-fixed {
   font-size: 13px;
   font-weight: 500;
-  color: #37474F;
+  color: var(--pr-color-secondary-400);
   padding: 8px 0;
 }
 
@@ -113,9 +113,9 @@
   }
 
   &--selected {
-    border-color: #42A5F5;
-    background: #F3F9FF;
-    box-shadow: 0 1px 6px rgba(21, 101, 192, 0.1);
+    border-color: var(--pr-color-primary-300);
+    background: var(--pr-color-primary-25);
+    box-shadow: 0 1px 6px rgba(var(--pr-color-primary-rgb), 0.1);
   }
 }
 
@@ -136,8 +136,8 @@
   font-family: 'JetBrains Mono', 'SF Mono', monospace;
   font-size: 10px;
   font-weight: 700;
-  color: #1565C0;
-  background: #E3F2FD;
+  color: var(--pr-color-primary-400);
+  background: var(--pr-color-primary-50);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -145,7 +145,7 @@
 .st-toc-title {
   font-size: 13px;
   font-weight: 500;
-  color: #263238;
+  color: var(--pr-color-secondary-400);
   line-height: 1.4;
 }
 
@@ -181,7 +181,7 @@
   flex-direction: column;
   gap: 8px;
   padding-left: 12px;
-  border-left: 2px solid #E3F2FD;
+  border-left: 2px solid var(--pr-color-primary-50);
 }
 
 .st-ind-card {
@@ -200,7 +200,7 @@
 
 .st-ind-desc {
   font-size: 12px;
-  color: #37474F;
+  color: var(--pr-color-secondary-400);
   line-height: 1.4;
   flex: 1;
 }
@@ -280,7 +280,7 @@
   font-family: 'JetBrains Mono', 'SF Mono', monospace;
   font-size: 14px;
   font-weight: 700;
-  color: #1565C0;
+  color: var(--pr-color-primary-400);
 }
 
 .st-no-indicators {
@@ -302,7 +302,7 @@
   border-radius: 8px;
   font-family: 'Poppins', sans-serif;
   font-size: 12px;
-  color: #37474F;
+  color: var(--pr-color-secondary-400);
   resize: vertical;
   background: #FFFFFF;
   transition: border-color 200ms ease;
@@ -313,8 +313,8 @@
   }
 
   &:focus {
-    border-color: #42A5F5;
-    box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.12);
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.12);
   }
 }
 
@@ -334,14 +334,14 @@
   border-radius: 8px;
   font-family: 'Poppins', sans-serif;
   font-size: 12px;
-  color: #37474F;
+  color: var(--pr-color-secondary-400);
   outline: none;
   background: #FFFFFF;
   transition: border-color 200ms ease, box-shadow 200ms ease;
 
   &:focus {
-    border-color: #42A5F5;
-    box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.12);
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.12);
   }
 }
 

@@ -22,7 +22,7 @@
 }
 
 .sgi-required {
-  color: #E53935;
+  color: var(--pr-color-red-300);
   font-weight: 700;
 }
 
@@ -37,8 +37,8 @@
 
   &:focus {
     outline: none;
-    border-color: #1565C0;
-    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.08);
   }
 
   &::placeholder {
@@ -60,8 +60,8 @@
 
   &:focus {
     outline: none;
-    border-color: #1565C0;
-    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.08);
   }
 
   &::placeholder {
@@ -77,11 +77,11 @@
   transition: color 200ms ease;
 
   &--saved {
-    color: #43A047;
+    color: var(--pr-color-green-500);
   }
 
   &--error {
-    color: #E53935;
+    color: var(--pr-color-red-300);
   }
 }
 
@@ -90,7 +90,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #1565C0;
+  color: var(--pr-color-primary-400);
   cursor: pointer;
   text-decoration: none;
   padding: 4px 0;
@@ -98,13 +98,13 @@
   transition: color 150ms ease;
 
   &:hover {
-    color: #0D47A1;
+    color: var(--pr-color-primary-600);
     text-decoration: underline;
     text-underline-offset: 3px;
   }
 
   &:focus-visible {
-    outline: 2px solid #1565C0;
+    outline: 2px solid var(--pr-color-primary-300);
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -149,14 +149,14 @@
   &:last-child { border-bottom: none; }
 
   &:hover {
-    background: #E8F0FE;
+    background: var(--pr-color-primary-25);
   }
 }
 
 .sgi-lead-result-name {
   font-size: 13px;
   font-weight: 600;
-  color: #263238;
+  color: var(--pr-color-secondary-400);
 }
 
 .sgi-lead-result-detail {
@@ -170,20 +170,20 @@
   gap: 10px;
   margin-top: 8px;
   padding: 11px 14px;
-  background: #E8F0FE;
-  border: 1.5px solid #1565C0;
+  background: var(--pr-color-primary-25);
+  border: 1.5px solid var(--pr-color-primary-300);
   border-radius: 6px;
 }
 
 .sgi-lead-selected-icon {
   font-size: 20px;
-  color: #1565C0;
+  color: var(--pr-color-primary-400);
 }
 
 .sgi-lead-selected-name {
   font-size: 13px;
   font-weight: 600;
-  color: #263238;
+  color: var(--pr-color-secondary-400);
 }
 
 .sgi-lead-selected-detail {
@@ -203,11 +203,11 @@
   transition: color 150ms ease;
 
   &:hover {
-    color: #E53935;
+    color: var(--pr-color-red-300);
   }
 
   &:focus-visible {
-    outline: 2px solid #1565C0;
+    outline: 2px solid var(--pr-color-primary-300);
     outline-offset: 1px;
     border-radius: 2px;
   }
@@ -248,7 +248,7 @@
 .sgi-dac-label {
   font-size: 13px;
   font-weight: 600;
-  color: #37474F;
+  color: var(--pr-color-secondary-400);
   letter-spacing: -0.1px;
 }
 
@@ -284,20 +284,20 @@
 
   &:hover:not(.sgi-radio--selected) {
     background: #F5F8FA;
-    color: #37474F;
+    color: var(--pr-color-secondary-400);
   }
 
   &:focus-visible {
-    outline: 2px solid #1565C0;
+    outline: 2px solid var(--pr-color-primary-300);
     outline-offset: -2px;
     z-index: 1;
   }
 
   &--selected {
-    background: linear-gradient(135deg, #1565C0, #1976D2);
+    background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-300));
     color: #FFFFFF;
     border-color: transparent;
-    box-shadow: 0 1px 4px rgba(21, 101, 192, 0.25);
+    box-shadow: 0 1px 4px rgba(var(--pr-color-primary-rgb), 0.25);
 
     & + .sgi-radio {
       border-left-color: transparent;
@@ -330,25 +330,25 @@
   font-weight: 500;
 
   &:hover {
-    border-color: #90CAF9;
-    background: #F5F9FF;
+    border-color: var(--pr-color-primary-200);
+    background: var(--pr-color-primary-25);
   }
 
   &:focus-visible {
-    outline: 2px solid #1565C0;
+    outline: 2px solid var(--pr-color-primary-300);
     outline-offset: 1px;
   }
 
   &--checked {
-    background: #E3F2FD;
-    border-color: #1565C0;
-    color: #0D47A1;
+    background: var(--pr-color-primary-50);
+    border-color: var(--pr-color-primary-300);
+    color: var(--pr-color-primary-600);
     font-weight: 600;
-    box-shadow: 0 1px 3px rgba(21, 101, 192, 0.1);
+    box-shadow: 0 1px 3px rgba(var(--pr-color-primary-rgb), 0.1);
 
     &:hover {
-      background: #BBDEFB;
-      border-color: #1257A8;
+      background: var(--pr-color-primary-100);
+      border-color: var(--pr-color-primary-600);
     }
   }
 }

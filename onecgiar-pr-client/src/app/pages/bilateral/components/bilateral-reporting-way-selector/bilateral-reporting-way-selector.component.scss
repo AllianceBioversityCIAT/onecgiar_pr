@@ -28,13 +28,13 @@
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 
   &:hover:not(&--disabled):not(&--loading) {
-    border-color: #90CAF9;
-    box-shadow: 0 4px 16px rgba(21, 101, 192, 0.12);
+    border-color: var(--pr-color-primary-200);
+    box-shadow: 0 4px 16px rgba(var(--pr-color-primary-rgb), 0.12);
     transform: translateY(-1px);
   }
 
   &:focus-visible {
-    outline: 2px solid #1565C0;
+    outline: 2px solid var(--pr-color-primary-300);
     outline-offset: 1px;
   }
 
@@ -63,8 +63,8 @@
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
-  color: #1565C0;
+  background: var(--pr-color-primary-50);
+  color: var(--pr-color-primary-400);
 
   i {
     font-size: 22px;

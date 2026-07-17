@@ -32,7 +32,7 @@
     gap: 8px;
     font-size: 13px;
     font-weight: 600;
-    color: #37474F;
+    color: var(--pr-color-secondary-400);
     text-transform: uppercase;
     letter-spacing: 0.4px;
   }
@@ -74,7 +74,7 @@
 }
 
 .extra-icon {
-  background: linear-gradient(135deg, #1565C0, #1976D2);
+  background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-300));
   &::before {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z'/%3E%3C/svg%3E");
     transform: scale(0.7);
@@ -103,7 +103,7 @@
 }
 
 .sg-required {
-  color: #D32F2F;
+  color: var(--pr-color-red-300);
 }
 
 .sg-toggle-buttons {
@@ -128,14 +128,14 @@
   }
 
   &--active {
-    background: #E3F2FD;
-    border-color: #1E88E5;
-    color: #0D47A1;
-    box-shadow: 0 2px 6px rgba(30, 136, 229, 0.12);
+    background: var(--pr-color-primary-50);
+    border-color: var(--pr-color-primary-300);
+    color: var(--pr-color-primary-600);
+    box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.12);
 
     &:hover {
-      background: #E3F2FD;
-      border-color: #1E88E5;
+      background: var(--pr-color-primary-50);
+      border-color: var(--pr-color-primary-300);
     }
   }
 }
@@ -156,16 +156,16 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-radius: 4px;
-  border: 1.5px solid #1565C0;
+  border: 1.5px solid var(--pr-color-primary-300);
   background: #FFFFFF;
-  color: #1565C0;
+  color: var(--pr-color-primary-400);
   cursor: pointer;
   transition: all 150ms ease;
 
   &:hover:not(:disabled) {
-    background: #E3F2FD;
-    border-color: #0D47A1;
-    color: #0D47A1;
+    background: var(--pr-color-primary-50);
+    border-color: var(--pr-color-primary-600);
+    color: var(--pr-color-primary-600);
   }
 
   &:disabled {
@@ -180,11 +180,11 @@
   color: #78909C;
 
   &--saved {
-    color: #2E7D32;
+    color: var(--pr-color-green-500);
   }
 
   &--error {
-    color: #C62828;
+    color: var(--pr-color-red-300);
   }
 }
 
@@ -201,7 +201,7 @@
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  color: #37474F;
+  color: var(--pr-color-secondary-400);
   letter-spacing: 0.5px;
   margin: 0;
 }
@@ -241,7 +241,7 @@
 .sg-chip-remove {
   background: none;
   border: none;
-  color: #D32F2F;
+  color: var(--pr-color-red-300);
   cursor: pointer;
   padding: 0;
   font-size: 14px;
@@ -253,6 +253,6 @@
   transition: color 150ms ease;
 
   &:hover {
-    color: #C62828;
+    color: var(--pr-color-red-400);
   }
 }

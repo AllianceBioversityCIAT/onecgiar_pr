@@ -9,11 +9,11 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: #E3F2FD;
+  background: var(--pr-color-primary-50);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #1565C0;
+  color: var(--pr-color-primary-400);
   letter-spacing: 0.3px;
   width: fit-content;
 
@@ -32,14 +32,14 @@
 
 .sts-empty-icon {
   font-size: 40px;
-  color: #43A047;
+  color: var(--pr-color-green-500);
   margin-bottom: 8px;
 }
 
 .sts-empty-title {
   font-size: 14px;
   font-weight: 600;
-  color: #37474F;
+  color: var(--pr-color-secondary-400);
   margin: 0 0 4px;
 }
 

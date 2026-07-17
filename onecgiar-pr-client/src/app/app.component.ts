@@ -51,6 +51,7 @@ export class AppComponent implements OnInit {
     this.rolesSE.validateReadOnly();
 
     this.api.dataControlSE.findClassTenSeconds('pSelectP').then(resp => {
+      if (!resp) return;
       try {
         document.querySelector('.pSelectP').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;

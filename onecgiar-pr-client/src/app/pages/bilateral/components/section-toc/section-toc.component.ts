@@ -114,7 +114,7 @@ export class SectionTocComponent implements OnInit {
       } else if (hasOther) {
         badge = ` <span class="inline-flex rounded-[10px] bg-[#FFF3E0] px-[6px] text-[10px] font-medium text-[#E65100]">Review needed</span>`;
       }
-      const select_label = `<b class="text-[10px] text-[#1565C0]">${code}</b>${badge} — ${title}`;
+      const select_label = `<b class="text-[10px] text-brand-400">${code}</b>${badge} — ${title}`;
       return { ...item, hasMatch, hasOther, select_label };
     });
   });

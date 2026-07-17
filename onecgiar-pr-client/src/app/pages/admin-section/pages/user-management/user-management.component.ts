@@ -348,6 +348,12 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   assignmentOverlayOpen = signal<boolean>(false);
   overlayTop = 0;
   overlayLeft = 0;
+  overlayBottom = 0;
+  overlayFlippedAbove = false;
+
+  /** Panel is right-anchored via translateX(-100%) and capped at 320px wide in SCSS. */
+  private readonly overlayPanelWidth = 320;
+  private readonly overlayViewportMargin = 8;
 
   openAssignmentOverlay(
     event: Event,
@@ -364,8 +370,27 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     }
 
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    this.overlayTop = rect.bottom + 6;
-    this.overlayLeft = rect.right;
+    const margin = this.overlayViewportMargin;
+
+    // Clamp horizontally: overlayLeft is the panel's RIGHT edge (translateX(-100%)),
+    // so keep [left - panelWidth, left] inside the viewport with an 8px margin.
+    this.overlayLeft = Math.min(Math.max(rect.right, margin + this.overlayPanelWidth), window.innerWidth - margin);
+
+    // Estimate panel height (title block + ~46px per item, list capped at 280px by SCSS)
+    // to decide whether it fits below the trigger; flip above it otherwise.
+    const estimatedHeight = Math.min(60 + (items?.length ?? 0) * 46, 340);
+    const topBelow = rect.bottom + 6;
+    const fitsBelow = topBelow + estimatedHeight <= window.innerHeight - margin;
+
+    this.overlayFlippedAbove = !fitsBelow;
+    if (fitsBelow) {
+      this.overlayTop = Math.max(margin, topBelow);
+    } else {
+      // Bottom-anchored so the panel grows upwards from just above the trigger,
+      // regardless of its real rendered height.
+      this.overlayBottom = Math.max(margin, window.innerHeight - rect.top + 6);
+    }
+
     this.assignmentOverlayTitle.set(title);
     this.assignmentOverlayItems.set(items ?? []);
     this.assignmentOverlayIsCenter.set(isCenter);

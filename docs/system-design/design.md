@@ -200,7 +200,7 @@ Tokens are defined in `onecgiar-pr-client/src/styles/colors.scss` and consumed b
 
 | Family | Main color | Token | Use |
 |---|---|---|---|
-| Primary | Indigo `#5569dd` | `--pr-color-primary-300` | Primary actions, links, focus rings. Aliased to PrimeNG `primary.color`. |
+| Primary | Violet `#6b6dc4` | `--pr-color-primary-300` | Primary actions, links, focus rings. Lighter stop of the brand accent gradient; `--pr-color-primary-400` (`#6461bc`) is the darker stop (active/hover). Full 25–950 ramp + `--pr-color-primary-rgb` in `colors.scss`. |
 | Secondary | Slate `#2a2e45` | `--pr-color-secondary-400` | Headers, secondary chrome, dark surfaces. |
 | Red | `#d00416` | `--pr-color-red-300` | Errors, destructive actions, blocked state. |
 | Yellow | `#dfb400` | `--pr-color-yellow-300` | Warnings, "has warnings" badges, in-progress. |
@@ -218,6 +218,25 @@ Tokens are defined in `onecgiar-pr-client/src/styles/colors.scss` and consumed b
 | `--pr-color-result-level-2` | Result Level 2. Dark blue. |
 | `--pr-color-result-level-3` | Result Level 3. Red. |
 | `--pr-color-result-level-4` | Result Level 4. Light blue. |
+
+### Brand design line (2026 redesign — normative for all new/reworked UI)
+
+The redesign is built on **two brand gradients** plus a Tailwind-first styling rule:
+
+| Element | Value | Use |
+|---|---|---|
+| **Accent gradient (violet)** | `#6b6dc4 → #6461bc` (`--pr-color-primary-300 → -400`) | Primary buttons, active states, highlights, selected nav items, progress/completion accents. Use the gradient generously — it *is* the brand accent, not a flat fill. |
+| **Chrome gradient (navy-carbon)** | `#1e202f → #1f2235` | Dark chrome surfaces: navbar, premium sidebar, table headers (`app-pr-table` header), hero/dark panels. |
+| **Icons** | `material-icons-round` | Always; never mix icon sets in new work. |
+| **Typography** | Poppins (unchanged) | See scale below. |
+
+**Rules:**
+
+1. **Tailwind-first (hard rule).** All NEW styling goes as Tailwind utilities in the template. SCSS only for what Tailwind can't express cleanly (`@keyframes`, complex pseudo-elements, `:host` box setup, projected/3rd-party DOM). No new `.pr-*` SCSS class blocks for layout/spacing/color/typography. Dynamic values via `[style.*]` bindings.
+2. **Brand tokens in Tailwind.** The primary ramp is exposed as `brand-*` utilities (`bg-brand-300`, `text-brand-400`, `border-brand-200`, …) via `@theme` in `styles.scss`, wired to the `--pr-color-primary-*` CSS vars. CSS vars also work in arbitrary values (`text-[var(--pr-color-secondary-400)]`).
+3. **Text on violet/chrome is white** (or `brand-25/50` for subdued text). Never place low-contrast greys on the gradients.
+4. **Neutral text caution:** `text-neutral-*` utilities are tinted violet in this theme — for genuinely grey text use `text-accent-*` / `--pr-color-secondary-400`-derived utilities instead.
+5. When a token changes: update `src/styles/colors.scss` first, then any mirror (Tailwind `@theme` vars pick it up automatically via CSS vars).
 
 ### Typography (from `src/styles/fonts.scss`)
 
@@ -358,7 +377,7 @@ Geography, contributors & partners, evidence, DAC scores, and ToC alignment are 
 
 ### DD-6 — Bilateral / platform-report as headless surfaces
 
-Bilateral and platform-report do not have a PRMS UI. Their UX contract is **payload shape stability** (see `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`). The "experience" is the API consumer's experience.
+**Amended (P2-2965):** bilateral now has a first-party PRMS UI — the bilateral result-creator module at `src/app/pages/bilateral/` (creator with auto-save, MDS tracker, per-type sections). The original decision still applies to the *summaries* surface: the `/api/bilateral/*` payload contract (`onecgiar-pr-server/docs/bilateral-result-summaries.en.md`) remains stability-bound for external consumers. Platform-report remains headless.
 
 ### DD-7 — Phase awareness is global, not local
 
@@ -379,6 +398,10 @@ In-app (sockets / Pusher) and email (microservice) — gated by `user-notificati
 ### DD-11 — Whole-app text scaling via root `zoom`, not root `font-size`
 
 User text-size scaling (§10) is driven by one lever: `--pr-font-scale` on `:root`, consumed by `html { zoom: var(--pr-font-scale) }` (`styles.scss`), owned by `FontScaleService` (signal + `localStorage['pr.a11y.fontScale']`), applied flash-free by an inline script in `index.html`. **Why `zoom`, not root `font-size`:** the type scale is authored across ~200+ hardcoded `px` sites, so a root font-size lever would not cascade; `zoom` scales px/em/rem **and** CDK overlays/dialogs uniformly from a single point, and — because containers grow with their text — avoids the clipped-fixed-height class of bugs that font-only scaling causes in a dense app. Steps are capped at 1.5× (native browser zoom covers beyond, and is never disabled). **Related:** the shell's navbar action icons (Search / What's new / Alerts / Text size) carry a text label beneath the glyph for comprehension, and the text-size control uses the `format_size` glyph. **Deferred (not committed):** the 12px base stays for now; raising the default baseline (a `px→rem` migration to body ~14–16px, tables 13–14px) is a separate future change — see §13.
+
+### DD-12 — 2026 brand design line: violet accent + navy-carbon chrome, Tailwind-first
+
+The redesign (branches `front-redesign-fields` / `performance-refactor`) establishes the brand line documented in §7: violet accent gradient (`#6b6dc4 → #6461bc`) as primary, navy-carbon chrome gradient (`#1e202f → #1f2235`) for dark surfaces, `material-icons-round`, and **Tailwind utilities as the only vehicle for new styling** (SCSS reserved for keyframes/pseudo-elements/`:host`/projected DOM). On these branches the base component layer is **Spartan UI (brain/helm) + the `pr-*` custom fields** — PrimeNG is removed; DD-1/DD-2's PrimeNG mirroring applies only to the legacy (`master`) lineage. **Why:** a distinctive brand identity, one styling system instead of three, and freedom from the PrimeNG upgrade treadmill (which blocked Angular 22).
 
 ---
 

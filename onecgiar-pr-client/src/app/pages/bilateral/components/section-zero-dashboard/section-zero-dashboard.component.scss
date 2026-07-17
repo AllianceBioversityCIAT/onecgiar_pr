@@ -29,8 +29,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    border: 1.5px solid #E3F2FD;
-    background: linear-gradient(to bottom, #FAFDFF, #FFFFFF);
+    border: 1.5px solid var(--pr-color-primary-50);
+    background: linear-gradient(to bottom, var(--pr-color-primary-25), #FFFFFF);
   }
 
   &--actions {
@@ -45,7 +45,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: #78909C;
+  color: var(--pr-color-primary-500);
   margin: 0 0 14px;
   display: flex;
   align-items: center;
@@ -56,7 +56,7 @@
     display: inline-block;
     width: 3px;
     height: 12px;
-    background: #1565C0;
+    background: var(--pr-color-primary-300);
     border-radius: 2px;
   }
 }
@@ -65,7 +65,7 @@
   font-family: 'JetBrains Mono', 'SF Mono', monospace;
   font-size: 17px;
   font-weight: 700;
-  color: #0D47A1;
+  color: var(--pr-color-primary-600);
   letter-spacing: -0.3px;
 }
 
@@ -98,15 +98,15 @@
   border-radius: 16px;
   font-size: 11px;
   font-weight: 500;
-  border: 1px solid #CFD8DC;
-  color: #607D8B;
-  background: #FAFAFA;
+  border: 1px solid var(--pr-color-primary-100);
+  color: var(--pr-color-primary-600);
+  background: var(--pr-color-primary-50);
 
   &--primary {
-    background: linear-gradient(135deg, #1565C0, #1976D2);
+    background: linear-gradient(135deg, var(--pr-color-primary-300), var(--pr-color-primary-400));
     border-color: transparent;
     color: #FFFFFF;
-    box-shadow: 0 1px 3px rgba(21, 101, 192, 0.2);
+    box-shadow: 0 1px 3px rgba(var(--pr-color-primary-rgb), 0.2);
   }
 }
 
@@ -173,9 +173,13 @@
 
   .bp-breakdown-fill {
     height: 100%;
-    background: linear-gradient(90deg, #1565C0, #42A5F5);
+    background: var(--pr-color-primary-300);
     transition: width 300ms ease;
     border-radius: 2px;
+
+    &.bp-breakdown-fill--complete {
+      background: var(--pr-color-green-500);
+    }
   }
 }
 
@@ -212,18 +216,18 @@
   }
 
   &--primary {
-    background: linear-gradient(135deg, #1565C0, #1976D2);
+    background: linear-gradient(135deg, var(--pr-color-primary-300), var(--pr-color-primary-400));
     border-color: transparent;
     color: #FFFFFF;
     font-weight: 600;
     letter-spacing: 0.3px;
-    box-shadow: 0 2px 6px rgba(21, 101, 192, 0.15);
+    box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.15);
 
     i { color: rgba(255, 255, 255, 0.85); }
 
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, #1257A8, #1565C0);
-      box-shadow: 0 4px 12px rgba(21, 101, 192, 0.25);
+      background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-500));
+      box-shadow: 0 4px 12px rgba(var(--pr-color-primary-rgb), 0.25);
     }
   }
 }

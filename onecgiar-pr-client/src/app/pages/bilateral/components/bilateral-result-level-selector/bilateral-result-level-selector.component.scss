@@ -29,13 +29,14 @@
   transition: border-color 150ms ease, background 150ms ease;
 
   &:hover {
-    border-color: #90CAF9;
+    border-color: var(--pr-color-primary-200);
     background: #F5F5F5;
   }
 
   &--selected {
-    border-color: #1565C0;
-    background: #E3F2FD;
+    border-color: var(--pr-color-primary-300);
+    background: var(--pr-color-primary-25);
+    box-shadow: 0 0 0 3px var(--pr-color-primary-100);
   }
 }
 

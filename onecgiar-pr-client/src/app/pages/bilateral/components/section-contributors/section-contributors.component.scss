@@ -41,7 +41,7 @@
     gap: 8px;
     font-size: 13px;
     font-weight: 600;
-    color: #37474F;
+    color: var(--pr-color-secondary-400);
     text-transform: uppercase;
     letter-spacing: 0.4px;
   }
@@ -70,15 +70,15 @@
   }
 
   &--lead-center {
-    border-color: #BBDEFB;
+    border-color: var(--pr-color-primary-100);
     border-width: 1.5px;
 
     .sc-card__header {
-      background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+      background: linear-gradient(135deg, var(--pr-color-primary-50), var(--pr-color-primary-100));
     }
 
     .sc-card__icon {
-      color: #1565C0;
+      color: var(--pr-color-primary-400);
     }
   }
 }
@@ -111,11 +111,11 @@
   align-self: flex-start;
 
   &--primary {
-    background: linear-gradient(135deg, #1565C0, #1976D2);
+    background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-300));
     border-color: transparent;
     color: #FFFFFF;
     font-weight: 600;
-    box-shadow: 0 2px 6px rgba(21, 101, 192, 0.15);
+    box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.15);
   }
 }
 
@@ -132,7 +132,7 @@
 
 .sc-lead {
   font-size: 14px;
-  color: #1565C0;
+  color: var(--pr-color-primary-400);
   font-weight: 600;
 }
 
@@ -146,8 +146,8 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, #F3F9FF, #E8F0FE);
-  border: 1.5px solid #BBDEFB;
+  background: linear-gradient(135deg, var(--pr-color-primary-25), var(--pr-color-primary-50));
+  border: 1.5px solid var(--pr-color-primary-100);
   border-radius: 10px;
   margin-bottom: 16px;
 }
@@ -169,7 +169,7 @@
   font-family: 'JetBrains Mono', 'SF Mono', monospace;
   font-size: 13px;
   font-weight: 700;
-  color: #0D47A1;
+  color: var(--pr-color-primary-600);
 }
 
 .sc-sp-name {
@@ -184,8 +184,8 @@
 .sc-sp-pct {
   font-size: 11px;
   font-weight: 600;
-  color: #1565C0;
-  background: #E3F2FD;
+  color: var(--pr-color-primary-400);
+  background: var(--pr-color-primary-50);
   padding: 2px 8px;
   border-radius: 10px;
 }
@@ -207,9 +207,9 @@
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
-  background: #E3F2FD;
-  border: 1px solid #BBDEFB;
-  color: #1565C0;
+  background: var(--pr-color-primary-50);
+  border: 1px solid var(--pr-color-primary-100);
+  color: var(--pr-color-primary-400);
 
   &--project {
     background: #E8F5E9;
@@ -218,7 +218,7 @@
   }
 
   &-readonly {
-    background: linear-gradient(135deg, #1565C0, #1976D2);
+    background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-300));
     border-color: transparent;
     color: #FFFFFF;
     font-weight: 600;
@@ -259,11 +259,11 @@
 }
 
 .status-saved {
-  color: #4CAF50;
+  color: var(--pr-color-green-500);
 }
 
 .status-error {
-  color: #F44336;
+  color: var(--pr-color-red-300);
 }
 
 .toc-icon {
@@ -328,7 +328,7 @@
 }
 
 .center-icon {
-  background: linear-gradient(135deg, #1565C0, #42A5F5);
+  background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-300));
   border-radius: 4px;
 
   &::before {

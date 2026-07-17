@@ -19,7 +19,7 @@
 }
 
 .tsf-required {
-  color: #E53935;
+  color: var(--pr-color-red-300);
   font-weight: 700;
 }
 
@@ -42,8 +42,8 @@
 
   &:focus {
     outline: none;
-    border-color: #1565C0;
-    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.08);
   }
 
   &--multi {
@@ -66,8 +66,8 @@
 
   &:focus {
     outline: none;
-    border-color: #1565C0;
-    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.08);
   }
 
   &::placeholder {
@@ -89,8 +89,8 @@
 
   &:focus {
     outline: none;
-    border-color: #1565C0;
-    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.08);
   }
 }
 
@@ -109,7 +109,7 @@
   cursor: pointer;
 
   input[type="radio"] {
-    accent-color: #1565C0;
+    accent-color: var(--pr-color-primary-300);
   }
 }
 
@@ -135,7 +135,7 @@
 
 .tsf-readonly-value {
   font-size: 14px;
-  color: #37474F;
+  color: var(--pr-color-secondary-400);
   word-break: break-word;
 }
 
@@ -158,7 +158,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 20px;
-  background: #1565C0;
+  background: var(--pr-color-primary-300);
   color: #FFFFFF;
   border: none;
   border-radius: 6px;
@@ -168,7 +168,7 @@
   transition: background 150ms ease;
 
   &:hover:not(:disabled) {
-    background: #0D47A1;
+    background: var(--pr-color-primary-400);
   }
 
   &:disabled {

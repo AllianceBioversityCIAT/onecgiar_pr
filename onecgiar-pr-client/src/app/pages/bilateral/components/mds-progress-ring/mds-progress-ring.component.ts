@@ -24,8 +24,7 @@ export class MdsProgressRingComponent {
 
   ringColor = computed(() => {
     const p = this.percentage();
-    if (p < 40) return '#C62828';
-    if (p < 80) return '#F57F17';
-    return '#2E7D32';
+    if (p >= 100) return '#19ae58';
+    return '#6b6dc4';
   });
 }

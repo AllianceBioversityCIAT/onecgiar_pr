@@ -570,10 +570,11 @@ describe('UserManagementComponent', () => {
   });
 
   describe('openAssignmentOverlay', () => {
-    const makeEvent = () =>
+    // jsdom viewport: 1024x768
+    const makeEvent = (rect: Partial<DOMRect> = { top: 0, bottom: 10, right: 400 }) =>
       ({
         stopPropagation: jest.fn(),
-        currentTarget: { getBoundingClientRect: () => ({ bottom: 10, right: 20 }) }
+        currentTarget: { getBoundingClientRect: () => rect }
       }) as unknown as Event;
 
     it('should open overlay with assignment data anchored to the trigger button', () => {
@@ -588,7 +589,24 @@ describe('UserManagementComponent', () => {
       expect(component.assignmentOverlayItems()).toEqual(items);
       expect(component.assignmentOverlayIsCenter()).toBe(true);
       expect(component.overlayTop).toBe(16);
-      expect(component.overlayLeft).toBe(20);
+      expect(component.overlayFlippedAbove).toBe(false);
+      expect(component.overlayLeft).toBe(400);
+    });
+
+    it('should clamp the panel inside the viewport when the trigger is near the left edge', () => {
+      // right: 20 would place the 320px-wide, right-anchored panel off-screen to the left
+      component.openAssignmentOverlay(makeEvent({ top: 0, bottom: 10, right: 20 }), 'CGIAR Centers', ['E1', 'E2', 'E3'], true);
+
+      expect(component.overlayLeft).toBe(328); // 8px margin + 320px panel width
+    });
+
+    it('should flip above the trigger when there is not enough space below', () => {
+      // bottom: 750 leaves less room than the estimated panel height in a 768px viewport
+      component.openAssignmentOverlay(makeEvent({ top: 728, bottom: 750, right: 400 }), 'CGIAR Centers', ['E1', 'E2', 'E3'], true);
+
+      expect(component.assignmentOverlayOpen()).toBe(true);
+      expect(component.overlayFlippedAbove).toBe(true);
+      expect(component.overlayBottom).toBe(46); // 768 - 728 + 6 → panel bottom sits 6px above the trigger
     });
 
     it('should not open overlay when items are within inline limit', () => {
