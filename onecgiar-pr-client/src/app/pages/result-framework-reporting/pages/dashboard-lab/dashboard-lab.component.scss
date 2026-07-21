@@ -1,7 +1,15 @@
 // Styling lives in the template via Tailwind utilities; SCSS only holds what
 // Tailwind can't express — the :host box and the flyout entrance keyframe.
+// Column geometry lives here, ONCE. Every fixed column and the content offset
+// derive from these — desyncing two of them is what put the content under the
+// sidebar and made the AOW cards unclickable, so don't inline the numbers again.
 :host {
   display: block;
+
+  --rail-w: 76px; // collapsed icon rail (AOW mode)
+  --panel-w: 236px; // Areas of Work column (AOW mode)
+  --full-w: 300px; // expanded Science Programs card (dashboard)
+  --float-gap: 10px; // inset of the floating card on the dashboard
 }
 
 @keyframes flyout-in {
@@ -12,6 +20,95 @@
   to {
     opacity: 1;
     transform: translateX(0) scale(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Master column morph: 300px floating card (dashboard) ↔ 76px flush rail (AOW).
+// The box itself transitions; its two content variants cross-fade via
+// animate.enter/animate.leave (Angular 20+ native — no BrowserAnimationsModule).
+// ---------------------------------------------------------------------------
+.pr-rail {
+  transition:
+    width 340ms cubic-bezier(0.33, 0, 0.2, 1),
+    inset 340ms cubic-bezier(0.33, 0, 0.2, 1),
+    padding 340ms cubic-bezier(0.33, 0, 0.2, 1),
+    border-radius 340ms cubic-bezier(0.33, 0, 0.2, 1);
+}
+
+// Content swap inside the rail. The leaving variant is taken out of flow so it
+// doesn't push the incoming one down while both are mounted.
+.pr-fade--enter {
+  animation: pr-fade-in 300ms 90ms cubic-bezier(0.33, 0, 0.2, 1) backwards;
+}
+
+.pr-fade--leave {
+  position: absolute;
+  inset: 0 14px auto;
+  animation: pr-fade-out 160ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+}
+
+@keyframes pr-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pr-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+// Column 2 (Areas of Work): slides out from behind the rail and back in.
+.pr-panel--enter {
+  animation: pr-panel-in 320ms cubic-bezier(0.33, 0, 0.2, 1);
+}
+
+.pr-panel--leave {
+  animation: pr-panel-out 240ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+}
+
+@keyframes pr-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pr-panel-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-rail {
+    transition-duration: 1ms;
+  }
+
+  .pr-fade--enter,
+  .pr-fade--leave,
+  .pr-panel--enter,
+  .pr-panel--leave {
+    animation-duration: 1ms;
   }
 }
 

@@ -41,6 +41,13 @@ export class DataControlService {
   currentNotification = null;
   currentResultSectionName = signal('');
   /**
+   * Focus mode: a surface has asked the shell to shed chrome and give the page
+   * every pixel it can (today: the AOW detail view in the reporting dashboard).
+   * While true the header hides the platform wordmark, keeping only the logo.
+   * Surfaces that set it MUST reset it on destroy.
+   */
+  readonly focusMode = signal(false);
+  /**
    * Backend section-completeness indicator. Signal-backed (transparent getter/setter
    * keeps existing call sites working) so `greenChecksString` can be a memoized
    * `computed` instead of a per-CD `JSON.stringify` in panel-menu. (P2-2967/P2-2970)

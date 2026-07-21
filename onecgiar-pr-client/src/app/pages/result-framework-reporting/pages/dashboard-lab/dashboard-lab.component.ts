@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
@@ -6,6 +6,7 @@ import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.i
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { DataControlService } from '../../../../shared/services/data-control.service';
 
 /** Vibrant, high-contrast palette for the status charts (no pastels). */
 const STATUS_COLOR: Record<number, string> = {
@@ -48,6 +49,15 @@ interface IndicatorCategory {
   submitted: number;
 }
 
+/**
+ * Sentinel AOW code for the 2030 Outcomes view. The units endpoint never returns
+ * it (its SQL filters `category IN ('OUTPUT','OUTCOME')` and 2030 items are `EOI`),
+ * so the old entity-aow sidebar hardcodes the entry too — see
+ * `pages/entity-aow/services/entity-aow.service.ts` `setSideBarItems()`.
+ * It resolves to the same `/aow/2030-outcomes` route and its own endpoint.
+ */
+const OUTCOMES_2030_CODE = '2030-outcomes';
+
 const OUTPUT_NAMES = ['Innovation development', 'Knowledge product', 'Capacity sharing for development', 'Other output'];
 const OUTCOME_NAMES = ['Innovation use', 'Policy change', 'Other outcome'];
 
@@ -78,14 +88,17 @@ interface AccentTheme {
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DashboardLabComponent implements OnInit {
+export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly api = inject(ApiService);
+  private readonly dataControlSE = inject(DataControlService);
 
   /** Currently selected program id; null → fall back to the first available. */
   readonly selectedId = signal<number | null>(null);
   /** Free-text filter for the sidebar list. */
   readonly query = signal<string>('');
+  /** The rail's search is collapsed to an icon; this opens the floating input. */
+  readonly searchOpen = signal(false);
   /** Program codes whose SP icon failed to load → render the fallback glyph. */
   readonly iconErrors = signal<Set<string>>(new Set());
   /** Dominant accent color extracted from each program's icon, keyed by code. */
@@ -156,6 +169,10 @@ export class DashboardLabComponent implements OnInit {
     return code ? this.aows().find(a => a.code === code) ?? null : null;
   });
 
+  /** The 2030 Outcomes view: single flat list, cumulative 2025→2030 targets. */
+  readonly is2030 = computed(() => this.activeAowCode() === OUTCOMES_2030_CODE);
+  readonly outcomes2030Code = OUTCOMES_2030_CODE;
+
   private readonly currentToc = computed(() => {
     const sp = this.selected();
     const aow = this.activeAowCode();
@@ -187,9 +204,6 @@ export class DashboardLabComponent implements OnInit {
   readonly statusOptions = ['Not started', 'In progress', 'Achieved', 'Overachieved'];
 
   // Option arrays shaped for <app-pr-select> ({label,value} pairs).
-  readonly programSelectOptions = computed(() =>
-    this.allPrograms().map(p => ({ label: `${p.initiativeCode} — ${p.initiativeShortName || p.initiativeName}`, id: p.initiativeId }))
-  );
   readonly typologySelectOptions = computed(() => [
     { label: 'All typologies', value: '' },
     ...this.typologyOptions().map(t => ({ label: t, value: t }))
@@ -225,11 +239,20 @@ export class DashboardLabComponent implements OnInit {
       }
     });
 
+    // Focus mode: the AOW view asks the shell to drop the header wordmark.
+    effect(() => this.dataControlSE.focusMode.set(this.viewMode() === 'aow'));
+
     // In AOW mode, keep a valid AOW selected when the program changes.
     effect(() => {
       if (this.viewMode() !== 'aow') return;
       const list = this.aows();
       const active = this.activeAowCode();
+      // The 2030 sentinel is valid for every program — keep it and refetch instead.
+      if (active === OUTCOMES_2030_CODE) {
+        const sp = this.selected();
+        if (sp) this.loadToc(sp.initiativeCode, OUTCOMES_2030_CODE);
+        return;
+      }
       if (list.length && !list.some(a => a.code === active)) {
         this.openAow(list[0].code);
       }
@@ -346,6 +369,11 @@ export class DashboardLabComponent implements OnInit {
     if (this.allPrograms().length === 0) {
       this.homeSE.getScienceProgramsProgress();
     }
+  }
+
+  /** Leaving the lab must never strand the shell in focus mode. */
+  ngOnDestroy(): void {
+    this.dataControlSE.focusMode.set(false);
   }
 
   select(sp: SPProgress): void {
@@ -487,15 +515,21 @@ export class DashboardLabComponent implements OnInit {
     return match ? { code: match[1], name: match[2] } : { code: null, name: text };
   }
 
-  /** Program dropdown change (AOW mode). */
-  changeProgram(id: number): void {
-    this.selectedId.set(id);
-  }
-
   private loadToc(program: string, aow: string): void {
     const key = `${program}::${aow}`;
     if (this.tocByKey().has(key) || this.loadingTocKeys().has(key)) return;
     this.loadingTocKeys.update(s => new Set(s).add(key));
+
+    // 2030 Outcomes has its own endpoint and returns ONE flat `tocResults` list
+    // (no outputs/outcomes split), so it lands in `outputs` and the tabs hide.
+    if (aow === OUTCOMES_2030_CODE) {
+      this.api.resultsSE.GET_2030Outcomes(program).subscribe({
+        next: (res: { response?: { tocResults?: any[] } }) => this.cacheToc(key, { outputs: res?.response?.tocResults ?? [], outcomes: [] }),
+        error: () => this.cacheToc(key, { outputs: [], outcomes: [] })
+      });
+      return;
+    }
+
     this.api.resultsSE.GET_TocResultsByAowId(program, aow).subscribe({
       next: (res: { response?: { tocResultsOutputs?: any[]; tocResultsOutcomes?: any[] } }) =>
         this.cacheToc(key, { outputs: res?.response?.tocResultsOutputs ?? [], outcomes: res?.response?.tocResultsOutcomes ?? [] }),
@@ -559,6 +593,16 @@ export class DashboardLabComponent implements OnInit {
 
   onQuery(value: string): void {
     this.query.set(value);
+  }
+
+  toggleSearch(): void {
+    this.searchOpen.update(open => !open);
+  }
+
+  /** Closing the filter also clears it — a hidden active filter is a trap. */
+  closeSearch(): void {
+    this.searchOpen.set(false);
+    this.query.set('');
   }
 
   /** Per-program SP icon (same asset set used by the home cards). */

@@ -1,144 +1,300 @@
-<!-- ==================== SIDEBAR (master) — premium surface reuse (Tailwind) ==================== -->
+<!-- ==================== COLUMN 1 — Science Programs ====================
+     One surface that morphs: a floating 300px card on the dashboard, a flush
+     76px icon rail once an AOW is open. Width/inset/radius all transition. -->
 <aside
-  class="fixed top-[10px] left-[10px] bottom-[10px] z-[5] box-border flex w-[300px] flex-col gap-[14px] overflow-hidden rounded-2xl border border-white/[0.09] bg-[#1f2233] bg-[radial-gradient(135%_85%_at_50%_-8%,rgba(100,97,188,0.32)_0%,rgba(100,97,188,0)_58%)] px-[14px] py-4 shadow-[0_22px_50px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] max-[900px]:static max-[900px]:m-[10px] max-[900px]:inset-auto max-[900px]:max-h-[320px] max-[900px]:w-auto">
-  <div class="flex flex-col gap-0.5 border-b border-white/10 px-2 pb-3.5 pt-1.5">
-    <span class="text-[10px] font-bold uppercase tracking-[1.4px] text-[var(--pr-color-primary-200)]">Reporting workspace</span>
-    <h2 class="m-0 text-[18px] font-bold leading-[1.15] tracking-[-0.01em] text-white">Science Programs</h2>
-    @if (phaseLabel()) {
-      <span
-        class="mt-2 self-start rounded-full bg-[linear-gradient(135deg,#6b6dc4_0%,#6461bc_100%)] px-2.5 py-[3px] text-[10px] font-semibold tracking-[0.02em] text-white shadow-[0_2px_8px_rgba(100,97,188,0.45)]">
-        {{ phaseLabel() }}
-      </span>
-    }
-  </div>
-
+  class="pr-rail fixed z-[6] box-border flex flex-col overflow-hidden border-white/[0.09] bg-[#1f2233] bg-[radial-gradient(135%_85%_at_50%_-8%,rgba(100,97,188,0.32)_0%,rgba(100,97,188,0)_58%)]"
+  [class]="
+    viewMode() === 'aow'
+      ? 'w-[var(--rail-w)] inset-y-0 left-0 gap-2 rounded-none border-r px-2 py-3'
+      : 'w-[var(--full-w)] bottom-[var(--float-gap)] left-[var(--float-gap)] top-[var(--float-gap)] gap-[14px] rounded-2xl border px-[14px] py-4 shadow-[0_22px_50px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)]'
+  ">
   @if (viewMode() === 'home') {
-  <!-- search -->
-  <div class="flex items-center gap-2 rounded-[10px] bg-white/[0.06] px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-    <span class="material-icons-round text-[16px] text-white/40">search</span>
-    <input
-      type="text"
-      placeholder="Filter programs…"
-      [value]="query()"
-      (input)="onQuery($any($event.target).value)"
-      aria-label="Filter Science Programs"
-      class="flex-1 appearance-none border-none bg-transparent text-[12px] text-white outline-none placeholder:text-white/40" />
-  </div>
+    <!-- ---------- FULL: header + inline search + named list ---------- -->
+    <div class="pr-fade flex flex-col gap-[14px] overflow-hidden" animate.enter="pr-fade--enter" animate.leave="pr-fade--leave">
+      <div class="flex flex-col gap-0.5 border-b border-white/10 px-2 pb-3.5 pt-1.5">
+        <span class="text-[10px] font-bold uppercase tracking-[1.4px] text-[var(--pr-color-primary-200)]">Reporting workspace</span>
+        <h2 class="m-0 text-[18px] font-bold leading-[1.15] tracking-[-0.01em] text-white">Science Programs</h2>
+        @if (phaseLabel()) {
+          <span
+            class="mt-2 self-start rounded-full bg-[linear-gradient(135deg,#6b6dc4_0%,#6461bc_100%)] px-2.5 py-[3px] text-[10px] font-semibold tracking-[0.02em] text-white shadow-[0_2px_8px_rgba(100,97,188,0.45)]">
+            {{ phaseLabel() }}
+          </span>
+        }
+      </div>
 
-  <!-- list -->
-  <div class="custom_scroll flex flex-1 flex-col gap-1 overflow-y-auto pr-0.5">
-    @if (homeSE.isLoadingSPLists()) {
-      @for (s of [1, 2, 3, 4, 5]; track s) {
-        <div class="h-[44px] animate-pulse rounded-[10px] bg-white/[0.06]"></div>
+      <div class="flex items-center gap-2 rounded-[10px] bg-white/[0.06] px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+        <span class="material-icons-round text-[16px] text-white/40">search</span>
+        <input
+          type="text"
+          placeholder="Filter programs…"
+          [value]="query()"
+          (input)="onQuery($any($event.target).value)"
+          aria-label="Filter Science Programs"
+          class="w-full flex-1 appearance-none border-none bg-transparent text-[12px] text-white outline-none placeholder:text-white/40" />
+      </div>
+    </div>
+
+    <div class="custom_scroll flex flex-1 flex-col gap-1 overflow-y-auto pr-0.5">
+      @if (homeSE.isLoadingSPLists()) {
+        @for (s of [1, 2, 3, 4, 5]; track s) {
+          <div class="h-[44px] shrink-0 animate-pulse rounded-[10px] bg-white/[0.06]"></div>
+        }
+      } @else {
+        @for (group of groups(); track group.label) {
+          <p class="px-2 pb-1 pt-2.5 text-[9px] font-bold uppercase tracking-[0.09em] text-white/40">{{ group.label }}</p>
+          @for (sp of group.items; track sp.initiativeId) {
+            <button
+              type="button"
+              (click)="select(sp)"
+              (mouseenter)="onHoverProgram(sp, $event)"
+              (mouseleave)="onLeaveProgram()"
+              class="grid w-full shrink-0 appearance-none grid-cols-[auto_auto_1fr_auto] items-center gap-2.5 rounded-[10px] border-none px-3 py-2.5 text-left transition-colors duration-200"
+              [class]="
+                isActive(sp)
+                  ? 'text-white bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] shadow-[0_8px_20px_rgba(100,97,188,0.5),inset_0_0_0_1px_rgba(255,255,255,0.14),inset_0_1px_0_rgba(255,255,255,0.28)]'
+                  : 'text-white/[0.78] bg-white/[0.035] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] hover:bg-white/[0.09] hover:text-white'
+              ">
+              @if (!iconErrors().has(sp.initiativeCode)) {
+                <img
+                  class="size-[22px] shrink-0 rounded-md bg-white/[0.08] object-cover"
+                  [src]="iconSrc(sp)"
+                  [alt]="sp.initiativeCode"
+                  width="22"
+                  height="22"
+                  (load)="extractAccent($event, sp.initiativeCode)"
+                  (error)="onIconError(sp.initiativeCode)" />
+              } @else {
+                <span class="inline-flex size-[22px] shrink-0 items-center justify-center rounded-md bg-white/[0.08]">
+                  <i class="material-icons-round text-[14px] text-white/60">hub</i>
+                </span>
+              }
+              <span class="text-[12px] font-semibold text-inherit">{{ sp.initiativeCode }}</span>
+              <span class="overflow-hidden text-ellipsis whitespace-nowrap text-[11px]" [class]="isActive(sp) ? 'text-white/80' : 'text-white/50'">
+                {{ sp.initiativeShortName || sp.initiativeName }}
+              </span>
+              <span class="rounded-full px-2 py-0.5 text-[10px] font-bold" [class]="isActive(sp) ? 'bg-white/20 text-white' : 'bg-white/10 text-white/75'">
+                {{ totalResults(sp) }}
+              </span>
+            </button>
+          }
+        }
+
+        @if (!groups().length) {
+          <p class="px-3 py-6 text-center text-[11px] text-white/40">No programs match your filter.</p>
+        }
       }
-    } @else {
-      @for (group of groups(); track group.label) {
-        <p class="px-2 pb-1 pt-2.5 text-[9px] font-bold uppercase tracking-[0.09em] text-white/40">{{ group.label }}</p>
+    </div>
+  } @else {
+    <!-- ---------- RAIL: collapsed search + icon list ---------- -->
+    <button
+      type="button"
+      (click)="toggleSearch()"
+      [attr.aria-expanded]="searchOpen()"
+      aria-label="Filter programs"
+      class="pr-fade mx-auto inline-flex size-9 shrink-0 appearance-none items-center justify-center rounded-xl border-0 transition-colors"
+      animate.enter="pr-fade--enter"
+      [class]="
+        searchOpen() || query()
+          ? 'bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] text-white'
+          : 'bg-white/[0.06] text-white/50 hover:bg-white/[0.12] hover:text-white'
+      ">
+      <span class="material-icons-round text-[18px]">search</span>
+    </button>
+
+    <div class="custom_scroll pr-fade flex flex-1 flex-col items-center gap-1.5 overflow-y-auto overflow-x-hidden" animate.enter="pr-fade--enter">
+      @for (group of groups(); track group.label; let isFirst = $first) {
+        @if (!isFirst) {
+          <span class="my-1 h-px w-8 shrink-0 bg-white/10"></span>
+        }
         @for (sp of group.items; track sp.initiativeId) {
+          <!-- hover reveals the full name + its AOWs in the flyout -->
           <button
             type="button"
             (click)="select(sp)"
             (mouseenter)="onHoverProgram(sp, $event)"
             (mouseleave)="onLeaveProgram()"
-            class="grid w-full appearance-none grid-cols-[auto_auto_1fr_auto] items-center gap-2.5 rounded-[10px] border-none px-3 py-2.5 text-left transition-colors duration-200"
+            [attr.aria-label]="sp.initiativeCode + ' ' + (sp.initiativeShortName || sp.initiativeName)"
+            [attr.aria-current]="isActive(sp) ? 'true' : null"
+            class="flex w-full shrink-0 appearance-none flex-col items-center gap-1 rounded-xl border-0 px-1 py-1.5 transition-colors duration-200"
             [class]="
               isActive(sp)
-                ? 'text-white bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] shadow-[0_8px_20px_rgba(100,97,188,0.5),inset_0_0_0_1px_rgba(255,255,255,0.14),inset_0_1px_0_rgba(255,255,255,0.28)]'
-                : 'text-white/[0.78] bg-white/[0.035] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] hover:bg-white/[0.09] hover:text-white'
+                ? 'text-white bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] shadow-[0_8px_20px_rgba(100,97,188,0.5),inset_0_0_0_1px_rgba(255,255,255,0.14)]'
+                : 'text-white/[0.62] bg-transparent hover:bg-white/[0.08] hover:text-white'
             ">
             @if (!iconErrors().has(sp.initiativeCode)) {
               <img
-                class="size-[22px] shrink-0 rounded-md bg-white/[0.08] object-cover"
+                class="size-7 shrink-0 rounded-lg bg-white/[0.08] object-cover"
                 [src]="iconSrc(sp)"
                 [alt]="sp.initiativeCode"
-                width="22"
-                height="22"
-                (load)="extractAccent($event, sp.initiativeCode)"
+                width="28"
+                height="28"
                 (error)="onIconError(sp.initiativeCode)" />
             } @else {
-              <span class="inline-flex size-[22px] shrink-0 items-center justify-center rounded-md bg-white/[0.08]">
-                <i class="material-icons-round text-[14px] text-white/60">hub</i>
+              <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
+                <i class="material-icons-round text-[15px] text-white/60">hub</i>
               </span>
             }
-            <span class="text-[12px] font-semibold text-inherit">{{ sp.initiativeCode }}</span>
-            <span
-              class="overflow-hidden text-ellipsis whitespace-nowrap text-[11px]"
-              [class]="isActive(sp) ? 'text-white/80' : 'text-white/50'">
-              {{ sp.initiativeShortName || sp.initiativeName }}
-            </span>
-            <span
-              class="rounded-full px-2 py-0.5 text-[10px] font-bold"
-              [class]="isActive(sp) ? 'bg-white/20 text-white' : 'bg-white/10 text-white/75'">
-              {{ totalResults(sp) }}
-            </span>
+            <span class="text-[9.5px] font-bold leading-none tracking-[0.02em] text-inherit">{{ sp.initiativeCode }}</span>
           </button>
-        }
-      }
-
-      @if (!groups().length) {
-        <p class="px-3 py-6 text-center text-[11px] text-white/40">No programs match your filter.</p>
-      }
-    }
-  </div>
-  } @else {
-    <!-- AOW MODE: back + program dropdown + AOW selector -->
-    <button
-      type="button"
-      (click)="backToHome()"
-      class="flex items-center gap-2 self-start rounded-lg px-2 py-1.5 text-[12px] font-semibold text-white/70 transition-colors hover:text-white">
-      <span class="material-icons-round text-[18px]">arrow_back</span>
-      Back to programs
-    </button>
-
-    <div class="flex flex-col gap-1.5">
-      <label class="px-1 text-[9px] font-bold uppercase tracking-[0.09em] text-white/40">Program</label>
-      <app-pr-select
-        [options]="programSelectOptions()"
-        optionLabel="label"
-        optionValue="id"
-        [editable]="true"
-        [required]="false"
-        [ngModel]="selected()?.initiativeId"
-        [ngModelOptions]="{ standalone: true }"
-        (selectOptionEvent)="$event && changeProgram($event.id)">
-      </app-pr-select>
-    </div>
-
-    <label class="px-1 text-[9px] font-bold uppercase tracking-[0.09em] text-white/40">Areas of Work</label>
-    <div class="custom_scroll flex flex-1 flex-col gap-1 overflow-y-auto pr-0.5">
-      @if (loadingAows()) {
-        @for (s of [1, 2, 3, 4]; track s) {
-          <div class="h-[40px] animate-pulse rounded-[10px] bg-white/[0.06]"></div>
-        }
-      } @else {
-        @for (aow of aows(); track aow.id) {
-          <button
-            type="button"
-            (click)="openAow(aow.code)"
-            class="grid w-full appearance-none grid-cols-[auto_1fr] items-center gap-2.5 rounded-[10px] border-0 px-3 py-2.5 text-left transition-colors duration-200"
-            [class]="
-              activeAowCode() === aow.code
-                ? 'text-white bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] shadow-[0_8px_20px_rgba(100,97,188,0.5)]'
-                : 'text-white/[0.78] bg-white/[0.035] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] hover:bg-white/[0.09] hover:text-white'
-            ">
-            <span class="text-[11px] font-bold">{{ aow.code }}</span>
-            <span class="truncate text-[11px]" [class]="activeAowCode() === aow.code ? 'text-white/80' : 'text-white/50'">{{ aow.name }}</span>
-          </button>
-        }
-        @if (!aows().length) {
-          <p class="px-3 py-4 text-center text-[11px] text-white/40">No areas of work.</p>
         }
       }
     </div>
   }
 </aside>
 
+<!-- ==================== SEARCH POPOVER — the rail's collapsed filter, expanded ==================== -->
+@if (searchOpen() && viewMode() === 'aow') {
+  <div
+    class="fixed left-[calc(var(--rail-w)+var(--panel-w)+8px)] top-[14px] z-[24] flex w-[260px] animate-[flyout-in_0.16s_cubic-bezier(0.22,1,0.36,1)] items-center gap-2 rounded-xl border border-white/[0.09] bg-[#1f2233] px-3 py-2.5 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+    <span class="material-icons-round text-[16px] text-white/40">search</span>
+    <input
+      type="text"
+      placeholder="Filter programs…"
+      [value]="query()"
+      (input)="onQuery($any($event.target).value)"
+      (keydown.escape)="closeSearch()"
+      aria-label="Filter Science Programs"
+      autofocus
+      class="flex-1 appearance-none border-none bg-transparent text-[12px] text-white outline-none placeholder:text-white/40" />
+    <button
+      type="button"
+      (click)="closeSearch()"
+      aria-label="Close filter"
+      class="inline-flex size-6 shrink-0 appearance-none items-center justify-center rounded-lg border-0 bg-transparent text-white/40 transition-colors hover:bg-white/10 hover:text-white">
+      <span class="material-icons-round text-[15px]">close</span>
+    </button>
+  </div>
+}
+
+<!-- ==================== COLUMN 2 — Areas of Work, only while an AOW is open ====================
+     White, flush against the rail (Monday-style): no gap, no radius, no shadow.
+     Slides in from behind the rail on enter and back out on leave. -->
+@if (viewMode() === 'aow') {
+  <aside
+    class="pr-panel fixed inset-y-0 left-[var(--rail-w)] z-[5] box-border flex w-[var(--panel-w)] flex-col gap-2.5 overflow-hidden border-r border-[rgba(30,32,47,0.1)] bg-white px-3 py-3.5"
+    animate.enter="pr-panel--enter"
+    animate.leave="pr-panel--leave">
+    <!-- header: back + program identity, tinted with the program's own accent -->
+    <div class="relative -mx-3 -mt-3.5 mb-1 overflow-hidden px-3 pb-3 pt-3.5" [style.background]="accentTheme().soft">
+      <span class="absolute inset-x-0 top-0 h-[3px]" [style.background]="accentTheme().gradient"></span>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          (click)="backToHome()"
+          aria-label="Back to dashboard"
+          class="inline-flex size-7 shrink-0 appearance-none items-center justify-center rounded-lg border-0 bg-white text-[var(--pr-color-accents-6)] shadow-[0_1px_3px_rgba(30,32,47,0.12)] transition-[transform,color] duration-200 hover:-translate-x-0.5 hover:text-[var(--pr-color-secondary-400)]">
+          <span class="material-icons-round text-[18px]">arrow_back</span>
+        </button>
+        @if (selected(); as sp) {
+          @if (!iconErrors().has(sp.initiativeCode)) {
+            <img class="size-7 shrink-0 rounded-lg object-cover" [src]="iconSrc(sp)" [alt]="sp.initiativeCode" width="28" height="28" (error)="onIconError(sp.initiativeCode)" />
+          }
+          <div class="min-w-0">
+            <p class="m-0 text-[12px] font-bold leading-tight" [style.color]="accentTheme().solid">{{ sp.initiativeCode }}</p>
+            <p class="m-0 truncate text-[10px] leading-tight text-[var(--pr-color-accents-6)]">{{ sp.initiativeShortName || sp.initiativeName }}</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- section label + aggregate progress across the program's AOWs -->
+    <div class="flex items-baseline justify-between gap-2 px-1">
+      <span class="text-[9px] font-bold uppercase tracking-[0.09em] text-[var(--pr-color-accents-5)]">Areas of Work</span>
+      @if (aows().length) {
+        <span class="text-[9px] font-semibold tabular-nums text-[var(--pr-color-accents-5)]">
+          {{ aows().length }} · avg <b [style.color]="accentTheme().solid">{{ aowStats().avgProgress }}%</b>
+        </span>
+      }
+    </div>
+
+    <div class="custom_scroll flex flex-1 flex-col gap-1 overflow-y-auto pr-0.5">
+      @if (loadingAows()) {
+        @for (s of [1, 2, 3, 4]; track s) {
+          <div class="h-[58px] shrink-0 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+        }
+      } @else {
+        @for (aow of aows(); track aow.id) {
+          @let isOpen = activeAowCode() === aow.code;
+          <button
+            type="button"
+            (click)="openAow(aow.code)"
+            [attr.aria-current]="isOpen ? 'true' : null"
+            class="group/aow relative flex w-full shrink-0 appearance-none flex-col gap-1.5 overflow-hidden rounded-xl border-0 py-2 pl-3 pr-2.5 text-left transition-[background,box-shadow] duration-200"
+            [class]="isOpen ? 'bg-white shadow-[0_4px_14px_rgba(30,32,47,0.10)]' : 'bg-transparent hover:bg-[var(--pr-color-accents-1)]'">
+            <!-- active marker: the program's accent, growing from the left edge -->
+            <span
+              class="absolute inset-y-1.5 left-0 w-[3px] rounded-r-full transition-transform duration-300 motion-reduce:transition-none"
+              [style.background]="accentTheme().gradient"
+              [class]="isOpen ? 'scale-y-100' : 'scale-y-0'"></span>
+
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10.5px] font-bold leading-tight" [style.color]="isOpen ? accentTheme().solid : 'var(--pr-color-secondary-400)'">{{ aow.code }}</span>
+              @if (aow.resultsCount) {
+                <span class="ml-auto flex shrink-0 gap-1">
+                  @if (aow.resultsCount.editing) {
+                    <span class="rounded-full bg-[#fef3c7] px-1.5 py-px text-[9px] font-bold tabular-nums text-[#92400e]">{{ aow.resultsCount.editing }}</span>
+                  }
+                  @if (aow.resultsCount.submitted) {
+                    <span class="rounded-full bg-[#dcfce7] px-1.5 py-px text-[9px] font-bold tabular-nums text-[#166534]">{{ aow.resultsCount.submitted }}</span>
+                  }
+                </span>
+              }
+            </div>
+
+            <span class="line-clamp-2 text-[11px] font-medium leading-snug" [class]="isOpen ? 'text-[var(--pr-color-secondary-400)]' : 'text-[var(--pr-color-accents-6)]'">
+              {{ aow.name }}
+            </span>
+
+            <div class="flex items-center gap-1.5">
+              <div class="h-1 flex-1 overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]">
+                <div
+                  class="h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none"
+                  [style.width.%]="aow.progress || 0"
+                  [style.background]="accentTheme().gradient"></div>
+              </div>
+              <span class="w-7 shrink-0 text-right text-[9px] font-bold tabular-nums text-[var(--pr-color-accents-5)]">{{ aow.progress || 0 }}%</span>
+            </div>
+          </button>
+        }
+        @if (!aows().length) {
+          <p class="px-3 py-4 text-center text-[11px] text-[var(--pr-color-accents-5)]">No areas of work.</p>
+        }
+      }
+
+      <!-- 2030 Outcomes: not returned by the units endpoint (EOI category is filtered
+           out server-side), so it is a fixed entry — same as the old entity-aow sidebar. -->
+      <span class="my-1.5 h-px w-full shrink-0 bg-[rgba(30,32,47,0.08)]"></span>
+      <button
+        type="button"
+        (click)="openAow(outcomes2030Code)"
+        [attr.aria-current]="is2030() ? 'true' : null"
+        class="group/aow relative flex w-full shrink-0 appearance-none items-center gap-2 overflow-hidden rounded-xl border-0 py-2.5 pl-3 pr-2.5 text-left transition-[background,box-shadow] duration-200"
+        [class]="is2030() ? 'bg-white shadow-[0_4px_14px_rgba(30,32,47,0.10)]' : 'bg-transparent hover:bg-[var(--pr-color-accents-1)]'">
+        <span
+          class="absolute inset-y-1.5 left-0 w-[3px] rounded-r-full transition-transform duration-300 motion-reduce:transition-none"
+          [style.background]="accentTheme().gradient"
+          [class]="is2030() ? 'scale-y-100' : 'scale-y-0'"></span>
+        <span
+          class="material-icons-round shrink-0 text-[16px]"
+          [style.color]="is2030() ? accentTheme().solid : 'var(--pr-color-accents-4)'">
+          flag
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="block text-[10.5px] font-bold leading-tight" [style.color]="is2030() ? accentTheme().solid : 'var(--pr-color-secondary-400)'">2030 Outcomes</span>
+          <span class="block truncate text-[10px] leading-tight text-[var(--pr-color-accents-5)]">Cumulative 2025–2030</span>
+        </span>
+      </button>
+    </div>
+  </aside>
+}
+
 <!-- ==================== SIDEBAR HOVER FLYOUT — interactive AOW preview ==================== -->
 @if (hoveredProgram(); as hp) {
   <div
     (mouseenter)="onFlyoutEnter()"
     (mouseleave)="onFlyoutLeave()"
-    class="fixed left-[314px] z-[20] w-[308px] animate-[flyout-in_0.16s_cubic-bezier(0.22,1,0.36,1)] overflow-hidden rounded-[20px] border border-white/60 bg-white/95 p-4 shadow-[0_24px_60px_rgba(30,32,47,0.28)] backdrop-blur-sm"
+    class="fixed z-[20] w-[308px] animate-[flyout-in_0.16s_cubic-bezier(0.22,1,0.36,1)] overflow-hidden rounded-[20px] border border-white/60 bg-white/95 p-4 shadow-[0_24px_60px_rgba(30,32,47,0.28)] backdrop-blur-sm"
+    [class]="viewMode() === 'aow' ? 'left-[calc(var(--rail-w)+var(--panel-w)+8px)]' : 'left-[calc(var(--full-w)+var(--float-gap)+4px)]'"
     [style.top.px]="hoverTop()">
     <div class="absolute inset-x-0 top-0 h-1" [style.background]="hoveredTheme().gradient"></div>
 
@@ -173,7 +329,14 @@
 }
 
 <!-- ==================== DETAIL (right panel) — bento dashboard (Tailwind) ==================== -->
-<section class="ml-[320px] box-border min-h-[calc(100vh-20px)] bg-[#eef0f3] px-6 pb-10 pt-5 max-[900px]:ml-0">
+<!-- Focus mode trims the panel gutters so the indicator table gets the full width. -->
+<section
+  class="box-border min-h-screen bg-[#eef0f3] transition-[margin] duration-300 motion-reduce:transition-none"
+  [class]="
+    viewMode() === 'aow'
+      ? 'ml-[calc(var(--rail-w)+var(--panel-w))] px-3 pb-4 pt-3'
+      : 'ml-[calc(var(--full-w)+var(--float-gap)*2)] px-6 pb-10 pt-5'
+  ">
   @if (selected(); as sp) {
     @if (viewMode() === 'aow') {
       <!-- ==================== AOW DETAIL — header ==================== -->
@@ -185,7 +348,12 @@
             {{ sp.initiativeShortName || sp.initiativeName }}
           </p>
           <h1 class="m-0 mt-1 text-[20px] font-bold leading-tight text-[var(--pr-color-secondary-400)] [text-wrap:balance]">
-            <span [style.color]="accentTheme().solid">{{ activeAowCode() }}</span> · {{ activeAow()?.name || 'Area of Work' }}
+            @if (is2030()) {
+              <span [style.color]="accentTheme().solid">2030 Outcomes</span>
+              <span class="ml-1.5 text-[12px] font-semibold text-[var(--pr-color-accents-5)]">· cumulative 2025–2030</span>
+            } @else {
+              <span [style.color]="accentTheme().solid">{{ activeAowCode() }}</span> · {{ activeAow()?.name || 'Area of Work' }}
+            }
           </h1>
         </div>
 
@@ -222,6 +390,16 @@
 
       <!-- ==================== toolbar — tabs + filters ==================== -->
       <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <!-- 2030 Outcomes is a single flat list — no Outputs/Outcomes split to toggle. -->
+        @if (is2030()) {
+          <span class="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)] shadow-[0_4px_14px_rgba(30,32,47,0.05)]">
+            <span class="material-icons-round text-[16px]" [style.color]="accentTheme().solid">flag</span>
+            End of Initiative Outcomes
+            <span class="rounded-full bg-[var(--pr-color-accents-2)] px-1.5 py-px text-[10px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">
+              {{ indicatorCounts().outputs }}
+            </span>
+          </span>
+        } @else {
         <div class="flex gap-1 rounded-xl bg-white p-1 shadow-[0_4px_14px_rgba(30,32,47,0.05)]">
           <button
             type="button"
@@ -258,6 +436,7 @@
             </span>
           </button>
         </div>
+        }
 
         <div class="flex flex-wrap items-center gap-2">
           <div class="w-[230px] max-[560px]:w-full">
@@ -356,7 +535,10 @@
                       </div>
 
                       <div class="hidden shrink-0 items-baseline gap-5 lg:flex">
-                        <span class="text-[11px] text-[var(--pr-color-accents-5)]">Target <b class="ml-0.5 text-[13px] tabular-nums text-[var(--pr-color-secondary-400)]">{{ (ind.target_value_sum ?? 0) | number }}</b></span>
+                        <span class="text-[11px] text-[var(--pr-color-accents-5)]">
+                          {{ is2030() ? '2030 target' : 'Target' }}
+                          <b class="ml-0.5 text-[13px] tabular-nums text-[var(--pr-color-secondary-400)]">{{ (ind.target_value_sum ?? 0) | number }}</b>
+                        </span>
                         <span class="text-[11px] text-[var(--pr-color-accents-5)]">Achieved <b class="ml-0.5 text-[13px] tabular-nums" [style.color]="achievedColor(ind.actual_achieved_value_sum)">{{ (ind.actual_achieved_value_sum ?? 0) | number }}</b></span>
                       </div>
 
@@ -604,40 +786,63 @@
       @if (loadingAows()) {
         <div class="grid grid-cols-4 gap-3 max-[1180px]:grid-cols-2 max-[620px]:grid-cols-1">
           @for (s of [1, 2, 3, 4]; track s) {
-            <div class="h-[116px] animate-pulse rounded-2xl bg-white/70"></div>
+            <div class="h-[78px] animate-pulse rounded-xl bg-white/70"></div>
           }
         </div>
       } @else if (aows().length) {
         <div class="grid grid-cols-4 gap-3 max-[1180px]:grid-cols-2 max-[620px]:grid-cols-1">
           @for (aow of aows(); track aow.id) {
+            <!-- The whole card is the button — the dark CTA row is gone (compact grid). -->
             <button
               type="button"
               (click)="openAow(aow.code)"
-              class="group flex w-full appearance-none flex-col gap-2 rounded-2xl border border-[rgba(30,32,47,0.06)] bg-white p-3.5 text-left shadow-[0_4px_14px_rgba(30,32,47,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(30,32,47,0.09)]">
-              <div class="flex items-center justify-between">
-                <span class="rounded-md bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[11px] font-bold text-[var(--pr-color-secondary-400)]">{{ aow.code }}</span>
+              [attr.aria-label]="'Open indicators for ' + aow.code + ' ' + aow.name"
+              class="group flex w-full appearance-none flex-col gap-1.5 rounded-xl border border-[rgba(30,32,47,0.06)] bg-white px-3 py-2.5 text-left shadow-[0_4px_14px_rgba(30,32,47,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(30,32,47,0.12)] hover:shadow-[0_10px_24px_rgba(30,32,47,0.09)]">
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-bold text-[var(--pr-color-secondary-400)]">{{ aow.code }}</span>
                 @if (aow.resultsCount) {
-                  <span class="flex gap-1.5">
-                    <span class="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold text-[#92400e]">{{ aow.resultsCount.editing }} ed</span>
-                    <span class="rounded-full bg-[#dcfce7] px-2 py-0.5 text-[10px] font-semibold text-[#166534]">{{ aow.resultsCount.submitted }} sub</span>
+                  <span class="ml-auto flex gap-1">
+                    <span class="rounded-full bg-[#fef3c7] px-1.5 py-px text-[9.5px] font-semibold text-[#92400e]">{{ aow.resultsCount.editing }} ed</span>
+                    <span class="rounded-full bg-[#dcfce7] px-1.5 py-px text-[9.5px] font-semibold text-[#166534]">{{ aow.resultsCount.submitted }} sub</span>
                   </span>
                 }
+                <span
+                  class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-accents-3)] transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--pr-color-secondary-400)]">
+                  arrow_forward
+                </span>
               </div>
 
-              <p class="line-clamp-2 min-h-[34px] text-[12.5px] font-semibold leading-tight text-[var(--pr-color-secondary-400)]">{{ aow.name }}</p>
+              <p class="line-clamp-1 text-[12.5px] font-semibold leading-tight text-[var(--pr-color-secondary-400)]">{{ aow.name }}</p>
 
-              <div class="mt-auto flex items-center gap-2">
-                <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]">
+              <div class="flex items-center gap-2">
+                <div class="h-1 flex-1 overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]">
                   <div class="h-full rounded-full" [style.width.%]="aow.progress || 0" [style.background]="accentTheme().gradient"></div>
                 </div>
-                <span class="text-[10px] font-bold text-[var(--pr-color-secondary-400)]">{{ aow.progress || 0 }}%</span>
+                <span class="text-[10px] font-bold tabular-nums text-[var(--pr-color-secondary-400)]">{{ aow.progress || 0 }}%</span>
               </div>
-
-              <span class="mt-1 inline-flex items-center justify-center gap-1 rounded-lg bg-[linear-gradient(150deg,#23252f_0%,#16171d_100%)] py-2 text-[12px] font-semibold text-white shadow-[0_6px_16px_rgba(30,32,47,0.24)] transition-transform duration-200 group-hover:-translate-y-px">
-                Open indicators <span class="material-icons-round text-[15px]">arrow_forward</span>
-              </span>
             </button>
           }
+
+          <!-- 2030 Outcomes — same slot as the AOWs, but no progress/counters:
+               the units endpoint returns no EOI data (see OUTCOMES_2030_CODE). -->
+          <button
+            type="button"
+            (click)="openAow(outcomes2030Code)"
+            aria-label="Open 2030 Outcomes"
+            class="group flex w-full appearance-none flex-col gap-1.5 rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white/70 px-3 py-2.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-solid hover:bg-white hover:shadow-[0_10px_24px_rgba(30,32,47,0.09)]">
+            <div class="flex items-center gap-2">
+              <span class="material-icons-round text-[15px]" [style.color]="accentTheme().solid">flag</span>
+              <span class="text-[11px] font-bold text-[var(--pr-color-secondary-400)]">2030</span>
+              <span
+                class="material-icons-round ml-auto shrink-0 text-[15px] text-[var(--pr-color-accents-3)] transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--pr-color-secondary-400)]">
+                arrow_forward
+              </span>
+            </div>
+
+            <p class="line-clamp-1 text-[12.5px] font-semibold leading-tight text-[var(--pr-color-secondary-400)]">2030 Outcomes</p>
+
+            <p class="text-[10px] leading-tight text-[var(--pr-color-accents-5)]">End of Initiative · cumulative 2025–2030</p>
+          </button>
         </div>
       } @else {
         <div class="rounded-[18px] border border-dashed border-[rgba(30,32,47,0.14)] bg-white/60 px-6 py-10 text-center">
