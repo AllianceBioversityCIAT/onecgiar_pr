@@ -560,6 +560,11 @@ export class ResultsByInstitutionsService {
         order: { id: 'ASC' },
       });
 
+      // Align with P22 GET: hide partners whose Clarisa institution is inactive (P2-3181).
+      institutions = institutions.filter(
+        (i) => i.obj_institutions?.is_active !== false,
+      );
+
       institutions = institutions.map((i) => ({
         ...i,
         delivery: i.delivery.filter((d) => d.is_active),
@@ -934,7 +939,7 @@ export class ResultsByInstitutionsService {
       );
 
       await this._resultByInstitutionsByDeliveriesTypeRepository.update(
-        { id: In(removed.map((d) => d.id)) },
+        { result_by_institution_id: In(removed.map((i) => i.id)) },
         { is_active: false, last_updated_by: userId },
       );
     }

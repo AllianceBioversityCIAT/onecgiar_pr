@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, Input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { EntityAowService } from '../../../../services/entity-aow.service';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -22,6 +23,7 @@ export interface ColumnOrder {
   selector: 'app-aow-hlo-table',
   imports: [
     CommonModule,
+    FormsModule,
     TableModule,
     ProgressBarModule,
     ButtonModule,
@@ -53,9 +55,30 @@ export class AowHloTableComponent {
     }
   });
 
+  // P2-3141: filter groups/indicators by the AoW-level search text without mutating the service signals.
+  filteredTableData = computed(() => {
+    const search = this.entityAowService.searchText().trim().toUpperCase();
+    if (!search) return this.tableData();
+
+    return this.tableData()
+      .map((item: any) => {
+        if ((item.result_title || '').toUpperCase().includes(search)) return item;
+
+        return {
+          ...item,
+          indicators: (item.indicators || []).filter(
+            (indicator: any) =>
+              (indicator.indicator_description || '').toUpperCase().includes(search) ||
+              (indicator.type_name || '').toUpperCase().includes(search)
+          )
+        };
+      })
+      .filter((item: any) => item.indicators?.length || (item.result_title || '').toUpperCase().includes(search));
+  });
+
   expandedRowKeys = computed(() => {
     const expanded: { [key: string]: boolean } = {};
-    this.tableData().forEach((item: any) => {
+    this.filteredTableData().forEach((item: any) => {
       expanded[item.result_title] = true;
     });
     return expanded;
