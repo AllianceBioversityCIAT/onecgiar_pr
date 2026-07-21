@@ -89,4 +89,50 @@ describe('ResultByIntitutionsRepository', () => {
       });
     });
   });
+
+  describe('getGenericResultByInstitutionExists', () => {
+    it('prefers active rows via order by is_active desc limit 1', async () => {
+      const activeRow = { id: 2, institutions_id: 11585, is_active: 1 };
+      queryMock.mockResolvedValueOnce([activeRow]);
+
+      const result = await repository.getGenericResultByInstitutionExists(
+        10,
+        11585,
+        2,
+      );
+
+      expect(queryMock).toHaveBeenCalledWith(
+        expect.stringMatching(/order by rbi\.is_active desc[\s\S]*limit 1/i),
+        [10, 2, 11585],
+      );
+      expect(result).toEqual(activeRow);
+    });
+
+    it('returns undefined when no row exists', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      const result = await repository.getGenericResultByInstitutionExists(
+        10,
+        999,
+        2,
+      );
+
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('getResultByInstitutionExists', () => {
+    it('prefers active rows via order by is_active desc limit 1', async () => {
+      const inactiveRow = { id: 1, institutions_id: 50, is_active: 0 };
+      queryMock.mockResolvedValueOnce([inactiveRow]);
+
+      const result = await repository.getResultByInstitutionExists(5, 50);
+
+      expect(queryMock).toHaveBeenCalledWith(
+        expect.stringMatching(/order by rbi\.is_active desc[\s\S]*limit 1/i),
+        [5, expect.anything(), 50],
+      );
+      expect(result).toEqual(inactiveRow);
+    });
+  });
 });

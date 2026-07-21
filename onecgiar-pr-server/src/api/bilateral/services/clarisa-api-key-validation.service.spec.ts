@@ -10,7 +10,7 @@ const originalEnv = { ...process.env };
 describe('ClarisaApiKeyValidationService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.CLA_URL = 'https://clarisa.example/';
+    process.env.CLA_VALIDATE_URL = 'https://clarisa.example/';
   });
 
   afterAll(() => {
