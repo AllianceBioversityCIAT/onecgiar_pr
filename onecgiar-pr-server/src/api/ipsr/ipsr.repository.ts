@@ -11,7 +11,7 @@ import {
 } from '../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
-import { env } from 'process';
+import { env } from 'node:process';
 import { ExcelReportDto } from './dto/excel-report-ipsr.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
@@ -114,7 +114,7 @@ export class IpsrRepository
   }
 
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(Ipsr, dataSource.createEntityManager());
@@ -788,10 +788,13 @@ export class IpsrRepository
           : undefined;
 
       const orderClause = ` ORDER BY r.result_code ASC`;
-      const paginatedClause =
-        limit !== undefined
-          ? ` LIMIT ${limit}${offset !== undefined ? ` OFFSET ${offset}` : ''}`
-          : '';
+      let paginatedClause = '';
+      if (limit != null) {
+        paginatedClause = ` LIMIT ${limit}`;
+        if (offset != null) {
+          paginatedClause += ` OFFSET ${offset}`;
+        }
+      }
 
       const queryData = `${baseQuery} ${where.join(' ')}${orderClause}${paginatedClause};`;
       const results = await this.query(queryData, params);

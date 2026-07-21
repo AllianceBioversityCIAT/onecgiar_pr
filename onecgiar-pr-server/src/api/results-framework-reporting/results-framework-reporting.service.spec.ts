@@ -27,6 +27,7 @@ import { ApplyFrameworkResultAssociationsService } from './application/commands/
 import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
+import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -63,6 +64,13 @@ const mockTocResultsRepository = {
   findIndicatorById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
   getIndicatorContributions: jest.fn(),
+  findBilateralProjectById: jest.fn(),
+  findBilateralProjectsByProgramOfficialCode: jest.fn(),
+  findTargetsWithCentersByIndicatorId: jest.fn(),
+};
+
+const mockTocCatalogRepository = {
+  getTocSynergyProgramsByResultIds: jest.fn(),
 };
 
 const defaultTocContext = {
@@ -135,6 +143,7 @@ const mockContributionToIndicatorResultsRepository = {
 
 const mockResultsByInstitutionsService = {
   handleContributingCenters: jest.fn(),
+  savePartnersInstitutionsByResultV2: jest.fn(),
 };
 
 const mockDataSource = {
@@ -149,6 +158,9 @@ describe('ResultsFrameworkReportingService', () => {
 
     mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
       new Map(),
+    );
+    mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+      [],
     );
     mockReportingTocContextService.resolve.mockImplementation(
       (yearOverride?: number) =>
@@ -183,6 +195,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: AoWBilateralRepository,
           useValue: mockTocResultsRepository,
+        },
+        {
+          provide: TocResultsRepository,
+          useValue: mockTocCatalogRepository,
         },
         {
           provide: ResultRepository,
@@ -568,6 +584,119 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getWorkPackagesByProgramAndArea', () => {
     beforeEach(() => {
       mockTocResultsRepository.findByCompositeCode.mockReset();
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockReset();
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockResolvedValue(
+        [],
+      );
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+        [],
+      );
+    });
+
+    it('should attach contributing_synergy_program_initiative_ids (P2-3114)', async () => {
+      const tocContext = { reportingYear: 2024, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          toc_result_id: 42,
+          category: 'OUTPUT',
+          result_title: 'Result with SP',
+          related_node_id: 'NODE-SP',
+          indicators: [],
+        },
+      ]);
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValueOnce(
+        [
+          { toc_result_id: 42, initiative_id: 101 },
+          { toc_result_id: 42, initiative_id: 102 },
+        ],
+      );
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2024',
+      );
+
+      expect(
+        mockTocCatalogRepository.getTocSynergyProgramsByResultIds,
+      ).toHaveBeenCalledWith([42], 'PHASE-1');
+      expect(
+        result.response.tocResultsOutputs[0]
+          .contributing_synergy_program_initiative_ids,
+      ).toEqual([101, 102]);
+    });
+
+    it('should keep center_acronym from disaggregated indicator rows', async () => {
+      const tocContext = { reportingYear: 2024, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          toc_result_id: 10,
+          category: 'OUTPUT',
+          result_title: 'Result with centers',
+          related_node_id: 'NODE-1',
+          indicators: [
+            {
+              indicator_id: 100,
+              indicator_description: 'Number of farmers trained',
+              center_id: 1,
+              center_acronym: 'CIP',
+            },
+            {
+              indicator_id: 100,
+              indicator_description: 'Number of farmers trained',
+              center_id: 2,
+              center_acronym: 'IRRI',
+            },
+          ],
+        },
+      ]);
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockResolvedValue(
+        [
+          {
+            toc_indicator_target_id: 1,
+            year: 2025,
+            target_value: 10,
+            number_target: '10',
+            centers: [
+              {
+                center_id: 1,
+                center_acronym: 'CIP',
+                center_name: 'International Potato Center',
+              },
+              {
+                center_id: 2,
+                center_acronym: 'IRRI',
+                center_name: 'International Rice Research Institute',
+              },
+            ],
+          },
+        ],
+      );
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2024',
+      );
+
+      expect(result.response.tocResultsOutputs[0].indicators).toEqual([
+        expect.objectContaining({
+          indicator_id: 100,
+          center_id: 1,
+          center_acronym: 'CIP',
+        }),
+        expect.objectContaining({
+          indicator_id: 100,
+          center_id: 2,
+          center_acronym: 'IRRI',
+        }),
+      ]);
+      expect(
+        result.response.tocResultsOutputs[0].indicators[0].center_acronyms,
+      ).toBeUndefined();
     });
 
     it('should return work packages when repository returns data', async () => {
@@ -729,6 +858,37 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getToc2030Outcomes', () => {
     beforeEach(() => {
       mockTocResultsRepository.find2030Outcomes.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+        [],
+      );
+    });
+
+    it('should attach contributing_synergy_program_initiative_ids (P2-3114)', async () => {
+      const tocContext = { reportingYear: 2030, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([
+        {
+          toc_result_id: 7,
+          category: 'EOI',
+          result_title: 'EOI with SP',
+          related_node_id: 'NODE-EOI-7',
+          indicators: [],
+        },
+      ]);
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValueOnce(
+        [{ toc_result_id: 7, initiative_id: 55 }],
+      );
+
+      const result: any = await service.getToc2030Outcomes('sp01');
+
+      expect(
+        mockTocCatalogRepository.getTocSynergyProgramsByResultIds,
+      ).toHaveBeenCalledWith([7], 'PHASE-1');
+      expect(
+        result.response.tocResults[0]
+          .contributing_synergy_program_initiative_ids,
+      ).toEqual([55]);
     });
 
     it('should return ToC 2030 outcomes when repository returns data', async () => {
@@ -1053,7 +1213,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsIndicatorsTargetsRepository.update.mockReset();
       mockShareResultRequestService.resultRequest.mockReset();
       mockResultsByProjectsService.linkBilateralProjectToResult.mockReset();
-      mockResultsByInstitutionsService.handleContributingCenters.mockReset();
+      mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2.mockReset();
     });
 
     it('should create a non-knowledge product result and link ToC data', async () => {
@@ -1365,8 +1525,16 @@ describe('ResultsFrameworkReportingService', () => {
       );
 
       expect(
-        mockResultsByInstitutionsService.handleContributingCenters,
-      ).toHaveBeenCalledWith(centers, { result_id: 606 }, user);
+        mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2,
+      ).toHaveBeenCalledWith(
+        {
+          result_id: 606,
+          contributing_center: centers,
+          institutions: undefined,
+          mqap_institutions: [],
+        },
+        user,
+      );
     });
   });
 
@@ -1618,6 +1786,67 @@ describe('ResultsFrameworkReportingService', () => {
         }),
         debug: true,
       });
+    });
+  });
+
+  describe('getBilateralProjectsByScienceProgram (P2-3001)', () => {
+    it('should return deduplicated bilateral projects for a science program', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 10,
+        official_code: 'SP01',
+      });
+      mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode.mockResolvedValueOnce(
+        [
+          {
+            toc_result_id: 1,
+            official_code: 'SP01',
+            project_id: 100,
+            project_name: 'Project A',
+          },
+          {
+            toc_result_id: 2,
+            official_code: 'SP01',
+            project_id: 100,
+            project_name: 'Project A',
+          },
+          {
+            toc_result_id: 3,
+            official_code: 'SP01',
+            project_id: 200,
+            project_name: 'Project B',
+          },
+        ],
+      );
+
+      const result = await service.getBilateralProjectsByScienceProgram('sp01');
+
+      expect(
+        mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode,
+      ).toHaveBeenCalledWith('SP01', 'PHASE-1');
+      expect(result.response).toHaveLength(2);
+      expect(result.response.map((row) => row.project_id)).toEqual([100, 200]);
+      expect(result.status).toBe(200);
+    });
+
+    it('should return empty array when program has no bilateral projects', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 10,
+        official_code: 'SP02',
+      });
+      mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode.mockResolvedValueOnce(
+        [],
+      );
+
+      const result = await service.getBilateralProjectsByScienceProgram('SP02');
+
+      expect(result.response).toEqual([]);
+      expect(result.status).toBe(200);
+    });
+
+    it('should return bad request when programId is missing', async () => {
+      const result = await service.getBilateralProjectsByScienceProgram('  ');
+
+      expect(result.status).toBe(400);
     });
   });
 });

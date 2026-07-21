@@ -70,7 +70,7 @@
   <div class="entity-details_cards">
     <div class="entity-details_card">
       <div class="entity-details_card_header">
-        Results planned in your {{ entityAowService.reportingPhaseYear }} ToC
+        Report Results Linked to Program's {{ entityAowService.reportingPhaseYear }} ToC
         <i
           class="pi pi-question-circle entity-details_card_header_info"
           pTooltip="Report results as planned theory of change"
@@ -93,6 +93,8 @@
         }
       </div>
     </div>
+    <!-- P2-3139: hide the "Report Emerging results" (create) pathway for AVISA (SGP-02) — view only. -->
+    @if (!isAvisaEntity()) {
     <div class="entity-details_card">
       <div class="entity-details_card_header">
         Report Emerging results
@@ -145,6 +147,7 @@
         }
       </div>
     </div>
+    }
   </div>
 </div>
 

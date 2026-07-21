@@ -11,6 +11,7 @@ import { buildInitiativeEntityMapPayload } from '../initiative_entity_map/initia
 import { In } from 'typeorm';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { throwServiceError } from '../../shared/utils/service-error.util';
 
 @Injectable()
 export class IpsrService {
@@ -162,9 +163,7 @@ export class IpsrService {
       const toNumberArray = (val: any): number[] | undefined => {
         if (val === undefined || val === null || val === '') return undefined;
         const asArray = Array.isArray(val) ? val : String(val).split(',');
-        const nums = asArray
-          .map((v) => Number(v))
-          .filter((n) => Number.isFinite(n));
+        const nums = asArray.map(Number).filter((n) => Number.isFinite(n));
         return nums.length ? nums : undefined;
       };
 
@@ -189,7 +188,7 @@ export class IpsrService {
       const repoRes =
         await this._ipsrRespository.getAllInnovationPackagesFiltered(
           filters,
-          limit !== undefined ? { limit, offset: offset ?? 0 } : undefined,
+          limit == null ? undefined : { limit, offset: offset ?? 0 },
         );
 
       let result: any[] = repoRes.results ?? [];
@@ -229,17 +228,14 @@ export class IpsrService {
       });
 
       if (!result.length) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throwServiceError('Results Not Found', HttpStatus.NOT_FOUND);
       }
 
       return {
         response:
-          limit !== undefined
-            ? {
+          limit == null
+            ? result
+            : {
                 items: result,
                 meta: {
                   total,
@@ -247,8 +243,7 @@ export class IpsrService {
                   limit,
                   totalPages: Math.max(1, Math.ceil(total / limit)),
                 },
-              }
-            : result,
+              },
         message: 'Successful response',
         status: HttpStatus.OK,
       };

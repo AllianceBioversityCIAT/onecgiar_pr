@@ -248,7 +248,9 @@ export class EntityAowService {
   }
 
   getW3BilateralProjects() {
-    this.api.resultsSE.GET_W3BilateralProjects(this.currentResultToReport()?.toc_result_id).subscribe(response => {
+    // P2-3001: full list of the Science Program's bilaterals (entityId = SP official code, e.g. SP01),
+    // bypassing the indicator-level filter.
+    this.api.resultsSE.GET_W3BilateralProjectsByProgram(this.entityId()).subscribe(response => {
       this.w3BilateralProjects.set(response?.response ?? []);
     });
   }

@@ -26,6 +26,8 @@ interface TocResultRow {
   result_type_id?: number | null;
   result_type_name?: string | null;
   result_level_id?: number | null;
+  center_id?: number | null;
+  center_acronym?: string | null;
 }
 
 export interface TocResultResponse {
@@ -34,6 +36,8 @@ export interface TocResultResponse {
   result_title: string;
   related_node_id: string | null;
   result_level_id?: number | null;
+  /** P2-3114: Clarisa initiative ids from toc_result_synergy_programs (same contract as C&P toc v2). */
+  contributing_synergy_program_initiative_ids?: number[];
   indicators: Array<{
     indicator_id: number;
     indicator_description: string | null;
@@ -52,6 +56,22 @@ export interface TocResultResponse {
     result_type_id?: number | null;
     result_type_name?: string | null;
     result_level_id?: number | null;
+    /** Center for this disaggregated indicator row (toc_result_indicator_target_center → clarisa_institutions). */
+    center_id?: number | null;
+    center_acronym?: string | null;
+    targets_by_center?: {
+      targets: Array<{
+        toc_indicator_target_id: number;
+        year: number;
+        target_value: number;
+        number_target: string;
+      }>;
+      centers: Array<{
+        center_id: number;
+        center_acronym: string;
+        center_name: string;
+      }>;
+    };
   }>;
 }
 
@@ -281,7 +301,11 @@ export class AoWBilateralRepository {
     try {
       const [rows, contributions] = await Promise.all([
         this.dataSource.query(query, params) as Promise<TocResultRow[]>,
-        this.getIndicatorContributions(program, context),
+        this.getIndicatorContributions(program, context, {
+          isCumulative: true,
+          fromYear: 2025,
+          toYear: 2030,
+        }),
       ]);
 
       const enhancedRows = rows.map((row) => ({
@@ -332,6 +356,8 @@ export class AoWBilateralRepository {
         trit.number_target,
         trit.target_date,
         trit.target_value,
+        tritc.center_id AS center_id,
+        ci.acronym AS center_acronym,
         CASE
           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
@@ -379,6 +405,10 @@ export class AoWBilateralRepository {
       LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
         AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
         AND trit.target_date = ?
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target_center tritc
+        ON trit.toc_indicator_target_id = tritc.toc_indicator_target_id
+      LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci
+        ON tritc.center_id = ci.id
     `;
     params.push(options.context.reportingYear);
 
@@ -408,8 +438,10 @@ export class AoWBilateralRepository {
         tri.location,
         trit.number_target,
         trit.target_date,
-        trit.target_value
-      ORDER BY tr.id ASC, tri.id ASC
+        trit.target_value,
+        tritc.center_id,
+        ci.acronym
+      ORDER BY tr.id ASC, tri.id ASC, ci.acronym ASC
     `;
 
     return { query, params };
@@ -449,6 +481,8 @@ export class AoWBilateralRepository {
           result_level_id: row.result_level_id ?? null,
           result_type_id: row.result_type_id ?? null,
           result_type_name: row.result_type_name ?? null,
+          center_id: row.center_id ?? null,
+          center_acronym: row.center_acronym ?? null,
         };
 
         grouped.get(row.toc_result_id)?.indicators.push(indicator);
@@ -556,9 +590,32 @@ export class AoWBilateralRepository {
   async getIndicatorContributions(
     program: string,
     contextOrYear?: ReportingTocContext | number,
+    options?: { isCumulative?: boolean; fromYear?: number; toYear?: number },
   ) {
     const context = await this.resolveContext(contextOrYear);
-    const params: (string | number)[] = [];
+    const isCumulative = !!options?.isCumulative;
+    const fromYear = options?.fromYear ?? 2025;
+    const toYear = options?.toYear ?? 2030;
+
+    const tgtParams = isCumulative
+      ? [fromYear, toYear, context.reportingYear, program, context.phaseUuid]
+      : [
+          context.reportingYear,
+          context.reportingYear,
+          program,
+          context.phaseUuid,
+        ];
+
+    const actParams = isCumulative
+      ? [fromYear, toYear, program]
+      : [
+          context.reportingYear,
+          context.reportingYear,
+          program,
+          context.phaseUuid,
+        ];
+
+    const params: (string | number)[] = [...tgtParams, ...actParams];
 
     const query = `
       SELECT
@@ -577,7 +634,7 @@ export class AoWBilateralRepository {
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
         JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
           AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
-          AND trit.target_date = ?
+          AND ${isCumulative ? 'trit.target_date BETWEEN ? AND ?' : 'trit.target_date = ?'}
         LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
           AND wp.year = ?
         WHERE
@@ -591,7 +648,7 @@ export class AoWBilateralRepository {
       ) AS tgt
       LEFT JOIN (
         SELECT
-          tri.id AS indicator_id,
+          tri.toc_result_indicator_id,
           COALESCE(SUM(CAST(rit.contributing_indicator AS DECIMAL(15,2))), 0) AS actual_achieved_value_sum
         FROM ${env.DB_NAME}.result r
         LEFT JOIN ${env.DB_NAME}.results_toc_result rtr ON rtr.results_id = r.id
@@ -602,13 +659,12 @@ export class AoWBilateralRepository {
         LEFT JOIN ${env.DB_NAME}.result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
           AND rit.is_active = 1
           AND rit.contributing_indicator IS NOT NULL
-          AND rit.target_date = ?
+          AND ${isCumulative ? 'rit.target_date BETWEEN ? AND ?' : 'rit.target_date = ?'}
         JOIN ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
           AND tri.is_active = 1
           AND CONVERT(rtri.toc_results_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
-        LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
-          AND wp.year = ?
+        ${isCumulative ? '' : `LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id AND wp.year = ?`}
         WHERE
           tr.official_code = ?
           AND r.is_active = 1
@@ -616,21 +672,11 @@ export class AoWBilateralRepository {
           AND r.status_id IN (2, 6)
           AND r.result_level_id IN (3, 4)
           AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
-          AND tr.phase = ?
+          ${isCumulative ? '' : 'AND tr.phase = ?'}
         GROUP BY
-          tri.id
-      ) AS act ON act.indicator_id = tgt.indicator_id
+          tri.toc_result_indicator_id
+      ) AS act ON act.toc_result_indicator_id = tgt.toc_result_indicator_id
     `;
-    params.push(
-      context.reportingYear,
-      context.reportingYear,
-      program,
-      context.phaseUuid,
-      context.reportingYear,
-      context.reportingYear,
-      program,
-      context.phaseUuid,
-    );
 
     try {
       const rows = await this.dataSource.query(query, params);
@@ -684,6 +730,45 @@ export class AoWBilateralRepository {
 
     try {
       return await this.dataSource.query(query, [tocResultId, phaseUuid]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  async findBilateralProjectsByProgramOfficialCode(
+    programOfficialCode: string,
+    phaseUuid: string,
+  ) {
+    const query = `
+      SELECT
+        tr.id AS toc_result_id,
+        tr.official_code AS official_code,
+        trp.project_id AS project_id,
+        trp.name AS project_name,
+        trp.project_summary AS project_summary,
+        cp.organization_code AS organization_code,
+        ci.id AS organization_id,
+        ci.name AS organization_name,
+        ci.acronym AS organization_acronym,
+        ci.website_link AS organization_website_link
+      FROM ${env.DB_TOC}.toc_results tr
+      JOIN ${env.DB_TOC}.toc_result_projects trp ON trp.toc_result_id_toc = tr.related_node_id
+      LEFT JOIN ${env.DB_NAME}.clarisa_projects cp ON cp.id = trp.project_id
+      LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci ON ci.id = cp.organization_code
+      WHERE UPPER(TRIM(tr.official_code)) = UPPER(TRIM(?))
+        AND tr.phase = ?
+      ORDER BY trp.name ASC, tr.id ASC
+    `;
+
+    try {
+      return await this.dataSource.query(query, [
+        programOfficialCode,
+        phaseUuid,
+      ]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,

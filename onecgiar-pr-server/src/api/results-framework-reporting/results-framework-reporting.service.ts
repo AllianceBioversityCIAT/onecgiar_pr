@@ -17,6 +17,8 @@ import { CreateResultFromFrameworkHandler } from './application/commands/create-
 import { GetExistingResultContributorsToIndicatorsQuery } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.query';
 import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
 import { throwServiceError } from '../../shared/utils/service-error.util';
+import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
+import type { TocResultResponse } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -31,6 +33,7 @@ export class ResultsFrameworkReportingService {
     private readonly _handlersError: HandlersError,
     private readonly _reportingTocContextService: ReportingTocContextService,
     private readonly _tocResultsRepository: AoWBilateralRepository,
+    private readonly _tocCatalogRepository: TocResultsRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _createResultFromFrameworkHandler: CreateResultFromFrameworkHandler,
     private readonly _getExistingResultContributorsToIndicatorsHandler: GetExistingResultContributorsToIndicatorsHandler,
@@ -328,8 +331,10 @@ export class ResultsFrameworkReportingService {
           };
         });
 
-        indicator.targets_by_center = centersMap.size
-          ? { targets, centers: Array.from(centersMap.values()) }
+        const centers = Array.from(centersMap.values());
+
+        indicator.targets_by_center = centers.length
+          ? { targets, centers }
           : {};
       };
 
@@ -355,6 +360,11 @@ export class ResultsFrameworkReportingService {
         enrichTocResultsWithTargets(tocResultsOutcomes),
         enrichTocResultsWithTargets(tocResultsOutputs),
       ]);
+
+      await this.enrichTocResultsWithSynergyPrograms(
+        [tocResultsOutcomes, tocResultsOutputs],
+        tocContext.phaseUuid,
+      );
 
       return {
         response: {
@@ -402,6 +412,11 @@ export class ResultsFrameworkReportingService {
           HttpStatus.NOT_FOUND,
         );
       }
+
+      await this.enrichTocResultsWithSynergyPrograms(
+        [toc2030Outcomes],
+        tocContext.phaseUuid,
+      );
 
       return {
         response: {
@@ -573,6 +588,59 @@ export class ResultsFrameworkReportingService {
           resolvedTocResultId,
           tocContext.phaseUuid,
         );
+
+      return {
+        response: bilateralProjects,
+        message: 'Bilateral projects retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getBilateralProjectsByScienceProgram(programId?: string) {
+    try {
+      const normalizedProgramId = programId?.trim().toUpperCase();
+
+      if (!normalizedProgramId) {
+        throwServiceError(
+          'A valid programId query parameter is required.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const initiative = await this._clarisaInitiativesRepository.findOne({
+        where: { official_code: normalizedProgramId, active: true },
+        select: ['id', 'official_code'],
+      });
+
+      if (!initiative) {
+        throwServiceError(
+          'No initiative was found with the provided program identifier.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const tocContext = await this._reportingTocContextService.resolve();
+      const rows =
+        await this._tocResultsRepository.findBilateralProjectsByProgramOfficialCode(
+          initiative.official_code.toUpperCase(),
+          tocContext.phaseUuid,
+        );
+
+      const seenProjectIds = new Set<number>();
+      const bilateralProjects = (rows ?? []).filter((row) => {
+        const projectId = Number(row?.project_id);
+        if (!Number.isFinite(projectId) || projectId <= 0) {
+          return false;
+        }
+        if (seenProjectIds.has(projectId)) {
+          return false;
+        }
+        seenProjectIds.add(projectId);
+        return true;
+      });
 
       return {
         response: bilateralProjects,
@@ -868,6 +936,72 @@ export class ResultsFrameworkReportingService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * P2-3114: attach contributing_synergy_program_initiative_ids to AoW toc-results nodes.
+   */
+  private async enrichTocResultsWithSynergyPrograms(
+    tocResultsLists: TocResultResponse[][],
+    phaseUuid: string,
+  ): Promise<void> {
+    const tocResultIds = Array.from(
+      new Set(
+        tocResultsLists
+          .flat()
+          .map((node) => Number(node?.toc_result_id))
+          .filter((id) => Number.isFinite(id) && id > 0),
+      ),
+    );
+
+    const synergyMap = tocResultIds.length
+      ? this.groupSynergyProgramsByResultId(
+          await this._tocCatalogRepository.getTocSynergyProgramsByResultIds(
+            tocResultIds,
+            phaseUuid,
+          ),
+        )
+      : new Map<number, number[]>();
+
+    for (const list of tocResultsLists) {
+      this.attachSynergyProgramIds(list, synergyMap);
+    }
+  }
+
+  private groupSynergyProgramsByResultId(
+    rows: Array<{ toc_result_id: number; initiative_id: number }>,
+  ): Map<number, number[]> {
+    const map = new Map<number, number[]>();
+
+    for (const row of rows ?? []) {
+      const tocId = Number(row?.toc_result_id);
+      const initiativeId = Number(row?.initiative_id);
+      if (!Number.isFinite(tocId) || !Number.isFinite(initiativeId)) {
+        continue;
+      }
+
+      const current = map.get(tocId) ?? [];
+      if (!current.includes(initiativeId)) {
+        current.push(initiativeId);
+      }
+      map.set(tocId, current);
+    }
+
+    return map;
+  }
+
+  private attachSynergyProgramIds(
+    tocResultsList: TocResultResponse[],
+    synergyMap: Map<number, number[]>,
+  ): void {
+    for (const tocResult of tocResultsList ?? []) {
+      const tocId = Number(tocResult?.toc_result_id);
+      tocResult.contributing_synergy_program_initiative_ids = Number.isFinite(
+        tocId,
+      )
+        ? (synergyMap.get(tocId) ?? [])
+        : [];
     }
   }
 }

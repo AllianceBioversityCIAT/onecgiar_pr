@@ -69,7 +69,8 @@ export class AowHloTableComponent {
           indicators: (item.indicators || []).filter(
             (indicator: any) =>
               (indicator.indicator_description || '').toUpperCase().includes(search) ||
-              (indicator.type_name || '').toUpperCase().includes(search)
+              (indicator.type_name || '').toUpperCase().includes(search) ||
+              (indicator.center_acronym || '').toUpperCase().includes(search)
           )
         };
       })
@@ -85,11 +86,16 @@ export class AowHloTableComponent {
   });
 
   // P2-3053: agreed nomenclature + dynamic phase year ("<year> target") instead of hardcoded "2025".
+  // P2-3133: the 2030 Outcomes view shows a cumulative "2030 target"; "Achieved value" replaces "Achieved target" globally.
   columnOrder = computed<ColumnOrder[]>(() => [
     { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
     { title: 'Indicator typology', attr: 'type_name', width: '10%' },
-    { title: `${this.entityAowService.reportingPhaseYear} target`.trim(), attr: 'target_value_sum', width: '10%' },
-    { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
+    {
+      title: this.tableType === '2030-outcomes' ? '2030 target' : `${this.entityAowService.reportingPhaseYear} target`.trim(),
+      attr: 'target_value_sum',
+      width: '10%'
+    },
+    { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
     { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
 
@@ -112,11 +118,15 @@ export class AowHloTableComponent {
     return 'Not started';
   }
 
-  openReportResultModal(item: any, currentItemId: string | null) {
+  openReportResultModal(item: any, currentItemId: string | null, centerId?: number | null) {
     const selectedCurrentItem = currentItemId
       ? {
           ...item,
-          indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+          indicators: item.indicators.filter(
+            (indicator: any) =>
+              indicator.indicator_id === currentItemId &&
+              (centerId == null || indicator.center_id === centerId)
+          )
         }
       : {
           ...item,
@@ -127,10 +137,14 @@ export class AowHloTableComponent {
     this.entityAowService.currentResultToReport.set(selectedCurrentItem);
   }
 
-  openViewResultDrawer(item: any, currentItemId: string) {
+  openViewResultDrawer(item: any, currentItemId: string, centerId?: number | null) {
     const selectedCurrentItem = {
       ...item,
-      indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+      indicators: item.indicators.filter(
+        (indicator: any) =>
+          indicator.indicator_id === currentItemId &&
+          (centerId == null || indicator.center_id === centerId)
+      )
     };
 
     this.entityAowService.existingResultsContributors.set([]);
@@ -138,18 +152,25 @@ export class AowHloTableComponent {
     this.entityAowService.currentResultToView.set(selectedCurrentItem);
   }
 
-  openTargetDetailsDrawer(item: any, currentItemId: string) {
+  openTargetDetailsDrawer(item: any, currentItemId: string, centerId?: number | null) {
     const selectedCurrentItem = {
       ...item,
-      indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+      indicators: item.indicators.filter(
+        (indicator: any) =>
+          indicator.indicator_id === currentItemId &&
+          (centerId == null || indicator.center_id === centerId)
+      )
     };
 
     this.entityAowService.showTargetDetailsDrawer.set(true);
     this.entityAowService.currentTargetToView.set(selectedCurrentItem);
   }
 
-  hasTargets(item: any, indicatorId: string): boolean {
-    const indicator = item.indicators?.find((ind: any) => ind.indicator_id === indicatorId);
+  hasTargets(item: any, indicatorId: string, centerId?: number | null): boolean {
+    const indicator = item.indicators?.find(
+      (ind: any) =>
+        ind.indicator_id === indicatorId && (centerId == null || ind.center_id === centerId)
+    );
     return indicator?.targets_by_center?.centers?.length > 0;
   }
 }
