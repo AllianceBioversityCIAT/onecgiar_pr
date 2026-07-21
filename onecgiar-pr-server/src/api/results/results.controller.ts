@@ -311,6 +311,38 @@ export class ResultsController {
     );
   }
 
+  @Get('check-title-uniqueness')
+  @ApiOperation({
+    summary: 'Check result title uniqueness',
+    description:
+      'Validates whether an exact trimmed title is free among active results in the current reporting phase (MySQL). Optional excludeResultId ignores the current result when editing.',
+  })
+  @ApiQuery({ name: 'title', type: String, required: true })
+  @ApiQuery({
+    name: 'excludeResultId',
+    type: Number,
+    required: false,
+    description: 'Result id to exclude (e.g. when updating an existing result)',
+  })
+  @ApiOkResponse({
+    description:
+      'Uniqueness check completed. response.isUnique is true when no conflicting active result exists.',
+  })
+  checkTitleUniqueness(
+    @Query('title') title: string,
+    @Query('excludeResultId') excludeResultId?: string,
+  ) {
+    const parsedExclude =
+      excludeResultId !== undefined && excludeResultId !== null
+        ? Number(excludeResultId)
+        : undefined;
+    const normalizedExclude =
+      typeof parsedExclude === 'number' && Number.isFinite(parsedExclude)
+        ? parsedExclude
+        : undefined;
+    return this.resultsService.checkTitleUniqueness(title, normalizedExclude);
+  }
+
   @Get('get/depth-search/:title')
   @ApiOperation({
     summary: 'Perform deep result search',
