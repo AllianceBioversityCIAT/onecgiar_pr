@@ -1,0 +1,308 @@
+// The wizard's own face. Scoped to this surface only — the rest of PRMS stays
+// on Poppins. Bricolage Grotesque carries the display weights the flow needs.
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,800&display=swap');
+
+// ---------------------------------------------------------------------------
+// Calm, light, professional. Depth comes from restraint: hairline borders, one
+// soft shadow on hover, generous whitespace. No 3D lips, no toy affordances.
+// ---------------------------------------------------------------------------
+:host {
+  display: contents;
+
+  --gc-bg: #fbfbfd;
+  --gc-surface: #ffffff;
+  --gc-ink: #1f2033;
+  --gc-muted: #74748c;
+  --gc-line: rgba(31, 32, 51, 0.09);
+
+  --gc-brand: #6b6dc4;
+  --gc-brand-ink: #4a4c9c;
+
+  // easeOutCubic everywhere — one curve, no bounce.
+  --gc-ease: cubic-bezier(0.215, 0.61, 0.355, 1);
+
+  font-family: 'Bricolage Grotesque', 'Poppins', system-ui, sans-serif;
+  font-optical-sizing: auto;
+}
+
+:host button:not(:disabled) {
+  cursor: pointer;
+}
+
+// ---------------------------------------------------------------------------
+// Selectable row. Hairline by default; on hover the accent takes over the border
+// and a single soft shadow lifts it. Selected keeps the accent border, no shadow.
+// ---------------------------------------------------------------------------
+.gc-option {
+  border: 1px solid var(--gc-line);
+  border-radius: 14px;
+  background: var(--gc-surface);
+  transition:
+    border-color 180ms var(--gc-ease),
+    box-shadow 180ms var(--gc-ease),
+    transform 180ms var(--gc-ease);
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--gc-accent, var(--gc-brand)) 45%, transparent);
+    box-shadow: 0 6px 20px rgba(31, 32, 51, 0.07);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.996);
+    box-shadow: none;
+  }
+
+  &.is-selected {
+    border-color: var(--gc-accent, var(--gc-brand));
+  }
+}
+
+// Primary action: solid brand, one shadow tinted with the brand itself.
+.gc-cta {
+  border-radius: 14px;
+  background: var(--gc-brand);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(107, 109, 196, 0.32);
+  transition:
+    background-color 180ms var(--gc-ease),
+    box-shadow 180ms var(--gc-ease),
+    transform 180ms var(--gc-ease);
+
+  &:hover {
+    background: var(--gc-brand-ink);
+    box-shadow: 0 10px 26px rgba(107, 109, 196, 0.4);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.995);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step transition: fade + a short directional slide. 280ms, easeOutCubic.
+// ---------------------------------------------------------------------------
+.gc-step--enter {
+  animation: gc-step-in 280ms var(--gc-ease);
+}
+
+.gc-step--leave {
+  animation: gc-step-out 220ms var(--gc-ease) forwards;
+}
+
+@keyframes gc-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--gc-dir, 1) * 18px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes gc-step-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(calc(var(--gc-dir, 1) * -18px));
+  }
+}
+
+// Content settles in a short cascade behind the step transition.
+.gc-step--enter .gc-rise {
+  animation: gc-rise 420ms var(--gc-ease) backwards;
+  animation-delay: calc(80ms + var(--i, 0) * 55ms);
+}
+
+@keyframes gc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gc-step--enter,
+  .gc-step--leave,
+  .gc-step--enter .gc-rise {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+
+  .gc-option,
+  .gc-cta {
+    transition-duration: 1ms;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Per-item entrance. Used with animate.enter so rows also cascade when a group
+// is expanded, not only when the screen first mounts. Capped at 12 items so a
+// long list never makes the user wait for the tail.
+// ---------------------------------------------------------------------------
+.gc-item--enter {
+  animation: gc-item-in 380ms var(--gc-ease) backwards;
+  animation-delay: calc(min(var(--i, 0), 12) * 45ms);
+}
+
+@keyframes gc-item-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-10px, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Main pane yields 35% to the confirmation panel.
+.gc-main--split {
+  flex-grow: 0;
+  flex-basis: 65%;
+}
+
+// Confirmation panel slides in from the right edge.
+.gc-panel--enter {
+  animation: gc-panel-in 420ms var(--gc-ease);
+}
+
+.gc-panel--leave {
+  animation: gc-panel-out 260ms var(--gc-ease) forwards;
+}
+
+@keyframes gc-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes gc-panel-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+// Compact row used inside the three-column explorer.
+.gc-row {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition:
+    background-color 150ms var(--gc-ease),
+    border-color 150ms var(--gc-ease);
+
+  &:hover {
+    background: #00000006;
+  }
+
+  &.is-active {
+    background: #6b6dc414;
+    border-color: #6b6dc44d;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gc-item--enter,
+  .gc-panel--enter,
+  .gc-panel--leave {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+
+  .gc-main {
+    transition-duration: 1ms;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Compacting rails. Once an answer is picked its column collapses to the codes
+// so the "where to report" list gets the space; hovering the rail widens it and
+// fades the names back in. Width is the only animated box property and the rail
+// is a fixed-size flex item, so nothing else on the row reflows.
+// ---------------------------------------------------------------------------
+.gc-rail {
+  width: 104px;
+  transition: width 260ms var(--gc-ease);
+
+  &:hover,
+  &:focus-within {
+    width: 268px;
+  }
+
+  .gc-pill__name {
+    opacity: 0;
+    transition: opacity 180ms var(--gc-ease);
+  }
+
+  &:hover .gc-pill__name,
+  &:focus-within .gc-pill__name {
+    opacity: 1;
+  }
+}
+
+// A rail item. The active one is ringed in the program's own colour.
+.gc-pill {
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  transition:
+    background-color 150ms var(--gc-ease),
+    border-color 150ms var(--gc-ease);
+
+  &:hover {
+    background: #00000006;
+  }
+
+  &.is-active {
+    border-color: var(--gc-accent, var(--gc-brand));
+    background: color-mix(in srgb, var(--gc-accent, var(--gc-brand)) 9%, transparent);
+  }
+}
+
+// Panel content swap: re-runs whenever the selected option changes, so the user
+// sees the explanation replace itself instead of silently mutating.
+.gc-swap {
+  animation: gc-swap-in 260ms var(--gc-ease);
+}
+
+@keyframes gc-swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gc-rail,
+  .gc-rail .gc-pill__name,
+  .gc-pill {
+    transition-duration: 1ms;
+  }
+
+  .gc-swap {
+    animation-duration: 1ms;
+  }
+}

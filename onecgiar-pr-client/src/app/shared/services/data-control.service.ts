@@ -41,10 +41,11 @@ export class DataControlService {
   currentNotification = null;
   currentResultSectionName = signal('');
   /**
-   * Focus mode: a surface has asked the shell to shed chrome and give the page
-   * every pixel it can (today: the AOW detail view in the reporting dashboard).
-   * While true the header hides the platform wordmark, keeping only the logo.
-   * Surfaces that set it MUST reset it on destroy.
+   * Focus mode: a surface has asked the shell to shed its chrome and give the page
+   * the whole viewport — the header/navigation bar is not rendered at all. Used by
+   * the AOW detail view and the guided creation flow, both of which provide their
+   * own way back. Surfaces that set it MUST reset it on destroy, or the user is
+   * left with no navigation.
    */
   readonly focusMode = signal(false);
   /**

@@ -12,6 +12,14 @@
   --float-gap: 10px; // inset of the floating card on the dashboard
 }
 
+// Browsers default <button> to `cursor: default` and Tailwind's preflight does not
+// override it, so every clickable in this page looked inert. Fix once, at the host,
+// instead of sprinkling `cursor-pointer` on 20 elements.
+:host button:not(:disabled),
+:host a[routerLink] {
+  cursor: pointer;
+}
+
 @keyframes flyout-in {
   from {
     opacity: 0;

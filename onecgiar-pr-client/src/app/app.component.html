@@ -33,6 +33,9 @@
 </app-pr-dialog>
 
 <app-pr-toast key="globalUserNotification" />
-@if (aiAssistantEnabled && !this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
+<!-- AI assistant launcher — disabled globally on request (2026-07-21). The component
+     and its engine stay wired in app.module; re-enable by restoring this block. -->
+<!-- @if (aiAssistantEnabled && !this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
   <app-ai-assistant-panel />
-}
+} -->
+

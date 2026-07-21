@@ -7,6 +7,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { DataControlService } from '../../../../shared/services/data-control.service';
+import { GuidedCreationComponent } from './components/guided-creation/guided-creation.component';
 
 /** Vibrant, high-contrast palette for the status charts (no pastels). */
 const STATUS_COLOR: Record<number, string> = {
@@ -83,7 +84,7 @@ interface AccentTheme {
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
-  imports: [RouterLink, CustomFieldsModule, DecimalPipe],
+  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -151,12 +152,28 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return !!code && this.loadingSummaryCodes().has(code) && !this.summariesByCode().has(code);
   });
 
+  // ---- Guided creation (full-screen flow) ----
+  readonly guidedOpen = signal(false);
+  readonly guidedPath = signal<'planned' | 'emerging' | null>(null);
+
+  openGuided(path: 'planned' | 'emerging' | null = null): void {
+    this.guidedPath.set(path);
+    this.guidedOpen.set(true);
+  }
+
+  closeGuided(): void {
+    this.guidedOpen.set(false);
+    this.guidedPath.set(null);
+  }
+
   // ---- AOW detail view (indicators) ----
   readonly viewMode = signal<'home' | 'aow'>('home');
   readonly activeAowCode = signal<string | null>(null);
   readonly indicatorTab = signal<'outputs' | 'outcomes'>('outputs');
   readonly typologyFilter = signal<string | null>(null);
   readonly statusFilter = signal<string | null>(null);
+  /** Free-text search across indicator description + typology. */
+  readonly indicatorSearch = signal<string>('');
   /** HLO group titles that are collapsed (default: all expanded). */
   readonly collapsedGroups = signal<Set<string>>(new Set());
 
@@ -213,21 +230,37 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     ...this.statusOptions.map(s => ({ label: s, value: s }))
   ];
 
-  /** HLO groups for the active tab, filtered by typology + status; empty groups dropped. */
+  /** HLO groups for the active tab, filtered by search + typology + status; empty groups dropped. */
   readonly indicatorGroups = computed(() => {
     const groups = this.indicatorTab() === 'outputs' ? this.currentToc().outputs : this.currentToc().outcomes;
     const typ = this.typologyFilter();
     const st = this.statusFilter();
-    if (!typ && !st) return groups;
+    const q = this.indicatorSearch().trim().toLowerCase();
+    if (!typ && !st && !q) return groups;
     return groups
       .map(g => ({
         ...g,
         indicators: (g?.indicators ?? []).filter(
-          (i: any) => (!typ || i?.type_name === typ) && (!st || this.statusLabel(i?.progress_percentage) === st)
+          (i: any) =>
+            (!typ || i?.type_name === typ) &&
+            (!st || this.statusLabel(i?.progress_percentage) === st) &&
+            (!q || `${i?.indicator_description ?? ''} ${i?.type_name ?? ''}`.toLowerCase().includes(q))
         )
       }))
       .filter(g => (g.indicators ?? []).length > 0);
   });
+
+  readonly hasFilters = computed(() => !!(this.typologyFilter() || this.statusFilter() || this.indicatorSearch().trim()));
+
+  /** "Showing X of Y" — X after filters, Y the tab total. */
+  readonly filteredCount = computed(() => this.indicatorGroups().reduce((n, g) => n + (g?.indicators?.length ?? 0), 0));
+  readonly tabTotal = computed(() => (this.indicatorTab() === 'outputs' ? this.indicatorCounts().outputs : this.indicatorCounts().outcomes));
+
+  clearFilters(): void {
+    this.typologyFilter.set(null);
+    this.statusFilter.set(null);
+    this.indicatorSearch.set('');
+  }
 
   constructor() {
     // Load the selected program's Areas of Work + indicator categories on selection change.
@@ -426,8 +459,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   openAow(aowCode: string): void {
     this.activeAowCode.set(aowCode);
     this.viewMode.set('aow');
-    this.typologyFilter.set(null);
-    this.statusFilter.set(null);
+    this.clearFilters();
     this.indicatorTab.set('outputs');
     const sp = this.selected();
     if (sp) this.loadToc(sp.initiativeCode, aowCode);
@@ -508,11 +540,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return n > 0 ? this.accentTheme().solid : 'var(--pr-color-accents-4)';
   }
 
-  /** Split an HLO group title like "2.2.2: Policy engagement…" into code + name. */
+  /**
+   * Split an HLO group title into code + name. The API is not consistent about the
+   * shape, so three forms are handled:
+   *   "HLO4.AOW1.IO1 Foster motivations"        → HLO4.AOW1.IO1 | Foster motivations
+   *   "HLO 3.1 - Targeted innovations…"         → HLO 3.1       | Targeted innovations…
+   *   "2.2.2: Policy engagement…"               → 2.2.2         | Policy engagement…
+   * Anything else keeps the whole string as the name (no invented code).
+   */
   splitGroupTitle(title: string | null | undefined): { code: string | null; name: string } {
     const text = String(title ?? '').trim();
-    const match = /^([\d.]+)\s*[:–-]\s*(.+)$/.exec(text);
-    return match ? { code: match[1], name: match[2] } : { code: null, name: text };
+    const hlo = /^(HLO[^\s]*(?:\s*\d[\d.]*)?)\s*[-–:]?\s+(.+)$/i.exec(text);
+    if (hlo) return { code: hlo[1].trim(), name: hlo[2].trim() };
+    const numeric = /^([\d.]+)\s*[:–-]\s*(.+)$/.exec(text);
+    return numeric ? { code: numeric[1], name: numeric[2] } : { code: null, name: text };
   }
 
   private loadToc(program: string, aow: string): void {

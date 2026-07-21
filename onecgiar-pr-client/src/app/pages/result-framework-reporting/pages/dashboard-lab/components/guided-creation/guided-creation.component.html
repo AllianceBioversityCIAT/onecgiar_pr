@@ -1,0 +1,460 @@
+<!-- Guided creation. Selecting never commits: the confirmation panel takes 35% of
+     the surface and explains the choice before it is applied. -->
+<div
+  class="fixed inset-0 z-[200] flex flex-col bg-[var(--gc-bg)] text-[var(--gc-ink)]"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Guided result creation"
+  (keydown.escape)="pending() ? cancelPending() : close()"
+  tabindex="-1">
+  <!-- ---------- top bar ---------- -->
+  <header class="flex shrink-0 items-center gap-4 border-b border-[var(--gc-line)] bg-white px-6 py-3.5">
+    <button
+      type="button"
+      (click)="back()"
+      [attr.aria-label]="screen() === 'choice' && !pending() ? 'Close guided creation' : 'Back'"
+      class="inline-flex size-9 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-[var(--gc-muted)] transition-colors duration-150 hover:bg-black/[0.04] hover:text-[var(--gc-ink)]">
+      <span class="material-icons-round text-[21px]">{{ screen() === 'choice' && !pending() ? 'close' : 'arrow_back' }}</span>
+    </button>
+
+    <!-- the trail of answers doubles as navigation -->
+    <nav class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 text-[13px]">
+      @for (a of answers(); track a.label; let last = $last) {
+        <button
+          type="button"
+          (click)="goTo(a.screen)"
+          class="max-w-[220px] appearance-none truncate rounded-full border-0 bg-[#6b6dc412] px-3 py-1.5 font-semibold text-[var(--gc-brand)] transition-colors hover:bg-[#6b6dc41f]">
+          {{ a.value }}
+        </button>
+        @if (!last) {
+          <span class="material-icons-round text-[15px] text-[var(--gc-muted)]">chevron_right</span>
+        }
+      }
+    </nav>
+  </header>
+
+  <!-- ---------- body: main pane + confirmation panel ---------- -->
+  <div class="flex min-h-0 flex-1">
+    <!-- main pane shrinks to 65% while a choice waits for confirmation -->
+    <div class="gc-main min-h-0 min-w-0 flex-1 transition-[flex-basis,flex-grow] duration-[420ms] ease-[cubic-bezier(0.215,0.61,0.355,1)] motion-reduce:transition-none" [class.gc-main--split]="!!pending()">
+      <!-- ===== CHOICE ===== -->
+      @if (screen() === 'choice') {
+        <section class="custom_scroll flex h-full overflow-y-auto px-8 py-10" animate.enter="gc-step--enter">
+          <div class="m-auto w-full max-w-[1000px]">
+            <h2 class="gc-rise m-0 text-[56px] font-extrabold leading-[1.02] tracking-[-0.03em] [text-wrap:balance] max-[900px]:text-[38px]" style="--i: 0">
+              What are you <span class="text-[var(--gc-brand)]">reporting?</span>
+            </h2>
+            <p class="gc-rise m-0 mt-4 max-w-[52ch] text-[18px] leading-[1.55] text-[var(--gc-muted)]" style="--i: 1">
+              Pick the group that matches what actually happened.
+            </p>
+
+            <div class="mt-10 grid grid-cols-2 gap-5 max-[900px]:grid-cols-1">
+              <button
+                type="button"
+                (click)="selectPath('planned')"
+                class="gc-option gc-rise flex appearance-none flex-col items-start gap-4 p-7 text-left"
+                [class.is-selected]="path() === 'planned'"
+                style="--i: 2; --gc-accent: #6b6dc4">
+                <span class="inline-flex size-14 items-center justify-center rounded-2xl bg-[#6b6dc41f]">
+                  <span class="material-icons-round text-[28px] text-[#6b6dc4]">flag</span>
+                </span>
+                <span class="text-[24px] font-extrabold leading-tight tracking-[-0.015em]">Planned in the Theory of Change</span>
+                <span class="text-[16px] leading-[1.55] text-[var(--gc-muted)]">It contributes to an indicator your program already committed to.</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="selectPath('emerging')"
+                class="gc-option gc-rise flex appearance-none flex-col items-start gap-4 p-7 text-left"
+                [class.is-selected]="path() === 'emerging'"
+                style="--i: 3; --gc-accent: #bf4b26">
+                <span class="inline-flex size-14 items-center justify-center rounded-2xl bg-[#bf4b261f]">
+                  <span class="material-icons-round text-[28px] text-[#bf4b26]">bolt</span>
+                </span>
+                <span class="text-[24px] font-extrabold leading-tight tracking-[-0.015em]">Emerging</span>
+                <span class="text-[16px] leading-[1.55] text-[var(--gc-muted)]">Nobody planned it, and it still counts.</span>
+              </button>
+            </div>
+
+            <p class="gc-rise m-0 mt-6 text-[15px] leading-[1.5] text-[var(--gc-muted)]" style="--i: 4">
+              If you can name the indicator this result contributes to, it is
+              <b class="font-semibold text-[var(--gc-ink)]">Planned</b>. If you cannot, it is
+              <b class="font-semibold text-[var(--gc-ink)]">Emerging</b>.
+            </p>
+          </div>
+        </section>
+      }
+
+      <!-- ===== PROGRAM (emerging path) ===== -->
+      @if (screen() === 'program') {
+        <section class="custom_scroll flex h-full overflow-y-auto px-8 py-10" animate.enter="gc-step--enter">
+          <div class="m-auto w-full max-w-[720px]">
+            <h2 class="gc-rise m-0 text-[56px] font-extrabold leading-[1.02] tracking-[-0.03em] [text-wrap:balance] max-[900px]:text-[38px]" style="--i: 0">
+              Which Science <span class="text-[var(--gc-brand)]">Program?</span>
+            </h2>
+            <p class="gc-rise m-0 mt-4 text-[18px] leading-[1.55] text-[var(--gc-muted)]" style="--i: 1">The result will be reported under this program.</p>
+
+            <div class="mt-9 flex flex-col gap-6">
+              @for (group of programGroups(); track group.label; let gi = $index) {
+                <div class="gc-rise" [style.--i]="gi + 2">
+                  <button
+                    type="button"
+                    (click)="toggleGroup(group.label)"
+                    [attr.aria-expanded]="!isGroupCollapsed(group.label)"
+                    class="mb-2.5 flex w-full appearance-none items-center gap-1.5 border-0 bg-transparent p-0 text-left">
+                    <span class="material-icons-round text-[19px] text-[var(--gc-muted)] transition-transform duration-200" [class.-rotate-90]="isGroupCollapsed(group.label)">
+                      expand_more
+                    </span>
+                    <span class="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--gc-muted)]">{{ group.label }}</span>
+                    <span class="rounded-full bg-[var(--gc-line)] px-2 py-px text-[12px] font-bold tabular-nums text-[var(--gc-muted)]">{{ group.items.length }}</span>
+                  </button>
+                  @if (!isGroupCollapsed(group.label)) {
+                    <div class="flex flex-col gap-2">
+                      @for (sp of group.items; track sp.initiativeId; let i = $index) {
+                        <button
+                          type="button"
+                          (click)="selectProgram(sp)"
+                          animate.enter="gc-item--enter"
+                          [style.--i]="i"
+                          class="gc-option flex w-full appearance-none items-center gap-4 px-4 py-3.5 text-left"
+                          [class.is-selected]="program()?.initiativeId === sp.initiativeId">
+                          <img class="size-10 shrink-0 rounded-xl object-cover" [src]="iconSrc(sp)" alt="" width="40" height="40" />
+                          <span class="w-[78px] shrink-0 text-[16px] font-bold tracking-[-0.01em]">{{ sp.initiativeCode }}</span>
+                          <span class="min-w-0 flex-1 truncate text-[15.5px] text-[var(--gc-muted)]">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                          <span class="material-icons-round shrink-0 text-[21px] text-[var(--gc-muted)]">chevron_right</span>
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- ===== BROWSE (planned path): the columns compact as the answer narrows ===== -->
+      @if (screen() === 'browse') {
+        <section class="flex h-full min-h-0 flex-col px-8 pb-8 pt-8" animate.enter="gc-step--enter">
+          @if (!program()) {
+            <!-- nothing chosen yet: one calm centred column, not a three-way grid -->
+            <div class="m-auto w-full max-w-[560px]">
+              <h2 class="gc-rise m-0 text-[48px] font-extrabold leading-[1.04] tracking-[-0.03em] max-[900px]:text-[34px]" style="--i: 0">
+                Which Science <span class="text-[var(--gc-brand)]">Program?</span>
+              </h2>
+              <p class="gc-rise m-0 mt-4 text-[17px] leading-[1.55] text-[var(--gc-muted)]" style="--i: 1">Start with the program that owns the work.</p>
+
+              <div class="custom_scroll mt-8 flex max-h-[46vh] flex-col gap-5 overflow-y-auto pr-1">
+                @for (group of programGroups(); track group.label; let gi = $index) {
+                  <div class="gc-rise" [style.--i]="gi + 2">
+                    <button
+                      type="button"
+                      (click)="toggleGroup(group.label)"
+                      [attr.aria-expanded]="!isGroupCollapsed(group.label)"
+                      class="mb-2 flex w-full appearance-none items-center gap-1.5 border-0 bg-transparent p-0 text-left">
+                      <span class="material-icons-round text-[18px] text-[var(--gc-muted)] transition-transform duration-200" [class.-rotate-90]="isGroupCollapsed(group.label)">
+                        expand_more
+                      </span>
+                      <span class="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--gc-muted)]">{{ group.label }}</span>
+                      <span class="rounded-full bg-[var(--gc-line)] px-2 py-px text-[11.5px] font-bold tabular-nums text-[var(--gc-muted)]">{{ group.items.length }}</span>
+                    </button>
+                    @if (!isGroupCollapsed(group.label)) {
+                      <div class="flex flex-col gap-2">
+                        @for (sp of group.items; track sp.initiativeId; let i = $index) {
+                          <button
+                            type="button"
+                            (click)="browseProgram(sp)"
+                            animate.enter="gc-item--enter"
+                            [style.--i]="i"
+                            class="gc-option flex w-full appearance-none items-center gap-4 px-4 py-3.5 text-left">
+                            <img class="size-10 shrink-0 rounded-xl object-cover" [src]="iconSrc(sp)" alt="" width="40" height="40" />
+                            <span class="w-[76px] shrink-0 text-[16px] font-bold tracking-[-0.01em]">{{ sp.initiativeCode }}</span>
+                            <span class="min-w-0 flex-1 truncate text-[15px] text-[var(--gc-muted)]">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                            <span class="material-icons-round shrink-0 text-[20px] text-[var(--gc-muted)]">chevron_right</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="shrink-0">
+              <h2 class="m-0 text-[34px] font-extrabold leading-[1.06] tracking-[-0.03em] max-[900px]:text-[26px]">
+                Where does it <span class="text-[var(--gc-brand)]">belong?</span>
+              </h2>
+              <p class="m-0 mt-2 text-[15.5px] leading-[1.5] text-[var(--gc-muted)]">Hover a rail to see the full names. Pick the indicator this result contributes to.</p>
+            </div>
+
+            <div class="mt-6 flex min-h-0 flex-1 gap-4">
+              <!-- rail 1 — programs. Compacted to codes; hovering the rail reveals names. -->
+              <div class="gc-rail flex min-h-0 shrink-0 flex-col">
+                <p class="gc-rail__label m-0 mb-2 shrink-0 text-[11px] font-semibold uppercase tracking-[0.07em] text-[var(--gc-muted)]">Program</p>
+                <div class="custom_scroll flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden pr-1">
+                  @for (group of programGroups(); track group.label) {
+                    @for (sp of group.items; track sp.initiativeId) {
+                      <button
+                        type="button"
+                        (click)="browseProgram(sp)"
+                        [attr.aria-label]="sp.initiativeCode + ' ' + (sp.initiativeShortName || sp.initiativeName)"
+                        class="gc-pill flex w-full appearance-none items-center gap-2.5 px-2 py-1.5 text-left"
+                        [class.is-active]="program()?.initiativeId === sp.initiativeId"
+                        [style.--gc-accent]="accentFor(sp)">
+                        <img class="size-8 shrink-0 rounded-lg object-cover" [src]="iconSrc(sp)" alt="" width="32" height="32" />
+                        <span class="shrink-0 text-[13px] font-bold">{{ sp.initiativeCode }}</span>
+                        <span class="gc-pill__name min-w-0 flex-1 truncate text-[13px] text-[var(--gc-muted)]">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                      </button>
+                    }
+                  }
+                </div>
+              </div>
+
+              <!-- rail 2 — areas of work. Expanded until one is picked, then a rail too. -->
+              <div class="flex min-h-0 flex-col border-l border-[var(--gc-line)] pl-4" [class]="aow() ? 'gc-rail shrink-0' : 'w-[300px] shrink-0'">
+                <p class="gc-rail__label m-0 mb-2 shrink-0 text-[11px] font-semibold uppercase tracking-[0.07em] text-[var(--gc-muted)]">Area of Work</p>
+                <div class="custom_scroll flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden pr-1">
+                  @if (loadingAows()) {
+                    @for (s of [1, 2, 3, 4]; track s) {
+                      <div class="h-[38px] shrink-0 animate-pulse rounded-[10px] bg-black/[0.04]"></div>
+                    }
+                  } @else {
+                    @for (unit of aows(); track unit.id; let i = $index) {
+                      <button
+                        type="button"
+                        (click)="browseAow(unit)"
+                        animate.enter="gc-item--enter"
+                        [style.--i]="i"
+                        [attr.aria-label]="unit.code + ' ' + unit.name"
+                        class="gc-pill flex w-full appearance-none items-center gap-2.5 px-2 py-1.5 text-left"
+                        [class.is-active]="aow()?.code === unit.code"
+                        [style.--gc-accent]="aowAccent(i)">
+                        <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg" [style.background]="aowAccent(i) + '1f'">
+                          <span class="material-icons-round text-[17px]" [style.color]="aowAccent(i)">{{ aowIcon(unit, i) }}</span>
+                        </span>
+                        <span class="shrink-0 text-[13px] font-bold">{{ unit.code }}</span>
+                        <span class="gc-pill__name min-w-0 flex-1 truncate text-[13px] text-[var(--gc-muted)]">{{ unit.name }}</span>
+                      </button>
+                    }
+                    @if (!aows().length) {
+                      <p class="mt-4 text-[13px] text-[var(--gc-muted)]">No areas of work.</p>
+                    }
+                  }
+                </div>
+              </div>
+
+              <!-- where to report — gets every pixel the rails give back -->
+              <div class="flex min-h-0 min-w-0 flex-1 flex-col border-l border-[var(--gc-line)] pl-4">
+                <div class="mb-2.5 flex shrink-0 items-center gap-3">
+                  <p class="m-0 text-[11px] font-semibold uppercase tracking-[0.07em] text-[var(--gc-muted)]">Where to report</p>
+                  @if (aow()) {
+                    <span class="rounded-full bg-[var(--gc-line)] px-2 py-px text-[11.5px] font-bold tabular-nums text-[var(--gc-muted)]">{{ indicatorCount() }}</span>
+                    <div class="ml-auto flex shrink-0 gap-0.5 rounded-[10px] border border-[var(--gc-line)] bg-white p-0.5">
+                      <button
+                        type="button"
+                        (click)="setView('list')"
+                        aria-label="List view"
+                        class="inline-flex size-7 appearance-none items-center justify-center rounded-lg border-0 transition-colors"
+                        [class]="listView() === 'list' ? 'bg-[#6b6dc41f] text-[var(--gc-brand)]' : 'bg-transparent text-[var(--gc-muted)] hover:text-[var(--gc-ink)]'">
+                        <span class="material-icons-round text-[17px]">view_agenda</span>
+                      </button>
+                      <button
+                        type="button"
+                        (click)="setView('table')"
+                        aria-label="Table view"
+                        class="inline-flex size-7 appearance-none items-center justify-center rounded-lg border-0 transition-colors"
+                        [class]="listView() === 'table' ? 'bg-[#6b6dc41f] text-[var(--gc-brand)]' : 'bg-transparent text-[var(--gc-muted)] hover:text-[var(--gc-ink)]'">
+                        <span class="material-icons-round text-[17px]">table_rows</span>
+                      </button>
+                    </div>
+                    <label class="flex h-9 w-[260px] items-center gap-2 rounded-[10px] border border-[var(--gc-line)] bg-white px-3 focus-within:border-[var(--gc-brand)] max-[1100px]:w-[180px]">
+                      <span class="material-icons-round text-[16px] text-[var(--gc-muted)]">search</span>
+                      <input
+                        type="text"
+                        placeholder="Search indicators…"
+                        [value]="indicatorSearch()"
+                        (input)="indicatorSearch.set($any($event.target).value)"
+                        (keydown.escape)="indicatorSearch.set('')"
+                        aria-label="Search indicators"
+                        class="w-full appearance-none border-none bg-transparent text-[13px] outline-none placeholder:text-[var(--gc-muted)]" />
+                    </label>
+                  }
+                </div>
+
+                @if (aow()) {
+                  <div class="mb-2.5 flex shrink-0 flex-wrap items-center gap-2">
+                    <div class="w-[220px]">
+                      <app-pr-select
+                        [options]="typologySelectOptions()"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All typologies"
+                        [editable]="true"
+                        [required]="false"
+                        [ngModel]="typologyFilter() || ''"
+                        [ngModelOptions]="{ standalone: true }"
+                        (selectOptionEvent)="typologyFilter.set($event?.value || null)">
+                      </app-pr-select>
+                    </div>
+                    <div class="w-[180px]">
+                      <app-pr-select
+                        [options]="statusSelectOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All statuses"
+                        [editable]="true"
+                        [required]="false"
+                        [ngModel]="statusFilter() || ''"
+                        [ngModelOptions]="{ standalone: true }"
+                        (selectOptionEvent)="statusFilter.set($event?.value || null)">
+                      </app-pr-select>
+                    </div>
+                    @if (hasFilters()) {
+                      <button
+                        type="button"
+                        (click)="clearFilters()"
+                        class="flex appearance-none items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-[13px] font-semibold text-[var(--gc-muted)] transition-colors hover:text-[var(--gc-ink)]">
+                        <span class="material-icons-round text-[16px]">close</span>
+                        Clear
+                      </button>
+                    }
+                  </div>
+                }
+
+                <div class="custom_scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+                  @if (!aow()) {
+                    <p class="mt-4 text-[13.5px] text-[var(--gc-muted)]">Pick an area of work to see where you can report.</p>
+                  } @else if (loadingIndicators()) {
+                    @for (s of [1, 2, 3, 4, 5]; track s) {
+                      <div class="h-[54px] shrink-0 animate-pulse rounded-[12px] bg-black/[0.04]"></div>
+                    }
+                  } @else {
+                    @for (group of indicatorGroups(); track group.result_title; let gi = $index) {
+                      @let hlo = splitHlo(group.result_title);
+                      <section class="shrink-0 overflow-hidden rounded-[12px] border border-[var(--gc-line)] bg-white" animate.enter="gc-item--enter" [style.--i]="gi">
+                        <button
+                          type="button"
+                          (click)="toggleHlo(group.result_title)"
+                          [attr.aria-expanded]="!isHloCollapsed(group.result_title)"
+                          class="flex w-full appearance-none items-center gap-3 border-0 bg-[var(--gc-brand)] px-4 py-3 text-left text-white transition-[filter] duration-150 hover:brightness-110">
+                          <span class="material-icons-round text-[20px] text-white/80 transition-transform duration-200" [class.-rotate-90]="isHloCollapsed(group.result_title)">
+                            expand_more
+                          </span>
+                          @if (hlo.code) {
+                            <span class="shrink-0 rounded-md bg-white/20 px-2 py-0.5 text-[12px] font-extrabold text-white">{{ hlo.code }}</span>
+                          }
+                          <span class="min-w-0 flex-1 truncate text-[16px] font-bold tracking-[-0.01em] text-white">{{ hlo.name }}</span>
+                          <span class="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[12px] font-bold tabular-nums text-white">{{ group.indicators.length }}</span>
+                        </button>
+
+                        @if (!isHloCollapsed(group.result_title)) {
+                          <div>
+                            @for (ind of group.indicators; track ind.indicator_id; let ri = $index) {
+                              <!-- rows alternate white / pale blue so a wall of long titles stays readable -->
+                              <button
+                                type="button"
+                                (click)="selectIndicator(ind)"
+                                class="flex w-full appearance-none flex-col items-start gap-2 border-0 px-3.5 py-3 text-left transition-colors duration-150 hover:bg-[#6b6dc412]"
+                                [class]="
+                                  indicator()?.indicator_id === ind.indicator_id ? 'bg-[#6b6dc41f]' : ri % 2 === 0 ? 'bg-white' : 'bg-[#f5f6fd]'
+                                ">
+                                <span class="text-[14px] font-medium leading-snug">{{ ind.indicator_description }}</span>
+                                <span class="flex flex-wrap items-center gap-1.5">
+                                  <span class="rounded-full bg-[#6b6dc41f] px-2.5 py-1 text-[12px] font-semibold text-[var(--gc-brand)]">
+                                    {{ ind.type_name || 'Not provided' }}
+                                  </span>
+                                  <span class="rounded-full bg-[var(--gc-line)] px-2.5 py-1 text-[12px] font-medium text-[var(--gc-muted)]">
+                                    target <b class="font-bold tabular-nums text-[var(--gc-ink)]">{{ ind.target_value_sum ?? 0 }}</b>
+                                  </span>
+                                  <span
+                                    class="rounded-full px-2.5 py-1 text-[12px] font-medium"
+                                    [class]="(ind.actual_achieved_value_sum ?? 0) > 0 ? 'bg-[#2f8f6b1f] text-[#257355]' : 'bg-[var(--gc-line)] text-[var(--gc-muted)]'">
+                                    achieved <b class="font-bold tabular-nums">{{ ind.actual_achieved_value_sum ?? 0 }}</b>
+                                  </span>
+                                </span>
+                              </button>
+                            }
+                          </div>
+                        }
+                      </section>
+                    }
+                    @if (!indicatorGroups().length) {
+                      <p class="mt-4 text-[13.5px] text-[var(--gc-muted)]">
+                        {{ indicatorSearch() ? 'No indicators match your search.' : 'No indicators here.' }}
+                      </p>
+                    }
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- ===== REVIEW ===== -->
+      @if (screen() === 'review') {
+        <section class="custom_scroll flex h-full overflow-y-auto px-8 py-10" animate.enter="gc-step--enter">
+          <div class="m-auto w-full max-w-[640px]">
+            <h2 class="gc-rise m-0 text-[56px] font-extrabold leading-[1.02] tracking-[-0.03em] max-[900px]:text-[38px]" style="--i: 0">
+              Ready to <span class="text-[var(--gc-brand)]">report</span>
+            </h2>
+            <p class="gc-rise m-0 mt-4 text-[18px] leading-[1.55] text-[var(--gc-muted)]" style="--i: 1">Tap any answer to change it before you continue.</p>
+
+            <div class="gc-rise mt-9 overflow-hidden rounded-[14px] border border-[var(--gc-line)] bg-white" style="--i: 2">
+              @for (a of answers(); track a.label) {
+                <button
+                  type="button"
+                  (click)="goTo(a.screen)"
+                  class="flex w-full appearance-none items-center gap-4 border-0 border-b border-[var(--gc-line)] bg-transparent px-5 py-4 text-left transition-colors duration-150 last:border-b-0 hover:bg-[#6b6dc40a]">
+                  <span class="w-[110px] shrink-0 text-[14px] text-[var(--gc-muted)]">{{ a.label }}</span>
+                  <span class="min-w-0 flex-1 truncate text-[16px] font-bold tracking-[-0.01em]">{{ a.value }}</span>
+                  <span class="material-icons-round shrink-0 text-[19px] text-[var(--gc-muted)]">mode_edit_outline</span>
+                </button>
+              }
+            </div>
+
+            <button type="button" (click)="finish()" class="gc-cta gc-rise mt-7 flex w-full appearance-none items-center justify-center gap-2 border-0 px-6 py-4" style="--i: 3">
+              <span class="text-[17px] font-bold tracking-[-0.01em]">Continue to reporting</span>
+              <span class="material-icons-round text-[20px]">arrow_forward</span>
+            </button>
+          </div>
+        </section>
+      }
+    </div>
+
+    <!-- ---------- confirmation panel (35%) ---------- -->
+    @if (pending(); as p) {
+      <aside class="gc-panel flex w-[35%] min-w-[340px] shrink-0 flex-col p-5 max-[900px]:w-[46%]" animate.enter="gc-panel--enter" animate.leave="gc-panel--leave">
+        <div class="custom_scroll flex flex-1 flex-col overflow-y-auto rounded-[20px] border border-[var(--gc-line)] bg-white px-7 py-8 shadow-[0_18px_44px_rgba(31,32,51,0.10)]">
+          <!-- keyed on the title so switching options re-runs the swap animation -->
+          @if (p.title; as key) {
+            <div class="gc-swap" [attr.data-key]="key">
+              <span class="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl" [style.background]="p.accent + '1f'">
+                <span class="material-icons-round text-[28px]" [style.color]="p.accent">{{ p.icon }}</span>
+              </span>
+
+              <p class="m-0 mt-7 text-[12px] font-semibold uppercase tracking-[0.07em] text-[var(--gc-muted)]">You selected</p>
+              <h3 class="m-0 mt-2 text-[26px] font-extrabold leading-[1.2] tracking-[-0.02em] [text-wrap:balance]">{{ p.title }}</h3>
+              <p class="m-0 mt-3 text-[15px] leading-[1.5] text-[var(--gc-muted)]">{{ p.subtitle }}</p>
+
+              <p class="m-0 mt-7 border-t border-[var(--gc-line)] pt-7 text-[15.5px] leading-[1.65] text-[var(--gc-ink)]">{{ p.body }}</p>
+            </div>
+          }
+
+          <div class="mt-auto flex flex-col gap-2.5 pt-10">
+            <button type="button" (click)="confirmPending()" class="gc-cta flex w-full appearance-none items-center justify-center gap-2 border-0 px-6 py-4">
+              <span class="text-[16px] font-bold tracking-[-0.01em]">Confirm</span>
+              <span class="material-icons-round text-[19px]">arrow_forward</span>
+            </button>
+            <button
+              type="button"
+              (click)="cancelPending()"
+              class="flex w-full appearance-none items-center justify-center rounded-[14px] border border-[var(--gc-line)] bg-white px-6 py-3.5 text-[15px] font-semibold text-[var(--gc-muted)] transition-colors duration-150 hover:bg-[#00000005] hover:text-[var(--gc-ink)]">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </aside>
+    }
+  </div>
+</div>
