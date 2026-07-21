@@ -64,6 +64,7 @@ describe('ResultCreatorComponent', () => {
       resultsSE: {
         GET_AllInitiatives: () => of({ response: myInitiativesList }),
         GET_FindResultsElastic: () => of(mockResponseGET_FindResultsElastic),
+        GET_checkTitleUniqueness: () => of({ response: { isUnique: true, existing: null } }),
         POST_resultCreateHeader: () => of({ response: mockResponsePOST_resultCreateHeader }),
         POST_createWithHandle: () => of({ response: mockResponsePOST_resultCreateHeader }),
         GET_mqapValidation: () => of({ response: { title: 'Title' } }),
@@ -277,6 +278,7 @@ describe('ResultCreatorComponent', () => {
     it('should set depthSearchList and exactTitleFound on successful API response', () => {
       const title = 'title 1';
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_FindResultsElastic');
+      const uniquenessSpy = jest.spyOn(mockApiService.resultsSE, 'GET_checkTitleUniqueness');
       const mock = [
         {
           id: 1,
@@ -292,17 +294,35 @@ describe('ResultCreatorComponent', () => {
       component.depthSearch(title);
 
       expect(spy).toHaveBeenCalled();
+      expect(uniquenessSpy).toHaveBeenCalledWith(title);
       expect(component.depthSearchList).toEqual(mock);
+      expect(component.exactTitleFound).toBe(false);
     });
 
-    it('should handle API error and reset properties', () => {
+    it('should set exactTitleFound when uniqueness check reports conflict', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_checkTitleUniqueness').mockReturnValue(
+        of({
+          response: {
+            isUnique: false,
+            existing: { id: 1, result_code: 1, title: 'title 1', version_id: 1 }
+          }
+        })
+      );
+      component.depthSearch('title 1');
+      expect(component.exactTitleFound).toBe(true);
+    });
+
+    it('should handle Elastic API error and keep uniqueness blocking on uniqueness error', () => {
       const title = 'title 1';
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_FindResultsElastic').mockReturnValue(throwError('API Error'));
+      jest
+        .spyOn(mockApiService.resultsSE, 'GET_checkTitleUniqueness')
+        .mockReturnValue(throwError('Uniqueness Error'));
 
       component.depthSearch(title);
 
       expect(component.depthSearchList).toEqual([]);
-      expect(component.exactTitleFound).toBe(false);
+      expect(component.exactTitleFound).toBe(true);
       expect(spy).toHaveBeenCalled();
     });
   });

@@ -2460,4 +2460,65 @@ describe('ResultsService (unit, pure mocks)', () => {
       expect((res as returnFormatService).message).toContain('compatible');
     });
   });
+
+  describe('checkTitleUniqueness', () => {
+    it('returns isUnique true for empty title', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockClear();
+      const res = await resultService.checkTitleUniqueness('   ');
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response).toEqual({
+        isUnique: true,
+        existing: null,
+      });
+      expect(mockResultRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('returns isUnique true when no active result matches', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+      const res = await resultService.checkTitleUniqueness('Brand new title');
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response.isUnique).toBe(true);
+      expect((res as returnFormatService).response.existing).toBeNull();
+    });
+
+    it('returns isUnique false with existing when title conflicts', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 11115,
+        result_code: 999,
+        title: 'Existing Title',
+        version_id: 1,
+      });
+      const res = await resultService.checkTitleUniqueness('Existing Title');
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response).toEqual({
+        isUnique: false,
+        existing: {
+          id: 11115,
+          result_code: 999,
+          title: 'Existing Title',
+          version_id: 1,
+        },
+      });
+    });
+
+    it('returns isUnique true when conflict is the excluded result', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 50,
+        result_code: 10,
+        title: 'Same Title',
+        version_id: 1,
+      });
+      const res = await resultService.checkTitleUniqueness('Same Title', 50);
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response.isUnique).toBe(true);
+    });
+
+    it('returns error when active phase is missing', async () => {
+      (
+        mockVersioningService.$_findActivePhase as jest.Mock
+      ).mockResolvedValueOnce(null);
+      const res = await resultService.checkTitleUniqueness('Any');
+      expect((res as returnFormatService).status).toBeGreaterThanOrEqual(400);
+    });
+  });
 });

@@ -481,6 +481,41 @@ describe('ResultsApiService', () => {
     });
   });
 
+  describe('GET_checkTitleUniqueness', () => {
+    it('should call check-title-uniqueness with title query param', done => {
+      const title = 'Unique Title';
+      service.GET_checkTitleUniqueness(title).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        r =>
+          r.url === `${service.apiBaseUrl}check-title-uniqueness` &&
+          r.params.get('title') === title
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('excludeResultId')).toBeNull();
+      req.flush(mockResponse);
+    });
+
+    it('should include excludeResultId when provided', done => {
+      service.GET_checkTitleUniqueness('Title', 42).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        r =>
+          r.url === `${service.apiBaseUrl}check-title-uniqueness` &&
+          r.params.get('title') === 'Title' &&
+          r.params.get('excludeResultId') === '42'
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
   describe('GET_ostMeliaStudiesByResultId', () => {
     it('should call GET_ostMeliaStudiesByResultId and return expected data', done => {
       service.GET_ostMeliaStudiesByResultId().subscribe(response => {

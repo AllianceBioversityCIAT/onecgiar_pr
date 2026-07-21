@@ -59,6 +59,7 @@ describe('ReportResultFormComponent', () => {
         GET_AllInitiatives: jest.fn(() => of({ response: mockInitiatives })),
         GET_cgiarEntityTypes: jest.fn(() => of({ response: mockEntityTypes })),
         GET_FindResultsElastic: jest.fn(() => of([])),
+        GET_checkTitleUniqueness: jest.fn(() => of({ response: { isUnique: true, existing: null } })),
         POST_resultCreateHeader: jest.fn(() => of({ response: { result_code: 'R001', version_id: 1 } })),
         POST_createWithHandle: jest.fn(() => of({ response: { result_code: 'R001', version_id: 1 } })),
         GET_mqapValidation: jest.fn(() => of({ response: { title: 'Test Title' } }))
@@ -280,6 +281,9 @@ describe('ReportResultFormComponent', () => {
         { id: 2, title: 'Another Result', version_id: 2 }
       ];
       mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of(mockResults));
+      mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() =>
+        of({ response: { isUnique: true, existing: null } })
+      );
       component.allPhases = mockPhases.reporting;
 
       component.depthSearch('Test');
@@ -288,25 +292,45 @@ describe('ReportResultFormComponent', () => {
       expect(component.depthSearchList[0].phase).toBeDefined();
     });
 
-    it('should set exactTitleFound when exact match is confirmed after recheck', () => {
-      jest.useFakeTimers();
-      const mockResults = [{ id: 1, title: 'Test Result', version_id: 1 }];
-      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of(mockResults));
+    it('should set exactTitleFound from MySQL uniqueness check when title conflicts', () => {
+      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of([]));
+      mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() =>
+        of({
+          response: {
+            isUnique: false,
+            existing: { id: 11115, result_code: 1, title: 'Test Result', version_id: 1 }
+          }
+        })
+      );
       component.allPhases = mockPhases.reporting;
 
       component.depthSearch('Test Result');
-      jest.advanceTimersByTime(700);
 
       expect(component.exactTitleFound()).toBe(true);
       expect(component.blockingExactTitleFound()).toBe(true);
-      jest.useRealTimers();
+      expect(component.titleCheckFailed()).toBe(false);
     });
 
-    it('should handle errors gracefully', () => {
-      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => throwError(() => new Error('Error')));
+    it('should block save and not show green when uniqueness check fails', () => {
+      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of([]));
+      mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() => throwError(() => new Error('Error')));
       component.depthSearch('Test');
       expect(component.depthSearchList).toEqual([]);
       expect(component.exactTitleFound()).toBe(false);
+      expect(component.titleCheckFailed()).toBe(true);
+      expect(component.blockingExactTitleFound()).toBe(true);
+    });
+
+    it('should keep similar results when Elastic succeeds but uniqueness fails', () => {
+      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() =>
+        of([{ id: 1, title: 'Similar', version_id: 1 }])
+      );
+      mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() => throwError(() => new Error('Error')));
+      component.allPhases = mockPhases.reporting;
+      component.depthSearch('Similar');
+      expect(component.depthSearchList.length).toBe(1);
+      expect(component.titleCheckFailed()).toBe(true);
+      expect(component.blockingExactTitleFound()).toBe(true);
     });
   });
 
@@ -560,6 +584,7 @@ describe('ReportResultFormComponent', () => {
       jest.useFakeTimers();
       fixture.detectChanges();
       mockApiService.resultsSE.GET_FindResultsElastic.mockClear();
+      mockApiService.resultsSE.GET_checkTitleUniqueness.mockClear();
 
       component.onTitleChange('test title');
       expect(component.loadingDepthSearch()).toBe(true);
@@ -567,6 +592,7 @@ describe('ReportResultFormComponent', () => {
 
       jest.advanceTimersByTime(500);
       expect(mockApiService.resultsSE.GET_FindResultsElastic).toHaveBeenCalledWith('test title', '');
+      expect(mockApiService.resultsSE.GET_checkTitleUniqueness).toHaveBeenCalledWith('test title');
       jest.useRealTimers();
     });
 
@@ -574,51 +600,56 @@ describe('ReportResultFormComponent', () => {
       jest.useFakeTimers();
       fixture.detectChanges();
       component.allPhases = mockPhases.reporting;
-      const firstRequest$ = new Subject<any[]>();
-      const secondRequest$ = new Subject<any[]>();
+      const firstElastic$ = new Subject<any[]>();
+      const secondElastic$ = new Subject<any[]>();
+      const uniqueness$ = of({ response: { isUnique: true, existing: null } });
 
       mockApiService.resultsSE.GET_FindResultsElastic = jest
         .fn()
-        .mockReturnValueOnce(firstRequest$.asObservable())
-        .mockReturnValueOnce(secondRequest$.asObservable());
+        .mockReturnValueOnce(firstElastic$.asObservable())
+        .mockReturnValueOnce(secondElastic$.asObservable());
+      mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() => uniqueness$);
 
       component.onTitleChange('first title');
       jest.advanceTimersByTime(500);
       component.onTitleChange('second title');
       jest.advanceTimersByTime(500);
 
-      secondRequest$.next([{ id: 2, title: 'second title', version_id: 1 }]);
-      secondRequest$.complete();
-      jest.advanceTimersByTime(700);
+      secondElastic$.next([{ id: 2, title: 'second title', version_id: 1 }]);
+      secondElastic$.complete();
 
       expect(component.exactTitleFound()).toBe(false);
       expect(component.depthSearchList[0]?.title).toBe('second title');
 
-      firstRequest$.next([{ id: 1, title: 'first title', version_id: 1 }]);
-      firstRequest$.complete();
-      jest.advanceTimersByTime(700);
+      firstElastic$.next([{ id: 1, title: 'first title', version_id: 1 }]);
+      firstElastic$.complete();
 
       expect(component.depthSearchList[0]?.title).toBe('second title');
       expect(component.blockingExactTitleFound()).toBe(false);
       jest.useRealTimers();
     });
 
-    it('should clear exact blocking when recheck does not confirm the match', () => {
+    it('should block when MySQL reports title is not unique', () => {
       jest.useFakeTimers();
       fixture.detectChanges();
       component.allPhases = mockPhases.reporting;
 
-      mockApiService.resultsSE.GET_FindResultsElastic = jest
-        .fn()
-        .mockReturnValueOnce(of([{ id: 1, title: 'Exact title', version_id: 1 }]))
-        .mockReturnValueOnce(of([]));
+      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of([]));
+      mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() =>
+        of({
+          response: {
+            isUnique: false,
+            existing: { id: 1, result_code: 1, title: 'Exact title', version_id: 1 }
+          }
+        })
+      );
 
       component.onTitleChange('Exact title');
       jest.advanceTimersByTime(500);
-      jest.advanceTimersByTime(700);
 
-      expect(component.exactTitleFound()).toBe(false);
-      expect(component.blockingExactTitleFound()).toBe(false);
+      expect(component.exactTitleFound()).toBe(true);
+      expect(component.blockingExactTitleFound()).toBe(true);
+      expect(component.titleCheckFailed()).toBe(false);
       expect(component.loadingDepthSearch()).toBe(false);
       jest.useRealTimers();
     });

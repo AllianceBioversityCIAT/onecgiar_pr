@@ -168,7 +168,12 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   }
 
   depthSearch(title: string) {
-    const cleanSpaces = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
+    if (!title?.trim()) {
+      this.depthSearchList = [];
+      this.exactTitleFound = false;
+      return;
+    }
+
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
 
     this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe({
@@ -177,12 +182,19 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
           ...result,
           phase: this.allPhases.find(phase => phase.id === result?.version_id)
         }));
-
-        this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
       },
       error: () => {
         this.depthSearchList = [];
-        this.exactTitleFound = false;
+      }
+    });
+
+    this.api.resultsSE.GET_checkTitleUniqueness(title).subscribe({
+      next: resp => {
+        this.exactTitleFound = resp?.response?.isUnique === false;
+      },
+      error: () => {
+        // Do not treat uniqueness check failure as "title free".
+        this.exactTitleFound = true;
       }
     });
   }
