@@ -327,19 +327,25 @@ export class ResultsPackageTocResultService {
               last_updated_by: user?.id,
               created_by: user.id,
             });
+          } else if (!instExist.is_active) {
+            // Soft-deleted partner re-selected / still in payload: reactivate
+            // before writing deliveries (P2-3181).
+            await this._resultByIntitutionsRepository.update(
+              { id: instExist.id },
+              { is_active: true, last_updated_by: user.id },
+            );
+            instExist.is_active = true;
+            instExist.last_updated_by = user.id;
           }
+
+          const partnerRbi = instExist ?? rbi;
 
           if (ins?.deliveries?.length) {
             const { deliveries } = ins;
-            await this.saveDeliveries(
-              instExist ? instExist : rbi,
-              deliveries,
-              user.id,
-              version,
-            );
+            await this.saveDeliveries(partnerRbi, deliveries, user.id, version);
           } else {
             await this._resultByInstitutionsByDeliveriesTypeRepository.inactiveResultDeLivery(
-              (instExist ? instExist : rbi).id,
+              partnerRbi.id,
               [],
               user.id,
             );
