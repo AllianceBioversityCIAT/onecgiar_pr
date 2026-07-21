@@ -980,6 +980,7 @@ export class ResultsByInstitutionsService {
               institutions_id: In(incomingInstitutionIds),
               institution_roles_id: institutionRoleId,
             },
+            relations: { delivery: true },
           })
         : [];
 
@@ -999,7 +1000,6 @@ export class ResultsByInstitutionsService {
         existing.institutions_id = incoming.institutions_id;
         existing.is_leading_result = incoming.is_leading_result;
         existing.from_toc = !!incoming.from_toc;
-        existing.delivery = incoming.delivery ?? [];
         institutionsToReactivate.push(existing);
         continue;
       }
@@ -1011,7 +1011,6 @@ export class ResultsByInstitutionsService {
       toAdd.result_id = resultId;
       toAdd.institutions_id = incoming.institutions_id;
       toAdd.institution_roles_id = institutionRoleId;
-      toAdd.delivery = incoming.delivery ?? [];
       toAdd['isNew'] = true;
       toAdd.is_leading_result = incoming.is_leading_result;
       toAdd.from_toc = !!incoming.from_toc;
@@ -1019,7 +1018,20 @@ export class ResultsByInstitutionsService {
     }
 
     if (institutionsToReactivate.length) {
-      await this._resultByIntitutionsRepository.save(institutionsToReactivate);
+      await Promise.all(
+        institutionsToReactivate.map((rbi) =>
+          this._resultByIntitutionsRepository.update(
+            { id: rbi.id },
+            {
+              is_active: rbi.is_active,
+              last_updated_by: rbi.last_updated_by,
+              institutions_id: rbi.institutions_id,
+              is_leading_result: rbi.is_leading_result,
+              from_toc: rbi.from_toc,
+            },
+          ),
+        ),
+      );
     }
 
     let savedAdded: ResultsByInstitution[];
@@ -1128,22 +1140,22 @@ export class ResultsByInstitutionsService {
     userId: number,
   ): Promise<void> {
     for (const institution of toUpdate.concat(added)) {
-      if (institution['isNew']) {
-        const incoming = institution.delivery ?? [];
-        if (incoming.length) {
-          await this.handleDeliveries(incoming, [], institution.id, userId);
-        }
-        continue;
-      }
-
-      const dto = incomingInstitutions.find((i) => i.id === institution.id);
+      const dto = incomingInstitutions.find(
+        (i) =>
+          i.id === institution.id ||
+          i.institutions_id === institution.institutions_id,
+      );
       if (!this._dtoHasDelivery(dto)) {
         continue;
       }
 
+      const oldDeliveries = (institution.delivery ?? []).filter(
+        (d) => d.is_active !== false,
+      );
+
       await this.handleDeliveries(
         dto?.delivery ?? [],
-        institution.delivery ?? [],
+        oldDeliveries,
         institution.id,
         userId,
       );
