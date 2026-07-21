@@ -95,6 +95,7 @@
         src="/assets/PR_logo.svg"
         alt="Reporting Tool Logo" />
 
+      @if (!dataControlSE.hideWordmark()) {
       <div class="logo_content flex flex-col items-start justify-center gap-0.5 max-lg:hidden">
         <p class="m-0 flex items-baseline gap-1 whitespace-nowrap text-[15px] font-extrabold leading-tight tracking-tight">
           <span class="text-[#1e202f]">PRMS</span>
@@ -107,6 +108,7 @@
           >
         }
       </div>
+      }
     </a>
 
       @if (!isProduction && showTestLabel() && !testLabelIsFixed()) {

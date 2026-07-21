@@ -590,3 +590,109 @@ background-attachment: fixed;
     padding-left: 32px;
   }
 }
+
+// ---------------------------------------------------------------------------
+// driver.js walkthrough popover. driver.js appends it to <body>, outside every
+// component's view encapsulation, so its skin has to live here. Scoped to the
+// `pr-guide` class we pass in popoverClass — the library's defaults are left
+// alone for any other future tour.
+// ---------------------------------------------------------------------------
+.driver-popover.pr-guide {
+  max-width: 340px;
+  padding: 20px 20px 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  color: var(--pr-color-secondary-400);
+  box-shadow: 0 24px 60px rgba(30, 32, 47, 0.28);
+  font-family: 'Poppins', system-ui, sans-serif;
+
+  .driver-popover-title {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    color: var(--pr-color-secondary-400);
+  }
+
+  .driver-popover-description {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--pr-color-accents-6);
+  }
+
+  .driver-popover-close-btn {
+    top: 12px;
+    right: 12px;
+    width: 26px;
+    height: 26px;
+    border-radius: 9999px;
+    color: var(--pr-color-accents-5);
+    font-size: 18px;
+    line-height: 1;
+    transition: background-color 150ms ease-out, color 150ms ease-out;
+
+    &:hover {
+      background: var(--pr-color-accents-1);
+      color: var(--pr-color-secondary-400);
+    }
+  }
+
+  .driver-popover-footer {
+    margin-top: 18px;
+    gap: 8px;
+
+    .driver-popover-progress-text {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--pr-color-accents-5);
+    }
+
+    button {
+      padding: 7px 14px;
+      border: 0;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      text-shadow: none;
+      transition: background-color 150ms ease-out, transform 150ms ease-out;
+
+      &:hover {
+        transform: translateY(-1px);
+      }
+    }
+
+    // "Back" — quiet. "Next"/"Got it" — the brand action.
+    .driver-popover-prev-btn {
+      background: var(--pr-color-accents-1);
+      color: var(--pr-color-accents-6);
+
+      &:hover {
+        background: var(--pr-color-accents-2);
+      }
+
+      &.driver-popover-btn-disabled {
+        opacity: 0.4;
+        transform: none;
+      }
+    }
+
+    .driver-popover-next-btn {
+      background: linear-gradient(135deg, #6b6dc4 0%, #6461bc 100%);
+      color: #ffffff;
+      box-shadow: 0 6px 16px rgba(100, 97, 188, 0.4);
+    }
+  }
+
+  .driver-popover-arrow {
+    border-width: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-popover.pr-guide .driver-popover-footer button:hover {
+    transform: none;
+  }
+}

@@ -22,6 +22,22 @@
         }
       </div>
 
+      <button
+        type="button"
+        (click)="goToOverview()"
+        [attr.aria-current]="scope() === 'overview' ? 'true' : null"
+        class="flex w-full appearance-none items-center gap-2.5 rounded-[10px] border-none px-3 py-2.5 text-left transition-colors duration-200"
+        [class]="
+          scope() === 'overview'
+            ? 'text-white bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] shadow-[0_8px_20px_rgba(100,97,188,0.5),inset_0_0_0_1px_rgba(255,255,255,0.14)]'
+            : 'text-white/[0.78] bg-white/[0.035] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] hover:bg-white/[0.09] hover:text-white'
+        ">
+        <span class="inline-flex size-[22px] shrink-0 items-center justify-center rounded-md bg-white/[0.12]">
+          <i class="material-icons-round text-[14px]">grid_view</i>
+        </span>
+        <span class="flex-1 text-[12px] font-semibold">Overview</span>
+      </button>
+
       <div class="flex items-center gap-2 rounded-[10px] bg-white/[0.06] px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
         <span class="material-icons-round text-[16px] text-white/40">search</span>
         <input
@@ -41,6 +57,9 @@
         }
       } @else {
         @for (group of groups(); track group.label) {
+          <div
+            class="flex flex-col gap-1"
+            [attr.data-guide]="group.label === 'My programs' ? 'my-programs' : group.label === 'Other programs' ? 'other-programs' : null">
           <p class="px-2 pb-1 pt-2.5 text-[9px] font-bold uppercase tracking-[0.09em] text-white/40">{{ group.label }}</p>
           @for (sp of group.items; track sp.initiativeId) {
             <button
@@ -77,6 +96,7 @@
               </span>
             </button>
           }
+          </div>
         }
 
         @if (!groups().length) {
@@ -192,6 +212,14 @@
           <div class="min-w-0">
             <p class="m-0 text-[12px] font-bold leading-tight" [style.color]="accentTheme().solid">{{ sp.initiativeCode }}</p>
             <p class="m-0 truncate text-[10px] leading-tight text-[var(--pr-color-accents-6)]">{{ sp.initiativeShortName || sp.initiativeName }}</p>
+            <!-- the phase lives here now; the navbar wordmark that carried it is hidden on this surface -->
+            @if (phaseLabel()) {
+              <span
+                class="mt-1.5 inline-block rounded-full bg-white px-2 py-px text-[9px] font-bold uppercase tracking-[0.04em] shadow-[0_1px_2px_rgba(30,32,47,0.1)]"
+                [style.color]="accentTheme().solid">
+                {{ phaseLabel() }}
+              </span>
+            }
           </div>
         }
       </div>
@@ -345,10 +373,63 @@
       ? 'ml-[calc(var(--rail-w)+var(--panel-w))] px-3 pb-4 pt-3'
       : 'ml-[calc(var(--full-w)+var(--float-gap)*2)] px-6 pb-10 pt-5'
   ">
-  @if (selected(); as sp) {
+  @if (scope() === 'overview') {
+    <!-- ==================== WORKSPACE OVERVIEW — no program in context ==================== -->
+    <div class="mx-auto w-full max-w-[1100px]">
+      <h1 class="m-0 text-[30px] font-bold leading-tight tracking-[-0.02em] text-[var(--pr-color-secondary-400)]">Reporting workspace</h1>
+      <p class="m-0 mt-2 max-w-[62ch] text-[14px] leading-relaxed text-[var(--pr-color-accents-6)]">
+        Start a report from here, or pick a Science Program on the left to see what it has planned.
+      </p>
+
+      <div class="mt-7 grid grid-cols-2 gap-4 max-[900px]:grid-cols-1">
+        <!-- start reporting -->
+        <button
+          type="button"
+          data-guide="guided-entry"
+          (click)="openGuided()"
+          class="group flex appearance-none flex-col items-start gap-3 rounded-[20px] border-0 bg-[linear-gradient(150deg,#6b6dc4_0%,#5f5cb4_100%)] p-6 text-left text-white shadow-[0_14px_34px_rgba(100,97,188,0.38)] transition-transform duration-200 hover:-translate-y-1">
+          <span class="inline-flex size-12 items-center justify-center rounded-2xl bg-white/20">
+            <span class="material-icons-round text-[24px]">auto_awesome</span>
+          </span>
+          <span class="text-[20px] font-bold leading-tight tracking-[-0.01em]">Report a result</span>
+          <span class="text-[13.5px] leading-relaxed text-white/85">
+            The guided flow asks whether it was planned or emerging, then walks you to the exact place it belongs.
+          </span>
+          <span class="mt-1 flex items-center gap-1 text-[13px] font-semibold">
+            Start
+            <span class="material-icons-round text-[17px] transition-transform group-hover:translate-x-0.5">arrow_forward</span>
+          </span>
+        </button>
+
+        <!-- learn how -->
+        <button
+          type="button"
+          (click)="startGuide()"
+          class="group flex appearance-none flex-col items-start gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-6 text-left shadow-[0_8px_22px_rgba(30,32,47,0.06)] transition-transform duration-200 hover:-translate-y-1">
+          <span class="inline-flex size-12 items-center justify-center rounded-2xl bg-[var(--pr-color-primary-25)]">
+            <span class="material-icons-round text-[24px] text-[var(--pr-color-primary-300)]">help_outline</span>
+          </span>
+          <span class="text-[20px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Not sure how to report?</span>
+          <span class="text-[13.5px] leading-relaxed text-[var(--pr-color-accents-6)]">
+            A short walkthrough of this screen: where planned indicators live, how emerging results differ, and what each action does.
+          </span>
+          <span class="mt-1 flex items-center gap-1 text-[13px] font-semibold text-[var(--pr-color-primary-300)]">
+            See the guide
+            <span class="material-icons-round text-[17px]">play_arrow</span>
+          </span>
+        </button>
+      </div>
+
+      <!-- global metrics land here once we agree on which ones -->
+      <div class="mt-4 rounded-[20px] border border-dashed border-[rgba(30,32,47,0.14)] bg-white/60 px-6 py-10 text-center">
+        <span class="material-icons-round text-[24px] text-[var(--pr-color-accents-3)]">insights</span>
+        <p class="m-0 mt-1.5 text-[13px] text-[var(--pr-color-accents-5)]">Portfolio-wide metrics go here.</p>
+      </div>
+    </div>
+  } @else if (selected(); as sp) {
     @if (viewMode() === 'aow') {
       <!-- ==================== AOW DETAIL — one header container: identity, metrics, toolbar ==================== -->
-      <section class="mb-4 overflow-hidden rounded-2xl border border-[rgba(30,32,47,0.07)] bg-white shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
+      <section data-guide="aow-header" class="mb-4 overflow-hidden rounded-2xl border border-[rgba(30,32,47,0.07)] bg-white shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
         <!-- accent hairline ties the header to the active program -->
         <span class="block h-[3px] w-full" [style.background]="accentTheme().gradient"></span>
 
@@ -409,7 +490,7 @@
         </div>
 
         <!-- ---- toolbar: tabs · search · filters · count ---- -->
-        <div class="flex flex-wrap items-center gap-2.5 border-t border-[rgba(30,32,47,0.07)] bg-[var(--pr-color-accents-1)] px-5 py-3">
+        <div data-guide="aow-search" class="flex flex-wrap items-center gap-2.5 border-t border-[rgba(30,32,47,0.07)] bg-[var(--pr-color-accents-1)] px-5 py-3">
           @if (is2030()) {
             <span class="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)] shadow-[0_1px_3px_rgba(30,32,47,0.08)]">
               <span class="material-icons-round text-[16px]" [style.color]="accentTheme().solid">flag</span>
@@ -553,7 +634,9 @@
           @for (group of indicatorGroups(); track group.result_title) {
             @let titleParts = splitGroupTitle(group.result_title);
             <!-- One card per HLO group: tinted header (program accent) + rows attached below. -->
-            <section class="overflow-hidden rounded-2xl border border-[rgba(30,32,47,0.07)] bg-white shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
+            <section
+              [attr.data-guide]="$first ? 'aow-group' : null"
+              class="overflow-hidden rounded-2xl border border-[rgba(30,32,47,0.07)] bg-white shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
               <button
                 type="button"
                 (click)="toggleGroup(group.result_title)"
@@ -586,7 +669,9 @@
               @if (group.indicators?.length) {
                 <div class="divide-y divide-[rgba(30,32,47,0.06)]">
                   @for (ind of group.indicators; track ind.indicator_id) {
-                    <div class="group/row relative flex items-center gap-4 px-4 py-3 transition-colors duration-150 hover:bg-[var(--pr-color-accents-1)]">
+                    <div
+                      [attr.data-guide]="$first ? 'aow-indicator' : null"
+                      class="group/row relative flex items-center gap-4 px-4 py-3 transition-colors duration-150 hover:bg-[var(--pr-color-accents-1)]">
                       <span class="size-2 shrink-0 rounded-full {{ statusDot(ind.progress_percentage) }}" [title]="statusLabel(ind.progress_percentage)"></span>
 
                       <div class="min-w-0 flex-1">
@@ -703,6 +788,7 @@
                not the program accent, so the primary action reads as the platform's). -->
           <button
             type="button"
+            data-guide="guided-entry"
             (click)="openGuided()"
             class="group ml-auto flex shrink-0 appearance-none items-center gap-2.5 rounded-xl border-0 bg-[linear-gradient(135deg,#6b6dc4_0%,#6461bc_100%)] px-3.5 py-2.5 text-left text-white shadow-[0_8px_20px_rgba(100,97,188,0.45)] transition-transform duration-200 hover:-translate-y-0.5">
             <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/20">
@@ -735,7 +821,7 @@
 
       <!-- Card 3 — Indicator categories (right column, tall 2 rows, tabs + scroll) -->
       <article class="col-start-2 row-span-2 row-start-2 flex min-h-[352px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-span-1 max-[1180px]:row-start-auto max-[1180px]:min-h-[360px]">
-        <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Report by category</p>
+        <h2 data-guide="emerging" class="m-0 text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Report Emerging results</h2>
 
         <!-- tabs -->
         <div class="mt-3 flex gap-1 rounded-xl bg-[var(--pr-color-accents-1)] p-1">
@@ -783,10 +869,11 @@
                     <!-- Emerging entry lives next to the category it would be created under (openspec §0.1) -->
                     <button
                       type="button"
+                      [attr.data-guide]="$first ? 'emerging-action' : null"
                       (click)="openGuided('emerging')"
                       [attr.aria-label]="'Report an emerging ' + cat.resultTypeName"
                       class="inline-flex appearance-none items-center gap-1 rounded-lg border-0 bg-[#23252f] px-2.5 py-1 text-[11px] font-semibold text-white transition-transform duration-200 hover:-translate-y-px">
-                      Emerging <span class="material-icons-round text-[14px]">bolt</span>
+                      Report result <span class="material-icons-round text-[14px]">arrow_forward</span>
                     </button>
                   </div>
                 </div>
@@ -796,37 +883,41 @@
             }
           }
         </div>
+
+        <button
+          type="button"
+          (click)="openGuided('emerging')"
+          class="mt-3 flex shrink-0 appearance-none items-center justify-center gap-2 rounded-xl border-0 bg-[#23252f] px-4 py-2.5 text-[12.5px] font-bold text-white shadow-[0_6px_16px_rgba(30,32,47,0.24)] transition-transform duration-200 hover:-translate-y-px">
+          Report an emerging result
+          <span class="material-icons-round text-[16px]">arrow_forward</span>
+        </button>
       </article>
 
       <!-- Card 4 — Areas of Work: a vertical block two rows tall, where the guided
            creation card used to sit. The dedicated section below the bento is gone. -->
       <article class="col-start-1 row-span-2 row-start-2 flex min-h-[352px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-span-1 max-[1180px]:row-start-auto">
         <div class="flex shrink-0 flex-wrap items-baseline gap-2">
-          <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Areas of Work</p>
+          <h2 data-guide="planned" class="m-0 text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Results planned in your 2026 ToC</h2>
           <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ aows().length }}</span>
-          @if (aows().length) {
-            <span class="ml-auto text-[10.5px] text-[var(--pr-color-accents-5)]">
-              avg <b [style.color]="accentTheme().solid">{{ aowStats().avgProgress }}%</b>
-            </span>
-          }
         </div>
 
-        <div class="custom_scroll mt-3 flex flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
+        <div class="custom_scroll mt-3 flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden pr-1">
           @if (loadingAows()) {
             @for (s of [1, 2, 3, 4]; track s) {
               <div class="h-[58px] shrink-0 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
             }
           } @else {
             @for (aow of aows(); track aow.id) {
-              <button
-                type="button"
-                (click)="openAow(aow.code)"
-                [attr.aria-label]="'Open indicators for ' + aow.code + ' ' + aow.name"
-                class="group flex w-full shrink-0 appearance-none flex-col gap-1.5 rounded-xl border border-transparent bg-[var(--pr-color-accents-1)] px-3 py-2.5 text-left transition-[background,border-color,box-shadow] duration-200 hover:border-[rgba(30,32,47,0.08)] hover:bg-white hover:shadow-[0_4px_14px_rgba(30,32,47,0.07)]">
-                <div class="flex items-center gap-2">
-                  <span class="text-[11.5px] font-extrabold text-[var(--pr-color-secondary-400)]">{{ aow.code }}</span>
+              <div
+                [attr.data-guide]="$first ? 'aow-action' : null"
+                class="group flex w-full min-w-0 shrink-0 flex-col gap-1 rounded-xl border border-transparent bg-[var(--pr-color-accents-1)] px-3 py-2.5 text-left transition-[background,border-color,box-shadow] duration-200 hover:border-[rgba(30,32,47,0.08)] hover:bg-white hover:shadow-[0_4px_14px_rgba(30,32,47,0.07)]">
+                <div class="flex min-w-0 items-start gap-2">
+                  <p class="m-0 min-w-0 flex-1 text-[12px] leading-snug text-[var(--pr-color-secondary-400)]">
+                    <b class="font-extrabold">{{ aow.code }}</b>
+                    <span class="mx-1 text-[var(--pr-color-accents-3)]">·</span>{{ aow.name }}
+                  </p>
                   @if (aow.resultsCount) {
-                    <span class="ml-auto flex shrink-0 gap-1">
+                    <span class="flex shrink-0 gap-1">
                       @if (aow.resultsCount.editing) {
                         <span class="rounded-full bg-[#fef3c7] px-1.5 py-px text-[9.5px] font-bold tabular-nums text-[#92400e]">{{ aow.resultsCount.editing }}</span>
                       }
@@ -835,21 +926,17 @@
                       }
                     </span>
                   }
-                  <span
-                    class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-accents-3)] transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--pr-color-secondary-400)]">
-                    arrow_forward
-                  </span>
                 </div>
 
-                <p class="line-clamp-2 text-[12px] font-medium leading-snug text-[var(--pr-color-secondary-400)]">{{ aow.name }}</p>
-
-                <div class="flex items-center gap-1.5">
-                  <div class="h-1 flex-1 overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]">
-                    <div class="h-full rounded-full" [style.width.%]="aow.progress || 0" [style.background]="accentTheme().gradient"></div>
-                  </div>
-                  <span class="w-7 shrink-0 text-right text-[9.5px] font-bold tabular-nums text-[var(--pr-color-accents-5)]">{{ aow.progress || 0 }}%</span>
-                </div>
-              </button>
+                <button
+                  type="button"
+                  (click)="openAow(aow.code)"
+                  [attr.aria-label]="'Report against indicators of ' + aow.code"
+                  class="inline-flex items-center gap-1 self-start rounded-lg border-0 bg-transparent px-0 py-0.5 text-[11px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:text-[var(--pr-color-primary-400)]">
+                  Report against indicators
+                  <span class="material-icons-round text-[13px]">arrow_forward</span>
+                </button>
+              </div>
             }
 
             <!-- 2030 Outcomes: fixed entry, the units endpoint never returns it -->
@@ -871,6 +958,119 @@
             </button>
           }
         </div>
+
+        <button
+          type="button"
+          data-guide="planned-action"
+          (click)="openGuided('planned')"
+          class="mt-3 flex shrink-0 appearance-none items-center justify-center gap-2 rounded-xl border-0 px-4 py-2.5 text-[12.5px] font-bold text-white transition-transform duration-200 hover:-translate-y-px"
+          [style.background]="accentTheme().gradient"
+          [style.boxShadow]="accentTheme().buttonShadow">
+          Report a planned result
+          <span class="material-icons-round text-[16px]">arrow_forward</span>
+        </button>
+      </article>
+
+      <!-- Card 7 — Reporting guide entry. Two rows tall, next to the other verticals. -->
+      <article
+        class="col-start-4 row-span-2 row-start-2 flex min-h-[352px] flex-col justify-between gap-4 overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-[linear-gradient(160deg,#f7f7fc_0%,#ecebf8_100%)] p-5 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-span-1 max-[1180px]:row-start-auto max-[1180px]:min-h-[168px]">
+        <div>
+          <span class="inline-flex size-11 items-center justify-center rounded-2xl bg-white shadow-[0_2px_8px_rgba(30,32,47,0.08)]">
+            <span class="material-icons-round text-[22px] text-[var(--pr-color-primary-300)]">help_outline</span>
+          </span>
+          <h2 class="m-0 mt-4 text-[17px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)] [text-wrap:balance]">
+            Not sure how to report?
+          </h2>
+          <p class="m-0 mt-2 text-[12.5px] leading-relaxed text-[var(--pr-color-accents-6)]">
+            A short walkthrough of the screen: where your planned indicators live, how emerging results differ, and what each action does.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="startGuide()"
+          class="flex shrink-0 appearance-none items-center justify-center gap-2 rounded-xl border-0 bg-white px-4 py-2.5 text-[12.5px] font-bold text-[var(--pr-color-primary-400)] shadow-[0_4px_14px_rgba(30,32,47,0.10)] transition-transform duration-200 hover:-translate-y-px">
+          See the guide
+          <span class="material-icons-round text-[16px]">play_arrow</span>
+        </button>
+      </article>
+
+      <!-- Card 6 — My CGIAR Centers. One card cycling through the centers; hovering
+           it swells and floats the full list out, no click needed. -->
+      <article
+        class="pr-centers relative col-start-3 row-start-2 flex min-h-[168px] flex-col gap-2.5 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-start-auto"
+        (mouseenter)="openCenters()"
+        (mouseleave)="closeCenters()">
+        <div class="flex shrink-0 items-baseline gap-2">
+          <p data-guide="centers" class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">My CGIAR Centers</p>
+          <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ myCenters().length }}</span>
+        </div>
+
+        @if (myCenters().length) {
+          <!-- the one visible center, keyed so each rotation animates in -->
+          @if (currentCenter(); as center) {
+            @if (center.center_id; as key) {
+              <div class="pr-centers__slide flex flex-1 flex-col gap-2" [attr.data-key]="key">
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-[var(--pr-color-primary-25)]">
+                    <i class="material-icons-round text-[15px] text-[var(--pr-color-primary-300)]">account_balance</i>
+                  </span>
+                  <p class="m-0 truncate text-[11px] font-medium text-[var(--pr-color-accents-5)]">CGIAR Center</p>
+                </div>
+                <h3 class="m-0 line-clamp-3 text-[13.5px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">
+                  {{ center.center_name }} ({{ center.center_acronym || center.center_id }})
+                </h3>
+                <a
+                  class="mt-auto inline-flex items-center gap-1.5 self-start rounded-lg bg-[var(--pr-color-primary-300)] px-3 py-1.5 text-[11.5px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
+                  routerLink="/bilateral/create">
+                  Report
+                  <i class="material-icons-round text-[14px]">arrow_forward</i>
+                </a>
+              </div>
+            }
+          }
+
+          <!-- rotation dots double as a manual picker -->
+          @if (myCenters().length > 1) {
+            <div class="flex shrink-0 items-center gap-1.5">
+              @for (c of myCenters(); track c.center_id; let i = $index) {
+                <button
+                  type="button"
+                  (mouseenter)="focusCenter(i)"
+                  (click)="focusCenter(i)"
+                  [attr.aria-label]="'Show ' + (c.center_acronym || c.center_name)"
+                  class="h-1.5 appearance-none rounded-full border-0 transition-all duration-300"
+                  [class]="i === centerIndex() ? 'w-5 bg-[var(--pr-color-primary-300)]' : 'w-1.5 bg-[var(--pr-color-accents-2)]'"></button>
+              }
+            </div>
+          }
+
+          <!-- the full list, floating out of the card on hover -->
+          @if (centersOpen() && myCenters().length > 1) {
+            <div
+              class="pr-centers__pop custom_scroll absolute inset-x-0 top-full z-[30] mt-2 flex max-h-[320px] flex-col gap-1.5 overflow-y-auto rounded-[18px] border border-[rgba(30,32,47,0.08)] bg-white p-2.5 shadow-[0_24px_60px_rgba(30,32,47,0.22)]">
+              @for (c of myCenters(); track c.center_id; let i = $index) {
+                <a
+                  class="pr-centers__row flex items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline transition-colors duration-150 hover:bg-[var(--pr-color-accents-1)]"
+                  [style.--i]="i"
+                  routerLink="/bilateral/create">
+                  <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--pr-color-primary-25)]">
+                    <i class="material-icons-round text-[15px] text-[var(--pr-color-primary-300)]">account_balance</i>
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-[12px] font-semibold leading-tight text-[var(--pr-color-secondary-400)]">{{ c.center_acronym || c.center_id }}</span>
+                    <span class="block truncate text-[10.5px] leading-tight text-[var(--pr-color-accents-5)]">{{ c.center_name }}</span>
+                  </span>
+                  <i class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-accents-3)]">arrow_forward</i>
+                </a>
+              }
+            </div>
+          }
+        } @else {
+          <p class="my-auto text-center text-[11.5px] leading-snug text-[var(--pr-color-accents-5)]">
+            You do not have a Center User role yet.
+          </p>
+        }
       </article>
 
       <!-- Card 5 — Results by status. One bento cell, one plot area: the bars share
@@ -915,4 +1115,54 @@
 <!-- ==================== GUIDED CREATION — full-screen flow ==================== -->
 @if (guidedOpen()) {
   <app-guided-creation [prefillPath]="guidedPath()" (closed)="closeGuided()" />
+}
+
+<!-- ==================== TUTORIAL PICKER ==================== -->
+@if (tutorialsOpen()) {
+  <div class="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(30,32,47,0.5)] p-6" (click)="tutorialsOpen.set(false)">
+    <div
+      class="pr-centers__pop w-full max-w-[560px] overflow-hidden rounded-[20px] bg-white shadow-[0_28px_70px_rgba(30,32,47,0.32)]"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Reporting tutorials"
+      (click)="$event.stopPropagation()">
+      <div class="flex items-start gap-3 border-b border-[rgba(30,32,47,0.07)] px-6 py-5">
+        <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--pr-color-primary-25)]">
+          <span class="material-icons-round text-[20px] text-[var(--pr-color-primary-300)]">school</span>
+        </span>
+        <div class="min-w-0 flex-1">
+          <h2 class="m-0 text-[17px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">How do you want to report?</h2>
+          <p class="m-0 mt-1 text-[12.5px] leading-snug text-[var(--pr-color-accents-5)]">Pick a walkthrough. Each one highlights the screen as it goes.</p>
+        </div>
+        <button
+          type="button"
+          (click)="tutorialsOpen.set(false)"
+          aria-label="Close"
+          class="inline-flex size-8 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)] hover:text-[var(--pr-color-secondary-400)]">
+          <span class="material-icons-round text-[19px]">close</span>
+        </button>
+      </div>
+
+      <div class="flex flex-col p-3">
+        @for (t of tutorials; track t.id) {
+          <button
+            type="button"
+            (click)="runTutorial(t.id)"
+            class="flex w-full appearance-none items-start gap-3.5 rounded-xl border-0 bg-transparent px-3 py-3 text-left transition-colors duration-150 hover:bg-[var(--pr-color-accents-1)]">
+            <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--pr-color-primary-25)]">
+              <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">{{ t.icon }}</span>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="flex items-baseline gap-2">
+                <span class="text-[14px] font-bold text-[var(--pr-color-secondary-400)]">{{ t.title }}</span>
+                <span class="text-[11px] text-[var(--pr-color-accents-4)]">{{ t.length }}</span>
+              </span>
+              <span class="mt-0.5 block text-[12.5px] leading-snug text-[var(--pr-color-accents-6)]">{{ t.summary }}</span>
+            </span>
+            <span class="material-icons-round mt-1 shrink-0 text-[18px] text-[var(--pr-color-accents-3)]">play_arrow</span>
+          </button>
+        }
+      </div>
+    </div>
+  </div>
 }

@@ -8,6 +8,7 @@ import { Unit } from '../entity-details/interfaces/entity-details.interface';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { GuidedCreationComponent } from './components/guided-creation/guided-creation.component';
+import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
 
 /** Vibrant, high-contrast palette for the status charts (no pastels). */
 const STATUS_COLOR: Record<number, string> = {
@@ -93,6 +94,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly api = inject(ApiService);
   private readonly dataControlSE = inject(DataControlService);
+  private readonly guideSE = inject(ReportingGuideService);
+
+  /**
+   * The landing surface is the workspace overview — no program in context. A
+   * program is only "entered" when the user picks one, which keeps the guided
+   * entry and the guide itself reachable before any program is chosen.
+   */
+  readonly scope = signal<'overview' | 'program'>('overview');
 
   /** Currently selected program id; null → fall back to the first available. */
   readonly selectedId = signal<number | null>(null);
@@ -151,6 +160,74 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const code = this.selected()?.initiativeCode;
     return !!code && this.loadingSummaryCodes().has(code) && !this.summariesByCode().has(code);
   });
+
+  /**
+   * Guided tour. The steps are derived from what is actually on screen — a user
+   * with no programs of their own, or a program without Areas of Work, gets a
+   * different (and honest) sequence instead of a spotlight over nothing.
+   */
+  /** The tutorial picker: "how do I report?" has more than one answer. */
+  readonly tutorialsOpen = signal(false);
+  readonly tutorials = this.guideSE.catalogue;
+
+  startGuide(): void {
+    this.tutorialsOpen.set(true);
+  }
+
+  runTutorial(id: TutorialId): void {
+    this.tutorialsOpen.set(false);
+    // Let the picker unmount before driver.js measures the page behind it.
+    setTimeout(() => this.guideSE.start(id, this.guideContext()), 120);
+  }
+
+  private guideContext() {
+    return {
+      hasMyPrograms: this.myPrograms().length > 0,
+      hasOtherPrograms: this.otherPrograms().length > 0 || this.otherProjects().length > 0,
+      // On the overview no program blocks are rendered, so claiming one is selected
+      // would point the tour at elements that do not exist.
+      hasSelectedProgram: this.scope() === 'program' && !!this.selected(),
+      hasAows: this.scope() === 'program' && this.aows().length > 0,
+      hasCategories: this.scope() === 'program' && (this.groupedSummaries().outputs.length > 0 || this.groupedSummaries().outcomes.length > 0),
+      hasCenters: this.scope() === 'program' && this.myCenters().length > 0,
+      inAowView: this.viewMode() === 'aow',
+      hasIndicators: this.indicatorGroups().length > 0
+    };
+  }
+
+  // ---- My CGIAR Centers (single card, auto-advancing) ----
+  /** Centers the user has a role in; the card cycles through them. */
+  readonly myCenters = computed<any[]>(() => this.api.rolesSE.getMyCenters() ?? []);
+  readonly centerIndex = signal(0);
+  readonly centersOpen = signal(false);
+  private centerTimer: ReturnType<typeof setInterval> | null = null;
+
+  readonly currentCenter = computed(() => {
+    const list = this.myCenters();
+    return list.length ? list[this.centerIndex() % list.length] : null;
+  });
+
+  /** Pause the rotation while the list is open — reading a moving card is hostile. */
+  private startCenterRotation(): void {
+    if (this.centerTimer) return;
+    this.centerTimer = setInterval(() => {
+      if (this.centersOpen()) return;
+      const total = this.myCenters().length;
+      if (total > 1) this.centerIndex.update(i => (i + 1) % total);
+    }, 4200);
+  }
+
+  openCenters(): void {
+    this.centersOpen.set(true);
+  }
+
+  closeCenters(): void {
+    this.centersOpen.set(false);
+  }
+
+  focusCenter(i: number): void {
+    this.centerIndex.set(i);
+  }
 
   // ---- Guided creation (full-screen flow) ----
   readonly guidedOpen = signal(false);
@@ -402,15 +479,32 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (this.allPrograms().length === 0) {
       this.homeSE.getScienceProgramsProgress();
     }
+    this.startCenterRotation();
+    // The sidebar already says "Reporting workspace · Science Programs · <phase>",
+    // so the navbar repeating it is noise on this surface.
+    this.dataControlSE.hideWordmark.set(true);
   }
 
-  /** Leaving the lab must never strand the shell in focus mode. */
+  /** Leaving the lab must never strand the shell in focus mode — or leak a timer. */
   ngOnDestroy(): void {
     this.dataControlSE.focusMode.set(false);
+    this.dataControlSE.hideWordmark.set(false);
+    if (this.centerTimer) clearInterval(this.centerTimer);
   }
 
   select(sp: SPProgress): void {
     this.selectedId.set(sp.initiativeId);
+    this.scope.set('program');
+    // If the tour is parked on "pick a program", this is the cue it was waiting for.
+    // Deferred: the program's blocks must be in the DOM before they can be highlighted.
+    setTimeout(() => this.guideSE.notify('program-selected', this.guideContext()), 350);
+  }
+
+  /** Back to the workspace overview: no program in context. */
+  goToOverview(): void {
+    this.scope.set('overview');
+    this.viewMode.set('home');
+    this.activeAowCode.set(null);
   }
 
   /** Fetch (and cache) the Areas of Work for a program by its official code. */
@@ -457,6 +551,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** Enter the AOW detail view and lazy-load its indicators. */
   openAow(aowCode: string): void {
+    // Deferred below: the AOW view must be in the DOM before it can be highlighted.
+    setTimeout(() => this.guideSE.notify('aow-opened', this.guideContext()), 700);
     this.activeAowCode.set(aowCode);
     this.viewMode.set('aow');
     this.clearFilters();
@@ -715,8 +811,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return this.latestVersion(sp)?.totalResults ?? sp.totalResults ?? 0;
   }
 
+  /**
+   * `selected()` always resolves to a program (it falls back to the first one), so
+   * it cannot answer "is this one highlighted?" on its own — on the overview no
+   * program is in context and none should look picked.
+   */
   isActive(sp: SPProgress): boolean {
-    return this.selected()?.initiativeId === sp.initiativeId;
+    return this.scope() === 'program' && this.selected()?.initiativeId === sp.initiativeId;
   }
 
   private filter(list: SPProgress[]): SPProgress[] {

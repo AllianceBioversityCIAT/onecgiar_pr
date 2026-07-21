@@ -49,6 +49,12 @@ export class DataControlService {
    */
   readonly focusMode = signal(false);
   /**
+   * Lighter than focusMode: the navigation bar stays, but its wordmark and phase
+   * chip are hidden because the surface already states where the user is (the
+   * reporting dashboard's sidebar carries both). Reset on destroy.
+   */
+  readonly hideWordmark = signal(false);
+  /**
    * Backend section-completeness indicator. Signal-backed (transparent getter/setter
    * keeps existing call sites working) so `greenChecksString` can be a memoized
    * `computed` instead of a per-CD `JSON.stringify` in panel-menu. (P2-2967/P2-2970)

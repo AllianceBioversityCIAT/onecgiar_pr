@@ -126,3 +126,83 @@
 :host ::ng-deep .custom_select .field {
   box-sizing: border-box;
 }
+
+// ---------------------------------------------------------------------------
+// My CGIAR Centers. The card cycles on its own; hovering swells it slightly and
+// floats the full list out below, each row rising in sequence. No click needed.
+// ---------------------------------------------------------------------------
+.pr-centers {
+  transition:
+    transform 320ms cubic-bezier(0.33, 0, 0.2, 1),
+    box-shadow 320ms cubic-bezier(0.33, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-2px) scale(1.012);
+    box-shadow: 0 18px 40px rgba(30, 32, 47, 0.14);
+  }
+}
+
+// Each rotation re-creates the slide, so the swap animates instead of jumping.
+.pr-centers__slide {
+  animation: pr-centers-slide 420ms cubic-bezier(0.33, 0, 0.2, 1);
+}
+
+@keyframes pr-centers-slide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+// The list unfolds from the card's own edge — clip-path makes it read as the
+// surface stretching rather than a separate panel appearing.
+.pr-centers__pop {
+  transform-origin: top center;
+  animation: pr-centers-pop 380ms cubic-bezier(0.33, 0, 0.2, 1);
+}
+
+@keyframes pr-centers-pop {
+  from {
+    opacity: 0;
+    clip-path: inset(0 12% 100% 12% round 18px);
+    transform: translateY(-10px) scaleY(0.94);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0 round 18px);
+    transform: none;
+  }
+}
+
+.pr-centers__row {
+  animation: pr-centers-row 340ms cubic-bezier(0.33, 0, 0.2, 1) backwards;
+  animation-delay: calc(90ms + var(--i, 0) * 45ms);
+}
+
+@keyframes pr-centers-row {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-centers,
+  .pr-centers__slide,
+  .pr-centers__pop,
+  .pr-centers__row {
+    transition-duration: 1ms;
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}
