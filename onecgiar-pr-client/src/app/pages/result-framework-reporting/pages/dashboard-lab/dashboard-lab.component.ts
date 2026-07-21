@@ -251,8 +251,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly statusFilter = signal<string | null>(null);
   /** Free-text search across indicator description + typology. */
   readonly indicatorSearch = signal<string>('');
-  /** HLO group titles that are collapsed (default: all expanded). */
-  readonly collapsedGroups = signal<Set<string>>(new Set());
+  /** Cards by default; the table is the dense alternative for scanning many rows. */
+  readonly indicatorView = signal<'cards' | 'table'>('cards');
+
+  setIndicatorView(view: 'cards' | 'table'): void {
+    this.indicatorView.set(view);
+  }
+  /**
+   * HLO groups start collapsed — an Area of Work can hold 45 indicators and an
+   * all-open list buries the structure. We track what is OPEN so new groups
+   * arriving from the API are collapsed by default without extra bookkeeping.
+   */
+  readonly expandedGroups = signal<Set<string>>(new Set());
 
   /** ToC results (indicator groups) cached by `${program}::${aow}`. */
   readonly tocByKey = signal<Map<string, { outputs: any[]; outcomes: any[] }>>(new Map());
@@ -315,15 +325,22 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const q = this.indicatorSearch().trim().toLowerCase();
     if (!typ && !st && !q) return groups;
     return groups
-      .map(g => ({
-        ...g,
-        indicators: (g?.indicators ?? []).filter(
-          (i: any) =>
-            (!typ || i?.type_name === typ) &&
-            (!st || this.statusLabel(i?.progress_percentage) === st) &&
-            (!q || `${i?.indicator_description ?? ''} ${i?.type_name ?? ''}`.toLowerCase().includes(q))
-        )
-      }))
+      .map(g => {
+        // A hit on the parent High-Level Output keeps the whole group: the user
+        // searched for the container, not for one of the rows inside it.
+        const parentHit = !!q && String(g?.result_title ?? '').toLowerCase().includes(q);
+        return {
+          ...g,
+          indicators: (g?.indicators ?? []).filter(
+            (i: any) =>
+              (!typ || i?.type_name === typ) &&
+              (!st || this.statusLabel(i?.progress_percentage) === st) &&
+              (!q ||
+                parentHit ||
+                `${i?.indicator_description ?? ''} ${i?.type_name ?? ''} ${i?.center_acronym ?? ''}`.toLowerCase().includes(q))
+          )
+        };
+      })
       .filter(g => (g.indicators ?? []).length > 0);
   });
 
@@ -571,11 +588,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   isGroupCollapsed(title: string): boolean {
-    return this.collapsedGroups().has(title);
+    return !this.expandedGroups().has(title);
   }
 
   toggleGroup(title: string): void {
-    this.collapsedGroups.update(set => {
+    this.expandedGroups.update(set => {
       const next = new Set(set);
       next.has(title) ? next.delete(title) : next.add(title);
       return next;
@@ -726,6 +743,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   onFlyoutLeave(): void {
     this.hoveredProgram.set(null);
+  }
+
+  /** Searching auto-opens the groups that survived the filter. */
+  private revealMatches(): void {
+    this.expandedGroups.set(new Set(this.indicatorGroups().map(g => g?.result_title).filter(Boolean)));
   }
 
   onQuery(value: string): void {

@@ -64,7 +64,7 @@ export class ReportingGuideService {
       title: 'Report against a planned indicator',
       summary: 'From the program down to the exact indicator, including what you find inside an Area of Work.',
       icon: 'flag',
-      length: '7 stops'
+      length: '8 stops'
     },
     {
       id: 'emerging',
@@ -313,8 +313,9 @@ export class ReportingGuideService {
       steps.push({
         element: '[data-guide="aow-group"]',
         popover: {
-          title: 'Grouped by High-Level Output',
-          description: 'Indicators sit under the HLO they belong to. Collapse the groups that are not yours to shorten the list.',
+          title: 'Open the High-Level Output',
+          description:
+            'Indicators live under the High-Level Output they belong to, and the groups start closed so the structure stays readable. Open the one your result contributes to — the number on the right tells you how many indicators are inside.',
           side: 'bottom',
           align: 'start'
         }
@@ -322,10 +323,19 @@ export class ReportingGuideService {
       steps.push({
         element: '[data-guide="aow-indicator"]',
         popover: {
-          title: 'Report against this one',
-          description: 'Each row shows its target and what has been achieved. Hovering a row reveals its actions — that is where you report your result.',
+          title: 'Read the indicator',
+          description:
+            'Each card carries what the indicator IS: its typology, the Center behind it, the target for the year and where it applies. Long wording is trimmed — hover the text to read it in full.',
           side: 'bottom',
           align: 'start'
+        }
+      });
+      steps.push({
+        element: '[data-guide="aow-report"]',
+        popover: {
+          title: 'This is where you report',
+          description: '"Report" starts a result against this exact indicator. "View" opens what has already been reported against it, so you can check nobody covered it before you.',
+          side: 'top'
         }
       });
     }
