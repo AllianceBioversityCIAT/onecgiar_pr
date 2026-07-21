@@ -20,6 +20,26 @@ p {
   color: var(--pr-color-secondary-200);
 }
 
+.kpi-statement-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kpi-statement-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.center-chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  border-color: var(--pr-color-primary-200);
+  background: var(--pr-color-primary-25);
+  color: var(--pr-color-primary-500);
+}
+
 .achieved {
   border: 1px solid var(--pr-color-green-500) !important;
   color: var(--pr-color-green-500) !important;
