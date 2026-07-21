@@ -331,8 +331,10 @@ export class ResultsFrameworkReportingService {
           };
         });
 
-        indicator.targets_by_center = centersMap.size
-          ? { targets, centers: Array.from(centersMap.values()) }
+        const centers = Array.from(centersMap.values());
+
+        indicator.targets_by_center = centers.length
+          ? { targets, centers }
           : {};
       };
 

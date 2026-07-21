@@ -26,6 +26,8 @@ interface TocResultRow {
   result_type_id?: number | null;
   result_type_name?: string | null;
   result_level_id?: number | null;
+  center_id?: number | null;
+  center_acronym?: string | null;
 }
 
 export interface TocResultResponse {
@@ -54,6 +56,22 @@ export interface TocResultResponse {
     result_type_id?: number | null;
     result_type_name?: string | null;
     result_level_id?: number | null;
+    /** Center for this disaggregated indicator row (toc_result_indicator_target_center → clarisa_institutions). */
+    center_id?: number | null;
+    center_acronym?: string | null;
+    targets_by_center?: {
+      targets: Array<{
+        toc_indicator_target_id: number;
+        year: number;
+        target_value: number;
+        number_target: string;
+      }>;
+      centers: Array<{
+        center_id: number;
+        center_acronym: string;
+        center_name: string;
+      }>;
+    };
   }>;
 }
 
@@ -338,6 +356,8 @@ export class AoWBilateralRepository {
         trit.number_target,
         trit.target_date,
         trit.target_value,
+        tritc.center_id AS center_id,
+        ci.acronym AS center_acronym,
         CASE
           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
@@ -385,6 +405,10 @@ export class AoWBilateralRepository {
       LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
         AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
         AND trit.target_date = ?
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target_center tritc
+        ON trit.toc_indicator_target_id = tritc.toc_indicator_target_id
+      LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci
+        ON tritc.center_id = ci.id
     `;
     params.push(options.context.reportingYear);
 
@@ -414,8 +438,10 @@ export class AoWBilateralRepository {
         tri.location,
         trit.number_target,
         trit.target_date,
-        trit.target_value
-      ORDER BY tr.id ASC, tri.id ASC
+        trit.target_value,
+        tritc.center_id,
+        ci.acronym
+      ORDER BY tr.id ASC, tri.id ASC, ci.acronym ASC
     `;
 
     return { query, params };
@@ -455,6 +481,8 @@ export class AoWBilateralRepository {
           result_level_id: row.result_level_id ?? null,
           result_type_id: row.result_type_id ?? null,
           result_type_name: row.result_type_name ?? null,
+          center_id: row.center_id ?? null,
+          center_acronym: row.center_acronym ?? null,
         };
 
         grouped.get(row.toc_result_id)?.indicators.push(indicator);

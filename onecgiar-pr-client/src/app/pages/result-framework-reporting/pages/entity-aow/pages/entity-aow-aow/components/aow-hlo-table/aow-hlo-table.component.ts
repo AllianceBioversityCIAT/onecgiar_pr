@@ -69,7 +69,8 @@ export class AowHloTableComponent {
           indicators: (item.indicators || []).filter(
             (indicator: any) =>
               (indicator.indicator_description || '').toUpperCase().includes(search) ||
-              (indicator.type_name || '').toUpperCase().includes(search)
+              (indicator.type_name || '').toUpperCase().includes(search) ||
+              (indicator.center_acronym || '').toUpperCase().includes(search)
           )
         };
       })
@@ -117,11 +118,15 @@ export class AowHloTableComponent {
     return 'Not started';
   }
 
-  openReportResultModal(item: any, currentItemId: string | null) {
+  openReportResultModal(item: any, currentItemId: string | null, centerId?: number | null) {
     const selectedCurrentItem = currentItemId
       ? {
           ...item,
-          indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+          indicators: item.indicators.filter(
+            (indicator: any) =>
+              indicator.indicator_id === currentItemId &&
+              (centerId == null || indicator.center_id === centerId)
+          )
         }
       : {
           ...item,
@@ -132,10 +137,14 @@ export class AowHloTableComponent {
     this.entityAowService.currentResultToReport.set(selectedCurrentItem);
   }
 
-  openViewResultDrawer(item: any, currentItemId: string) {
+  openViewResultDrawer(item: any, currentItemId: string, centerId?: number | null) {
     const selectedCurrentItem = {
       ...item,
-      indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+      indicators: item.indicators.filter(
+        (indicator: any) =>
+          indicator.indicator_id === currentItemId &&
+          (centerId == null || indicator.center_id === centerId)
+      )
     };
 
     this.entityAowService.existingResultsContributors.set([]);
@@ -143,18 +152,25 @@ export class AowHloTableComponent {
     this.entityAowService.currentResultToView.set(selectedCurrentItem);
   }
 
-  openTargetDetailsDrawer(item: any, currentItemId: string) {
+  openTargetDetailsDrawer(item: any, currentItemId: string, centerId?: number | null) {
     const selectedCurrentItem = {
       ...item,
-      indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+      indicators: item.indicators.filter(
+        (indicator: any) =>
+          indicator.indicator_id === currentItemId &&
+          (centerId == null || indicator.center_id === centerId)
+      )
     };
 
     this.entityAowService.showTargetDetailsDrawer.set(true);
     this.entityAowService.currentTargetToView.set(selectedCurrentItem);
   }
 
-  hasTargets(item: any, indicatorId: string): boolean {
-    const indicator = item.indicators?.find((ind: any) => ind.indicator_id === indicatorId);
+  hasTargets(item: any, indicatorId: string, centerId?: number | null): boolean {
+    const indicator = item.indicators?.find(
+      (ind: any) =>
+        ind.indicator_id === indicatorId && (centerId == null || ind.center_id === centerId)
+    );
     return indicator?.targets_by_center?.centers?.length > 0;
   }
 }

@@ -584,6 +584,10 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getWorkPackagesByProgramAndArea', () => {
     beforeEach(() => {
       mockTocResultsRepository.findByCompositeCode.mockReset();
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockReset();
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockResolvedValue(
+        [],
+      );
       mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockReset();
       mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
         [],
@@ -622,6 +626,77 @@ describe('ResultsFrameworkReportingService', () => {
         result.response.tocResultsOutputs[0]
           .contributing_synergy_program_initiative_ids,
       ).toEqual([101, 102]);
+    });
+
+    it('should keep center_acronym from disaggregated indicator rows', async () => {
+      const tocContext = { reportingYear: 2024, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          toc_result_id: 10,
+          category: 'OUTPUT',
+          result_title: 'Result with centers',
+          related_node_id: 'NODE-1',
+          indicators: [
+            {
+              indicator_id: 100,
+              indicator_description: 'Number of farmers trained',
+              center_id: 1,
+              center_acronym: 'CIP',
+            },
+            {
+              indicator_id: 100,
+              indicator_description: 'Number of farmers trained',
+              center_id: 2,
+              center_acronym: 'IRRI',
+            },
+          ],
+        },
+      ]);
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockResolvedValue(
+        [
+          {
+            toc_indicator_target_id: 1,
+            year: 2025,
+            target_value: 10,
+            number_target: '10',
+            centers: [
+              {
+                center_id: 1,
+                center_acronym: 'CIP',
+                center_name: 'International Potato Center',
+              },
+              {
+                center_id: 2,
+                center_acronym: 'IRRI',
+                center_name: 'International Rice Research Institute',
+              },
+            ],
+          },
+        ],
+      );
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2024',
+      );
+
+      expect(result.response.tocResultsOutputs[0].indicators).toEqual([
+        expect.objectContaining({
+          indicator_id: 100,
+          center_id: 1,
+          center_acronym: 'CIP',
+        }),
+        expect.objectContaining({
+          indicator_id: 100,
+          center_id: 2,
+          center_acronym: 'IRRI',
+        }),
+      ]);
+      expect(
+        result.response.tocResultsOutputs[0].indicators[0].center_acronyms,
+      ).toBeUndefined();
     });
 
     it('should return work packages when repository returns data', async () => {
