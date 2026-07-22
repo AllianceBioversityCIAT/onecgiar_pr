@@ -153,6 +153,7 @@ describe('AowHloTableComponent', () => {
     const mockShowTargetDetailsDrawer = signal<boolean>(false);
     const mockTargetDetailsDrawerFullScreen = signal<boolean>(false);
     const mockCurrentTargetToView = signal<any>({});
+    const mockTargetDetailsSelectedCenterId = signal<string | number | null>(null);
     const mockExistingResultsContributors = signal<any[]>([]);
 
     mockEntityAowService = {
@@ -176,6 +177,7 @@ describe('AowHloTableComponent', () => {
       showTargetDetailsDrawer: mockShowTargetDetailsDrawer,
       targetDetailsDrawerFullScreen: mockTargetDetailsDrawerFullScreen,
       currentTargetToView: mockCurrentTargetToView,
+      targetDetailsSelectedCenterId: mockTargetDetailsSelectedCenterId,
       existingResultsContributors: mockExistingResultsContributors
     } as any;
 
@@ -187,6 +189,7 @@ describe('AowHloTableComponent', () => {
     jest.spyOn(mockShowTargetDetailsDrawer, 'set');
     jest.spyOn(mockTargetDetailsDrawerFullScreen, 'set');
     jest.spyOn(mockCurrentTargetToView, 'set');
+    jest.spyOn(mockTargetDetailsSelectedCenterId, 'set');
     jest.spyOn(mockExistingResultsContributors, 'set');
 
     mockResultLevelService = {
@@ -367,6 +370,10 @@ describe('AowHloTableComponent', () => {
       const result = component.getStatusLabel(input);
       expect(result).toBe(expected);
     });
+
+    it('should return Not started for fractional progress below 1%', () => {
+      expect(component.getStatusLabel('0.5%')).toBe('Not started');
+    });
   });
 
   describe('tableData computed', () => {
@@ -462,6 +469,25 @@ describe('AowHloTableComponent', () => {
 
       expect(result).toEqual([]);
       expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  describe('emptyStateMessage', () => {
+    it('should return High-Level Outputs message for outputs table', () => {
+      component.tableType = 'outputs';
+      expect(component.emptyStateMessage()).toBe('There are no High-Level Outputs indicators found.');
+    });
+
+    it('should return Intermediate Outcomes message for outcomes table', () => {
+      component.tableType = 'outcomes';
+      expect(component.emptyStateMessage()).toBe('There are no Intermediate Outcomes indicators found.');
+    });
+
+    it('should return 2030 Outcomes message for 2030-outcomes table', () => {
+      component.tableType = '2030-outcomes';
+      expect(component.emptyStateMessage()).toBe(
+        'There are no 2030 Outcomes indicators configured for this program in the current reporting phase.'
+      );
     });
   });
 
@@ -684,7 +710,100 @@ describe('AowHloTableComponent', () => {
     });
   });
 
-  testModalDrawerOpening('openTargetDetailsDrawer', 'showTargetDetailsDrawer', 'currentTargetToView');
+  testModalDrawerOpening('openViewResultDrawer', 'showViewResultDrawer', 'currentResultToView');
+
+  describe('openTargetDetailsDrawer', () => {
+    it('should open the drawer with the selected indicator row and matched center', () => {
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        center_id: 3,
+        target_value_sum: 79,
+        targets_by_center: {
+          centers: [
+            {
+              center_id: 1,
+              targets: [{ year: 2026, target_value: 95 }]
+            },
+            {
+              center_id: 3,
+              targets: [{ year: 2026, target_value: 79 }]
+            }
+          ]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.showTargetDetailsDrawer.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(3);
+      expect(mockEntityAowService.currentTargetToView.set).toHaveBeenCalledWith({
+        ...mockItem,
+        indicators: [selectedIndicator]
+      });
+    });
+
+    it('should clear selected center when no target match is found', () => {
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value_sum: 50,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(null);
+    });
+
+    it('should resolve center by target value when center_id is missing', () => {
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value_sum: 79,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(3);
+    });
+
+    it('should clear selected center when reporting year is unavailable', () => {
+      mockEntityAowService.reportingPhaseYear = '';
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value_sum: 79,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(null);
+    });
+
+    it('should resolve center using target_value when target_value_sum is missing', () => {
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value: 79,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(3);
+    });
+  });
 
   describe('hasTargets', () => {
     it('should return true when indicator has targets with centers', () => {

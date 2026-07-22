@@ -189,6 +189,35 @@ describe('EntityAowService', () => {
       expect(service.isLoadingDetails()).toBe(false);
     });
 
+    it('should disable reporting when initiative status returns reporting_enabled false', async () => {
+      service.entityId.set('SP01');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_phaseInitiativeStatus').mockReturnValue(
+        of({ response: { reporting_enabled: false } })
+      );
+
+      service.getAllDetailsData();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockApiService.resultsSE.GET_phaseInitiativeStatus).toHaveBeenCalledWith(34, 1);
+      expect(service.reportingEnabled()).toBe(false);
+    });
+
+    it('should keep reporting enabled when initiative status request fails', async () => {
+      service.entityId.set('SP01');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_phaseInitiativeStatus').mockReturnValue(
+        throwError(() => new Error('phase status unavailable'))
+      );
+
+      service.getAllDetailsData();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.reportingEnabled()).toBe(true);
+    });
+
     it('should handle empty units array', async () => {
       service.entityId.set('SP01');
       const responseWithEmptyUnits = {
@@ -395,7 +424,25 @@ describe('EntityAowService', () => {
 
       service.getTocResultsByAowId(entityId, aowId);
 
-      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId, undefined);
+    });
+
+    it('should call API with reporting phase year when configured', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      (mockApiService as any).dataControlSE.reportingCurrentPhase = {
+        phaseId: 34,
+        phaseYear: 2026,
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(
+        entityId,
+        aowId,
+        '2026',
+      );
     });
 
     it('should update tocResultsOutputsByAowId and tocResultsOutcomesByAowId and set loading to false on successful API call', () => {
@@ -1013,7 +1060,7 @@ describe('EntityAowService', () => {
       expect(service.tocResultsOutputsByAowId()).toEqual(mockTocResults);
       expect(service.tocResultsOutcomesByAowId()).toEqual([]);
       expect(service.isLoadingTocResultsByAowId()).toBe(false);
-      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId, undefined);
     });
 
     it('should maintain state consistency across multiple TOC operations', () => {
@@ -1051,7 +1098,7 @@ describe('EntityAowService', () => {
       expect(service.tocResultsOutputsByAowId()).toEqual(customTocResults);
       expect(service.tocResultsOutcomesByAowId()).toEqual([]);
       expect(service.isLoadingTocResultsByAowId()).toBe(false);
-      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId2);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId2, undefined);
     });
 
     it('should handle complete modal workflow', () => {

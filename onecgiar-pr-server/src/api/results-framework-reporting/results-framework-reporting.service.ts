@@ -302,35 +302,53 @@ export class ResultsFrameworkReportingService {
         const targetsWithCenters =
           await this._tocResultsRepository.findTargetsWithCentersByIndicatorId(
             indicator.indicator_id,
+            resolvedYear,
           );
 
-        const centersMap = new Map<
+        const centerTargetsMap = new Map<
           number,
-          { center_id: number; center_acronym: string; center_name: string }
+          {
+            center_id: number;
+            center_acronym: string;
+            center_name: string;
+            targets: Array<{
+              toc_indicator_target_id: number;
+              year: number;
+              target_value: number;
+              number_target: string;
+            }>;
+          }
         >();
 
-        const targets = targetsWithCenters.map((target) => {
-          target.centers.forEach((center) => {
-            if (!centersMap.has(center.center_id)) {
-              centersMap.set(center.center_id, {
+        for (const target of targetsWithCenters) {
+          for (const center of target.centers ?? []) {
+            if (!center?.center_id) {
+              continue;
+            }
+
+            if (!centerTargetsMap.has(center.center_id)) {
+              centerTargetsMap.set(center.center_id, {
                 center_id: center.center_id,
                 center_acronym: center.center_acronym,
                 center_name: center.center_name,
+                targets: [],
               });
             }
-          });
 
-          return {
-            toc_indicator_target_id: target.toc_indicator_target_id,
-            year: target.year,
-            target_value: target.target_value,
-            number_target: target.number_target,
-          };
-        });
+            centerTargetsMap.get(center.center_id)?.targets.push({
+              toc_indicator_target_id: target.toc_indicator_target_id,
+              year: target.year,
+              target_value: target.target_value,
+              number_target: target.number_target,
+            });
+          }
+        }
 
-        indicator.targets_by_center = centersMap.size
-          ? { targets, centers: Array.from(centersMap.values()) }
+        indicator.targets_by_center = centerTargetsMap.size
+          ? { centers: Array.from(centerTargetsMap.values()) }
           : {};
+
+        this.assignIndicatorCenterContext(indicator, resolvedYear);
       };
 
       const enrichTocResult = async (tocResult: any) => {
@@ -375,6 +393,41 @@ export class ResultsFrameworkReportingService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private assignIndicatorCenterContext(
+    indicator: any,
+    resolvedYear: number,
+  ): void {
+    const centers = indicator?.targets_by_center?.centers;
+    if (!Array.isArray(centers) || !centers.length) {
+      return;
+    }
+
+    const reportingYear = String(indicator.target_date ?? resolvedYear);
+    const targetValue =
+      indicator.target_value ?? indicator.target_value_sum ?? null;
+
+    if (targetValue == null || `${targetValue}`.trim() === '') {
+      return;
+    }
+
+    const normalizedTarget = String(targetValue);
+    const matchedCenter = centers.find((center: any) =>
+      center.targets?.some(
+        (target: any) =>
+          String(target.year) === reportingYear &&
+          String(target.target_value) === normalizedTarget,
+      ),
+    );
+
+    if (!matchedCenter) {
+      return;
+    }
+
+    indicator.center_id = matchedCenter.center_id;
+    indicator.center_acronym = matchedCenter.center_acronym;
+    indicator.center_name = matchedCenter.center_name;
   }
 
   async getToc2030Outcomes(programId?: string) {

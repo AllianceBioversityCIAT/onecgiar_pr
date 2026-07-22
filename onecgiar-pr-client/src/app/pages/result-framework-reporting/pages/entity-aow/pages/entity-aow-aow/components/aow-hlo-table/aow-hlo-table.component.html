@@ -56,7 +56,16 @@
     @if (item.indicators.length) {
       @for (result of item.indicators; track $index) {
         <tr>
-          <td class="text-secondary-300" style="min-width: 150px !important">{{ result.indicator_description }}</td>
+          <td class="text-secondary-300" style="min-width: 150px !important">
+            <div class="kpi-statement-cell">
+              <span class="kpi-statement-text">{{ result.indicator_description }}</span>
+              @if (result.center_acronym) {
+                <span class="tab-content_chip center-chip" [pTooltip]="'CGIAR Center: ' + result.center_acronym">
+                  {{ result.center_acronym }}
+                </span>
+              }
+            </div>
+          </td>
           <td>
             <div class="tab-content_chip" [pTooltip]="!result.type_name ? 'This information should be filled in the ToC Board' : ''">
               {{ result.type_name || 'Not provided' }}
@@ -98,7 +107,7 @@
                   label="Target details"
                   type="button"
                   class="p-button-outlined pr-body-3 tab-content_actions_button"
-                  (click)="openTargetDetailsDrawer(item, result.indicator_id)"></button>
+                  (click)="openTargetDetailsDrawer(item, result)"></button>
               }
             </div>
           </td>
@@ -134,7 +143,7 @@
         @if (entityAowService.searchText().trim()) {
           No indicators match your search.
         } @else {
-          There are no High-Level Outputs Indicators found.
+          {{ emptyStateMessage() }}
         }
       </td>
     </tr>
