@@ -18,6 +18,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   naratives = internationalizationData.reportNewResult;
   depthSearchList: any[] = [];
   exactTitleFound = false;
+  titleCheckFailed = false;
   mqapJson: {};
   validating = false;
   kpAlertDescription = `Please add the handle generated in your Center's institutional repository (e.g., CGSpace, MELSpace, WorldFish Repository) to report your knowledge product. Only knowledge products entered into these repositories are accepted in the PRMS Reporting Tool.<br><br>
@@ -163,6 +164,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     if (!title?.trim()) {
       this.depthSearchList = [];
       this.exactTitleFound = false;
+      this.titleCheckFailed = false;
       return;
     }
 
@@ -182,11 +184,12 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
 
     this.api.resultsSE.GET_checkTitleUniqueness(title).subscribe({
       next: resp => {
+        this.titleCheckFailed = false;
         this.exactTitleFound = resp?.response?.isUnique === false;
       },
       error: () => {
-        // Do not treat uniqueness check failure as "title free".
-        this.exactTitleFound = true;
+        this.titleCheckFailed = true;
+        this.exactTitleFound = false;
       }
     });
   }

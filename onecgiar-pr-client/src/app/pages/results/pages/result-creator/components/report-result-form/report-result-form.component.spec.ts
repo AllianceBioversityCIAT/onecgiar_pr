@@ -653,6 +653,33 @@ describe('ReportResultFormComponent', () => {
       expect(component.loadingDepthSearch()).toBe(false);
       jest.useRealTimers();
     });
+
+    it('should resolve gate before slow Elastic finishes', () => {
+      jest.useFakeTimers();
+      fixture.detectChanges();
+      component.allPhases = mockPhases.reporting;
+      const elastic$ = new Subject<any[]>();
+
+      mockApiService.resultsSE.GET_checkTitleUniqueness = jest.fn(() =>
+        of({ response: { isUnique: true, existing: null } })
+      );
+      mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => elastic$.asObservable());
+
+      component.onTitleChange('slow elastic title');
+      jest.advanceTimersByTime(500);
+
+      expect(component.loadingDepthSearch()).toBe(false);
+      expect(component.blockingExactTitleFound()).toBe(false);
+      expect(component.titleCheckFailed()).toBe(false);
+      expect(component.depthSearchList).toEqual([]);
+
+      elastic$.next([{ id: 1, title: 'slow elastic title', version_id: 1 }]);
+      elastic$.complete();
+
+      expect(component.depthSearchList.length).toBe(1);
+      expect(component.loadingDepthSearch()).toBe(false);
+      jest.useRealTimers();
+    });
   });
 
   describe('applyPendingResultTypeSelection', () => {
