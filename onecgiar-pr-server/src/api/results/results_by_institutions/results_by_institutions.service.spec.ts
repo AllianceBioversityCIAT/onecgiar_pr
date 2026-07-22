@@ -22,6 +22,7 @@ describe('ResultsByInstitutionsService', () => {
   };
   const mockDeliveriesTypeRepository = {
     update: jest.fn(),
+    save: jest.fn(),
   };
   const mockHandlersError = {
     returnErrorRes: jest.fn((payload) => payload),
@@ -284,6 +285,51 @@ describe('ResultsByInstitutionsService', () => {
       const deliveryWhere =
         mockDeliveriesTypeRepository.update.mock.calls[0][0];
       expect(deliveryWhere.id).toBeUndefined();
+    });
+
+    it('reactivates inactive partner without cascading delivery on RBI save', async () => {
+      const inactiveRbi = {
+        id: 500,
+        institutions_id: 11585,
+        is_active: false,
+        delivery: [{ id: 90553, partner_delivery_type_id: 1, is_active: true }],
+      };
+      mockResultByInstitutionsRepository.find.mockResolvedValueOnce([
+        inactiveRbi,
+      ]);
+      mockResultByInstitutionsRepository.update.mockResolvedValueOnce(
+        {} as any,
+      );
+      mockResultByInstitutionsRepository.save.mockResolvedValueOnce([]);
+
+      const incomingInstitutions = [
+        {
+          institutions_id: 11585,
+          is_leading_result: false,
+          delivery: [{ partner_delivery_type_id: 2 }],
+        },
+      ] as any[];
+
+      await (service as any).handleInstitutions(
+        incomingInstitutions,
+        [],
+        false,
+        false,
+        32177,
+        5,
+      );
+
+      expect(mockResultByInstitutionsRepository.update).toHaveBeenCalledWith(
+        { id: 500 },
+        expect.objectContaining({ is_active: true, last_updated_by: 5 }),
+      );
+      expect(mockResultByInstitutionsRepository.save).not.toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ id: 500 })]),
+      );
+      expect(mockDeliveriesTypeRepository.save).toHaveBeenCalled();
+      const savedDeliveries =
+        mockDeliveriesTypeRepository.save.mock.calls[0][0] ?? [];
+      expect(savedDeliveries[0]?.result_by_institution_id).toBe(500);
     });
   });
 
