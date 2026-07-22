@@ -312,7 +312,7 @@ describe('ResultCreatorComponent', () => {
       expect(component.exactTitleFound).toBe(true);
     });
 
-    it('should handle Elastic API error and keep uniqueness blocking on uniqueness error', () => {
+    it('should handle uniqueness check error without treating it as a title conflict', () => {
       const title = 'title 1';
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_FindResultsElastic').mockReturnValue(throwError('API Error'));
       jest
@@ -322,7 +322,8 @@ describe('ResultCreatorComponent', () => {
       component.depthSearch(title);
 
       expect(component.depthSearchList).toEqual([]);
-      expect(component.exactTitleFound).toBe(true);
+      expect(component.exactTitleFound).toBe(false);
+      expect(component.titleCheckFailed).toBe(true);
       expect(spy).toHaveBeenCalled();
     });
   });
