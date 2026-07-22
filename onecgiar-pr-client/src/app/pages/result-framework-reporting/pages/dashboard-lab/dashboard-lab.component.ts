@@ -8,6 +8,7 @@ import { Unit } from '../entity-details/interfaces/entity-details.interface';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { GuidedCreationComponent } from './components/guided-creation/guided-creation.component';
+import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
 
 /** Vibrant, high-contrast palette for the status charts (no pastels). */
@@ -85,7 +86,7 @@ interface AccentTheme {
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
-  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent],
+  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -229,6 +230,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.centerIndex.set(i);
   }
 
+  // ---- Manage drawer (one indicator) ----
+  /** The indicator being managed, with the HLO it belongs to for context. */
+  readonly managed = signal<{ indicator: any; groupTitle: string; node: any } | null>(null);
+  /** Room reserved on the right so the manage panel never covers the list. */
+  readonly managePanelWidth = signal(520);
+
+  manageIndicator(indicator: any, groupTitle: string): void {
+    // The group carries the ToC node id the existing-results endpoint needs; the
+    // indicator row does not, so it is folded in here.
+    const group = this.indicatorGroups().find(g => g?.result_title === groupTitle);
+    this.managed.set({ indicator: { ...indicator, toc_result_id: group?.toc_result_id }, groupTitle, node: group });
+  }
+
+  closeManage(): void {
+    this.managed.set(null);
+  }
+
   // ---- Guided creation (full-screen flow) ----
   readonly guidedOpen = signal(false);
   readonly guidedPath = signal<'planned' | 'emerging' | null>(null);
@@ -366,8 +384,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Focus mode: the AOW view asks the shell to drop the header wordmark.
-    effect(() => this.dataControlSE.focusMode.set(this.viewMode() === 'aow'));
+    // Only the guided flow claims the whole viewport (focus mode). Inside an open
+    // Area of Work the header stays, but trimmed to the two reporting entries so it
+    // does not compete with the AOW's own navigation. Neither applies on the
+    // overview or the program bento.
+    effect(() => this.dataControlSE.focusMode.set(this.guidedOpen()));
+    effect(() => this.dataControlSE.slimNav.set(this.viewMode() === 'aow'));
 
     // In AOW mode, keep a valid AOW selected when the program changes.
     effect(() => {
@@ -506,6 +528,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.dataControlSE.focusMode.set(false);
     this.dataControlSE.hideWordmark.set(false);
+    this.dataControlSE.slimNav.set(false);
     if (this.centerTimer) clearInterval(this.centerTimer);
   }
 

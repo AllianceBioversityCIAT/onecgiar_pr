@@ -19,7 +19,10 @@ import { FormsModule } from '@angular/forms';
   }
 })
 export class NavigationBarComponent {
-  readonly navigationOptions = signal<PrRoute[]>(routingApp);
+  /** Slim mode keeps only the reporting entries; everything else is hidden. */
+  readonly navigationOptions = computed<PrRoute[]>(() =>
+    this.dataControlSE.slimNav() ? routingApp.filter(o => this.dataControlSE.SLIM_NAV_PATHS.includes(o.path ?? '')) : routingApp
+  );
   readonly isSearchMode = input(false);
   readonly searchClosed = output<void>();
   readonly searchQuery = signal('');

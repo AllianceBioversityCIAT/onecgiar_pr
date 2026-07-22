@@ -55,6 +55,14 @@ export class DataControlService {
    */
   readonly hideWordmark = signal(false);
   /**
+   * Slim navigation: the bar stays, but only the reporting entries are listed.
+   * The reporting dashboard already carries its own wayfinding (rail, sidebar,
+   * breadcrumbs), so the full menu on top of it is noise. Reset on destroy.
+   */
+  readonly slimNav = signal(false);
+  /** Paths kept while slimNav is on. */
+  readonly SLIM_NAV_PATHS = ['result-framework-reporting', 'result'];
+  /**
    * Backend section-completeness indicator. Signal-backed (transparent getter/setter
    * keeps existing call sites working) so `greenChecksString` can be a memoized
    * `computed` instead of a per-CD `JSON.stringify` in panel-menu. (P2-2967/P2-2970)

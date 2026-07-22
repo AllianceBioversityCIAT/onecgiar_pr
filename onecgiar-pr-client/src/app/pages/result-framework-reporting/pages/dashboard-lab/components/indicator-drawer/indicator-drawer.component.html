@@ -1,0 +1,199 @@
+<!-- No scrim on purpose: the panel is part of the layout, not a modal. The list
+     beside it stays scrollable and clickable while the form is open. -->
+<aside
+  class="pr-drawer fixed inset-y-0 right-0 z-[141] flex flex-col border-l border-[rgba(30,32,47,0.1)] bg-white shadow-[-18px_0_44px_rgba(30,32,47,0.14)]"
+  [style.width.px]="width()"
+  role="complementary"
+  aria-label="Manage indicator"
+  (keydown.escape)="requestClose()"
+  tabindex="-1">
+  <!-- drag the left edge to widen; past a threshold the form goes two-column -->
+  <div
+    class="absolute inset-y-0 -left-1 z-[2] w-2 cursor-col-resize"
+    (mousedown)="startResize($event)"
+    role="separator"
+    aria-orientation="vertical"
+    aria-label="Resize panel"></div>
+  <!-- ---------- context: what you are about to report against ---------- -->
+  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] px-6 pb-4 pt-5">
+    <div class="flex items-start gap-3">
+      <div class="min-w-0 flex-1">
+        <p class="m-0 text-[11.5px] font-medium text-[var(--pr-color-accents-5)]">
+          {{ programCode() }} <span class="text-[var(--pr-color-accents-3)]">/</span> {{ aowCode() }}
+        </p>
+        @if (groupTitle()) {
+          <p class="m-0 mt-0.5 truncate text-[12.5px] font-bold" [style.color]="accent()">{{ groupTitle() }}</p>
+        }
+      </div>
+      <button
+        type="button"
+        (click)="requestClose()"
+        aria-label="Close"
+        class="inline-flex size-8 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)] hover:text-[var(--pr-color-secondary-400)]">
+        <span class="material-icons-round text-[19px]">close</span>
+      </button>
+    </div>
+
+    <h2 class="m-0 mt-2.5 text-[15px] font-bold leading-snug text-[var(--pr-color-secondary-400)]">{{ indicator()?.indicator_description }}</h2>
+
+    <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+      <span class="rounded-full bg-[#6b6dc41f] px-2 py-0.5 text-[11.5px] font-semibold text-[var(--pr-color-primary-400)]">
+        {{ indicator()?.type_name || 'Not provided' }}
+      </span>
+      @if (indicator()?.center_acronym) {
+        <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">
+          {{ indicator()?.center_acronym }}
+        </span>
+      }
+      <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">
+        Target: <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ indicator()?.target_value_sum ?? 0 }}</b>
+      </span>
+      @if (indicator()?.unit_messurament) {
+        <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">
+          {{ indicator()?.unit_messurament }}
+        </span>
+      }
+    </div>
+  </header>
+
+  <!-- ---------- tabs ---------- -->
+  <div class="flex shrink-0 gap-1 border-b border-[rgba(30,32,47,0.08)] bg-[var(--pr-color-accents-1)] px-4 py-2">
+    @for (t of tabs; track t.id) {
+      <button
+        type="button"
+        (click)="setTab(t.id)"
+        [attr.aria-selected]="tab() === t.id"
+        class="flex flex-1 appearance-none items-center justify-center gap-1.5 rounded-lg border-0 px-3 py-2 text-[12.5px] font-semibold transition-colors duration-150"
+        [class]="
+          tab() === t.id
+            ? 'bg-white text-[var(--pr-color-primary-400)] shadow-[0_2px_6px_rgba(30,32,47,0.10)]'
+            : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'
+        ">
+        <span class="material-icons-round text-[16px]">{{ t.icon }}</span>
+        {{ t.label }}
+      </button>
+    }
+  </div>
+
+  <!-- ---------- panels ---------- -->
+  <div class="custom_scroll flex-1 overflow-y-auto px-6 py-5">
+    @switch (tab()) {
+      @case ('report') {
+        <app-lab-report-form
+          [tocNode]="tocNode()"
+          [indicator]="indicator()"
+          [initiativeId]="initiativeId()"
+          [programCode]="programCode()"
+          [columns]="columns()"
+          (dirtyChange)="onDirtyChange($event)"
+          (created)="close()" />
+      }
+
+      @case ('results') {
+        @if (loadingExisting()) {
+          <div class="flex flex-col gap-2">
+            @for (s of [1, 2, 3]; track s) {
+              <div class="h-[62px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+            }
+          </div>
+        } @else if (existing()?.length) {
+          <p class="m-0 mb-3 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
+            {{ existing()!.length }} result{{ existing()!.length === 1 ? '' : 's' }} already reported here
+          </p>
+          <div class="flex flex-col gap-2">
+            @for (r of existing()!; track $index) {
+              <div class="rounded-xl border border-[rgba(30,32,47,0.08)] bg-white p-3.5">
+                <p class="m-0 text-[13px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">
+                  {{ r?.result_title || r?.title || 'Untitled result' }}
+                </p>
+                <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-[var(--pr-color-accents-5)]">
+                  @if (r?.result_code) {
+                    <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 font-semibold">{{ r.result_code }}</span>
+                  }
+                  @if (r?.official_code) {
+                    <span>{{ r.official_code }}</span>
+                  }
+                  @if (r?.contributing_indicator != null) {
+                    <span>contribution <b class="text-[var(--pr-color-secondary-400)]">{{ r.contributing_indicator }}</b></span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white px-5 py-10 text-center">
+            <span class="material-icons-round text-[24px] text-[var(--pr-color-accents-3)]">inbox</span>
+            <p class="m-0 mt-1.5 text-[13px] text-[var(--pr-color-accents-5)]">Nothing reported against this indicator yet.</p>
+          </div>
+        }
+      }
+
+      @case ('target') {
+        <div class="rounded-xl border border-[rgba(30,32,47,0.08)] bg-white p-4">
+          <div class="flex items-baseline justify-between gap-4">
+            <span class="text-[12px] text-[var(--pr-color-accents-5)]">Overall target</span>
+            <b class="text-[19px] tabular-nums text-[var(--pr-color-secondary-400)]">{{ indicator()?.target_value_sum ?? 0 | number }}</b>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between gap-4 border-t border-[rgba(30,32,47,0.06)] pt-2">
+            <span class="text-[12px] text-[var(--pr-color-accents-5)]">Achieved so far</span>
+            <b class="text-[19px] tabular-nums text-[var(--pr-color-secondary-400)]">{{ indicator()?.actual_achieved_value_sum ?? 0 | number }}</b>
+          </div>
+        </div>
+
+        @if (targetsByCenter().length) {
+          <p class="m-0 mb-2 mt-5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">Split by year and Center</p>
+          <div class="overflow-hidden rounded-xl border border-[rgba(30,32,47,0.08)]">
+            <table class="w-full border-collapse text-left">
+              <thead>
+                <tr class="bg-[var(--pr-color-accents-1)] text-[10.5px] uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
+                  <th class="px-3 py-2 font-bold">Year</th>
+                  <th class="px-3 py-2 font-bold">Center</th>
+                  <th class="px-3 py-2 text-right font-bold">Target</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of targetsByCenter(); track $index) {
+                  <tr class="border-t border-[rgba(30,32,47,0.06)]" [class]="$even ? 'bg-white' : 'bg-[#f8f9fd]'">
+                    <td class="px-3 py-2 text-[12.5px] tabular-nums text-[var(--pr-color-accents-6)]">{{ t?.year || '—' }}</td>
+                    <td class="px-3 py-2 text-[12.5px] text-[var(--pr-color-accents-6)]">{{ t?.center_acronym || t?.center_id || '—' }}</td>
+                    <td class="px-3 py-2 text-right text-[13px] font-bold tabular-nums text-[var(--pr-color-secondary-400)]">{{ t?.target_value ?? t?.value ?? '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="m-0 mt-5 text-[12.5px] text-[var(--pr-color-accents-5)]">This indicator has no per-Center split — the target is reported as a single figure.</p>
+        }
+      }
+    }
+  </div>
+
+  @if (confirmingExit()) {
+    <div class="absolute inset-0 z-[5] flex items-center justify-center bg-[rgba(255,255,255,0.86)] p-6">
+      <div class="w-full max-w-[340px] rounded-2xl border border-[rgba(30,32,47,0.1)] bg-white p-5 shadow-[0_20px_50px_rgba(30,32,47,0.22)]">
+        <span class="inline-flex size-10 items-center justify-center rounded-xl bg-[#fff4e5]">
+          <span class="material-icons-round text-[20px] text-[#b45309]">warning_amber</span>
+        </span>
+        <h3 class="m-0 mt-3 text-[15px] font-bold text-[var(--pr-color-secondary-400)]">You have unsaved changes</h3>
+        <p class="m-0 mt-1.5 text-[12.5px] leading-relaxed text-[var(--pr-color-accents-6)]">
+          Nothing you typed has been saved yet. Closing this panel discards it.
+        </p>
+        <div class="mt-4 flex flex-col gap-2">
+          <button
+            type="button"
+            (click)="cancelExit()"
+            class="w-full appearance-none rounded-xl border-0 bg-[var(--pr-color-primary-300)] px-4 py-2.5 text-[13px] font-bold text-white">
+            Keep editing
+          </button>
+          <button
+            type="button"
+            (click)="discardAndClose()"
+            class="w-full appearance-none rounded-xl border border-[rgba(30,32,47,0.12)] bg-white px-4 py-2.5 text-[13px] font-semibold text-[var(--pr-color-red-300)]">
+            Discard and close
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</aside>
