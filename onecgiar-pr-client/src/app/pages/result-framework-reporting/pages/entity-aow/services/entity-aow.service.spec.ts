@@ -189,6 +189,35 @@ describe('EntityAowService', () => {
       expect(service.isLoadingDetails()).toBe(false);
     });
 
+    it('should disable reporting when initiative status returns reporting_enabled false', async () => {
+      service.entityId.set('SP01');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_phaseInitiativeStatus').mockReturnValue(
+        of({ response: { reporting_enabled: false } })
+      );
+
+      service.getAllDetailsData();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockApiService.resultsSE.GET_phaseInitiativeStatus).toHaveBeenCalledWith(34, 1);
+      expect(service.reportingEnabled()).toBe(false);
+    });
+
+    it('should keep reporting enabled when initiative status request fails', async () => {
+      service.entityId.set('SP01');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_phaseInitiativeStatus').mockReturnValue(
+        throwError(() => new Error('phase status unavailable'))
+      );
+
+      service.getAllDetailsData();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.reportingEnabled()).toBe(true);
+    });
+
     it('should handle empty units array', async () => {
       service.entityId.set('SP01');
       const responseWithEmptyUnits = {

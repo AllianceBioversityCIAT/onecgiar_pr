@@ -95,4 +95,61 @@ describe('AowTargetDetailsDrawerComponent', () => {
     expect(mockEntityAowService.showTargetDetailsDrawer.set).toHaveBeenCalledWith(false);
     expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(null);
   });
+
+  it('should not highlight rows when no center is selected', () => {
+    mockEntityAowService.targetDetailsSelectedCenterId.set(null);
+
+    const rows = component.tableData();
+
+    expect(component.isSelectedCenter(rows[0])).toBe(false);
+    expect(component.isSelectedCenter(rows[1])).toBe(false);
+  });
+
+  it('should clear selected center on destroy', () => {
+    component.ngOnDestroy();
+
+    expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(null);
+    expect(document.body.style.overflow).toBe('auto');
+  });
+
+  it('should ignore invalid targets_by_center shapes', () => {
+    mockEntityAowService.currentTargetToView.set({
+      result_title: 'Test Result',
+      indicators: [{ indicator_description: 'Test', targets_by_center: { centers: null } }]
+    });
+    fixture.detectChanges();
+
+    expect(component.years()).toEqual([]);
+    expect(component.tableData()).toEqual([]);
+  });
+
+  it('should skip targets with empty year or value', () => {
+    mockEntityAowService.currentTargetToView.set({
+      result_title: 'Test Result',
+      indicators: [
+        {
+          indicator_description: 'Test',
+          targets_by_center: {
+            centers: [
+              {
+                center_id: '1',
+                center_acronym: 'ABC',
+                center_name: 'Center A',
+                targets: [
+                  { number_target: '1', target_value: '10', toc_indicator_target_id: '1', year: '' },
+                  { number_target: '1', target_value: '', toc_indicator_target_id: '2', year: '2026' },
+                  { number_target: '1', target_value: '55', toc_indicator_target_id: '3', year: '2027' }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    });
+    fixture.detectChanges();
+
+    expect(component.years()).toEqual(['2026', '2027']);
+    expect(component.getTargetValue(component.tableData()[0], '2026')).toBe('');
+    expect(component.getTargetValue(component.tableData()[0], '2027')).toBe('55');
+  });
 });
