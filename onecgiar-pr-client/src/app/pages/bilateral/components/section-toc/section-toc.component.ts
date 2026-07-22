@@ -133,8 +133,6 @@ export class SectionTocComponent implements OnInit {
   });
 
   constructor() {
-    this.mdsTracker.updateSection('contributors', 3);
-
     effect(() => {
       const iId = this.creationService.resultInitiativeId();
       if (iId) {

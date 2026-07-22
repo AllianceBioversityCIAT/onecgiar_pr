@@ -52,7 +52,7 @@
               [maxSelectedLabels]="0"
               selectedItemsLabel="{0} selected"
               [(ngModel)]="geographicLocationBody.regions"
-              (ngModelChange)="saveGeography()"
+              (ngModelChange)="queueGeographySave()"
               panelStyleClass="sc-dropdown-panel"
               appendTo="body">
             </p-multiSelect>
@@ -65,6 +65,9 @@
                   </span>
                 }
               </div>
+            }
+            @if (regionsSelectionMissing) {
+              <p class="sg-field-error">Select at least one region for this geographic scope.</p>
             }
           </div>
         }
@@ -91,7 +94,7 @@
               [maxSelectedLabels]="0"
               selectedItemsLabel="{0} selected"
               [(ngModel)]="geographicLocationBody.countries"
-              (ngModelChange)="saveGeography()"
+              (ngModelChange)="queueGeographySave()"
               panelStyleClass="sc-dropdown-panel"
               appendTo="body">
             </p-multiSelect>
@@ -104,6 +107,9 @@
                   </span>
                 }
               </div>
+            }
+            @if (countriesSelectionMissing) {
+              <p class="sg-field-error">Select at least one country for this geographic scope.</p>
             }
           </div>
         }
@@ -176,7 +182,7 @@
                 [maxSelectedLabels]="0"
                 selectedItemsLabel="{0} selected"
                 [(ngModel)]="extraGeographicLocationBody.regions"
-                (ngModelChange)="saveGeography()"
+                (ngModelChange)="queueGeographySave()"
                 panelStyleClass="sc-dropdown-panel"
                 appendTo="body">
               </p-multiSelect>
@@ -189,6 +195,9 @@
                     </span>
                   }
                 </div>
+              }
+              @if (extraRegionsSelectionMissing) {
+                <p class="sg-field-error">Select at least one extra region for this geographic scope.</p>
               }
             </div>
           }
@@ -205,7 +214,7 @@
                 [maxSelectedLabels]="0"
                 selectedItemsLabel="{0} selected"
                 [(ngModel)]="extraGeographicLocationBody.countries"
-                (ngModelChange)="saveGeography()"
+                (ngModelChange)="queueGeographySave()"
                 panelStyleClass="sc-dropdown-panel"
                 appendTo="body">
               </p-multiSelect>
@@ -218,6 +227,9 @@
                     </span>
                   }
                 </div>
+              }
+              @if (extraCountriesSelectionMissing) {
+                <p class="sg-field-error">Select at least one extra country for this geographic scope.</p>
               }
             </div>
           }

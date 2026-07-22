@@ -15,11 +15,13 @@ import { ClarisaCentersRepository } from '../../../clarisa/clarisa-centers/clari
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { ResultsByProjectsService } from '../../results/results_by_projects/results_by_projects.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { SourceEnum } from '../../results/entities/result.entity';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
+  let module: TestingModule;
   let versioningService: VersioningService;
   let resultRepository: ResultRepository;
   let resultByLevelRepository: ResultByLevelRepository;
@@ -27,7 +29,7 @@ describe('BilateralCenterService', () => {
   let bilateralProjectsService: BilateralProjectsService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         BilateralCenterService,
         {
@@ -104,7 +106,7 @@ describe('BilateralCenterService', () => {
         {
           provide: ClarisaCentersRepository,
           useValue: {
-            find: jest.fn(),
+            find: jest.fn().mockResolvedValue([]),
           },
         },
         {
@@ -117,7 +119,13 @@ describe('BilateralCenterService', () => {
           provide: ResultsCenterRepository,
           useValue: {
             findOne: jest.fn().mockResolvedValue(null),
+            find: jest.fn().mockResolvedValue([]),
             save: jest.fn().mockResolvedValue({}),
+            update: jest.fn().mockResolvedValue({}),
+            updateCenter: jest.fn().mockResolvedValue({}),
+            getAllResultsCenterByResultIdAndCenterId: jest
+              .fn()
+              .mockResolvedValue(undefined),
           },
         },
         {
@@ -125,6 +133,17 @@ describe('BilateralCenterService', () => {
           useValue: {
             findOne: jest.fn().mockResolvedValue(null),
             save: jest.fn().mockResolvedValue({}),
+            update: jest.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: ResultsByProjectsService,
+          useValue: {
+            syncBilateralProjects: jest.fn().mockResolvedValue({
+              status: 200,
+              message: 'ok',
+              response: { set_active: [], deactivated: [] },
+            }),
           },
         },
       ],
@@ -227,6 +246,98 @@ describe('BilateralCenterService', () => {
           result_type_id: 6,
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('saveContributors', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'test@cgiar.org',
+      first_name: 'Test',
+      last_name: 'User',
+    };
+
+    it('should sync-replace centers via updateCenter', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        source: SourceEnum.Bilateral,
+      } as any);
+      const clarisaCentersRepository = module.get<ClarisaCentersRepository>(
+        ClarisaCentersRepository,
+      );
+      const resultsCenterRepository = module.get<ResultsCenterRepository>(
+        ResultsCenterRepository,
+      );
+      jest
+        .spyOn(clarisaCentersRepository, 'find')
+        .mockResolvedValue([{ institutionId: 501, code: 'ABC' }] as any);
+
+      const result = await service.saveContributors(
+        10,
+        { contributing_center: [{ institution_id: 501 }] },
+        user,
+      );
+
+      expect(resultsCenterRepository.updateCenter).toHaveBeenCalledWith(
+        10,
+        ['ABC'],
+        42,
+      );
+      expect(resultsCenterRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_id: 10,
+          center_id: 'ABC',
+          is_active: true,
+        }),
+      );
+      expect(result.message).toBe('Contributors saved successfully');
+    });
+
+    it('should sync-replace projects via syncBilateralProjects and set is_lead', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        source: SourceEnum.Bilateral,
+      } as any);
+      const resultsByProjectsService = module.get<ResultsByProjectsService>(
+        ResultsByProjectsService,
+      );
+      const resultsByProjectsRepository =
+        module.get<ResultsByProjectsRepository>(ResultsByProjectsRepository);
+      jest
+        .spyOn(resultsByProjectsService, 'syncBilateralProjects')
+        .mockResolvedValue({
+          status: 200,
+          message: 'ok',
+          response: {
+            set_active: [1, 2],
+            deactivated: [3],
+          },
+        } as any);
+
+      const result = await service.saveContributors(
+        10,
+        {
+          contributing_bilateral_projects: [
+            { project_id: 1, is_lead: true },
+            { project_id: 2, is_lead: false },
+          ],
+        },
+        user,
+      );
+
+      expect(
+        resultsByProjectsService.syncBilateralProjects,
+      ).toHaveBeenCalledWith(
+        10,
+        [
+          { project_id: 1, is_lead: true },
+          { project_id: 2, is_lead: false },
+        ],
+        42,
+      );
+      expect(resultsByProjectsRepository.update).toHaveBeenCalled();
+      expect((result.response as any).deactivatedProjects).toEqual([3]);
+      expect(result.message).toBe('Contributors saved successfully');
     });
   });
 });

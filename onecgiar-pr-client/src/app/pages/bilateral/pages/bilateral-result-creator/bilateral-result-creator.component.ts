@@ -49,7 +49,12 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
-  providers: [MessageService]
+  providers: [
+    MessageService,
+    BilateralCreationService,
+    BilateralAutoSaveService,
+    BilateralMdsTrackerService,
+  ]
 })
 export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -208,9 +213,16 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.resultId()) {
+      void this.autoSaveService.flush();
+    }
+    this.autoSaveService.reset();
+    this.mdsTracker.reset();
     const url = this.router.url;
     if (!url.startsWith('/bilateral/')) {
       this.creationService.resetWizard();
+    } else {
+      this.creationService.clearEditorState();
     }
   }
 }

@@ -5,8 +5,15 @@ import { BilateralApiService } from '../../../shared/services/api/bilateral-api.
 export type FieldType = 'text' | 'select' | 'checkbox';
 export type FieldStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type GlobalSaveState = 'idle' | 'saving' | 'saved' | 'error';
+export type EndpointKey =
+  | 'generalInfo'
+  | 'plannedResult'
+  | 'tocMapping'
+  | 'contributors'
+  | 'geography'
+  | 'typeSpecific';
 
-type EndpointKey = 'generalInfo' | 'plannedResult' | 'tocMapping' | 'contributors';
+export type PayloadExecutor = (resultId: number, body: Record<string, unknown>) => Observable<unknown>;
 
 const FIELD_ENDPOINT_KEYS: Record<string, EndpointKey> = {
   title: 'generalInfo',
@@ -26,15 +33,36 @@ const FIELD_ENDPOINT_KEYS: Record<string, EndpointKey> = {
   programCode: 'plannedResult',
   toc_mapping: 'tocMapping',
   contributors: 'contributors',
+  geography: 'geography',
+  'type-specific': 'typeSpecific',
 };
 
-@Injectable({ providedIn: 'root' })
+const ENDPOINT_STATUS_KEY: Record<EndpointKey, string> = {
+  generalInfo: 'generalInfo',
+  plannedResult: 'plannedResult',
+  tocMapping: 'toc_mapping',
+  contributors: 'contributors',
+  geography: 'geography',
+  typeSpecific: 'type-specific',
+};
+
+@Injectable()
 export class BilateralAutoSaveService {
   private readonly bilateralApi = inject(BilateralApiService);
 
   private readonly _pendingFields = new Map<string, { fieldPath: string; value: unknown; fieldType: FieldType }>();
   private readonly _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly _payloadDebounceTimers = new Map<EndpointKey, ReturnType<typeof setTimeout>>();
+  private readonly _pendingPayloads = new Map<EndpointKey, Record<string, unknown>>();
+  private readonly _payloadStatusKeys = new Map<EndpointKey, string[]>();
+  private readonly _payloadExecutors = new Map<EndpointKey, PayloadExecutor>();
+  private readonly _inFlight = new Map<EndpointKey, boolean>();
+  private readonly _queuedPayloads = new Map<
+    EndpointKey,
+    { body: Record<string, unknown>; statusKeys: string[]; executor?: PayloadExecutor }
+  >();
   private readonly _blurSubject = new Subject<{ fieldPath: string; value: unknown }>();
+  private _generation = 0;
 
   readonly manualSave$ = new Subject<void>();
 
@@ -80,16 +108,74 @@ export class BilateralAutoSaveService {
     this._blurSubject.next({ fieldPath, value });
   }
 
-  async flush(): Promise<void> {
-    const pending = Array.from(this._pendingFields.entries());
-    const resultId = this._currentResultId();
-    if (!resultId || pending.length === 0) return;
+  /**
+   * Schedule a structured payload save (geo, toc, contributors, type-specific) with optional debounce.
+   * Coalesces while in-flight: only the latest body is sent after the current request finishes.
+   * Optional `executor` overrides the default BilateralApiService PATCH for that endpoint.
+   */
+  schedulePayload(
+    endpointKey: EndpointKey,
+    body: Record<string, unknown>,
+    options?: { debounceMs?: number; statusKey?: string | string[]; executor?: PayloadExecutor }
+  ): void {
+    const statusKeys = this.normalizeStatusKeys(endpointKey, options?.statusKey);
+    const debounceMs = options?.debounceMs ?? 0;
 
+    this.setFieldStatuses(statusKeys, 'saving');
+    this._pendingPayloads.set(endpointKey, body);
+    this._payloadStatusKeys.set(endpointKey, statusKeys);
+    if (options?.executor) {
+      this._payloadExecutors.set(endpointKey, options.executor);
+    }
+    this.hasPendingSaves.set(true);
+
+    const existing = this._payloadDebounceTimers.get(endpointKey);
+    if (existing) clearTimeout(existing);
+
+    if (debounceMs > 0) {
+      this._payloadDebounceTimers.set(
+        endpointKey,
+        setTimeout(() => this.dispatchPendingPayload(endpointKey), debounceMs)
+      );
+    } else {
+      this.dispatchPendingPayload(endpointKey);
+    }
+  }
+
+  /**
+   * Run an arbitrary request immediately while tracking field status (evidence / type-specific).
+   */
+  runImmediate(statusKey: string, requestFn: () => Observable<unknown>): void {
+    const generation = this._generation;
+    this.fieldStatus.update(s => ({ ...s, [statusKey]: 'saving' }));
+    requestFn().subscribe({
+      next: () => {
+        if (generation !== this._generation) return;
+        this.markFieldsSavedThenIdle([statusKey]);
+        this.refreshPendingFlag();
+      },
+      error: () => {
+        if (generation !== this._generation) return;
+        this.setFieldStatuses([statusKey], 'error');
+        this.refreshPendingFlag();
+      },
+    });
+  }
+
+  async flush(): Promise<void> {
+    this._debounceTimers.forEach(t => clearTimeout(t));
+    this._debounceTimers.clear();
+    this._payloadDebounceTimers.forEach(t => clearTimeout(t));
+    this._payloadDebounceTimers.clear();
+
+    const resultId = this._currentResultId();
+    if (!resultId) return;
+
+    const pendingFields = Array.from(this._pendingFields.entries());
     this._pendingFields.clear();
-    this.hasPendingSaves.set(false);
 
     const byEndpoint = new Map<EndpointKey, { fields: string[]; body: Record<string, unknown> }>();
-    for (const [_key, entry] of pending) {
+    for (const [_key, entry] of pendingFields) {
       const endpointKey = FIELD_ENDPOINT_KEYS[entry.fieldPath];
       if (!endpointKey) continue;
       let batch = byEndpoint.get(endpointKey);
@@ -102,15 +188,14 @@ export class BilateralAutoSaveService {
     }
 
     for (const [endpointKey, batch] of byEndpoint) {
-      try {
-        this.patchByEndpoint(endpointKey, resultId, batch.body).subscribe({
-          next: () => this.markFieldsSavedThenIdle(batch.fields),
-          error: () => this.setFieldStatuses(batch.fields, 'error'),
-        });
-      } catch {
-        this.setFieldStatuses(batch.fields, 'error');
-      }
+      this.enqueueEndpointRequest(endpointKey, batch.body, batch.fields);
     }
+
+    for (const endpointKey of Array.from(this._pendingPayloads.keys())) {
+      this.dispatchPendingPayload(endpointKey);
+    }
+
+    this.refreshPendingFlag();
   }
 
   updateFieldsBatch(updates: Record<string, unknown>): void {
@@ -119,13 +204,21 @@ export class BilateralAutoSaveService {
       this._pendingFields.set(fieldPath, { fieldPath, value, fieldType: 'select' });
     }
     this.hasPendingSaves.set(true);
-    this.flush();
+    void this.flush();
   }
 
   reset(): void {
+    this._generation += 1;
     this._pendingFields.clear();
     this._debounceTimers.forEach(t => clearTimeout(t));
     this._debounceTimers.clear();
+    this._payloadDebounceTimers.forEach(t => clearTimeout(t));
+    this._payloadDebounceTimers.clear();
+    this._pendingPayloads.clear();
+    this._payloadStatusKeys.clear();
+    this._payloadExecutors.clear();
+    this._queuedPayloads.clear();
+    this._inFlight.clear();
     this.fieldStatus.set({});
     this.hasPendingSaves.set(false);
     this._currentResultId.set(null);
@@ -133,13 +226,112 @@ export class BilateralAutoSaveService {
 
   private readonly _currentResultId = signal<number | null>(null);
   setResultId(id: number): void {
+    this._generation += 1;
     this._currentResultId.set(id);
   }
 
   private flushField(fieldPath: string, value: unknown): void {
     this._pendingFields.set(fieldPath, { fieldPath, value, fieldType: 'text' });
     this.hasPendingSaves.set(true);
-    this.flush();
+    void this.flush();
+  }
+
+  private normalizeStatusKeys(endpointKey: EndpointKey, statusKey?: string | string[]): string[] {
+    if (Array.isArray(statusKey) && statusKey.length) return statusKey;
+    if (typeof statusKey === 'string' && statusKey) return [statusKey];
+    return [ENDPOINT_STATUS_KEY[endpointKey]];
+  }
+
+  private dispatchPendingPayload(endpointKey: EndpointKey): void {
+    const body = this._pendingPayloads.get(endpointKey);
+    if (!body) return;
+    const statusKeys = this._payloadStatusKeys.get(endpointKey) ?? [ENDPOINT_STATUS_KEY[endpointKey]];
+    const executor = this._payloadExecutors.get(endpointKey);
+    this._pendingPayloads.delete(endpointKey);
+    this._payloadStatusKeys.delete(endpointKey);
+    this.enqueueEndpointRequest(endpointKey, body, statusKeys, executor);
+  }
+
+  private enqueueEndpointRequest(
+    endpointKey: EndpointKey,
+    body: Record<string, unknown>,
+    statusKeys: string[],
+    executor?: PayloadExecutor
+  ): void {
+    if (this._inFlight.get(endpointKey)) {
+      this._queuedPayloads.set(endpointKey, { body, statusKeys, executor });
+      this.setFieldStatuses(statusKeys, 'saving');
+      this.hasPendingSaves.set(true);
+      return;
+    }
+    this.sendEndpointRequest(endpointKey, body, statusKeys, executor);
+  }
+
+  private sendEndpointRequest(
+    endpointKey: EndpointKey,
+    body: Record<string, unknown>,
+    statusKeys: string[],
+    executor?: PayloadExecutor
+  ): void {
+    const resultId = this._currentResultId();
+    if (!resultId) {
+      this.setFieldStatuses(statusKeys, 'error');
+      this.refreshPendingFlag();
+      return;
+    }
+
+    const generation = this._generation;
+    this._inFlight.set(endpointKey, true);
+    this.setFieldStatuses(statusKeys, 'saving');
+
+    const request$ = executor
+      ? executor(resultId, body)
+      : this.patchByEndpoint(endpointKey, resultId, body);
+
+    try {
+      request$.subscribe({
+        next: () => {
+          if (generation !== this._generation) {
+            this._inFlight.set(endpointKey, false);
+            return;
+          }
+          this._inFlight.set(endpointKey, false);
+          this.markFieldsSavedThenIdle(statusKeys);
+          this.drainQueuedPayload(endpointKey);
+          this.refreshPendingFlag();
+        },
+        error: () => {
+          if (generation !== this._generation) {
+            this._inFlight.set(endpointKey, false);
+            return;
+          }
+          this._inFlight.set(endpointKey, false);
+          this.setFieldStatuses(statusKeys, 'error');
+          this.drainQueuedPayload(endpointKey);
+          this.refreshPendingFlag();
+        },
+      });
+    } catch {
+      this._inFlight.set(endpointKey, false);
+      this.setFieldStatuses(statusKeys, 'error');
+      this.refreshPendingFlag();
+    }
+  }
+
+  private drainQueuedPayload(endpointKey: EndpointKey): void {
+    const queued = this._queuedPayloads.get(endpointKey);
+    if (!queued) return;
+    this._queuedPayloads.delete(endpointKey);
+    this.sendEndpointRequest(endpointKey, queued.body, queued.statusKeys, queued.executor);
+  }
+
+  private refreshPendingFlag(): void {
+    const pending =
+      this._pendingFields.size > 0 ||
+      this._pendingPayloads.size > 0 ||
+      this._queuedPayloads.size > 0 ||
+      Array.from(this._inFlight.values()).some(Boolean);
+    this.hasPendingSaves.set(pending);
   }
 
   private setFieldStatuses(fields: string[], status: FieldStatus): void {
@@ -177,6 +369,10 @@ export class BilateralAutoSaveService {
         return this.bilateralApi.PATCH_tocMapping(resultId, body);
       case 'contributors':
         return this.bilateralApi.PATCH_contributors(resultId, body);
+      case 'geography':
+        return this.bilateralApi.PATCH_geographic(resultId, body);
+      case 'typeSpecific':
+        throw new Error('typeSpecific requires an executor');
     }
   }
 
@@ -188,63 +384,53 @@ export class BilateralAutoSaveService {
     indicator_id?: number | string;
     contributing_indicator?: number | string;
   }): void {
-    const resultId = this._currentResultId();
-    if (!resultId) return;
-
     const tocLevelId = tocData.toc_level_id ? Number(tocData.toc_level_id) : undefined;
     const tocResultId = tocData.toc_result_id ? Number(tocData.toc_result_id) : undefined;
     const indicatorId = tocData.indicator_id ? String(tocData.indicator_id) : undefined;
-    const contributing = tocData.contributing_indicator !== undefined && tocData.contributing_indicator !== null
-      ? Number(tocData.contributing_indicator) : undefined;
+    const contributing =
+      tocData.contributing_indicator !== undefined && tocData.contributing_indicator !== null
+        ? Number(tocData.contributing_indicator)
+        : undefined;
 
     const body: Record<string, unknown> = {
       result_toc_result: {
         planned_result: tocData.planned_result ?? true,
-        result_toc_results: [{
-          toc_level_id: tocLevelId,
-          toc_result_id: tocResultId,
-          toc_progressive_narrative: tocData.toc_progressive_narrative,
-          ...(indicatorId && {
-            indicators: [{
-              id: indicatorId,
-              targets: contributing !== undefined ? [{
-                targetId: 0,
-                contributing_indicator: contributing,
-              }] : [],
-            }],
-          }),
-        }],
+        result_toc_results: [
+          {
+            toc_level_id: tocLevelId,
+            toc_result_id: tocResultId,
+            toc_progressive_narrative: tocData.toc_progressive_narrative,
+            ...(indicatorId && {
+              indicators: [
+                {
+                  id: indicatorId,
+                  targets:
+                    contributing !== undefined
+                      ? [
+                          {
+                            targetId: 0,
+                            contributing_indicator: contributing,
+                          },
+                        ]
+                      : [],
+                },
+              ],
+            }),
+          },
+        ],
       },
     };
 
-    this.fieldStatus.update(s => ({ ...s, toc_mapping: 'saving' }));
-    this.bilateralApi.PATCH_tocMapping(resultId, body).subscribe({
-      next: () => {
-        this.fieldStatus.update(s => ({ ...s, toc_mapping: 'saved' }));
-        this.scheduleSavedToIdle('toc_mapping');
-      },
-      error: () => {
-        this.fieldStatus.update(s => ({ ...s, toc_mapping: 'error' }));
-      },
-    });
+    this.schedulePayload('tocMapping', body, { debounceMs: 0, statusKey: 'toc_mapping' });
   }
 
   saveContributors(contributorsData: {
     contributing_center?: { institution_id: number }[];
     contributing_bilateral_projects?: { project_id: number; is_lead?: boolean }[];
   }): void {
-    const resultId = this._currentResultId();
-    if (!resultId) return;
-
-    this.fieldStatus.update(s => ({ ...s, contributors: 'saving' }));
-    this.bilateralApi.PATCH_contributors(resultId, contributorsData).subscribe({
-      next: () => {
-        this.fieldStatus.update(s => ({ ...s, contributors: 'saved' }));
-        this.scheduleSavedToIdle('contributors');
-      },
-      error: () => {
-        this.fieldStatus.update(s => ({ ...s, contributors: 'error' }));
-      },
+    this.schedulePayload('contributors', contributorsData as Record<string, unknown>, {
+      debounceMs: 0,
+      statusKey: 'contributors',
     });
   }
 
@@ -268,7 +454,7 @@ export class BilateralAutoSaveService {
       });
     }
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       this.bilateralApi.GET_tocState(resultId).subscribe({
         next: ({ response }) => {
           resolve({

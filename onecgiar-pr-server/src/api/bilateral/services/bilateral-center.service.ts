@@ -1,12 +1,18 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { In } from 'typeorm';
 import { BilateralProjectsService } from './bilateral-projects.service';
 import { BilateralService } from '../bilateral.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { CreateCenterResultDto } from '../dto/create-center-result.dto';
 import { SaveBilateralTocMappingDto } from '../dto/save-bilateral-toc-mapping.dto';
-import { SaveBilateralContributorsDto } from '../dto/save-bilateral-contributors.dto';
+import {
+  BilateralProjectDto,
+  InstitutionDto,
+  SaveBilateralContributorsDto,
+} from '../dto/save-bilateral-contributors.dto';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { ResultsByProjectsService } from '../../results/results_by_projects/results_by_projects.service';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { Result, SourceEnum } from '../../results/entities/result.entity';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
@@ -39,6 +45,7 @@ export class BilateralCenterService {
     private readonly clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly resultsCenterRepository: ResultsCenterRepository,
     private readonly resultsByProjectsRepository: ResultsByProjectsRepository,
+    private readonly resultsByProjectsService: ResultsByProjectsService,
   ) {}
 
   async getProjects(centerId: number) {
@@ -348,11 +355,18 @@ export class BilateralCenterService {
     dto: SaveBilateralContributorsDto,
     user: TokenDto,
   ) {
-    const result: any = {
+    const result: {
+      savedCenters: Array<Record<string, unknown>>;
+      failedCenters: Array<Record<string, unknown>>;
+      savedProjects: Array<Record<string, unknown>>;
+      failedProjects: Array<Record<string, unknown>>;
+      deactivatedProjects: number[];
+    } = {
       savedCenters: [],
       failedCenters: [],
       savedProjects: [],
       failedProjects: [],
+      deactivatedProjects: [],
     };
 
     try {
@@ -367,96 +381,22 @@ export class BilateralCenterService {
         };
       }
 
-      if (dto.contributing_center?.length) {
-        for (const center of dto.contributing_center) {
-          if (center.institution_id === undefined) {
-            result.failedCenters.push({
-              institution_id: center.institution_id,
-              reason: 'No institution_id provided',
-            });
-            continue;
-          }
-
-          const inst = await this.clarisaInstitutionsRepository.findOne({
-            where: { id: center.institution_id },
-          });
-          if (!inst) {
-            result.failedCenters.push({
-              institution_id: center.institution_id,
-              reason: 'Institution not found in clarisa_institutions',
-            });
-            continue;
-          }
-
-          const clarisaCenters = await this.clarisaCentersRepository.find({
-            where: { institutionId: inst.id },
-          });
-          if (!clarisaCenters || clarisaCenters.length === 0) {
-            result.failedCenters.push({
-              institution_id: center.institution_id,
-              reason: 'Institution has no clarisa_center record',
-            });
-            continue;
-          }
-
-          const centerCode = clarisaCenters[0].code;
-          const existing = await this.resultsCenterRepository.findOne({
-            where: {
-              result_id: resultId,
-              center_id: centerCode,
-            },
-          });
-          if (!existing) {
-            await this.resultsCenterRepository.save({
-              result_id: resultId,
-              center_id: centerCode,
-              is_primary: false,
-              is_leading_result: false,
-              from_cgspace: false,
-              is_active: true,
-              created_by: user.id,
-            });
-            result.savedCenters.push({
-              institution_id: center.institution_id,
-              centerCode,
-            });
-          } else {
-            result.savedCenters.push({
-              institution_id: center.institution_id,
-              centerCode,
-              alreadyExists: true,
-            });
-          }
-        }
+      if (dto.contributing_center !== undefined) {
+        await this.syncContributingCenters(
+          resultId,
+          dto.contributing_center,
+          user,
+          result,
+        );
       }
 
-      if (dto.contributing_bilateral_projects?.length) {
-        for (const project of dto.contributing_bilateral_projects) {
-          try {
-            const existing = await this.resultsByProjectsRepository.findOne({
-              where: { result_id: resultId, project_id: project.project_id },
-            });
-            if (!existing) {
-              await this.resultsByProjectsRepository.save({
-                result_id: resultId,
-                project_id: project.project_id,
-                is_lead: project.is_lead === true || project.is_lead === 1,
-                created_by: user.id,
-              });
-              result.savedProjects.push({ project_id: project.project_id });
-            } else {
-              result.savedProjects.push({
-                project_id: project.project_id,
-                alreadyExists: true,
-              });
-            }
-          } catch {
-            result.failedProjects.push({
-              project_id: project.project_id,
-              reason: 'Save failed',
-            });
-          }
-        }
+      if (dto.contributing_bilateral_projects !== undefined) {
+        await this.syncContributingProjects(
+          resultId,
+          dto.contributing_bilateral_projects,
+          user,
+          result,
+        );
       }
 
       return {
@@ -476,6 +416,163 @@ export class BilateralCenterService {
             : 'Failed to save contributors',
         status: 500,
       };
+    }
+  }
+
+  private async syncContributingCenters(
+    resultId: number,
+    centers: InstitutionDto[],
+    user: TokenDto,
+    result: {
+      savedCenters: Array<Record<string, unknown>>;
+      failedCenters: Array<Record<string, unknown>>;
+    },
+  ): Promise<void> {
+    const institutionIds = centers
+      .map((c) => c.institution_id)
+      .filter((id): id is number => id !== undefined && id !== null);
+
+    const clarisaCenters =
+      institutionIds.length > 0
+        ? await this.clarisaCentersRepository.find({
+            where: { institutionId: In(institutionIds) },
+          })
+        : [];
+
+    const codeByInstitution = new Map<number, string>();
+    for (const center of clarisaCenters) {
+      if (!codeByInstitution.has(center.institutionId)) {
+        codeByInstitution.set(center.institutionId, center.code);
+      }
+    }
+
+    const centerCodes: string[] = [];
+    for (const center of centers) {
+      if (
+        center.institution_id === undefined ||
+        center.institution_id === null
+      ) {
+        result.failedCenters.push({
+          institution_id: center.institution_id,
+          reason: 'No institution_id provided',
+        });
+        continue;
+      }
+
+      const centerCode = codeByInstitution.get(center.institution_id);
+      if (!centerCode) {
+        result.failedCenters.push({
+          institution_id: center.institution_id,
+          reason: 'Institution has no clarisa_center record',
+        });
+        continue;
+      }
+
+      if (!centerCodes.includes(centerCode)) {
+        centerCodes.push(centerCode);
+      }
+      result.savedCenters.push({
+        institution_id: center.institution_id,
+        centerCode,
+      });
+    }
+
+    const leadingRows = await this.resultsCenterRepository.find({
+      where: { result_id: resultId, is_leading_result: true },
+    });
+    const leadingCodes = leadingRows.map((row) => row.center_id);
+
+    await this.resultsCenterRepository.updateCenter(
+      resultId,
+      centerCodes,
+      user.id,
+    );
+
+    for (const centerCode of centerCodes) {
+      const existing =
+        await this.resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
+          resultId,
+          centerCode,
+        );
+      if (!existing) {
+        await this.resultsCenterRepository.save({
+          result_id: resultId,
+          center_id: centerCode,
+          is_primary: false,
+          is_leading_result: leadingCodes.includes(centerCode),
+          from_cgspace: false,
+          is_active: true,
+          created_by: user.id,
+          last_updated_by: user.id,
+        });
+      } else if (leadingCodes.includes(centerCode)) {
+        await this.resultsCenterRepository.update(
+          { id: existing.id },
+          {
+            is_leading_result: true,
+            is_active: true,
+            last_updated_by: user.id,
+          },
+        );
+      }
+    }
+  }
+
+  private async syncContributingProjects(
+    resultId: number,
+    projects: BilateralProjectDto[],
+    user: TokenDto,
+    result: {
+      savedProjects: Array<Record<string, unknown>>;
+      failedProjects: Array<Record<string, unknown>>;
+      deactivatedProjects: number[];
+    },
+  ): Promise<void> {
+    const syncResult =
+      await this.resultsByProjectsService.syncBilateralProjects(
+        resultId,
+        projects,
+        user.id,
+      );
+
+    if (syncResult?.status >= 400) {
+      result.failedProjects.push({
+        reason: syncResult.message || 'Failed syncing bilateral projects',
+      });
+      return;
+    }
+
+    const syncResponse = syncResult?.response as
+      | {
+          set_active?: number[];
+          deactivated?: number[];
+        }
+      | undefined;
+
+    result.deactivatedProjects = syncResponse?.deactivated ?? [];
+    result.savedProjects = (syncResponse?.set_active ?? []).map(
+      (projectId: number) => ({ project_id: projectId }),
+    );
+
+    await this.resultsByProjectsRepository.update(
+      { result_id: resultId, is_active: true },
+      { is_lead: false, last_updated_by: user.id },
+    );
+
+    const leadIds = projects
+      .filter((p) => p.is_lead === true || p.is_lead === 1)
+      .map((p) => Number(p.project_id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    if (leadIds.length) {
+      await this.resultsByProjectsRepository.update(
+        {
+          result_id: resultId,
+          project_id: In(leadIds),
+          is_active: true,
+        },
+        { is_lead: true, last_updated_by: user.id },
+      );
     }
   }
 }

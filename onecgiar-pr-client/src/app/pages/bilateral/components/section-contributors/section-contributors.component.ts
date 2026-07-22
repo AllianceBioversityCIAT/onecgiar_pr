@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, effect, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, computed, signal, OnInit, OnDestroy, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -24,6 +24,8 @@ interface ProjectOption {
   shortName: string;
   fullName: string;
 }
+
+const CONTRIBUTORS_MDS_TOTAL = 3;
 
 @Component({
   selector: 'app-section-contributors',
@@ -84,87 +86,24 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonlyLeadCenterInstitutionId: number | null = null;
   readonlyLeadProjectId: number | null = null;
 
-  private readonly leadCenterEffect = effect(() => {
-    const project = this.creationService.selectedProject();
-    const resultLeadCenterId = this.creationService.resultLeadCenterId();
-    const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
-    if (!leadCenterId || !this.availableCenters.length) return;
+  private readonly centersReady = signal(false);
+  private readonly projectsReady = signal(false);
 
-    const leadInstitutionId = Number(leadCenterId);
-    if (!this.availableCenters.some(c => c.institutionId === leadInstitutionId)) return;
-    if (this.readonlyLeadCenterInstitutionId === leadInstitutionId) return;
-
-    if (this.readonlyLeadCenterInstitutionId != null) {
-      this.selectedCenterInstitutionIds = this.selectedCenterInstitutionIds.filter(
-        id => id !== this.readonlyLeadCenterInstitutionId
-      );
-    }
-    this.readonlyLeadCenterInstitutionId = leadInstitutionId;
-    if (!this.selectedCenterInstitutionIds.includes(leadInstitutionId)) {
-      this.selectedCenterInstitutionIds = [leadInstitutionId, ...this.selectedCenterInstitutionIds];
-    }
-    const selectedCenters = this.selectedCenterInstitutionIds.map(id => {
-      const c = this.availableCenters.find(c => c.institutionId === id);
-      return c ? { institution_id: c.institutionId } : null;
-    }).filter(Boolean);
-    this.autoSave.saveContributors({
-      contributing_center: selectedCenters as { institution_id: number }[],
-    });
-  });
-
-  private readonly leadCenterIdChangeEffect = effect(() => {
-    const resultLeadCenterId = this.creationService.resultLeadCenterId();
-    if (resultLeadCenterId && this.availableCenters.length && !this.readonlyLeadCenterInstitutionId) {
-      this.ensureLeadCenterSaved();
-    }
-  });
-
-  private readonly savedContributingCentersEffect = effect(() => {
-    const savedIds = this.creationService.resultContributingCenterIds();
-    if (!this.availableCenters.length) return;
-    const leadId = this.readonlyLeadCenterInstitutionId;
-    const merged = new Set<number>(savedIds);
-    if (leadId != null) merged.add(leadId);
-    this.selectedCenterInstitutionIds = Array.from(merged);
-  });
-
-  private readonly leadProjectEffect = effect(() => {
-    const project = this.creationService.selectedProject();
-    if (!project?.id || !this.availableProjects().length) return;
-
-    const leadProjId = Number(project.id);
-    if (!this.availableProjects().some(p => p.id === leadProjId)) return;
-    if (this.readonlyLeadProjectId === leadProjId) return;
-
-    if (this.readonlyLeadProjectId != null) {
-      this.selectedProjectIds = this.selectedProjectIds.filter(id => id !== this.readonlyLeadProjectId);
-    }
-    this.readonlyLeadProjectId = leadProjId;
-    if (!this.selectedProjectIds.includes(leadProjId)) {
-      this.selectedProjectIds = [leadProjId, ...this.selectedProjectIds];
-    }
-    const selectedProjects = this.selectedProjectIds.map(id => {
-      const p = this.availableProjects().find(p => p.id === id);
-      return p ? {
-        project_id: id,
-        is_lead: id === leadProjId,
-      } : null;
-    }).filter(Boolean);
-    this.autoSave.saveContributors({
-      contributing_bilateral_projects: selectedProjects as { project_id: number; is_lead?: boolean }[],
-    });
-  });
-
-  private readonly savedContributingProjectsEffect = effect(() => {
-    const savedIds = this.creationService.resultContributingProjectIds();
-    if (!this.availableProjects().length) return;
-    const leadId = this.readonlyLeadProjectId;
-    const merged = new Set<number>(savedIds);
-    if (leadId != null) merged.add(leadId);
-    this.selectedProjectIds = Array.from(merged);
+  private readonly hydrateWhenReady = effect(() => {
+    const loading = this.creationService.isLoadingResult();
+    const centersReady = this.centersReady();
+    const projectsReady = this.projectsReady();
+    // Touch contributing ids so hydrate re-runs after result detail arrives.
+    this.creationService.resultContributingCenterIds();
+    this.creationService.resultContributingProjectIds();
+    this.creationService.resultLeadCenterId();
+    this.creationService.selectedProject();
+    if (loading || !centersReady || !projectsReady) return;
+    untracked(() => this.hydrateLeadAndSelection());
   });
 
   ngOnInit(): void {
+    this.mdsTracker.setTotalFields('contributors', CONTRIBUTORS_MDS_TOTAL);
     this.loadCenters();
     this.loadProjects();
   }
@@ -179,9 +118,11 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
             fullName: p.fullName,
           }))
         );
+        this.projectsReady.set(true);
       },
       error: () => {
         this.availableProjects.set([]);
+        this.projectsReady.set(true);
       }
     });
   }
@@ -210,28 +151,88 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       acronym: (c as any).acronym || c.code,
       full_name: `${(c as any).acronym || c.code} - ${c.name}`,
     }));
-    this.ensureLeadCenterSaved();
+    this.centersReady.set(true);
   }
 
-  private ensureLeadCenterSaved(): void {
+  /** One-shot UI hydrate after centers/projects/result data are available. No network. */
+  hydrateLeadAndSelection(): void {
     const project = this.creationService.selectedProject();
     const resultLeadCenterId = this.creationService.resultLeadCenterId();
     const leadCenterId = project?.leadCenter?.id ?? resultLeadCenterId;
-    if (!leadCenterId || this.readonlyLeadCenterInstitutionId) return;
-    const leadInstitutionId = Number(leadCenterId);
-    const centerExists = this.availableCenters.some(c => c.institutionId === leadInstitutionId);
-    if (!centerExists) return;
-    this.readonlyLeadCenterInstitutionId = leadInstitutionId;
-    if (!this.selectedCenterInstitutionIds.includes(leadInstitutionId)) {
-      this.selectedCenterInstitutionIds = [leadInstitutionId, ...this.selectedCenterInstitutionIds];
+    if (leadCenterId && this.availableCenters.length) {
+      const leadInstitutionId = Number(leadCenterId);
+      if (this.availableCenters.some(c => c.institutionId === leadInstitutionId)) {
+        this.readonlyLeadCenterInstitutionId = leadInstitutionId;
+      }
     }
-    const selectedCenters = this.selectedCenterInstitutionIds.map(id => {
-      const c = this.availableCenters.find(c => c.institutionId === id);
-      return c ? { institution_id: c.institutionId } : null;
-    }).filter(Boolean);
-    this.autoSave.saveContributors({
-      contributing_center: selectedCenters as { institution_id: number }[],
+
+    if (project?.id && this.availableProjects().length) {
+      const leadProjId = Number(project.id);
+      if (this.availableProjects().some(p => p.id === leadProjId)) {
+        this.readonlyLeadProjectId = leadProjId;
+      }
+    }
+
+    const centerIds = new Set<number>(this.creationService.resultContributingCenterIds());
+    if (this.readonlyLeadCenterInstitutionId != null) {
+      centerIds.add(this.readonlyLeadCenterInstitutionId);
+    }
+    this.selectedCenterInstitutionIds = Array.from(centerIds);
+
+    const projectIds = new Set<number>(this.creationService.resultContributingProjectIds());
+    if (this.readonlyLeadProjectId != null) {
+      projectIds.add(this.readonlyLeadProjectId);
+    }
+    this.selectedProjectIds = Array.from(projectIds);
+
+    this.updateContributorsMds();
+  }
+
+  private buildContributorsPayload(): {
+    contributing_center: { institution_id: number }[];
+    contributing_bilateral_projects: { project_id: number; is_lead?: boolean }[];
+  } {
+    const selectedCenters = this.selectedCenterInstitutionIds
+      .map(id => {
+        const center = this.availableCenters.find(c => c.institutionId === id);
+        return center ? { institution_id: center.institutionId } : null;
+      })
+      .filter(Boolean) as { institution_id: number }[];
+
+    const leadProjectId = this.readonlyLeadProjectId ?? this.creationService.selectedProject()?.id ?? null;
+    const selectedProjects = this.selectedProjectIds
+      .map(id => {
+        const exists = this.availableProjects().some(p => p.id === id);
+        return exists
+          ? {
+              project_id: id,
+              is_lead: leadProjectId != null && id === Number(leadProjectId),
+            }
+          : null;
+      })
+      .filter(Boolean) as { project_id: number; is_lead?: boolean }[];
+
+    return {
+      contributing_center: selectedCenters,
+      contributing_bilateral_projects: selectedProjects,
+    };
+  }
+
+  private persistContributors(): void {
+    this.autoSave.schedulePayload('contributors', this.buildContributorsPayload(), {
+      debounceMs: 400,
+      statusKey: 'contributors',
     });
+    this.updateContributorsMds();
+  }
+
+  /** Real MDS slots: lead center, lead project, ≥1 contributing selection beyond empty. */
+  updateContributorsMds(): void {
+    const filled =
+      (this.readonlyLeadCenterInstitutionId != null ? 1 : 0) +
+      (this.readonlyLeadProjectId != null ? 1 : 0) +
+      (this.selectedCenterInstitutionIds.length > 0 || this.selectedProjectIds.length > 0 ? 1 : 0);
+    this.mdsTracker.updateSection('contributors', filled);
   }
 
   onCentersChange(ids: number[]): void {
@@ -240,14 +241,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       finalIds = [this.readonlyLeadCenterInstitutionId, ...finalIds];
     }
     this.selectedCenterInstitutionIds = finalIds;
-    const selectedCenters = this.selectedCenterInstitutionIds.map(id => {
-      const center = this.availableCenters.find(c => c.institutionId === id);
-      return center ? { institution_id: center.institutionId } : null;
-    }).filter(Boolean);
-
-    this.autoSave.saveContributors({
-      contributing_center: selectedCenters as { institution_id: number }[],
-    });
+    this.persistContributors();
   }
 
   onProjectsChange(ids: number[]): void {
@@ -256,18 +250,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       finalIds = [this.readonlyLeadProjectId, ...finalIds];
     }
     this.selectedProjectIds = finalIds;
-    const currentProjectId = this.creationService.selectedProject()?.id;
-    const selectedProjects = this.selectedProjectIds.map(id => {
-      const project = this.availableProjects().some(p => p.id === id);
-      return project ? {
-        project_id: id,
-        is_lead: id === currentProjectId,
-      } : null;
-    }).filter(Boolean);
-
-    this.autoSave.saveContributors({
-      contributing_bilateral_projects: selectedProjects as { project_id: number; is_lead?: boolean }[],
-    });
+    this.persistContributors();
   }
 
   formatAlloc(value: string | null | undefined): string {

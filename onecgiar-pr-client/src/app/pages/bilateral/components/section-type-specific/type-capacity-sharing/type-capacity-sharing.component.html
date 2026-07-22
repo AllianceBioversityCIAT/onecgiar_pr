@@ -7,28 +7,28 @@
   <div class="tsf-row">
     <div class="tsf-field tsf-field--half">
       <label class="tsf-label">Women</label>
-      <input class="tsf-input" type="number" min="0" [(ngModel)]="body.female_using" (ngModelChange)="updateMds()" placeholder="0" />
+      <input class="tsf-input" type="number" min="0" [(ngModel)]="body.female_using" (ngModelChange)="onFieldChange()" placeholder="0" />
     </div>
     <div class="tsf-field tsf-field--half">
       <label class="tsf-label">Men</label>
-      <input class="tsf-input" type="number" min="0" [(ngModel)]="body.male_using" (ngModelChange)="updateMds()" placeholder="0" />
+      <input class="tsf-input" type="number" min="0" [(ngModel)]="body.male_using" (ngModelChange)="onFieldChange()" placeholder="0" />
     </div>
   </div>
 
   <div class="tsf-row">
     <div class="tsf-field tsf-field--half">
       <label class="tsf-label">Non-binary</label>
-      <input class="tsf-input" type="number" min="0" [(ngModel)]="body.non_binary_using" (ngModelChange)="updateMds()" placeholder="0" />
+      <input class="tsf-input" type="number" min="0" [(ngModel)]="body.non_binary_using" (ngModelChange)="onFieldChange()" placeholder="0" />
     </div>
     <div class="tsf-field tsf-field--half">
       <label class="tsf-label">Unknown</label>
-      <input class="tsf-input" type="number" min="0" [(ngModel)]="body.has_unkown_using" placeholder="0" />
+      <input class="tsf-input" type="number" min="0" [(ngModel)]="body.has_unkown_using" (ngModelChange)="onFieldChange()" placeholder="0" />
     </div>
   </div>
 
   <div class="tsf-field">
     <label class="tsf-label">Delivery Method <span class="tsf-required">*</span></label>
-    <select class="tsf-select" [(ngModel)]="body.capdev_delivery_method_id" (ngModelChange)="updateMds()">
+    <select class="tsf-select" [(ngModel)]="body.capdev_delivery_method_id" (ngModelChange)="onFieldChange()">
       <option [ngValue]="null" disabled>Select delivery method</option>
       <option *ngFor="let dm of deliveryMethods" [ngValue]="dm.capdev_delivery_method_id">{{ dm.name }}</option>
     </select>

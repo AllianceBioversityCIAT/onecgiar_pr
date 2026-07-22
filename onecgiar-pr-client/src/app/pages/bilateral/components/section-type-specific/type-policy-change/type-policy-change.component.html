@@ -1,7 +1,7 @@
 <div class="tsf-fields">
   <div class="tsf-field">
     <label class="tsf-label">Policy Type <span class="tsf-required">*</span></label>
-    <select class="tsf-select" [(ngModel)]="body.policy_type_id" (ngModelChange)="updateMds()">
+    <select class="tsf-select" [(ngModel)]="body.policy_type_id" (ngModelChange)="onFieldChange()">
       <option [ngValue]="null" disabled>Select policy type</option>
       <option *ngFor="let pt of policyControlList.policyTypesList" [ngValue]="pt.id">{{ pt.name }}</option>
     </select>
@@ -9,7 +9,7 @@
 
   <div class="tsf-field">
     <label class="tsf-label">Stage <span class="tsf-required">*</span></label>
-    <select class="tsf-select" [(ngModel)]="body.policy_stage_id" (ngModelChange)="updateMds()">
+    <select class="tsf-select" [(ngModel)]="body.policy_stage_id" (ngModelChange)="onFieldChange()">
       <option [ngValue]="null" disabled>Select stage</option>
       <option *ngFor="let ps of policyControlList.policyStages" [ngValue]="ps.id">{{ ps.full_name }}</option>
     </select>
@@ -18,7 +18,7 @@
   <div class="tsf-field">
     <label class="tsf-label">Implementing Organizations <span class="tsf-required">*</span></label>
     <p class="tsf-hint">Select at least 1 organization</p>
-    <select class="tsf-select tsf-select--multi" multiple [(ngModel)]="body.institutions" (ngModelChange)="updateMds()">
+    <select class="tsf-select tsf-select--multi" multiple [(ngModel)]="body.institutions" (ngModelChange)="onFieldChange()">
       <option *ngFor="let inst of institutionsService.institutionsList" [ngValue]="inst.institutions_id">{{ inst.full_name }}</option>
     </select>
   </div>

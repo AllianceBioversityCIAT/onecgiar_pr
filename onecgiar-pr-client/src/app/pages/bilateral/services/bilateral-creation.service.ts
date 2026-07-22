@@ -8,7 +8,7 @@ const LS_PROJECT_KEY = 'bp_project';
 const LS_SP_KEY = 'bp_primary_sp';
 const LS_SECONDARY_SP_KEY = 'bp_secondary_sps';
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class BilateralCreationService {
   private readonly api = inject(ApiService);
   private readonly bilateralApi = inject(BilateralApiService);

@@ -106,6 +106,13 @@
   color: #D32F2F;
 }
 
+.sg-field-error {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #D32F2F;
+}
+
 ::ng-deep .p-select {
   width: 100%;
   max-width: 480px;

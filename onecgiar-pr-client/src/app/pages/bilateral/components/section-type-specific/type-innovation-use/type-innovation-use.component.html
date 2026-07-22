@@ -3,11 +3,11 @@
     <label class="tsf-label">Innovation Use to be Determined <span class="tsf-required">*</span></label>
     <div class="tsf-radio-group">
       <label class="tsf-radio-label">
-        <input type="radio" name="tbd" [value]="true" [(ngModel)]="body.innov_use_to_be_determined" (ngModelChange)="updateMds()" />
+        <input type="radio" name="tbd" [value]="true" [(ngModel)]="body.innov_use_to_be_determined" (ngModelChange)="onFieldChange()" />
         Yes
       </label>
       <label class="tsf-radio-label">
-        <input type="radio" name="tbd" [value]="false" [(ngModel)]="body.innov_use_to_be_determined" (ngModelChange)="updateMds()" />
+        <input type="radio" name="tbd" [value]="false" [(ngModel)]="body.innov_use_to_be_determined" (ngModelChange)="onFieldChange()" />
         No
       </label>
     </div>
@@ -17,7 +17,7 @@
     <div class="tsf-field">
       <label class="tsf-label">Actors <span class="tsf-required">*</span></label>
       <p class="tsf-hint">Describe the actors involved in innovation use</p>
-      <textarea class="tsf-textarea" [(ngModel)]="body.actors" (ngModelChange)="updateMds()" placeholder="Enter actors..."></textarea>
+      <textarea class="tsf-textarea" [(ngModel)]="body.actors" (ngModelChange)="onFieldChange()" placeholder="Enter actors..."></textarea>
     </div>
   }
 </div>

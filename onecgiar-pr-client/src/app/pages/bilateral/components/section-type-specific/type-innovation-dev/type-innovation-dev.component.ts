@@ -1,8 +1,10 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
+import { BilateralCreationService } from '../../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-tracker.service';
+import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 
 const TOTAL_FIELDS = 4;
 
@@ -13,12 +15,14 @@ const TOTAL_FIELDS = 4;
   styleUrl: './type-innovation-dev.component.scss',
 })
 export class TypeInnovationDevComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly bilateralApi = inject(BilateralApiService);
+  private readonly creationService = inject(BilateralCreationService);
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
+  private readonly autoSave = inject(BilateralAutoSaveService);
 
   body: any = {};
   readinessLevels: any[] = [];
-  saving = signal(false);
+  readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
 
   readonly typologies = [
     { code: 12, label: 'Product innovation' },
@@ -33,20 +37,28 @@ export class TypeInnovationDevComponent implements OnInit {
   }
 
   private loadData(): void {
-    this.api.resultsSE.GET_innovationDev().subscribe(({ response }) => {
+    const resultId = this.creationService.currentResultId();
+    if (!resultId) return;
+    this.bilateralApi.GET_innovationDev(resultId).subscribe(({ response }) => {
       this.body = response || {};
       this.updateMds();
     });
   }
 
+  onFieldChange(): void {
+    this.updateMds();
+    this.queueTypeSave();
+  }
+
   onSave(): void {
-    this.saving.set(true);
-    this.api.resultsSE.PATCH_innovationDev(this.body).subscribe({
-      next: () => {
-        this.loadData();
-        this.saving.set(false);
-      },
-      error: () => this.saving.set(false),
+    this.queueTypeSave(0);
+  }
+
+  private queueTypeSave(debounceMs = 800): void {
+    this.autoSave.schedulePayload('typeSpecific', { ...this.body }, {
+      debounceMs,
+      statusKey: 'type-specific',
+      executor: (resultId, body) => this.bilateralApi.PATCH_innovationDev(resultId, body),
     });
   }
 

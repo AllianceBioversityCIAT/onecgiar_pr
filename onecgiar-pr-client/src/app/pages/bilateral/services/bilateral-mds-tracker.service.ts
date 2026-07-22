@@ -18,7 +18,7 @@ const MDS_FIELD_DEFS: Record<string, { totalFields: number }> = {
   evidence: { totalFields: 1 },
 };
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class BilateralMdsTrackerService {
   private _sections = signal<Record<string, number>>({
     'general-info': 0,

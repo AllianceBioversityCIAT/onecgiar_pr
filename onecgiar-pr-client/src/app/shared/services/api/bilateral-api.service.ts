@@ -11,6 +11,7 @@ export class BilateralApiService {
   private readonly saveButtonSE = inject(SaveButtonService);
 
   private readonly baseApiBaseUrl = environment.apiBaseUrl + 'api/';
+  private readonly resultsApiBaseUrl = environment.apiBaseUrl + 'api/results/';
 
   GET_bilateralProjects(centerId: string | number) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/projects?centerId=${centerId}`);
@@ -48,6 +49,13 @@ export class BilateralApiService {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/results/bilateral/general-info/${resultId}`, body);
   }
 
+  PATCH_geographic(resultId: number | string, body: Record<string, unknown>) {
+    return this.http.patch<any>(
+      `${environment.apiBaseUrl}v2/api/geographic-location/update/geographic/${resultId}`,
+      body
+    );
+  }
+
   PATCH_BilateralResultTitle(resultId: number | string, body: any) {
     return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/${resultId}/title`, body);
   }
@@ -62,5 +70,59 @@ export class BilateralApiService {
     return this.http
       .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body)
       .pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  // --- Legacy result-review endpoints (same URLs as ResultsApiService) ---
+
+  GET_capacityDevelopment(resultId: number | string) {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}summary/capacity-developent/get/result/${resultId}`);
+  }
+
+  PATCH_capacityDevelopment(resultId: number | string, body: Record<string, unknown>) {
+    return this.http.patch<any>(`${this.resultsApiBaseUrl}summary/capacity-developent/create/result/${resultId}`, body);
+  }
+
+  GET_capdevsDeliveryMethod() {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}capdevs-delivery-methods/get/all`);
+  }
+
+  GET_innovationDev(resultId: number | string) {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}summary/innovation-dev/get/result/${resultId}`);
+  }
+
+  PATCH_innovationDev(resultId: number | string, body: Record<string, unknown>) {
+    return this.http.patch<any>(`${this.resultsApiBaseUrl}summary/innovation-dev/create/result/${resultId}`, body);
+  }
+
+  GET_innovationUse(resultId: number | string) {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}summary/innovation-use/get/result/${resultId}`);
+  }
+
+  PATCH_innovationUse(resultId: number | string, body: Record<string, unknown>) {
+    return this.http.patch<any>(`${this.resultsApiBaseUrl}summary/innovation-use/create/result/${resultId}`, body);
+  }
+
+  GET_policyChanges(resultId: number | string) {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}summary/policy-changes/get/result/${resultId}`);
+  }
+
+  GET_policyChangesQuestions(resultId: number | string) {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}questions/policy-change/${resultId}`);
+  }
+
+  PATCH_policyChanges(resultId: number | string, body: Record<string, unknown>) {
+    return this.http.patch<any>(`${this.resultsApiBaseUrl}summary/policy-changes/create/result/${resultId}`, body);
+  }
+
+  GET_evidences(resultId: number | string) {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}evidences/get/${resultId}`);
+  }
+
+  POST_evidences(resultId: number | string, formData: FormData) {
+    return this.http.post<any>(`${this.resultsApiBaseUrl}evidences/create/${resultId}`, formData);
+  }
+
+  GET_knowledgeProduct(resultId: number | string) {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}results-knowledge-products/get/result/${resultId}`);
   }
 }
