@@ -370,6 +370,10 @@ describe('AowHloTableComponent', () => {
       const result = component.getStatusLabel(input);
       expect(result).toBe(expected);
     });
+
+    it('should return Not started for fractional progress below 1%', () => {
+      expect(component.getStatusLabel('0.5%')).toBe('Not started');
+    });
   });
 
   describe('tableData computed', () => {
@@ -752,6 +756,52 @@ describe('AowHloTableComponent', () => {
       component.openTargetDetailsDrawer(mockItem, selectedIndicator);
 
       expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(null);
+    });
+
+    it('should resolve center by target value when center_id is missing', () => {
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value_sum: 79,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(3);
+    });
+
+    it('should clear selected center when reporting year is unavailable', () => {
+      mockEntityAowService.reportingPhaseYear = '';
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value_sum: 79,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(null);
+    });
+
+    it('should resolve center using target_value when target_value_sum is missing', () => {
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value: 79,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(3);
     });
   });
 
