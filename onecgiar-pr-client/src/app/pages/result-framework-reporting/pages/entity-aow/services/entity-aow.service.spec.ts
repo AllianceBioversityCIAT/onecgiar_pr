@@ -395,7 +395,25 @@ describe('EntityAowService', () => {
 
       service.getTocResultsByAowId(entityId, aowId);
 
-      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId, undefined);
+    });
+
+    it('should call API with reporting phase year when configured', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      (mockApiService as any).dataControlSE.reportingCurrentPhase = {
+        phaseId: 34,
+        phaseYear: 2026,
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(
+        entityId,
+        aowId,
+        '2026',
+      );
     });
 
     it('should update tocResultsOutputsByAowId and tocResultsOutcomesByAowId and set loading to false on successful API call', () => {
@@ -1013,7 +1031,7 @@ describe('EntityAowService', () => {
       expect(service.tocResultsOutputsByAowId()).toEqual(mockTocResults);
       expect(service.tocResultsOutcomesByAowId()).toEqual([]);
       expect(service.isLoadingTocResultsByAowId()).toBe(false);
-      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId, undefined);
     });
 
     it('should maintain state consistency across multiple TOC operations', () => {
@@ -1051,7 +1069,7 @@ describe('EntityAowService', () => {
       expect(service.tocResultsOutputsByAowId()).toEqual(customTocResults);
       expect(service.tocResultsOutcomesByAowId()).toEqual([]);
       expect(service.isLoadingTocResultsByAowId()).toBe(false);
-      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId2);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId2, undefined);
     });
 
     it('should handle complete modal workflow', () => {

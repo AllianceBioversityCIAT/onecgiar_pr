@@ -453,4 +453,45 @@ describe('AoWBilateralRepository', () => {
       expect(phaseId).toBeNull();
     });
   });
+
+  describe('findTargetsWithCentersByIndicatorId', () => {
+    it('should filter targets from the reporting year onward', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          toc_indicator_target_id: 10,
+          year: 2026,
+          target_value: 5,
+          number_target: '1',
+          center_id: 3,
+          center_acronym: 'CIP',
+          center_name: 'International Potato Center',
+        },
+      ]);
+
+      const result = await repository.findTargetsWithCentersByIndicatorId(
+        99,
+        2026,
+      );
+
+      expect(dataSourceQueryMock).toHaveBeenCalledWith(
+        expect.stringContaining('AND trit.target_date >= ?'),
+        [99, 2026],
+      );
+      expect(result).toEqual([
+        {
+          toc_indicator_target_id: 10,
+          year: 2026,
+          target_value: 5,
+          number_target: '1',
+          centers: [
+            {
+              center_id: 3,
+              center_acronym: 'CIP',
+              center_name: 'International Potato Center',
+            },
+          ],
+        },
+      ]);
+    });
+  });
 });
