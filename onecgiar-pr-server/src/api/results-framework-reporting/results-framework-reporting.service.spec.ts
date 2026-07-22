@@ -853,6 +853,105 @@ describe('ResultsFrameworkReportingService', () => {
         mockTocResultsRepository.findByCompositeCode,
       ).not.toHaveBeenCalled();
     });
+
+    it('should enrich indicator targets using the resolved reporting year', async () => {
+      const tocContext = { reportingYear: 2026, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          id: 1,
+          category: 'OUTPUT',
+          result_title: 'Result 1',
+          related_node_id: 'NODE-1',
+          indicators: [
+            {
+              indicator_id: 55,
+              indicator_description: 'Indicator 1',
+              target_date: 2026,
+              target_value: 95,
+            },
+          ],
+        },
+      ]);
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockResolvedValueOnce(
+        [
+          {
+            toc_indicator_target_id: 10,
+            year: 2026,
+            target_value: 95,
+            number_target: '1',
+            centers: [
+              {
+                center_id: 1,
+                center_acronym: 'ABC',
+                center_name: 'Alliance of Bioversity and CIAT - Headquarter',
+              },
+            ],
+          },
+          {
+            toc_indicator_target_id: 11,
+            year: 2026,
+            target_value: 79,
+            number_target: '1',
+            centers: [
+              {
+                center_id: 3,
+                center_acronym: 'CIP',
+                center_name: 'International Potato Center',
+              },
+            ],
+          },
+        ],
+      );
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2026',
+      );
+
+      expect(
+        mockTocResultsRepository.findTargetsWithCentersByIndicatorId,
+      ).toHaveBeenCalledWith(55, 2026);
+      expect(
+        result.response.tocResultsOutputs[0].indicators[0].targets_by_center,
+      ).toEqual({
+        centers: [
+          {
+            center_id: 1,
+            center_acronym: 'ABC',
+            center_name: 'Alliance of Bioversity and CIAT - Headquarter',
+            targets: [
+              {
+                toc_indicator_target_id: 10,
+                year: 2026,
+                target_value: 95,
+                number_target: '1',
+              },
+            ],
+          },
+          {
+            center_id: 3,
+            center_acronym: 'CIP',
+            center_name: 'International Potato Center',
+            targets: [
+              {
+                toc_indicator_target_id: 11,
+                year: 2026,
+                target_value: 79,
+                number_target: '1',
+              },
+            ],
+          },
+        ],
+      });
+      expect(
+        result.response.tocResultsOutputs[0].indicators[0].center_acronym,
+      ).toBe('ABC');
+      expect(result.response.tocResultsOutputs[0].indicators[0].center_id).toBe(
+        1,
+      );
+    });
   });
 
   describe('getToc2030Outcomes', () => {

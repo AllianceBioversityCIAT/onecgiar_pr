@@ -779,11 +779,15 @@ export class AoWBilateralRepository {
   }
 
   /**
-   * Get all targets for an indicator across all years with their contributing centers
+   * Get all targets for an indicator from the reporting year onward with their contributing centers.
    * @param indicatorId The indicator ID from toc_results_indicators
+   * @param reportingYear Active reporting phase year (from ReportingTocContext)
    * @returns Array of targets with their centers
    */
-  async findTargetsWithCentersByIndicatorId(indicatorId: number) {
+  async findTargetsWithCentersByIndicatorId(
+    indicatorId: number,
+    reportingYear: number,
+  ) {
     const query = `
       SELECT
         trit.toc_indicator_target_id,
@@ -799,12 +803,15 @@ export class AoWBilateralRepository {
       LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci 
         ON tritc.center_id = ci.id
       WHERE trit.id_indicator = ?
-        AND trit.target_date >= 2025
+        AND trit.target_date >= ?
       ORDER BY trit.target_date ASC, ci.acronym ASC
     `;
 
     try {
-      const rows = await this.dataSource.query(query, [indicatorId]);
+      const rows = await this.dataSource.query(query, [
+        indicatorId,
+        reportingYear,
+      ]);
 
       // Group by target_id to consolidate centers
       const targetsMap = new Map<

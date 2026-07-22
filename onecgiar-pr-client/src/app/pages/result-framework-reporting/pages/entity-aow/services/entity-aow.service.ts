@@ -52,6 +52,7 @@ export class EntityAowService {
   showTargetDetailsDrawer = signal<boolean>(false);
   targetDetailsDrawerFullScreen = signal<boolean>(false);
   currentTargetToView = signal<any>({});
+  targetDetailsSelectedCenterId = signal<string | number | null>(null);
 
   dashboardData = signal<any>(null);
 
@@ -212,12 +213,19 @@ export class EntityAowService {
     ]);
   }
 
+  private resolveReportingYearQueryParam(): string | undefined {
+    const reportingYear = this.reportingPhaseYear;
+    if (reportingYear === '' || reportingYear == null) return undefined;
+    return String(reportingYear);
+  }
+
   getTocResultsByAowId(entityId: string, aowId: string) {
     if (!entityId || !aowId) return;
 
     this.isLoadingTocResultsByAowId.set(true);
 
-    this.api.resultsSE.GET_TocResultsByAowId(entityId, aowId).subscribe({
+    const year = this.resolveReportingYearQueryParam();
+    this.api.resultsSE.GET_TocResultsByAowId(entityId, aowId, year).subscribe({
       next: ({ response }) => {
         this.tocResultsOutputsByAowId.set(response?.tocResultsOutputs ?? []);
         this.tocResultsOutcomesByAowId.set(response?.tocResultsOutcomes ?? []);

@@ -107,7 +107,7 @@
                   label="Target details"
                   type="button"
                   class="p-button-outlined pr-body-3 tab-content_actions_button"
-                  (click)="openTargetDetailsDrawer(item, result.indicator_id, result.center_id)"></button>
+                  (click)="openTargetDetailsDrawer(item, result)"></button>
               }
             </div>
           </td>
@@ -143,7 +143,7 @@
         @if (entityAowService.searchText().trim()) {
           No indicators match your search.
         } @else {
-          There are no High-Level Outputs Indicators found.
+          {{ emptyStateMessage() }}
         }
       </td>
     </tr>
