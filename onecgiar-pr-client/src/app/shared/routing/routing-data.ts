@@ -495,12 +495,14 @@ export const WhatsNewRouting: PrRoute[] = [
 
 export const ResultFrameworkReportingRouting: PrRoute[] = [
   {
+    // The home now serves the redesigned dashboard-lab experience. The original
+    // home component is kept in the codebase (no longer routed here) and the
+    // experimental /dashboard-lab route below still points at the same component.
     prName: 'Result Framework & Reporting',
     path: 'home',
+    data: { sidebar: { width: 300 } },
     loadComponent: () =>
-      import('../../pages/result-framework-reporting/pages/result-framework-reporting-home/result-framework-reporting-home.component').then(
-        m => m.ResultFrameworkReportingHomeComponent
-      )
+      import('../../pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.component').then(m => m.DashboardLabComponent)
   },
   {
     prName: 'Dashboard lab (experimental)',

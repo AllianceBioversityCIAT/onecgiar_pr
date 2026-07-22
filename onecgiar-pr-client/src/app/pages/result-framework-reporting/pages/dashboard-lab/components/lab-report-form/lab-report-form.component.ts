@@ -45,14 +45,21 @@ export class LabReportFormComponent {
   private readonly centersSE = inject(CentersService);
   private readonly resultsListFilterSE = inject(ResultsListFilterService);
 
-  /** The ToC node (HLO group) holding the indicator being reported against. */
-  readonly tocNode = input.required<any>();
-  /** The single indicator selected inside that node. */
-  readonly indicator = input.required<any>();
+  /** The ToC node (HLO group) holding the indicator. Null for an emerging result. */
+  readonly tocNode = input<any>(null);
+  /** The single indicator selected inside that node. Null for an emerging result. */
+  readonly indicator = input<any>(null);
   /** Owning Science Program (clarisa initiative id). */
   readonly initiativeId = input.required<number>();
   /** Program code, for the bilateral-projects lookup. */
   readonly programCode = input<string>('');
+  /**
+   * When set, the form runs in EMERGING mode: no indicator, no ToC node — the
+   * category is fixed to this result type and the result is created without a
+   * ToC contribution. `{ id: result_type_id, name, levelId: result_level_id }`.
+   */
+  readonly emergingCategory = input<{ id: number; name: string; levelId: number } | null>(null);
+  readonly isEmerging = computed(() => !!this.emergingCategory());
 
   readonly created = output<void>();
   /** Raised the first time the user touches a field, so the host can guard the exit. */
@@ -80,7 +87,10 @@ export class LabReportFormComponent {
   readonly selectedBilateral = signal<any[]>([]);
 
   readonly currentResultIsKnowledgeProduct = computed(
-    () => this.indicator()?.type_name === 'Number of knowledge products' || this.createResultBody().result_type_id === 6
+    () =>
+      this.indicator()?.type_name === 'Number of knowledge products' ||
+      this.createResultBody().result_type_id === 6 ||
+      this.emergingCategory()?.id === 6
   );
 
   // ---- Contributing CGIAR Centers: ToC split + "Other(s)" ------------------
@@ -126,15 +136,20 @@ export class LabReportFormComponent {
   readonly noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
 
   constructor() {
-    // Re-arm for whichever indicator the drawer is showing.
+    // Re-arm for whichever indicator the drawer is showing — or for an emerging
+    // category when the form runs in emerging mode.
     effect(() => {
       const ind = this.indicator();
-      if (!ind) return;
+      const emerging = this.emergingCategory();
+      if (!ind && !emerging) return;
       this.resetForm();
       this.loadInitiatives();
       this.loadBilateral();
       this.preselectTocCenters();
-      if (!ind?.result_type_id) {
+      if (emerging) {
+        // Emerging: the category is fixed, so lock the result type and skip the picker.
+        this.createResultBody.update(b => ({ ...b, result_type_id: emerging.id }));
+      } else if (!ind?.result_type_id) {
         this.resultTypes.set(
           this.resultsListFilterSE.filters.resultLevel?.find(
             (item: any) => item.id === (ind?.result_level_id || this.tocNode()?.result_level_id)
@@ -296,8 +311,8 @@ export class LabReportFormComponent {
 
     const body = {
       result: {
-        result_type_id: ind?.result_type_id ?? this.createResultBody().result_type_id,
-        result_level_id: ind?.result_level_id || this.tocNode()?.result_level_id,
+        result_type_id: ind?.result_type_id ?? this.emergingCategory()?.id ?? this.createResultBody().result_type_id,
+        result_level_id: ind?.result_level_id || this.tocNode()?.result_level_id || this.emergingCategory()?.levelId,
         initiative_id: this.initiativeId(),
         result_name: this.createResultBody().result_name,
         handler: this.createResultBody().handler

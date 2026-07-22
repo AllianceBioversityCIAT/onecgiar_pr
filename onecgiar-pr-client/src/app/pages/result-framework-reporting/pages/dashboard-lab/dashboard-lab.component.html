@@ -225,12 +225,27 @@
       </div>
     </div>
 
-    <!-- section label + aggregate progress across the program's AOWs -->
-    <div class="px-1">
-      <span class="text-[9px] font-bold uppercase tracking-[0.09em] text-[var(--pr-color-accents-5)]">Areas of Work</span>
+    <!-- 3-view switch: browse by AoW, by indicator, or the grouped accordion -->
+    <div class="flex shrink-0 items-center gap-0.5 rounded-lg bg-[var(--pr-color-accents-1)] p-0.5 text-[10px] font-semibold">
+      @for (v of panelViews; track v.id) {
+        <button
+          type="button"
+          (click)="setPanelView(v.id)"
+          [attr.aria-pressed]="panelView() === v.id"
+          class="flex flex-1 appearance-none items-center justify-center gap-1 rounded-md border-0 py-1.5 transition-colors duration-150"
+          [class]="
+            panelView() === v.id
+              ? 'bg-white text-[var(--pr-color-secondary-400)] shadow-[0_1px_3px_rgba(30,32,47,0.12)]'
+              : 'bg-transparent text-[var(--pr-color-accents-5)] hover:text-[var(--pr-color-secondary-400)]'
+          ">
+          <span class="material-icons-round text-[13px]">{{ v.icon }}</span>{{ v.label }}
+        </button>
+      }
     </div>
 
     <div class="custom_scroll flex flex-1 flex-col gap-1 overflow-y-auto pr-0.5">
+      @switch (panelView()) {
+        @case ('aows') {
       @if (loadingAows()) {
         @for (s of [1, 2, 3, 4]; track s) {
           <div class="h-[58px] shrink-0 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
@@ -303,6 +318,63 @@
           <span class="block truncate text-[10.5px] leading-tight text-[var(--pr-color-accents-5)]">Cumulative 2025–2030</span>
         </span>
       </button>
+        }
+
+        <!-- ===== indicators: every indicator in the program, flat ===== -->
+        @case ('indicators') {
+          @if (allPanelIndicators().length) {
+            @for (ind of allPanelIndicators(); track ind.indicator_id + '::' + ind.__aowCode) {
+              <button
+                type="button"
+                (click)="openAow(ind.__aowCode)"
+                class="group flex w-full shrink-0 appearance-none flex-col gap-1 rounded-xl border border-transparent bg-[var(--pr-color-accents-1)] px-3 py-2 text-left transition-[background,border-color,box-shadow] duration-150 hover:border-[rgba(30,32,47,0.08)] hover:bg-white hover:shadow-[0_2px_8px_rgba(30,32,47,0.06)]">
+                <span class="line-clamp-2 text-[11.5px] font-medium leading-snug text-[var(--pr-color-secondary-400)]">{{ ind.indicator_description }}</span>
+                <span class="flex flex-wrap items-center gap-1">
+                  <span class="rounded-full bg-[#6b6dc41f] px-1.5 py-px text-[9px] font-bold text-[var(--pr-color-primary-400)]">{{ ind.__aowCode }}</span>
+                  <span class="truncate text-[9.5px] text-[var(--pr-color-accents-5)]">{{ ind.type_name || 'Not provided' }}</span>
+                </span>
+              </button>
+            }
+          } @else {
+            <p class="px-2 py-6 text-center text-[11px] text-[var(--pr-color-accents-5)]">Loading indicators…</p>
+          }
+        }
+
+        <!-- ===== grouped: each AoW collapsed, its indicators inside ===== -->
+        @case ('grouped') {
+          @for (x of indicatorsByAow(); track x.aow.code) {
+            <div class="shrink-0 overflow-hidden rounded-xl border border-[rgba(30,32,47,0.06)] bg-[var(--pr-color-accents-1)]">
+              <button
+                type="button"
+                (click)="togglePanelAow(x.aow.code)"
+                [attr.aria-expanded]="isPanelAowExpanded(x.aow.code)"
+                class="flex w-full appearance-none items-center gap-1.5 border-0 bg-transparent px-2.5 py-2 text-left">
+                <span class="material-icons-round text-[15px] text-[var(--pr-color-accents-5)] transition-transform duration-200" [class.-rotate-90]="!isPanelAowExpanded(x.aow.code)">expand_more</span>
+                <span class="shrink-0 text-[11px] font-extrabold" [style.color]="accentTheme().solid">{{ x.aow.code }}</span>
+                <span class="line-clamp-1 min-w-0 flex-1 text-[11px] text-[var(--pr-color-accents-6)]">{{ x.aow.name }}</span>
+                <span class="shrink-0 rounded-full bg-white px-1.5 py-px text-[9px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ x.count }}</span>
+              </button>
+              @if (isPanelAowExpanded(x.aow.code)) {
+                @if (x.loading) {
+                  <div class="px-3 pb-2"><div class="h-8 animate-pulse rounded-lg bg-white"></div></div>
+                } @else if (x.indicators.length) {
+                  @for (ind of x.indicators; track ind.indicator_id) {
+                    <button
+                      type="button"
+                      (click)="openAow(x.aow.code)"
+                      class="flex w-full appearance-none flex-col gap-0.5 border-0 border-t border-[rgba(30,32,47,0.06)] bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-white">
+                      <span class="line-clamp-2 text-[11px] leading-snug text-[var(--pr-color-secondary-400)]">{{ ind.indicator_description }}</span>
+                      <span class="text-[9.5px] text-[var(--pr-color-accents-5)]">{{ ind.type_name || 'Not provided' }}</span>
+                    </button>
+                  }
+                } @else {
+                  <p class="px-3 pb-2 text-[10px] text-[var(--pr-color-accents-5)]">No indicators.</p>
+                }
+              }
+            </div>
+          }
+        }
+      }
     </div>
   </aside>
 }
@@ -912,7 +984,7 @@
       </article>
 
       <!-- Card 3 — Indicator categories (right column, tall 2 rows, tabs + scroll) -->
-      <article class="col-start-2 row-span-2 row-start-2 flex min-h-[352px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-span-1 max-[1180px]:row-start-auto max-[1180px]:min-h-[360px]">
+      <article class="col-start-4 row-start-2 flex min-h-[300px] max-h-[440px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:max-h-none max-[1180px]:row-start-auto max-[1180px]:min-h-[360px]">
         <h2 data-guide="emerging" class="m-0 text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Report Emerging results</h2>
 
         <!-- tabs -->
@@ -987,7 +1059,7 @@
 
       <!-- Card 4 — Areas of Work: a vertical block two rows tall, where the guided
            creation card used to sit. The dedicated section below the bento is gone. -->
-      <article class="col-start-1 row-span-2 row-start-2 flex min-h-[352px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-span-1 max-[1180px]:row-start-auto">
+      <article class="col-start-1 col-span-3 row-start-2 flex min-h-[300px] max-h-[440px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-span-2 max-[1180px]:col-start-auto max-[1180px]:max-h-none max-[1180px]:row-start-auto max-[620px]:col-span-1">
         <div class="flex shrink-0 flex-wrap items-baseline gap-2">
           <h2 data-guide="planned" class="m-0 text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Results planned in your 2026 ToC</h2>
           <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ aows().length }}</span>
@@ -1002,8 +1074,8 @@
             @for (aow of aows(); track aow.id) {
               <div
                 [attr.data-guide]="$first ? 'aow-action' : null"
-                class="group box-border flex w-full min-w-0 max-w-full shrink-0 flex-col gap-1 overflow-hidden rounded-xl border border-transparent bg-[var(--pr-color-accents-1)] px-3 py-2.5 text-left transition-[background,border-color,box-shadow] duration-200 hover:border-[rgba(30,32,47,0.08)] hover:bg-white hover:shadow-[0_4px_14px_rgba(30,32,47,0.07)]">
-                <p class="m-0 min-w-0 text-[12px] leading-snug text-[var(--pr-color-secondary-400)]">
+                class="group box-border flex w-full min-w-0 max-w-full shrink-0 items-center justify-between gap-2 overflow-hidden rounded-xl border border-transparent bg-[var(--pr-color-accents-1)] px-3 py-2 text-left transition-[background,border-color,box-shadow] duration-200 hover:border-[rgba(30,32,47,0.08)] hover:bg-white hover:shadow-[0_4px_14px_rgba(30,32,47,0.07)]">
+                <p class="m-0 min-w-0 flex-1 truncate text-[12px] leading-snug text-[var(--pr-color-secondary-400)]">
                   <b class="font-extrabold">{{ aow.code }}</b>
                   <span class="mx-1 text-[var(--pr-color-accents-3)]">·</span>{{ aow.name }}
                 </p>
@@ -1012,9 +1084,8 @@
                   type="button"
                   (click)="openAow(aow.code)"
                   [attr.aria-label]="'Report against indicators of ' + aow.code"
-                  class="inline-flex items-center gap-1 self-start rounded-lg border-0 bg-transparent px-0 py-0.5 text-[11px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:text-[var(--pr-color-primary-400)]">
-                  Report against indicators
-                  <span class="material-icons-round text-[13px]">arrow_forward</span>
+                  class="inline-flex shrink-0 appearance-none items-center gap-1 rounded-lg border-0 bg-[#23252f] px-2.5 py-1 text-[11px] font-semibold text-white transition-transform duration-200 hover:-translate-y-px">
+                  Report <span class="material-icons-round text-[14px]">arrow_forward</span>
                 </button>
               </div>
             }
@@ -1051,101 +1122,38 @@
         </button>
       </article>
 
-      <!-- Card 7 — Reporting guide entry. Two rows tall, next to the other verticals. -->
-      <article
-        class="col-start-4 row-span-2 row-start-2 flex min-h-[352px] flex-col justify-between gap-4 overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-[linear-gradient(160deg,#f7f7fc_0%,#ecebf8_100%)] p-5 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-span-1 max-[1180px]:row-start-auto max-[1180px]:min-h-[168px]">
-        <div>
-          <span class="inline-flex size-11 items-center justify-center rounded-2xl bg-white shadow-[0_2px_8px_rgba(30,32,47,0.08)]">
-            <span class="material-icons-round text-[22px] text-[var(--pr-color-primary-300)]">help_outline</span>
-          </span>
-          <h2 class="m-0 mt-4 text-[17px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)] [text-wrap:balance]">
-            Not sure how to report?
-          </h2>
-          <p class="m-0 mt-2 text-[12.5px] leading-relaxed text-[var(--pr-color-accents-6)]">
-            A short walkthrough of the screen: where your planned indicators live, how emerging results differ, and what each action does.
-          </p>
-        </div>
+      <!-- Card 7 (guide) removed on the program view — the "Not sure how to report?"
+           entry already lives on the workspace overview. -->
 
-        <button
-          type="button"
-          (click)="startGuide()"
-          class="flex shrink-0 appearance-none items-center justify-center gap-2 rounded-xl border-0 bg-white px-4 py-2.5 text-[12.5px] font-bold text-[var(--pr-color-primary-400)] shadow-[0_4px_14px_rgba(30,32,47,0.10)] transition-transform duration-200 hover:-translate-y-px">
-          See the guide
-          <span class="material-icons-round text-[16px]">play_arrow</span>
-        </button>
-      </article>
-
-      <!-- Card 6 — My CGIAR Centers. One card cycling through the centers; hovering
-           it swells and floats the full list out, no click needed. -->
+      <!-- Card 6 — My CGIAR Centers. Spans the freed column so no gap is left where
+           the guide card used to sit. Hovering swells it and floats the full list out. -->
       <article
-        class="pr-centers relative col-start-3 row-start-2 flex min-h-[168px] flex-col gap-2.5 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-start-auto"
-        (mouseenter)="openCenters()"
-        (mouseleave)="closeCenters()">
+        class="col-start-1 col-span-4 row-start-3 flex min-h-[120px] flex-col gap-2.5 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-span-2 max-[1180px]:col-start-auto max-[1180px]:row-start-auto max-[620px]:col-span-1">
         <div class="flex shrink-0 items-baseline gap-2">
           <p data-guide="centers" class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">My CGIAR Centers</p>
           <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ myCenters().length }}</span>
         </div>
 
         @if (myCenters().length) {
-          <!-- the one visible center, keyed so each rotation animates in -->
-          @if (currentCenter(); as center) {
-            @if (center.center_id; as key) {
-              <div class="pr-centers__slide flex flex-1 flex-col gap-2" [attr.data-key]="key">
-                <div class="flex items-center gap-2">
-                  <span class="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-[var(--pr-color-primary-25)]">
-                    <i class="material-icons-round text-[15px] text-[var(--pr-color-primary-300)]">account_balance</i>
-                  </span>
-                  <p class="m-0 truncate text-[11px] font-medium text-[var(--pr-color-accents-5)]">CGIAR Center</p>
-                </div>
-                <h3 class="m-0 line-clamp-3 text-[13.5px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">
-                  {{ center.center_name }} ({{ center.center_acronym || center.center_id }})
-                </h3>
-                <a
-                  class="mt-auto inline-flex items-center gap-1.5 self-start rounded-lg bg-[var(--pr-color-primary-300)] px-3 py-1.5 text-[11.5px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
-                  routerLink="/bilateral/create">
-                  Report
-                  <i class="material-icons-round text-[14px]">arrow_forward</i>
-                </a>
-              </div>
+          <!-- Full-width bottom row: Centers in a responsive grid. -->
+          <div class="grid grid-cols-3 gap-2 max-[900px]:grid-cols-2 max-[620px]:grid-cols-1">
+            @for (c of myCenters(); track c.center_id) {
+              <a
+                class="group flex items-center gap-2.5 rounded-xl border border-transparent bg-[var(--pr-color-accents-1)] px-2.5 py-2 no-underline transition-[background,border-color,box-shadow] duration-150 hover:border-[rgba(30,32,47,0.08)] hover:bg-white hover:shadow-[0_4px_14px_rgba(30,32,47,0.07)]"
+                routerLink="/bilateral/create">
+                <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--pr-color-primary-25)]">
+                  <i class="material-icons-round text-[15px] text-[var(--pr-color-primary-300)]">account_balance</i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-[12px] font-semibold leading-tight text-[var(--pr-color-secondary-400)]">{{ c.center_acronym || c.center_id }}</span>
+                  <span class="block truncate text-[10.5px] leading-tight text-[var(--pr-color-accents-5)]">{{ c.center_name }}</span>
+                </span>
+                <span class="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#23252f] px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                  Report <i class="material-icons-round text-[13px]">arrow_forward</i>
+                </span>
+              </a>
             }
-          }
-
-          <!-- rotation dots double as a manual picker -->
-          @if (myCenters().length > 1) {
-            <div class="flex shrink-0 items-center gap-1.5">
-              @for (c of myCenters(); track c.center_id; let i = $index) {
-                <button
-                  type="button"
-                  (mouseenter)="focusCenter(i)"
-                  (click)="focusCenter(i)"
-                  [attr.aria-label]="'Show ' + (c.center_acronym || c.center_name)"
-                  class="h-1.5 appearance-none rounded-full border-0 transition-all duration-300"
-                  [class]="i === centerIndex() ? 'w-5 bg-[var(--pr-color-primary-300)]' : 'w-1.5 bg-[var(--pr-color-accents-2)]'"></button>
-              }
-            </div>
-          }
-
-          <!-- the full list, floating out of the card on hover -->
-          @if (centersOpen() && myCenters().length > 1) {
-            <div
-              class="pr-centers__pop custom_scroll absolute inset-x-0 top-full z-[30] mt-2 flex max-h-[320px] flex-col gap-1.5 overflow-y-auto rounded-[18px] border border-[rgba(30,32,47,0.08)] bg-white p-2.5 shadow-[0_24px_60px_rgba(30,32,47,0.22)]">
-              @for (c of myCenters(); track c.center_id; let i = $index) {
-                <a
-                  class="pr-centers__row flex items-center gap-2.5 rounded-xl px-2.5 py-2 no-underline transition-colors duration-150 hover:bg-[var(--pr-color-accents-1)]"
-                  [style.--i]="i"
-                  routerLink="/bilateral/create">
-                  <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--pr-color-primary-25)]">
-                    <i class="material-icons-round text-[15px] text-[var(--pr-color-primary-300)]">account_balance</i>
-                  </span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block text-[12px] font-semibold leading-tight text-[var(--pr-color-secondary-400)]">{{ c.center_acronym || c.center_id }}</span>
-                    <span class="block truncate text-[10.5px] leading-tight text-[var(--pr-color-accents-5)]">{{ c.center_name }}</span>
-                  </span>
-                  <i class="material-icons-round shrink-0 text-[15px] text-[var(--pr-color-accents-3)]">arrow_forward</i>
-                </a>
-              }
-            </div>
-          }
+          </div>
         } @else {
           <p class="my-auto text-center text-[11.5px] leading-snug text-[var(--pr-color-accents-5)]">
             You do not have a Center User role yet.

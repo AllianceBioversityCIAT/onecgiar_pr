@@ -116,6 +116,29 @@
                         <div class="in-qa-tag">In QA</div>
                       }
                     </div>
+                  } @else if (column.attr === 'result_code') {
+                    <!-- code + a marker for results that open in the reporting framework (not Result Detail) -->
+                    <div class="flex items-center justify-center gap-1">
+                      <span [innerHTML]="subResult.result_code"></span>
+                      @if (opensInFramework(subResult)) {
+                        <i
+                          class="material-icons-round meta_code_icon"
+                          prTooltip="Opens in the reporting framework (bilateral review) — not Result Detail"
+                          prTooltipPosition="right">open_in_new</i>
+                      }
+                    </div>
+                  } @else if (column.attr === 'source_name' && subResult.source_name) {
+                    <div class="flex w-full items-center justify-center">
+                      <span class="meta_chip" [ngClass]="{ 'meta_chip--bilateral': isBilateral(subResult) }">{{ subResult.source_name }}</span>
+                    </div>
+                  } @else if (column.attr === 'result_type' && subResult.result_type) {
+                    <div class="flex w-full items-center justify-center">
+                      <span class="meta_chip meta_chip--type">{{ subResult.result_type }}</span>
+                    </div>
+                  } @else if (column.attr === 'lead_center' && subResult.lead_center) {
+                    <div class="flex w-full items-center justify-center">
+                      <span class="meta_chip meta_chip--center">{{ subResult.lead_center }}</span>
+                    </div>
                   } @else {
                     <!-- NOTE (P2-3049): empty cell is intentional when a result has no lead center (led by an external partner).
                          Future change: fall back to showing the lead partner here instead of leaving it blank. -->

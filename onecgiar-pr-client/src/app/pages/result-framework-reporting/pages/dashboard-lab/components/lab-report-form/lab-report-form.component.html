@@ -20,7 +20,7 @@
     <div class="flex items-center gap-2">
       <span class="text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Indicator category:</span>
       <span class="rounded-lg border border-[rgba(30,32,47,0.12)] px-2.5 py-1 text-[12.5px] text-[var(--pr-color-accents-6)]">
-        {{ indicator()?.result_type_name || indicator()?.type_name || 'Not provided' }}
+        {{ emergingCategory()?.name || indicator()?.result_type_name || indicator()?.type_name || 'Not provided' }}
       </span>
     </div>
   }

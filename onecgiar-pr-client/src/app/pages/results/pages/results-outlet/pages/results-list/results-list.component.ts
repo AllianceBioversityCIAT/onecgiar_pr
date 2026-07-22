@@ -46,7 +46,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   columnOrder = [
     { title: 'Result code', attr: 'result_code', center: true, width: '90px' },
     { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
-    { title: 'Funding Source', attr: 'source_name', center: true, width: '100px' },
+    { title: 'Funding Source', attr: 'source_name', center: true, width: '120px' },
     { title: 'Center', attr: 'lead_center', center: true, width: '100px' },
     { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
     { title: 'Indicator category', attr: 'result_type', center: true, width: '100px' },
@@ -255,6 +255,20 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     if (result?.source_name !== 'W3/Bilaterals') return false;
     const code = result?.submitter ?? result?.initiative_official_code ?? '';
     return code === 'SGP-02' || code === 'SGP02';
+  }
+
+  /**
+   * A W3/Bilaterals result (non-AVISA, not yet Approved) does NOT open Result Detail
+   * — it routes to the reporting framework's bilateral review drawer. Mirrors the
+   * branching in navigateToResult() so the list can flag these rows at the code.
+   */
+  opensInFramework(result: CurrentResult): boolean {
+    return result?.source_name === 'W3/Bilaterals' && !this.isW3BilateralsAvisa(result) && result?.status_name !== 'Approved';
+  }
+
+  /** True when this result comes from a W3/bilateral funding source. */
+  isBilateral(result: CurrentResult): boolean {
+    return result?.source_name === 'W3/Bilaterals';
   }
 
   onPressAction(result: CurrentResult): void {

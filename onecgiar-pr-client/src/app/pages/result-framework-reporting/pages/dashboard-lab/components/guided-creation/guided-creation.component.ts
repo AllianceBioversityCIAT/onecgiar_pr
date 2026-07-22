@@ -12,30 +12,27 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 type ReportingPath = 'planned' | 'emerging';
 
 /**
- * Screens, not numbered steps: the two paths genuinely diverge. `browse` is the
- * three-column explorer the planned path needs (program → area of work →
- * indicator); the emerging path only needs to know the program.
+ * A linear step. Both paths now walk the same road: type → program → area of work
+ * → indicator → title → review. The old confirmation-panel screens are gone; a
+ * change only asks for confirmation when it would invalidate a later step.
  */
-type Screen = 'choice' | 'browse' | 'program' | 'review';
+type Step = 'path' | 'program' | 'aow' | 'indicator' | 'title' | 'review';
 
-/** What the side panel is currently asking the user to confirm. */
-interface PendingChoice {
-  kind: 'path' | 'program' | 'indicator';
-  title: string;
-  subtitle: string;
-  body: string;
-  accent: string;
-  icon: string;
-  payload: any;
+/** A change to a completed step that would clear later selections, held for confirmation. */
+interface PendingChange {
+  message: string;
+  detail: string;
+  apply: () => void;
+  clearAll: () => void;
 }
 
 /**
- * GUIDED CREATION — full-screen, one decision at a time.
+ * GUIDED CREATION — full-screen, step by step.
  *
- * Implements openspec change `guided-result-reporting-flow` §0 (A2). Choices are
- * never applied on click: selecting opens a confirmation panel that takes 35% of
- * the surface and explains what the choice means, so nothing is decided by accident
- * (design D10/D11). Every answer stays revisable from the review screen.
+ * Every step is visible in the top rail as a chip; tapping a chip jumps back to
+ * that step. Changing an earlier answer only wipes what depends on it (a new
+ * program clears its Area of Work + indicator; a new area of work clears its
+ * indicator) — the title is always kept unless the user asks to clear everything.
  */
 @Component({
   selector: 'app-guided-creation',
@@ -57,14 +54,28 @@ export class GuidedCreationComponent implements OnDestroy {
   /** Emitted when the user leaves the flow (ESC, close, or after hand-off). */
   readonly closed = output<void>();
 
-  readonly screen = signal<Screen>('choice');
+  readonly step = signal<Step>('path');
   readonly path = signal<ReportingPath | null>(null);
   readonly program = signal<SPProgress | null>(null);
   readonly aow = signal<Unit | null>(null);
   readonly indicator = signal<any | null>(null);
+  /** The HLO node the chosen indicator hangs from — carries the toc_result_id the create call needs. */
+  readonly tocResultId = signal<number | null>(null);
+  readonly title = signal('');
 
-  /** The choice awaiting confirmation in the side panel. */
-  readonly pending = signal<PendingChoice | null>(null);
+  /** True while the create call is in flight (locks the finish button). */
+  readonly creating = signal(false);
+
+  /** A change awaiting confirmation because it clears later steps. */
+  readonly pendingChange = signal<PendingChange | null>(null);
+
+  /** Ordered steps. `path` drops out once it is pre-filled from the hub. */
+  readonly steps = computed<Step[]>(() => {
+    const base: Step[] = ['program', 'aow', 'indicator', 'title', 'review'];
+    return this.prefillPath() ? base : ['path', ...base];
+  });
+
+  readonly stepIndex = computed(() => Math.max(0, this.steps().indexOf(this.step())));
 
   // ---- data -------------------------------------------------------------
 
@@ -73,7 +84,7 @@ export class GuidedCreationComponent implements OnDestroy {
   private readonly tocByKey = signal<Map<string, any[]>>(new Map());
   /** Free-text filter for the "where to report" column. */
   readonly indicatorSearch = signal('');
-  /** HLO groups collapsed in the third column. */
+  /** HLO groups collapsed in the indicator step. */
   readonly collapsedHlo = signal<Set<string>>(new Set());
   readonly typologyFilter = signal<string | null>(null);
   readonly statusFilter = signal<string | null>(null);
@@ -88,7 +99,7 @@ export class GuidedCreationComponent implements OnDestroy {
     return !!code && this.loadingCodes().has(code) && !this.aowsByCode().has(code);
   });
 
-  /** HLO groups for the third column, filtered by the search box. */
+  /** HLO groups for the indicator step, filtered by the search box. */
   readonly indicatorGroups = computed(() => {
     const key = this.tocKey();
     const groups = key ? this.tocByKey().get(key) ?? [] : [];
@@ -184,15 +195,22 @@ export class GuidedCreationComponent implements OnDestroy {
     ].filter(group => group.items.length)
   );
 
-  /** Answers so far, for the review screen. */
-  readonly answers = computed(() => {
-    const out: { screen: Screen; label: string; value: string }[] = [];
-    if (this.path()) out.push({ screen: 'choice', label: 'Type', value: this.path() === 'planned' ? 'Planned in ToC' : 'Emerging' });
-    if (this.program()) out.push({ screen: this.path() === 'planned' ? 'browse' : 'program', label: 'Program', value: this.program()!.initiativeCode });
-    if (this.aow()) out.push({ screen: 'browse', label: 'Area of Work', value: this.aow()!.code });
-    if (this.indicator()) out.push({ screen: 'browse', label: 'Indicator', value: this.indicator().indicator_description ?? '—' });
+  // ---- top rail chips (one per step, with the picked value) ---------------
+
+  readonly chips = computed(() => {
+    const out: { step: Step; label: string; value: string | null; icon: string }[] = [];
+    if (!this.prefillPath()) {
+      out.push({ step: 'path', label: 'Type', value: this.path() ? (this.path() === 'planned' ? 'Planned' : 'Emerging') : null, icon: this.path() === 'emerging' ? 'bolt' : 'flag' });
+    }
+    out.push({ step: 'program', label: 'Program', value: this.program()?.initiativeCode ?? null, icon: 'hub' });
+    out.push({ step: 'aow', label: 'Area of Work', value: this.aow()?.code ?? null, icon: 'category' });
+    out.push({ step: 'indicator', label: 'Indicator', value: this.indicator()?.indicator_description ?? null, icon: 'insights' });
+    out.push({ step: 'title', label: 'Title', value: this.title().trim() || null, icon: 'title' });
     return out;
   });
+
+  /** Review rows — the same data, laid out with an edit affordance. */
+  readonly summary = computed(() => this.chips().filter(c => c.value));
 
   constructor() {
     this.dataControlSE.focusMode.set(true);
@@ -202,7 +220,7 @@ export class GuidedCreationComponent implements OnDestroy {
     const prefill = this.prefillPath();
     if (prefill) {
       this.path.set(prefill);
-      this.screen.set(prefill === 'planned' ? 'browse' : 'program');
+      this.step.set('program');
     }
   }
 
@@ -210,105 +228,146 @@ export class GuidedCreationComponent implements OnDestroy {
     this.dataControlSE.focusMode.set(false);
   }
 
-  // ---- selection → confirmation ------------------------------------------
+  // ---- step navigation ----------------------------------------------------
+
+  /** Jump straight to a step from a chip or a review pencil. */
+  goToStep(step: Step): void {
+    this.pendingChange.set(null);
+    this.step.set(step);
+  }
+
+  /** A step is reachable once every step before it has an answer. */
+  isStepReady(step: Step): boolean {
+    switch (step) {
+      case 'path':
+      case 'program':
+        return true;
+      case 'aow':
+        return !!this.program();
+      case 'indicator':
+        return !!this.aow();
+      case 'title':
+        return !!this.indicator();
+      case 'review':
+        return !!this.title().trim();
+    }
+  }
+
+  back(): void {
+    if (this.pendingChange()) {
+      this.pendingChange.set(null);
+      return;
+    }
+    const order = this.steps();
+    const i = order.indexOf(this.step());
+    if (i <= 0) {
+      this.close();
+      return;
+    }
+    this.step.set(order[i - 1]);
+  }
+
+  // ---- selection (advances the flow; asks only when it clears later steps) --
 
   selectPath(value: ReportingPath): void {
-    this.pending.set({
-      kind: 'path',
-      title: value === 'planned' ? 'Planned in the Theory of Change' : 'Emerging',
-      subtitle: value === 'planned' ? 'Reported against a committed indicator' : 'Reported outside the committed indicators',
-      body:
-        value === 'planned'
-          ? 'You will pick the Area of Work and the exact indicator this result contributes to. Its progress will count toward the target your program committed to.'
-          : 'You will only pick the program. The result is recorded on its own, without contributing to a planned indicator.',
-      accent: value === 'planned' ? '#6b6dc4' : '#bf4b26',
-      icon: value === 'planned' ? 'flag' : 'bolt',
-      payload: value
-    });
+    this.path.set(value);
+    this.step.set('program');
   }
 
   selectProgram(sp: SPProgress): void {
-    this.pending.set({
-      kind: 'program',
-      title: sp.initiativeCode,
-      subtitle: sp.initiativeShortName || sp.initiativeName,
-      body: `The result will belong to ${sp.initiativeCode} and appear in its reporting for this phase.`,
-      accent: '#6b6dc4',
-      icon: 'hub',
-      payload: sp
-    });
-  }
-
-  selectIndicator(ind: any): void {
-    this.pending.set({
-      kind: 'indicator',
-      title: ind?.indicator_description ?? 'Indicator',
-      subtitle: `${this.aow()?.code} · ${ind?.type_name || 'Not provided'}`,
-      body: `Target ${ind?.target_value_sum ?? 0} · achieved ${ind?.actual_achieved_value_sum ?? 0} so far. Your result will contribute to this indicator.`,
-      accent: '#6b6dc4',
-      icon: 'insights',
-      payload: ind
-    });
-  }
-
-  cancelPending(): void {
-    this.pending.set(null);
-  }
-
-  confirmPending(): void {
-    const p = this.pending();
-    if (!p) return;
-    this.pending.set(null);
-
-    if (p.kind === 'path') {
-      const value = p.payload as ReportingPath;
-      const changed = this.path() !== value;
-      this.path.set(value);
-      if (changed) {
-        this.aow.set(null);
-        this.indicator.set(null);
-      }
-      this.screen.set(value === 'planned' ? 'browse' : 'program');
+    const prev = this.program();
+    if (prev && prev.initiativeId !== sp.initiativeId && (this.aow() || this.indicator())) {
+      this.pendingChange.set({
+        message: 'Change the Science Program?',
+        detail: 'An Area of Work belongs to one program, so its Area of Work and Indicator will be cleared. Your title is kept.',
+        apply: () => {
+          this.program.set(sp);
+          this.aow.set(null);
+          this.indicator.set(null);
+          this.tocResultId.set(null);
+          this.loadAows(sp.initiativeCode);
+          this.step.set('aow');
+        },
+        clearAll: () => {
+          this.program.set(sp);
+          this.aow.set(null);
+          this.indicator.set(null);
+          this.tocResultId.set(null);
+          this.title.set('');
+          this.loadAows(sp.initiativeCode);
+          this.step.set('aow');
+        }
+      });
       return;
     }
-
-    if (p.kind === 'program') {
-      const sp = p.payload as SPProgress;
-      const previous = this.program();
-      this.program.set(sp);
-      // An Area of Work belongs to one program — a program change invalidates it.
-      if (previous && previous.initiativeId !== sp.initiativeId) {
-        this.aow.set(null);
-        this.indicator.set(null);
-      }
-      this.loadAows(sp.initiativeCode);
-      if (this.path() === 'emerging') this.screen.set('review');
-      return;
-    }
-
-    this.indicator.set(p.payload);
-    this.screen.set('review');
-  }
-
-  // ---- browsing ----------------------------------------------------------
-
-  /** In the explorer, picking a program or an area of work is navigation, not a decision. */
-  browseProgram(sp: SPProgress): void {
-    const previous = this.program();
     this.program.set(sp);
-    if (previous && previous.initiativeId !== sp.initiativeId) {
-      this.aow.set(null);
-      this.indicator.set(null);
-    }
     this.loadAows(sp.initiativeCode);
+    this.step.set('aow');
   }
 
-  browseAow(unit: Unit): void {
+  selectAow(unit: Unit): void {
+    const prev = this.aow();
+    if (prev && prev.code !== unit.code && this.indicator()) {
+      this.pendingChange.set({
+        message: 'Change the Area of Work?',
+        detail: 'The Indicator you picked belongs to the current Area of Work, so it will be cleared. Your title is kept.',
+        apply: () => {
+          this.aow.set(unit);
+          this.indicator.set(null);
+          this.tocResultId.set(null);
+          this.clearFilters();
+          const sp = this.program();
+          if (sp) this.loadToc(sp.initiativeCode, unit.code);
+          this.step.set('indicator');
+        },
+        clearAll: () => {
+          this.aow.set(unit);
+          this.indicator.set(null);
+          this.tocResultId.set(null);
+          this.title.set('');
+          this.clearFilters();
+          const sp = this.program();
+          if (sp) this.loadToc(sp.initiativeCode, unit.code);
+          this.step.set('indicator');
+        }
+      });
+      return;
+    }
     this.aow.set(unit);
-    this.indicator.set(null);
     this.clearFilters();
     const sp = this.program();
     if (sp) this.loadToc(sp.initiativeCode, unit.code);
+    this.step.set('indicator');
+  }
+
+  selectIndicator(ind: any, tocResultId: number | null): void {
+    this.indicator.set(ind);
+    this.tocResultId.set(tocResultId ?? ind?.toc_result_id ?? null);
+    this.step.set('title');
+  }
+
+  confirmTitle(): void {
+    if (this.title().trim()) this.step.set('review');
+  }
+
+  applyChange(): void {
+    const c = this.pendingChange();
+    if (c) {
+      c.apply();
+      this.pendingChange.set(null);
+    }
+  }
+
+  clearAllChange(): void {
+    const c = this.pendingChange();
+    if (c) {
+      c.clearAll();
+      this.pendingChange.set(null);
+    }
+  }
+
+  cancelChange(): void {
+    this.pendingChange.set(null);
   }
 
   isGroupCollapsed(label: string): boolean {
@@ -323,49 +382,56 @@ export class GuidedCreationComponent implements OnDestroy {
     });
   }
 
-  // ---- navigation --------------------------------------------------------
-
-  back(): void {
-    if (this.pending()) {
-      this.pending.set(null);
-      return;
-    }
-    switch (this.screen()) {
-      case 'choice':
-        this.close();
-        break;
-      case 'browse':
-      case 'program':
-        this.screen.set('choice');
-        break;
-      case 'review':
-        this.screen.set(this.path() === 'planned' ? 'browse' : 'program');
-        break;
-    }
-  }
-
-  goTo(screen: Screen): void {
-    this.pending.set(null);
-    this.screen.set(screen);
-  }
-
   close(): void {
     this.closed.emit();
   }
 
   /**
-   * Hand off to the existing create surfaces with the collected context.
-   * Planned → the Area of Work indicator list. Emerging → the program overview.
+   * Create the result from everything the wizard collected — same POST the create
+   * modal fires — then redirect to its Result Detail so the rest is filled there.
+   * The wizard only gathers program + AoW + indicator + title; every other field
+   * (centers, science programs, evidence…) is completed on the Result Detail.
    */
   finish(): void {
     const sp = this.program();
-    if (!sp) return;
-    const target =
-      this.path() === 'planned' && this.aow()
-        ? ['/result-framework-reporting/entity-details', sp.initiativeCode, 'aow', this.aow()!.code]
-        : ['/result-framework-reporting/entity-details', sp.initiativeCode];
-    this.closed.emit();
-    this.router.navigate(target);
+    const ind = this.indicator();
+    if (!sp || !ind || this.creating()) return;
+    this.creating.set(true);
+
+    const body = {
+      result: {
+        result_type_id: ind?.result_type_id,
+        result_level_id: ind?.result_level_id,
+        initiative_id: sp.initiativeId,
+        result_name: this.title().trim(),
+        handler: ''
+      },
+      number_target: ind?.number_target,
+      target_date: ind?.target_date,
+      contributing_indicator: null,
+      contributing_center: [],
+      knowledge_product: null,
+      toc_result_id: this.tocResultId(),
+      toc_progressive_narrative: '',
+      indicators: ind || [],
+      contributors_result_toc_result: [],
+      bilateral_project: []
+    };
+
+    this.api.resultsSE.POST_createResult(body).subscribe({
+      next: (resp: any) => {
+        this.api.alertsFe.show({ id: 'guidedCreateSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+        this.creating.set(false);
+        this.closed.emit();
+        this.router.navigate([`/result/result-detail/${resp?.response?.result?.result_code}/general-information`], {
+          queryParams: { phase: resp?.response?.result?.version_id }
+        });
+      },
+      error: (err: any) => {
+        this.api.alertsFe.show({ id: 'guidedCreateError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.creating.set(false);
+      }
+    });
   }
 
   // ---- fetching ----------------------------------------------------------
@@ -408,14 +474,14 @@ export class GuidedCreationComponent implements OnDestroy {
     });
   }
 
-  /** How the "where to report" column is rendered. */
+  /** How the "where to report" list is rendered. */
   readonly listView = signal<'list' | 'table'>('list');
 
   setView(view: 'list' | 'table'): void {
     this.listView.set(view);
   }
 
-  /** A stable icon + colour per Area of Work, so the rail is scannable when compact. */
+  /** A stable icon + colour per Area of Work, so the list is scannable. */
   private readonly AOW_ICONS = ['insights', 'science', 'diversity_3', 'agriculture', 'public', 'hub', 'eco', 'bolt'];
 
   aowIcon(unit: Unit, index: number): string {
@@ -427,7 +493,7 @@ export class GuidedCreationComponent implements OnDestroy {
     return palette[index % palette.length];
   }
 
-  /** Each program keeps its own ring colour so the rail is readable at a glance. */
+  /** Each program keeps its own ring colour so the list is readable at a glance. */
   accentFor(sp: SPProgress): string {
     const palette = ['#6b6dc4', '#bf4b26', '#1e202f', '#2f8f6b', '#a6558f', '#c08a1e', '#3b82f6', '#d0435a'];
     return palette[(sp.initiativeId ?? 0) % palette.length];

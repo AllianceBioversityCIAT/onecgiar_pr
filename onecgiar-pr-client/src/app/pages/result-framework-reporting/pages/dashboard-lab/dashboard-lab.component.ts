@@ -681,6 +681,59 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.activeAowCode.set(null);
   }
 
+  // ---- Navigation panel: 3 views (AoWs · indicators · grouped accordion) ----
+
+  /** Which way the left navigation panel lists the program's work. */
+  readonly panelView = signal<'aows' | 'indicators' | 'grouped'>('aows');
+  readonly panelViews = [
+    { id: 'aows', label: 'AoWs', icon: 'grid_view' },
+    { id: 'indicators', label: 'Indicators', icon: 'insights' },
+    { id: 'grouped', label: 'Grouped', icon: 'account_tree' }
+  ] as const;
+  /** AoWs expanded in the grouped (accordion) panel view. */
+  readonly expandedPanelAows = signal<Set<string>>(new Set());
+
+  setPanelView(view: 'aows' | 'indicators' | 'grouped'): void {
+    this.panelView.set(view);
+    // The indicator / grouped views need every AoW's ToC, not just the open one.
+    if (view !== 'aows') this.loadAllTocs();
+  }
+
+  private loadAllTocs(): void {
+    const sp = this.selected()?.initiativeCode;
+    if (!sp) return;
+    this.aows().forEach(aow => this.loadToc(sp, aow.code));
+  }
+
+  /** Indicators grouped by their AoW (output + outcome tiers), for the panel views. */
+  readonly indicatorsByAow = computed(() => {
+    const sp = this.selected()?.initiativeCode;
+    const map = this.tocByKey();
+    const loadingKeys = this.loadingTocKeys();
+    return this.aows().map(aow => {
+      const key = `${sp}::${aow.code}`;
+      const toc = map.get(key);
+      const groups = toc ? [...(toc.outputs ?? []), ...(toc.outcomes ?? [])] : [];
+      const indicators = groups.flatMap((g: any) => (g?.indicators ?? []).map((i: any) => ({ ...i, __aowCode: aow.code, __hlo: g?.result_title })));
+      return { aow, indicators, count: indicators.length, loading: !toc && loadingKeys.has(key) };
+    });
+  });
+
+  /** Flat list of every indicator in the program, for the "indicators" view. */
+  readonly allPanelIndicators = computed(() => this.indicatorsByAow().flatMap(x => x.indicators));
+
+  isPanelAowExpanded(code: string): boolean {
+    return this.expandedPanelAows().has(code);
+  }
+
+  togglePanelAow(code: string): void {
+    this.expandedPanelAows.update(set => {
+      const next = new Set(set);
+      next.has(code) ? next.delete(code) : next.add(code);
+      return next;
+    });
+  }
+
   setIndicatorTab(tab: 'outputs' | 'outcomes'): void {
     this.indicatorTab.set(tab);
   }
