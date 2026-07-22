@@ -10,6 +10,14 @@ input[type='number'] {
   -moz-appearance: textfield;
 }
 
+// The themed input (hlmInput) defaults to content-box; with width:100% plus its
+// own horizontal padding it spills past the field-card body. Force border-box so
+// the control always stays inside its card.
+.input_container input {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
 .pr-input.readOnly {
   padding: 8px 10px;
   box-shadow: 0px 0px 10px -1px var(--pr-color-neutral-1000);

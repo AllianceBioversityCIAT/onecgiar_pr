@@ -63,7 +63,8 @@ export class PrInputComponent implements ControlValueAccessor {
 
   /** Presentation values: FieldsManager overrides the inputs, with input fallback. */
   readonly effectiveLabel = computed(() => this.fieldConfig()?.label ?? this.label());
-  readonly effectivePlaceholder = computed(() => this.fieldConfig()?.placeholder ?? this.placeholder());
+  // Fall back to '' — never let an unset placeholder reach the DOM as the literal "undefined".
+  readonly effectivePlaceholder = computed(() => this.fieldConfig()?.placeholder ?? this.placeholder() ?? '');
   readonly effectiveDescription = computed(() => this.fieldConfig()?.description ?? this.description());
   readonly effectiveRequired = computed(() => {
     if (this.lockRequiredFromFieldManager()) return this.required();

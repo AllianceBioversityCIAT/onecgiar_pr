@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.interface';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -96,6 +96,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly dataControlSE = inject(DataControlService);
   private readonly guideSE = inject(ReportingGuideService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  /** AOW code read from the URL on load, opened once its program's AOWs arrive. */
+  private pendingAow: string | null = null;
+  /** AOW filters read from the URL, applied right after the AOW reopens (openAow
+   *  clears filters, so they must be restored last). */
+  private pendingFilters: { typ: string | null; st: string | null; q: string } | null = null;
 
   /**
    * The landing surface is the workspace overview — no program in context. A
@@ -233,13 +240,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   // ---- Manage drawer (one indicator) ----
   /** The indicator being managed, with the HLO it belongs to for context. */
   readonly managed = signal<{ indicator: any; groupTitle: string; node: any } | null>(null);
-  /** Room reserved on the right so the manage panel never covers the list. */
-  readonly managePanelWidth = signal(520);
+  /** Which tab the drawer should land on — chosen by the card button that opened it. */
+  readonly manageTab = signal<'report' | 'info'>('report');
+  /** Room reserved on the right so the manage panel never covers the list. Matches
+   *  the drawer's default width so the report form opens two-column from the start. */
+  readonly managePanelWidth = signal(740);
 
-  manageIndicator(indicator: any, groupTitle: string): void {
+  manageIndicator(indicator: any, groupTitle: string, tab: 'report' | 'info' = 'report'): void {
     // The group carries the ToC node id the existing-results endpoint needs; the
     // indicator row does not, so it is folded in here.
     const group = this.indicatorGroups().find(g => g?.result_title === groupTitle);
+    this.manageTab.set(tab);
     this.managed.set({ indicator: { ...indicator, toc_result_id: group?.toc_result_id }, groupTitle, node: group });
   }
 
@@ -406,6 +417,51 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         this.openAow(list[0].code);
       }
     });
+
+    // Reopen the AOW named in the URL once its program's AOWs have loaded.
+    effect(() => {
+      if (!this.pendingAow) return;
+      const list = this.aows();
+      const code = this.pendingAow;
+      if (code === OUTCOMES_2030_CODE || list.some(a => a.code === code)) {
+        this.pendingAow = null;
+        this.openAow(code);
+        // openAow() cleared the filters — put the URL's back, last.
+        const f = this.pendingFilters;
+        this.pendingFilters = null;
+        if (f) {
+          this.typologyFilter.set(f.typ);
+          this.statusFilter.set(f.st);
+          this.indicatorSearch.set(f.q);
+        }
+      }
+    });
+
+    // Mirror the current view (program + open AOW) into the URL so a reload lands
+    // back here. Held off while an AOW restore is still pending, so we never erase
+    // the code from the URL before it has been consumed.
+    effect(() => {
+      const sp = this.selectedId();
+      const scope = this.scope();
+      const aow = this.activeAowCode();
+      const typ = this.typologyFilter();
+      const st = this.statusFilter();
+      const q = this.indicatorSearch().trim();
+      if (this.pendingAow || this.pendingFilters) return;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {
+          sp: scope === 'program' ? sp : null,
+          aow: aow ?? null,
+          // filters only make sense inside an open AOW
+          typ: aow ? typ ?? null : null,
+          st: aow ? st ?? null : null,
+          q: aow && q ? q : null
+        },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    });
   }
 
   readonly myPrograms = computed(() => this.filter(this.homeSE.mySPsList()));
@@ -515,6 +571,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.restoreFromUrl();
     if (this.allPrograms().length === 0) {
       this.homeSE.getScienceProgramsProgress();
     }
@@ -522,6 +579,24 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // The sidebar already says "Reporting workspace · Science Programs · <phase>",
     // so the navbar repeating it is noise on this surface.
     this.dataControlSE.hideWordmark.set(true);
+  }
+
+  /** Rehydrate the view from the URL so a reload stays on the same program + AOW. */
+  private restoreFromUrl(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    const sp = qp.get('sp');
+    if (sp) {
+      const id = Number(sp);
+      if (!Number.isNaN(id)) {
+        this.selectedId.set(id);
+        this.scope.set('program');
+      }
+    }
+    const aow = qp.get('aow');
+    this.pendingAow = aow || null;
+    if (this.pendingAow) {
+      this.pendingFilters = { typ: qp.get('typ') || null, st: qp.get('st') || null, q: qp.get('q') || '' };
+    }
   }
 
   /** Leaving the lab must never strand the shell in focus mode — or leak a timer. */

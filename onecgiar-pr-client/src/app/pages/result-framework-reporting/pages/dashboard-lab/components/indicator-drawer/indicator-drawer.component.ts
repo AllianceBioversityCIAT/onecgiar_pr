@@ -3,7 +3,7 @@ import { DecimalPipe } from '@angular/common';
 import { LabReportFormComponent } from '../lab-report-form/lab-report-form.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
-type DrawerTab = 'report' | 'results' | 'target';
+type DrawerTab = 'report' | 'info';
 
 /**
  * INDICATOR DRAWER — the manage surface for one planned indicator.
@@ -39,6 +39,8 @@ export class IndicatorDrawerComponent {
   readonly initiativeId = input<number>(0);
   readonly aowCode = input<string>('');
   readonly accent = input<string>('#6b6dc4');
+  /** Tab to land on — set by the card button that opened the drawer. */
+  readonly initialTab = input<DrawerTab>('report');
 
   readonly closed = output<void>();
   /** The host reserves this much room so the panel never covers the list. */
@@ -47,9 +49,10 @@ export class IndicatorDrawerComponent {
   /**
    * Panel width, dragged from its left edge. Below the threshold the form runs in
    * one column; above it, two — so widening the panel actually buys the user
-   * something instead of just stretching the fields.
+   * something instead of just stretching the fields. Defaults above the threshold
+   * so the report form opens two-column ("readable at a glance") without dragging.
    */
-  readonly width = signal(520);
+  readonly width = signal(740);
   readonly TWO_COLUMN_AT = 720;
   readonly columns = computed<1 | 2>(() => (this.width() >= this.TWO_COLUMN_AT ? 2 : 1));
 
@@ -100,13 +103,10 @@ export class IndicatorDrawerComponent {
     this.close();
   }
 
+  /** Which drawer this is — set once by the card button, no in-drawer tab switching. */
   readonly tab = signal<DrawerTab>('report');
-
-  readonly tabs: { id: DrawerTab; label: string; icon: string }[] = [
-    { id: 'report', label: 'Report result', icon: 'edit_note' },
-    { id: 'results', label: 'View results', icon: 'fact_check' },
-    { id: 'target', label: 'Target details', icon: 'flag' }
-  ];
+  /** True once the mode is fixed, so the smart default stops overriding. */
+  private tabTouched = false;
 
   // ---- existing results (View results tab) --------------------------------
   readonly existing = signal<any[] | null>(null);
@@ -116,10 +116,13 @@ export class IndicatorDrawerComponent {
   readonly targetsByCenter = computed<any[]>(() => this.indicator()?.targets_by_center?.targets ?? []);
 
   constructor() {
-    // Reset per indicator: the drawer is reused rather than re-created.
+    // Reset per indicator: the drawer is reused rather than re-created. The tab is
+    // the explicit choice of the card button that opened it, so honour it and don't
+    // let the smart default override.
     effect(() => {
       const ind = this.indicator();
-      this.tab.set('report');
+      this.tab.set(this.initialTab());
+      this.tabTouched = true;
       this.existing.set(null);
       this.formDirty.set(false);
       if (ind) this.loadExisting(ind);
@@ -127,6 +130,7 @@ export class IndicatorDrawerComponent {
   }
 
   setTab(tab: DrawerTab): void {
+    this.tabTouched = true;
     this.tab.set(tab);
   }
 
@@ -144,8 +148,13 @@ export class IndicatorDrawerComponent {
     this.loadingExisting.set(true);
     this.api.resultsSE.GET_ExistingResultsContributors(tocResultId, indicatorId).subscribe({
       next: (res: { response?: any[] }) => {
-        this.existing.set(res?.response ?? []);
+        const list = res?.response ?? [];
+        this.existing.set(list);
         this.loadingExisting.set(false);
+        // Smart default: if something is already reported here, someone opening the
+        // drawer is likely coming to look — land on Information, not the blank form.
+        // Never override a tab the user already picked by hand.
+        if (list.length && !this.tabTouched) this.tab.set('info');
       },
       error: () => {
         this.existing.set([]);

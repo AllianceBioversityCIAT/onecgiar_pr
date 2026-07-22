@@ -1,5 +1,5 @@
 <!-- Fields mirror aow-hlo-create-modal; only the container and the data source differ. -->
-<form class="grid gap-5" [style.gridTemplateColumns]="columns() === 2 ? '1fr 1fr' : '1fr'" (ngSubmit)="createResult()">
+<form class="grid items-start gap-x-6 gap-y-5" [style.gridTemplateColumns]="columns() === 2 ? '1fr 1fr' : '1fr'" (ngSubmit)="createResult()">
   <!-- indicator category: only asked when the ToC node does not fix it -->
   @if (resultTypes().length && !indicator()?.result_type_id) {
     <div>
@@ -27,10 +27,10 @@
 
   <!-- knowledge products come from a repository handle -->
   @if (currentResultIsKnowledgeProduct()) {
-    <div>
+    <div class="col-span-full">
       <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span></p>
       <div class="flex items-start gap-2">
-        <div class="flex-1">
+        <div class="min-w-0 flex-1">
           <app-pr-input
             [ngModel]="createResultBody().handler"
             [ngModelOptions]="{ standalone: true }"
@@ -78,9 +78,10 @@
         <b class="text-[var(--pr-color-secondary-400)]">Example:</b> if the target is 200 people trained and your result evidences 90, enter <b>90</b>.
       </span>
     </div>
-    <div class="w-[160px]">
+    <div class="max-w-[300px]">
       <app-pr-input
         type="number"
+        placeholder="e.g. 90"
         [ngModel]="createResultBody().contribution_to_indicator_target"
         [ngModelOptions]="{ standalone: true }"
         (ngModelChange)="patch('contribution_to_indicator_target', $event)"
@@ -103,7 +104,7 @@
   </div>
 
   <!-- contributing CGIAR Centers: ToC first, "Other(s)" opens the rest -->
-  <div class="col-span-full">
+  <div>
     <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing CGIAR Centers</p>
     <p class="m-0 mb-2 text-[12px] leading-relaxed text-[var(--pr-color-accents-5)]">
       {{ tocCenters().length ? contributingCentersInfoNote : noCentersNote }}
@@ -136,7 +137,7 @@
   </div>
 
   <!-- contributing Science Programs: same split -->
-  <div class="col-span-full">
+  <div>
     <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing Science Programs/Accelerators</p>
     <p class="m-0 mb-2 text-[12px] leading-relaxed text-[var(--pr-color-accents-5)]">
       {{ tocSciencePrograms().length ? contributingScienceInfoNote : noScienceProgramsNote }}
