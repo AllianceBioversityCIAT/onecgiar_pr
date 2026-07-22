@@ -297,7 +297,9 @@ export class ResultByIntitutionsRepository
     from results_by_institution rbi 
     where rbi.result_id = ?
       and institution_roles_id = ?
-      and rbi.institutions_id = ?;
+      and rbi.institutions_id = ?
+    order by rbi.is_active desc, rbi.id desc
+    limit 1;
     `;
     try {
       const completeUser: ResultsByInstitution[] = await this.query(queryData, [
@@ -334,7 +336,9 @@ export class ResultByIntitutionsRepository
     from results_by_institution rbi 
     where rbi.result_id = ?
       and institution_roles_id = ?
-      and rbi.institutions_id = ?;
+      and rbi.institutions_id = ?
+    order by rbi.is_active desc, rbi.id desc
+    limit 1;
     `;
     try {
       const completeUser: ResultsByInstitution[] = await this.query(queryData, [
