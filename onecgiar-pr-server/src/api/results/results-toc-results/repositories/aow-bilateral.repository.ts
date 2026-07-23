@@ -386,8 +386,10 @@ export class AoWBilateralRepository {
     `;
 
     if (options.areaAcronym) {
+      // LEFT JOIN + (matched AOW OR null wp_id): ToC nodes without a work package /
+      // area of work must appear under every AOW of the science program.
       query += `
-        JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
+        LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
           AND wp.year = ?
           AND UPPER(TRIM(wp.acronym)) = ?
           AND wp.wp_official_code LIKE CONCAT(?, '-%')
@@ -421,6 +423,10 @@ export class AoWBilateralRepository {
     params.push(program, ...categories);
     query += ` AND tr.phase = ?`;
     params.push(options.context.phaseUuid);
+
+    if (options.areaAcronym) {
+      query += ` AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)`;
+    }
 
     query += `
       GROUP BY

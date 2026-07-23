@@ -66,10 +66,11 @@ describe('AoWBilateralRepository', () => {
     expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC, ci.acronym ASC');
     expect(query).toContain('FROM toc_test.toc_results tr');
     expect(query).toContain(
-      'JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.toc_id',
+      'LEFT JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.toc_id',
     );
     expect(query).toContain("AND wp.wp_official_code LIKE CONCAT(?, '-%')");
     expect(query).toContain('AND UPPER(TRIM(wp.acronym)) = ?');
+    expect(query).toContain('AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)');
     expect(query).not.toContain("LOWER(TRIM(wp.source)) = 'clarisa'");
     expect(query).toContain('JOIN toc_test.toc_result_indicator_target');
     expect(query).toContain('toc_result_indicator_target_center');
@@ -78,6 +79,19 @@ describe('AoWBilateralRepository', () => {
     expect(query).toContain('AND trit.target_date = ?');
     expect(query).toContain('WHERE');
     expect(query).toContain('AND tr.phase = ?');
+  });
+
+  it('should include ToC nodes without work package under every area of work', async () => {
+    mockResolveContext();
+    dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    await repository.findByCompositeCode('SP01', 'SP01-AOW02', defaultContext);
+
+    const [query] = dataSourceQueryMock.mock.calls[0];
+    expect(query).toContain(
+      'LEFT JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.toc_id',
+    );
+    expect(query).toContain('AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)');
   });
 
   it('should omit work package join when composite code is not provided', async () => {
