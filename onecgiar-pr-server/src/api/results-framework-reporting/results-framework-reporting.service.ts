@@ -407,6 +407,11 @@ export class ResultsFrameworkReportingService {
     indicator: any,
     resolvedYear: number,
   ): void {
+    // Prefer center already resolved from SQL (one row per target×center).
+    if (indicator?.center_id != null && indicator?.center_acronym) {
+      return;
+    }
+
     const centers = indicator?.targets_by_center?.centers;
     if (!Array.isArray(centers) || !centers.length) {
       return;

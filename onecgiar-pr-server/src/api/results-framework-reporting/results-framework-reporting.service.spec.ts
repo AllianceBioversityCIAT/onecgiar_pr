@@ -952,6 +952,86 @@ describe('ResultsFrameworkReportingService', () => {
         1,
       );
     });
+
+    it('should preserve SQL center_acronym when multiple centers share the same target value', async () => {
+      const tocContext = { reportingYear: 2026, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          toc_result_id: 10,
+          category: 'OUTCOME',
+          result_title: 'Outcome with same targets',
+          related_node_id: 'NODE-OUT',
+          indicators: [
+            {
+              indicator_id: 100,
+              indicator_description: 'Shared KPI',
+              target_date: 2026,
+              target_value: 2,
+              center_id: 1,
+              center_acronym: 'ABC',
+            },
+            {
+              indicator_id: 100,
+              indicator_description: 'Shared KPI',
+              target_date: 2026,
+              target_value: 2,
+              center_id: 3,
+              center_acronym: 'CIP',
+            },
+          ],
+        },
+      ]);
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockResolvedValue(
+        [
+          {
+            toc_indicator_target_id: 10,
+            year: 2026,
+            target_value: 2,
+            number_target: '1',
+            centers: [
+              {
+                center_id: 1,
+                center_acronym: 'ABC',
+                center_name: 'Alliance of Bioversity and CIAT - Headquarter',
+              },
+            ],
+          },
+          {
+            toc_indicator_target_id: 11,
+            year: 2026,
+            target_value: 2,
+            number_target: '1',
+            centers: [
+              {
+                center_id: 3,
+                center_acronym: 'CIP',
+                center_name: 'International Potato Center',
+              },
+            ],
+          },
+        ],
+      );
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2026',
+      );
+
+      expect(result.response.tocResultsOutcomes[0].indicators).toEqual([
+        expect.objectContaining({
+          indicator_id: 100,
+          center_id: 1,
+          center_acronym: 'ABC',
+        }),
+        expect.objectContaining({
+          indicator_id: 100,
+          center_id: 3,
+          center_acronym: 'CIP',
+        }),
+      ]);
+    });
   });
 
   describe('getToc2030Outcomes', () => {
