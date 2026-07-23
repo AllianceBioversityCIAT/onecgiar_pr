@@ -189,7 +189,7 @@
 <!-- ==================== COLUMN 2 — Areas of Work, only while an AOW is open ====================
      White, flush against the rail (Monday-style): no gap, no radius, no shadow.
      Slides in from behind the rail on enter and back out on leave. -->
-@if (viewMode() === 'aow') {
+@if (viewMode() === 'aow' && panelView() !== 'full') {
   <aside
     class="pr-panel fixed inset-y-0 left-[var(--rail-w)] z-[5] box-border flex w-[var(--panel-w)] flex-col gap-2.5 overflow-hidden border-r border-[rgba(30,32,47,0.1)] bg-white px-3 py-3.5"
     animate.enter="pr-panel--enter"
@@ -225,22 +225,10 @@
       </div>
     </div>
 
-    <!-- 3-view switch: browse by AoW, by indicator, or the grouped accordion -->
-    <div class="flex shrink-0 items-center gap-0.5 rounded-lg bg-[var(--pr-color-accents-1)] p-0.5 text-[10px] font-semibold">
-      @for (v of panelViews; track v.id) {
-        <button
-          type="button"
-          (click)="setPanelView(v.id)"
-          [attr.aria-pressed]="panelView() === v.id"
-          class="flex flex-1 appearance-none items-center justify-center gap-1 rounded-md border-0 py-1.5 transition-colors duration-150"
-          [class]="
-            panelView() === v.id
-              ? 'bg-white text-[var(--pr-color-secondary-400)] shadow-[0_1px_3px_rgba(30,32,47,0.12)]'
-              : 'bg-transparent text-[var(--pr-color-accents-5)] hover:text-[var(--pr-color-secondary-400)]'
-          ">
-          <span class="material-icons-round text-[13px]">{{ v.icon }}</span>{{ v.label }}
-        </button>
-      }
+    <div class="px-1">
+      <span class="text-[9px] font-bold uppercase tracking-[0.09em] text-[var(--pr-color-accents-5)]">
+        {{ panelView() === 'indicators' ? 'Indicators' : 'Areas of Work' }}
+      </span>
     </div>
 
     <div class="custom_scroll flex flex-1 flex-col gap-1 overflow-y-auto pr-0.5">
@@ -327,11 +315,13 @@
               <button
                 type="button"
                 (click)="openAow(ind.__aowCode)"
-                class="group flex w-full shrink-0 appearance-none flex-col gap-1 rounded-xl border border-transparent bg-[var(--pr-color-accents-1)] px-3 py-2 text-left transition-[background,border-color,box-shadow] duration-150 hover:border-[rgba(30,32,47,0.08)] hover:bg-white hover:shadow-[0_2px_8px_rgba(30,32,47,0.06)]">
-                <span class="line-clamp-2 text-[11.5px] font-medium leading-snug text-[var(--pr-color-secondary-400)]">{{ ind.indicator_description }}</span>
-                <span class="flex flex-wrap items-center gap-1">
-                  <span class="rounded-full bg-[#6b6dc41f] px-1.5 py-px text-[9px] font-bold text-[var(--pr-color-primary-400)]">{{ ind.__aowCode }}</span>
-                  <span class="truncate text-[9.5px] text-[var(--pr-color-accents-5)]">{{ ind.type_name || 'Not provided' }}</span>
+                class="group flex w-full shrink-0 appearance-none flex-col gap-1.5 rounded-xl border border-transparent bg-[var(--pr-color-accents-1)] px-3 py-2.5 text-left transition-[background,border-color,box-shadow] duration-150 hover:border-[rgba(30,32,47,0.08)] hover:bg-white hover:shadow-[0_2px_8px_rgba(30,32,47,0.06)]">
+                <!-- the indicator IS the blue chip (type_name); the long text is the output it hangs from -->
+                <span class="line-clamp-2 self-start rounded-lg bg-[#6b6dc41f] px-2 py-1 text-[11px] font-semibold leading-snug text-[var(--pr-color-primary-400)]">{{ ind.type_name || 'Not provided' }}</span>
+                <span class="line-clamp-2 text-[10px] leading-snug text-[var(--pr-color-accents-5)]" [title]="ind.indicator_description">{{ ind.indicator_description }}</span>
+                <span class="flex flex-wrap items-center gap-1.5 text-[9px] font-semibold text-[var(--pr-color-accents-5)]">
+                  <span class="rounded-full bg-white px-1.5 py-px font-bold text-[var(--pr-color-accents-6)] shadow-[0_1px_2px_rgba(30,32,47,0.06)]">{{ ind.__aowCode }}</span>
+                  <span>Target {{ ind.target_value_sum ?? 0 }}</span>
                 </span>
               </button>
             }
@@ -340,40 +330,6 @@
           }
         }
 
-        <!-- ===== grouped: each AoW collapsed, its indicators inside ===== -->
-        @case ('grouped') {
-          @for (x of indicatorsByAow(); track x.aow.code) {
-            <div class="shrink-0 overflow-hidden rounded-xl border border-[rgba(30,32,47,0.06)] bg-[var(--pr-color-accents-1)]">
-              <button
-                type="button"
-                (click)="togglePanelAow(x.aow.code)"
-                [attr.aria-expanded]="isPanelAowExpanded(x.aow.code)"
-                class="flex w-full appearance-none items-center gap-1.5 border-0 bg-transparent px-2.5 py-2 text-left">
-                <span class="material-icons-round text-[15px] text-[var(--pr-color-accents-5)] transition-transform duration-200" [class.-rotate-90]="!isPanelAowExpanded(x.aow.code)">expand_more</span>
-                <span class="shrink-0 text-[11px] font-extrabold" [style.color]="accentTheme().solid">{{ x.aow.code }}</span>
-                <span class="line-clamp-1 min-w-0 flex-1 text-[11px] text-[var(--pr-color-accents-6)]">{{ x.aow.name }}</span>
-                <span class="shrink-0 rounded-full bg-white px-1.5 py-px text-[9px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ x.count }}</span>
-              </button>
-              @if (isPanelAowExpanded(x.aow.code)) {
-                @if (x.loading) {
-                  <div class="px-3 pb-2"><div class="h-8 animate-pulse rounded-lg bg-white"></div></div>
-                } @else if (x.indicators.length) {
-                  @for (ind of x.indicators; track ind.indicator_id) {
-                    <button
-                      type="button"
-                      (click)="openAow(x.aow.code)"
-                      class="flex w-full appearance-none flex-col gap-0.5 border-0 border-t border-[rgba(30,32,47,0.06)] bg-transparent px-3 py-1.5 text-left transition-colors hover:bg-white">
-                      <span class="line-clamp-2 text-[11px] leading-snug text-[var(--pr-color-secondary-400)]">{{ ind.indicator_description }}</span>
-                      <span class="text-[9.5px] text-[var(--pr-color-accents-5)]">{{ ind.type_name || 'Not provided' }}</span>
-                    </button>
-                  }
-                } @else {
-                  <p class="px-3 pb-2 text-[10px] text-[var(--pr-color-accents-5)]">No indicators.</p>
-                }
-              }
-            </div>
-          }
-        }
       }
     </div>
   </aside>
@@ -426,7 +382,9 @@
   [style.marginRight.px]="managed() ? managePanelWidth() : 0"
   [class]="
     viewMode() === 'aow'
-      ? 'ml-[calc(var(--rail-w)+var(--panel-w))] px-3 pb-4 pt-3'
+      ? (panelView() === 'full'
+          ? 'ml-[var(--rail-w)] px-5 pb-8 pt-4'
+          : 'ml-[calc(var(--rail-w)+var(--panel-w))] px-3 pb-4 pt-3')
       : 'ml-[calc(var(--full-w)+var(--float-gap)*2)] px-6 pb-10 pt-5'
   ">
   @if (scope() === 'overview') {
@@ -484,6 +442,78 @@
     </div>
   } @else if (selected(); as sp) {
     @if (viewMode() === 'aow') {
+      <!-- 3-view switch — moved here from the panel so it shows in the Full view too -->
+      <div class="mb-4 flex w-fit items-center gap-0.5 rounded-xl border border-[rgba(30,32,47,0.07)] bg-white p-1 text-[12px] font-semibold shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
+        @for (v of panelViews; track v.id) {
+          <button
+            type="button"
+            (click)="setPanelView(v.id)"
+            [attr.aria-pressed]="panelView() === v.id"
+            class="flex appearance-none items-center gap-1.5 rounded-lg border-0 px-3.5 py-1.5 transition-colors duration-150"
+            [class]="
+              panelView() === v.id
+                ? 'bg-[#6b6dc41f] text-[var(--pr-color-primary-400)]'
+                : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'
+            ">
+            <span class="material-icons-round text-[16px]">{{ v.icon }}</span>{{ v.label }}
+          </button>
+        }
+      </div>
+
+      @if (panelView() === 'full') {
+        <!-- ===== FULL VIEW: every AoW with its indicators, full width ===== -->
+        <div class="flex flex-col gap-4">
+          @for (x of indicatorsByAow(); track x.aow.code) {
+            <section class="overflow-hidden rounded-2xl border border-[rgba(30,32,47,0.07)] bg-white shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
+              <button
+                type="button"
+                (click)="togglePanelAow(x.aow.code)"
+                [attr.aria-expanded]="isPanelAowExpanded(x.aow.code)"
+                class="flex w-full appearance-none items-center gap-3 border-0 px-5 py-3.5 text-left"
+                [style.background]="accentTheme().soft">
+                <span class="material-icons-round text-[20px] transition-transform duration-200" [class.-rotate-90]="!isPanelAowExpanded(x.aow.code)" [style.color]="accentTheme().solid">expand_more</span>
+                <span class="shrink-0 text-[15px] font-extrabold" [style.color]="accentTheme().solid">{{ x.aow.code }}</span>
+                <span class="min-w-0 flex-1 truncate text-[15px] font-bold text-[var(--pr-color-secondary-400)]">{{ x.aow.name }}</span>
+                <span class="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ x.count }} indicator{{ x.count === 1 ? '' : 's' }}</span>
+              </button>
+
+              @if (isPanelAowExpanded(x.aow.code)) {
+                @if (x.loading) {
+                  <div class="flex flex-col gap-2 p-4">
+                    @for (s of [1, 2]; track s) { <div class="h-16 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div> }
+                  </div>
+                } @else if (x.indicators.length) {
+                  <div class="grid grid-cols-2 gap-3 p-4 max-[1100px]:grid-cols-1">
+                    @for (ind of x.indicators; track ind.indicator_id) {
+                      <div class="flex flex-col gap-2.5 rounded-xl border border-[rgba(30,32,47,0.07)] bg-white p-3.5">
+                        <p class="m-0 line-clamp-2 text-[13.5px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]" [title]="ind.indicator_description">{{ ind.indicator_description }}</p>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                          <span class="max-w-full truncate rounded-full bg-[#6b6dc41f] px-2 py-0.5 text-[11.5px] font-semibold text-[var(--pr-color-primary-400)]">{{ ind.type_name || 'Not provided' }}</span>
+                          @if (ind.center_acronym) {
+                            <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">{{ ind.center_acronym }}</span>
+                          }
+                          <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">Target: <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ ind.target_value_sum ?? 0 }}</b></span>
+                        </div>
+                        <div class="mt-auto flex items-center justify-between gap-2 pt-1">
+                          <span class="text-[11.5px] text-[var(--pr-color-accents-5)]">Achieved <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ ind.actual_achieved_value_sum ?? 0 }}</b> of {{ ind.target_value_sum ?? 0 }}</span>
+                          <button
+                            type="button"
+                            (click)="openAow(x.aow.code)"
+                            class="flex shrink-0 appearance-none items-center gap-1.5 rounded-lg border-0 bg-[linear-gradient(135deg,#6b6dc4_0%,#6461bc_100%)] px-3 py-1.5 text-[12px] font-semibold text-white">
+                            <span class="material-icons-round text-[14px]">edit_note</span> Report result
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="px-5 py-4 text-[12.5px] text-[var(--pr-color-accents-5)]">No indicators in this Area of Work.</p>
+                }
+              }
+            </section>
+          }
+        </div>
+      } @else {
       <!-- ==================== AOW DETAIL — one header container: identity, metrics, toolbar ==================== -->
       <!-- NOT overflow-hidden: the select panels are absolutely positioned inside
            and were being clipped by it, which made the filters unusable. -->
@@ -906,6 +936,7 @@
             </button>
           }
         </div>
+      }
       }
     } @else {
     <div class="grid grid-cols-4 items-stretch gap-4 max-[1180px]:grid-cols-2 max-[620px]:grid-cols-1">

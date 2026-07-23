@@ -683,19 +683,22 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   // ---- Navigation panel: 3 views (AoWs · indicators · grouped accordion) ----
 
-  /** Which way the left navigation panel lists the program's work. */
-  readonly panelView = signal<'aows' | 'indicators' | 'grouped'>('aows');
+  /**
+   * How the AoW surface is browsed. `aows`/`indicators` keep the left panel;
+   * `full` hides the panel and shows every AoW with its indicators, full-width.
+   */
+  readonly panelView = signal<'aows' | 'indicators' | 'full'>('aows');
   readonly panelViews = [
-    { id: 'aows', label: 'AoWs', icon: 'grid_view' },
+    { id: 'aows', label: 'Areas of Work', icon: 'grid_view' },
     { id: 'indicators', label: 'Indicators', icon: 'insights' },
-    { id: 'grouped', label: 'Grouped', icon: 'account_tree' }
+    { id: 'full', label: 'Full view', icon: 'view_agenda' }
   ] as const;
-  /** AoWs expanded in the grouped (accordion) panel view. */
+  /** AoWs expanded in the full (accordion) view. */
   readonly expandedPanelAows = signal<Set<string>>(new Set());
 
-  setPanelView(view: 'aows' | 'indicators' | 'grouped'): void {
+  setPanelView(view: 'aows' | 'indicators' | 'full'): void {
     this.panelView.set(view);
-    // The indicator / grouped views need every AoW's ToC, not just the open one.
+    // The indicator / full views need every AoW's ToC, not just the open one.
     if (view !== 'aows') this.loadAllTocs();
   }
 
