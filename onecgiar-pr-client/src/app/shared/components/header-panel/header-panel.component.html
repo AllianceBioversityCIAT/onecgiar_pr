@@ -1,6 +1,6 @@
 @let unreadNotifications = this.resultsNotificationsSE.updatesPopUpData;
 
-@if (!this.dataControlSE.show_qa_full_screen && !dataControlSE.focusMode()) {
+@if (!this.dataControlSE.show_qa_full_screen && !dataControlSE.focusMode() && !dataControlSE.hideHeaderChrome()) {
   <div class="header_spacer pointer-events-none h-[70px] w-full" aria-hidden="true"></div>
 
   <!-- Non-production "Testing environment" ribbon. Its markup is defined once here

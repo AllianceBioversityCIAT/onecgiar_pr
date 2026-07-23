@@ -1,7 +1,10 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
+import { CommonModule } from '@angular/common';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { A11yModule } from '@angular/cdk/a11y';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideLayoutDashboard,
@@ -21,6 +24,9 @@ import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress } from '../../interfaces/SP-progress.interface';
+import { ApiService } from '../../services/api/api.service';
+import { FontScale, FONT_SCALE_OPTIONS, FontScaleService } from '../../services/font-scale.service';
+import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 
 interface ProgramGroup {
   key: string;
@@ -31,12 +37,14 @@ interface ProgramGroup {
 /**
  * Official Spartan sidebar used as the reporting navigation on Results Center and the
  * Result Framework home. Lists the app sections plus a lazily-loaded, collapsible tree of
- * Science Programs. Consumers wrap it in `hlmSidebarWrapper` + `hlmSidebarInset`.
+ * Science Programs, and — in its footer — the header chrome (whats-new, notifications,
+ * text-size, user menu) so these surfaces need no top header. Consumers wrap it in
+ * `hlmSidebarWrapper` + `hlmSidebarInset`.
  */
 @Component({
   selector: 'app-reporting-nav-sidebar',
   standalone: true,
-  imports: [RouterModule, NgIcon, ...HlmSidebarImports],
+  imports: [CommonModule, RouterModule, NgIcon, OverlayModule, A11yModule, ...HlmSidebarImports],
   templateUrl: './reporting-nav-sidebar.component.html',
   styleUrls: ['./reporting-nav-sidebar.component.scss'],
   providers: [
@@ -58,6 +66,12 @@ export class ReportingNavSidebarComponent {
   public readonly dataControlSE = inject(DataControlService);
   public readonly homeSE = inject(ResultFrameworkReportingHomeService);
   public readonly router = inject(Router);
+  public readonly api = inject(ApiService);
+  public readonly fontScaleSE = inject(FontScaleService);
+  public readonly resultsNotificationsSE = inject(ResultsNotificationsService);
+
+  readonly isProduction = environment.production;
+  readonly fontScaleOptions = FONT_SCALE_OPTIONS;
 
   /** Lucide icon per top-level section (matches the section `path`). */
   private readonly sectionIcons: Record<string, string> = {
@@ -100,6 +114,12 @@ export class ReportingNavSidebarComponent {
     ),
     { initialValue: null }
   );
+
+  // --- Footer chrome (moved from the top header) ---
+  readonly userMenuOpen = signal(false);
+  readonly fontMenuOpen = signal(false);
+  readonly userMenuPositions: ConnectedPosition[] = [{ originX: 'start', overlayX: 'start', originY: 'top', overlayY: 'bottom' }];
+  readonly fontMenuPositions: ConnectedPosition[] = [{ originX: 'start', overlayX: 'start', originY: 'top', overlayY: 'bottom' }];
 
   iconFor(section: PrRoute): string {
     return this.sectionIcons[section.path ?? ''] ?? 'lucideCircleDot';
@@ -151,5 +171,75 @@ export class ReportingNavSidebarComponent {
     const initiatives = this.dataControlSE?.myInitiativesList ?? [];
     const hasLeadOrCoordinator = initiatives.some(init => init?.role === 'Lead' || init?.role === 'Coordinator');
     return !hasLeadOrCoordinator;
+  }
+
+  // --- User / notifications / text-size (reuse the same shell services) ---
+  getUserInitials(): string {
+    const user = this.api.authSE.localStorageUser;
+    if (user?.user_acronym) return user.user_acronym;
+    const fromName = (user?.user_name ?? '')
+      .split(' ')
+      .filter(n => !!n)
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+    if (fromName) return fromName;
+    const localPart = (user?.email ?? '').split('@')[0] ?? '';
+    return localPart
+      .split(/[._-]+/)
+      .filter(p => !!p)
+      .map(p => p[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  }
+
+  getUserName(): string {
+    return this.api.authSE.localStorageUser?.user_name ?? '';
+  }
+
+  getUserEmail(): string {
+    return this.api.authSE.localStorageUser?.email ?? '';
+  }
+
+  getPlatformRole(): string {
+    return this.api.rolesSE.roles?.application?.description ?? 'Guest';
+  }
+
+  getInitiativeSeparatedByPortfolio() {
+    return this.api.dataControlSE.myInitiativesList.filter(item => item.portfolio_id == 3);
+  }
+
+  getMyCenters() {
+    return this.api.rolesSE.getMyCenters();
+  }
+
+  notificationBadgeCount(): number {
+    return this.resultsNotificationsSE?.updatesPopUpData?.length ?? 0;
+  }
+
+  goToNotifications(): void {
+    this.router.navigate(['result/results-outlet/results-notifications/requests']);
+  }
+
+  selectFontScale(value: FontScale): void {
+    this.fontScaleSE.set(value);
+  }
+
+  logout(): void {
+    this.userMenuOpen.set(false);
+    this.api.authSE.logout();
+  }
+
+  goAdmin(): void {
+    this.userMenuOpen.set(false);
+    this.router.navigate(['/admin-module']);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.userMenuOpen.set(false);
+    this.fontMenuOpen.set(false);
   }
 }

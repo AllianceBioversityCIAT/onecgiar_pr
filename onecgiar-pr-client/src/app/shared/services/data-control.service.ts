@@ -68,6 +68,11 @@ export class DataControlService {
    */
   readonly hideMainNav = signal(false);
   /**
+   * Hides the entire top header chrome (logo, actions, user menu). Turned on by surfaces
+   * where the Spartan sidebar carries ALL navigation + actions, reset on destroy.
+   */
+  readonly hideHeaderChrome = signal(false);
+  /**
    * Backend section-completeness indicator. Signal-backed (transparent getter/setter
    * keeps existing call sites working) so `greenChecksString` can be a memoized
    * `computed` instead of a per-CD `JSON.stringify` in panel-menu. (P2-2967/P2-2970)

@@ -18,11 +18,13 @@ export class ResultsOutletComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Results Center hosts its own vertical navigation, so hide the top nav pill here.
+    // The Spartan sidebar carries all navigation + actions here, so hide the top header.
     this.dataControlSE.hideMainNav.set(true);
+    this.dataControlSE.hideHeaderChrome.set(true);
   }
 
   ngOnDestroy(): void {
     this.dataControlSE.hideMainNav.set(false);
+    this.dataControlSE.hideHeaderChrome.set(false);
   }
 }

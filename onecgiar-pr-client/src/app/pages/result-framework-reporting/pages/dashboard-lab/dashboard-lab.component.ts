@@ -593,8 +593,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // The sidebar already says "Reporting workspace · Science Programs · <phase>",
     // so the navbar repeating it is noise on this surface.
     this.dataControlSE.hideWordmark.set(true);
-    // The Spartan sidebar now carries the primary navigation, so hide the top nav pill.
+    // The Spartan sidebar now carries the primary navigation + actions, so hide the top header.
     this.dataControlSE.hideMainNav.set(true);
+    this.dataControlSE.hideHeaderChrome.set(true);
   }
 
   /** Rehydrate the view from the URL so a reload stays on the same program + AOW. */
@@ -621,6 +622,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.dataControlSE.hideWordmark.set(false);
     this.dataControlSE.slimNav.set(false);
     this.dataControlSE.hideMainNav.set(false);
+    this.dataControlSE.hideHeaderChrome.set(false);
     this.spParamSub?.unsubscribe();
     if (this.centerTimer) clearInterval(this.centerTimer);
   }
