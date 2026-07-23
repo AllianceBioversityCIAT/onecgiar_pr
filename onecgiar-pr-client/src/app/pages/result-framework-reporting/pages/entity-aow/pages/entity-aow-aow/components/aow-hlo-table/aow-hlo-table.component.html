@@ -54,7 +54,7 @@
 
   <ng-template #expandedrow let-item>
     @if (item.indicators.length) {
-      @for (result of item.indicators; track $index) {
+      @for (result of item.indicators; track result.indicator_id + '-' + (result.center_id ?? $index)) {
         <tr>
           <td class="text-secondary-300" style="min-width: 150px !important">
             <div class="kpi-statement-cell">
@@ -93,15 +93,15 @@
                   label="Report result"
                   type="button"
                   class="pr-body-3 tab-content_actions_button"
-                  (click)="openReportResultModal(item, result.indicator_id)"></button>
+                  (click)="openReportResultModal(item, result.indicator_id, result.center_id)"></button>
               }
               <button
                 pButton
                 label="View results"
                 type="button"
                 class="p-button-outlined pr-body-3 tab-content_actions_button"
-                (click)="openViewResultDrawer(item, result.indicator_id)"></button>
-              @if (hasTargets(item, result.indicator_id)) {
+                (click)="openViewResultDrawer(item, result.indicator_id, result.center_id)"></button>
+              @if (hasTargets(item, result.indicator_id, result.center_id)) {
                 <button
                   pButton
                   label="Target details"

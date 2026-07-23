@@ -63,7 +63,7 @@ describe('AoWBilateralRepository', () => {
       'COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
     );
     expect(query).toContain('GROUP BY');
-    expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC');
+    expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC, ci.acronym ASC');
     expect(query).toContain('FROM toc_test.toc_results tr');
     expect(query).toContain(
       'LEFT JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.toc_id',
@@ -73,6 +73,9 @@ describe('AoWBilateralRepository', () => {
     expect(query).toContain('AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)');
     expect(query).not.toContain("LOWER(TRIM(wp.source)) = 'clarisa'");
     expect(query).toContain('JOIN toc_test.toc_result_indicator_target');
+    expect(query).toContain('toc_result_indicator_target_center');
+    expect(query).toContain('clarisa_institutions');
+    expect(query).toContain('ci.acronym AS center_acronym');
     expect(query).toContain('AND trit.target_date = ?');
     expect(query).toContain('WHERE');
     expect(query).toContain('AND tr.phase = ?');
