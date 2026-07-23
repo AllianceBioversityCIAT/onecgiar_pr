@@ -97,7 +97,7 @@ export class ResultsFrameworkReportingController {
   @ApiOperation({
     summary: 'List ToC results by program and area of work',
     description:
-      'Retrieves the ToC result identifiers for the provided program and area of work combination.',
+      'Retrieves the ToC result identifiers for the provided program and area of work combination. Intermediate outcomes/outputs without a defined work package (wp_id null) are included in every area of work of the science program.',
   })
   @ApiQuery({
     name: 'program',
