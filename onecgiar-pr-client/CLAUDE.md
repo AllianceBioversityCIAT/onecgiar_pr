@@ -238,6 +238,17 @@ Poppins, loaded from Google Fonts. Base size **12px**. Use the `pr-typography($t
 
 Do **not** author new `.pr-*`-style SCSS class blocks for layout/spacing/color/typography — use utilities. Arbitrary values are fine (`bg-[#1f2233]`, `shadow-[...]`, `bg-[radial-gradient(...)]`). PRMS brand tokens are exposed as utilities (`bg-brand-300`, `text-brand-400`, …) and CSS vars work in arbitrary values (`text-[var(--pr-color-secondary-400)]`). Keep the component's `.scss` as small as possible; an empty-but-for-`:host` file is the norm for new components. (Existing SCSS-heavy components are legacy — migrate opportunistically, don't add to them.)
 
+#### Tailwind preflight — ENABLED on `performance-refactor` (know how to approach it)
+
+`src/styles.scss` imports **Tailwind's preflight (base reset)**. It was historically **disabled** ("would reset PrimeNG") and **re-enabled on the `performance-refactor` branch** once PrimeNG was removed (0 `primeng` imports remain; only `primeicons`).
+
+What this means when working here:
+
+- **Preflight strips browser defaults app-wide** — `h1`-`h6` sizing/weight, `p`/`ul`/`ol` margins + list bullets, `<a>` blue color/underline, `<button>` native chrome, `body` margin, `img` inline. You style everything explicitly with utilities instead.
+- **Why it was turned on:** official **Spartan components (e.g. the sidebar) assume preflight**. Without it, browser defaults leak in and the component renders broken (list bullets, blue `<a>` links, native buttons). With preflight they render correctly out of the box — no per-component reset hacks.
+- **Known trade-off / migration debt:** legacy pages built *before* preflight assumed those defaults, so some **older layouts need touch-ups** (e.g. the header `test-environment-label` overlapping the `nav_pill` after the reset). These are being fixed opportunistically on the branch — if you touch a legacy page and a heading/list/button/spacing looks off, suspect a lost default and restyle it with utilities rather than reverting preflight.
+- **Do NOT re-disable preflight** to "fix" a single page — that reintroduces the Spartan-breakage. Fix the specific legacy element instead. A scoped reset in a component `.scss` (see `results-outlet.component.scss`) is an acceptable safety net but no longer required for Spartan components now that preflight is global.
+
 **Interactive controls — never raw native, always the design system.** For selects, inputs, checkboxes, radios, dialogs, tooltips, etc. use the project primitives — the **`custom-fields` components** (`app-pr-select`, `app-pr-input`, `app-pr-textarea`, `app-pr-checkbox`, …; import `CustomFieldsModule`, and pass `[editable]="true"` — `RolesService.readOnly` defaults to `true` and hides the control otherwise) or a **Spartan** component. **Before building ANY component, consult the Spartan MCP (`spartan-ui`) + the `spartan` skill for the real contract — do not hand-author from memory, and do not drop a bare `<select>`/`<input>` (it renders with the native OS look and breaks the design line).** `app-pr-select` API: `[options]`, `optionLabel`, `optionValue`, `placeholder`, `[required]="false"`, `[showClear]`, `(selectOptionEvent)`.
 
 ### A11y, responsive, i18n

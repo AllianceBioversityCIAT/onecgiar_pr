@@ -1,0 +1,28 @@
+/**
+ * Safety net: even though the app now ships Tailwind preflight globally, keep a scoped
+ * reset so the official Spartan sidebar renders correctly regardless of preflight state
+ * (no list bullets/indent, links inherit the sidebar foreground color).
+ */
+:host {
+  display: contents;
+}
+
+hlm-sidebar {
+  ul[hlmSidebarMenu],
+  ul[hlmSidebarMenuSub] {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li[hlmSidebarMenuItem],
+  li[hlmSidebarMenuSubItem] {
+    list-style: none;
+  }
+
+  a[hlmSidebarMenuButton],
+  a[hlmSidebarMenuSubButton] {
+    color: inherit;
+    text-decoration: none;
+  }
+}

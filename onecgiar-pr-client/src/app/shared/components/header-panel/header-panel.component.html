@@ -134,11 +134,13 @@
         <i class="material-icons-round text-[20px]" aria-hidden="true">{{ isSearchMode() ? 'close' : 'search' }}</i>
       </button>
 
-      <div
-        class="nav_pill flex h-12 min-w-0 items-center rounded-full bg-[linear-gradient(90deg,#1e202f,#1f2233,#1f2235)] px-1.5 py-1.5 shadow-[0_6px_18px_rgba(30,32,47,0.28)]"
-        [ngClass]="isSearchMode() ? 'flex-1' : ''">
-        <app-navigation-bar [isSearchMode]="isSearchMode()" (searchClosed)="isSearchMode.set(false)"></app-navigation-bar>
-      </div>
+      @if (!dataControlSE.hideMainNav()) {
+        <div
+          class="nav_pill flex h-12 min-w-0 items-center rounded-full bg-[linear-gradient(90deg,#1e202f,#1f2233,#1f2235)] px-1.5 py-1.5 shadow-[0_6px_18px_rgba(30,32,47,0.28)]"
+          [ngClass]="isSearchMode() ? 'flex-1' : ''">
+          <app-navigation-bar [isSearchMode]="isSearchMode()" (searchClosed)="isSearchMode.set(false)"></app-navigation-bar>
+        </div>
+      }
     </div>
 
     <div class="information flex items-center gap-2.5 max-md:gap-2">

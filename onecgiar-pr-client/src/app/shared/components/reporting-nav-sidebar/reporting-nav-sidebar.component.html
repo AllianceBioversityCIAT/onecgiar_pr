@@ -1,0 +1,93 @@
+<hlm-sidebar
+  collapsible="none"
+  class="bg-sidebar text-sidebar-foreground border-sidebar-border sticky top-0 flex h-svh w-(--sidebar-width) shrink-0 flex-col border-r">
+  <div hlmSidebarHeader class="gap-2 p-3">
+    <div class="flex items-center gap-2 px-1">
+      <span class="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold">PR</span>
+      <span class="text-sm font-semibold leading-tight">Reporting</span>
+    </div>
+  </div>
+
+  <div hlmSidebarContent>
+    <div hlmSidebarGroup>
+      <div hlmSidebarGroupContent>
+        <ul hlmSidebarMenu>
+          @for (section of sections(); track section.path) {
+            @if (section.path === 'result-framework-reporting') {
+              <li hlmSidebarMenuItem>
+                <button hlmSidebarMenuButton type="button" (click)="toggleRfr()" [attr.aria-expanded]="rfrExpanded()">
+                  <ng-icon name="lucideLayoutDashboard" />
+                  <span>{{ section.prName }}</span>
+                  <ng-icon
+                    name="lucideChevronDown"
+                    class="ms-auto text-[16px] transition-transform duration-200"
+                    [class.rotate-180]="rfrExpanded()" />
+                </button>
+
+                @if (rfrExpanded()) {
+                  @if (homeSE.isLoadingSPLists()) {
+                    <div class="text-sidebar-foreground/55 px-3 py-2 text-xs">Loading programs…</div>
+                  } @else {
+                    @for (group of programGroups(); track group.key) {
+                      @if (group.items.length) {
+                        <button
+                          type="button"
+                          (click)="toggleGroup(group.key)"
+                          class="text-sidebar-foreground/55 hover:text-sidebar-foreground mt-1 flex w-full items-center gap-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition-colors">
+                          <ng-icon
+                            name="lucideChevronDown"
+                            class="text-[13px] transition-transform duration-200"
+                            [class.-rotate-90]="!isGroupOpen(group.key)" />
+                          <span>{{ group.label }}</span>
+                          <span class="ms-auto tabular-nums">{{ group.items.length }}</span>
+                        </button>
+
+                        @if (isGroupOpen(group.key)) {
+                          <ul hlmSidebarMenuSub>
+                            @for (sp of group.items; track sp.initiativeId) {
+                              <li hlmSidebarMenuSubItem>
+                                <a
+                                  hlmSidebarMenuSubButton
+                                  routerLink="/result-framework-reporting/home"
+                                  [queryParams]="{ sp: sp.initiativeId }"
+                                  [isActive]="sp.initiativeId === activeSpId()"
+                                  [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
+                                  <img
+                                    [src]="iconSrc(sp)"
+                                    [alt]="sp.initiativeCode"
+                                    width="18"
+                                    height="18"
+                                    loading="lazy"
+                                    class="size-[18px] shrink-0 rounded-[5px] object-cover" />
+                                  <span class="shrink-0 font-semibold">{{ sp.initiativeCode }}</span>
+                                  <span class="text-sidebar-foreground/70 truncate">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                                  <small class="bg-sidebar-accent text-sidebar-foreground/70 ms-auto shrink-0 rounded-full px-1.5 text-[10px] tabular-nums">{{ count(sp) }}</small>
+                                </a>
+                              </li>
+                            }
+                          </ul>
+                        }
+                      }
+                    }
+                  }
+                }
+              </li>
+            } @else {
+              <li hlmSidebarMenuItem>
+                <a
+                  hlmSidebarMenuButton
+                  [routerLink]="'/' + section.path"
+                  routerLinkActive
+                  #rla="routerLinkActive"
+                  [isActive]="rla.isActive">
+                  <ng-icon [name]="iconFor(section)" />
+                  <span>{{ section.prName }}</span>
+                </a>
+              </li>
+            }
+          }
+        </ul>
+      </div>
+    </div>
+  </div>
+</hlm-sidebar>

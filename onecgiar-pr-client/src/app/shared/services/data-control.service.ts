@@ -63,6 +63,11 @@ export class DataControlService {
   /** Paths kept while slimNav is on. */
   readonly SLIM_NAV_PATHS = ['result-framework-reporting', 'result'];
   /**
+   * Hides the horizontal primary nav pill in the header. Turned on by surfaces that
+   * host their own navigation (e.g. Results Center's Spartan sidebar), reset on destroy.
+   */
+  readonly hideMainNav = signal(false);
+  /**
    * Backend section-completeness indicator. Signal-backed (transparent getter/setter
    * keeps existing call sites working) so `greenChecksString` can be a memoized
    * `computed` instead of a per-CD `JSON.stringify` in panel-menu. (P2-2967/P2-2970)

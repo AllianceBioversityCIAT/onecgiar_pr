@@ -2,10 +2,12 @@
 @use './styles/field-card.scss';
 @layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
-// NOTE: Tailwind's global preflight (base reset) is intentionally NOT imported.
-// It would reset PrimeNG's components across all templates. Tailwind utilities
-// stay opt-in so PrimeNG + PRMS styles keep their appearance during the migration.
-// @import 'tailwindcss/preflight.css' layer(base);
+// Tailwind's global preflight (base reset) — RE-ENABLED now that PrimeNG was removed
+// (0 `primeng` imports remain; only `primeicons`). It lives in @layer base so utilities
+// still win. Kept in review: this resets native h1-h6/p/ul/button/form app-wide, so watch
+// for legacy-SCSS regressions that assumed browser defaults. Was disabled during the
+// PrimeNG→Spartan migration to avoid resetting PrimeNG's components.
+@import 'tailwindcss/preflight.css' layer(base);
 @import 'tailwindcss/utilities.css';
 
 @import "@spartan-ng/brain/hlm-tailwind-preset.css";

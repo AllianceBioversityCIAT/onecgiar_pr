@@ -24,7 +24,12 @@
     "paths": {
       "@spartan/input": ["./src/app/spartan/input/src/index.ts"],
       "@spartan/utils": ["./src/app/spartan/utils/src/index.ts"],
-      "@spartan/button": ["./src/app/spartan/button/src/index.ts"]
+      "@spartan/button": ["./src/app/spartan/button/src/index.ts"],
+      "@spartan/sidebar": ["./src/app/spartan/sidebar/src/index.ts"],
+      "@spartan/separator": ["./src/app/spartan/separator/src/index.ts"],
+      "@spartan/sheet": ["./src/app/spartan/sheet/src/index.ts"],
+      "@spartan/skeleton": ["./src/app/spartan/skeleton/src/index.ts"],
+      "@spartan/tooltip": ["./src/app/spartan/tooltip/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

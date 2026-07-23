@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.interface';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -8,6 +9,7 @@ import { Unit } from '../entity-details/interfaces/entity-details.interface';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { GuidedCreationComponent } from './components/guided-creation/guided-creation.component';
+import { ReportingNavSidebarComponent } from '../../../../shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component';
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
 
@@ -86,7 +88,7 @@ interface AccentTheme {
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
-  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent],
+  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent, ReportingNavSidebarComponent],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -570,15 +572,29 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     };
   }
 
+  private spParamSub?: Subscription;
+
   ngOnInit(): void {
     this.restoreFromUrl();
     if (this.allPrograms().length === 0) {
       this.homeSE.getScienceProgramsProgress();
     }
+    // React to `?sp=` changes coming from the Spartan sidebar (in-app navigation keeps the
+    // component alive, so the snapshot read in restoreFromUrl only covers the first load).
+    this.spParamSub = this.route.queryParamMap.subscribe(qp => {
+      const raw = qp.get('sp');
+      const id = raw ? Number(raw) : NaN;
+      if (!Number.isNaN(id)) {
+        this.selectedId.set(id);
+        this.scope.set('program');
+      }
+    });
     this.startCenterRotation();
     // The sidebar already says "Reporting workspace · Science Programs · <phase>",
     // so the navbar repeating it is noise on this surface.
     this.dataControlSE.hideWordmark.set(true);
+    // The Spartan sidebar now carries the primary navigation, so hide the top nav pill.
+    this.dataControlSE.hideMainNav.set(true);
   }
 
   /** Rehydrate the view from the URL so a reload stays on the same program + AOW. */
@@ -604,6 +620,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.dataControlSE.focusMode.set(false);
     this.dataControlSE.hideWordmark.set(false);
     this.dataControlSE.slimNav.set(false);
+    this.dataControlSE.hideMainNav.set(false);
+    this.spParamSub?.unsubscribe();
     if (this.centerTimer) clearInterval(this.centerTimer);
   }
 

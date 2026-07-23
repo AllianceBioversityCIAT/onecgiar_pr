@@ -1,166 +1,9 @@
 <!-- ==================== COLUMN 1 — Science Programs ====================
      One surface that morphs: a floating 300px card on the dashboard, a flush
      76px icon rail once an AOW is open. Width/inset/radius all transition. -->
-<aside
-  class="pr-rail fixed z-[6] box-border flex flex-col overflow-hidden border-white/[0.09] bg-[#1f2233] bg-[radial-gradient(135%_85%_at_50%_-8%,rgba(100,97,188,0.32)_0%,rgba(100,97,188,0)_58%)]"
-  [class]="
-    viewMode() === 'aow'
-      ? 'w-[var(--rail-w)] inset-y-0 left-0 gap-2 rounded-none border-r px-2 py-3'
-      : 'w-[var(--full-w)] bottom-[var(--float-gap)] left-[var(--float-gap)] top-[var(--float-gap)] gap-[14px] rounded-2xl border px-[14px] py-4 shadow-[0_22px_50px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)]'
-  ">
-  @if (viewMode() === 'home') {
-    <!-- ---------- FULL: header + inline search + named list ---------- -->
-    <div class="pr-fade flex flex-col gap-[14px] overflow-hidden" animate.enter="pr-fade--enter" animate.leave="pr-fade--leave">
-      <div class="flex flex-col gap-0.5 border-b border-white/10 px-2 pb-3.5 pt-1.5">
-        <span class="text-[10px] font-bold uppercase tracking-[1.4px] text-[var(--pr-color-primary-200)]">Reporting workspace</span>
-        <h2 class="m-0 text-[18px] font-bold leading-[1.15] tracking-[-0.01em] text-white">Science Programs</h2>
-        @if (phaseLabel()) {
-          <span
-            class="mt-2 self-start rounded-full bg-[linear-gradient(135deg,#6b6dc4_0%,#6461bc_100%)] px-2.5 py-[3px] text-[10px] font-semibold tracking-[0.02em] text-white shadow-[0_2px_8px_rgba(100,97,188,0.45)]">
-            {{ phaseLabel() }}
-          </span>
-        }
-      </div>
+<div hlmSidebarWrapper sidebarWidth="280px" class="flex min-h-svh w-full items-stretch">
+  <app-reporting-nav-sidebar />
 
-      <button
-        type="button"
-        (click)="goToOverview()"
-        [attr.aria-current]="scope() === 'overview' ? 'true' : null"
-        class="flex w-full appearance-none items-center gap-2.5 rounded-[10px] border-none px-3 py-2.5 text-left transition-colors duration-200"
-        [class]="
-          scope() === 'overview'
-            ? 'text-white bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] shadow-[0_8px_20px_rgba(100,97,188,0.5),inset_0_0_0_1px_rgba(255,255,255,0.14)]'
-            : 'text-white/[0.78] bg-white/[0.035] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] hover:bg-white/[0.09] hover:text-white'
-        ">
-        <span class="inline-flex size-[22px] shrink-0 items-center justify-center rounded-md bg-white/[0.12]">
-          <i class="material-icons-round text-[14px]">grid_view</i>
-        </span>
-        <span class="flex-1 text-[12px] font-semibold">Overview</span>
-      </button>
-
-      <div class="flex items-center gap-2 rounded-[10px] bg-white/[0.06] px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-        <span class="material-icons-round text-[16px] text-white/40">search</span>
-        <input
-          type="text"
-          placeholder="Filter programs…"
-          [value]="query()"
-          (input)="onQuery($any($event.target).value)"
-          aria-label="Filter Science Programs"
-          class="w-full flex-1 appearance-none border-none bg-transparent text-[12px] text-white outline-none placeholder:text-white/40" />
-      </div>
-    </div>
-
-    <div class="custom_scroll flex flex-1 flex-col gap-1 overflow-y-auto pr-0.5">
-      @if (homeSE.isLoadingSPLists()) {
-        @for (s of [1, 2, 3, 4, 5]; track s) {
-          <div class="h-[44px] shrink-0 animate-pulse rounded-[10px] bg-white/[0.06]"></div>
-        }
-      } @else {
-        @for (group of groups(); track group.label) {
-          <div
-            class="flex flex-col gap-1"
-            [attr.data-guide]="group.label === 'My programs' ? 'my-programs' : group.label === 'Other programs' ? 'other-programs' : null">
-          <p class="px-2 pb-1 pt-2.5 text-[9px] font-bold uppercase tracking-[0.09em] text-white/40">{{ group.label }}</p>
-          @for (sp of group.items; track sp.initiativeId) {
-            <button
-              type="button"
-              (click)="select(sp)"
-              (mouseenter)="onHoverProgram(sp, $event)"
-              (mouseleave)="onLeaveProgram()"
-              class="grid w-full shrink-0 appearance-none grid-cols-[auto_auto_1fr_auto] items-center gap-2.5 rounded-[10px] border-none px-3 py-2.5 text-left transition-colors duration-200"
-              [class]="
-                isActive(sp)
-                  ? 'text-white bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] shadow-[0_8px_20px_rgba(100,97,188,0.5),inset_0_0_0_1px_rgba(255,255,255,0.14),inset_0_1px_0_rgba(255,255,255,0.28)]'
-                  : 'text-white/[0.78] bg-white/[0.035] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] hover:bg-white/[0.09] hover:text-white'
-              ">
-              @if (!iconErrors().has(sp.initiativeCode)) {
-                <img
-                  class="size-[22px] shrink-0 rounded-md bg-white/[0.08] object-cover"
-                  [src]="iconSrc(sp)"
-                  [alt]="sp.initiativeCode"
-                  width="22"
-                  height="22"
-                  (load)="extractAccent($event, sp.initiativeCode)"
-                  (error)="onIconError(sp.initiativeCode)" />
-              } @else {
-                <span class="inline-flex size-[22px] shrink-0 items-center justify-center rounded-md bg-white/[0.08]">
-                  <i class="material-icons-round text-[14px] text-white/60">hub</i>
-                </span>
-              }
-              <span class="text-[12px] font-semibold text-inherit">{{ sp.initiativeCode }}</span>
-              <span class="overflow-hidden text-ellipsis whitespace-nowrap text-[11px]" [class]="isActive(sp) ? 'text-white/80' : 'text-white/50'">
-                {{ sp.initiativeShortName || sp.initiativeName }}
-              </span>
-              <span class="rounded-full px-2 py-0.5 text-[10px] font-bold" [class]="isActive(sp) ? 'bg-white/20 text-white' : 'bg-white/10 text-white/75'">
-                {{ totalResults(sp) }}
-              </span>
-            </button>
-          }
-          </div>
-        }
-
-        @if (!groups().length) {
-          <p class="px-3 py-6 text-center text-[11px] text-white/40">No programs match your filter.</p>
-        }
-      }
-    </div>
-  } @else {
-    <!-- ---------- RAIL: collapsed search + icon list ---------- -->
-    <button
-      type="button"
-      (click)="toggleSearch()"
-      [attr.aria-expanded]="searchOpen()"
-      aria-label="Filter programs"
-      class="pr-fade mx-auto inline-flex size-9 shrink-0 appearance-none items-center justify-center rounded-xl border-0 transition-colors"
-      animate.enter="pr-fade--enter"
-      [class]="
-        searchOpen() || query()
-          ? 'bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] text-white'
-          : 'bg-white/[0.06] text-white/50 hover:bg-white/[0.12] hover:text-white'
-      ">
-      <span class="material-icons-round text-[18px]">search</span>
-    </button>
-
-    <div class="custom_scroll pr-fade flex flex-1 flex-col items-center gap-1.5 overflow-y-auto overflow-x-hidden" animate.enter="pr-fade--enter">
-      @for (group of groups(); track group.label; let isFirst = $first) {
-        @if (!isFirst) {
-          <span class="my-1 h-px w-8 shrink-0 bg-white/10"></span>
-        }
-        @for (sp of group.items; track sp.initiativeId) {
-          <!-- hover reveals the full name + its AOWs in the flyout -->
-          <button
-            type="button"
-            (click)="select(sp)"
-            (mouseenter)="onHoverProgram(sp, $event)"
-            (mouseleave)="onLeaveProgram()"
-            [attr.aria-label]="sp.initiativeCode + ' ' + (sp.initiativeShortName || sp.initiativeName)"
-            [attr.aria-current]="isActive(sp) ? 'true' : null"
-            class="flex w-full shrink-0 appearance-none flex-col items-center gap-1 rounded-xl border-0 px-1 py-1.5 transition-colors duration-200"
-            [class]="
-              isActive(sp)
-                ? 'text-white bg-[linear-gradient(180deg,#6b6dc4_0%,#6461bc_100%)] shadow-[0_8px_20px_rgba(100,97,188,0.5),inset_0_0_0_1px_rgba(255,255,255,0.14)]'
-                : 'text-white/[0.62] bg-transparent hover:bg-white/[0.08] hover:text-white'
-            ">
-            @if (!iconErrors().has(sp.initiativeCode)) {
-              <img
-                class="size-7 shrink-0 rounded-lg bg-white/[0.08] object-cover"
-                [src]="iconSrc(sp)"
-                [alt]="sp.initiativeCode"
-                width="28"
-                height="28"
-                (error)="onIconError(sp.initiativeCode)" />
-            } @else {
-              <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
-                <i class="material-icons-round text-[15px] text-white/60">hub</i>
-              </span>
-            }
-            <span class="text-[9.5px] font-bold leading-none tracking-[0.02em] text-inherit">{{ sp.initiativeCode }}</span>
-          </button>
-        }
-      }
-    </div>
-  }
-</aside>
 
 <!-- ==================== SEARCH POPOVER — the rail's collapsed filter, expanded ==================== -->
 @if (searchOpen() && viewMode() === 'aow') {
@@ -377,15 +220,16 @@
 
 <!-- ==================== DETAIL (right panel) — bento dashboard (Tailwind) ==================== -->
 <!-- Focus mode trims the panel gutters so the indicator table gets the full width. -->
+<main hlmSidebarInset class="min-w-0 flex-1">
 <section
   class="box-border min-h-screen bg-[#eef0f3] transition-[margin] duration-300 motion-reduce:transition-none"
   [style.marginRight.px]="managed() ? managePanelWidth() : 0"
   [class]="
     viewMode() === 'aow'
       ? (panelView() === 'full'
-          ? 'ml-[var(--rail-w)] px-5 pb-8 pt-4'
-          : 'ml-[calc(var(--rail-w)+var(--panel-w))] px-3 pb-4 pt-3')
-      : 'ml-[calc(var(--full-w)+var(--float-gap)*2)] px-6 pb-10 pt-5'
+          ? 'px-5 pb-8 pt-4'
+          : 'px-3 pb-4 pt-3')
+      : 'px-6 pb-10 pt-5'
   ">
   @if (scope() === 'overview') {
     <!-- ==================== WORKSPACE OVERVIEW — no program in context ==================== -->
@@ -1230,6 +1074,8 @@
     </div>
   }
 </section>
+</main>
+</div>
 
 <!-- ==================== GUIDED CREATION — full-screen flow ==================== -->
 @if (guidedOpen()) {

@@ -1,5 +1,11 @@
-<app-page-header>Results Center</app-page-header>
-<app-alert-global-info className="section_container"></app-alert-global-info>
-<div class="local_container section_container">
-  <router-outlet></router-outlet>
+<div hlmSidebarWrapper sidebarWidth="280px" class="min-h-full items-stretch">
+  <app-reporting-nav-sidebar />
+
+  <main hlmSidebarInset class="min-w-0 flex-1">
+    <app-page-header>Results Center</app-page-header>
+    <app-alert-global-info className="section_container"></app-alert-global-info>
+    <div class="local_container section_container">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
 </div>
