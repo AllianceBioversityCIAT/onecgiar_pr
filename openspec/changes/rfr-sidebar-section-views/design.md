@@ -35,7 +35,7 @@ User constraint: the new grouping must **not** be another collapsible — only a
 
 3. **Subtle label** — static text (not a button), uppercase small tracking, `text-white/40` (or sidebar-foreground muted) matching dark premium sidebar; same padding as program group labels, **no chevron**.
 
-4. **SP links** — navigate to the **current** RFR section path (or default `home`) with `{ sp: id }` so switching program does not bounce users back to Dashboard unexpectedly.
+4. **SP links nest under Planned ToC** — My / Other programs / Other projects sit under “Results planned…”. Clicking a program always opens `planned-toc?sp=` (AoW tree on that surface). Dashboard / Emerging / Centers sit as siblings; they keep `?sp=` when switching section.
 
 5. **Collapsed flyout** — list the four section links first; keep program lists below or secondary so icon-rail users can reach sections.
 

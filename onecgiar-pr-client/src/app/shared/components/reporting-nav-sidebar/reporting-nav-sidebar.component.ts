@@ -159,12 +159,22 @@ export class ReportingNavSidebarComponent {
    * Conceptual RFR action links (subtle group label in the template — not a collapsible).
    * Dashboard = full bento; the other three are single-section surfaces.
    */
+  /** Full RFR action list (Dashboard → Planned → Emerging → Centers). */
   readonly rfrSectionLinks: NavSubLink[] = [
     { name: 'Dashboard', path: '/result-framework-reporting/home', icon: 'lucideLayoutDashboard' },
     { name: 'Results planned in your 2026 ToC', path: '/result-framework-reporting/planned-toc', icon: 'lucideClipboardCheck' },
     { name: 'Report Emerging results', path: '/result-framework-reporting/emerging', icon: 'lucideSparkles' },
     { name: 'My CGIAR Centers', path: '/result-framework-reporting/centers', icon: 'lucideBuilding2' }
   ];
+
+  /** Planned ToC path — Science Programs nest under this entry (AoW children live on that surface). */
+  readonly rfrPlannedPath = '/result-framework-reporting/planned-toc';
+
+  /** Section links that sit above the Planned + programs block. */
+  readonly rfrLinksBeforePrograms: NavSubLink[] = [this.rfrSectionLinks[0]];
+
+  /** Section links that sit below the Planned + programs block. */
+  readonly rfrLinksAfterPrograms: NavSubLink[] = this.rfrSectionLinks.slice(2);
 
   /**
    * Primary nav sections + Admin module (admin-only, from extraRoutingApp).
@@ -207,23 +217,6 @@ export class ReportingNavSidebarComponent {
       })
     ),
     { initialValue: null }
-  );
-
-  /**
-   * Current RFR section path (home / planned-toc / emerging / centers) so SP links
-   * keep the user on the same surface when switching programs.
-   */
-  readonly currentRfrSectionPath = toSignal(
-    this.router.events.pipe(
-      filter(e => e instanceof NavigationEnd),
-      startWith(null),
-      map(() => {
-        const url = this.router.url.split('?')[0];
-        const match = this.rfrSectionLinks.find(l => url === l.path || url.startsWith(l.path + '/'));
-        return match?.path ?? '/result-framework-reporting/home';
-      })
-    ),
-    { initialValue: '/result-framework-reporting/home' }
   );
 
   constructor() {

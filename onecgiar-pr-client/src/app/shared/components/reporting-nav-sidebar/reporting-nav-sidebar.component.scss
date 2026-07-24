@@ -134,6 +134,18 @@ hlm-sidebar {
     color: rgba(255, 255, 255, 0.38);
   }
 
+  // Programs sit under Planned ToC (one level deeper)
+  .pr-nav-rfr-programs {
+    margin: 2px 0 4px 10px;
+    padding-left: 6px;
+    border-inline-start: 1.5px solid rgba(255, 255, 255, 0.12);
+
+    ul[hlmSidebarMenuSub] {
+      margin-left: 4px;
+      padding-left: 6px;
+    }
+  }
+
   [data-slot='sidebar-separator'] {
     background: rgba(255, 255, 255, 0.12) !important;
   }
