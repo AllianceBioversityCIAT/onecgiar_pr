@@ -27,6 +27,7 @@ import { ResultByInitiativesRepository } from '../../results/results_by_inititia
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaCentersRepository } from '../../../clarisa/clarisa-centers/clarisa-centers.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ResultCreationMethod } from '../../../shared/constants/result-creation-method.enum';
 
 @Injectable()
 export class BilateralCenterService {
@@ -96,6 +97,7 @@ export class BilateralCenterService {
       result_level_id: dto.result_level_id,
       source: SourceEnum.Bilateral,
       status_id: ResultStatusData.Editing.value,
+      creation_method: ResultCreationMethod.MANUAL,
     } as Result);
 
     await this.resultRepository.update(result.id, {
