@@ -44,104 +44,110 @@
         <ul hlmSidebarMenu>
           @for (section of sections(); track section.path) {
             @if (section.path === 'result-framework-reporting') {
-              <!-- Level-1 conceptual group: subtle tag + 4 peer items (no parent collapsible, no indent) -->
-              @if (!isCollapsed()) {
-                <li class="pr-nav-rfr-group-label-wrap list-none">
-                  <p class="pr-nav-rfr-group-label">Results framework and reporting</p>
-                </li>
-              }
-
-              @for (link of rfrLinksBeforePrograms; track link.path) {
-                <li hlmSidebarMenuItem>
-                  <a
-                    hlmSidebarMenuButton
-                    [routerLink]="link.path"
-                    [queryParams]="rfrSectionQueryParams()"
-                    [isActive]="isRfrSectionActive(link.path)"
-                    [tooltip]="link.name">
-                    <ng-icon [name]="link.icon" />
-                    <span>{{ link.name }}</span>
-                  </a>
-                </li>
-              }
-
-              <li hlmSidebarMenuItem class="pr-nav-rfr-planned">
-                <a
-                  hlmSidebarMenuButton
-                  [routerLink]="rfrPlannedPath"
-                  [queryParams]="rfrSectionQueryParams()"
-                  [isActive]="isRfrSectionActive(rfrPlannedPath)"
-                  tooltip="Results planned in your 2026 ToC"
-                  (mouseenter)="openIconFlyout('rfr', $event)"
-                  (mouseleave)="scheduleCloseIconFlyout()">
-                  <ng-icon name="lucideClipboardCheck" />
-                  <span>Results planned in your 2026 ToC</span>
-                </a>
-
+              <!-- Squared group: tag + level-1 children inside one compact container -->
+              <li
+                class="pr-nav-rfr-box list-none"
+                [class.pr-nav-rfr-box--rail]="isCollapsed()"
+                role="group"
+                aria-label="Results framework and reporting">
                 @if (!isCollapsed()) {
-                  @if (homeSE.isLoadingSPLists()) {
-                    <div class="text-sidebar-foreground/55 px-2 py-1.5 text-[10px]">Loading programs…</div>
-                  } @else {
-                    <div class="pr-nav-rfr-programs">
-                      @for (group of programGroups(); track group.key) {
-                        @if (group.items.length) {
-                          <button
-                            type="button"
-                            (click)="toggleGroup(group.key)"
-                            class="text-sidebar-foreground/45 hover:text-sidebar-foreground mt-0.5 flex w-full items-center gap-1 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide transition-colors">
-                            <ng-icon
-                              name="lucideChevronDown"
-                              class="text-[12px] transition-transform duration-200"
-                              [class.-rotate-90]="!isGroupOpen(group.key)" />
-                            <span>{{ group.label }}</span>
-                            <span class="ms-auto tabular-nums">{{ group.items.length }}</span>
-                          </button>
-
-                          @if (isGroupOpen(group.key)) {
-                            <ul hlmSidebarMenuSub>
-                              @for (sp of group.items; track sp.initiativeId) {
-                                <li hlmSidebarMenuSubItem>
-                                  <a
-                                    hlmSidebarMenuSubButton
-                                    [routerLink]="rfrPlannedPath"
-                                    [queryParams]="{ sp: sp.initiativeId }"
-                                    [isActive]="isRfrSectionActive(rfrPlannedPath) && sp.initiativeId === activeSpId()"
-                                    [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
-                                    <img
-                                      [src]="iconSrc(sp)"
-                                      [alt]="sp.initiativeCode"
-                                      width="18"
-                                      height="18"
-                                      loading="lazy"
-                                      class="size-[18px] shrink-0 rounded-[5px] object-cover" />
-                                    <span class="shrink-0 font-semibold">{{ sp.initiativeCode }}</span>
-                                    <span class="text-sidebar-foreground/70 truncate">{{ sp.initiativeShortName || sp.initiativeName }}</span>
-                                    <small class="bg-sidebar-accent text-sidebar-foreground/70 ms-auto shrink-0 rounded-full px-1.5 text-[10px] tabular-nums">{{ count(sp) }}</small>
-                                  </a>
-                                </li>
-                              }
-                            </ul>
-                          }
-                        }
-                      }
-                    </div>
-                  }
+                  <p class="pr-nav-rfr-group-label">Results framework and reporting</p>
                 }
-              </li>
 
-              @for (link of rfrLinksAfterPrograms; track link.path) {
-                <li hlmSidebarMenuItem>
-                  <a
-                    hlmSidebarMenuButton
-                    [routerLink]="link.path"
-                    [queryParams]="rfrSectionQueryParams()"
-                    [isActive]="isRfrSectionActive(link.path)"
-                    [tooltip]="link.name">
-                    <ng-icon [name]="link.icon" />
-                    <span>{{ link.name }}</span>
-                  </a>
-                </li>
-              }
+                <ul class="pr-nav-rfr-box__menu" hlmSidebarMenu>
+                  @for (link of rfrLinksBeforePrograms; track link.path) {
+                    <li hlmSidebarMenuItem>
+                      <a
+                        hlmSidebarMenuButton
+                        [routerLink]="link.path"
+                        [queryParams]="rfrSectionQueryParams()"
+                        [isActive]="isRfrSectionActive(link.path)"
+                        [tooltip]="link.name">
+                        <ng-icon [name]="link.icon" />
+                        <span>{{ link.name }}</span>
+                      </a>
+                    </li>
+                  }
+
+                  <li hlmSidebarMenuItem class="pr-nav-rfr-planned">
+                    <a
+                      hlmSidebarMenuButton
+                      [routerLink]="rfrPlannedPath"
+                      [queryParams]="rfrSectionQueryParams()"
+                      [isActive]="isRfrSectionActive(rfrPlannedPath)"
+                      tooltip="Results planned in your 2026 ToC"
+                      (mouseenter)="openIconFlyout('rfr', $event)"
+                      (mouseleave)="scheduleCloseIconFlyout()">
+                      <ng-icon name="lucideClipboardCheck" />
+                      <span>Results planned in your 2026 ToC</span>
+                    </a>
+
+                    @if (!isCollapsed()) {
+                      @if (homeSE.isLoadingSPLists()) {
+                        <div class="text-sidebar-foreground/55 px-2 py-1.5 text-[10px]">Loading programs…</div>
+                      } @else {
+                        <div class="pr-nav-rfr-programs">
+                          @for (group of programGroups(); track group.key) {
+                            @if (group.items.length) {
+                              <button
+                                type="button"
+                                (click)="toggleGroup(group.key)"
+                                class="text-sidebar-foreground/45 hover:text-sidebar-foreground mt-0.5 flex w-full items-center gap-1 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide transition-colors">
+                                <ng-icon
+                                  name="lucideChevronDown"
+                                  class="text-[12px] transition-transform duration-200"
+                                  [class.-rotate-90]="!isGroupOpen(group.key)" />
+                                <span>{{ group.label }}</span>
+                                <span class="ms-auto tabular-nums">{{ group.items.length }}</span>
+                              </button>
+
+                              @if (isGroupOpen(group.key)) {
+                                <ul hlmSidebarMenuSub>
+                                  @for (sp of group.items; track sp.initiativeId) {
+                                    <li hlmSidebarMenuSubItem>
+                                      <a
+                                        hlmSidebarMenuSubButton
+                                        [routerLink]="rfrPlannedPath"
+                                        [queryParams]="{ sp: sp.initiativeId }"
+                                        [isActive]="isRfrSectionActive(rfrPlannedPath) && sp.initiativeId === activeSpId()"
+                                        [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
+                                        <img
+                                          [src]="iconSrc(sp)"
+                                          [alt]="sp.initiativeCode"
+                                          width="18"
+                                          height="18"
+                                          loading="lazy"
+                                          class="size-[18px] shrink-0 rounded-[5px] object-cover" />
+                                        <span class="shrink-0 font-semibold">{{ sp.initiativeCode }}</span>
+                                        <span class="text-sidebar-foreground/70 truncate">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                                        <small class="bg-sidebar-accent text-sidebar-foreground/70 ms-auto shrink-0 rounded-full px-1.5 text-[10px] tabular-nums">{{ count(sp) }}</small>
+                                      </a>
+                                    </li>
+                                  }
+                                </ul>
+                              }
+                            }
+                          }
+                        </div>
+                      }
+                    }
+                  </li>
+
+                  @for (link of rfrLinksAfterPrograms; track link.path) {
+                    <li hlmSidebarMenuItem>
+                      <a
+                        hlmSidebarMenuButton
+                        [routerLink]="link.path"
+                        [queryParams]="rfrSectionQueryParams()"
+                        [isActive]="isRfrSectionActive(link.path)"
+                        [tooltip]="link.name">
+                        <ng-icon [name]="link.icon" />
+                        <span>{{ link.name }}</span>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              </li>
             } @else if (section.path === 'init-admin-module') {
               <li hlmSidebarMenuItem>
                 <button

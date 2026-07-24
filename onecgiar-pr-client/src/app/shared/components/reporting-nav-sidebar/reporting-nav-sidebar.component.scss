@@ -123,36 +123,50 @@ hlm-sidebar {
     color: rgba(213, 213, 240, 0.75); // primary-100-ish
   }
 
-  // Level-1 conceptual tag — compact rounded chip, little vertical space
-  .pr-nav-rfr-group-label-wrap {
-    margin: 2px 8px 4px;
-    padding: 0;
+  // Squared group: tag + children share one compact frame (no extra indent on peers)
+  .pr-nav-rfr-box {
+    margin: 2px 6px 6px;
+    padding: 5px 4px 4px;
     list-style: none;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    &--rail {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+    }
   }
 
   .pr-nav-rfr-group-label {
-    margin: 0;
-    width: fit-content;
-    max-width: 100%;
-    padding: 3px 7px;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.06);
+    margin: 0 4px 4px;
+    padding: 0 2px;
     font-size: 8.5px;
     font-weight: 600;
     letter-spacing: 0.05em;
     line-height: 1.2;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.48);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  .pr-nav-rfr-box__menu {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
   }
 
   // Programs only — nested under Planned (the 4 section links stay flush level-1)
   .pr-nav-rfr-programs {
-    margin: 2px 0 6px;
-    padding: 0 4px 0 8px;
+    margin: 2px 0 4px;
+    padding: 0 2px 0 6px;
 
     ul[hlmSidebarMenuSub] {
       margin-left: 0;
