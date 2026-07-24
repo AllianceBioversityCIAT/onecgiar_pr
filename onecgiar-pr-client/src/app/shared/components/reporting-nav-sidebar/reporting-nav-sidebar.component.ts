@@ -15,7 +15,10 @@ import {
   lucideHandshake,
   lucideChartLine,
   lucideCircleDot,
-  lucideChevronDown
+  lucideChevronDown,
+  lucideRocket,
+  lucideBell,
+  lucideType
 } from '@ng-icons/lucide';
 import { HlmSidebarImports } from '@spartan/sidebar';
 import { PrRoute, routingApp } from '../../routing/routing-data';
@@ -37,9 +40,9 @@ interface ProgramGroup {
 /**
  * Official Spartan sidebar used as the reporting navigation on Results Center and the
  * Result Framework home. Lists the app sections plus a lazily-loaded, collapsible tree of
- * Science Programs, and — in its footer — the header chrome (whats-new, notifications,
- * text-size, user menu) so these surfaces need no top header. Consumers wrap it in
- * `hlmSidebarWrapper` + `hlmSidebarInset`.
+ * Science Programs; extra tools (release notes, notifications, text size) sit below a
+ * separator; the footer keeps the user menu. Consumers wrap it in `hlmSidebarWrapper` +
+ * `hlmSidebarInset`.
  */
 @Component({
   selector: 'app-reporting-nav-sidebar',
@@ -57,7 +60,10 @@ interface ProgramGroup {
       lucideHandshake,
       lucideChartLine,
       lucideCircleDot,
-      lucideChevronDown
+      lucideChevronDown,
+      lucideRocket,
+      lucideBell,
+      lucideType
     })
   ]
 })
