@@ -16,6 +16,7 @@ import { SectionContributorsComponent } from '../../components/section-contribut
 import { SectionGeographyComponent } from '../../components/section-geography/section-geography.component';
 import { SectionEvidenceComponent } from '../../components/section-evidence/section-evidence.component';
 import { SectionTypeSpecificComponent } from '../../components/section-type-specific/section-type-specific.component';
+import { BilateralProgressAsideComponent } from '../../components/bilateral-progress-aside/bilateral-progress-aside.component';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 
 const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
@@ -45,7 +46,8 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     SectionContributorsComponent,
     SectionGeographyComponent,
     SectionEvidenceComponent,
-    SectionTypeSpecificComponent
+    SectionTypeSpecificComponent,
+    BilateralProgressAsideComponent,
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
@@ -73,10 +75,17 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   isSubmitting = signal(false);
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
   sectionZeroOpen = signal(true);
+  showTypeDropdown = signal(false);
 
   availableResultTypes = computed(() => {
     const level = this.resultLevelId();
     return level ? (RESULT_TYPES_BY_LEVEL[level] ?? []) : [];
+  });
+
+  selectedTypeLabel = computed(() => {
+    const typeId = this.resultTypeId();
+    if (!typeId) return 'Select result type';
+    return this.availableResultTypes().find(t => t.id === typeId)?.label ?? 'Select result type';
   });
 
   overallPct = this.mdsTracker.overallPercentage;
@@ -94,6 +103,17 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.mdsTracker.reset();
         this.autoSaveService.setResultId(resultId);
         this.creationService.loadResult(resultId);
+      } else {
+        // Fresh create: never reuse project/SP from a previous visit (or legacy localStorage).
+        this.isCreating.set(true);
+        this.resultId.set(null);
+        this.selectedReportingWay.set(null);
+        this.resultLevelId.set(null);
+        this.resultTypeId.set(null);
+        this.showTypeDropdown.set(false);
+        this.autoSaveService.reset();
+        this.mdsTracker.reset();
+        this.creationService.resetWizard();
       }
     });
   }
@@ -123,13 +143,23 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.creationService.resultLevelId.set(levelId);
     this.resultTypeId.set(null);
     this.creationService.resultTypeId.set(null);
+    this.showTypeDropdown.set(false);
     this.scrollToSection('bcr-type-section');
   }
 
-  onTypeSelected(event: Event): void {
-    const typeId = Number((event.target as HTMLSelectElement).value);
+  toggleTypeDropdown(): void {
+    this.showTypeDropdown.update(v => !v);
+  }
+
+  closeTypeDropdown(): void {
+    this.showTypeDropdown.set(false);
+  }
+
+  onTypeSelected(typeId: number): void {
     this.resultTypeId.set(typeId);
     this.creationService.resultTypeId.set(typeId);
+    this.showTypeDropdown.set(false);
+    this.scrollToSection('bcr-actions');
   }
 
   onNext(): void {
@@ -175,9 +205,12 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   }
 
   private scrollToSection(id: string): void {
+    // Defer so Angular can render newly shown sections (and absolute dropdowns can close).
     setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
   }
 
   get canCreate(): boolean {
@@ -218,11 +251,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     }
     this.autoSaveService.reset();
     this.mdsTracker.reset();
-    const url = this.router.url;
-    if (!url.startsWith('/bilateral/')) {
-      this.creationService.resetWizard();
-    } else {
-      this.creationService.clearEditorState();
-    }
+    // Always clear wizard + legacy LS so the next create visit starts empty.
+    this.creationService.resetWizard();
   }
 }

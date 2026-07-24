@@ -117,7 +117,10 @@
         <!-- Sub-national section -->
         @if (geographicLocationBody.geo_scope_id === 5 && geographicLocationBody.countries.length) {
           <div class="sg-subnational-container">
-            <h4 class="sg-subnational-title">Sub-national Details</h4>
+            <h4 class="sg-subnational-title">Sub-national Details <span class="sg-required">*</span></h4>
+            @if (subNationalSelectionMissing) {
+              <p class="sg-field-error">Select at least one sub-national location for each country.</p>
+            }
             @for (country of geographicLocationBody.countries; track country.id; let idx = $index) {
               <div class="sg-subnational-card">
                 <app-sub-geoscope
@@ -152,6 +155,9 @@
             <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="extraGeographicLocationBody.has_extra_geo_scope === true" (click)="setHasExtraScope(true)">Yes</button>
             <button type="button" class="sg-toggle-btn" [class.sg-toggle-btn--active]="extraGeographicLocationBody.has_extra_geo_scope === false" (click)="setHasExtraScope(false)">No</button>
           </div>
+          @if (extraScopeAnswerMissing) {
+            <p class="sg-field-error">Please answer Yes or No.</p>
+          }
         </div>
 
         @if (extraGeographicLocationBody.has_extra_geo_scope) {
@@ -237,7 +243,10 @@
           <!-- Extra Sub-national section -->
           @if (extraGeographicLocationBody.geo_scope_id === 5 && extraGeographicLocationBody.countries.length) {
             <div class="sg-subnational-container">
-              <h4 class="sg-subnational-title">Extra Sub-national Details</h4>
+              <h4 class="sg-subnational-title">Extra Sub-national Details <span class="sg-required">*</span></h4>
+              @if (extraSubNationalSelectionMissing) {
+                <p class="sg-field-error">Select at least one sub-national location for each extra country.</p>
+              }
               @for (country of extraGeographicLocationBody.countries; track country.id; let idx = $index) {
                 <div class="sg-subnational-card">
                   <app-sub-geoscope

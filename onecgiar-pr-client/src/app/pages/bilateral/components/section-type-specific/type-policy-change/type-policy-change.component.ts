@@ -8,8 +8,6 @@ import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.
 import { PolicyControlListService } from '../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../shared/services/global/institutions.service';
 
-const TOTAL_FIELDS = 3;
-
 @Component({
   selector: 'app-type-policy-change',
   imports: [CommonModule, FormsModule],
@@ -30,7 +28,6 @@ export class TypePolicyChangeComponent implements OnInit {
   readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
 
   ngOnInit(): void {
-    this.mdsTracker.setTotalFields('type-specific', TOTAL_FIELDS);
     this.loadData();
   }
 
@@ -75,10 +72,14 @@ export class TypePolicyChangeComponent implements OnInit {
   }
 
   updateMds(): void {
-    const filled =
-      (this.body.policy_type_id ? 1 : 0) +
-      (this.body.policy_stage_id ? 1 : 0) +
-      (this.body.institutions?.length > 0 ? 1 : 0);
-    this.mdsTracker.updateSection('type-specific', filled);
+    this.mdsTracker.setSectionFields('type-specific', [
+      { key: 'policy-type', label: 'Policy type', filled: !!this.body.policy_type_id },
+      { key: 'policy-stage', label: 'Policy stage', filled: !!this.body.policy_stage_id },
+      {
+        key: 'policy-institutions',
+        label: 'Related institutions',
+        filled: (this.body.institutions?.length ?? 0) > 0,
+      },
+    ]);
   }
 }

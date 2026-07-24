@@ -1,12 +1,8 @@
 .bp-dashboard {
   display: grid;
-  grid-template-columns: 1fr 200px 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 18px;
   margin-bottom: 28px;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: 1fr 1fr;
-  }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -31,12 +27,6 @@
     align-items: center;
     border: 1.5px solid #E3F2FD;
     background: linear-gradient(to bottom, #FAFDFF, #FFFFFF);
-  }
-
-  &--actions {
-    @media (max-width: 1200px) {
-      grid-column: 1 / -1;
-    }
   }
 }
 

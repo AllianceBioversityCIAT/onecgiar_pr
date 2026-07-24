@@ -22,24 +22,6 @@
     }
   </div>
 
-  <div class="bp-dashboard-card bp-dashboard-card--progress">
-    <h3 class="bp-card-title">MDS Progress</h3>
-    <div class="bp-progress-center">
-      <app-mds-progress-ring [percentage]="overallPct()" [size]="80"></app-mds-progress-ring>
-    </div>
-    <div class="bp-section-breakdown">
-      @for (s of sectionStatuses(); track s.sectionName) {
-        <div class="bp-breakdown-row" (click)="scrollToSection(s.sectionName)" tabindex="0" role="link" (keydown.enter)="scrollToSection(s.sectionName)">
-          <span class="bp-breakdown-name">{{ s.sectionLabel }}</span>
-          <span class="bp-breakdown-count">{{ s.filledFields }}/{{ s.totalFields }}</span>
-          <div class="bp-breakdown-bar">
-            <div class="bp-breakdown-fill" [style.width.%]="s.percentage"></div>
-          </div>
-        </div>
-      }
-    </div>
-  </div>
-
   <div class="bp-dashboard-card bp-dashboard-card--actions">
     <h3 class="bp-card-title">Actions</h3>
     <button class="bp-action-btn" [disabled]="overallStatus() !== 'complete'" type="button">

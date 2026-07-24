@@ -1,25 +1,43 @@
-<div class="local_container" [ngClass]="{ 'pr-range-level--disabled': disabled }">
-  <div class="line">
-    <div
-      class="circle"
-      [ngClass]="{ active: (options ? item[optionValue] : item) == this.value }"
-      #circle
-      *ngFor="let item of options ? options : sizeArray; let i = index"
-      (click)="disabled ? null : onSelectLevel(options ? item[optionValue] : item, circle)"
-      (mouseenter)="itemTitle || itemDescription ? this.hoverData.handleMouseEnter(item, i) : null"
-      (mouseleave)="itemTitle || itemDescription ? this.hoverData.handleMouseLeave() : null">
-      {{ options ? i : item }}
+<div
+  class="prl"
+  [class.prl--disabled]="disabled"
+  [class.prl--readonly]="rolesSE.readOnly">
+  <div class="prl-track" role="radiogroup" aria-label="Level selector">
+    <div class="prl-track-rail" aria-hidden="true">
+      <div class="prl-track-fill" [style.width.%]="progressPercent"></div>
+    </div>
+
+    <div class="prl-dots">
+      @for (item of levels; track $index; let i = $index) {
+        <button
+          type="button"
+          class="prl-dot"
+          role="radio"
+          [attr.aria-checked]="isActive(i)"
+          [attr.aria-label]="'Level ' + levelLabel(i)"
+          [class.prl-dot--reached]="isReached(i)"
+          [class.prl-dot--active]="isActive(i)"
+          [disabled]="disabled || rolesSE.readOnly"
+          (click)="onSelectLevel(levelValue(item))">
+          <span class="prl-dot-label">{{ levelLabel(i) }}</span>
+        </button>
+      }
     </div>
   </div>
-</div>
 
-<div
-  *ngIf="(this.getRangeIndexByValue(this.value) >= 0 && (itemTitle || itemDescription)) || this.hoverData.show"
-  class="gray_card"
-  [ngClass]="{ showHoverData: this.hoverData.show }">
-  <div class="title">
-    {{ this.hoverData.show ? this.hoverData.index : this.getRangeIndexByValue(this.value) }} -
-    {{ this.hoverData.object[itemTitle] || this.options[this.getRangeIndexByValue(this.value)][itemTitle] }}
-  </div>
-  <div class="description">{{ this.hoverData?.object[itemDescription] || this.options[this.getRangeIndexByValue(this.value)][itemDescription] }}</div>
+  @if (hasNarrativeFields) {
+    <div class="prl-narrative" aria-live="polite">
+      @if (selectedIndex >= 0) {
+        <div class="prl-narrative-header">
+          <span class="prl-badge">{{ selectedIndex }}</span>
+          <h4 class="prl-title">{{ selectedTitle }}</h4>
+        </div>
+        @if (selectedDescription) {
+          <p class="prl-description">{{ selectedDescription }}</p>
+        }
+      } @else {
+        <p class="prl-placeholder">Select a readiness level to see its description.</p>
+      }
+    </div>
+  }
 </div>

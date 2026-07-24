@@ -369,7 +369,12 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   }
 
   private updateTracker(): void {
-    const filled = this.hasValidLink ? 1 : 0;
-    this.mdsTracker.updateSection('evidence', filled);
+    this.mdsTracker.setSectionFields('evidence', [
+      {
+        key: 'valid-link',
+        label: 'Evidence with valid link',
+        filled: this.hasValidLink,
+      },
+    ]);
   }
 }

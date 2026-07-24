@@ -6,8 +6,6 @@ import { BilateralCreationService } from '../../../services/bilateral-creation.s
 import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 
-const TOTAL_FIELDS = 2;
-
 @Component({
   selector: 'app-type-innovation-use',
   imports: [CommonModule, FormsModule],
@@ -24,7 +22,6 @@ export class TypeInnovationUseComponent implements OnInit {
   readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
 
   ngOnInit(): void {
-    this.mdsTracker.setTotalFields('type-specific', TOTAL_FIELDS);
     this.loadData();
   }
 
@@ -55,14 +52,19 @@ export class TypeInnovationUseComponent implements OnInit {
   }
 
   updateMds(): void {
-    const filled =
-      this.body.innov_use_to_be_determined !== null && this.body.innov_use_to_be_determined !== undefined
-        ? this.body.innov_use_to_be_determined
-          ? 1
-          : this.body.actors?.length > 0
-            ? 2
-            : 1
-        : 0;
-    this.mdsTracker.updateSection('type-specific', filled);
+    const tbd = this.body.innov_use_to_be_determined;
+    const tbdSet = tbd !== null && tbd !== undefined;
+    this.mdsTracker.setSectionFields('type-specific', [
+      {
+        key: 'use-determined',
+        label: 'Use to be determined',
+        filled: tbdSet,
+      },
+      {
+        key: 'use-actors',
+        label: 'Actors / users',
+        filled: tbdSet && (tbd === true || (this.body.actors?.length ?? 0) > 0),
+      },
+    ]);
   }
 }

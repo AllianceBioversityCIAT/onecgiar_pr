@@ -6,8 +6,6 @@ import { BilateralCreationService } from '../../../services/bilateral-creation.s
 import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 
-const TOTAL_FIELDS = 4;
-
 @Component({
   selector: 'app-type-capacity-sharing',
   imports: [CommonModule, FormsModule],
@@ -25,7 +23,6 @@ export class TypeCapacitySharingComponent implements OnInit {
   readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
 
   ngOnInit(): void {
-    this.mdsTracker.setTotalFields('type-specific', TOTAL_FIELDS);
     this.loadData();
   }
 
@@ -59,11 +56,15 @@ export class TypeCapacitySharingComponent implements OnInit {
   }
 
   updateMds(): void {
-    const filled =
-      (this.body.female_using != null ? 1 : 0) +
-      (this.body.male_using != null ? 1 : 0) +
-      (this.body.non_binary_using != null ? 1 : 0) +
-      (this.body.capdev_delivery_method_id ? 1 : 0);
-    this.mdsTracker.updateSection('type-specific', filled);
+    this.mdsTracker.setSectionFields('type-specific', [
+      { key: 'female-using', label: 'Female participants', filled: this.body.female_using != null },
+      { key: 'male-using', label: 'Male participants', filled: this.body.male_using != null },
+      { key: 'non-binary-using', label: 'Non-binary participants', filled: this.body.non_binary_using != null },
+      {
+        key: 'delivery-method',
+        label: 'Delivery method',
+        filled: !!this.body.capdev_delivery_method_id,
+      },
+    ]);
   }
 }

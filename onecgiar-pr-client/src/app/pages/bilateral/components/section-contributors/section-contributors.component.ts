@@ -25,7 +25,7 @@ interface ProjectOption {
   fullName: string;
 }
 
-const CONTRIBUTORS_MDS_TOTAL = 3;
+const PARTNERS_MDS_GROUP = 'partners';
 
 @Component({
   selector: 'app-section-contributors',
@@ -103,7 +103,6 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.mdsTracker.setTotalFields('contributors', CONTRIBUTORS_MDS_TOTAL);
     this.loadCenters();
     this.loadProjects();
   }
@@ -226,13 +225,34 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     this.updateContributorsMds();
   }
 
-  /** Real MDS slots: lead center, lead project, ≥1 contributing selection beyond empty. */
+  /** Partner slots for the progress aside (ToC publishes its own group). */
   updateContributorsMds(): void {
-    const filled =
-      (this.readonlyLeadCenterInstitutionId != null ? 1 : 0) +
-      (this.readonlyLeadProjectId != null ? 1 : 0) +
-      (this.selectedCenterInstitutionIds.length > 0 || this.selectedProjectIds.length > 0 ? 1 : 0);
-    this.mdsTracker.updateSection('contributors', filled);
+    const hasExtra =
+      this.selectedCenterInstitutionIds.some(id => id !== this.readonlyLeadCenterInstitutionId) ||
+      this.selectedProjectIds.some(id => id !== this.readonlyLeadProjectId) ||
+      this.selectedCenterInstitutionIds.length > 0 ||
+      this.selectedProjectIds.length > 0;
+    this.mdsTracker.setSectionFields(
+      'contributors',
+      [
+        {
+          key: 'lead-center',
+          label: 'Lead center',
+          filled: this.readonlyLeadCenterInstitutionId != null,
+        },
+        {
+          key: 'lead-project',
+          label: 'Lead project',
+          filled: this.readonlyLeadProjectId != null,
+        },
+        {
+          key: 'contributing-selection',
+          label: 'Contributing centers / projects',
+          filled: hasExtra,
+        },
+      ],
+      PARTNERS_MDS_GROUP
+    );
   }
 
   onCentersChange(ids: number[]): void {

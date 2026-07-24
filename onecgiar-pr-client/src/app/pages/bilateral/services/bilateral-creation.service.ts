@@ -14,13 +14,10 @@ export class BilateralCreationService {
   private readonly bilateralApi = inject(BilateralApiService);
 
   projects = signal<BilateralProject[]>([]);
-  selectedProject = signal<BilateralProject | null>(this.loadFromStorage<BilateralProject>(LS_PROJECT_KEY));
-  selectedPrimarySp = signal<{ programId: number; programCode: string; allocation: string; name?: string; shortName?: string } | null>(
-    this.loadFromStorage(LS_SP_KEY)
-  );
-  selectedSecondarySps = signal<{ programId: number; programCode: string; allocation: string }[]>(
-    this.loadFromStorage(LS_SECONDARY_SP_KEY) ?? []
-  );
+  /** Always start empty — do not hydrate from localStorage (avoids stale create wizard). */
+  selectedProject = signal<BilateralProject | null>(null);
+  selectedPrimarySp = signal<{ programId: number; programCode: string; allocation: string; name?: string; shortName?: string } | null>(null);
+  selectedSecondarySps = signal<{ programId: number; programCode: string; allocation: string }[]>([]);
 
   currentResultId = signal<number | null>(null);
   isLoadingProjects = signal(false);
@@ -181,9 +178,7 @@ export class BilateralCreationService {
     this.selectedProject.set(project);
     this.selectedPrimarySp.set(null);
     this.selectedSecondarySps.set([]);
-    this.saveToStorage(LS_PROJECT_KEY, project);
-    localStorage.removeItem(LS_SP_KEY);
-    localStorage.removeItem(LS_SECONDARY_SP_KEY);
+    this.clearLegacyWizardStorage();
   }
 
   resetWizard(): void {
@@ -192,26 +187,19 @@ export class BilateralCreationService {
     this.selectedSecondarySps.set([]);
     this.clearEditorState();
     this.currentResultId.set(null);
-    localStorage.removeItem(LS_PROJECT_KEY);
-    localStorage.removeItem(LS_SP_KEY);
-    localStorage.removeItem(LS_SECONDARY_SP_KEY);
+    this.clearLegacyWizardStorage();
   }
 
   selectPrimarySp(sp: { programId: number; programCode: string; allocation: string }): void {
     this.selectedPrimarySp.set(sp);
-    this.saveToStorage(LS_SP_KEY, sp);
   }
 
   toggleSecondarySp(sp: { programId: number; programCode: string; allocation: string }): void {
     const current = this.selectedSecondarySps();
     if (current.some(s => s.programId === sp.programId)) {
-      const next = current.filter(s => s.programId !== sp.programId);
-      this.selectedSecondarySps.set(next);
-      this.saveToStorage(LS_SECONDARY_SP_KEY, next);
+      this.selectedSecondarySps.set(current.filter(s => s.programId !== sp.programId));
     } else {
-      const next = [...current, sp];
-      this.selectedSecondarySps.set(next);
-      this.saveToStorage(LS_SECONDARY_SP_KEY, next);
+      this.selectedSecondarySps.set([...current, sp]);
     }
   }
 
@@ -246,16 +234,14 @@ export class BilateralCreationService {
     });
   }
 
-  private saveToStorage<T>(key: string, value: T): void {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
-  }
-
-  private loadFromStorage<T>(key: string): T | null {
+  /** Wipe old bp_* keys left by previous singleton/localStorage wizard persistence. */
+  private clearLegacyWizardStorage(): void {
     try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : null;
+      localStorage.removeItem(LS_PROJECT_KEY);
+      localStorage.removeItem(LS_SP_KEY);
+      localStorage.removeItem(LS_SECONDARY_SP_KEY);
     } catch {
-      return null;
+      /* ignore */
     }
   }
 }

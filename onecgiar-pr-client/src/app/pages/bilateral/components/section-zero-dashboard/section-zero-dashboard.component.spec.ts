@@ -18,8 +18,6 @@ describe('SectionZeroDashboardComponent', () => {
     };
 
     mdsTracker = {
-      sectionStatus: signal([{ sectionName: 'general-info', sectionLabel: 'General Information', totalFields: 2, filledFields: 0, percentage: 0, status: 'empty' }]),
-      overallPercentage: signal(0),
       overallStatus: signal('empty'),
     } as any;
 
@@ -44,10 +42,6 @@ describe('SectionZeroDashboardComponent', () => {
     const emitSpy = jest.spyOn(component.submitRequested, 'emit');
     component.onSubmit();
     expect(emitSpy).toHaveBeenCalled();
-  });
-
-  it('should show overall percentage', () => {
-    expect(component.overallPct()).toBe(0);
   });
 
   it('should show empty project hint when no project selected', () => {

@@ -1,4 +1,4 @@
-<div class="bp-accordion" [class.bp-accordion--open]="isOpen">
+<div class="bp-accordion" [attr.data-section]="sectionName()" [class.bp-accordion--open]="isOpen">
   <div class="bp-accordion-header" (click)="toggle()" role="button" tabindex="0" (keydown.enter)="toggle()" (keydown.space)="toggle()">
     <i class="material-icons-round bp-section-icon">{{ sectionIcon() }}</i>
     <span class="bp-section-label">{{ sectionLabel() }}</span>

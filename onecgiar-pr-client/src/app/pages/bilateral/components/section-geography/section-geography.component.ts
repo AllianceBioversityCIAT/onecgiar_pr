@@ -44,7 +44,8 @@ export class SectionGeographyComponent implements OnInit {
     has_countries: false,
     regions: [],
     countries: [],
-    has_extra_geo_scope: false
+    /** null = unanswered; required for every non-Global / non-Determined main scope. */
+    has_extra_geo_scope: null as boolean | null
   };
 
   geoscopeOptions = [
@@ -83,7 +84,10 @@ export class SectionGeographyComponent implements OnInit {
           this.extraGeographicLocationBody.has_countries = response.has_extra_countries;
           this.extraGeographicLocationBody.regions = response.extra_regions || [];
           this.extraGeographicLocationBody.countries = response.extra_countries || [];
-          this.extraGeographicLocationBody.has_extra_geo_scope = Boolean(response.has_extra_geo_scope);
+          this.extraGeographicLocationBody.has_extra_geo_scope =
+            response.has_extra_geo_scope === null || response.has_extra_geo_scope === undefined
+              ? null
+              : Boolean(response.has_extra_geo_scope);
 
           this.updateTracker();
         }
@@ -103,7 +107,7 @@ export class SectionGeographyComponent implements OnInit {
       extra_countries: this.extraGeographicLocationBody.countries,
       has_extra_countries: this.extraGeographicLocationBody.has_countries,
       has_extra_regions: this.extraGeographicLocationBody.has_regions,
-      has_extra_geo_scope: this.extraGeographicLocationBody.has_extra_geo_scope
+      has_extra_geo_scope: this.extraGeographicLocationBody.has_extra_geo_scope === true
     };
   }
 
@@ -129,10 +133,12 @@ export class SectionGeographyComponent implements OnInit {
       this.geographicLocationBody.has_regions = true;
       this.geographicLocationBody.has_countries = false;
       this.geographicLocationBody.countries = [];
+      this.extraGeographicLocationBody.has_extra_geo_scope = null;
     } else if (scopeId === GeoScopeEnum.COUNTRY || scopeId === GeoScopeEnum.SUB_NATIONAL) {
       this.geographicLocationBody.has_countries = true;
       this.geographicLocationBody.has_regions = false;
       this.geographicLocationBody.regions = [];
+      this.extraGeographicLocationBody.has_extra_geo_scope = null;
     }
     this.queueGeographySave();
   }
@@ -281,6 +287,45 @@ export class SectionGeographyComponent implements OnInit {
     return this.requiresExtraCountriesSelection && !(this.extraGeographicLocationBody.countries?.length > 0);
   }
 
+  get requiresExtraScopeAnswer(): boolean {
+    const scopeId = Number(this.geographicLocationBody.geo_scope_id);
+    return (
+      !!scopeId &&
+      scopeId !== GeoScopeEnum.GLOBAL &&
+      scopeId !== GeoScopeEnum.DETERMINED
+    );
+  }
+
+  get extraScopeAnswerMissing(): boolean {
+    return (
+      this.requiresExtraScopeAnswer &&
+      this.extraGeographicLocationBody.has_extra_geo_scope !== true &&
+      this.extraGeographicLocationBody.has_extra_geo_scope !== false
+    );
+  }
+
+  /** Sub-national scope requires ≥1 sub-national unit per selected country. */
+  get subNationalSelectionMissing(): boolean {
+    if (Number(this.geographicLocationBody.geo_scope_id) !== GeoScopeEnum.SUB_NATIONAL) {
+      return false;
+    }
+    const countries = this.geographicLocationBody.countries ?? [];
+    if (!countries.length) return true;
+    return countries.some((c: any) => !(c.sub_national?.length > 0));
+  }
+
+  get extraSubNationalSelectionMissing(): boolean {
+    if (
+      !this.extraGeographicLocationBody.has_extra_geo_scope ||
+      Number(this.extraGeographicLocationBody.geo_scope_id) !== GeoScopeEnum.SUB_NATIONAL
+    ) {
+      return false;
+    }
+    const countries = this.extraGeographicLocationBody.countries ?? [];
+    if (!countries.length) return true;
+    return countries.some((c: any) => !(c.sub_national?.length > 0));
+  }
+
   isGeographyComplete(): boolean {
     const scopeId = Number(this.geographicLocationBody.geo_scope_id);
     if (!scopeId) return false;
@@ -289,6 +334,7 @@ export class SectionGeographyComponent implements OnInit {
       return true;
     }
 
+    // Any scope other than Global / Determined must fill the dependent selectors.
     if (
       scopeId !== GeoScopeEnum.REGIONAL &&
       scopeId !== GeoScopeEnum.COUNTRY &&
@@ -301,17 +347,96 @@ export class SectionGeographyComponent implements OnInit {
       return false;
     }
 
+    if (this.subNationalSelectionMissing) {
+      return false;
+    }
+
+    if (this.extraScopeAnswerMissing) {
+      return false;
+    }
+
     if (this.extraGeographicLocationBody.has_extra_geo_scope) {
       if (!this.extraGeographicLocationBody.geo_scope_id) return false;
       if (this.extraRegionsSelectionMissing || this.extraCountriesSelectionMissing) return false;
+      if (this.extraSubNationalSelectionMissing) return false;
     }
 
     return true;
   }
 
   updateTracker(): void {
-    const filled = this.isGeographyComplete() ? 1 : 0;
-    this.mdsTracker.updateSection('geography', filled);
+    const scopeId = Number(this.geographicLocationBody.geo_scope_id);
+    const items: { key: string; label: string; filled: boolean }[] = [
+      {
+        key: 'geo-scope',
+        label: 'Geographic scope',
+        filled: !!scopeId,
+      },
+    ];
+
+    const isConcrete =
+      scopeId === GeoScopeEnum.REGIONAL ||
+      scopeId === GeoScopeEnum.COUNTRY ||
+      scopeId === GeoScopeEnum.SUB_NATIONAL;
+
+    if (isConcrete) {
+      if (this.requiresRegionsSelection) {
+        items.push({
+          key: 'regions',
+          label: 'Regions',
+          filled: !this.regionsSelectionMissing,
+        });
+      }
+      if (this.requiresCountriesSelection) {
+        items.push({
+          key: 'countries',
+          label: 'Countries',
+          filled: !this.countriesSelectionMissing,
+        });
+      }
+      if (scopeId === GeoScopeEnum.SUB_NATIONAL) {
+        items.push({
+          key: 'sub-national',
+          label: 'Sub-national details',
+          filled: !this.subNationalSelectionMissing,
+        });
+      }
+      items.push({
+        key: 'extra-geo-answer',
+        label: 'Extra geographic areas (Yes/No)',
+        filled: !this.extraScopeAnswerMissing,
+      });
+      if (this.extraGeographicLocationBody.has_extra_geo_scope === true) {
+        items.push({
+          key: 'extra-geo-scope',
+          label: 'Extra geographic scope',
+          filled: !!this.extraGeographicLocationBody.geo_scope_id,
+        });
+        if (this.requiresExtraRegionsSelection) {
+          items.push({
+            key: 'extra-regions',
+            label: 'Extra regions',
+            filled: !this.extraRegionsSelectionMissing,
+          });
+        }
+        if (this.requiresExtraCountriesSelection) {
+          items.push({
+            key: 'extra-countries',
+            label: 'Extra countries',
+            filled: !this.extraCountriesSelectionMissing,
+          });
+        }
+        if (Number(this.extraGeographicLocationBody.geo_scope_id) === GeoScopeEnum.SUB_NATIONAL) {
+          items.push({
+            key: 'extra-sub-national',
+            label: 'Extra sub-national details',
+            filled: !this.extraSubNationalSelectionMissing,
+          });
+        }
+      }
+    }
+
+    this.mdsTracker.setSectionFields('geography', items);
   }
 
   get scopeStatus(): string {

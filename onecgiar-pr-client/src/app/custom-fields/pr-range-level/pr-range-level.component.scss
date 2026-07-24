@@ -1,53 +1,202 @@
 @use '../../../styles/fonts.scss' as fonts;
 
-.local_container {
-  .line {
-    background-color: var(--pr-color-neutral-1000);
-    height: 12px;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 50px;
-    margin-bottom: 50px;
+:host {
+  display: block;
+  width: 100%;
+}
 
-    .circle {
-      background-color: var(--pr-color-neutral-1000);
-      border-radius: 100px;
-      min-width: 40px;
-      min-height: 40px;
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all ease-in-out 0.3s;
-    }
+.prl {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.prl-track {
+  position: relative;
+  // Room for active ring (no transform scale — avoids visual jump).
+  padding: 20px 10px 16px;
+}
+
+.prl-track-rail {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 999px;
+  background: var(--pr-color-accents-2, #eaeaea);
+  overflow: hidden;
+  z-index: 0;
+}
+
+.prl-track-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--pr-color-primary-200, #8e9be8),
+    var(--pr-color-primary-300, #5569dd)
+  );
+  transition: width 200ms ease;
+  min-width: 0;
+  will-change: width;
+}
+
+.prl-dots {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  // Lock row height so ring/shadow never reflows the page.
+  height: 36px;
+}
+
+.prl-dot {
+  appearance: none;
+  border: 2px solid #c5c9d6;
+  background: var(--pr-color-white, #fff);
+  color: var(--pr-color-accents-5, #666);
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: none;
+  // Never transition "all" or transform — those caused the jump.
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    border-color: var(--pr-color-primary-300, #5569dd);
+    color: var(--pr-color-primary-400, #273ec5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb, 85, 105, 221), 0.16);
   }
 
-  .active {
-    background-color: var(--pr-color-primary-300) !important;
-    color: var(--pr-color-white);
+  &:disabled {
+    cursor: not-allowed;
   }
 }
 
-.gray_card {
-  padding: 10px 20px;
-  border-radius: 5px !important;
+.prl-dot-label {
+  pointer-events: none;
+  user-select: none;
+}
 
-  .title {
-    @include fonts.pr-typography('body-1');
-    font-weight: 700;
-    margin-bottom: 10px;
+.prl-dot--reached {
+  border-color: var(--pr-color-primary-200, #8e9be8);
+  background: var(--pr-color-primary-50, #e6eafe);
+  color: var(--pr-color-primary-400, #273ec5);
+}
+
+.prl-dot--active {
+  background: var(--pr-color-primary-300, #5569dd);
+  border-color: var(--pr-color-primary-300, #5569dd);
+  color: var(--pr-color-white, #fff);
+  box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb, 85, 105, 221), 0.22);
+}
+
+.prl-narrative {
+  box-sizing: border-box;
+  // Exact fixed box — long/short copy never moves siblings (Save button, etc.).
+  height: 128px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--pr-color-primary-25, #eef0fc);
+  border: 1px solid var(--pr-color-primary-100, #c6cdf4);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.prl-narrative-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.prl-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--pr-color-primary-300, #5569dd);
+  color: var(--pr-color-white, #fff);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.prl-title {
+  margin: 0;
+  @include fonts.pr-typography('body-1');
+  font-weight: 700;
+  color: var(--pr-color-primary-500, #1c2c8a);
+  line-height: 1.3;
+  padding-top: 3px;
+}
+
+.prl-description {
+  margin: 0;
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5, #666);
+  line-height: 1.45;
+}
+
+.prl-placeholder {
+  margin: 0;
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-4, #888);
+  font-style: italic;
+  line-height: 1.45;
+}
+
+.prl--disabled,
+.prl--readonly {
+  .prl-track {
+    opacity: 0.55;
   }
 
-  .description {
-    @include fonts.pr-typography('body-2');
+  .prl-dot {
+    pointer-events: none;
   }
 }
 
-.showHoverData {
-  box-shadow: 0px 0px 5px 2px rgba(var(--pr-color-black-rgb), 0.103) !important;
-  background-color: var(--pr-color-primary-50);
+@media (max-width: 520px) {
+  .prl-dot {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    font-size: 10px;
+  }
+
+  .prl-track-rail {
+    left: 16px;
+    right: 16px;
+  }
+
+  .prl-narrative {
+    height: 140px;
+  }
 }

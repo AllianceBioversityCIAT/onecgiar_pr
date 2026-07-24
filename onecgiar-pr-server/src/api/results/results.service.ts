@@ -4225,6 +4225,7 @@ export class ResultsService {
     }
 
     const newRecord = repo.create({
+      results_id: resultId,
       result_object: { id: resultId } as Result,
       created_by: userId,
       last_updated_by: userId,

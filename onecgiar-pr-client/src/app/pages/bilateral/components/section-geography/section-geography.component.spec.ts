@@ -12,10 +12,10 @@ import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
 describe('SectionGeographyComponent', () => {
   let component: SectionGeographyComponent;
   let fixture: ComponentFixture<SectionGeographyComponent>;
-  let mdsTracker: { updateSection: jest.Mock };
+  let mdsTracker: { setSectionFields: jest.Mock; updateSection: jest.Mock };
 
   beforeEach(async () => {
-    mdsTracker = { updateSection: jest.fn() };
+    mdsTracker = { setSectionFields: jest.fn(), updateSection: jest.fn() };
 
     await TestBed.configureTestingModule({
       imports: [SectionGeographyComponent],
@@ -60,6 +60,7 @@ describe('SectionGeographyComponent', () => {
     component.geographicLocationBody.geo_scope_id = GeoScopeEnum.REGIONAL;
     component.geographicLocationBody.has_regions = true;
     component.geographicLocationBody.regions = [];
+    component.extraGeographicLocationBody.has_extra_geo_scope = false;
     expect(component.regionsSelectionMissing).toBe(true);
     expect(component.isGeographyComplete()).toBe(false);
 
@@ -72,6 +73,7 @@ describe('SectionGeographyComponent', () => {
     component.geographicLocationBody.geo_scope_id = GeoScopeEnum.COUNTRY;
     component.geographicLocationBody.has_countries = true;
     component.geographicLocationBody.countries = [];
+    component.extraGeographicLocationBody.has_extra_geo_scope = false;
     expect(component.countriesSelectionMissing).toBe(true);
     expect(component.isGeographyComplete()).toBe(false);
 
@@ -79,13 +81,20 @@ describe('SectionGeographyComponent', () => {
     expect(component.isGeographyComplete()).toBe(true);
   });
 
-  it('should require at least one country for Sub-national scope', () => {
+  it('should require countries and sub-national details for Sub-national scope', () => {
     component.geographicLocationBody.geo_scope_id = GeoScopeEnum.SUB_NATIONAL;
     component.geographicLocationBody.has_countries = true;
     component.geographicLocationBody.countries = [];
+    component.extraGeographicLocationBody.has_extra_geo_scope = false;
     expect(component.isGeographyComplete()).toBe(false);
 
-    component.geographicLocationBody.countries = [{ id: 10, name: 'Kenya' }];
+    component.geographicLocationBody.countries = [{ id: 10, name: 'Kenya', sub_national: [] }];
+    expect(component.subNationalSelectionMissing).toBe(true);
+    expect(component.isGeographyComplete()).toBe(false);
+
+    component.geographicLocationBody.countries = [
+      { id: 10, name: 'Kenya', sub_national: [{ code: 'KE-01', name: 'Nairobi' }] },
+    ];
     expect(component.isGeographyComplete()).toBe(true);
   });
 
@@ -95,19 +104,48 @@ describe('SectionGeographyComponent', () => {
     component.geographicLocationBody.countries = [{ id: 10, name: 'Kenya' }];
     component.geographicLocationBody.has_regions = true;
     component.geographicLocationBody.regions = [];
+    component.extraGeographicLocationBody.has_extra_geo_scope = false;
     expect(component.regionsSelectionMissing).toBe(true);
     expect(component.isGeographyComplete()).toBe(false);
   });
 
-  it('should update MDS only when geography is complete', () => {
+  it('should require Yes/No for extra geographic areas on non-Global scopes', () => {
+    component.geographicLocationBody.geo_scope_id = GeoScopeEnum.REGIONAL;
+    component.geographicLocationBody.has_regions = true;
+    component.geographicLocationBody.regions = [{ id: 1, name: 'SSA' }];
+    component.extraGeographicLocationBody.has_extra_geo_scope = null;
+    expect(component.extraScopeAnswerMissing).toBe(true);
+    expect(component.isGeographyComplete()).toBe(false);
+
+    component.extraGeographicLocationBody.has_extra_geo_scope = false;
+    expect(component.isGeographyComplete()).toBe(true);
+  });
+
+  it('should publish dependent MDS fields for Regional scope', () => {
     component.geographicLocationBody.geo_scope_id = GeoScopeEnum.REGIONAL;
     component.geographicLocationBody.has_regions = true;
     component.geographicLocationBody.regions = [];
+    component.extraGeographicLocationBody.has_extra_geo_scope = null;
     component.updateTracker();
-    expect(mdsTracker.updateSection).toHaveBeenCalledWith('geography', 0);
+
+    expect(mdsTracker.setSectionFields).toHaveBeenCalledWith(
+      'geography',
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'geo-scope', filled: true }),
+        expect.objectContaining({ key: 'regions', filled: false }),
+        expect.objectContaining({ key: 'extra-geo-answer', filled: false }),
+      ])
+    );
 
     component.geographicLocationBody.regions = [{ id: 1, name: 'SSA' }];
+    component.extraGeographicLocationBody.has_extra_geo_scope = false;
     component.updateTracker();
-    expect(mdsTracker.updateSection).toHaveBeenCalledWith('geography', 1);
+    expect(mdsTracker.setSectionFields).toHaveBeenCalledWith(
+      'geography',
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'regions', filled: true }),
+        expect.objectContaining({ key: 'extra-geo-answer', filled: true }),
+      ])
+    );
   });
 });

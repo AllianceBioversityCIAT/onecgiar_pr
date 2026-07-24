@@ -15,7 +15,7 @@ describe('SectionContributorsComponent', () => {
     saveContributors: jest.Mock;
     fieldStatus: ReturnType<typeof signal>;
   };
-  let mdsTracker: { setTotalFields: jest.Mock; updateSection: jest.Mock };
+  let mdsTracker: { setTotalFields: jest.Mock; updateSection: jest.Mock; setSectionFields: jest.Mock };
 
   beforeEach(async () => {
     autoSave = {
@@ -23,7 +23,7 @@ describe('SectionContributorsComponent', () => {
       saveContributors: jest.fn(),
       fieldStatus: signal({}),
     };
-    mdsTracker = { setTotalFields: jest.fn(), updateSection: jest.fn() };
+    mdsTracker = { setTotalFields: jest.fn(), updateSection: jest.fn(), setSectionFields: jest.fn() };
 
     await TestBed.configureTestingModule({
       imports: [SectionContributorsComponent],
