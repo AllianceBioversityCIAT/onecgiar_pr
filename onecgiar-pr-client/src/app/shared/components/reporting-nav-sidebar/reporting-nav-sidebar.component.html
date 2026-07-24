@@ -100,44 +100,48 @@
   </div>
 
   <div hlmSidebarFooter class="border-sidebar-border gap-2 border-t p-2">
-    <!-- Quick actions moved from the top header -->
-    <div class="flex items-center gap-1 px-1">
-      <a
-        routerLink="/whats-new"
-        routerLinkActive
-        #rlaWhatsNew="routerLinkActive"
-        title="What's new"
-        aria-label="What's new"
-        class="border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent flex size-9 items-center justify-center rounded-lg border bg-white transition-colors"
-        [class.bg-sidebar-accent]="rlaWhatsNew.isActive">
-        <i class="material-icons-round text-[19px]" aria-hidden="true">rocket_launch</i>
-      </a>
+    <!-- Extra tools (not primary nav): release notes, notifications, text size -->
+    <div class="flex flex-col gap-2 px-1 pt-0.5" role="group" aria-label="Extra tools">
+      <div class="flex items-center gap-1">
+        <a
+          routerLink="/whats-new"
+          routerLinkActive
+          #rlaWhatsNew="routerLinkActive"
+          title="What's new"
+          aria-label="What's new"
+          class="border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent flex size-9 items-center justify-center rounded-lg border bg-white transition-colors"
+          [class.bg-sidebar-accent]="rlaWhatsNew.isActive">
+          <i class="material-icons-round text-[19px]" aria-hidden="true">rocket_launch</i>
+        </a>
 
-      <button
-        type="button"
-        (click)="goToNotifications()"
-        title="Notifications"
-        aria-label="Notifications"
-        class="border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent relative flex size-9 items-center justify-center rounded-lg border bg-white transition-colors">
-        <i class="material-icons-round text-[19px]" aria-hidden="true">notifications</i>
-        @if (notificationBadgeCount() > 0) {
-          <span class="absolute -right-1 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-[var(--pr-color-red-300)] px-1 text-[9px] font-bold leading-[16px] text-white">{{ notificationBadgeCount() }}</span>
-        }
-      </button>
+        <button
+          type="button"
+          (click)="goToNotifications()"
+          title="Notifications"
+          aria-label="Notifications"
+          class="border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent relative flex size-9 items-center justify-center rounded-lg border bg-white transition-colors">
+          <i class="material-icons-round text-[19px]" aria-hidden="true">notifications</i>
+          @if (notificationBadgeCount() > 0) {
+            <span class="absolute -right-1 -top-1 flex min-w-[16px] items-center justify-center rounded-full bg-[var(--pr-color-red-300)] px-1 text-[9px] font-bold leading-[16px] text-white">{{ notificationBadgeCount() }}</span>
+          }
+        </button>
 
-      <button
-        type="button"
-        cdkOverlayOrigin
-        #fontTrigger="cdkOverlayOrigin"
-        (click)="fontMenuOpen.set(!fontMenuOpen())"
-        title="Text size"
-        aria-label="Text size"
-        [attr.aria-expanded]="fontMenuOpen()"
-        class="border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent flex size-9 items-center justify-center rounded-lg border bg-white transition-colors"
-        [class.bg-sidebar-accent]="fontMenuOpen()">
-        <i class="material-icons-round text-[19px]" aria-hidden="true">format_size</i>
-      </button>
+        <button
+          type="button"
+          cdkOverlayOrigin
+          #fontTrigger="cdkOverlayOrigin"
+          (click)="fontMenuOpen.set(!fontMenuOpen())"
+          title="Text size"
+          aria-label="Text size"
+          [attr.aria-expanded]="fontMenuOpen()"
+          class="border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent flex size-9 items-center justify-center rounded-lg border bg-white transition-colors"
+          [class.bg-sidebar-accent]="fontMenuOpen()">
+          <i class="material-icons-round text-[19px]" aria-hidden="true">format_size</i>
+        </button>
+      </div>
     </div>
+
+    <div hlmSidebarSeparator class="mx-0"></div>
 
     <!-- User identity + menu -->
     <button
