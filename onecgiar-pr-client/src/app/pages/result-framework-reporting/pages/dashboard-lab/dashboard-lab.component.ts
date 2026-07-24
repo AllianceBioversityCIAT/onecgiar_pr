@@ -107,13 +107,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private pendingFilters: { typ: string | null; st: string | null; q: string } | null = null;
 
   /**
-   * The landing surface is the workspace overview — no program in context. A
-   * program is only "entered" when the user picks one, which keeps the guided
-   * entry and the guide itself reachable before any program is chosen.
+   * Always on a program surface. Lands on the user's first My Program when the
+   * list loads (unless `?sp=` already points at one).
    */
-  readonly scope = signal<'overview' | 'program'>('overview');
+  readonly scope = signal<'overview' | 'program'>('program');
 
-  /** Currently selected program id; null → fall back to the first available. */
+  /** Currently selected program id; null until My Programs (or `?sp=`) resolve. */
   readonly selectedId = signal<number | null>(null);
   /** Free-text filter for the sidebar list. */
   readonly query = signal<string>('');
@@ -194,12 +193,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return {
       hasMyPrograms: this.myPrograms().length > 0,
       hasOtherPrograms: this.otherPrograms().length > 0 || this.otherProjects().length > 0,
-      // On the overview no program blocks are rendered, so claiming one is selected
-      // would point the tour at elements that do not exist.
-      hasSelectedProgram: this.scope() === 'program' && !!this.selected(),
-      hasAows: this.scope() === 'program' && this.aows().length > 0,
-      hasCategories: this.scope() === 'program' && (this.groupedSummaries().outputs.length > 0 || this.groupedSummaries().outcomes.length > 0),
-      hasCenters: this.scope() === 'program' && this.myCenters().length > 0,
+      hasSelectedProgram: !!this.selected(),
+      hasAows: this.aows().length > 0,
+      hasCategories: this.groupedSummaries().outputs.length > 0 || this.groupedSummaries().outcomes.length > 0,
+      hasCenters: this.myCenters().length > 0,
       inAowView: this.viewMode() === 'aow',
       hasIndicators: this.indicatorGroups().length > 0
     };
@@ -399,10 +396,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
     // Only the guided flow claims the whole viewport (focus mode). Inside an open
     // Area of Work the header stays, but trimmed to the two reporting entries so it
-    // does not compete with the AOW's own navigation. Neither applies on the
-    // overview or the program bento.
+    // does not compete with the AOW's own navigation.
     effect(() => this.dataControlSE.focusMode.set(this.guidedOpen()));
     effect(() => this.dataControlSE.slimNav.set(this.viewMode() === 'aow'));
+
+    // Default landing: first assigned Science Program under My Programs (skip when
+    // `?sp=` is present — restoreFromUrl / the queryParam subscription own that).
+    effect(() => {
+      if (this.selectedId() != null) return;
+      const rawSp = this.route.snapshot.queryParamMap.get('sp');
+      if (rawSp && !Number.isNaN(Number(rawSp))) return;
+      const first = this.homeSE.mySPsList()[0];
+      if (!first) return;
+      this.select(first);
+    });
 
     // In AOW mode, keep a valid AOW selected when the program changes.
     effect(() => {
@@ -489,8 +496,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly selected = computed<SPProgress | null>(() => {
     const list = this.allPrograms();
     const id = this.selectedId();
-    if (id == null) return list[0] ?? null;
-    return list.find(sp => sp.initiativeId === id) ?? list[0] ?? null;
+    if (id == null) return this.homeSE.mySPsList()[0] ?? null;
+    return list.find(sp => sp.initiativeId === id) ?? this.homeSE.mySPsList()[0] ?? null;
   });
 
   /** Phase chip taken from the first program's latest version. */
@@ -633,13 +640,6 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // If the tour is parked on "pick a program", this is the cue it was waiting for.
     // Deferred: the program's blocks must be in the DOM before they can be highlighted.
     setTimeout(() => this.guideSE.notify('program-selected', this.guideContext()), 350);
-  }
-
-  /** Back to the workspace overview: no program in context. */
-  goToOverview(): void {
-    this.scope.set('overview');
-    this.viewMode.set('home');
-    this.activeAowCode.set(null);
   }
 
   /** Fetch (and cache) the Areas of Work for a program by its official code. */
@@ -1019,13 +1019,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return this.latestVersion(sp)?.totalResults ?? sp.totalResults ?? 0;
   }
 
-  /**
-   * `selected()` always resolves to a program (it falls back to the first one), so
-   * it cannot answer "is this one highlighted?" on its own — on the overview no
-   * program is in context and none should look picked.
-   */
   isActive(sp: SPProgress): boolean {
-    return this.scope() === 'program' && this.selected()?.initiativeId === sp.initiativeId;
+    return this.selected()?.initiativeId === sp.initiativeId;
   }
 
   private filter(list: SPProgress[]): SPProgress[] {

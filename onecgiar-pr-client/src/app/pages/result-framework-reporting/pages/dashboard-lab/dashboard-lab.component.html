@@ -231,60 +231,7 @@
           : 'px-3 pb-4 pt-3')
       : 'px-6 pb-10 pt-5'
   ">
-  @if (scope() === 'overview') {
-    <!-- ==================== WORKSPACE OVERVIEW — no program in context ==================== -->
-    <div class="mx-auto w-full max-w-[1100px]">
-      <h1 class="m-0 text-[30px] font-bold leading-tight tracking-[-0.02em] text-[var(--pr-color-secondary-400)]">Reporting workspace</h1>
-      <p class="m-0 mt-2 max-w-[62ch] text-[14px] leading-relaxed text-[var(--pr-color-accents-6)]">
-        Start a report from here, or pick a Science Program on the left to see what it has planned.
-      </p>
-
-      <div class="mt-7 grid grid-cols-2 gap-4 max-[900px]:grid-cols-1">
-        <!-- start reporting -->
-        <button
-          type="button"
-          data-guide="guided-entry"
-          (click)="openGuided()"
-          class="group flex appearance-none flex-col items-start gap-3 rounded-[20px] border-0 bg-[linear-gradient(150deg,#6b6dc4_0%,#5f5cb4_100%)] p-6 text-left text-white shadow-[0_14px_34px_rgba(100,97,188,0.38)] transition-transform duration-200 hover:-translate-y-1">
-          <span class="inline-flex size-12 items-center justify-center rounded-2xl bg-white/20">
-            <span class="material-icons-round text-[24px]">auto_awesome</span>
-          </span>
-          <span class="text-[20px] font-bold leading-tight tracking-[-0.01em]">Report a result</span>
-          <span class="text-[13.5px] leading-relaxed text-white/85">
-            The guided flow asks whether it was planned or emerging, then walks you to the exact place it belongs.
-          </span>
-          <span class="mt-1 flex items-center gap-1 text-[13px] font-semibold">
-            Start
-            <span class="material-icons-round text-[17px] transition-transform group-hover:translate-x-0.5">arrow_forward</span>
-          </span>
-        </button>
-
-        <!-- learn how -->
-        <button
-          type="button"
-          (click)="startGuide()"
-          class="group flex appearance-none flex-col items-start gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-6 text-left shadow-[0_8px_22px_rgba(30,32,47,0.06)] transition-transform duration-200 hover:-translate-y-1">
-          <span class="inline-flex size-12 items-center justify-center rounded-2xl bg-[var(--pr-color-primary-25)]">
-            <span class="material-icons-round text-[24px] text-[var(--pr-color-primary-300)]">help_outline</span>
-          </span>
-          <span class="text-[20px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Not sure how to report?</span>
-          <span class="text-[13.5px] leading-relaxed text-[var(--pr-color-accents-6)]">
-            A short walkthrough of this screen: where planned indicators live, how emerging results differ, and what each action does.
-          </span>
-          <span class="mt-1 flex items-center gap-1 text-[13px] font-semibold text-[var(--pr-color-primary-300)]">
-            See the guide
-            <span class="material-icons-round text-[17px]">play_arrow</span>
-          </span>
-        </button>
-      </div>
-
-      <!-- global metrics land here once we agree on which ones -->
-      <div class="mt-4 rounded-[20px] border border-dashed border-[rgba(30,32,47,0.14)] bg-white/60 px-6 py-10 text-center">
-        <span class="material-icons-round text-[24px] text-[var(--pr-color-accents-3)]">insights</span>
-        <p class="m-0 mt-1.5 text-[13px] text-[var(--pr-color-accents-5)]">Portfolio-wide metrics go here.</p>
-      </div>
-    </div>
-  } @else if (selected(); as sp) {
+  @if (selected(); as sp) {
     @if (viewMode() === 'aow') {
       <!-- 3-view switch — moved here from the panel so it shows in the Full view too -->
       <div class="mb-4 flex w-fit items-center gap-0.5 rounded-xl border border-[rgba(30,32,47,0.07)] bg-white p-1 text-[12px] font-semibold shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
@@ -1047,11 +994,7 @@
         </button>
       </article>
 
-      <!-- Card 7 (guide) removed on the program view — the "Not sure how to report?"
-           entry already lives on the workspace overview. -->
-
-      <!-- Card 6 — My CGIAR Centers. Spans the freed column so no gap is left where
-           the guide card used to sit. Hovering swells it and floats the full list out. -->
+      <!-- Card 6 — My CGIAR Centers. -->
       <article
         class="col-start-1 col-span-4 row-start-3 flex min-h-[120px] flex-col gap-2.5 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-span-2 max-[1180px]:col-start-auto max-[1180px]:row-start-auto max-[620px]:col-span-1">
         <div class="flex shrink-0 items-baseline gap-2">
