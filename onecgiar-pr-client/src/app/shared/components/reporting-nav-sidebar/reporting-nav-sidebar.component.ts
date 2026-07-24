@@ -217,6 +217,16 @@ export class ReportingNavSidebarComponent {
     { initialValue: null }
   );
 
+  /** True only on Planned ToC — drives showing/hiding the Science Programs block. */
+  readonly isPlannedActive = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      startWith(null),
+      map(() => this.router.url.split('?')[0] === this.rfrPlannedPath)
+    ),
+    { initialValue: false }
+  );
+
   constructor() {
     this.ensureRfrLoaded();
     // Expand collapsibles when landing inside their module (don't force-collapse on leave).

@@ -82,7 +82,8 @@
                       <span>Results planned in your 2026 ToC</span>
                     </a>
 
-                    @if (!isCollapsed()) {
+                    <!-- Programs only while Planned ToC is active — collapses when another option is selected -->
+                    @if (!isCollapsed() && isPlannedActive()) {
                       @if (homeSE.isLoadingSPLists()) {
                         <div class="text-sidebar-foreground/55 px-2 py-1.5 text-[10px]">Loading programs…</div>
                       } @else {
@@ -109,7 +110,7 @@
                                         hlmSidebarMenuSubButton
                                         [routerLink]="rfrPlannedPath"
                                         [queryParams]="{ sp: sp.initiativeId }"
-                                        [isActive]="isRfrSectionActive(rfrPlannedPath) && sp.initiativeId === activeSpId()"
+                                        [isActive]="sp.initiativeId === activeSpId()"
                                         [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
                                         <img
                                           [src]="iconSrc(sp)"
