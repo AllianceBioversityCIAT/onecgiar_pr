@@ -128,6 +128,28 @@
   box-sizing: border-box;
 }
 
+// Planned ToC — keep typology multiselect panel wide + above scrolled list content.
+:host ::ng-deep .planned-type-filter {
+  .custom_select .field {
+    width: 100%;
+  }
+
+  .custom_select .field .options {
+    min-width: 100%;
+    width: max(100%, 420px);
+    z-index: 40;
+  }
+}
+
+// Yellow hit marks from `highlightSearch` pipe (innerHTML).
+:host ::ng-deep mark.planned-search-hit {
+  background: #fde047;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+  box-decoration-break: clone;
+}
+
 // ---------------------------------------------------------------------------
 // My CGIAR Centers. The card cycles on its own; hovering swells it slightly and
 // floats the full list out below, each row rising in sequence. No click needed.

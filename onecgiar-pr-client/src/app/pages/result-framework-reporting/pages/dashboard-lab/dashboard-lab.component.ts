@@ -9,6 +9,14 @@ import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.i
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { HighlightSearchPipe } from './pipes/highlight-search.pipe';
+import {
+  comparePlannedSearchEvaluation,
+  indicatorSearchHaystack,
+  parsePlannedSearch,
+  plannedSearchEvaluate,
+  type PlannedSearchEvaluation
+} from './pipes/planned-search.util';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { GuidedCreationComponent } from './components/guided-creation/guided-creation.component';
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
@@ -92,7 +100,7 @@ export type RfrView = 'dashboard' | 'planned' | 'emerging' | 'centers';
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
-  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent],
+  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent, HighlightSearchPipe],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -417,6 +425,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       if (code) {
         this.loadAows(code);
         this.loadSummaries(code);
+        this.plannedHloAowCode.set(null);
+        this.plannedTypeFilter.set([]);
+        this.plannedSearch.set('');
+      }
+    });
+
+    // By AOW requires a selected AOW — pick the first once the list is ready (or after program change).
+    effect(() => {
+      if (this.plannedBrowseView() !== 'byAow') return;
+      const list = this.aows();
+      if (!list.length) return;
+      const active = this.plannedHloAowCode();
+      if (!active || !list.some(a => a.code === active)) {
+        this.setPlannedHloAow(list[0].code);
       }
     });
 
@@ -753,16 +775,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return this.aows().map(aow => {
       const key = `${sp}::${aow.code}`;
       const toc = map.get(key);
-      const groups = toc ? [...(toc.outputs ?? []), ...(toc.outcomes ?? [])] : [];
-      const indicators = groups.flatMap((g: any) =>
-        (g?.indicators ?? []).map((i: any) => ({
-          ...i,
-          __aowCode: aow.code,
-          __hlo: g?.result_title,
-          toc_result_id: g?.toc_result_id,
-          __hloNode: g
-        }))
-      );
+      const fromTier = (groups: any[] | undefined, tier: 'output' | 'outcome') =>
+        (groups ?? []).flatMap((g: any) =>
+          (g?.indicators ?? []).map((i: any) => ({
+            ...i,
+            __aowCode: aow.code,
+            __hlo: g?.result_title,
+            __tier: tier,
+            toc_result_id: g?.toc_result_id,
+            __hloNode: g
+          }))
+        );
+      const indicators = [...fromTier(toc?.outputs, 'output'), ...fromTier(toc?.outcomes, 'outcome')];
       return { aow, indicators, count: indicators.length, loading: !toc && loadingKeys.has(key) };
     });
   });
@@ -796,48 +820,190 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /**
    * Planned-ToC browse modes (home surface only — independent of AoW-detail `panelView`).
-   * Default = Areas of Work; HLO = high-level output groups; Indicators = flat list.
+   * Default = Areas of Work list; By AOW = one AOW + typology filter; Indicators = flat list.
    */
-  readonly plannedBrowseView = signal<'aows' | 'hlo' | 'indicators'>('aows');
+  readonly plannedBrowseView = signal<'aows' | 'byAow' | 'indicators'>('aows');
   readonly plannedBrowseViews = [
     { id: 'aows' as const, label: 'Areas of Work', icon: 'account_tree' },
-    { id: 'hlo' as const, label: 'By HLO', icon: 'layers' },
+    { id: 'byAow' as const, label: 'By AOW', icon: 'folder_open' },
     { id: 'indicators' as const, label: 'Indicators', icon: 'insights' }
   ];
   readonly expandedPlannedHlos = signal<Set<string>>(new Set());
-  /** Layout for Indicators / HLO lists on the planned surface. */
+  /** Layout for By AOW / Indicators lists on the planned surface. */
   readonly plannedLayout = signal<'cards' | 'table'>('cards');
+  /** Selected AOW code for the By AOW browse mode. */
+  readonly plannedHloAowCode = signal<string | null>(null);
+  /**
+   * Multiselect of indicator typologies (`type_name`).
+   * Bound to `app-pr-multi-select` as `{ name }[]`. Empty = all.
+   */
+  readonly plannedTypeFilter = signal<{ name: string }[]>([]);
+  /** Client-side text search across Planned browse modes. */
+  readonly plannedSearch = signal('');
 
-  setPlannedBrowseView(view: 'aows' | 'hlo' | 'indicators'): void {
+  /** True when search text and/or typology multiselect are active. */
+  readonly hasPlannedFilters = computed(
+    () => !!this.plannedSearch().trim() || this.plannedTypeFilter().length > 0
+  );
+
+  clearPlannedFilters(): void {
+    this.plannedSearch.set('');
+    this.plannedTypeFilter.set([]);
+  }
+
+  setPlannedBrowseView(view: 'aows' | 'byAow' | 'indicators'): void {
     this.plannedBrowseView.set(view);
-    if (view !== 'aows') this.loadAllTocs();
+    this.plannedTypeFilter.set([]);
+    this.plannedSearch.set('');
+    if (view === 'byAow') {
+      const code = this.plannedHloAowCode() ?? this.aows()[0]?.code ?? null;
+      if (code) this.setPlannedHloAow(code);
+    } else if (view === 'indicators') {
+      this.loadAllTocs();
+    }
   }
 
   setPlannedLayout(layout: 'cards' | 'table'): void {
     this.plannedLayout.set(layout);
   }
 
-  /** Program-wide indicators grouped by HLO (`result_title`). */
-  readonly indicatorsByHlo = computed(() => {
-    const buckets = new Map<string, { title: string; indicators: any[]; aowCodes: Set<string> }>();
-    for (const ind of this.allPanelIndicators()) {
-      const title = (ind.__hlo as string) || 'Ungrouped';
-      let bucket = buckets.get(title);
-      if (!bucket) {
-        bucket = { title, indicators: [], aowCodes: new Set() };
-        buckets.set(title, bucket);
-      }
-      bucket.indicators.push(ind);
-      if (ind.__aowCode) bucket.aowCodes.add(ind.__aowCode);
+  setPlannedHloAow(code: string | null): void {
+    this.plannedHloAowCode.set(code);
+    this.expandedPlannedHlos.set(new Set());
+    this.plannedTypeFilter.set([]);
+    this.plannedSearch.set('');
+    const sp = this.selected()?.initiativeCode;
+    if (sp && code) this.loadToc(sp, code);
+  }
+
+  onPlannedTypeFilterChange(selected: { name: string }[] | null): void {
+    // Keep stable `{ name }` objects only — pr-multi-select spreads clones with
+    // `selected`/`new` flags; those must not feed back into ngModel or checkboxes desync.
+    const next = (Array.isArray(selected) ? selected : [])
+      .map(t => (typeof t === 'string' ? t : t?.name))
+      .filter((name): name is string => !!name)
+      .map(name => ({ name }));
+    this.plannedTypeFilter.set(next);
+  }
+
+  /** Options for the Area of Work select (By AOW mode). */
+  readonly plannedAowSelectOptions = computed(() =>
+    this.aows().map(a => ({ label: `${a.code} · ${a.name}`, value: a.code }))
+  );
+
+  /**
+   * Typology options for the multiselect (`type_name` from indicators).
+   * By AOW → High-Level Output indicators of the selected AOW; Indicators → whole program.
+   */
+  readonly plannedTypologyMultiOptions = computed(() => {
+    const view = this.plannedBrowseView();
+    const code = this.plannedHloAowCode();
+    const source =
+      view === 'byAow' && code
+        ? (this.indicatorsForAow(code)?.indicators ?? []).filter(i => i?.__tier === 'output')
+        : this.allPanelIndicators();
+    const set = new Set<string>();
+    for (const ind of source) {
+      if (ind?.type_name) set.add(String(ind.type_name));
     }
-    return [...buckets.values()].map(b => ({
-      title: b.title,
-      indicators: b.indicators,
-      count: b.indicators.length,
-      aowCount: b.aowCodes.size,
-      split: this.splitGroupTitle(b.title)
-    }));
+    return [...set].sort((a, b) => a.localeCompare(b)).map(name => ({ name }));
   });
+
+  readonly plannedHloLoading = computed(() => {
+    const code = this.plannedHloAowCode();
+    if (!code) return false;
+    return this.indicatorsForAow(code)?.loading ?? false;
+  });
+
+  /**
+   * Areas of Work filtered + ranked by Planned search.
+   * 1 phrase → 2 unordered tokens → 3 fuzzy similarity (typos).
+   */
+  readonly plannedFilteredAows = computed(() => {
+    const parsed = parsePlannedSearch(this.plannedSearch());
+    const list = this.aows();
+    if (!parsed.phrase) return list;
+
+    return list
+      .map(aow => {
+        let best = plannedSearchEvaluate(`${aow.code} ${aow.name}`, parsed);
+        for (const ind of this.indicatorsForAow(aow.code)?.indicators ?? []) {
+          const next = plannedSearchEvaluate(indicatorSearchHaystack(ind), parsed);
+          if (comparePlannedSearchEvaluation(next, best) < 0) best = next;
+        }
+        return { aow, eval: best };
+      })
+      .filter(x => x.eval.rank > 0)
+      .sort(
+        (a, b) =>
+          comparePlannedSearchEvaluation(a.eval, b.eval) || String(a.aow.code).localeCompare(String(b.aow.code))
+      )
+      .map(x => x.aow);
+  });
+
+  /** High-Level Output groups for the selected AOW, filtered/ranked by typology + text search. */
+  readonly plannedHloGroups = computed(() => {
+    const code = this.plannedHloAowCode();
+    if (!code) return [];
+    const typeSet = new Set(this.plannedTypeFilter().map(t => t?.name).filter(Boolean));
+    const parsed = parsePlannedSearch(this.plannedSearch());
+    let inds = (this.indicatorsForAow(code)?.indicators ?? []).filter(i => i?.__tier === 'output');
+    if (typeSet.size) inds = inds.filter(i => typeSet.has(i?.type_name));
+    return this.rankPlannedHloGroups(this.groupIndicatorsByHlo(inds), parsed);
+  });
+
+  /** Flat indicators for Indicators mode — typology + ranked text search. */
+  readonly plannedFilteredIndicators = computed(() => {
+    const typeSet = new Set(this.plannedTypeFilter().map(t => t?.name).filter(Boolean));
+    const parsed = parsePlannedSearch(this.plannedSearch());
+    let inds = this.allPanelIndicators();
+    if (typeSet.size) inds = inds.filter(i => typeSet.has(i?.type_name));
+    if (!parsed.phrase) return inds;
+    return inds
+      .map(ind => ({ ind, eval: plannedSearchEvaluate(indicatorSearchHaystack(ind), parsed) }))
+      .filter(x => x.eval.rank > 0)
+      .sort((a, b) => comparePlannedSearchEvaluation(a.eval, b.eval))
+      .map(x => x.ind);
+  });
+
+  /** HLO groups inside an expanded AoW card, filtered/ranked by Planned search. */
+  plannedAowHloGroups(indicators: any[] | null | undefined) {
+    return this.rankPlannedHloGroups(this.groupIndicatorsByHlo(indicators), parsePlannedSearch(this.plannedSearch()));
+  }
+
+  /**
+   * Keep groups that match (phrase / unordered tokens / fuzzy).
+   * Order: 1 exact phrase → 2 split words → 3 average similarity (typos).
+   */
+  private rankPlannedHloGroups(
+    groups: { title: string; indicators: any[]; split: { code: string | null; name: string } }[],
+    parsed: ReturnType<typeof parsePlannedSearch>
+  ) {
+    if (!parsed.phrase) {
+      return groups.map(g => ({ ...g, count: g.indicators.length }));
+    }
+
+    return groups
+      .map(g => {
+        const parentEval = plannedSearchEvaluate(String(g.title ?? ''), parsed);
+        const rankedKids = g.indicators
+          .map(ind => ({ ind, eval: plannedSearchEvaluate(indicatorSearchHaystack(ind), parsed) }))
+          .sort((a, b) => comparePlannedSearchEvaluation(a.eval, b.eval));
+
+        // Parent hit → keep all children (matches first). Else → only matching children.
+        const ordered =
+          parentEval.rank > 0 ? rankedKids.map(x => x.ind) : rankedKids.filter(x => x.eval.rank > 0).map(x => x.ind);
+
+        const bestChild = rankedKids.reduce<PlannedSearchEvaluation>(
+          (best, x) => (comparePlannedSearchEvaluation(x.eval, best) < 0 ? x.eval : best),
+          { rank: 0, score: 0, similarWords: [] }
+        );
+        const groupEval = parentEval.rank > 0 ? parentEval : bestChild;
+        return { ...g, indicators: ordered, count: ordered.length, eval: groupEval };
+      })
+      .filter(g => g.count > 0)
+      .sort((a, b) => comparePlannedSearchEvaluation(a.eval, b.eval));
+  }
 
   /** Group one AoW's indicators by HLO for the expanded Areas-of-Work cards. */
   groupIndicatorsByHlo(indicators: any[] | null | undefined): { title: string; indicators: any[]; split: { code: string | null; name: string } }[] {
