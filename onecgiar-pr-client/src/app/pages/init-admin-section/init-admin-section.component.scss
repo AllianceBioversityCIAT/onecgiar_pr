@@ -1,8 +1,8 @@
-// Top header is gone on this surface — only clear the premium admin panel.
+:host {
+  display: block;
+}
+
 .local_container {
-  .router {
-    margin-left: 320px; // premium sidebar margin (10) + width (300) + gap (10)
-    padding-top: 16px;
-    box-sizing: border-box;
-  }
+  padding-top: 16px;
+  box-sizing: border-box;
 }

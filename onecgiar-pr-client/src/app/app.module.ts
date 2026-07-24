@@ -3,8 +3,6 @@ import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { NavigationBarComponent } from './shared/components/navigation-bar/navigation-bar.component';
-import { HeaderPanelComponent } from './shared/components/header-panel/header-panel.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ExternalToolsComponent } from './shared/components/external-tools/external-tools.component';
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
@@ -19,19 +17,19 @@ import { ChangePhaseModalModule } from './shared/components/change-phase-modal/c
 import { FooterModule } from './shared/components/footer/footer.module';
 import { PrDialogComponent } from './shared/components/pr-dialog/pr-dialog.component';
 import { PrToastComponent } from './shared/components/pr-toast';
-import { PopUpNotificationItemComponent } from './shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
 // import { SocketIoModule } from 'ngx-socket-io';
 // import { WebsocketService } from './sockets/websocket.service';
 // import { environment } from '../environments/environment';
 import { ClarityService } from './shared/services/clarity.service';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { UserRolesInfoModalComponent } from './shared/components/user-roles-info-modal/user-roles-info-modal.component';
-import { FormatTimeAgoPipe } from './shared/pipes/format-time-ago/format-time-ago.pipe';
 import { AiAssistantPanelComponent } from './shared/components/ai-assistant/ai-assistant-panel.component';
 import { ASSISTANT_ENGINE } from './shared/components/ai-assistant/engine/assistant-engine.types';
 import { WebLlmEngineService } from './shared/components/ai-assistant/engine/web-llm-engine.service';
 import { RouteReuseStrategy } from '@angular/router';
 import { PrmsRouteReuseStrategy } from './shared/components/ai-assistant/prms-route-reuse.strategy';
+import { HlmSidebarImports } from '@spartan/sidebar';
+import { ReportingNavSidebarComponent } from './shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component';
 
 function initializeClarityService(clarityService: ClarityService) {
   return () => clarityService.init();
@@ -51,13 +49,11 @@ function initializeClarityService(clarityService: ClarityService) {
     FooterModule,
     PrDialogComponent,
     PrToastComponent,
-    HeaderPanelComponent,
-    NavigationBarComponent,
     TawkComponent,
-    FormatTimeAgoPipe,
-    PopUpNotificationItemComponent,
     UserRolesInfoModalComponent,
-    AiAssistantPanelComponent
+    AiAssistantPanelComponent,
+    ...HlmSidebarImports,
+    ReportingNavSidebarComponent
     // SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
   ],
   providers: [

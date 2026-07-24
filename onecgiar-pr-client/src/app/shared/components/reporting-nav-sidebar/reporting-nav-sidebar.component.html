@@ -1,18 +1,40 @@
-<hlm-sidebar
-  collapsible="none"
-  class="bg-sidebar text-sidebar-foreground border-sidebar-border sticky top-0 flex h-svh w-(--sidebar-width) shrink-0 flex-col border-r">
-  <div hlmSidebarHeader class="gap-2 p-3">
-    <div class="flex items-center gap-2 px-1">
-      <span class="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold">PR</span>
-      <span class="text-sm font-semibold leading-tight">Reporting</span>
+<hlm-sidebar collapsible="icon">
+  <div hlmSidebarHeader class="gap-2 p-2">
+    <div class="flex items-center gap-2" [class.justify-between]="!isCollapsed()" [class.justify-center]="isCollapsed()">
+      <div class="flex min-w-0 items-center gap-2 px-1" [class.justify-center]="isCollapsed()">
+        <span class="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold">PR</span>
+        @if (!isCollapsed()) {
+          <div class="min-w-0 leading-tight">
+            <span class="block text-sm font-semibold">PRMS Reporting</span>
+            @if (reportingPhaseLabel()) {
+              <span class="text-sidebar-foreground/60 block truncate text-[10px]">{{ reportingPhaseLabel() }}</span>
+            }
+          </div>
+        }
+      </div>
+      @if (!isCollapsed()) {
+        <button hlmSidebarTrigger type="button"></button>
+      }
     </div>
-    @if (!isProduction) {
+
+    @if (!isProduction && !isCollapsed()) {
       <span class="mt-1 flex w-max items-center gap-1.5 rounded-full border border-amber-300/70 bg-amber-50 py-[3px] pl-[3px] pr-2.5">
         <span class="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white">
           <i class="material-icons-round text-[12px] leading-none" aria-hidden="true">priority_high</i>
         </span>
         <span class="text-[11px] font-bold leading-none tracking-tight text-amber-800">Testing environment</span>
       </span>
+    }
+
+    @if (isCollapsed()) {
+      <button
+        type="button"
+        class="hover:bg-sidebar-accent text-sidebar-foreground mx-auto flex size-8 items-center justify-center rounded-md"
+        (click)="sidebarSE.toggleSidebar()"
+        aria-label="Expand sidebar"
+        title="Expand sidebar">
+        <ng-icon name="lucidePanelLeft" class="text-[18px]" />
+      </button>
     }
   </div>
 
@@ -23,16 +45,25 @@
           @for (section of sections(); track section.path) {
             @if (section.path === 'result-framework-reporting') {
               <li hlmSidebarMenuItem>
-                <button hlmSidebarMenuButton type="button" (click)="toggleRfr()" [attr.aria-expanded]="rfrExpanded()">
+                <button
+                  hlmSidebarMenuButton
+                  type="button"
+                  (click)="toggleRfr()"
+                  (mouseenter)="openIconFlyout('rfr', $event)"
+                  (mouseleave)="scheduleCloseIconFlyout()"
+                  [attr.aria-expanded]="!isCollapsed() && rfrExpanded()"
+                  [attr.aria-label]="section.prName">
                   <ng-icon name="lucideLayoutDashboard" />
                   <span>{{ section.prName }}</span>
-                  <ng-icon
-                    name="lucideChevronDown"
-                    class="ms-auto text-[16px] transition-transform duration-200"
-                    [class.rotate-180]="rfrExpanded()" />
+                  @if (!isCollapsed()) {
+                    <ng-icon
+                      name="lucideChevronDown"
+                      class="ms-auto text-[16px] transition-transform duration-200"
+                      [class.rotate-180]="rfrExpanded()" />
+                  }
                 </button>
 
-                @if (rfrExpanded()) {
+                @if (!isCollapsed() && rfrExpanded()) {
                   @if (homeSE.isLoadingSPLists()) {
                     <div class="text-sidebar-foreground/55 px-3 py-2 text-xs">Loading programs…</div>
                   } @else {
@@ -80,6 +111,72 @@
                   }
                 }
               </li>
+            } @else if (section.path === 'init-admin-module') {
+              <li hlmSidebarMenuItem>
+                <button
+                  hlmSidebarMenuButton
+                  type="button"
+                  (click)="toggleMyAdmin()"
+                  (mouseenter)="openIconFlyout('my-admin', $event)"
+                  (mouseleave)="scheduleCloseIconFlyout()"
+                  [attr.aria-expanded]="!isCollapsed() && myAdminExpanded()"
+                  [attr.aria-label]="section.prName">
+                  <ng-icon [name]="iconFor(section)" />
+                  <span>{{ section.prName }}</span>
+                  @if (!isCollapsed()) {
+                    <ng-icon
+                      name="lucideChevronDown"
+                      class="ms-auto text-[16px] transition-transform duration-200"
+                      [class.rotate-180]="myAdminExpanded()" />
+                  }
+                </button>
+
+                @if (!isCollapsed() && myAdminExpanded()) {
+                  <ul hlmSidebarMenuSub>
+                    @for (link of myAdminLinks; track link.path) {
+                      <li hlmSidebarMenuSubItem>
+                        <a hlmSidebarMenuSubButton [routerLink]="link.path" [isActive]="isSubLinkActive(link.path)">
+                          <ng-icon [name]="link.icon" />
+                          <span>{{ link.name }}</span>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                }
+              </li>
+            } @else if (section.path === 'admin-module') {
+              <li hlmSidebarMenuItem>
+                <button
+                  hlmSidebarMenuButton
+                  type="button"
+                  (click)="toggleAdminModule()"
+                  (mouseenter)="openIconFlyout('admin-module', $event)"
+                  (mouseleave)="scheduleCloseIconFlyout()"
+                  [attr.aria-expanded]="!isCollapsed() && adminModuleExpanded()"
+                  [attr.aria-label]="section.prName">
+                  <ng-icon [name]="iconFor(section)" />
+                  <span>{{ section.prName }}</span>
+                  @if (!isCollapsed()) {
+                    <ng-icon
+                      name="lucideChevronDown"
+                      class="ms-auto text-[16px] transition-transform duration-200"
+                      [class.rotate-180]="adminModuleExpanded()" />
+                  }
+                </button>
+
+                @if (!isCollapsed() && adminModuleExpanded()) {
+                  <ul hlmSidebarMenuSub>
+                    @for (link of adminModuleLinks; track link.path) {
+                      <li hlmSidebarMenuSubItem>
+                        <a hlmSidebarMenuSubButton [routerLink]="link.path" [isActive]="isSubLinkActive(link.path)">
+                          <ng-icon [name]="link.icon" />
+                          <span>{{ link.name }}</span>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                }
+              </li>
             } @else {
               <li hlmSidebarMenuItem>
                 <a
@@ -87,7 +184,8 @@
                   [routerLink]="'/' + section.path"
                   routerLinkActive
                   #rla="routerLinkActive"
-                  [isActive]="rla.isActive">
+                  [isActive]="rla.isActive"
+                  [tooltip]="section.prName ?? ''">
                   <ng-icon [name]="iconFor(section)" />
                   <span>{{ section.prName }}</span>
                 </a>
@@ -98,11 +196,12 @@
       </div>
     </div>
 
-    <!-- Extra tools — separated from primary nav -->
     <div hlmSidebarSeparator></div>
 
     <div hlmSidebarGroup>
-      <div hlmSidebarGroupLabel>Extras</div>
+      @if (!isCollapsed()) {
+        <div hlmSidebarGroupLabel>Extras</div>
+      }
       <div hlmSidebarGroupContent>
         <ul hlmSidebarMenu role="group" aria-label="Extra tools">
           <li hlmSidebarMenuItem>
@@ -111,16 +210,17 @@
               routerLink="/whats-new"
               routerLinkActive
               #rlaWhatsNew="routerLinkActive"
-              [isActive]="rlaWhatsNew.isActive">
+              [isActive]="rlaWhatsNew.isActive"
+              tooltip="Release notes">
               <ng-icon name="lucideRocket" />
               <span>Release notes</span>
             </a>
           </li>
           <li hlmSidebarMenuItem>
-            <button hlmSidebarMenuButton type="button" (click)="goToNotifications()">
+            <button hlmSidebarMenuButton type="button" tooltip="Notifications" (click)="goToNotifications()">
               <ng-icon name="lucideBell" />
               <span>Notifications</span>
-              @if (notificationBadgeCount() > 0) {
+              @if (notificationBadgeCount() > 0 && !isCollapsed()) {
                 <span class="bg-[var(--pr-color-red-300)] ms-auto flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold leading-[18px] text-white">{{ notificationBadgeCount() }}</span>
               }
             </button>
@@ -129,6 +229,7 @@
             <button
               hlmSidebarMenuButton
               type="button"
+              tooltip="Text size"
               cdkOverlayOrigin
               #fontTrigger="cdkOverlayOrigin"
               (click)="fontMenuOpen.set(!fontMenuOpen())"
@@ -150,19 +251,97 @@
       (click)="userMenuOpen.set(!userMenuOpen())"
       aria-label="User menu"
       [attr.aria-expanded]="userMenuOpen()"
-      class="border-sidebar-border hover:bg-sidebar-accent flex w-full items-center gap-2 rounded-xl border bg-white p-1.5 text-left transition-colors">
+      [attr.title]="isCollapsed() ? getUserName() : null"
+      class="border-sidebar-border hover:bg-sidebar-accent flex w-full items-center gap-2 rounded-xl border bg-white p-1.5 text-left transition-colors"
+      [class.justify-center]="isCollapsed()">
       <span class="pr-avatar" [style]="{ width: '32px', height: '32px', minWidth: '32px' }">{{ getUserInitials() }}</span>
-      <span class="flex min-w-0 flex-col leading-tight">
-        <span class="flex items-center gap-1.5">
-          <span class="text-sidebar-foreground min-w-0 truncate text-xs font-semibold">{{ getUserName() }}</span>
-          <span class="shrink-0 truncate rounded bg-[var(--pr-color-primary-50)] px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-700)]">{{ getPlatformRole() }}</span>
+      @if (!isCollapsed()) {
+        <span class="flex min-w-0 flex-col leading-tight">
+          <span class="flex items-center gap-1.5">
+            <span class="text-sidebar-foreground min-w-0 truncate text-xs font-semibold">{{ getUserName() }}</span>
+            <span class="shrink-0 truncate rounded bg-[var(--pr-color-primary-50)] px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-700)]">{{ getPlatformRole() }}</span>
+          </span>
+          <span class="text-sidebar-foreground/60 truncate text-[10px]">{{ getUserEmail() }}</span>
         </span>
-        <span class="text-sidebar-foreground/60 truncate text-[10px]">{{ getUserEmail() }}</span>
-      </span>
-      <i class="material-icons-round text-sidebar-foreground/70 ms-auto text-[18px] transition-transform duration-200" [class.rotate-180]="userMenuOpen()" aria-hidden="true">expand_more</i>
+        <i class="material-icons-round text-sidebar-foreground/70 ms-auto text-[18px] transition-transform duration-200" [class.rotate-180]="userMenuOpen()" aria-hidden="true">expand_more</i>
+      }
     </button>
   </div>
+
+  <button type="button" hlmSidebarRail aria-label="Toggle sidebar"></button>
 </hlm-sidebar>
+
+<!-- Collapsed-rail flyout: section title + children (portaled outside overflow:hidden content) -->
+@if (isCollapsed() && iconFlyout(); as fly) {
+  <div
+    class="border-sidebar-border fixed z-[220] max-h-[min(70vh,520px)] w-[260px] overflow-auto rounded-xl border bg-white p-2 shadow-[0_16px_40px_-12px_rgba(30,32,47,0.35)]"
+    [style.top.px]="fly.top"
+    [style.left.px]="fly.left"
+    (mouseenter)="keepIconFlyout()"
+    (mouseleave)="scheduleCloseIconFlyout()"
+    role="menu">
+    @if (fly.key === 'rfr') {
+      <p class="text-sidebar-foreground m-0 px-2 py-1.5 text-xs font-semibold">Results Framework &amp; Reporting</p>
+      @if (homeSE.isLoadingSPLists()) {
+        <p class="text-sidebar-foreground/55 m-0 px-2 py-2 text-xs">Loading programs…</p>
+      } @else {
+        @for (group of programGroups(); track group.key) {
+          @if (group.items.length) {
+            <p class="text-sidebar-foreground/50 m-0 px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide">{{ group.label }}</p>
+            <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
+              @for (sp of group.items; track sp.initiativeId) {
+                <li>
+                  <a
+                    class="hover:bg-sidebar-accent flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs no-underline"
+                    [class.bg-sidebar-accent]="sp.initiativeId === activeSpId()"
+                    routerLink="/result-framework-reporting/home"
+                    [queryParams]="{ sp: sp.initiativeId }"
+                    (click)="closeIconFlyout()">
+                    <img [src]="iconSrc(sp)" [alt]="sp.initiativeCode" width="16" height="16" class="size-4 shrink-0 rounded object-cover" />
+                    <span class="font-semibold">{{ sp.initiativeCode }}</span>
+                    <span class="text-sidebar-foreground/70 truncate">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        }
+      }
+    } @else if (fly.key === 'my-admin') {
+      <p class="text-sidebar-foreground m-0 px-2 py-1.5 text-xs font-semibold">My Admin</p>
+      <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
+        @for (link of myAdminLinks; track link.path) {
+          <li>
+            <a
+              class="hover:bg-sidebar-accent flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs no-underline"
+              [class.bg-sidebar-accent]="isSubLinkActive(link.path)"
+              [routerLink]="link.path"
+              (click)="closeIconFlyout()">
+              <ng-icon [name]="link.icon" class="text-[16px]" />
+              <span>{{ link.name }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    } @else if (fly.key === 'admin-module') {
+      <p class="text-sidebar-foreground m-0 px-2 py-1.5 text-xs font-semibold">Admin module</p>
+      <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
+        @for (link of adminModuleLinks; track link.path) {
+          <li>
+            <a
+              class="hover:bg-sidebar-accent flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs no-underline"
+              [class.bg-sidebar-accent]="isSubLinkActive(link.path)"
+              [routerLink]="link.path"
+              (click)="closeIconFlyout()">
+              <ng-icon [name]="link.icon" class="text-[16px]" />
+              <span>{{ link.name }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+}
 
 <!-- Text-size popover (opens upward from the footer) -->
 <ng-template
@@ -244,13 +423,6 @@
             <p class="m-0 text-xs font-medium text-[var(--pr-color-secondary-300)]">{{ item.center_id }} - {{ item.center_name }} ({{ item.role_name }})</p>
           }
         </div>
-      }
-
-      @if (rolesSE.isAdmin) {
-        <button type="button" class="group flex cursor-pointer items-center gap-1.5" (click)="goAdmin()">
-          <i class="pi pi-wrench text-[15px] text-brand-200 transition-colors group-hover:text-brand-300" aria-hidden="true"></i>
-          <p class="m-0 text-xs font-medium text-brand-200 transition-colors group-hover:text-brand-300">Admin module</p>
-        </button>
       }
     </div>
 

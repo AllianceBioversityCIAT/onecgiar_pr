@@ -1142,37 +1142,12 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   private calculateNavbarHeight() {
-    // Try to find the navbar/header element
-    const navbar =
-      document.querySelector('app-header-panel') ||
-      document.querySelector('header') ||
-      document.querySelector('nav') ||
-      document.querySelector('.navbar') ||
-      document.querySelector('.header');
-
-    if (navbar) {
-      const height = navbar.getBoundingClientRect().height;
-      this.navbarHeight.set(height);
-    } else {
-      // Default fallback height
-      this.navbarHeight.set(60);
-    }
+    // Top header was removed; filter drawers sit under the app content inset.
+    this.navbarHeight.set(0);
   }
 
   private setupResizeObserver() {
-    const navbar =
-      document.querySelector('app-header-panel') ||
-      document.querySelector('header') ||
-      document.querySelector('nav') ||
-      document.querySelector('.navbar') ||
-      document.querySelector('.header');
-
-    if (navbar) {
-      this.resizeObserver = new ResizeObserver(() => {
-        this.calculateNavbarHeight();
-      });
-      this.resizeObserver.observe(navbar);
-    }
+    // No top chrome to observe after the header removal.
   }
 
   ngOnDestroy() {

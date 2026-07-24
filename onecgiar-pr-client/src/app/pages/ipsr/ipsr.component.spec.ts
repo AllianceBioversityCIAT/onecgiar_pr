@@ -1,8 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { RouterTestingModule } from '@angular/router/testing';
 import { IpsrComponent } from './ipsr.component';
 import { ApiService } from '../../shared/services/api/api.service';
-import { DataControlService } from '../../shared/services/data-control.service';
 import { IpsrDataControlService } from './services/ipsr-data-control.service';
 
 describe('IpsrComponent', () => {
@@ -10,7 +9,6 @@ describe('IpsrComponent', () => {
   let fixture: ComponentFixture<IpsrComponent>;
   let mockApiService: any;
   let mockIpsrDataControlService: any;
-  let mockDataControlService: any;
 
   beforeEach(async () => {
     mockApiService = {
@@ -19,17 +17,13 @@ describe('IpsrComponent', () => {
       dataControlSE: { myInitiativesLoaded: true }
     };
     mockIpsrDataControlService = { inIpsr: false };
-    mockDataControlService = {
-      hideMainNav: signal(false),
-      hideHeaderChrome: signal(false)
-    };
 
     await TestBed.configureTestingModule({
       declarations: [IpsrComponent],
+      imports: [RouterTestingModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
-        { provide: IpsrDataControlService, useValue: mockIpsrDataControlService },
-        { provide: DataControlService, useValue: mockDataControlService }
+        { provide: IpsrDataControlService, useValue: mockIpsrDataControlService }
       ]
     }).compileComponents();
 
@@ -45,10 +39,5 @@ describe('IpsrComponent', () => {
   it('should set inIpsr to true and platformIsClosed from globalVariablesSE', () => {
     expect(mockIpsrDataControlService.inIpsr).toBe(true);
     expect(mockApiService.rolesSE.platformIsClosed).toBe(true);
-  });
-
-  it('should hide the top header chrome while the sidebar is active', () => {
-    expect(mockDataControlService.hideMainNav()).toBe(true);
-    expect(mockDataControlService.hideHeaderChrome()).toBe(true);
   });
 });

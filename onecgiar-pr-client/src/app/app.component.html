@@ -1,11 +1,29 @@
 <div class="global_information" *ngIf="this.api.globalVariablesSE.get?.show_global_info">
   {{ this.api.globalVariablesSE.get?.global_info_message }}
 </div>
+
 @if (!this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
-  <app-header-panel></app-header-panel>
+  <!-- App chrome: Spartan sidebar is the only primary nav (top header removed). -->
+  <div hlmSidebarWrapper sidebarWidth="280px" sidebarWidthIcon="3.5rem" class="min-h-svh items-stretch">
+    @if (!this.api.dataControlSE.show_qa_full_screen && !this.api.dataControlSE.focusMode()) {
+      <app-reporting-nav-sidebar />
+    }
+
+    <main hlmSidebarInset class="min-w-0 flex-1">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+
+  <app-tawk
+    *ngIf="this.api.authSE.localStorageUser?.user_name && this.api.authSE.localStorageUser?.email && !inLocal"
+    [user]="{ username: this.api.authSE.localStorageUser.user_name, email: this.api.authSE.localStorageUser.email }">
+  </app-tawk>
+} @else if (this.rolesSE.firstValidationOfReadOnly) {
+  <router-outlet></router-outlet>
 }
-<router-outlet *ngIf="this.rolesSE.firstValidationOfReadOnly"></router-outlet>
-<app-external-tools></app-external-tools><app-share-request-modal></app-share-request-modal>
+
+<app-external-tools></app-external-tools>
+<app-share-request-modal></app-share-request-modal>
 @if (!this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
   <app-footer></app-footer>
 }
@@ -38,4 +56,3 @@
 <!-- @if (aiAssistantEnabled && !this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
   <app-ai-assistant-panel />
 } -->
-

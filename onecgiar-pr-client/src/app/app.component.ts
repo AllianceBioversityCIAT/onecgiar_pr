@@ -20,6 +20,8 @@ export class AppComponent implements OnInit {
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
   aiAssistantEnabled = environment.aiAssistant?.enabled ?? false;
+  /** Same gate the old header used so Tawk does not load in local embeds. */
+  readonly inLocal = (environment as { inLocal?: boolean }).inLocal;
 
   readonly layoutSE = inject(LayoutService);
   private readonly router = inject(Router);

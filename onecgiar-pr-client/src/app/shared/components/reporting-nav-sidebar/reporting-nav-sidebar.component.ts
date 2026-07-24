@@ -18,10 +18,17 @@ import {
   lucideChevronDown,
   lucideRocket,
   lucideBell,
-  lucideType
+  lucideType,
+  lucideClipboardCheck,
+  lucideWrench,
+  lucideTicket,
+  lucideLayers,
+  lucideBookOpen,
+  lucideUserCog,
+  lucidePanelLeft
 } from '@ng-icons/lucide';
-import { HlmSidebarImports } from '@spartan/sidebar';
-import { PrRoute, routingApp } from '../../routing/routing-data';
+import { HlmSidebarImports, HlmSidebarService } from '@spartan/sidebar';
+import { PrRoute, extraRoutingApp, routingApp } from '../../routing/routing-data';
 import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
@@ -37,12 +44,23 @@ interface ProgramGroup {
   items: SPProgress[];
 }
 
+interface NavSubLink {
+  name: string;
+  path: string;
+  icon: string;
+}
+
+type FlyoutKey = 'rfr' | 'my-admin' | 'admin-module';
+
+interface IconFlyout {
+  key: FlyoutKey;
+  top: number;
+  left: number;
+}
+
 /**
- * Official Spartan sidebar used as the reporting navigation on Results Center and the
- * Result Framework home. Lists the app sections plus a lazily-loaded, collapsible tree of
- * Science Programs; extra tools (release notes, notifications, text size) sit below a
- * separator; the footer keeps the user menu. Consumers wrap it in `hlmSidebarWrapper` +
- * `hlmSidebarInset`.
+ * Official Spartan sidebar — the app-level primary navigation (mounted from `app.component`).
+ * Collapses to an icon rail; on hover a floating panel shows the section label and any children.
  */
 @Component({
   selector: 'app-reporting-nav-sidebar',
@@ -63,7 +81,14 @@ interface ProgramGroup {
       lucideChevronDown,
       lucideRocket,
       lucideBell,
-      lucideType
+      lucideType,
+      lucideClipboardCheck,
+      lucideWrench,
+      lucideTicket,
+      lucideLayers,
+      lucideBookOpen,
+      lucideUserCog,
+      lucidePanelLeft
     })
   ]
 })
@@ -75,9 +100,24 @@ export class ReportingNavSidebarComponent {
   public readonly api = inject(ApiService);
   public readonly fontScaleSE = inject(FontScaleService);
   public readonly resultsNotificationsSE = inject(ResultsNotificationsService);
+  public readonly sidebarSE = inject(HlmSidebarService);
 
   readonly isProduction = environment.production;
   readonly fontScaleOptions = FONT_SCALE_OPTIONS;
+
+  /** Icon-rail mode (Spartan `collapsible="icon"` + service state). */
+  readonly isCollapsed = computed(() => this.sidebarSE.state() === 'collapsed' && !this.sidebarSE.isMobile());
+
+  /** Floating hover panel for sections that have children while collapsed. */
+  readonly iconFlyout = signal<IconFlyout | null>(null);
+  private flyoutCloseTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Phase chip that used to live under the top-bar wordmark. */
+  readonly reportingPhaseLabel = computed(() => {
+    this.dataControlSE.reportingPhaseVersion();
+    const phase = this.dataControlSE.reportingCurrentPhase;
+    return phase?.portfolioAcronym && phase?.phaseName ? `${phase.portfolioAcronym} - ${phase.phaseName}` : '';
+  });
 
   /** Lucide icon per top-level section (matches the section `path`). */
   private readonly sectionIcons: Record<string, string> = {
@@ -86,16 +126,49 @@ export class ReportingNavSidebarComponent {
     ipsr: 'lucidePackage',
     'quality-assurance': 'lucideShieldCheck',
     'init-admin-module': 'lucideSettings',
+    'admin-module': 'lucideWrench',
     bilateral: 'lucideHandshake',
     'outcome-indicator-module': 'lucideChartLine'
   };
 
-  /** Same visible set as the horizontal primary nav, mirrored into the sidebar. */
-  readonly sections = computed<PrRoute[]>(() => routingApp.filter(o => !(o.prHide || this.validateAdminModuleAndRole(o))));
+  /**
+   * My Admin child links. Same set the My Admin shell used to expose in its
+   * premium sidebar — Completeness stays in the route table but is not listed today.
+   */
+  readonly myAdminLinks: NavSubLink[] = [
+    {
+      name: 'General results report',
+      path: '/init-admin-module/init-general-results-report',
+      icon: 'lucideClipboardCheck'
+    }
+  ];
+
+  /** Platform Admin module children (admin-only). Mirrors admin-section.sections. */
+  readonly adminModuleLinks: NavSubLink[] = [
+    { name: 'Tickets Dashboard', path: '/admin-module/tickets-dashboard', icon: 'lucideTicket' },
+    { name: 'Phase management', path: '/admin-module/phase-management', icon: 'lucideLayers' },
+    { name: 'Knowledge Products', path: '/admin-module/knowledge-products', icon: 'lucideBookOpen' },
+    { name: 'User management', path: '/admin-module/user-management', icon: 'lucideUserCog' }
+  ];
+
+  /**
+   * Primary nav sections + Admin module (admin-only, from extraRoutingApp).
+   * Same role gating as the horizontal nav for My Admin.
+   */
+  readonly sections = computed<PrRoute[]>(() => {
+    const primary = routingApp.filter(o => !(o.prHide || this.validateAdminModuleAndRole(o)));
+    if (!this.rolesSE?.isAdmin) return primary;
+    const admin = extraRoutingApp.find(o => o.path === 'admin-module' && !o.prHide);
+    return admin ? [...primary, admin] : primary;
+  });
 
   // --- Results Framework & Reporting: lazy-expandable program tree ---
   /** Whether the RFR entry is expanded to reveal the Science Program groups. */
   readonly rfrExpanded = signal(false);
+  /** Whether My Admin is expanded to reveal its child pages. */
+  readonly myAdminExpanded = signal(this.router.url.startsWith('/init-admin-module'));
+  /** Whether Admin module is expanded to reveal its child pages. */
+  readonly adminModuleExpanded = signal(this.router.url.startsWith('/admin-module'));
   /** Which program groups are open. "My programs" starts open, the rest collapsed. */
   readonly openGroups = signal<Set<string>>(new Set(['mine']));
   /** Ensures the (lazy) programs fetch is triggered at most once. */
@@ -121,6 +194,14 @@ export class ReportingNavSidebarComponent {
     { initialValue: null }
   );
 
+  constructor() {
+    // Expand collapsibles when landing inside their module (don't force-collapse on leave).
+    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
+      if (this.router.url.startsWith('/init-admin-module')) this.myAdminExpanded.set(true);
+      if (this.router.url.startsWith('/admin-module')) this.adminModuleExpanded.set(true);
+    });
+  }
+
   // --- Footer chrome (moved from the top header) ---
   readonly userMenuOpen = signal(false);
   readonly fontMenuOpen = signal(false);
@@ -131,15 +212,69 @@ export class ReportingNavSidebarComponent {
     return this.sectionIcons[section.path ?? ''] ?? 'lucideCircleDot';
   }
 
+  ensureRfrLoaded(): void {
+    if (this.rfrLoadTriggered) return;
+    this.rfrLoadTriggered = true;
+    const alreadyLoaded = this.homeSE.mySPsList().length || this.homeSE.otherSPsList().length || this.homeSE.otherProjectsList().length;
+    if (!alreadyLoaded) this.homeSE.getScienceProgramsProgress();
+  }
+
   /** Expand/collapse RFR. On the first expand, lazily fetch the programs (unless already cached). */
   toggleRfr(): void {
+    if (this.isCollapsed()) return;
     const next = !this.rfrExpanded();
     this.rfrExpanded.set(next);
-    if (next && !this.rfrLoadTriggered) {
-      this.rfrLoadTriggered = true;
-      const alreadyLoaded = this.homeSE.mySPsList().length || this.homeSE.otherSPsList().length || this.homeSE.otherProjectsList().length;
-      if (!alreadyLoaded) this.homeSE.getScienceProgramsProgress();
+    if (next) this.ensureRfrLoaded();
+  }
+
+  toggleMyAdmin(): void {
+    if (this.isCollapsed()) return;
+    this.myAdminExpanded.update(open => !open);
+  }
+
+  toggleAdminModule(): void {
+    if (this.isCollapsed()) return;
+    this.adminModuleExpanded.update(open => !open);
+  }
+
+  openIconFlyout(key: FlyoutKey, event: Event): void {
+    if (!this.isCollapsed()) return;
+    if (this.flyoutCloseTimer) {
+      clearTimeout(this.flyoutCloseTimer);
+      this.flyoutCloseTimer = null;
     }
+    const el = event.currentTarget as HTMLElement | null;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    this.iconFlyout.set({ key, top: Math.max(8, rect.top), left: rect.right + 8 });
+    if (key === 'rfr') this.ensureRfrLoaded();
+  }
+
+  keepIconFlyout(): void {
+    if (this.flyoutCloseTimer) {
+      clearTimeout(this.flyoutCloseTimer);
+      this.flyoutCloseTimer = null;
+    }
+  }
+
+  scheduleCloseIconFlyout(): void {
+    if (this.flyoutCloseTimer) clearTimeout(this.flyoutCloseTimer);
+    this.flyoutCloseTimer = setTimeout(() => {
+      this.iconFlyout.set(null);
+      this.flyoutCloseTimer = null;
+    }, 180);
+  }
+
+  closeIconFlyout(): void {
+    if (this.flyoutCloseTimer) {
+      clearTimeout(this.flyoutCloseTimer);
+      this.flyoutCloseTimer = null;
+    }
+    this.iconFlyout.set(null);
+  }
+
+  isSubLinkActive(path: string): boolean {
+    return this.router.url.startsWith(path);
   }
 
   toggleGroup(key: string): void {
@@ -238,14 +373,10 @@ export class ReportingNavSidebarComponent {
     this.api.authSE.logout();
   }
 
-  goAdmin(): void {
-    this.userMenuOpen.set(false);
-    this.router.navigate(['/admin-module']);
-  }
-
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.userMenuOpen.set(false);
     this.fontMenuOpen.set(false);
+    this.closeIconFlyout();
   }
 }

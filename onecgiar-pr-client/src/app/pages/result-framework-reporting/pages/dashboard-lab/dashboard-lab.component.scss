@@ -6,10 +6,11 @@
 :host {
   display: block;
 
-  --rail-w: 76px; // collapsed icon rail (AOW mode)
+  // Match the app sidebar gap: expanded uses --sidebar-width, icon-rail uses --sidebar-width-icon.
+  --rail-w: var(--sidebar-width, 280px);
   --panel-w: 236px; // Areas of Work column (AOW mode)
-  --full-w: 300px; // expanded Science Programs card (dashboard)
-  --float-gap: 10px; // inset of the floating card on the dashboard
+  --full-w: var(--sidebar-width, 280px);
+  --float-gap: 0px; // flush against the app sidebar
 }
 
 // Browsers default <button> to `cursor: default` and Tailwind's preflight does not

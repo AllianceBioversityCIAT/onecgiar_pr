@@ -1,11 +1,6 @@
-<!-- ==================== COLUMN 1 — Science Programs ====================
-     One surface that morphs: a floating 300px card on the dashboard, a flush
-     76px icon rail once an AOW is open. Width/inset/radius all transition. -->
-<div hlmSidebarWrapper sidebarWidth="280px" class="flex min-h-svh w-full items-stretch">
-  <app-reporting-nav-sidebar />
-
-
 <!-- ==================== SEARCH POPOVER — the rail's collapsed filter, expanded ==================== -->
+<!-- Primary nav is the app-level Spartan sidebar; these columns are page-local overlays. -->
+
 @if (searchOpen() && viewMode() === 'aow') {
   <div
     class="fixed left-[calc(var(--rail-w)+var(--panel-w)+8px)] top-[14px] z-[24] flex w-[260px] animate-[flyout-in_0.16s_cubic-bezier(0.22,1,0.36,1)] items-center gap-2 rounded-xl border border-white/[0.09] bg-[#1f2233] px-3 py-2.5 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
@@ -220,7 +215,6 @@
 
 <!-- ==================== DETAIL (right panel) — bento dashboard (Tailwind) ==================== -->
 <!-- Focus mode trims the panel gutters so the indicator table gets the full width. -->
-<main hlmSidebarInset class="min-w-0 flex-1">
 <section
   class="box-border min-h-screen bg-[#eef0f3] transition-[margin] duration-300 motion-reduce:transition-none"
   [style.marginRight.px]="managed() ? managePanelWidth() : 0"
@@ -1067,8 +1061,6 @@
     </div>
   }
 </section>
-</main>
-</div>
 
 <!-- ==================== GUIDED CREATION — full-screen flow ==================== -->
 @if (guidedOpen()) {

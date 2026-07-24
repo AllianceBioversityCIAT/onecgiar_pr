@@ -9,7 +9,6 @@ import { Unit } from '../entity-details/interfaces/entity-details.interface';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { GuidedCreationComponent } from './components/guided-creation/guided-creation.component';
-import { ReportingNavSidebarComponent } from '../../../../shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component';
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
 
@@ -88,7 +87,7 @@ interface AccentTheme {
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
-  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent, ReportingNavSidebarComponent],
+  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -597,12 +596,6 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
     });
     this.startCenterRotation();
-    // The sidebar already says "Reporting workspace · Science Programs · <phase>",
-    // so the navbar repeating it is noise on this surface.
-    this.dataControlSE.hideWordmark.set(true);
-    // The Spartan sidebar now carries the primary navigation + actions, so hide the top header.
-    this.dataControlSE.hideMainNav.set(true);
-    this.dataControlSE.hideHeaderChrome.set(true);
   }
 
   /** Rehydrate the view from the URL so a reload stays on the same program + AOW. */
@@ -626,10 +619,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** Leaving the lab must never strand the shell in focus mode — or leak a timer. */
   ngOnDestroy(): void {
     this.dataControlSE.focusMode.set(false);
-    this.dataControlSE.hideWordmark.set(false);
     this.dataControlSE.slimNav.set(false);
-    this.dataControlSE.hideMainNav.set(false);
-    this.dataControlSE.hideHeaderChrome.set(false);
     this.spParamSub?.unsubscribe();
     if (this.centerTimer) clearInterval(this.centerTimer);
   }

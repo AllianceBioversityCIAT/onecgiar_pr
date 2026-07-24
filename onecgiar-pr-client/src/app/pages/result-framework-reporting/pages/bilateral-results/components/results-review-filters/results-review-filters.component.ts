@@ -92,33 +92,12 @@ export class ResultsReviewFiltersComponent implements OnInit, OnDestroy {
   private resizeObserver: ResizeObserver | null = null;
 
   private calculateNavbarHeight(): void {
-    const navbar =
-      document.querySelector('app-header-panel') ||
-      document.querySelector('header') ||
-      document.querySelector('nav') ||
-      document.querySelector('.navbar') ||
-      document.querySelector('.header');
-
-    if (navbar) {
-      const height = navbar.getBoundingClientRect().height;
-      this.navbarHeight.set(height);
-    } else {
-      this.navbarHeight.set(60);
-    }
+    // Top header was removed; drawers sit flush under the content inset.
+    this.navbarHeight.set(0);
   }
 
   private setupResizeObserver(): void {
-    const navbar =
-      document.querySelector('app-header-panel') ||
-      document.querySelector('header') ||
-      document.querySelector('nav') ||
-      document.querySelector('.navbar') ||
-      document.querySelector('.header');
-
-    if (navbar) {
-      this.resizeObserver = new ResizeObserver(() => this.calculateNavbarHeight());
-      this.resizeObserver.observe(navbar);
-    }
+    // No top chrome to observe after the header removal.
   }
 
   ngOnDestroy(): void {

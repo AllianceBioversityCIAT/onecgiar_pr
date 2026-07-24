@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
 import { QualityAssuranceComponent } from './quality-assurance.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrSelectComponent } from '../../custom-fields/pr-select/pr-select.component';
@@ -90,10 +89,7 @@ describe('QualityAssuranceComponent', () => {
         },
         {
           provide: DataControlService,
-          useValue: {
-            hideMainNav: signal(false),
-            hideHeaderChrome: signal(false)
-          }
+          useValue: {}
         }
       ]
     }).compileComponents();
