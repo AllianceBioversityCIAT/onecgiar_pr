@@ -270,10 +270,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   manageIndicator(indicator: any, groupTitle: string, tab: 'report' | 'info' = 'report'): void {
     // The group carries the ToC node id the existing-results endpoint needs; the
-    // indicator row does not, so it is folded in here.
-    const group = this.indicatorGroups().find(g => g?.result_title === groupTitle);
+    // indicator row does not, so it is folded in here. Planned browse may pass
+    // `__hloNode` / `toc_result_id` when no AoW detail is open.
+    const group =
+      this.indicatorGroups().find(g => g?.result_title === groupTitle) ?? indicator?.__hloNode ?? null;
+    const tocId = indicator?.toc_result_id ?? group?.toc_result_id;
     this.manageTab.set(tab);
-    this.managed.set({ indicator: { ...indicator, toc_result_id: group?.toc_result_id }, groupTitle, node: group });
+    this.managed.set({ indicator: { ...indicator, toc_result_id: tocId }, groupTitle, node: group });
   }
 
   closeManage(): void {
@@ -751,7 +754,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const key = `${sp}::${aow.code}`;
       const toc = map.get(key);
       const groups = toc ? [...(toc.outputs ?? []), ...(toc.outcomes ?? [])] : [];
-      const indicators = groups.flatMap((g: any) => (g?.indicators ?? []).map((i: any) => ({ ...i, __aowCode: aow.code, __hlo: g?.result_title })));
+      const indicators = groups.flatMap((g: any) =>
+        (g?.indicators ?? []).map((i: any) => ({
+          ...i,
+          __aowCode: aow.code,
+          __hlo: g?.result_title,
+          toc_result_id: g?.toc_result_id,
+          __hloNode: g
+        }))
+      );
       return { aow, indicators, count: indicators.length, loading: !toc && loadingKeys.has(key) };
     });
   });
@@ -781,6 +792,74 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** The {aow, indicators, count, loading} bundle for a single AoW code (from indicatorsByAow). */
   indicatorsForAow(code: string) {
     return this.indicatorsByAow().find(x => x.aow.code === code) ?? null;
+  }
+
+  /**
+   * Planned-ToC browse modes (home surface only — independent of AoW-detail `panelView`).
+   * Default = Areas of Work; HLO = high-level output groups; Indicators = flat list.
+   */
+  readonly plannedBrowseView = signal<'aows' | 'hlo' | 'indicators'>('aows');
+  readonly plannedBrowseViews = [
+    { id: 'aows' as const, label: 'Areas of Work', icon: 'account_tree' },
+    { id: 'hlo' as const, label: 'By HLO', icon: 'layers' },
+    { id: 'indicators' as const, label: 'Indicators', icon: 'insights' }
+  ];
+  readonly expandedPlannedHlos = signal<Set<string>>(new Set());
+  /** Layout for Indicators / HLO lists on the planned surface. */
+  readonly plannedLayout = signal<'cards' | 'table'>('cards');
+
+  setPlannedBrowseView(view: 'aows' | 'hlo' | 'indicators'): void {
+    this.plannedBrowseView.set(view);
+    if (view !== 'aows') this.loadAllTocs();
+  }
+
+  setPlannedLayout(layout: 'cards' | 'table'): void {
+    this.plannedLayout.set(layout);
+  }
+
+  /** Program-wide indicators grouped by HLO (`result_title`). */
+  readonly indicatorsByHlo = computed(() => {
+    const buckets = new Map<string, { title: string; indicators: any[]; aowCodes: Set<string> }>();
+    for (const ind of this.allPanelIndicators()) {
+      const title = (ind.__hlo as string) || 'Ungrouped';
+      let bucket = buckets.get(title);
+      if (!bucket) {
+        bucket = { title, indicators: [], aowCodes: new Set() };
+        buckets.set(title, bucket);
+      }
+      bucket.indicators.push(ind);
+      if (ind.__aowCode) bucket.aowCodes.add(ind.__aowCode);
+    }
+    return [...buckets.values()].map(b => ({
+      title: b.title,
+      indicators: b.indicators,
+      count: b.indicators.length,
+      aowCount: b.aowCodes.size,
+      split: this.splitGroupTitle(b.title)
+    }));
+  });
+
+  /** Group one AoW's indicators by HLO for the expanded Areas-of-Work cards. */
+  groupIndicatorsByHlo(indicators: any[] | null | undefined): { title: string; indicators: any[]; split: { code: string | null; name: string } }[] {
+    const map = new Map<string, any[]>();
+    for (const ind of indicators ?? []) {
+      const key = (ind.__hlo as string) || 'Other';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(ind);
+    }
+    return [...map.entries()].map(([title, inds]) => ({ title, indicators: inds, split: this.splitGroupTitle(title) }));
+  }
+
+  isPlannedHloExpanded(title: string): boolean {
+    return this.expandedPlannedHlos().has(title);
+  }
+
+  togglePlannedHlo(title: string): void {
+    this.expandedPlannedHlos.update(set => {
+      const next = new Set(set);
+      next.has(title) ? next.delete(title) : next.add(title);
+      return next;
+    });
   }
 
   setIndicatorTab(tab: 'outputs' | 'outcomes'): void {
