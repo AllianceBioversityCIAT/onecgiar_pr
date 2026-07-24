@@ -26,23 +26,44 @@ hlm-sidebar {
   }
 
   /**
-   * Child tree rail — keep Spartan's left border readable and make nested items
-   * read clearly as children (the global list reset above used to wipe submenu padding).
+   * Child tree rail — compact nested items (smaller type + tighter rows) with a
+   * light left rail so they still read as children of the parent section.
    */
   ul[hlmSidebarMenuSub] {
-    margin: 2px 0 8px 14px;
-    padding: 4px 0 4px 10px;
+    margin: 0 0 4px 12px;
+    padding: 2px 0 2px 8px;
     list-style: none;
-    border-inline-start: 2px solid color-mix(in srgb, var(--sidebar-border, #e5e7eb) 85%, var(--pr-color-primary-300) 15%);
-    gap: 2px;
+    border-inline-start: 1.5px solid color-mix(in srgb, var(--sidebar-border, #e5e7eb) 90%, var(--pr-color-primary-300) 10%);
+    gap: 0;
   }
 
   a[hlmSidebarMenuSubButton],
   button[hlmSidebarMenuSubButton] {
-    min-height: 30px;
-    font-size: 12px;
+    height: 26px !important;
+    min-height: 26px !important;
+    padding-block: 0 !important;
+    padding-inline: 6px !important;
+    font-size: 11px !important;
     font-weight: 500;
-    color: color-mix(in srgb, var(--sidebar-foreground, #1e202f) 78%, transparent);
+    line-height: 1.2;
+    color: color-mix(in srgb, var(--sidebar-foreground, #1e202f) 72%, transparent);
+
+    ng-icon {
+      font-size: 14px !important;
+      width: 14px;
+      height: 14px;
+    }
+
+    img {
+      width: 14px !important;
+      height: 14px !important;
+    }
+
+    small {
+      font-size: 9px !important;
+      padding-inline: 4px !important;
+      line-height: 14px;
+    }
   }
 
   a[hlmSidebarMenuSubButton][data-active='true'],
@@ -52,12 +73,12 @@ hlm-sidebar {
   }
 }
 
-/* Same child treatment for the collapsed-rail hover flyout */
+/* Same compact child treatment for the collapsed-rail hover flyout */
 .pr-nav-flyout {
   &__title {
     margin: 0;
-    padding: 6px 8px 4px;
-    font-size: 11px;
+    padding: 4px 6px 2px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.02em;
     text-transform: uppercase;
@@ -65,21 +86,22 @@ hlm-sidebar {
   }
 
   &__list {
-    margin: 0 0 4px 8px;
-    padding: 2px 0 2px 10px;
+    margin: 0 0 2px 6px;
+    padding: 1px 0 1px 8px;
     list-style: none;
-    border-inline-start: 2px solid color-mix(in srgb, #e5e7eb 80%, var(--pr-color-primary-300) 20%);
+    border-inline-start: 1.5px solid color-mix(in srgb, #e5e7eb 80%, var(--pr-color-primary-300) 20%);
   }
 
   &__link {
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 8px;
-    border-radius: 8px;
-    padding: 6px 8px;
-    font-size: 12px;
+    gap: 6px;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
     font-weight: 500;
+    line-height: 1.2;
     color: var(--pr-color-secondary-300);
     text-decoration: none;
 
