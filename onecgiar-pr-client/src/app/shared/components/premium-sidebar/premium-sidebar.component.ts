@@ -40,4 +40,9 @@ export class PremiumSidebarComponent {
   readonly title = input<string>('');
   /** Navigation entries. */
   readonly options = input<PremiumSidebarOption[]>([]);
+  /**
+   * CSS `left` for the fixed panel. Override when another sidebar (e.g. the
+   * reporting Spartan nav) already occupies the viewport’s left edge.
+   */
+  readonly offsetLeft = input<string>('10px');
 }

@@ -1,6 +1,16 @@
-<div class="local_container">
-  <app-premium-sidebar eyebrow="Administration" title="My Admin" [options]="sections"></app-premium-sidebar>
-  <div class="router">
-    <router-outlet></router-outlet>
-  </div>
+<div hlmSidebarWrapper sidebarWidth="280px" class="min-h-full items-stretch">
+  <app-reporting-nav-sidebar />
+
+  <main hlmSidebarInset class="min-w-0 flex-1">
+    <div class="local_container">
+      <app-premium-sidebar
+        eyebrow="Administration"
+        title="My Admin"
+        [options]="sections"
+        offsetLeft="calc(var(--sidebar-width, 280px) + 10px)"></app-premium-sidebar>
+      <div class="router">
+        <router-outlet></router-outlet>
+      </div>
+    </div>
+  </main>
 </div>

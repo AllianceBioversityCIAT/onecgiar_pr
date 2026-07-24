@@ -1,29 +1,38 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { InitAdminSectionComponent } from './init-admin-section.component';
-import { DynamicPanelMenuComponent } from '../../shared/components/dynamic-panel-menu/dynamic-panel-menu.component';
 import { RouterTestingModule } from '@angular/router/testing';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { ApiService } from '../../shared/services/api/api.service';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 
 describe('InitAdminSectionComponent', () => {
   let component: InitAdminSectionComponent;
   let fixture: ComponentFixture<InitAdminSectionComponent>;
-  let mockDataControlService;
+  let mockDataControlService: any;
 
   beforeEach(async () => {
     mockDataControlService = {
-      detailSectionTitle: jest.fn()
+      detailSectionTitle: jest.fn(),
+      hideMainNav: signal(false),
+      hideHeaderChrome: signal(false)
     };
 
     await TestBed.configureTestingModule({
-      declarations: [InitAdminSectionComponent, DynamicPanelMenuComponent],
+      declarations: [InitAdminSectionComponent],
       imports: [HttpClientTestingModule, RouterTestingModule],
       providers: [
         {
           provide: DataControlService,
           useValue: mockDataControlService
+        },
+        {
+          provide: ApiService,
+          useValue: {}
         }
-      ]
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
     fixture = TestBed.createComponent(InitAdminSectionComponent);
@@ -52,6 +61,11 @@ describe('InitAdminSectionComponent', () => {
       component.ngOnInit();
 
       expect(spyDetailSectionTitle).toHaveBeenCalledWith('My Admin');
+    });
+
+    it('should hide the top header chrome while the sidebar is active', () => {
+      expect(mockDataControlService.hideMainNav()).toBe(true);
+      expect(mockDataControlService.hideHeaderChrome()).toBe(true);
     });
   });
 });

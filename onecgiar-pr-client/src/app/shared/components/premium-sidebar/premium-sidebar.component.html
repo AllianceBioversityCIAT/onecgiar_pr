@@ -1,4 +1,4 @@
-<aside class="premium_sidebar">
+<aside class="premium_sidebar" [style.left]="offsetLeft()">
   <div class="premium_sidebar_header">
     <span class="eyebrow" *ngIf="eyebrow()">{{ eyebrow() }}</span>
     <h2 class="title">{{ title() }}</h2>
