@@ -64,6 +64,24 @@
                 </button>
 
                 @if (!isCollapsed() && rfrExpanded()) {
+                  <!-- Conceptual group — label only, not a collapsible -->
+                  <p class="pr-nav-rfr-group-label">Results framework and reporting</p>
+                  <ul hlmSidebarMenuSub>
+                    @for (link of rfrSectionLinks; track link.path) {
+                      <li hlmSidebarMenuSubItem>
+                        <a
+                          hlmSidebarMenuSubButton
+                          [routerLink]="link.path"
+                          [queryParams]="rfrSectionQueryParams()"
+                          [isActive]="isRfrSectionActive(link.path)"
+                          [title]="link.name">
+                          <ng-icon [name]="link.icon" />
+                          <span>{{ link.name }}</span>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+
                   @if (homeSE.isLoadingSPLists()) {
                     <div class="text-sidebar-foreground/55 px-3 py-2 text-xs">Loading programs…</div>
                   } @else {
@@ -87,7 +105,7 @@
                               <li hlmSidebarMenuSubItem>
                                 <a
                                   hlmSidebarMenuSubButton
-                                  routerLink="/result-framework-reporting/home"
+                                  [routerLink]="currentRfrSectionPath()"
                                   [queryParams]="{ sp: sp.initiativeId }"
                                   [isActive]="sp.initiativeId === activeSpId()"
                                   [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
@@ -281,7 +299,22 @@
     (mouseleave)="scheduleCloseIconFlyout()"
     role="menu">
     @if (fly.key === 'rfr') {
-      <p class="pr-nav-flyout__title">Results Framework &amp; Reporting</p>
+      <p class="pr-nav-flyout__title">Results framework and reporting</p>
+      <ul class="pr-nav-flyout__list flex flex-col gap-0.5">
+        @for (link of rfrSectionLinks; track link.path) {
+          <li>
+            <a
+              class="pr-nav-flyout__link"
+              [class.pr-nav-flyout__link--active]="isRfrSectionActive(link.path)"
+              [routerLink]="link.path"
+              [queryParams]="rfrSectionQueryParams()"
+              (click)="closeIconFlyout()">
+              <ng-icon [name]="link.icon" class="text-[16px]" />
+              <span>{{ link.name }}</span>
+            </a>
+          </li>
+        }
+      </ul>
       @if (homeSE.isLoadingSPLists()) {
         <p class="m-0 px-2 py-2 text-xs text-white/55">Loading programs…</p>
       } @else {
@@ -294,7 +327,7 @@
                   <a
                     class="pr-nav-flyout__link"
                     [class.pr-nav-flyout__link--active]="sp.initiativeId === activeSpId()"
-                    routerLink="/result-framework-reporting/home"
+                    [routerLink]="currentRfrSectionPath()"
                     [queryParams]="{ sp: sp.initiativeId }"
                     (click)="closeIconFlyout()">
                     <img [src]="iconSrc(sp)" [alt]="sp.initiativeCode" width="16" height="16" class="size-4 shrink-0 rounded object-cover" />

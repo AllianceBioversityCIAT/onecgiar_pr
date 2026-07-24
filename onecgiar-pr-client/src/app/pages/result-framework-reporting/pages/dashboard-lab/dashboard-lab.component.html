@@ -724,7 +724,13 @@
       }
       }
     } @else {
-    <div class="grid grid-cols-4 items-stretch gap-4 max-[1180px]:grid-cols-2 max-[620px]:grid-cols-1">
+    <div
+      [class]="
+        showDashboardChrome()
+          ? 'grid grid-cols-4 items-stretch gap-4 max-[1180px]:grid-cols-2 max-[620px]:grid-cols-1'
+          : 'grid grid-cols-1 items-stretch gap-4'
+      ">
+      @if (showDashboardChrome()) {
       <!-- Card 1 — Science Program hero + report actions (dark, accent glow, spans 2) -->
       <article
         class="relative col-span-2 flex min-h-[168px] flex-col justify-between gap-4 overflow-hidden rounded-[20px] border border-white/[0.07] bg-[linear-gradient(150deg,#23252f_0%,#16171d_100%)] px-5 py-5 max-[620px]:col-span-1">
@@ -798,9 +804,16 @@
         </div>
         <p class="text-[11px] text-white/85">QAed + Submitted</p>
       </article>
+      }
 
+      @if (showEmerging()) {
       <!-- Card 3 — Indicator categories (right column, tall 2 rows, tabs + scroll) -->
-      <article class="col-start-4 row-start-2 flex min-h-[300px] max-h-[440px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:max-h-none max-[1180px]:row-start-auto max-[1180px]:min-h-[360px]">
+      <article
+        [class]="
+          showDashboardChrome()
+            ? 'col-start-4 row-start-2 flex min-h-[300px] max-h-[440px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:max-h-none max-[1180px]:row-start-auto max-[1180px]:min-h-[360px]'
+            : 'flex min-h-[min(70vh,640px)] max-h-none flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)]'
+        ">
         <h2 data-guide="emerging" class="m-0 text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Report Emerging results</h2>
 
         <!-- tabs -->
@@ -872,10 +885,17 @@
           <span class="material-icons-round text-[16px]">arrow_forward</span>
         </button>
       </article>
+      }
 
+      @if (showPlanned()) {
       <!-- Card 4 — Areas of Work: a vertical block two rows tall, where the guided
            creation card used to sit. The dedicated section below the bento is gone. -->
-      <article class="col-start-1 col-span-3 row-start-2 flex min-h-[300px] max-h-[440px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-span-2 max-[1180px]:col-start-auto max-[1180px]:max-h-none max-[1180px]:row-start-auto max-[620px]:col-span-1">
+      <article
+        [class]="
+          showDashboardChrome()
+            ? 'col-start-1 col-span-3 row-start-2 flex min-h-[300px] max-h-[440px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-span-2 max-[1180px]:col-start-auto max-[1180px]:max-h-none max-[1180px]:row-start-auto max-[620px]:col-span-1'
+            : 'flex min-h-[min(70vh,640px)] max-h-none flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)]'
+        ">
         <div class="flex shrink-0 flex-wrap items-baseline gap-2">
           <h2 data-guide="planned" class="m-0 text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Results planned in your 2026 ToC</h2>
           <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ aows().length }}</span>
@@ -987,10 +1007,16 @@
           <span class="material-icons-round text-[16px]">arrow_forward</span>
         </button>
       </article>
+      }
 
+      @if (showCenters()) {
       <!-- Card 6 — My CGIAR Centers. -->
       <article
-        class="col-start-1 col-span-4 row-start-3 flex min-h-[120px] flex-col gap-2.5 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-span-2 max-[1180px]:col-start-auto max-[1180px]:row-start-auto max-[620px]:col-span-1">
+        [class]="
+          showDashboardChrome()
+            ? 'col-start-1 col-span-4 row-start-3 flex min-h-[120px] flex-col gap-2.5 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-span-2 max-[1180px]:col-start-auto max-[1180px]:row-start-auto max-[620px]:col-span-1'
+            : 'flex min-h-[120px] flex-col gap-2.5 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)]'
+        ">
         <div class="flex shrink-0 items-baseline gap-2">
           <p data-guide="centers" class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">My CGIAR Centers</p>
           <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ myCenters().length }}</span>
@@ -1022,7 +1048,9 @@
           </p>
         }
       </article>
+      }
 
+      @if (showDashboardChrome()) {
       <!-- Card 5 — Results by status. One bento cell, one plot area: the bars share
            a single baseline instead of each sitting on its own segment. -->
       <article class="col-start-4 row-start-1 flex min-h-[168px] flex-col gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-start-auto">
@@ -1050,6 +1078,7 @@
           <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">No results reported yet.</p>
         }
       </article>
+      }
     </div>
 
     }

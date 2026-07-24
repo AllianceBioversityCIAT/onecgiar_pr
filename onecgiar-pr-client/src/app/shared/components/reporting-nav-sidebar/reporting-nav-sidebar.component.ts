@@ -25,7 +25,9 @@ import {
   lucideLayers,
   lucideBookOpen,
   lucideUserCog,
-  lucidePanelLeft
+  lucidePanelLeft,
+  lucideSparkles,
+  lucideBuilding2
 } from '@ng-icons/lucide';
 import { HlmSidebarImports, HlmSidebarService } from '@spartan/sidebar';
 import { PrRoute, extraRoutingApp, routingApp } from '../../routing/routing-data';
@@ -88,7 +90,9 @@ interface IconFlyout {
       lucideLayers,
       lucideBookOpen,
       lucideUserCog,
-      lucidePanelLeft
+      lucidePanelLeft,
+      lucideSparkles,
+      lucideBuilding2
     })
   ]
 })
@@ -152,6 +156,17 @@ export class ReportingNavSidebarComponent {
   ];
 
   /**
+   * Conceptual RFR action links (subtle group label in the template — not a collapsible).
+   * Dashboard = full bento; the other three are single-section surfaces.
+   */
+  readonly rfrSectionLinks: NavSubLink[] = [
+    { name: 'Dashboard', path: '/result-framework-reporting/home', icon: 'lucideLayoutDashboard' },
+    { name: 'Results planned in your 2026 ToC', path: '/result-framework-reporting/planned-toc', icon: 'lucideClipboardCheck' },
+    { name: 'Report Emerging results', path: '/result-framework-reporting/emerging', icon: 'lucideSparkles' },
+    { name: 'My CGIAR Centers', path: '/result-framework-reporting/centers', icon: 'lucideBuilding2' }
+  ];
+
+  /**
    * Primary nav sections + Admin module (admin-only, from extraRoutingApp).
    * Same role gating as the horizontal nav for My Admin.
    */
@@ -162,9 +177,9 @@ export class ReportingNavSidebarComponent {
     return admin ? [...primary, admin] : primary;
   });
 
-  // --- Results Framework & Reporting: lazy-expandable program tree ---
-  /** Whether the RFR entry is expanded to reveal the Science Program groups. */
-  readonly rfrExpanded = signal(false);
+  // --- Results Framework & Reporting: section links + lazy-expandable program tree ---
+  /** Whether the RFR entry is expanded to reveal section links + Science Programs. */
+  readonly rfrExpanded = signal(this.router.url.startsWith('/result-framework-reporting'));
   /** Whether My Admin is expanded to reveal its child pages. */
   readonly myAdminExpanded = signal(this.router.url.startsWith('/init-admin-module'));
   /** Whether Admin module is expanded to reveal its child pages. */
@@ -194,12 +209,45 @@ export class ReportingNavSidebarComponent {
     { initialValue: null }
   );
 
+  /**
+   * Current RFR section path (home / planned-toc / emerging / centers) so SP links
+   * keep the user on the same surface when switching programs.
+   */
+  readonly currentRfrSectionPath = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      startWith(null),
+      map(() => {
+        const url = this.router.url.split('?')[0];
+        const match = this.rfrSectionLinks.find(l => url === l.path || url.startsWith(l.path + '/'));
+        return match?.path ?? '/result-framework-reporting/home';
+      })
+    ),
+    { initialValue: '/result-framework-reporting/home' }
+  );
+
   constructor() {
     // Expand collapsibles when landing inside their module (don't force-collapse on leave).
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
+      if (this.router.url.startsWith('/result-framework-reporting')) {
+        this.rfrExpanded.set(true);
+        this.ensureRfrLoaded();
+      }
       if (this.router.url.startsWith('/init-admin-module')) this.myAdminExpanded.set(true);
       if (this.router.url.startsWith('/admin-module')) this.adminModuleExpanded.set(true);
     });
+  }
+
+  /** Active state for RFR section links (path only; ignores `?sp=`). */
+  isRfrSectionActive(path: string): boolean {
+    const url = this.router.url.split('?')[0];
+    return url === path;
+  }
+
+  /** Query params for a section link — keep the selected Science Program. */
+  rfrSectionQueryParams(): { sp?: number } {
+    const sp = this.activeSpId();
+    return sp != null ? { sp } : {};
   }
 
   // --- Footer chrome (moved from the top header) ---

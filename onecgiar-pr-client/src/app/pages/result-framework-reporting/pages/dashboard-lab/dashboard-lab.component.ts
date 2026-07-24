@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress, Version } from '../../../../shared/interfaces/SP-progress.interface';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -92,6 +94,9 @@ interface AccentTheme {
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
+/** Which RFR section surface to render (from route `data.rfrView`). */
+export type RfrView = 'dashboard' | 'planned' | 'emerging' | 'centers';
+
 export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly api = inject(ApiService);
@@ -99,6 +104,25 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly guideSE = inject(ReportingGuideService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+
+  /** Sidebar section mode — Dashboard = full bento; others = that card only. */
+  readonly rfrView = toSignal(
+    this.route.data.pipe(map(d => (d['rfrView'] as RfrView) || 'dashboard')),
+    { initialValue: (this.route.snapshot.data['rfrView'] as RfrView) || 'dashboard' }
+  );
+  readonly showDashboardChrome = computed(() => this.rfrView() === 'dashboard');
+  readonly showPlanned = computed(() => {
+    const v = this.rfrView();
+    return v === 'dashboard' || v === 'planned';
+  });
+  readonly showEmerging = computed(() => {
+    const v = this.rfrView();
+    return v === 'dashboard' || v === 'emerging';
+  });
+  readonly showCenters = computed(() => {
+    const v = this.rfrView();
+    return v === 'dashboard' || v === 'centers';
+  });
   /** AOW code read from the URL on load, opened once its program's AOWs arrive. */
   private pendingAow: string | null = null;
   /** AOW filters read from the URL, applied right after the AOW reopens (openAow

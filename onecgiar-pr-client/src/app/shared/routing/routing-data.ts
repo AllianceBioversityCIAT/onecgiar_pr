@@ -493,24 +493,43 @@ export const WhatsNewRouting: PrRoute[] = [
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
 
+const loadDashboardLab = () =>
+  import('../../pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.component').then(m => m.DashboardLabComponent);
+
 export const ResultFrameworkReportingRouting: PrRoute[] = [
   {
     // The home now serves the redesigned dashboard-lab experience. The original
     // home component is kept in the codebase (no longer routed here) and the
     // experimental /dashboard-lab route below still points at the same component.
-    prName: 'Result Framework & Reporting',
+    prName: 'Dashboard',
     path: 'home',
-    data: { sidebar: { width: 300 } },
-    loadComponent: () =>
-      import('../../pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.component').then(m => m.DashboardLabComponent)
+    data: { sidebar: { width: 300 }, rfrView: 'dashboard' },
+    loadComponent: loadDashboardLab
+  },
+  {
+    prName: 'Results planned in your 2026 ToC',
+    path: 'planned-toc',
+    data: { sidebar: { width: 300 }, rfrView: 'planned' },
+    loadComponent: loadDashboardLab
+  },
+  {
+    prName: 'Report Emerging results',
+    path: 'emerging',
+    data: { sidebar: { width: 300 }, rfrView: 'emerging' },
+    loadComponent: loadDashboardLab
+  },
+  {
+    prName: 'My CGIAR Centers',
+    path: 'centers',
+    data: { sidebar: { width: 300 }, rfrView: 'centers' },
+    loadComponent: loadDashboardLab
   },
   {
     prName: 'Dashboard lab (experimental)',
     path: 'dashboard-lab',
     onlyTest: true,
-    data: { sidebar: { width: 300 } },
-    loadComponent: () =>
-      import('../../pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.component').then(m => m.DashboardLabComponent)
+    data: { sidebar: { width: 300 }, rfrView: 'dashboard' },
+    loadComponent: loadDashboardLab
   },
   {
     prName: 'Center report',

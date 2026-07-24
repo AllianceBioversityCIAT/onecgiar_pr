@@ -123,6 +123,17 @@ hlm-sidebar {
     color: rgba(213, 213, 240, 0.75); // primary-100-ish
   }
 
+  // Conceptual RFR section group — muted label only (not a collapsible)
+  .pr-nav-rfr-group-label {
+    margin: 6px 0 2px;
+    padding: 2px 8px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.38);
+  }
+
   [data-slot='sidebar-separator'] {
     background: rgba(255, 255, 255, 0.12) !important;
   }
