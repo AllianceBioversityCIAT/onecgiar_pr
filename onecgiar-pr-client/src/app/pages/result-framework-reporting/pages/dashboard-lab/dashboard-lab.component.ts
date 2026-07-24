@@ -757,6 +757,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Expand/collapse an AoW inline in the planned-ToC list, lazily loading its ToC on open. */
+  toggleInlineAow(code: string): void {
+    const sp = this.selected()?.initiativeCode;
+    if (sp && !this.isPanelAowExpanded(code)) this.loadToc(sp, code);
+    this.togglePanelAow(code);
+  }
+
+  /** The {aow, indicators, count, loading} bundle for a single AoW code (from indicatorsByAow). */
+  indicatorsForAow(code: string) {
+    return this.indicatorsByAow().find(x => x.aow.code === code) ?? null;
+  }
+
   setIndicatorTab(tab: 'outputs' | 'outcomes'): void {
     this.indicatorTab.set(tab);
   }
