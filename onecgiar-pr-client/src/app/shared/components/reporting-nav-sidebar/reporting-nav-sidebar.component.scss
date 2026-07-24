@@ -123,10 +123,15 @@ hlm-sidebar {
     color: rgba(213, 213, 240, 0.75); // primary-100-ish
   }
 
-  // Conceptual RFR section group — muted label only (not a collapsible)
+  // Level-1 conceptual tag — same horizontal inset as menu buttons, no collapsible
+  .pr-nav-rfr-group-label-wrap {
+    margin: 0;
+    padding: 0;
+  }
+
   .pr-nav-rfr-group-label {
-    margin: 6px 0 2px;
-    padding: 2px 8px;
+    margin: 4px 0 2px;
+    padding: 4px 8px;
     font-size: 9px;
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -134,15 +139,15 @@ hlm-sidebar {
     color: rgba(255, 255, 255, 0.38);
   }
 
-  // Programs sit under Planned ToC (one level deeper)
+  // Programs only — nested under Planned (the 4 section links stay flush level-1)
   .pr-nav-rfr-programs {
-    margin: 2px 0 4px 10px;
-    padding-left: 6px;
-    border-inline-start: 1.5px solid rgba(255, 255, 255, 0.12);
+    margin: 2px 0 6px;
+    padding: 0 4px 0 8px;
 
     ul[hlmSidebarMenuSub] {
-      margin-left: 4px;
-      padding-left: 6px;
+      margin-left: 0;
+      padding-left: 8px;
+      border-inline-start: 1.5px solid rgba(255, 255, 255, 0.12);
     }
   }
 

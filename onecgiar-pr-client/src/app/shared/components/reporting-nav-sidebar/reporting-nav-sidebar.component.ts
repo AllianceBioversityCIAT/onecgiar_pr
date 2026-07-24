@@ -187,9 +187,7 @@ export class ReportingNavSidebarComponent {
     return admin ? [...primary, admin] : primary;
   });
 
-  // --- Results Framework & Reporting: section links + lazy-expandable program tree ---
-  /** Whether the RFR entry is expanded to reveal section links + Science Programs. */
-  readonly rfrExpanded = signal(this.router.url.startsWith('/result-framework-reporting'));
+  // --- Results Framework: level-1 group tag + 4 peer links; programs under Planned ---
   /** Whether My Admin is expanded to reveal its child pages. */
   readonly myAdminExpanded = signal(this.router.url.startsWith('/init-admin-module'));
   /** Whether Admin module is expanded to reveal its child pages. */
@@ -220,12 +218,10 @@ export class ReportingNavSidebarComponent {
   );
 
   constructor() {
+    this.ensureRfrLoaded();
     // Expand collapsibles when landing inside their module (don't force-collapse on leave).
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
-      if (this.router.url.startsWith('/result-framework-reporting')) {
-        this.rfrExpanded.set(true);
-        this.ensureRfrLoaded();
-      }
+      if (this.router.url.startsWith('/result-framework-reporting')) this.ensureRfrLoaded();
       if (this.router.url.startsWith('/init-admin-module')) this.myAdminExpanded.set(true);
       if (this.router.url.startsWith('/admin-module')) this.adminModuleExpanded.set(true);
     });
@@ -258,14 +254,6 @@ export class ReportingNavSidebarComponent {
     this.rfrLoadTriggered = true;
     const alreadyLoaded = this.homeSE.mySPsList().length || this.homeSE.otherSPsList().length || this.homeSE.otherProjectsList().length;
     if (!alreadyLoaded) this.homeSE.getScienceProgramsProgress();
-  }
-
-  /** Expand/collapse RFR. On the first expand, lazily fetch the programs (unless already cached). */
-  toggleRfr(): void {
-    if (this.isCollapsed()) return;
-    const next = !this.rfrExpanded();
-    this.rfrExpanded.set(next);
-    if (next) this.ensureRfrLoaded();
   }
 
   toggleMyAdmin(): void {
