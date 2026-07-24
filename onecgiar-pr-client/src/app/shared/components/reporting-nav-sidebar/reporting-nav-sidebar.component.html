@@ -274,32 +274,32 @@
 <!-- Collapsed-rail flyout: section title + children (portaled outside overflow:hidden content) -->
 @if (isCollapsed() && iconFlyout(); as fly) {
   <div
-    class="border-sidebar-border fixed z-[220] max-h-[min(70vh,520px)] w-[260px] overflow-auto rounded-xl border bg-white p-2 shadow-[0_16px_40px_-12px_rgba(30,32,47,0.35)]"
+    class="pr-nav-flyout border-sidebar-border fixed z-[220] max-h-[min(70vh,520px)] w-[260px] overflow-auto rounded-xl border bg-white p-2 shadow-[0_16px_40px_-12px_rgba(30,32,47,0.35)]"
     [style.top.px]="fly.top"
     [style.left.px]="fly.left"
     (mouseenter)="keepIconFlyout()"
     (mouseleave)="scheduleCloseIconFlyout()"
     role="menu">
     @if (fly.key === 'rfr') {
-      <p class="text-sidebar-foreground m-0 px-2 py-1.5 text-xs font-semibold">Results Framework &amp; Reporting</p>
+      <p class="pr-nav-flyout__title">Results Framework &amp; Reporting</p>
       @if (homeSE.isLoadingSPLists()) {
         <p class="text-sidebar-foreground/55 m-0 px-2 py-2 text-xs">Loading programs…</p>
       } @else {
         @for (group of programGroups(); track group.key) {
           @if (group.items.length) {
             <p class="text-sidebar-foreground/50 m-0 px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide">{{ group.label }}</p>
-            <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
+            <ul class="pr-nav-flyout__list flex flex-col gap-0.5">
               @for (sp of group.items; track sp.initiativeId) {
                 <li>
                   <a
-                    class="hover:bg-sidebar-accent flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs no-underline"
-                    [class.bg-sidebar-accent]="sp.initiativeId === activeSpId()"
+                    class="pr-nav-flyout__link"
+                    [class.pr-nav-flyout__link--active]="sp.initiativeId === activeSpId()"
                     routerLink="/result-framework-reporting/home"
                     [queryParams]="{ sp: sp.initiativeId }"
                     (click)="closeIconFlyout()">
                     <img [src]="iconSrc(sp)" [alt]="sp.initiativeCode" width="16" height="16" class="size-4 shrink-0 rounded object-cover" />
                     <span class="font-semibold">{{ sp.initiativeCode }}</span>
-                    <span class="text-sidebar-foreground/70 truncate">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                    <span class="truncate opacity-80">{{ sp.initiativeShortName || sp.initiativeName }}</span>
                   </a>
                 </li>
               }
@@ -308,13 +308,13 @@
         }
       }
     } @else if (fly.key === 'my-admin') {
-      <p class="text-sidebar-foreground m-0 px-2 py-1.5 text-xs font-semibold">My Admin</p>
-      <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
+      <p class="pr-nav-flyout__title">My Admin</p>
+      <ul class="pr-nav-flyout__list flex flex-col gap-0.5">
         @for (link of myAdminLinks; track link.path) {
           <li>
             <a
-              class="hover:bg-sidebar-accent flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs no-underline"
-              [class.bg-sidebar-accent]="isSubLinkActive(link.path)"
+              class="pr-nav-flyout__link"
+              [class.pr-nav-flyout__link--active]="isSubLinkActive(link.path)"
               [routerLink]="link.path"
               (click)="closeIconFlyout()">
               <ng-icon [name]="link.icon" class="text-[16px]" />
@@ -324,13 +324,13 @@
         }
       </ul>
     } @else if (fly.key === 'admin-module') {
-      <p class="text-sidebar-foreground m-0 px-2 py-1.5 text-xs font-semibold">Admin module</p>
-      <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
+      <p class="pr-nav-flyout__title">Admin module</p>
+      <ul class="pr-nav-flyout__list flex flex-col gap-0.5">
         @for (link of adminModuleLinks; track link.path) {
           <li>
             <a
-              class="hover:bg-sidebar-accent flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs no-underline"
-              [class.bg-sidebar-accent]="isSubLinkActive(link.path)"
+              class="pr-nav-flyout__link"
+              [class.pr-nav-flyout__link--active]="isSubLinkActive(link.path)"
               [routerLink]="link.path"
               (click)="closeIconFlyout()">
               <ng-icon [name]="link.icon" class="text-[16px]" />

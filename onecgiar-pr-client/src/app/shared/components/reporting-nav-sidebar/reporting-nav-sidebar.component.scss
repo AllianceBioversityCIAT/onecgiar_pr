@@ -8,8 +8,7 @@
 }
 
 hlm-sidebar {
-  ul[hlmSidebarMenu],
-  ul[hlmSidebarMenuSub] {
+  ul[hlmSidebarMenu] {
     margin: 0;
     padding: 0;
     list-style: none;
@@ -24,5 +23,75 @@ hlm-sidebar {
   a[hlmSidebarMenuSubButton] {
     color: inherit;
     text-decoration: none;
+  }
+
+  /**
+   * Child tree rail — keep Spartan's left border readable and make nested items
+   * read clearly as children (the global list reset above used to wipe submenu padding).
+   */
+  ul[hlmSidebarMenuSub] {
+    margin: 2px 0 8px 14px;
+    padding: 4px 0 4px 10px;
+    list-style: none;
+    border-inline-start: 2px solid color-mix(in srgb, var(--sidebar-border, #e5e7eb) 85%, var(--pr-color-primary-300) 15%);
+    gap: 2px;
+  }
+
+  a[hlmSidebarMenuSubButton],
+  button[hlmSidebarMenuSubButton] {
+    min-height: 30px;
+    font-size: 12px;
+    font-weight: 500;
+    color: color-mix(in srgb, var(--sidebar-foreground, #1e202f) 78%, transparent);
+  }
+
+  a[hlmSidebarMenuSubButton][data-active='true'],
+  button[hlmSidebarMenuSubButton][data-active='true'] {
+    color: var(--sidebar-foreground, #1e202f);
+    font-weight: 600;
+  }
+}
+
+/* Same child treatment for the collapsed-rail hover flyout */
+.pr-nav-flyout {
+  &__title {
+    margin: 0;
+    padding: 6px 8px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--pr-color-secondary-400) 70%, transparent);
+  }
+
+  &__list {
+    margin: 0 0 4px 8px;
+    padding: 2px 0 2px 10px;
+    list-style: none;
+    border-inline-start: 2px solid color-mix(in srgb, #e5e7eb 80%, var(--pr-color-primary-300) 20%);
+  }
+
+  &__link {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--pr-color-secondary-300);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--pr-color-primary-25, #f1f1fb);
+      color: var(--pr-color-secondary-400);
+    }
+
+    &--active {
+      background: var(--pr-color-primary-50, #eaeaf8);
+      color: var(--pr-color-primary-400);
+      font-weight: 600;
+    }
   }
 }
