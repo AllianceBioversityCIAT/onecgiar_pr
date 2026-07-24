@@ -77,6 +77,9 @@ interface AccentTheme {
   cardShadow: string;
 }
 
+/** Which RFR section surface to render (from route `data.rfrView`). */
+export type RfrView = 'dashboard' | 'planned' | 'emerging' | 'centers';
+
 /**
  * DASHBOARD LAB (experimental) — route: /result-framework-reporting/dashboard-lab
  *
@@ -94,9 +97,6 @@ interface AccentTheme {
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-/** Which RFR section surface to render (from route `data.rfrView`). */
-export type RfrView = 'dashboard' | 'planned' | 'emerging' | 'centers';
-
 export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly api = inject(ApiService);
