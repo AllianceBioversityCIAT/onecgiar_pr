@@ -1,13 +1,37 @@
 /**
- * Safety net: even though the app now ships Tailwind preflight globally, keep a scoped
- * reset so the official Spartan sidebar renders correctly regardless of preflight state
- * (no list bullets/indent, links inherit the sidebar foreground color).
+ * Premium dark "command console" look — same surface as the old premium-sidebar
+ * (#1f2233 + primary radial glow) with white type. Scoped token overrides keep
+ * Spartan utilities (bg-sidebar, text-sidebar-foreground, accents) in sync.
  */
 :host {
   display: contents;
 }
 
 hlm-sidebar {
+  --sidebar: #1f2233;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #6b6dc4;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(107, 109, 196, 0.22);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #6b6dc4;
+
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  background-color: #1f2233 !important;
+  background-image: radial-gradient(135% 85% at 50% -8%, rgba(100, 97, 188, 0.32) 0%, rgba(100, 97, 188, 0) 58%) !important;
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  // Inner shell used when collapsible=icon
+  [data-slot='sidebar-inner'],
+  [data-sidebar='sidebar'] {
+    background-color: transparent !important;
+    background-image: none !important;
+  }
+
   ul[hlmSidebarMenu] {
     margin: 0;
     padding: 0;
@@ -25,15 +49,30 @@ hlm-sidebar {
     text-decoration: none;
   }
 
+  // Active item — same indigo lift as the old premium sidebar
+  [data-slot='sidebar-menu-button'][data-active='true'],
+  [data-slot='sidebar-menu-button'][data-active='true']:hover {
+    background-image: linear-gradient(180deg, #6b6dc4 0%, #6461bc 100%) !important;
+    color: #fff !important;
+    font-weight: 600;
+    box-shadow:
+      0 8px 20px rgba(100, 97, 188, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+
+  [data-slot='sidebar-menu-button']:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+
   /**
-   * Child tree rail — compact nested items (smaller type + tighter rows) with a
-   * light left rail so they still read as children of the parent section.
+   * Child tree rail — compact nested items on the dark surface.
    */
   ul[hlmSidebarMenuSub] {
     margin: 0 0 4px 12px;
     padding: 2px 0 2px 8px;
     list-style: none;
-    border-inline-start: 1.5px solid color-mix(in srgb, var(--sidebar-border, #e5e7eb) 90%, var(--pr-color-primary-300) 10%);
+    border-inline-start: 1.5px solid rgba(255, 255, 255, 0.16);
     gap: 0;
   }
 
@@ -46,7 +85,7 @@ hlm-sidebar {
     font-size: 11px !important;
     font-weight: 500;
     line-height: 1.2;
-    color: color-mix(in srgb, var(--sidebar-foreground, #1e202f) 72%, transparent);
+    color: rgba(255, 255, 255, 0.72);
 
     ng-icon {
       font-size: 14px !important;
@@ -63,18 +102,56 @@ hlm-sidebar {
       font-size: 9px !important;
       padding-inline: 4px !important;
       line-height: 14px;
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: rgba(255, 255, 255, 0.75) !important;
     }
   }
 
   a[hlmSidebarMenuSubButton][data-active='true'],
   button[hlmSidebarMenuSubButton][data-active='true'] {
-    color: var(--sidebar-foreground, #1e202f);
+    color: #fff;
     font-weight: 600;
+    background: rgba(107, 109, 196, 0.35) !important;
+  }
+
+  [data-slot='sidebar-group-label'] {
+    color: rgba(213, 213, 240, 0.75); // primary-100-ish
+  }
+
+  [data-slot='sidebar-separator'] {
+    background: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  [data-slot='sidebar-footer'] {
+    border-color: rgba(255, 255, 255, 0.1) !important;
   }
 }
 
-/* Same compact child treatment for the collapsed-rail hover flyout */
+.pr-nav-user-chip {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #fff;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .pr-nav-user-chip__role {
+    background: rgba(107, 109, 196, 0.35);
+    color: #d5d5f0;
+  }
+}
+
+/* Collapsed-rail hover flyout — same dark console language */
 .pr-nav-flyout {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: #1f2233 !important;
+  background-image: radial-gradient(135% 85% at 50% -8%, rgba(100, 97, 188, 0.28) 0%, rgba(100, 97, 188, 0) 58%) !important;
+  color: #fff;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
   &__title {
     margin: 0;
     padding: 4px 6px 2px;
@@ -82,14 +159,14 @@ hlm-sidebar {
     font-weight: 700;
     letter-spacing: 0.02em;
     text-transform: uppercase;
-    color: color-mix(in srgb, var(--pr-color-secondary-400) 70%, transparent);
+    color: rgba(213, 213, 240, 0.8);
   }
 
   &__list {
     margin: 0 0 2px 6px;
     padding: 1px 0 1px 8px;
     list-style: none;
-    border-inline-start: 1.5px solid color-mix(in srgb, #e5e7eb 80%, var(--pr-color-primary-300) 20%);
+    border-inline-start: 1.5px solid rgba(255, 255, 255, 0.16);
   }
 
   &__link {
@@ -102,18 +179,19 @@ hlm-sidebar {
     font-size: 11px;
     font-weight: 500;
     line-height: 1.2;
-    color: var(--pr-color-secondary-300);
+    color: rgba(255, 255, 255, 0.78);
     text-decoration: none;
 
     &:hover {
-      background: var(--pr-color-primary-25, #f1f1fb);
-      color: var(--pr-color-secondary-400);
+      background: rgba(107, 109, 196, 0.22);
+      color: #fff;
     }
 
     &--active {
-      background: var(--pr-color-primary-50, #eaeaf8);
-      color: var(--pr-color-primary-400);
+      background-image: linear-gradient(180deg, #6b6dc4 0%, #6461bc 100%);
+      color: #fff;
       font-weight: 600;
+      box-shadow: 0 6px 14px rgba(100, 97, 188, 0.4);
     }
   }
 }

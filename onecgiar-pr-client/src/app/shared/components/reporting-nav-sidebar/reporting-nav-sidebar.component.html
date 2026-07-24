@@ -252,18 +252,18 @@
       aria-label="User menu"
       [attr.aria-expanded]="userMenuOpen()"
       [attr.title]="isCollapsed() ? getUserName() : null"
-      class="border-sidebar-border hover:bg-sidebar-accent flex w-full items-center gap-2 rounded-xl border bg-white p-1.5 text-left transition-colors"
+      class="pr-nav-user-chip flex w-full items-center gap-2 rounded-xl border p-1.5 text-left transition-colors"
       [class.justify-center]="isCollapsed()">
       <span class="pr-avatar" [style]="{ width: '32px', height: '32px', minWidth: '32px' }">{{ getUserInitials() }}</span>
       @if (!isCollapsed()) {
         <span class="flex min-w-0 flex-col leading-tight">
           <span class="flex items-center gap-1.5">
-            <span class="text-sidebar-foreground min-w-0 truncate text-xs font-semibold">{{ getUserName() }}</span>
-            <span class="shrink-0 truncate rounded bg-[var(--pr-color-primary-50)] px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-700)]">{{ getPlatformRole() }}</span>
+            <span class="min-w-0 truncate text-xs font-semibold text-white">{{ getUserName() }}</span>
+            <span class="pr-nav-user-chip__role shrink-0 truncate rounded px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px]">{{ getPlatformRole() }}</span>
           </span>
-          <span class="text-sidebar-foreground/60 truncate text-[10px]">{{ getUserEmail() }}</span>
+          <span class="truncate text-[10px] text-white/60">{{ getUserEmail() }}</span>
         </span>
-        <i class="material-icons-round text-sidebar-foreground/70 ms-auto text-[18px] transition-transform duration-200" [class.rotate-180]="userMenuOpen()" aria-hidden="true">expand_more</i>
+        <i class="material-icons-round ms-auto text-[18px] text-white/70 transition-transform duration-200" [class.rotate-180]="userMenuOpen()" aria-hidden="true">expand_more</i>
       }
     </button>
   </div>
@@ -274,7 +274,7 @@
 <!-- Collapsed-rail flyout: section title + children (portaled outside overflow:hidden content) -->
 @if (isCollapsed() && iconFlyout(); as fly) {
   <div
-    class="pr-nav-flyout border-sidebar-border fixed z-[220] max-h-[min(70vh,520px)] w-[260px] overflow-auto rounded-xl border bg-white p-2 shadow-[0_16px_40px_-12px_rgba(30,32,47,0.35)]"
+    class="pr-nav-flyout fixed z-[220] max-h-[min(70vh,520px)] w-[260px] overflow-auto rounded-xl border p-2"
     [style.top.px]="fly.top"
     [style.left.px]="fly.left"
     (mouseenter)="keepIconFlyout()"
@@ -283,11 +283,11 @@
     @if (fly.key === 'rfr') {
       <p class="pr-nav-flyout__title">Results Framework &amp; Reporting</p>
       @if (homeSE.isLoadingSPLists()) {
-        <p class="text-sidebar-foreground/55 m-0 px-2 py-2 text-xs">Loading programs…</p>
+        <p class="m-0 px-2 py-2 text-xs text-white/55">Loading programs…</p>
       } @else {
         @for (group of programGroups(); track group.key) {
           @if (group.items.length) {
-            <p class="text-sidebar-foreground/50 m-0 px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide">{{ group.label }}</p>
+            <p class="m-0 px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-white/50">{{ group.label }}</p>
             <ul class="pr-nav-flyout__list flex flex-col gap-0.5">
               @for (sp of group.items; track sp.initiativeId) {
                 <li>
