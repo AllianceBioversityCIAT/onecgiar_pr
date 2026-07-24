@@ -123,20 +123,30 @@ hlm-sidebar {
     color: rgba(213, 213, 240, 0.75); // primary-100-ish
   }
 
-  // Level-1 conceptual tag — same horizontal inset as menu buttons, no collapsible
+  // Level-1 conceptual tag — compact rounded chip, little vertical space
   .pr-nav-rfr-group-label-wrap {
-    margin: 0;
+    margin: 2px 8px 4px;
     padding: 0;
+    list-style: none;
   }
 
   .pr-nav-rfr-group-label {
-    margin: 4px 0 2px;
-    padding: 4px 8px;
-    font-size: 9px;
+    margin: 0;
+    width: fit-content;
+    max-width: 100%;
+    padding: 3px 7px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 8.5px;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.38);
+    color: rgba(255, 255, 255, 0.48);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   // Programs only — nested under Planned (the 4 section links stay flush level-1)
