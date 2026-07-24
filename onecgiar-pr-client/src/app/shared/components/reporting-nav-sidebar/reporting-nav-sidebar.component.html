@@ -70,20 +70,28 @@
                   }
 
                   <li hlmSidebarMenuItem class="pr-nav-rfr-planned">
-                    <a
+                    <button
                       hlmSidebarMenuButton
-                      [routerLink]="rfrPlannedPath"
-                      [queryParams]="rfrSectionQueryParams()"
-                      [isActive]="isRfrSectionActive(rfrPlannedPath)"
-                      tooltip="Results planned in your 2026 ToC"
+                      type="button"
+                      (click)="togglePlanned()"
                       (mouseenter)="openIconFlyout('rfr', $event)"
-                      (mouseleave)="scheduleCloseIconFlyout()">
+                      (mouseleave)="scheduleCloseIconFlyout()"
+                      [isActive]="isPlannedActive()"
+                      [attr.aria-expanded]="plannedExpanded()"
+                      aria-label="Results planned in your 2026 ToC"
+                      tooltip="Results planned in your 2026 ToC">
                       <ng-icon name="lucideClipboardCheck" />
                       <span>Results planned in your 2026 ToC</span>
-                    </a>
+                      @if (!isCollapsed()) {
+                        <ng-icon
+                          name="lucideChevronDown"
+                          class="ms-auto text-[16px] transition-transform duration-200"
+                          [class.rotate-180]="plannedExpanded()" />
+                      }
+                    </button>
 
-                    <!-- Programs only while Planned ToC is active — collapses when another option is selected -->
-                    @if (!isCollapsed() && isPlannedActive()) {
+                    <!-- Programs expand under Planned; pick a program to navigate -->
+                    @if (!isCollapsed() && plannedExpanded()) {
                       @if (homeSE.isLoadingSPLists()) {
                         <div class="text-sidebar-foreground/55 px-2 py-1.5 text-[10px]">Loading programs…</div>
                       } @else {

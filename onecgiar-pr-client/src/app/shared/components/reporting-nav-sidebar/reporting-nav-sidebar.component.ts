@@ -217,7 +217,7 @@ export class ReportingNavSidebarComponent {
     { initialValue: null }
   );
 
-  /** True only on Planned ToC — drives showing/hiding the Science Programs block. */
+  /** True when the URL is Planned ToC (a program is open). */
   readonly isPlannedActive = toSignal(
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
@@ -227,14 +227,36 @@ export class ReportingNavSidebarComponent {
     { initialValue: false }
   );
 
+  /**
+   * Local expand/collapse for Science Programs under Planned.
+   * Clicking Planned toggles this — it does NOT navigate (pick a program to enter).
+   */
+  readonly plannedExpanded = signal(this.router.url.split('?')[0] === this.rfrPlannedPath);
+
   constructor() {
     this.ensureRfrLoaded();
     // Expand collapsibles when landing inside their module (don't force-collapse on leave).
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
+      const path = this.router.url.split('?')[0];
+      if (path === this.rfrPlannedPath) {
+        this.plannedExpanded.set(true);
+        this.ensureRfrLoaded();
+      } else {
+        // Leaving Planned (Dashboard / Emerging / Centers / elsewhere) collapses the tree
+        this.plannedExpanded.set(false);
+      }
       if (this.router.url.startsWith('/result-framework-reporting')) this.ensureRfrLoaded();
       if (this.router.url.startsWith('/init-admin-module')) this.myAdminExpanded.set(true);
       if (this.router.url.startsWith('/admin-module')) this.adminModuleExpanded.set(true);
     });
+  }
+
+  /** Expand/collapse Planned programs only — never navigates by itself. */
+  togglePlanned(): void {
+    if (this.isCollapsed()) return;
+    const next = !this.plannedExpanded();
+    this.plannedExpanded.set(next);
+    if (next) this.ensureRfrLoaded();
   }
 
   /** Active state for RFR section links (path only; ignores `?sp=`). */
