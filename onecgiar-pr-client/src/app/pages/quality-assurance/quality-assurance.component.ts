@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
 import { DomSanitizer } from '@angular/platform-browser';
 import { environment } from '../../../environments/environment';
 import { Observable } from 'rxjs';
 import { QualityAssuranceService } from './quality-assurance.service';
+import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-quality-assurance',
@@ -13,7 +14,9 @@ import { QualityAssuranceService } from './quality-assurance.service';
   standalone: false,
   changeDetection: ChangeDetectionStrategy.Default
 })
-export class QualityAssuranceComponent implements OnInit {
+export class QualityAssuranceComponent implements OnInit, OnDestroy {
+  private readonly dataControlSE = inject(DataControlService);
+
   constructor(
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
@@ -30,6 +33,9 @@ export class QualityAssuranceComponent implements OnInit {
   ngOnInit(): void {
     this.api.rolesSE.validateReadOnly();
     this.api.dataControlSE.detailSectionTitle('Quality Assurance');
+    // The Spartan sidebar carries all navigation + actions here, so hide the top header.
+    this.dataControlSE.hideMainNav.set(true);
+    this.dataControlSE.hideHeaderChrome.set(true);
 
     new Observable((observer: any) => {
       observer.next();
@@ -39,6 +45,11 @@ export class QualityAssuranceComponent implements OnInit {
         this.GET_AllInitiatives();
       });
     });
+  }
+
+  ngOnDestroy(): void {
+    this.dataControlSE.hideMainNav.set(false);
+    this.dataControlSE.hideHeaderChrome.set(false);
   }
 
   sanitizeUrl() {

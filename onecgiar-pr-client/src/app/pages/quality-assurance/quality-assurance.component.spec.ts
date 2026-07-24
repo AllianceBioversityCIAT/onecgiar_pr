@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { QualityAssuranceComponent } from './quality-assurance.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrSelectComponent } from '../../custom-fields/pr-select/pr-select.component';
@@ -13,6 +14,7 @@ import { ApiService } from '../../shared/services/api/api.service';
 import { QualityAssuranceService } from './quality-assurance.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
 import { DomSanitizer } from '@angular/platform-browser';
+import { DataControlService } from '../../shared/services/data-control.service';
 
 jest.useFakeTimers();
 
@@ -85,6 +87,13 @@ describe('QualityAssuranceComponent', () => {
         {
           provide: DomSanitizer,
           useValue: mockDomSanitizer
+        },
+        {
+          provide: DataControlService,
+          useValue: {
+            hideMainNav: signal(false),
+            hideHeaderChrome: signal(false)
+          }
         }
       ]
     }).compileComponents();

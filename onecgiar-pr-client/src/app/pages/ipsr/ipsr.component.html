@@ -1,1 +1,7 @@
-<router-outlet *ngIf="this.api.dataControlSE?.myInitiativesLoaded"></router-outlet>
+<div hlmSidebarWrapper sidebarWidth="280px" class="min-h-full items-stretch">
+  <app-reporting-nav-sidebar />
+
+  <main hlmSidebarInset class="min-w-0 flex-1">
+    <router-outlet *ngIf="this.api.dataControlSE?.myInitiativesLoaded"></router-outlet>
+  </main>
+</div>
