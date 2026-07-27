@@ -1219,56 +1219,37 @@ describe('ResultsListFiltersComponent', () => {
     });
   });
 
+  // The top header was removed (Spartan sidebar is the sole app chrome), so there is no
+  // navbar to measure or observe: the height is pinned to 0 and no ResizeObserver is created.
   describe('calculateNavbarHeight (private)', () => {
-    it('should set navbar height from found element', () => {
-      const spy = jest.spyOn(document, 'querySelector').mockReturnValue({
-        getBoundingClientRect: () => ({ height: 80 })
-      } as any);
+    it('should pin navbar height to 0 without reading the DOM', () => {
+      const spy = jest.spyOn(document, 'querySelector');
 
       (component as any).calculateNavbarHeight();
 
-      expect(component.navbarHeight()).toBe(80);
-      spy.mockRestore();
-    });
-
-    it('should set default height when no navbar element found', () => {
-      const spy = jest.spyOn(document, 'querySelector').mockReturnValue(null);
-
-      (component as any).calculateNavbarHeight();
-
-      expect(component.navbarHeight()).toBe(60);
+      expect(component.navbarHeight()).toBe(0);
+      expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
     });
   });
 
   describe('setupResizeObserver (private)', () => {
-    it('should create ResizeObserver when navbar element exists', () => {
-      const mockObserve = jest.fn();
+    it('should not create a ResizeObserver', () => {
       const OriginalResizeObserver = (global as any).ResizeObserver;
       const MockResizeObserver = jest.fn().mockImplementation(() => ({
-        observe: mockObserve,
+        observe: jest.fn(),
         disconnect: jest.fn()
       }));
       (global as any).ResizeObserver = MockResizeObserver;
 
-      const mockElement = { getBoundingClientRect: () => ({ height: 80 }) } as any;
-      const spy = jest.spyOn(document, 'querySelector').mockReturnValue(mockElement);
+      try {
+        (component as any).setupResizeObserver();
 
-      (component as any).setupResizeObserver();
-
-      expect(MockResizeObserver).toHaveBeenCalled();
-      expect(mockObserve).toHaveBeenCalledWith(mockElement);
-      spy.mockRestore();
-      (global as any).ResizeObserver = OriginalResizeObserver;
-    });
-
-    it('should not create ResizeObserver when no navbar element', () => {
-      const spy = jest.spyOn(document, 'querySelector').mockReturnValue(null);
-
-      (component as any).setupResizeObserver();
-
-      expect((component as any).resizeObserver).toBeNull();
-      spy.mockRestore();
+        expect(MockResizeObserver).not.toHaveBeenCalled();
+        expect((component as any).resizeObserver).toBeNull();
+      } finally {
+        (global as any).ResizeObserver = OriginalResizeObserver;
+      }
     });
   });
 
