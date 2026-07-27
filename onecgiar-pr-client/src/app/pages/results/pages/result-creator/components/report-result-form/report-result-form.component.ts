@@ -6,11 +6,20 @@ import { ResultBody } from '../../../../../../shared/interfaces/result.interface
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
 import { EntityAowService } from '../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
-import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, of, switchMap, takeUntil, timer } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, merge, of, switchMap, takeUntil } from 'rxjs';
 import {
   filterOutAvisaFromGroupedInitiativeOptions,
   filterOutAvisaInitiatives
 } from '../../../../../../shared/utils/avisa-initiative.util';
+
+type TitleSearchEvent =
+  | {
+      kind: 'gate';
+      exactTitleFound: boolean;
+      blockingExactTitleFound: boolean;
+      titleCheckFailed: boolean;
+    }
+  | { kind: 'elastic'; depthSearchList: any[] };
 
 @Component({
   selector: 'app-report-result-form',
@@ -22,11 +31,11 @@ export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
   depthSearchList: any[] = [];
   exactTitleFound = signal(false);
   blockingExactTitleFound = signal(false);
+  titleCheckFailed = signal(false);
   loadingDepthSearch = signal(false);
   private readonly titleSearch$ = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
   private readonly titleSearchDebounceMs = 500;
-  private readonly titleRecheckDelayMs = 700;
   mqapJson: {};
   validating = false;
   kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
@@ -211,6 +220,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
       this.depthSearchList = [];
       this.exactTitleFound.set(false);
       this.blockingExactTitleFound.set(false);
+      this.titleCheckFailed.set(false);
       this.loadingDepthSearch.set(false);
       return;
     }
@@ -218,17 +228,13 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     this.loadingDepthSearch.set(true);
     this.exactTitleFound.set(false);
     this.blockingExactTitleFound.set(false);
+    this.titleCheckFailed.set(false);
     this.titleSearch$.next(title);
   }
 
   depthSearch(title: string) {
     this.loadingDepthSearch.set(true);
-    this.searchResultsWithRecheck(title).subscribe(state => {
-      this.depthSearchList = state.depthSearchList;
-      this.exactTitleFound.set(state.exactTitleFound);
-      this.blockingExactTitleFound.set(state.blockingExactTitleFound);
-      this.loadingDepthSearch.set(false);
-    });
+    this.searchResultsWithTitleUniqueness(title).subscribe(event => this.applyTitleSearchEvent(event));
   }
 
   getLegacyType(type: string, level: string): string {
@@ -393,60 +399,66 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
         filter(title => !!title?.trim()),
         debounceTime(this.titleSearchDebounceMs),
         distinctUntilChanged(),
-        switchMap(title => this.searchResultsWithRecheck(title)),
+        switchMap(title => this.searchResultsWithTitleUniqueness(title)),
         takeUntil(this.destroy$)
       )
-      .subscribe(state => {
-        this.depthSearchList = state.depthSearchList;
-        this.exactTitleFound.set(state.exactTitleFound);
-        this.blockingExactTitleFound.set(state.blockingExactTitleFound);
-        this.loadingDepthSearch.set(false);
-      });
+      .subscribe(event => this.applyTitleSearchEvent(event));
   }
 
-  private searchResultsWithRecheck(title: string) {
-    const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
-    return this.api.resultsSE.GET_FindResultsElastic(title, legacyType).pipe(
-      map(response => this.mapDepthSearchResults(response)),
-      switchMap(initialResults => {
-        const hasExactMatch = this.hasExactTitleMatch(initialResults, title);
-        if (!hasExactMatch) {
-          return of({
-            depthSearchList: initialResults,
-            exactTitleFound: false,
-            blockingExactTitleFound: false
-          });
-        }
+  private applyTitleSearchEvent(event: TitleSearchEvent): void {
+    if (event.kind === 'elastic') {
+      this.depthSearchList = event.depthSearchList;
+      return;
+    }
 
-        // Re-check shortly after an exact match to reduce false positives from stale ES index state.
-        return timer(this.titleRecheckDelayMs).pipe(
-          switchMap(() => this.api.resultsSE.GET_FindResultsElastic(title, legacyType)),
-          map(recheckResponse => {
-            const recheckResults = this.mapDepthSearchResults(recheckResponse);
-            const confirmedExactMatch = this.hasExactTitleMatch(recheckResults, title);
-            return {
-              depthSearchList: recheckResults,
-              exactTitleFound: confirmedExactMatch,
-              blockingExactTitleFound: confirmedExactMatch
-            };
-          }),
-          catchError(() =>
-            of({
-              depthSearchList: initialResults,
-              exactTitleFound: false,
-              blockingExactTitleFound: false
-            })
-          )
-        );
+    this.exactTitleFound.set(event.exactTitleFound);
+    this.blockingExactTitleFound.set(event.blockingExactTitleFound);
+    this.titleCheckFailed.set(event.titleCheckFailed);
+    this.loadingDepthSearch.set(false);
+  }
+
+  /**
+   * Elastic powers similar-results suggestions; MySQL uniqueness gates create.
+   * Emits gate and elastic events independently so a slow Elastic response
+   * does not block the uniqueness gate or save button.
+   */
+  private searchResultsWithTitleUniqueness(title: string) {
+    const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
+
+    const gate$ = this.api.resultsSE.GET_checkTitleUniqueness(title).pipe(
+      map(resp => {
+        const isUnique = resp?.response?.isUnique !== false;
+        return {
+          kind: 'gate' as const,
+          exactTitleFound: !isUnique,
+          blockingExactTitleFound: !isUnique,
+          titleCheckFailed: false
+        };
       }),
       catchError(() =>
         of({
-          depthSearchList: [],
+          kind: 'gate' as const,
           exactTitleFound: false,
-          blockingExactTitleFound: false
+          blockingExactTitleFound: true,
+          titleCheckFailed: true
         })
       )
     );
+
+    const elastic$ = this.api.resultsSE.GET_FindResultsElastic(title, legacyType).pipe(
+      map(response => ({
+        kind: 'elastic' as const,
+        depthSearchList: this.mapDepthSearchResults(response)
+      })),
+      catchError(() =>
+        of({
+          kind: 'elastic' as const,
+          depthSearchList: []
+        })
+      )
+    );
+
+    return merge(gate$, elastic$);
   }
 
   private mapDepthSearchResults(response: any[]) {
@@ -454,11 +466,6 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
       ...result,
       phase: this.allPhases.find(phase => phase.id === result?.version_id)
     }));
-  }
-
-  private hasExactTitleMatch(results: any[], title: string) {
-    const normalizeTitle = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
-    return results.some(result => normalizeTitle(result.title) === normalizeTitle(title));
   }
 
   ngOnDestroy(): void {

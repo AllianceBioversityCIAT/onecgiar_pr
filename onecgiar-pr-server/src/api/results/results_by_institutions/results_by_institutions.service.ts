@@ -27,7 +27,6 @@ import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ResultsByProjectsService } from '../results_by_projects/results_by_projects.service';
 import { SavePartnersV2Dto } from './dto/save-partners-v2.dto';
 import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
-import { throwServiceError } from '../../../shared/utils/service-error.util';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -59,7 +58,11 @@ export class ResultsByInstitutionsService {
           id,
         );
       if (!intitutions.length) {
-        throwServiceError('Institutions Not Found', HttpStatus.NOT_FOUND);
+        throw {
+          response: {},
+          message: 'Institutions Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
       }
       return {
         response: intitutions,
@@ -78,10 +81,11 @@ export class ResultsByInstitutionsService {
           id,
         );
       if (!intitutions.length) {
-        throwServiceError(
-          'Institutions Actors Not Found',
-          HttpStatus.NOT_FOUND,
-        );
+        throw {
+          response: {},
+          message: 'Institutions Actors Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
       }
       return {
         response: intitutions,
@@ -97,7 +101,11 @@ export class ResultsByInstitutionsService {
     try {
       const result = await this._resultRepository.getResultById(resultId);
       if (!result?.id) {
-        throwServiceError('Results Not Found', HttpStatus.NOT_FOUND, resultId);
+        throw {
+          response: resultId,
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
       }
 
       const knowledgeProduct =
@@ -110,9 +118,11 @@ export class ResultsByInstitutionsService {
         result.result_type_id === 6 &&
         !knowledgeProduct?.result_knowledge_product_id
       ) {
-        throwServiceError('Knowledge Product Not Found', HttpStatus.NOT_FOUND, {
-          result_id: resultId,
-        });
+        throw {
+          response: { result_id: resultId },
+          message: 'Knowledge Product Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
       }
 
       let institutions: any = [];
@@ -227,12 +237,20 @@ export class ResultsByInstitutionsService {
         },
       });
       if (!incomingResult) {
-        throwServiceError('Result Not Found', HttpStatus.NOT_FOUND);
+        throw {
+          response: {},
+          message: 'Result Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
       }
 
       const incomingUser = await this._userRepository.getUserById(user.id);
       if (!incomingUser) {
-        throwServiceError('User Not Found', HttpStatus.NOT_FOUND, user);
+        throw {
+          response: user,
+          message: 'User Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
       }
 
       const globalParameter = await this._globalParameterRepository.findOne({
@@ -358,12 +376,20 @@ export class ResultsByInstitutionsService {
           },
         });
         if (!incomingResult) {
-          throwServiceError('Result Not Found', HttpStatus.NOT_FOUND);
+          throw {
+            response: {},
+            message: 'Result Not Found',
+            status: HttpStatus.NOT_FOUND,
+          };
         }
 
         const incomingUser = await this._userRepository.getUserById(user.id);
         if (!incomingUser) {
-          throwServiceError('User Not Found', HttpStatus.NOT_FOUND, user);
+          throw {
+            response: user,
+            message: 'User Not Found',
+            status: HttpStatus.NOT_FOUND,
+          };
         }
 
         const globalParameter = await this._globalParameterRepository.findOne({
@@ -439,21 +465,12 @@ export class ResultsByInstitutionsService {
             ResultTypeEnum.INNOVATION_USE,
             ResultTypeEnum.INNOVATION_USE_IPSR,
           ].includes(incomingResult.result_type_id);
-          const institutionRoleId = knowledgeProduct
-            ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
-            : InstitutionRoleEnum.PARTNER;
           await this.handleInstitutions(
             data.institutions ?? [],
             oldPartners,
             !!knowledgeProduct,
             isInnovation,
             data.result_id,
-            user.id,
-          );
-          await this.syncInstitutionFromTocFlags(
-            data.institutions ?? [],
-            data.result_id,
-            institutionRoleId,
             user.id,
           );
         }
@@ -473,11 +490,12 @@ export class ResultsByInstitutionsService {
             );
 
           if (syncResult?.status && syncResult.status >= 400) {
-            throwServiceError(
-              syncResult.message ?? 'Failed to sync bilateral projects',
-              syncResult.status,
-              syncResult.response ?? {},
-            );
+            throw {
+              response: syncResult.response ?? {},
+              message:
+                syncResult.message ?? 'Failed to sync bilateral projects',
+              status: syncResult.status,
+            };
           }
 
           const activeProjects = await this._resultsBilateralRepository.find({
@@ -514,7 +532,11 @@ export class ResultsByInstitutionsService {
     try {
       const result = await this._resultRepository.getResultById(resultId);
       if (!result?.id) {
-        throwServiceError('Results Not Found', HttpStatus.NOT_FOUND, resultId);
+        throw {
+          response: resultId,
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
       }
 
       const knowledgeProduct =
@@ -537,6 +559,11 @@ export class ResultsByInstitutionsService {
         },
         order: { id: 'ASC' },
       });
+
+      // Align with P22 GET: hide partners whose Clarisa institution is inactive (P2-3181).
+      institutions = institutions.filter(
+        (i) => i.obj_institutions?.is_active !== false,
+      );
 
       institutions = institutions.map((i) => ({
         ...i,
@@ -621,39 +648,6 @@ export class ResultsByInstitutionsService {
     }
   }
 
-  private async syncInstitutionFromTocFlags(
-    incomingInstitutions: ResultsByInstitution[],
-    resultId: number,
-    institutionRoleId: InstitutionRoleEnum,
-    userId: number,
-  ) {
-    if (!incomingInstitutions?.length) {
-      return;
-    }
-
-    const institutionsToSync = incomingInstitutions
-      .filter((inst) => inst?.institutions_id != null)
-      .sort(
-        (left, right) =>
-          Number(left.institutions_id) - Number(right.institutions_id),
-      );
-
-    for (const inst of institutionsToSync) {
-      await this._resultByIntitutionsRepository.update(
-        {
-          result_id: resultId,
-          institutions_id: inst.institutions_id,
-          institution_roles_id: institutionRoleId,
-          is_active: true,
-        },
-        {
-          from_toc: !!inst.from_toc,
-          last_updated_by: userId,
-        },
-      );
-    }
-  }
-
   async handleContributingCenters(
     contributing_center: ResultsCenterDto[],
     data: { result_id: number },
@@ -682,18 +676,16 @@ export class ResultsByInstitutionsService {
           created_by: user.id,
           last_updated_by: user.id,
           is_leading_result: center.is_leading_result,
-          from_toc: !!center.from_toc,
         };
 
-        if (exists) {
-          exists.is_leading_result = center.is_leading_result;
-          exists.from_toc = !!center.from_toc;
-          exists.last_updated_by = user.id;
-          resultCenterArray.push(exists);
-        } else {
+        if (!exists) {
           const newResultCenter = new ResultsCenter();
           Object.assign(newResultCenter, resultCenterData);
           resultCenterArray.push(newResultCenter);
+        } else {
+          exists.is_leading_result = center.is_leading_result;
+          exists.last_updated_by = user.id;
+          resultCenterArray.push(exists);
         }
       }
 
@@ -775,13 +767,13 @@ export class ResultsByInstitutionsService {
       last_updated_by: user.id,
     };
 
-    if (existingBudget) {
-      await this._resultBilateralBudgetRepository.update(projectId, budgetData);
-    } else {
+    if (!existingBudget) {
       await this._resultBilateralBudgetRepository.save({
         ...budgetData,
         created_by: user.id,
       });
+    } else {
+      await this._resultBilateralBudgetRepository.update(projectId, budgetData);
     }
   }
 
@@ -799,16 +791,16 @@ export class ResultsByInstitutionsService {
       last_updated_by: user.id,
     };
 
-    if (existingBudget) {
-      await this._resultBilateralBudgetRepository.update(
-        { result_project_id: projectId },
-        budgetData,
-      );
-    } else {
+    if (!existingBudget) {
       await this._resultBilateralBudgetRepository.save({
         ...budgetData,
         created_by: user.id,
       });
+    } else {
+      await this._resultBilateralBudgetRepository.update(
+        { result_project_id: projectId },
+        budgetData,
+      );
     }
   }
 
@@ -919,232 +911,6 @@ export class ResultsByInstitutionsService {
     }
   }
 
-  private _partnerInstitutionRoleId(
-    isKnowledgeProduct: boolean,
-  ): InstitutionRoleEnum {
-    return isKnowledgeProduct
-      ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
-      : InstitutionRoleEnum.PARTNER;
-  }
-
-  private async _deactivateRemovedPartnerInstitutions(
-    removed: ResultsByInstitution[],
-    userId: number,
-  ): Promise<void> {
-    if (!removed.length) {
-      return;
-    }
-
-    const removedIds = removed.map((i) => i.id);
-    await this._resultByIntitutionsRepository.update(
-      { id: In(removedIds) },
-      { is_active: false, last_updated_by: userId },
-    );
-    await this._resultInstitutionsBudgetRepository.update(
-      { result_institution_id: In(removedIds) },
-      { is_active: false, last_updated_by: userId },
-    );
-    await this._resultByInstitutionsByDeliveriesTypeRepository.update(
-      { id: In(removedIds) },
-      { is_active: false, last_updated_by: userId },
-    );
-  }
-
-  private async _upsertAddedPartnerInstitutions(
-    added: ResultsByInstitution[],
-    isKnowledgeProduct: boolean,
-    isInnoDev: boolean,
-    resultId: number,
-    userId: number,
-  ): Promise<ResultsByInstitution[]> {
-    if (!added.length) {
-      return [];
-    }
-
-    const institutionRoleId =
-      this._partnerInstitutionRoleId(isKnowledgeProduct);
-    const incomingInstitutionIds = added
-      .map((a) => a.institutions_id)
-      .filter((id) => id != null);
-
-    const existingInstitutions =
-      incomingInstitutionIds.length > 0
-        ? await this._resultByIntitutionsRepository.find({
-            where: {
-              result_id: resultId,
-              institutions_id: In(incomingInstitutionIds),
-              institution_roles_id: institutionRoleId,
-            },
-          })
-        : [];
-
-    const existingMap = new Map<number, ResultsByInstitution>();
-    for (const existing of existingInstitutions) {
-      existingMap.set(existing.institutions_id, existing);
-    }
-
-    const institutionsToReactivate: ResultsByInstitution[] = [];
-    const institutionsToCreate: ResultsByInstitution[] = [];
-
-    for (const incoming of added) {
-      const existing = existingMap.get(incoming.institutions_id);
-      if (existing) {
-        existing.is_active = true;
-        existing.last_updated_by = userId;
-        existing.institutions_id = incoming.institutions_id;
-        existing.is_leading_result = incoming.is_leading_result;
-        existing.from_toc = !!incoming.from_toc;
-        existing.delivery = incoming.delivery ?? [];
-        institutionsToReactivate.push(existing);
-        continue;
-      }
-
-      const toAdd = new ResultsByInstitution();
-      toAdd.created_by = userId;
-      toAdd.last_updated_by = userId;
-      toAdd.is_active = true;
-      toAdd.result_id = resultId;
-      toAdd.institutions_id = incoming.institutions_id;
-      toAdd.institution_roles_id = institutionRoleId;
-      toAdd.delivery = incoming.delivery ?? [];
-      toAdd['isNew'] = true;
-      toAdd.is_leading_result = incoming.is_leading_result;
-      toAdd.from_toc = !!incoming.from_toc;
-      institutionsToCreate.push(toAdd);
-    }
-
-    if (institutionsToReactivate.length) {
-      await this._resultByIntitutionsRepository.save(institutionsToReactivate);
-    }
-
-    let savedAdded: ResultsByInstitution[];
-    if (institutionsToCreate.length) {
-      const created =
-        await this._resultByIntitutionsRepository.save(institutionsToCreate);
-      savedAdded = [...institutionsToReactivate, ...created];
-    } else {
-      savedAdded = institutionsToReactivate;
-    }
-
-    if (isInnoDev) {
-      await this._resultInstitutionsBudgetRepository.save(
-        savedAdded.map((institution) => {
-          const budget = new ResultInstitutionsBudget();
-          budget.created_by = userId;
-          budget.result_institution_id = institution.id;
-          budget.is_active = true;
-          return budget;
-        }),
-      );
-    }
-
-    return savedAdded;
-  }
-
-  private _applyIncomingPartnerFields(
-    institution: ResultsByInstitution,
-    incoming: ResultsByInstitution | undefined,
-    userId: number,
-  ): void {
-    if (!incoming) {
-      return;
-    }
-    institution.last_updated_by = userId;
-    institution.institutions_id = incoming.institutions_id;
-    institution.is_leading_result = incoming.is_leading_result;
-  }
-
-  private _appendPartnerInstitutionBudget(
-    institution: ResultsByInstitution,
-    userId: number,
-    budgetsToSave: ResultInstitutionsBudget[],
-  ): void {
-    if (institution.result_institution_budget_array?.length > 0) {
-      const activeBudgets = institution.result_institution_budget_array.filter(
-        (b) => b.is_active,
-      );
-      let workingBudget: ResultInstitutionsBudget;
-      if (activeBudgets.length > 0) {
-        workingBudget = activeBudgets.shift();
-        activeBudgets.forEach((budget) => {
-          budget.is_active = false;
-          budget.last_updated_by = userId;
-          budgetsToSave.push(budget);
-        });
-      } else {
-        workingBudget = new ResultInstitutionsBudget();
-        workingBudget.created_by = userId;
-        workingBudget.result_institution_id = institution.id;
-      }
-      workingBudget.is_active = true;
-      workingBudget.last_updated_by = userId;
-      budgetsToSave.push(workingBudget);
-      return;
-    }
-
-    const newBudget = new ResultInstitutionsBudget();
-    newBudget.created_by = userId;
-    newBudget.result_institution_id = institution.id;
-    newBudget.is_active = true;
-    budgetsToSave.push(newBudget);
-  }
-
-  private _collectPartnerInstitutionBudgetUpdates(
-    toUpdate: ResultsByInstitution[],
-    incomingInstitutions: ResultsByInstitution[],
-    isInnoDev: boolean,
-    userId: number,
-  ): ResultInstitutionsBudget[] {
-    const updatedBudgets: ResultInstitutionsBudget[] = [];
-    for (const institution of toUpdate) {
-      const incoming = incomingInstitutions.find(
-        (i) => i.id === institution.id,
-      );
-      this._applyIncomingPartnerFields(institution, incoming, userId);
-      if (isInnoDev) {
-        this._appendPartnerInstitutionBudget(
-          institution,
-          userId,
-          updatedBudgets,
-        );
-      }
-    }
-    return updatedBudgets;
-  }
-
-  private _dtoHasDelivery(dto: ResultsByInstitution | undefined): boolean {
-    return dto != null && Object.prototype.hasOwnProperty.call(dto, 'delivery');
-  }
-
-  private async _syncPartnerInstitutionDeliveries(
-    toUpdate: ResultsByInstitution[],
-    added: ResultsByInstitution[],
-    incomingInstitutions: ResultsByInstitution[],
-    userId: number,
-  ): Promise<void> {
-    for (const institution of toUpdate.concat(added)) {
-      if (institution['isNew']) {
-        const incoming = institution.delivery ?? [];
-        if (incoming.length) {
-          await this.handleDeliveries(incoming, [], institution.id, userId);
-        }
-        continue;
-      }
-
-      const dto = incomingInstitutions.find((i) => i.id === institution.id);
-      if (!this._dtoHasDelivery(dto)) {
-        continue;
-      }
-
-      await this.handleDeliveries(
-        dto?.delivery ?? [],
-        institution.delivery ?? [],
-        institution.id,
-        userId,
-      );
-    }
-  }
-
   private async handleInstitutions(
     incomingInstitutions: ResultsByInstitution[],
     oldInstitutions: ResultsByInstitution[],
@@ -1159,35 +925,194 @@ export class ResultsByInstitutionsService {
         incomingInstitutions,
         'id',
       );
+    let added = initialAdded;
 
-    await this._deactivateRemovedPartnerInstitutions(removed, userId);
+    if (removed.length) {
+      await this._resultByIntitutionsRepository.update(
+        { id: In(removed.map((i) => i.id)) },
+        { is_active: false, last_updated_by: userId },
+      );
 
-    const added = await this._upsertAddedPartnerInstitutions(
-      initialAdded,
-      isKnowledgeProduct,
-      isInnoDev,
-      resultId,
-      userId,
-    );
+      await this._resultInstitutionsBudgetRepository.update(
+        { result_institution_id: In(removed.map((i) => i.id)) },
+        { is_active: false, last_updated_by: userId },
+      );
+
+      await this._resultByInstitutionsByDeliveriesTypeRepository.update(
+        { result_by_institution_id: In(removed.map((i) => i.id)) },
+        { is_active: false, last_updated_by: userId },
+      );
+    }
+
+    if (added.length) {
+      const institutionRoleId = isKnowledgeProduct
+        ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
+        : InstitutionRoleEnum.PARTNER;
+
+      // Check for existing institutions (active or inactive) to avoid duplicates
+      // OPTIMIZATION: Single query to fetch all potentially existing records
+      const incomingInstitutionIds = added
+        .map((a) => a.institutions_id)
+        .filter((id) => id != null);
+
+      const existingInstitutions =
+        incomingInstitutionIds.length > 0
+          ? await this._resultByIntitutionsRepository.find({
+              where: {
+                result_id: resultId,
+                institutions_id: In(incomingInstitutionIds),
+                institution_roles_id: institutionRoleId,
+              },
+              relations: { delivery: true },
+            })
+          : [];
+
+      // Build map for O(1) lookup: institutions_id -> existing ResultsByInstitution
+      const existingMap = new Map<number, ResultsByInstitution>();
+      for (const existing of existingInstitutions) {
+        existingMap.set(existing.institutions_id, existing);
+      }
+
+      const institutionsToReactivate: ResultsByInstitution[] = [];
+      const institutionsToCreate: ResultsByInstitution[] = [];
+
+      for (const a of added) {
+        const existing = existingMap.get(a.institutions_id);
+
+        if (existing) {
+          // Reactivate and update existing record instead of creating duplicate
+          existing.is_active = true;
+          existing.last_updated_by = userId;
+          existing.institutions_id = a.institutions_id;
+          existing.is_leading_result = a.is_leading_result;
+          institutionsToReactivate.push(existing);
+        } else {
+          // Create new only if no existing record found
+          const toAdd = new ResultsByInstitution();
+          toAdd.created_by = userId;
+          toAdd.last_updated_by = userId;
+          toAdd.is_active = true;
+          toAdd.result_id = resultId;
+          toAdd.institutions_id = a.institutions_id;
+          toAdd.institution_roles_id = institutionRoleId;
+          toAdd['isNew'] = true;
+          toAdd.is_leading_result = a.is_leading_result;
+          institutionsToCreate.push(toAdd);
+        }
+      }
+
+      // Persist reactivations without cascading delivery relations (P2-3181).
+      if (institutionsToReactivate.length) {
+        await Promise.all(
+          institutionsToReactivate.map((rbi) =>
+            this._resultByIntitutionsRepository.update(
+              { id: rbi.id },
+              {
+                is_active: rbi.is_active,
+                last_updated_by: rbi.last_updated_by,
+                institutions_id: rbi.institutions_id,
+                is_leading_result: rbi.is_leading_result,
+              },
+            ),
+          ),
+        );
+      }
+
+      if (institutionsToCreate.length) {
+        const created =
+          await this._resultByIntitutionsRepository.save(institutionsToCreate);
+        added = [...institutionsToReactivate, ...created];
+      } else {
+        added = institutionsToReactivate;
+      }
+
+      if (isInnoDev) {
+        const resultInstitutionsBudgets = added.map((a) => {
+          const toAdd = new ResultInstitutionsBudget();
+
+          toAdd.created_by = userId;
+          toAdd.result_institution_id = a.id;
+          toAdd.is_active = true;
+
+          return toAdd;
+        });
+
+        await this._resultInstitutionsBudgetRepository.save(
+          resultInstitutionsBudgets,
+        );
+      }
+    }
 
     const toUpdate = oldInstitutions.filter(
-      (institution) =>
-        !removed.some((removedItem) => removedItem.id === institution.id),
+      (i) => !removed.some((r) => r.id === i.id),
     );
-    const updatedNewBudgets = this._collectPartnerInstitutionBudgetUpdates(
-      toUpdate,
-      incomingInstitutions,
-      isInnoDev,
-      userId,
-    );
+    const updatedNewBudgets: ResultInstitutionsBudget[] = [];
+
+    for (const institutionToUpdate of toUpdate) {
+      const newData = incomingInstitutions.find(
+        (i) => i.id === institutionToUpdate.id,
+      );
+
+      if (newData) {
+        institutionToUpdate.last_updated_by = userId;
+        institutionToUpdate.institutions_id = newData.institutions_id;
+        institutionToUpdate.is_leading_result = newData.is_leading_result;
+      }
+
+      if (isInnoDev) {
+        if (institutionToUpdate.result_institution_budget_array?.length > 0) {
+          const activeBudgets =
+            institutionToUpdate.result_institution_budget_array.filter(
+              (b) => b.is_active,
+            );
+          let workingBudget: ResultInstitutionsBudget;
+          if (activeBudgets?.length > 0) {
+            workingBudget = activeBudgets.shift();
+
+            activeBudgets.forEach((b) => {
+              b.is_active = false;
+              b.last_updated_by = userId;
+              updatedNewBudgets.push(b);
+            });
+          } else {
+            workingBudget = new ResultInstitutionsBudget();
+
+            workingBudget.created_by = userId;
+            workingBudget.result_institution_id = institutionToUpdate.id;
+          }
+
+          workingBudget.is_active = true;
+          workingBudget.last_updated_by = userId;
+          updatedNewBudgets.push(workingBudget);
+        } else {
+          const newBudget = new ResultInstitutionsBudget();
+
+          newBudget.created_by = userId;
+          newBudget.result_institution_id = institutionToUpdate.id;
+          newBudget.is_active = true;
+
+          updatedNewBudgets.push(newBudget);
+        }
+      }
+    }
 
     await this._resultByIntitutionsRepository.save(toUpdate);
     await this._resultInstitutionsBudgetRepository.save(updatedNewBudgets);
-    await this._syncPartnerInstitutionDeliveries(
-      toUpdate,
-      added,
-      incomingInstitutions,
-      userId,
-    );
+
+    const dtoHasDelivery = (dto: any): boolean =>
+      dto != null && Object.prototype.hasOwnProperty.call(dto, 'delivery');
+
+    for (const inst of toUpdate.concat(added)) {
+      const dto = incomingInstitutions.find(
+        (i) => i.id === inst.id || i.institutions_id === inst.institutions_id,
+      );
+
+      if (!dtoHasDelivery(dto)) continue;
+
+      const incoming = (dto?.delivery ?? []) as any[];
+      const old = (inst.delivery ?? []).filter((d) => d.is_active !== false);
+
+      await this.handleDeliveries(incoming, old, inst.id, userId);
+    }
   }
 }

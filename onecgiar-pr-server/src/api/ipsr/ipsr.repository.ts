@@ -150,10 +150,11 @@ export class IpsrRepository
     const initativeQuery = `select iem.initiative_id  
                             from initiative_entity_map iem 
                             where iem.entity_id IN (?)`;
-    const initiativeIds = await this.dataSource
+    const mappedIds = await this.dataSource
       .query<{ initiative_id: number }[]>(initativeQuery, [initiativeId])
       .then((res) => res.map((item) => item.initiative_id));
-    initiativeIds.push(...initiativeId);
+    const initiativeIds = [...new Set([...mappedIds, ...initiativeId])];
+    const placeholders = initiativeIds.map(() => '?').join(',');
     const resultInnovationQuery = `
         SELECT
             DISTINCT r.id AS result_id,
@@ -201,7 +202,7 @@ export class IpsrRepository
         WHERE
             r.status_id = 2
             AND r.is_active = 1
-            AND rbi.inititiative_id IN (?)
+            AND rbi.inititiative_id IN (${placeholders})
             AND (
                 rbi.initiative_role_id = 1
                 OR rbi.initiative_role_id = 2
@@ -214,7 +215,7 @@ export class IpsrRepository
     try {
       const resultInnovation: any[] = await this.dataSource.query(
         resultInnovationQuery,
-        [initiativeIds],
+        initiativeIds,
       );
       return resultInnovation;
     } catch (error) {
