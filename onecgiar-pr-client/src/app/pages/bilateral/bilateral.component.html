@@ -1,1 +1,19 @@
+<nav class="bil-nav">
+  <div class="bil-nav-inner">
+    <div class="bil-nav-links">
+      <a class="bil-nav-link" [class.bil-nav-link--active]="isActive('/bilateral/create')" routerLink="/bilateral/create">
+        <i class="material-icons-round">add_circle_outline</i>
+        Create
+      </a>
+      <a class="bil-nav-link" [class.bil-nav-link--active]="isActive('/bilateral/drafts')" routerLink="/bilateral/drafts">
+        <i class="material-icons-round">drafts</i>
+        My Drafts
+        @if (bilateralAiService.draftCountDisplay(); as count) {
+          <span class="bil-nav-badge">{{ count }}</span>
+        }
+      </a>
+    </div>
+  </div>
+</nav>
+
 <router-outlet></router-outlet>

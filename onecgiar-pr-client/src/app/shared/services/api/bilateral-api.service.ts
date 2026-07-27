@@ -125,4 +125,34 @@ export class BilateralApiService {
   GET_knowledgeProduct(resultId: number | string) {
     return this.http.get<any>(`${this.resultsApiBaseUrl}results-knowledge-products/get/result/${resultId}`);
   }
+
+  // ── Bilateral AI endpoints ──────────────────────────────────────────
+
+  POST_bilateralAiJob(formData: FormData) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/jobs`, formData);
+  }
+
+  GET_bilateralAiJob(jobId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/jobs/${jobId}`);
+  }
+
+  GET_bilateralAiDrafts() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts`);
+  }
+
+  GET_bilateralAiDraft(draftId: number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts/${draftId}`);
+  }
+
+  PATCH_bilateralAiEvidence(draftId: number, evidenceId: number, body: { is_formal_evidence: boolean }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts/${draftId}/evidence/${evidenceId}`, body);
+  }
+
+  POST_promoteBilateralAiDraft(draftId: number) {
+    return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts/${draftId}/promote`, {});
+  }
+
+  DELETE_bilateralAiDraft(draftId: number) {
+    return this.http.delete<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts/${draftId}`);
+  }
 }

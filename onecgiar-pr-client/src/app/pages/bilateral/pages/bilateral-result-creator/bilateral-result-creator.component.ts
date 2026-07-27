@@ -5,6 +5,8 @@ import { MessageService } from 'primeng/api';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
+import { BilateralAiService } from '../../services/bilateral-ai.service';
+import { BilateralAiUploadComponent } from '../../components/bilateral-ai-upload/bilateral-ai-upload.component';
 import { SectionZeroDashboardComponent } from '../../components/section-zero-dashboard/section-zero-dashboard.component';
 import { BilateralAccordionComponent } from '../../components/bilateral-accordion/bilateral-accordion.component';
 import { BilateralProjectSelectorComponent } from '../../components/bilateral-project-selector/bilateral-project-selector.component';
@@ -42,6 +44,7 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     BilateralSpSelectorComponent,
     BilateralResultLevelSelectorComponent,
     BilateralReportingWaySelectorComponent,
+    BilateralAiUploadComponent,
     SectionGeneralInfoComponent,
     SectionContributorsComponent,
     SectionGeographyComponent,
@@ -65,6 +68,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   readonly creationService = inject(BilateralCreationService);
   readonly mdsTracker = inject(BilateralMdsTrackerService);
   readonly autoSaveService = inject(BilateralAutoSaveService);
+  readonly bilateralAiService = inject(BilateralAiService);
 
   isCreating = signal(true);
   resultId = signal<number | null>(null);
@@ -76,6 +80,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
   sectionZeroOpen = signal(true);
   showTypeDropdown = signal(false);
+  isAiGenerated = signal(false);
+
+  canUseAi = computed(() => !!this.creationService.selectedProject() && !!this.creationService.selectedPrimarySp());
 
   availableResultTypes = computed(() => {
     const level = this.resultLevelId();
@@ -135,6 +142,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.selectedReportingWay.set(way);
     if (way === 'manual') {
       this.scrollToSection('bcr-level-section');
+    } else if (way === 'ai') {
+      this.bilateralAiService.clearUploadState();
+      this.scrollToSection('bcr-ai-upload');
     }
   }
 

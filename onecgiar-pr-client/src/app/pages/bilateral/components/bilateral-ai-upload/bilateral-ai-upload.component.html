@@ -1,0 +1,216 @@
+@if (uploadState().status === 'idle' || uploadState().status === 'uploading') {
+  <div class="aiu-card">
+    <div class="aiu-header">
+      <div class="aiu-header-icon">
+        <i class="material-icons-round">auto_awesome</i>
+      </div>
+      <div>
+        <h3 class="aiu-title">Upload Source Materials</h3>
+        <p class="aiu-subtitle">Provide documents, audio files, or text context for AI analysis</p>
+      </div>
+    </div>
+
+    <div class="aiu-limits">
+      <span class="aiu-limit-tag">Up to {{ MAX_FILES }} files</span>
+      <span class="aiu-limit-tag">PDF, DOC, DOCX, TXT</span>
+      <span class="aiu-limit-tag">MP3, WAV, M4A, OGG</span>
+      <span class="aiu-limit-tag">Max 50 MB / file (documents)</span>
+      <span class="aiu-limit-tag">Max 100 MB / file (audio)</span>
+    </div>
+
+    <div class="aiu-dropzone"
+      [class.aiu-dropzone--active]="isDragging()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)">
+      <div class="aiu-dropzone-content">
+        <i class="material-icons-round aiu-dropzone-icon">cloud_upload</i>
+        <p class="aiu-dropzone-text">Drag & drop files here</p>
+        <span class="aiu-dropzone-or">or</span>
+      </div>
+
+      <div class="aiu-dropzone-actions">
+        <label class="aiu-btn aiu-btn--doc">
+          <i class="material-icons-round">description</i>
+          Browse Documents
+          <input type="file" hidden multiple [accept]="acceptedDocumentTypes" (change)="onDocumentSelected($event)" />
+        </label>
+
+        <label class="aiu-btn aiu-btn--audio">
+          <i class="material-icons-round">audiotrack</i>
+          Browse Audio
+          <input type="file" hidden multiple [accept]="acceptedAudioTypes" (change)="onAudioSelected($event)" />
+        </label>
+
+        @if (!isRecording()) {
+          <button type="button" class="aiu-btn aiu-btn--record" (click)="startRecording()">
+            <i class="material-icons-round">mic</i>
+            Record Voice Note
+          </button>
+        } @else {
+          <div class="aiu-recording">
+            <span class="aiu-recording-dot"></span>
+            <span class="aiu-recording-time">{{ formatDuration(recordingDuration()) }}</span>
+            <button type="button" class="aiu-btn aiu-btn--stop" (click)="stopRecording()">
+              <i class="material-icons-round">stop</i>
+              Stop
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (recordingSaved()) {
+      <div class="aiu-recording-saved">
+        <i class="material-icons-round">check_circle</i>
+        <span>Recording saved — <strong>{{ lastRecordingName }}</strong></span>
+        <button type="button" class="aiu-recording-dismiss" (click)="recordingSaved.set(false)">
+          <i class="material-icons-round">close</i>
+        </button>
+      </div>
+    }
+
+    @if (fileList().length > 0) {
+      <div class="aiu-file-list">
+        <h4 class="aiu-file-list-title">
+          Selected Files ({{ fileList().length }})
+          <span class="aiu-file-list-docs">{{ documentCount() }} doc{{ documentCount() !== 1 ? 's' : '' }}</span>
+          @if (audioCount()) {
+            <span class="aiu-file-list-audio">{{ audioCount() }} audio</span>
+          }
+        </h4>
+
+        @for (entry of fileList(); track entry.id) {
+          <div class="aiu-file-item" [class.aiu-file-item--audio]="entry.type === 'audio'">
+            @if (entry.type === 'audio') {
+              <button type="button" class="aiu-file-play" (click)="playAudio(entry)" [attr.aria-label]="playingAudioId() === entry.id ? 'Pause' : 'Play'">
+                <i class="material-icons-round">{{ playingAudioId() === entry.id ? 'pause' : 'play_arrow' }}</i>
+              </button>
+              @if (playingAudioId() === entry.id) {
+                <div class="aiu-waveform">
+                  <span class="aiu-wave-bar"></span>
+                  <span class="aiu-wave-bar"></span>
+                  <span class="aiu-wave-bar"></span>
+                  <span class="aiu-wave-bar"></span>
+                  <span class="aiu-wave-bar"></span>
+                </div>
+              }
+            } @else {
+              <i class="material-icons-round aiu-file-icon">description</i>
+            }
+            <div class="aiu-file-info">
+              <span class="aiu-file-name">{{ entry.file.name }}</span>
+              <span class="aiu-file-size">{{ formatSize(entry.file.size) }}</span>
+            </div>
+            <div class="aiu-file-actions">
+              @if (entry.type === 'audio') {
+                <button type="button" class="aiu-file-btn aiu-file-btn--download" (click)="downloadFile(entry)" aria-label="Download audio">
+                  <i class="material-icons-round">download</i>
+                </button>
+              }
+              <button type="button" class="aiu-file-btn aiu-file-btn--remove" (click)="removeFile(entry.id)" aria-label="Remove file">
+                <i class="material-icons-round">close</i>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="aiu-text-section">
+      <label class="aiu-text-label" for="ai-context">
+        <i class="material-icons-round">notes</i>
+        Additional Context
+      </label>
+      <textarea
+        id="ai-context"
+        class="aiu-textarea"
+        placeholder="Provide any additional context about the results you want to extract (optional)"
+        [ngModel]="contextText()"
+        (ngModelChange)="contextText.set($event)"
+        rows="3"
+      ></textarea>
+    </div>
+
+    <div class="aiu-actions">
+      <button
+        type="button"
+        class="aiu-submit-btn"
+        [class.aiu-submit-btn--loading]="isUploading()"
+        [disabled]="!canSubmit()"
+        (click)="onSubmit()"
+      >
+        @if (isUploading()) {
+          <span class="aiu-spinner"></span>
+          Uploading...
+        } @else {
+          <i class="material-icons-round">auto_awesome</i>
+          Generate Draft
+        }
+      </button>
+      <button type="button" class="aiu-cancel-btn" (click)="onReset()">Cancel</button>
+    </div>
+  </div>
+}
+
+@if (uploadState().status === 'pending' || uploadState().status === 'processing') {
+  <div class="aiu-processing">
+    <div class="aiu-processing-graphic">
+      <div class="aiu-pulse-ring"></div>
+      <div class="aiu-pulse-ring aiu-pulse-ring--2"></div>
+      <div class="aiu-pulse-ring aiu-pulse-ring--3"></div>
+      <i class="material-icons-round aiu-processing-icon">auto_awesome</i>
+    </div>
+
+    <h3 class="aiu-processing-title">
+      @if (uploadState().status === 'pending') {
+        Job Queued
+      } @else {
+        Analyzing Content
+      }
+    </h3>
+    <p class="aiu-processing-subtitle">
+      @if (uploadState().status === 'pending') {
+        Your documents are queued for AI processing. This may take a few minutes.
+      } @else {
+        Extracting result data from your sources...
+      }
+    </p>
+
+    <div class="aiu-processing-spinner"></div>
+
+    <p class="aiu-processing-hint">You can safely close this page and check your drafts later.</p>
+  </div>
+}
+
+@if (uploadState().status === 'failed') {
+  <div class="aiu-error">
+    <div class="aiu-error-icon">
+      <i class="material-icons-round">error_outline</i>
+    </div>
+    <h3 class="aiu-error-title">Processing Failed</h3>
+    <p class="aiu-error-message">{{ uploadState().errorMessage || 'An unexpected error occurred during AI processing.' }}</p>
+    <div class="aiu-error-actions">
+      <button type="button" class="aiu-submit-btn" (click)="onReset()">
+        <i class="material-icons-round">refresh</i>
+        Try Again
+      </button>
+    </div>
+  </div>
+}
+
+@if (uploadState().status === 'completed_no_candidates') {
+  <div class="aiu-error">
+    <div class="aiu-error-icon aiu-error-icon--warn">
+      <i class="material-icons-round">info</i>
+    </div>
+    <h3 class="aiu-error-title">No Candidates Found</h3>
+    <p class="aiu-error-message">AI could not extract enough information from the provided sources. Try adding more documents or context.</p>
+    <div class="aiu-error-actions">
+      <button type="button" class="aiu-submit-btn" (click)="onReset()">
+        <i class="material-icons-round">refresh</i>
+        Try Again
+      </button>
+    </div>
+  </div>
+}

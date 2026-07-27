@@ -112,7 +112,7 @@ export class BilateralAiService {
       });
       throw error;
     }
-    return { jobId: job.job_id, status: job.status };
+    return { jobId: job.job_id, jobStatus: job.status };
   }
 
   async getJob(jobId: string, userId: number) {
@@ -121,6 +121,10 @@ export class BilateralAiService {
     });
     if (!job) throw new NotFoundException('AI job not found.');
     return job;
+  }
+
+  async getJobRaw(jobId: string): Promise<BilateralAiJob | null> {
+    return this.jobRepository.findOne({ where: { job_id: jobId } });
   }
 
   async listDrafts(userId: number) {

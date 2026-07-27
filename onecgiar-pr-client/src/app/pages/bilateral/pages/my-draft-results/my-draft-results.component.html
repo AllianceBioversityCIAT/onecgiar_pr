@@ -1,0 +1,104 @@
+<div class="mdr">
+  <div class="mdr-header">
+    <h2 class="mdr-title">My AI Draft Results</h2>
+    <p class="mdr-subtitle">
+      @if (bilateralAiService.isDraftListLoaded()) {
+        {{ hasDrafts ? drafts.length + ' draft' + (drafts.length !== 1 ? 's' : '') + ' ready for review' : 'No drafts yet' }}
+      } @else {
+        Loading drafts...
+      }
+    </p>
+  </div>
+
+  @if (hasDrafts) {
+    <div class="mdr-list">
+      @for (draft of drafts; track draft.id) {
+        <div class="mdr-card">
+          <div class="mdr-card-main">
+            <div class="mdr-card-header">
+              <h3 class="mdr-card-title">{{ draft.title || 'Untitled Draft' }}</h3>
+              @if (draft.result_type_id) {
+                <span class="mdr-card-type">Type {{ draft.result_type_id }}</span>
+              }
+            </div>
+
+            <div class="mdr-card-meta">
+              <span class="mdr-meta-item">
+                <i class="material-icons-round">folder</i>
+                {{ draft.project_id }}
+              </span>
+              <span class="mdr-meta-item">
+                <i class="material-icons-round">code</i>
+                {{ draft.program_code }}
+              </span>
+              @if (draft.evidence.length) {
+                <span class="mdr-meta-item mdr-meta-docs">
+                  <i class="material-icons-round">description</i>
+                  {{ getDraftDocumentNames(draft) }}
+                </span>
+              }
+            </div>
+
+            @if (draft.warnings.length) {
+              <div class="mdr-warnings">
+                @for (warning of draft.warnings.slice(0, 2); track warning) {
+                  <span class="mdr-warning-tag">
+                    <i class="material-icons-round">warning_amber</i>
+                    {{ warning }}
+                  </span>
+                }
+                @if (draft.warnings.length > 2) {
+                  <span class="mdr-warning-more">+{{ draft.warnings.length - 2 }} more</span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="mdr-card-side">
+            <div class="mdr-completeness">
+              <div class="mdr-pct-circle" [class]="getCompletenessClass(draft.completeness)">
+                <svg viewBox="0 0 36 36" class="mdr-pct-svg">
+                  <path class="mdr-pct-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="mdr-pct-fill" [attr.stroke-dasharray]="draft.completeness + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <span class="mdr-pct-text">{{ getCompletenessLabel(draft.completeness) }}</span>
+              </div>
+            </div>
+
+            <span class="mdr-date">{{ formatDate(draft.created_date) }}</span>
+
+            <div class="mdr-actions">
+              <button type="button" class="mdr-btn mdr-btn--review" (click)="onReview(draft)">
+                <i class="material-icons-round">visibility</i>
+                Review
+              </button>
+              <button type="button" class="mdr-btn mdr-btn--promote" (click)="onPromote(draft)">
+                <i class="material-icons-round">arrow_upward</i>
+                Promote
+              </button>
+              <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscard(draft)">
+                <i class="material-icons-round">delete_outline</i>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (bilateralAiService.isDraftListLoaded()) {
+    <div class="mdr-empty">
+      <div class="mdr-empty-icon">
+        <i class="material-icons-round">drafts</i>
+      </div>
+      <h3 class="mdr-empty-title">No Drafts Yet</h3>
+      <p class="mdr-empty-text">AI-generated drafts will appear here after you upload source materials for analysis.</p>
+      <a class="mdr-empty-cta" routerLink="/bilateral/create">
+        <i class="material-icons-round">add_circle_outline</i>
+        Create a New Result
+      </a>
+    </div>
+  } @else {
+    <div class="mdr-loading">
+      <div class="mdr-loading-spinner"></div>
+    </div>
+  }
+</div>

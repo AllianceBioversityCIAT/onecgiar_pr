@@ -1,0 +1,59 @@
+<div class="badd">
+  <div class="badd-topbar">
+    <a class="badd-back" routerLink="/bilateral/drafts">
+      <i class="material-icons-round">arrow_back</i>
+      Back to Drafts
+    </a>
+    @if (draft) {
+      <div class="badd-actions">
+        <button type="button" class="badd-btn badd-btn--promote" (click)="onPromote()">
+          <i class="material-icons-round">arrow_upward</i>
+          Promote to Result
+        </button>
+        <button type="button" class="badd-btn badd-btn--discard" (click)="onDiscard()">
+          <i class="material-icons-round">delete_outline</i>
+          Discard
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (error) {
+    <div class="badd-error">
+      <i class="material-icons-round">error_outline</i>
+      <div class="badd-error-content">
+        <strong>Error</strong>
+        <p>{{ error }}</p>
+      </div>
+      <a class="badd-error-back" routerLink="/bilateral/drafts">
+        <i class="material-icons-round">arrow_back</i>
+        Back to Drafts
+      </a>
+    </div>
+  } @else if (!draft) {
+    <div class="badd-loading">
+      <div class="badd-loading-spinner"></div>
+      <p>Loading draft...</p>
+    </div>
+  } @else {
+    <div class="badd-layout">
+      <div class="badd-primary">
+        <app-draft-result-card [draft]="draft" />
+      </div>
+      <div class="badd-secondary">
+        <div class="badd-section-label">
+          <i class="material-icons-round">source</i>
+          Source Material
+        </div>
+        <app-draft-evidence-list
+          [documents]="documents"
+          [audioFiles]="audioFiles"
+          [textContext]="draft.text_context"
+          [draftId]="draft.id"
+          [isReadOnly]="false"
+          (evidenceToggled)="onEvidenceToggled($event)"
+        />
+      </div>
+    </div>
+  }
+</div>

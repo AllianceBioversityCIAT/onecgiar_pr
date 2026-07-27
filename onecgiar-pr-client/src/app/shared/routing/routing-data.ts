@@ -553,6 +553,22 @@ export const BilateralRouting: PrRoute[] = [
         m => m.BilateralResultCreatorComponent
       )
   },
+  {
+    prName: 'My Drafts',
+    path: 'drafts',
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/my-draft-results/my-draft-results.component').then(
+        m => m.MyDraftResultsComponent
+      )
+  },
+  {
+    prName: 'Draft Detail',
+    path: 'drafts/:draftId',
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-ai-draft-detail/bilateral-ai-draft-detail.component').then(
+        m => m.BilateralAiDraftDetailComponent
+      )
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'create' }
 ];
 

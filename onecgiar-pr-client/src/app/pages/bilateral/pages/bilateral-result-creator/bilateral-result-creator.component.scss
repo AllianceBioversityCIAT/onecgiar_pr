@@ -397,6 +397,10 @@
   white-space: nowrap;
 }
 
+.bcr-ai-section {
+  margin: 32px 0 24px;
+}
+
 @keyframes bcr-save-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(-360deg); }

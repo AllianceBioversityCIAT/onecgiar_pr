@@ -1,0 +1,71 @@
+.bil-nav {
+  border-bottom: 1px solid #E8ECEE;
+  background: #FFFFFF;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.bil-nav-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 28px;
+
+  @media (min-width: 1400px) {
+    margin-left: max(28px, calc((100vw - 860px) / 2));
+  }
+}
+
+.bil-nav-links {
+  display: flex;
+  gap: 4px;
+  padding: 10px 0;
+}
+
+.bil-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #718096;
+  text-decoration: none;
+  transition: all 150ms ease;
+  position: relative;
+
+  i {
+    font-size: 18px;
+  }
+
+  &:hover {
+    background: #F7FAFC;
+    color: #4A5568;
+  }
+
+  &--active {
+    background: #F0FFF4;
+    color: #047857;
+    font-weight: 600;
+
+    &:hover {
+      background: #ECFDF5;
+    }
+  }
+}
+
+.bil-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #065F46;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}

@@ -9,7 +9,28 @@ import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.ser
 import { RolesService } from '../../../../shared/services/global/roles.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { signal } from '@angular/core';
+import { signal, Injectable } from '@angular/core';
+import { BilateralAiService } from '../../services/bilateral-ai.service';
+
+@Injectable()
+class MockBilateralAiService {
+  draftCount = signal(0);
+  uploadState = signal('idle');
+  isUploading = signal(false);
+  errorMessage = signal<string | null>(null);
+  canUseAi = signal(true);
+  startUpload = jest.fn();
+  resetUpload = jest.fn();
+  loadAllDrafts = jest.fn();
+  getDraft = jest.fn();
+  promoteDraft = jest.fn();
+  discardDraft = jest.fn();
+  toggleEvidence = jest.fn();
+  activeJobId = signal<number | null>(null);
+  pollIntervalRef = signal<any>(null);
+  draftList = signal([]);
+  isDraftListLoaded = signal(false);
+}
 
 describe('BilateralResultCreatorComponent', () => {
   let component: BilateralResultCreatorComponent;
@@ -90,6 +111,7 @@ describe('BilateralResultCreatorComponent', () => {
             { provide: BilateralCreationService, useValue: creationService },
             { provide: BilateralMdsTrackerService, useValue: mdsTracker },
             { provide: BilateralAutoSaveService, useValue: autoSaveService },
+            { provide: BilateralAiService, useClass: MockBilateralAiService },
           ],
         },
       })

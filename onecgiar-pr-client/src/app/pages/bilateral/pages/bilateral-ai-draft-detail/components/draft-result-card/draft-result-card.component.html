@@ -1,0 +1,70 @@
+<div class="drc">
+  <div class="drc-header">
+    <div class="drc-header-left">
+      <div class="drc-ai-badge">
+        <i class="material-icons-round">auto_awesome</i>
+        AI Suggested
+      </div>
+      <h2 class="drc-title">{{ draft().title || 'Untitled Draft' }}</h2>
+    </div>
+    @if (draft().result_type_id) {
+      <span class="drc-type-badge">Type {{ draft().result_type_id }}</span>
+    }
+  </div>
+
+  @if (draft().warnings.length) {
+    <div class="drc-warnings">
+      @for (warning of draft().warnings; track warning) {
+        <div class="drc-warning">
+          <i class="material-icons-round">warning_amber</i>
+          <span>{{ warning }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="drc-meta">
+    <div class="drc-meta-item">
+      <span class="drc-meta-label">Project</span>
+      <span class="drc-meta-value">{{ draft().project_id }}</span>
+    </div>
+    <div class="drc-meta-item">
+      <span class="drc-meta-label">Program</span>
+      <span class="drc-meta-value">{{ draft().program_code }}</span>
+    </div>
+    <div class="drc-meta-item">
+      <span class="drc-meta-label">Created</span>
+      <span class="drc-meta-value">{{ draft().created_date | date:'mediumDate' }}</span>
+    </div>
+    <div class="drc-meta-item">
+      <span class="drc-meta-label">Completeness</span>
+      <span class="drc-meta-value">{{ draft().completeness }}%</span>
+    </div>
+  </div>
+
+  @if (extractedFields.length) {
+    <div class="drc-fields">
+      <h3 class="drc-fields-title">Extracted Fields</h3>
+      @for (field of extractedFields; track field.key) {
+        <div class="drc-field">
+          <div class="drc-field-header">
+            <span class="drc-field-label">{{ field.label }}</span>
+            <span class="drc-field-confidence" [class]="getConfidenceClass(field.confidence)">
+              {{ getConfidenceLabel(field.confidence) }} confidence
+            </span>
+          </div>
+          <div class="drc-field-value">{{ field.value }}</div>
+          @if (field.provenance) {
+            <span class="drc-field-source">Source: {{ field.provenance }}</span>
+          }
+          @if (field.warning) {
+            <span class="drc-field-warn">
+              <i class="material-icons-round">info</i>
+              {{ field.warning }}
+            </span>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

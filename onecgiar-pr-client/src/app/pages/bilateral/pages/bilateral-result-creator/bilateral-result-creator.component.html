@@ -23,8 +23,15 @@
     <div id="bcr-reporting-way">
       <app-bilateral-reporting-way-selector
         [isLoading]="isCreatingResult()"
+        [canUseAi]="canUseAi()"
         (waySelected)="onReportingWaySelected($event)"
       ></app-bilateral-reporting-way-selector>
+    </div>
+  }
+
+  @if (isCreating() && selectedReportingWay() === 'ai') {
+    <div id="bcr-ai-upload" class="bcr-ai-section">
+      <app-bilateral-ai-upload></app-bilateral-ai-upload>
     </div>
   }
 
