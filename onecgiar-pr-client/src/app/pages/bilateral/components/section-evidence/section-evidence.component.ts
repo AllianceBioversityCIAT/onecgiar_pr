@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { tap } from 'rxjs';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -13,7 +15,7 @@ import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component'
 
 @Component({
   selector: 'app-section-evidence',
-  imports: [CommonModule, FormsModule, FormSkeletonComponent],
+  imports: [CommonModule, FormsModule, DialogModule, ButtonModule, FormSkeletonComponent],
   templateUrl: './section-evidence.component.html',
   styleUrl: './section-evidence.component.scss'
 })
@@ -39,6 +41,8 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
 
   draftItem = signal<BilateralEvidenceItem>({ is_sharepoint: false });
   showDraft = signal(false);
+
+  deleteTarget = signal<BilateralEvidenceItem | null>(null);
 
   saveStatus = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -347,13 +351,23 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
 
   // ── Delete ──────────────────────────────────────────────────────────
 
-  deleteItem(item: BilateralEvidenceItem): void {
-    if (!confirm('Are you sure you want to delete this evidence?')) return;
+  confirmDelete(item: BilateralEvidenceItem): void {
+    this.deleteTarget.set(item);
+  }
+
+  cancelDelete(): void {
+    this.deleteTarget.set(null);
+  }
+
+  executeDelete(): void {
+    const item = this.deleteTarget();
+    if (!item) return;
 
     this.evidenceBody.update(body => ({
       ...body,
       evidences: body.evidences.filter(e => e !== item)
     }));
+    this.deleteTarget.set(null);
     this.updateTracker();
     void this.saveSection();
   }

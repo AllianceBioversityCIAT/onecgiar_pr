@@ -69,11 +69,11 @@
                 <i class="material-icons-round">visibility</i>
                 Review
               </button>
-              <button type="button" class="mdr-btn mdr-btn--promote" (click)="onPromote(draft)">
+              <button type="button" class="mdr-btn mdr-btn--promote" (click)="onPromoteClick(draft)">
                 <i class="material-icons-round">arrow_upward</i>
                 Promote
               </button>
-              <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscard(draft)">
+              <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscardClick(draft)">
                 <i class="material-icons-round">delete_outline</i>
               </button>
             </div>
@@ -99,3 +99,65 @@
     </div>
   }
 </div>
+
+<p-dialog
+  styleClass="pr-dialog pr-dialog--promote"
+  [modal]="true"
+  [closable]="false"
+  [dismissableMask]="false"
+  [style]="{ width: '420px' }"
+  [visible]="promoteTarget() !== null"
+  (onHide)="onPromoteCancel()"
+>
+  <ng-template pTemplate="header">
+    <div class="pr-dialog-header">
+      <span class="pr-dialog-header-icon pr-dialog-header-icon--promote">
+        <i class="material-icons-round">arrow_upward</i>
+      </span>
+      <span class="pr-dialog-header-title">Promote Draft</span>
+    </div>
+  </ng-template>
+  @if (promoteTarget(); as target) {
+    <div class="pr-dialog-body">
+      <p class="pr-dialog-text">Promote <strong>{{ getDraftTitle(target) }}</strong> to a bilateral result?</p>
+      <p class="pr-dialog-hint">This will create a new bilateral result using the extracted data from this draft.</p>
+    </div>
+  }
+  <ng-template pTemplate="footer">
+    <div class="pr-dialog-footer">
+      <p-button label="Cancel" severity="secondary" (onClick)="onPromoteCancel()" />
+      <p-button label="Promote" (onClick)="onPromoteConfirm()" />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  styleClass="pr-dialog pr-dialog--discard"
+  [modal]="true"
+  [closable]="false"
+  [dismissableMask]="false"
+  [style]="{ width: '420px' }"
+  [visible]="discardTarget() !== null"
+  (onHide)="onDiscardCancel()"
+>
+  <ng-template pTemplate="header">
+    <div class="pr-dialog-header">
+      <span class="pr-dialog-header-icon pr-dialog-header-icon--discard">
+        <i class="material-icons-round">delete_outline</i>
+      </span>
+      <span class="pr-dialog-header-title">Discard Draft</span>
+    </div>
+  </ng-template>
+  @if (discardTarget(); as target) {
+    <div class="pr-dialog-body">
+      <p class="pr-dialog-text">Discard <strong>{{ getDraftTitle(target) }}</strong>?</p>
+      <p class="pr-dialog-hint pr-dialog-hint--danger">All extracted data will be permanently deleted. This cannot be undone.</p>
+    </div>
+  }
+  <ng-template pTemplate="footer">
+    <div class="pr-dialog-footer">
+      <p-button label="Cancel" severity="secondary" (onClick)="onDiscardCancel()" />
+      <p-button label="Discard" severity="danger" (onClick)="onDiscardConfirm()" />
+    </div>
+  </ng-template>
+</p-dialog>

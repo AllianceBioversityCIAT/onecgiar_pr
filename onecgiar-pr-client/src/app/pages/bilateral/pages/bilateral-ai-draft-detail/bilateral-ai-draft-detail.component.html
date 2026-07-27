@@ -18,11 +18,11 @@
         Back to Drafts
       </a>
       <div class="badd-actions">
-        <button type="button" class="badd-btn badd-btn--promote" (click)="onPromote()">
+        <button type="button" class="badd-btn badd-btn--promote" (click)="onPromoteClick()">
           <i class="material-icons-round">arrow_upward</i>
           Promote to Result
         </button>
-        <button type="button" class="badd-btn badd-btn--discard" (click)="onDiscard()">
+        <button type="button" class="badd-btn badd-btn--discard" (click)="onDiscardClick()">
           <i class="material-icons-round">delete_outline</i>
           Discard
         </button>
@@ -44,3 +44,61 @@
     </div>
   }
 </div>
+
+<p-dialog
+  styleClass="pr-dialog pr-dialog--promote"
+  [modal]="true"
+  [closable]="false"
+  [dismissableMask]="false"
+  [style]="{ width: '420px' }"
+  [visible]="showPromoteDialog()"
+  (onHide)="onPromoteCancel()"
+>
+  <ng-template pTemplate="header">
+    <div class="pr-dialog-header">
+      <span class="pr-dialog-header-icon pr-dialog-header-icon--promote">
+        <i class="material-icons-round">arrow_upward</i>
+      </span>
+      <span class="pr-dialog-header-title">Promote to Result</span>
+    </div>
+  </ng-template>
+  <div class="pr-dialog-body">
+    <p class="pr-dialog-text">Convert this AI draft into a bilateral result?</p>
+    <p class="pr-dialog-hint">The draft will be used as a starting point for a new bilateral result.</p>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="pr-dialog-footer">
+      <p-button label="Cancel" severity="secondary" (onClick)="onPromoteCancel()" />
+      <p-button label="Promote" (onClick)="onPromoteConfirm()" />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  styleClass="pr-dialog pr-dialog--discard"
+  [modal]="true"
+  [closable]="false"
+  [dismissableMask]="false"
+  [style]="{ width: '420px' }"
+  [visible]="showDiscardDialog()"
+  (onHide)="onDiscardCancel()"
+>
+  <ng-template pTemplate="header">
+    <div class="pr-dialog-header">
+      <span class="pr-dialog-header-icon pr-dialog-header-icon--discard">
+        <i class="material-icons-round">delete_outline</i>
+      </span>
+      <span class="pr-dialog-header-title">Discard Draft</span>
+    </div>
+  </ng-template>
+  <div class="pr-dialog-body">
+    <p class="pr-dialog-text">Discard this draft?</p>
+    <p class="pr-dialog-hint pr-dialog-hint--danger">All extracted data will be permanently deleted. This cannot be undone.</p>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="pr-dialog-footer">
+      <p-button label="Cancel" severity="secondary" (onClick)="onDiscardCancel()" />
+      <p-button label="Discard" severity="danger" (onClick)="onDiscardConfirm()" />
+    </div>
+  </ng-template>
+</p-dialog>

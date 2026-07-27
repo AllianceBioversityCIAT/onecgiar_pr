@@ -7,7 +7,6 @@ import { ResultsApiService } from '../../../shared/services/api/results-api.serv
 import {
   BilateralAiDraft,
   BilateralAiJob,
-  BilateralAiJobStatus,
   BilateralAiUploadState,
 } from './bilateral-ai.interfaces';
 import { ReportingApiResponse } from '../../../shared/interfaces/reporting-api.response';

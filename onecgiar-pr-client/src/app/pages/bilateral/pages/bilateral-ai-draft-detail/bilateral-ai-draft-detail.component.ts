@@ -1,6 +1,8 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
@@ -9,7 +11,7 @@ import { DraftEvidenceListComponent } from './components/draft-evidence-list/dra
 
 @Component({
   selector: 'app-bilateral-ai-draft-detail',
-  imports: [CommonModule, RouterModule, DraftResultCardComponent, DraftEvidenceListComponent],
+  imports: [CommonModule, RouterModule, DialogModule, ButtonModule, DraftResultCardComponent, DraftEvidenceListComponent],
   templateUrl: './bilateral-ai-draft-detail.component.html',
   styleUrl: './bilateral-ai-draft-detail.component.scss',
 })
@@ -17,6 +19,9 @@ export class BilateralAiDraftDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   readonly bilateralAiService = inject(BilateralAiService);
   private readonly messageService = inject(MessageService);
+
+  showPromoteDialog = signal(false);
+  showDiscardDialog = signal(false);
 
   draftId: number | null = null;
   draft: BilateralAiDraft | null = null;
@@ -46,15 +51,33 @@ export class BilateralAiDraftDetailComponent implements OnInit {
     return this.draft?.extracted_mds?.['title'] ?? 'Untitled Draft';
   }
 
-  onPromote(): void {
-    if (!this.draft) return;
-    if (!confirm(`Convert this AI draft into a bilateral result? The draft will be used as a starting point.`)) return;
-    this.bilateralAiService.promoteDraft(this.draft.id);
+  onPromoteClick(): void {
+    this.showPromoteDialog.set(true);
   }
 
-  onDiscard(): void {
-    if (!this.draft) return;
-    if (!confirm(`Discard this draft? All extracted data will be permanently deleted.`)) return;
-    this.bilateralAiService.discardDraft(this.draft.id);
+  onPromoteConfirm(): void {
+    if (this.draft) {
+      this.bilateralAiService.promoteDraft(this.draft.id);
+    }
+    this.showPromoteDialog.set(false);
+  }
+
+  onPromoteCancel(): void {
+    this.showPromoteDialog.set(false);
+  }
+
+  onDiscardClick(): void {
+    this.showDiscardDialog.set(true);
+  }
+
+  onDiscardConfirm(): void {
+    if (this.draft) {
+      this.bilateralAiService.discardDraft(this.draft.id);
+    }
+    this.showDiscardDialog.set(false);
+  }
+
+  onDiscardCancel(): void {
+    this.showDiscardDialog.set(false);
   }
 }
