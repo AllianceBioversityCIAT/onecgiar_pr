@@ -27,12 +27,14 @@
                 <span class="mdr-meta-item">
                   <i class="material-icons-round">business</i>
                   <span class="mdr-meta-label">Project</span>
-                  {{ bilateralAiService.projectNameMap()[draft.job.project_id] ?? draft.job.project_id }}
+                  <span class="mdr-meta-value">
+                    {{ bilateralAiService.projectNameMap()[draft.job.project_id] ?? draft.job.project_id }}
+                  </span>
                 </span>
                 <span class="mdr-meta-item">
                   <i class="material-icons-round">layers</i>
                   <span class="mdr-meta-label">Program</span>
-                  {{ draft.job.program_code }}
+                  <span class="mdr-meta-value">{{ draft.job.program_code }}</span>
                 </span>
               }
             </div>

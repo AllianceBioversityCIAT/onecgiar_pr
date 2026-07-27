@@ -94,14 +94,17 @@
 
 .mdr-meta-item {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   font-size: 11px;
   color: #718096;
+  min-width: 0;
 
   i {
     font-size: 14px;
     color: #A0AEC0;
+    flex: 0 0 auto;
+    margin-top: 1px;
   }
 }
 
@@ -111,6 +114,12 @@
   color: #A0AEC0;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+}
+
+.mdr-meta-value {
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .mdr-meta-docs {

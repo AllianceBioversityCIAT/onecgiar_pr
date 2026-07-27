@@ -8,11 +8,12 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -45,6 +46,13 @@ export class BilateralAiController {
       files?.audio ?? [],
       user,
     );
+  }
+
+  @Get('files/signed-url')
+  @ApiOperation({ summary: 'Generate presigned URL for a bilateral AI file' })
+  @ApiQuery({ name: 'key', required: true, type: String })
+  getSignedUrl(@Query('key') key: string, @UserToken() user: TokenDto) {
+    return this.bilateralAiService.getSignedUrl(key, user);
   }
 
   @Get('jobs/:jobId')

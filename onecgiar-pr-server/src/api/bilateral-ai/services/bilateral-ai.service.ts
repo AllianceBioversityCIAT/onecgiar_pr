@@ -127,6 +127,24 @@ export class BilateralAiService {
     return { response: job, message: 'AI job found', status: 200 };
   }
 
+  async getSignedUrl(key: string, user: TokenDto) {
+    const jobId = this.extractJobIdFromKey(key);
+    if (!jobId) throw new NotFoundException('Invalid file key.');
+    const job = await this.jobRepository.findOne({
+      where: { job_id: jobId, user_id: user.id },
+    });
+    if (!job) throw new NotFoundException('File not found.');
+    const allKeys = [...(job.document_keys ?? []), ...(job.audio_keys ?? [])];
+    if (!allKeys.includes(key)) throw new NotFoundException('File not found.');
+    const url = this.storage.getSignedUrl(key);
+    return { response: { url }, message: 'Signed URL generated', status: 200 };
+  }
+
+  private extractJobIdFromKey(key: string): string | null {
+    const parts = key.split('/');
+    return parts.length >= 3 ? parts[2] : null;
+  }
+
   async getJobRaw(jobId: string): Promise<BilateralAiJob | null> {
     return this.jobRepository.findOne({ where: { job_id: jobId } });
   }

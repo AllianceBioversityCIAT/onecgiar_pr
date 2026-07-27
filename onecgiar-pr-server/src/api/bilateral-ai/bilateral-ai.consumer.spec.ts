@@ -12,6 +12,7 @@ describe('BilateralAiConsumer', () => {
   beforeEach(() => {
     bilateralAiService = {
       processJob: jest.fn(),
+      getJobRaw: jest.fn().mockResolvedValue(null),
     } as any;
 
     mockChannelRef = { ack: jest.fn(), nack: jest.fn() };
@@ -49,16 +50,20 @@ describe('BilateralAiConsumer', () => {
       expect(mockChannelRef.nack).not.toHaveBeenCalled();
     });
 
-    it('should nack the message and rethrow on failure', async () => {
+    it('should nack the message on failure when retries remain', async () => {
       const error = new Error('Processing failed');
       bilateralAiService.processJob.mockRejectedValue(error);
+      bilateralAiService.getJobRaw.mockResolvedValue({
+        attempts: 0,
+      } as any);
       const context = makeContext();
 
-      await expect(
-        consumer.process({ jobId: 'failing-job-id' }, context),
-      ).rejects.toThrow('Processing failed');
+      await consumer.process({ jobId: 'failing-job-id' }, context);
 
       expect(bilateralAiService.processJob).toHaveBeenCalledWith(
+        'failing-job-id',
+      );
+      expect(bilateralAiService.getJobRaw).toHaveBeenCalledWith(
         'failing-job-id',
       );
       expect(mockChannelRef.nack).toHaveBeenCalledWith(
@@ -72,15 +77,16 @@ describe('BilateralAiConsumer', () => {
     it('should log an error message when processing fails', async () => {
       const error = new Error('AI service error');
       bilateralAiService.processJob.mockRejectedValue(error);
+      bilateralAiService.getJobRaw.mockResolvedValue({
+        attempts: 0,
+      } as any);
       const context = makeContext();
       const errorSpy = jest.spyOn(Logger.prototype, 'error');
 
-      await expect(
-        consumer.process({ jobId: 'err-job' }, context),
-      ).rejects.toThrow();
+      await consumer.process({ jobId: 'err-job' }, context);
 
       expect(errorSpy).toHaveBeenCalledWith(
-        'Bilateral AI job processing will be retried.',
+        'Bilateral AI job err-job will be retried (attempt 0/3).',
       );
     });
   });

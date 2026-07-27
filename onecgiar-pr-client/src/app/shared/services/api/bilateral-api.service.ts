@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 
@@ -154,5 +154,11 @@ export class BilateralApiService {
 
   DELETE_bilateralAiDraft(draftId: number) {
     return this.http.delete<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts/${draftId}`);
+  }
+
+  GET_bilateralAiFileSignedUrl(key: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/files/signed-url`, {
+      params: new HttpParams().set('key', key),
+    });
   }
 }

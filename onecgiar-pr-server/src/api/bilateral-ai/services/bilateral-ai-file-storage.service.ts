@@ -96,4 +96,14 @@ export class BilateralAiFileStorageService {
       throw new BadRequestException('Bilateral AI storage is not configured.');
     return this.bucket;
   }
+
+  getSignedUrl(key: string, expiresIn = 3600): string {
+    if (!this.bucket)
+      throw new BadRequestException('Bilateral AI storage is not configured.');
+    return this.s3.getSignedUrl('getObject', {
+      Bucket: this.bucket,
+      Key: key,
+      Expires: expiresIn,
+    });
+  }
 }

@@ -41,6 +41,11 @@ describe('BilateralAiController', () => {
               id: 1,
               discarded: true,
             }),
+            getSignedUrl: jest.fn().mockResolvedValue({
+              response: { url: 'https://signed.url' },
+              message: 'Signed URL generated',
+              status: 200,
+            }),
           },
         },
       ],
@@ -87,6 +92,25 @@ describe('BilateralAiController', () => {
       await controller.createJob(dto, undefined as any, user);
 
       expect(service.createJob).toHaveBeenCalledWith(dto, [], [], user);
+    });
+  });
+
+  describe('getSignedUrl', () => {
+    it('should delegate to service.getSignedUrl with key and user', async () => {
+      const result = await controller.getSignedUrl(
+        'prms/bilateral-ai/job-123/file.pdf',
+        user,
+      );
+
+      expect(service.getSignedUrl).toHaveBeenCalledWith(
+        'prms/bilateral-ai/job-123/file.pdf',
+        user,
+      );
+      expect(result).toEqual({
+        response: { url: 'https://signed.url' },
+        message: 'Signed URL generated',
+        status: 200,
+      });
     });
   });
 

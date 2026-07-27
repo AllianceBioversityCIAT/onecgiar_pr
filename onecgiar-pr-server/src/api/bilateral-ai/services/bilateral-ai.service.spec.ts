@@ -49,6 +49,7 @@ describe('BilateralAiService (unit)', () => {
       validateSources: jest.fn(),
       uploadFiles: jest.fn().mockResolvedValue([]),
       getBucketName: jest.fn().mockReturnValue('test-bucket'),
+      getSignedUrl: jest.fn().mockReturnValue('https://signed.url'),
     };
     const textMining = {
       extract: jest.fn().mockResolvedValue({}),
@@ -247,6 +248,72 @@ describe('BilateralAiService (unit)', () => {
       expect(stubs.jobRepository.findOne).toHaveBeenCalledWith({
         where: { job_id: 'j1', user_id: 42 },
       });
+    });
+  });
+
+  describe('getSignedUrl', () => {
+    it('should return signed URL when key belongs to a user job', async () => {
+      const { service, stubs } = makeService();
+      const mockJob = {
+        job_id: 'job-uuid-1',
+        user_id: 42,
+        document_keys: ['prms/bilateral-ai/job-uuid-1/doc.pdf'],
+        audio_keys: [],
+      };
+      stubs.jobRepository.findOne.mockResolvedValue(mockJob);
+
+      const result = await service.getSignedUrl(
+        'prms/bilateral-ai/job-uuid-1/doc.pdf',
+        user,
+      );
+
+      expect(stubs.jobRepository.findOne).toHaveBeenCalledWith({
+        where: { job_id: 'job-uuid-1', user_id: 42 },
+      });
+      expect(stubs.storage.getSignedUrl).toHaveBeenCalledWith(
+        'prms/bilateral-ai/job-uuid-1/doc.pdf',
+      );
+      expect(result).toEqual({
+        response: { url: 'https://signed.url' },
+        message: 'Signed URL generated',
+        status: 200,
+      });
+    });
+
+    it('should throw NotFoundException when key format is invalid', async () => {
+      const { service } = makeService();
+      await expect(
+        service.getSignedUrl('invalid-key', user),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when job not found for user', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getSignedUrl(
+          'prms/bilateral-ai/other-job/doc.pdf',
+          user,
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when key not in job keys', async () => {
+      const { service, stubs } = makeService();
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        user_id: 42,
+        document_keys: ['prms/bilateral-ai/j1/real.pdf'],
+        audio_keys: [],
+      });
+
+      await expect(
+        service.getSignedUrl(
+          'prms/bilateral-ai/j1/unknown.pdf',
+          user,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

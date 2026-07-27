@@ -25,6 +25,26 @@
   i { font-size: 16px; color: #718096; }
 }
 
+.del-loading-badge {
+  font-size: 9px;
+  font-weight: 600;
+  color: #D69E2E;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.del-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4A5568;
+  margin: 0 0 8px;
+
+  i { font-size: 15px; color: #718096; }
+}
+
 .del-text-snippet {
   font-size: 13px;
   color: #4A5568;
@@ -42,6 +62,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  margin-bottom: 16px;
 }
 
 .del-item {
@@ -59,9 +80,10 @@
   }
 }
 
-.del-item--formal {
-  background: linear-gradient(135deg, #F0FFF4, #ECFDF5);
-  border-color: #A7F3D0;
+.del-item--audio {
+  &:hover {
+    border-color: #FDE68A;
+  }
 }
 
 .del-item-icon {
@@ -96,35 +118,7 @@
   white-space: nowrap;
 }
 
-.del-item-meta {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-top: 2px;
-}
-
-.del-item-type {
-  font-size: 10px;
-  color: #A0AEC0;
-}
-
-.del-item-pages {
-  font-size: 10px;
-  color: #A0AEC0;
-}
-
-.del-item-formal-badge {
-  font-size: 9px;
-  font-weight: 600;
-  color: #065F46;
-  background: #D1FAE5;
-  padding: 1px 6px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.del-toggle-evidence {
+.del-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -133,20 +127,27 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 50%;
+  border-radius: 6px;
   transition: all 150ms ease;
-  color: #CBD5E0;
+  color: #A0AEC0;
+  text-decoration: none;
   flex-shrink: 0;
 
-  i { font-size: 20px; }
+  i { font-size: 18px; }
 
   &:hover {
-    color: #059669;
-    background: #D1FAE5;
+    color: #2B6CB0;
+    background: #EBF4FF;
   }
 
-  &--active {
-    color: #059669;
+  &--disabled {
+    cursor: default;
+    opacity: 0.5;
+
+    &:hover {
+      color: #A0AEC0;
+      background: transparent;
+    }
   }
 }
 
