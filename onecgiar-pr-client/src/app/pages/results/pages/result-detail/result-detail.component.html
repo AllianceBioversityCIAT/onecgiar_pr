@@ -1,39 +1,4 @@
 <div class="rd_layout">
-  <aside class="rd_sidebar">
-    <div class="rd_sidebar_header">
-      <span class="eyebrow">Section</span>
-      <h2 class="title">{{ this.dataControlSE.currentResultSectionName() }}</h2>
-    </div>
-    <app-panel-menu></app-panel-menu>
-
-    <!-- Result metadata at the bottom of the sidebar — wraps, never pushes the list -->
-    <div class="rd_metadata">
-      <div class="item">
-        <span class="label">Result code</span>
-        <span class="value">{{ this.api.resultsSE.currentResultCode }}</span>
-      </div>
-      <div class="item">
-        <span class="label">Status</span>
-        <span class="value">{{ this.dataControlSE?.currentResult?.status_name }}</span>
-      </div>
-      <div class="item">
-        <span class="label">Result level</span>
-        <span class="value">{{ this.dataControlSE.currentResult?.result_level_name }}</span>
-      </div>
-      <div class="item">
-        <span class="label">Indicator category</span>
-        <span class="value">{{ this.dataControlSE.currentResult?.result_type_name }}</span>
-      </div>
-      <div class="item">
-        <span class="label">Submitter</span>
-        <span class="value">{{ this.dataControlSE.currentResult?.initiative_official_code }} - {{ this.dataControlSE.currentResult?.initiative_name }}</span>
-      </div>
-      <div class="item">
-        <span class="label">Funding source</span>
-        <span class="value">{{ this.dataControlSE.currentResult?.source_name }}</span>
-      </div>
-    </div>
-  </aside>
   <div class="rd_content">
     <div class="phase_switcher_container">
       <app-phase-switcher></app-phase-switcher>
