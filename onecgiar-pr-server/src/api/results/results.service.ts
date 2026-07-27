@@ -27,6 +27,7 @@ import {
 import { ResultTypesService } from './result_types/result_types.service';
 import { ResultType } from './result_types/entities/result_type.entity';
 import { returnFormatResult } from './dto/return-format-result.dto';
+import { returnFormatService } from '../../shared/extendsGlobalDTO/returnServices.dto';
 import {
   ScienceProgramProgressDto,
   ScienceProgramProgressResponseDto,
@@ -218,6 +219,30 @@ export class ResultsService {
   ) {}
 
   /**
+   * Exact title lookup among active results in a reporting version (MySQL source of truth).
+   */
+  private async findActiveResultByExactTitle(
+    trimmedTitle: string,
+    versionId: number,
+  ): Promise<Pick<
+    Result,
+    'id' | 'result_code' | 'title' | 'version_id'
+  > | null> {
+    if (!trimmedTitle) {
+      return null;
+    }
+    const existing = await this._resultRepository.findOne({
+      where: {
+        title: trimmedTitle,
+        is_active: true,
+        version_id: versionId,
+      },
+      select: ['id', 'result_code', 'title', 'version_id'],
+    });
+    return existing ?? null;
+  }
+
+  /**
    * Blocks duplicate titles among active results within the same reporting version.
    * The same title may exist on another version (same result_code lineage, different id).
    * When updating general information, pass excludeResultId so the row can keep its title.
@@ -231,13 +256,10 @@ export class ResultsService {
     if (!trimmed) {
       return '';
     }
-    const existing = await this._resultRepository.findOne({
-      where: {
-        title: trimmed,
-        is_active: true,
-        version_id: versionId,
-      },
-    });
+    const existing = await this.findActiveResultByExactTitle(
+      trimmed,
+      versionId,
+    );
     if (
       existing?.id &&
       (excludeResultId === undefined || existing.id !== excludeResultId)
@@ -249,6 +271,65 @@ export class ResultsService {
       };
     }
     return trimmed;
+  }
+
+  /**
+   * Lightweight uniqueness check for the result creator UI.
+   * Uses the same MySQL criteria as assertUniqueActiveResultTitle / create.
+   */
+  async checkTitleUniqueness(
+    title: string,
+    excludeResultId?: number,
+  ): Promise<returnFormatService | returnErrorDto> {
+    try {
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
+      }
+
+      const trimmed = (title ?? '').trim();
+      if (!trimmed) {
+        return {
+          response: { isUnique: true, existing: null },
+          message: 'Empty title is treated as unique',
+          status: HttpStatus.OK,
+        };
+      }
+
+      const existing = await this.findActiveResultByExactTitle(
+        trimmed,
+        version.id,
+      );
+      const conflicts = Boolean(
+        existing?.id &&
+          (excludeResultId === undefined || existing.id !== excludeResultId),
+      );
+
+      return {
+        response: {
+          isUnique: !conflicts,
+          existing: conflicts
+            ? {
+                id: existing.id,
+                result_code: existing.result_code,
+                title: existing.title,
+                version_id: existing.version_id,
+              }
+            : null,
+        },
+        message: conflicts
+          ? 'A result with this title already exists.'
+          : 'Title is unique for the active reporting phase.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 
   async createOwnerResult(
