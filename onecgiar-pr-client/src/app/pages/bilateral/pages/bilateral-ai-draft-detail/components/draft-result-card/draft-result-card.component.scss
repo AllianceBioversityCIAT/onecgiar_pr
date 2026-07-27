@@ -44,17 +44,6 @@
   line-height: 1.3;
 }
 
-.drc-type-badge {
-  font-size: 11px;
-  font-weight: 600;
-  color: #065F46;
-  background: #ECFDF5;
-  padding: 4px 14px;
-  border-radius: 8px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
 .drc-warnings {
   display: flex;
   flex-direction: column;
@@ -113,92 +102,71 @@
   color: #2D3748;
 }
 
-.drc-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+// ── Extracted sections ────────────────────────────────────────────────
 
-.drc-fields-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #4A5568;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 0;
-}
+.drc-section {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #EDF2F7;
 
-.drc-field {
-  padding: 12px;
-  background: #FAFAFA;
-  border: 1px solid #EDF2F7;
-  border-radius: 8px;
-  transition: border-color 150ms ease;
-
-  &:hover {
-    border-color: #D1FAE5;
+  &:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
   }
 }
 
-.drc-field-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
-
-.drc-field-label {
+.drc-section-title {
   font-size: 11px;
-  font-weight: 600;
-  color: #718096;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.drc-field-confidence {
-  font-size: 9px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 6px;
+  color: #4A5568;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px;
 }
 
-.drc-conf--high {
-  color: #065F46;
-  background: #D1FAE5;
+.drc-description {
+  font-size: 13px;
+  color: #4A5568;
+  line-height: 1.6;
+  margin: 0;
 }
 
-.drc-conf--medium {
-  color: #92400E;
-  background: #FEF3C7;
-}
-
-.drc-conf--low {
-  color: #991B1B;
-  background: #FEE2E2;
+.drc-tag {
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 500;
+  color: #2B6CB0;
+  background: #EBF4FF;
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 
 .drc-field-value {
   font-size: 13px;
   color: #2D3748;
-  line-height: 1.5;
+  margin-bottom: 4px;
 }
 
-.drc-field-source {
-  display: block;
-  font-size: 10px;
-  color: #A0AEC0;
-  margin-top: 4px;
-}
-
-.drc-field-warn {
+.drc-confidence {
   display: inline-flex;
-  align-items: center;
-  gap: 3px;
   font-size: 10px;
-  color: #92400E;
-  margin-top: 4px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
 
-  i { font-size: 12px; }
+  &--high {
+    color: #065F46;
+    background: #D1FAE5;
+  }
+
+  &--medium {
+    color: #92400E;
+    background: #FEF3C7;
+  }
+
+  &--low {
+    color: #991B1B;
+    background: #FEE2E2;
+  }
 }

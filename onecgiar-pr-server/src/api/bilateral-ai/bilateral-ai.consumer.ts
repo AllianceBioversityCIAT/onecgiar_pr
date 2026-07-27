@@ -18,7 +18,7 @@ export class BilateralAiConsumer {
     try {
       await this.bilateralAiService.processJob(payload.jobId);
       context.getChannelRef().ack(context.getMessage());
-    } catch (error) {
+    } catch {
       const job = await this.bilateralAiService.getJobRaw(payload.jobId);
       const attempts = job?.attempts ?? 0;
       if (attempts < maxRetries) {

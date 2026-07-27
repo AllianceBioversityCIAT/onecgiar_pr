@@ -204,8 +204,12 @@ describe('BilateralAiService (unit)', () => {
       );
 
       expect(result).toEqual({
-        jobId: 'new-job',
-        status: BilateralAiJobStatus.PENDING,
+        response: {
+          jobId: 'new-job',
+          jobStatus: BilateralAiJobStatus.PENDING,
+        },
+        message: 'AI job created successfully',
+        status: 202,
       });
     });
   });
@@ -218,7 +222,11 @@ describe('BilateralAiService (unit)', () => {
 
       const result = await service.getJob('j1', 42);
 
-      expect(result).toEqual(mockJob);
+      expect(result).toEqual({
+        response: mockJob,
+        message: 'AI job found',
+        status: 200,
+      });
     });
 
     it('should throw NotFoundException when job not found', async () => {
@@ -267,7 +275,11 @@ describe('BilateralAiService (unit)', () => {
 
       const result = await service.getDraft(5, 42);
 
-      expect(result).toEqual({ ...mockDraft, evidence: [{ id: 10 }] });
+      expect(result).toEqual({
+        response: { ...mockDraft, evidence: [{ id: 10 }] },
+        message: 'AI draft found',
+        status: 200,
+      });
     });
 
     it('should throw NotFoundException when draft not found', async () => {
@@ -407,7 +419,11 @@ describe('BilateralAiService (unit)', () => {
       expect(stubs.resultRepository.update).toHaveBeenCalledWith(100, {
         is_active: false,
       });
-      expect(result).toEqual({ id: 5, discarded: true });
+      expect(result).toEqual({
+        response: { id: 5, discarded: true },
+        message: 'AI draft discarded',
+        status: 200,
+      });
     });
   });
 

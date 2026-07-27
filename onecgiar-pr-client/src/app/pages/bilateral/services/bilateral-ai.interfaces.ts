@@ -2,51 +2,39 @@ export type BilateralAiJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAI
 
 export interface BilateralAiJob {
   job_id: string;
+  user_id: number;
+  center_id: number | null;
   project_id: number;
   program_code: string;
+  bucket_name: string;
+  document_keys: string[];
+  audio_keys: string[];
+  text_context: string | null;
   status: BilateralAiJobStatus;
-  error_message?: string;
+  attempts: number;
+  external_interaction_id: string | null;
+  response_snapshot: Record<string, unknown> | null;
+  result_count: number;
+  error_code: string | null;
+  error_message: string | null;
   created_date: string;
+  started_date: string | null;
+  completed_date: string | null;
   last_updated_date: string;
-}
-
-export type DraftEvidenceSourceType = 'DOCUMENT' | 'VOICE_NOTE' | 'TEXT_CONTEXT';
-
-export interface DraftEvidence {
-  id: number;
-  draft_id: number;
-  source_type: DraftEvidenceSourceType;
-  file_name?: string;
-  is_formal_evidence: boolean;
-  created_date: string;
-  pages?: number;
-  duration?: number;
-}
-
-export interface ExtractedField {
-  key: string;
-  label: string;
-  value: unknown;
-  confidence: number;
-  provenance: string;
-  warning?: string;
 }
 
 export interface BilateralAiDraft {
   id: number;
   job_id: string;
-  project_id: number;
-  program_code: string;
-  title: string;
-  result_type_id?: number;
-  status: 'draft' | 'promoted' | 'discarded';
-  extracted_mds: Record<string, ExtractedField>;
-  warnings: string[];
-  completeness: number;
-  text_context?: string;
-  evidence: DraftEvidence[];
+  result_id: number;
+  candidate_index: number;
+  extracted_mds: Record<string, any> | null;
+  candidate_snapshot: Record<string, any> | null;
+  mapping_warnings: string[] | null;
+  is_discarded: boolean;
   created_date: string;
   last_updated_date: string;
+  job: BilateralAiJob;
 }
 
 export interface BilateralAiUploadState {

@@ -112,7 +112,11 @@ export class BilateralAiService {
       });
       throw error;
     }
-    return { jobId: job.job_id, jobStatus: job.status };
+    return {
+      response: { jobId: job.job_id, jobStatus: job.status },
+      message: 'AI job created successfully',
+      status: 202,
+    };
   }
 
   async getJob(jobId: string, userId: number) {
@@ -120,7 +124,7 @@ export class BilateralAiService {
       where: { job_id: jobId, user_id: userId },
     });
     if (!job) throw new NotFoundException('AI job not found.');
-    return job;
+    return { response: job, message: 'AI job found', status: 200 };
   }
 
   async getJobRaw(jobId: string): Promise<BilateralAiJob | null> {
@@ -135,17 +139,26 @@ export class BilateralAiService {
     });
   }
 
-  async getDraft(draftId: number, userId: number) {
+  private async getDraftRaw(draftId: number, userId: number) {
     const draft = await this.draftRepository.findOne({
       where: { id: draftId, is_discarded: false, job: { user_id: userId } },
       relations: { job: true, result: true },
     });
     if (!draft) throw new NotFoundException('AI draft not found.');
+    return draft;
+  }
+
+  async getDraft(draftId: number, userId: number) {
+    const draft = await this.getDraftRaw(draftId, userId);
     const evidence = await this.evidenceRepository.find({
       where: { draft_id: draft.id, is_active: true },
       order: { created_date: 'ASC' },
     });
-    return { ...draft, evidence };
+    return {
+      response: { ...draft, evidence },
+      message: 'AI draft found',
+      status: 200,
+    };
   }
 
   async setFormalEvidence(
@@ -154,7 +167,7 @@ export class BilateralAiService {
     formal: boolean,
     userId: number,
   ) {
-    const draft = await this.getDraft(draftId, userId);
+    const draft = await this.getDraftRaw(draftId, userId);
     const evidence = await this.evidenceRepository.findOne({
       where: { id: evidenceId, draft_id: draft.id, is_active: true },
     });
@@ -165,12 +178,17 @@ export class BilateralAiService {
       );
     }
     evidence.is_formal_evidence = formal;
-    return this.evidenceRepository.save(evidence);
+    const saved = await this.evidenceRepository.save(evidence);
+    return { response: saved, message: 'Evidence updated', status: 200 };
   }
 
   async promoteDraft(draftId: number, userId: number) {
-    const draft = await this.getDraft(draftId, userId);
-    const formalEvidence = draft.evidence.filter(
+    const draft = await this.getDraftRaw(draftId, userId);
+    const evidence = await this.evidenceRepository.find({
+      where: { draft_id: draft.id, is_active: true },
+      order: { created_date: 'ASC' },
+    });
+    const formalEvidence = evidence.filter(
       (item) => item.is_formal_evidence,
     );
     if (
@@ -189,10 +207,14 @@ export class BilateralAiService {
   }
 
   async discardDraft(draftId: number, userId: number) {
-    const draft = await this.getDraft(draftId, userId);
+    const draft = await this.getDraftRaw(draftId, userId);
     await this.draftRepository.update(draft.id, { is_discarded: true });
     await this.resultRepository.update(draft.result_id, { is_active: false });
-    return { id: draft.id, discarded: true };
+    return {
+      response: { id: draft.id, discarded: true },
+      message: 'AI draft discarded',
+      status: 200,
+    };
   }
 
   async processJob(jobId: string): Promise<void> {

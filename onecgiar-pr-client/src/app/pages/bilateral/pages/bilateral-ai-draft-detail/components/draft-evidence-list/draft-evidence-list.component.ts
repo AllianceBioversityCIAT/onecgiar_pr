@@ -1,6 +1,6 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DraftEvidence, DraftEvidenceSourceType } from '../../../../services/bilateral-ai.interfaces';
+import { BilateralAiJob } from '../../../../services/bilateral-ai.interfaces';
 
 @Component({
   selector: 'app-draft-evidence-list',
@@ -9,44 +9,26 @@ import { DraftEvidence, DraftEvidenceSourceType } from '../../../../services/bil
   styleUrl: './draft-evidence-list.component.scss',
 })
 export class DraftEvidenceListComponent {
-  documents = input<DraftEvidence[]>([]);
-  audioFiles = input<DraftEvidence[]>([]);
-  textContext = input<string | undefined>();
-  draftId = input.required<number>();
-  isReadOnly = input(false);
+  job = input<BilateralAiJob | null>(null);
 
-  evidenceToggled = output<{ draftId: number; evidenceId: number; isFormalEvidence: boolean }>();
-
-  onToggleEvidence(evidence: DraftEvidence): void {
-    if (this.isReadOnly()) return;
-    this.evidenceToggled.emit({
-      draftId: this.draftId(),
-      evidenceId: evidence.id,
-      isFormalEvidence: !evidence.is_formal_evidence,
-    });
+  get documents(): string[] {
+    return this.job()?.document_keys ?? [];
   }
 
-  canBeFormal(evidence: DraftEvidence): boolean {
-    return evidence.source_type === 'DOCUMENT';
+  get audioFiles(): string[] {
+    return this.job()?.audio_keys ?? [];
   }
 
-  getEvidenceIcon(evidence: DraftEvidence): string {
-    switch (evidence.source_type) {
-      case 'DOCUMENT': return 'description';
-      case 'VOICE_NOTE': return 'audiotrack';
-      case 'TEXT_CONTEXT': return 'notes';
-    }
+  get textContext(): string | null {
+    return this.job()?.text_context ?? null;
   }
 
-  getEvidenceTypeLabel(evidence: DraftEvidence): string {
-    switch (evidence.source_type) {
-      case 'DOCUMENT': return 'Document';
-      case 'VOICE_NOTE': return 'Audio';
-      case 'TEXT_CONTEXT': return 'Text Context';
-    }
+  getFileName(key: string): string {
+    const parts = key.split('/');
+    return parts[parts.length - 1] ?? key;
   }
 
-  hasFormalEvidence(): boolean {
-    return [...this.documents(), ...this.audioFiles()].some(e => e.is_formal_evidence);
+  hasAnyEvidence(): boolean {
+    return this.documents.length > 0 || this.audioFiles.length > 0 || !!this.textContext;
   }
 }

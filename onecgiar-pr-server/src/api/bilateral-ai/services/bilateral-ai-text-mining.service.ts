@@ -17,7 +17,9 @@ export class BilateralAiTextMiningService {
 
   async extract(request: TextMiningRequest): Promise<Record<string, unknown>> {
     const url = env.BILATERAL_AI_TEXT_MINING_URL?.trim();
-    const apiKey = env.BILATERAL_AI_TEXT_MINING_API_KEY?.trim();
+    const apiKey =
+      env.MICROSERVICE_API_KEY?.trim() ||
+      env.BILATERAL_AI_TEXT_MINING_API_KEY?.trim();
     if (!url || !apiKey) {
       throw new ServiceUnavailableException(
         'Bilateral AI text mining is not configured.',

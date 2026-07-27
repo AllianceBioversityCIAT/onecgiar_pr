@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
-import { BilateralAiDraft, DraftEvidence } from '../../services/bilateral-ai.interfaces';
+import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { DraftResultCardComponent } from './components/draft-result-card/draft-result-card.component';
 import { DraftEvidenceListComponent } from './components/draft-evidence-list/draft-evidence-list.component';
 
@@ -42,16 +42,8 @@ export class BilateralAiDraftDetailComponent implements OnInit {
     });
   }
 
-  get documents(): DraftEvidence[] {
-    return this.draft?.evidence.filter(e => e.source_type === 'DOCUMENT') ?? [];
-  }
-
-  get audioFiles(): DraftEvidence[] {
-    return this.draft?.evidence.filter(e => e.source_type === 'VOICE_NOTE') ?? [];
-  }
-
-  onEvidenceToggled(event: { draftId: number; evidenceId: number; isFormalEvidence: boolean }): void {
-    this.bilateralAiService.toggleFormalEvidence(event.draftId, event.evidenceId, event.isFormalEvidence);
+  getDraftTitle(): string {
+    return this.draft?.extracted_mds?.['title'] ?? 'Untitled Draft';
   }
 
   onPromote(): void {

@@ -95,7 +95,7 @@
 .mdr-meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   font-size: 11px;
   color: #718096;
 
@@ -103,6 +103,14 @@
     font-size: 14px;
     color: #A0AEC0;
   }
+}
+
+.mdr-meta-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #A0AEC0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .mdr-meta-docs {
@@ -249,13 +257,15 @@
   }
 
   &--discard {
-    background: transparent;
-    color: #A0AEC0;
-    border-color: transparent;
+    background: #FFF5F5;
+    color: #C53030;
+    border: 1.5px solid #FED7D7;
     padding: 6px 8px;
+    border-radius: 6px;
     &:hover {
-      background: #FFF5F5;
-      color: #E53E3E;
+      background: #FED7D7;
+      color: #991B1B;
+      border-color: #FEB2B2;
     }
   }
 }

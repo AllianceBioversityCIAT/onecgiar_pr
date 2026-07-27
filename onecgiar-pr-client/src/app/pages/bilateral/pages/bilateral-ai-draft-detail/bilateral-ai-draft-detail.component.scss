@@ -8,11 +8,13 @@
   padding: 28px;
 }
 
-.badd-topbar {
+.badd-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .badd-back {
@@ -52,6 +54,7 @@
   cursor: pointer;
   border: 1.5px solid transparent;
   transition: all 150ms ease;
+  white-space: nowrap;
 
   i { font-size: 16px; }
 
@@ -66,15 +69,36 @@
   }
 
   &--discard {
-    background: transparent;
-    color: #A0AEC0;
-    border-color: #E2E8F0;
+    background: #FFF5F5;
+    color: #C53030;
+    border-color: #FED7D7;
     &:hover {
-      background: #FFF5F5;
-      color: #E53E3E;
-      border-color: #FED7D7;
+      background: #FED7D7;
+      color: #991B1B;
+      border-color: #FEB2B2;
     }
   }
+}
+
+// ── Content Layout ─────────────────────────────────────────────────────
+
+.badd-content {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.badd-main {
+  min-width: 0;
+}
+
+.badd-sidebar {
+  min-width: 0;
 }
 
 // ── Error State ────────────────────────────────────────────────────────
@@ -153,39 +177,4 @@
 
 @keyframes badd-spin {
   to { transform: rotate(360deg); }
-}
-
-// ── Layout ─────────────────────────────────────────────────────────────
-
-.badd-layout {
-  display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 24px;
-  align-items: start;
-
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.badd-primary {
-  min-width: 0;
-}
-
-.badd-secondary {
-  min-width: 0;
-}
-
-.badd-section-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #4A5568;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 12px;
-
-  i { font-size: 16px; color: #718096; }
 }

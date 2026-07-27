@@ -16,39 +16,34 @@
         <div class="mdr-card">
           <div class="mdr-card-main">
             <div class="mdr-card-header">
-              <h3 class="mdr-card-title">{{ draft.title || 'Untitled Draft' }}</h3>
-              @if (draft.result_type_id) {
-                <span class="mdr-card-type">Type {{ draft.result_type_id }}</span>
+              <h3 class="mdr-card-title">{{ getDraftTitle(draft) }}</h3>
+              @if (getDraftType(draft)) {
+                <span class="mdr-card-type">{{ getDraftType(draft) }}</span>
               }
             </div>
 
             <div class="mdr-card-meta">
-              <span class="mdr-meta-item">
-                <i class="material-icons-round">folder</i>
-                {{ draft.project_id }}
-              </span>
-              <span class="mdr-meta-item">
-                <i class="material-icons-round">code</i>
-                {{ draft.program_code }}
-              </span>
-              @if (draft.evidence.length) {
-                <span class="mdr-meta-item mdr-meta-docs">
-                  <i class="material-icons-round">description</i>
-                  {{ getDraftDocumentNames(draft) }}
+              @if (draft.job) {
+                <span class="mdr-meta-item">
+                  <i class="material-icons-round">business</i>
+                  <span class="mdr-meta-label">Project</span>
+                  {{ bilateralAiService.projectNameMap()[draft.job.project_id] ?? draft.job.project_id }}
+                </span>
+                <span class="mdr-meta-item">
+                  <i class="material-icons-round">layers</i>
+                  <span class="mdr-meta-label">Program</span>
+                  {{ draft.job.program_code }}
                 </span>
               }
             </div>
 
-            @if (draft.warnings.length) {
+            @if (draft.mapping_warnings?.length) {
               <div class="mdr-warnings">
-                @for (warning of draft.warnings.slice(0, 2); track warning) {
+                @for (warning of draft.mapping_warnings ?? []; track warning) {
                   <span class="mdr-warning-tag">
                     <i class="material-icons-round">warning_amber</i>
                     {{ warning }}
                   </span>
-                }
-                @if (draft.warnings.length > 2) {
-                  <span class="mdr-warning-more">+{{ draft.warnings.length - 2 }} more</span>
                 }
               </div>
             }
@@ -56,12 +51,12 @@
 
           <div class="mdr-card-side">
             <div class="mdr-completeness">
-              <div class="mdr-pct-circle" [class]="getCompletenessClass(draft.completeness)">
+              <div class="mdr-pct-circle">
                 <svg viewBox="0 0 36 36" class="mdr-pct-svg">
                   <path class="mdr-pct-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  <path class="mdr-pct-fill" [attr.stroke-dasharray]="draft.completeness + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="mdr-pct-fill" stroke-dasharray="50, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
-                <span class="mdr-pct-text">{{ getCompletenessLabel(draft.completeness) }}</span>
+                <span class="mdr-pct-text">Draft</span>
               </div>
             </div>
 

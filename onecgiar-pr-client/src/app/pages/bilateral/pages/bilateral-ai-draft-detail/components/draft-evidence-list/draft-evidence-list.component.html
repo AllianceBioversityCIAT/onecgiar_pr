@@ -1,85 +1,64 @@
 <div class="del">
-  @if (textContext()) {
-    <div class="del-section">
-      <h3 class="del-section-title">
-        <i class="material-icons-round">notes</i>
-        Text Context
-      </h3>
-      <div class="del-text-snippet">{{ textContext() }}</div>
-    </div>
-  }
+  <h3 class="del-title">Source Materials</h3>
 
-  @if (documents().length) {
-    <div class="del-section">
-      <h3 class="del-section-title">
-        <i class="material-icons-round">description</i>
-        Source Documents ({{ documents().length }})
-      </h3>
-      <div class="del-list">
-        @for (evidence of documents(); track evidence.id) {
-          <div class="del-item" [class.del-item--formal]="evidence.is_formal_evidence">
-            <div class="del-item-icon">
-              <i class="material-icons-round">{{ getEvidenceIcon(evidence) }}</i>
-            </div>
-            <div class="del-item-content">
-              <div class="del-item-name">{{ evidence.file_name }}</div>
-              <div class="del-item-meta">
-                <span class="del-item-type">{{ getEvidenceTypeLabel(evidence) }}</span>
-                @if (evidence.pages) {
-                  <span class="del-item-pages">{{ evidence.pages }} pages referenced</span>
-                }
-                @if (evidence.is_formal_evidence) {
-                  <span class="del-item-formal-badge">Formal Evidence</span>
-                }
+  @if (hasAnyEvidence()) {
+    @if (documents.length) {
+      <div class="del-group">
+        <h4 class="del-group-title">
+          <i class="material-icons-round">description</i>
+          Documents ({{ documents.length }})
+        </h4>
+        <div class="del-list">
+          @for (doc of documents; track doc) {
+            <div class="del-item">
+              <div class="del-item-icon">
+                <i class="material-icons-round">description</i>
+              </div>
+              <div class="del-item-content">
+                <div class="del-item-name">{{ getFileName(doc) }}</div>
               </div>
             </div>
-            @if (!isReadOnly() && canBeFormal(evidence)) {
-              <button
-                type="button"
-                class="del-toggle-evidence"
-                [class.del-toggle-evidence--active]="evidence.is_formal_evidence"
-                (click)="onToggleEvidence(evidence)"
-                [attr.aria-label]="evidence.is_formal_evidence ? 'Remove from formal evidence' : 'Mark as formal evidence'"
-              >
-                <i class="material-icons-round">
-                  {{ evidence.is_formal_evidence ? 'check_circle' : 'radio_button_unchecked' }}
-                </i>
-              </button>
-            }
-          </div>
-        }
+          }
+        </div>
       </div>
-    </div>
-  }
+    }
 
-  @if (audioFiles().length) {
-    <div class="del-section">
-      <h3 class="del-section-title">
-        <i class="material-icons-round">audiotrack</i>
-        Audio Recordings ({{ audioFiles().length }})
-      </h3>
-      <div class="del-list">
-        @for (evidence of audioFiles(); track evidence.id) {
-          <div class="del-item">
-            <div class="del-item-icon del-item-icon--audio">
-              <i class="material-icons-round">{{ getEvidenceIcon(evidence) }}</i>
-            </div>
-            <div class="del-item-content">
-              <div class="del-item-name">{{ evidence.file_name }}</div>
-              <div class="del-item-meta">
-                <span class="del-item-type">{{ getEvidenceTypeLabel(evidence) }}</span>
+    @if (audioFiles.length) {
+      <div class="del-group">
+        <h4 class="del-group-title">
+          <i class="material-icons-round">audiotrack</i>
+          Audio Recordings ({{ audioFiles.length }})
+        </h4>
+        <div class="del-list">
+          @for (audio of audioFiles; track audio) {
+            <div class="del-item">
+              <div class="del-item-icon del-item-icon--audio">
+                <i class="material-icons-round">audiotrack</i>
+              </div>
+              <div class="del-item-content">
+                <div class="del-item-name">{{ getFileName(audio) }}</div>
               </div>
             </div>
-          </div>
-        }
+          }
+        </div>
       </div>
-    </div>
-  }
+    }
 
-  @if (!documents().length && !audioFiles().length && !textContext()) {
+    @if (textContext) {
+      <div class="del-group">
+        <h4 class="del-group-title">
+          <i class="material-icons-round">notes</i>
+          Text Context
+        </h4>
+        <div class="del-text-context">
+          <p>{{ textContext }}</p>
+        </div>
+      </div>
+    }
+  } @else {
     <div class="del-empty">
-      <i class="material-icons-round">file_copy</i>
-      <p>No source material associated with this draft.</p>
+      <i class="material-icons-round">cloud_off</i>
+      <p>No source materials available for this draft.</p>
     </div>
   }
 </div>

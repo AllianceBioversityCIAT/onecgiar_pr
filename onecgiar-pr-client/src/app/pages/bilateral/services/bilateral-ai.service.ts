@@ -3,12 +3,12 @@ import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
+import { ResultsApiService } from '../../../shared/services/api/results-api.service';
 import {
   BilateralAiDraft,
   BilateralAiJob,
   BilateralAiJobStatus,
   BilateralAiUploadState,
-  DraftEvidence,
 } from './bilateral-ai.interfaces';
 import { ReportingApiResponse } from '../../../shared/interfaces/reporting-api.response';
 
@@ -18,6 +18,7 @@ const MAX_POLL_DURATION = 300_000;
 @Injectable({ providedIn: 'root' })
 export class BilateralAiService implements OnDestroy {
   private readonly bilateralApi = inject(BilateralApiService);
+  private readonly resultsApi = inject(ResultsApiService);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
 
@@ -26,6 +27,8 @@ export class BilateralAiService implements OnDestroy {
   draftList = signal<BilateralAiDraft[]>([]);
   currentDraft = signal<BilateralAiDraft | null>(null);
   isDraftListLoaded = signal(false);
+
+  projectNameMap = signal<Record<number, string>>({});
 
   uploadState = signal<BilateralAiUploadState>({
     jobId: null,
@@ -36,7 +39,7 @@ export class BilateralAiService implements OnDestroy {
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private pollingStart = 0;
 
-  draftCount = computed(() => this.draftList().filter(d => d.status === 'draft').length);
+  draftCount = computed(() => this.draftList().length);
   draftCountDisplay = computed(() => {
     const count = this.draftCount();
     if (count === 0) return '';
@@ -122,6 +125,7 @@ export class BilateralAiService implements OnDestroy {
   // ── Draft CRUD ──────────────────────────────────────────────────────
 
   loadAllDrafts(): void {
+    this.loadProjectNames();
     this.bilateralApi.GET_bilateralAiDrafts().subscribe({
       next: (data: any) => {
         this.draftList.set(data ?? []);
@@ -133,12 +137,19 @@ export class BilateralAiService implements OnDestroy {
     });
   }
 
-  getDraft(draftId: number): Observable<ReportingApiResponse<BilateralAiDraft>> {
-    return this.bilateralApi.GET_bilateralAiDraft(draftId);
-  }
-
-  toggleEvidence(draftId: number, evidenceId: number, isFormalEvidence: boolean): void {
-    this.toggleFormalEvidence(draftId, evidenceId, isFormalEvidence);
+  loadProjectNames(): void {
+    this.resultsApi.GET_ClarisaProjects().subscribe({
+      next: (data: any) => {
+        const projects = data?.response ?? data ?? [];
+        const map: Record<number, string> = {};
+        for (const p of projects) {
+          if (p.id != null) {
+            map[p.id] = p.shortName ?? p.fullName ?? String(p.id);
+          }
+        }
+        this.projectNameMap.set(map);
+      },
+    });
   }
 
   loadDraft(draftId: number): void {
@@ -149,30 +160,15 @@ export class BilateralAiService implements OnDestroy {
     });
   }
 
-  toggleFormalEvidence(draftId: number, evidenceId: number, isFormalEvidence: boolean): void {
-    this.bilateralApi.PATCH_bilateralAiEvidence(draftId, evidenceId, { is_formal_evidence: isFormalEvidence }).subscribe({
-      next: () => {
-        this.currentDraft.update(draft => {
-          if (!draft) return draft;
-          const updateEvidence = (items: DraftEvidence[]) =>
-            items.map(e => (e.id === evidenceId ? { ...e, is_formal_evidence: isFormalEvidence } : e));
-          return {
-            ...draft,
-            evidence: updateEvidence(draft.evidence),
-          };
-        });
-      },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update evidence' });
-      },
-    });
+  getDraft(draftId: number): Observable<ReportingApiResponse<BilateralAiDraft>> {
+    return this.bilateralApi.GET_bilateralAiDraft(draftId);
   }
 
   promoteDraft(draftId: number): void {
     this.bilateralApi.POST_promoteBilateralAiDraft(draftId).subscribe({
       next: ({ response }) => {
         this.uploadState.update(s => ({ ...s, status: 'promoted' }));
-        this.currentDraft.update(d => d ? { ...d, status: 'promoted' } : d);
+        this.draftList.update(list => list.filter(d => d.id !== draftId));
         const resultId = response?.resultId ?? response?.result_id;
         if (resultId) {
           void this.router.navigate(['/bilateral/result', resultId]);
