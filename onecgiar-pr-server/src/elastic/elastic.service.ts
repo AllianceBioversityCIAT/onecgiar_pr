@@ -152,10 +152,13 @@ export class ElasticService {
         status: HttpStatus.OK,
       };
     } catch (error) {
-      return this._handlersError.returnErrorRes({
-        error: error.response?.data,
+      // Log via HandlersError, then rethrow so callers' try/catch can warn
+      // without treating a soft error DTO as success.
+      this._handlersError.returnErrorRes({
+        error: error?.response?.data ?? error,
         debug: true,
       });
+      throw error;
     }
   }
 

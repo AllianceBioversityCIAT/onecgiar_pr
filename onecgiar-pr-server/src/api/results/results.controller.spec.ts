@@ -146,6 +146,28 @@ describe('ResultsController', () => {
     expect(mockService.findAllResultsLegacyNew).toHaveBeenCalledWith('abc');
   });
 
+  it('checkTitleUniqueness delegates to service with optional excludeResultId', async () => {
+    (mockService as any).checkTitleUniqueness = jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: { isUnique: true } });
+    await controller.checkTitleUniqueness('My Title', '42');
+    expect((mockService as any).checkTitleUniqueness).toHaveBeenCalledWith(
+      'My Title',
+      42,
+    );
+  });
+
+  it('checkTitleUniqueness omits exclude when not a finite number', async () => {
+    (mockService as any).checkTitleUniqueness = jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: { isUnique: true } });
+    await controller.checkTitleUniqueness('My Title', 'abc');
+    expect((mockService as any).checkTitleUniqueness).toHaveBeenCalledWith(
+      'My Title',
+      undefined,
+    );
+  });
+
   it('getInstitutions delegates to service', async () => {
     const res = await controller.getInstitutions();
     expect(mockService.getAllInstitutions).toHaveBeenCalled();
