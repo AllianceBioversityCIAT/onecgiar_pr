@@ -2,10 +2,28 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, signal, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { BehaviorSubject, of } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
+
+// Chart.js needs a real 2D canvas context, which jsdom does not provide. The stub
+// records every chart built so the rendering branches stay assertable.
+jest.mock('chart.js/auto', () => {
+  class ChartMock {
+    static register = jest.fn();
+    destroy = jest.fn();
+    constructor(
+      public canvas: any,
+      public config: any
+    ) {
+      (globalThis as any).__entityDetailsCharts.push(this);
+    }
+  }
+  return { Chart: ChartMock, default: ChartMock };
+});
+
 import { EntityDetailsComponent } from './entity-details.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
+import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 
 // Shared mock data to avoid duplication
 const createMockDashboardData = () => ({
@@ -76,10 +94,15 @@ describe('EntityDetailsComponent', () => {
 
   beforeEach(async () => {
     params$ = new BehaviorSubject({ entityId: '123' });
+    (globalThis as any).__entityDetailsCharts = [];
 
     apiServiceMock = {
       resultsSE: {
         GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      dataControlSE: {
+        myInitiativesListReportingByPortfolio: null as any,
+        myInitiativesList: null as any
       }
     };
 
@@ -479,5 +502,270 @@ describe('EntityDetailsComponent', () => {
       entityAowServiceMock.isLoadingDetails = signal(false);
       expect(component.entityAowService.isLoadingDetails()).toBe(false);
     });
+  });
+
+  // ------------------------------------------------------------- ngOnInit guards
+  describe('ngOnInit guards', () => {
+    it('does not request any data when the route carries no entity id', () => {
+      params$.next({});
+      component.ngOnInit();
+
+      expect(entityAowServiceMock.resetDashboardData).toHaveBeenCalled();
+      expect(entityAowServiceMock.entityId()).toBeUndefined();
+      expect(entityAowServiceMock.getAllDetailsData).not.toHaveBeenCalled();
+      expect(entityAowServiceMock.getDashboardData).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------- showBilateralReview
+  describe('showBilateralResultsReview', () => {
+    it('is hidden only for AVISA (SGP-02)', () => {
+      entityAowServiceMock.entityId.set('SP01');
+      expect(component.showBilateralResultsReview()).toBe(true);
+
+      entityAowServiceMock.entityId.set('SGP-02');
+      expect(component.showBilateralResultsReview()).toBe(false);
+    });
+  });
+
+  // --------------------------------------------------- groupedIndicatorSummaries
+  describe('groupedIndicatorSummaries', () => {
+    it('splits the summaries into outputs and outcomes and drops IPSR', () => {
+      entityAowServiceMock.indicatorSummaries = signal([
+        { resultTypeName: 'Innovation development' },
+        { resultTypeName: 'Knowledge product' },
+        { resultTypeName: 'Capacity sharing for development' },
+        { resultTypeName: 'Other output' },
+        { resultTypeName: 'Innovation use' },
+        { resultTypeName: 'Policy change' },
+        { resultTypeName: 'Other outcome' },
+        { resultTypeName: 'Innovation Use(IPSR)' },
+        { resultTypeName: 'Something else' },
+        null,
+        {}
+      ]);
+
+      const grouped = component.groupedIndicatorSummaries();
+      expect(grouped.outputs).toHaveLength(4);
+      expect(grouped.outcomes).toHaveLength(3);
+    });
+
+    it('is empty when there are no summaries', () => {
+      entityAowServiceMock.indicatorSummaries = signal([]);
+      expect(component.groupedIndicatorSummaries()).toEqual({ outputs: [], outcomes: [] });
+    });
+  });
+
+  // ------------------------------------------------------ entityDisplayShortName
+  describe('entityDisplayShortName', () => {
+    it('prefers the short name coming from the entity details', () => {
+      entityAowServiceMock.entityDetails = signal({ shortName: 'My Program' });
+      expect(component.entityDisplayShortName).toBe('My Program');
+    });
+
+    it('falls back to a placeholder for a regular program without details', () => {
+      entityAowServiceMock.entityDetails = signal(null);
+      entityAowServiceMock.entityId.set('SP01');
+      expect(component.entityDisplayShortName).toBe('No information loaded');
+    });
+
+    it('resolves AVISA from the reporting portfolio initiatives list', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId.set('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [{ official_code: 'SGP-02', short_name: 'AVISA' }];
+      expect(component.entityDisplayShortName).toBe('AVISA');
+    });
+
+    it('resolves AVISA from the plain initiatives list, walking the name fallbacks', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId.set('SGP02');
+
+      apiServiceMock.dataControlSE.myInitiativesList = [{ official_code: 'SGP02', shortName: 'Camel AVISA' }];
+      expect(component.entityDisplayShortName).toBe('Camel AVISA');
+
+      apiServiceMock.dataControlSE.myInitiativesList = [{ official_code: 'SGP02', name: 'Plain name' }];
+      expect(component.entityDisplayShortName).toBe('Plain name');
+
+      apiServiceMock.dataControlSE.myInitiativesList = [{ official_code: 'SGP02' }];
+      expect(component.entityDisplayShortName).toBe('No information loaded');
+    });
+
+    it('falls back to the Science Program lists when AVISA is not in the initiatives', () => {
+      const homeService = TestBed.inject(ResultFrameworkReportingHomeService);
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId.set('SGP-02');
+
+      homeService.mySPsList.set([{ initiativeId: 41, initiativeShortName: 'AVISA SP' } as any]);
+      expect(component.entityDisplayShortName).toBe('AVISA SP');
+
+      homeService.mySPsList.set([]);
+      homeService.otherSPsList.set([{ initiativeCode: 'SGP-02', initiativeName: 'Long AVISA' } as any]);
+      expect(component.entityDisplayShortName).toBe('Long AVISA');
+
+      homeService.otherSPsList.set([]);
+      homeService.otherProjectsList.set([{ initiativeCode: 'SGP02' } as any]);
+      expect(component.entityDisplayShortName).toBe('No information loaded');
+
+      homeService.otherProjectsList.set([]);
+      expect(component.entityDisplayShortName).toBe('No information loaded');
+    });
+  });
+
+  // ------------------------------------------- reportFormSelectedInitiativeId
+  describe('reportFormSelectedInitiativeId', () => {
+    it('uses the entity details id when available', () => {
+      entityAowServiceMock.entityDetails = signal({ id: 55 });
+      expect(component.reportFormSelectedInitiativeId).toBe(55);
+    });
+
+    it('is undefined for a regular program without details', () => {
+      entityAowServiceMock.entityDetails = signal({ id: null });
+      entityAowServiceMock.entityId.set('SP01');
+      expect(component.reportFormSelectedInitiativeId).toBeUndefined();
+    });
+
+    it('resolves the AVISA id from the initiatives list, falling back to initiative_id', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId.set('SGP-02');
+
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [{ official_code: 'SGP-02', id: 41 }];
+      expect(component.reportFormSelectedInitiativeId).toBe(41);
+
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [{ official_code: 'SGP-02', initiative_id: 77 }];
+      expect(component.reportFormSelectedInitiativeId).toBe(77);
+
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [{ official_code: 'OTHER' }];
+      expect(component.reportFormSelectedInitiativeId).toBeUndefined();
+    });
+  });
+
+  // ----------------------------------------------------------------- modal close
+  describe('onModalClose', () => {
+    it('closes the modal and cleans the result-level state', () => {
+      component.showReportModal.set(true);
+      component.onModalClose();
+      expect(component.showReportModal()).toBe(false);
+      expect(resultLevelServiceMock.cleanData).toHaveBeenCalled();
+    });
+
+    it('is safe when the result-level service has no cleanData', () => {
+      resultLevelServiceMock.cleanData = undefined;
+      component.showReportModal.set(true);
+      expect(() => component.onModalClose()).not.toThrow();
+      expect(component.showReportModal()).toBe(false);
+    });
+  });
+
+  // ------------------------------------------------------------- axis max helper
+  describe('calculateDatasetMax', () => {
+    it('tolerates a missing dataset payload and non numeric values', () => {
+      const max = (component as any).calculateDatasetMax({ datasets: [{ data: null }, { data: [1, 'x', null, 9] }] });
+      expect(max).toBe(9);
+    });
+
+    it('returns 0 when there are no datasets', () => {
+      expect((component as any).calculateDatasetMax({ datasets: [] })).toBe(0);
+    });
+  });
+
+  // --------------------------------------------------------------- chart plumbing
+  describe('chart plumbing', () => {
+    it('registers the datalabels plugin in the browser', () => {
+      const { Chart } = jest.requireMock('chart.js/auto');
+      Chart.register.mockClear();
+      component.initChart();
+      expect(Chart.register).toHaveBeenCalled();
+      expect(changeDetectorRefMock.markForCheck).not.toThrow;
+    });
+
+    it('ngOnDestroy is safe when no chart was built', () => {
+      expect(() => component.ngOnDestroy()).not.toThrow();
+    });
+
+    it('renderBarChart skips when there is no canvas', () => {
+      const result = (component as any).renderBarChart(undefined, undefined, { datasets: [] }, {});
+      expect(result).toBeUndefined();
+      expect((globalThis as any).__entityDetailsCharts).toHaveLength(0);
+    });
+
+    it('renderBarChart replaces the previous chart instance', () => {
+      const canvas = document.createElement('canvas');
+      const existing = { destroy: jest.fn() } as any;
+
+      const chart = (component as any).renderBarChart({ nativeElement: canvas }, existing, { datasets: [] }, {});
+      expect(existing.destroy).toHaveBeenCalled();
+      expect(chart).toBe((globalThis as any).__entityDetailsCharts[0]);
+    });
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Server platform + view lifecycle need their own testing module.
+// -----------------------------------------------------------------------------
+describe('EntityDetailsComponent — platform + view lifecycle', () => {
+  const buildOn = async (platform: string, template: string) => {
+    TestBed.resetTestingModule();
+    (globalThis as any).__entityDetailsCharts = [];
+
+    const entityAowServiceMock: any = {
+      entityId: signal<string>(''),
+      aowId: signal<string>(''),
+      entityDetails: signal<any>({}),
+      entityAows: signal<any[]>([]),
+      isLoadingDetails: signal<boolean>(false),
+      sideBarItems: signal<any[]>([]),
+      setSideBarItems: jest.fn(),
+      getAllDetailsData: jest.fn(),
+      indicatorSummaries: signal<any[]>([]),
+      getDashboardData: jest.fn(),
+      dashboardData: signal<any>(createMockDashboardData()),
+      resetDashboardData: jest.fn()
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [EntityDetailsComponent],
+      providers: [
+        { provide: ActivatedRoute, useValue: { params: of({ entityId: 'SP01' }) } },
+        { provide: ApiService, useValue: { resultsSE: {}, dataControlSE: {} } },
+        { provide: EntityAowService, useValue: entityAowServiceMock },
+        { provide: ResultLevelService, useValue: { setPendingResultType: jest.fn(), cleanData: jest.fn() } },
+        { provide: PLATFORM_ID, useValue: platform }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    })
+      .overrideComponent(EntityDetailsComponent, { set: { template } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(EntityDetailsComponent);
+    return { fixture, component: fixture.componentInstance };
+  };
+
+  it('does not register Chart.js outside the browser', async () => {
+    const { Chart } = jest.requireMock('chart.js/auto');
+    const { component } = await buildOn('server', '');
+    Chart.register.mockClear();
+
+    component.initChart();
+    expect(Chart.register).not.toHaveBeenCalled();
+    expect((component as any).renderBarChart({ nativeElement: document.createElement('canvas') }, undefined, { datasets: [] }, {})).toBeUndefined();
+  });
+
+  it('builds both bar charts once the view is ready and destroys them on teardown', async () => {
+    const { fixture, component } = await buildOn('browser', '<canvas #outputsCanvas></canvas><canvas #outcomesCanvas></canvas>');
+
+    fixture.detectChanges();
+    const charts = (globalThis as any).__entityDetailsCharts;
+    expect(charts).toHaveLength(2);
+    expect(charts[0].config.type).toBe('bar');
+
+    component.ngOnDestroy();
+    expect(charts[0].destroy).toHaveBeenCalled();
+    expect(charts[1].destroy).toHaveBeenCalled();
+  });
+
+  it('skips rendering while the canvases are not in the view', async () => {
+    const { fixture } = await buildOn('browser', '');
+    fixture.detectChanges();
+    expect((globalThis as any).__entityDetailsCharts).toHaveLength(0);
   });
 });
