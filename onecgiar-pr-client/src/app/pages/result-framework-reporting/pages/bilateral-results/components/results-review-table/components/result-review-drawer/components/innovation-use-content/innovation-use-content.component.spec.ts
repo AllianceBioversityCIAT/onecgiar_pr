@@ -5,7 +5,6 @@ import { of, throwError } from 'rxjs';
 import { InnovationUseContentComponent } from './innovation-use-content.component';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 describe('InnovationUseContentComponent', () => {
   let component: InnovationUseContentComponent;

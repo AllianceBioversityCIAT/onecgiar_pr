@@ -3,7 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { KpContentComponent } from './kp-content.component';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 describe('KpContentComponent', () => {
   let component: KpContentComponent;

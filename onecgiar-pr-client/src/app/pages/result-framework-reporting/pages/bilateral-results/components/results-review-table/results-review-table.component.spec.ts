@@ -5,7 +5,6 @@ import { ResultsReviewTableComponent } from './results-review-table.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { BilateralResultsService } from '../../bilateral-results.service';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 describe('ResultsReviewTableComponent', () => {
   let component: ResultsReviewTableComponent;

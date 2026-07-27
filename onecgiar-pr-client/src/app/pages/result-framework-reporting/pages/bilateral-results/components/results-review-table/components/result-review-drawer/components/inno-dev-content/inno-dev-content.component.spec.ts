@@ -5,7 +5,6 @@ import { Subject } from 'rxjs';
 import { InnoDevContentComponent } from './inno-dev-content.component';
 import { InnovationControlListService } from '../../../../../../../../../../shared/services/global/innovation-control-list.service';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 describe('InnoDevContentComponent', () => {
   let component: InnoDevContentComponent;

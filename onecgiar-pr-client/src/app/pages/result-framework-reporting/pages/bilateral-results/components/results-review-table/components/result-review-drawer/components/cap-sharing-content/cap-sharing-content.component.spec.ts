@@ -5,7 +5,6 @@ import { of, throwError } from 'rxjs';
 import { CapSharingContentComponent } from './cap-sharing-content.component';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 describe('CapSharingContentComponent', () => {
   let component: CapSharingContentComponent;

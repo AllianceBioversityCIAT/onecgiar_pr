@@ -5,7 +5,6 @@ import { PolicyChangeContentComponent } from './policy-change-content.component'
 import { PolicyControlListService } from '../../../../../../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../../../../../../shared/services/global/institutions.service';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 describe('PolicyChangeContentComponent', () => {
   let component: PolicyChangeContentComponent;

@@ -10,7 +10,6 @@ import { CentersService } from '../../../../../../../../shared/services/global/c
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { BilateralResultsService } from '../../../../bilateral-results.service';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // jsdom does not expose structuredClone; the component relies on it for snapshots.
 if (typeof (globalThis as any).structuredClone !== 'function') {
