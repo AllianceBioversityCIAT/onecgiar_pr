@@ -1,10 +1,18 @@
 import { mountCF } from '../../../../cypress/support/ct-utils';
 
 /**
- * Behavior lock for <app-pr-checkbox> before the signals refactor.
+ * Behaviour lock for <app-pr-checkbox>.
  * Captures: label renders, checkbox toggles the bound model and emits selectOptionEvent.
+ *
+ * NOTE (performance-refactor): the original selectors targeted `p-checkbox input`, the PrimeNG
+ * widget this branch removed. The component now renders a NATIVE `<input type="checkbox"
+ * class="pr-native-check">`. Only the selectors were updated — the assertions are unchanged and
+ * match `master` (the component `.ts` is byte-identical between the two branches).
  */
 describe('PrCheckboxComponent (CT)', () => {
+  /** The interactive control after the Spartan migration (was `p-checkbox input`). */
+  const CHECK = 'input.pr-native-check';
+
   const TEMPLATE = `
     <app-pr-checkbox
       label="I agree"
@@ -25,7 +33,7 @@ describe('PrCheckboxComponent (CT)', () => {
 
   it('checking it sets the model to true and emits', () => {
     mount(false).then(w => {
-      cy.get('p-checkbox input').check({ force: true });
+      cy.get(CHECK).check({ force: true });
       cy.get('@select').should('have.been.called');
       cy.wrap(null).then(() => expect((w.component as any).model).to.equal(true));
     });
@@ -33,6 +41,6 @@ describe('PrCheckboxComponent (CT)', () => {
 
   it('reflects a pre-checked bound value', () => {
     mount(true);
-    cy.get('p-checkbox input').should('be.checked');
+    cy.get(CHECK).should('be.checked');
   });
 });

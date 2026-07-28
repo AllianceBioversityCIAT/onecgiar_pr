@@ -62,3 +62,114 @@ export function mountComponent<T>(component: Type<T>, opts: MountCFOptions = {})
       return cy.wrap(wrapper);
     });
 }
+
+/* ------------------------------------------------------------------ *
+ * Contract-testing helpers
+ *
+ * These exist so specs can assert how a field is EXPECTED to behave —
+ * derived from the `master` (PrimeNG) reference and from how the ~34-53
+ * real consumer templates actually use each field — rather than from
+ * whatever the current implementation happens to do.
+ * ------------------------------------------------------------------ */
+
+/**
+ * Drive the host component from inside a test.
+ *
+ * Real parents mutate the bound model IN PLACE (`splice`/`push` on the array they
+ * passed as `[(ngModel)]`), and they replace `[options]` once an async catalog call
+ * resolves. Both paths are regression-prone after the `@Input()` -> `input()` signal
+ * migration, so specs need a way to reproduce them exactly.
+ *
+ * `fn` receives the host instance; change detection runs after it returns.
+ */
+export function patchHost(fn: (host: any) => void) {
+  return cy.get('@ctWrapper').then((wrapper: any) => {
+    const fixture = wrapper.fixture;
+    // Let Angular own the change-detection cycle. Mutating the host and immediately forcing a
+    // synchronous detectChanges() puts the two-way [(ngModel)] write-back inside the very cycle
+    // that is already checking it, which throws NG0100 from the TEST HOST — an artefact of the
+    // harness, not a defect of the field under test. autoDetectChanges lets the write-back land
+    // on its own tick, so any NG0100 that still surfaces belongs to the component.
+    fixture.autoDetectChanges(true);
+    fn(fixture.componentInstance);
+    return cy.wrap(wrapper, { log: false });
+  });
+}
+
+/** Mount and alias the wrapper as `@ctWrapper` so `patchHost` can reach the host later. */
+export function mountCFHost(template: string, opts: MountCFOptions = {}) {
+  return mountCF(template, opts).as('ctWrapper');
+}
+
+/** Read the host's bound model without leaving the Cypress chain. */
+export function readHost(fn: (host: any) => unknown) {
+  return cy.get('@ctWrapper').then((wrapper: any) => cy.wrap(fn(wrapper.fixture.componentInstance) as any, { log: false }));
+}
+
+/**
+ * Shared contracts every custom field must satisfy, regardless of which control it renders.
+ *
+ * Call inside a `describe`. These encode behaviour the whole app depends on:
+ *  - `RolesService.readOnly` defaults to TRUE, so the read-only path is the DEFAULT render
+ *    in the running app — a field that leaks an editable control there is a real defect.
+ *  - `DataControlService.someMandatoryFieldIncompleteResultDetail()` SCANS the DOM for
+ *    `.pr-field.mandatory` / `.pr-input.mandatory` without `.complete` to build the submission
+ *    validation list. A field that renders fine but drops those classes breaks submit validation
+ *    SILENTLY — which is why this is asserted on the markup, not on a component property.
+ */
+export interface FieldCase {
+  template: string;
+  componentProperties: Record<string, unknown>;
+}
+
+export function sharedFieldContracts(opts: {
+  /** Field required, holding NO value. */
+  emptyRequired: FieldCase;
+  /** Field required, holding a value. */
+  filledRequired: FieldCase;
+  /** Field with [required]="false". Omit if the field is always required. */
+  optional?: FieldCase;
+  /** Selector of the interactive control that must disappear while read-only. */
+  controlSelector: string;
+  /** Root element carrying the mandatory/complete contract. Defaults to `.pr-field`. */
+  rootSelector?: string;
+}) {
+  const root = opts.rootSelector ?? '.pr-field';
+
+  it('[contract] hides the interactive control when read-only (the app default)', () => {
+    mountCF(opts.filledRequired.template, { componentProperties: opts.filledRequired.componentProperties });
+    cy.get(opts.controlSelector).should('not.exist');
+  });
+
+  it('[contract] exposes the interactive control when editable', () => {
+    mountCF(opts.emptyRequired.template, {
+      componentProperties: opts.emptyRequired.componentProperties,
+      editable: true
+    });
+    cy.get(opts.controlSelector).should('exist');
+  });
+
+  it('[contract] marks a required field as mandatory-but-incomplete while empty', () => {
+    mountCF(opts.emptyRequired.template, {
+      componentProperties: opts.emptyRequired.componentProperties,
+      editable: true
+    });
+    cy.get(`${root}.mandatory`).should('exist').and('not.have.class', 'complete');
+  });
+
+  it('[contract] marks a required field complete once it holds a value', () => {
+    mountCF(opts.filledRequired.template, {
+      componentProperties: opts.filledRequired.componentProperties,
+      editable: true
+    });
+    cy.get(`${root}.mandatory`).should('have.class', 'complete');
+  });
+
+  if (opts.optional) {
+    const optional = opts.optional;
+    it('[contract] does not mark an optional field as mandatory', () => {
+      mountCF(optional.template, { componentProperties: optional.componentProperties, editable: true });
+      cy.get(`${root}.mandatory`).should('not.exist');
+    });
+  }
+}
