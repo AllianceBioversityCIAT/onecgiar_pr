@@ -121,11 +121,15 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   //   - `type_name` is the descriptive text shown in the TOC "Type" column — what the user expects here.
   // `indicator_typology` is a backend alias of `type_value`, so the old `indicator_typology ?? type_value`
   // chain never reached `type_name` and rendered "custom" for every custom KPI.
-  // Resolution order: the descriptive name first, then the sentinel (identical to the name in 43 of the 59
-  // KPIs surveyed in prtest), then its alias as a last resort.
+  // Both values are shown, sentinel first ("custom — <real KPI name>"), so the user keeps the TOC marker in
+  // sight without losing the descriptive text. They are only joined when they actually differ: in 43 of the
+  // 59 KPIs surveyed in prtest they are identical, and "Innovation Use — Innovation Use" is pure noise.
   indicatorTypologyValue = computed(() => {
     const ind: any = this.selectedIndicatorData();
-    return this.firstNonEmpty(ind?.type_name, ind?.type_value, ind?.indicator_typology);
+    const name = this.firstNonEmpty(ind?.type_name);
+    const sentinel = this.firstNonEmpty(ind?.type_value, ind?.indicator_typology);
+    if (name && sentinel && name !== sentinel) return `${sentinel} — ${name}`;
+    return name || sentinel;
   });
 
   // P2-3204: the field is always rendered once a KPI is selected, so an empty typology must read like its

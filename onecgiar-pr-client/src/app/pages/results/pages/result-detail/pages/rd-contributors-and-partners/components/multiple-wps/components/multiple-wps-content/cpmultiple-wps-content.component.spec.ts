@@ -61,7 +61,7 @@ describe('CPMultipleWPsContentComponent', () => {
 
   // P2-3204: the five shapes the TOC actually returns, taken from a census of 59 KPIs in prtest (SP01-SP07).
   describe('indicatorTypologyValue (P2-3204)', () => {
-    it('should show the real KPI name instead of the "custom" sentinel', () => {
+    it('should show the sentinel and the real KPI name together', () => {
       buildComponent();
       component.selectedIndicatorData.set({
         type_value: 'custom',
@@ -69,11 +69,10 @@ describe('CPMultipleWPsContentComponent', () => {
         indicator_typology: 'custom'
       } as any);
 
-      expect(component.indicatorTypologyValue()).toBe('# partners supporting changes to more gender-equitable norms');
-      expect(component.indicatorTypologyValue()).not.toBe('custom');
+      expect(component.indicatorTypologyValue()).toBe('custom — # partners supporting changes to more gender-equitable norms');
     });
 
-    it('should keep catalogue types unchanged when both fields match', () => {
+    it('should not repeat the value when sentinel and name are identical', () => {
       buildComponent();
       component.selectedIndicatorData.set({
         type_value: 'Innovation Use',
@@ -109,14 +108,16 @@ describe('CPMultipleWPsContentComponent', () => {
       expect(component.indicatorTypologyValue()).toBe('Innovation Use');
     });
 
-    it('should prefer the clean type name over a sentinel carrying a dirty prefix', () => {
+    it('should keep both values when the sentinel carries a dirty prefix', () => {
       buildComponent();
       component.selectedIndicatorData.set({
         type_value: '_n_Realized genetic gains in farmer-relevant conditions.',
         type_name: 'Realized genetic gains in farmer-relevant conditions.'
       } as any);
 
-      expect(component.indicatorTypologyValue()).toBe('Realized genetic gains in farmer-relevant conditions.');
+      expect(component.indicatorTypologyValue()).toBe(
+        '_n_Realized genetic gains in farmer-relevant conditions. — Realized genetic gains in farmer-relevant conditions.'
+      );
     });
 
     it('should return an empty string when the TOC has no typology at all', () => {
@@ -126,7 +127,7 @@ describe('CPMultipleWPsContentComponent', () => {
       expect(component.indicatorTypologyValue()).toBe('');
     });
 
-    it('should ignore whitespace-only values and trim the resolved text', () => {
+    it('should ignore whitespace-only values and trim each part', () => {
       buildComponent();
       component.selectedIndicatorData.set({ type_name: '   ', type_value: '  Innovation Use  ' } as any);
 
@@ -154,6 +155,13 @@ describe('CPMultipleWPsContentComponent', () => {
       component.selectedIndicatorData.set({ type_name: 'Innovation Use' } as any);
 
       expect(component.indicatorTypologyDisplay()).toBe('Innovation Use');
+    });
+
+    it('should show both values joined when they differ', () => {
+      buildComponent();
+      component.selectedIndicatorData.set({ type_value: 'custom', type_name: 'Other outcome' } as any);
+
+      expect(component.indicatorTypologyDisplay()).toBe('custom — Other outcome');
     });
   });
 

@@ -61,10 +61,10 @@ Same defect, different screen. The correct text already arrives and is silently 
 | Pattern | Count | `type_value` | `type_name` | Today | After |
 |---|---|---|---|---|---|
 | Catalogue type | 43 | `Innovation Use` | `Innovation Use` | correct | unchanged |
-| Custom KPI | 7 | `custom` | real name | shows `custom` | shows real name |
-| Empty sentinel | 6 | `""` | real name | **field hidden** | shows real name |
+| Custom KPI | 7 | `custom` | real name | shows `custom` | `custom — <real name>` |
+| Empty sentinel | 6 | `""` | real name | **field hidden** | shows the real name alone |
 | No type at all | 3 | `""` | `""` / null | field hidden | `Not specified` |
-| Dirty sentinel | 1 | `_n_Realized genetic…` | `Realized genetic…` | shows `_n_…` | shows clean name |
+| Dirty sentinel | 1 | `_n_Realized genetic…` | `Realized genetic…` | shows `_n_…` | both, joined |
 
 ### Constraints
 
@@ -75,9 +75,9 @@ Same defect, different screen. The correct text already arrives and is silently 
 ## Goals / Non-Goals
 
 **Goals:**
-- Show the ToC's real KPI type name wherever PRMS labels something "Indicator Typology".
+- Show the ToC marker together with the real KPI type name wherever PRMS labels something "Indicator Typology", without repeating a value that appears in both fields.
 - Stop the field from vanishing when the ToC sentinel is empty but a type name exists.
-- Make the resolution order explicit and readable, replacing a `??` chain whose two operands are identical.
+- Make the resolution explicit and readable, replacing a `??` chain whose two operands are identical.
 - Keep the two screens (section 2 and the contribution review panel) consistent with each other and with the Results Framework table.
 
 **Non-Goals:**
@@ -89,18 +89,22 @@ Same defect, different screen. The correct text already arrives and is silently 
 
 ## Decisions
 
-### D1 — Render `type_name`, with `type_value` as a genuine fallback
+### D1 — Render both values, sentinel first, joined only when they differ
 
 ```
-type_name  →  (empty?)  →  type_value  →  (empty?)  →  "Not specified"
+both present and different  →  "<type_value> — <type_name>"     e.g. "custom — # partners supporting…"
+both present and identical  →  the value once                   e.g. "Innovation Use"
+only one present            →  that one
+neither                     →  "Not specified"
 ```
 
-**Why:** `type_name` is the column ToC users already read, and PRMS itself already renders `type_name` under the label "Indicator typology" in `aow-hlo-table.component.ts:102`. Choosing `type_name` removes an internal contradiction rather than creating a new convention.
+**Why:** requested by Yecksin on 2026-07-28. Keeping the ToC marker in view preserves the information reporters use to tell a custom KPI apart from a catalogue one, while the descriptive name — the text they read in the ToC "Type" column — is no longer lost.
 
-`type_value` is kept as a second step, not deleted: in 43 of 59 records the two are identical, and if a ToC record ever ships `type_name` empty while `type_value` holds a real catalogue type, the user still sees something meaningful.
+The de-duplication is not cosmetic polish: the two fields are identical in 43 of the 59 KPIs surveyed, so joining unconditionally would render `Innovation Use — Innovation Use` in 73% of cases. Joining only on difference keeps the pairing meaningful exactly where it carries information.
 
 **Alternatives considered:**
-- *Show both, e.g. `custom — # partners supporting…`* — rejected as the default. It leaks an internal sentinel into the UI and reads as noise for the 43 records where both values are identical (`Innovation Use — Innovation Use`). Kept as the documented switch if Nicoleta or Santiago prefer it: it is a one-line change in a single computed.
+- *Show `type_name` only* — the original recommendation, implemented first and then superseded. It matches `aow-hlo-table.component.ts:102`, which renders `type_name` under the same label, but it drops the marker that distinguishes a custom KPI from a catalogue one.
+- *Join unconditionally* — rejected. `Innovation Use — Innovation Use` in 43 of 59 records is noise.
 - *Keep `type_value` and map `custom` to a friendlier word* — rejected. It would still hide the real KPI type, which is the actual information the user is asking for.
 
 ### D2 — Decouple visibility from the resolved value
@@ -113,7 +117,7 @@ The template guard drops to `@if (isCP2026())` (plus the existing selection guar
 
 ### D3 — Apply the same resolution in the contribution review panel
 
-`notification-item.component.html:87` reads `review.statement || review.indicator_typology || '—'`, and `statement?: string` is added to `TocContributionReview`.
+`notification-item.component.html:87` renders `tocTypologyOf(review)`, which applies the D1 rule to `statement` and `indicator_typology`, and `statement?: string` is added to `TocContributionReview`.
 
 **Why:** the correct text is already in the payload; consuming it is a frontend-only change. Leaving this screen showing `custom` would reintroduce the same contradiction we are removing from section 2.
 
@@ -136,7 +140,8 @@ Corrected to `Indicator Typology`, matching `aow-hlo-table.component.ts:102`.
 
 ## Risks / Trade-offs
 
-- **[Nicoleta/Santiago may prefer showing both values]** → D1 is isolated in a single computed; switching to `custom — <name>` is one line plus one test. The proposal is explicit that this is a display decision, not an architectural one.
+- **[Nicoleta may prefer the name alone]** → D1 is isolated in a single computed per screen; reverting to name-only is a few lines plus their tests. This is a display decision, not an architectural one.
+- **[The dirty `_n_` record renders both halves of near-identical text]** → cosmetically poor in 1 of 59 records, but faithful to the ToC. Stripping the prefix would be unrequested sanitising that breaks on the next malformed value; the ToC record is the thing worth fixing upstream.
 - **[`statement` is a confusing backend alias that a future refactor could rename or drop]** → the front reads `statement || indicator_typology`, so a rename degrades to the current behaviour instead of rendering blank. Follow-up logged for the backend owner.
 - **[The field now appears where it used to be hidden, in 6 of 59 records]** → this is the intended fix, but it is a visible change beyond the reported bug. Called out explicitly in the QA steps so testers are not surprised.
 - **[Branch cut from an epic with an open PR]** → the epic's PR #719 could merge to staging while this work is in flight. Mitigation: cut the branch from the epic and merge it back into the epic *before* #719 closes; if #719 merges first, rebase onto `staging`, where the field will then exist. Precedent: `P2-2928-TOC-Improvements-statement-fix` (P2-3202).
@@ -152,6 +157,6 @@ Corrected to `Indicator Typology`, matching `aow-hlo-table.component.ts:102`.
 
 ## Open Questions
 
-- **Option A (name only) or Option B (`custom — name`)?** Proceeding with A as recommended; asked on Slack 2026-07-28.
+- ~~Option A (name only) or Option B (`custom — name`)?~~ **Resolved 2026-07-28: Option B**, chosen by Yecksin after seeing A implemented. Nicoleta may still weigh in.
 - Should the backend `statement` alias be renamed to something self-describing? Out of scope here; for the backend owner (Juan David).
 - The dirty `_n_` prefix in one SP01 record — is that a ToC data-entry issue worth reporting upstream? Not handled in code by design.
