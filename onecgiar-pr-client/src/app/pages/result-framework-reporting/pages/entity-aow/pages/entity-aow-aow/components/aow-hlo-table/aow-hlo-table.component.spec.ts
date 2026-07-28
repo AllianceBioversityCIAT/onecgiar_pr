@@ -166,9 +166,12 @@ describe('AowHloTableComponent', () => {
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
       tocResults2030Outcomes: signal<any[]>([]),
+      tocResultsIntermediateOutcomes: signal<any[]>([]),
       searchText: signal<string>(''),
       isLoadingTocResults2030Outcomes: signal<boolean>(false),
       isLoadingTocResultsByAowId: signal<boolean>(false),
+      isLoadingIntermediateOutcomes: signal<boolean>(false),
+      canReportResults: jest.fn(() => false),
       showReportResultModal: mockShowReportResultModal,
       currentResultToReport: mockCurrentResultToReport,
       showViewResultDrawer: mockShowViewResultDrawer,
@@ -423,6 +426,19 @@ describe('AowHloTableComponent', () => {
       expect(result).toEqual(mock2030OutcomesData);
     });
 
+    it('should return intermediate outcomes data when tableType is "intermediate-outcomes"', () => {
+      const mockIntermediateData = [
+        { id: 'intermediate-1', title: 'Intermediate Outcome 1', type: 'intermediate' },
+        { id: 'intermediate-2', title: 'Intermediate Outcome 2', type: 'intermediate' }
+      ];
+      mockEntityAowService.tocResultsIntermediateOutcomes.set(mockIntermediateData);
+      component.tableType = 'intermediate-outcomes';
+
+      const result = component.tableData();
+
+      expect(result).toEqual(mockIntermediateData);
+    });
+
     it('should return empty array when tableType is undefined', () => {
       component.tableType = undefined as any;
 
@@ -487,6 +503,13 @@ describe('AowHloTableComponent', () => {
       component.tableType = '2030-outcomes';
       expect(component.emptyStateMessage()).toBe(
         'There are no 2030 Outcomes indicators configured for this program in the current reporting phase.'
+      );
+    });
+
+    it('should return Intermediate Outcomes message for intermediate-outcomes table', () => {
+      component.tableType = 'intermediate-outcomes';
+      expect(component.emptyStateMessage()).toBe(
+        'There are no Intermediate Outcomes configured for this program in the current reporting phase.'
       );
     });
   });
