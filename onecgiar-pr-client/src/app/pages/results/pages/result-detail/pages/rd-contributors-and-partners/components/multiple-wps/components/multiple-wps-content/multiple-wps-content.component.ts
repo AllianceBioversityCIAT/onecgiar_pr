@@ -83,6 +83,11 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   // `outcome_statement` (mapped from the TOC board `description`). We find the selected node by toc_result_id
   // in the list that matches the chosen level (1=output, 2=outcome, 3=eoi), mirroring updateSelectedIndicatorData().
   private selectedTocNode = computed(() => {
+    // P2-3063: reactive trigger. The node dropdown writes `toc_result_id` in place on the plain `activeTab`
+    // object, so no signal in this computed's dependency set notifies and the memo would keep the previously
+    // selected node's statement until the parent re-set the lists on save. `selectionVersion` (P2-2998, bumped
+    // by getIndicatorsList() from every node dropdown's ngModelChange) is the trigger that closes that gap.
+    this.selectionVersion();
     const id = this.activeTabSignal()?.toc_result_id ?? this.activeTab?.toc_result_id;
     if (id === null || id === undefined) return null;
     switch (this.activeTabSignal()?.toc_level_id) {
