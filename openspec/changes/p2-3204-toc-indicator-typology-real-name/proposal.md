@@ -15,11 +15,11 @@ The ToC already sends the correct text — the frontend is reading the wrong fie
 
 ## What Changes
 
-- **"Indicator Tipology" shows the real KPI type name.** The field renders the ToC's descriptive type (`type_name`) instead of the internal sentinel (`type_value`), so PRMS shows exactly what the ToC's **Type** column shows.
+- **"Indicator Tipology" shows both values, sentinel first.** The field renders `<type_value> — <type_name>` (e.g. `custom — # partners supporting changes to more gender-equitable norms`), so the ToC marker stays visible without losing the descriptive text users read in the ToC's **Type** column. The two are joined **only when they differ**: they are identical in 43 of the 59 KPIs surveyed, where `Innovation Use — Innovation Use` would be pure noise.
 - **The field stops disappearing.** Its visibility no longer depends on the sentinel being non-empty. When the ToC has a type, the field is shown; when it genuinely has none, a `Not specified` placeholder is rendered, consistent with the neighbouring "Unit of measurement" and "Target" fields.
-- **Resolution order becomes explicit**: `type_name` → `type_value` → `Not specified`. The current `indicator_typology ?? type_value` fallback is misleading, since both sides of the `??` resolve to the same value.
+- **Resolution becomes explicit**: both parts are trimmed; when only one is present it is shown alone; when neither is, the field shows `Not specified`. The current `indicator_typology ?? type_value` fallback is misleading, since both sides of the `??` resolve to the same value.
 - **Label typo fixed**: `Indicator Tipology` → `Indicator Typology`, matching the label already used in Results Framework & Reporting.
-- **Same fix applied to the ToC contribution review panel** (notifications): the panel renders the already-delivered `statement` field (the ToC `type_name`) and falls back to `indicator_typology`, so both screens agree.
+- **Same fix applied to the ToC contribution review panel** (notifications): the panel joins the already-delivered `statement` field (the ToC `type_name`) with `indicator_typology` under the same rule, so both screens agree.
 - No change to what is saved. The field is read-only ToC metadata; **no payload, DTO, or persistence is touched**.
 
 ### Evidence

@@ -1,7 +1,7 @@
 ## 1. Prerequisites (blocking — done by the user, not the AI)
 
 - [x] 1.1 Jira created: **P2-3204** (bug) with subtasks **P2-3205** (frontend) and **P2-3206** (QA, assigned to Santiago Sanchez).
-- [x] 1.2 Option A approved by Yecksin on 2026-07-28. Nicoleta/Santiago can still switch to Option B — it is one line in a single computed plus one test.
+- [x] 1.2 **Option B chosen by Yecksin on 2026-07-28**, after seeing Option A in place: show `<sentinel> — <name>`, joined only when the two differ so identical values are not repeated (43 of 59 KPIs).
 - [x] 1.3 Branch `P2-3204-indicator-typology-real-name` created from `origin/P2-2928-TOC-Improvements` (worktree at `reporting/onecgiar_pr-P2-3204`).
 
 ## 2. Frontend — Contributors & Partners (section 2)
@@ -9,7 +9,7 @@
 Component folder: `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/components/multiple-wps/components/multiple-wps-content/`
 
 - [x] 2.1 In `multiple-wps-content.component.ts`, update the comment above `indicatorTypologyValue` (lines 113–114) to state that `indicator_typology` is an alias of the ToC sentinel `type_value` and that `type_name` is the display text.
-- [x] 2.2 In `multiple-wps-content.component.ts`, rewrite the `indicatorTypologyValue` computed (lines 115–118) to resolve in order: trimmed `type_name` → trimmed `type_value` → empty string. Do not sanitise or reformat the resolved text.
+- [x] 2.2 In `multiple-wps-content.component.ts`, rewrite the `indicatorTypologyValue` computed to join the trimmed sentinel and the trimmed name as `<sentinel> — <name>` when they differ, show either one alone when only one is present, and never sanitise or reformat the values.
 - [x] 2.3 In `multiple-wps-content.component.ts`, add a small computed (or reuse the existing one) that returns `'Not specified'` when the resolution yields an empty string, so the template does not carry the placeholder logic.
 - [x] 2.4 In `multiple-wps-content.component.html`, change the guard at line 96 from `@if (isCP2026() && indicatorTypologyValue())` to `@if (isCP2026())`, keeping the surrounding `showIndicators()` / `activeTab.toc_result_id` / `indicatorsList().length` guards untouched so the field only appears once a KPI list is loaded.
 - [x] 2.5 In `multiple-wps-content.component.html`, bind the field description to the placeholder-aware value from 2.3.
@@ -21,7 +21,7 @@ Component folder: `onecgiar-pr-client/src/app/pages/results/pages/result-detail/
 Component folder: `onecgiar-pr-client/src/app/pages/results/pages/results-outlet/pages/results-notifications/components/notification-item/`
 
 - [x] 3.1 In `notification-item.component.ts`, add `statement?: string;` to the `TocContributionReview` interface (lines 12–24), with a comment noting it carries the ToC `type_name` under a legacy alias.
-- [x] 3.2 In `notification-item.component.html` line 87, render the typology through a new `tocTypologyOf(review)` method on the component, keeping the em dash placeholder used by every other row of the panel. *Implemented as a component method rather than an inline template expression so the resolution is unit-testable and does not live in the HTML.*
+- [x] 3.2 In `notification-item.component.html` line 87, render the typology through a new `tocTypologyOf(review)` method applying the same join rule, keeping the em dash placeholder used by every other row of the panel. *Implemented as a component method rather than an inline template expression so the resolution is unit-testable and does not live in the HTML.*
 - [x] 3.3 Verify the neighbouring `outcome_statement` row (line 86) is untouched — it comes from a different column and must not be confused with `statement`.
 
 ## 4. Do NOT touch (guard rails)
@@ -32,9 +32,9 @@ Component folder: `onecgiar-pr-client/src/app/pages/results/pages/results-outlet
 
 ## 5. Unit tests (Jest)
 
-- [x] 5.1 In `multiple-wps-content.component.spec.ts`, add a case per data pattern from the census: catalogue type (both equal), custom (`custom` + real name), empty sentinel with a name, both empty, and dirty sentinel with a clean name.
+- [x] 5.1 In `cpmultiple-wps-content.component.spec.ts`, add a case per data pattern from the census: catalogue type (both equal, shown once), custom (`custom — real name`), empty sentinel with a name, both empty, and dirty sentinel joined with its clean name.
 - [x] 5.2 In `multiple-wps-content.component.spec.ts`, assert the field renders with `Not specified` when no typology can be resolved, and that it is not rendered when `isCP2026()` is false.
-- [x] 5.3 In `notification-item.component.spec.ts`, assert the review row prefers `statement`, falls back to `indicator_typology`, and shows `—` when both are missing.
+- [x] 5.3 In `notification-item.component.spec.ts`, assert the review row joins both values when they differ, shows one when they are equal, falls back to whichever is present, and shows `—` when both are missing.
 - [x] 5.4 Run `npm run test src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/components/multiple-wps/components/multiple-wps-content/multiple-wps-content.component.spec.ts` and the notification-item spec — both green.
 
 ## 6. Gate before pushing

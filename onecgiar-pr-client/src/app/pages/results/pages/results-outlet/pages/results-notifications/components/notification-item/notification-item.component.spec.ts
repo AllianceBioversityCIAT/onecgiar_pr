@@ -424,12 +424,16 @@ describe('NotificationItemComponent', () => {
   // P2-3204: the backend sends the TOC type name as `statement` and the internal sentinel as
   // `indicator_typology`. The panel must show the name, matching Contributors & Partners.
   describe('tocTypologyOf() (P2-3204)', () => {
-    it('should prefer the TOC type name over the "custom" sentinel', () => {
+    it('should show the sentinel and the TOC type name together', () => {
       const review = {
         statement: '# partners supporting changes to more gender-equitable norms',
         indicator_typology: 'custom'
       };
-      expect(component.tocTypologyOf(review)).toBe('# partners supporting changes to more gender-equitable norms');
+      expect(component.tocTypologyOf(review)).toBe('custom — # partners supporting changes to more gender-equitable norms');
+    });
+
+    it('should not repeat the value when both fields are identical', () => {
+      expect(component.tocTypologyOf({ statement: 'Innovation Use', indicator_typology: 'Innovation Use' })).toBe('Innovation Use');
     });
 
     it('should fall back to indicator_typology when statement is missing', () => {
