@@ -15,7 +15,7 @@ interface UploadFileEntry {
   url?: string;
 }
 
-const DOCUMENT_EXTENSIONS = ['.pdf', '.doc', '.docx', '.txt'];
+const DOCUMENT_EXTENSIONS = ['.pdf', '.docx', '.txt', '.xls', '.xlsx', '.pptx'];
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.ogg'];
 const MAX_DOCUMENT_SIZE = 50 * 1024 * 1024;
 const MAX_AUDIO_SIZE = 100 * 1024 * 1024;
@@ -341,11 +341,12 @@ export class BilateralAiUploadComponent implements OnDestroy {
   private handleUploadError(err: HttpErrorResponse): void {
     const status = err.status;
     if (status === 400) {
-      this.messageService.add({ severity: 'error', summary: 'Invalid request', detail: 'Check file format and try again.' });
+      const detail = err.error?.message ?? 'Check file format and try again.';
+      this.messageService.add({ severity: 'error', summary: 'Invalid request', detail });
     } else if (status === 413) {
       this.messageService.add({ severity: 'error', summary: 'File too large', detail: 'Maximum combined size exceeded.' });
     } else if (status === 415) {
-      this.messageService.add({ severity: 'error', summary: 'Unsupported format', detail: 'Accepted: PDF, DOC, DOCX, TXT, MP3, WAV, M4A, OGG.' });
+      this.messageService.add({ severity: 'error', summary: 'Unsupported format', detail: 'Accepted documents: PDF, DOCX, TXT, XLS, XLSX, PPTX. Audio: MP3, WAV, M4A, OGG.' });
     } else if (status === 503) {
       this.messageService.add({ severity: 'error', summary: 'Service unavailable', detail: 'AI service temporarily unavailable. Please try again later.' });
     } else {

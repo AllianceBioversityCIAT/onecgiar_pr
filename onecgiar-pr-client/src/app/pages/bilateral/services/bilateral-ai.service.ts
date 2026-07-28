@@ -105,9 +105,13 @@ export class BilateralAiService implements OnDestroy {
         this.uploadState.update(s => ({ ...s, status: 'processing' }));
       } else if (job.status === 'COMPLETED') {
         this.stopPolling();
-        this.uploadState.update(s => ({ ...s, status: 'completed' }));
-        this.loadAllDrafts();
-        await this.router.navigate(['/bilateral/drafts']);
+        if (job.result_count === 0) {
+          this.uploadState.update(s => ({ ...s, status: 'completed_no_candidates' }));
+        } else {
+          this.uploadState.update(s => ({ ...s, status: 'completed' }));
+          this.loadAllDrafts();
+          await this.router.navigate(['/bilateral/drafts']);
+        }
       } else if (job.status === 'FAILED') {
         this.stopPolling();
         this.uploadState.update(s => ({
