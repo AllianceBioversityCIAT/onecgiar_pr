@@ -420,4 +420,33 @@ describe('NotificationItemComponent', () => {
       expect(component.tocReview[0].contribution_target).toBe(2);
     });
   });
+
+  // P2-3204: the backend sends the TOC type name as `statement` and the internal sentinel as
+  // `indicator_typology`. The panel must show the name, matching Contributors & Partners.
+  describe('tocTypologyOf() (P2-3204)', () => {
+    it('should prefer the TOC type name over the "custom" sentinel', () => {
+      const review = {
+        statement: '# partners supporting changes to more gender-equitable norms',
+        indicator_typology: 'custom'
+      };
+      expect(component.tocTypologyOf(review)).toBe('# partners supporting changes to more gender-equitable norms');
+    });
+
+    it('should fall back to indicator_typology when statement is missing', () => {
+      expect(component.tocTypologyOf({ indicator_typology: 'Innovation Use' })).toBe('Innovation Use');
+    });
+
+    it('should fall back to indicator_typology when statement is blank', () => {
+      expect(component.tocTypologyOf({ statement: '   ', indicator_typology: 'Innovation Use' })).toBe('Innovation Use');
+    });
+
+    it('should show the em dash placeholder when neither field is populated', () => {
+      expect(component.tocTypologyOf({})).toBe('—');
+      expect(component.tocTypologyOf({ statement: '', indicator_typology: '' })).toBe('—');
+    });
+
+    it('should not break when the review entry is null', () => {
+      expect(component.tocTypologyOf(null as any)).toBe('—');
+    });
+  });
 });

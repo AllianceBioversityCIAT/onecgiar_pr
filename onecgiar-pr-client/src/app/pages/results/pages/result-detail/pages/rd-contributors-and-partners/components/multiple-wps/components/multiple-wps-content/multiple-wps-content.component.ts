@@ -115,12 +115,29 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   hloStatementTooltip = computed(() => (this.isCP2026() ? 'Maps to TOC: Output or Outcome statement' : ''));
 
   // P2-3063 (L3): read-only Indicator Typology = the "Type" of the selected KPI in TOC.
-  // Comes as `indicator_typology` (alias of `type_value`) on the selected indicator (Juan David's enrichment df27cc55a).
   // `selectedIndicatorData()` already holds the selected indicator (set by updateSelectedIndicatorData()).
+  // P2-3204: the TOC sends TWO fields per indicator and they are not interchangeable:
+  //   - `type_value` is an internal sentinel: literally "custom", or the catalogue type name, or empty.
+  //   - `type_name` is the descriptive text shown in the TOC "Type" column — what the user expects here.
+  // `indicator_typology` is a backend alias of `type_value`, so the old `indicator_typology ?? type_value`
+  // chain never reached `type_name` and rendered "custom" for every custom KPI.
+  // Resolution order: the descriptive name first, then the sentinel (identical to the name in 43 of the 59
+  // KPIs surveyed in prtest), then its alias as a last resort.
   indicatorTypologyValue = computed(() => {
     const ind: any = this.selectedIndicatorData();
-    return ind?.indicator_typology ?? ind?.type_value ?? '';
+    return this.firstNonEmpty(ind?.type_name, ind?.type_value, ind?.indicator_typology);
   });
+
+  // P2-3204: the field is always rendered once a KPI is selected, so an empty typology must read like its
+  // sibling read-only fields ("Unit of measurement" / "Target") instead of making the whole field vanish.
+  indicatorTypologyDisplay = computed(() => this.indicatorTypologyValue() || 'Not specified');
+
+  private firstNonEmpty(...values: unknown[]): string {
+    for (const value of values) {
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+    return '';
+  }
 
   indicatorTypologyTooltip = computed(() => (this.isCP2026() ? 'Maps to TOC: [Type]' : ''));
 
