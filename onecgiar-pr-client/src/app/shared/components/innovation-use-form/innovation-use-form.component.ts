@@ -3,7 +3,6 @@ import { ApiService } from '../../services/api/api.service';
 import { TerminologyService } from '../../../internationalization/terminology.service';
 import { FieldsManagerService } from '../../services/fields-manager.service';
 import { InnovationControlListService } from '../../services/global/innovation-control-list.service';
-import { InnovationUseResultsService } from '../../services/global/innovation-use-results.service';
 import { InnovationDevelopmentLinks } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/InnovationDevelopmentLinks.model';
 import {
   Actor,
@@ -31,7 +30,6 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     private readonly terminologyService: TerminologyService,
     public fieldsManagerSE: FieldsManagerService,
     public innovationControlListSE: InnovationControlListService,
-    public innovationUseResultsSE: InnovationUseResultsService,
     private readonly cdr: ChangeDetectorRef
   ) {
     this.GETAllActorsTypes();
@@ -342,24 +340,4 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return Number.isFinite(levelNumber) ? levelNumber : -1;
   }
 
-  formatResultLabel(option: any): string {
-    if (option?.result_code && option?.name) {
-      let phaseInfo = '';
-      if (option?.acronym && option?.phase_year) {
-        phaseInfo = `(${option.acronym} - ${option.phase_year}) `;
-      } else if (option?.acronym) {
-        phaseInfo = `(${option.acronym}) `;
-      } else if (option?.phase_year) {
-        phaseInfo = `(${option.phase_year}) `;
-      }
-
-      const resultType = option?.result_type_name || option?.resultTypeName || option?.type_name || '';
-      const resultTypeInfo = resultType ? ` (${resultType})` : '';
-
-      const title = option?.title ? ` - ${option.title}` : '';
-
-      return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
-    }
-    return option?.title || option?.name || '';
-  }
 }
