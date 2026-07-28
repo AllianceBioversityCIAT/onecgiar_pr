@@ -1,8 +1,15 @@
+export interface OutcomesSummary {
+  count: number;
+  hasData: boolean;
+}
+
 export interface EntityDetails {
   initiative: Initiative;
   parentUnit: Unit;
   units: Unit[];
   metadata: Metadata;
+  intermediateOutcomes?: OutcomesSummary;
+  outcomes2030?: OutcomesSummary;
 }
 
 export interface Initiative {

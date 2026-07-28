@@ -13,7 +13,7 @@
   id="tocResultsByAowIdTable"
   styleClass="p-datatable-gridlines p-datatable-sm"
   [value]="filteredTableData()"
-  [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes()"
+  [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes() || entityAowService.isLoadingIntermediateOutcomes()"
   sortField="result_title"
   [sortOrder]="1"
   responsiveLayout="scroll"

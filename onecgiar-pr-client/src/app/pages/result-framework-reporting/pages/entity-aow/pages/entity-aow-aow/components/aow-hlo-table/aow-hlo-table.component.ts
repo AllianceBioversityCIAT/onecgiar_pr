@@ -40,7 +40,7 @@ export class AowHloTableComponent {
   entityAowService = inject(EntityAowService);
   resultLevelService = inject(ResultLevelService);
 
-  @Input() tableType: 'outputs' | 'outcomes' | '2030-outcomes' = 'outputs';
+  @Input() tableType: 'outputs' | 'outcomes' | '2030-outcomes' | 'intermediate-outcomes' = 'outputs';
 
   tableData = computed(() => {
     switch (this.tableType) {
@@ -50,6 +50,8 @@ export class AowHloTableComponent {
         return this.entityAowService.tocResultsOutcomesByAowId();
       case '2030-outcomes':
         return this.entityAowService.tocResults2030Outcomes();
+      case 'intermediate-outcomes':
+        return this.entityAowService.tocResultsIntermediateOutcomes();
       default:
         return [];
     }
@@ -91,6 +93,8 @@ export class AowHloTableComponent {
         return 'There are no Intermediate Outcomes indicators found.';
       case '2030-outcomes':
         return 'There are no 2030 Outcomes indicators configured for this program in the current reporting phase.';
+      case 'intermediate-outcomes':
+        return 'There are no Intermediate Outcomes configured for this program in the current reporting phase.';
       case 'outputs':
       default:
         return 'There are no High-Level Outputs indicators found.';

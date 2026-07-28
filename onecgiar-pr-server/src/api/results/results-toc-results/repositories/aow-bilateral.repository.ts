@@ -64,6 +64,8 @@ interface TocQueryOptions {
   areaAcronym?: string;
   categories?: string[];
   context: ReportingTocContext;
+  /** When true, restricts results to toc_results with wp_id IS NULL (not linked to any Area of Work). */
+  intermediateOnly?: boolean;
 }
 
 export interface TocWorkPackageRow {
@@ -211,6 +213,45 @@ export class AoWBilateralRepository {
     }
   }
 
+  async countProgramLevelOutcomes(
+    programOfficialCode: string,
+    context: ReportingTocContext,
+  ): Promise<{ intermediateCount: number; eoi2030Count: number }> {
+    try {
+      const [intermediateRows, eoiRows] = await Promise.all([
+        this.dataSource.query(
+          `SELECT COUNT(*) AS cnt
+           FROM \`${env.DB_TOC}\`.toc_results tr
+           WHERE tr.official_code = ?
+             AND tr.category IN ('OUTPUT', 'OUTCOME')
+             AND tr.wp_id IS NULL
+             AND tr.is_active = 1
+             AND tr.phase = ?`,
+          [programOfficialCode, context.phaseUuid],
+        ),
+        this.dataSource.query(
+          `SELECT COUNT(*) AS cnt
+           FROM \`${env.DB_TOC}\`.toc_results tr
+           WHERE tr.official_code = ?
+             AND tr.category = 'EOI'
+             AND tr.is_active = 1
+             AND tr.phase = ?`,
+          [programOfficialCode, context.phaseUuid],
+        ),
+      ]);
+      return {
+        intermediateCount: Number(intermediateRows[0]?.cnt ?? 0),
+        eoi2030Count: Number(eoiRows[0]?.cnt ?? 0),
+      };
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
+
   async findUnitAcronymsByProgram(
     programOfficialCode: string,
     contextOrYear?: ReportingTocContext | number,
@@ -281,6 +322,41 @@ export class AoWBilateralRepository {
     const { query, params } = this.buildTocQuery(program, {
       categories: ['EOI'],
       context,
+    });
+
+    try {
+      const [rows, contributions] = await Promise.all([
+        this.dataSource.query(query, params) as Promise<TocResultRow[]>,
+        this.getIndicatorContributions(program, context),
+      ]);
+
+      const enhancedRows = rows.map((row) => ({
+        ...row,
+        actual_achieved_value_sum:
+          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
+        progress_percentage:
+          contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
+      }));
+
+      return this.groupTocRows(enhancedRows);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  async findIntermediateOutcomes(
+    program: string,
+    contextOrYear: ReportingTocContext | number,
+  ) {
+    const context = await this.resolveContext(contextOrYear);
+    const { query, params } = this.buildTocQuery(program, {
+      categories: ['OUTPUT', 'OUTCOME'],
+      context,
+      intermediateOnly: true,
     });
 
     try {
@@ -407,6 +483,10 @@ export class AoWBilateralRepository {
 
     if (options.areaAcronym) {
       query += ` AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)`;
+    }
+
+    if (options.intermediateOnly) {
+      query += ` AND tr.wp_id IS NULL`;
     }
 
     query += `
