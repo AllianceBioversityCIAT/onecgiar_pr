@@ -81,6 +81,47 @@ export class InnovationUseInfoComponent {
   onSaveSection() {
     this.savingSection = true;
 
+    // P2-3199: the innovation link question now lives only in Contributors and partners (section 2).
+    // This section no longer edits it, so it must re-read the current value right before saving —
+    // otherwise a stale value loaded on mount would overwrite the section 2 answer and, because the
+    // server treats a falsy value as "no link", delete the results linked there.
+    if (this.fieldsManagerSE.isP25()) {
+      this.api.resultsSE.GET_innovationUseP25().subscribe({
+        next: ({ response }) => this.saveSectionWith(this.innovationLinkFrom(response)),
+        error: err => {
+          console.error(err);
+          this.saveSectionWith(this.currentInnovationLink());
+        }
+      });
+      return;
+    }
+
+    this.saveSectionWith(this.currentInnovationLink());
+  }
+
+  /** Innovation link values as currently held by this section (fallback when the fresh read fails). */
+  private currentInnovationLink() {
+    return {
+      has_innovation_link: this.innovationUseInfoBody.has_innovation_link,
+      linked_results: this.toLinkedResultIds(this.innovationUseInfoBody.linked_results)
+    };
+  }
+
+  /** Innovation link values as stored on the server, normalized the same way the section loads them. */
+  private innovationLinkFrom(response: any) {
+    if (!response) return this.currentInnovationLink();
+
+    return {
+      has_innovation_link: response.has_innovation_link === 1 || response.has_innovation_link === true,
+      linked_results: this.toLinkedResultIds(response.linked_results)
+    };
+  }
+
+  private toLinkedResultIds(linkedResults: any[]) {
+    return (linkedResults || []).map((r: any) => Number(r?.id ?? r));
+  }
+
+  private saveSectionWith(innovationLink: { has_innovation_link: boolean; linked_results: number[] }) {
     const { investment_programs = [], investment_bilateral = [], investment_partners = [] } = this.innovationUseInfoBody as any;
     const actors = this.innovationUseInfoBody?.innovatonUse?.actors || [];
     const measures = this.innovationUseInfoBody?.innovatonUse?.measures || [];
@@ -101,8 +142,8 @@ export class InnovationUseInfoComponent {
       : this.innovationUseInfoBody.innovation_use_2030;
 
     const bodyToSend = {
-      has_innovation_link: this.innovationUseInfoBody.has_innovation_link,
-      linked_results: (this.innovationUseInfoBody.linked_results || []).map((r: any) => Number(r?.id ?? r)),
+      has_innovation_link: innovationLink.has_innovation_link,
+      linked_results: innovationLink.linked_results,
       innovation_use_level_id: (this.innovationUseInfoBody as any).innovation_use_level_id,
       readiness_level_explanation: this.innovationUseInfoBody.readiness_level_explanation,
       has_scaling_studies: this.innovationUseInfoBody.has_scaling_studies,

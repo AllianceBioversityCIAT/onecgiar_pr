@@ -1,33 +1,6 @@
 @if (!this.isIpsr) {
-  <app-pr-radio-button
-    [readOnly]="saving"
-    fieldRef="[innovation-use-form]-has-innovation-link"
-    [options]="[
-      { value: true, label: 'Yes' },
-      { value: false, label: 'No' }
-    ]"
-    optionLabel="label"
-    [(ngModel)]="body.has_innovation_link"
-    optionValue="value">
-  </app-pr-radio-button>
-
-  <div *ngIf="body.has_innovation_link && this.fieldsManagerSE.isP25()">
-    <app-pr-multi-select
-      [readOnly]="saving"
-      [options]="this.innovationUseResultsSE.resultsList"
-      [(ngModel)]="body.linked_results"
-      optionLabel="title"
-      optionValue="id"
-      optionGroupLabel="name"
-      optionGroupChildren="options"
-      label="Please select a result"
-      placeholder="Please select a result"
-      selectedLabel="Results selected"
-      selectedOptionLabel="title"
-      [displayLabelFormatter]="formatResultLabel.bind(this)">
-    </app-pr-multi-select>
-  </div>
-
+  <!-- The "linked or bundled with another CGIAR-reported result" question lives only in
+       Contributors and partners (section 2). See P2-3199 — it used to be duplicated here. -->
   @if (!this.fieldsManagerSE.isP25()) {
     <app-pr-field-header [label]="currentUseHeaderLabel()" [useColon]="!this.fieldsManagerSE.isP25()"></app-pr-field-header>
   }
