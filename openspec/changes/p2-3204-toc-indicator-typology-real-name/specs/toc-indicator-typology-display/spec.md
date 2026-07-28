@@ -2,41 +2,43 @@
 
 ### Requirement: Indicator typology resolves to the ToC type name
 
-Wherever PRMS displays the ToC indicator typology of a selected KPI, the system SHALL render the ToC's descriptive type name (`type_name`) in preference to the internal sentinel (`type_value`).
+Wherever PRMS displays the ToC indicator typology of a selected KPI, the system SHALL render both the internal sentinel (`type_value`) and the ToC's descriptive type name (`type_name`), sentinel first, separated by an em dash surrounded by spaces.
 
-Resolution order SHALL be:
-1. `type_name`, when it is a non-empty string after trimming
-2. otherwise `type_value`, when it is a non-empty string after trimming
-3. otherwise the capability's empty-value placeholder
+Resolution SHALL be, after trimming both values:
+1. when both are non-empty and different, `<sentinel> — <name>`
+2. when both are non-empty and equal, that value once
+3. when only one is non-empty, that one alone
+4. when neither is non-empty, the capability's empty-value placeholder
 
-The system SHALL NOT alter, trim prefixes from, or otherwise sanitise the resolved text beyond whitespace trimming.
+The system SHALL NOT alter, trim prefixes from, or otherwise sanitise either value beyond whitespace trimming.
 
-#### Scenario: Custom KPI shows its real name instead of "custom"
+#### Scenario: Custom KPI shows the sentinel and its real name
 
 - **WHEN** the selected KPI arrives with `type_value` = `"custom"` and `type_name` = `"# partners supporting changes to more gender-equitable norms"`
-- **THEN** the indicator typology field displays `# partners supporting changes to more gender-equitable norms`
-- **AND** the word `custom` is not displayed
+- **THEN** the indicator typology field displays `custom — # partners supporting changes to more gender-equitable norms`
 
-#### Scenario: Catalogue KPI keeps its current display
+#### Scenario: Identical values are not repeated
 
 - **WHEN** the selected KPI arrives with `type_value` = `"Innovation Use"` and `type_name` = `"Innovation Use"`
 - **THEN** the indicator typology field displays `Innovation Use`
+- **AND** it does not display `Innovation Use — Innovation Use`
 
-#### Scenario: Empty sentinel falls through to the type name
+#### Scenario: Empty sentinel leaves the type name alone
 
 - **WHEN** the selected KPI arrives with `type_value` = `""` and `type_name` = `"Number of food producers using CGIAR innovations."`
 - **THEN** the indicator typology field displays `Number of food producers using CGIAR innovations.`
+- **AND** no separator is displayed
 
 #### Scenario: Missing type name falls back to the sentinel
 
 - **WHEN** the selected KPI arrives with `type_name` absent, null, or blank, and `type_value` = `"Innovation Use"`
 - **THEN** the indicator typology field displays `Innovation Use`
 
-#### Scenario: Dirty sentinel is not displayed when a clean name exists
+#### Scenario: A dirty sentinel is shown as delivered, not sanitised
 
 - **WHEN** the selected KPI arrives with `type_value` = `"_n_Realized genetic gains in farmer-relevant conditions."` and `type_name` = `"Realized genetic gains in farmer-relevant conditions."`
-- **THEN** the indicator typology field displays `Realized genetic gains in farmer-relevant conditions.`
-- **AND** the `_n_` prefix is not displayed
+- **THEN** the indicator typology field displays both values joined, because they differ
+- **AND** the `_n_` prefix is preserved exactly as the ToC delivered it
 
 ### Requirement: The indicator typology field remains visible when no type is available
 
@@ -75,12 +77,17 @@ Every screen that displays the ToC indicator typology SHALL label it `Indicator 
 
 ### Requirement: The ToC contribution review panel shows the same typology text
 
-The ToC contribution review panel in notifications SHALL display the same resolved typology text as the Contributors & Partners block, reading the ToC type name delivered as `statement` in preference to the `indicator_typology` sentinel.
+The ToC contribution review panel in notifications SHALL display the same resolved typology text as the Contributors & Partners block, applying the same rule to the ToC type name delivered as `statement` and the `indicator_typology` sentinel.
 
 #### Scenario: Custom KPI in the review panel
 
 - **WHEN** a contribution review entry arrives with `indicator_typology` = `"custom"` and `statement` = `"# partners supporting changes to more gender-equitable norms"`
-- **THEN** the panel's "Indicator Typology" row displays `# partners supporting changes to more gender-equitable norms`
+- **THEN** the panel's "Indicator Typology" row displays `custom — # partners supporting changes to more gender-equitable norms`
+
+#### Scenario: Review panel does not repeat identical values
+
+- **WHEN** a contribution review entry arrives with `indicator_typology` and `statement` both equal to `"Innovation Use"`
+- **THEN** the panel's "Indicator Typology" row displays `Innovation Use` once
 
 #### Scenario: Review panel keeps its own empty placeholder
 
