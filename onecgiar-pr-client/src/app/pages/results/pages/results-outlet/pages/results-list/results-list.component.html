@@ -83,7 +83,11 @@
               [style.min-width]="column.width"
               style="cursor: pointer">
               @for (subResult of result['results']; track subResult) {
-                <a [class]="column.class" (click)="navigateToResult(subResult)">
+                <a
+                  [class]="column.class"
+                  [routerLink]="getResultLink(subResult)"
+                  [queryParams]="getResultQueryParams(subResult)"
+                  (click)="onResultLinkClick($event, subResult)">
                   @if (i == 1) {
                     @if (subResult.is_new && !subResult.legacy_id) {
                       <div class="new_tag">New</div>
