@@ -2,7 +2,9 @@
 
 **Frontend-only.** No backend change is required — the data is already in the payload.
 
-The read-only `<Level> Statement` field added by change `p2-3063-hlo-outcome-statement` (ticket **P2-3063**, epic **P2-2928 ToC Improvements**) is stale: when a reporter changes the HLO / Intermediate Outcome / 2030 Outcome dropdown, the statement box keeps showing the **previous** node's statement. It only catches up after the form is saved. A read-only field whose whole purpose is to tell the reporter *which* ToC node they just picked is actively misleading while it lags — the reporter can pick outcome B, read outcome A's statement, and save on a false confirmation.
+Ticket: **P2-3202** (Bug, under epic **P2-2340 Bugs 2026**). It fixes a defect in the field delivered by **P2-3063**; that ticket stays as it is — nothing about it is reopened or re-scoped here.
+
+The read-only `<Level> Statement` field added by change `p2-3063-hlo-outcome-statement` is stale: when a reporter changes the HLO / Intermediate Outcome / 2030 Outcome dropdown, the statement box keeps showing the **previous** node's statement. It only catches up after the form is saved. A read-only field whose whole purpose is to tell the reporter *which* ToC node they just picked is actively misleading while it lags — the reporter can pick outcome B, read outcome A's statement, and save on a false confirmation.
 
 Root cause is a reactivity gap, not a data gap: `selectedTocNode` is a `computed()` whose only reactive dependencies are `activeTabSignal()` and the three ToC lists, while the node dropdown mutates the plain `activeTab` object **in place** through `[(ngModel)]`. No signal notifies, so the computed keeps its cached value until the parent re-sets the lists on save.
 
