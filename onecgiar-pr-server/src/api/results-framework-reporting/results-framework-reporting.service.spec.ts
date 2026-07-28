@@ -59,6 +59,8 @@ const mockTocResultsRepository = {
   findWorkPackagesByProgram: jest.fn(),
   findByCompositeCode: jest.fn(),
   find2030Outcomes: jest.fn(),
+  findIntermediateOutcomes: jest.fn(),
+  countProgramLevelOutcomes: jest.fn(),
   findResultById: jest.fn(),
   findIndicatorById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
@@ -248,6 +250,10 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getGlobalUnitsByProgram', () => {
     beforeEach(() => {
       mockDataSource.query.mockResolvedValue([]);
+      mockTocResultsRepository.countProgramLevelOutcomes.mockResolvedValue({
+        intermediateCount: 0,
+        eoi2030Count: 0,
+      });
     });
 
     it('should return formatted units when all checks pass', async () => {
