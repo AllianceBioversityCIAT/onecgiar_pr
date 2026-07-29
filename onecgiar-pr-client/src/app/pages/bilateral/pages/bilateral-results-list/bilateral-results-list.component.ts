@@ -2,14 +2,15 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
+  DestroyRef,
   inject,
   OnInit,
   signal,
-  untracked,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
+import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { combineLatest, filter, take } from 'rxjs';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
@@ -39,6 +40,7 @@ export class BilateralResultsListComponent implements OnInit {
   private readonly bilateralApiService = inject(BilateralApiService);
   private readonly phasesService = inject(PhasesService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   readonly ctx = inject(BilateralContextService);
 
   readonly phases = signal<Phases[]>([]);
@@ -59,22 +61,30 @@ export class BilateralResultsListComponent implements OnInit {
   });
 
   constructor() {
-    effect(() => {
-      const centerId = this.ctx.centerId();
-      const phase = this.selectedPhase();
-      if (centerId && phase) {
-        untracked(() => this.loadResults(phase.id));
-      }
-    });
+    combineLatest([
+      toObservable(this.ctx.centerId).pipe(filter((id): id is string => !!id)),
+      toObservable(this.selectedPhase).pipe(filter((p): p is Phases => !!p)),
+    ])
+      .pipe(takeUntilDestroyed())
+      .subscribe(([, phase]) => this.loadResults(phase.id));
   }
 
   ngOnInit(): void {
     const reportingPhases = this.phasesService.phases.reporting;
-    this.phases.set(reportingPhases);
 
-    const active =
-      this.phasesService.currentlyActivePhaseOnReporting ?? reportingPhases[0] ?? null;
-    this.selectedPhase.set(active);
+    if (reportingPhases.length) {
+      this.phases.set(reportingPhases);
+      const active = this.phasesService.currentlyActivePhaseOnReporting ?? reportingPhases[0] ?? null;
+      this.selectedPhase.set(active);
+    } else {
+      this.phasesService.getPhasesObservable()
+        .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+        .subscribe(loaded => {
+          this.phases.set(loaded);
+          const active = loaded.find((p: Phases) => p.status) ?? loaded[0] ?? null;
+          this.selectedPhase.set(active);
+        });
+    }
   }
 
   selectPhase(phase: Phases): void {

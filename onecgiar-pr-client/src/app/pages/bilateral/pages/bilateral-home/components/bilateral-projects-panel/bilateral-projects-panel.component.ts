@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
@@ -13,7 +13,7 @@ import { BilateralProject } from '../../../../services/bilateral-creation.interf
   styleUrl: './bilateral-projects-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class BilateralProjectsPanelComponent implements OnInit {
+export class BilateralProjectsPanelComponent {
   private readonly bilateralApiService = inject(BilateralApiService);
   readonly ctx = inject(BilateralContextService);
 
@@ -41,25 +41,29 @@ export class BilateralProjectsPanelComponent implements OnInit {
     });
   });
 
-  onSearch(event: Event): void {
-    this.searchQuery.set((event.target as HTMLInputElement).value);
+  constructor() {
+    effect(() => {
+      const centerId = this.ctx.centerId();
+      if (!centerId) return;
+      untracked(() => {
+        this.loading.set(true);
+        this.error.set(false);
+        this.bilateralApiService.GET_bilateralProjects(centerId).subscribe({
+          next: ({ response }) => {
+            this.projects.set(response?.projects ?? response ?? []);
+            this.loading.set(false);
+          },
+          error: () => {
+            this.error.set(true);
+            this.loading.set(false);
+          }
+        });
+      });
+    });
   }
 
-  ngOnInit(): void {
-    const centerId = this.ctx.centerId();
-    if (!centerId) return;
-
-    this.loading.set(true);
-    this.bilateralApiService.GET_bilateralProjects(centerId).subscribe({
-      next: ({ response }) => {
-        this.projects.set(response?.projects ?? response ?? []);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set(true);
-        this.loading.set(false);
-      }
-    });
+  onSearch(event: Event): void {
+    this.searchQuery.set((event.target as HTMLInputElement).value);
   }
 }
 

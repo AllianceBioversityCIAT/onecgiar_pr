@@ -1,7 +1,7 @@
 import { Component, inject, output, effect, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
-import { RolesService } from '../../../../shared/services/global/roles.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 
 @Component({
@@ -12,7 +12,7 @@ import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 })
 export class BilateralProjectSelectorComponent {
   readonly creationService = inject(BilateralCreationService);
-  readonly rolesService = inject(RolesService);
+  readonly ctx = inject(BilateralContextService);
 
   projectSelected = output<BilateralProject>();
   showDropdown = signal(false);
@@ -28,9 +28,9 @@ export class BilateralProjectSelectorComponent {
 
   constructor() {
     effect(() => {
-      const centers = this.rolesService.getMyCenters();
-      if (centers.length > 0) {
-        this.creationService.getProjects(centers[0].center_id);
+      const centerId = this.ctx.centerId();
+      if (centerId) {
+        this.creationService.getProjects(centerId);
       }
     });
   }
