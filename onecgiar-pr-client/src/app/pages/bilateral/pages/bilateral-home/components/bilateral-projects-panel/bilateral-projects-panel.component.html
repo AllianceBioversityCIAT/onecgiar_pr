@@ -34,7 +34,7 @@
                   <span class="bpp_item_chip">
                     {{ sp.spShortName }}
                     @if (sp.allocation) {
-                      <span class="bpp_item_chip_alloc">{{ sp.allocation }}%</span>
+                      <span class="bpp_item_chip_alloc">{{ sp.allocation | number:'1.0-0' }}%</span>
                     }
                   </span>
                 }

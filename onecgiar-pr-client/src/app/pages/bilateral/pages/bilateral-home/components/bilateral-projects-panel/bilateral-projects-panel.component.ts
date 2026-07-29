@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
@@ -7,7 +8,7 @@ import { BilateralProject } from '../../../../services/bilateral-creation.interf
 @Component({
   selector: 'app-bilateral-projects-panel',
   standalone: true,
-  imports: [RouterModule],
+  imports: [RouterModule, DecimalPipe],
   templateUrl: './bilateral-projects-panel.component.html',
   styleUrl: './bilateral-projects-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
