@@ -580,6 +580,15 @@ export const BilateralRouting: PrRoute[] = [
         m => m.BilateralAiDraftDetailComponent
       )
   },
+  {
+    prName: 'Results',
+    path: 'results',
+    prHide: true,
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-results-list/bilateral-results-list.component').then(
+        m => m.BilateralResultsListComponent
+      )
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
 

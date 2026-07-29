@@ -3508,4 +3508,43 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       });
     }
   }
+
+  async getResultsByBilateralCenter(
+    centerId: number,
+    versionId: number,
+  ): Promise<any[]> {
+    const query = `
+      SELECT
+        r.id,
+        r.result_code,
+        r.title,
+        rt.name  AS result_type,
+        rs.id    AS status_id,
+        rs.status_name,
+        r.created_date,
+        r.version_id
+      FROM results r
+      INNER JOIN results_center rc
+             ON rc.result_id = r.id
+            AND rc.center_id = ?
+            AND rc.is_leading_result = 1
+            AND rc.is_active = 1
+      INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
+      INNER JOIN result_status rs ON rs.id = r.status_id
+      WHERE r.version_id = ?
+        AND r.source = 'API'
+        AND r.is_active = 1
+      ORDER BY r.result_code ASC
+    `;
+
+    try {
+      return await this.query(query, [centerId, versionId]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
 }

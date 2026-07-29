@@ -17,6 +17,13 @@ export class BilateralApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/projects?centerId=${centerId}`);
   }
 
+  GET_bilateralCenterResults(centerId: string, versionId: number) {
+    return this.http.get<any>(
+      `${this.resultsApiBaseUrl}bilateral-center-results`,
+      { params: { centerId, versionId: String(versionId) } }
+    );
+  }
+
   POST_createBilateralHeader(body: Record<string, unknown>) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/bilateral/center/create-header`, body);
   }

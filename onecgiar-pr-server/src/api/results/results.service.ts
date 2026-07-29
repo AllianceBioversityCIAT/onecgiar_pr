@@ -4863,4 +4863,40 @@ export class ResultsService {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
+
+  async getBilateralCenterResults(centerId: string, versionId: string) {
+    try {
+      const parsedCenterId = Number(centerId);
+      const parsedVersionId = Number(versionId);
+
+      if (!parsedCenterId || isNaN(parsedCenterId)) {
+        return {
+          response: [],
+          message: 'centerId is required and must be a valid number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!parsedVersionId || isNaN(parsedVersionId)) {
+        return {
+          response: [],
+          message: 'versionId is required and must be a valid number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const results = await this._resultRepository.getResultsByBilateralCenter(
+        parsedCenterId,
+        parsedVersionId,
+      );
+
+      return {
+        response: results,
+        message: 'Bilateral center results retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
 }

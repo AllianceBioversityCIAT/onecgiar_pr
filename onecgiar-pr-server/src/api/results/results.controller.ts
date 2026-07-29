@@ -740,6 +740,32 @@ export class ResultsController {
     return this.resultsService.getPendingReviewCount(programId);
   }
 
+  @Get('bilateral-center-results')
+  @ApiOperation({
+    summary: 'Get bilateral results by center and phase',
+    description:
+      'Returns all bilateral results where the given center is the lead center in the specified reporting phase.',
+  })
+  @ApiQuery({
+    name: 'centerId',
+    type: String,
+    required: true,
+    description: 'Numeric CLARISA center ID',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: String,
+    required: true,
+    description: 'Reporting phase (version) ID',
+  })
+  @ApiOkResponse({ description: 'Bilateral center results retrieved successfully.' })
+  async getBilateralCenterResults(
+    @Query('centerId') centerId: string,
+    @Query('versionId') versionId: string,
+  ) {
+    return this.resultsService.getBilateralCenterResults(centerId, versionId);
+  }
+
   @Get('by-program-and-centers')
   @ApiOperation({
     summary: 'Get results by program and centers',

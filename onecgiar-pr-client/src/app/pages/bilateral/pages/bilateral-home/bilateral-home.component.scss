@@ -21,10 +21,14 @@
 
 .bil-home_cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 
-  @media (max-width: 600px) {
+  @media (max-width: 860px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 560px) {
     grid-template-columns: 1fr;
   }
 }
@@ -78,6 +82,22 @@
     &:hover {
       border-color: #0369a1;
       box-shadow: 0 6px 20px rgba(3, 105, 161, 0.1);
+    }
+  }
+
+  &--results {
+    .bil-home_card_accent { background: var(--pr-color-primary-300); }
+
+    .bil-home_card_icon {
+      background: #eef2ff;
+      i { color: var(--pr-color-primary-300); }
+    }
+
+    .bil-home_card_cta { color: var(--pr-color-primary-300); }
+
+    &:hover {
+      border-color: var(--pr-color-primary-300);
+      box-shadow: 0 6px 20px rgba(85, 105, 221, 0.1);
     }
   }
 }
