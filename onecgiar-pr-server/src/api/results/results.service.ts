@@ -4866,13 +4866,12 @@ export class ResultsService {
 
   async getBilateralCenterResults(centerId: string, versionId: string) {
     try {
-      const parsedCenterId = Number(centerId);
       const parsedVersionId = Number(versionId);
 
-      if (!parsedCenterId || isNaN(parsedCenterId)) {
+      if (!centerId?.trim()) {
         return {
           response: [],
-          message: 'centerId is required and must be a valid number.',
+          message: 'centerId is required.',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -4886,7 +4885,7 @@ export class ResultsService {
       }
 
       const results = await this._resultRepository.getResultsByBilateralCenter(
-        parsedCenterId,
+        centerId,
         parsedVersionId,
       );
 

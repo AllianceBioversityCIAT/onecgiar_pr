@@ -44,7 +44,7 @@
 
 .bpa-aside {
   position: fixed;
-  left: max(12px, calc((100vw - 860px) / 2 - 300px));
+  left: max(12px, calc((100vw - 1100px) / 2 - 300px));
   // top / max-height bound in template to match #bcr-section-zero
   width: 280px;
   overflow-y: auto;
