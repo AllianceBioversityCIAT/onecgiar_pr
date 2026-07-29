@@ -47,6 +47,7 @@ export class BilateralResultsListComponent implements OnInit {
   readonly selectedPhase = signal<Phases | null>(null);
   readonly results = signal<BilateralCenterResult[]>([]);
   readonly loading = signal(false);
+  readonly initializing = signal(true);
   readonly error = signal(false);
   readonly searchQuery = signal('');
 
@@ -76,6 +77,7 @@ export class BilateralResultsListComponent implements OnInit {
       this.phases.set(reportingPhases);
       const active = this.phasesService.currentlyActivePhaseOnReporting ?? reportingPhases[0] ?? null;
       this.selectedPhase.set(active);
+      this.initializing.set(false);
     } else {
       this.phasesService.getPhasesObservable()
         .pipe(take(1), takeUntilDestroyed(this.destroyRef))
@@ -83,6 +85,7 @@ export class BilateralResultsListComponent implements OnInit {
           this.phases.set(loaded);
           const active = loaded.find((p: Phases) => p.status) ?? loaded[0] ?? null;
           this.selectedPhase.set(active);
+          this.initializing.set(false);
         });
     }
   }

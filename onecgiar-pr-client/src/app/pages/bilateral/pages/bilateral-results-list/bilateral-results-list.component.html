@@ -49,7 +49,7 @@
     </div>
 
     <!-- States -->
-    @if (loading()) {
+    @if (initializing() || loading()) {
       <div class="brl_state">
         <i class="pi pi-spin pi-spinner brl_state_icon"></i>
         <span>Loading results…</span>
@@ -58,11 +58,6 @@
       <div class="brl_state brl_state--error">
         <i class="pi pi-exclamation-circle brl_state_icon"></i>
         <span>Could not load results. Please try refreshing the page.</span>
-      </div>
-    } @else if (!ctx.centerId()) {
-      <div class="brl_state">
-        <i class="pi pi-info-circle brl_state_icon"></i>
-        <span>No center selected. Please navigate here from the reporting home.</span>
       </div>
     } @else if (results().length === 0) {
       <div class="brl_state">
