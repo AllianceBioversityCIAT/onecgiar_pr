@@ -26,8 +26,7 @@
         <li class="bpp_item">
           <div class="bpp_item_body">
             <div class="bpp_item_info">
-              <span class="bpp_item_short">{{ project.shortName }}</span>
-              <span class="bpp_item_full">{{ project.fullName }}</span>
+              <span class="bpp_item_short" [title]="project.fullName || project.shortName">{{ project.shortName }}</span>
             </div>
             @if (project.sciencePrograms.length > 0) {
               <div class="bpp_item_programs">
