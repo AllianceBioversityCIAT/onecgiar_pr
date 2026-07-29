@@ -12,6 +12,14 @@
   margin-bottom: 16px;
 }
 
+.bpp_header_top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .bpp_title {
   font-size: 13px;
   font-weight: 700;
@@ -23,6 +31,67 @@
   font-size: 11px;
   color: var(--pr-color-accents-5);
   margin: 0;
+}
+
+// ─── Search bar ───────────────────────────────────────────────────────────────
+
+.bpp_search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.bpp_search_icon {
+  position: absolute;
+  left: 10px;
+  font-size: 12px;
+  color: var(--pr-color-accents-4);
+  pointer-events: none;
+}
+
+.bpp_search_input {
+  height: 32px;
+  padding: 0 30px 0 30px;
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--pr-color-secondary-400);
+  background: #fff;
+  width: 240px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &::placeholder {
+    color: var(--pr-color-accents-4);
+  }
+
+  &:focus {
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(85, 105, 221, 0.1);
+  }
+}
+
+.bpp_search_clear {
+  position: absolute;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--pr-color-accents-4);
+  padding: 0;
+  border-radius: 50%;
+  transition: color 0.12s ease;
+
+  i { font-size: 10px; }
+
+  &:hover { color: var(--pr-color-secondary-400); }
 }
 
 // ─── States (loading / error / empty) ────────────────────────────────────────
