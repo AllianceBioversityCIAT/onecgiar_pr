@@ -6,10 +6,11 @@ import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
+import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
 
 @Component({
   selector: 'app-my-draft-results',
-  imports: [CommonModule, RouterModule, DialogModule, ButtonModule],
+  imports: [CommonModule, RouterModule, DialogModule, ButtonModule, BilateralPageHeaderComponent],
   templateUrl: './my-draft-results.component.html',
   styleUrl: './my-draft-results.component.scss',
 })

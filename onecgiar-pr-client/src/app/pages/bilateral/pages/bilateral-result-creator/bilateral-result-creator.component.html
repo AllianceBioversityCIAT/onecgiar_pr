@@ -1,13 +1,6 @@
+<app-bilateral-page-header />
+
 <div class="bilateral-creator">
-  <nav class="bcr-breadcrumb">
-    <span>CGIAR Center</span>
-    <span>&rsaquo;</span>
-    @if (creationService.selectedProject(); as p) {
-      @if (p.leadCenter) {
-        <strong>{{ p.leadCenter.name }} ({{ p.leadCenter.acronym }})</strong>
-      }
-    }
-  </nav>
 
   @if (isCreating()) {
     <app-bilateral-project-selector (projectSelected)="onProjectSelected($event)"></app-bilateral-project-selector>

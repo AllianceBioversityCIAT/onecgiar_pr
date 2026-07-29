@@ -18,6 +18,7 @@ import { SectionContributorsComponent } from '../../components/section-contribut
 import { SectionGeographyComponent } from '../../components/section-geography/section-geography.component';
 import { SectionEvidenceComponent } from '../../components/section-evidence/section-evidence.component';
 import { SectionTypeSpecificComponent } from '../../components/section-type-specific/section-type-specific.component';
+import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
 import { BilateralProgressAsideComponent } from '../../components/bilateral-progress-aside/bilateral-progress-aside.component';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 
@@ -51,6 +52,7 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     SectionEvidenceComponent,
     SectionTypeSpecificComponent,
     BilateralProgressAsideComponent,
+    BilateralPageHeaderComponent,
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',

@@ -1,0 +1,54 @@
+<app-bilateral-page-header />
+
+<div class="bil-home">
+
+  <p class="bil-home_label">What would you like to do?</p>
+
+  <div class="bil-home_cards">
+
+    <a class="bil-home_card bil-home_card--create" routerLink="/bilateral/create">
+      <div class="bil-home_card_accent"></div>
+      <div class="bil-home_card_content">
+        <div class="bil-home_card_icon">
+          <i class="material-icons-round">add_circle_outline</i>
+        </div>
+        <div class="bil-home_card_text">
+          <h2 class="bil-home_card_title">Create a result</h2>
+          <p class="bil-home_card_desc">
+            Report a new bilateral result with AI-assisted document analysis or manual entry.
+          </p>
+        </div>
+      </div>
+      <div class="bil-home_card_footer">
+        <span class="bil-home_card_cta">Get started</span>
+        <i class="pi pi-arrow-right bil-home_card_arrow"></i>
+      </div>
+    </a>
+
+    <a class="bil-home_card bil-home_card--drafts" routerLink="/bilateral/drafts">
+      <div class="bil-home_card_accent"></div>
+      <div class="bil-home_card_content">
+        <div class="bil-home_card_icon">
+          <i class="material-icons-round">inventory_2</i>
+        </div>
+        <div class="bil-home_card_text">
+          <h2 class="bil-home_card_title">
+            My drafts
+            @if (bilateralAiService.draftCountDisplay(); as count) {
+              <span class="bil-home_card_badge">{{ count }}</span>
+            }
+          </h2>
+          <p class="bil-home_card_desc">
+            Review and promote AI-generated draft results waiting for your attention.
+          </p>
+        </div>
+      </div>
+      <div class="bil-home_card_footer">
+        <span class="bil-home_card_cta">View drafts</span>
+        <i class="pi pi-arrow-right bil-home_card_arrow"></i>
+      </div>
+    </a>
+
+  </div>
+
+</div>
