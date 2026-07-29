@@ -1,7 +1,7 @@
 <div class="bps-selector">
   <label class="bps-label">Reporting Project <span class="bps-required">*</span></label>
 
-  @if (creationService.isLoadingProjects()) {
+  @if (creationService.isLoadingProjects() && !creationService.selectedProject()) {
     <div class="bps-field bps-loading">Loading projects...</div>
   } @else {
     <div class="bps-dropdown-anchor">

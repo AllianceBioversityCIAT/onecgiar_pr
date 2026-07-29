@@ -115,7 +115,8 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.autoSaveService.setResultId(resultId);
         this.creationService.loadResult(resultId);
       } else {
-        // Fresh create: never reuse project/SP from a previous visit (or legacy localStorage).
+        // Fresh create: reset wizard but preserve a project pre-selected from the home panel.
+        const preselected = this.creationService.selectedProject();
         this.isCreating.set(true);
         this.resultId.set(null);
         this.selectedReportingWay.set(null);
@@ -125,6 +126,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.autoSaveService.reset();
         this.mdsTracker.reset();
         this.creationService.resetWizard();
+        if (preselected) {
+          this.creationService.selectProject(preselected);
+        }
       }
     });
   }

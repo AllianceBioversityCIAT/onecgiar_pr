@@ -3,6 +3,7 @@ import { DecimalPipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { BilateralApiService } from '../../../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../../../services/bilateral-context.service';
+import { BilateralCreationService } from '../../../../services/bilateral-creation.service';
 import { BilateralProject } from '../../../../services/bilateral-creation.interfaces';
 
 @Component({
@@ -16,6 +17,11 @@ import { BilateralProject } from '../../../../services/bilateral-creation.interf
 export class BilateralProjectsPanelComponent {
   private readonly bilateralApiService = inject(BilateralApiService);
   readonly ctx = inject(BilateralContextService);
+  readonly creationService = inject(BilateralCreationService);
+
+  selectAndCreate(project: BilateralProject): void {
+    this.creationService.selectProject(project);
+  }
 
   readonly projects = signal<BilateralProject[]>([]);
   readonly loading = signal(false);
