@@ -3,6 +3,16 @@ import { CenterDto } from '../../../../shared/interfaces/center.dto';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultToReview, GroupedResult } from './components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 
+/** Query param that deep-links a result's review drawer on the results-review screen. */
+export const REVIEW_RESULT_QUERY_PARAM = 'reviewResult';
+
+/**
+ * Result id that goes with REVIEW_RESULT_QUERY_PARAM. Needed because a deep-linked
+ * result may not be part of the review list (e.g. drafts still being edited), and the
+ * drawer loads its detail by id.
+ */
+export const REVIEW_RESULT_ID_QUERY_PARAM = 'reviewResultId';
+
 @Injectable({
   providedIn: 'root'
 })
