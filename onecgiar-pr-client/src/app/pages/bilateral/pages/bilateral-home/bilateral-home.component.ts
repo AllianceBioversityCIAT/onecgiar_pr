@@ -2,11 +2,12 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
+import { BilateralProjectsPanelComponent } from './components/bilateral-projects-panel/bilateral-projects-panel.component';
 
 @Component({
   selector: 'app-bilateral-home',
   standalone: true,
-  imports: [RouterModule, BilateralPageHeaderComponent],
+  imports: [RouterModule, BilateralPageHeaderComponent, BilateralProjectsPanelComponent],
   templateUrl: './bilateral-home.component.html',
   styleUrl: './bilateral-home.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

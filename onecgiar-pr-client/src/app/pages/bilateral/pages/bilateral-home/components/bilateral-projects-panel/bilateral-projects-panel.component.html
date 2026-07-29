@@ -1,0 +1,54 @@
+<section class="bpp">
+
+  <div class="bpp_header">
+    <h2 class="bpp_title">Bilateral projects</h2>
+    <p class="bpp_subtitle">Projects available for reporting under this center</p>
+  </div>
+
+  @if (loading()) {
+    <div class="bpp_state">
+      <i class="pi pi-spin pi-spinner bpp_state_icon"></i>
+      <span class="bpp_state_text">Loading projects…</span>
+    </div>
+  } @else if (error()) {
+    <div class="bpp_state bpp_state--error">
+      <i class="pi pi-exclamation-circle bpp_state_icon"></i>
+      <span class="bpp_state_text">Could not load projects. Please try refreshing the page.</span>
+    </div>
+  } @else if (projects().length === 0) {
+    <div class="bpp_state">
+      <i class="pi pi-inbox bpp_state_icon"></i>
+      <span class="bpp_state_text">No bilateral projects found for this center.</span>
+    </div>
+  } @else {
+    <ul class="bpp_list">
+      @for (project of projects(); track project.id) {
+        <li class="bpp_item">
+          <div class="bpp_item_body">
+            <div class="bpp_item_info">
+              <span class="bpp_item_short">{{ project.shortName }}</span>
+              <span class="bpp_item_full">{{ project.fullName }}</span>
+            </div>
+            @if (project.sciencePrograms.length > 0) {
+              <div class="bpp_item_programs">
+                @for (sp of project.sciencePrograms; track sp.programId) {
+                  <span class="bpp_item_chip">
+                    {{ sp.spShortName }}
+                    @if (sp.allocation) {
+                      <span class="bpp_item_chip_alloc">{{ sp.allocation }}%</span>
+                    }
+                  </span>
+                }
+              </div>
+            }
+          </div>
+          <a class="bpp_item_cta" routerLink="/bilateral/create">
+            <i class="pi pi-plus"></i>
+            Create result
+          </a>
+        </li>
+      }
+    </ul>
+  }
+
+</section>

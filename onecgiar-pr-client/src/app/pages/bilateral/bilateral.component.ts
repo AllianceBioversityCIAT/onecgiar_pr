@@ -29,7 +29,7 @@ export class BilateralComponent implements OnInit, OnDestroy {
 
     const params = this.route.snapshot.queryParams;
     if (params['center']) {
-      this.ctx.setCenter(params['center'], params['centerName'] ?? '');
+      this.ctx.setCenter(params['center'], params['centerName'] ?? '', params['centerId'] ?? undefined);
     }
 
     this.updateBreadcrumb(this.router.url);
