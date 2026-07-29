@@ -90,7 +90,7 @@
       </div>
       <h3 class="mdr-empty-title">No Drafts Yet</h3>
       <p class="mdr-empty-text">AI-generated drafts will appear here after you upload source materials for analysis.</p>
-      <a class="mdr-empty-cta" routerLink="/bilateral/create">
+      <a class="mdr-empty-cta" [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']">
         <i class="material-icons-round">add_circle_outline</i>
         Create a New Result
       </a>

@@ -11,6 +11,6 @@ export class CenterReportStubComponent implements OnInit {
   private readonly router = inject(Router);
 
   ngOnInit(): void {
-    this.router.navigate(['/bilateral'], { replaceUrl: true });
+    this.router.navigate(['/result-framework-reporting/home'], { replaceUrl: true });
   }
 }

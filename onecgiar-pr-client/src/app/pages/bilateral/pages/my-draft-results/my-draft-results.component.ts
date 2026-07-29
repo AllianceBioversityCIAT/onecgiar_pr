@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
 
 @Component({
@@ -18,6 +19,7 @@ export class MyDraftResultsComponent implements OnInit {
   readonly bilateralAiService = inject(BilateralAiService);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
+  readonly ctx = inject(BilateralContextService);
 
   promoteTarget = signal<BilateralAiDraft | null>(null);
   discardTarget = signal<BilateralAiDraft | null>(null);
@@ -55,7 +57,7 @@ export class MyDraftResultsComponent implements OnInit {
   }
 
   onReview(draft: BilateralAiDraft): void {
-    void this.router.navigate(['/bilateral/drafts', draft.id]);
+    void this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'drafts', draft.id]);
   }
 
   onPromoteClick(draft: BilateralAiDraft): void {

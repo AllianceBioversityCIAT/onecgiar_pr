@@ -2,9 +2,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   OnInit,
   signal,
+  untracked,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
@@ -56,6 +58,16 @@ export class BilateralResultsListComponent implements OnInit {
     });
   });
 
+  constructor() {
+    effect(() => {
+      const centerId = this.ctx.centerId();
+      const phase = this.selectedPhase();
+      if (centerId && phase) {
+        untracked(() => this.loadResults(phase.id));
+      }
+    });
+  }
+
   ngOnInit(): void {
     const reportingPhases = this.phasesService.phases.reporting;
     this.phases.set(reportingPhases);
@@ -63,16 +75,11 @@ export class BilateralResultsListComponent implements OnInit {
     const active =
       this.phasesService.currentlyActivePhaseOnReporting ?? reportingPhases[0] ?? null;
     this.selectedPhase.set(active);
-
-    if (active) {
-      this.loadResults(active.id);
-    }
   }
 
   selectPhase(phase: Phases): void {
     this.selectedPhase.set(phase);
     this.searchQuery.set('');
-    this.loadResults(phase.id);
   }
 
   loadResults(versionId: number): void {

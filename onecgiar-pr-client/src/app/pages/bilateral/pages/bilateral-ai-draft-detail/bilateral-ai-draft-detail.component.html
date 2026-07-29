@@ -6,14 +6,14 @@
       </div>
       <h3 class="badd-error-title">Draft Not Found</h3>
       <p class="badd-error-message">{{ error }}</p>
-      <a class="badd-error-back" routerLink="/bilateral/drafts">
+      <a class="badd-error-back" [routerLink]="['/bilateral', ctx.centerAcronym(), 'drafts']">
         <i class="material-icons-round">arrow_back</i>
         Back to My Drafts
       </a>
     </div>
   } @else if (draft) {
     <div class="badd-nav">
-      <a class="badd-back" routerLink="/bilateral/drafts">
+      <a class="badd-back" [routerLink]="['/bilateral', ctx.centerAcronym(), 'drafts']">
         <i class="material-icons-round">arrow_back</i>
         Back to Drafts
       </a>

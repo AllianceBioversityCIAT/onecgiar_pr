@@ -6,7 +6,7 @@
 
   <div class="bil-home_cards">
 
-    <a class="bil-home_card bil-home_card--create" routerLink="/bilateral/create">
+    <a class="bil-home_card bil-home_card--create" [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']">
       <div class="bil-home_card_accent"></div>
       <div class="bil-home_card_content">
         <div class="bil-home_card_icon">
@@ -25,7 +25,7 @@
       </div>
     </a>
 
-    <a class="bil-home_card bil-home_card--results" routerLink="/bilateral/results">
+    <a class="bil-home_card bil-home_card--results" [routerLink]="['/bilateral', ctx.centerAcronym(), 'results']">
       <div class="bil-home_card_accent"></div>
       <div class="bil-home_card_content">
         <div class="bil-home_card_icon">
@@ -44,7 +44,7 @@
       </div>
     </a>
 
-    <a class="bil-home_card bil-home_card--drafts" routerLink="/bilateral/drafts">
+    <a class="bil-home_card bil-home_card--drafts" [routerLink]="['/bilateral', ctx.centerAcronym(), 'drafts']">
       <div class="bil-home_card_accent"></div>
       <div class="bil-home_card_content">
         <div class="bil-home_card_icon">

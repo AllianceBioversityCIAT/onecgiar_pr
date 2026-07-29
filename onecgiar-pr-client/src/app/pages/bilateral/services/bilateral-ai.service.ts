@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { ResultsApiService } from '../../../shared/services/api/results-api.service';
+import { BilateralContextService } from './bilateral-context.service';
 import {
   BilateralAiDraft,
   BilateralAiJob,
@@ -20,6 +21,7 @@ export class BilateralAiService implements OnDestroy {
   private readonly resultsApi = inject(ResultsApiService);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
+  private readonly ctx = inject(BilateralContextService);
 
   currentJobId = signal<string | null>(null);
   currentJob = signal<BilateralAiJob | null>(null);
@@ -110,7 +112,7 @@ export class BilateralAiService implements OnDestroy {
         } else {
           this.uploadState.update(s => ({ ...s, status: 'completed' }));
           this.loadAllDrafts();
-          await this.router.navigate(['/bilateral/drafts']);
+          await this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'drafts']);
         }
       } else if (job.status === 'FAILED') {
         this.stopPolling();
@@ -174,9 +176,9 @@ export class BilateralAiService implements OnDestroy {
         this.draftList.update(list => list.filter(d => d.id !== draftId));
         const resultId = response?.resultId ?? response?.result_id;
         if (resultId) {
-          void this.router.navigate(['/bilateral/result', resultId]);
+          void this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', resultId]);
         } else {
-          void this.router.navigate(['/bilateral/drafts']);
+          void this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'drafts']);
         }
       },
       error: () => {
@@ -191,7 +193,7 @@ export class BilateralAiService implements OnDestroy {
         this.uploadState.update(s => ({ ...s, status: 'discarded' }));
         this.draftList.update(list => list.filter(d => d.id !== draftId));
         this.currentDraft.set(null);
-        void this.router.navigate(['/bilateral/drafts']);
+        void this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'drafts']);
       },
       error: () => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to discard draft' });

@@ -6,6 +6,7 @@ import { BilateralCreationService } from '../../services/bilateral-creation.serv
 import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralAiUploadComponent } from '../../components/bilateral-ai-upload/bilateral-ai-upload.component';
 import { SectionZeroDashboardComponent } from '../../components/section-zero-dashboard/section-zero-dashboard.component';
 import { BilateralAccordionComponent } from '../../components/bilateral-accordion/bilateral-accordion.component';
@@ -71,6 +72,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   readonly mdsTracker = inject(BilateralMdsTrackerService);
   readonly autoSaveService = inject(BilateralAutoSaveService);
   readonly bilateralAiService = inject(BilateralAiService);
+  private readonly ctx = inject(BilateralContextService);
 
   isCreating = signal(true);
   resultId = signal<number | null>(null);
@@ -194,7 +196,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.autoSaveService.reset();
         this.mdsTracker.reset();
         this.autoSaveService.setResultId(response.id);
-        this.router.navigate(['/bilateral/result', response.id]);
+        this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', response.id]);
       },
       error: (err: HttpErrorResponse) => {
         this.isCreatingResult.set(false);

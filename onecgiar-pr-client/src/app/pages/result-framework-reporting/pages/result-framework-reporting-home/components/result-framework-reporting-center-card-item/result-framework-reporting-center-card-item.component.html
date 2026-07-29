@@ -1,7 +1,6 @@
 <a
   class="framework-reporting-center-card-item"
-  [routerLink]="['/bilateral']"
-  [queryParams]="{ center: item?.center_acronym, centerName: item?.center_name, centerId: item?.center_id }">
+  [routerLink]="['/bilateral', item?.center_acronym, 'home']">
   <div class="framework-reporting-center-card-item_header">
     <p class="framework-reporting-center-card-item_header_desc">CGIAR Center</p>
     <h3 class="framework-reporting-center-card-item_header_acronym">

@@ -12,7 +12,7 @@
         @if (isAtHome) {
           <span class="bil-nav-breadcrumb_current">{{ ctx.centerAcronym() }}</span>
         } @else {
-          <a class="bil-nav-breadcrumb_link" routerLink="/bilateral/home">
+          <a class="bil-nav-breadcrumb_link" [routerLink]="['/bilateral', ctx.centerAcronym(), 'home']">
             {{ ctx.centerAcronym() }}
           </a>
           <i class="pi pi-chevron-right bil-nav-breadcrumb_sep"></i>

@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 import { DraftResultCardComponent } from './components/draft-result-card/draft-result-card.component';
 import { DraftEvidenceListComponent } from './components/draft-evidence-list/draft-evidence-list.component';
 
@@ -19,6 +20,7 @@ export class BilateralAiDraftDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   readonly bilateralAiService = inject(BilateralAiService);
   private readonly messageService = inject(MessageService);
+  readonly ctx = inject(BilateralContextService);
 
   showPromoteDialog = signal(false);
   showDiscardDialog = signal(false);
