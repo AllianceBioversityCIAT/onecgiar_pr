@@ -162,6 +162,12 @@
       grid-template-columns: repeat(2, 1fr);
       gap: 20px;
     }
+
+    .validate-all-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
   }
 
   .radio-button-group {
@@ -196,6 +202,28 @@
             background-color: white;
             border-radius: 50%;
           }
+        }
+      }
+
+      .checkbox-square {
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        border: 2px solid #8b8b8b;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+
+        &.selected {
+          border-color: var(--pr-color-primary-400);
+          background-color: var(--pr-color-primary-400);
+        }
+
+        .checkbox-check {
+          font-size: 14px;
+          color: white;
         }
       }
     }
