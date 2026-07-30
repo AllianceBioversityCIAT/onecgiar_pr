@@ -349,13 +349,13 @@ export const resultDetailRouting: PrRoute[] = [
     loadChildren: () =>
       import('../../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.module').then(m => m.RdLinksToResultsModule)
   },
+  ...rdResultTypesPages,
   {
     prName: 'Evidence',
     path: 'evidences',
     underConstruction: false,
     loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.module').then(m => m.RdEvidencesModule)
   },
-  ...rdResultTypesPages,
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'general-information' }
 ];
 

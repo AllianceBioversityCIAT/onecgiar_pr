@@ -27,11 +27,11 @@ export class RdEvidencesComponent implements OnInit {
   // Impact-area + typology fields surfaced as tags in the collapsed accordion header.
   // (Note: the "Climate change" checkbox is bound to youth_related, matching the existing form.)
   private readonly tagFields: { field: keyof EvidencesCreateInterface; label: string }[] = [
-    { field: 'gender_related', label: 'Gender' },
-    { field: 'youth_related', label: 'Climate change' },
-    { field: 'nutrition_related', label: 'Nutrition' },
-    { field: 'environmental_biodiversity_related', label: 'Environment' },
-    { field: 'poverty_related', label: 'Poverty' },
+    { field: 'gender_related', label: 'Gender equality, youth and social inclusion' },
+    { field: 'youth_related', label: 'Climate adaptation and mitigation' },
+    { field: 'nutrition_related', label: 'Nutrition, health and food security' },
+    { field: 'environmental_biodiversity_related', label: 'Environmental health and biodiversity' },
+    { field: 'poverty_related', label: 'Poverty reduction, livelihoods and jobs' },
     { field: 'innovation_readiness_related', label: 'Innovation Development' },
     { field: 'innovation_use_related', label: 'Innovation Use' },
     { field: 'policy_change_related', label: 'Policy Change' },
@@ -50,7 +50,7 @@ export class RdEvidencesComponent implements OnInit {
     <li>Links to SharePoint, One Drive, Google Drive, DropBox and other file storage platforms are not allowed.</li>
     <li>Files can be also uploaded to the PRMS repository.</li>
     <li>For confidential evidence, select “Upload file” and then “No” to indicate that it should not be public.</li>
-    <li>If you need additional information or guidance on how to create an evidence entry, you can find a video tutorial at the following a <a class="open_route" href="https://cgiar.sharepoint.com/:v:/s/OneCGIARPRMSRepository/ETb3eWyBPm9FumJV75XyUDABeVD57nTvz9zz1kNzL_Ob9w?e=kvLk2t" target="_blank">link</a>.</li>
+    <li>If you need additional information or guidance on how to create an evidence entry, you can find a video tutorial at the following a <a class="open_route" href="https://cgiar.sharepoint.com/:v:/s/OneCGIARPRMSRepository/IQCPCRtUOihDQKJExjQgfIOIAZQAZH4pnHDucy3HX-w14WU?e=Xoy42x" target="_blank">link</a>.</li>
     `;
 
     if (this.api.dataControlSE?.currentResult?.result_type_id === 5)
@@ -214,10 +214,15 @@ export class RdEvidencesComponent implements OnInit {
   }
 
   // Delete from the accordion header with a confirmation popup (reuses the existing alert).
+  // P2-3030: confirming the delete persists immediately via the section save flow (same as
+  // create/edit confirm), so the deletion is not lost when navigating away and back.
   deleteEvidenceWithConfirm(index: number) {
     this.api.alertsFe.show(
       { id: 'confirm-delete-evidence', title: 'Are you sure you want to delete this evidence?', status: 'warning', confirmText: 'Yes, delete' },
-      () => this.deleteEvidence(index)
+      () => {
+        this.deleteEvidence(index);
+        this.onSaveSection();
+      }
     );
   }
 
@@ -290,6 +295,19 @@ export class RdEvidencesComponent implements OnInit {
     if (this.isOptionalReadinessLevel) return true;
 
     return this.evidencesBody.evidences.some(evidence => evidence.innovation_readiness_related);
+  }
+
+  // P2-3056: the Evidence green check must stay red until ALL mandatory evidence is present:
+  // (1) at least one piece of evidence (type 5 is exempt),
+  // (2) evidence for every Impact-Area marker set to Principal (validateCheckBoxes() returns '' when covered),
+  // (3) Innovation-Readiness evidence when the readiness level is 1-9 (Innovation Development, type 7, only).
+  // Reuses the same helpers that drive the yellow warnings so the check and the alerts never disagree.
+  get evidenceSectionComplete(): boolean {
+    const resultTypeId = this.api.dataControlSE.currentResult?.result_type_id;
+    const hasBaseEvidence = this.evidencesBody.evidences.length > 0 || resultTypeId == 5;
+    const markersCovered = !this.validateCheckBoxes();
+    const readinessCovered = resultTypeId !== 7 || this.validateHasInnoReadinessLevelEvidence();
+    return hasBaseEvidence && markersCovered && readinessCovered;
   }
 
   get validateButtonDisabled() {

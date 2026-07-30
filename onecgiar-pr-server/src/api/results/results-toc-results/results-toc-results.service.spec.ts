@@ -15,6 +15,7 @@ import { TemplateRepository } from '../../platform-report/repositories/template.
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 describe('ResultsTocResultsService', () => {
@@ -117,6 +118,14 @@ describe('ResultsTocResultsService', () => {
         { provide: RoleByUserRepository, useValue: {} },
         { provide: UserNotificationSettingRepository, useValue: {} },
         { provide: GlobalParameterRepository, useValue: {} },
+        {
+          provide: TocResultsRepository,
+          useValue: {
+            getCatalogTargetsByIndicatorNodeIds: jest
+              .fn()
+              .mockResolvedValue([]),
+          },
+        },
       ],
     }).compile();
 

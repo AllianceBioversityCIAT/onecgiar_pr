@@ -1313,6 +1313,36 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(call[3]).toEqual({ limit: 10, offset: 10 });
   });
 
+  it('findAllByRoleFiltered synthesizes initiative_entity_map for P25 when table is empty', async () => {
+    const items = [
+      {
+        id: 1,
+        title: 'P25 result',
+        submitter_id: 55,
+        submitter_name: 'Science Program X',
+        acronym: 'P25',
+      },
+    ];
+    (
+      mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered as jest.Mock
+    ).mockResolvedValueOnce({ results: items, total: 1 });
+    (mockInitiativeEntityMapRepository.find as jest.Mock).mockResolvedValueOnce(
+      [],
+    );
+
+    const res = await resultService.findAllByRoleFiltered(7, {});
+    expect(res.status).toBe(HttpStatus.OK);
+    const payload: any = res.response as any;
+    expect(payload.items[0].initiative_entity_map).toEqual([
+      {
+        id: null,
+        entityId: 55,
+        initiativeId: 55,
+        entityName: 'Science Program X',
+      },
+    ]);
+  });
+
   it('findAllByRoleFiltered returns NOT_FOUND when no items', async () => {
     (
       mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered as jest.Mock
@@ -2387,6 +2417,67 @@ describe('ResultsService (unit, pure mocks)', () => {
       const res = await resultService.createOwnerResult(newResult, userTest);
       expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
       expect((res as returnFormatService).message).toContain('compatible');
+    });
+  });
+
+  describe('checkTitleUniqueness', () => {
+    it('returns isUnique true for empty title', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockClear();
+      const res = await resultService.checkTitleUniqueness('   ');
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response).toEqual({
+        isUnique: true,
+        existing: null,
+      });
+      expect(mockResultRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('returns isUnique true when no active result matches', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+      const res = await resultService.checkTitleUniqueness('Brand new title');
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response.isUnique).toBe(true);
+      expect((res as returnFormatService).response.existing).toBeNull();
+    });
+
+    it('returns isUnique false with existing when title conflicts', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 11115,
+        result_code: 999,
+        title: 'Existing Title',
+        version_id: 1,
+      });
+      const res = await resultService.checkTitleUniqueness('Existing Title');
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response).toEqual({
+        isUnique: false,
+        existing: {
+          id: 11115,
+          result_code: 999,
+          title: 'Existing Title',
+          version_id: 1,
+        },
+      });
+    });
+
+    it('returns isUnique true when conflict is the excluded result', async () => {
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 50,
+        result_code: 10,
+        title: 'Same Title',
+        version_id: 1,
+      });
+      const res = await resultService.checkTitleUniqueness('Same Title', 50);
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response.isUnique).toBe(true);
+    });
+
+    it('returns error when active phase is missing', async () => {
+      (
+        mockVersioningService.$_findActivePhase as jest.Mock
+      ).mockResolvedValueOnce(null);
+      const res = await resultService.checkTitleUniqueness('Any');
+      expect((res as returnFormatService).status).toBeGreaterThanOrEqual(400);
     });
   });
 });

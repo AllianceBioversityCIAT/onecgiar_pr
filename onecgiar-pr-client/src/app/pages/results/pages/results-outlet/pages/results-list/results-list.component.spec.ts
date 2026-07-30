@@ -317,10 +317,9 @@ describe('ResultsListComponent', () => {
       expect(component.resultsListService.showDeletingResultSpinner).toBeFalsy();
     });
     it('should handle errors from PATCH_DeleteResult correctly', () => {
-      const errorMessage = 'error message';
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(errorMessage));
+      const errorResponse = { status: 500, error: { message: 'error message' } };
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(() => errorResponse));
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
-      const consoleErrorSpy = jest.spyOn(console, 'error');
 
       document.getElementById = jest.fn().mockReturnValue({
         scrollIntoView: jest.fn()
@@ -328,13 +327,35 @@ describe('ResultsListComponent', () => {
       component.onDeleteREsult();
       jest.runAllTimers();
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(errorMessage);
       expect(spy).toHaveBeenCalled();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'delete-error',
         title: 'Error when delete result',
-        description: '',
+        description: 'error message',
         status: 'error'
+      });
+      expect(component.resultsListService.showDeletingResultSpinner).toBeFalsy();
+    });
+
+    it('should show a warning with backend message when delete returns 409', () => {
+      const errorResponse = {
+        status: 409,
+        error: { message: 'The result belongs to an inactive or closed phase' }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(() => errorResponse));
+      const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
+
+      document.getElementById = jest.fn().mockReturnValue({
+        scrollIntoView: jest.fn()
+      });
+      component.onDeleteREsult();
+      jest.runAllTimers();
+
+      expect(spyShow).toHaveBeenCalledWith({
+        id: 'delete-error',
+        title: 'Unable to delete result',
+        description: 'The result belongs to an inactive or closed phase',
+        status: 'warning'
       });
       expect(component.resultsListService.showDeletingResultSpinner).toBeFalsy();
     });
@@ -468,7 +489,7 @@ describe('ResultsListComponent', () => {
     });
 
     it('should call navigateToResult on items[2] command', () => {
-      const spy = jest.spyOn(component, 'navigateToResult');
+      const spy = jest.spyOn(component, 'navigateToResult').mockImplementation();
       mockApiService.dataControlSE.currentResult = { id: '1', title: 'Test' };
 
       component.items[2].command();
@@ -477,7 +498,7 @@ describe('ResultsListComponent', () => {
     });
 
     it('should call navigateToResult on itemsWithDelete[2] command', () => {
-      const spy = jest.spyOn(component, 'navigateToResult');
+      const spy = jest.spyOn(component, 'navigateToResult').mockImplementation();
       mockApiService.dataControlSE.currentResult = { id: '1', title: 'Test' };
 
       component.itemsWithDelete[2].command();
@@ -851,9 +872,79 @@ describe('ResultsListComponent', () => {
     });
   });
 
+  describe('getResultLink() / getResultQueryParams()', () => {
+    it('should link a W3/Bilaterals AVISA result to its result detail', () => {
+      const result = { source_name: 'W3/Bilaterals', submitter: 'SGP-02', result_code: 'R-1', version_id: 10 } as any;
+
+      expect(component.getResultLink(result)).toEqual(['/result', 'result-detail', 'R-1', 'general-information']);
+      expect(component.getResultQueryParams(result)).toEqual({ phase: 10 });
+    });
+
+    it('should link an approved W3/Bilaterals result to its result detail', () => {
+      const result = { source_name: 'W3/Bilaterals', submitter: 'OTHER', status_name: 'Approved', result_code: 'R-4', version_id: 11 } as any;
+
+      expect(component.getResultLink(result)).toEqual(['/result', 'result-detail', 'R-4', 'general-information']);
+      expect(component.getResultQueryParams(result)).toEqual({ phase: 11 });
+    });
+
+    it('should link a non-W3/Bilaterals result to its result detail', () => {
+      const result = { source_name: 'Initiative', result_code: 'R-3', version_id: 10 } as any;
+
+      expect(component.getResultLink(result)).toEqual(['/result', 'result-detail', 'R-3', 'general-information']);
+      expect(component.getResultQueryParams(result)).toEqual({ phase: 10 });
+    });
+
+    it('should link a W3/Bilaterals result pending review to the results-review screen carrying its code', () => {
+      const result = { source_name: 'W3/Bilaterals', submitter: 'OTHER', result_code: 'R-2', version_id: 10, id: 'id-2' } as any;
+
+      expect(component.getResultLink(result)).toEqual(['/result-framework-reporting', 'entity-details', 'OTHER', 'results-review']);
+      expect(component.getResultQueryParams(result)).toEqual({ reviewResult: 'R-2', reviewResultId: 'id-2' });
+    });
+
+    it('should return the same object identity for the same result (cached for routerLink)', () => {
+      const result = { source_name: 'Initiative', result_code: 'R-3', version_id: 10 } as any;
+
+      expect(component.getResultLink(result)).toBe(component.getResultLink(result));
+      expect(component.getResultQueryParams(result)).toBe(component.getResultQueryParams(result));
+    });
+  });
+
+  describe('onResultLinkClick()', () => {
+    const bilateralResult = { source_name: 'W3/Bilaterals', submitter: 'OTHER', result_code: 'R-2', version_id: 10, id: 'id-2' } as any;
+
+    beforeEach(() => {
+      component.bilateralResultsService.currentResultToReview.set(null);
+      component.bilateralResultsService.showReviewDrawer.set(false);
+    });
+
+    it('should preload the review drawer state on a plain left click', () => {
+      component.onResultLinkClick({ button: 0 } as MouseEvent, bilateralResult);
+
+      expect(component.bilateralResultsService.currentResultToReview()).toBe(bilateralResult);
+      expect(component.bilateralResultsService.showReviewDrawer()).toBe(true);
+    });
+
+    it('should do nothing when the click opens a new tab (ctrl/cmd/shift/middle)', () => {
+      component.onResultLinkClick({ button: 0, ctrlKey: true } as MouseEvent, bilateralResult);
+      component.onResultLinkClick({ button: 0, metaKey: true } as MouseEvent, bilateralResult);
+      component.onResultLinkClick({ button: 0, shiftKey: true } as MouseEvent, bilateralResult);
+      component.onResultLinkClick({ button: 1 } as MouseEvent, bilateralResult);
+
+      expect(component.bilateralResultsService.currentResultToReview()).toBeNull();
+      expect(component.bilateralResultsService.showReviewDrawer()).toBe(false);
+    });
+
+    it('should do nothing for results that do not use the bilateral review flow', () => {
+      component.onResultLinkClick({ button: 0 } as MouseEvent, { source_name: 'Initiative', result_code: 'R-3', version_id: 10 } as any);
+
+      expect(component.bilateralResultsService.currentResultToReview()).toBeNull();
+      expect(component.bilateralResultsService.showReviewDrawer()).toBe(false);
+    });
+  });
+
   describe('navigateToResult()', () => {
     it('should navigate to result detail for W3/Bilaterals AVISA result', () => {
-      const navigateSpy = jest.spyOn(component.router, 'navigateByUrl').mockResolvedValue(true);
+      const navigateSpy = jest.spyOn(component.router, 'navigate').mockResolvedValue(true);
       const result = {
         source_name: 'W3/Bilaterals',
         submitter: 'SGP-02',
@@ -863,25 +954,28 @@ describe('ResultsListComponent', () => {
 
       component.navigateToResult(result);
 
-      expect(navigateSpy).toHaveBeenCalledWith('/result/result-detail/R-1/general-information?phase=10');
+      expect(navigateSpy).toHaveBeenCalledWith(['/result', 'result-detail', 'R-1', 'general-information'], { queryParams: { phase: 10 } });
     });
 
     it('should navigate to entity-details for W3/Bilaterals non-AVISA result', () => {
-      const navigateSpy = jest.spyOn(component.router, 'navigateByUrl').mockResolvedValue(true);
+      const navigateSpy = jest.spyOn(component.router, 'navigate').mockResolvedValue(true);
       const result = {
         source_name: 'W3/Bilaterals',
         submitter: 'OTHER',
         result_code: 'R-2',
-        version_id: 10
+        version_id: 10,
+        id: 'id-2'
       } as any;
 
       component.navigateToResult(result);
 
-      expect(navigateSpy).toHaveBeenCalledWith('/result-framework-reporting/entity-details/OTHER/results-review');
+      expect(navigateSpy).toHaveBeenCalledWith(['/result-framework-reporting', 'entity-details', 'OTHER', 'results-review'], {
+        queryParams: { reviewResult: 'R-2', reviewResultId: 'id-2' }
+      });
     });
 
     it('should navigate to result detail for non-W3/Bilaterals result', () => {
-      const navigateSpy = jest.spyOn(component.router, 'navigateByUrl').mockResolvedValue(true);
+      const navigateSpy = jest.spyOn(component.router, 'navigate').mockResolvedValue(true);
       const result = {
         source_name: 'Initiative',
         result_code: 'R-3',
@@ -890,11 +984,11 @@ describe('ResultsListComponent', () => {
 
       component.navigateToResult(result);
 
-      expect(navigateSpy).toHaveBeenCalledWith('/result/result-detail/R-3/general-information?phase=10');
+      expect(navigateSpy).toHaveBeenCalledWith(['/result', 'result-detail', 'R-3', 'general-information'], { queryParams: { phase: 10 } });
     });
 
     it('should set currentResultToReview and show review drawer for W3/Bilaterals non-AVISA', async () => {
-      jest.spyOn(component.router, 'navigateByUrl').mockResolvedValue(true);
+      jest.spyOn(component.router, 'navigate').mockResolvedValue(true);
       const result = {
         source_name: 'W3/Bilaterals',
         submitter: 'OTHER',

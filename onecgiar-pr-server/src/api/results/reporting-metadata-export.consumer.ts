@@ -24,9 +24,16 @@ export class ReportingMetadataExportConsumer {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
+    this._logger.log(
+      `Received export job ${payload.jobId} from RabbitMQ (userId=${payload.user.id}).`,
+    );
+
     try {
       await this._exportService.executeQueuedExportJob(payload);
       channel.ack(originalMsg);
+      this._logger.log(
+        `Export job ${payload.jobId} processed successfully; message ACKed.`,
+      );
     } catch (err) {
       let message: string;
       if (err instanceof Error) {
@@ -51,9 +58,14 @@ export class ReportingMetadataExportConsumer {
         message.includes('No rows were returned from the P25 Excel view');
 
       if (isValidationError) {
+        this._logger.warn(
+          `Export job ${payload.jobId} validation error; message ACKed (will not requeue).`,
+        );
         channel.ack(originalMsg);
       } else {
-        // For technical errors (S3, DB connection, etc.), we NACK and requeue
+        this._logger.warn(
+          `Export job ${payload.jobId} technical error; message NACKed for requeue.`,
+        );
         channel.nack(originalMsg, false, true);
       }
     }

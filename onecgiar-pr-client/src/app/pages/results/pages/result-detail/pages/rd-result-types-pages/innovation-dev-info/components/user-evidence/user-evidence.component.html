@@ -105,11 +105,11 @@
 
     <app-pr-field-header [label]="getEvidenceRelatedTitle()" [required]="false" *ngIf="!isSuppInfo"></app-pr-field-header>
     <div class="checkboxes" *ngIf="!isSuppInfo">
-      <app-pr-checkbox label="Gender" [(ngModel)]="this.evidence.gender_related"> </app-pr-checkbox>
-      <app-pr-checkbox label="Climate change" [(ngModel)]="this.evidence.youth_related"> </app-pr-checkbox>
-      <app-pr-checkbox label="Nutrition" [(ngModel)]="this.evidence.nutrition_related"> </app-pr-checkbox>
-      <app-pr-checkbox label="Environment" [(ngModel)]="this.evidence.environmental_biodiversity_related"> </app-pr-checkbox>
-      <app-pr-checkbox label="Poverty" [(ngModel)]="this.evidence.poverty_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Gender equality, youth and social inclusion" [(ngModel)]="this.evidence.gender_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Climate adaptation and mitigation" [(ngModel)]="this.evidence.youth_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Nutrition, health and food security" [(ngModel)]="this.evidence.nutrition_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Environmental health and biodiversity" [(ngModel)]="this.evidence.environmental_biodiversity_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Poverty reduction, livelihoods and jobs" [(ngModel)]="this.evidence.poverty_related"> </app-pr-checkbox>
       <app-pr-checkbox label="Innovation Development" [(ngModel)]="this.evidence.innovation_readiness_related" *ngIf="this.dataControlSE.isInnoDev">
       </app-pr-checkbox>
       <app-pr-checkbox label="Innovation Use" [(ngModel)]="this.evidence.innovation_use_related" *ngIf="this.dataControlSE.isInnoUse">

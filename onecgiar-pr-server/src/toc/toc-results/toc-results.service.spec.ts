@@ -47,9 +47,10 @@ describe('TocResultsService', () => {
       id: 1,
       version_id: 2,
       result_type_id: 7,
-      obj_version: { id: 3, phase_year: 2030 },
+      obj_version: { id: 3, phase_year: 2030, toc_pahse_id: 'phase-2030' },
     };
-    yearRecord = { year: 2030 };
+
+    yearRecord = { year: 2026 };
 
     resultRepository = {
       findOne: jest.fn().mockResolvedValue(resultRecord),
@@ -242,14 +243,24 @@ describe('TocResultsService', () => {
         ],
         statusCode: HttpStatus.OK,
       });
+      expect(repository.$_getResultTocByConfigV2).toHaveBeenCalledWith(
+        2,
+        3,
+        2030,
+        7,
+        1,
+        true,
+        'phase-2030',
+      );
       expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith(
         resultRecord,
-        yearRecord,
+        2030,
         [10],
         7,
         ['NODE-1'],
         1,
         2,
+        false,
       );
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(1, 2, [
         10,
@@ -311,12 +322,13 @@ describe('TocResultsService', () => {
       });
       expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith(
         resultRecord,
-        yearRecord,
+        2030,
         [20],
         7,
         [],
         4,
         5,
+        false,
       );
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(4, 5, [
         20,
@@ -395,6 +407,126 @@ describe('TocResultsService', () => {
         ],
         statusCode: HttpStatus.OK,
       });
+    });
+
+    it('maps saved indicator metadata when stored id matches toc_result_indicator_id only', async () => {
+      const data = [{ toc_result_id: 6768, title: 'Output' }];
+      const savedIndicatorId = 'aec22cfa-50c7-4efd-a470-e1d764d28c5d';
+      const indicatorRows = [
+        {
+          toc_result_id: 6768,
+          indicator_id: 900,
+          toc_result_indicator_id: savedIndicatorId,
+          related_node_id: 'different-node-id',
+          indicator_description: 'Number of innovations',
+          unit_messurament: 'Units',
+          type_value: 'Number of innovations',
+          type_name: 'Quantitative',
+          location: 'Global',
+          target_value: 200,
+        },
+      ];
+      repository.$_getResultTocByConfigV2.mockResolvedValue(data);
+      repository.getTocIndicatorsByResultIds.mockResolvedValue(indicatorRows);
+      repository.getResultIndicatorMappings.mockResolvedValue([
+        {
+          toc_result_id: 6768,
+          result_toc_result_id: 13214,
+          planned_result: true,
+          toc_progressive_narrative: '',
+          result_toc_result_indicator_id: 2198,
+          toc_results_indicator_id: savedIndicatorId,
+          indicator_contributing: null,
+          indicator_status: null,
+        },
+      ]);
+      returnResponse.format.mockReturnValue({} as any);
+
+      await service.findTocResultByConfigV2(11021, 62, 1, true);
+
+      expect(returnResponse.format).toHaveBeenCalledWith({
+        message: 'Successful response',
+        response: [
+          expect.objectContaining({
+            toc_result_id: 6768,
+            result_toc_result_id: 13214,
+            indicators: [
+              expect.objectContaining({
+                toc_result_indicator_id: savedIndicatorId,
+                related_node_id: 'different-node-id',
+                result_toc_result_indicator_id: 2198,
+                target_value: 200,
+              }),
+            ],
+          }),
+        ],
+        statusCode: HttpStatus.OK,
+      });
+    });
+
+    it('requests inactive catalog indicators when result year is before active reporting year', async () => {
+      resultRepository.findOne.mockResolvedValueOnce({
+        id: 11021,
+        version_id: 8,
+        result_type_id: 7,
+        obj_version: {
+          id: 8,
+          phase_year: 2025,
+          toc_pahse_id: 'phase-2025',
+        },
+      } as any);
+      yearRepository.findOne.mockResolvedValueOnce({ year: 2026 } as any);
+      repository.$_getResultTocByConfigV2.mockResolvedValue([
+        { toc_result_id: 6768 },
+      ]);
+      repository.getResultIndicatorMappings.mockResolvedValue([]);
+      returnResponse.format.mockReturnValue({} as any);
+
+      await service.findTocResultByConfigV2(11021, 62, 1, true);
+
+      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith(
+        expect.objectContaining({
+          obj_version: expect.objectContaining({ phase_year: 2025 }),
+        }),
+        2025,
+        [6768],
+        7,
+        [],
+        11021,
+        62,
+        true,
+      );
+    });
+
+    it('uses the result reporting phase year instead of the active platform year', async () => {
+      resultRepository.findOne.mockResolvedValueOnce({
+        id: 4,
+        version_id: 8,
+        result_type_id: 7,
+        obj_version: {
+          id: 8,
+          phase_year: 2025,
+          toc_pahse_id: 'phase-2025',
+        },
+      } as any);
+      repository.$_getResultTocByConfigV2.mockResolvedValue([]);
+      returnResponse.format.mockReturnValue({} as any);
+
+      await service.findTocResultByConfigV2(4, 5, 1);
+
+      expect(yearRepository.findOne).toHaveBeenCalledWith({
+        where: { active: true },
+        select: ['year'],
+      });
+      expect(repository.$_getResultTocByConfigV2).toHaveBeenCalledWith(
+        5,
+        1,
+        2025,
+        7,
+        4,
+        true,
+        'phase-2025',
+      );
     });
   });
 

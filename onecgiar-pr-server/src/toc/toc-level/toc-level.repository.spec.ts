@@ -45,7 +45,7 @@ describe('TocLevelRepository', () => {
       const result = await repository.getAllTocLevel();
 
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('from toc_level tl;'),
+        expect.stringContaining('FROM toc_level tl;'),
       );
       expect(result).toBe(expected);
     });
@@ -68,7 +68,7 @@ describe('TocLevelRepository', () => {
       const result = await repository.getTocLevelByResult();
 
       expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('from toc_level tl;'),
+        expect.stringContaining('FROM toc_level tl;'),
       );
       expect(result).toBe(expected);
     });

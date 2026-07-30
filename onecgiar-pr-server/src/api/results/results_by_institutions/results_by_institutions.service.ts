@@ -560,6 +560,11 @@ export class ResultsByInstitutionsService {
         order: { id: 'ASC' },
       });
 
+      // Align with P22 GET: hide partners whose Clarisa institution is inactive (P2-3181).
+      institutions = institutions.filter(
+        (i) => i.obj_institutions?.is_active !== false,
+      );
+
       institutions = institutions.map((i) => ({
         ...i,
         delivery: i.delivery.filter((d) => d.is_active),
@@ -934,7 +939,7 @@ export class ResultsByInstitutionsService {
       );
 
       await this._resultByInstitutionsByDeliveriesTypeRepository.update(
-        { id: In(removed.map((d) => d.id)) },
+        { result_by_institution_id: In(removed.map((i) => i.id)) },
         { is_active: false, last_updated_by: userId },
       );
     }
@@ -958,6 +963,7 @@ export class ResultsByInstitutionsService {
                 institutions_id: In(incomingInstitutionIds),
                 institution_roles_id: institutionRoleId,
               },
+              relations: { delivery: true },
             })
           : [];
 
@@ -979,7 +985,6 @@ export class ResultsByInstitutionsService {
           existing.last_updated_by = userId;
           existing.institutions_id = a.institutions_id;
           existing.is_leading_result = a.is_leading_result;
-          existing.delivery = a.delivery ?? [];
           institutionsToReactivate.push(existing);
         } else {
           // Create new only if no existing record found
@@ -990,17 +995,26 @@ export class ResultsByInstitutionsService {
           toAdd.result_id = resultId;
           toAdd.institutions_id = a.institutions_id;
           toAdd.institution_roles_id = institutionRoleId;
-          toAdd.delivery = a.delivery ?? [];
           toAdd['isNew'] = true;
           toAdd.is_leading_result = a.is_leading_result;
           institutionsToCreate.push(toAdd);
         }
       }
 
-      // Save reactivated and new institutions separately
+      // Persist reactivations without cascading delivery relations (P2-3181).
       if (institutionsToReactivate.length) {
-        await this._resultByIntitutionsRepository.save(
-          institutionsToReactivate,
+        await Promise.all(
+          institutionsToReactivate.map((rbi) =>
+            this._resultByIntitutionsRepository.update(
+              { id: rbi.id },
+              {
+                is_active: rbi.is_active,
+                last_updated_by: rbi.last_updated_by,
+                institutions_id: rbi.institutions_id,
+                is_leading_result: rbi.is_leading_result,
+              },
+            ),
+          ),
         );
       }
 
@@ -1089,20 +1103,14 @@ export class ResultsByInstitutionsService {
       dto != null && Object.prototype.hasOwnProperty.call(dto, 'delivery');
 
     for (const inst of toUpdate.concat(added)) {
-      if (inst['isNew']) {
-        const incoming = (inst.delivery ?? []) as any[];
-        if (incoming.length) {
-          await this.handleDeliveries(incoming, [], inst.id, userId);
-        }
-        continue;
-      }
-
-      const dto = incomingInstitutions.find((i) => i.id === inst.id);
+      const dto = incomingInstitutions.find(
+        (i) => i.id === inst.id || i.institutions_id === inst.institutions_id,
+      );
 
       if (!dtoHasDelivery(dto)) continue;
 
       const incoming = (dto?.delivery ?? []) as any[];
-      const old = (inst.delivery ?? []) as any[];
+      const old = (inst.delivery ?? []).filter((d) => d.is_active !== false);
 
       await this.handleDeliveries(incoming, old, inst.id, userId);
     }

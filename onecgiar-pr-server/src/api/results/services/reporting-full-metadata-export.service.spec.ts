@@ -274,6 +274,37 @@ describe('ReportingFullMetadataExportService', () => {
         }),
       ).rejects.toThrow('No results match the current filters.');
     });
+
+    it('processes job when consumer instance has no prior enqueue (multi-instance RMQ)', async () => {
+      resultsService.getResultDataForBasicReport.mockResolvedValue(
+        okReport([
+          {
+            result_code: 100,
+            version_id: 1,
+            phase_year: 2024,
+            result_type: 'Legacy',
+          },
+        ]),
+      );
+
+      const jobId = 'cross-instance-job-id';
+
+      await service.executeQueuedExportJob({
+        jobId,
+        filters: {},
+        user: {
+          id: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+        },
+      });
+
+      expect(resultsService.getResultDataForBasicReport).toHaveBeenCalled();
+      const job = service.getJob(jobId, user.id);
+      expect(job?.status).toBe('completed');
+      expect(emailService.sendEmail).toHaveBeenCalled();
+    });
   });
 
   describe('export pipeline (non-P25)', () => {

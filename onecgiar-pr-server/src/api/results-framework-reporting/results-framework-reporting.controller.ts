@@ -97,7 +97,7 @@ export class ResultsFrameworkReportingController {
   @ApiOperation({
     summary: 'List ToC results by program and area of work',
     description:
-      'Retrieves the ToC result identifiers for the provided program and area of work combination.',
+      'Retrieves the ToC result identifiers for the provided program and area of work combination. Intermediate outcomes/outputs without a defined work package (wp_id null) are included in every area of work of the science program.',
   })
   @ApiQuery({
     name: 'program',
@@ -129,6 +129,27 @@ export class ResultsFrameworkReportingController {
       program,
       areaOfWork,
       year,
+    );
+  }
+
+  @Get('toc-results/intermediate-outcomes')
+  @ApiOperation({
+    summary: 'List intermediate ToC outcomes by program',
+    description:
+      'Retrieves TOC results (OUTPUT/OUTCOME category) with wp_id IS NULL — i.e. not assigned to any Area of Work — for the requested program in the active reporting phase.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g. SP01).',
+  })
+  @ApiOkResponse({
+    description: 'Intermediate outcomes retrieved successfully.',
+  })
+  getIntermediateOutcomes(@Query('programId') programId: string) {
+    return this.resultsFrameworkReportingService.getIntermediateOutcomes(
+      programId,
     );
   }
 

@@ -153,9 +153,11 @@ describe('AowHloTableComponent', () => {
     const mockShowTargetDetailsDrawer = signal<boolean>(false);
     const mockTargetDetailsDrawerFullScreen = signal<boolean>(false);
     const mockCurrentTargetToView = signal<any>({});
+    const mockTargetDetailsSelectedCenterId = signal<string | number | null>(null);
     const mockExistingResultsContributors = signal<any[]>([]);
 
     mockEntityAowService = {
+      reportingPhaseYear: 2026,
       aowId: signal<string>(''),
       entityId: signal<string>(''),
       entityDetails: signal<any>({}),
@@ -164,8 +166,12 @@ describe('AowHloTableComponent', () => {
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
       tocResults2030Outcomes: signal<any[]>([]),
+      tocResultsIntermediateOutcomes: signal<any[]>([]),
+      searchText: signal<string>(''),
       isLoadingTocResults2030Outcomes: signal<boolean>(false),
       isLoadingTocResultsByAowId: signal<boolean>(false),
+      isLoadingIntermediateOutcomes: signal<boolean>(false),
+      canReportResults: jest.fn(() => false),
       showReportResultModal: mockShowReportResultModal,
       currentResultToReport: mockCurrentResultToReport,
       showViewResultDrawer: mockShowViewResultDrawer,
@@ -174,6 +180,7 @@ describe('AowHloTableComponent', () => {
       showTargetDetailsDrawer: mockShowTargetDetailsDrawer,
       targetDetailsDrawerFullScreen: mockTargetDetailsDrawerFullScreen,
       currentTargetToView: mockCurrentTargetToView,
+      targetDetailsSelectedCenterId: mockTargetDetailsSelectedCenterId,
       existingResultsContributors: mockExistingResultsContributors
     } as any;
 
@@ -185,6 +192,7 @@ describe('AowHloTableComponent', () => {
     jest.spyOn(mockShowTargetDetailsDrawer, 'set');
     jest.spyOn(mockTargetDetailsDrawerFullScreen, 'set');
     jest.spyOn(mockCurrentTargetToView, 'set');
+    jest.spyOn(mockTargetDetailsSelectedCenterId, 'set');
     jest.spyOn(mockExistingResultsContributors, 'set');
 
     mockResultLevelService = {
@@ -225,10 +233,10 @@ describe('AowHloTableComponent', () => {
   describe('Component Initialization', () => {
     it('should initialize with default values', () => {
       expect(component.columnOrder()).toEqual([
-        { title: 'Indicator name', attr: 'indicator_description', width: '30%' },
-        { title: 'Type', attr: 'type_name', width: '10%' },
-        { title: 'Expected target 2025', attr: 'target_value_sum', width: '10%' },
-        { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
+        { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
+        { title: 'Indicator typology', attr: 'type_name', width: '10%' },
+        { title: '2026 target', attr: 'target_value_sum', width: '10%' },
+        { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
         { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
       ]);
     });
@@ -245,22 +253,22 @@ describe('AowHloTableComponent', () => {
 
       expect(columns).toHaveLength(5);
       expect(columns[0]).toEqual({
-        title: 'Indicator name',
+        title: 'KPI statement',
         attr: 'indicator_description',
         width: '30%'
       });
       expect(columns[1]).toEqual({
-        title: 'Type',
+        title: 'Indicator typology',
         attr: 'type_name',
         width: '10%'
       });
       expect(columns[2]).toEqual({
-        title: 'Expected target 2025',
+        title: '2026 target',
         attr: 'target_value_sum',
         width: '10%'
       });
       expect(columns[3]).toEqual({
-        title: 'Actual achieved',
+        title: 'Achieved target',
         attr: 'actual_achieved_value_sum',
         width: '10%'
       });
@@ -365,6 +373,10 @@ describe('AowHloTableComponent', () => {
       const result = component.getStatusLabel(input);
       expect(result).toBe(expected);
     });
+
+    it('should return Not started for fractional progress below 1%', () => {
+      expect(component.getStatusLabel('0.5%')).toBe('Not started');
+    });
   });
 
   describe('tableData computed', () => {
@@ -414,6 +426,19 @@ describe('AowHloTableComponent', () => {
       expect(result).toEqual(mock2030OutcomesData);
     });
 
+    it('should return intermediate outcomes data when tableType is "intermediate-outcomes"', () => {
+      const mockIntermediateData = [
+        { id: 'intermediate-1', title: 'Intermediate Outcome 1', type: 'intermediate' },
+        { id: 'intermediate-2', title: 'Intermediate Outcome 2', type: 'intermediate' }
+      ];
+      mockEntityAowService.tocResultsIntermediateOutcomes.set(mockIntermediateData);
+      component.tableType = 'intermediate-outcomes';
+
+      const result = component.tableData();
+
+      expect(result).toEqual(mockIntermediateData);
+    });
+
     it('should return empty array when tableType is undefined', () => {
       component.tableType = undefined as any;
 
@@ -460,6 +485,32 @@ describe('AowHloTableComponent', () => {
 
       expect(result).toEqual([]);
       expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  describe('emptyStateMessage', () => {
+    it('should return High-Level Outputs message for outputs table', () => {
+      component.tableType = 'outputs';
+      expect(component.emptyStateMessage()).toBe('There are no High-Level Outputs indicators found.');
+    });
+
+    it('should return Intermediate Outcomes message for outcomes table', () => {
+      component.tableType = 'outcomes';
+      expect(component.emptyStateMessage()).toBe('There are no Intermediate Outcomes indicators found.');
+    });
+
+    it('should return 2030 Outcomes message for 2030-outcomes table', () => {
+      component.tableType = '2030-outcomes';
+      expect(component.emptyStateMessage()).toBe(
+        'There are no 2030 Outcomes indicators configured for this program in the current reporting phase.'
+      );
+    });
+
+    it('should return Intermediate Outcomes message for intermediate-outcomes table', () => {
+      component.tableType = 'intermediate-outcomes';
+      expect(component.emptyStateMessage()).toBe(
+        'There are no Intermediate Outcomes configured for this program in the current reporting phase.'
+      );
     });
   });
 
@@ -563,7 +614,219 @@ describe('AowHloTableComponent', () => {
     });
   });
 
-  testModalDrawerOpening('openTargetDetailsDrawer', 'showTargetDetailsDrawer', 'currentTargetToView');
+  describe('filteredTableData computed (P2-3141 search)', () => {
+    const searchMockData = [
+      {
+        result_title: 'Climate adaptation outcome',
+        indicators: [
+          { indicator_id: 'ind-1', indicator_description: 'Number of farmers trained', type_name: 'Capacity sharing' },
+          { indicator_id: 'ind-2', indicator_description: 'Policies influenced', type_name: 'Policy change' }
+        ]
+      },
+      {
+        result_title: 'Gender equality outcome',
+        indicators: [{ indicator_id: 'ind-3', indicator_description: 'Number of women reached', type_name: 'Knowledge products' }]
+      },
+      {
+        result_title: 'Empty group outcome',
+        indicators: []
+      }
+    ];
+
+    beforeEach(() => {
+      mockEntityAowService.tocResultsOutputsByAowId.set(searchMockData);
+      component.tableType = 'outputs';
+      mockEntityAowService.searchText.set('');
+    });
+
+    it('should return tableData untouched (same reference) when search is empty', () => {
+      expect(component.filteredTableData()).toBe(component.tableData());
+    });
+
+    it('should return tableData untouched when search is only whitespace', () => {
+      mockEntityAowService.searchText.set('   ');
+      expect(component.filteredTableData()).toBe(component.tableData());
+    });
+
+    it('should filter indicators by indicator_description and drop groups without matches', () => {
+      mockEntityAowService.searchText.set('Number of');
+
+      const result = component.filteredTableData();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].result_title).toBe('Climate adaptation outcome');
+      expect(result[0].indicators).toEqual([
+        { indicator_id: 'ind-1', indicator_description: 'Number of farmers trained', type_name: 'Capacity sharing' }
+      ]);
+      expect(result[1].result_title).toBe('Gender equality outcome');
+      expect(result[1].indicators).toHaveLength(1);
+    });
+
+    it('should filter indicators by type_name (Indicator typology)', () => {
+      mockEntityAowService.searchText.set('Policy change');
+
+      const result = component.filteredTableData();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].result_title).toBe('Climate adaptation outcome');
+      expect(result[0].indicators).toEqual([
+        { indicator_id: 'ind-2', indicator_description: 'Policies influenced', type_name: 'Policy change' }
+      ]);
+    });
+
+    it('should keep the whole group with all indicators when the group title matches', () => {
+      mockEntityAowService.searchText.set('Climate adaptation');
+
+      const result = component.filteredTableData();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].indicators).toHaveLength(2);
+    });
+
+    it('should match case-insensitively', () => {
+      mockEntityAowService.searchText.set('nUmBeR oF wOmEn');
+
+      const result = component.filteredTableData();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].result_title).toBe('Gender equality outcome');
+    });
+
+    it('should return empty array when nothing matches', () => {
+      mockEntityAowService.searchText.set('zzz-no-match');
+
+      expect(component.filteredTableData()).toEqual([]);
+    });
+
+    it('should keep a title-matching group even if it has no indicators', () => {
+      mockEntityAowService.searchText.set('Empty group');
+
+      const result = component.filteredTableData();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].result_title).toBe('Empty group outcome');
+      expect(result[0].indicators).toEqual([]);
+    });
+
+    it('should not mutate the source data held in the service signal', () => {
+      mockEntityAowService.searchText.set('Policies');
+
+      component.filteredTableData();
+
+      const source = mockEntityAowService.tocResultsOutputsByAowId();
+      expect(source[0].indicators).toHaveLength(2);
+      expect(source).toEqual(searchMockData);
+    });
+
+    it('should restore the full table when the search is cleared', () => {
+      mockEntityAowService.searchText.set('Policies');
+      expect(component.filteredTableData()).toHaveLength(1);
+
+      mockEntityAowService.searchText.set('');
+      expect(component.filteredTableData()).toEqual(searchMockData);
+    });
+
+    it('should drive expandedRowKeys from the filtered data', () => {
+      mockEntityAowService.searchText.set('Gender');
+
+      expect(component.expandedRowKeys()).toEqual({ 'Gender equality outcome': true });
+    });
+  });
+
+  testModalDrawerOpening('openViewResultDrawer', 'showViewResultDrawer', 'currentResultToView');
+
+  describe('openTargetDetailsDrawer', () => {
+    it('should open the drawer with the selected indicator row and matched center', () => {
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        center_id: 3,
+        target_value_sum: 79,
+        targets_by_center: {
+          centers: [
+            {
+              center_id: 1,
+              targets: [{ year: 2026, target_value: 95 }]
+            },
+            {
+              center_id: 3,
+              targets: [{ year: 2026, target_value: 79 }]
+            }
+          ]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.showTargetDetailsDrawer.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(3);
+      expect(mockEntityAowService.currentTargetToView.set).toHaveBeenCalledWith({
+        ...mockItem,
+        indicators: [selectedIndicator]
+      });
+    });
+
+    it('should clear selected center when no target match is found', () => {
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value_sum: 50,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(null);
+    });
+
+    it('should resolve center by target value when center_id is missing', () => {
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value_sum: 79,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(3);
+    });
+
+    it('should clear selected center when reporting year is unavailable', () => {
+      mockEntityAowService.reportingPhaseYear = '';
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value_sum: 79,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(null);
+    });
+
+    it('should resolve center using target_value when target_value_sum is missing', () => {
+      const selectedIndicator = {
+        indicator_id: 'indicator-1',
+        target_value: 79,
+        targets_by_center: {
+          centers: [{ center_id: 3, targets: [{ year: 2026, target_value: 79 }] }]
+        }
+      };
+      const mockItem = createMockItem({ indicators: [selectedIndicator] });
+
+      component.openTargetDetailsDrawer(mockItem, selectedIndicator);
+
+      expect(mockEntityAowService.targetDetailsSelectedCenterId.set).toHaveBeenCalledWith(3);
+    });
+  });
 
   describe('hasTargets', () => {
     it('should return true when indicator has targets with centers', () => {

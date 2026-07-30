@@ -23,6 +23,10 @@ export class CustomizedAlertsFeService {
   show(alertOptions: AlertOptions, callback?) {
     const { id, title, description = '', closeIn, status, confirmText, hideCancelButton = false } = alertOptions;
     // this.showed = true;
+    // P2-3030: a new alert supersedes any alert already on screen (including one still
+    // playing its closing animation), so a previous alert never overlaps the new one.
+    // Centered modal alerts are shown one at a time.
+    document.querySelectorAll('.custom_modal_container').forEach(node => node.remove());
     let alert = document.getElementById(id);
 
     const appRoot = document.getElementsByTagName('app-root')[0];

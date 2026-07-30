@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { EmailNotificationManagementService } from './email-notification-management.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { env } from 'process';
+import { env } from 'node:process';
 
 @Module({
   providers: [EmailNotificationManagementService],

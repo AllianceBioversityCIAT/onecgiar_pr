@@ -20,6 +20,7 @@ import { EvidenceSharepointRepository } from './repositories/evidence-sharepoint
 import { EvidenceSharepoint } from './entities/evidence-sharepoint.entity';
 import { MQAPService } from '../../m-qap/m-qap.service';
 import { MQAPBodyDto } from '../../m-qap/dtos/m-qap-body.dto';
+import { throwServiceError } from '../../../shared/utils/service-error.util';
 
 @Injectable()
 export class EvidencesService {
@@ -75,19 +76,9 @@ export class EvidencesService {
     }
   }
 
-  private _throwServiceError(
-    message: string,
-    status: HttpStatus = HttpStatus.BAD_REQUEST,
-  ): never {
-    const error = new Error(message);
-    (error as any).response = {};
-    (error as any).status = status;
-    throw error;
-  }
-
   private _assertUniqueLinks(links: string[], message: string): void {
     if (new Set(links).size !== links.length) {
-      this._throwServiceError(message);
+      throwServiceError(message);
     }
   }
 

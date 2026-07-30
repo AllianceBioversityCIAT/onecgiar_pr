@@ -1,10 +1,15 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
+import { REPORTING_EXCLUDED_INSTITUTION_IDS } from '../clarisa-reporting-exclusions.constant';
 import { ClarisaInstitution } from './entities/clarisa-institution.entity';
+import {
+  formatUnknownError,
+  throwServiceError,
+} from '../../shared/utils/service-error.util';
 
 @Injectable()
 export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution> {
-  constructor(private dataSource: DataSource) {
+  constructor(private readonly dataSource: DataSource) {
     super(ClarisaInstitution, dataSource.createEntityManager());
   }
 
@@ -24,14 +29,13 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
       ci.last_updated_date
     `;
     try {
-      const queryResult = this.query(query);
+      const queryResult = await this.query(query);
       return queryResult;
     } catch (error) {
-      throw {
-        message: `[${ClarisaInstitutionsRepository.name}] => getMostRecentLastUpdated error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${ClarisaInstitutionsRepository.name}] => getMostRecentLastUpdated error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -43,11 +47,10 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
       const deleteData = await this.query(queryData);
       return deleteData;
     } catch (error) {
-      throw {
-        message: `[${ClarisaInstitutionsRepository.name}] => deleteAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${ClarisaInstitutionsRepository.name}] => deleteAllData error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -66,28 +69,28 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
       INNER JOIN clarisa_institution_types cit ON cit.code = ci.institution_type_code
       LEFT JOIN clarisa_countries cco ON cco.iso_alpha_2 = ci.headquarter_country_iso2
       LEFT JOIN clarisa_center cce ON ci.id = cce.institutionId
-      WHERE ci.is_active > 0;
+      WHERE ci.is_active > 0
+        AND ci.id NOT IN (${REPORTING_EXCLUDED_INSTITUTION_IDS.join(',')});
     `;
     try {
       const deleteData: ClarisaInstitution[] = await this.query(queryData);
       return deleteData;
     } catch (error) {
-      throw {
-        message: `[${ClarisaInstitutionsRepository.name}] => deleteAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${ClarisaInstitutionsRepository.name}] => deleteAllData error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async getValidInstitution(institutions: institutionsInterface[]) {
+  async getValidInstitution(institutions: InstitutionsInterface[]) {
     const id = institutions.map((el) => el.institutions_id);
     let values = '';
-    for (let index = 0; index < id.length; index++) {
-      if (!values) {
-        values = `values row(${id[index]})`;
+    for (const institutionId of id) {
+      if (values) {
+        values += `, row(${institutionId})`;
       } else {
-        values += `, row(${id[index]})`;
+        values = `values row(${institutionId})`;
       }
     }
     const queryData = `
@@ -105,15 +108,14 @@ export class ClarisaInstitutionsRepository extends Repository<ClarisaInstitution
       const validInstitutions = await this.query(queryData);
       return validInstitutions;
     } catch (error) {
-      throw {
-        message: `[${ClarisaInstitutionsRepository.name}] => getValidInstitution error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${ClarisaInstitutionsRepository.name}] => getValidInstitution error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }
 
-interface institutionsInterface {
+interface InstitutionsInterface {
   institutions_id: number;
 }

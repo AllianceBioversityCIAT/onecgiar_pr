@@ -33,6 +33,7 @@ export class EntityAowAowComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.entityAowService.aowId.set(params['aowId']);
+      this.entityAowService.searchText.set('');
     });
     this.entityAowService.getTocResultsByAowId(this.entityAowService.entityId(), this.entityAowService.aowId());
   }
@@ -47,5 +48,6 @@ export class EntityAowAowComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.entityAowService.aowId.set('');
+    this.entityAowService.searchText.set('');
   }
 }

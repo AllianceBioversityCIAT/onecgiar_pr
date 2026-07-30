@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { BilateralService } from './bilateral.service';
 import { BilateralController } from './bilateral.controller';
 import { ResultsModule } from '../results/results.module';
@@ -45,9 +46,12 @@ import { ResultsPolicyChangesRepository } from '../results/summary/repositories/
 import { NoopBilateralHandler } from './handlers/noop.handler';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { PathwayModule } from '../ipsr-framework/pathway/pathway.module';
+import { ClarisaApiKeyValidationService } from './services/clarisa-api-key-validation.service';
+import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
 
 @Module({
   imports: [
+    HttpModule,
     ResultsModule,
     VersioningModule,
     UserModule,
@@ -84,6 +88,8 @@ import { PathwayModule } from '../ipsr-framework/pathway/pathway.module';
   ],
   controllers: [BilateralController],
   providers: [
+    ClarisaApiKeyValidationService,
+    ClarisaApiKeyGuard,
     BilateralService,
     KnowledgeProductBilateralHandler,
     CapacityChangeBilateralHandler,

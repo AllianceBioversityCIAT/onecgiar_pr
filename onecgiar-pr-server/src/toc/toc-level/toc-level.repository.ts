@@ -1,10 +1,14 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { TocLevel } from './entities/toc-level.entity';
+import {
+  formatUnknownError,
+  throwServiceError,
+} from '../../shared/utils/service-error.util';
 
 @Injectable()
 export class TocLevelRepository extends Repository<TocLevel> {
-  constructor(private dataSource: DataSource) {
+  constructor(private readonly dataSource: DataSource) {
     super(TocLevel, dataSource.createEntityManager());
   }
 
@@ -16,11 +20,10 @@ export class TocLevelRepository extends Repository<TocLevel> {
       const deleteData = await this.query(queryData);
       return deleteData;
     } catch (error) {
-      throw {
-        message: `[${TocLevelRepository.name}] => deleteAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocLevelRepository.name}] => deleteAllData error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -30,17 +33,16 @@ export class TocLevelRepository extends Repository<TocLevel> {
       tl.toc_level_id,
       tl.name,
       tl.description 
-      from toc_level tl;
+      FROM toc_level tl;
     `;
     try {
       const tocResult: TocLevel[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
-      throw {
-        message: `[${TocLevelRepository.name}] => getAllTocResults error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocLevelRepository.name}] => getAllTocResults error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -50,17 +52,16 @@ export class TocLevelRepository extends Repository<TocLevel> {
       tl.toc_level_id,
       tl.name,
       tl.description 
-      from toc_level tl;
+    FROM toc_level tl;
     `;
     try {
       const tocResult: TocLevel[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
-      throw {
-        message: `[${TocLevelRepository.name}] => getAllTocResults error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocLevelRepository.name}] => getAllTocResults error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

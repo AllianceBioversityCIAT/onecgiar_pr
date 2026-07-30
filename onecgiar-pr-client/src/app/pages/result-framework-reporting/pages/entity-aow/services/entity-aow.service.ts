@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Initiative, Unit } from '../../entity-details/interfaces/entity-details.interface';
+import { Initiative, OutcomesSummary, Unit } from '../../entity-details/interfaces/entity-details.interface';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { forkJoin } from 'rxjs';
 
@@ -8,6 +8,12 @@ import { forkJoin } from 'rxjs';
 })
 export class EntityAowService {
   private readonly api = inject(ApiService);
+
+  // P2-3053: active reporting-phase year for the ToC views (replaces hardcoded "2025").
+  // Returns '' until the current phase is loaded so the UI never shows "null".
+  get reportingPhaseYear(): number | string {
+    return this.api.dataControlSE.reportingCurrentPhase.phaseYear ?? '';
+  }
 
   entityId = signal<string>('');
   aowId = signal<string>('');
@@ -30,8 +36,14 @@ export class EntityAowService {
   tocResultsOutputsByAowId = signal<any[]>([]);
   tocResultsOutcomesByAowId = signal<any[]>([]);
   tocResults2030Outcomes = signal<any[]>([]);
+  tocResultsIntermediateOutcomes = signal<any[]>([]);
+  searchText = signal<string>('');
   isLoadingTocResults2030Outcomes = signal<boolean>(false);
   isLoadingTocResultsByAowId = signal<boolean>(false);
+  isLoadingIntermediateOutcomes = signal<boolean>(false);
+
+  intermediateOutcomes = signal<OutcomesSummary | null>(null);
+  outcomes2030 = signal<OutcomesSummary | null>(null);
 
   showReportResultModal = signal<boolean>(false);
   currentResultToReport = signal<any>({});
@@ -45,6 +57,7 @@ export class EntityAowService {
   showTargetDetailsDrawer = signal<boolean>(false);
   targetDetailsDrawerFullScreen = signal<boolean>(false);
   currentTargetToView = signal<any>({});
+  targetDetailsSelectedCenterId = signal<string | number | null>(null);
 
   dashboardData = signal<any>(null);
 
@@ -168,6 +181,8 @@ export class EntityAowService {
         const initiative = clarisaGlobalUnits?.response?.initiative;
         this.entityDetails.set(initiative);
         this.entityAows.set(clarisaGlobalUnits?.response?.units ?? []);
+        this.intermediateOutcomes.set(clarisaGlobalUnits?.response?.intermediateOutcomes ?? null);
+        this.outcomes2030.set(clarisaGlobalUnits?.response?.outcomes2030 ?? null);
         this.indicatorSummaries.set(indicatorSummaries?.response?.totalsByType ?? []);
 
         if (initiative?.id) {
@@ -186,7 +201,7 @@ export class EntityAowService {
   }
 
   setSideBarItems() {
-    this.sideBarItems.set([
+    const items: any[] = [
       {
         isTree: true,
         label: 'By AOW',
@@ -196,13 +211,24 @@ export class EntityAowService {
           name: aow.name,
           itemLink: `/aow/${aow.code}`
         }))
-      },
-      {
-        isTree: false,
-        label: '2030 Outcomes',
-        itemLink: '/aow/2030-outcomes'
       }
-    ]);
+    ];
+
+    if (this.intermediateOutcomes()?.hasData) {
+      items.push({ isTree: false, label: 'Intermediate Outcomes', itemLink: '/aow/unplanned' });
+    }
+
+    if (this.outcomes2030()?.hasData) {
+      items.push({ isTree: false, label: '2030 Outcomes', itemLink: '/aow/2030-outcomes' });
+    }
+
+    this.sideBarItems.set(items);
+  }
+
+  private resolveReportingYearQueryParam(): string | undefined {
+    const reportingYear = this.reportingPhaseYear;
+    if (reportingYear === '' || reportingYear == null) return undefined;
+    return String(reportingYear);
   }
 
   getTocResultsByAowId(entityId: string, aowId: string) {
@@ -210,7 +236,8 @@ export class EntityAowService {
 
     this.isLoadingTocResultsByAowId.set(true);
 
-    this.api.resultsSE.GET_TocResultsByAowId(entityId, aowId).subscribe({
+    const year = this.resolveReportingYearQueryParam();
+    this.api.resultsSE.GET_TocResultsByAowId(entityId, aowId, year).subscribe({
       next: ({ response }) => {
         this.tocResultsOutputsByAowId.set(response?.tocResultsOutputs ?? []);
         this.tocResultsOutcomesByAowId.set(response?.tocResultsOutcomes ?? []);
@@ -220,6 +247,22 @@ export class EntityAowService {
         this.tocResultsOutputsByAowId.set([]);
         this.tocResultsOutcomesByAowId.set([]);
         this.isLoadingTocResultsByAowId.set(false);
+      }
+    });
+  }
+
+  getIntermediateOutcomes(entityId: string) {
+    if (!entityId) return;
+    this.isLoadingIntermediateOutcomes.set(true);
+
+    this.api.resultsSE.GET_IntermediateOutcomes(entityId).subscribe({
+      next: ({ response }) => {
+        this.tocResultsIntermediateOutcomes.set(response?.tocResults ?? []);
+        this.isLoadingIntermediateOutcomes.set(false);
+      },
+      error: () => {
+        this.tocResultsIntermediateOutcomes.set([]);
+        this.isLoadingIntermediateOutcomes.set(false);
       }
     });
   }

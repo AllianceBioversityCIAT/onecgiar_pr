@@ -98,7 +98,7 @@
   <div
     appFeedbackValidation
     labelText="Evidence"
-    [isComplete]="this.evidencesBody.evidences.length > 0 || this.dataControlSE.currentResult?.result_type_id == 5"></div>
+    [isComplete]="this.evidenceSectionComplete"></div>
   <div appFeedbackValidation labelText="Empty, repeated or invalid link" [isComplete]="!this.validateButtonDisabled"></div>
 </div>
 

@@ -24,6 +24,7 @@ import { In, Repository } from 'typeorm';
 import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ResultsByProjectsService } from '../../results/results_by_projects/results_by_projects.service';
+import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 
 @Injectable()
 export class IpsrPathwayStepFourService {
@@ -234,12 +235,25 @@ export class IpsrPathwayStepFourService {
       }
 
       for (const partner of inv) {
-        const rbi = await this._resultByInstitutionsRepository.findOne({
-          where: {
-            result_id: resultId,
-            institutions_id: partner.obj_result_institution.institutions_id,
-          },
-        });
+        const resultInstitutionId =
+          Number(
+            partner.result_institution_id ?? partner.obj_result_institution?.id,
+          ) || null;
+
+        const rbi = resultInstitutionId
+          ? await this._resultByInstitutionsRepository.findOne({
+              where: { id: resultInstitutionId, result_id: resultId },
+            })
+          : await this._resultByInstitutionsRepository.findOne({
+              where: {
+                result_id: resultId,
+                institutions_id: partner.obj_result_institution.institutions_id,
+                institution_roles_id: In([
+                  InstitutionRoleEnum.PARTNER,
+                  InstitutionRoleEnum.EXPECTED_PARTNER,
+                ]),
+              },
+            });
 
         if (!rbi) {
           this.logger.error(

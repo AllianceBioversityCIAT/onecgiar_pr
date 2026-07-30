@@ -1,8 +1,19 @@
+<div class="search_input" style="width: 100%; margin-bottom: 1rem">
+  <i class="material-icons-round">search</i>
+  <input
+    id="aowIndicatorSearchInput"
+    type="text"
+    placeholder="Find indicator..."
+    aria-label="Find indicator"
+    [ngModel]="entityAowService.searchText()"
+    (ngModelChange)="entityAowService.searchText.set($event)" />
+</div>
+
 <p-table
   id="tocResultsByAowIdTable"
   styleClass="p-datatable-gridlines p-datatable-sm"
-  [value]="tableData()"
-  [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes()"
+  [value]="filteredTableData()"
+  [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes() || entityAowService.isLoadingIntermediateOutcomes()"
   sortField="result_title"
   [sortOrder]="1"
   responsiveLayout="scroll"
@@ -43,9 +54,18 @@
 
   <ng-template #expandedrow let-item>
     @if (item.indicators.length) {
-      @for (result of item.indicators; track $index) {
+      @for (result of item.indicators; track result.indicator_id + '-' + (result.center_id ?? $index)) {
         <tr>
-          <td class="text-secondary-300" style="min-width: 150px !important">{{ result.indicator_description }}</td>
+          <td class="text-secondary-300" style="min-width: 150px !important">
+            <div class="kpi-statement-cell">
+              <span class="kpi-statement-text">{{ result.indicator_description }}</span>
+              @if (result.center_acronym) {
+                <span class="tab-content_chip center-chip" [pTooltip]="'CGIAR Center: ' + result.center_acronym">
+                  {{ result.center_acronym }}
+                </span>
+              }
+            </div>
+          </td>
           <td>
             <div class="tab-content_chip" [pTooltip]="!result.type_name ? 'This information should be filled in the ToC Board' : ''">
               {{ result.type_name || 'Not provided' }}
@@ -73,21 +93,21 @@
                   label="Report result"
                   type="button"
                   class="pr-body-3 tab-content_actions_button"
-                  (click)="openReportResultModal(item, result.indicator_id)"></button>
+                  (click)="openReportResultModal(item, result.indicator_id, result.center_id)"></button>
               }
               <button
                 pButton
                 label="View results"
                 type="button"
                 class="p-button-outlined pr-body-3 tab-content_actions_button"
-                (click)="openViewResultDrawer(item, result.indicator_id)"></button>
-              @if (hasTargets(item, result.indicator_id)) {
+                (click)="openViewResultDrawer(item, result.indicator_id, result.center_id)"></button>
+              @if (hasTargets(item, result.indicator_id, result.center_id)) {
                 <button
                   pButton
                   label="Target details"
                   type="button"
                   class="p-button-outlined pr-body-3 tab-content_actions_button"
-                  (click)="openTargetDetailsDrawer(item, result.indicator_id)"></button>
+                  (click)="openTargetDetailsDrawer(item, result)"></button>
               }
             </div>
           </td>
@@ -119,7 +139,13 @@
 
   <ng-template #emptymessage>
     <tr style="height: 200px">
-      <td colspan="8" class="tab-content_empty">There are no High-Level Outputs Indicators found.</td>
+      <td colspan="8" class="tab-content_empty">
+        @if (entityAowService.searchText().trim()) {
+          No indicators match your search.
+        } @else {
+          {{ emptyStateMessage() }}
+        }
+      </td>
     </tr>
   </ng-template>
 </p-table>

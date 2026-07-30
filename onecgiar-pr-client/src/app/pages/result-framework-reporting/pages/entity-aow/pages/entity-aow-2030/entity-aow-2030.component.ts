@@ -14,6 +14,7 @@ export class EntityAow2030Component implements OnInit {
   entityAowService = inject(EntityAowService);
 
   ngOnInit() {
+    this.entityAowService.searchText.set('');
     this.entityAowService.get2030Outcomes(this.entityAowService.entityId());
   }
 }
