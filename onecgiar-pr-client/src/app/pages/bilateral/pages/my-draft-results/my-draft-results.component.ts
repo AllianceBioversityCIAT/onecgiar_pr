@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { DialogModule } from 'primeng/dialog';
@@ -17,7 +17,7 @@ import { DraftEvidenceListComponent } from '../bilateral-ai-draft-detail/compone
   templateUrl: './my-draft-results.component.html',
   styleUrl: './my-draft-results.component.scss',
 })
-export class MyDraftResultsComponent implements OnInit {
+export class MyDraftResultsComponent implements OnInit, OnDestroy {
   readonly bilateralAiService = inject(BilateralAiService);
   private readonly messageService = inject(MessageService);
   readonly ctx = inject(BilateralContextService);
@@ -25,6 +25,12 @@ export class MyDraftResultsComponent implements OnInit {
   promoteTarget = signal<BilateralAiDraft | null>(null);
   discardTarget = signal<BilateralAiDraft | null>(null);
   selectedDraft = signal<BilateralAiDraft | null>(null);
+
+  constructor() {
+    effect(() => {
+      document.body.style.overflow = this.selectedDraft() ? 'hidden' : '';
+    });
+  }
 
   ngOnInit(): void {
     this.bilateralAiService.loadAllDrafts();
@@ -98,5 +104,9 @@ export class MyDraftResultsComponent implements OnInit {
 
   onDiscardCancel(): void {
     this.discardTarget.set(null);
+  }
+
+  ngOnDestroy(): void {
+    document.body.style.overflow = '';
   }
 }
