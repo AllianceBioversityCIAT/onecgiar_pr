@@ -3,17 +3,19 @@
 <div class="bilateral-creator">
 
   @if (isCreating()) {
-    <app-bilateral-project-selector (projectSelected)="onProjectSelected($event)"></app-bilateral-project-selector>
+    <div [class.bcr-step--locked]="isAiProcessing()">
+      <app-bilateral-project-selector (projectSelected)="onProjectSelected($event)"></app-bilateral-project-selector>
+    </div>
 
     @if (creationService.selectedProject()) {
-      <div id="bcr-sp-section">
+      <div id="bcr-sp-section" [class.bcr-step--locked]="isAiProcessing()">
         <app-bilateral-sp-selector (primarySelected)="onPrimarySelected()"></app-bilateral-sp-selector>
       </div>
     }
   }
 
   @if (creationService.selectedPrimarySp() && isCreating()) {
-    <div id="bcr-reporting-way">
+    <div id="bcr-reporting-way" [class.bcr-step--locked]="isAiProcessing()">
       <app-bilateral-reporting-way-selector
         [isLoading]="isCreatingResult()"
         [canUseAi]="canUseAi()"

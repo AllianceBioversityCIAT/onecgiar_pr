@@ -1,3 +1,10 @@
+.bcr-step--locked {
+  pointer-events: none;
+  opacity: 0.45;
+  user-select: none;
+  transition: opacity 0.2s ease;
+}
+
 .bilateral-creator {
   max-width: 1100px;
   margin: 0 auto;

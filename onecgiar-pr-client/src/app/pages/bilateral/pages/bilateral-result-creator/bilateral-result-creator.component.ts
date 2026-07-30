@@ -87,6 +87,11 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
 
   canUseAi = computed(() => !!this.creationService.selectedProject() && !!this.creationService.selectedPrimarySp());
 
+  isAiProcessing = computed(() => {
+    const status = this.bilateralAiService.uploadState().status;
+    return status === 'uploading' || status === 'pending' || status === 'processing';
+  });
+
   availableResultTypes = computed(() => {
     const level = this.resultLevelId();
     return level ? (RESULT_TYPES_BY_LEVEL[level] ?? []) : [];
