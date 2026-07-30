@@ -1,7 +1,10 @@
-import { Component, input, inject } from '@angular/core';
+import { Component, input, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { BilateralAiService } from '../../../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../../../services/bilateral-ai.interfaces';
+import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
 
 @Component({
   selector: 'app-draft-result-card',
@@ -11,7 +14,40 @@ import { BilateralAiDraft } from '../../../../services/bilateral-ai.interfaces';
 })
 export class DraftResultCardComponent {
   private readonly aiService = inject(BilateralAiService);
+  private readonly resultsApi = inject(ResultsApiService);
   draft = input.required<BilateralAiDraft>();
+
+  subnationalCodeMap = signal<Record<string, string>>({});
+
+  constructor() {
+    effect(() => {
+      const countries = this.draft().extracted_mds?.['geo_focus']?.countries ?? [];
+      const withSub: string[] = countries
+        .filter((c: any) => c.subnational_areas?.length)
+        .map((c: any) => c.iso_alpha_2 as string);
+
+      if (!withSub.length) return;
+
+      const requests = withSub.map(iso =>
+        this.resultsApi.GET_subNationalByIsoAlpha2(iso).pipe(catchError(() => of({ response: [] })))
+      );
+
+      forkJoin(requests).subscribe((results: any[]) => {
+        const map: Record<string, string> = {};
+        for (const res of results) {
+          const scopes: any[] = res?.response ?? res ?? [];
+          for (const s of scopes) {
+            if (s.code) map[s.code] = s.name ?? s.code;
+          }
+        }
+        this.subnationalCodeMap.set(map);
+      });
+    });
+  }
+
+  getSubnationalName(code: string): string {
+    return this.subnationalCodeMap()[code] ?? code;
+  }
 
   get projectName(): string {
     const pid = this.draft().job?.project_id;

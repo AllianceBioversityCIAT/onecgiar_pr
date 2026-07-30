@@ -80,7 +80,7 @@
                 @if (country.subnational.length) {
                   <div class="drc-geo-subnational">
                     @for (area of country.subnational; track area) {
-                      <span class="drc-geo-sub-tag">{{ area }}</span>
+                      <span class="drc-geo-sub-tag" [title]="area">{{ getSubnationalName(area) }}</span>
                     }
                   </div>
                 }
