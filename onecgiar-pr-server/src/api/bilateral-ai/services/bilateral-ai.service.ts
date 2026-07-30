@@ -319,12 +319,13 @@ export class BilateralAiService {
       created_by: job.user_id,
       is_lead: true,
     });
+    const normalizedCandidate = this.normalizeLeadCenter(candidate);
     const draft = await this.draftRepository.save(
       this.draftRepository.create({
         job_id: job.job_id,
         result_id: result.id,
         candidate_index: candidateIndex,
-        extracted_mds: candidate,
+        extracted_mds: normalizedCandidate,
         candidate_snapshot: candidate,
         mapping_warnings: null,
         is_discarded: false,
@@ -370,5 +371,24 @@ export class BilateralAiService {
       });
     }
     return draft;
+  }
+
+  // institution_id 46 ("CIAT Alliance") is no longer a valid Center in reporting;
+  // it must be remapped to 49 ("ABC RH") so downstream center associations are correct.
+  private normalizeLeadCenter(
+    candidate: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const OBSOLETE_ID = 46;
+    const REPLACEMENT_ID = 49;
+    const leadCenter = candidate['lead_center'] as
+      | Record<string, unknown>
+      | undefined;
+    if (!leadCenter || leadCenter['institution_id'] !== OBSOLETE_ID) {
+      return candidate;
+    }
+    return {
+      ...candidate,
+      lead_center: { ...leadCenter, institution_id: REPLACEMENT_ID },
+    };
   }
 }
