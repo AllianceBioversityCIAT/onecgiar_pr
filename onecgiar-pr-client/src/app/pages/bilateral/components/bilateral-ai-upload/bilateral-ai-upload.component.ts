@@ -16,7 +16,7 @@ interface UploadFileEntry {
 }
 
 const DOCUMENT_EXTENSIONS = ['.pdf', '.docx', '.txt', '.xls', '.xlsx', '.pptx'];
-const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.ogg'];
+const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.ogg', '.webm', '.flac'];
 const MAX_DOCUMENT_SIZE = 50 * 1024 * 1024;
 const MAX_AUDIO_SIZE = 100 * 1024 * 1024;
 const MAX_FILES = 6;
