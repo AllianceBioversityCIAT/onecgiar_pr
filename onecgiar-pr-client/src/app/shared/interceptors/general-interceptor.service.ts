@@ -23,7 +23,17 @@ export class GeneralInterceptorService implements HttpInterceptor {
    * pre-upgrade behaviour for every screen at once. See ViewRefreshService for the full rationale.
    */
   private refreshViewWhenSettled<T>(source: Observable<T>): Observable<T> {
-    return defer(() => source.pipe(finalize(() => this.viewRefreshSE.schedule())));
+    return defer(() =>
+      source.pipe(
+        finalize(() => {
+          // Scoped to Result Detail on purpose. A full pass is verified safe on every section of
+          // every result type there, whereas IPSR › Contributors loops forever inside a single
+          // detectChanges on this branch (see the QA report) — refreshing it would turn a section
+          // that merely renders empty into a frozen tab.
+          if (this.router.url.includes('/result/result-detail/')) this.viewRefreshSE.schedule();
+        })
+      )
+    );
   }
   constructor(
     private readonly authService: AuthService,

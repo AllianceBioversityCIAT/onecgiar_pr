@@ -3,6 +3,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { Observable, of, Subject } from 'rxjs';
+import { ViewRefreshService } from '../../../../../../shared/services/view-refresh.service';
 
 describe('RdPartnersService', () => {
   let service: RdPartnersService;
@@ -31,7 +32,8 @@ describe('RdPartnersService', () => {
       centersList: []
     } as unknown as jest.Mocked<CentersService>;
 
-    service = new RdPartnersService(apiServiceMock, institutionsServiceMock, centersServiceMock);
+    const viewRefreshMock = { schedule: jest.fn() } as unknown as ViewRefreshService;
+    service = new RdPartnersService(apiServiceMock, institutionsServiceMock, centersServiceMock, viewRefreshMock);
   });
 
   afterEach(() => {

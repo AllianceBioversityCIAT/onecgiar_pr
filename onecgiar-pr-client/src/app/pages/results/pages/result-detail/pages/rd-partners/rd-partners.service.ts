@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, inject } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { InstitutionsInterface, PartnersBody, UnmappedMQAPInstitutionDto } from './models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
@@ -27,12 +27,11 @@ export class RdPartnersService implements OnDestroy {
   updatingLeadData: boolean = false;
   disableLeadPartner: boolean = false;
 
-  private readonly viewRefreshSE = inject(ViewRefreshService);
-
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
-    public centersSE: CentersService
+    public centersSE: CentersService,
+    private readonly viewRefreshSE: ViewRefreshService
   ) {
     this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
       if (loaded) {
