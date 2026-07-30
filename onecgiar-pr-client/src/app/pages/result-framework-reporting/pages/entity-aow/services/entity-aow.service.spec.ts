@@ -570,15 +570,42 @@ describe('EntityAowService', () => {
               itemLink: '/aow/AOW-002'
             }
           ]
-        },
-        {
-          isTree: false,
-          label: '2030 Outcomes',
-          itemLink: '/aow/2030-outcomes'
         }
       ];
 
       expect(service.sideBarItems()).toEqual(expectedSideBarItems);
+    });
+
+    it('should include Intermediate Outcomes item when hasData is true', () => {
+      service.entityAows.set(mockUnits);
+      service.intermediateOutcomes.set({ count: 3, hasData: true });
+      service.setSideBarItems();
+
+      const items = service.sideBarItems();
+      expect(items).toHaveLength(2);
+      expect(items[1]).toEqual({ isTree: false, label: 'Intermediate Outcomes', itemLink: '/aow/unplanned' });
+    });
+
+    it('should include 2030 Outcomes item when hasData is true', () => {
+      service.entityAows.set(mockUnits);
+      service.outcomes2030.set({ count: 2, hasData: true });
+      service.setSideBarItems();
+
+      const items = service.sideBarItems();
+      expect(items).toHaveLength(2);
+      expect(items[1]).toEqual({ isTree: false, label: '2030 Outcomes', itemLink: '/aow/2030-outcomes' });
+    });
+
+    it('should include both conditional items when both hasData are true', () => {
+      service.entityAows.set(mockUnits);
+      service.intermediateOutcomes.set({ count: 3, hasData: true });
+      service.outcomes2030.set({ count: 2, hasData: true });
+      service.setSideBarItems();
+
+      const items = service.sideBarItems();
+      expect(items).toHaveLength(3);
+      expect(items[1]).toEqual({ isTree: false, label: 'Intermediate Outcomes', itemLink: '/aow/unplanned' });
+      expect(items[2]).toEqual({ isTree: false, label: '2030 Outcomes', itemLink: '/aow/2030-outcomes' });
     });
 
     it('should handle empty units array', () => {
@@ -591,11 +618,6 @@ describe('EntityAowService', () => {
           label: 'By AOW',
           isOpen: true,
           items: []
-        },
-        {
-          isTree: false,
-          label: '2030 Outcomes',
-          itemLink: '/aow/2030-outcomes'
         }
       ];
 
@@ -1045,7 +1067,7 @@ describe('EntityAowService', () => {
       expect(service.isLoadingDetails()).toBe(false);
 
       const sideBarItems = service.sideBarItems();
-      expect(sideBarItems).toHaveLength(2);
+      expect(sideBarItems).toHaveLength(1);
       expect(sideBarItems[0].isTree).toBe(true);
       expect(sideBarItems[0].items).toHaveLength(2);
     });
