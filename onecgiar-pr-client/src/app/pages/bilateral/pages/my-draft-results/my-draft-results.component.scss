@@ -431,15 +431,68 @@
 
 .mdr-aside-footer {
   display: flex;
-  gap: 8px;
-  padding: 14px 20px;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
   border-top: 1px solid #E8ECEE;
   flex-shrink: 0;
-  background: #FAFAFA;
+  background: #FFFFFF;
 }
 
 .mdr-btn--wide {
   flex: 1;
+  justify-content: center;
+  font-size: 13px;
+  height: 44px;
+  border-radius: 10px;
+  letter-spacing: 0.2px;
+}
+
+.mdr-btn--promote.mdr-btn--wide {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  color: #FFFFFF;
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(5, 150, 105, 0.30);
+  font-weight: 700;
+
+  i { font-size: 17px; }
+
+  &:hover {
+    background: linear-gradient(135deg, #065F46 0%, #047857 100%);
+    box-shadow: 0 4px 16px rgba(5, 150, 105, 0.40);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 6px rgba(5, 150, 105, 0.25);
+  }
+}
+
+.mdr-btn--discard:not(.mdr-btn--wide) {
+  height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #DC2626;
+  border-color: #FECACA;
+  flex-shrink: 0;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+
+  i { font-size: 17px; }
+
+  &:hover {
+    background: #FEF2F2;
+    border-color: #FCA5A5;
+    color: #B91C1C;
+  }
+
+  &:active {
+    background: #FEE2E2;
+  }
 }
 
 // ── Loading ───────────────────────────────────────────────────────────
