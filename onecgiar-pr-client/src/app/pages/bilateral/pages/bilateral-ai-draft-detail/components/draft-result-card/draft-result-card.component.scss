@@ -219,6 +219,75 @@
   margin-bottom: 4px;
 }
 
+// ── Contributing Partners ─────────────────────────────────────────────
+
+.drc-partners {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drc-partner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #F7FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 7px;
+}
+
+.drc-partner-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #2D3748;
+  flex: 1;
+  min-width: 0;
+}
+
+.drc-partner-acronym {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6B7280;
+  background: #E2E8F0;
+  padding: 2px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+// ── Innovation Development ────────────────────────────────────────────
+
+.drc-innov-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.drc-innov-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.drc-innov-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #A0AEC0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.drc-innov-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #2D3748;
+  background: #F7FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 5px 10px;
+}
+
 .drc-confidence {
   display: inline-flex;
   font-size: 10px;

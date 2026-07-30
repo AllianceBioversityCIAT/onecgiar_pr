@@ -99,13 +99,39 @@
     </div>
   }
 
-  @if (hasInnovationType()) {
+  @if (hasContributingPartners()) {
     <div class="drc-section">
-      <h3 class="drc-section-title">Innovation</h3>
-      <div class="drc-field-value">{{ getInnovationType() }}</div>
-      @if (getReadinessLevel()) {
-        <span class="drc-confidence drc-conf--medium">{{ getReadinessLevel() }}</span>
-      }
+      <h3 class="drc-section-title">Contributing Partners</h3>
+      <div class="drc-partners">
+        @for (partner of getContributingPartners(); track partner.institution_id) {
+          <div class="drc-partner">
+            <span class="drc-partner-name">{{ partner.name }}</span>
+            @if (partner.acronym) {
+              <span class="drc-partner-acronym">{{ partner.acronym }}</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (hasInnovationDevelopment()) {
+    <div class="drc-section">
+      <h3 class="drc-section-title">Innovation Development</h3>
+      <div class="drc-innov-fields">
+        @if (getInnovationType()) {
+          <div class="drc-innov-field">
+            <span class="drc-innov-label">Typology</span>
+            <span class="drc-innov-value">{{ getInnovationType() }}</span>
+          </div>
+        }
+        @if (getReadinessLevel()) {
+          <div class="drc-innov-field">
+            <span class="drc-innov-label">Readiness Level</span>
+            <span class="drc-innov-value">{{ getReadinessLevel() }}</span>
+          </div>
+        }
+      </div>
     </div>
   }
 </div>

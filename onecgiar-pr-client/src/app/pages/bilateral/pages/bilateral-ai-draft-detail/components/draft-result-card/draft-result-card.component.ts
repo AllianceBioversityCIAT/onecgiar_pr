@@ -129,6 +129,11 @@ export class DraftResultCardComponent {
     return this.draft().extracted_mds?.['lead_center']?.acronym ?? '';
   }
 
+  hasInnovationDevelopment(): boolean {
+    const id = this.draft().extracted_mds?.['innovation_development'];
+    return !!(id?.['innovation_typology'] || id?.['innovation_readiness_level']);
+  }
+
   hasInnovationType(): boolean {
     return !!this.draft().extracted_mds?.['innovation_development']?.['innovation_typology'];
   }
@@ -139,5 +144,14 @@ export class DraftResultCardComponent {
 
   getReadinessLevel(): string {
     return this.draft().extracted_mds?.['innovation_development']?.['innovation_readiness_level']?.['name'] ?? '';
+  }
+
+  getContributingPartners(): { name: string; acronym?: string; institution_id: number }[] {
+    const raw: any[] = this.draft().extracted_mds?.['contributing_partners'] ?? [];
+    return raw.filter(p => p?.institution_id != null);
+  }
+
+  hasContributingPartners(): boolean {
+    return this.getContributingPartners().length > 0;
   }
 }
