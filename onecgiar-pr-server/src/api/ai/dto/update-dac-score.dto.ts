@@ -1,6 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { DacFieldName } from '../constants/dac-field-name.enum';
 
 export class UpdateDacScoreDto {
@@ -24,15 +31,16 @@ export class UpdateDacScoreDto {
   tag_id?: number | null;
 
   @ApiProperty({
-    description: 'Selected impact area (required when tag_id equals 3)',
-    type: Number,
+    description:
+      'Selected impact area component IDs (required when tag_id equals 3, supports multiple)',
+    type: [Number],
     nullable: true,
-    example: 10,
+    example: [10, 11],
   })
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ allowNaN: false, allowInfinity: false })
-  impact_area_id?: number | null;
+  @IsArray()
+  @IsNumber({}, { each: true })
+  impact_area_id?: number[] | null;
 
   @ApiProperty({
     description:
