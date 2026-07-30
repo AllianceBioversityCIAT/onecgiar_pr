@@ -29,6 +29,7 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     this.shareRequestModalSE.inNotifications = true;
     this.setQueryParams();
     this.api.dataControlSE.getCurrentPhases().subscribe();
+    this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
   }
 
   ngOnDestroy() {
