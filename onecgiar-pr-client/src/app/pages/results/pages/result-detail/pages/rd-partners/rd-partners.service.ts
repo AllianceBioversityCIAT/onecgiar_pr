@@ -1,10 +1,11 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, inject } from '@angular/core';
 import { InstitutionsInterface, PartnersBody, UnmappedMQAPInstitutionDto } from './models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { ViewRefreshService } from '../../../../../../shared/services/view-refresh.service';
 
 @Injectable({
   providedIn: 'root'
@@ -25,6 +26,8 @@ export class RdPartnersService implements OnDestroy {
 
   updatingLeadData: boolean = false;
   disableLeadPartner: boolean = false;
+
+  private readonly viewRefreshSE = inject(ViewRefreshService);
 
   constructor(
     public api: ApiService,
@@ -158,6 +161,9 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
+        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
+        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
+        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
@@ -183,6 +189,9 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
+        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
+        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
+        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
@@ -204,6 +213,9 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
+        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
+        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
+        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
@@ -220,6 +232,9 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
+        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
+        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
+        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
