@@ -102,6 +102,37 @@
   }
 </div>
 
+@if (selectedDraft(); as draft) {
+  <div class="mdr-aside-backdrop" (click)="closeAside()"></div>
+  <aside class="mdr-aside">
+    <div class="mdr-aside-header">
+      <div class="mdr-aside-header-title">
+        <i class="material-icons-round">smart_toy</i>
+        <span>Draft Preview</span>
+      </div>
+      <button type="button" class="mdr-aside-close" (click)="closeAside()" aria-label="Close preview">
+        <i class="material-icons-round">close</i>
+      </button>
+    </div>
+
+    <div class="mdr-aside-body">
+      <app-draft-result-card [draft]="draft" />
+      <app-draft-evidence-list [job]="draft.job" />
+    </div>
+
+    <div class="mdr-aside-footer">
+      <button type="button" class="mdr-btn mdr-btn--promote mdr-btn--wide" (click)="onPromoteClick(draft)">
+        <i class="material-icons-round">arrow_upward</i>
+        Promote to Result
+      </button>
+      <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscardClick(draft)">
+        <i class="material-icons-round">delete_outline</i>
+        Discard
+      </button>
+    </div>
+  </aside>
+}
+
 <p-dialog
   styleClass="pr-dialog pr-dialog--promote"
   [modal]="true"
