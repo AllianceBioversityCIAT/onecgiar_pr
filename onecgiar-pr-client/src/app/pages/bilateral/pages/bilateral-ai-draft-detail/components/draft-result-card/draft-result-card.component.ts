@@ -31,10 +31,38 @@ export class DraftResultCardComponent {
     return !!this.draft().extracted_mds?.['geo_focus'];
   }
 
-  getGeoCountries(): string {
+  getGeoScope(): string {
+    return this.draft().extracted_mds?.['geo_focus']?.scope_label ?? '';
+  }
+
+  getGeoScopeCode(): number {
+    return this.draft().extracted_mds?.['geo_focus']?.scope_code ?? 0;
+  }
+
+  getGeoScopeIcon(): string {
+    const code = this.getGeoScopeCode();
+    switch (code) {
+      case 1: return 'public';       // Global
+      case 2: return 'map';          // Regional
+      case 3: return 'language';     // Multi-national
+      case 4: return 'flag';         // National
+      case 5: return 'place';        // Sub-national
+      default: return 'location_on';
+    }
+  }
+
+  getGeoCountries(): { iso: string; subnational: string[] }[] {
     const gf = this.draft().extracted_mds?.['geo_focus'];
-    if (!gf?.countries?.length) return '';
-    return gf.countries.map((c: any) => c.iso_alpha_2).join(', ');
+    if (!gf?.countries?.length) return [];
+    return gf.countries.map((c: any) => ({
+      iso: c.iso_alpha_2 ?? '',
+      subnational: c.subnational_areas ?? [],
+    }));
+  }
+
+  getGeoRegions(): string[] {
+    const gf = this.draft().extracted_mds?.['geo_focus'];
+    return gf?.regions ?? [];
   }
 
   hasLeadCenter(): boolean {

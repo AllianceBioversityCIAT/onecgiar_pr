@@ -142,6 +142,77 @@
   border-radius: 6px;
 }
 
+// ── Geo focus ────────────────────────────────────────────────────────
+
+.drc-geo-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  padding: 4px 10px 4px 7px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1D4ED8;
+}
+
+.drc-geo-scope-icon {
+  font-size: 15px;
+  color: #3B82F6;
+}
+
+.drc-geo-group {
+  margin-bottom: 8px;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.drc-geo-group-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #A0AEC0;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+
+.drc-geo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.drc-geo-countries {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drc-geo-country {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drc-geo-subnational {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-left: 10px;
+}
+
+.drc-geo-sub-tag {
+  font-size: 10px;
+  font-weight: 500;
+  color: #4338CA;
+  background: #EEF2FF;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
 .drc-field-value {
   font-size: 13px;
   color: #2D3748;
