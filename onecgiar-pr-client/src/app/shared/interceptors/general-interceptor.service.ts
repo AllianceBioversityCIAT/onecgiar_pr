@@ -22,15 +22,24 @@ export class GeneralInterceptorService implements HttpInterceptor {
    * empty view they were created with. Refreshing once every request settles restores the
    * pre-upgrade behaviour for every screen at once. See ViewRefreshService for the full rationale.
    */
+  /**
+   * Result Detail and IPSR are the reporting forms that lose their data to the zoneless render gap,
+   * so they are the ones repainted. IPSR › Contributors is deliberately left out: on this branch a
+   * single full change detection pass over that page never returns (a synchronous CD loop), and
+   * freezing the tab is worse than the empty section it already shows. Every other section of both
+   * modules was verified to complete a full pass. Remove the exclusion once that page is fixed.
+   */
+  private shouldRepaint(): boolean {
+    const url = this.router.url;
+    if (url.includes('/ipsr/detail/') && url.includes('/contributors')) return false;
+    return url.includes('/result/result-detail/') || url.includes('/ipsr/detail/');
+  }
+
   private refreshViewWhenSettled<T>(source: Observable<T>): Observable<T> {
     return defer(() =>
       source.pipe(
         finalize(() => {
-          // Scoped to Result Detail on purpose. A full pass is verified safe on every section of
-          // every result type there, whereas IPSR › Contributors loops forever inside a single
-          // detectChanges on this branch (see the QA report) — refreshing it would turn a section
-          // that merely renders empty into a frozen tab.
-          if (this.router.url.includes('/result/result-detail/')) this.viewRefreshSE.schedule();
+          if (this.shouldRepaint()) this.viewRefreshSE.schedule();
         })
       )
     );
