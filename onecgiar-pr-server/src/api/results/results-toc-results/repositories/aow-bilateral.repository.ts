@@ -292,6 +292,32 @@ export class AoWBilateralRepository {
     }
   }
 
+  private async fetchAndGroupTocResults(
+    program: string,
+    context: ReportingTocContext,
+    queryOptions: Omit<TocQueryOptions, 'context'>,
+  ): Promise<TocResultResponse[]> {
+    const { query, params } = this.buildTocQuery(program, {
+      ...queryOptions,
+      context,
+    });
+
+    const [rows, contributions] = await Promise.all([
+      this.dataSource.query(query, params) as Promise<TocResultRow[]>,
+      this.getIndicatorContributions(program, context),
+    ]);
+
+    const enhancedRows = rows.map((row) => ({
+      ...row,
+      actual_achieved_value_sum:
+        contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
+      progress_percentage:
+        contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
+    }));
+
+    return this.groupTocRows(enhancedRows);
+  }
+
   async findByCompositeCode(
     program: string,
     composite_code: string,
@@ -299,27 +325,11 @@ export class AoWBilateralRepository {
   ) {
     const context = await this.resolveContext(contextOrYear);
     const areaAcronym = this.resolveAreaAcronym(program, composite_code);
-    const { query, params } = this.buildTocQuery(program, {
-      areaAcronym,
-      categories: ['OUTPUT', 'OUTCOME'],
-      context,
-    });
-
     try {
-      const [rows, contributions] = await Promise.all([
-        this.dataSource.query(query, params) as Promise<TocResultRow[]>,
-        this.getIndicatorContributions(program, context),
-      ]);
-
-      const enhancedRows = rows.map((row) => ({
-        ...row,
-        actual_achieved_value_sum:
-          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
-        progress_percentage:
-          contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
-      }));
-
-      return this.groupTocRows(enhancedRows);
+      return await this.fetchAndGroupTocResults(program, context, {
+        areaAcronym,
+        categories: ['OUTPUT', 'OUTCOME'],
+      });
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
@@ -334,30 +344,10 @@ export class AoWBilateralRepository {
     contextOrYear: ReportingTocContext | number,
   ) {
     const context = await this.resolveContext(contextOrYear);
-    const { query, params } = this.buildTocQuery(program, {
-      categories: ['EOI'],
-      context,
-    });
-
     try {
-      const [rows, contributions] = await Promise.all([
-        this.dataSource.query(query, params) as Promise<TocResultRow[]>,
-        this.getIndicatorContributions(program, context, {
-          isCumulative: true,
-          fromYear: 2025,
-          toYear: 2030,
-        }),
-      ]);
-
-      const enhancedRows = rows.map((row) => ({
-        ...row,
-        actual_achieved_value_sum:
-          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
-        progress_percentage:
-          contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
-      }));
-
-      return this.groupTocRows(enhancedRows);
+      return await this.fetchAndGroupTocResults(program, context, {
+        categories: ['EOI'],
+      });
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
@@ -372,27 +362,11 @@ export class AoWBilateralRepository {
     contextOrYear: ReportingTocContext | number,
   ) {
     const context = await this.resolveContext(contextOrYear);
-    const { query, params } = this.buildTocQuery(program, {
-      categories: ['OUTPUT', 'OUTCOME'],
-      context,
-      intermediateOnly: true,
-    });
-
     try {
-      const [rows, contributions] = await Promise.all([
-        this.dataSource.query(query, params) as Promise<TocResultRow[]>,
-        this.getIndicatorContributions(program, context),
-      ]);
-
-      const enhancedRows = rows.map((row) => ({
-        ...row,
-        actual_achieved_value_sum:
-          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
-        progress_percentage:
-          contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
-      }));
-
-      return this.groupTocRows(enhancedRows);
+      return await this.fetchAndGroupTocResults(program, context, {
+        categories: ['OUTPUT', 'OUTCOME'],
+        intermediateOnly: true,
+      });
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
