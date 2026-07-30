@@ -18,8 +18,20 @@ export class DraftResultCardComponent {
   draft = input.required<BilateralAiDraft>();
 
   subnationalCodeMap = signal<Record<string, string>>({});
+  countryNameMap = signal<Record<string, string>>({});
 
   constructor() {
+    this.resultsApi.GET_AllCLARISACountries().subscribe({
+      next: (res: any) => {
+        const map: Record<string, string> = {};
+        const countries: any[] = res?.response ?? res ?? [];
+        for (const c of countries) {
+          if (c.iso_alpha_2) map[c.iso_alpha_2] = c.name ?? c.iso_alpha_2;
+        }
+        this.countryNameMap.set(map);
+      },
+    });
+
     effect(() => {
       const countries = this.draft().extracted_mds?.['geo_focus']?.countries ?? [];
       const withSub: string[] = countries
@@ -43,6 +55,10 @@ export class DraftResultCardComponent {
         this.subnationalCodeMap.set(map);
       });
     });
+  }
+
+  getCountryName(iso: string): string {
+    return this.countryNameMap()[iso] ?? iso;
   }
 
   getSubnationalName(code: string): string {

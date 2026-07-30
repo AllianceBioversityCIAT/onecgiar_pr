@@ -76,7 +76,7 @@
           <div class="drc-geo-countries">
             @for (country of getGeoCountries(); track country.iso) {
               <div class="drc-geo-country">
-                <span class="drc-tag">{{ country.iso }}</span>
+                <span class="drc-tag" [title]="country.iso">{{ getCountryName(country.iso) }}</span>
                 @if (country.subnational.length) {
                   <div class="drc-geo-subnational">
                     @for (area of country.subnational; track area) {
