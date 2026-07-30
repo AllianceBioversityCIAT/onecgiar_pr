@@ -3522,17 +3522,18 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         rs.result_status_id AS status_id,
         rs.status_name,
         r.created_date,
-        r.version_id
+        r.version_id,
+        r.source,
+        rc.is_leading_result
       FROM result r
       INNER JOIN results_center rc
              ON rc.result_id = r.id
             AND rc.center_id = ?
-            AND rc.is_leading_result = 1
             AND rc.is_active = 1
       INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
       INNER JOIN result_status rs ON rs.result_status_id = r.status_id
       WHERE r.version_id = ?
-        AND r.source = 'API'
+        AND r.source IN ('API', 'Result')
         AND r.is_active = 1
       ORDER BY r.result_code ASC
     `;

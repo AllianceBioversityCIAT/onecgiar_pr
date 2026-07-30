@@ -21,6 +21,88 @@
     </div>
   }
 
+  <!-- Filter chips bar -->
+  <div class="brl_filter_bar">
+    <span class="brl_filter_label">
+      <i class="pi pi-filter"></i>
+      Filters
+    </span>
+
+    <div class="brl_filter_groups">
+
+      <!-- Source group -->
+      <div class="brl_filter_group">
+        <span class="brl_filter_group_label">Source</span>
+        <div class="brl_chips">
+          <button
+            class="brl_chip brl_chip--w3"
+            [class.brl_chip--active]="showW3()"
+            (click)="toggleW3()"
+            [title]="showW3() ? 'Hide W3 Bilateral results' : 'Show W3 Bilateral results'">
+            <span class="brl_chip_dot brl_chip_dot--w3"></span>
+            W3 Bilateral
+            @if (showW3()) {
+              <i class="pi pi-check brl_chip_icon"></i>
+            } @else {
+              <i class="pi pi-plus brl_chip_icon brl_chip_icon--add"></i>
+            }
+          </button>
+
+          <button
+            class="brl_chip brl_chip--w1w2"
+            [class.brl_chip--active]="showW1W2()"
+            (click)="toggleW1W2()"
+            [title]="showW1W2() ? 'Hide W1/W2 results' : 'Add W1/W2 results'">
+            <span class="brl_chip_dot brl_chip_dot--w1w2"></span>
+            W1 / W2
+            @if (showW1W2()) {
+              <i class="pi pi-check brl_chip_icon"></i>
+            } @else {
+              <i class="pi pi-plus brl_chip_icon brl_chip_icon--add"></i>
+            }
+          </button>
+        </div>
+      </div>
+
+      <div class="brl_filter_divider"></div>
+
+      <!-- Role group -->
+      <div class="brl_filter_group">
+        <span class="brl_filter_group_label">Center role</span>
+        <div class="brl_chips">
+          <button
+            class="brl_chip brl_chip--lead"
+            [class.brl_chip--active]="showLead()"
+            (click)="toggleLead()"
+            [title]="showLead() ? 'Hide results where center is lead' : 'Show results where center is lead'">
+            <span class="brl_chip_dot brl_chip_dot--lead"></span>
+            Lead · {{ ctx.centerAcronym() }}
+            @if (showLead()) {
+              <i class="pi pi-check brl_chip_icon"></i>
+            } @else {
+              <i class="pi pi-plus brl_chip_icon brl_chip_icon--add"></i>
+            }
+          </button>
+
+          <button
+            class="brl_chip brl_chip--contributing"
+            [class.brl_chip--active]="showContributing()"
+            (click)="toggleContributing()"
+            [title]="showContributing() ? 'Hide results where center is contributing' : 'Add results where center is contributing'">
+            <span class="brl_chip_dot brl_chip_dot--contributing"></span>
+            Contributing
+            @if (showContributing()) {
+              <i class="pi pi-check brl_chip_icon"></i>
+            } @else {
+              <i class="pi pi-plus brl_chip_icon brl_chip_icon--add"></i>
+            }
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <div class="brl_body">
 
     <!-- Toolbar -->
@@ -28,7 +110,7 @@
       <div class="brl_toolbar_left">
         @if (!loading() && !error()) {
           <span class="brl_count">
-            {{ filteredResults().length }} result{{ filteredResults().length === 1 ? '' : 's' }}
+            {{ totalCount() }} result{{ totalCount() === 1 ? '' : 's' }}
           </span>
         }
       </div>
@@ -62,12 +144,14 @@
     } @else if (results().length === 0) {
       <div class="brl_state">
         <i class="pi pi-inbox brl_state_icon"></i>
-        <span>No bilateral results found for this center in this phase.</span>
+        <span>No results found for this center in this phase.</span>
       </div>
-    } @else if (filteredResults().length === 0 && searchQuery()) {
+    } @else if (totalCount() === 0) {
       <div class="brl_state">
-        <i class="pi pi-search brl_state_icon"></i>
-        <span>No results match <strong>"{{ searchQuery() }}"</strong></span>
+        <i class="pi pi-filter brl_state_icon"></i>
+        <span>No results match the active filters
+          @if (searchQuery()) { and search query <strong>"{{ searchQuery() }}"</strong> }.
+        </span>
       </div>
     } @else {
       <!-- Results table -->
@@ -75,16 +159,25 @@
         <table class="brl_table">
           <thead>
             <tr>
+              <th class="brl_th brl_col_source">Source</th>
               <th class="brl_th brl_col_code">Code</th>
               <th class="brl_th brl_col_title">Title</th>
               <th class="brl_th brl_col_type">Type</th>
+              <th class="brl_th brl_col_role">Role</th>
               <th class="brl_th brl_col_status">Status</th>
               <th class="brl_th brl_col_date">Created</th>
             </tr>
           </thead>
           <tbody>
-            @for (result of filteredResults(); track result.id) {
+            @for (result of pagedResults(); track result.id) {
               <tr class="brl_row" (click)="openResult(result)" tabindex="0" (keydown.enter)="openResult(result)">
+                <td class="brl_td brl_col_source">
+                  @if (result.source === 'API') {
+                    <span class="brl_source_badge brl_source_badge--w3">W3</span>
+                  } @else {
+                    <span class="brl_source_badge brl_source_badge--w1w2">W1/W2</span>
+                  }
+                </td>
                 <td class="brl_td brl_col_code">
                   <span class="brl_code">{{ result.result_code }}</span>
                 </td>
@@ -93,6 +186,13 @@
                 </td>
                 <td class="brl_td brl_col_type">
                   <span class="brl_type_chip">{{ result.result_type }}</span>
+                </td>
+                <td class="brl_td brl_col_role">
+                  @if (result.is_leading_result === 1) {
+                    <span class="brl_role_badge brl_role_badge--lead">Lead</span>
+                  } @else {
+                    <span class="brl_role_badge brl_role_badge--contributing">Contributing</span>
+                  }
                 </td>
                 <td class="brl_td brl_col_status">
                   <span class="brl_status brl_status--{{ statusClass(result.status_id) }}">
@@ -105,6 +205,48 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Pagination -->
+      @if (totalPages() > 1) {
+        <div class="brl_pagination">
+          <span class="brl_pagination_info">
+            {{ pageStart() }}–{{ pageEnd() }} of {{ totalCount() }}
+          </span>
+
+          <div class="brl_pagination_nav">
+            <button
+              class="brl_page_btn brl_page_btn--arrow"
+              [disabled]="currentPage() === 1"
+              (click)="prevPage()"
+              aria-label="Previous page">
+              <i class="pi pi-chevron-left"></i>
+            </button>
+
+            @for (page of pageNumbers(); track $index) {
+              @if (page === '…') {
+                <span class="brl_page_ellipsis">…</span>
+              } @else {
+                <button
+                  class="brl_page_btn"
+                  [class.brl_page_btn--active]="currentPage() === page"
+                  (click)="goToPage(page)"
+                  [attr.aria-label]="'Page ' + page"
+                  [attr.aria-current]="currentPage() === page ? 'page' : null">
+                  {{ page }}
+                </button>
+              }
+            }
+
+            <button
+              class="brl_page_btn brl_page_btn--arrow"
+              [disabled]="currentPage() === totalPages()"
+              (click)="nextPage()"
+              aria-label="Next page">
+              <i class="pi pi-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      }
     }
 
   </div>

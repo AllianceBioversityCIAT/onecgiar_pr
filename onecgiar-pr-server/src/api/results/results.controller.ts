@@ -744,7 +744,7 @@ export class ResultsController {
   @ApiOperation({
     summary: 'Get bilateral results by center and phase',
     description:
-      'Returns all bilateral results where the given center is the lead center in the specified reporting phase.',
+      'Returns all results (source API and Result) where the given center participates as lead or contributing center in the specified reporting phase. The response includes `source` and `is_leading_result` so the client can apply frontend filters.',
   })
   @ApiQuery({
     name: 'centerId',

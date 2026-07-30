@@ -14,7 +14,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   border-bottom: 1px solid var(--pr-color-accents-2);
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .brl_phases {
@@ -61,6 +61,201 @@
   font-weight: 700;
   color: var(--pr-color-primary-300);
   letter-spacing: 0.3px;
+}
+
+// ─── Filter chips bar ─────────────────────────────────────────────────────────
+
+// Color tokens for the four chip types
+$w3-color:           #5569dd;
+$w3-color-light:     #eef2ff;
+$w3-color-border:    #c7d2fe;
+
+$w1w2-color:         #7c3aed;
+$w1w2-color-light:   #f5f3ff;
+$w1w2-color-border:  #ddd6fe;
+
+$lead-color:         #059669;
+$lead-color-light:   #ecfdf5;
+$lead-color-border:  #a7f3d0;
+
+$contrib-color:      #0284c7;
+$contrib-color-light:#e0f2fe;
+$contrib-color-border:#bae6fd;
+
+.brl_filter_bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: #fafbff;
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.brl_filter_label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--pr-color-accents-5);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  .pi {
+    font-size: 11px;
+  }
+}
+
+.brl_filter_groups {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.brl_filter_group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.brl_filter_group_label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--pr-color-accents-4);
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.brl_chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.brl_filter_divider {
+  width: 1px;
+  height: 22px;
+  background: var(--pr-color-accents-2);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+// Base chip
+.brl_chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  border: 1.5px solid var(--pr-color-accents-2);
+  background: #fff;
+  color: var(--pr-color-accents-5);
+  user-select: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
+.brl_chip_dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
+}
+
+.brl_chip--active .brl_chip_dot {
+  opacity: 1;
+}
+
+.brl_chip_icon {
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.brl_chip_icon--add {
+  opacity: 0.5;
+}
+
+// W3 Bilateral chip
+.brl_chip_dot--w3 { background: $w3-color; }
+
+.brl_chip--w3 {
+  &:hover:not(.brl_chip--active) {
+    border-color: $w3-color-border;
+    background: $w3-color-light;
+    color: $w3-color;
+  }
+  &.brl_chip--active {
+    background: $w3-color-light;
+    border-color: $w3-color-border;
+    color: $w3-color;
+  }
+}
+
+// W1/W2 chip
+.brl_chip_dot--w1w2 { background: $w1w2-color; }
+
+.brl_chip--w1w2 {
+  &:hover:not(.brl_chip--active) {
+    border-color: $w1w2-color-border;
+    background: $w1w2-color-light;
+    color: $w1w2-color;
+  }
+  &.brl_chip--active {
+    background: $w1w2-color-light;
+    border-color: $w1w2-color-border;
+    color: $w1w2-color;
+  }
+}
+
+// Lead chip
+.brl_chip_dot--lead { background: $lead-color; }
+
+.brl_chip--lead {
+  &:hover:not(.brl_chip--active) {
+    border-color: $lead-color-border;
+    background: $lead-color-light;
+    color: $lead-color;
+  }
+  &.brl_chip--active {
+    background: $lead-color-light;
+    border-color: $lead-color-border;
+    color: $lead-color;
+  }
+}
+
+// Contributing chip
+.brl_chip_dot--contributing { background: $contrib-color; }
+
+.brl_chip--contributing {
+  &:hover:not(.brl_chip--active) {
+    border-color: $contrib-color-border;
+    background: $contrib-color-light;
+    color: $contrib-color;
+  }
+  &.brl_chip--active {
+    background: $contrib-color-light;
+    border-color: $contrib-color-border;
+    color: $contrib-color;
+  }
 }
 
 // ─── Body ─────────────────────────────────────────────────────────────────────
@@ -212,11 +407,13 @@
 
 // ─── Column widths ────────────────────────────────────────────────────────────
 
-.brl_col_code  { width: 80px; }
-.brl_col_title { min-width: 200px; }
-.brl_col_type  { width: 180px; }
-.brl_col_status{ width: 120px; }
-.brl_col_date  { width: 100px; white-space: nowrap; }
+.brl_col_source { width: 70px; }
+.brl_col_code   { width: 80px; }
+.brl_col_title  { min-width: 180px; }
+.brl_col_type   { width: 170px; }
+.brl_col_role   { width: 110px; }
+.brl_col_status { width: 110px; }
+.brl_col_date   { width: 100px; white-space: nowrap; }
 
 // ─── Cell content ─────────────────────────────────────────────────────────────
 
@@ -237,7 +434,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 360px;
+  max-width: 340px;
   color: var(--pr-color-secondary-400);
   font-weight: 500;
 }
@@ -251,6 +448,137 @@
   font-size: 10px;
   color: var(--pr-color-accents-6);
   font-weight: 600;
+}
+
+// ─── Source badges — match chip colors ────────────────────────────────────────
+
+.brl_source_badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+
+  &--w3 {
+    background: $w3-color-light;
+    color: $w3-color;
+    border: 1px solid $w3-color-border;
+  }
+
+  &--w1w2 {
+    background: $w1w2-color-light;
+    color: $w1w2-color;
+    border: 1px solid $w1w2-color-border;
+  }
+}
+
+// ─── Role badges — match chip colors ─────────────────────────────────────────
+
+.brl_role_badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &--lead {
+    background: $lead-color-light;
+    color: $lead-color;
+    border: 1px solid $lead-color-border;
+  }
+
+  &--contributing {
+    background: $contrib-color-light;
+    color: $contrib-color;
+    border: 1px solid $contrib-color-border;
+  }
+}
+
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+.brl_pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 4px 4px;
+}
+
+.brl_pagination_info {
+  font-size: 11px;
+  color: var(--pr-color-accents-5);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.brl_pagination_nav {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.brl_page_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--pr-color-accents-5);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+
+  &:hover:not(:disabled):not(.brl_page_btn--active) {
+    background: #f5f7ff;
+    border-color: var(--pr-color-primary-300);
+    color: var(--pr-color-primary-300);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  &--active {
+    background: var(--pr-color-primary-300);
+    border-color: var(--pr-color-primary-300);
+    color: #fff;
+    cursor: default;
+  }
+
+  &--arrow {
+    color: var(--pr-color-accents-5);
+
+    .pi { font-size: 10px; }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
+.brl_page_ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  font-size: 11px;
+  color: var(--pr-color-accents-4);
+  letter-spacing: 1px;
+  user-select: none;
 }
 
 // ─── Status badges ────────────────────────────────────────────────────────────

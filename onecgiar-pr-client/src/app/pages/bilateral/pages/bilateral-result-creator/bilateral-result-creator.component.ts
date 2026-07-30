@@ -59,7 +59,6 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
   styleUrl: './bilateral-result-creator.component.scss',
   providers: [
     MessageService,
-    BilateralCreationService,
     BilateralAutoSaveService,
     BilateralMdsTrackerService,
   ]
