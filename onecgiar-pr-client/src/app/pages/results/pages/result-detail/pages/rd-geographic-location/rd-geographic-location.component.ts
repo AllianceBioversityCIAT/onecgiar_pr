@@ -1,4 +1,4 @@
-import { Component, OnInit, effect } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, effect, inject } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeographicLocationBody } from './models/geographicLocationBody';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
@@ -16,6 +16,11 @@ import { DataControlService } from '../../../../../../shared/services/data-contr
   standalone: false
 })
 export class RdGeographicLocationComponent {
+  // Angular 21 bootstraps zoneless, so an HTTP response no longer schedules change detection by
+  // itself. This section loads from an `effect()` and stores the payload in plain (non-signal)
+  // fields, so without an explicit markForCheck the saved geoscope/regions/countries stayed
+  // invisible until an unrelated click forced a pass.
+  private readonly cdr = inject(ChangeDetectorRef);
   geographicLocationBody = new GeographicLocationBody();
   extraGeographicLocationBody = new ExtraGeographicLocationBody();
 
@@ -81,12 +86,14 @@ export class RdGeographicLocationComponent {
 
   fillGeographicLocationBody(response: any) {
     this.geographicLocationBody = response;
+    this.cdr.markForCheck();
     const legacyCountries = 4;
     this.geographicLocationBody.geo_scope_id =
       this.geographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.geographicLocationBody.geo_scope_id;
   }
 
   fillExtraGeographicLocationBody(response: any) {
+    this.cdr.markForCheck();
     this.extraGeographicLocationBody.geo_scope_id = response.extra_geo_scope_id;
     this.extraGeographicLocationBody.has_regions = response.has_extra_regions;
     this.extraGeographicLocationBody.has_countries = response.has_extra_countries;
