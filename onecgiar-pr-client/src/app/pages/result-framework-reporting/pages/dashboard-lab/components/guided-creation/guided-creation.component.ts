@@ -489,13 +489,13 @@ export class GuidedCreationComponent implements OnDestroy {
   }
 
   aowAccent(index: number): string {
-    const palette = ['#6b6dc4', '#2f8f6b', '#bf4b26', '#3b82f6', '#a6558f', '#c08a1e'];
+    const palette = ['#6b46e5', '#2f8f6b', '#bf4b26', '#3b82f6', '#a6558f', '#c08a1e'];
     return palette[index % palette.length];
   }
 
   /** Each program keeps its own ring colour so the list is readable at a glance. */
   accentFor(sp: SPProgress): string {
-    const palette = ['#6b6dc4', '#bf4b26', '#1e202f', '#2f8f6b', '#a6558f', '#c08a1e', '#3b82f6', '#d0435a'];
+    const palette = ['#6b46e5', '#bf4b26', '#1e202f', '#2f8f6b', '#a6558f', '#c08a1e', '#3b82f6', '#d0435a'];
     return palette[(sp.initiativeId ?? 0) % palette.length];
   }
 

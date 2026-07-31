@@ -1225,7 +1225,7 @@ The drawer's UX feedback model is **terse by design** — the project relies on 
 
 ### 9.1 Color tokens used heavily
 
-- `--pr-color-primary-300` (`#5569dd`, indigo) — primary buttons, breadcrumb active link, focus rings.
+- `--pr-color-primary-300` (`#6b46e5`, indigo) — primary buttons, breadcrumb active link, focus rings.
 - `--pr-color-primary-25` — group-header background in tables.
 - `--pr-color-secondary-50` — group-header border-bottom.
 - `--pr-color-accents-1..6` — neutral greys (1 = lightest bg, 6 = body text muted).

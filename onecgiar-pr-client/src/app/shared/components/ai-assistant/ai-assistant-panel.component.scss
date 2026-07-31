@@ -6,7 +6,7 @@
 .pr-ai-fab {
   // Violet-tinted layered depth instead of the default gray drop-shadow.
   box-shadow:
-    0 8px 22px -6px rgba(107, 109, 196, 0.55),
+    0 8px 22px -6px rgba(107, 70, 229, 0.55),
     0 3px 8px -3px rgba(30, 32, 47, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     inset 0 -2px 6px rgba(30, 32, 47, 0.25);
@@ -27,7 +27,7 @@
   position: absolute;
   inset: -6px;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(107, 109, 196, 0.45), rgba(107, 109, 196, 0) 70%);
+  background: radial-gradient(circle, rgba(107, 70, 229, 0.45), rgba(107, 70, 229, 0) 70%);
   z-index: -1;
   animation: pr-ai-halo 3.6s ease-in-out infinite;
 }
@@ -58,7 +58,7 @@
 /* Chat surface: a faint violet-tinted wash so bubbles read with depth. */
 .pr-ai-chat {
   background:
-    radial-gradient(120% 60% at 50% 0%, rgba(107, 109, 196, 0.06), rgba(107, 109, 196, 0) 60%),
+    radial-gradient(120% 60% at 50% 0%, rgba(107, 70, 229, 0.06), rgba(107, 70, 229, 0) 60%),
     linear-gradient(180deg, #f7f7fb 0%, #fbfbfd 100%);
 }
 

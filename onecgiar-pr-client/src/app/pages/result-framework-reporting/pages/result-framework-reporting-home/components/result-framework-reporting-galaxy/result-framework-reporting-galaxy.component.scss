@@ -4,7 +4,7 @@
   position: fixed;
   inset: 0;
   z-index: 1200;
-  background: radial-gradient(120% 120% at 50% 15%, #1e202f 0%, #12131c 70%);
+  background: radial-gradient(120% 120% at 50% 15%, var(--pr-color-primary-800) 0%, var(--pr-color-primary-950) 70%);
   overflow: hidden;
   animation: cf-overlay-in 0.35s ease;
 }
@@ -41,7 +41,7 @@
 }
 .cf-ghost { background: rgba(255, 255, 255, 0.08); color: #fff; backdrop-filter: blur(8px); }
 .cf-ghost:hover { background: rgba(255, 255, 255, 0.16); }
-.cf-solid { background: linear-gradient(135deg, var(--pr-color-primary-300), #5457b0); color: #fff; box-shadow: 0 8px 24px rgba(107, 109, 196, 0.4); }
+.cf-solid { background: linear-gradient(135deg, var(--pr-color-primary-300), #5733c4); color: #fff; box-shadow: 0 8px 24px rgba(107, 70, 229, 0.4); }
 .cf-solid:hover { filter: brightness(1.1); }
 
 // --- level colour key + hint ---

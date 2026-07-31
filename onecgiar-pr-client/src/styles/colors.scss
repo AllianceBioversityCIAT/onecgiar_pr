@@ -1,26 +1,46 @@
 :root {
-  // primary colors
-  --pr-color-primary-25: #f1f1fb;
-  --pr-color-primary-50: #eaeaf8;
-  --pr-color-primary-100: #d5d5f0;
-  --pr-color-primary-200: #aaa9e0;
-  --pr-color-primary-300: #6b6dc4; // Main custom Color (violet — lighter stop of the accent gradient)
-  --pr-color-primary-400: #6461bc; // Darker stop of the accent gradient (active/hover)
-  --pr-color-primary-500: #4f4c9e;
-  --pr-color-primary-600: #403d7e;
-  --pr-color-primary-700: #333062;
-  --pr-color-primary-800: #26244a;
-  --pr-color-primary-900: #171630;
-  --pr-color-primary-950: #0d0c1c;
+  // ── PRIMARY — PRMS violet. Approved palette: docs/reporting-redesign/UI-RULES.md §2.1.
+  // Re-valued IN PLACE: stop names and the "-300 is main" convention are preserved, so the
+  // ~736 var(--pr-color-primary-*) references and the 101 *-brand-* Tailwind utilities across
+  // ~340 files inherit the new brand with zero template edits.
+  //
+  // Why the anchor is at -300 and not -400: this stop carries three roles at once — 95 background
+  // fills (39 paired with white text), 65 border/outline declarations and 154 color: declarations,
+  // plus .open_route (fonts.scss:18-22, the app's universal inline link, 126 uses / 68 files).
+  // Contrast is direction-symmetric, so #6b46e5 discharges all of them: 5.7809:1 on white either
+  // way, and 5.2707:1 as text on -50. A lighter value here measures 3.7761 and fails AA on every
+  // primary CTA in the app. See openspec/changes/reporting-redesign-token-layer/design.md D1.
+  //
+  // NOTE — -100/-200 are light tints, NOT border or focus-ring colours. Focus indicators come from
+  // --pr-focus-ring (built on -300); content borders are neutral (--pr-border). UI-RULES rule 7.
+  --pr-color-primary-25: #faf9fe;
+  --pr-color-primary-50: #f5f3ff;
+  --pr-color-primary-100: #ede9fe;
+  --pr-color-primary-200: #ddd6fe;
+  --pr-color-primary-300: #6b46e5; // Main — primary actions, links, focus
+  --pr-color-primary-400: #5733c4; // Hover / active
+  --pr-color-primary-500: #4a2bb8;
+  --pr-color-primary-600: #3f2499;
+  --pr-color-primary-700: #33227a; // Sidebar elevated surface
+  --pr-color-primary-800: #271862; // Sidebar base surface
+  --pr-color-primary-900: #1b1145;
+  --pr-color-primary-950: #0f0926;
 
-  --pr-color-primary-rgb: 107, 109, 196;
+  // Companion triplet for rgba(var(--pr-color-primary-rgb), alpha) — ~68 consumers.
+  // Must track -300 or low-alpha tints drift away from the brand.
+  --pr-color-primary-rgb: 107, 70, 229;
 
   //   secondary
   --pr-color-secondary-50: #dde0ee;
   --pr-color-secondary-100: #9ca2c3;
   --pr-color-secondary-200: #6a73a4;
   --pr-color-secondary-300: #484f77;
-  --pr-color-secondary-400: #2a2e45; // Main custom Color
+  // -400 is THE dark-surface token (289 references): footer, the unauthenticated Cognito
+  // background, dynamic-panel-menu, collapsible-container, page-alert, ~9 modals. Repointed to the
+  // brand's deepest surface so all ~17 legacy dark surfaces join the rebrand with zero template
+  // edits and stop clashing with the violet sidebar. White on it goes 13.3318 -> 15.0723, so every
+  // light foreground on those surfaces improves. See design.md D5.
+  --pr-color-secondary-400: #271862; // Main custom Color — dark brand surface
   --pr-color-secondary-500: #1a1c2a;
   --pr-color-secondary-600: #16171e;
   --pr-color-secondary-700: #111218;
@@ -28,7 +48,11 @@
   --pr-color-secondary-900: #08080b;
   --pr-color-secondary-950: #050507;
 
-  --pr-color-secondary-rgb: 42, 46, 69;
+  // DELIBERATELY DECOUPLED from -400 (task 2.4 / design.md open question 2). This triplet's ~19
+  // consumers are shadows and scrims (styles.scss:305 at alpha .337, ipsr.scss:94 at alpha .745),
+  // not brand surfaces — so it tracks the shadow ink #191524, matching --pr-scrim below. Tracking
+  // -400 instead would tint every scrim saturated violet.
+  --pr-color-secondary-rgb: 25, 21, 36;
 
   // neutral
   --pr-color-neutral-100: #e8ebff;
@@ -143,4 +167,74 @@
   --pr-color-result-level-2: var(--pr-color-blue-other-1);
   --pr-color-result-level-3: var(--pr-color-red-400);
   --pr-color-result-level-4: var(--pr-color-blue-other-2);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEMANTIC TOKENS — docs/reporting-redesign/UI-RULES.md §2.2
+//
+// Components consume THESE, never a numbered ramp stop and never a raw hex.
+// Exposed to Tailwind as utilities in src/styles.scss (@theme inline) — see §2.3.
+// A separate :root block on purpose: it keeps the diff reviewable and cannot
+// accidentally orphan declarations out of the block above.
+// ─────────────────────────────────────────────────────────────────────────────
+:root {
+  // ── Surfaces
+  --pr-surface-topbar: #ffffff;
+  --pr-surface-band: #f7f4fd; // program band — the one tinted content surface
+  --pr-surface-app: #f7f7f9; // content background — NEUTRAL, not tinted
+  --pr-surface-card: #ffffff;
+  --pr-surface-subtle: #f7f7f9; // HLO / outcome group headers
+
+  // ── Borders. Content-area boundaries are NEUTRAL (rule 7); violet only for selected state.
+  --pr-border: #e3e3e8;
+  --pr-border-strong: #d5d5dc; // AoW header bottom border
+  --pr-border-divider: #eeeef1; // row separators
+
+  // ── Text — violet-tinted neutral ramp
+  --pr-text-heading: #191524;
+  --pr-text: #2b2838;
+  --pr-text-secondary: #5d5872;
+  --pr-text-muted: #6b6580;
+  --pr-text-subtle: #9691a8;
+
+  // ── Sidebar (on-dark). Foregrounds verified against --pr-sidebar-bg:
+  // #e9e4fa 12.1601:1 · #c4b5fd 8.6:1 · #a79bd4 6.2:1 — all clear AA.
+  --pr-sidebar-bg: var(--pr-color-primary-800);
+  --pr-sidebar-elevated: var(--pr-color-primary-700);
+  --pr-sidebar-active: var(--pr-color-primary-300);
+  --pr-sidebar-fg: #e9e4fa;
+  --pr-sidebar-fg-muted: #a79bd4;
+  --pr-sidebar-fg-subtle: #8b7cc4;
+  --pr-sidebar-accent: #c4b5fd;
+  --pr-sidebar-border: rgb(255 255 255 / 0.1);
+  --pr-sidebar-hover: rgb(255 255 255 / 0.07);
+
+  // ── Report status — FIXED fg/bg pairs. Never recombine a fg with another bg,
+  // never invent a sixth status colour (rule 9).
+  --pr-status-not-started-fg: #6b7280;
+  --pr-status-not-started-bg: #f3f4f6;
+  --pr-status-in-progress-fg: #b45309;
+  --pr-status-in-progress-bg: #fef3c7;
+  --pr-status-submitted-fg: var(--pr-color-blue-700);
+  --pr-status-submitted-bg: var(--pr-color-blue-100);
+  --pr-status-in-qa-fg: #0e7490;
+  --pr-status-in-qa-bg: #cffafe;
+  --pr-status-approved-fg: #047857;
+  --pr-status-approved-bg: #d1fae5;
+
+  // ── Charts — violet, 4 steps. Status colours are NOT for charts.
+  --pr-chart-1: #4a2bb8;
+  --pr-chart-2: #6b46e5;
+  --pr-chart-3: #9270f0;
+  --pr-chart-4: #c4a0f7;
+
+  // ── Elevation — only these three exist (rule 10: max two levels per screen).
+  --pr-shadow-1: 0 1px 2px rgb(25 21 36 / 0.06);
+  --pr-shadow-2: 0 8px 24px rgb(25 21 36 / 0.1);
+  --pr-shadow-drawer: -12px 0 32px rgb(25 21 36 / 0.12);
+  --pr-scrim: rgb(25 21 36 / 0.32);
+
+  // ── Focus. THE focus indicator for every interactive control (rule 4).
+  // Built on -300, so it measures 5.7809:1 solid against white — light tints must not be used here.
+  --pr-focus-ring: 0 0 0 3px rgb(107 70 229 / 0.28);
 }

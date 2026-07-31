@@ -28,7 +28,7 @@
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 
   &:hover:not(&--disabled):not(&--loading) {
-    border-color: var(--pr-color-primary-200);
+    border-color: var(--pr-color-primary-300);
     box-shadow: 0 4px 16px rgba(var(--pr-color-primary-rgb), 0.12);
     transform: translateY(-1px);
   }

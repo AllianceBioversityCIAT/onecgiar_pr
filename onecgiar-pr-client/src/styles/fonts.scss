@@ -3,11 +3,30 @@
 // PRMS rebrand (replaces Poppins). 'Poppins' stays as fallback alias below so any
 // stray font-family: 'Manrope', 'Poppins', sans-serif declaration still resolves to the same stack.
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap');
+// JetBrains Mono: codes and figures ONLY (result codes, SP/AOW/HLO identifiers, Target/Achieved
+// values). Manrope keeps display and UI text. Instrument Sans and Inter are deliberately NOT
+// adopted — docs/reporting-redesign/UI-RULES.md §1.2 / §2.4. Consumed as Tailwind `font-mono`.
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 html,
 body {
   font-family: 'Manrope', 'Poppins', sans-serif;
   font-size: 12px;
+}
+
+// ⚠️ Numeric/code helpers. `tabular-nums` is what keeps figure columns aligned — losing it
+// defeats the table layout (UI-RULES rule 13).
+.pr-code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pr-figure {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .segment_title_margin {

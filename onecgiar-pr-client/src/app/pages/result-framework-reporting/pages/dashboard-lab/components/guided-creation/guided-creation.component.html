@@ -27,7 +27,7 @@
           class="group flex shrink-0 appearance-none items-center gap-2 rounded-xl border-0 px-2.5 py-1.5 text-left transition-colors duration-150 disabled:cursor-default"
           [class]="
             step() === c.step
-              ? 'bg-[#6b6dc41f]'
+              ? 'bg-[#6b46e51f]'
               : c.value
                 ? 'bg-transparent hover:bg-black/[0.04]'
                 : 'bg-transparent opacity-55'
@@ -80,9 +80,9 @@
               (click)="selectPath('planned')"
               class="gc-option gc-rise flex appearance-none flex-col items-start gap-4 p-7 text-left"
               [class.is-selected]="path() === 'planned'"
-              style="--i: 2; --gc-accent: #6b6dc4">
-              <span class="inline-flex size-14 items-center justify-center rounded-2xl bg-[#6b6dc41f]">
-                <span class="material-icons-round text-[28px] text-[#6b6dc4]">flag</span>
+              style="--i: 2; --gc-accent: #6b46e5">
+              <span class="inline-flex size-14 items-center justify-center rounded-2xl bg-[#6b46e51f]">
+                <span class="material-icons-round text-[28px] text-[#6b46e5]">flag</span>
               </span>
               <span class="text-[24px] font-extrabold leading-tight tracking-[-0.015em]">Planned in the Theory of Change</span>
               <span class="text-[16px] leading-[1.55] text-[var(--gc-muted)]">It contributes to an indicator your program already committed to.</span>
@@ -294,13 +294,13 @@
                       <button
                         type="button"
                         (click)="selectIndicator(ind, group.toc_result_id)"
-                        class="flex w-full appearance-none flex-col items-start gap-2 border-0 px-3.5 py-3 text-left transition-colors duration-150 hover:bg-[#6b6dc412]"
+                        class="flex w-full appearance-none flex-col items-start gap-2 border-0 px-3.5 py-3 text-left transition-colors duration-150 hover:bg-[#6b46e512]"
                         [class]="
-                          indicator()?.indicator_id === ind.indicator_id ? 'bg-[#6b6dc41f]' : ri % 2 === 0 ? 'bg-white' : 'bg-[#f5f6fd]'
+                          indicator()?.indicator_id === ind.indicator_id ? 'bg-[#6b46e51f]' : ri % 2 === 0 ? 'bg-white' : 'bg-[#f5f6fd]'
                         ">
                         <span class="text-[14px] font-medium leading-snug">{{ ind.indicator_description }}</span>
                         <span class="flex flex-wrap items-center gap-1.5">
-                          <span class="rounded-full bg-[#6b6dc41f] px-2.5 py-1 text-[12px] font-semibold text-[var(--gc-brand)]">
+                          <span class="rounded-full bg-[#6b46e51f] px-2.5 py-1 text-[12px] font-semibold text-[var(--gc-brand)]">
                             {{ ind.type_name || 'Not provided' }}
                           </span>
                           <span class="rounded-full bg-[var(--gc-line)] px-2.5 py-1 text-[12px] font-medium text-[var(--gc-muted)]">
@@ -377,8 +377,8 @@
               <button
                 type="button"
                 (click)="goToStep(row.step)"
-                class="flex w-full appearance-none items-center gap-4 border-0 border-b border-[var(--gc-line)] bg-transparent px-5 py-4 text-left transition-colors duration-150 last:border-b-0 hover:bg-[#6b6dc40a]">
-                <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#6b6dc41f]">
+                class="flex w-full appearance-none items-center gap-4 border-0 border-b border-[var(--gc-line)] bg-transparent px-5 py-4 text-left transition-colors duration-150 last:border-b-0 hover:bg-[#6b46e50a]">
+                <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#6b46e51f]">
                   <span class="material-icons-round text-[17px] text-[var(--gc-brand)]">{{ row.icon }}</span>
                 </span>
                 <span class="w-[110px] shrink-0 text-[13px] text-[var(--gc-muted)]">{{ row.label }}</span>

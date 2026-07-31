@@ -4,9 +4,9 @@
   --x-card: #191b2b;
   --x-card-2: #1e2033;
   --x-border: #2a2d45;
-  --x-violet: #6b6dc4;
+  --x-violet: #6b46e5;
   --x-violet-2: #8b8ee0;
-  --x-violet-soft: #6b6dc41f;
+  --x-violet-soft: #6b46e51f;
   --x-green: #19ae58;
   --x-amber: #dfb400;
   --x-text: #eef0fb;
@@ -62,14 +62,14 @@
   height: 480px;
   top: -160px;
   left: -120px;
-  background: #6b6dc433;
+  background: #6b46e533;
 }
 .rfr-x::after {
   width: 420px;
   height: 420px;
   bottom: -160px;
   right: -100px;
-  background: #6461bc26;
+  background: #5733c426;
 }
 
 // ---------------------------------------------------------------- lang switch
@@ -98,9 +98,9 @@
     transition: all 0.18s ease;
 
     &.is-active {
-      background: linear-gradient(135deg, var(--x-violet), #6461bc);
+      background: linear-gradient(135deg, var(--x-violet), #5733c4);
       color: #fff;
-      box-shadow: 0 4px 12px #6b6dc455;
+      box-shadow: 0 4px 12px #6b46e555;
     }
     &:hover:not(.is-active) {
       color: var(--x-text);
@@ -160,7 +160,7 @@
     width: 6px;
     height: 26px;
     border-radius: 3px;
-    background: linear-gradient(var(--x-violet), #6461bc);
+    background: linear-gradient(var(--x-violet), #5733c4);
   }
 }
 .rfr-x__section-sub {
@@ -490,7 +490,7 @@
   gap: 8px;
   padding: 8px 16px;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--x-violet), #6461bc);
+  background: linear-gradient(135deg, var(--x-violet), #5733c4);
   color: #fff;
   font-weight: 600;
   font-size: 14px;
@@ -549,11 +549,11 @@
 }
 .rfr-x__tree-root {
   padding: 14px 26px;
-  background: linear-gradient(135deg, var(--x-violet), #6461bc);
+  background: linear-gradient(135deg, var(--x-violet), #5733c4);
   color: #fff;
   font-weight: 700;
   border-radius: 12px;
-  box-shadow: 0 8px 20px #6b6dc440;
+  box-shadow: 0 8px 20px #6b46e540;
 }
 .rfr-x__tree-connect {
   width: 2px;

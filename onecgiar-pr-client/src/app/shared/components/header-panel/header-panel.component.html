@@ -33,28 +33,28 @@
             type="button"
             (click)="setTestLabelPos('default')"
             class="flex items-center gap-2 px-3 py-1.5 text-left text-[12px] font-medium transition-colors hover:bg-amber-50"
-            [ngClass]="testLabelPos() === 'default' ? 'text-amber-700' : 'text-[#1e202f]'">
+            [ngClass]="testLabelPos() === 'default' ? 'text-amber-700' : 'text-ink-heading'">
             <i class="material-icons-round text-[16px] leading-none">title</i> Beside the title
           </button>
           <button
             type="button"
             (click)="setTestLabelPos('top-right')"
             class="flex items-center gap-2 px-3 py-1.5 text-left text-[12px] font-medium transition-colors hover:bg-amber-50"
-            [ngClass]="testLabelPos() === 'top-right' ? 'text-amber-700' : 'text-[#1e202f]'">
+            [ngClass]="testLabelPos() === 'top-right' ? 'text-amber-700' : 'text-ink-heading'">
             <i class="material-icons-round text-[16px] leading-none">north_east</i> Top-right corner
           </button>
           <button
             type="button"
             (click)="setTestLabelPos('bottom-left')"
             class="flex items-center gap-2 px-3 py-1.5 text-left text-[12px] font-medium transition-colors hover:bg-amber-50"
-            [ngClass]="testLabelPos() === 'bottom-left' ? 'text-amber-700' : 'text-[#1e202f]'">
+            [ngClass]="testLabelPos() === 'bottom-left' ? 'text-amber-700' : 'text-ink-heading'">
             <i class="material-icons-round text-[16px] leading-none">south_west</i> Bottom-left corner
           </button>
           <button
             type="button"
             (click)="setTestLabelPos('bottom-right')"
             class="flex items-center gap-2 px-3 py-1.5 text-left text-[12px] font-medium transition-colors hover:bg-amber-50"
-            [ngClass]="testLabelPos() === 'bottom-right' ? 'text-amber-700' : 'text-[#1e202f]'">
+            [ngClass]="testLabelPos() === 'bottom-right' ? 'text-amber-700' : 'text-ink-heading'">
             <i class="material-icons-round text-[16px] leading-none">south_east</i> Bottom-right corner
           </button>
           <div class="my-1 h-px bg-amber-100"></div>
@@ -98,7 +98,7 @@
       @if (!dataControlSE.hideWordmark()) {
       <div class="logo_content flex flex-col items-start justify-center gap-0.5 max-lg:hidden">
         <p class="m-0 flex items-baseline gap-1 whitespace-nowrap text-[15px] font-extrabold leading-tight tracking-tight">
-          <span class="text-[#1e202f]">PRMS</span>
+          <span class="text-ink-heading">PRMS</span>
           <span class="text-brand-300">Reporting</span>
         </p>
         @if (reportingPhaseLabel()) {
@@ -124,8 +124,8 @@
         class="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
         [ngClass]="
           isSearchMode()
-            ? 'border border-transparent bg-[linear-gradient(90deg,#6b6dc4,#6461bc,#6461bc)] text-white shadow-[0_4px_12px_rgba(100,97,188,0.4)]'
-            : 'border border-[#e6e3db] bg-white text-[#1e202f] hover:bg-[#f7f6f2]'
+            ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87, 51, 196,0.4)]'
+            : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'
         "
         (click)="toggleSearch()"
         [prTooltip]="isSearchMode() ? 'Close search' : 'Search sections'"
@@ -136,7 +136,7 @@
 
       @if (!dataControlSE.hideMainNav()) {
         <div
-          class="nav_pill flex h-12 min-w-0 items-center rounded-full bg-[linear-gradient(90deg,#1e202f,#1f2233,#1f2235)] px-1.5 py-1.5 shadow-[0_6px_18px_rgba(30,32,47,0.28)]"
+          class="nav_pill flex h-12 min-w-0 items-center rounded-full bg-sidebar px-1.5 py-1.5 shadow-[0_6px_18px_rgba(30,32,47,0.28)]"
           [ngClass]="isSearchMode() ? 'flex-1' : ''">
           <app-navigation-bar [isSearchMode]="isSearchMode()" (searchClosed)="isSearchMode.set(false)"></app-navigation-bar>
         </div>
@@ -147,7 +147,7 @@
       <a
         #whatsNewLink
         class="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
-        [ngClass]="rlaWhatsNew.isActive ? 'border border-transparent bg-[linear-gradient(90deg,#6b6dc4,#6461bc,#6461bc)] text-white shadow-[0_4px_12px_rgba(100,97,188,0.4)]' : 'border border-[#e6e3db] bg-white text-[#1e202f] hover:bg-[#f7f6f2]'"
+        [ngClass]="rlaWhatsNew.isActive ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87, 51, 196,0.4)]' : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'"
         (keydown.space)="$event.preventDefault(); whatsNewLink.click()"
         routerLink="/whats-new"
         routerLinkActive
@@ -161,7 +161,7 @@
       <button
         type="button"
         class="relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
-        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'border border-transparent bg-[linear-gradient(90deg,#6b6dc4,#6461bc,#6461bc)] text-white shadow-[0_4px_12px_rgba(100,97,188,0.4)]' : 'border border-[#e6e3db] bg-white text-[#1e202f] hover:bg-[#f7f6f2]'"
+        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87, 51, 196,0.4)]' : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'"
         cdkOverlayOrigin
         #notifTrigger="cdkOverlayOrigin"
         (click)="notificationsOpen.set(!notificationsOpen())"
@@ -185,7 +185,7 @@
         #settingsTrigger
         type="button"
         class="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
-        [ngClass]="settingsMenuOpen() ? 'border border-transparent bg-[linear-gradient(90deg,#6b6dc4,#6461bc,#6461bc)] text-white shadow-[0_4px_12px_rgba(100,97,188,0.4)]' : 'border border-[#e6e3db] bg-white text-[#1e202f] hover:bg-[#f7f6f2]'"
+        [ngClass]="settingsMenuOpen() ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87, 51, 196,0.4)]' : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'"
         cdkOverlayOrigin
         #settingsOrigin="cdkOverlayOrigin"
         (click)="settingsMenuOpen.set(!settingsMenuOpen())"
@@ -367,8 +367,8 @@
             (keydown.space)="$event.preventDefault(); adminLink.click()"
             (keydown.enter)="adminLink.click()"
             (click)="userMenuOpen.set(false)">
-            <i class="pi pi-wrench text-[15px] text-brand-200 transition-colors duration-300 group-hover:text-brand-300" aria-hidden="true"></i>
-            <p class="m-0 text-xs font-medium text-brand-200 transition-colors duration-300 group-hover:text-brand-300">Admin module</p>
+            <i class="pi pi-wrench text-[15px] text-brand-300 transition-colors duration-300 group-hover:text-brand-300" aria-hidden="true"></i>
+            <p class="m-0 text-xs font-medium text-brand-300 transition-colors duration-300 group-hover:text-brand-300">Admin module</p>
           </a>
         }
       </div>

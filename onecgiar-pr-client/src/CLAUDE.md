@@ -626,7 +626,7 @@ styles/
 
 ### Key tokens (from `colors.scss`)
 
-- **Primary** indigo scale `--pr-color-primary-25..950` with main color `--pr-color-primary-300` (`#5569dd`).
+- **Primary** indigo scale `--pr-color-primary-25..950` with main color `--pr-color-primary-300` (`#6b46e5`).
 - **Secondary** slate scale, main `--pr-color-secondary-400` (`#2a2e45`).
 - **Status colors** with named main values: `red-300` (`#d00416`), `yellow-300` (`#dfb400`), `green-500` (`#19ae58`), `blue-500` (`#3b82f6`), `orange-500` (`#f97316`).
 - **Neutral** scale `--pr-color-neutral-100..1000`.

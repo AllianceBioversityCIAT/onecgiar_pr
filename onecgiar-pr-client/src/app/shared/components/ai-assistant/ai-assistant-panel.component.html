@@ -1,7 +1,7 @@
 <!-- Launcher FAB -->
 <button
   type="button"
-  class="pr-ai-fab fixed bottom-24 right-5 z-[1050] flex h-14 w-14 items-center justify-center rounded-full text-white transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 focus-visible:ring-offset-2"
+  class="pr-ai-fab fixed bottom-24 right-5 z-[1050] flex h-14 w-14 items-center justify-center rounded-full text-white transition-all duration-300 ease-out hover:-translate-y-0.5 hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-2"
   [class.scale-0]="assistant.isOpen()"
   [class.opacity-0]="assistant.isOpen()"
   [class.pointer-events-none]="assistant.isOpen()"
@@ -95,7 +95,7 @@
             <div class="mt-1 flex gap-2">
               <button
                 type="button"
-                class="rounded-lg px-4 py-2 pr-body-2 font-weight-600 text-white shadow-sm transition-all hover:-translate-y-px hover:shadow-md active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 focus-visible:ring-offset-2"
+                class="rounded-lg px-4 py-2 pr-body-2 font-weight-600 text-white shadow-sm transition-all hover:-translate-y-px hover:shadow-md active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-2"
                 style="background: linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
                 (click)="startDownload()">
                 Download
@@ -140,7 +140,7 @@
             }
             <button
               type="button"
-              class="mt-1 rounded-lg px-4 py-2 pr-body-2 font-weight-600 text-white shadow-sm transition-all hover:-translate-y-px hover:shadow-md active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 focus-visible:ring-offset-2"
+              class="mt-1 rounded-lg px-4 py-2 pr-body-2 font-weight-600 text-white shadow-sm transition-all hover:-translate-y-px hover:shadow-md active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-2"
               style="background: linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
               (click)="retry()">
               Retry
@@ -181,7 +181,7 @@
                       @for (card of msg.cards; track card.code) {
                         <button
                           type="button"
-                          class="group flex items-start gap-2.5 rounded-xl border border-brand-100 bg-brand-25 px-3 py-2.5 text-left transition-all hover:-translate-y-px hover:border-brand-300 hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200"
+                          class="group flex items-start gap-2.5 rounded-xl border border-brand-100 bg-brand-25 px-3 py-2.5 text-left transition-all hover:-translate-y-px hover:border-brand-300 hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
                           (click)="open(card.url)">
                           <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-brand-300 shadow-sm ring-1 ring-brand-100">
                             <i class="material-icons-round text-[15px]">description</i>
@@ -236,7 +236,7 @@
               autocomplete="off" />
             <button
               type="submit"
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-all hover:-translate-y-px hover:shadow-md active:translate-y-0 disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 focus-visible:ring-offset-2"
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-all hover:-translate-y-px hover:shadow-md active:translate-y-0 disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-2"
               style="background: linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))"
               [disabled]="assistant.status() === 'thinking' || !draft().trim()"
               aria-label="Send">

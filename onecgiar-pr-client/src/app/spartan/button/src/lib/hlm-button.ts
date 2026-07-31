@@ -10,7 +10,13 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/80',
+        // WCAG fix — was `hover:bg-primary/80`. Tailwind compiles `/80` to
+        // color-mix(in oklab, var(--primary) 80%, transparent), i.e. the primary composited over
+        // whatever is BEHIND the button, not a darker stop. With --primary #6b46e5 that lands on
+        // ~#896bea, where white text measures 3.9217:1 over white / 4.0173:1 over the #f7f7f9
+        // canvas — both fail AA for normal text, on every default button in the app.
+        // The explicit 400 stop gives 7.8479:1 and matches the `brand` variant below.
+        default: 'bg-primary text-primary-foreground hover:bg-brand-400',
         outline:
           'border-border bg-background hover:bg-muted hover:text-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 aria-expanded:bg-muted aria-expanded:text-foreground shadow-xs',
         secondary:
@@ -18,7 +24,15 @@ export const buttonVariants = cva(
         ghost: 'hover:bg-muted hover:text-foreground dark:hover:bg-muted/50 aria-expanded:bg-muted aria-expanded:text-foreground',
         destructive:
           'bg-destructive/10 hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/20 text-destructive focus-visible:border-destructive/40 dark:hover:bg-destructive/30',
-        link: 'text-primary underline-offset-4 hover:underline'
+        link: 'text-primary underline-offset-4 hover:underline',
+        // ── PRMS redesign variants — docs/reporting-redesign/UI-RULES.md §3.3.
+        // `brand` is THE single primary action per screen (rule 1). white on #6b46e5 = 5.7809:1,
+        // hover #5733c4 = 7.8479:1.
+        brand: 'bg-brand-300 text-white hover:bg-brand-400 shadow-[var(--pr-shadow-1)]',
+        // `brandSoft` is for row-level actions (Report / Continue). Border is the light tint, which
+        // is fine here because the FILL carries the affordance and the label is #5733c4 on #ffffff
+        // (7.8479:1) / on #f5f3ff (7.1583:1).
+        brandSoft: 'bg-white border border-brand-200 text-brand-400 hover:bg-brand-50'
       },
       size: {
         default: 'h-9 gap-1.5 px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',

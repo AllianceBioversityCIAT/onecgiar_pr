@@ -38,7 +38,7 @@ export class IndicatorDrawerComponent {
   readonly tocNode = input<any>(null);
   readonly initiativeId = input<number>(0);
   readonly aowCode = input<string>('');
-  readonly accent = input<string>('#6b6dc4');
+  readonly accent = input<string>('#6b46e5');
   /** Tab to land on — set by the card button that opened the drawer. */
   readonly initialTab = input<DrawerTab>('report');
 

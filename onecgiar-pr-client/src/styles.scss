@@ -29,7 +29,38 @@
   --color-brand-900: var(--pr-color-primary-900);
   --color-brand-950: var(--pr-color-primary-950);
   --color-brand: var(--pr-color-primary-300);
-  --color-ink: var(--pr-color-secondary-400);
+  // Repointed: --pr-color-secondary-400 is now the dark brand SURFACE (#271862), not ink.
+  // "ink" means body text, so it tracks the text ramp. (0 consumers today — safe.)
+  --color-ink: var(--pr-text);
+
+  // ── Semantic aliases — docs/reporting-redesign/UI-RULES.md §2.3.
+  // Gives bg-surface-app, text-ink-secondary, bg-sidebar, font-mono.
+  // `inline` is REQUIRED: the values are var() references, so Tailwind must emit the var()
+  // straight into the utility instead of re-declaring a theme var. A plain @theme here would
+  // freeze resolution to :root and break every scoped override (e.g. the dark sidebar).
+  --color-surface-topbar: var(--pr-surface-topbar);
+  --color-surface-band: var(--pr-surface-band);
+  --color-surface-app: var(--pr-surface-app);
+  --color-surface-card: var(--pr-surface-card);
+  --color-surface-subtle: var(--pr-surface-subtle);
+
+  --color-ink-heading: var(--pr-text-heading);
+  --color-ink-body: var(--pr-text);
+  --color-ink-secondary: var(--pr-text-secondary);
+  --color-ink-muted: var(--pr-text-muted);
+  --color-ink-subtle: var(--pr-text-subtle);
+
+  // ⚠️ DELIBERATELY NOT DECLARED HERE: --color-sidebar and --color-sidebar-foreground.
+  // UI-RULES §2.3 proposes them, but Helm's own preset already owns those keys
+  // (@spartan-ng/brain/hlm-tailwind-preset.css: --color-sidebar: var(--sidebar) at :94).
+  // Redeclaring them to point at --pr-* would win over the preset and sever `bg-sidebar` from
+  // the raw --sidebar var — which is exactly the mechanism that lets a scoped selector paint the
+  // sidebar dark on a light page. The sidebar VALUE therefore belongs on the raw var below, not
+  // here. Only the two keys the preset does NOT define are added:
+  --color-sidebar-elevated: var(--pr-sidebar-elevated);
+  --color-sidebar-fg-muted: var(--pr-sidebar-fg-muted);
+
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 /* You can add global styles to this file, and also import other style files */
 @import 'primeicons/primeicons.css';
@@ -119,9 +150,11 @@ background: var(--pr-color-primary-300);
 border-radius: 10px;
 }
 
-/* Handle on hover */
+/* Handle on hover — DARKENS on hover. Was -200, which in the new ramp is a light tint
+   (#ddd6fe, 1.3885:1 on white): the thumb would have vanished on hover instead of
+   responding. -400 gives 7.8479:1 and reads as a press. */
 .custom_scroll::-webkit-scrollbar-thumb:hover {
-background: var(--pr-color-primary-200);
+background: var(--pr-color-primary-400);
 border-radius: 10px;
 }
 
@@ -433,32 +466,70 @@ zoom: var(--pr-font-scale, 1);
 --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
 --radius: 0.625rem;
---background: oklch(1 0 0);
---foreground: oklch(0.129 0.042 264.695);
---card: oklch(1 0 0);
---card-foreground: oklch(0.129 0.042 264.695);
---popover: oklch(1 0 0);
---popover-foreground: oklch(0.129 0.042 264.695);
---primary: oklch(0.208 0.042 265.755);
---primary-foreground: oklch(0.984 0.003 247.858);
---secondary: oklch(0.968 0.007 247.896);
---secondary-foreground: oklch(0.208 0.042 265.755);
---muted: oklch(0.968 0.007 247.896);
---muted-foreground: oklch(0.554 0.046 257.417);
---accent: oklch(0.968 0.007 247.896);
---accent-foreground: oklch(0.208 0.042 265.755);
---destructive: oklch(0.577 0.245 27.325);
---border: oklch(0.929 0.013 255.508);
---input: oklch(0.929 0.013 255.508);
---ring: oklch(0.704 0.04 256.788);
---sidebar: oklch(0.984 0.003 247.858);
---sidebar-foreground: oklch(0.129 0.042 264.695);
---sidebar-primary: oklch(0.208 0.042 265.755);
---sidebar-primary-foreground: oklch(0.984 0.003 247.858);
---sidebar-accent: oklch(0.968 0.007 247.896);
---sidebar-accent-foreground: oklch(0.208 0.042 265.755);
---sidebar-border: oklch(0.929 0.013 255.508);
---sidebar-ring: oklch(0.704 0.04 256.788);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPARTAN / HELM RAW VARS — wired to the PRMS canon (styles/colors.scss).
+//
+// These were shadcn's slate DEFAULTS until now, which is why every Spartan component
+// rendered grey-blue regardless of what colors.scss said. Every Helm recipe styles
+// against these names, so this block is what actually brands the component library.
+//
+// 🛑 DO NOT re-declare these keys in an @theme block. Helm's preset already maps them
+// into Tailwind (@spartan-ng/brain/hlm-tailwind-preset.css @theme inline from :82 —
+// `--color-primary: var(--primary)` at :106). Declaring a plain @theme for them makes
+// Tailwind emit `:root,:host{...}` and freezes resolution to :root, which silently
+// severs every scoped override — the dark sidebar reverts to page colours while the
+// page still looks right. See design.md D3.
+//
+// Colour space: hex via var() is intentional and verified — `bg-primary/50` compiles to
+// color-mix(in oklab, var(--primary) 50%, transparent) and resolves hex correctly in
+// Tailwind 4.3.2. What breaks INVISIBLY is a bare channel triplet (resolves to
+// rgba(0,0,0,0), i.e. the element loses its fill with no error), so every var here must
+// be confirmed to resolve, not merely to be present.
+// ─────────────────────────────────────────────────────────────────────────────
+--background: var(--pr-surface-app);
+--foreground: var(--pr-text);
+--card: var(--pr-surface-card);
+--card-foreground: var(--pr-text);
+--popover: var(--pr-surface-card);
+--popover-foreground: var(--pr-text);
+
+// white on #6b46e5 = 5.7809:1 (AA, normal text)
+--primary: var(--pr-color-primary-300);
+--primary-foreground: var(--pr-color-white);
+
+--secondary: var(--pr-surface-subtle);
+--secondary-foreground: var(--pr-text);
+--muted: var(--pr-surface-subtle);
+--muted-foreground: var(--pr-text-secondary);
+
+// Hover/selected affordance for menu + list items. Violet is allowed here: it is an
+// action state, not a content surface (rule 7). #5733c4 on #f5f3ff = 7.1583:1.
+--accent: var(--pr-color-primary-50);
+--accent-foreground: var(--pr-color-primary-400);
+
+--destructive: var(--pr-color-red-300);
+
+// ⚠️ KNOWN DEBT, not a regression: a #e3e3e8 control boundary is 1.2790:1 on white,
+// under the WCAG 1.4.11 3:1 floor. Today's shadcn default is equally light, so this
+// change neither fixes nor worsens it. Raising it needs a design call on a
+// --pr-border-control token — deliberately out of scope for this phase.
+--border: var(--pr-border);
+--input: var(--pr-border);
+
+// Solid focus indicator — #6b46e5 on white = 5.7809:1, well clear of the 3:1 non-text floor.
+--ring: var(--pr-color-primary-300);
+
+// ── Sidebar: dark chrome on a light page, expressed through the sidebar token family
+// (NOT via .dark). A component may still scope these on its own host to override.
+--sidebar: var(--pr-sidebar-bg);
+--sidebar-foreground: var(--pr-sidebar-fg);
+--sidebar-primary: var(--pr-sidebar-active);
+--sidebar-primary-foreground: var(--pr-color-white);
+--sidebar-accent: var(--pr-sidebar-elevated);
+--sidebar-accent-foreground: var(--pr-sidebar-fg);
+--sidebar-border: var(--pr-sidebar-border);
+--sidebar-ring: var(--pr-sidebar-accent);
 }
 
 :root.dark {
@@ -531,7 +602,7 @@ background-attachment: fixed;
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: var(--pr-color-primary-300, #5569dd);
+  background-color: var(--pr-color-primary-300, #6b46e5);
   color: var(--pr-color-white, #fff);
   font-size: 12px;
   font-weight: 500;
@@ -553,7 +624,7 @@ background-attachment: fixed;
   height: 100%;
   width: 40%;
   border-radius: 3px;
-  background-color: var(--pr-color-primary-300, #5569dd);
+  background-color: var(--pr-color-primary-300, #6b46e5);
   animation: pr-progress-indet 1.2s infinite ease-in-out;
 }
 @keyframes pr-progress-indet {
@@ -566,7 +637,7 @@ background-attachment: fixed;
   width: 32px;
   height: 32px;
   border: 3px solid var(--pr-color-accents-2, #eaeaea);
-  border-top-color: var(--pr-color-primary-300, #5569dd);
+  border-top-color: var(--pr-color-primary-300, #6b46e5);
   border-radius: 50%;
   animation: pr-spin 0.8s linear infinite;
 }
@@ -682,9 +753,9 @@ background-attachment: fixed;
     }
 
     .driver-popover-next-btn {
-      background: linear-gradient(135deg, #6b6dc4 0%, #6461bc 100%);
+      background: linear-gradient(135deg, #6b46e5 0%, #5733c4 100%);
       color: #ffffff;
-      box-shadow: 0 6px 16px rgba(100, 97, 188, 0.4);
+      box-shadow: 0 6px 16px rgba(87, 51, 196, 0.4);
     }
   }
 

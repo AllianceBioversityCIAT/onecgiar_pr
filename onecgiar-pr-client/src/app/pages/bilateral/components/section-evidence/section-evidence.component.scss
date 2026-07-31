@@ -398,14 +398,14 @@
   transition: border-color 150ms ease, background 150ms ease;
 
   &:hover {
-    border-color: var(--pr-color-primary-200);
+    border-color: var(--pr-color-primary-300);
     background: var(--pr-color-primary-25);
   }
 }
 
 .sev-draft-dropzone-icon {
   font-size: 32px;
-  color: var(--pr-color-primary-200);
+  color: var(--pr-color-primary-300);
 }
 
 .sev-draft-dropzone-text {
@@ -510,7 +510,7 @@
   }
 
   &:hover {
-    border-color: var(--pr-color-primary-200);
+    border-color: var(--pr-color-primary-300);
     background: var(--pr-color-primary-25);
     color: var(--pr-color-primary-400);
   }

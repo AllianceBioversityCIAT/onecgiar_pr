@@ -1,7 +1,7 @@
 <div
   #frameworkReportingCardItem
   type="button"
-  class="framework-reporting-card-item group flex min-h-0 flex-1 cursor-pointer flex-col gap-2.5 rounded-xl border border-[var(--pr-color-accents-2)] bg-white p-4 transition-[border-color,box-shadow] duration-200 hover:border-brand-200 hover:shadow-[0_6px_18px_rgba(var(--pr-color-primary-rgb),0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+  class="framework-reporting-card-item group flex min-h-0 flex-1 cursor-pointer flex-col gap-2.5 rounded-xl border border-[var(--pr-color-accents-2)] bg-white p-4 transition-[border-color,box-shadow] duration-200 hover:border-brand-300 hover:shadow-[0_6px_18px_rgba(var(--pr-color-primary-rgb),0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
   routerLink="/result-framework-reporting/entity-details/{{ item?.initiativeCode }}"
   (keydown.space)="$event.preventDefault(); frameworkReportingCardItem.click()"
   (keydown.enter)="frameworkReportingCardItem.click()">

@@ -27,13 +27,13 @@ describe('MdsProgressRingComponent', () => {
   it('should compute ring color violet for < 100%', () => {
     fixture.componentRef.setInput('percentage', 25);
     fixture.detectChanges();
-    expect(component.ringColor()).toBe('#6b6dc4');
+    expect(component.ringColor()).toBe('#6b46e5');
   });
 
   it('should compute ring color violet for in-progress values', () => {
     fixture.componentRef.setInput('percentage', 60);
     fixture.detectChanges();
-    expect(component.ringColor()).toBe('#6b6dc4');
+    expect(component.ringColor()).toBe('#6b46e5');
   });
 
   it('should compute ring color green when complete', () => {

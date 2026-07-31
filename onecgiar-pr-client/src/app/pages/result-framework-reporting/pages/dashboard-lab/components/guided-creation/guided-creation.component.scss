@@ -15,7 +15,7 @@
   --gc-muted: #74748c;
   --gc-line: rgba(31, 32, 51, 0.09);
 
-  --gc-brand: #6b6dc4;
+  --gc-brand: #6b46e5;
   --gc-brand-ink: #4a4c9c;
 
   // easeOutCubic everywhere — one curve, no bounce.
@@ -63,7 +63,7 @@
   border-radius: 14px;
   background: var(--gc-brand);
   color: #fff;
-  box-shadow: 0 8px 22px rgba(107, 109, 196, 0.32);
+  box-shadow: 0 8px 22px rgba(107, 70, 229, 0.32);
   transition:
     background-color 180ms var(--gc-ease),
     box-shadow 180ms var(--gc-ease),
@@ -71,7 +71,7 @@
 
   &:hover {
     background: var(--gc-brand-ink);
-    box-shadow: 0 10px 26px rgba(107, 109, 196, 0.4);
+    box-shadow: 0 10px 26px rgba(107, 70, 229, 0.4);
     transform: translateY(-1px);
   }
 
@@ -215,8 +215,8 @@
   }
 
   &.is-active {
-    background: #6b6dc414;
-    border-color: #6b6dc44d;
+    background: #6b46e514;
+    border-color: #6b46e54d;
   }
 }
 
