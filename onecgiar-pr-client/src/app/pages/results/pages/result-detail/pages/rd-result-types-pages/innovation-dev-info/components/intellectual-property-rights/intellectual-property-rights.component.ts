@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
-import { InnovationDevelopmentQuestions } from '../../model/InnovationDevelopmentQuestions.model';
+import { InnovationDevelopmentQuestions, Intellectualpropertyrights, Q12, Q3 } from '../../model/InnovationDevelopmentQuestions.model';
 import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
 
 @Component({
@@ -11,7 +11,30 @@ import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-inf
 })
 export class IntellectualPropertyRightsComponent implements OnInit {
   @Input() body = new InnovationDevInfoBody();
-  @Input() options: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
+  private _options: InnovationDevelopmentQuestions = new InnovationDevelopmentQuestions();
+
+  /**
+   * The API omits the questions that do not apply to a result's question version — result 51 comes
+   * back without `q4` — while the template and `ngOnInit` read `qN.question_text` / `qN['value']`
+   * unconditionally, which threw "Cannot read properties of undefined" on first render (the same
+   * error happens on prtest). Fill the gaps with the model defaults so the shape always matches what
+   * the template expects; the control still renders, exactly as before.
+   */
+  @Input()
+  set options(value: InnovationDevelopmentQuestions) {
+    const next = value ?? new InnovationDevelopmentQuestions();
+    next.intellectual_property_rights ??= new Intellectualpropertyrights();
+    const ipr = next.intellectual_property_rights;
+    ipr.q1 ??= new Q12();
+    ipr.q2 ??= new Q12();
+    ipr.q3 ??= new Q3();
+    ipr.q4 ??= new Q3();
+    this._options = next;
+  }
+
+  get options(): InnovationDevelopmentQuestions {
+    return this._options;
+  }
 
   constructor(public innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
 
