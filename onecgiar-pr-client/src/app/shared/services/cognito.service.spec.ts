@@ -54,7 +54,7 @@ describe('CognitoService', () => {
 
       service.loginWithAzureAd();
 
-      expect(spy).toHaveBeenCalledWith(environment.production ? 'CGIAR-Account' : 'CGIAR-AzureAD');
+      expect(spy).toHaveBeenCalledWith(environment.production ? 'CGIAR-Account' : 'CGIAR-AzureAD', `${window.location.origin}/auth`);
       expect(service.isLoadingAzureAd()).toBe(false);
     });
 
