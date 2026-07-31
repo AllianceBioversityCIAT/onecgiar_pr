@@ -22,20 +22,8 @@ export class GeneralInterceptorService implements HttpInterceptor {
    * empty view they were created with. Refreshing once every request settles restores the
    * pre-upgrade behaviour for every screen at once. See ViewRefreshService for the full rationale.
    */
-  /** Result Detail and IPSR are the reporting forms that lose their data to the zoneless render gap. */
-  private shouldRepaint(): boolean {
-    const url = this.router.url;
-    return url.includes('/result/result-detail/') || url.includes('/ipsr/detail/');
-  }
-
   private refreshViewWhenSettled<T>(source: Observable<T>): Observable<T> {
-    return defer(() =>
-      source.pipe(
-        finalize(() => {
-          if (this.shouldRepaint()) this.viewRefreshSE.schedule();
-        })
-      )
-    );
+    return defer(() => source.pipe(finalize(() => this.viewRefreshSE.schedule())));
   }
   constructor(
     private readonly authService: AuthService,

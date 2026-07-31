@@ -8,6 +8,7 @@ import { FooterService } from './shared/components/footer/footer.service';
 import { LayoutService, SidebarLayout } from './shared/services/layout.service';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
+import { ResultsNotificationsService } from './pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 // import { WebsocketService } from './sockets/websocket.service';
 
 @Component({
@@ -26,6 +27,7 @@ export class AppComponent implements OnInit {
   readonly layoutSE = inject(LayoutService);
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly resultsNotificationsSE = inject(ResultsNotificationsService);
 
   constructor(
     public AuthService: AuthService,
@@ -51,6 +53,7 @@ export class AppComponent implements OnInit {
     Hotjar.init(environment.hotjarSiteId, environment.hotjarVersion);
     this.getGlobalParametersByCategory();
     this.rolesSE.validateReadOnly();
+    this.bootstrapUserSession();
 
     this.api.dataControlSE.findClassTenSeconds('pSelectP').then(resp => {
       if (!resp) return;
@@ -100,6 +103,26 @@ export class AppComponent implements OnInit {
   }
 
   /** Walk to the deepest activated route, then up until a `data.sidebar` is found. */
+  /**
+   * App-wide session bootstrap. This used to live in `app-header-panel.ngOnInit`, which rendered on
+   * every authenticated page; the Spartan sidebar replaced that header and the bootstrap was lost
+   * with it, so pages that do not fetch it themselves came up without the user's roles or
+   * initiatives. Symptom on `/ipsr/list`: the "Submitter (s)" filter had no chips and the table
+   * reported "There are no results for the selected filters" while prtest listed the packages.
+   *
+   * It belongs in the shell rather than in the sidebar: the sidebar is hidden in QA full-screen and
+   * focus mode, and the data is needed regardless.
+   */
+  private bootstrapUserSession(): void {
+    if (!this.AuthService.localStorageUser) return;
+
+    this.api.updateUserData(() => {
+      this.resultsNotificationsSE.get_updates_notifications();
+      this.resultsNotificationsSE.get_updates_pop_up_notifications();
+    });
+    this.api.dataControlSE.getCurrentPhases().subscribe();
+  }
+
   private resolveSidebarFromRoute(): SidebarLayout | null {
     let route = this.activatedRoute;
     while (route.firstChild) route = route.firstChild;
