@@ -4086,6 +4086,42 @@ export class BilateralService {
     }
   }
 
+  /**
+   * Runs the type-specific handler (same as bilateral ingest `afterCreate`) against
+   * AI-extracted data during draft promotion. Failures are logged as warnings rather
+   * than propagated, because AI-extracted fields may be partial.
+   */
+  public async populateTypeSpecificFromExtractedMds(
+    result: Result,
+    extractedMds: Record<string, any>,
+    userId: number,
+  ): Promise<void> {
+    const handler = this.resultTypeHandlerMap.get(result.result_type_id);
+    if (!handler?.afterCreate) return;
+
+    const partialDto = {
+      result_type_id: result.result_type_id,
+      title: result.title,
+      innovation_development: extractedMds['innovation_development'],
+      capacity_sharing: extractedMds['capacity_sharing'],
+      innovation_use: extractedMds['innovation_use'],
+      policy_change: extractedMds['policy_change'],
+    } as any;
+
+    try {
+      await handler.afterCreate({
+        bilateralDto: partialDto,
+        resultId: result.id,
+        userId,
+        isDuplicateResult: false,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `populateTypeSpecificFromExtractedMds: skipped for result ${result.id} (type ${result.result_type_id}) — ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+      );
+    }
+  }
+
   public async populateInitiativeAndTocFromProgramCode(
     resultId: number,
     programCode: string | null | undefined,

@@ -575,6 +575,9 @@ body.pr-p25-drawer-scroll-lock {
   font-weight: 600;
   color: #111827;
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pr-dialog-chips {

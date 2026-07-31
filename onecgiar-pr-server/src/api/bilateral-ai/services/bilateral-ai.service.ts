@@ -237,6 +237,14 @@ export class BilateralAiService {
       userId,
     );
 
+    if (draft.extracted_mds) {
+      await this.bilateralService.populateTypeSpecificFromExtractedMds(
+        result,
+        draft.extracted_mds as Record<string, any>,
+        userId,
+      );
+    }
+
     await this.resultRepository.update(draft.result_id, {
       status_id: ResultStatusData.Editing.value,
     });
