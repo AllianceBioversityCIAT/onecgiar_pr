@@ -30,6 +30,7 @@ export class BilateralAiService implements OnDestroy {
   isDraftListLoaded = signal(false);
 
   projectNameMap = signal<Record<number, string>>({});
+  initiativeNameMap = signal<Record<string, string>>({});
 
   uploadState = signal<BilateralAiUploadState>({
     jobId: null,
@@ -131,6 +132,7 @@ export class BilateralAiService implements OnDestroy {
 
   loadAllDrafts(): void {
     this.loadProjectNames();
+    this.loadInitiativeNames();
     this.bilateralApi.GET_bilateralAiDrafts().subscribe({
       next: (data: any) => {
         this.draftList.set(data ?? []);
@@ -138,6 +140,21 @@ export class BilateralAiService implements OnDestroy {
       },
       error: () => {
         this.isDraftListLoaded.set(true);
+      },
+    });
+  }
+
+  loadInitiativeNames(): void {
+    this.resultsApi.GET_AllInitiatives().subscribe({
+      next: (data: any) => {
+        const list = data?.response ?? [];
+        const map: Record<string, string> = {};
+        for (const i of list) {
+          if (i.official_code) {
+            map[i.official_code] = i.short_name ?? i.name ?? i.official_code;
+          }
+        }
+        this.initiativeNameMap.set(map);
       },
     });
   }

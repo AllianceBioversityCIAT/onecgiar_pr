@@ -52,6 +52,12 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     return draft.extracted_mds?.['indicator'] ?? '';
   }
 
+  getProgramLabel(draft: BilateralAiDraft): string {
+    const code = draft.job?.program_code;
+    if (!code) return '';
+    return this.bilateralAiService.initiativeNameMap()[code] ?? code;
+  }
+
   formatDate(dateStr: string): string {
     const date = new Date(dateStr);
     const now = new Date();
