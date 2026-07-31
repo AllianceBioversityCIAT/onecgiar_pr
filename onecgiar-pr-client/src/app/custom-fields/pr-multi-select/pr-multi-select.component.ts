@@ -55,7 +55,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
 
   private readonly _valueSig = signal<any[]>([]);
 
-  /** Stable clones for flat mode, rebuilt only when the source `options` reference/length changes. */
+  /** Stable clones for flat mode, rebuilt only when the source `options` CONTENT changes. */
   private _decorated: any[] = [];
   private _decoratedSource: any = null;
 
@@ -77,10 +77,17 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
    * never triggers `writeValue`. Re-deriving each cycle keeps the dropdown checkboxes in sync with
    * those external changes — exactly like the pre-signals getter did.
    *
-   * Flags are applied to STABLE clones (rebuilt only when the source `options` reference/length
-   * changes), so we never mutate the parent's original `options` array (fixes shared-reference
-   * corruption) and the virtual-scroll checkbox bindings stay stable. Grouped mode keeps its in-place
-   * decoration via `syncSelectionFlags`.
+   * Flags are applied to STABLE clones, so we never mutate the parent's original `options` array
+   * (fixes shared-reference corruption) and the virtual-scroll checkbox bindings stay stable.
+   * Grouped mode keeps its in-place decoration via `syncSelectionFlags`.
+   *
+   * The clones are rebuilt on a CONTENT comparison, not on array identity. Several consumers bind
+   * `[options]` to a method call (`[options]="filterImpactAreaIndicatorsByImpactAreaID(1)"`), which
+   * hands us a brand-new array on every pass. Rebuilding on identity therefore produced fresh option
+   * objects every pass, the `*ngFor` recreated its views, the view never settled, and Angular 21's
+   * `synchronize()` loop kept re-running change detection until the tab froze (reproduced on
+   * IPSR › Contributors). Comparing content keeps the clones identity-stable and lets the view
+   * converge, without asking every consumer to memoise its list.
    */
   optionsIntance(): any[] {
     const opts = this.options();
@@ -93,10 +100,10 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
     const optionValue = this.optionValue();
     const logicalDeletion = this.logicalDeletion();
 
-    if (this._decoratedSource !== opts || this._decorated.length !== opts.length) {
+    if (!this.sameOptionSet(opts, this._decoratedSource, optionValue, this.optionLabel())) {
       this._decorated = opts.map((o: any) => ({ ...o }));
-      this._decoratedSource = opts;
     }
+    this._decoratedSource = opts;
 
     for (const clone of this._decorated) {
       clone.disabled = false;
@@ -118,6 +125,20 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
     });
 
     return this._decorated;
+  }
+
+  /**
+   * Cheap element-wise comparison (value + label, bailing on the first difference) used to decide
+   * whether the decorated clones can be reused. Allocation-free, so it is safe to run on every pass.
+   */
+  private sameOptionSet(next: any[], previous: any[] | null, optionValue: string, optionLabel: string): boolean {
+    if (!previous || previous.length !== next.length || this._decorated.length !== next.length) return false;
+    if (previous === next) return true;
+    for (let i = 0; i < next.length; i++) {
+      if (next[i]?.[optionValue] !== previous[i]?.[optionValue]) return false;
+      if (next[i]?.[optionLabel] !== previous[i]?.[optionLabel]) return false;
+    }
+    return true;
   }
 
   selectAllF() {

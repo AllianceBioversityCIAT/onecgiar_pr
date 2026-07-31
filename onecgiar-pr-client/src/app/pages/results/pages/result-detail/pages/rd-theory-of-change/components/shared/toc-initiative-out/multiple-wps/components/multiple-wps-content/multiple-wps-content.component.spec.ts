@@ -149,7 +149,7 @@ describe('MultipleWPsContentComponent', () => {
       expect(component.activeTab.is_sdg_action_impact).toEqual(mockResponse.is_sdg_action_impact);
       expect(component.activeTab.wpinformation).toEqual(mockResponse.wpinformation);
       expect(component.activeTab.wpinformation.wpTitle).toEqual("<strong>acronym</strong> <br> <div class=\"select_item_description\">title</div>");
-      expect(component.indicatorView).toBeTruthy();
+      expect(component.indicatorView()).toBeTruthy();
     });
     it('should set indicatorView to true after successful Get_indicator call when wpinformation?.extraInformation?.wp_acronym is undefined', () => {
       component.activeTab = {};
@@ -166,7 +166,7 @@ describe('MultipleWPsContentComponent', () => {
       );
       expect(component.activeTab.indicators).toEqual(mockResponse.informationIndicator);
       expect(component.activeTab.wpinformation.wpTitle).toEqual("<strong>title</strong>");
-      expect(component.indicatorView).toBeTruthy();
+      expect(component.indicatorView()).toBeTruthy();
     });
     it('should handle error when Get_indicator call fails', () => {
       const errorMessage = 'Your error message';
@@ -461,11 +461,11 @@ describe('MultipleWPsContentComponent', () => {
 
   describe('getIndicator', () => {
     it('should set indicatorView to false', () => {
-      component.indicatorView = true;
+      component.indicatorView.set(true);
 
       component.getIndicator();
 
-      expect(component.indicatorView).toBe(false);
+      expect(component.indicatorView()).toBe(false);
     });
 
     it('should set indicatorView to true after calling getIndicator', () => {
@@ -474,7 +474,7 @@ describe('MultipleWPsContentComponent', () => {
       component.getIndicator();
 
       setTimeout(() => {
-        expect(component.indicatorView).toBe(true);
+        expect(component.indicatorView()).toBe(true);
       }, 80);
     });
   });
