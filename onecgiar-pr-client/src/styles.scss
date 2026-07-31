@@ -560,6 +560,7 @@ body.pr-p25-drawer-scroll-lock {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .pr-dialog-meta-label {
@@ -571,6 +572,7 @@ body.pr-p25-drawer-scroll-lock {
 }
 
 .pr-dialog-meta-value {
+  display: block;
   font-size: 12px;
   font-weight: 600;
   color: #111827;
