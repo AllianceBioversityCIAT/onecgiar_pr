@@ -27,6 +27,7 @@ import {
   DraftEvidenceSourceType,
 } from '../entities/draft-evidence.entity';
 import { CreateBilateralAiJobDto } from '../dto/create-bilateral-ai-job.dto';
+import { BilateralService } from '../../bilateral/bilateral.service';
 
 const TYPE_BY_INDICATOR: Record<string, { type: number; level: number }> = {
   'Policy Change': { type: 1, level: 3 },
@@ -55,6 +56,7 @@ export class BilateralAiService {
     private readonly queue: BilateralAiProcessingQueuePublisherService,
     private readonly storage: BilateralAiFileStorageService,
     private readonly textMining: BilateralAiTextMiningService,
+    private readonly bilateralService: BilateralService,
   ) {}
 
   async createJob(
@@ -206,9 +208,7 @@ export class BilateralAiService {
       where: { draft_id: draft.id, is_active: true },
       order: { created_date: 'ASC' },
     });
-    const formalEvidence = evidence.filter(
-      (item) => item.is_formal_evidence,
-    );
+    const formalEvidence = evidence.filter((item) => item.is_formal_evidence);
     if (
       formalEvidence.some(
         (item) => item.source_type !== DraftEvidenceSourceType.DOCUMENT,
@@ -218,10 +218,28 @@ export class BilateralAiService {
         'Only document sources can become formal evidence.',
       );
     }
+
+    const result = await this.resultRepository.findOneOrFail({
+      where: { id: draft.result_id },
+    });
+
+    if (draft.extracted_mds) {
+      await this.bilateralService.populateResultFromExtractedMds(
+        result,
+        draft.extracted_mds as Record<string, any>,
+        userId,
+      );
+    }
+
     await this.resultRepository.update(draft.result_id, {
       status_id: ResultStatusData.Editing.value,
     });
-    return this.getDraft(draftId, userId);
+
+    return {
+      response: { resultId: draft.result_id },
+      message: 'Draft promoted to bilateral result',
+      status: 200,
+    };
   }
 
   async discardDraft(draftId: number, userId: number) {

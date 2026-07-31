@@ -4031,6 +4031,62 @@ export class BilateralService {
   }
 
   /**
+   * Populates result-association tables from `extracted_mds` produced by the AI draft pipeline.
+   * Called during draft promotion so that lead center, contributing partners, and geo focus
+   * are written to the DB without going through the full bilateral ingestion pipeline.
+   */
+  public async populateResultFromExtractedMds(
+    result: Result,
+    extractedMds: Record<string, any>,
+    userId: number,
+  ): Promise<void> {
+    if (!extractedMds) return;
+
+    if (extractedMds.lead_center) {
+      await this.handleLeadCenter(result.id, extractedMds.lead_center, userId);
+    }
+
+    const partners = extractedMds.contributing_partners;
+    if (Array.isArray(partners) && partners.length) {
+      await this.handleInstitutions(
+        result.id,
+        partners,
+        userId,
+        result.result_type_id,
+      );
+    }
+
+    const geoFocus = extractedMds.geo_focus;
+    if (geoFocus) {
+      try {
+        const scope = await this.findScope(
+          geoFocus.scope_code,
+          geoFocus.scope_label,
+        );
+        await this.handleRegions(result, scope, geoFocus.regions ?? []);
+        await this.handleCountries(
+          result,
+          geoFocus.countries ?? [],
+          geoFocus.subnational_areas ?? [],
+          scope.id,
+          userId,
+        );
+        await this._resultRepository.save({
+          ...result,
+          geographic_scope_id: this.resolveScopeId(
+            scope.id,
+            geoFocus.countries,
+          ),
+        });
+      } catch (err) {
+        this.logger.warn(
+          `populateResultFromExtractedMds: geo_focus skipped for result ${result.id} — ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+        );
+      }
+    }
+  }
+
+  /**
    * Stores contributing centers (non lead) into results_center.
    * Input objects follow InstitutionDto shape: may include institution_id, acronym, or name.
    * Avoids duplicating the lead center if already stored.

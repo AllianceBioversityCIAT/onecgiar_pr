@@ -31,6 +31,7 @@ describe('BilateralAiService (unit)', () => {
     const resultRepository = {
       save: jest.fn(async (x) => ({ ...x, id: 100 })),
       update: jest.fn(),
+      findOneOrFail: jest.fn().mockResolvedValue({ id: 100, result_type_id: 7 }),
     };
     const versioningService = {
       $_findActivePhase: jest.fn().mockResolvedValue({ id: 1 }),
@@ -58,6 +59,10 @@ describe('BilateralAiService (unit)', () => {
         .mockReturnValue({ results: [], interactionId: null }),
     };
 
+    const bilateralService = {
+      populateResultFromExtractedMds: jest.fn().mockResolvedValue(undefined),
+    };
+
     const service = new BilateralAiService(
       jobRepository as any,
       draftRepository as any,
@@ -69,6 +74,7 @@ describe('BilateralAiService (unit)', () => {
       queue as any,
       storage as any,
       textMining as any,
+      bilateralService as any,
     );
 
     Object.assign(service, overrides);
