@@ -152,34 +152,33 @@
   </ng-template>
   @if (promoteTarget(); as target) {
     <div class="pr-dialog-body">
-      <p class="pr-dialog-text">Activate <strong>{{ getDraftTitle(target) }}</strong> as a bilateral result?</p>
-      @if (target.job?.program_code) {
-        <div class="pr-dialog-section">
-          <span class="pr-dialog-section-label">Primary Science Program</span>
-          <span class="pr-dialog-chip pr-dialog-chip--initiative">
-            <i class="material-icons-round">science</i>
-            {{ getProgramLabel(target) }}
-            @if (getProgramLabel(target) !== target.job?.program_code) {
-              <span class="pr-dialog-chip-code">{{ target.job?.program_code }}</span>
-            }
+      <p class="pr-dialog-text">Promote <strong>{{ getDraftTitle(target) }}</strong> as a bilateral result?</p>
+      <div class="pr-dialog-meta">
+        <div class="pr-dialog-meta-item">
+          <span class="pr-dialog-meta-label">Science Program</span>
+          <span class="pr-dialog-meta-value">
+            @if (getProgramLabel(target)) { {{ getProgramLabel(target) }} } @else { — }
           </span>
         </div>
-      }
-      <div class="pr-dialog-section">
-        <span class="pr-dialog-section-label">AI-extracted fields</span>
-        <div class="pr-dialog-chips">
-          <span class="pr-dialog-chip pr-dialog-chip--green">
-            <i class="material-icons-round">business</i>Lead Center
+        <div class="pr-dialog-meta-item">
+          <span class="pr-dialog-meta-label">Project</span>
+          <span class="pr-dialog-meta-value">
+            @if (target.job?.project_id) {
+              {{ bilateralAiService.projectNameMap()[target.job!.project_id] ?? target.job!.project_id }}
+            } @else { — }
           </span>
-          <span class="pr-dialog-chip pr-dialog-chip--green">
-            <i class="material-icons-round">people</i>Partners
+        </div>
+        <div class="pr-dialog-meta-item">
+          <span class="pr-dialog-meta-label">Type</span>
+          <span class="pr-dialog-meta-value">
+            @if (getDraftType(target)) { {{ getDraftType(target) }} } @else { — }
           </span>
-          <span class="pr-dialog-chip pr-dialog-chip--green">
-            <i class="material-icons-round">public</i>Geography
-          </span>
+        </div>
+        <div class="pr-dialog-meta-item">
+          <span class="pr-dialog-meta-label">Center</span>
+          <span class="pr-dialog-meta-value">{{ ctx.centerAcronym() }}</span>
         </div>
       </div>
-      <p class="pr-dialog-hint">These fields will be pre-populated from the AI analysis. You can review and edit them afterwards.</p>
     </div>
   }
   <ng-template pTemplate="footer">
