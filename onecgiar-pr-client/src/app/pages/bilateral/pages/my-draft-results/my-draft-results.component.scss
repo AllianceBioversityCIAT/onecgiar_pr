@@ -495,6 +495,53 @@
   }
 }
 
+// ── Promote overlay ──────────────────────────────────────────────────
+
+.mdr-promote-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: mdr-fade-in 180ms ease;
+}
+
+.mdr-promote-overlay-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 32px 44px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.08);
+  animation: mdr-promote-card-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mdr-promote-overlay-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #D1FAE5;
+  border-top-color: #059669;
+  border-radius: 50%;
+  animation: mdr-spin 0.7s linear infinite;
+}
+
+.mdr-promote-overlay-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #065F46;
+  letter-spacing: 0.1px;
+}
+
+@keyframes mdr-promote-card-in {
+  from { opacity: 0; transform: scale(0.9) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 // ── Loading ───────────────────────────────────────────────────────────
 
 .mdr-loading {

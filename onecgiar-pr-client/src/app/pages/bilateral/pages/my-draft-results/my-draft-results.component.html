@@ -133,6 +133,15 @@
   </aside>
 }
 
+@if (bilateralAiService.isPromoting()) {
+  <div class="mdr-promote-overlay">
+    <div class="mdr-promote-overlay-card">
+      <div class="mdr-promote-overlay-spinner"></div>
+      <span class="mdr-promote-overlay-text">Promoting result…</span>
+    </div>
+  </div>
+}
+
 <p-dialog
   styleClass="pr-dialog pr-dialog--promote"
   [modal]="true"

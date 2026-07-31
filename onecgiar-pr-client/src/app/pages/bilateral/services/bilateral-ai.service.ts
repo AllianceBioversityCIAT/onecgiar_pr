@@ -31,6 +31,7 @@ export class BilateralAiService implements OnDestroy {
 
   projectNameMap = signal<Record<number, string>>({});
   initiativeNameMap = signal<Record<string, string>>({});
+  isPromoting = signal(false);
 
   uploadState = signal<BilateralAiUploadState>({
     jobId: null,
@@ -187,8 +188,10 @@ export class BilateralAiService implements OnDestroy {
   }
 
   promoteDraft(draftId: number): void {
+    this.isPromoting.set(true);
     this.bilateralApi.POST_promoteBilateralAiDraft(draftId).subscribe({
       next: ({ response }) => {
+        this.isPromoting.set(false);
         this.uploadState.update(s => ({ ...s, status: 'promoted' }));
         this.draftList.update(list => list.filter(d => d.id !== draftId));
         const resultId = response?.resultId ?? response?.result_id;
@@ -199,6 +202,7 @@ export class BilateralAiService implements OnDestroy {
         }
       },
       error: () => {
+        this.isPromoting.set(false);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to promote draft' });
       },
     });
