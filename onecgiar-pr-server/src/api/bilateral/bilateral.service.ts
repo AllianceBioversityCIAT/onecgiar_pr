@@ -4086,6 +4086,43 @@ export class BilateralService {
     }
   }
 
+  public async populateInitiativeAndTocFromProgramCode(
+    resultId: number,
+    programCode: string | null | undefined,
+    userId: number,
+  ): Promise<void> {
+    if (!programCode) return;
+
+    const initiative = await this._clarisaInitiatives.findOne({
+      where: { official_code: programCode.toUpperCase() },
+    });
+
+    if (!initiative) {
+      this.logger.warn(
+        `populateInitiativeAndTocFromProgramCode: no initiative found for program_code=${programCode}`,
+      );
+      return;
+    }
+
+    await this.upsertResultInitiative(resultId, initiative.id, 1, userId);
+
+    const existingToc = await this._resultsTocResultsRepository.findOne({
+      where: { result_id: resultId, initiative_ids: initiative.id, is_active: true },
+    });
+
+    if (!existingToc) {
+      await this._resultsTocResultsRepository.save({
+        created_by: userId,
+        toc_result_id: null,
+        initiative_ids: initiative.id,
+        result_id: resultId,
+        toc_level_id: null,
+        planned_result: true,
+        is_active: true,
+      });
+    }
+  }
+
   /**
    * Stores contributing centers (non lead) into results_center.
    * Input objects follow InstitutionDto shape: may include institution_id, acronym, or name.

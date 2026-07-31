@@ -231,6 +231,12 @@ export class BilateralAiService {
       );
     }
 
+    await this.bilateralService.populateInitiativeAndTocFromProgramCode(
+      result.id,
+      draft.job?.program_code,
+      userId,
+    );
+
     await this.resultRepository.update(draft.result_id, {
       status_id: ResultStatusData.Editing.value,
     });

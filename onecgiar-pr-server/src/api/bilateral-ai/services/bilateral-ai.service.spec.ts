@@ -61,6 +61,7 @@ describe('BilateralAiService (unit)', () => {
 
     const bilateralService = {
       populateResultFromExtractedMds: jest.fn().mockResolvedValue(undefined),
+      populateInitiativeAndTocFromProgramCode: jest.fn().mockResolvedValue(undefined),
     };
 
     const service = new BilateralAiService(
@@ -92,6 +93,7 @@ describe('BilateralAiService (unit)', () => {
         queue,
         storage,
         textMining,
+        bilateralService,
       },
     };
   };
@@ -432,7 +434,8 @@ describe('BilateralAiService (unit)', () => {
         id: 5,
         is_discarded: false,
         result_id: 100,
-        evidence: [{ is_formal_evidence: true, source_type: 'DOCUMENT' }],
+        job: { program_code: 'EXCELLENCE', user_id: 42 },
+        extracted_mds: null,
       });
       stubs.evidenceRepository.find.mockResolvedValue([
         {
@@ -448,18 +451,34 @@ describe('BilateralAiService (unit)', () => {
       });
     });
 
+    it('should call populateInitiativeAndTocFromProgramCode with job program_code', async () => {
+      const { service, stubs } = makeService();
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        result_id: 100,
+        job: { program_code: 'CLIMATE', user_id: 42 },
+        extracted_mds: null,
+      });
+      stubs.evidenceRepository.find.mockResolvedValue([]);
+
+      await service.promoteDraft(5, 42);
+
+      expect(stubs.bilateralService.populateInitiativeAndTocFromProgramCode).toHaveBeenCalledWith(
+        100,
+        'CLIMATE',
+        42,
+      );
+    });
+
     it('should throw BadRequestException when non-DOCUMENT formal evidence exists', async () => {
       const { service, stubs } = makeService();
       stubs.draftRepository.findOne.mockResolvedValue({
         id: 5,
         is_discarded: false,
         result_id: 100,
-        evidence: [
-          {
-            is_formal_evidence: true,
-            source_type: DraftEvidenceSourceType.VOICE_NOTE,
-          },
-        ],
+        job: { program_code: null, user_id: 42 },
+        extracted_mds: null,
       });
       stubs.evidenceRepository.find.mockResolvedValue([
         {
