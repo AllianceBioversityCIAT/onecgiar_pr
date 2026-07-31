@@ -55,6 +55,16 @@ interface StatusRow {
   barGradient: string;
 }
 
+/** Compact AoW row for the Dashboard leadership overview. */
+interface AowProgressRow {
+  code: string;
+  name: string;
+  progress: number;
+  editing: number;
+  submitted: number;
+  total: number;
+}
+
 /** One indicator category (result type) with its reporting counts. */
 interface IndicatorCategory {
   resultTypeId: number;
@@ -85,6 +95,15 @@ interface AccentTheme {
   cardShadow: string;
 }
 
+/** Planned ToC browse modes persisted in `?tocView=`. */
+type PlannedBrowseView = 'aows' | 'byAow' | 'indicators';
+
+function parsePlannedBrowseView(raw: string | null | undefined): PlannedBrowseView | null {
+  if (raw === 'aows' || raw === 'byAow' || raw === 'indicators') return raw;
+  if (raw === 'aow') return 'byAow'; // short alias
+  return null;
+}
+
 /** Which RFR section surface to render (from route `data.rfrView`). */
 export type RfrView = 'dashboard' | 'planned' | 'emerging' | 'centers';
 
@@ -113,29 +132,25 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  /** Sidebar section mode — Dashboard = full bento; others = that card only. */
+  /** Sidebar section mode — Dashboard = leadership metrics; others = that card only. */
   readonly rfrView = toSignal(
     this.route.data.pipe(map(d => (d['rfrView'] as RfrView) || 'dashboard')),
     { initialValue: (this.route.snapshot.data['rfrView'] as RfrView) || 'dashboard' }
   );
   readonly showDashboardChrome = computed(() => this.rfrView() === 'dashboard');
-  readonly showPlanned = computed(() => {
-    const v = this.rfrView();
-    return v === 'dashboard' || v === 'planned';
-  });
-  readonly showEmerging = computed(() => {
-    const v = this.rfrView();
-    return v === 'dashboard' || v === 'emerging';
-  });
-  readonly showCenters = computed(() => {
-    const v = this.rfrView();
-    return v === 'dashboard' || v === 'centers';
-  });
+  /** Dedicated sidebar surfaces only — not shown on the Dashboard bento. */
+  readonly showPlanned = computed(() => this.rfrView() === 'planned');
+  readonly showEmerging = computed(() => this.rfrView() === 'emerging');
+  readonly showCenters = computed(() => this.rfrView() === 'centers');
   /** AOW code read from the URL on load, opened once its program's AOWs arrive. */
   private pendingAow: string | null = null;
   /** AOW filters read from the URL, applied right after the AOW reopens (openAow
    *  clears filters, so they must be restored last). */
   private pendingFilters: { typ: string | null; st: string | null; q: string } | null = null;
+  /** Planned By AOW selection from `?tocAow=`, applied once the AoW list is ready. */
+  private pendingPlannedAow: string | null = null;
+  /** Skip echoing Planned URL params while hydrating from the query string. */
+  private restoringPlannedUrl = false;
 
   /**
    * Always on a program surface. Lands on the user's first My Program when the
@@ -431,15 +446,29 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
     });
 
-    // By AOW requires a selected AOW — pick the first once the list is ready (or after program change).
+    // By AOW requires a selected AOW — prefer `?tocAow=`, else keep/pick the first.
     effect(() => {
       if (this.plannedBrowseView() !== 'byAow') return;
       const list = this.aows();
       if (!list.length) return;
+      const pending = this.pendingPlannedAow;
+      if (pending && list.some(a => a.code === pending)) {
+        this.pendingPlannedAow = null;
+        this.setPlannedHloAow(pending);
+        return;
+      }
       const active = this.plannedHloAowCode();
       if (!active || !list.some(a => a.code === active)) {
         this.setPlannedHloAow(list[0].code);
       }
+    });
+
+    // Planned search needs every AoW's ToC so matches inside collapsed parents are found.
+    effect(() => {
+      if (this.rfrView() !== 'planned') return;
+      if (!this.plannedSearch().trim()) return;
+      const view = this.plannedBrowseView();
+      if (view === 'aows' || view === 'indicators') this.loadAllTocs();
     });
 
     // Only the guided flow claims the whole viewport (focus mode). Inside an open
@@ -494,9 +523,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Mirror the current view (program + open AOW) into the URL so a reload lands
-    // back here. Held off while an AOW restore is still pending, so we never erase
-    // the code from the URL before it has been consumed.
+    // Mirror the current view (program + open AOW + Planned browse mode) into the URL
+    // so a reload lands back here. Held off while an AOW restore is still pending.
     effect(() => {
       const sp = this.selectedId();
       const scope = this.scope();
@@ -504,7 +532,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       const typ = this.typologyFilter();
       const st = this.statusFilter();
       const q = this.indicatorSearch().trim();
-      if (this.pendingAow || this.pendingFilters) return;
+      const onPlanned = this.rfrView() === 'planned';
+      const tocView = onPlanned ? this.plannedBrowseView() : null;
+      const tocAow = onPlanned && tocView === 'byAow' ? this.plannedHloAowCode() : null;
+      if (this.pendingAow || this.pendingFilters || this.restoringPlannedUrl) return;
       this.router.navigate([], {
         relativeTo: this.route,
         queryParams: {
@@ -513,7 +544,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           // filters only make sense inside an open AOW
           typ: aow ? typ ?? null : null,
           st: aow ? st ?? null : null,
-          q: aow && q ? q : null
+          q: aow && q ? q : null,
+          // Planned ToC browse mode (+ selected AoW when browsing By AOW)
+          tocView: tocView,
+          tocAow: tocAow
         },
         queryParamsHandling: 'merge',
         replaceUrl: true
@@ -603,6 +637,131 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return { count: list.length, avgProgress: Math.round(sum / list.length), active };
   });
 
+  /** Top AoWs by progress for the Dashboard leadership overview (cap 8). */
+  readonly aowProgressRows = computed<AowProgressRow[]>(() => {
+    return [...this.aows()]
+      .map(u => {
+        const editing = u.resultsCount?.editing || 0;
+        const submitted = u.resultsCount?.submitted || 0;
+        return {
+          code: u.code,
+          name: u.name,
+          progress: Math.round(u.progress || 0),
+          editing,
+          submitted,
+          total: editing + submitted
+        };
+      })
+      .sort((a, b) => b.progress - a.progress || b.total - a.total || a.code.localeCompare(b.code))
+      .slice(0, 8);
+  });
+
+  /** Status counts + share for leadership KPI cards (no new API). */
+  readonly pipelineStats = computed(() => {
+    const statuses = this.latestVersion(this.selected())?.statuses ?? [];
+    const count = (id: number) => statuses.find(s => s.statusId === id)?.count ?? 0;
+    const total = statuses.reduce((acc, s) => acc + s.count, 0);
+    const editing = count(1);
+    const qaed = count(2);
+    const submitted = count(3);
+    const discontinued = count(4);
+    const pending = count(5);
+    const reported = qaed + submitted;
+    const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+    return {
+      total,
+      editing,
+      qaed,
+      submitted,
+      pending,
+      discontinued,
+      reported,
+      editingPct: pct(editing),
+      reportedPct: pct(reported),
+      pendingPct: pct(pending),
+      submittedPct: pct(submitted)
+    };
+  });
+
+  /** Top AoW by result volume (leader “where is the work”). */
+  readonly topAowByResults = computed(() => {
+    const rows = this.aowProgressRows();
+    if (!rows.length) return null;
+    return [...rows].sort((a, b) => b.total - a.total || a.code.localeCompare(b.code))[0] ?? null;
+  });
+
+  /** Emerging / type mix totals already loaded for the program. */
+  readonly emergingOverview = computed(() => {
+    const { outputs, outcomes } = this.groupedSummaries();
+    const sum = (list: IndicatorCategory[]) =>
+      list.reduce(
+        (acc, c) => {
+          acc.editing += c.editing || 0;
+          acc.submitted += c.submitted || 0;
+          acc.types += 1;
+          return acc;
+        },
+        { editing: 0, submitted: 0, types: 0 }
+      );
+    const out = sum(outputs);
+    const oc = sum(outcomes);
+    const outputResults = out.editing + out.submitted;
+    const outcomeResults = oc.editing + oc.submitted;
+    const mixTotal = outputResults + outcomeResults || 1;
+    return {
+      outputTypes: out.types,
+      outcomeTypes: oc.types,
+      outputResults,
+      outcomeResults,
+      outputEditing: out.editing,
+      outcomeEditing: oc.editing,
+      outputPct: Math.round((outputResults / mixTotal) * 100),
+      outcomePct: Math.round((outcomeResults / mixTotal) * 100),
+      loading: this.loadingSummaries()
+    };
+  });
+
+  /** Multi-segment conic-gradient for the status donut chart. */
+  readonly statusConic = computed(() => {
+    const rows = this.statusRows();
+    if (!rows.length) return 'conic-gradient(#e2e8f0 0% 100%)';
+    let cursor = 0;
+    const parts: string[] = [];
+    for (const row of rows) {
+      if (row.sharePct <= 0) continue;
+      const end = cursor + row.sharePct;
+      parts.push(`${row.color} ${cursor}% ${end}%`);
+      cursor = end;
+    }
+    if (!parts.length) return 'conic-gradient(#e2e8f0 0% 100%)';
+    if (cursor < 100) parts.push(`#e2e8f0 ${cursor}% 100%`);
+    return `conic-gradient(${parts.join(', ')})`;
+  });
+
+  /** AoW rows ranked by volume, with bar widths for volume charts. */
+  readonly aowVolumeRows = computed(() => {
+    const rows = [...this.aowProgressRows()].sort((a, b) => b.total - a.total || a.code.localeCompare(b.code));
+    const max = Math.max(...rows.map(r => r.total), 1);
+    return rows.map(r => ({
+      ...r,
+      volumePct: Math.round((r.total / max) * 100),
+      editingShare: r.total ? Math.round((r.editing / r.total) * 100) : 0,
+      submittedShare: r.total ? Math.round((r.submitted / r.total) * 100) : 0
+    }));
+  });
+
+  /** Horizontal funnel steps for the Dashboard pipeline chart. */
+  readonly funnelSteps = computed(() => {
+    const p = this.pipelineStats();
+    const qaedPct = p.total ? Math.round((p.qaed / p.total) * 100) : 0;
+    return [
+      { label: 'Editing', count: p.editing, barPct: Math.max(p.editingPct, p.editing ? 4 : 0), color: '#f59e0b' },
+      { label: 'Pending', count: p.pending, barPct: Math.max(p.pendingPct, p.pending ? 4 : 0), color: '#94a3b8' },
+      { label: 'QAed', count: p.qaed, barPct: Math.max(qaedPct, p.qaed ? 4 : 0), color: '#3b82f6' },
+      { label: 'Submitted', count: p.submitted, barPct: Math.max(p.submittedPct, p.submitted ? 4 : 0), color: '#22c55e' }
+    ];
+  });
+
   /** Accent hex for the selected program (icon-derived, orange fallback). */
   readonly accent = computed(() => this.accentHex(this.selected()?.initiativeCode));
 
@@ -643,11 +802,39 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         this.selectedId.set(id);
         this.scope.set('program');
       }
+      // Browser back/forward on Planned ToC browse mode.
+      if (this.rfrView() === 'planned') {
+        const view = parsePlannedBrowseView(qp.get('tocView')) ?? 'aows';
+        if (view !== this.plannedBrowseView()) {
+          this.restoringPlannedUrl = true;
+          this.plannedBrowseView.set(view);
+          this.plannedTypeFilter.set([]);
+          this.plannedSearch.set('');
+          if (view === 'byAow') {
+            this.pendingPlannedAow = qp.get('tocAow');
+          } else if (view === 'indicators') {
+            this.loadAllTocs();
+          }
+          queueMicrotask(() => {
+            this.restoringPlannedUrl = false;
+          });
+        } else if (view === 'byAow') {
+          const tocAow = qp.get('tocAow');
+          if (tocAow && tocAow !== this.plannedHloAowCode()) {
+            this.pendingPlannedAow = tocAow;
+            const list = this.aows();
+            if (list.some(a => a.code === tocAow)) {
+              this.pendingPlannedAow = null;
+              this.setPlannedHloAow(tocAow);
+            }
+          }
+        }
+      }
     });
     this.startCenterRotation();
   }
 
-  /** Rehydrate the view from the URL so a reload stays on the same program + AOW. */
+  /** Rehydrate the view from the URL so a reload stays on the same program + AOW + Planned mode. */
   private restoreFromUrl(): void {
     const qp = this.route.snapshot.queryParamMap;
     const sp = qp.get('sp');
@@ -663,6 +850,26 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (this.pendingAow) {
       this.pendingFilters = { typ: qp.get('typ') || null, st: qp.get('st') || null, q: qp.get('q') || '' };
     }
+    this.restorePlannedBrowseFromQuery(qp);
+  }
+
+  /** Apply `?tocView=` / `?tocAow=` on the Planned ToC surface. */
+  private restorePlannedBrowseFromQuery(qp: { get(name: string): string | null }): void {
+    if ((this.route.snapshot.data['rfrView'] as RfrView) !== 'planned') return;
+    const view = parsePlannedBrowseView(qp.get('tocView'));
+    if (!view) return;
+    this.restoringPlannedUrl = true;
+    this.plannedBrowseView.set(view);
+    this.plannedTypeFilter.set([]);
+    this.plannedSearch.set('');
+    if (view === 'byAow') {
+      this.pendingPlannedAow = qp.get('tocAow');
+    } else if (view === 'indicators') {
+      queueMicrotask(() => this.loadAllTocs());
+    }
+    queueMicrotask(() => {
+      this.restoringPlannedUrl = false;
+    });
   }
 
   /** Leaving the lab must never strand the shell in focus mode — or leak a timer. */
@@ -795,7 +1002,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly allPanelIndicators = computed(() => this.indicatorsByAow().flatMap(x => x.indicators));
 
   isPanelAowExpanded(code: string): boolean {
-    return this.expandedPanelAows().has(code);
+    if (this.expandedPanelAows().has(code)) return true;
+    // While searching on Planned → Areas of Work, auto-open parents that matched via children.
+    return this.plannedSearchExpandAowCodes().has(code);
   }
 
   togglePanelAow(code: string): void {
@@ -822,7 +1031,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * Planned-ToC browse modes (home surface only — independent of AoW-detail `panelView`).
    * Default = Areas of Work list; By AOW = one AOW + typology filter; Indicators = flat list.
    */
-  readonly plannedBrowseView = signal<'aows' | 'byAow' | 'indicators'>('aows');
+  readonly plannedBrowseView = signal<PlannedBrowseView>('aows');
   readonly plannedBrowseViews = [
     { id: 'aows' as const, label: 'Areas of Work', icon: 'account_tree' },
     { id: 'byAow' as const, label: 'By AOW', icon: 'folder_open' },
@@ -846,12 +1055,37 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     () => !!this.plannedSearch().trim() || this.plannedTypeFilter().length > 0
   );
 
+  /** Active Planned text search (used to force-expand matching parents). */
+  readonly plannedSearchActive = computed(() => !!this.plannedSearch().trim());
+
+  /**
+   * AoW codes that must stay expanded while searching — parents with internal
+   * indicator hits (even when the AoW title itself does not match).
+   */
+  readonly plannedSearchExpandAowCodes = computed(() => {
+    const set = new Set<string>();
+    if (!this.plannedSearchActive() || this.plannedBrowseView() !== 'aows') return set;
+    for (const aow of this.plannedFilteredAows()) set.add(aow.code);
+    return set;
+  });
+
+  /**
+   * HLO titles that must stay expanded while searching in By AOW —
+   * groups kept because children match, not only because the HLO title matches.
+   */
+  readonly plannedSearchExpandHloTitles = computed(() => {
+    const set = new Set<string>();
+    if (!this.plannedSearchActive() || this.plannedBrowseView() !== 'byAow') return set;
+    for (const g of this.plannedHloGroups()) set.add(g.title);
+    return set;
+  });
+
   clearPlannedFilters(): void {
     this.plannedSearch.set('');
     this.plannedTypeFilter.set([]);
   }
 
-  setPlannedBrowseView(view: 'aows' | 'byAow' | 'indicators'): void {
+  setPlannedBrowseView(view: PlannedBrowseView): void {
     this.plannedBrowseView.set(view);
     this.plannedTypeFilter.set([]);
     this.plannedSearch.set('');
@@ -1017,7 +1251,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   isPlannedHloExpanded(title: string): boolean {
-    return this.expandedPlannedHlos().has(title);
+    if (this.expandedPlannedHlos().has(title)) return true;
+    // While searching on By AOW, auto-open HLO groups that matched via inner indicators.
+    return this.plannedSearchExpandHloTitles().has(title);
   }
 
   togglePlannedHlo(title: string): void {

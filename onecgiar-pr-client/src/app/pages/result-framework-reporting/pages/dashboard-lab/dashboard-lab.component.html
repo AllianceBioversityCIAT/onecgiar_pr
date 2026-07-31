@@ -733,7 +733,7 @@
           : 'grid grid-cols-1 items-stretch gap-4'
       ">
       @if (showDashboardChrome()) {
-      <!-- Card 1 — Science Program hero + report actions (dark, accent glow, spans 2) -->
+      <!-- ===== Original leader layout (restored) ===== -->
       <article
         class="relative col-span-2 flex min-h-[168px] flex-col justify-between gap-4 overflow-hidden rounded-[20px] border border-white/[0.07] bg-[linear-gradient(150deg,#23252f_0%,#16171d_100%)] px-5 py-5 max-[620px]:col-span-1">
         <div class="pointer-events-none absolute inset-0" [style.background]="accentTheme().glow"></div>
@@ -766,32 +766,23 @@
           </a>
         </div>
 
-        <div class="relative z-[1] flex flex-wrap items-end gap-3">
+        <div class="relative z-[1] flex flex-wrap items-center gap-3">
           <div class="flex flex-wrap gap-2">
             <span class="rounded-full bg-white/[0.1] px-3 py-1 text-[11px] font-semibold text-white/85">{{ selectedTotal() }} results this phase</span>
             <span class="rounded-full bg-white/[0.1] px-3 py-1 text-[11px] font-semibold text-white/85">{{ submittedPct() }}% reported</span>
           </div>
-
-          <!-- Guided creation lives with the program it reports against (brand violet,
-               not the program accent, so the primary action reads as the platform's). -->
           <button
             type="button"
             data-guide="guided-entry"
             (click)="openGuided()"
-            class="group ml-auto flex shrink-0 appearance-none items-center gap-2.5 rounded-xl border-0 bg-[linear-gradient(135deg,#6b6dc4_0%,#6461bc_100%)] px-3.5 py-2.5 text-left text-white shadow-[0_8px_20px_rgba(100,97,188,0.45)] transition-transform duration-200 hover:-translate-y-0.5">
-            <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/20">
-              <span class="material-icons-round text-[18px]">auto_awesome</span>
-            </span>
-            <span>
-              <span class="block text-[12.5px] font-bold leading-tight">Report a result</span>
-              <span class="block text-[10px] leading-tight text-white/80">We ask you everything, step by step</span>
-            </span>
-            <span class="material-icons-round text-[16px] text-white/85 transition-transform group-hover:translate-x-0.5">arrow_forward</span>
+            class="ml-auto inline-flex shrink-0 appearance-none items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-[11px] font-semibold text-white/80 transition-colors hover:bg-white/[0.12] hover:text-white">
+            <span class="material-icons-round text-[14px]">auto_awesome</span>
+            Report a result
           </button>
         </div>
       </article>
 
-      <!-- Card 2 — Reported donut (accent-filled pop) -->
+      <!-- Reported donut (original) -->
       <article
         class="col-start-3 row-start-1 flex min-h-[168px] flex-col items-center rounded-[20px] px-5 py-5 text-center transition-[background,box-shadow] duration-500"
         [style.background]="accentTheme().gradient"
@@ -806,16 +797,285 @@
         </div>
         <p class="text-[11px] text-white/85">QAed + Submitted</p>
       </article>
+
+      <!-- Program snapshot (original) -->
+      <article
+        class="col-start-4 row-start-1 flex min-h-[168px] flex-col justify-between gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-start-auto">
+        <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Program snapshot</p>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="rounded-xl bg-[var(--pr-color-accents-1)] px-2.5 py-2">
+            <p class="m-0 text-[18px] font-extrabold tabular-nums leading-none text-[var(--pr-color-secondary-400)]">{{ selectedTotal() }}</p>
+            <p class="m-0 mt-1 text-[10px] font-semibold text-[var(--pr-color-accents-6)]">Results</p>
+          </div>
+          <div class="rounded-xl bg-[var(--pr-color-accents-1)] px-2.5 py-2">
+            <p class="m-0 text-[18px] font-extrabold tabular-nums leading-none text-[var(--pr-color-secondary-400)]">{{ submittedPct() }}%</p>
+            <p class="m-0 mt-1 text-[10px] font-semibold text-[var(--pr-color-accents-6)]">Reported</p>
+          </div>
+          <div class="rounded-xl bg-[var(--pr-color-accents-1)] px-2.5 py-2">
+            <p class="m-0 text-[18px] font-extrabold tabular-nums leading-none text-[var(--pr-color-secondary-400)]">{{ aowStats().count }}</p>
+            <p class="m-0 mt-1 text-[10px] font-semibold text-[var(--pr-color-accents-6)]">Areas of Work</p>
+          </div>
+          <div class="rounded-xl bg-[var(--pr-color-accents-1)] px-2.5 py-2">
+            <p class="m-0 text-[18px] font-extrabold tabular-nums leading-none text-[var(--pr-color-secondary-400)]">{{ aowStats().avgProgress }}%</p>
+            <p class="m-0 mt-1 text-[10px] font-semibold text-[var(--pr-color-accents-6)]">Avg AoW progress</p>
+          </div>
+        </div>
+        <p class="m-0 text-[11px] text-[var(--pr-color-accents-5)]">
+          <span class="font-bold tabular-nums text-[var(--pr-color-secondary-400)]">{{ aowStats().active }}</span>
+          active AoWs with results this phase
+        </p>
+      </article>
+
+      <!-- Results by status (original) -->
+      <article class="col-span-2 flex min-h-[280px] flex-col gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-5 py-5 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[620px]:col-span-1">
+        <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Results by status</p>
+        @if (statusRows().length) {
+          <div class="flex flex-1 flex-col justify-end">
+            <div class="flex items-end justify-around gap-3 border-b border-[rgba(30,32,47,0.1)] pb-0">
+              @for (row of statusRows(); track row.statusId) {
+                <div class="flex flex-1 flex-col items-center gap-1.5">
+                  <span class="text-[14px] font-extrabold tabular-nums text-[var(--pr-color-secondary-400)]">{{ row.count }}</span>
+                  <div
+                    class="min-h-[4px] w-full max-w-[40px] rounded-[8px_8px_0_0] transition-[height] duration-500 motion-reduce:transition-none"
+                    [style.height.px]="12 + (row.barPct || 3) * 1.1"
+                    [style.background]="row.barGradient"></div>
+                </div>
+              }
+            </div>
+            <div class="flex justify-around gap-3 pt-2">
+              @for (row of statusRows(); track row.statusId) {
+                <span class="flex-1 text-center text-[11px] font-semibold leading-tight text-[var(--pr-color-accents-6)]">{{ row.label }}</span>
+              }
+            </div>
+          </div>
+        } @else {
+          <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">No results reported yet.</p>
+        }
+      </article>
+
+      <!-- AoW progress (original) -->
+      <article class="col-span-2 flex min-h-[280px] flex-col gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-5 py-5 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[620px]:col-span-1">
+        <div class="flex items-baseline justify-between gap-2">
+          <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">AoW progress</p>
+          <a
+            class="text-[11px] font-semibold text-[var(--pr-color-primary-400)] no-underline hover:underline"
+            routerLink="/result-framework-reporting/planned-toc"
+            [queryParams]="{ sp: sp.initiativeId }">
+            Open Planned ToC
+          </a>
+        </div>
+        @if (loadingAows()) {
+          <div class="flex flex-1 flex-col gap-2">
+            @for (s of [1, 2, 3, 4]; track s) {
+              <div class="h-10 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+            }
+          </div>
+        } @else if (aowProgressRows().length) {
+          <div class="custom_scroll flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto">
+            @for (row of aowProgressRows(); track row.code) {
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="m-0 min-w-0 truncate text-[12px] text-[var(--pr-color-secondary-400)]">
+                    <b class="font-extrabold">{{ row.code }}</b>
+                    <span class="mx-1 text-[var(--pr-color-accents-3)]">·</span>{{ row.name }}
+                  </p>
+                  <span class="shrink-0 text-[11px] font-bold tabular-nums text-[var(--pr-color-secondary-400)]">{{ row.progress }}%</span>
+                </div>
+                <div class="h-1.5 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+                  <div
+                    class="h-full rounded-full transition-[width] duration-500"
+                    [style.width.%]="row.progress"
+                    [style.background]="accentTheme().gradient"></div>
+                </div>
+                <p class="m-0 text-[10px] text-[var(--pr-color-accents-5)]">
+                  {{ row.total }} results
+                  @if (row.total) {
+                    <span>({{ row.submitted }} submitted · {{ row.editing }} editing)</span>
+                  }
+                </p>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">No Areas of Work loaded for this program.</p>
+        }
+      </article>
+
+      <!-- ===== Added: two 1×1 cards ===== -->
+      <article class="flex aspect-square min-h-[168px] flex-col justify-between overflow-hidden rounded-[20px] border border-[#f59e0b]/35 bg-[linear-gradient(155deg,#fffbeb_0%,#ffffff_55%)] px-4 py-4 shadow-[0_8px_22px_rgba(245,158,11,0.12)] max-[1180px]:aspect-auto">
+        <div class="flex items-start justify-between gap-2">
+          <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[#b45309]">Needs attention</p>
+          <span class="inline-flex size-8 items-center justify-center rounded-lg bg-[#f59e0b]/15">
+            <span class="material-icons-round text-[18px] text-[#d97706]">edit_note</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div
+            class="relative flex size-[72px] shrink-0 items-center justify-center rounded-full"
+            [style.background]="'conic-gradient(#f59e0b ' + pipelineStats().editingPct + '%, #fde68a55 0)'">
+            <div class="flex size-[48px] items-center justify-center rounded-full bg-white">
+              <span class="text-[16px] font-extrabold tabular-nums text-[#92400e]">{{ pipelineStats().editingPct }}%</span>
+            </div>
+          </div>
+          <div>
+            <p class="m-0 text-[32px] font-extrabold leading-none tabular-nums tracking-[-0.03em] text-[#92400e]">{{ pipelineStats().editing }}</p>
+            <p class="m-0 mt-1 text-[12px] font-semibold text-[#b45309]">still in Editing</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="flex aspect-square min-h-[168px] flex-col justify-between overflow-hidden rounded-[20px] border border-[#22c55e]/30 bg-[linear-gradient(155deg,#f0fdf4_0%,#ffffff_55%)] px-4 py-4 shadow-[0_8px_22px_rgba(34,197,94,0.1)] max-[1180px]:aspect-auto">
+        <div class="flex items-start justify-between gap-2">
+          <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[#15803d]">Submitted</p>
+          <span class="inline-flex size-8 items-center justify-center rounded-lg bg-[#22c55e]/15">
+            <span class="material-icons-round text-[18px] text-[#16a34a]">task_alt</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div
+            class="relative flex size-[72px] shrink-0 items-center justify-center rounded-full"
+            [style.background]="'conic-gradient(#22c55e ' + pipelineStats().submittedPct + '%, #bbf7d0 0)'">
+            <div class="flex size-[48px] items-center justify-center rounded-full bg-white">
+              <span class="text-[16px] font-extrabold tabular-nums text-[#14532d]">{{ pipelineStats().submittedPct }}%</span>
+            </div>
+          </div>
+          <div>
+            <p class="m-0 text-[32px] font-extrabold leading-none tabular-nums tracking-[-0.03em] text-[#14532d]">{{ pipelineStats().submitted }}</p>
+            <p class="m-0 mt-1 text-[12px] font-semibold text-[#15803d]">fully submitted</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- ===== Added: charts row ===== -->
+      <article class="col-span-2 flex min-h-[200px] flex-col gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[620px]:col-span-1">
+        <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Status mix</p>
+        <div class="flex flex-1 items-center gap-4">
+          <div class="relative flex size-[110px] shrink-0 items-center justify-center rounded-full" [style.background]="statusConic()">
+            <div class="flex size-[72px] flex-col items-center justify-center rounded-full bg-white shadow-[inset_0_0_0_1px_rgba(30,32,47,0.06)]">
+              <span class="text-[18px] font-extrabold leading-none tabular-nums text-[var(--pr-color-secondary-400)]">{{ pipelineStats().total }}</span>
+              <span class="mt-0.5 text-[9px] font-semibold uppercase text-[var(--pr-color-accents-5)]">results</span>
+            </div>
+          </div>
+          <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+            @for (row of statusRows(); track row.statusId) {
+              <div class="grid grid-cols-[72px_1fr_28px] items-center gap-2">
+                <span class="truncate text-[11px] font-semibold text-[var(--pr-color-accents-6)]">{{ row.label }}</span>
+                <div class="h-2.5 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+                  <div class="h-full rounded-full transition-[width] duration-500" [style.width.%]="row.sharePct" [style.background]="row.color"></div>
+                </div>
+                <span class="text-right text-[11px] font-extrabold tabular-nums text-[var(--pr-color-secondary-400)]">{{ row.count }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </article>
+
+      <article class="col-span-2 flex min-h-[200px] flex-col gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[620px]:col-span-1">
+        <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Pipeline funnel</p>
+        <div class="flex flex-1 flex-col justify-center gap-2">
+          @for (step of funnelSteps(); track step.label) {
+            <div class="grid grid-cols-[72px_1fr_36px] items-center gap-2">
+              <span class="text-[11px] font-semibold text-[var(--pr-color-accents-6)]">{{ step.label }}</span>
+              <div class="h-3.5 overflow-hidden rounded-md bg-[var(--pr-color-accents-1)]">
+                <div class="h-full rounded-md transition-[width] duration-500" [style.width.%]="step.barPct" [style.background]="step.color"></div>
+              </div>
+              <span class="text-right text-[12px] font-extrabold tabular-nums text-[var(--pr-color-secondary-400)]">{{ step.count }}</span>
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="col-span-2 flex min-h-[200px] flex-col gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[620px]:col-span-1">
+        <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Outputs vs outcomes</p>
+        @if (emergingOverview().loading) {
+          <div class="h-24 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+        } @else {
+          <div class="flex flex-1 items-center gap-4">
+            <div
+              class="relative flex size-[110px] shrink-0 items-center justify-center rounded-full"
+              [style.background]="
+                'conic-gradient(#6b6dc4 0% ' +
+                emergingOverview().outputPct +
+                '%, #22c55e ' +
+                emergingOverview().outputPct +
+                '% 100%)'
+              ">
+              <div class="flex size-[72px] flex-col items-center justify-center rounded-full bg-white">
+                <span class="text-[16px] font-extrabold leading-none tabular-nums text-[var(--pr-color-secondary-400)]">{{ emergingOverview().outputResults + emergingOverview().outcomeResults }}</span>
+                <span class="mt-0.5 text-[9px] font-semibold uppercase text-[var(--pr-color-accents-5)]">total</span>
+              </div>
+            </div>
+            <div class="flex min-w-0 flex-1 flex-col gap-3">
+              <div>
+                <div class="mb-1 flex justify-between text-[12px] font-semibold">
+                  <span class="text-[#6b6dc4]">Outputs</span>
+                  <span class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ emergingOverview().outputResults }} · {{ emergingOverview().outputPct }}%</span>
+                </div>
+                <div class="h-2.5 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+                  <div class="h-full rounded-full bg-[#6b6dc4] transition-[width] duration-500" [style.width.%]="emergingOverview().outputPct"></div>
+                </div>
+              </div>
+              <div>
+                <div class="mb-1 flex justify-between text-[12px] font-semibold">
+                  <span class="text-[#16a34a]">Outcomes</span>
+                  <span class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ emergingOverview().outcomeResults }} · {{ emergingOverview().outcomePct }}%</span>
+                </div>
+                <div class="h-2.5 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+                  <div class="h-full rounded-full bg-[#22c55e] transition-[width] duration-500" [style.width.%]="emergingOverview().outcomePct"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </article>
+
+      <article class="col-span-2 flex min-h-[200px] flex-col gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-5 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[620px]:col-span-1">
+        <div class="flex items-baseline justify-between gap-2">
+          <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">AoW volume</p>
+          @if (topAowByResults(); as top) {
+            <p class="m-0 text-[11px] text-[var(--pr-color-accents-5)]">
+              Heaviest: <span class="font-bold text-[var(--pr-color-secondary-400)]">{{ top.code }}</span> ({{ top.total }})
+            </p>
+          }
+        </div>
+        @if (loadingAows()) {
+          <div class="flex flex-col gap-2">
+            @for (s of [1, 2, 3]; track s) {
+              <div class="h-7 animate-pulse rounded-lg bg-[var(--pr-color-accents-1)]"></div>
+            }
+          </div>
+        } @else if (aowVolumeRows().length) {
+          <div class="flex flex-1 flex-col justify-center gap-2">
+            @for (row of aowVolumeRows(); track row.code) {
+              <div class="grid grid-cols-[56px_1fr_28px] items-center gap-2">
+                <span class="truncate text-[11px] font-extrabold tabular-nums text-[var(--pr-color-secondary-400)]" [title]="row.name">{{ row.code }}</span>
+                <div class="h-3 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+                  <div class="flex h-full transition-[width] duration-500" [style.width.%]="row.volumePct">
+                    @if (row.editingShare) {
+                      <div class="h-full bg-[#f59e0b]" [style.width.%]="row.editingShare"></div>
+                    }
+                    @if (row.submittedShare) {
+                      <div class="h-full bg-[#22c55e]" [style.width.%]="row.submittedShare"></div>
+                    }
+                  </div>
+                </div>
+                <span class="text-right text-[11px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ row.total }}</span>
+              </div>
+            }
+          </div>
+          <div class="flex gap-3 text-[10px] font-semibold text-[var(--pr-color-accents-5)]">
+            <span class="inline-flex items-center gap-1"><span class="size-1.5 rounded-full bg-[#f59e0b]"></span>Editing</span>
+            <span class="inline-flex items-center gap-1"><span class="size-1.5 rounded-full bg-[#22c55e]"></span>Submitted</span>
+          </div>
+        } @else {
+          <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">No AoWs loaded.</p>
+        }
+      </article>
       }
 
       @if (showEmerging()) {
-      <!-- Card 3 — Indicator categories (right column, tall 2 rows, tabs + scroll) -->
-      <article
-        [class]="
-          showDashboardChrome()
-            ? 'col-start-4 row-start-2 flex min-h-[300px] max-h-[440px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:max-h-none max-[1180px]:row-start-auto max-[1180px]:min-h-[360px]'
-            : 'flex min-h-[min(70vh,640px)] max-h-none flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)]'
-        ">
+      <!-- Emerging — dedicated sidebar surface -->
+      <article class="flex min-h-[min(70vh,640px)] max-h-none flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)]">
         <h2 data-guide="emerging" class="m-0 text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Report Emerging results</h2>
 
         <!-- tabs -->
@@ -890,14 +1150,8 @@
       }
 
       @if (showPlanned()) {
-      <!-- Planned ToC: compact in Dashboard bento; full 3-view browse on /planned-toc -->
-      <article
-        [class]="
-          showDashboardChrome()
-            ? 'col-start-1 col-span-3 row-start-2 flex min-h-[300px] max-h-[440px] flex-col overflow-hidden rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white p-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-span-2 max-[1180px]:col-start-auto max-[1180px]:max-h-none max-[1180px]:row-start-auto max-[620px]:col-span-1'
-            : 'flex max-h-[calc(100vh-1.25rem)] w-full min-w-0 flex-col overflow-visible rounded-2xl border border-[rgba(30,32,47,0.06)] bg-white shadow-[0_4px_14px_rgba(30,32,47,0.05)]'
-        ">
-        @if (rfrView() === 'planned') {
+      <!-- Planned ToC — dedicated sidebar surface -->
+      <article class="flex max-h-[calc(100vh-1.25rem)] w-full min-w-0 flex-col overflow-visible rounded-2xl border border-[rgba(30,32,47,0.06)] bg-white shadow-[0_4px_14px_rgba(30,32,47,0.05)]">
           <!-- ===== Planned page — dense header + view switcher (no footer CTA) ===== -->
           <header class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[rgba(30,32,47,0.06)] px-4 py-2">
             <h2 data-guide="planned" class="m-0 min-w-0 truncate text-[14px] font-bold tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Results planned in your 2026 ToC</h2>
@@ -1313,99 +1567,12 @@
               }
             }
           </div>
-        } @else {
-          <!-- ===== Dashboard bento — compact AoW list ===== -->
-          <div class="flex shrink-0 flex-wrap items-baseline gap-2">
-            <h2 data-guide="planned" class="m-0 text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Results planned in your 2026 ToC</h2>
-            <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ aows().length }}</span>
-          </div>
-
-          <div class="custom_scroll mt-3 flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-clip">
-            @if (loadingAows()) {
-              @for (s of [1, 2, 3, 4]; track s) {
-                <div class="h-[58px] shrink-0 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
-              }
-            } @else {
-              @for (aow of aows(); track aow.id) {
-                @let expanded = isPanelAowExpanded(aow.code);
-                @let data = indicatorsForAow(aow.code);
-                <div
-                  [class]="
-                    'box-border flex w-full min-w-0 shrink-0 flex-col overflow-hidden rounded-xl border transition-colors duration-200 ' +
-                    (expanded
-                      ? 'border-[rgba(30,32,47,0.1)] bg-white shadow-[0_4px_14px_rgba(30,32,47,0.06)]'
-                      : 'border-transparent bg-[var(--pr-color-accents-1)] hover:border-[rgba(30,32,47,0.08)] hover:bg-white')
-                  ">
-                  <button
-                    type="button"
-                    [attr.data-guide]="$first ? 'aow-action' : null"
-                    (click)="toggleInlineAow(aow.code)"
-                    [attr.aria-expanded]="expanded"
-                    class="group flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left">
-                    <span class="material-icons-round shrink-0 text-[18px] text-[var(--pr-color-accents-4)] transition-transform duration-200" [class.rotate-90]="expanded" aria-hidden="true">chevron_right</span>
-                    <p class="m-0 min-w-0 flex-1 truncate text-[12px] leading-snug text-[var(--pr-color-secondary-400)]">
-                      <b class="font-extrabold">{{ aow.code }}</b>
-                      <span class="mx-1 text-[var(--pr-color-accents-3)]">·</span>{{ aow.name }}
-                    </p>
-                    @if (data?.count) {
-                      <span class="shrink-0 rounded-full bg-[var(--pr-color-accents-2)] px-1.5 text-[10px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ data.count }}</span>
-                    }
-                  </button>
-                  @if (expanded) {
-                    <div class="flex flex-col gap-1.5 border-t border-[rgba(30,32,47,0.06)] px-3 py-2.5">
-                      @if (data?.loading) {
-                        <div class="h-10 animate-pulse rounded-lg bg-[var(--pr-color-accents-1)]"></div>
-                      } @else if (!data?.indicators?.length) {
-                        <p class="m-0 py-1 text-[11.5px] text-[var(--pr-color-accents-5)]">No indicators planned in the ToC for this Area of Work.</p>
-                      } @else {
-                        @for (ind of data.indicators; track ind.indicator_id) {
-                          <div class="flex flex-col gap-1.5 rounded-lg border border-[rgba(30,32,47,0.07)] bg-white p-2.5">
-                            <p class="m-0 line-clamp-2 text-[12px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">{{ ind.indicator_description }}</p>
-                            <div class="flex justify-end">
-                              <button type="button" (click)="manageIndicator(ind, ind.__hlo, 'report')" class="flex appearance-none items-center gap-1 rounded-lg border-0 bg-[linear-gradient(135deg,#6b6dc4_0%,#6461bc_100%)] px-2.5 py-1 text-[11px] font-semibold text-white">
-                                <span class="material-icons-round text-[13px]">edit_note</span> Report result
-                              </button>
-                            </div>
-                          </div>
-                        }
-                      }
-                    </div>
-                  }
-                </div>
-              }
-              <button type="button" (click)="openAow(outcomes2030Code)" class="group flex w-full shrink-0 appearance-none items-center gap-2 rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white/70 px-3 py-2.5 text-left hover:bg-white">
-                <span class="material-icons-round text-[15px]" [style.color]="accentTheme().solid">flag</span>
-                <span class="min-w-0 flex-1">
-                  <span class="block text-[12px] font-bold text-[var(--pr-color-secondary-400)]">2030 Outcomes</span>
-                  <span class="block text-[10px] text-[var(--pr-color-accents-5)]">Cumulative 2025–2030</span>
-                </span>
-                <span class="material-icons-round text-[15px] text-[var(--pr-color-accents-3)]">arrow_forward</span>
-              </button>
-            }
-          </div>
-
-          <button
-            type="button"
-            data-guide="planned-action"
-            (click)="openGuided('planned')"
-            class="mt-3 flex shrink-0 appearance-none items-center justify-center gap-2 rounded-xl border-0 px-4 py-2.5 text-[12.5px] font-bold text-white"
-            [style.background]="accentTheme().gradient"
-            [style.boxShadow]="accentTheme().buttonShadow">
-            Report a planned result
-            <span class="material-icons-round text-[16px]">arrow_forward</span>
-          </button>
-        }
       </article>
       }
 
       @if (showCenters()) {
-      <!-- Card 6 — My CGIAR Centers. -->
-      <article
-        [class]="
-          showDashboardChrome()
-            ? 'col-start-1 col-span-4 row-start-3 flex min-h-[120px] flex-col gap-2.5 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-span-2 max-[1180px]:col-start-auto max-[1180px]:row-start-auto max-[620px]:col-span-1'
-            : 'flex min-h-[120px] flex-col gap-2.5 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)]'
-        ">
+      <!-- Centers — dedicated sidebar surface -->
+      <article class="flex min-h-[120px] flex-col gap-2.5 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)]">
         <div class="flex shrink-0 items-baseline gap-2">
           <p data-guide="centers" class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">My CGIAR Centers</p>
           <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ myCenters().length }}</span>
@@ -1439,35 +1606,6 @@
       </article>
       }
 
-      @if (showDashboardChrome()) {
-      <!-- Card 5 — Results by status. One bento cell, one plot area: the bars share
-           a single baseline instead of each sitting on its own segment. -->
-      <article class="col-start-4 row-start-1 flex min-h-[168px] flex-col gap-3 rounded-[20px] border border-[rgba(30,32,47,0.06)] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,32,47,0.06)] max-[1180px]:col-start-auto max-[1180px]:row-start-auto">
-        <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Results by status</p>
-        @if (statusRows().length) {
-          <div class="flex flex-1 flex-col justify-end">
-            <div class="flex items-end justify-around gap-2 border-b border-[rgba(30,32,47,0.1)] pb-0">
-              @for (row of statusRows(); track row.statusId) {
-                <div class="flex flex-1 flex-col items-center gap-1">
-                  <span class="text-[12px] font-extrabold tabular-nums text-[var(--pr-color-secondary-400)]">{{ row.count }}</span>
-                  <div
-                    class="min-h-[4px] w-full max-w-[26px] rounded-[6px_6px_0_0] transition-[height] duration-500 motion-reduce:transition-none"
-                    [style.height.px]="8 + (row.barPct || 3) * 0.62"
-                    [style.background]="row.barGradient"></div>
-                </div>
-              }
-            </div>
-            <div class="flex justify-around gap-2 pt-1.5">
-              @for (row of statusRows(); track row.statusId) {
-                <span class="flex-1 text-center text-[9.5px] font-semibold leading-tight text-[var(--pr-color-accents-6)]">{{ row.label }}</span>
-              }
-            </div>
-          </div>
-        } @else {
-          <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">No results reported yet.</p>
-        }
-      </article>
-      }
     </div>
 
     }
