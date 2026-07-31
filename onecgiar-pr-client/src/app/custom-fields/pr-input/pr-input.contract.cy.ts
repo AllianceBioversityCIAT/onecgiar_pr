@@ -225,7 +225,9 @@ describe('PrInputComponent — contract (CT)', () => {
   describe('type="number" (64 consumers)', () => {
     const TPL = `
       <app-pr-input label="Amount" type="number" [required]="false" [(ngModel)]="model"></app-pr-input>`;
-    const NUMBER_INPUT = '.pr-input input[type="number"]';
+    // The field is a text input with `inputmode="decimal"` so it can show grouped thousands
+    // (`123,123`) the way the pre-migration `<p-inputNumber>` did.
+    const NUMBER_INPUT = '.pr-input input[inputmode="decimal"]';
 
     it('[contract] a typed amount reaches the bound model as a number', () => {
       mountCFHost(TPL, { editable: true, componentProperties: { model: null } });

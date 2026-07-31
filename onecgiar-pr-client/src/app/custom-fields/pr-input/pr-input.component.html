@@ -85,11 +85,13 @@
       <input
         *ngIf="type() == 'number'"
         hlmInput
-        type="number"
-        [(ngModel)]="value"
+        type="text"
+        inputmode="decimal"
+        [(ngModel)]="numberRaw"
+        (ngModelChange)="onNumberInput()"
+        (focus)="onNumberFocus()"
+        (blur)="onNumberBlur()"
         [disabled]="disabled()"
-        [min]="0"
-        [step]="numberMode() === 'decimal' ? 'any' : 1"
         [placeholder]="effectivePlaceholder()"
         [ngClass]="{ 'pr-body-2': true }"
         [style]="{ 'max-height': variant() === 'sm' ? '30px' : variant() === 'xs' ? '25px' : 'auto', width: '100%' }" />

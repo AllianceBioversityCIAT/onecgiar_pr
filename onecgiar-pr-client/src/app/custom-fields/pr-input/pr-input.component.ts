@@ -150,6 +150,75 @@ export class PrInputComponent implements ControlValueAccessor {
     this.syncCurrencyRaw();
   }
 
+  /**
+   * Numeric field. Staging rendered `type="number"` with PrimeNG's `<p-inputNumber>`, which grouped
+   * thousands (`123,123`) and honoured `numberMode`/`maxDecimals`. The Spartan migration replaced it
+   * with a bare `<input type="number">` and the grouping was lost, so saved figures read differently
+   * from prtest. This mirrors the currency field: `numberRaw` is what the input shows — the digits
+   * exactly as typed while focused, grouped on blur / load — and the stored model stays numeric.
+   */
+  numberRaw = '';
+
+  private toNumberString(v: any): string {
+    if (v === null || v === undefined || v === '') return '';
+    const n = Number(v);
+    if (isNaN(n)) return '';
+    return n.toLocaleString(
+      'en-US',
+      this.numberMode() ? { minimumFractionDigits: 2, maximumFractionDigits: this.maxDecimals() } : { maximumFractionDigits: 0 }
+    );
+  }
+
+  /** Blurred/loaded state: show the grouped value. */
+  syncNumberRaw() {
+    this.numberRaw = this.toNumberString(this._value());
+  }
+
+  /** On focus, show the raw number so it is freely editable. */
+  onNumberFocus() {
+    const v = this._value();
+    this.numberRaw = v === null || v === undefined || v === '' ? '' : String(v);
+  }
+
+  /**
+   * While typing, keep the bound model in sync (the old `<p-inputNumber>` did too) WITHOUT rewriting
+   * what the user is typing — reformatting mid-typing would move the caret and break entries like
+   * "10.".
+   */
+  onNumberInput() {
+    const cleaned = this.sanitizeNumberInput(this.numberRaw);
+    // Only rewrite the field to DROP characters the old control never accepted (letters, a second
+    // dot, a minus sign) — never to reformat, so the caret stays put while typing.
+    if (cleaned !== this.numberRaw) this.numberRaw = cleaned;
+    const parsed = cleaned === '' ? null : Number(cleaned);
+    const next = parsed === null || isNaN(parsed) ? null : parsed < 0 ? 0 : parsed;
+    if (next !== this._value()) {
+      this._value.set(next);
+      this.onChange(next);
+    }
+  }
+
+  /**
+   * Keeps only what `<p-inputNumber>` used to accept: digits, and a single decimal point when
+   * `numberMode` is set (`[min]="0"` made a minus sign unreachable, and integer mode had
+   * `maxFractionDigits` 0).
+   */
+  private sanitizeNumberInput(raw: string): string {
+    let cleaned = (raw ?? '').replace(/[^0-9.]/g, '');
+    if (!this.numberMode()) return cleaned.replace(/\./g, '');
+    const firstDot = cleaned.indexOf('.');
+    if (firstDot !== -1) cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '');
+    return cleaned;
+  }
+
+  /** On blur, parse what was typed into a number and reformat for display. */
+  onNumberBlur() {
+    const cleaned = this.sanitizeNumberInput(this.numberRaw);
+    const n = cleaned === '' ? null : Number(cleaned);
+    this.value = n === null || isNaN(n) ? null : n < 0 ? 0 : n;
+    this.syncNumberRaw();
+  }
+
   get badLink() {
     const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([-.][a-z0-9]+)*\.[a-z]{2,6}(:\d{1,5})?(\/\S*)?$/i);
 
@@ -169,6 +238,7 @@ export class PrInputComponent implements ControlValueAccessor {
   writeValue(value: any): void {
     this._value.set(value);
     if (this.type() === 'currency') this.syncCurrencyRaw();
+    if (this.type() === 'number') this.syncNumberRaw();
   }
   registerOnChange(fn: any): void {
     this.onChange = fn;
