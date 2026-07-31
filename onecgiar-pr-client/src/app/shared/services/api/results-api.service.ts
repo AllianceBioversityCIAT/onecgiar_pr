@@ -1314,12 +1314,16 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.releasesNotesApiUrl}/blocks/${blockId}/children`);
   }
 
-  GET_loginWithAzureAd(provider: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}auth/login/provider?provider=${provider}`);
+  GET_loginWithAzureAd(provider: string, redirectUri?: string) {
+    const params = new URLSearchParams({ provider });
+    if (redirectUri) params.set('redirectUri', redirectUri);
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/login/provider?${params.toString()}`);
   }
 
-  POST_validateCognitoCode(code: string) {
-    return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
+  POST_validateCognitoCode(code: string, redirectUri?: string) {
+    const body: Record<string, string> = { code };
+    if (redirectUri) body['redirectUri'] = redirectUri;
+    return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, body);
   }
 
   PATCH_updateUserStatus(body: UpdateUserStatus) {
