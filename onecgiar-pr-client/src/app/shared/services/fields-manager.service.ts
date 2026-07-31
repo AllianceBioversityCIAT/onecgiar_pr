@@ -186,11 +186,6 @@ export class FieldsManagerService {
           <li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years. If age disaggregation does not apply then please apply a 50/50% rule in dividing women or men across the youth/non-youth category.</li>
           </ul>`
       },
-      '[contributors-partners]-is-lead-by-partner': {
-        label: 'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?',
-        hide: this.isP22(),
-        required: true
-      },
       '[knowledge-product-info]-ost_submitted': {
         label: this.isP25() ? 'Do you have a MELIA study planned in your TOC?' : 'Was it planned in your Initiative proposal?',
         required: true

@@ -147,7 +147,9 @@ describe('InnovationUseInfoComponent', () => {
       mockFieldsManagerService.isP25.mockReturnValue(true);
       const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
       const spyGetP25 = jest.spyOn(component, 'getSectionInformationp25');
-      (component.innovationUseInfoBody as any).linked_results = ([{ id: '5' }, '6'] as any);
+      jest
+        .spyOn(mockApiService.resultsSE, 'GET_innovationUseP25')
+        .mockReturnValue(of({ response: { ...mockGET_innovationUseP25Response, linked_results: [{ id: '5' }, '6'] } }));
 
       component.onSaveSection();
 
@@ -156,6 +158,54 @@ describe('InnovationUseInfoComponent', () => {
       expect(bodyArg.linked_results).toEqual([5, 6]);
       expect(spyGetP25).toHaveBeenCalled();
       expect(component.savingSection).toBeFalsy();
+    });
+
+    // P2-3199: the question lives only in Contributors and partners (section 2), so this section
+    // must send the value stored on the server, never the one it loaded when it was mounted.
+    it('should send the freshly read innovation link values on P25, not the stale ones held in the body', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      // Stale state: this section was loaded before the user answered in section 2.
+      component.innovationUseInfoBody.has_innovation_link = false;
+      (component.innovationUseInfoBody as any).linked_results = [];
+      jest
+        .spyOn(mockApiService.resultsSE, 'GET_innovationUseP25')
+        .mockReturnValue(of({ response: { ...mockGET_innovationUseP25Response, has_innovation_link: 1, linked_results: ['7'] } }));
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg.has_innovation_link).toBe(true);
+      expect(bodyArg.linked_results).toEqual([7]);
+    });
+
+    it('should fall back to the held innovation link values when the fresh read fails on P25', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.has_innovation_link = true;
+      (component.innovationUseInfoBody as any).linked_results = [{ id: '9' }];
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(throwError(new Error('Mock error')));
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg.has_innovation_link).toBe(true);
+      expect(bodyArg.linked_results).toEqual([9]);
+      expect(component.savingSection).toBeFalsy();
+    });
+
+    it('should never send undefined or null for has_innovation_link when the read returns no response', () => {
+      mockFieldsManagerService.isP25.mockReturnValue(true);
+      const spyPATCH = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUseP25');
+      component.innovationUseInfoBody.has_innovation_link = false;
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUseP25').mockReturnValue(of({ response: null }));
+
+      component.onSaveSection();
+
+      const bodyArg: any = spyPATCH.mock.calls[0][0] as any;
+      expect(bodyArg.has_innovation_link).toBe(false);
+      expect(bodyArg.has_innovation_link).not.toBeNull();
+      expect(bodyArg.has_innovation_link).not.toBeUndefined();
     });
     it('should handle error when saving section', () => {
       const mockError = new Error('Mock error');

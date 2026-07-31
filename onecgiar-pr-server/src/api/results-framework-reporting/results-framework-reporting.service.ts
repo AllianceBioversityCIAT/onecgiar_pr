@@ -81,11 +81,17 @@ export class ResultsFrameworkReportingService {
           tocContext,
         );
 
-      const resultCountsByUnit = await this.getResultsCountByUnitAndStatus(
-        initiative.id,
-        workPackages.map((u) => u.code),
-        tocContext,
-      );
+      const [resultCountsByUnit, programLevelOutcomes] = await Promise.all([
+        this.getResultsCountByUnitAndStatus(
+          initiative.id,
+          workPackages.map((u) => u.code),
+          tocContext,
+        ),
+        this._tocResultsRepository.countProgramLevelOutcomes(
+          initiative.official_code.toUpperCase(),
+          tocContext,
+        ),
+      ]);
 
       let totalTargetValue = 0;
       let totalActualValue = 0;
@@ -214,6 +220,14 @@ export class ResultsFrameworkReportingService {
             year: tocContext.reportingYear,
           },
           units: filteredUnits,
+          intermediateOutcomes: {
+            count: programLevelOutcomes.intermediateCount,
+            hasData: programLevelOutcomes.intermediateCount > 0,
+          },
+          outcomes2030: {
+            count: programLevelOutcomes.eoi2030Count,
+            hasData: programLevelOutcomes.eoi2030Count > 0,
+          },
           metadata: {
             activeYear: tocContext.reportingYear,
             phaseUuid: tocContext.phaseUuid,
@@ -407,6 +421,11 @@ export class ResultsFrameworkReportingService {
     indicator: any,
     resolvedYear: number,
   ): void {
+    // Prefer center already resolved from SQL (one row per target×center).
+    if (indicator?.center_id != null && indicator?.center_acronym) {
+      return;
+    }
+
     const centers = indicator?.targets_by_center?.centers;
     if (!Array.isArray(centers) || !centers.length) {
       return;
@@ -480,6 +499,43 @@ export class ResultsFrameworkReportingService {
           },
         },
         message: 'ToC 2030 outcomes retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getIntermediateOutcomes(programId?: string) {
+    try {
+      const normalizedProgram = programId?.trim();
+
+      if (!normalizedProgram) {
+        throwServiceError(
+          'The program identifier is required in the query params.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const tocContext = await this._reportingTocContextService.resolve();
+
+      const intermediateOutcomes =
+        await this._tocResultsRepository.findIntermediateOutcomes(
+          normalizedProgram.toUpperCase(),
+          tocContext,
+        );
+
+      return {
+        response: {
+          program: normalizedProgram.toUpperCase(),
+          year: tocContext.reportingYear,
+          tocResults: intermediateOutcomes ?? [],
+          metadata: {
+            total: intermediateOutcomes?.length ?? 0,
+            phaseUuid: tocContext.phaseUuid,
+          },
+        },
+        message: 'Intermediate outcomes retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {

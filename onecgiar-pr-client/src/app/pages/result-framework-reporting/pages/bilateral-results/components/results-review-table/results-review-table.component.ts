@@ -12,8 +12,9 @@ import {
 import { HlmButton } from '@spartan/button';
 import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
 import { ResultToReview, GroupedResult } from './components/result-review-drawer/result-review-drawer.interfaces';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
-import { BilateralResultsService } from '../../bilateral-results.service';
+import { BilateralResultsService, REVIEW_RESULT_ID_QUERY_PARAM, REVIEW_RESULT_QUERY_PARAM } from '../../bilateral-results.service';
 
 @Component({
   selector: 'app-results-review-table',
@@ -35,6 +36,13 @@ import { BilateralResultsService } from '../../bilateral-results.service';
 export class ResultsReviewTableComponent implements OnDestroy {
   api = inject(ApiService);
   bilateralResultsService = inject(BilateralResultsService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  /** Result code deep-linked through the URL, consumed once the results are loaded. */
+  private pendingReviewResultCode: string | null = this.route.snapshot.queryParamMap.get(REVIEW_RESULT_QUERY_PARAM);
+  /** Id of that same result, used when it is not part of the review list (e.g. drafts). */
+  private readonly pendingReviewResultId: string | null = this.route.snapshot.queryParamMap.get(REVIEW_RESULT_ID_QUERY_PARAM);
 
   canReviewResults = computed(() => {
     if (this.api.rolesSE.isAdmin) {
@@ -118,6 +126,38 @@ export class ResultsReviewTableComponent implements OnDestroy {
     });
     return expanded;
   });
+
+  /**
+   * Abre el drawer del resultado enlazado por URL (?reviewResult=CODE) en cuanto
+   * la tabla termina de cargar, para que el deep link funcione en una pestaña nueva.
+   */
+  openDeepLinkedResult = effect(() => {
+    const results = this.bilateralResultsService.tableResults();
+    if (!this.pendingReviewResultCode || results.length === 0) return;
+
+    const code = this.pendingReviewResultCode;
+    this.pendingReviewResultCode = null;
+
+    // Prefer the object from the list (it is complete). Results that are not part of the
+    // review list — drafts still being edited — fall back to a minimal object built from
+    // the id, which is all the drawer needs to load its detail.
+    const match = results.find(result => String(result.result_code) === String(code));
+    const target = match ?? (this.pendingReviewResultId ? ({ id: this.pendingReviewResultId, result_code: code } as ResultToReview) : null);
+
+    if (target) {
+      this.reviewResult(target);
+    }
+    this.clearReviewResultParam();
+  });
+
+  private clearReviewResultParam(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { [REVIEW_RESULT_QUERY_PARAM]: null, [REVIEW_RESULT_ID_QUERY_PARAM]: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
 
   // Acción del botón para abrir el drawer de review
   reviewResult(result: ResultToReview): void {

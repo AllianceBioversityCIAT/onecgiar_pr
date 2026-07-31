@@ -1,4 +1,11 @@
-<!-- Not implemented yet. This route is not linked from the AOW sidebar; it is only reachable through
-     the parent's default redirect or an old deep link. It used to ship the Angular scaffold markup
-     ("entity-aow-unplanned works!"), which reached users verbatim — see
-     docs/qa-performance-refactor-parity.md. Kept empty on purpose until the view is built. -->
+<div class="entity-aow-unplanned_content">
+  <div class="entity-aow-unplanned_content_header">
+    <h3>Intermediate Outcomes</h3>
+    <div class="entity-aow-unplanned_content_header_dot"></div>
+    <h3 class="entity-aow-unplanned_content_header_phase">Reporting Phase {{ entityAowService.reportingPhaseYear }}</h3>
+  </div>
+
+  <div class="entity-aow-unplanned_content_table">
+    <app-aow-hlo-table tableType="intermediate-outcomes"></app-aow-hlo-table>
+  </div>
+</div>

@@ -47,7 +47,7 @@ export class AowHloTableComponent {
   entityAowService = inject(EntityAowService);
   resultLevelService = inject(ResultLevelService);
 
-  @Input() tableType: 'outputs' | 'outcomes' | '2030-outcomes' = 'outputs';
+  @Input() tableType: 'outputs' | 'outcomes' | '2030-outcomes' | 'intermediate-outcomes' = 'outputs';
 
   tableData = computed(() => {
     switch (this.tableType) {
@@ -57,6 +57,8 @@ export class AowHloTableComponent {
         return this.entityAowService.tocResultsOutcomesByAowId();
       case '2030-outcomes':
         return this.entityAowService.tocResults2030Outcomes();
+      case 'intermediate-outcomes':
+        return this.entityAowService.tocResultsIntermediateOutcomes();
       default:
         return [];
     }
@@ -89,7 +91,9 @@ export class AowHloTableComponent {
               (indicator: any) =>
                 !query ||
                 (indicator.indicator_description || '').toLowerCase().includes(query) ||
-                (indicator.type_name || '').toLowerCase().includes(query)
+                (indicator.type_name || '').toLowerCase().includes(query) ||
+                // staging: AOW indicators now carry the center, so it is searchable too.
+                (indicator.center_acronym || '').toLowerCase().includes(query)
             );
 
         return { group, indicators: byStatus(searched), titleMatches };
@@ -114,6 +118,8 @@ export class AowHloTableComponent {
         return 'There are no Intermediate Outcomes indicators found.';
       case '2030-outcomes':
         return 'There are no 2030 Outcomes indicators configured for this program in the current reporting phase.';
+      case 'intermediate-outcomes':
+        return 'There are no Intermediate Outcomes configured for this program in the current reporting phase.';
       case 'outputs':
       default:
         return 'There are no High-Level Outputs indicators found.';
@@ -153,11 +159,15 @@ export class AowHloTableComponent {
     return 'Not started';
   }
 
-  openReportResultModal(item: any, currentItemId: string | null) {
+  openReportResultModal(item: any, currentItemId: string | null, centerId?: number | null) {
     const selectedCurrentItem = currentItemId
       ? {
           ...item,
-          indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+          indicators: item.indicators.filter(
+            (indicator: any) =>
+              indicator.indicator_id === currentItemId &&
+              (centerId == null || indicator.center_id === centerId)
+          )
         }
       : {
           ...item,
@@ -168,10 +178,14 @@ export class AowHloTableComponent {
     this.entityAowService.currentResultToReport.set(selectedCurrentItem);
   }
 
-  openViewResultDrawer(item: any, currentItemId: string) {
+  openViewResultDrawer(item: any, currentItemId: string, centerId?: number | null) {
     const selectedCurrentItem = {
       ...item,
-      indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+      indicators: item.indicators.filter(
+        (indicator: any) =>
+          indicator.indicator_id === currentItemId &&
+          (centerId == null || indicator.center_id === centerId)
+      )
     };
 
     this.entityAowService.existingResultsContributors.set([]);
@@ -218,8 +232,11 @@ export class AowHloTableComponent {
     return matchedCenter?.center_id ?? null;
   }
 
-  hasTargets(item: any, indicatorId: string): boolean {
-    const indicator = item.indicators?.find((ind: any) => ind.indicator_id === indicatorId);
+  hasTargets(item: any, indicatorId: string, centerId?: number | null): boolean {
+    const indicator = item.indicators?.find(
+      (ind: any) =>
+        ind.indicator_id === indicatorId && (centerId == null || ind.center_id === centerId)
+    );
     return indicator?.targets_by_center?.centers?.length > 0;
   }
 }

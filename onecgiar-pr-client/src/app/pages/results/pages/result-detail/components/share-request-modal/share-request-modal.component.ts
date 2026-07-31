@@ -60,6 +60,11 @@ export class ShareRequestModalComponent implements OnInit {
     return this.api.dataControlSE?.currentResult?.source_name === 'W3/Bilaterals';
   }
 
+  get isIpsrResult(): boolean {
+    const typeId = this.api.dataControlSE?.currentResult?.result_type_id;
+    return typeId === 10 || typeId === 11;
+  }
+
   get shouldShowTocInitiativeOut(): boolean {
     const hasInitiativeId = !!this.shareRequestModalSE.shareRequestBody?.initiative_id;
     const inNotifications = this.api.dataControlSE.inNotifications;

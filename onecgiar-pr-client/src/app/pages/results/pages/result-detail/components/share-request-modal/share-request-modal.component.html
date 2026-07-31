@@ -38,13 +38,14 @@
       <app-toc-initiative-out
         [initiative]="shareRequestModalSE.shareRequestBody"
         [isNotifications]="true"
+        [isIpsr]="isIpsrResult"
         [editable]="
           !this.api.rolesSE.platformIsClosed &&
           (this.rolesSE.validateInitiative(shareRequestModalSE.shareRequestBody?.initiative_id) ||
             this.rolesSE.isAdmin ||
             this.api.dataControlSE.inNotifications)
         "
-        [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id === 4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr ? 1 : 2">
+        [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id === 4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr && !isIpsrResult ? 1 : 2">
       </app-toc-initiative-out>
     }
 

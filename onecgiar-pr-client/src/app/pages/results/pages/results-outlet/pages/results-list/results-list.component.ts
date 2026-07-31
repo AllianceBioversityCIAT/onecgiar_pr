@@ -10,7 +10,16 @@ import { PrTableComponent } from '../../../../../../shared/components/pr-table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 import { ResultsListFilterService } from './services/results-list-filter.service';
 import { Router } from '@angular/router';
-import { BilateralResultsService } from '../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
+import {
+  BilateralResultsService,
+  REVIEW_RESULT_ID_QUERY_PARAM,
+  REVIEW_RESULT_QUERY_PARAM
+} from '../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
+
+interface ResultRoute {
+  commands: unknown[];
+  queryParams: Record<string, unknown>;
+}
 
 interface ItemMenu {
   label: string;
@@ -32,6 +41,8 @@ interface ItemMenu {
 export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   router = inject(Router);
   bilateralResultsService = inject(BilateralResultsService);
+
+  private readonly resultRouteCache = new Map<string, ResultRoute>();
 
   private readonly selectedPhaseIds = computed(() =>
     this.resultsListFilterSE
@@ -408,24 +419,75 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  navigateToResult(result: CurrentResult) {
-    if (this.isW3BilateralsAvisa(result) || result?.status_name === 'Approved') {
-      const url = '/result/result-detail/' + result.result_code + '/general-information?phase=' + result.version_id;
-      this.router.navigateByUrl(url);
-      return;
-    }
+  /**
+   * True when the result must be opened in the bilateral review drawer
+   * instead of the regular result detail page.
+   */
+  private usesBilateralReviewFlow(result: CurrentResult): boolean {
+    if (this.isW3BilateralsAvisa(result) || result?.status_name === 'Approved') return false;
+    return result?.source_name === 'W3/Bilaterals';
+  }
 
-    if (result?.source_name == 'W3/Bilaterals') {
-      const url = '/result-framework-reporting/entity-details/' + result.submitter + '/results-review';
+  /**
+   * Router commands and query params for a result, cached per result so the
+   * template keeps handing routerLink the same object identity on each change
+   * detection run.
+   */
+  private getResultRoute(result: CurrentResult): ResultRoute {
+    const key = [result?.result_code, result?.version_id, result?.status_name, result?.source_name, result?.submitter].join('|');
+    const cached = this.resultRouteCache.get(key);
+    if (cached) return cached;
+
+    const route: ResultRoute = this.usesBilateralReviewFlow(result)
+      ? {
+          commands: ['/result-framework-reporting', 'entity-details', result?.submitter, 'results-review'],
+          queryParams: { [REVIEW_RESULT_QUERY_PARAM]: result?.result_code, [REVIEW_RESULT_ID_QUERY_PARAM]: result?.id }
+        }
+      : {
+          commands: ['/result', 'result-detail', result?.result_code, 'general-information'],
+          queryParams: { phase: result?.version_id }
+        };
+
+    this.resultRouteCache.set(key, route);
+    return route;
+  }
+
+  /** Router commands for the result row link (renders a real href). */
+  getResultLink(result: CurrentResult): unknown[] {
+    return this.getResultRoute(result).commands;
+  }
+
+  /** Query params for the result row link. */
+  getResultQueryParams(result: CurrentResult): Record<string, unknown> {
+    return this.getResultRoute(result).queryParams;
+  }
+
+  /**
+   * Plain left click on a row link: routerLink handles the navigation, this only
+   * preloads the review drawer state, exactly as the previous (click) handler did.
+   * Modified clicks (ctrl/cmd/shift/alt) open a new tab, so they must not touch state.
+   */
+  onResultLinkClick(event: MouseEvent, result: CurrentResult): void {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    if (!this.usesBilateralReviewFlow(result)) return;
+
+    this.bilateralResultsService.currentResultToReview.set(result);
+    this.bilateralResultsService.showReviewDrawer.set(true);
+  }
+
+  navigateToResult(result: CurrentResult) {
+    const { commands, queryParams } = this.getResultRoute(result);
+
+    if (this.usesBilateralReviewFlow(result)) {
       this.bilateralResultsService.currentResultToReview.set(result);
 
-      this.router.navigateByUrl(url).then(() => {
+      this.router.navigate(commands, { queryParams }).then(() => {
         this.bilateralResultsService.showReviewDrawer.set(true);
       });
       return;
     }
-    const url = '/result/result-detail/' + result.result_code + '/general-information?phase=' + result.version_id;
-    this.router.navigateByUrl(url);
+
+    this.router.navigate(commands, { queryParams });
   }
 
   ngOnDestroy(): void {
