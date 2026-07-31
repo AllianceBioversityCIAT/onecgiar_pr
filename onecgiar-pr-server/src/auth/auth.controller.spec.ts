@@ -128,7 +128,7 @@ describe('AuthController', () => {
       const result = await controller.getAuthURL(provider);
 
       expect(result).toEqual(mockAuthUrlResponse);
-      expect(authService.getAuthURL).toHaveBeenCalledWith(provider);
+      expect(authService.getAuthURL).toHaveBeenCalledWith(provider, undefined);
     });
   });
 
