@@ -138,22 +138,33 @@
   [modal]="true"
   [closable]="false"
   [dismissableMask]="false"
-  [style]="{ width: '420px' }"
+  [style]="{ width: '480px' }"
   [visible]="promoteTarget() !== null"
   (onHide)="onPromoteCancel()"
 >
   <ng-template pTemplate="header">
     <div class="pr-dialog-header">
       <span class="pr-dialog-header-icon pr-dialog-header-icon--promote">
-        <i class="material-icons-round">arrow_upward</i>
+        <i class="material-icons-round">rocket_launch</i>
       </span>
       <span class="pr-dialog-header-title">Promote Draft</span>
     </div>
   </ng-template>
   @if (promoteTarget(); as target) {
     <div class="pr-dialog-body">
-      <p class="pr-dialog-text">Promote <strong>{{ getDraftTitle(target) }}</strong> to a bilateral result?</p>
-      <p class="pr-dialog-hint">This will create a new bilateral result using the extracted data from this draft.</p>
+      <p class="pr-dialog-text">Activate <strong>{{ getDraftTitle(target) }}</strong> as a bilateral result?</p>
+      <div class="pr-dialog-chips">
+        <span class="pr-dialog-chip pr-dialog-chip--green">
+          <i class="material-icons-round">business</i>Lead Center
+        </span>
+        <span class="pr-dialog-chip pr-dialog-chip--green">
+          <i class="material-icons-round">people</i>Partners
+        </span>
+        <span class="pr-dialog-chip pr-dialog-chip--green">
+          <i class="material-icons-round">public</i>Geography
+        </span>
+      </div>
+      <p class="pr-dialog-hint">These AI-extracted fields will be pre-populated. You can review and edit them afterwards.</p>
     </div>
   }
   <ng-template pTemplate="footer">

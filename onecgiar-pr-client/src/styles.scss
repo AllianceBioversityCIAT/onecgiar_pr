@@ -443,19 +443,19 @@ body.pr-p25-drawer-scroll-lock {
   animation: pr-dialog-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
 
   .p-dialog-header {
-    padding: 24px 28px 0;
-    border: none;
-    background: transparent;
+    padding: 24px 28px 0 !important;
+    border: none !important;
+    background: transparent !important;
   }
 
   .p-dialog-content {
-    padding: 14px 28px 24px;
-    overflow: visible;
+    padding: 20px 28px 24px !important;
+    overflow: visible !important;
   }
 
   .p-dialog-footer {
-    padding: 0 28px 24px;
-    border: none;
+    padding: 0 28px 24px !important;
+    border: none !important;
   }
 
   // Keep confirmation copy aligned with the header and footer on discard dialogs.
@@ -484,8 +484,12 @@ body.pr-p25-drawer-scroll-lock {
   }
 
   &--promote {
-    background: #ECFDF5;
-    i { color: #059669; }
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #ECFDF5, #D1FAE5);
+    border: 1px solid rgba(5, 150, 105, 0.2);
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.12);
+    i { color: #059669; font-size: 22px; }
   }
 
   &--discard {
@@ -504,7 +508,7 @@ body.pr-p25-drawer-scroll-lock {
 .pr-dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
 }
 
 .pr-dialog-text {
@@ -542,10 +546,54 @@ body.pr-p25-drawer-scroll-lock {
   word-break: break-all;
 }
 
+.pr-dialog-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 4px;
+}
+
+.pr-dialog-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 20px;
+  padding: 3px 10px 3px 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  i { font-size: 14px; }
+
+  &--green {
+    background: #F0FDF4;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+    i { color: #059669; }
+  }
+}
+
 .pr-dialog-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.pr-dialog--promote {
+  border-top: 3px solid #059669 !important;
+  border-radius: 14px !important;
+
+  .p-dialog-footer .p-button:not(.p-button-secondary) {
+    background: #059669 !important;
+    border-color: #059669 !important;
+
+    &:hover {
+      background: #047857 !important;
+      border-color: #047857 !important;
+    }
+
+    &:focus-visible {
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.25) !important;
+    }
+  }
 }
 
 @keyframes pr-dialog-enter {
