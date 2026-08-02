@@ -192,6 +192,197 @@ hlm-sidebar {
   }
 }
 
+/* ════════════════════════════════════════════════════════════════════════════
+   SCIENCE PROGRAMS block — exact spec from the approved reference.
+   Source: docs/design-references/prms-reporting-tool-mockup/Resultados.dc.html:96-145
+   Spec sheet: docs/reporting-redesign/SIDEBAR-SPEC.md §2
+
+   Sizes are absolute px on purpose: html is 12px, so rem-based utilities would
+   render 25% small (UI-RULES §1.3). Colours come from the token layer only.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.pr-nav-section-label {
+  padding: 8px 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--pr-sidebar-fg-muted);
+
+  // Inside the "other programmes" toggle the label sits inline, so it drops the padding
+  // and stretches to push the count to the right edge.
+  &--inline {
+    flex: 1;
+    padding: 0;
+    text-align: left;
+  }
+
+  // Extra top space where a new block starts (reference uses 14px / 16px there).
+  &--spaced {
+    padding-top: 14px;
+  }
+}
+
+/* CGIAR centre card — same 44px box as a programme, but the marker is a rotated
+   square instead of a dot, and there is no code column (reference lines 134-142). */
+.pr-nav-center-card:hover {
+  border-color: var(--pr-color-primary-200);
+}
+
+.pr-nav-center-diamond {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  transform: rotate(45deg);
+}
+
+.pr-nav-programs {
+  padding: 0 6px;
+}
+
+.pr-nav-divider {
+  height: 1px;
+  margin: 16px 8px;
+  background: var(--pr-sidebar-border);
+}
+
+/* ── "My" programmes — 44px bordered cards ── */
+.pr-nav-program-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+
+  &:hover {
+    background: var(--pr-color-primary-700);
+  }
+
+  &--active {
+    border-color: var(--pr-sidebar-accent);
+    background: var(--pr-color-primary-700);
+  }
+}
+
+.pr-nav-program-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--pr-sidebar-accent);
+
+  &--sm {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+.pr-nav-program-code {
+  flex: none;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pr-sidebar-accent);
+
+  &--sm {
+    font-size: 11px;
+    font-weight: 500;
+  }
+}
+
+.pr-nav-program-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-sidebar-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &--sm {
+    font-size: 13px;
+    font-weight: 400;
+  }
+}
+
+/* ── "Other" programmes — 32px toggle + 30px rows ── */
+.pr-nav-others-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pr-sidebar-fg-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--pr-sidebar-hover);
+  }
+}
+
+.pr-nav-others-count {
+  flex: none;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--pr-sidebar-fg-muted);
+}
+
+.pr-nav-others-list {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: 1px;
+  max-height: 196px;
+  overflow-y: auto;
+}
+
+.pr-nav-program-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  min-height: 30px;
+  flex: none;
+  width: 100%;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--pr-sidebar-hover);
+  }
+
+  &--active {
+    background: var(--pr-sidebar-hover);
+
+    .pr-nav-program-name--sm {
+      color: var(--pr-sidebar-fg);
+      font-weight: 500;
+    }
+  }
+}
+
 .pr-nav-user-chip {
   border-color: rgba(255, 255, 255, 0.12) !important;
   background: rgba(255, 255, 255, 0.06) !important;

@@ -15,6 +15,7 @@ import {
   lucideHandshake,
   lucideChartLine,
   lucideCircleDot,
+  lucideCheck,
   lucideChevronDown,
   lucideRocket,
   lucideBell,
@@ -96,6 +97,7 @@ interface IconFlyout {
       lucideHandshake,
       lucideChartLine,
       lucideCircleDot,
+      lucideCheck,
       lucideChevronDown,
       lucideRocket,
       lucideBell,
@@ -548,6 +550,36 @@ export class ReportingNavSidebarComponent {
 
   getInitiativeSeparatedByPortfolio() {
     return this.api.dataControlSE.myInitiativesList.filter(item => item.portfolio_id == 3);
+  }
+
+  /**
+   * Per-programme dot colour, as in the approved reference (SIDEBAR-SPEC.md §2).
+   *
+   * The API does not carry a colour: `SPProgress` has no such field. So it is derived
+   * DETERMINISTICALLY from `initiativeCode` — the same programme always gets the same dot,
+   * across reloads, users and sessions, with no persistence and no extra request.
+   *
+   * Values are design tokens, never literals, so the palette follows any future rebrand.
+   */
+  private readonly programDotPalette: readonly string[] = [
+    'var(--pr-chart-2)',
+    'var(--pr-color-green-500)',
+    'var(--pr-color-blue-500)',
+    'var(--pr-chart-3)',
+    'var(--pr-color-yellow-300)',
+    'var(--pr-chart-4)',
+    'var(--pr-color-orange-500)',
+    'var(--pr-color-red-300)'
+  ];
+
+  programDotColor(code: string | null | undefined): string {
+    if (!code) return this.programDotPalette[0];
+    // Programme codes are sequential (SP01, SP06, SP10…), so indexing by their NUMBER spreads
+    // adjacent programmes across the palette. A character hash collided in practice — SP01 and
+    // SP12 both landed on the same swatch, which reads as "these two are related".
+    const digits = code.match(/\d+/)?.[0];
+    const index = digits ? Number(digits) : [...code].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 0);
+    return this.programDotPalette[index % this.programDotPalette.length];
   }
 
   getMyCenters() {
