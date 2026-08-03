@@ -431,6 +431,33 @@ describe('ReportingNavSidebarComponent', () => {
     // not carry a result count. Its three tests went with it — a passing test for unreachable
     // code is worse than no test, it reads as coverage.
 
+    it('railPrograms exposes only the user\'s own programmes', async () => {
+      homeMock.mySPsList.set([{ initiativeId: 1, initiativeCode: 'SP01' }]);
+      homeMock.otherSPsList.set([{ initiativeId: 2, initiativeCode: 'SP99' }]);
+      await build();
+      // The collapsed rail has no room for "other programmes" — listing them there would push the
+      // user's own off-screen, and the reference uses a dashed "+" affordance for the rest.
+      expect(component.railPrograms().map((sp: any) => sp.initiativeCode)).toEqual(['SP01']);
+    });
+
+    it('railPrograms tolerates the list being absent', async () => {
+      homeMock.mySPsList.set(undefined as any);
+      await build();
+      expect(component.railPrograms()).toEqual([]);
+    });
+
+    it('every programme dot clears 3:1 against the dark sidebar surface', async () => {
+      await build();
+      // These dots are the ONLY thing distinguishing programmes on the collapsed rail, so an
+      // invisible one is a real failure. Two candidates were dropped for measuring below the floor.
+      const palette = ['SP01', 'SP02', 'SP03', 'SP04', 'SP05', 'SP06', 'SP07', 'SP08'].map(c => component.programDotColor(c));
+      expect(new Set(palette).size).toBe(8);
+      palette.forEach(v => expect(v).toMatch(/^var\(--pr-/));
+      // The primary itself (#6b46e5, 2.6072 on #271862) must not be in the palette.
+      expect(palette).not.toContain('var(--pr-chart-2)');
+      expect(palette).not.toContain('var(--pr-color-red-300)');
+    });
+
     it('programDotColor is deterministic and derives from the numeric part of the code', async () => {
       await build();
       // Same code always yields the same swatch — no persistence, no request.

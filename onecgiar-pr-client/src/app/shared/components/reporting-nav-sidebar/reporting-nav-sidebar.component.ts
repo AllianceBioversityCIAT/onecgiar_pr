@@ -228,10 +228,21 @@ export class ReportingNavSidebarComponent {
   /** Ensures the (lazy) programs fetch is triggered at most once. */
   private rfrLoadTriggered = false;
 
+  /**
+   * Programmes shown on the collapsed icon rail — the user's own only. The rail has no room for
+   * "other programmes" or projects, and the reference shows a dashed "+" affordance for those
+   * instead of listing them.
+   */
+  readonly railPrograms = computed<SPProgress[]>(() => this.homeSE.mySPsList() ?? []);
+
+  // `?? []` is load-bearing, not defensive noise: the template reads `group.items.length`, so a
+  // list that arrives undefined (a failed or in-flight fetch) crashed the whole sidebar with
+  // "Cannot read properties of undefined (reading 'length')" — taking the app's only navigation
+  // down with it. Caught by the railPrograms test.
   readonly programGroups = computed<ProgramGroup[]>(() => [
-    { key: 'mine', label: 'My programs', items: this.homeSE.mySPsList() },
-    { key: 'other', label: 'Other programs', items: this.homeSE.otherSPsList() },
-    { key: 'projects', label: 'Other projects', items: this.homeSE.otherProjectsList() }
+    { key: 'mine', label: 'My programs', items: this.homeSE.mySPsList() ?? [] },
+    { key: 'other', label: 'Other programs', items: this.homeSE.otherSPsList() ?? [] },
+    { key: 'projects', label: 'Other projects', items: this.homeSE.otherProjectsList() ?? [] }
   ]);
 
   /** Currently selected program id from the URL `?sp=` query param (so the tree highlights it). */
@@ -406,7 +417,11 @@ export class ReportingNavSidebarComponent {
   ensureRfrLoaded(): void {
     if (this.rfrLoadTriggered) return;
     this.rfrLoadTriggered = true;
-    const alreadyLoaded = this.homeSE.mySPsList().length || this.homeSE.otherSPsList().length || this.homeSE.otherProjectsList().length;
+    // This runs from the CONSTRUCTOR, before any fetch resolves, so the lists can legitimately be
+    // absent here. Reading `.length` off undefined threw during component construction and took the
+    // app's only navigation down with it.
+    const alreadyLoaded =
+      (this.homeSE.mySPsList()?.length ?? 0) || (this.homeSE.otherSPsList()?.length ?? 0) || (this.homeSE.otherProjectsList()?.length ?? 0);
     if (!alreadyLoaded) this.homeSE.getScienceProgramsProgress();
   }
 
@@ -537,15 +552,24 @@ export class ReportingNavSidebarComponent {
    *
    * Values are design tokens, never literals, so the palette follows any future rebrand.
    */
+  /**
+   * Every swatch must clear the WCAG 1.4.11 3:1 non-text floor against the DARK sidebar surface
+   * (#271862) — these dots are the only thing distinguishing one programme from another on the
+   * collapsed rail, so an invisible one is a real failure.
+   *
+   * Two candidates were dropped for measuring below it: --pr-chart-2 (#6b46e5, 2.6072 — it is the
+   * primary, too dark for its own sidebar) and --pr-color-red-300 (#d00416, 2.6634). Their
+   * replacements are the lighter stops of the same families.
+   */
   private readonly programDotPalette: readonly string[] = [
-    'var(--pr-chart-2)',
-    'var(--pr-color-green-500)',
-    'var(--pr-color-blue-500)',
-    'var(--pr-chart-3)',
-    'var(--pr-color-yellow-300)',
-    'var(--pr-chart-4)',
-    'var(--pr-color-orange-500)',
-    'var(--pr-color-red-300)'
+    'var(--pr-chart-3)', // #9270f0 — 4.1615
+    'var(--pr-color-green-500)', // #19ae58 — 5.1939
+    'var(--pr-color-blue-500)', // #3b82f6 — 4.0981
+    'var(--pr-sidebar-accent)', // #c4b5fd — 8.1642
+    'var(--pr-color-yellow-300)', // #dfb400 — 7.6553
+    'var(--pr-chart-4)', // #c4a0f7 — 6.9753
+    'var(--pr-color-orange-500)', // #f97316 — 5.3771
+    'var(--pr-color-red-100)' // #fc7c7c — 5.9666
   ];
 
   programDotColor(code: string | null | undefined): string {

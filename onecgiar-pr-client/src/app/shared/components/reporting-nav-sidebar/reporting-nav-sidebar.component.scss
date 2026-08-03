@@ -225,6 +225,62 @@ hlm-sidebar {
   background: var(--pr-sidebar-border);
 }
 
+/* ── Collapsed icon rail (SIDEBAR-SPEC.md §2 "Collapsed rail") ──
+   32×32 buttons, centred, so the programme band survives collapsing. */
+.pr-nav-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+}
+
+.pr-nav-rail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+
+  &:hover {
+    background: var(--pr-sidebar-hover);
+  }
+
+  &--active {
+    border-color: var(--pr-sidebar-accent);
+    background: var(--pr-color-primary-700);
+  }
+}
+
+.pr-nav-rail-divider {
+  width: 32px;
+  height: 1px;
+  flex: none;
+  margin: 12px 0;
+  background: var(--pr-sidebar-border);
+}
+
+/* ── Focus visibility for every new interactive element in this sidebar.
+   These are custom-styled <a> elements, so without this they fall back to the global
+   `outline-ring/50` rule, which sets only outline-COLOR and never a width or style —
+   i.e. no visible indicator at all. --pr-sidebar-accent is the on-dark ring. */
+.pr-nav-program-card,
+.pr-nav-program-row,
+.pr-nav-others-toggle,
+.pr-nav-rail-btn {
+  &:focus-visible {
+    outline: 2px solid var(--pr-sidebar-accent);
+    outline-offset: 2px;
+  }
+}
+
 /* ── "My" programmes — 44px bordered cards ── */
 .pr-nav-program-card {
   display: flex;
@@ -393,7 +449,7 @@ hlm-sidebar {
     font-weight: 700;
     letter-spacing: 0.02em;
     text-transform: uppercase;
-    color: rgba(213, 213, 240, 0.8);
+    color: var(--pr-sidebar-fg-muted);
   }
 
   &__list {

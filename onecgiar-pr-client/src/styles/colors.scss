@@ -204,14 +204,14 @@
   --pr-sidebar-active: var(--pr-color-primary-300);
   --pr-sidebar-fg: #e9e4fa;
   --pr-sidebar-fg-muted: #a79bd4;
-  --pr-sidebar-fg-subtle: #8b7cc4;
+  --pr-sidebar-fg-subtle: #a79bd4; // was #8b7cc4 — failed AA on both sidebar surfaces
   --pr-sidebar-accent: #c4b5fd;
   --pr-sidebar-border: rgb(255 255 255 / 0.1);
   --pr-sidebar-hover: rgb(255 255 255 / 0.07);
 
   // ── Report status — FIXED fg/bg pairs. Never recombine a fg with another bg,
   // never invent a sixth status colour (rule 9).
-  --pr-status-not-started-fg: #6b7280;
+  --pr-status-not-started-fg: #4b5563; // was #6b7280 — 4.3929:1 on its own bg, under AA
   --pr-status-not-started-bg: #f3f4f6;
   --pr-status-in-progress-fg: #b45309;
   --pr-status-in-progress-bg: #fef3c7;
@@ -234,7 +234,11 @@
   --pr-shadow-drawer: -12px 0 32px rgb(25 21 36 / 0.12);
   --pr-scrim: rgb(25 21 36 / 0.32);
 
-  // ── Focus. THE focus indicator for every interactive control (rule 4).
-  // Built on -300, so it measures 5.7809:1 solid against white — light tints must not be used here.
+  // ── Focus HALO (rule 4). ⚠️ This is decorative, NOT the conformant indicator on its own:
+  // at 28% alpha it composites to #d6cbf8 over white = 1.5265:1, far under the 1.4.11 3:1 floor.
+  // (An earlier comment here claimed 5.7809 — that is the -300 stop SOLID, not this halo.)
+  // Pair it with a SOLID border/outline, which is what Helm's recipe does
+  // (`focus-visible:border-ring` + `ring-ring/50`) and what the sidebar's own
+  // `outline: 2px solid var(--pr-sidebar-accent)` does.
   --pr-focus-ring: 0 0 0 3px rgb(107 70 229 / 0.28);
 }
