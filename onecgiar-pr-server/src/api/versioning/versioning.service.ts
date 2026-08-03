@@ -1061,7 +1061,7 @@ export class VersioningService {
     });
 
     if (res.length) {
-      const ids = res.map(r => r.id);
+      const ids = res.map((r) => r.id);
 
       const [resultsWithPhase, versionsWithPrevPhase] = await Promise.all([
         this._resultRepository.find({
@@ -1074,11 +1074,17 @@ export class VersioningService {
         }),
       ]);
 
-      const versionIdsWithResults = new Set(resultsWithPhase.map(r => r.version_id));
-      const versionIdsAsPrevious = new Set(versionsWithPrevPhase.map(v => v.previous_phase));
+      const versionIdsWithResults = new Set(
+        resultsWithPhase.map((r) => r.version_id),
+      );
+      const versionIdsAsPrevious = new Set(
+        versionsWithPrevPhase.map((v) => v.previous_phase),
+      );
 
       for (const row of res) {
-        row['can_be_deleted'] = !versionIdsWithResults.has(row.id) && !versionIdsAsPrevious.has(row.id);
+        row['can_be_deleted'] =
+          !versionIdsWithResults.has(row.id) &&
+          !versionIdsAsPrevious.has(row.id);
       }
     }
 

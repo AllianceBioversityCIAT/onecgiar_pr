@@ -4143,7 +4143,11 @@ export class BilateralService {
     await this.upsertResultInitiative(resultId, initiative.id, 1, userId);
 
     const existingToc = await this._resultsTocResultsRepository.findOne({
-      where: { result_id: resultId, initiative_ids: initiative.id, is_active: true },
+      where: {
+        result_id: resultId,
+        initiative_ids: initiative.id,
+        is_active: true,
+      },
     });
 
     if (!existingToc) {

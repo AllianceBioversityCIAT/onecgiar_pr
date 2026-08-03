@@ -110,7 +110,7 @@ describe('BilateralCreationService', () => {
     expect(service.resultDescription()).toBe('');
     expect(service.resultContributingProjectIds()).toEqual([]);
     expect(service.resultTitle()).toBe('New');
-    expect(mockBilateralApi.GET_BilateralResultDetail).toHaveBeenCalledWith(7);
+    expect(mockBilateralApi.GET_BilateralResultDetail).toHaveBeenCalledWith(7, undefined);
   });
 
   it('should select a primary SP', () => {

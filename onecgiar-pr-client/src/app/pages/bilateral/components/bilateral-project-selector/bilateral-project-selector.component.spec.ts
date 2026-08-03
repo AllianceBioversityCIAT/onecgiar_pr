@@ -1,14 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BilateralProjectSelectorComponent } from './bilateral-project-selector.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
-import { RolesService } from '../../../../shared/services/global/roles.service';
+import { BilateralContextService } from '../../services/bilateral-context.service';
 import { signal } from '@angular/core';
 
 describe('BilateralProjectSelectorComponent', () => {
   let component: BilateralProjectSelectorComponent;
   let fixture: ComponentFixture<BilateralProjectSelectorComponent>;
   let creationService: any;
-  let rolesService: any;
+  let ctxService: any;
 
   beforeEach(async () => {
     creationService = {
@@ -19,15 +19,17 @@ describe('BilateralProjectSelectorComponent', () => {
       selectProject: jest.fn(),
     };
 
-    rolesService = {
-      getMyCenters: jest.fn().mockReturnValue([{ center_id: 'CENTER-01', center_name: 'Center One' }]),
+    ctxService = {
+      centerId: signal('CENTER-01'),
+      centerAcronym: signal('C01'),
+      centerName: signal('Center One'),
     };
 
     await TestBed.configureTestingModule({
       imports: [BilateralProjectSelectorComponent],
       providers: [
         { provide: BilateralCreationService, useValue: creationService },
-        { provide: RolesService, useValue: rolesService },
+        { provide: BilateralContextService, useValue: ctxService },
       ],
     }).compileComponents();
 

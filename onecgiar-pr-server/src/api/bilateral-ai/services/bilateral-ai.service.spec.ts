@@ -31,7 +31,9 @@ describe('BilateralAiService (unit)', () => {
     const resultRepository = {
       save: jest.fn(async (x) => ({ ...x, id: 100 })),
       update: jest.fn(),
-      findOneOrFail: jest.fn().mockResolvedValue({ id: 100, result_type_id: 7 }),
+      findOneOrFail: jest
+        .fn()
+        .mockResolvedValue({ id: 100, result_type_id: 7 }),
     };
     const versioningService = {
       $_findActivePhase: jest.fn().mockResolvedValue({ id: 1 }),
@@ -61,7 +63,9 @@ describe('BilateralAiService (unit)', () => {
 
     const bilateralService = {
       populateResultFromExtractedMds: jest.fn().mockResolvedValue(undefined),
-      populateInitiativeAndTocFromProgramCode: jest.fn().mockResolvedValue(undefined),
+      populateInitiativeAndTocFromProgramCode: jest
+        .fn()
+        .mockResolvedValue(undefined),
     };
 
     const service = new BilateralAiService(
@@ -290,9 +294,9 @@ describe('BilateralAiService (unit)', () => {
 
     it('should throw NotFoundException when key format is invalid', async () => {
       const { service } = makeService();
-      await expect(
-        service.getSignedUrl('invalid-key', user),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getSignedUrl('invalid-key', user)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw NotFoundException when job not found for user', async () => {
@@ -300,10 +304,7 @@ describe('BilateralAiService (unit)', () => {
       stubs.jobRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.getSignedUrl(
-          'prms/bilateral-ai/other-job/doc.pdf',
-          user,
-        ),
+        service.getSignedUrl('prms/bilateral-ai/other-job/doc.pdf', user),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -317,10 +318,7 @@ describe('BilateralAiService (unit)', () => {
       });
 
       await expect(
-        service.getSignedUrl(
-          'prms/bilateral-ai/j1/unknown.pdf',
-          user,
-        ),
+        service.getSignedUrl('prms/bilateral-ai/j1/unknown.pdf', user),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -464,11 +462,9 @@ describe('BilateralAiService (unit)', () => {
 
       await service.promoteDraft(5, 42);
 
-      expect(stubs.bilateralService.populateInitiativeAndTocFromProgramCode).toHaveBeenCalledWith(
-        100,
-        'CLIMATE',
-        42,
-      );
+      expect(
+        stubs.bilateralService.populateInitiativeAndTocFromProgramCode,
+      ).toHaveBeenCalledWith(100, 'CLIMATE', 42);
     });
 
     it('should throw BadRequestException when non-DOCUMENT formal evidence exists', async () => {

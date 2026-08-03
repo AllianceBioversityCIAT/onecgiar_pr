@@ -50,6 +50,7 @@ describe('BilateralResultCreatorComponent', () => {
       isLoadingProjects: signal(false),
       resultLevelId: signal(null) as any,
       resultTypeId: signal(null) as any,
+      currentResultId: signal(null) as any,
       createResult: jest.fn().mockReturnValue(of({ response: { id: 42 } })),
       submitResult: jest.fn().mockReturnValue(of({})),
       selectProject: jest.fn(),

@@ -758,7 +758,9 @@ export class ResultsController {
     required: true,
     description: 'Reporting phase (version) ID',
   })
-  @ApiOkResponse({ description: 'Bilateral center results retrieved successfully.' })
+  @ApiOkResponse({
+    description: 'Bilateral center results retrieved successfully.',
+  })
   async getBilateralCenterResults(
     @Query('centerId') centerId: string,
     @Query('versionId') versionId: string,

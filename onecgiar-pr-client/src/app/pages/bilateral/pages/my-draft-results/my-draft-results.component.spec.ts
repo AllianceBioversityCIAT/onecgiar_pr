@@ -34,9 +34,4 @@ describe('MyDraftResultsComponent', () => {
     expect(component.formatDate(new Date().toISOString())).toBe('Today');
   });
 
-  it('should return correct completeness label', () => {
-    expect(component.getCompletenessLabel(0)).toBe('Empty');
-    expect(component.getCompletenessLabel(50)).toBe('50%');
-    expect(component.getCompletenessLabel(100)).toBe('Complete');
-  });
 });

@@ -3153,7 +3153,11 @@ export class ResultsService {
 
       const result = versionId
         ? await this._resultRepository.findOne({
-            where: { result_code: resultId, version_id: versionId, source: SourceEnum.Bilateral },
+            where: {
+              result_code: resultId,
+              version_id: versionId,
+              source: SourceEnum.Bilateral,
+            },
           })
         : await this._resultRepository.findOne({
             where: { id: resultId, source: SourceEnum.Bilateral },
