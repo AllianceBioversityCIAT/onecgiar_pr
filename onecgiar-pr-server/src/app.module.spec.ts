@@ -41,27 +41,11 @@ describe('AppModule metadata', () => {
     );
     expect(firstChain.exclude).toHaveBeenCalledWith(
       {
-        path: 'api/platform-report/*path',
+        path: 'api/platform-report/(.*)',
         method: RequestMethod.ALL,
       },
       {
-        path: 'api/bilateral',
-        method: RequestMethod.ALL,
-      },
-      {
-        path: 'api/bilateral/create',
-        method: RequestMethod.ALL,
-      },
-      {
-        path: 'api/bilateral/list',
-        method: RequestMethod.ALL,
-      },
-      {
-        path: 'api/bilateral/results',
-        method: RequestMethod.ALL,
-      },
-      {
-        path: 'api/bilateral/:id',
+        path: 'api/bilateral/(.*)',
         method: RequestMethod.ALL,
       },
       {
