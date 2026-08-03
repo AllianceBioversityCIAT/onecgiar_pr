@@ -208,6 +208,7 @@ describe('VersioningService', () => {
           provide: ResultRepository,
           useValue: {
             findOne: jest.fn(),
+            find: jest.fn().mockResolvedValue([]),
             replicate: jest.fn(),
           },
         },
