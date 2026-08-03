@@ -1287,92 +1287,21 @@
               @if (!plannedFilteredAows().length) {
                 <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No Areas of Work match your search.</p>
               }
-              @for (aow of plannedFilteredAows(); track aow.id) {
-                @let expanded = isPanelAowExpanded(aow.code);
-                @let data = indicatorsForAow(aow.code);
-                <section
-                  class="overflow-hidden rounded-xl border transition-[border-color,box-shadow] duration-200"
-                  [class]="
-                    expanded
-                      ? 'border-[rgba(30,32,47,0.12)] bg-white shadow-[0_2px_10px_rgba(30,32,47,0.05)]'
-                      : 'border-transparent bg-[var(--pr-color-accents-1)] hover:border-[rgba(30,32,47,0.08)] hover:bg-white'
-                  ">
-                  <button
-                    type="button"
-                    [attr.data-guide]="$first ? 'aow-action' : null"
-                    (click)="toggleInlineAow(aow.code)"
-                    [attr.aria-expanded]="expanded"
-                    class="flex w-full items-center gap-2 px-2.5 py-2 text-left">
-                    <span
-                      class="material-icons-round text-[18px] text-[var(--pr-color-accents-4)] transition-transform duration-200"
-                      [class.rotate-90]="expanded"
-                      aria-hidden="true"
-                      >chevron_right</span
-                    >
-                    <span class="min-w-0 flex-1 truncate text-[12px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">
-                      <span class="font-extrabold" [style.color]="accentTheme().solid" [innerHTML]="aow.code | highlightSearch: plannedSearch()"></span>
-                      <span class="mx-1 font-normal text-[var(--pr-color-accents-3)]">·</span>
-                      <span [innerHTML]="aow.name | highlightSearch: plannedSearch()"></span>
-                    </span>
-                    @if (data?.count != null) {
-                      <span class="shrink-0 rounded-full bg-white px-1.5 py-px text-[10px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ data.count }}</span>
-                    }
-                  </button>
-
-                  @if (expanded) {
-                    <div class="border-t border-[rgba(30,32,47,0.06)] bg-white px-2.5 py-2">
-                      @if (data?.loading) {
-                        <div class="h-10 animate-pulse rounded-lg bg-[var(--pr-color-accents-1)]"></div>
-                      } @else if (!data?.indicators?.length) {
-                        <p class="m-0 py-1 text-[11px] text-[var(--pr-color-accents-5)]">No indicators planned in the ToC for this Area of Work.</p>
-                      } @else if (!plannedAowHloGroups(data.indicators).length) {
-                        <p class="m-0 py-1 text-[11px] text-[var(--pr-color-accents-5)]">No indicators match your search in this Area of Work.</p>
-                      } @else {
-                        @for (hlo of plannedAowHloGroups(data.indicators); track hlo.title) {
-                          <div class="mb-2 last:mb-0">
-                            <p class="m-0 mb-1 flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-color-accents-5)]">
-                              @if (hlo.split.code) {
-                                <span class="text-[var(--pr-color-primary-400)]" [innerHTML]="hlo.split.code | highlightSearch: plannedSearch()"></span>
-                                <span class="font-normal normal-case tracking-normal" [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
-                              } @else {
-                                <span [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
-                              }
-                            </p>
-                            <div class="flex flex-col gap-1.5">
-                              @for (ind of hlo.indicators; track ind.indicator_id) {
-                                <div class="flex flex-col gap-1.5 rounded-lg border border-[rgba(30,32,47,0.07)] bg-[var(--pr-color-accents-1)]/50 px-2.5 py-2">
-                                  <p
-                                    class="m-0 line-clamp-2 text-[11.5px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]"
-                                    [title]="ind.indicator_description"
-                                    [innerHTML]="ind.indicator_description | highlightSearch: plannedSearch()"></p>
-                                  <div class="flex flex-wrap items-center justify-between gap-1.5">
-                                    <div class="flex flex-wrap items-center gap-1">
-                                      @if (ind.type_name) {
-                                        <span
-                                          class="rounded-full bg-[#6b46e51f] px-1.5 py-px text-[10px] font-semibold text-[var(--pr-color-primary-400)]"
-                                          [innerHTML]="ind.type_name | highlightSearch: plannedSearch()"></span>
-                                      }
-                                      <span class="text-[10px] text-[var(--pr-color-accents-6)]"
-                                        >{{ ind.actual_achieved_value_sum ?? 0 }}/{{ ind.target_value_sum ?? 0 }}</span
-                                      >
-                                    </div>
-                                    <button
-                                      type="button"
-                                      (click)="manageIndicator(ind, ind.__hlo, 'report')"
-                                      class="flex appearance-none items-center gap-0.5 rounded-md border-0 bg-[linear-gradient(135deg,#6b46e5_0%,#5733c4_100%)] px-2 py-0.5 text-[10.5px] font-semibold text-white">
-                                      <span class="material-icons-round text-[12px]">edit_note</span> Report
-                                    </button>
-                                  </div>
-                                </div>
-                              }
-                            </div>
-                          </div>
-                        }
-                      }
-                    </div>
-                  }
-                </section>
-              }
+              <!-- ════════════════════════════════════════════════════════════════════════
+                   REPORTING TAB — AoW → HLO → indicator, per the approved reference.
+                   Replaces the previous inline AoW list (86 lines of a different distribution).
+                   Spec: docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §5
+                   Presentation lives in the child; this page keeps owning the data and the drawer.
+                   ════════════════════════════════════════════════════════════════════════ -->
+              <app-reporting-aow-table
+                [groups]="reportingGroups()"
+                [search]="plannedSearch()"
+                [canReport]="true"
+                (openRow)="onReportingRowOpen($event)"
+                (reportRow)="onReportingRowReport($event)"
+                (openTarget)="onReportingOpenTarget($event)"
+                (openAchieved)="onReportingOpenAchieved($event)"
+                (openAow)="openAow($event)" />
 
               <button
                 type="button"

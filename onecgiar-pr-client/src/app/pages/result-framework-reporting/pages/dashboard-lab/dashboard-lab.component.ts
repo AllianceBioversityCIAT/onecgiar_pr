@@ -20,6 +20,7 @@ import {
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { GuidedCreationComponent } from './components/guided-creation/guided-creation.component';
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
+import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
 
 /** Vibrant, high-contrast palette for the status charts (no pastels). */
@@ -119,7 +120,7 @@ export type RfrView = 'dashboard' | 'planned' | 'emerging' | 'centers';
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
-  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent, HighlightSearchPipe],
+  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent, HighlightSearchPipe, ReportingAowTableComponent],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -1025,6 +1026,41 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** The {aow, indicators, count, loading} bundle for a single AoW code (from indicatorsByAow). */
   indicatorsForAow(code: string) {
     return this.indicatorsByAow().find(x => x.aow.code === code) ?? null;
+  }
+
+  /**
+   * Feed for the Reporting tab table (`app-reporting-aow-table`).
+   *
+   * `indicatorsForAow()` already returns exactly the shape that component expects
+   * ({ aow, indicators, count, loading }) with `__hlo` and `__tier` folded into every row, so this
+   * is a pass-through over the search-filtered AoW list — no reshaping, no second source of truth.
+   */
+  readonly reportingGroups = computed<ReportingAowGroup[]>(() =>
+    this.plannedFilteredAows().map(
+      aow => this.indicatorsForAow(aow.code) ?? { aow, indicators: [], count: 0, loading: false }
+    )
+  );
+
+  /** Row click / Report — both land on the existing indicator drawer, on the matching tab. */
+  onReportingRowOpen(row: ReportingIndicator): void {
+    this.manageIndicator(row, row.__hlo ?? '', 'info');
+  }
+
+  onReportingRowReport(row: ReportingIndicator): void {
+    this.manageIndicator(row, row.__hlo ?? '', 'report');
+  }
+
+  /**
+   * Target and Achieved open the same drawer on the tab that answers each question: `info` carries
+   * the target breakdown, `report` the reported values. The reference uses popovers; the app already
+   * ships this drawer, and forking it to add popovers would put the same data behind two surfaces.
+   */
+  onReportingOpenTarget(row: ReportingIndicator): void {
+    this.manageIndicator(row, row.__hlo ?? '', 'info');
+  }
+
+  onReportingOpenAchieved(row: ReportingIndicator): void {
+    this.manageIndicator(row, row.__hlo ?? '', 'report');
   }
 
   /**

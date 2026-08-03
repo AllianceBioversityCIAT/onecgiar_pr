@@ -1,0 +1,134 @@
+/**
+ * Reporting tab — only what Tailwind cannot express cleanly lives here (the grid template, the
+ * line clamps, the status-mark shapes). Everything else is a utility in the template, per the
+ * client's Tailwind-first rule.
+ *
+ * Reference: docs/design-references/prms-reporting-tool-mockup/Resultados.dc.html:1007-1085
+ */
+
+:host {
+  display: block;
+}
+
+/* ── The row. Grid definition is the reference's, verbatim. ── */
+.pr-reporting-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 110px 110px 120px 28px;
+  align-items: center;
+  gap: 12px;
+  min-height: 88px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--pr-border-divider);
+  background: var(--pr-surface-card);
+  cursor: pointer;
+  transition: background 400ms ease;
+
+  &:hover {
+    background: var(--pr-surface-app);
+  }
+
+  // The row is a keyboard-reachable control, so it needs a real indicator. The global
+  // `outline-ring/50` rule sets only outline-COLOR — never a width — so it renders nothing.
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* ── Status mark — one 16px circle, four states.
+   The reference draws "in progress" as a half fill rather than a partial ring, which reads
+   correctly at 16px where an arc would not. ── */
+.pr-status-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1.5px solid var(--pr-text-subtle);
+  background: transparent;
+
+  &--not-started {
+    // ring only
+  }
+
+  &--in-progress {
+    border-color: var(--pr-status-in-progress-fg);
+
+    // 7px of fill on the left half — the "half-filled circle" of the reference.
+    &::before {
+      content: '';
+      width: 7px;
+      height: 16px;
+      margin-right: 7px;
+      background: var(--pr-status-in-progress-fg);
+    }
+  }
+
+  &--achieved {
+    border-color: var(--pr-status-submitted-fg);
+    background: var(--pr-status-submitted-fg);
+  }
+
+  &--overachieved {
+    border-color: var(--pr-status-approved-fg);
+    background: var(--pr-status-approved-fg);
+  }
+}
+
+/* ── Clamping. Rule 16: long text is clamped, never broken. ── */
+.pr-clamp-1,
+.pr-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pr-clamp-1 {
+  -webkit-line-clamp: 1;
+}
+
+.pr-clamp-2 {
+  -webkit-line-clamp: 2;
+}
+
+/* ── Row action. This is the `brandSoft` recipe, inlined because the row action is not an
+   hlmBtn (it must not inherit the base recipe's focus ring inside a clickable row).
+   Border is -300, not the reference's #DDD6FE: on a white card that tint measures 1.39:1,
+   under the WCAG 1.4.11 3:1 floor. See AUDIT-FINDINGS.md #19. ── */
+.pr-row-action {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--pr-color-primary-300);
+  border-radius: 8px;
+  background: var(--pr-surface-card);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-color-primary-400);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+
+  &:hover {
+    background: var(--pr-color-primary-50);
+    border-color: var(--pr-color-primary-400);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
+/* ── A smaller mono figure than the global `.pr-figure` (18px), for headers and counts. ── */
+.pr-figure-sm {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
