@@ -1,5 +1,12 @@
 # Program shell, Overview and Reporting — exact spec
 
+> ⚠️ **Line numbers below point at the LEGACY export.** The current reference is
+> [`../../../docs/design-references/prms-shell-CURRENT/`](../../../docs/design-references/prms-shell-CURRENT/)
+> (3574 lines vs 3200, and it carries the shell + Overview as markup). The VALUES here were
+> re-verified against the new export and its rendered PNG, so they are correct — but the
+> `:NNN` citations still resolve against the legacy file. Re-anchor them when next editing.
+
+
 **Source:** `docs/design-references/legacy-prms-reporting-tool-mockup/Resultados.dc.html` (the `<header>` at
 :200-264 and the Reporting table at :960-1150) plus the three Overview reference screenshots supplied
 by the owner on 2026-08-03. Every px/hex below was read from the markup, not inferred from an image.

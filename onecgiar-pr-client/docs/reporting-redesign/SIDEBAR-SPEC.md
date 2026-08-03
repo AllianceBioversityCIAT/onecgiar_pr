@@ -1,5 +1,10 @@
 # Sidebar — exact spec extracted from the mockup
 
+> ⚠️ **Line numbers below point at the LEGACY export.** The sidebar shipped from these values and
+> is verified in the browser, so the spec is accurate; only the `:NNN` anchors are stale. Current
+> reference: [`../../../docs/design-references/prms-shell-CURRENT/`](../../../docs/design-references/prms-shell-CURRENT/).
+
+
 **Source:** `docs/design-references/legacy-prms-reporting-tool-mockup/Resultados.dc.html` lines **28-197**
 (the `<nav>` element). Every value below was read from the markup, not interpreted from a screenshot.
 
