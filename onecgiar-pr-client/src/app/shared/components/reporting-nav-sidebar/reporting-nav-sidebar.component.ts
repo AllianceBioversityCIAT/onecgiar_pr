@@ -201,6 +201,13 @@ export class ReportingNavSidebarComponent {
   /** Planned ToC path — Science Programs nest under this entry (AoW children live on that surface). */
   readonly rfrPlannedPath = '/result-framework-reporting/planned-toc';
 
+  /**
+   * Overview is the OTHER tab of the same program shell. The sidebar entry must stay lit there:
+   * switching tab does not leave the program, and dropping the highlight reads as "you navigated
+   * away" when nothing moved.
+   */
+  readonly rfrOverviewPath = '/result-framework-reporting/overview';
+
   /** Section links that sit above the Planned + programs block. */
   readonly rfrLinksBeforePrograms: NavSubLink[] = [this.rfrSectionLinks[0]];
 
@@ -259,15 +266,20 @@ export class ReportingNavSidebarComponent {
     { initialValue: null }
   );
 
-  /** True when the URL is Planned ToC (a program is open). */
+  /** True when the URL is the program shell — either of its tabs (a program is open). */
   readonly isPlannedActive = toSignal(
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
       startWith(null),
-      map(() => this.router.url.split('?')[0] === this.rfrPlannedPath)
+      map(() => this.isProgramShellUrl(this.router.url))
     ),
     { initialValue: false }
   );
+
+  private isProgramShellUrl(url: string): boolean {
+    const path = url.split('?')[0];
+    return path === this.rfrPlannedPath || path === this.rfrOverviewPath;
+  }
 
   /**
    * Local expand/collapse for Science Programs under Planned.

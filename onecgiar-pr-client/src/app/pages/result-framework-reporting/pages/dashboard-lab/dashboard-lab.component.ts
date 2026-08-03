@@ -22,6 +22,7 @@ import { GuidedCreationComponent } from './components/guided-creation/guided-cre
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
 import { ReportingProgramBandComponent } from './components/reporting-program-band/reporting-program-band.component';
+import { ProgramOverviewComponent } from './components/program-overview/program-overview.component';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
 
 /** Vibrant, high-contrast palette for the status charts (no pastels). */
@@ -107,7 +108,7 @@ function parsePlannedBrowseView(raw: string | null | undefined): PlannedBrowseVi
 }
 
 /** Which RFR section surface to render (from route `data.rfrView`). */
-export type RfrView = 'dashboard' | 'planned' | 'emerging' | 'centers';
+export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'centers';
 
 /**
  * DASHBOARD LAB (experimental) — route: /result-framework-reporting/dashboard-lab
@@ -121,7 +122,17 @@ export type RfrView = 'dashboard' | 'planned' | 'emerging' | 'centers';
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
-  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent, HighlightSearchPipe, ReportingAowTableComponent, ReportingProgramBandComponent],
+  imports: [
+    RouterLink,
+    CustomFieldsModule,
+    DecimalPipe,
+    GuidedCreationComponent,
+    IndicatorDrawerComponent,
+    HighlightSearchPipe,
+    ReportingAowTableComponent,
+    ReportingProgramBandComponent,
+    ProgramOverviewComponent
+  ],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -142,7 +153,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   );
   readonly showDashboardChrome = computed(() => this.rfrView() === 'dashboard');
   /** Dedicated sidebar surfaces only — not shown on the Dashboard bento. */
+  readonly showOverview = computed(() => this.rfrView() === 'overview');
   readonly showPlanned = computed(() => this.rfrView() === 'planned');
+  /**
+   * The two tabs of the program shell. They share the band, so they also share its layout
+   * contract: full-bleed band, no outer gutters, 32px content pad owned by the tab itself.
+   */
+  readonly isProgramShell = computed(() => this.showOverview() || this.showPlanned());
   readonly showEmerging = computed(() => this.rfrView() === 'emerging');
   readonly showCenters = computed(() => this.rfrView() === 'centers');
   /** AOW code read from the URL on load, opened once its program's AOWs arrive. */
@@ -621,6 +638,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly selectedTotal = computed(() => {
     const sp = this.selected();
     return sp ? this.totalResults(sp) : 0;
+  });
+
+  /**
+   * Footer meta for the program-band ⓘ popover: "M planned results".
+   * Prefer the sum of ToC indicators (what the reference means by planned) once loaded;
+   * fall back to this phase's result total so the line is never empty on first paint.
+   */
+  readonly bandPlannedResultsCount = computed(() => {
+    const bundles = this.indicatorsByAow();
+    const fromToc = bundles.reduce((sum, b) => sum + (b.count || 0), 0);
+    return fromToc > 0 ? fromToc : this.selectedTotal();
   });
 
   /** % of results in a "reported" state (QAed / Submitted). */

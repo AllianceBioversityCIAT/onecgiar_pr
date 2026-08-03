@@ -125,10 +125,5 @@
   }
 }
 
-/* ── A smaller mono figure than the global `.pr-figure` (18px), for headers and counts. ── */
-.pr-figure-sm {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 13px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
+/* `.pr-figure-sm` (the 13px mono figure) now lives in src/styles/fonts.scss next to `.pr-code`
+   and `.pr-figure` — the Overview tab needs the same recipe, and a second local copy would drift. */

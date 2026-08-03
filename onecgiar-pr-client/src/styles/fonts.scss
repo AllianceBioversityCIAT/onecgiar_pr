@@ -29,6 +29,16 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+// The 13px figure — counts, ratios and legend numbers, everywhere the 18px `.pr-figure` would
+// shout. Global on purpose: it started scoped inside the Reporting table and the Overview needs
+// the exact same recipe, and two copies of a type token is how they drift.
+.pr-figure-sm {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
 .segment_title_margin {
   margin-top: 30px;
   margin-bottom: 10px;

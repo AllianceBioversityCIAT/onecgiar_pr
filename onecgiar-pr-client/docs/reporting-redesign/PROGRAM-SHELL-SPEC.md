@@ -57,6 +57,12 @@ The sidebar spans full height; the topbar starts where the sidebar ends.
 
 ## 3. Program band
 
+> **Implementation status (2026-08-03).** The expanded band matches the values below
+> (88px + 48px, title 30/800, 2px underline, `position: sticky`). Two deliberate deviations:
+> the **days-left chip is absent** (no cycle end date exists in the client — see the component
+> doc), and the **collapsed 48px variant is not built yet**. The Reporting toolbar was moved OUT
+> of the band into the 32px content pad, which is where the reference puts it (`:883`).
+
 ### Expanded (88px identity + 48px tabs)
 
 **Eyebrow row:** a `●` programme dot, then
@@ -90,8 +96,22 @@ all on one line. The band is `position: sticky`.
 
 ## 4. Tab: Overview
 
+> **Implementation status (2026-08-03).** Shipped as
+> `dashboard-lab/components/program-overview/`, routed at **`/result-framework-reporting/overview`**
+> (`rfrView: 'overview'`). The tab used to point at `/home`, i.e. the retired bento — that is fixed.
+> **Every figure in it is placeholder data**: not one of the seven blocks has a feed today (see the
+> per-block table in the component's doc comment, and open questions 4 and 5 in §7). The layout is
+> the deliverable; wiring is a separate change, and each block reads from ONE signal so swapping in
+> a real source is a one-line edit per block.
+
 Seven blocks, in order. All cards: `background: #FFFFFF`, `border: 1px solid #E3E3E8`,
-`border-radius: 12px` — separated by border, not shadow (rule 10).
+`border-radius: 12px` — separated by border, not shadow (rule 10). 12-column grid, 16px gutter,
+inside the 32px content pad. Spans: About 12 · Reporting status 8 + Reporting pace 4 · Progress by
+area of work 12 · Needs attention 6 + Largest gaps 6 · Impact so far 12.
+
+⚠️ `Largest gaps to target` is in the rendered screenshots but **not** in the current export's
+markup (`PRMS-Shell.dc.html` has two empty slots at :836/:838 where it used to sit). Its values
+below were read from the screenshots.
 
 1. **About this program** — body copy `14px/400`, `line-height 1.5`, `#2B2838`, clamped to 3 lines with
    an inline `Show more` (`#6B46E5`).

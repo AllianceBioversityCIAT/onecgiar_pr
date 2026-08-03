@@ -507,6 +507,14 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
     loadComponent: loadDashboardLab
   },
   {
+    // Overview tab of the program shell. Its own route (not `home`) so the band's tabs are real
+    // navigation: sending Overview back to the retired bento was the reported bug.
+    prName: 'Program overview',
+    path: 'overview',
+    data: { sidebar: { width: 300 }, rfrView: 'overview' },
+    loadComponent: loadDashboardLab
+  },
+  {
     prName: 'Results planned in your 2026 ToC',
     path: 'planned-toc',
     data: { sidebar: { width: 300 }, rfrView: 'planned' },

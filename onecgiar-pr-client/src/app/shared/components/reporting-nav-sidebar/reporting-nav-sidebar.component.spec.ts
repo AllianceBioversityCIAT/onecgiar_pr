@@ -245,6 +245,13 @@ describe('ReportingNavSidebarComponent', () => {
       expect(component.isPlannedActive()).toBe(true);
     });
 
+    it('stays active on the Overview tab — the same program shell, not a different surface', async () => {
+      await build();
+
+      navigateTo('/result-framework-reporting/overview?sp=3');
+      expect(component.isPlannedActive()).toBe(true);
+    });
+
     it('expands My Admin and the Admin module on their own URLs', async () => {
       await build();
       expect(component.myAdminExpanded()).toBe(false);

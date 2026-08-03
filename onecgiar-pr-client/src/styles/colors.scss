@@ -189,6 +189,9 @@
   --pr-border: #e3e3e8;
   --pr-border-strong: #d5d5dc; // AoW header bottom border
   --pr-border-divider: #eeeef1; // row separators
+  // The ONE violet-tinted border: it closes the tinted band, so a neutral rule would read as a
+  // seam against #f7f4fd. Reference: PRMS-Shell.dc.html:315.
+  --pr-border-band: #e4e0ef;
 
   // ── Text — violet-tinted neutral ramp
   --pr-text-heading: #191524;
