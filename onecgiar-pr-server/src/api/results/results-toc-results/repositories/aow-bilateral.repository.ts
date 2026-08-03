@@ -26,6 +26,7 @@ interface TocResultRow {
   result_type_id?: number | null;
   result_type_name?: string | null;
   result_level_id?: number | null;
+  is_aow?: number | null;
   center_id?: number | null;
   center_acronym?: string | null;
 }
@@ -38,6 +39,8 @@ export interface TocResultResponse {
   result_level_id?: number | null;
   /** P2-3114: Clarisa initiative ids from toc_result_synergy_programs (same contract as C&P toc v2). */
   contributing_synergy_program_initiative_ids?: number[];
+  /** True when the ToC node is explicitly linked to the queried AOW (wp_id IS NOT NULL and matched). False for program-level nodes that appear under all AOWs. */
+  is_aow?: boolean;
   indicators: Array<{
     indicator_id: number;
     indicator_description: string | null;
@@ -394,6 +397,7 @@ export class AoWBilateralRepository {
         tr.category,
         tr.result_title AS result_title,
         tr.related_node_id AS related_node_id,
+        ${options.areaAcronym ? '(wp.toc_id IS NOT NULL)' : 'NULL'} AS is_aow,
         tri.id AS indicator_id,
         tri.indicator_description,
         tri.toc_result_indicator_id,
@@ -518,6 +522,7 @@ export class AoWBilateralRepository {
           result_title: row.result_title,
           related_node_id: row.related_node_id,
           result_level_id: row.result_level_id ?? null,
+          is_aow: Boolean(row.is_aow),
           indicators: [],
         });
       }
@@ -549,7 +554,11 @@ export class AoWBilateralRepository {
       }
     }
 
-    return Array.from(grouped.values());
+    const results = Array.from(grouped.values());
+    if (results.some((r) => r.is_aow)) {
+      results.sort((a, b) => Number(b.is_aow) - Number(a.is_aow));
+    }
+    return results;
   }
 
   async findResultById(tocResultId: number, phaseUuid: string) {
@@ -772,7 +781,7 @@ export class AoWBilateralRepository {
       SELECT
         tr.id AS toc_result_id,
         tr.official_code AS official_code,
-        trp.project_id AS project_id, 
+        trp.project_id AS project_id,
         trp.name AS project_name,
         trp.project_summary AS project_summary,
         cp.organization_code AS organization_code,
@@ -858,9 +867,9 @@ export class AoWBilateralRepository {
         ci.acronym AS center_acronym,
         ci.name AS center_name
       FROM ${env.DB_TOC}.toc_result_indicator_target trit
-      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target_center tritc 
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target_center tritc
         ON trit.toc_indicator_target_id = tritc.toc_indicator_target_id
-      LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci 
+      LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci
         ON tritc.center_id = ci.id
       WHERE trit.id_indicator = ?
         AND trit.target_date >= ?
