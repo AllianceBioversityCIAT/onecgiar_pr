@@ -487,7 +487,12 @@ zoom: var(--pr-font-scale, 1);
 // rgba(0,0,0,0), i.e. the element loses its fill with no error), so every var here must
 // be confirmed to resolve, not merely to be present.
 // ─────────────────────────────────────────────────────────────────────────────
---background: var(--pr-surface-app);
+// --background is the base component surface (what `bg-background` paints on an outline
+// button, an input, a popover), NOT the page canvas. It must be WHITE and it must differ
+// from --muted, because Helm's outline variant is `bg-background hover:bg-muted`: pointing
+// both at the same value made hovering an outline button a visual no-op.
+// The page canvas is applied explicitly on `body` further down instead.
+--background: var(--pr-surface-card);
 --foreground: var(--pr-text);
 --card: var(--pr-surface-card);
 --card-foreground: var(--pr-text);
@@ -498,9 +503,11 @@ zoom: var(--pr-font-scale, 1);
 --primary: var(--pr-color-primary-300);
 --primary-foreground: var(--pr-color-white);
 
---secondary: var(--pr-surface-subtle);
+// --muted is the neutral HOVER / de-emphasised fill. It must be distinguishable from
+// --background (see above) — #f7f7f9 on white reads as a soft grey hover.
+--secondary: var(--pr-surface-app);
 --secondary-foreground: var(--pr-text);
---muted: var(--pr-surface-subtle);
+--muted: var(--pr-surface-app);
 --muted-foreground: var(--pr-text-secondary);
 
 // Hover/selected affordance for menu + list items. Violet is allowed here: it is an
@@ -532,43 +539,23 @@ zoom: var(--pr-font-scale, 1);
 --sidebar-ring: var(--pr-sidebar-accent);
 }
 
-:root.dark {
-color-scheme: dark;
-
---background: oklch(0.129 0.042 264.695);
---foreground: oklch(0.984 0.003 247.858);
---card: oklch(0.208 0.042 265.755);
---card-foreground: oklch(0.984 0.003 247.858);
---popover: oklch(0.208 0.042 265.755);
---popover-foreground: oklch(0.984 0.003 247.858);
---primary: oklch(0.929 0.013 255.508);
---primary-foreground: oklch(0.208 0.042 265.755);
---secondary: oklch(0.279 0.041 260.031);
---secondary-foreground: oklch(0.984 0.003 247.858);
---muted: oklch(0.279 0.041 260.031);
---muted-foreground: oklch(0.704 0.04 256.788);
---accent: oklch(0.279 0.041 260.031);
---accent-foreground: oklch(0.984 0.003 247.858);
---destructive: oklch(0.704 0.191 22.216);
---border: oklch(1 0 0 / 10%);
---input: oklch(1 0 0 / 15%);
---ring: oklch(0.551 0.027 264.364);
---sidebar: oklch(0.208 0.042 265.755);
---sidebar-foreground: oklch(0.984 0.003 247.858);
---sidebar-primary: oklch(0.984 0.003 247.858);
---sidebar-primary-foreground: oklch(0.208 0.042 265.755);
---sidebar-accent: oklch(0.279 0.041 260.031);
---sidebar-accent-foreground: oklch(0.984 0.003 247.858);
---sidebar-border: oklch(1 0 0 / 10%);
---sidebar-ring: oklch(0.551 0.027 264.364);
-}
+// NOTE: the `:root.dark` block that used to sit here was REMOVED. It held 30 lines of shadcn
+// slate oklch() defaults and was unreachable: the selector was `:root.dark` (not `.dark`),
+// nothing in the app ever adds that class, and `color-scheme: light` is pinned on :root above.
+// Left in place it was a loaded gun — the moment anyone added a dark class, every Spartan
+// component would have reverted to grey-blue, silently undoing the brand wiring.
+// Reintroducing dark mode is a separate change: it needs a scopable selector, a toggle, a
+// persisted preference and its own contrast audit for all 24 values.
 
 @layer base {
 * {
 @apply border-border outline-ring/50;
 }
 body {
-@apply bg-background text-foreground;
+// The page canvas is the app surface, NOT --background: that var is the base COMPONENT
+// surface (white) so Helm's `bg-background hover:bg-muted` pair stays distinguishable.
+@apply text-foreground;
+background-color: var(--pr-surface-app);
 // Subtle canvas texture over the base background (repeats + stays fixed on scroll).
 background-image: url('assets/texture-bg.webp');
 background-repeat: repeat;

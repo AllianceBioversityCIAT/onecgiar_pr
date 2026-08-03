@@ -48,7 +48,7 @@ const ICON_BASE = '/assets/result-framework-reporting/SPs-Icons/';
 
 /** Accent colour per hierarchy level — lets each level read at a glance. */
 const LEVEL_ACCENT: Record<Kind, string> = {
-  program: '#8a8ce0', // brand violet
+  program: '#8b6cf5', // brand violet (was #8a8ce0, retired indigo)
   aow: '#2bd4d9',     // cyan
   output: '#5b8cff',  // blue
   outcome: '#e879f9'  // magenta
@@ -430,7 +430,7 @@ export class ResultFrameworkReportingGalaxyComponent implements AfterViewInit, O
       pos[i * 3] = r * Math.sin(p) * Math.cos(t); pos[i * 3 + 1] = r * Math.cos(p); pos[i * 3 + 2] = r * Math.sin(p) * Math.sin(t);
     }
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x8a8ce0, size: 0.6, transparent: true, opacity: 0.5 })));
+    scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x8b6cf5, size: 0.6, transparent: true, opacity: 0.5 })));
 
     scene.add(this.groupB, this.linesB);
 

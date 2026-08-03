@@ -16,7 +16,7 @@
   --gc-line: rgba(31, 32, 51, 0.09);
 
   --gc-brand: #6b46e5;
-  --gc-brand-ink: #4a4c9c;
+  --gc-brand-ink: var(--pr-color-primary-400); // was #4a4c9c (retired indigo) — CTA hover disagreed with its own rest state
 
   // easeOutCubic everywhere — one curve, no bounce.
   --gc-ease: cubic-bezier(0.215, 0.61, 0.355, 1);

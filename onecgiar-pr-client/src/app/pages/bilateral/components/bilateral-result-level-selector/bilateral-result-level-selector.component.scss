@@ -28,9 +28,12 @@
   font-family: inherit;
   transition: border-color 150ms ease, background 150ms ease;
 
+  // Hover is NEUTRAL, selected is BRAND. The 200->300 repoint had made both borders the same
+  // violet, so hovering previewed nothing — the card looked already selected. Rule 7 also wants
+  // resting/hover borders neutral inside content, with violet reserved for the chosen state.
   &:hover {
-    border-color: var(--pr-color-primary-300);
-    background: #F5F5F5;
+    border-color: var(--pr-border-strong);
+    background: var(--pr-surface-app);
   }
 
   &--selected {

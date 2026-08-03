@@ -262,7 +262,6 @@ export class ReportingNavSidebarComponent {
    * Local expand/collapse for Science Programs under Planned.
    * Clicking Planned toggles this — it does NOT navigate (pick a program to enter).
    */
-  readonly plannedExpanded = signal(this.router.url.split('?')[0] === this.rfrPlannedPath);
 
   // --- Result Detail context: "Results Center" expands into the open result's sections ---
   /** True when the URL is a result-detail page (the white context card is shown). */
@@ -375,27 +374,11 @@ export class ReportingNavSidebarComponent {
     this.ensureRfrLoaded();
     // Expand collapsibles when landing inside their module (don't force-collapse on leave).
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
-      const path = this.router.url.split('?')[0];
-      if (path === this.rfrPlannedPath) {
-        this.plannedExpanded.set(true);
-        this.ensureRfrLoaded();
-      } else {
-        // Leaving Planned (Dashboard / Emerging / Centers / elsewhere) collapses the tree
-        this.plannedExpanded.set(false);
-      }
       if (this.router.url.startsWith('/result-framework-reporting')) this.ensureRfrLoaded();
       if (this.router.url.includes('/result/result-detail/')) this.resultCenterExpanded.set(true);
       if (this.router.url.startsWith('/init-admin-module')) this.myAdminExpanded.set(true);
       if (this.router.url.startsWith('/admin-module')) this.adminModuleExpanded.set(true);
     });
-  }
-
-  /** Expand/collapse Planned programs only — never navigates by itself. */
-  togglePlanned(): void {
-    if (this.isCollapsed()) return;
-    const next = !this.plannedExpanded();
-    this.plannedExpanded.set(next);
-    if (next) this.ensureRfrLoaded();
   }
 
   /** Active state for RFR section links (path only; ignores `?sp=`). */
@@ -491,13 +474,6 @@ export class ReportingNavSidebarComponent {
 
   iconSrc(sp: SPProgress): string {
     return `/assets/result-framework-reporting/SPs-Icons/${sp.initiativeCode}.png`;
-  }
-
-  /** Result count for the latest reporting version (falls back to the flat total). */
-  count(sp: SPProgress): number {
-    const versions = sp.versions ?? [];
-    const latest = versions.length ? versions.reduce((a, b) => ((b.phaseYear ?? 0) > (a.phaseYear ?? 0) ? b : a)) : null;
-    return latest?.totalResults ?? sp.totalResults ?? 0;
   }
 
   // Mirrors NavigationBarComponent so admin-only entries stay gated in the sidebar too.

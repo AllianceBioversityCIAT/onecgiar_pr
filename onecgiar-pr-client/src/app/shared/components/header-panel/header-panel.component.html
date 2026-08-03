@@ -124,7 +124,7 @@
         class="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
         [ngClass]="
           isSearchMode()
-            ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87, 51, 196,0.4)]'
+            ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87,51,196,0.4)]'
             : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'
         "
         (click)="toggleSearch()"
@@ -147,7 +147,7 @@
       <a
         #whatsNewLink
         class="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
-        [ngClass]="rlaWhatsNew.isActive ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87, 51, 196,0.4)]' : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'"
+        [ngClass]="rlaWhatsNew.isActive ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87,51,196,0.4)]' : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'"
         (keydown.space)="$event.preventDefault(); whatsNewLink.click()"
         routerLink="/whats-new"
         routerLinkActive
@@ -161,7 +161,7 @@
       <button
         type="button"
         class="relative flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
-        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87, 51, 196,0.4)]' : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'"
+        [ngClass]="notificationsOpen() || isInNotificationsRoute() ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87,51,196,0.4)]' : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'"
         cdkOverlayOrigin
         #notifTrigger="cdkOverlayOrigin"
         (click)="notificationsOpen.set(!notificationsOpen())"
@@ -185,7 +185,7 @@
         #settingsTrigger
         type="button"
         class="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-[0_2px_6px_rgba(30,32,47,0.08)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
-        [ngClass]="settingsMenuOpen() ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87, 51, 196,0.4)]' : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'"
+        [ngClass]="settingsMenuOpen() ? 'border border-transparent bg-[linear-gradient(90deg,#6b46e5,#5733c4,#5733c4)] text-white shadow-[0_4px_12px_rgba(87,51,196,0.4)]' : 'border border-[#e6e3db] bg-white text-ink-heading hover:bg-[#f7f6f2]'"
         cdkOverlayOrigin
         #settingsOrigin="cdkOverlayOrigin"
         (click)="settingsMenuOpen.set(!settingsMenuOpen())"
@@ -367,8 +367,8 @@
             (keydown.space)="$event.preventDefault(); adminLink.click()"
             (keydown.enter)="adminLink.click()"
             (click)="userMenuOpen.set(false)">
-            <i class="pi pi-wrench text-[15px] text-brand-300 transition-colors duration-300 group-hover:text-brand-300" aria-hidden="true"></i>
-            <p class="m-0 text-xs font-medium text-brand-300 transition-colors duration-300 group-hover:text-brand-300">Admin module</p>
+            <i class="pi pi-wrench text-[15px] text-brand-300 transition-colors duration-300 group-hover:text-brand-400" aria-hidden="true"></i>
+            <p class="m-0 text-xs font-medium text-brand-300 transition-colors duration-300 group-hover:text-brand-400">Admin module</p>
           </a>
         }
       </div>

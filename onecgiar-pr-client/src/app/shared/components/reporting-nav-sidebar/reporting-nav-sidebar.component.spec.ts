@@ -229,20 +229,19 @@ describe('ReportingNavSidebarComponent', () => {
 
   // ------------------------------------------------------------ router reactions
   describe('router reactions', () => {
-    it('expands Planned when landing on it and collapses it when leaving', async () => {
+    it('marks Planned active on its own URL and inactive elsewhere', async () => {
       await build();
-      expect(component.plannedExpanded()).toBe(false);
+      expect(component.isPlannedActive()).toBe(false);
 
       navigateTo(`${PLANNED}?sp=3`);
-      expect(component.plannedExpanded()).toBe(true);
+      expect(component.isPlannedActive()).toBe(true);
 
       navigateTo('/result-framework-reporting/home');
-      expect(component.plannedExpanded()).toBe(false);
+      expect(component.isPlannedActive()).toBe(false);
     });
 
-    it('starts with Planned expanded when the entry URL is Planned', async () => {
+    it('starts with Planned active when the entry URL is Planned', async () => {
       await build(PLANNED);
-      expect(component.plannedExpanded()).toBe(true);
       expect(component.isPlannedActive()).toBe(true);
     });
 
@@ -279,25 +278,6 @@ describe('ReportingNavSidebarComponent', () => {
 
   // ------------------------------------------------------------------- toggles
   describe('collapsible toggles', () => {
-    it('togglePlanned flips the tree and lazily loads the programs', async () => {
-      homeMock.mySPsList.set([{ initiativeCode: 'SP1' }]);
-      await build();
-      expect(component.plannedExpanded()).toBe(false);
-
-      component.togglePlanned();
-      expect(component.plannedExpanded()).toBe(true);
-
-      component.togglePlanned();
-      expect(component.plannedExpanded()).toBe(false);
-    });
-
-    it('togglePlanned is a no-op on the icon rail', async () => {
-      await build();
-      sidebarMock.state.set('collapsed');
-      component.togglePlanned();
-      expect(component.plannedExpanded()).toBe(false);
-    });
-
     it('toggleMyAdmin / toggleAdminModule flip when expanded and no-op when collapsed', async () => {
       await build();
       component.toggleMyAdmin();
@@ -447,29 +427,27 @@ describe('ReportingNavSidebarComponent', () => {
       expect(component.iconSrc({ initiativeCode: 'SP03' } as any)).toBe('/assets/result-framework-reporting/SPs-Icons/SP03.png');
     });
 
-    it('count picks the latest version total', async () => {
+    // `count()` was removed with the programme-count badge: the reference's programme cards do
+    // not carry a result count. Its three tests went with it — a passing test for unreachable
+    // code is worse than no test, it reads as coverage.
+
+    it('programDotColor is deterministic and derives from the numeric part of the code', async () => {
       await build();
-      const sp = {
-        totalResults: 99,
-        versions: [
-          { phaseYear: 2025, totalResults: 5 },
-          { phaseYear: 2026, totalResults: 8 }
-        ]
-      } as any;
-      expect(component.count(sp)).toBe(8);
+      // Same code always yields the same swatch — no persistence, no request.
+      expect(component.programDotColor('SP01')).toBe(component.programDotColor('SP01'));
+      // Sequential codes land on different swatches (a character hash collided: SP01/SP12).
+      const codes = ['SP01', 'SP06', 'SP10', 'SP12'];
+      expect(new Set(codes.map(c => component.programDotColor(c))).size).toBe(codes.length);
+      // Every result is a token reference, never a literal.
+      codes.forEach(c => expect(component.programDotColor(c)).toMatch(/^var\(--pr-/));
     });
 
-    it('count treats a missing phaseYear as the oldest version', async () => {
+    it('programDotColor tolerates a missing, empty or non-numeric code', async () => {
       await build();
-      const sp = { totalResults: 99, versions: [{ totalResults: 5 }, { phaseYear: 2026, totalResults: 7 }] } as any;
-      expect(component.count(sp)).toBe(7);
-    });
-
-    it('count falls back to the flat total and then to zero', async () => {
-      await build();
-      expect(component.count({ totalResults: 4, versions: [] } as any)).toBe(4);
-      expect(component.count({ versions: undefined } as any)).toBe(0);
-      expect(component.count({ totalResults: 3, versions: [{ phaseYear: 2026 }] } as any)).toBe(3);
+      // Centre IDs are passed through the same helper and are not always numeric.
+      [null, undefined, '', 'CIAT', 'SP', '999999999999'].forEach(c => {
+        expect(component.programDotColor(c as any)).toMatch(/^var\(--pr-/);
+      });
     });
   });
 

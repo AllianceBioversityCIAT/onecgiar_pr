@@ -68,7 +68,12 @@
                       <span class="pr-nav-program-code">{{ sp.initiativeCode }}</span>
                       <span class="pr-nav-program-name">{{ sp.initiativeShortName || sp.initiativeName }}</span>
                       @if (sp.initiativeId === activeSpId()) {
-                        <ng-icon name="lucideCheck" class="text-sidebar-accent shrink-0 text-[13px]" />
+                        <!-- Uses --pr-sidebar-accent (the lilac #c4b5fd FOREGROUND), NOT Helm's
+                             --sidebar-accent (the elevated SURFACE #33227a). Those two names differ by
+                             one prefix and mean opposite things: the surface is exactly the active
+                             card's own background, so `text-sidebar-accent` rendered at 1.0000:1 —
+                             an invisible checkmark. On #33227a the lilac measures ~7.4:1. -->
+                        <ng-icon name="lucideCheck" class="shrink-0 text-[13px] text-[var(--pr-sidebar-accent)]" />
                       }
                     </a>
                   }

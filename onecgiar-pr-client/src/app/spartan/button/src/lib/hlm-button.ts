@@ -29,10 +29,11 @@ export const buttonVariants = cva(
         // `brand` is THE single primary action per screen (rule 1). white on #6b46e5 = 5.7809:1,
         // hover #5733c4 = 7.8479:1.
         brand: 'bg-brand-300 text-white hover:bg-brand-400 shadow-[var(--pr-shadow-1)]',
-        // `brandSoft` is for row-level actions (Report / Continue). Border is the light tint, which
-        // is fine here because the FILL carries the affordance and the label is #5733c4 on #ffffff
-        // (7.8479:1) / on #f5f3ff (7.1583:1).
-        brandSoft: 'bg-white border border-brand-200 text-brand-400 hover:bg-brand-50'
+        // `brandSoft` is for row-level actions (Report / Continue). The border is the -300 stop,
+        // not the light tint: on a white card `border-brand-200` measured 1.39:1 after the ramp
+        // change, so the button read as a borderless white ghost. -300 gives 5.7809:1, clear of
+        // the 3:1 non-text floor. Label is #5733c4 on #ffffff (7.8479:1) / on #f5f3ff (7.1583:1).
+        brandSoft: 'bg-white border border-brand-300 text-brand-400 hover:bg-brand-50'
       },
       size: {
         default: 'h-9 gap-1.5 px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',

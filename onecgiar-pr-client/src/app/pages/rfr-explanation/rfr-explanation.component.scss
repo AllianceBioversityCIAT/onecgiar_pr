@@ -5,7 +5,7 @@
   --x-card-2: #1e2033;
   --x-border: #2a2d45;
   --x-violet: #6b46e5;
-  --x-violet-2: #8b8ee0;
+  --x-violet-2: var(--pr-color-primary-200); // was #8b8ee0 (retired indigo)
   --x-violet-soft: #6b46e51f;
   --x-green: #19ae58;
   --x-amber: #dfb400;
