@@ -77,8 +77,11 @@ export class ReportingAowTableComponent {
   readonly openAchieved = output<ReportingIndicator>();
   readonly openRowMenu = output<{ row: ReportingIndicator; event: MouseEvent }>();
 
-  /** Collapse is opt-IN: everything starts open, matching the app's existing expand-all default. */
-  private readonly collapsed = signal<ReadonlySet<string>>(new Set());
+  /**
+   * Disclosure = a user override on top of a per-index default. The rendered reference opens only
+   * the FIRST AoW and, inside it, only the FIRST sub-group; everything else is collapsed.
+   */
+  private readonly overrides = signal<ReadonlyMap<string, boolean>>(new Map());
   /** Row titles the user expanded past the 2-line clamp. */
   private readonly expandedTitles = signal<ReadonlySet<number>>(new Set());
 
@@ -188,18 +191,38 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * The AoW header ratio. Counted over the UNFILTERED set on purpose: a progress figure that moves
-   * when you type in a search box is not progress, it is a coincidence.
+   * The AoW header ratio — `3 of 8 · 38%` in the reference.
+   *
+   * `done` counts KPIs with SOMETHING REPORTED, not KPIs that reached 100%. Verified against the
+   * designer's rendered reference (uploads/pasted-1785766366426-0.png): 3/8 = 37.5% ≈ the 38% shown.
+   * Counting completions instead produced "0 of 30 · 0%" on real data — technically true and
+   * completely useless, since almost nothing is ever at 100% mid-cycle.
+   *
+   * Counted over the UNFILTERED set on purpose: a progress figure that moves when you type in a
+   * search box is not progress, it is a coincidence.
    */
   ratioOf(group: ReportingAowGroup): { done: number; total: number; percent: number } {
     const all = group.indicators ?? [];
-    const done = all.filter(r => this.progressOf(r) >= 100).length;
+    const done = all.filter(r => Number(r?.actual_achieved_value_sum ?? 0) > 0).length;
     const total = all.length;
     return { done, total, percent: total ? Math.round((done / total) * 100) : 0 };
   }
 
   countLabel(n: number, noun = 'KPI'): string {
     return `${n} ${noun}${n === 1 ? '' : 's'}`;
+  }
+
+  /**
+   * Default disclosure, from the rendered reference: only the FIRST AoW is expanded, and inside it
+   * only the FIRST sub-group. Everything else is collapsed. Expanding all of it (the first pass)
+   * buried the page in rows and made the AoW headers useless as an overview.
+   */
+  isDefaultOpenAow(index: number): boolean {
+    return index === 0;
+  }
+
+  isDefaultOpenHlo(index: number): boolean {
+    return index === 0;
   }
 
   /** AoWs with at least one visible row, so filtering empties the list instead of showing dead cards. */
@@ -211,16 +234,14 @@ export class ReportingAowTableComponent {
   });
 
   // ── Disclosure ────────────────────────────────────────────────────────────
-  isOpen(key: string): boolean {
-    return !this.collapsed().has(key);
+  /** `defaultOpen` comes from the index: first-of-level is open, the rest closed. */
+  isOpen(key: string, defaultOpen = false): boolean {
+    return this.overrides().get(key) ?? defaultOpen;
   }
 
-  toggle(key: string): void {
-    this.collapsed.update(set => {
-      const next = new Set(set);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
+  toggle(key: string, defaultOpen = false): void {
+    const now = this.isOpen(key, defaultOpen);
+    this.overrides.update(map => new Map(map).set(key, !now));
   }
 
   isTitleExpanded(id: number): boolean {

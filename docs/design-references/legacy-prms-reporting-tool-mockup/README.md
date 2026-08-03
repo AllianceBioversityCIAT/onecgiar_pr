@@ -1,3 +1,11 @@
+<!-- ⚠️ SUPERSEDED on 2026-08-03. The current reference is ../prms-shell-CURRENT/ —
+     a newer export that also covers the shell and the Overview tab, and whose rendered PNG
+     corrects several things this folder left ambiguous (the KPI counter, what the ratio counts,
+     the default disclosure state). This folder is kept for history only.
+     When the two disagree, prms-shell-CURRENT wins. -->
+
+# ⚠️ LEGACY — superseded by [`../prms-shell-CURRENT/`](../prms-shell-CURRENT/)
+
 # PRMS Reporting Tool — design mockup (reference)
 
 **This is the authoritative visual reference for the PRMS reporting redesign.** It is the source the

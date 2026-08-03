@@ -7,7 +7,7 @@
   10.5px instead of 14px (UI-RULES §1.3). Colours are tokens only (rule 8).
 -->
 <div class="flex flex-col gap-4">
-  @for (group of visibleGroups(); track group.aow.code) {
+  @for (group of visibleGroups(); track group.aow.code; let aowIndex = $index) {
     @let ratio = ratioOf(group);
     @let aowKey = 'aow::' + group.aow.code;
 
@@ -17,21 +17,29 @@
       <button
         type="button"
         class="flex h-[64px] w-full items-center gap-3 border-b border-[var(--pr-border-strong)] bg-[var(--pr-surface-card)] px-6 text-left"
-        [attr.aria-expanded]="isOpen(aowKey)"
-        (click)="toggle(aowKey)">
+        [attr.aria-expanded]="isOpen(aowKey, isDefaultOpenAow(aowIndex))"
+        (click)="toggle(aowKey, isDefaultOpenAow(aowIndex))">
         <ng-icon
           name="lucideChevronDown"
           class="shrink-0 text-[14px] text-[var(--pr-text-secondary)] transition-transform duration-200"
-          [class.-rotate-90]="!isOpen(aowKey)" />
+          [class.-rotate-90]="!isOpen(aowKey, isDefaultOpenAow(aowIndex))" />
 
         <!-- Code chip: mono, brand-soft. The reference uses #EDE9FE on #5733C4. -->
         <span class="pr-code shrink-0 rounded-md bg-[var(--pr-color-primary-100)] px-2 py-[3px] text-[var(--pr-color-primary-400)]">
           {{ group.aow.code }}
         </span>
 
-        <span class="min-w-0 flex-1 truncate text-[16px] font-semibold text-[var(--pr-text-heading)]">{{ group.aow.name }}</span>
+        <span class="min-w-0 truncate text-[16px] font-semibold text-[var(--pr-text-heading)]">{{ group.aow.name }}</span>
 
-        <span class="pr-figure-sm shrink-0 text-[var(--pr-text-subtle)]">{{ group.count }}</span>
+        <!-- ⓘ per AoW, as in the rendered reference. Currently a tooltip: the API carries no AoW
+             description field, so a popover would have nothing to show (NEEDS-BACKEND). -->
+        <span class="flex shrink-0 items-center text-[var(--pr-text-subtle)]" [prTooltip]="group.aow.name">
+          <ng-icon name="lucideInfo" class="text-[14px]" />
+        </span>
+
+        <span class="pr-figure-sm shrink-0 text-[var(--pr-text-subtle)]">{{ countLabel(group.count) }}</span>
+
+        <span class="flex-1"></span>
 
         <!-- Ratio + bar. A continuous bar is legitimate here: the number is a COUNT of indicators,
              so it is a true proportion (rule 15 forbids meters on indicator VALUES, not on counts). -->
@@ -44,7 +52,7 @@
         </span>
       </button>
 
-      @if (isOpen(aowKey)) {
+      @if (isOpen(aowKey, isDefaultOpenAow(aowIndex))) {
         @if (group.loading) {
           <div class="px-6 py-5 text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
         } @else {
@@ -60,17 +68,17 @@
             </div>
           }
 
-          @for (hlo of hloGroups; track hlo.key) {
+          @for (hlo of hloGroups; track hlo.key; let hloIndex = $index) {
             <!-- ═══ HLO sub-group header — 44px. Second level carries FILL, not weight. ═══ -->
             <button
               type="button"
               class="flex h-[44px] w-full items-center gap-2 border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-6 text-left"
-              [attr.aria-expanded]="isOpen(hlo.key)"
-              (click)="toggle(hlo.key)">
+              [attr.aria-expanded]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))"
+              (click)="toggle(hlo.key, isDefaultOpenHlo(hloIndex))">
               <ng-icon
                 name="lucideChevronDown"
                 class="shrink-0 text-[12px] text-[var(--pr-text-secondary)] transition-transform duration-200"
-                [class.-rotate-90]="!isOpen(hlo.key)" />
+                [class.-rotate-90]="!isOpen(hlo.key, isDefaultOpenHlo(hloIndex))" />
 
               <span
                 class="shrink-0 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]"
@@ -89,7 +97,7 @@
               <span class="pr-figure-sm shrink-0 text-[var(--pr-text-subtle)]">{{ countLabel(hlo.rows.length) }}</span>
             </button>
 
-            @if (isOpen(hlo.key)) {
+            @if (isOpen(hlo.key, isDefaultOpenHlo(hloIndex))) {
               @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
                 <!-- ═══ ROW — 88px min, the reference's grid verbatim ═══ -->
                 <div

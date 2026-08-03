@@ -143,16 +143,28 @@ describe('ReportingAowTableComponent', () => {
 
   // ── ratio ─────────────────────────────────────────────────────────────────
   describe('AoW ratio', () => {
-    it('counts achieved over total', async () => {
-      const g = group([row({ progress_percentage: 100 }), row({ indicator_id: 2, progress_percentage: 0 })]);
+    it('counts REPORTED over total, not completed', async () => {
+      // Verified against the designer's rendered reference: "3 of 8 · 38%" — 3/8 = 37.5%.
+      // Counting `progress >= 100` instead gave "0 of 30 · 0%" on real data, since almost nothing
+      // is at 100% mid-cycle. A row counts as done the moment it has any achieved value.
+      const g = group([
+        row({ indicator_id: 1, actual_achieved_value_sum: 2, progress_percentage: 40 }),
+        row({ indicator_id: 2, actual_achieved_value_sum: 0, progress_percentage: 0 })
+      ]);
       await build([g]);
       expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50 });
     });
 
+    it('counts a row at 100% only if something was actually reported', async () => {
+      const g = group([row({ progress_percentage: 100, actual_achieved_value_sum: 0 })]);
+      await build([g]);
+      expect(component.ratioOf(g).done).toBe(0);
+    });
+
     it('is computed over the UNFILTERED set — progress must not move when you search', async () => {
       const g = group([
-        row({ indicator_id: 1, progress_percentage: 100, indicator_description: 'alpha' }),
-        row({ indicator_id: 2, progress_percentage: 0, indicator_description: 'beta' })
+        row({ indicator_id: 1, actual_achieved_value_sum: 3, indicator_description: 'alpha' }),
+        row({ indicator_id: 2, actual_achieved_value_sum: 0, indicator_description: 'beta' })
       ]);
       await build([g], { search: 'alpha' });
       // One row is filtered out, but the ratio still reflects both.
@@ -200,11 +212,13 @@ describe('ReportingAowTableComponent', () => {
       expect(text()).toContain('Achieved');
     });
 
-    it('shows the AoW code, name and ratio in the header', async () => {
-      await build([group([row({ progress_percentage: 100 })])]);
+    it('shows the AoW code, name, KPI count and ratio in the header', async () => {
+      await build([group([row({ actual_achieved_value_sum: 1 })])]);
       expect(text()).toContain('AOW01');
       expect(text()).toContain('Market Intelligence');
       expect(text()).toContain('1 of 1');
+      // The reference labels this counter "8 KPIs", not a bare number.
+      expect(text()).toContain('1 KPI');
     });
 
     it('pluralises the KPI count', async () => {
@@ -214,12 +228,34 @@ describe('ReportingAowTableComponent', () => {
       expect(text()).toContain('1 KPI');
     });
 
-    it('collapses an AoW on click and hides its rows', async () => {
+    it('collapses the first AoW on click and hides its rows', async () => {
       await build([group([row()])]);
       expect(rows().length).toBe(1);
-      component.toggle('aow::AOW01');
+      // The first AoW defaults to OPEN, so toggling it must pass that default in.
+      component.toggle('aow::AOW01', true);
       fixture.detectChanges();
       expect(rows().length).toBe(0);
+    });
+
+    it('opens only the FIRST AoW by default; the rest are collapsed', async () => {
+      const a = group([row({ indicator_id: 1 })]);
+      const b = { ...group([row({ indicator_id: 2 })]), aow: { id: 2, code: 'AOW02', name: 'Breeding Pipelines' } };
+      await build([a, b]);
+      // Two cards, but only the first one's rows are rendered.
+      expect(text()).toContain('AOW02');
+      expect(rows().length).toBe(1);
+    });
+
+    it('opens only the FIRST sub-group inside the open AoW', async () => {
+      const g = group([
+        row({ indicator_id: 1, __hlo: 'HLO1 First' }),
+        row({ indicator_id: 2, __hlo: 'HLO2 Second' })
+      ]);
+      await build([g]);
+      // Both sub-group headers show, only the first one's row does.
+      expect(text()).toContain('First');
+      expect(text()).toContain('Second');
+      expect(rows().length).toBe(1);
     });
 
     it('shows the loading state instead of an empty table', async () => {

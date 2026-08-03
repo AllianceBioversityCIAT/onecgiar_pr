@@ -464,10 +464,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Planned search needs every AoW's ToC so matches inside collapsed parents are found.
+    // The Reporting tab renders every AoW's indicators inline and expanded, so every ToC is needed
+    // up front — not only when a search is active, which is all the previous condition covered.
+    // Without this the table paints "0 of 0 / no planned indicators" on every card: the data was
+    // lazy-loaded by the old list's expand click, and there is no expand click any more.
+    // `loadToc` is idempotent (it early-outs on a key already loaded or in flight), so re-running
+    // this effect costs nothing.
     effect(() => {
       if (this.rfrView() !== 'planned') return;
-      if (!this.plannedSearch().trim()) return;
       const view = this.plannedBrowseView();
       if (view === 'aows' || view === 'indicators') this.loadAllTocs();
     });

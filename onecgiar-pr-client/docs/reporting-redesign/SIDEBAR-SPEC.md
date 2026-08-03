@@ -1,6 +1,6 @@
 # Sidebar — exact spec extracted from the mockup
 
-**Source:** `docs/design-references/prms-reporting-tool-mockup/Resultados.dc.html` lines **28-197**
+**Source:** `docs/design-references/legacy-prms-reporting-tool-mockup/Resultados.dc.html` lines **28-197**
 (the `<nav>` element). Every value below was read from the markup, not interpreted from a screenshot.
 
 **Target component:** `src/app/shared/components/reporting-nav-sidebar/` (615-line template, 580-line
