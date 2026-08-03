@@ -249,6 +249,8 @@ export class BilateralAiService {
       status_id: ResultStatusData.Editing.value,
     });
 
+    await this.draftRepository.update(draft.id, { is_discarded: true });
+
     return {
       response: { resultId: draft.result_id },
       message: 'Draft promoted to bilateral result',
