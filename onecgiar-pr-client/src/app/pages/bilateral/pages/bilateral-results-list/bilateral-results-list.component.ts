@@ -18,6 +18,8 @@ import { BilateralContextService } from '../../services/bilateral-context.servic
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
+import { RolesService } from '../../../../shared/services/global/roles.service';
+import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 
 export interface BilateralCenterResult {
   id: number;
@@ -47,6 +49,8 @@ export class BilateralResultsListComponent implements OnInit {
   private readonly phasesService = inject(PhasesService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly rolesService = inject(RolesService);
+  private readonly resultsApiService = inject(ResultsApiService);
   readonly ctx = inject(BilateralContextService);
 
   readonly phases = signal<Phases[]>([]);
@@ -62,6 +66,15 @@ export class BilateralResultsListComponent implements OnInit {
   readonly showW1W2 = signal(false);
   readonly showLead = signal(true);
   readonly showContributing = signal(false);
+
+  // Actions
+  readonly confirmingDeleteId = signal<number | null>(null);
+  readonly deletingId = signal<number | null>(null);
+
+  /** True when the user can manage (edit/delete) W3 bilateral results for this center. */
+  readonly canManageW3 = computed(() =>
+    this.rolesService.validateCenterAccess(this.ctx.centerId() ?? '')
+  );
 
   // Pagination
   readonly currentPage = signal(1);
@@ -212,6 +225,41 @@ export class BilateralResultsListComponent implements OnInit {
   toggleContributing(): void {
     if (this.showContributing() && !this.showLead()) return;
     this.showContributing.update(v => !v);
+  }
+
+  /** W3 results in Editing status that the current user can manage. */
+  canManageResult(result: BilateralCenterResult): boolean {
+    return result.source === 'API' && result.status_id === 1 && this.canManageW3();
+  }
+
+  editResult(result: BilateralCenterResult, event: Event): void {
+    event.stopPropagation();
+    this.openResult(result);
+  }
+
+  requestDelete(result: BilateralCenterResult, event: Event): void {
+    event.stopPropagation();
+    this.confirmingDeleteId.set(result.id);
+  }
+
+  cancelDelete(event: Event): void {
+    event.stopPropagation();
+    this.confirmingDeleteId.set(null);
+  }
+
+  confirmDelete(result: BilateralCenterResult, event: Event): void {
+    event.stopPropagation();
+    this.deletingId.set(result.id);
+    this.resultsApiService.PATCH_DeleteResult(result.id).subscribe({
+      next: () => {
+        this.results.update(list => list.filter(r => r.id !== result.id));
+        this.confirmingDeleteId.set(null);
+        this.deletingId.set(null);
+      },
+      error: () => {
+        this.deletingId.set(null);
+      },
+    });
   }
 
   loadResults(versionId: number): void {

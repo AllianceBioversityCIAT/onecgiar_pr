@@ -581,6 +581,95 @@ $contrib-color-border:#bae6fd;
   user-select: none;
 }
 
+// ─── Actions column ───────────────────────────────────────────────────────────
+
+.brl_col_actions { width: 90px; text-align: right; }
+
+.brl_actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.brl_actions_confirm {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.brl_actions_confirm_text {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--pr-color-red-300);
+}
+
+.brl_action_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s ease;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+
+  &--edit {
+    background: #f0f4ff;
+    color: var(--pr-color-primary-300);
+    border-color: #dde5ff;
+    font-size: 11px;
+
+    &:hover { background: #dde5ff; }
+  }
+
+  &--delete {
+    background: #fef2f2;
+    color: var(--pr-color-red-300);
+    border-color: #fecaca;
+    font-size: 11px;
+
+    &:hover { background: #fecaca; }
+  }
+
+  &--danger {
+    width: auto;
+    height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--pr-color-red-300);
+    color: #fff;
+    border-color: var(--pr-color-red-300);
+
+    &:hover:not(:disabled) { filter: brightness(0.9); }
+
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  &--ghost {
+    width: auto;
+    height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
+    font-weight: 600;
+    background: transparent;
+    color: var(--pr-color-accents-5);
+    border-color: var(--pr-color-accents-2);
+
+    &:hover { background: var(--pr-color-accents-1); }
+  }
+}
+
 // ─── Status badges ────────────────────────────────────────────────────────────
 
 .brl_status {

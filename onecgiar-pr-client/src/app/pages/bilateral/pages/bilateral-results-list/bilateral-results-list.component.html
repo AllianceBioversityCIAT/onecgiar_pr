@@ -166,6 +166,9 @@
               <th class="brl_th brl_col_role">Role</th>
               <th class="brl_th brl_col_status">Status</th>
               <th class="brl_th brl_col_date">Created</th>
+              @if (canManageW3()) {
+                <th class="brl_th brl_col_actions"></th>
+              }
             </tr>
           </thead>
           <tbody>
@@ -200,6 +203,45 @@
                   </span>
                 </td>
                 <td class="brl_td brl_col_date">{{ result.created_date | date:'dd/MM/yyyy' }}</td>
+                @if (canManageW3()) {
+                  <td class="brl_td brl_col_actions" (click)="$event.stopPropagation()">
+                    @if (canManageResult(result)) {
+                      @if (confirmingDeleteId() === result.id) {
+                        <div class="brl_actions_confirm">
+                          <span class="brl_actions_confirm_text">Delete?</span>
+                          <button
+                            class="brl_action_btn brl_action_btn--danger"
+                            [disabled]="deletingId() === result.id"
+                            (click)="confirmDelete(result, $event)">
+                            @if (deletingId() === result.id) {
+                              <i class="pi pi-spin pi-spinner"></i>
+                            } @else {
+                              Yes
+                            }
+                          </button>
+                          <button class="brl_action_btn brl_action_btn--ghost" (click)="cancelDelete($event)">
+                            No
+                          </button>
+                        </div>
+                      } @else {
+                        <div class="brl_actions">
+                          <button
+                            class="brl_action_btn brl_action_btn--edit"
+                            title="Edit result"
+                            (click)="editResult(result, $event)">
+                            <i class="pi pi-pencil"></i>
+                          </button>
+                          <button
+                            class="brl_action_btn brl_action_btn--delete"
+                            title="Delete result"
+                            (click)="requestDelete(result, $event)">
+                            <i class="pi pi-trash"></i>
+                          </button>
+                        </div>
+                      }
+                    }
+                  </td>
+                }
               </tr>
             }
           </tbody>
