@@ -487,12 +487,12 @@ zoom: var(--pr-font-scale, 1);
 // rgba(0,0,0,0), i.e. the element loses its fill with no error), so every var here must
 // be confirmed to resolve, not merely to be present.
 // ─────────────────────────────────────────────────────────────────────────────
-// --background is the base component surface (what `bg-background` paints on an outline
-// button, an input, a popover), NOT the page canvas. It must be WHITE and it must differ
-// from --muted, because Helm's outline variant is `bg-background hover:bg-muted`: pointing
-// both at the same value made hovering an outline button a visual no-op.
-// The page canvas is applied explicitly on `body` further down instead.
---background: var(--pr-surface-card);
+// --background is the PAGE CANVAS, per shadcn's own semantics — `hlm-sidebar-inset` paints
+// `bg-background` across the whole content area, so making this white erased the grey canvas.
+// Component surfaces are --card / --popover. The `outline` variant's `bg-background
+// hover:bg-muted` pair still works because --muted is a distinct tint (below), which is what
+// the original no-op hover actually needed.
+--background: var(--pr-surface-app);
 --foreground: var(--pr-text);
 --card: var(--pr-surface-card);
 --card-foreground: var(--pr-text);
@@ -503,11 +503,13 @@ zoom: var(--pr-font-scale, 1);
 --primary: var(--pr-color-primary-300);
 --primary-foreground: var(--pr-color-white);
 
-// --muted is the neutral HOVER / de-emphasised fill. It must be distinguishable from
-// --background (see above) — #f7f7f9 on white reads as a soft grey hover.
---secondary: var(--pr-surface-app);
+// --muted is the HOVER / de-emphasised fill and must be perceptibly different from
+// --background. Both were #f7f7f9, which made `bg-background hover:bg-muted` a no-op; a second
+// neutral grey would be just as invisible against the grey canvas, so this is the soft lilac —
+// the hover registers through its tint.
+--secondary: var(--pr-color-primary-25);
 --secondary-foreground: var(--pr-text);
---muted: var(--pr-surface-app);
+--muted: var(--pr-color-primary-50);
 --muted-foreground: var(--pr-text-secondary);
 
 // Hover/selected affordance for menu + list items. Violet is allowed here: it is an
@@ -524,8 +526,11 @@ zoom: var(--pr-font-scale, 1);
 --border: var(--pr-border);
 --input: var(--pr-border);
 
-// Solid focus indicator — #6b46e5 on white = 5.7809:1, well clear of the 3:1 non-text floor.
---ring: var(--pr-color-primary-300);
+// Focus indicator. MUST NOT equal --primary: the base button recipe focuses with
+// `focus-visible:border-ring`, so a ring the colour of the fill is literally invisible
+// (1.0000:1 on every filled brand button). The 900 stop reads on both grounds:
+// 2.9955:1 against the #6b46e5 fill and 17.3165:1 against white.
+--ring: var(--pr-color-primary-900);
 
 // ── Sidebar: dark chrome on a light page, expressed through the sidebar token family
 // (NOT via .dark). A component may still scope these on its own host to override.
@@ -552,10 +557,7 @@ zoom: var(--pr-font-scale, 1);
 @apply border-border outline-ring/50;
 }
 body {
-// The page canvas is the app surface, NOT --background: that var is the base COMPONENT
-// surface (white) so Helm's `bg-background hover:bg-muted` pair stays distinguishable.
-@apply text-foreground;
-background-color: var(--pr-surface-app);
+@apply bg-background text-foreground;
 // Subtle canvas texture over the base background (repeats + stays fixed on scroll).
 background-image: url('assets/texture-bg.webp');
 background-repeat: repeat;

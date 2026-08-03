@@ -157,7 +157,7 @@
                 <span
                   class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white shadow-sm ring-2 ring-white"
                   [style.background]="msg.role === 'user'
-                    ? 'linear-gradient(140deg, #3a3f5f, var(--pr-color-secondary-400))'
+                    ? 'linear-gradient(140deg, #3a3f5f, var(--pr-color-primary-800))'
                     : 'linear-gradient(140deg, var(--pr-color-primary-300), var(--pr-color-primary-400))'">
                   <i class="material-icons-round text-[18px]">{{ msg.role === 'user' ? 'person' : 'smart_toy' }}</i>
                 </span>
@@ -167,7 +167,7 @@
                   [class]="msg.role === 'user'
                     ? 'rounded-2xl rounded-br-sm text-white'
                     : 'rounded-2xl rounded-bl-sm border border-brand-100 bg-white text-secondary-400'"
-                  [style.background]="msg.role === 'user' ? 'linear-gradient(140deg, #3a3f5f, var(--pr-color-secondary-400))' : null">
+                  [style.background]="msg.role === 'user' ? 'linear-gradient(140deg, #3a3f5f, var(--pr-color-primary-800))' : null">
                   <span class="whitespace-pre-line">{{ msg.text }}</span>
                   @if (msg.action) {
                     <span

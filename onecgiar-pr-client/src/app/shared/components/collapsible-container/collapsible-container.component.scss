@@ -5,8 +5,8 @@
     position: relative;
     z-index: 1;
     padding: 10px 20px 10px 20px;
-    background: var(--pr-color-secondary-400);
-    background: linear-gradient(122deg, var(--pr-color-secondary-400) 62%, var(--pr-color-primary-950) 96%);
+    background: var(--pr-color-primary-800);
+    background: linear-gradient(122deg, var(--pr-color-primary-800) 62%, var(--pr-color-primary-950) 96%);
     border-radius: 5px;
     display: grid;
     grid-template-columns: 1fr min-content;
@@ -43,8 +43,8 @@
       border-radius: 0px 0px 4px 4px;
 
       .collapse_botton_border {
-        background: var(--pr-color-secondary-400);
-        background: linear-gradient(122deg, var(--pr-color-secondary-400) 62%, var(--pr-color-primary-950) 96%);
+        background: var(--pr-color-primary-800);
+        background: linear-gradient(122deg, var(--pr-color-primary-800) 62%, var(--pr-color-primary-950) 96%);
         height: 15px;
       }
     }

@@ -42,7 +42,7 @@
     width: 50%;
 
     .chip_selected {
-      background-color: var(--pr-color-secondary-400) !important;
+      background-color: var(--pr-color-primary-800) !important;
     }
   }
 
@@ -51,7 +51,7 @@
   }
 
   .phase_name .chip_selected {
-    background-color: var(--pr-color-secondary-400) !important;
+    background-color: var(--pr-color-primary-800) !important;
   }
 }
 
@@ -68,7 +68,7 @@
   }
 
   .result_level_title {
-    background-color: var(--pr-color-secondary-400);
+    background-color: var(--pr-color-primary-800);
     padding: 4px 10px;
     color: var(--pr-color-white);
     width: max-content;

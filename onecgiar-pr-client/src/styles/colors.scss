@@ -35,12 +35,12 @@
   --pr-color-secondary-100: #9ca2c3;
   --pr-color-secondary-200: #6a73a4;
   --pr-color-secondary-300: #484f77;
-  // -400 is THE dark-surface token (289 references): footer, the unauthenticated Cognito
-  // background, dynamic-panel-menu, collapsible-container, page-alert, ~9 modals. Repointed to the
-  // brand's deepest surface so all ~17 legacy dark surfaces join the rebrand with zero template
-  // edits and stop clashing with the violet sidebar. White on it goes 13.3318 -> 15.0723, so every
-  // light foreground on those surfaces improves. See design.md D5.
-  --pr-color-secondary-400: #271862; // Main custom Color — dark brand surface
+  // -400 is INK, not a surface. Of its 292 references, 155 are `color:` (body copy, headings,
+  // labels) and only 42 were backgrounds. An earlier pass repointed it to the violet #271862 to
+  // rebrand the dark surfaces in one edit — which worked, but silently turned 155 text sites
+  // violet. The 42 surfaces now point at --pr-color-primary-800 directly, so this token can stay
+  // what its consumers overwhelmingly use it as: neutral ink. Tracks --pr-text (14.3507:1 on white).
+  --pr-color-secondary-400: #2b2838; // Main custom Color — neutral ink
   --pr-color-secondary-500: #1a1c2a;
   --pr-color-secondary-600: #16171e;
   --pr-color-secondary-700: #111218;
