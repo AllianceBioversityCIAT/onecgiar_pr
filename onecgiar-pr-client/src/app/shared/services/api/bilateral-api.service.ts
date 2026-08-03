@@ -44,8 +44,9 @@ export class BilateralApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/toc-state/${resultId}`);
   }
 
-  GET_BilateralResultDetail(resultId: string | number) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`);
+  GET_BilateralResultDetail(resultId: string | number, versionId?: number) {
+    const params = versionId ? { versionId: String(versionId) } : undefined;
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`, params ? { params } : {});
   }
 
   PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification: string }) {

@@ -3140,6 +3140,7 @@ export class ResultsService {
 
   async getBilateralResultById(
     resultId: number,
+    versionId?: number,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
       if (!resultId || resultId <= 0) {
@@ -3150,9 +3151,13 @@ export class ResultsService {
         };
       }
 
-      const result = await this._resultRepository.findOne({
-        where: { id: resultId, source: SourceEnum.Bilateral },
-      });
+      const result = versionId
+        ? await this._resultRepository.findOne({
+            where: { result_code: resultId, version_id: versionId, source: SourceEnum.Bilateral },
+          })
+        : await this._resultRepository.findOne({
+            where: { id: resultId, source: SourceEnum.Bilateral },
+          });
 
       if (!result) {
         return {
@@ -3162,24 +3167,26 @@ export class ResultsService {
         };
       }
 
+      const internalId = result.id;
+
       const [commonFields, tocMetadata, geoScope, contributingCenters] =
-        await this._loadBilateralBaseData(resultId);
+        await this._loadBilateralBaseData(internalId);
 
       const contributingInstitutions =
-        await this._loadContributingInstitutions(resultId);
+        await this._loadContributingInstitutions(internalId);
 
       const [contributingProjects, contributingInitiatives, evidence] =
-        await this._loadBilateralRelatedData(resultId);
+        await this._loadBilateralRelatedData(internalId);
 
       const resultTypeResponse = await this._loadBilateralResultTypeData(
-        resultId,
+        internalId,
         result.result_type_id,
       );
 
       const tocResponse = (tocMetadata?.response as Record<string, any>) ?? {};
 
       const impactAreaScores = await this._resultImpactAreaScoresService.find(
-        resultId,
+        internalId,
         undefined,
         {
           impact_area_score: true,

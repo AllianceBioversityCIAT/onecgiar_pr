@@ -72,9 +72,16 @@ export class BilateralResultsListComponent implements OnInit {
   readonly deletingId = signal<number | null>(null);
 
   /** True when the user can manage (edit/delete) W3 bilateral results for this center. */
-  readonly canManageW3 = computed(() =>
-    this.rolesService.validateCenterAccess(this.ctx.centerId() ?? '')
-  );
+  readonly canManageW3 = computed(() => {
+    if (this.rolesService.isAdmin) return true;
+    const centerId = this.ctx.centerId();
+    const acronym = this.ctx.centerAcronym();
+    return this.rolesService.getMyCenters().some(
+      (c: any) =>
+        (centerId && c.center_id === centerId) ||
+        (acronym && c.center_acronym === acronym),
+    );
+  });
 
   // Pagination
   readonly currentPage = signal(1);
@@ -283,8 +290,8 @@ export class BilateralResultsListComponent implements OnInit {
 
   openResult(result: BilateralCenterResult): void {
     this.router.navigate(
-      ['/result/result-detail', result.result_code, 'general-information'],
-      { queryParams: { phase: result.version_id } }
+      ['/bilateral', this.ctx.centerAcronym(), 'result', result.result_code],
+      { queryParams: { phase: result.version_id } },
     );
   }
 

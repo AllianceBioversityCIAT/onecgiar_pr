@@ -104,6 +104,10 @@ export class BilateralCenterService {
       title: `Bilateral Draft #${result.id}`,
     });
 
+    const savedResult = await this.resultRepository.findOne({
+      where: { id: result.id },
+    });
+
     if (dto.program_code) {
       const initiative = await this.clarisaInitiativesRepository.findOne({
         where: { official_code: dto.program_code, active: true },
@@ -139,6 +143,8 @@ export class BilateralCenterService {
     return {
       response: {
         id: result.id,
+        result_code: savedResult?.result_code ?? result.result_code,
+        version_id: savedResult?.version_id ?? result.version_id,
         result_level_id: result.result_level_id,
         result_type_id: result.result_type_id,
         source: result.source,

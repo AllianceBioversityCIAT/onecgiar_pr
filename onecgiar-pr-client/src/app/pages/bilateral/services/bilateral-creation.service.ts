@@ -64,15 +64,20 @@ export class BilateralCreationService {
     this.resultContributingProjects.set([]);
   }
 
-  loadResult(resultId: number): void {
+  loadResult(resultId: number, versionId?: number): void {
     this.currentResultId.set(resultId);
     this.api.resultsSE.currentResultId = resultId;
     this.isLoadingResult.set(true);
     this.clearEditorState();
-    this.bilateralApi.GET_BilateralResultDetail(resultId).subscribe({
+    this.bilateralApi.GET_BilateralResultDetail(resultId, versionId).subscribe({
       next: ({ response }) => {
         if (response?.commonFields) {
           const cf = response.commonFields;
+          // When looked up by result_code, the internal id may differ — sync it.
+          if (cf.id && cf.id !== this.currentResultId()) {
+            this.currentResultId.set(cf.id);
+            this.api.resultsSE.currentResultId = cf.id;
+          }
           this.resultTitle.set(cf.result_title ?? '');
           this.resultDescription.set(cf.result_description ?? '');
           this.resultLeadContact.set(cf.lead_contact_person ?? '');

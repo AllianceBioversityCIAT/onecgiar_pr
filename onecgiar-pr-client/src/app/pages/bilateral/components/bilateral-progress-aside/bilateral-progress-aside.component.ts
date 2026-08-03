@@ -97,8 +97,12 @@ export class BilateralProgressAsideComponent {
     this.asideTopPx.set(Math.max(minTop, top));
   }
 
-  /** Sticky header height + gap — aside must stay below `app-header-panel`. */
+  /** Sticky header + breadcrumb height + gap — aside must stay below all sticky chrome. */
   getNavbarClearancePx(): number {
+    const bilNav = document.querySelector('.bil-nav');
+    if (bilNav) {
+      return Math.round(bilNav.getBoundingClientRect().bottom + NAVBAR_EXTRA_GAP);
+    }
     const navbar =
       document.querySelector('app-header-panel') ||
       document.querySelector('.header_panel_container');

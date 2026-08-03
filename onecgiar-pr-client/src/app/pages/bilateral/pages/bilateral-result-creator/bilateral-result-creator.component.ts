@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
+import { Component, effect, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MessageService } from 'primeng/api';
@@ -106,18 +106,29 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   overallPct = this.mdsTracker.overallPercentage;
   sectionStatuses = this.mdsTracker.sectionStatus;
 
+  constructor() {
+    // When loadResult resolves and updates currentResultId to the internal DB id,
+    // sync it to the component signal and wire up autosave.
+    effect(() => {
+      const id = this.creationService.currentResultId();
+      if (id && !this.isCreating()) {
+        this.resultId.set(id);
+        this.autoSaveService.setResultId(id);
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       const id = params['id'];
       if (id) {
-        const resultId = Number(id);
-        this.resultId.set(resultId);
+        const resultCode = Number(id);
+        const versionId = Number(this.route.snapshot.queryParams['phase']) || undefined;
         this.isCreating.set(false);
         // Drop pending writes from a previous result before binding the new id.
         this.autoSaveService.reset();
         this.mdsTracker.reset();
-        this.autoSaveService.setResultId(resultId);
-        this.creationService.loadResult(resultId);
+        this.creationService.loadResult(resultCode, versionId);
       } else {
         // Fresh create: reset wizard but preserve a project pre-selected from the home panel.
         const preselected = this.creationService.selectedProject();
@@ -203,8 +214,10 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.creationService.clearEditorState();
         this.autoSaveService.reset();
         this.mdsTracker.reset();
-        this.autoSaveService.setResultId(response.id);
-        this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', response.id]);
+        this.router.navigate(
+          ['/bilateral', this.ctx.centerAcronym(), 'result', response.result_code ?? response.id],
+          { queryParams: response.version_id ? { phase: response.version_id } : {} },
+        );
       },
       error: (err: HttpErrorResponse) => {
         this.isCreatingResult.set(false);

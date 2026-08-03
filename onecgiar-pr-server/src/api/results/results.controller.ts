@@ -816,8 +816,11 @@ export class ResultsController {
   @ApiOkResponse({
     description: 'Bilateral result retrieved successfully.',
   })
-  async getBilateralResultById(@Param('resultId') resultId: number) {
-    return this.resultsService.getBilateralResultById(resultId);
+  async getBilateralResultById(
+    @Param('resultId') resultId: number,
+    @Query('versionId') versionId?: number,
+  ) {
+    return this.resultsService.getBilateralResultById(resultId, versionId);
   }
 
   @Patch('bilateral/review-update/data-standard/:resultId')
