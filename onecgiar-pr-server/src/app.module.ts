@@ -143,10 +143,10 @@ export class AppModule implements NestModule {
         },
       )
       .forRoutes(
-        { path: 'api/(.*)', method: RequestMethod.ALL },
-        { path: 'v2/(.*)', method: RequestMethod.ALL },
-        { path: 'clarisa/(.*)', method: RequestMethod.ALL },
-        { path: 'toc/(.*)', method: RequestMethod.ALL },
+        { path: 'api/*path', method: RequestMethod.ALL },
+        { path: 'v2/*path', method: RequestMethod.ALL },
+        { path: 'clarisa/*path', method: RequestMethod.ALL },
+        { path: 'toc/*path', method: RequestMethod.ALL },
       );
 
     consumer

@@ -22,7 +22,8 @@
         selectedLabel="Sub-national selected"
         optionValue="code"
         placeholder="Select Sub-national level"
-        [(ngModel)]="this.obj_country.sub_national">
+        [(ngModel)]="this.obj_country.sub_national"
+        (ngModelChange)="onSubNationalChange()">
       </app-pr-multi-select>
     </div>
 

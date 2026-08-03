@@ -12,6 +12,7 @@ export class ResultStatusData {
   );
   public static readonly Approved = new ResultStatusData('approved', 6);
   public static readonly Rejected = new ResultStatusData('rejected', 7);
+  public static readonly Draft = new ResultStatusData('draft', 8);
 
   private constructor(
     public readonly name: string,

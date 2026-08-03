@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { map, Observable, firstValueFrom } from 'rxjs';
@@ -18,11 +18,14 @@ import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
+import { BilateralApiService } from './bilateral-api.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsApiService {
+  private readonly bilateralApiSE = inject(BilateralApiService);
+
   constructor(
     public http: HttpClient,
     private readonly saveButtonSE: SaveButtonService,
@@ -1395,9 +1398,10 @@ export class ResultsApiService {
     );
   }
 
-  GET_TocResultsByAowId(entityId: string, aowId: string, year?: string) {
-    const queryParams: string[] = [`program=${entityId}`, `areaOfWork=${aowId}`];
+  GET_TocResultsByAowId(entityId: string, aowId?: string | null, year?: string) {
+    const queryParams: string[] = [`program=${entityId}`];
 
+    if (aowId) queryParams.push(`areaOfWork=${aowId}`);
     if (year) queryParams.push(`year=${year}`);
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
@@ -1463,23 +1467,23 @@ export class ResultsApiService {
   }
 
   PATCH_BilateralTocMetadata(resultId: number | string, body: any) {
-    return this.http
-      .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/toc-metadata/${resultId}`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+    return this.bilateralApiSE.PATCH_BilateralTocMetadata(resultId, body);
   }
 
   PATCH_BilateralDataStandard(resultId: number | string, body: any) {
-    return this.http
-      .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+    return this.bilateralApiSE.PATCH_BilateralDataStandard(resultId, body);
   }
 
   PATCH_BilateralResultTitle(resultId: number | string, body: any) {
-    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/${resultId}/title`, body);
+    return this.bilateralApiSE.PATCH_BilateralResultTitle(resultId, body);
   }
 
   GET_ClarisaProjects() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
+  }
+
+  GET_bilateralProjects(centerId: string | number) {
+    return this.bilateralApiSE.GET_bilateralProjects(centerId);
   }
 
   GET_ClarisaPortfolios() {
@@ -1498,11 +1502,12 @@ export class ResultsApiService {
   GET_PendingReviewCount(programId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/pending-review?programId=${programId}`);
   }
+
   GET_BilateralResultDetail(resultId: string | number) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`);
+    return this.bilateralApiSE.GET_BilateralResultDetail(resultId);
   }
 
   PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification: string }) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}/review-decision`, body);
+    return this.bilateralApiSE.PATCH_BilateralReviewDecision(resultId, body);
   }
 }

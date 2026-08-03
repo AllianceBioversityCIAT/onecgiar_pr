@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -45,6 +46,7 @@ import { ResultsInnovationsDev } from '../summary/entities/results-innovations-d
 import { ResultsInnovationsUse } from '../summary/entities/results-innovations-use.entity';
 import { ResultsPolicyChanges } from '../summary/entities/results-policy-changes.entity';
 import { ResultImpactAreaScore } from '../../result-impact-area-scores/entities/result-impact-area-score.entity';
+import { ResultCreationMethod } from '../../../shared/constants/result-creation-method.enum';
 
 export enum SourceEnum {
   Result = 'Result',
@@ -52,6 +54,7 @@ export enum SourceEnum {
 }
 
 @Entity()
+@Index('idx_result_creation_method', ['creation_method'])
 export class Result {
   @PrimaryGeneratedColumn({
     name: 'id',
@@ -508,6 +511,15 @@ export class Result {
     enumName: 'source_enum',
   })
   source: SourceEnum = SourceEnum.Result;
+
+  @Column({
+    name: 'creation_method',
+    type: 'varchar',
+    length: 20,
+    nullable: false,
+    default: ResultCreationMethod.UNKNOWN,
+  })
+  creation_method?: ResultCreationMethod;
 
   @Column({
     name: 'external_submitter',

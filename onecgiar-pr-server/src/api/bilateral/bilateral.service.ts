@@ -475,7 +475,9 @@ export class BilateralService {
         );
       } catch (error) {
         this.logger.error('Error creating bilateral', error);
-        this.logger.error(error.stack);
+        this.logger.error(
+          error instanceof Error ? error.stack : JSON.stringify(error),
+        );
         throw error;
       }
     }
@@ -3882,6 +3884,8 @@ export class BilateralService {
     'CIAT-BIOVERSITY',
     'CIAT (ALLIANCE)',
     'BIOVERSITY (ALLIANCE)',
+    'CIAT ALLIANCE',
+    'BIOVERSITY ALLIANCE',
   ]);
 
   /**
@@ -3903,7 +3907,7 @@ export class BilateralService {
     return value;
   }
 
-  private async handleLeadCenter(
+  public async handleLeadCenter(
     resultId: number,
     leadCenter: { name?: string; acronym?: string; institution_id?: number },
     userId: number,
@@ -4025,6 +4029,139 @@ export class BilateralService {
         `Failed to save lead center for result ${resultId}: ${selectedCenter.code}`,
         err instanceof Error ? err.stack : JSON.stringify(err),
       );
+    }
+  }
+
+  /**
+   * Populates result-association tables from `extracted_mds` produced by the AI draft pipeline.
+   * Called during draft promotion so that lead center, contributing partners, and geo focus
+   * are written to the DB without going through the full bilateral ingestion pipeline.
+   */
+  public async populateResultFromExtractedMds(
+    result: Result,
+    extractedMds: Record<string, any>,
+    userId: number,
+  ): Promise<void> {
+    if (!extractedMds) return;
+
+    if (extractedMds.lead_center) {
+      await this.handleLeadCenter(result.id, extractedMds.lead_center, userId);
+    }
+
+    const partners = extractedMds.contributing_partners;
+    if (Array.isArray(partners) && partners.length) {
+      await this.handleInstitutions(
+        result.id,
+        partners,
+        userId,
+        result.result_type_id,
+      );
+    }
+
+    const geoFocus = extractedMds.geo_focus;
+    if (geoFocus) {
+      try {
+        const scope = await this.findScope(
+          geoFocus.scope_code,
+          geoFocus.scope_label,
+        );
+        await this.handleRegions(result, scope, geoFocus.regions ?? []);
+        await this.handleCountries(
+          result,
+          geoFocus.countries ?? [],
+          geoFocus.subnational_areas ?? [],
+          scope.id,
+          userId,
+        );
+        await this._resultRepository.save({
+          ...result,
+          geographic_scope_id: this.resolveScopeId(
+            scope.id,
+            geoFocus.countries,
+          ),
+        });
+      } catch (err) {
+        this.logger.warn(
+          `populateResultFromExtractedMds: geo_focus skipped for result ${result.id} — ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Runs the type-specific handler (same as bilateral ingest `afterCreate`) against
+   * AI-extracted data during draft promotion. Failures are logged as warnings rather
+   * than propagated, because AI-extracted fields may be partial.
+   */
+  public async populateTypeSpecificFromExtractedMds(
+    result: Result,
+    extractedMds: Record<string, any>,
+    userId: number,
+  ): Promise<void> {
+    const handler = this.resultTypeHandlerMap.get(result.result_type_id);
+    if (!handler?.afterCreate) return;
+
+    const partialDto = {
+      result_type_id: result.result_type_id,
+      title: result.title,
+      innovation_development: extractedMds['innovation_development'],
+      capacity_sharing: extractedMds['capacity_sharing'],
+      innovation_use: extractedMds['innovation_use'],
+      policy_change: extractedMds['policy_change'],
+    } as any;
+
+    try {
+      await handler.afterCreate({
+        bilateralDto: partialDto,
+        resultId: result.id,
+        userId,
+        isDuplicateResult: false,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `populateTypeSpecificFromExtractedMds: skipped for result ${result.id} (type ${result.result_type_id}) — ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+      );
+    }
+  }
+
+  public async populateInitiativeAndTocFromProgramCode(
+    resultId: number,
+    programCode: string | null | undefined,
+    userId: number,
+  ): Promise<void> {
+    if (!programCode) return;
+
+    const initiative = await this._clarisaInitiatives.findOne({
+      where: { official_code: programCode.toUpperCase() },
+    });
+
+    if (!initiative) {
+      this.logger.warn(
+        `populateInitiativeAndTocFromProgramCode: no initiative found for program_code=${programCode}`,
+      );
+      return;
+    }
+
+    await this.upsertResultInitiative(resultId, initiative.id, 1, userId);
+
+    const existingToc = await this._resultsTocResultsRepository.findOne({
+      where: {
+        result_id: resultId,
+        initiative_ids: initiative.id,
+        is_active: true,
+      },
+    });
+
+    if (!existingToc) {
+      await this._resultsTocResultsRepository.save({
+        created_by: userId,
+        toc_result_id: null,
+        initiative_ids: initiative.id,
+        result_id: resultId,
+        toc_level_id: null,
+        planned_result: true,
+        is_active: true,
+      });
     }
   }
 

@@ -23,6 +23,7 @@ import { ReviewDecisionDto } from './dto/review-decision.dto';
 import { ReviewUpdateDto } from './dto/review-update.dto';
 import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 import { UpdateResultTitleDto } from './dto/update-result-title.dto';
+import { UpdateBilateralGeneralInfoDto } from './dto/update-bilateral-general-info.dto';
 import { BasicReportFiltersDto } from './dto/basic-report-filters.dto';
 import { ReportingFullMetadataExportService } from './services/reporting-full-metadata-export.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
@@ -739,6 +740,34 @@ export class ResultsController {
     return this.resultsService.getPendingReviewCount(programId);
   }
 
+  @Get('bilateral-center-results')
+  @ApiOperation({
+    summary: 'Get bilateral results by center and phase',
+    description:
+      'Returns all results (source API and Result) where the given center participates as lead or contributing center in the specified reporting phase. The response includes `source` and `is_leading_result` so the client can apply frontend filters.',
+  })
+  @ApiQuery({
+    name: 'centerId',
+    type: String,
+    required: true,
+    description: 'Numeric CLARISA center ID',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: String,
+    required: true,
+    description: 'Reporting phase (version) ID',
+  })
+  @ApiOkResponse({
+    description: 'Bilateral center results retrieved successfully.',
+  })
+  async getBilateralCenterResults(
+    @Query('centerId') centerId: string,
+    @Query('versionId') versionId: string,
+  ) {
+    return this.resultsService.getBilateralCenterResults(centerId, versionId);
+  }
+
   @Get('by-program-and-centers')
   @ApiOperation({
     summary: 'Get results by program and centers',
@@ -789,8 +818,11 @@ export class ResultsController {
   @ApiOkResponse({
     description: 'Bilateral result retrieved successfully.',
   })
-  async getBilateralResultById(@Param('resultId') resultId: number) {
-    return this.resultsService.getBilateralResultById(resultId);
+  async getBilateralResultById(
+    @Param('resultId') resultId: number,
+    @Query('versionId') versionId?: number,
+  ) {
+    return this.resultsService.getBilateralResultById(resultId, versionId);
   }
 
   @Patch('bilateral/review-update/data-standard/:resultId')
@@ -907,5 +939,21 @@ export class ResultsController {
       updateResultTitleDto.title,
       user,
     );
+  }
+
+  @Patch('bilateral/general-info/:resultId')
+  @ApiOperation({
+    summary: 'Update bilateral result general info',
+    description:
+      'Updates the title and/or description of a W3/bilateral result. Each field is optional.',
+  })
+  @ApiParam({ name: 'resultId', type: Number, required: true })
+  @ApiBody({ type: UpdateBilateralGeneralInfoDto })
+  async updateBilateralGeneralInfo(
+    @Param('resultId') resultId: number,
+    @Body() dto: UpdateBilateralGeneralInfoDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.updateBilateralGeneralInfo(resultId, dto, user);
   }
 }

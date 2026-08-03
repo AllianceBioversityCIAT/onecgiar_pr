@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { ResultsApiService } from './results-api.service';
+import { BilateralApiService } from './bilateral-api.service';
 import { CustomizedAlertsFsService } from '../customized-alerts-fs.service';
 import { AuthService } from './auth.service';
 import { CustomizedAlertsFeService } from '../customized-alerts-fe.service';
@@ -42,6 +43,7 @@ export class ApiService {
     public endpointsSE: EndpointsService,
     public resultsListSE: ResultsListService,
     public resultsSE: ResultsApiService,
+    public bilateralSE: BilateralApiService,
     public alertsFs: CustomizedAlertsFsService,
     private readonly qaSE: QualityAssuranceService,
     public authSE: AuthService,

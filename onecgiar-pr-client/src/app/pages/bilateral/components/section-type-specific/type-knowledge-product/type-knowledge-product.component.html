@@ -1,0 +1,37 @@
+<div class="tsf-fields">
+  @if (loading()) {
+    <div class="tsf-loading">
+      <i class="material-icons-round">hourglass_empty</i>
+      <span>Loading metadata...</span>
+    </div>
+  } @else {
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Handle</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.handle">{{ body.handle || 'Not available' }}</span>
+    </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Title</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.title">{{ body.title || 'Not available' }}</span>
+    </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Authors</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.authors">{{ body.authors || 'Not available' }}</span>
+    </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Type</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.type">{{ body.type || 'Not available' }}</span>
+    </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">DOI</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.doi">{{ body.doi || 'Not available' }}</span>
+    </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Peer Reviewed</span>
+      <span class="tsf-readonly-value">{{ body.is_peer_reviewed ? 'Yes' : 'No' }}</span>
+    </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Accessibility</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.accesibility">{{ body.accesibility || 'Not available' }}</span>
+    </div>
+  }
+</div>

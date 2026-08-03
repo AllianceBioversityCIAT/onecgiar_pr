@@ -1,16 +1,13 @@
-<div class="framework-reporting-center-card-item">
+<a
+  class="framework-reporting-center-card-item"
+  [routerLink]="['/bilateral', item?.center_acronym, 'home']">
   <div class="framework-reporting-center-card-item_header">
-    <div>
-      <p class="framework-reporting-center-card-item_header_desc">CGIAR Center</p>
-      <h3 class="framework-reporting-center-card-item_header_title">
-        {{ item?.center_name }} ({{ item?.center_acronym || item?.center_id }})
-      </h3>
-    </div>
+    <p class="framework-reporting-center-card-item_header_desc">CGIAR Center</p>
+    <h3 class="framework-reporting-center-card-item_header_acronym">
+      {{ item?.center_acronym || item?.center_id }}
+    </h3>
+    <p class="framework-reporting-center-card-item_header_name">
+      {{ item?.center_name }}
+    </p>
   </div>
-
-  <a
-    class="framework-reporting-center-card-item_report-btn"
-    [routerLink]="['/result-framework-reporting/center', item?.center_id, 'report']">
-    Report
-  </a>
-</div>
+</a>

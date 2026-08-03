@@ -1,0 +1,37 @@
+<svg
+  [attr.width]="size()"
+  [attr.height]="size()"
+  [attr.viewBox]="'0 0 ' + size() + ' ' + size()"
+  class="progress-ring"
+>
+  <circle
+    [attr.cx]="size() / 2"
+    [attr.cy]="size() / 2"
+    [attr.r]="size() / 2 - strokeWidth"
+    fill="none"
+    stroke="#EEEEEE"
+    [attr.stroke-width]="strokeWidth"
+  />
+  <circle
+    [attr.cx]="size() / 2"
+    [attr.cy]="size() / 2"
+    [attr.r]="size() / 2 - strokeWidth"
+    fill="none"
+    [attr.stroke]="ringColor()"
+    [attr.stroke-width]="strokeWidth"
+    stroke-linecap="round"
+    [attr.stroke-dasharray]="circumference()"
+    [attr.stroke-dashoffset]="dashOffset()"
+    [attr.transform]="'rotate(-90 ' + size() / 2 + ' ' + size() / 2 + ')'"
+    class="progress-ring-fill"
+  />
+  <text
+    [attr.x]="size() / 2"
+    [attr.y]="size() / 2"
+    dominant-baseline="middle"
+    text-anchor="middle"
+    class="progress-ring-text"
+  >
+    {{ percentage() }}%
+  </text>
+</svg>

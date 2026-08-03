@@ -1,0 +1,31 @@
+<nav class="bil-nav">
+  <div class="bil-nav-inner">
+    <div class="bil-nav-breadcrumb">
+
+      <a class="bil-nav-breadcrumb_link" routerLink="/result-framework-reporting/home">
+        Result Framework Reporting
+      </a>
+
+      @if (ctx.centerAcronym()) {
+        <i class="pi pi-chevron-right bil-nav-breadcrumb_sep"></i>
+
+        @if (isAtHome) {
+          <span class="bil-nav-breadcrumb_current">{{ ctx.centerAcronym() }}</span>
+        } @else {
+          <a class="bil-nav-breadcrumb_link" [routerLink]="['/bilateral', ctx.centerAcronym(), 'home']">
+            {{ ctx.centerAcronym() }}
+          </a>
+          <i class="pi pi-chevron-right bil-nav-breadcrumb_sep"></i>
+          <span class="bil-nav-breadcrumb_current">{{ currentPageLabel }}</span>
+        }
+
+      } @else {
+        <i class="pi pi-chevron-right bil-nav-breadcrumb_sep"></i>
+        <span class="bil-nav-breadcrumb_current">{{ currentPageLabel }}</span>
+      }
+
+    </div>
+  </div>
+</nav>
+
+<router-outlet></router-outlet>

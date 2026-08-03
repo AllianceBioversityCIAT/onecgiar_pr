@@ -3,34 +3,47 @@
 .framework-reporting-center-card-item {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 16px;
   padding: 20px;
   border-radius: 10px;
   border: 1px solid var(--pr-color-accents-2);
   background-color: var(--pr-color-white);
   min-height: 136px;
+  min-width: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.framework-reporting-center-card-item:visited {
+  color: inherit;
+}
+
+.framework-reporting-center-card-item:hover {
+  border-color: var(--pr-color-primary-300);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.framework-reporting-center-card-item_header {
+  min-width: 0;
 }
 
 .framework-reporting-center-card-item_header_desc {
   @include fonts.pr-typography('body-2');
   color: var(--pr-color-secondary-200);
+  margin-bottom: 6px;
+}
+
+.framework-reporting-center-card-item_header_acronym {
+  @include fonts.pr-typography('h3');
+  font-weight: 700;
+  color: var(--pr-color-secondary-400);
   margin-bottom: 4px;
 }
 
-.framework-reporting-center-card-item_header_title {
-  @include fonts.pr-typography('h3');
-  font-weight: 600;
-  color: var(--pr-color-secondary-400);
-}
-
-.framework-reporting-center-card-item_report-btn {
-  align-self: flex-start;
-  padding: 8px 16px;
-  border-radius: 6px;
-  background-color: var(--pr-color-primary-300);
-  color: var(--pr-color-white);
-  text-decoration: none;
-  @include fonts.pr-typography('body-2');
-  font-weight: 600;
+.framework-reporting-center-card-item_header_name {
+  @include fonts.pr-typography('body-1');
+  color: var(--pr-color-secondary-200);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

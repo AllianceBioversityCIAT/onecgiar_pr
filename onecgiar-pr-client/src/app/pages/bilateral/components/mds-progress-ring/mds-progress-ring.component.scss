@@ -1,0 +1,14 @@
+.progress-ring {
+  display: block;
+}
+
+.progress-ring-text {
+  font-family: Inter, Poppins, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  fill: #212121;
+}
+
+.progress-ring-fill {
+  transition: stroke-dashoffset 300ms ease, stroke 300ms ease;
+}

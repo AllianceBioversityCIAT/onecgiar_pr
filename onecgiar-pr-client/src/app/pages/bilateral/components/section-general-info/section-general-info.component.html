@@ -1,0 +1,127 @@
+<div class="sgi-fields">
+  <div class="sgi-field">
+    <label class="sgi-label">Title <span class="sgi-required">*</span></label>
+    <input
+      type="text"
+      class="sgi-input"
+      [value]="title()"
+      (input)="onTitleChange($event)"
+      (blur)="onTitleBlur()"
+      maxlength="200"
+      placeholder="Enter result title (max 30 words)"
+    />
+    @if (titleStatus !== 'idle') {
+      <span class="sgi-status" [class.sgi-status--saved]="titleStatus === 'saved'" [class.sgi-status--error]="titleStatus === 'error'">
+        {{ titleStatus === 'saving' ? 'Saving...' : titleStatus === 'saved' ? 'Saved ✓' : 'Save failed — Retry' }}
+      </span>
+    }
+  </div>
+
+  <div class="sgi-field">
+    <label class="sgi-label">Description <span class="sgi-required">*</span></label>
+    <textarea
+      class="sgi-textarea"
+      [value]="description()"
+      (input)="onDescriptionChange($event)"
+      (blur)="onDescriptionBlur()"
+      maxlength="2000"
+      placeholder="Describe the result (max 300 words)"
+      rows="4"
+    ></textarea>
+    @if (descriptionStatus !== 'idle') {
+      <span class="sgi-status" [class.sgi-status--saved]="descriptionStatus === 'saved'" [class.sgi-status--error]="descriptionStatus === 'error'">
+        {{ descriptionStatus === 'saving' ? 'Saving...' : descriptionStatus === 'saved' ? 'Saved ✓' : 'Save failed — Retry' }}
+      </span>
+    }
+  </div>
+
+  <a class="sgi-show-all" (click)="toggleShowAll()" (keydown.enter)="toggleShowAll()" tabindex="0" role="button">
+    {{ showAllFields() ? 'Hide' : 'Show' }} additional fields
+  </a>
+
+  @if (showAllFields()) {
+    <div class="sgi-extra">
+      @if (isLoadingDac()) {
+        <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="false" />
+      } @else {
+        <div class="sgi-field">
+          <label class="sgi-label">Lead Contact Person</label>
+          <div class="sgi-lead-search-wrapper">
+            <input
+              type="text"
+              class="sgi-input"
+              [(ngModel)]="leadContactSearchQuery"
+              (input)="onLeadContactSearch($any($event.target).value)"
+              (blur)="onLeadContactBlur()"
+              placeholder="Search by name or email (min 3 characters)"
+              autocomplete="off"
+            />
+            @if (isSearchingLeads) {
+              <span class="sgi-lead-searching">Searching...</span>
+            }
+            @if (leadContactResults.length > 0) {
+              <div class="sgi-lead-results">
+                @for (user of leadContactResults; track user.mail) {
+                  <div class="sgi-lead-result-item" (mousedown)="selectLeadContact(user)">
+                    <span class="sgi-lead-result-name">{{ user.display_name }}</span>
+                    <span class="sgi-lead-result-detail">{{ user.mail }} @if (user.title) { &mdash; {{ user.title }} }</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          @if (leadContactSelected) {
+            <div class="sgi-lead-selected">
+              <span class="material-icons-round sgi-lead-selected-icon">person</span>
+              <div>
+                <div class="sgi-lead-selected-name">{{ leadContactSelected.display_name }}</div>
+                <div class="sgi-lead-selected-detail">{{ leadContactSelected.mail }} @if (leadContactSelected.title) { &mdash; {{ leadContactSelected.title }} }</div>
+              </div>
+              <button class="sgi-lead-clear" (click)="clearLeadContact()" type="button">&times;</button>
+            </div>
+          }
+          @if (leadContactStatus !== 'idle') {
+            <span class="sgi-status" [class.sgi-status--saved]="leadContactStatus === 'saved'" [class.sgi-status--error]="leadContactStatus === 'error'">
+              {{ leadContactStatus === 'saving' ? 'Saving...' : leadContactStatus === 'saved' ? 'Saved ✓' : 'Save failed — Retry' }}
+            </span>
+          }
+        </div>
+
+        <div class="sgi-dac-section">
+          <label class="sgi-label sgi-dac-title">Impact Area Scores</label>
+          @for (area of dacAreas; track area.key) {
+            <div class="sgi-dac-row">
+              <div class="sgi-dac-label">{{ area.label }}</div>
+              <div class="sgi-dac-tags">
+                @for (level of tagLevels(); track level.value) {
+                  <button
+                    type="button"
+                    class="sgi-radio"
+                    [class.sgi-radio--selected]="selectedDacLevels()[area.key] === level.value"
+                    (click)="onDacTagChange(area.key, level.value)"
+                  >
+                    {{ level.label }}
+                  </button>
+                }
+              </div>
+              @if (selectedDacLevels()[area.key] == 3) {
+                <div class="sgi-dac-subscores">
+                  @for (opt of (impactAreaSubScores()[area.key] ?? []); track opt.id) {
+                    <button
+                      type="button"
+                      class="sgi-checkbox"
+                      [class.sgi-checkbox--checked]="(selectedSubScores()[area.key] ?? []).includes(opt.id)"
+                      (click)="toggleSubScore(area.key, opt.id)"
+                    >
+                      {{ opt.title }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

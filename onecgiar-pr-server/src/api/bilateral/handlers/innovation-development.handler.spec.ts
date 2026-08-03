@@ -145,9 +145,10 @@ describe('InnovationDevelopmentBilateralHandler', () => {
     });
     expect(repoStub.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        results_id: baseContext.resultId,
         result_object: { id: baseContext.resultId },
-        innovation_nature_id: 12,
-        innovation_readiness_level_id: 14,
+        innovation_nature: { code: 12 },
+        innovation_readiness_level: { id: 14 },
       }),
     );
     expect(repoStub.save).toHaveBeenCalled();
@@ -171,8 +172,9 @@ describe('InnovationDevelopmentBilateralHandler', () => {
     );
     expect(repoStub.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        results_id: baseContext.resultId,
         result_object: { id: baseContext.resultId },
-        innovation_readiness_level_id: 14,
+        innovation_readiness_level: { id: 14 },
       }),
     );
     expect(repoStub.save).toHaveBeenCalled();
@@ -191,8 +193,8 @@ describe('InnovationDevelopmentBilateralHandler', () => {
     expect(repoStub.save).toHaveBeenCalledWith(
       expect.objectContaining({
         result_innovation_dev_id: 123,
-        innovation_nature_id: 12,
-        innovation_readiness_level_id: 14,
+        innovation_nature: { code: 12 },
+        innovation_readiness_level: { id: 14 },
         last_updated_by: baseContext.userId,
       }),
     );

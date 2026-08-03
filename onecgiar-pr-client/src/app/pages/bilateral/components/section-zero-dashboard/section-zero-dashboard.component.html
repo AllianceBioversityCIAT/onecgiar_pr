@@ -1,0 +1,60 @@
+<div class="bp-dashboard">
+  <div class="bp-dashboard-card">
+    <h3 class="bp-card-title">
+      Project
+      @if (creationService.isAiGenerated()) {
+        <span class="bp-ai-badge">
+          <i class="material-icons-round bp-ai-badge-icon">auto_awesome</i>
+          AI Result
+        </span>
+      }
+    </h3>
+    @if (creationService.selectedProject(); as project) {
+      <div class="bp-project-code">{{ project.shortName }}</div>
+      <div class="bp-project-name">{{ project.fullName }}</div>
+      @if (project.leadCenter) {
+        <div class="bp-lead-center">{{ project.leadCenter.acronym }}</div>
+      }
+      <div class="bp-sp-badges">
+        @for (sp of project.sciencePrograms; track sp.programId) {
+          <span class="bp-sp-badge" [class.bp-sp-badge--primary]="creationService.selectedPrimarySp()?.programId === sp.programId">
+            {{ sp.spShortName }}
+            @if (sp.allocation) {
+              <span class="bp-sp-allocation">{{ formatAlloc(sp.allocation) }}%</span>
+            }
+          </span>
+        }
+      </div>
+    } @else {
+      @if (creationService.currentResultId()) {
+        <p class="bp-empty-hint">No project linked</p>
+      } @else {
+        <p class="bp-empty-hint">Select a project to begin</p>
+      }
+    }
+  </div>
+
+  <div class="bp-dashboard-card bp-dashboard-card--actions">
+    <h3 class="bp-card-title">Actions</h3>
+    <button class="bp-action-btn" disabled type="button" aria-label="Generate Narrative - Coming soon">
+      <i class="material-icons-round">sparkles</i>
+      <span>Generate Narrative</span>
+      <span class="bp-action-status">Coming soon</span>
+    </button>
+    <button class="bp-action-btn" disabled type="button" aria-label="Download PDF - Coming soon">
+      <i class="material-icons-round">picture_as_pdf</i>
+      <span>Download PDF</span>
+      <span class="bp-action-status">Coming soon</span>
+    </button>
+    <button class="bp-action-btn" disabled type="button" aria-label="AI Review - Coming soon">
+      <i class="material-icons-round">search_check</i>
+      <span>AI Review</span>
+      <span class="bp-action-status">Coming soon</span>
+    </button>
+    <button class="bp-action-btn bp-action-btn--primary" [disabled]="overallStatus() !== 'complete'" type="button" (click)="onSubmit()">
+      <i class="material-icons-round">send</i>
+      <span>Submit for Review</span>
+      <span class="bp-action-status">In progress</span>
+    </button>
+  </div>
+</div>

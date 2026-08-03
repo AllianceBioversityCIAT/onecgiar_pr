@@ -107,6 +107,7 @@ import {
   ReviewDecisionEnum,
 } from './dto/review-decision.dto';
 import { ReviewUpdateDto } from './dto/review-update.dto';
+import { UpdateBilateralGeneralInfoDto } from './dto/update-bilateral-general-info.dto';
 import {
   ResultReviewHistory,
   ReviewActionEnum,
@@ -3139,6 +3140,7 @@ export class ResultsService {
 
   async getBilateralResultById(
     resultId: number,
+    versionId?: number,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
       if (!resultId || resultId <= 0) {
@@ -3149,9 +3151,17 @@ export class ResultsService {
         };
       }
 
-      const result = await this._resultRepository.findOne({
-        where: { id: resultId, source: SourceEnum.Bilateral },
-      });
+      const result = versionId
+        ? await this._resultRepository.findOne({
+            where: {
+              result_code: resultId,
+              version_id: versionId,
+              source: SourceEnum.Bilateral,
+            },
+          })
+        : await this._resultRepository.findOne({
+            where: { id: resultId, source: SourceEnum.Bilateral },
+          });
 
       if (!result) {
         return {
@@ -3161,21 +3171,31 @@ export class ResultsService {
         };
       }
 
+      const internalId = result.id;
+
       const [commonFields, tocMetadata, geoScope, contributingCenters] =
-        await this._loadBilateralBaseData(resultId);
+        await this._loadBilateralBaseData(internalId);
 
       const contributingInstitutions =
-        await this._loadContributingInstitutions(resultId);
+        await this._loadContributingInstitutions(internalId);
 
       const [contributingProjects, contributingInitiatives, evidence] =
-        await this._loadBilateralRelatedData(resultId);
+        await this._loadBilateralRelatedData(internalId);
 
       const resultTypeResponse = await this._loadBilateralResultTypeData(
-        resultId,
+        internalId,
         result.result_type_id,
       );
 
       const tocResponse = (tocMetadata?.response as Record<string, any>) ?? {};
+
+      const impactAreaScores = await this._resultImpactAreaScoresService.find(
+        internalId,
+        undefined,
+        {
+          impact_area_score: true,
+        },
+      );
 
       const mappedResult = {
         commonFields: commonFields ?? null,
@@ -3189,6 +3209,12 @@ export class ResultsService {
         contributingInitiatives: contributingInitiatives ?? [],
         evidence: evidence ?? [],
         resultTypeResponse: resultTypeResponse ?? [],
+        impactAreaScores: (impactAreaScores ?? []).map((r: any) => ({
+          id: r.id,
+          impact_area_score_id: r.impact_area_score_id,
+          impact_area: r.impact_area_score?.impact_area ?? null,
+          name: r.impact_area_score?.name ?? null,
+        })),
       };
 
       return {
@@ -4299,6 +4325,7 @@ export class ResultsService {
     }
 
     const newRecord = repo.create({
+      results_id: resultId,
       result_object: { id: resultId } as Result,
       created_by: userId,
       last_updated_by: userId,
@@ -4677,6 +4704,216 @@ export class ResultsService {
           status: error.getStatus(),
         };
       }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateBilateralGeneralInfo(
+    resultId: number,
+    dto: UpdateBilateralGeneralInfoDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (
+        !dto.title?.trim() &&
+        !dto.description?.trim() &&
+        dto.lead_contact_person === undefined &&
+        dto.gender_tag_level_id === undefined &&
+        dto.climate_change_tag_level_id === undefined &&
+        dto.nutrition_tag_level_id === undefined &&
+        dto.environmental_biodiversity_tag_level_id === undefined &&
+        dto.poverty_tag_level_id === undefined &&
+        dto.gender_impact_area_ids === undefined &&
+        dto.climate_impact_area_ids === undefined &&
+        dto.nutrition_impact_area_ids === undefined &&
+        dto.environmental_biodiversity_impact_area_ids === undefined &&
+        dto.poverty_impact_area_ids === undefined
+      ) {
+        return {
+          response: {},
+          message: 'At least one field must be provided.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const bilateralResult = await this._resultRepository.findOne({
+        where: { id: parsedResultId, is_active: true },
+        select: ['id', 'version_id', 'source', 'title'],
+      });
+      if (!bilateralResult) {
+        return {
+          response: {},
+          message: 'Result not found.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const updates: Partial<Result> = {};
+
+      if (dto.title?.trim()) {
+        if (dto.title.trim() !== bilateralResult.title) {
+          const existing = await this._resultRepository.findOne({
+            where: {
+              title: dto.title.trim(),
+              is_active: true,
+              version_id: bilateralResult.version_id,
+            },
+          });
+          if (existing?.id && existing.id !== parsedResultId) {
+            return {
+              response: {},
+              message: 'A result with this title already exists.',
+              status: HttpStatus.CONFLICT,
+            };
+          }
+          (updates as any).title = dto.title.trim();
+        }
+      }
+
+      if (dto.description?.trim() !== undefined) {
+        (updates as any).description = dto.description.trim();
+      }
+
+      if (dto.lead_contact_person !== undefined) {
+        (updates as any).lead_contact_person = dto.lead_contact_person || null;
+      }
+
+      const DAC_TAG_FIELDS: { dtoKey: string; col: string }[] = [
+        { dtoKey: 'gender_tag_level_id', col: 'gender_tag_level_id' },
+        {
+          dtoKey: 'climate_change_tag_level_id',
+          col: 'climate_change_tag_level_id',
+        },
+        { dtoKey: 'nutrition_tag_level_id', col: 'nutrition_tag_level_id' },
+        {
+          dtoKey: 'environmental_biodiversity_tag_level_id',
+          col: 'environmental_biodiversity_tag_level_id',
+        },
+        { dtoKey: 'poverty_tag_level_id', col: 'poverty_tag_level_id' },
+      ];
+      for (const { dtoKey, col } of DAC_TAG_FIELDS) {
+        if ((dto as any)[dtoKey] !== undefined) {
+          (updates as any)[col] = (dto as any)[dtoKey];
+        }
+      }
+
+      const DAC_IMPACT_FIELDS = [
+        { dtoKey: 'gender_impact_area_ids' },
+        { dtoKey: 'climate_impact_area_ids' },
+        { dtoKey: 'nutrition_impact_area_ids' },
+        { dtoKey: 'environmental_biodiversity_impact_area_ids' },
+        { dtoKey: 'poverty_impact_area_ids' },
+      ];
+      const hasImpactAreaUpdates = DAC_IMPACT_FIELDS.some(
+        (f) => (dto as any)[f.dtoKey] !== undefined,
+      );
+
+      if (Object.keys(updates).length === 0 && !hasImpactAreaUpdates) {
+        return {
+          response: { id: parsedResultId },
+          message: 'No changes to apply.',
+          status: HttpStatus.OK,
+        };
+      }
+
+      await this._dataSource.transaction(async (manager) => {
+        await this._validateBilateralResultForUpdate(
+          manager,
+          parsedResultId,
+          user,
+        );
+
+        if (Object.keys(updates).length > 0) {
+          await manager.update(Result, parsedResultId, updates);
+        }
+
+        const hasAnyImpactUpdate = DAC_IMPACT_FIELDS.some(
+          (f) => (dto as any)[f.dtoKey] !== undefined,
+        );
+
+        if (hasAnyImpactUpdate) {
+          const allScores: { impact_area_score_id: number }[] = [];
+          for (const { dtoKey } of DAC_IMPACT_FIELDS) {
+            const ids = (dto as any)[dtoKey];
+            if (ids && Array.isArray(ids)) {
+              for (const id of ids) {
+                allScores.push({ impact_area_score_id: Number(id) });
+              }
+            }
+          }
+          await this._resultImpactAreaScoresService.create(
+            parsedResultId,
+            allScores,
+            'impact_area_score_id',
+            { userId: user.id, manager },
+          );
+        }
+      });
+
+      return {
+        response: { id: parsedResultId, ...updates },
+        message: 'General info updated successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getBilateralCenterResults(centerId: string, versionId: string) {
+    try {
+      const parsedVersionId = Number(versionId);
+
+      if (!centerId?.trim()) {
+        return {
+          response: [],
+          message: 'centerId is required.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!parsedVersionId || isNaN(parsedVersionId)) {
+        return {
+          response: [],
+          message: 'versionId is required and must be a valid number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const results = await this._resultRepository.getResultsByBilateralCenter(
+        centerId,
+        parsedVersionId,
+      );
+
+      return {
+        response: results,
+        message: 'Bilateral center results retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }

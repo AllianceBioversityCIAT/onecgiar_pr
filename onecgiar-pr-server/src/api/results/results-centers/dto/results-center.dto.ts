@@ -71,4 +71,9 @@ export class ResultsCenterDto {
       'Flag that indicates the center was prefilled from the Theory of Change mapping.',
   })
   from_toc?: boolean;
+
+  @ApiProperty({
+    description: 'Unique institution identifier associated with the center.',
+  })
+  institutionId: number;
 }
