@@ -21,6 +21,7 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
 import { GuidedCreationComponent } from './components/guided-creation/guided-creation.component';
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
+import { ReportingProgramBandComponent } from './components/reporting-program-band/reporting-program-band.component';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
 
 /** Vibrant, high-contrast palette for the status charts (no pastels). */
@@ -120,7 +121,7 @@ export type RfrView = 'dashboard' | 'planned' | 'emerging' | 'centers';
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
-  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent, HighlightSearchPipe, ReportingAowTableComponent],
+  imports: [RouterLink, CustomFieldsModule, DecimalPipe, GuidedCreationComponent, IndicatorDrawerComponent, HighlightSearchPipe, ReportingAowTableComponent, ReportingProgramBandComponent],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -128,7 +129,8 @@ export type RfrView = 'dashboard' | 'planned' | 'emerging' | 'centers';
 export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly api = inject(ApiService);
-  private readonly dataControlSE = inject(DataControlService);
+  // Public: the template reads reportingCurrentPhase for the band's cycle eyebrow.
+  readonly dataControlSE = inject(DataControlService);
   private readonly guideSE = inject(ReportingGuideService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -1039,11 +1041,48 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * ({ aow, indicators, count, loading }) with `__hlo` and `__tier` folded into every row, so this
    * is a pass-through over the search-filtered AoW list — no reshaping, no second source of truth.
    */
-  readonly reportingGroups = computed<ReportingAowGroup[]>(() =>
-    this.plannedFilteredAows().map(
-      aow => this.indicatorsForAow(aow.code) ?? { aow, indicators: [], count: 0, loading: false }
-    )
-  );
+  readonly reportingGroups = computed<ReportingAowGroup[]>(() => {
+    const aowFilter = this.reportingAowFilter();
+    const typology = this.reportingTypologyFilter();
+    return this.plannedFilteredAows()
+      .filter(aow => aowFilter === 'all' || aow.code === aowFilter)
+      .map(aow => {
+        const bundle = this.indicatorsForAow(aow.code) ?? { aow, indicators: [], count: 0, loading: false };
+        if (typology === 'all') return bundle;
+        // Typology filters the ROWS but not `count`: the AoW header must keep reporting how many
+        // KPIs the area has, not how many survived a filter (same reason the ratio is unfiltered).
+        const indicators = (bundle.indicators ?? []).filter(
+          (i: any) => (i?.result_type_name || i?.type_name || '').trim() === typology
+        );
+        return { ...bundle, indicators };
+      });
+  });
+
+  /**
+   * Toolbar state for the Reporting tab. Kept SEPARATE from the AoW-detail `statusFilter` /
+   * `typologyFilter` signals: those are asserted by existing tests and drive a different surface,
+   * and sharing them would couple two toolbars that happen to look alike.
+   */
+  readonly reportingStatusFilter = signal<string>('all');
+  readonly reportingViewMode = signal<'grouped' | 'flat'>('grouped');
+  readonly reportingAowFilter = signal<string>('all');
+  readonly reportingTypologyFilter = signal<string>('all');
+
+  /**
+   * Indicator-type options for the band's `Indicator` filter, derived from what the loaded ToCs
+   * actually contain — so the dropdown never offers a type with zero rows behind it.
+   * `result_type_name` first (the clean 6-value field), `type_name` as the fallback.
+   */
+  readonly reportingTypologyOptions = computed(() => {
+    const set = new Set<string>();
+    for (const g of this.indicatorsByAow()) {
+      for (const i of g.indicators ?? []) {
+        const t = (i as any)?.result_type_name || (i as any)?.type_name;
+        if (t) set.add(String(t).trim());
+      }
+    }
+    return [...set].sort((a, b) => a.localeCompare(b)).map(v => ({ value: v, label: v }));
+  });
 
   /** Row click / Report — both land on the existing indicator drawer, on the matching tab. */
   onReportingRowOpen(row: ReportingIndicator): void {

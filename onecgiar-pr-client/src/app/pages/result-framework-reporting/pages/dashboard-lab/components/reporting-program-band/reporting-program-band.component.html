@@ -1,0 +1,155 @@
+<!--
+  Program band + tabs + Reporting toolbar.
+  Reference: docs/design-references/prms-shell-CURRENT/ (see uploads/pasted-1785766366426-0.png)
+  Spec:      docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §3
+-->
+
+<!-- ═══ BAND — surface-band, the one tinted content surface (rule 7) ═══ -->
+<div class="bg-[var(--pr-surface-band)] px-8 pt-5">
+  <!-- Eyebrow: dot + SP01 · REPORTING CYCLE 2026 · P25 -->
+  <div class="flex items-center gap-2">
+    <span class="size-[8px] shrink-0 rounded-full" [style.background]="programDotColor()"></span>
+    <span class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-secondary)]">
+      {{ eyebrow() }}
+    </span>
+    <!-- The reference's `48 DAYS LEFT` chip is intentionally absent: no cycle end date exists in the
+         client, so the number cannot be derived and is not invented. See the component doc. -->
+  </div>
+
+  <!-- Title row + primary action -->
+  <div class="mt-2 flex items-start justify-between gap-4">
+    <div class="flex min-w-0 items-center gap-2">
+      <h1 class="m-0 min-w-0 truncate text-[28px] font-bold leading-tight tracking-[-0.02em] text-[var(--pr-text-heading)]">
+        {{ programName() }}
+      </h1>
+      <span class="flex shrink-0 items-center text-[var(--pr-text-subtle)]" [prTooltip]="programName()">
+        <ng-icon name="lucideInfo" class="text-[16px]" />
+      </span>
+    </div>
+
+    <!-- The single `brand` button on the screen (rule 1) -->
+    <a
+      class="flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[var(--pr-color-primary-300)] px-3.5 text-[14px] font-medium text-white shadow-[var(--pr-shadow-1)] transition-colors hover:bg-[var(--pr-color-primary-400)]"
+      [routerLink]="emergingPath">
+      <ng-icon name="lucideZap" class="text-[16px]" />
+      Report emerging result
+    </a>
+  </div>
+
+  <!-- Tabs — Overview and Reporting are real routes, so these are links, not local state.
+       Active gets a 3px violet underline; the hairline runs the full width beneath. -->
+  <nav class="mt-4 flex items-end gap-6" aria-label="Program sections">
+    <a
+      class="border-b-[3px] pb-2.5 text-[15px] font-medium transition-colors"
+      [class]="
+        activeTab() === 'overview'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'overview' ? 'page' : null"
+      [routerLink]="overviewPath"
+      queryParamsHandling="preserve">
+      Overview
+    </a>
+    <a
+      class="border-b-[3px] pb-2.5 text-[15px] font-medium transition-colors"
+      [class]="
+        activeTab() === 'reporting'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'reporting' ? 'page' : null"
+      [routerLink]="reportingPath"
+      queryParamsHandling="preserve">
+      Reporting
+    </a>
+  </nav>
+  <div class="h-px bg-[var(--pr-border)]"></div>
+</div>
+
+<!-- ═══ TOOLBAR ═══ -->
+<div class="flex flex-wrap items-center gap-3 px-8 py-5">
+  <!-- Search -->
+  <div class="relative w-[300px] shrink-0">
+    <span class="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
+      <ng-icon name="lucideSearch" class="text-[14px]" />
+    </span>
+    <input
+      type="text"
+      class="h-9 w-full rounded-lg border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-9 pr-3 text-[13px] text-[var(--pr-text)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)]"
+      placeholder="Search results or indicators…"
+      aria-label="Search results or indicators"
+      [value]="search()"
+      (input)="searchChange.emit($any($event.target).value)" />
+  </div>
+
+  <div class="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+    <!-- AoW / Indicator / Status. Native selects on purpose: they are 3-option filters, and a
+         Spartan select would add a generated component for no behavioural gain. -->
+    @if (aowOptions().length) {
+      <select
+        class="h-9 w-[120px] shrink-0 cursor-pointer rounded-lg border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-2.5 text-[13px] text-[var(--pr-text)] outline-none focus-visible:border-[var(--pr-color-primary-300)]"
+        aria-label="Filter by area of work"
+        (change)="onSelect(aowChange, $event)">
+        <option value="all" [selected]="aowValue() === 'all'">AoW</option>
+        @for (o of aowOptions(); track o.value) {
+          <option [value]="o.value" [selected]="aowValue() === o.value">{{ o.label }}</option>
+        }
+      </select>
+    }
+
+    @if (typologyOptions().length) {
+      <select
+        class="h-9 w-[150px] shrink-0 cursor-pointer rounded-lg border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-2.5 text-[13px] text-[var(--pr-text)] outline-none focus-visible:border-[var(--pr-color-primary-300)]"
+        aria-label="Filter by indicator type"
+        (change)="onSelect(typologyChange, $event)">
+        <option value="all" [selected]="typologyValue() === 'all'">Indicator</option>
+        @for (o of typologyOptions(); track o.value) {
+          <option [value]="o.value" [selected]="typologyValue() === o.value">{{ o.label }}</option>
+        }
+      </select>
+    }
+
+    <select
+      class="h-9 w-[120px] shrink-0 cursor-pointer rounded-lg border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-2.5 text-[13px] text-[var(--pr-text)] outline-none focus-visible:border-[var(--pr-color-primary-300)]"
+      aria-label="Filter by status"
+      (change)="onSelect(statusChange, $event)">
+      @for (o of statusOptions; track o.value) {
+        <option [value]="o.value" [selected]="statusValue() === o.value">{{ o.label }}</option>
+      }
+    </select>
+
+    <!-- Segmented: Indicators by AoW | All indicators -->
+    <div
+      role="tablist"
+      aria-label="Grouping"
+      class="flex items-center gap-0.5 rounded-lg border border-[var(--pr-border)] bg-[var(--pr-surface-app)] p-0.5">
+      <button
+        type="button"
+        role="tab"
+        class="rounded-md border-0 px-3 py-1.5 text-[13px] font-medium transition-colors"
+        [class]="
+          viewMode() === 'grouped'
+            ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)] shadow-[var(--pr-shadow-1)]'
+            : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+        "
+        [attr.aria-selected]="viewMode() === 'grouped'"
+        (click)="viewModeChange.emit('grouped')">
+        Indicators by AoW
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="rounded-md border-0 px-3 py-1.5 text-[13px] font-medium transition-colors"
+        [class]="
+          viewMode() === 'flat'
+            ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)] shadow-[var(--pr-shadow-1)]'
+            : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+        "
+        [attr.aria-selected]="viewMode() === 'flat'"
+        (click)="viewModeChange.emit('flat')">
+        All indicators
+      </button>
+    </div>
+  </div>
+</div>

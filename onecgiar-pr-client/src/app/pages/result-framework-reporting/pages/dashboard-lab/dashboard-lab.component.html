@@ -1150,133 +1150,39 @@
       }
 
       @if (showPlanned()) {
-      <!-- Planned ToC — dedicated sidebar surface -->
-      <article class="flex max-h-[calc(100vh-1.25rem)] w-full min-w-0 flex-col overflow-visible rounded-2xl border border-[rgba(30,32,47,0.06)] bg-white shadow-[0_4px_14px_rgba(30,32,47,0.05)]">
-          <!-- ===== Planned page — dense header + view switcher (no footer CTA) ===== -->
-          <header class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[rgba(30,32,47,0.06)] px-4 py-2">
-            <h2 data-guide="planned" class="m-0 min-w-0 truncate text-[14px] font-bold tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Results planned in your 2026 ToC</h2>
-            <div class="flex flex-wrap items-center gap-1.5">
-              <div
-                role="tablist"
-                aria-label="Planned ToC browse mode"
-                class="flex items-center gap-0.5 rounded-lg border border-[rgba(30,32,47,0.08)] bg-[var(--pr-color-accents-1)] p-0.5">
-                @for (v of plannedBrowseViews; track v.id) {
-                  <button
-                    type="button"
-                    role="tab"
-                    (click)="setPlannedBrowseView(v.id)"
-                    [attr.aria-selected]="plannedBrowseView() === v.id"
-                    class="flex appearance-none items-center gap-1 rounded-md border-0 px-2 py-1 text-[11px] font-semibold transition-colors"
-                    [class]="
-                      plannedBrowseView() === v.id
-                        ? 'bg-white text-[var(--pr-color-primary-400)] shadow-[0_1px_3px_rgba(30,32,47,0.08)]'
-                        : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'
-                    ">
-                    <span class="material-icons-round text-[14px]" aria-hidden="true">{{ v.icon }}</span>
-                    {{ v.label }}
-                  </button>
-                }
-              </div>
-              @if (plannedBrowseView() !== 'aows') {
-                <div class="flex items-center gap-0.5 rounded-lg border border-[rgba(30,32,47,0.08)] bg-[var(--pr-color-accents-1)] p-0.5">
-                  <button
-                    type="button"
-                    (click)="setPlannedLayout('cards')"
-                    [attr.aria-pressed]="plannedLayout() === 'cards'"
-                    class="flex size-7 appearance-none items-center justify-center rounded-md border-0"
-                    [class]="plannedLayout() === 'cards' ? 'bg-white text-[var(--pr-color-secondary-400)] shadow-sm' : 'bg-transparent text-[var(--pr-color-accents-5)]'"
-                    title="Cards"
-                    aria-label="Cards layout">
-                    <span class="material-icons-round text-[15px]">grid_view</span>
-                  </button>
-                  <button
-                    type="button"
-                    (click)="setPlannedLayout('table')"
-                    [attr.aria-pressed]="plannedLayout() === 'table'"
-                    class="flex size-7 appearance-none items-center justify-center rounded-md border-0"
-                    [class]="plannedLayout() === 'table' ? 'bg-white text-[var(--pr-color-secondary-400)] shadow-sm' : 'bg-transparent text-[var(--pr-color-accents-5)]'"
-                    title="Table"
-                    aria-label="Table layout">
-                    <span class="material-icons-round text-[15px]">table_rows</span>
-                  </button>
-                </div>
-              }
-            </div>
-          </header>
+      <!-- Reporting tab. No card wrapper: in the reference the band spans the full width and the
+           table sits directly on the canvas — the old rounded/bordered/shadowed <article> was part
+           of the retired layout. -->
+      <article class="flex w-full min-w-0 flex-col">
+          <!-- ═══════════════════════════════════════════════════════════════════════
+               PROGRAM BAND + TABS + TOOLBAR — the approved reference.
+               Replaces the old dense header (51 lines: an h2 plus the browse-mode switcher).
+               Spec: docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §3
+               ═══════════════════════════════════════════════════════════════════════ -->
+          <app-reporting-program-band
+            [programCode]="selected()?.initiativeCode || ''"
+            [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
+            [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
+            [cyclePhase]="dataControlSE.reportingCurrentPhase.portfolioAcronym || ''"
+            [programDotColor]="accentTheme().solid"
+            activeTab="reporting"
+            [search]="plannedSearch()"
+            [statusValue]="reportingStatusFilter()"
+            [aowOptions]="plannedAowSelectOptions()"
+            [aowValue]="reportingAowFilter()"
+            [typologyOptions]="reportingTypologyOptions()"
+            [typologyValue]="reportingTypologyFilter()"
+            [viewMode]="reportingViewMode()"
+            (searchChange)="plannedSearch.set($event)"
+            (statusChange)="reportingStatusFilter.set($event)"
+            (aowChange)="reportingAowFilter.set($event)"
+            (typologyChange)="reportingTypologyFilter.set($event)"
+            (viewModeChange)="reportingViewMode.set($event)" />
 
           <!-- Filters OUTSIDE the scroll area so dropdown panels are not clipped -->
-          <div class="relative z-[30] shrink-0 border-b border-[rgba(30,32,47,0.06)] px-4 py-2.5">
-            <div class="flex w-full flex-wrap items-end gap-3">
-              <label
-                class="flex h-[38px] min-w-[220px] flex-1 basis-[240px] items-center gap-2 rounded-xl border border-[rgba(30,32,47,0.08)] bg-[var(--pr-color-accents-1)] px-3 focus-within:border-[var(--pr-color-primary-300)] focus-within:bg-white">
-                <span class="material-icons-round text-[17px] text-[var(--pr-color-accents-4)]" aria-hidden="true">search</span>
-                <input
-                  type="text"
-                  [placeholder]="plannedBrowseView() === 'aows' ? 'Search Areas of Work or indicators…' : 'Search indicators…'"
-                  [value]="plannedSearch()"
-                  (input)="plannedSearch.set($any($event.target).value)"
-                  (keydown.escape)="plannedSearch.set('')"
-                  aria-label="Search planned ToC"
-                  class="w-full flex-1 appearance-none border-none bg-transparent text-[12.5px] text-[var(--pr-color-secondary-400)] outline-none placeholder:text-[var(--pr-color-accents-4)]" />
-                @if (plannedSearch()) {
-                  <button
-                    type="button"
-                    (click)="plannedSearch.set('')"
-                    aria-label="Clear search"
-                    class="inline-flex size-5 shrink-0 appearance-none items-center justify-center rounded-md border-0 bg-transparent text-[var(--pr-color-accents-4)] hover:text-[var(--pr-color-secondary-400)]">
-                    <span class="material-icons-round text-[15px]">close</span>
-                  </button>
-                }
-              </label>
-
-              @if (plannedBrowseView() === 'byAow') {
-                <div class="min-w-[260px] flex-1 basis-[260px]">
-                  <app-pr-select
-                    label="Area of Work"
-                    [options]="plannedAowSelectOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select Area of Work"
-                    [editable]="true"
-                    [required]="false"
-                    [truncateSelectionText]="true"
-                    optionsInlineStyles="min-width: 360px"
-                    [ngModel]="plannedHloAowCode() || ''"
-                    [ngModelOptions]="{ standalone: true }"
-                    (selectOptionEvent)="setPlannedHloAow($event?.value || null)">
-                  </app-pr-select>
-                </div>
-              }
-
-              @if (plannedBrowseView() === 'byAow' || plannedBrowseView() === 'indicators') {
-                <div class="planned-type-filter min-w-[320px] flex-[1.4] basis-[320px]">
-                  <app-pr-multi-select
-                    label="Indicator type"
-                    [options]="plannedTypologyMultiOptions()"
-                    optionLabel="name"
-                    optionValue="name"
-                    [ngModel]="plannedTypeFilter()"
-                    [ngModelOptions]="{ standalone: true }"
-                    (ngModelChange)="onPlannedTypeFilterChange($event)"
-                    placeholder="All indicator types"
-                    [required]="false"
-                    [showSelectAll]="true"
-                    [isStatic]="true">
-                  </app-pr-multi-select>
-                </div>
-              }
-
-              @if (hasPlannedFilters()) {
-                <button
-                  type="button"
-                  (click)="clearPlannedFilters()"
-                  class="mb-0.5 flex h-[38px] shrink-0 appearance-none items-center gap-1 rounded-lg border-0 bg-transparent px-2 text-[12px] font-semibold text-[var(--pr-color-accents-6)] transition-colors hover:text-[var(--pr-color-secondary-400)]">
-                  <span class="material-icons-round text-[15px]" aria-hidden="true">close</span>
-                  Clear filters
-                </button>
-              }
-            </div>
-          </div>
+          <!-- The old filter strip (72 lines: its own search plus the AoW / typology selects)
+               was removed — the band above now owns search, filters and the grouping toggle,
+               and having two search boxes on one screen was the visible symptom. -->
 
           <div class="custom_scroll flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-4 py-2">
             @if (loadingAows()) {
@@ -1296,6 +1202,7 @@
               <app-reporting-aow-table
                 [groups]="reportingGroups()"
                 [search]="plannedSearch()"
+                [statusFilter]="reportingStatusFilter()"
                 [canReport]="true"
                 (openRow)="onReportingRowOpen($event)"
                 (reportRow)="onReportingRowReport($event)"
