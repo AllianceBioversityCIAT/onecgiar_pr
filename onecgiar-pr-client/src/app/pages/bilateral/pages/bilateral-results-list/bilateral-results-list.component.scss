@@ -608,10 +608,10 @@ $contrib-color-border:#bae6fd;
   text-align: right;
   position: sticky;
   right: 0;
-  background: #fff;
+  background: inherit;
 
-  // Subtle left shadow to indicate stickiness when content scrolls under it.
-  box-shadow: -3px 0 6px -2px rgba(0, 0, 0, 0.06);
+  // Keep the sticky cell visually aligned with the rest of the row.
+  box-shadow: none;
 }
 
 // Header cell needs its own background so rows don't bleed through.

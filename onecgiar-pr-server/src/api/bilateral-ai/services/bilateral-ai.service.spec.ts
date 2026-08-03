@@ -515,49 +515,6 @@ describe('BilateralAiService (unit)', () => {
     });
   });
 
-  describe('normalizeLeadCenter', () => {
-    it('should return candidate unchanged when there is no lead_center', () => {
-      const { service } = makeService();
-      const candidate = { title: 'Test', description: 'Desc' };
-      expect((service as any).normalizeLeadCenter(candidate)).toEqual(candidate);
-    });
-
-    it('should return candidate unchanged when institution_id is not 46', () => {
-      const { service } = makeService();
-      const candidate = {
-        title: 'Test',
-        lead_center: { name: 'Some Center', institution_id: 99 },
-      };
-      expect((service as any).normalizeLeadCenter(candidate)).toEqual(candidate);
-    });
-
-    it('should remap institution_id 46 → 49 and force acronym to ABC', () => {
-      const { service } = makeService();
-      const candidate = {
-        title: 'Test',
-        lead_center: { name: 'CIAT Alliance', acronym: 'CIAT', institution_id: 46 },
-      };
-      const result = (service as any).normalizeLeadCenter(candidate);
-      expect(result.lead_center.institution_id).toBe(49);
-      expect(result.lead_center.acronym).toBe('ABC');
-      expect(result.lead_center.name).toBe('CIAT Alliance');
-      expect(result.title).toBe('Test');
-    });
-
-    it('should not modify other candidate fields', () => {
-      const { service } = makeService();
-      const candidate = {
-        title: 'My result',
-        description: 'Desc',
-        lead_center: { institution_id: 46 },
-        contributing_partners: [{ name: 'Partner A' }],
-      };
-      const result = (service as any).normalizeLeadCenter(candidate);
-      expect(result.description).toBe('Desc');
-      expect(result.contributing_partners).toEqual([{ name: 'Partner A' }]);
-    });
-  });
-
   describe('processJob', () => {
     it('should return early when job not found', async () => {
       const { service, stubs } = makeService();
@@ -654,6 +611,40 @@ describe('BilateralAiService (unit)', () => {
         response_snapshot: expect.any(Object),
         completed_date: expect.any(Date),
       });
+    });
+
+    it('should preserve the AI-detected lead center when creating a draft', async () => {
+      const { service, stubs } = makeService();
+      const candidate = {
+        indicator: 'Innovation Development',
+        title: 'Seattle result',
+        lead_center: {
+          institution_id: 46,
+          name: 'Seattle Alliance',
+          acronym: 'SEA',
+        },
+      };
+      stubs.jobRepository.findOne.mockResolvedValue({
+        job_id: 'j1',
+        status: BilateralAiJobStatus.PENDING,
+        attempts: 0,
+        bucket_name: 'b',
+        document_keys: [],
+        audio_keys: [],
+        text_context: null,
+        user_id: 42,
+        project_id: 10,
+      });
+      stubs.textMining.normalize.mockReturnValue({
+        results: [candidate],
+        interactionId: null,
+      });
+
+      await service.processJob('j1');
+
+      expect(stubs.draftRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ extracted_mds: candidate }),
+      );
     });
 
     it('should mark job as FAILED and throw on retryable errors', async () => {
