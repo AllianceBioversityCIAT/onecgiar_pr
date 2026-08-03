@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo } from '@ng-icons/lucide';
@@ -19,13 +20,26 @@ export interface ReportingIndicator {
   __hlo?: string;
   __tier?: 'output' | 'outcome';
   __aowCode?: string;
+  /** Display name of the source AoW — used when Intermediate Outcomes is a top-level sibling. */
+  __aowName?: string;
 }
+
+/**
+ * Top-level card on the Reporting tab.
+ *
+ * ⚠️ Intermediate Outcomes and 2030 Outcomes are SIBLINGS of AoWs (same chrome level), not
+ * HLO-level children. The design reference nests them under each AoW — that is a known bug the
+ * owner rejected; PRMS real data (and the previous entity-aow sidebar) treats them as program-level
+ * buckets next to the Areas of Work list.
+ */
+export type ReportingGroupKind = 'aow' | 'intermediate' | '2030';
 
 export interface ReportingAowGroup {
   aow: { id?: number | string; code: string; name: string; progress?: number };
   indicators: ReportingIndicator[];
   count: number;
   loading: boolean;
+  kind?: ReportingGroupKind;
 }
 
 /** A row's workflow state, as far as the data allows. See `statusOf`. */
@@ -55,7 +69,7 @@ interface HloGroup {
 @Component({
   selector: 'app-reporting-aow-table',
   standalone: true,
-  imports: [NgIcon, PrTooltipDirectiveModule],
+  imports: [NgIcon, NgTemplateOutlet, PrTooltipDirectiveModule],
   templateUrl: './reporting-aow-table.component.html',
   styleUrls: ['./reporting-aow-table.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,6 +81,11 @@ export class ReportingAowTableComponent {
   readonly search = input<string>('');
   /** `'all'` or one of the RowStatus values. */
   readonly statusFilter = input<string>('all');
+  /**
+   * `grouped` = AoW (or bucket) cards with HLO/sub-group rows.
+   * `flat` = one list of every visible indicator, no card chrome.
+   */
+  readonly viewMode = input<'grouped' | 'flat'>('grouped');
   /** Whether the current user may report — the parent passes `canReportResults()` through. */
   readonly canReport = input<boolean>(false);
 
@@ -154,29 +173,77 @@ export class ReportingAowTableComponent {
 
   // ── Grouping ──────────────────────────────────────────────────────────────
   /**
-   * Splits an AoW's flat indicator list into the reference's sub-groups, keyed by HLO title.
-   * `__tier` decides the eyebrow: outputs are HLOs, outcomes are outcomes. The reference's own
-   * codes travel inside the title ("HLO4.AOW1.IO1 Foster motivations"), so the code chip and the
-   * short name come from splitting it — no extra request.
+   * Second-level groups inside a top-level card.
+   *
+   * - **AoW card** → High-Level Outputs only (HLO eyebrow + title). Outcomes never live here.
+   * - **Intermediate Outcomes card** → one fill-header per source AoW (siblings of HLOs, not nested
+   *   under an AoW card — the reference bug this corrects).
+   * - **2030 Outcomes card** → groups by the ToC result title returned by `GET_2030Outcomes`.
    */
   hloGroupsOf(group: ReportingAowGroup): HloGroup[] {
+    const kind = group.kind ?? 'aow';
     const byKey = new Map<string, HloGroup>();
+
     for (const row of this.visibleRows(group)) {
-      const title = row.__hlo?.trim() || 'Unassigned';
-      const key = `${group.aow.code}::${title}`;
-      if (!byKey.has(key)) {
+      let key: string;
+      let eyebrow: string;
+      let code: string;
+      let name: string;
+
+      if (kind === 'intermediate') {
+        // Sub-group = the intermediate-outcome ToC node (or its source AoW when present).
+        const title = row.__hlo?.trim() || row.__aowName?.trim() || 'Intermediate outcome';
+        const aowCode = row.__aowCode?.trim();
+        key = `io::${aowCode ?? ''}::${title}`;
+        eyebrow = aowCode && aowCode !== 'intermediate-outcomes' ? aowCode : 'IO';
+        code = '';
+        name = title;
+      } else if (kind === '2030') {
+        const title = row.__hlo?.trim() || '2030 Outcomes';
+        key = `o30::${title}`;
+        eyebrow = '2030';
+        code = '';
+        name = title;
+      } else {
+        // Pure HLO under an AoW — outcomes are filtered out upstream.
+        const title = row.__hlo?.trim() || 'Unassigned';
+        key = `${group.aow.code}::${title}`;
         const match = /^((?:HLO|IO|EOI)[\w.\-]*)\s+(.*)$/i.exec(title);
-        byKey.set(key, {
-          key,
-          eyebrow: row.__tier === 'outcome' ? 'Outcome' : 'HLO',
-          code: match?.[1] ?? '',
-          name: match?.[2] ?? title,
-          rows: []
-        });
+        eyebrow = 'HLO';
+        code = match?.[1] ?? '';
+        name = match?.[2] ?? title;
+      }
+
+      if (!byKey.has(key)) {
+        byKey.set(key, { key, eyebrow, code, name, rows: [] });
       }
       byKey.get(key)!.rows.push(row);
     }
+
     return [...byKey.values()];
+  }
+
+  /** Flat list of every indicator that survives the toolbar filters (All indicators view). */
+  readonly flatRows = computed(() => {
+    const rows: ReportingIndicator[] = [];
+    for (const g of this.visibleGroups()) {
+      rows.push(...this.visibleRows(g));
+    }
+    return rows;
+  });
+
+  /** Whether this top-level card is a program-level bucket (not a real AoW). */
+  isBucket(group: ReportingAowGroup): boolean {
+    const kind = group.kind ?? 'aow';
+    return kind === 'intermediate' || kind === '2030';
+  }
+
+  /** Chip label in the 68px header — AoW code, or a short bucket tag. */
+  headerChip(group: ReportingAowGroup): string {
+    const kind = group.kind ?? 'aow';
+    if (kind === 'intermediate') return 'IO';
+    if (kind === '2030') return '2030';
+    return group.aow.code;
   }
 
   /** Rows surviving the toolbar filters. */
@@ -225,12 +292,16 @@ export class ReportingAowTableComponent {
     return index === 0;
   }
 
-  /** AoWs with at least one visible row, so filtering empties the list instead of showing dead cards. */
+  /**
+   * Top-level cards with something to show. With no search/status filter, every card the parent
+   * built is kept (including empty AoWs). Once a filter is active, empty cards drop out so the
+   * list does not fill with dead headers.
+   */
   readonly visibleGroups = computed(() => {
     const q = this.search().trim();
     const status = this.statusFilter();
     if (!q && status === 'all') return this.groups();
-    return this.groups().filter(g => this.visibleRows(g).length > 0);
+    return this.groups().filter(g => g.loading || this.visibleRows(g).length > 0);
   });
 
   // ── Disclosure ────────────────────────────────────────────────────────────

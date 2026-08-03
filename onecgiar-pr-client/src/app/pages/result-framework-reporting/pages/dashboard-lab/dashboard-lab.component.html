@@ -1234,27 +1234,15 @@
                 [groups]="reportingGroups()"
                 [search]="plannedSearch()"
                 [statusFilter]="reportingStatusFilter()"
+                [viewMode]="reportingViewMode()"
                 [canReport]="true"
                 (openRow)="onReportingRowOpen($event)"
                 (reportRow)="onReportingRowReport($event)"
                 (openTarget)="onReportingOpenTarget($event)"
                 (openAchieved)="onReportingOpenAchieved($event)"
                 (openAow)="openAow($event)" />
-
-              <!-- 2030 Outcomes. Same card chrome and 68px header height as an AoW so it reads as
-                   one more row of the same system, not as a leftover from the old layout. -->
-              <button
-                type="button"
-                (click)="openAow(outcomes2030Code)"
-                aria-label="Open 2030 Outcomes"
-                class="group flex h-[68px] w-full appearance-none items-center gap-2.5 rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-6 text-left transition-colors hover:bg-[var(--pr-surface-app)]">
-                <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">flag</span>
-                <span class="min-w-0 flex-1 truncate">
-                  <span class="text-[17px] font-bold text-[var(--pr-text-heading)]">2030 Outcomes</span>
-                  <span class="ml-2 text-[13px] text-[var(--pr-text-subtle)]">Cumulative 2025–2030</span>
-                </span>
-                <span class="material-icons-round text-[18px] text-[var(--pr-text-subtle)]">arrow_forward</span>
-              </button>
+              <!-- Intermediate Outcomes + 2030 Outcomes are top-level cards inside the table
+                   (siblings of AoWs). The old "open 2030 detail" jump button is gone. -->
             } @else if (plannedBrowseView() === 'byAow') {
               @if (!plannedHloAowCode()) {
                 <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">Select an Area of Work to browse HLOs.</p>

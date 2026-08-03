@@ -1,209 +1,245 @@
 <!--
-  Reporting tab — AoW → HLO → indicator.
-  Reference: docs/design-references/prms-reporting-tool-mockup/Resultados.dc.html:960-1150
-  Spec:      docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §5
+  Reporting tab — AoW → HLO → indicator (+ program-level Intermediate / 2030 siblings).
+  Reference: docs/design-references/prms-shell-CURRENT/ (visual) + owner correction:
+  Intermediate Outcomes and 2030 Outcomes are top-level cards (siblings of AoWs), not HLO children.
+  Spec: docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §5
 
-  Every size is an explicit px arbitrary value. html is 12px here, so `text-sm` would render
-  10.5px instead of 14px (UI-RULES §1.3). Colours are tokens only (rule 8).
+  ⚠️ html is 12px — only arbitrary px values (UI-RULES §1.3).
 -->
-<!-- 20px between AoW cards — the reference's `gap:20px` (PRMS-Shell.dc.html:989). -->
-<div class="flex flex-col gap-5">
-  @for (group of visibleGroups(); track group.aow.code; let aowIndex = $index) {
-    @let ratio = ratioOf(group);
-    @let aowKey = 'aow::' + group.aow.code;
 
-    <!-- ═══ AoW card ═══ -->
-    <section class="overflow-hidden rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
-      <!-- AoW header — 68px, typographic weight carries this level (no fill) -->
-      <button
-        type="button"
-        class="flex h-[68px] w-full items-center gap-2.5 border-b border-[var(--pr-border-strong)] bg-[var(--pr-surface-card)] px-6 text-left"
-        [attr.aria-expanded]="isOpen(aowKey, isDefaultOpenAow(aowIndex))"
-        (click)="toggle(aowKey, isDefaultOpenAow(aowIndex))">
-        <!-- ▼ closed / ▲ open — read off the rendered reference (uploads/pasted-1785766366426-0.png).
-             It used to rotate -90° (◀ when closed), which is a different affordance. -->
-        <ng-icon
-          name="lucideChevronDown"
-          class="shrink-0 text-[16px] text-[var(--pr-text-secondary)] transition-transform duration-200"
-          [class.rotate-180]="isOpen(aowKey, isDefaultOpenAow(aowIndex))" />
-
-        <!-- Code chip: mono, brand-soft. The reference uses #EDE9FE on #5733C4. -->
-        <span class="pr-code shrink-0 rounded-md bg-[var(--pr-color-primary-100)] px-2 py-[2px] text-[var(--pr-color-primary-400)]">
-          {{ group.aow.code }}
-        </span>
-
-        <span class="min-w-0 truncate text-[17px] font-bold text-[var(--pr-text-heading)]">{{ group.aow.name }}</span>
-
-        <!-- ⓘ per AoW, as in the rendered reference. Currently a tooltip: the API carries no AoW
-             description field, so a popover would have nothing to show (NEEDS-BACKEND). -->
-        <span class="flex shrink-0 items-center text-[var(--pr-text-subtle)]" [prTooltip]="group.aow.name">
-          <ng-icon name="lucideInfo" class="text-[14px]" />
-        </span>
-
-        <!-- Count is Manrope, not mono: it is a sentence ("30 KPIs"), not a figure column. -->
-        <span class="shrink-0 text-[13px] text-[var(--pr-text-subtle)]">{{ countLabel(group.count) }}</span>
-
-        <span class="flex-1"></span>
-
-        <!-- Ratio + bar. A continuous bar is legitimate here: the number is a COUNT of indicators,
-             so it is a true proportion (rule 15 forbids meters on indicator VALUES, not on counts). -->
-        <span class="flex shrink-0 items-center gap-3">
-          <span class="h-[8px] w-[120px] overflow-hidden rounded bg-[var(--pr-border)]">
-            <span class="block h-full rounded bg-[var(--pr-color-primary-300)]" [style.width.%]="ratio.percent"></span>
-          </span>
-          <span class="pr-figure-sm w-[62px] text-right text-[14px] font-semibold text-[var(--pr-text-heading)]">{{ ratio.done }} of {{ ratio.total }}</span>
-          <span class="w-[42px] text-right text-[14px] font-semibold text-[var(--pr-text-secondary)]">{{ ratio.percent }}%</span>
-        </span>
-      </button>
-
-      @if (isOpen(aowKey, isDefaultOpenAow(aowIndex))) {
-        @if (group.loading) {
-          <div class="px-6 py-5 text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
+@if (viewMode() === 'flat') {
+  <!-- ═══ ALL INDICATORS — flat list, no AoW chrome ═══ -->
+  <section class="overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
+    @if (!flatRows().length) {
+      <div class="px-[24px] py-[40px] text-center text-[13px] text-[var(--pr-text-secondary)]">
+        @if (search().trim() || statusFilter() !== 'all') {
+          No indicators match your filters.
         } @else {
-          @let hloGroups = hloGroupsOf(group);
+          No planned indicators yet.
+        }
+      </div>
+    } @else {
+      @for (row of flatRows(); track row.indicator_id + '::' + (row.center_id ?? '') + '::' + (row.__aowCode ?? '')) {
+        <ng-container *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: true }" />
+      }
+    }
+  </section>
+} @else {
+  <!-- ═══ GROUPED — 20px between top-level cards ═══ -->
+  <div class="flex flex-col gap-[20px]">
+    @for (group of visibleGroups(); track group.aow.code; let aowIndex = $index) {
+      @let ratio = ratioOf(group);
+      @let aowKey = 'aow::' + group.aow.code;
 
-          @if (!hloGroups.length) {
-            <div class="px-6 py-5 text-[13px] text-[var(--pr-text-secondary)]">
-              @if (search().trim() || statusFilter() !== 'all') {
-                No indicators match the current filters in this area of work.
-              } @else {
-                This area of work has no planned indicators yet.
-              }
-            </div>
-          }
+      <section class="overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
+        <!-- Top-level header: 68px. Same chrome for AoW and for Intermediate / 2030 buckets. -->
+        <button
+          type="button"
+          class="flex h-[68px] w-full items-center gap-[10px] border-b border-[var(--pr-border-strong)] bg-[var(--pr-surface-card)] px-[24px] text-left"
+          [attr.aria-expanded]="isOpen(aowKey, isDefaultOpenAow(aowIndex))"
+          (click)="toggle(aowKey, isDefaultOpenAow(aowIndex))">
+          <ng-icon
+            name="lucideChevronDown"
+            class="shrink-0 text-[16px] text-[var(--pr-text-secondary)] transition-transform duration-200"
+            [class.rotate-180]="isOpen(aowKey, isDefaultOpenAow(aowIndex))" />
 
-          @for (hlo of hloGroups; track hlo.key; let hloIndex = $index) {
-            <!-- ═══ HLO sub-group header — 44px. Second level carries FILL, not weight. ═══ -->
-            <button
-              type="button"
-              class="flex h-[44px] w-full items-center gap-2 border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-6 text-left"
-              [attr.aria-expanded]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))"
-              (click)="toggle(hlo.key, isDefaultOpenHlo(hloIndex))">
-              <ng-icon
-                name="lucideChevronDown"
-                class="shrink-0 text-[13px] text-[var(--pr-text-secondary)] transition-transform duration-200"
-                [class.rotate-180]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))" />
+          <span
+            class="pr-code shrink-0 rounded-[6px] bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[var(--pr-color-primary-400)]">
+            {{ headerChip(group) }}
+          </span>
 
+          <span class="min-w-0 truncate text-[17px] font-bold text-[var(--pr-text-heading)]">
+            {{ group.aow.name }}
+          </span>
+
+          <span
+            class="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-[var(--pr-text-subtle)]"
+            [prTooltip]="group.aow.name">
+            <ng-icon name="lucideInfo" class="text-[14px]" />
+          </span>
+
+          <span class="shrink-0 text-[13px] text-[var(--pr-text-subtle)]">{{ countLabel(group.count) }}</span>
+
+          <span class="flex-1"></span>
+
+          <span class="flex shrink-0 items-center gap-[12px]">
+            <span class="h-[8px] w-[120px] overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
               <span
-                class="shrink-0 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]"
-                [prTooltip]="hlo.name">
-                {{ hlo.eyebrow }}
-              </span>
+                class="block h-[8px] rounded-[4px] bg-[var(--pr-color-primary-300)]"
+                [style.width.%]="ratio.percent"></span>
+            </span>
+            <span class="pr-figure-sm w-[62px] text-right text-[14px] font-semibold text-[var(--pr-text-heading)]">
+              {{ ratio.done }} of {{ ratio.total }}
+            </span>
+            <span class="w-[42px] text-right text-[14px] font-semibold text-[var(--pr-text-secondary)]">
+              {{ ratio.percent }}%
+            </span>
+          </span>
+        </button>
 
-              @if (hlo.code) {
-                <span class="pr-code shrink-0 text-[var(--pr-text-secondary)]">{{ hlo.code }}</span>
-              }
+        @if (isOpen(aowKey, isDefaultOpenAow(aowIndex))) {
+          @if (group.loading) {
+            <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
+          } @else {
+            @let hloGroups = hloGroupsOf(group);
 
-              <span class="min-w-0 flex-1 truncate text-[13px] font-medium leading-[16px] text-[var(--pr-text-secondary)]" [title]="hlo.name">
-                {{ hlo.name }}
-              </span>
+            @if (!hloGroups.length) {
+              <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">
+                @if (search().trim() || statusFilter() !== 'all') {
+                  No indicators match the current filters.
+                } @else if (isBucket(group)) {
+                  No indicators in this bucket yet.
+                } @else {
+                  This area of work has no planned indicators yet.
+                }
+              </div>
+            }
 
-              <span class="pr-figure-sm shrink-0 text-[var(--pr-text-subtle)]">{{ countLabel(hlo.rows.length) }}</span>
-            </button>
+            @for (hlo of hloGroups; track hlo.key; let hloIndex = $index) {
+              <!-- Second level: HLO under AoW, or source-AoW under Intermediate, etc. -->
+              <button
+                type="button"
+                class="flex h-[44px] w-full items-center gap-[8px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-[24px] text-left"
+                [attr.aria-expanded]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))"
+                (click)="toggle(hlo.key, isDefaultOpenHlo(hloIndex))">
+                <ng-icon
+                  name="lucideChevronDown"
+                  class="shrink-0 text-[13px] text-[var(--pr-text-secondary)] transition-transform duration-200"
+                  [class.rotate-180]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))" />
 
-            @if (isOpen(hlo.key, isDefaultOpenHlo(hloIndex))) {
-              @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
-                <!-- ═══ ROW — 88px min, the reference's grid verbatim ═══ -->
-                <div
-                  class="pr-reporting-row"
-                  role="button"
-                  tabindex="0"
-                  [attr.aria-label]="row.indicator_description"
-                  (click)="openRow.emit(row)"
-                  (keydown.enter)="openRow.emit(row)"
-                  (keydown.space)="openRow.emit(row)">
-                  <!-- 1 — status mark. Four states, one 16px circle. -->
-                  <span class="flex w-[36px] self-start pt-[3px]">
-                    <span
-                      class="pr-status-mark"
-                      [class]="'pr-status-mark--' + statusOf(row)"
-                      [prTooltip]="statusLabel(row)"
-                      [attr.aria-label]="statusLabel(row)">
-                      @if (statusOf(row) === 'achieved' || statusOf(row) === 'overachieved') {
-                        <ng-icon name="lucideCheck" class="text-[10px] text-white" />
-                      }
-                    </span>
+                <span
+                  class="shrink-0 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]"
+                  [prTooltip]="hlo.name">
+                  {{ hlo.eyebrow }}
+                </span>
+
+                @if (hlo.code) {
+                  <span class="pr-code shrink-0 text-[var(--pr-text-secondary)]">{{ hlo.code }}</span>
+                }
+
+                @if (hlo.name) {
+                  <span
+                    class="min-w-0 flex-1 truncate text-[13px] font-medium leading-[16px] text-[var(--pr-text-secondary)]"
+                    [title]="hlo.name">
+                    {{ hlo.name }}
                   </span>
+                } @else {
+                  <span class="flex-1"></span>
+                }
 
-                  <!-- 2 — title (2-line clamp + Show more) and the indicator sentence -->
-                  <div class="flex min-w-0 max-w-[620px] flex-col">
-                    <span
-                      class="text-[15px] font-semibold leading-[1.45] text-[var(--pr-text-heading)]"
-                      [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)">
-                      {{ row.indicator_description }}
-                    </span>
-                    <button
-                      type="button"
-                      class="mt-[2px] w-max border-0 bg-transparent p-0 text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]"
-                      (click)="toggleTitle(row.indicator_id, $event)">
-                      {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
-                    </button>
-                    <span class="pr-clamp-1 mt-[6px] text-[13px] leading-[17px] text-[var(--pr-text-secondary)]" [title]="typologyOf(row)">
-                      {{ typologyOf(row) }}
-                      @if (row.center_acronym) {
-                        · {{ row.center_acronym }}
-                      }
-                    </span>
-                  </div>
+                <span class="pr-figure-sm shrink-0 text-[var(--pr-text-subtle)]">
+                  {{ countLabel(hlo.rows.length) }}
+                </span>
+              </button>
 
-                  <!-- 3 — Target. A BUTTON, not text: it opens the target breakdown. -->
-                  <div class="flex flex-col items-end gap-[1px]">
-                    <button
-                      type="button"
-                      class="pr-figure border-0 bg-transparent p-0 text-[var(--pr-text-heading)] hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
-                      (click)="emitAndStop(openTarget, row, $event)">
-                      {{ targetText(row) }}
-                    </button>
-                    <span class="text-[11px] font-medium leading-[14px] text-[var(--pr-text-subtle)]">Target</span>
-                  </div>
-
-                  <!-- 4 — Achieved. Opens the reported-results list. -->
-                  <div class="flex flex-col items-end gap-[1px]">
-                    <button
-                      type="button"
-                      class="pr-figure border-0 bg-transparent p-0 hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
-                      [class]="progressOf(row) > 0 ? 'text-[var(--pr-text-heading)]' : 'text-[var(--pr-text-subtle)]'"
-                      (click)="emitAndStop(openAchieved, row, $event)">
-                      {{ achievedText(row) }}
-                    </button>
-                    <span class="text-[11px] font-medium leading-[14px] text-[var(--pr-text-subtle)]">Achieved</span>
-                  </div>
-
-                  <!-- 5 — action. Label follows state; no button once the target is met (rule 17). -->
-                  <div class="flex justify-end">
-                    @if (canReport() && actionLabel(row)) {
-                      <button type="button" class="pr-row-action" (click)="emitAndStop(reportRow, row, $event)">
-                        {{ actionLabel(row) }}
-                      </button>
-                    }
-                  </div>
-
-                  <!-- 6 — overflow -->
-                  <div class="flex justify-end">
-                    <button
-                      type="button"
-                      class="flex size-[28px] items-center justify-center rounded-md border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-text)]"
-                      aria-label="More actions"
-                      (click)="emitAndStop(openRowMenu, { row: row, event: $any($event) }, $event)">
-                      <ng-icon name="lucideEllipsis" class="text-[16px]" />
-                    </button>
-                  </div>
-                </div>
+              @if (isOpen(hlo.key, isDefaultOpenHlo(hloIndex))) {
+                @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
+                  <ng-container *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: false }" />
+                }
               }
             }
           }
         }
-      }
-    </section>
-  }
+      </section>
+    }
 
-  @if (!visibleGroups().length) {
-    <div class="rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-6 py-10 text-center text-[13px] text-[var(--pr-text-secondary)]">
-      @if (search().trim() || statusFilter() !== 'all') {
-        No indicators match your filters.
-      } @else {
-        No areas of work with planned indicators yet.
+    @if (!visibleGroups().length) {
+      <div
+        class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[24px] py-[40px] text-center text-[13px] text-[var(--pr-text-secondary)]">
+        @if (search().trim() || statusFilter() !== 'all') {
+          No indicators match your filters.
+        } @else {
+          No areas of work with planned indicators yet.
+        }
+      </div>
+    }
+  </div>
+}
+
+<!-- Shared indicator row. `showAow` adds the AoW code under the typology line in flat mode. -->
+<ng-template #indicatorRow let-row let-showAow="showAow">
+  <div
+    class="pr-reporting-row"
+    role="button"
+    tabindex="0"
+    [attr.aria-label]="row.indicator_description"
+    (click)="openRow.emit(row)"
+    (keydown.enter)="openRow.emit(row)"
+    (keydown.space)="openRow.emit(row)">
+    <span class="flex w-[36px] self-start pt-[3px]">
+      <span
+        class="pr-status-mark"
+        [class]="'pr-status-mark--' + statusOf(row)"
+        [prTooltip]="statusLabel(row)"
+        [attr.aria-label]="statusLabel(row)">
+        @if (statusOf(row) === 'achieved' || statusOf(row) === 'overachieved') {
+          <ng-icon name="lucideCheck" class="text-[10px] text-white" />
+        }
+      </span>
+    </span>
+
+    <div class="flex min-w-0 max-w-[620px] flex-col">
+      <span
+        class="text-[15px] font-semibold leading-[1.45] text-[var(--pr-text-heading)]"
+        [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)">
+        {{ row.indicator_description }}
+      </span>
+      <button
+        type="button"
+        class="mt-[2px] w-max border-0 bg-transparent p-0 text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]"
+        (click)="toggleTitle(row.indicator_id, $event)">
+        {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
+      </button>
+      <span
+        class="pr-clamp-1 mt-[6px] text-[13px] leading-[17px] text-[var(--pr-text-secondary)]"
+        [title]="typologyOf(row)">
+        {{ typologyOf(row) }}
+        @if (row.center_acronym) {
+          · {{ row.center_acronym }}
+        }
+        @if (showAow && row.__aowCode) {
+          · {{ row.__aowCode }}
+        }
+      </span>
+    </div>
+
+    <div class="flex flex-col items-end gap-[1px]">
+      <button
+        type="button"
+        class="pr-figure border-0 bg-transparent p-0 text-[var(--pr-text-heading)] hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
+        (click)="emitAndStop(openTarget, row, $event)">
+        {{ targetText(row) }}
+      </button>
+      <span class="text-[11px] font-medium leading-[14px] text-[var(--pr-text-subtle)]">Target</span>
+    </div>
+
+    <div class="flex flex-col items-end gap-[1px]">
+      <button
+        type="button"
+        class="pr-figure border-0 bg-transparent p-0 hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
+        [class]="progressOf(row) > 0 ? 'text-[var(--pr-text-heading)]' : 'text-[var(--pr-text-subtle)]'"
+        (click)="emitAndStop(openAchieved, row, $event)">
+        {{ achievedText(row) }}
+      </button>
+      <span class="text-[11px] font-medium leading-[14px] text-[var(--pr-text-subtle)]">Achieved</span>
+    </div>
+
+    <div class="flex justify-end">
+      @if (canReport() && actionLabel(row)) {
+        <button type="button" class="pr-row-action" (click)="emitAndStop(reportRow, row, $event)">
+          {{ actionLabel(row) }}
+        </button>
       }
     </div>
-  }
-</div>
+
+    <div class="flex justify-end">
+      <button
+        type="button"
+        class="flex h-[28px] w-[28px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-text)]"
+        aria-label="More actions"
+        (click)="emitAndStop(openRowMenu, { row: row, event: $any($event) }, $event)">
+        <ng-icon name="lucideEllipsis" class="text-[16px]" />
+      </button>
+    </div>
+  </div>
+</ng-template>
