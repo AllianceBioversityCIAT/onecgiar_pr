@@ -9,6 +9,7 @@ describe('BilateralAiTextMiningService', () => {
   let httpService: jest.Mocked<HttpService>;
 
   beforeEach(async () => {
+    delete process.env.MICROSERVICE_API_KEY;
     httpService = {
       post: jest.fn(),
     } as any;
@@ -26,6 +27,9 @@ describe('BilateralAiTextMiningService', () => {
   });
 
   afterEach(() => {
+    delete process.env.MICROSERVICE_API_KEY;
+    delete process.env.BILATERAL_AI_TEXT_MINING_URL;
+    delete process.env.BILATERAL_AI_TEXT_MINING_API_KEY;
     jest.restoreAllMocks();
   });
 
