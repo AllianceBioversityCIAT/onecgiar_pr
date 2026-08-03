@@ -123,4 +123,16 @@ describe('ResultRepository (unit)', () => {
       }),
     ).rejects.toMatchObject({ status: HttpStatus.INTERNAL_SERVER_ERROR });
   });
+
+  it('includes AI provenance fields in bilateral center results ordered newest first', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.creation_method');
+    expect(sql).toContain("CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated");
+    expect(sql).toContain('ORDER BY r.created_date DESC, r.id DESC');
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
 });

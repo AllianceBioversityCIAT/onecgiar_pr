@@ -50,4 +50,19 @@ describe('SectionZeroDashboardComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Select a project');
   });
+
+  it('should label unavailable actions and keep submit status visible', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    const statuses = Array.from(el.querySelectorAll('.bp-action-status'))
+      .map(status => status.textContent?.trim());
+
+    expect(statuses).toEqual(['Coming soon', 'Coming soon', 'Coming soon', 'In progress']);
+  });
+
+  it('should show the AI Result badge when the result was generated with AI', () => {
+    (creationService.isAiGenerated as any).set(true);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('AI Result');
+  });
 });

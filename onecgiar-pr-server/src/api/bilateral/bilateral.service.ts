@@ -3884,6 +3884,8 @@ export class BilateralService {
     'CIAT-BIOVERSITY',
     'CIAT (ALLIANCE)',
     'BIOVERSITY (ALLIANCE)',
+    'CIAT ALLIANCE',
+    'BIOVERSITY ALLIANCE',
   ]);
 
   /**

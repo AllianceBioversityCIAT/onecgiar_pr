@@ -409,6 +409,8 @@ export class BilateralAiService {
 
   // institution_id 46 ("CIAT Alliance") is no longer a valid Center in reporting;
   // it must be remapped to 49 ("ABC RH") so downstream center associations are correct.
+  // We also force acronym to 'ABC' so that handleLeadCenter's alias normalizer
+  // reliably resolves it to the Alliance of Bioversity and CIAT institution.
   private normalizeLeadCenter(
     candidate: Record<string, unknown>,
   ): Record<string, unknown> {
@@ -422,7 +424,11 @@ export class BilateralAiService {
     }
     return {
       ...candidate,
-      lead_center: { ...leadCenter, institution_id: REPLACEMENT_ID },
+      lead_center: {
+        ...leadCenter,
+        institution_id: REPLACEMENT_ID,
+        acronym: 'ABC',
+      },
     };
   }
 }

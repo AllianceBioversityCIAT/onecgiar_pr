@@ -530,4 +530,29 @@ describe('BilateralService (unit)', () => {
       service.handleLeadCenter(1, {} as any, 1),
     ).resolves.toBeUndefined();
   });
+
+  describe('normalizeInstitutionValue (ALLIANCE_ALIASES)', () => {
+    it.each([
+      ['ABC', true],
+      ['abc', true],
+      ['CIAT-BIOVERSITY', true],
+      ['CIAT (Alliance)', true],
+      ['BIOVERSITY (Alliance)', true],
+      ['CIAT Alliance', true],
+      ['Bioversity Alliance', true],
+      ['CIAT', false],
+      ['Bioversity', false],
+      ['Some Other Org', false],
+    ])('normalizeInstitutionValue(%s) → isAlias=%s', (input, shouldNormalize) => {
+      const { service } = makeService();
+      const result = (service as any).normalizeInstitutionValue(input);
+      if (shouldNormalize) {
+        expect(result).toBe(
+          'Alliance of Bioversity and CIAT - Headquarter (Bioversity International)',
+        );
+      } else {
+        expect(result).toBe(input);
+      }
+    });
+  });
 });

@@ -474,6 +474,25 @@ $contrib-color-border:#bae6fd;
   }
 }
 
+.brl_ai_badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: #f1eaff;
+  color: #7048b8;
+  border: 1px solid #d8c4ff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.15px;
+  line-height: 1;
+  white-space: nowrap;
+
+  .pi { font-size: 9px; }
+}
+
 // ─── Role badges — match chip colors ─────────────────────────────────────────
 
 .brl_role_badge {

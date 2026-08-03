@@ -148,4 +148,21 @@ describe('BilateralCreationService', () => {
       justification: 'Submitted by Center User',
     });
   });
+
+  it('should identify persisted AI results from the detail payload', () => {
+    mockBilateralApi.GET_BilateralResultDetail.mockReturnValue({
+      subscribe: ({ next }: any) =>
+        next({
+          response: {
+            commonFields: { creation_method: 'AI' },
+            contributingProjects: [],
+            contributingCenters: [],
+          },
+        }),
+    } as any);
+
+    service.loadResult(8706);
+
+    expect(service.isAiGenerated()).toBe(true);
+  });
 });

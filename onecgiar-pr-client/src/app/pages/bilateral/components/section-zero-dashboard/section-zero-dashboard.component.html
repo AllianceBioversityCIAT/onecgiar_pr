@@ -5,7 +5,7 @@
       @if (creationService.isAiGenerated()) {
         <span class="bp-ai-badge">
           <i class="material-icons-round bp-ai-badge-icon">auto_awesome</i>
-          AI Generated
+          AI Result
         </span>
       }
     </h3>
@@ -36,21 +36,25 @@
 
   <div class="bp-dashboard-card bp-dashboard-card--actions">
     <h3 class="bp-card-title">Actions</h3>
-    <button class="bp-action-btn" [disabled]="overallStatus() !== 'complete'" type="button">
+    <button class="bp-action-btn" disabled type="button" aria-label="Generate Narrative - Coming soon">
       <i class="material-icons-round">sparkles</i>
-      Generate Narrative
+      <span>Generate Narrative</span>
+      <span class="bp-action-status">Coming soon</span>
     </button>
-    <button class="bp-action-btn" type="button">
+    <button class="bp-action-btn" disabled type="button" aria-label="Download PDF - Coming soon">
       <i class="material-icons-round">picture_as_pdf</i>
-      Download PDF
+      <span>Download PDF</span>
+      <span class="bp-action-status">Coming soon</span>
     </button>
-    <button class="bp-action-btn" [disabled]="overallStatus() !== 'complete'" type="button">
+    <button class="bp-action-btn" disabled type="button" aria-label="AI Review - Coming soon">
       <i class="material-icons-round">search_check</i>
-      AI Review
+      <span>AI Review</span>
+      <span class="bp-action-status">Coming soon</span>
     </button>
     <button class="bp-action-btn bp-action-btn--primary" [disabled]="overallStatus() !== 'complete'" type="button" (click)="onSubmit()">
       <i class="material-icons-round">send</i>
-      Submit for Review
+      <span>Submit for Review</span>
+      <span class="bp-action-status">In progress</span>
     </button>
   </div>
 </div>

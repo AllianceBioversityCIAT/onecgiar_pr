@@ -2897,6 +2897,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.result_type_id,
         r.title AS result_title,
         r.description AS result_description,
+        r.creation_method,
+        CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rt.name AS result_category,
         r.status_id,
         r.lead_contact_person,
@@ -3524,6 +3526,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.created_date,
         r.version_id,
         r.source,
+        r.creation_method,
+        CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rc.is_leading_result
       FROM result r
       INNER JOIN results_center rc
@@ -3544,7 +3548,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       WHERE r.version_id = ?
         AND r.source IN ('API', 'Result')
         AND r.is_active = 1
-      ORDER BY r.result_code ASC
+      ORDER BY r.created_date DESC, r.id DESC
     `;
 
     try {

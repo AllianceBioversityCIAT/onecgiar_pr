@@ -31,6 +31,8 @@ export interface BilateralCenterResult {
   created_date: string;
   version_id: number;
   source: 'API' | 'Result';
+  creation_method?: string;
+  is_ai_generated?: boolean | number;
   is_leading_result: 0 | 1;
 }
 
@@ -255,6 +257,12 @@ export class BilateralResultsListComponent implements OnInit {
   canDeleteResult(result: BilateralCenterResult): boolean {
     if (!this.canManageW3() || result.source !== 'API') return false;
     return this.rolesService.isAdmin || result.status_id === 1;
+  }
+
+  isAiResult(result: BilateralCenterResult): boolean {
+    return result.is_ai_generated === true ||
+      result.is_ai_generated === 1 ||
+      result.creation_method?.toUpperCase() === 'AI';
   }
 
   editResult(result: BilateralCenterResult, event: Event): void {

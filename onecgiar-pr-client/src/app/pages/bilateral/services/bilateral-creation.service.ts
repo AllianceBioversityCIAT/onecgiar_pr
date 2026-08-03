@@ -80,7 +80,9 @@ export class BilateralCreationService {
             this.currentResultId.set(cf.id);
             this.api.resultsSE.currentResultId = cf.id;
           }
-          this.isAiGenerated.set(!!cf.is_ai_generated);
+          this.isAiGenerated.set(
+            !!cf.is_ai_generated || cf.creation_method === 'AI',
+          );
           this.resultTitle.set(cf.result_title ?? '');
           this.resultDescription.set(cf.result_description ?? '');
           this.resultLeadContact.set(cf.lead_contact_person ?? '');

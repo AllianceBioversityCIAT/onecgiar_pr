@@ -180,6 +180,12 @@
                   } @else {
                     <span class="brl_source_badge brl_source_badge--w1w2">W1/W2</span>
                   }
+                  @if (isAiResult(result)) {
+                    <span class="brl_ai_badge" title="AI Result" aria-label="AI Result">
+                      <i class="pi pi-sparkles" aria-hidden="true"></i>
+                      <span>AI Result</span>
+                    </span>
+                  }
                 </td>
                 <td class="brl_td brl_col_code">
                   <span class="brl_code">{{ result.result_code }}</span>
