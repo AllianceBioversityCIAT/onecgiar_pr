@@ -12,7 +12,7 @@ import {
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { combineLatest, filter, take } from 'rxjs';
+import { combineLatest, filter, take, map, distinctUntilChanged } from 'rxjs';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
@@ -158,8 +158,19 @@ export class BilateralResultsListComponent implements OnInit {
   });
 
   constructor() {
+    // Use centerId when resolved; fall back to centerAcronym so admin users browsing
+    // centers that aren't in their roles can still trigger the load.
+    const centerIdentifier$ = combineLatest([
+      toObservable(this.ctx.centerId),
+      toObservable(this.ctx.centerAcronym),
+    ]).pipe(
+      map(([id, acronym]) => id ?? (acronym || null)),
+      filter((v): v is string => !!v),
+      distinctUntilChanged(),
+    );
+
     combineLatest([
-      toObservable(this.ctx.centerId).pipe(filter((id): id is string => !!id)),
+      centerIdentifier$,
       toObservable(this.selectedPhase).pipe(filter((p): p is Phases => !!p)),
     ])
       .pipe(takeUntilDestroyed())
@@ -270,7 +281,7 @@ export class BilateralResultsListComponent implements OnInit {
   }
 
   loadResults(versionId: number): void {
-    const centerId = this.ctx.centerId();
+    const centerId = this.ctx.centerId() || this.ctx.centerAcronym() || '';
     if (!centerId) return;
 
     this.loading.set(true);

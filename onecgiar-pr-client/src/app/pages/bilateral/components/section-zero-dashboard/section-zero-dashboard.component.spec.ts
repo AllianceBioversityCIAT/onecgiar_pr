@@ -15,6 +15,8 @@ describe('SectionZeroDashboardComponent', () => {
       selectedProject: signal(null) as any,
       selectedPrimarySp: signal(null) as any,
       selectedSecondarySps: signal([]) as any,
+      isAiGenerated: signal(false) as any,
+      currentResultId: signal(null) as any,
     };
 
     mdsTracker = {

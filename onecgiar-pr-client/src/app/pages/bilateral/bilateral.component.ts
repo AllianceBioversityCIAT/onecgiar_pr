@@ -6,6 +6,7 @@ import { ApiService } from '../../shared/services/api/api.service';
 import { BilateralAiService } from './services/bilateral-ai.service';
 import { BilateralContextService } from './services/bilateral-context.service';
 import { RolesService } from '../../shared/services/global/roles.service';
+import { CentersService } from '../../shared/services/global/centers.service';
 
 @Component({
   selector: 'app-bilateral',
@@ -20,6 +21,7 @@ export class BilateralComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   readonly ctx = inject(BilateralContextService);
   private readonly rolesService = inject(RolesService);
+  private readonly centersService = inject(CentersService);
 
   currentPageLabel = 'Home';
   isAtHome = true;
@@ -55,7 +57,19 @@ export class BilateralComponent implements OnInit, OnDestroy {
     }
 
     const center = centers.find((c: any) => c.center_acronym === acronym);
-    this.ctx.setCenter(acronym, center?.center_name ?? '', center?.center_id ?? undefined);
+    if (center) {
+      this.ctx.setCenter(acronym, center.center_name ?? '', center.center_id ?? undefined);
+      return;
+    }
+
+    // Admin users (or users without a matching center assignment): resolve via CLARISA catalog.
+    const allCenters = await this.centersService.getData().catch(() => []);
+    const clarisaCenter = allCenters.find((c: any) => c.acronym === acronym);
+    this.ctx.setCenter(
+      acronym,
+      clarisaCenter?.name ?? '',
+      clarisaCenter?.code ?? undefined,
+    );
   }
 
   ngOnDestroy(): void {

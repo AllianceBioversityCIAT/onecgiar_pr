@@ -112,6 +112,26 @@
   font-style: italic;
 }
 
+.bp-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  background: linear-gradient(135deg, #7C3AED, #A855F7);
+  color: #FFFFFF;
+  box-shadow: 0 1px 4px rgba(124, 58, 237, 0.25);
+  margin-left: 4px;
+}
+
+.bp-ai-badge-icon {
+  font-size: 11px;
+}
+
 .bp-progress-center {
   display: flex;
   justify-content: center;

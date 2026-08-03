@@ -1,6 +1,14 @@
 <div class="bp-dashboard">
   <div class="bp-dashboard-card">
-    <h3 class="bp-card-title">Project</h3>
+    <h3 class="bp-card-title">
+      Project
+      @if (creationService.isAiGenerated()) {
+        <span class="bp-ai-badge">
+          <i class="material-icons-round bp-ai-badge-icon">auto_awesome</i>
+          AI Generated
+        </span>
+      }
+    </h3>
     @if (creationService.selectedProject(); as project) {
       <div class="bp-project-code">{{ project.shortName }}</div>
       <div class="bp-project-name">{{ project.fullName }}</div>
@@ -18,7 +26,11 @@
         }
       </div>
     } @else {
-      <p class="bp-empty-hint">Select a project to begin</p>
+      @if (creationService.currentResultId()) {
+        <p class="bp-empty-hint">No project linked</p>
+      } @else {
+        <p class="bp-empty-hint">Select a project to begin</p>
+      }
     }
   </div>
 

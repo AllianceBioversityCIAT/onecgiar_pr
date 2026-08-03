@@ -3528,8 +3528,17 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       FROM result r
       INNER JOIN results_center rc
              ON rc.result_id = r.id
-            AND rc.center_id = ?
             AND rc.is_active = 1
+            AND (
+              rc.center_id = ?
+              OR EXISTS (
+                SELECT 1
+                FROM clarisa_center cc
+                INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+                WHERE cc.code = rc.center_id
+                  AND ci.acronym = ?
+              )
+            )
       INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
       INNER JOIN result_status rs ON rs.result_status_id = r.status_id
       WHERE r.version_id = ?
@@ -3539,7 +3548,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     `;
 
     try {
-      return await this.query(query, [centerId, versionId]);
+      return await this.query(query, [centerId, centerId, versionId]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

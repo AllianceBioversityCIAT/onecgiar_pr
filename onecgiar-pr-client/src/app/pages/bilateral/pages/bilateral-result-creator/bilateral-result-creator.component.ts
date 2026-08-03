@@ -83,7 +83,6 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
   sectionZeroOpen = signal(true);
   showTypeDropdown = signal(false);
-  isAiGenerated = signal(false);
 
   canUseAi = computed(() => !!this.creationService.selectedProject() && !!this.creationService.selectedPrimarySp());
 

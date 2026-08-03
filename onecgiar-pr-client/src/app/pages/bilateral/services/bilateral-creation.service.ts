@@ -22,6 +22,7 @@ export class BilateralCreationService {
   currentResultId = signal<number | null>(null);
   isLoadingProjects = signal(false);
   isLoadingResult = signal(false);
+  isAiGenerated = signal(false);
   resultTitle = signal('');
   resultDescription = signal('');
   resultLeadContact = signal('');
@@ -49,6 +50,7 @@ export class BilateralCreationService {
 
   /** Clears editor signals so a previous result cannot leak into a new one. */
   clearEditorState(): void {
+    this.isAiGenerated.set(false);
     this.resultTitle.set('');
     this.resultDescription.set('');
     this.resultLeadContact.set('');
@@ -78,6 +80,7 @@ export class BilateralCreationService {
             this.currentResultId.set(cf.id);
             this.api.resultsSE.currentResultId = cf.id;
           }
+          this.isAiGenerated.set(!!cf.is_ai_generated);
           this.resultTitle.set(cf.result_title ?? '');
           this.resultDescription.set(cf.result_description ?? '');
           this.resultLeadContact.set(cf.lead_contact_person ?? '');
