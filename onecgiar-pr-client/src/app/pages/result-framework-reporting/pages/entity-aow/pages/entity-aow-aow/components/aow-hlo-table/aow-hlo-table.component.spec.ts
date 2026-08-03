@@ -165,6 +165,10 @@ describe('AowHloTableComponent', () => {
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
+      // The real service derives these from `tocResultsOutcomesByAowId` via the `is_aow` flag; the
+      // derivation itself is asserted in entity-aow.service.spec.ts.
+      tocResultsOutcomesExclusiveByAowId: signal<any[]>([]),
+      tocResultsOutcomesNonExclusiveByAowId: signal<any[]>([]),
       tocResults2030Outcomes: signal<any[]>([]),
       tocResultsIntermediateOutcomes: signal<any[]>([]),
       searchText: signal<string>(''),
@@ -384,6 +388,10 @@ describe('AowHloTableComponent', () => {
       // Reset mock signals to empty arrays
       mockEntityAowService.tocResultsOutputsByAowId.set([]);
       mockEntityAowService.tocResultsOutcomesByAowId.set([]);
+      // Cast: on the real service these two are `computed` (read-only Signals), so the typed mock
+      // does not expose `set` even though the test double is a writable signal.
+      (mockEntityAowService.tocResultsOutcomesExclusiveByAowId as any).set([]);
+      (mockEntityAowService.tocResultsOutcomesNonExclusiveByAowId as any).set([]);
       mockEntityAowService.tocResults2030Outcomes.set([]);
     });
 
@@ -400,17 +408,37 @@ describe('AowHloTableComponent', () => {
       expect(result).toEqual(mockOutputsData);
     });
 
-    it('should return outcomes data when tableType is "outcomes"', () => {
+    it('should return the AoW-exclusive outcomes when tableType is "outcomes"', () => {
       const mockOutcomesData = [
         { id: 'outcome-1', title: 'Outcome 1', type: 'outcome' },
         { id: 'outcome-2', title: 'Outcome 2', type: 'outcome' }
       ];
-      mockEntityAowService.tocResultsOutcomesByAowId.set(mockOutcomesData);
+      (mockEntityAowService.tocResultsOutcomesExclusiveByAowId as any).set(mockOutcomesData);
       component.tableType = 'outcomes';
 
       const result = component.tableData();
 
       expect(result).toEqual(mockOutcomesData);
+    });
+
+    it('should return the non-exclusive outcomes when tableType is "outcomes-non-exclusive"', () => {
+      const mockSharedOutcomes = [{ id: 'outcome-3', title: 'Shared Outcome', type: 'outcome' }];
+      (mockEntityAowService.tocResultsOutcomesNonExclusiveByAowId as any).set(mockSharedOutcomes);
+      component.tableType = 'outcomes-non-exclusive';
+
+      const result = component.tableData();
+
+      expect(result).toEqual(mockSharedOutcomes);
+    });
+
+    it('should not mix the two outcome lists', () => {
+      // `tableType` is a plain @Input set once by the host, so it is read here on a single instance.
+      (mockEntityAowService.tocResultsOutcomesExclusiveByAowId as any).set([{ id: 'own' }]);
+      (mockEntityAowService.tocResultsOutcomesNonExclusiveByAowId as any).set([{ id: 'shared' }]);
+      component.tableType = 'outcomes';
+
+      expect(component.tableData()).toEqual([{ id: 'own' }]);
+      expect(component.tableData()).not.toContainEqual({ id: 'shared' });
     });
 
     it('should return 2030 outcomes data when tableType is "2030-outcomes"', () => {
@@ -511,6 +539,65 @@ describe('AowHloTableComponent', () => {
       expect(component.emptyStateMessage()).toBe(
         'There are no Intermediate Outcomes configured for this program in the current reporting phase.'
       );
+    });
+
+    it('should return the shared-outcomes message for outcomes-non-exclusive table', () => {
+      component.tableType = 'outcomes-non-exclusive';
+      expect(component.emptyStateMessage()).toBe(
+        'There are no Intermediate Outcomes shared with other Areas of Work.'
+      );
+    });
+  });
+
+  // A second instance of this table renders on the Outcomes tab. The search box and the
+  // modal/drawers are driven by shared service signals, so they must render only once.
+  describe('secondary instance inputs', () => {
+    it('should render the search input and the overlays by default', () => {
+      fixture.detectChanges();
+
+      expect(component.showSearch).toBe(true);
+      expect(component.renderOverlays).toBe(true);
+      expect(component.instanceId).toBe('');
+      expect(fixture.nativeElement.querySelector('#aowIndicatorSearchInput')).toBeTruthy();
+    });
+
+    it('should not render the search input when showSearch is false', () => {
+      component.showSearch = false;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('#aowIndicatorSearchInput')).toBeNull();
+    });
+
+    it('should not render the report-result modal when renderOverlays is false', () => {
+      mockEntityAowService.showReportResultModal.set(true);
+      component.renderOverlays = false;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-aow-hlo-create-modal')).toBeNull();
+    });
+
+    it('should not render the view-results drawer when renderOverlays is false', () => {
+      mockEntityAowService.showViewResultDrawer.set(true);
+      component.renderOverlays = false;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-aow-view-results-drawer')).toBeNull();
+    });
+
+    it('should not render the target-details drawer when renderOverlays is false', () => {
+      mockEntityAowService.showTargetDetailsDrawer.set(true);
+      component.renderOverlays = false;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-aow-target-details-drawer')).toBeNull();
+    });
+
+    it('should suffix the table id with instanceId so two instances stay unique', () => {
+      component.instanceId = 'NonExclusive';
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('#tocResultsByAowIdTableNonExclusive')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('#tocResultsByAowIdTable')).toBeNull();
     });
   });
 

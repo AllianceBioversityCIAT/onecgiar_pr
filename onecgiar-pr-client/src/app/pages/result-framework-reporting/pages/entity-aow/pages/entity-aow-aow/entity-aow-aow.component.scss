@@ -102,3 +102,35 @@ p {
 .tab-content {
   padding: 25px;
 }
+
+// Second Outcomes section: the program-level Intermediate Outcomes shared across every AoW.
+.aow-non-exclusive-header {
+  border-top: 1px solid var(--pr-color-accents-2);
+}
+
+.aow-non-exclusive-note {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 20px 25px 0;
+  padding: 12px 15px;
+  border-radius: 9px;
+  background-color: var(--pr-color-blue-50);
+  border: 1px solid var(--pr-color-blue-200);
+}
+
+.aow-non-exclusive-note_icon {
+  flex: 0 0 auto;
+  font-size: 20px;
+  color: var(--pr-color-blue-500);
+}
+
+.aow-non-exclusive-note_text {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-blue-800);
+  line-height: 1.5;
+}
+
+.aow-non-exclusive-header + .aow-non-exclusive-note + .tab-content {
+  padding-top: 15px;
+}

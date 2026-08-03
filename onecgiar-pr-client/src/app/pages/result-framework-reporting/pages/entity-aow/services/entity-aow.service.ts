@@ -35,6 +35,19 @@ export class EntityAowService {
 
   tocResultsOutputsByAowId = signal<any[]>([]);
   tocResultsOutcomesByAowId = signal<any[]>([]);
+
+  // Outcomes exclusive to the current AoW. The server flags every ToC node it returns for an AoW
+  // with `is_aow`: `false` means the node is not linked to any Area of Work
+  // (`toc_results.wp_id IS NULL`), so it is returned under EVERY AoW of the program.
+  // A missing flag is treated as exclusive, which keeps the previous single-list behaviour.
+  tocResultsOutcomesExclusiveByAowId = computed(() =>
+    this.tocResultsOutcomesByAowId().filter((item: any) => item?.is_aow !== false)
+  );
+
+  // Program-level Outcomes shown inside every AoW — rendered in their own tagged section.
+  tocResultsOutcomesNonExclusiveByAowId = computed(() =>
+    this.tocResultsOutcomesByAowId().filter((item: any) => item?.is_aow === false)
+  );
   tocResults2030Outcomes = signal<any[]>([]);
   tocResultsIntermediateOutcomes = signal<any[]>([]);
   searchText = signal<string>('');

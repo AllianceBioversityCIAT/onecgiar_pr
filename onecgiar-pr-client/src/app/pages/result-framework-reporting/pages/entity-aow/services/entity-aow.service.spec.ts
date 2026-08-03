@@ -774,6 +774,58 @@ describe('EntityAowService', () => {
     });
   });
 
+  // The server marks every ToC node it returns for an AoW with `is_aow`. `false` means the node is
+  // not linked to any Area of Work, so it is returned under every AoW of the program.
+  describe('Outcomes split by the is_aow flag', () => {
+    const own = { toc_result_id: 1, result_title: 'Own outcome', is_aow: true };
+    const shared = { toc_result_id: 2, result_title: 'Shared outcome', is_aow: false };
+
+    it('should keep only the AoW-exclusive outcomes in the exclusive list', () => {
+      service.tocResultsOutcomesByAowId.set([own, shared]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([own]);
+    });
+
+    it('should keep only the non-exclusive outcomes in the shared list', () => {
+      service.tocResultsOutcomesByAowId.set([own, shared]);
+
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([shared]);
+    });
+
+    it('should treat a missing is_aow as exclusive so the previous single-list behaviour is kept', () => {
+      const legacy = { toc_result_id: 3, result_title: 'No flag' };
+      service.tocResultsOutcomesByAowId.set([legacy]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([legacy]);
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([]);
+    });
+
+    it('should return empty lists when there are no outcomes', () => {
+      service.tocResultsOutcomesByAowId.set([]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([]);
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([]);
+    });
+
+    it('should handle an AoW whose outcomes are all non-exclusive', () => {
+      service.tocResultsOutcomesByAowId.set([shared]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([]);
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([shared]);
+    });
+
+    it('should not mutate the source signal', () => {
+      const source = [own, shared];
+      service.tocResultsOutcomesByAowId.set(source);
+
+      service.tocResultsOutcomesExclusiveByAowId();
+      service.tocResultsOutcomesNonExclusiveByAowId();
+
+      expect(service.tocResultsOutcomesByAowId()).toEqual([own, shared]);
+      expect(service.tocResultsOutcomesByAowId().length).toBe(2);
+    });
+  });
+
   describe('Additional signals', () => {
     it('should update w3BilateralProjects signal', () => {
       const mockProjects = [

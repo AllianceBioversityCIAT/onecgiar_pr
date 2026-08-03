@@ -20,6 +20,15 @@ p {
   color: var(--pr-color-secondary-200);
 }
 
+.non-exclusive-chip {
+  flex: 0 0 auto;
+  background-color: var(--pr-color-blue-50);
+  border-color: var(--pr-color-blue-200);
+  color: var(--pr-color-blue-700);
+  cursor: help;
+  white-space: nowrap;
+}
+
 .kpi-statement-cell {
   display: flex;
   align-items: center;
