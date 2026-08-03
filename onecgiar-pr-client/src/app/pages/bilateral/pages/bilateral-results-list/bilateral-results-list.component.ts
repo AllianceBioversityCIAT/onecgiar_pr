@@ -226,7 +226,7 @@ export class BilateralResultsListComponent implements OnInit {
   }
 
   toggleW3(): void {
-    if (!this.showW3() && !this.showW1W2()) return;
+    if (this.showW3() && !this.showW1W2()) return;
     this.showW3.update(v => !v);
   }
 
@@ -236,7 +236,7 @@ export class BilateralResultsListComponent implements OnInit {
   }
 
   toggleLead(): void {
-    if (!this.showLead() && !this.showContributing()) return;
+    if (this.showLead() && !this.showContributing()) return;
     this.showLead.update(v => !v);
   }
 
@@ -245,9 +245,16 @@ export class BilateralResultsListComponent implements OnInit {
     this.showContributing.update(v => !v);
   }
 
-  /** W3 results in Editing status that the current user can manage. */
-  canManageResult(result: BilateralCenterResult): boolean {
-    return result.source === 'API' && result.status_id === 1 && this.canManageW3();
+  /** Any W3 result the current user can open and edit. */
+  canEditResult(result: BilateralCenterResult): boolean {
+    return result.source === 'API' && this.canManageW3();
+  }
+
+  /** W3 results that can be deleted.
+   * Admins may delete regardless of status; center users only while in Editing. */
+  canDeleteResult(result: BilateralCenterResult): boolean {
+    if (!this.canManageW3() || result.source !== 'API') return false;
+    return this.rolesService.isAdmin || result.status_id === 1;
   }
 
   editResult(result: BilateralCenterResult, event: Event): void {

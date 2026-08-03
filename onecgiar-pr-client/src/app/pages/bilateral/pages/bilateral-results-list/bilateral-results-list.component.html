@@ -205,7 +205,7 @@
                 <td class="brl_td brl_col_date">{{ result.created_date | date:'dd/MM/yyyy' }}</td>
                 @if (canManageW3()) {
                   <td class="brl_td brl_col_actions" (click)="$event.stopPropagation()">
-                    @if (canManageResult(result)) {
+                    @if (canEditResult(result)) {
                       @if (confirmingDeleteId() === result.id) {
                         <div class="brl_actions_confirm">
                           <span class="brl_actions_confirm_text">Delete?</span>
@@ -231,12 +231,14 @@
                             (click)="editResult(result, $event)">
                             <i class="pi pi-pencil"></i>
                           </button>
-                          <button
-                            class="brl_action_btn brl_action_btn--delete"
-                            title="Delete result"
-                            (click)="requestDelete(result, $event)">
-                            <i class="pi pi-trash"></i>
-                          </button>
+                          @if (canDeleteResult(result)) {
+                            <button
+                              class="brl_action_btn brl_action_btn--delete"
+                              title="Delete result"
+                              (click)="requestDelete(result, $event)">
+                              <i class="pi pi-trash"></i>
+                            </button>
+                          }
                         </div>
                       }
                     }

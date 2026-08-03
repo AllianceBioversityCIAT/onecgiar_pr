@@ -64,7 +64,22 @@ export class BilateralComponent implements OnInit, OnDestroy {
 
     // Admin users (or users without a matching center assignment): resolve via CLARISA catalog.
     const allCenters = await this.centersService.getData().catch(() => []);
-    const clarisaCenter = allCenters.find((c: any) => c.acronym === acronym);
+
+    // Direct acronym match first.
+    let clarisaCenter = allCenters.find((c: any) => c.acronym === acronym);
+
+    // Fallback: known aliases for the Alliance of Bioversity and CIAT
+    // (mirrors ALLIANCE_ALIASES in bilateral.service.ts on the server).
+    if (!clarisaCenter) {
+      const ALLIANCE_ACRONYMS = new Set(['ABC', 'CIAT-BIOVERSITY', 'CIAT (ALLIANCE)', 'BIOVERSITY (ALLIANCE)']);
+      if (ALLIANCE_ACRONYMS.has(acronym.toUpperCase())) {
+        clarisaCenter = allCenters.find((c: any) =>
+          (c.name as string).toLowerCase().includes('alliance') &&
+          (c.name as string).toLowerCase().includes('bioversity'),
+        );
+      }
+    }
+
     this.ctx.setCenter(
       acronym,
       clarisaCenter?.name ?? '',

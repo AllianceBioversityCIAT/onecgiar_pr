@@ -11,8 +11,10 @@
   padding: 36px 28px 100px;
 
   @media (min-width: 1400px) {
-    // Leave visual room for the fixed left progress aside.
-    margin-left: max(28px, calc((100vw - 1100px) / 2));
+    // The progress aside is fixed at left:12px with width:280px (right edge = 292px).
+    // Content must start at ≥292px + 24px gap = 316px to avoid overlap.
+    // On very wide viewports the centering formula naturally exceeds that, so we take the max.
+    margin-left: max(316px, calc((100vw - 1100px) / 2));
   }
 }
 
