@@ -405,5 +405,4 @@ export class BilateralAiService {
     }
     return draft;
   }
-
 }

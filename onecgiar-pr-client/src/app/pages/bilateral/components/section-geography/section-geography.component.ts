@@ -1,9 +1,11 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { tap } from 'rxjs';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { RegionsCountriesService } from '../../../../shared/services/global/regions-countries.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
@@ -25,6 +27,7 @@ import { GeoscopeManagementModule } from '../../../../shared/components/geoscope
 })
 export class SectionGeographyComponent implements OnInit {
   readonly api = inject(ApiService);
+  readonly bilateralApi = inject(BilateralApiService);
   readonly regionsCountriesSE = inject(RegionsCountriesService);
   readonly creationService = inject(BilateralCreationService);
   readonly autoSaveService = inject(BilateralAutoSaveService);
@@ -114,7 +117,11 @@ export class SectionGeographyComponent implements OnInit {
   queueGeographySave(debounceMs = 500): void {
     this.autoSaveService.schedulePayload('geography', this.buildGeographyPayload(), {
       debounceMs,
-      statusKey: 'geography'
+      statusKey: 'geography',
+      executor: (resultId, body) =>
+        this.bilateralApi.PATCH_geographic(resultId, body).pipe(
+          tap(() => this.loadGeographicData()),
+        ),
     });
     this.updateTracker();
   }

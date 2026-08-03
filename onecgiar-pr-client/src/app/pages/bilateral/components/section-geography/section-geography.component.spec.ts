@@ -7,6 +7,7 @@ import { RegionsCountriesService } from '../../../../shared/services/global/regi
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
+import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
 
 describe('SectionGeographyComponent', () => {
@@ -44,6 +45,12 @@ describe('SectionGeographyComponent', () => {
           },
         },
         { provide: BilateralMdsTrackerService, useValue: mdsTracker },
+        {
+          provide: BilateralApiService,
+          useValue: {
+            PATCH_geographic: jest.fn().mockReturnValue(of({ status: 200 })),
+          },
+        },
       ],
     }).compileComponents();
 
@@ -147,5 +154,19 @@ describe('SectionGeographyComponent', () => {
         expect.objectContaining({ key: 'extra-geo-answer', filled: true }),
       ])
     );
+  });
+
+  it('should refresh the persisted geography after a successful save', () => {
+    const getGeographic = component.api.resultsSE.GET_geographicSectionp25 as jest.Mock;
+    const patchGeographic = component.bilateralApi.PATCH_geographic as jest.Mock;
+    const schedulePayload = component.autoSaveService.schedulePayload as jest.Mock;
+
+    component.queueGeographySave(0);
+
+    const options = schedulePayload.mock.calls[0][2];
+    options.executor(1, { geo_scope_id: GeoScopeEnum.COUNTRY }).subscribe();
+
+    expect(patchGeographic).toHaveBeenCalledWith(1, { geo_scope_id: GeoScopeEnum.COUNTRY });
+    expect(getGeographic).toHaveBeenCalledTimes(1);
   });
 });

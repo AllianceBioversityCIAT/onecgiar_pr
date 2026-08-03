@@ -128,7 +128,8 @@
                   [index]="idx"
                   [obj_countrySelected]="geographicLocationBody.countries"
                   [name]="country.name"
-                  [readOnly]="false">
+                  [readOnly]="false"
+                  (changed)="queueGeographySave()">
                 </app-sub-geoscope>
               </div>
             }
@@ -252,9 +253,10 @@
                   <app-sub-geoscope
                     [obj_country]="country"
                     [index]="idx"
-                    [obj_countrySelected]="extraGeographicLocationBody.countries"
-                    [name]="country.name"
-                    [readOnly]="false">
+                  [obj_countrySelected]="extraGeographicLocationBody.countries"
+                  [name]="country.name"
+                  [readOnly]="false"
+                  (changed)="queueGeographySave()">
                   </app-sub-geoscope>
                 </div>
               }

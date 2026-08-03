@@ -131,7 +131,9 @@ describe('ResultRepository (unit)', () => {
 
     const [sql, params] = queryMock.mock.calls[0];
     expect(sql).toContain('r.creation_method');
-    expect(sql).toContain("CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated");
+    expect(sql).toContain(
+      "CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated",
+    );
     expect(sql).toContain('ORDER BY r.created_date DESC, r.id DESC');
     expect(params).toEqual(['BIO', 'BIO', 36]);
   });

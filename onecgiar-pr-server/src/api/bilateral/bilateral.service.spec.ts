@@ -543,16 +543,19 @@ describe('BilateralService (unit)', () => {
       ['CIAT', false],
       ['Bioversity', false],
       ['Some Other Org', false],
-    ])('normalizeInstitutionValue(%s) → isAlias=%s', (input, shouldNormalize) => {
-      const { service } = makeService();
-      const result = (service as any).normalizeInstitutionValue(input);
-      if (shouldNormalize) {
-        expect(result).toBe(
-          'Alliance of Bioversity and CIAT - Headquarter (Bioversity International)',
-        );
-      } else {
-        expect(result).toBe(input);
-      }
-    });
+    ])(
+      'normalizeInstitutionValue(%s) → isAlias=%s',
+      (input, shouldNormalize) => {
+        const { service } = makeService();
+        const result = (service as any).normalizeInstitutionValue(input);
+        if (shouldNormalize) {
+          expect(result).toBe(
+            'Alliance of Bioversity and CIAT - Headquarter (Bioversity International)',
+          );
+        } else {
+          expect(result).toBe(input);
+        }
+      },
+    );
   });
 });
