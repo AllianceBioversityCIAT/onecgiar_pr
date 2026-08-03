@@ -48,7 +48,7 @@ The search input and the three overlays hosted by the indicators table (Report-R
 - **THEN** the tab still reads `Outcomes (6)`
 
 ### Requirement: Description on the Intermediate Outcomes page
-The sidebar page `Intermediate Outcomes` (`/aow/unplanned`) SHALL display, above its table, a note stating that these are the Science Program's Theory of Change entries not assigned to a specific Area of Work, that they are gathered there and also appear tagged inside every Area of Work, and that the Outcomes shown when opening an Area of Work are the ones planned for that Area of Work only.
+The sidebar page `Intermediate Outcomes` (`/aow/unplanned`) SHALL display, above its table, a note stating that these are the Intermediate Outcomes of the Science Program/Accelerator that are not assigned to a specific Area of Work, and that they are displayed both there and within the Areas of Work to which they are mapped. Wording approved by the requesters on 2026-08-03.
 
 #### Scenario: Note visible on the page
 - **WHEN** a user opens the Intermediate Outcomes page from the sidebar
