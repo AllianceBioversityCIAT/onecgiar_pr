@@ -26,6 +26,7 @@ interface TocResultRow {
   result_type_id?: number | null;
   result_type_name?: string | null;
   result_level_id?: number | null;
+  is_aow?: number | null;
   center_id?: number | null;
   center_acronym?: string | null;
 }
@@ -36,6 +37,8 @@ export interface TocResultResponse {
   result_title: string;
   related_node_id: string | null;
   result_level_id?: number | null;
+  /** True when the ToC node is explicitly linked to the queried AOW (wp_id IS NOT NULL and matched). False for program-level nodes that appear under all AOWs. */
+  is_aow?: boolean;
   indicators: Array<{
     indicator_id: number;
     indicator_description: string | null;
@@ -379,6 +382,7 @@ export class AoWBilateralRepository {
         tr.category,
         tr.result_title AS result_title,
         tr.related_node_id AS related_node_id,
+        ${options.areaAcronym ? '(wp.toc_id IS NOT NULL)' : 'NULL'} AS is_aow,
         tri.id AS indicator_id,
         tri.indicator_description,
         tri.toc_result_indicator_id,
@@ -503,6 +507,7 @@ export class AoWBilateralRepository {
           result_title: row.result_title,
           related_node_id: row.related_node_id,
           result_level_id: row.result_level_id ?? null,
+          is_aow: Boolean(row.is_aow),
           indicators: [],
         });
       }
@@ -534,7 +539,11 @@ export class AoWBilateralRepository {
       }
     }
 
-    return Array.from(grouped.values());
+    const results = Array.from(grouped.values());
+    if (results.some((r) => r.is_aow)) {
+      results.sort((a, b) => Number(b.is_aow) - Number(a.is_aow));
+    }
+    return results;
   }
 
   async findResultById(tocResultId: number, phaseUuid: string) {
