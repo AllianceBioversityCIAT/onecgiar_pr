@@ -54,17 +54,33 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   gettingReport = false;
   combine = true;
 
+  /**
+   * Default columns match CURRENT Results Center (PRMS-Shell.dc.html):
+   * Code · Title · Program · Center · Phase · Indicator category · Funding · Status · Created
+   * PDF / Created by are not default chrome — PDF lives in the row action menu.
+   */
   columnOrder = [
-    { title: 'Result code', attr: 'result_code', center: true, width: '90px' },
-    { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
-    { title: 'Funding Source', attr: 'source_name', center: true, width: '120px' },
-    { title: 'Center', attr: 'lead_center', center: true, width: '100px' },
-    { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
-    { title: 'Indicator category', attr: 'result_type', center: true, width: '100px' },
-    { title: 'Submitter', attr: 'submitter', center: true, width: '75px' },
-    { title: 'Status', attr: 'full_status_name_html', center: true, width: '124px' },
-    { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
-    { title: 'Created by	', attr: 'full_name', width: '120px' }
+    { title: 'Code', attr: 'result_code', center: false, width: '88px' },
+    { title: 'Title', attr: 'title', class: 'notCenter', width: '280px' },
+    { title: 'Program', attr: 'submitter', center: false, width: '88px' },
+    { title: 'Center', attr: 'lead_center', center: false, width: '110px' },
+    { title: 'Phase', attr: 'phase_name', center: false, width: '100px' },
+    { title: 'Indicator category', attr: 'result_type', center: false, width: '140px' },
+    { title: 'Funding', attr: 'source_name', center: false, width: '100px' },
+    { title: 'Status', attr: 'full_status_name_html', center: false, width: '110px' },
+    { title: 'Created', attr: 'created_date', center: false, width: '100px' }
+  ];
+
+  /** Same deterministic palette as the sidebar program dots. */
+  private readonly programDotPalette: readonly string[] = [
+    'var(--pr-chart-3)',
+    'var(--pr-color-green-500)',
+    'var(--pr-color-blue-500)',
+    'var(--pr-sidebar-accent)',
+    'var(--pr-color-yellow-300)',
+    'var(--pr-chart-4)',
+    'var(--pr-color-orange-500)',
+    'var(--pr-color-red-100)'
   ];
   items: ItemMenu[] = [
     {
@@ -280,6 +296,57 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   /** True when this result comes from a W3/bilateral funding source. */
   isBilateral(result: CurrentResult): boolean {
     return result?.source_name === 'W3/Bilaterals';
+  }
+
+  /** Program / submitter official code for the Program column. */
+  programCode(result: CurrentResult): string {
+    return String(result?.submitter ?? result?.initiative_official_code ?? '').trim();
+  }
+
+  programDotColor(code: string | null | undefined): string {
+    if (!code) return this.programDotPalette[0];
+    const digits = code.match(/\d+/)?.[0];
+    const index = digits ? Number(digits) : [...code].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 0);
+    return this.programDotPalette[index % this.programDotPalette.length];
+  }
+
+  /** CURRENT short phase: `2026 · P25` from longer phase_name / year + acronym. */
+  phaseShort(result: CurrentResult): string {
+    const year = result?.phase_year ?? result?.reported_year;
+    const portfolio = result?.acronym ?? result?.portfolio;
+    if (year && portfolio) return `${year} · ${portfolio}`;
+    const name = String(result?.phase_name ?? '').trim();
+    if (!name) return '—';
+    // "Reporting 2026 - P25" / "Reporting 2026 (Open)" → "2026 · P25" when possible
+    const yearMatch = name.match(/(20\d{2})/);
+    const portMatch = name.match(/\b(P\d{2})\b/i);
+    if (yearMatch && portMatch) return `${yearMatch[1]} · ${portMatch[1].toUpperCase()}`;
+    if (yearMatch) return yearMatch[1];
+    return name;
+  }
+
+  /** Compact funding label (CURRENT: W1/W2 · Bilateral · W3). */
+  fundingLabel(result: CurrentResult): string {
+    const raw = String(result?.source_name ?? '').trim();
+    if (!raw) return '—';
+    if (/w3\s*\/?\s*bilateral/i.test(raw) || /bilateral/i.test(raw)) return 'Bilateral';
+    return raw;
+  }
+
+  /** Recent = last 7 days (CURRENT purple code dot). */
+  isRecentResult(result: CurrentResult): boolean {
+    if (!result?.created_date) return false;
+    const t = new Date(result.created_date).getTime();
+    if (Number.isNaN(t)) return false;
+    return Date.now() - t < 7 * 24 * 60 * 60 * 1000;
+  }
+
+  statusClass(result: CurrentResult): string {
+    return `status_tag status_${result?.status_id ?? ''}`;
+  }
+
+  pdfHref(result: CurrentResult): string {
+    return `/reports/result-details/${result?.result_code}?phase=${result?.version_id}`;
   }
 
   onPressAction(result: CurrentResult): void {

@@ -465,16 +465,15 @@ describe('ResultsListComponent', () => {
   describe('Component Properties', () => {
     it('should have correct column order configuration', () => {
       expect(component.columnOrder).toEqual([
-        { title: 'Result code', attr: 'result_code', center: true, width: '90px' },
-        { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
-        { title: 'Funding Source', attr: 'source_name', center: true, width: '120px' },
-        { title: 'Center', attr: 'lead_center', center: true, width: '100px' },
-        { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
-        { title: 'Indicator category', attr: 'result_type', center: true, width: '100px' },
-        { title: 'Submitter', attr: 'submitter', center: true, width: '75px' },
-        { title: 'Status', attr: 'full_status_name_html', center: true, width: '124px' },
-        { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
-        { title: 'Created by	', attr: 'full_name', width: '120px' }
+        { title: 'Code', attr: 'result_code', center: false, width: '88px' },
+        { title: 'Title', attr: 'title', class: 'notCenter', width: '280px' },
+        { title: 'Program', attr: 'submitter', center: false, width: '88px' },
+        { title: 'Center', attr: 'lead_center', center: false, width: '110px' },
+        { title: 'Phase', attr: 'phase_name', center: false, width: '100px' },
+        { title: 'Indicator category', attr: 'result_type', center: false, width: '140px' },
+        { title: 'Funding', attr: 'source_name', center: false, width: '100px' },
+        { title: 'Status', attr: 'full_status_name_html', center: false, width: '110px' },
+        { title: 'Created', attr: 'created_date', center: false, width: '100px' }
       ]);
     });
 

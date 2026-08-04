@@ -5,7 +5,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 8px 32px 32px;
+  // CURRENT page shell: padding 32px (PRMS-Shell.dc.html Results Center)
+  padding: 24px 32px 40px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .rc-page-header {
@@ -73,22 +76,27 @@
   // display:block overrides Tailwind's `.table` utility (display:table), which
   // collided with this semantic class and shrank the container to its content.
   display: block;
-  padding-bottom: 100px;
+  padding-bottom: 24px;
   position: relative;
 
   border: 1px solid var(--pr-border, #e3e3e8);
   border-radius: 12px;
   background: #fff;
-  overflow: hidden;
+  // Horizontal scroll for many columns; vertical scroll stays on the page.
+  overflow-x: auto;
+  overflow-y: hidden;
 
   // Restore the pre-redesign table behavior: honor the fixed column widths so the columns
   // stay compact (collapse to their defined size) instead of auto-stretching to fit content.
   ::ng-deep .pr-table {
     table-layout: fixed;
-    min-width: 1300px;
+    min-width: 1100px;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
 
     thead th {
-      white-space: normal;
+      white-space: nowrap;
       background: #f7f7f9 !important;
       color: #6b6580;
       font-size: 11px;
@@ -96,7 +104,11 @@
       text-transform: uppercase;
       letter-spacing: 0.04em;
       height: 40px;
+      padding: 0 12px !important;
       border-bottom: 1px solid #e3e3e8 !important;
+      border-right: none !important;
+      border-left: none !important;
+      vertical-align: middle;
     }
 
     tbody tr {
@@ -105,19 +117,29 @@
       &:hover {
         background: #fafafb;
       }
+
+      &:last-child td {
+        border-bottom: none !important;
+      }
     }
 
     tbody td {
       border-bottom: 1px solid #eeeef1 !important;
+      border-right: none !important;
+      border-left: none !important;
       font-size: 13px;
+      padding: 6px 12px !important;
+      vertical-align: middle;
+      color: var(--pr-text, #2b2838);
+      overflow: hidden;
     }
   }
 
   .align-center {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
-    padding: 2px 10px;
+    padding: 0;
   }
 }
 
@@ -126,7 +148,152 @@
   padding-top: 0;
 }
 
-/* Status chips — CURRENT palette */
+/* ── Cell recipes (CURRENT table) ── */
+.rc-cell-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 28px;
+  max-width: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.rc-code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #191524;
+
+  &__num {
+    min-width: 0;
+  }
+}
+
+.rc-new-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 999px;
+  background: #6b46e5;
+}
+
+.rc-title {
+  font-size: 14px;
+  font-weight: 400;
+  color: #2b2838;
+
+  &__text {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &:hover .rc-title__text {
+    color: #5733c4;
+  }
+}
+
+.rc-program {
+  gap: 6px;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 999px;
+  }
+
+  &__code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: #5d5872;
+  }
+}
+
+.rc-plain {
+  font-size: 13px;
+  font-weight: 400;
+  color: #2b2838;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rc-phase {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #5d5872;
+  white-space: nowrap;
+}
+
+.rc-funding {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #2b2838;
+  white-space: nowrap;
+}
+
+.rc-date {
+  font-size: 13px;
+  font-weight: 400;
+  color: #5d5872;
+  white-space: nowrap;
+}
+
+.rc-status-wrap {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.rc-row-menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #5d5872;
+  cursor: pointer;
+
+  &:hover {
+    background: #f3f2f7;
+  }
+
+  i {
+    font-size: 14px;
+  }
+}
+
+.rc-th-action {
+  width: 44px !important;
+}
+
+.discontinued-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--pr-color-orange-500, #f97316);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i {
+    color: white;
+    font-size: 11px;
+  }
+}
+
+/* Status chips — CURRENT palette (force inside table cells) */
 .status_tag {
   display: inline-flex;
   align-items: center;
@@ -135,133 +302,61 @@
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
-// Editing / draft-like
+// Editing / Not started
 .status_tag.status_1 {
-  color: #6b7280;
-  background: #f3f4f6;
+  color: #6b7280 !important;
+  background: #f3f4f6 !important;
 }
-// Quality Assessed
+// Quality Assessed / In QA-ish
 .status_tag.status_2 {
-  color: #0e7490;
-  background: #cffafe;
+  color: #0e7490 !important;
+  background: #cffafe !important;
 }
 // Submitted
 .status_tag.status_3 {
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: #1d4ed8 !important;
+  background: #dbeafe !important;
 }
 // Discontinued
 .status_tag.status_4 {
-  color: #6b7280;
-  background: #f3f4f6;
+  color: #6b7280 !important;
+  background: #f3f4f6 !important;
 }
-// Pending review / In progress-ish
+// Pending review / In progress
 .status_tag.status_5 {
-  color: #b45309;
-  background: #fef3c7;
+  color: #b45309 !important;
+  background: #fef3c7 !important;
 }
 // Approved
 .status_tag.status_6 {
-  color: #047857;
-  background: #d1fae5;
+  color: #047857 !important;
+  background: #d1fae5 !important;
 }
 // Rejected
 .status_tag.status_7 {
-  color: #b91c1c;
-  background: #fee2e2;
+  color: #b91c1c !important;
+  background: #fee2e2 !important;
 }
 
-.meta_chip {
+.in-qa-tag {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 3px 9px;
-  font-size: 12px;
-  font-weight: 500;
-  background: #f3f2f7;
-  color: #2b2838;
-
-  &--type {
-    background: #ede9fe;
-    color: #5733c4;
-  }
-
-  &--center {
-    background: #f3f2f7;
-    color: #2b2838;
-  }
-
-  &--bilateral {
-    background: #fff7ed;
-    color: #c2410c;
-    border: 1px solid #fdba74;
-  }
-}
-
-.new_tag {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  margin-right: 6px;
-  border-radius: 6px;
-  background: #6b46e5;
-  color: #fff;
+  padding: 2px 8px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
+  color: #0e7490;
+  background: #ecfeff;
 }
 
 .subResults {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
-
-td {
-  a {
-    display: flex;
-    align-items: center;
-    min-height: 35px;
-    color: var(--pr-color-secondary-400);
-  }
-
-  &.title {
-    a {
-      gap: 8px;
-    }
-
-    .discontinued-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background-color: var(--pr-color-orange-500, #f97316);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      padding-bottom: 2px;
-
-      i {
-        color: white;
-        font-size: 12px;
-      }
-    }
-  }
-}
-
-.truncate-multiline {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  line-clamp: 3;
-  -webkit-line-clamp: 3;
-  text-overflow: ellipsis;
-}
-
-.text-center {
-  text-align: center;
+  align-items: flex-end;
+  gap: 4px;
 }
 
 .noDataText {
@@ -269,16 +364,6 @@ td {
   padding: 50px 0px;
   @include fonts.pr-typography('h4');
   color: var(--pr-color-primary-300);
-}
-
-.new_tag {
-  background-color: var(--pr-color-primary-300);
-  margin-right: 10px;
-  padding: 2px 3px;
-  @include fonts.pr-typography('body-3');
-  border-radius: 3px;
-  color: var(--pr-color-white);
-  height: 17px;
 }
 
 .table_menu_item {

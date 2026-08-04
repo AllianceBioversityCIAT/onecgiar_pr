@@ -14,14 +14,11 @@
 @let shown = filteredResults?.length ?? 0;
 
 <div class="rc-page">
-  <!-- CURRENT chrome: title + subtitle + report new -->
+  <!-- CURRENT chrome: title + subtitle -->
   <header class="rc-page-header">
     <div class="rc-page-header__text">
       <h1 class="rc-page-title">Results Center</h1>
       <p class="rc-page-sub">Search and export results across all Science Programs.</p>
-    </div>
-    <div class="rc-page-header__actions">
-      <app-report-new-result-button [ngClass]="{ disabledButtons: !activeButtons }"></app-report-new-result-button>
     </div>
   </header>
 
@@ -55,7 +52,7 @@
       [loading]="this.resultsListService.showDeletingResultSpinner || (this.resultsListService.showLoadingResultSpinner && !filteredResults?.length)"
       [paginator]="filteredResults?.length"
       [rows]="10"
-      styleClass="p-datatable-gridlines p-datatable-sm"
+      styleClass="rc-pr-table"
       selectionMode="single"
       [first]="this.resultsListFilterSE.text_to_search() && 0"
       [rowsPerPageOptions]="[10, 50, 100]">
@@ -76,126 +73,141 @@
             </th>
           }
 
-          <th id="pdf" style="width: 50px">PDF</th>
-
           @if (!this.api.rolesSE.platformIsClosed) {
-            <th id="action" style="width: 60px">Action</th>
+            <th id="action" class="rc-th-action" style="width: 44px"></th>
           }
         </tr>
       </ng-template>
 
       <ng-template prTableBody let-result>
-        <tr>
-          @for (column of columnOrder; track column.attr; let i = $index) {
+        <tr class="rc-row">
+          @for (column of columnOrder; track column.attr) {
             <td
-              [class]="column.attr"
+              [class]="'rc-td rc-td--' + column.attr"
               [style.width]="column.width"
               [style.max-width]="column.width"
-              [style.min-width]="column.width"
-              style="cursor: pointer">
+              [style.min-width]="column.width">
               @for (subResult of result['results']; track subResult.id) {
-                <a
-                  [class]="column.class"
-                  [routerLink]="getResultLink(subResult)"
-                  [queryParams]="getResultQueryParams(subResult)"
-                  (click)="onResultLinkClick($event, subResult)">
-                  @if (i == 1) {
-                    @if (subResult.is_new && !subResult.legacy_id) {
-                      <div class="new_tag">New</div>
-                    } @else if (subResult.legacy_id) {
-                      <div class="new_tag pre">Pre 2022</div>
+                @if (column.attr === 'result_code') {
+                  <a
+                    class="rc-cell-link rc-code"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    @if (isRecentResult(subResult)) {
+                      <span class="rc-new-dot" title="Created in the last 7 days"></span>
                     }
-                  }
-
-                  @if (
-                    column.attr === 'title' &&
-                    subResult?.status_id === '4' &&
-                    (!subResult?.has_discontinued_options ||
-                      subResult?.has_discontinued_options === '0' ||
-                      subResult?.has_discontinued_options === 0) &&
-                    (!subResult?.discontinued_options || !subResult?.discontinued_options?.length || subResult?.discontinued_options?.length === 0)
-                  ) {
-                    <div
-                      class="discontinued-icon"
-                      prTooltip="This innovation is tagged as discontinued, but no justification has been provided."
-                      prTooltipPosition="right">
-                      <i class="pi pi-exclamation-triangle"></i>
-                    </div>
-                  }
-
-                  @if (column.attr === 'full_status_name_html') {
-                    <div>
-                      <div [class]="`status_tag status_${subResult.status_id}`" [prTooltip]="subResult.inQA ? 'This result is being QAed' : ''">
-                        {{ subResult.status_name }}
-                      </div>
-                      @if (subResult.inQA) {
-                        <div class="in-qa-tag">In QA</div>
-                      }
-                    </div>
-                  } @else if (column.attr === 'result_code') {
-                    <!-- code + a marker for results that open in the reporting framework (not Result Detail) -->
-                    <div class="flex items-center justify-center gap-1">
-                      <span [innerHTML]="subResult.result_code"></span>
-                      @if (opensInFramework(subResult)) {
-                        <i
-                          class="material-icons-round meta_code_icon"
-                          prTooltip="Opens in the reporting framework (bilateral review) — not Result Detail"
-                          prTooltipPosition="right">open_in_new</i>
-                      }
-                    </div>
-                  } @else if (column.attr === 'source_name' && subResult.source_name) {
-                    <div class="flex w-full items-center justify-center">
-                      <span class="meta_chip" [ngClass]="{ 'meta_chip--bilateral': isBilateral(subResult) }">{{ subResult.source_name }}</span>
-                    </div>
-                  } @else if (column.attr === 'result_type' && subResult.result_type) {
-                    <div class="flex w-full items-center justify-center">
-                      <span class="meta_chip meta_chip--type">{{ subResult.result_type }}</span>
-                    </div>
-                  } @else if (column.attr === 'lead_center' && subResult.lead_center) {
-                    <div class="flex w-full items-center justify-center">
-                      <span class="meta_chip meta_chip--center">{{ subResult.lead_center }}</span>
-                    </div>
-                  } @else {
-                    <!-- NOTE (P2-3049): empty cell is intentional when a result has no lead center (led by an external partner).
-                         Future change: fall back to showing the lead partner here instead of leaving it blank. -->
-                    <div
-                      [prTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
-                      [ngClass]="{ 'flex items-center justify-center w-full': column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
-                      [innerHTML]="column.attr === 'lead_center' ? (subResult.lead_center || '') : (column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'yyyy-MM-dd'))"></div>
-                  }
-                </a>
+                    <span class="rc-code__num" [innerHTML]="subResult.result_code"></span>
+                  </a>
+                } @else if (column.attr === 'title') {
+                  <a
+                    class="rc-cell-link rc-title"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)"
+                    [attr.title]="subResult.title">
+                    @if (
+                      subResult?.status_id === '4' &&
+                      (!subResult?.has_discontinued_options ||
+                        subResult?.has_discontinued_options === '0' ||
+                        subResult?.has_discontinued_options === 0) &&
+                      (!subResult?.discontinued_options ||
+                        !subResult?.discontinued_options?.length ||
+                        subResult?.discontinued_options?.length === 0)
+                    ) {
+                      <span
+                        class="discontinued-icon"
+                        prTooltip="This innovation is tagged as discontinued, but no justification has been provided."
+                        prTooltipPosition="right">
+                        <i class="pi pi-exclamation-triangle"></i>
+                      </span>
+                    }
+                    <span class="rc-title__text">{{ subResult.title }}</span>
+                  </a>
+                } @else if (column.attr === 'submitter') {
+                  <a
+                    class="rc-cell-link rc-program"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    <span class="rc-program__dot" [style.background]="programDotColor(programCode(subResult))"></span>
+                    <span class="rc-program__code">{{ programCode(subResult) || '—' }}</span>
+                  </a>
+                } @else if (column.attr === 'lead_center') {
+                  <a
+                    class="rc-cell-link rc-plain"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)"
+                    [attr.title]="subResult.lead_center || ''">
+                    {{ subResult.lead_center || '—' }}
+                  </a>
+                } @else if (column.attr === 'phase_name') {
+                  <a
+                    class="rc-cell-link rc-phase"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)"
+                    [attr.title]="subResult.phase_name || ''">
+                    {{ phaseShort(subResult) }}
+                  </a>
+                } @else if (column.attr === 'result_type') {
+                  <a
+                    class="rc-cell-link rc-plain"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)"
+                    [attr.title]="subResult.result_type || ''">
+                    {{ subResult.result_type || '—' }}
+                  </a>
+                } @else if (column.attr === 'source_name') {
+                  <a
+                    class="rc-cell-link rc-funding"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    {{ fundingLabel(subResult) }}
+                  </a>
+                } @else if (column.attr === 'full_status_name_html') {
+                  <a
+                    class="rc-cell-link rc-status-wrap"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    <span
+                      [class]="statusClass(subResult)"
+                      [prTooltip]="subResult.inQA ? 'This result is being QAed' : ''">
+                      {{ subResult.status_name }}
+                    </span>
+                    @if (subResult.inQA) {
+                      <span class="in-qa-tag">In QA</span>
+                    }
+                  </a>
+                } @else if (column.attr === 'created_date') {
+                  <a
+                    class="rc-cell-link rc-date"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    {{ subResult.created_date | date: 'dd MMM yyyy' }}
+                  </a>
+                }
               }
             </td>
           }
 
-          <td>
-            <div class="subResults">
-              @for (subResult of result['results']; track subResult.id) {
-                <a
-                  prTooltip="Click to view the pdf"
-                  prTooltipPosition="bottom"
-                  [href]="'/reports/result-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
-                  target="_blank"
-                  rel="noopener noreferrer">
-                  <app-pdf-icon></app-pdf-icon>
-                </a>
-              }
-            </div>
-          </td>
-
           @if (!this.api.rolesSE.platformIsClosed) {
-            <td>
+            <td class="rc-td rc-td--action">
               <div class="subResults">
                 @for (subResult of result['results']; track subResult.id) {
-                  <div class="icon_container text-center" aria-hidden="false">
-                    <button
-                      type="button"
-                      class="pi pi-ellipsis-v"
-                      (click)="toggleMenu($event, subResult)"
-                      (keydown.enter)="toggleMenu($event)"
-                      aria-label="Open actions menu"
-                      style="background: none; border: none; cursor: pointer; padding: 0"></button>
-                  </div>
+                  <button
+                    type="button"
+                    class="rc-row-menu"
+                    (click)="toggleMenu($event, subResult)"
+                    (keydown.enter)="toggleMenu($event, subResult)"
+                    aria-label="More actions">
+                    <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+                  </button>
                 }
               </div>
             </td>
@@ -214,16 +226,10 @@
 
       <ng-template prTableEmpty>
         <tr style="height: 200px">
-          <td [attr.colspan]="columnOrder.length + 2" class="noDataText">There are no results for the selected filters.</td>
+          <td [attr.colspan]="columnOrder.length + 1" class="noDataText">There are no results for the selected filters.</td>
         </tr>
       </ng-template>
     </app-pr-table>
-
-    @if (filteredResults?.length) {
-      <div class="rc-footer-total">
-        Showing {{ filteredResults?.length }} of {{ this.api.dataControlSE.resultsListSignal().length }}
-      </div>
-    }
   </div>
 </div>
 
@@ -244,6 +250,17 @@
           <span [style]="item.inlineStyle">{{ item.label }}</span>
         </div>
       }
+    }
+    @if (this.api.dataControlSE.currentResult; as cur) {
+      <a
+        class="table_menu_item"
+        [href]="pdfHref(cur)"
+        target="_blank"
+        rel="noopener noreferrer"
+        (click)="closeMenu()">
+        <i class="pi pi-file-pdf" style="color: var(--pr-color-primary-300)"></i>
+        <span>Download PDF</span>
+      </a>
     }
   </div>
 }

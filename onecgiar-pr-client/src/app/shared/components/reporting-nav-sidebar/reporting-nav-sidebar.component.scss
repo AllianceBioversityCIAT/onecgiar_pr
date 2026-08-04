@@ -50,11 +50,16 @@ hlm-sidebar {
     border-right: 1px solid var(--pr-sidebar-border) !important;
   }
 
-  // Inner shell used when collapsible=icon
+  // Inner shell used when collapsible=icon — must stay a fixed-height flex column
+  // so sidebar-content can shrink and scroll.
   [data-slot='sidebar-inner'],
   [data-sidebar='sidebar'] {
     background-color: transparent !important;
     background-image: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    height: 100% !important;
   }
 
   ul[hlmSidebarMenu] {
@@ -75,11 +80,37 @@ hlm-sidebar {
   }
 
   // Content area: CURRENT `padding: 4px 12px 16px` on the scroll column.
+  // Force the flex/scroll chain so tall Platform + programs lists can scroll
+  // (h-svh shell → flex column → flex-1 min-h-0 → overflow-y auto).
   [data-slot='sidebar-content'] {
     padding: 4px 12px 16px !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    // Thin dark-on-dark scrollbar so scroll is discoverable without looking noisy.
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  }
+
+  [data-slot='sidebar-footer'] {
+    flex: none !important;
   }
 
   [data-slot='sidebar-header'] {
+    flex: none !important;
     padding-left: 16px !important;
     padding-right: 16px !important;
   }

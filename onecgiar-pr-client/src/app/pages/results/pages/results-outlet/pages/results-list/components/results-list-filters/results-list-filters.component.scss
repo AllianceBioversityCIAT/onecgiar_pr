@@ -59,11 +59,74 @@
     max-width: 220px;
   }
 
-  // Force multiselect trigger height toward CURRENT 40px
-  ::ng-deep .p-multiselect,
-  ::ng-deep .pr-filter-multiselect,
-  ::ng-deep .p-multiselect-label-container {
-    min-height: 40px;
+  // CURRENT select: plain 40px white field + muted chevron — no purple bar chrome.
+  ::ng-deep .custom_select,
+  ::ng-deep .pr-filter-ms {
+    width: 100%;
+
+    .field {
+      min-height: 40px;
+      height: 40px;
+      padding: 0 36px 0 12px;
+      border: 1px solid var(--pr-border, #e3e3e8);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: none;
+      gap: 8px;
+
+      &:hover {
+        border-color: #d5d5dc;
+      }
+
+      &:focus-within {
+        border-color: var(--pr-color-primary-200, #a78bfa);
+        box-shadow: 0 0 0 3px rgba(107, 70, 229, 0.12);
+      }
+
+      .text {
+        padding-right: 0;
+        font-size: 14px;
+        font-weight: 400;
+        color: var(--pr-text-heading, #191524);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &.select_placeholder {
+          color: var(--pr-text-subtle, #9691a8);
+        }
+      }
+
+      .icon_container {
+        display: none !important;
+      }
+
+      .icon_dropdown {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+        font-size: 12px;
+        color: var(--pr-text-secondary, #5d5872) !important;
+        pointer-events: none;
+      }
+
+      .options {
+        top: calc(100% + 4px);
+        bottom: auto;
+        left: 0;
+        min-width: 100%;
+        width: max-content;
+        max-width: 320px;
+        max-height: 320px;
+        border: 1px solid var(--pr-border, #e3e3e8);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+        overflow: hidden;
+        transform-origin: top center;
+      }
+    }
   }
 }
 
@@ -155,6 +218,42 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+
+  // Same clean CURRENT trigger inside More filters popover
+  ::ng-deep .custom_select,
+  ::ng-deep .pr-filter-ms {
+    width: 100%;
+
+    .field {
+      min-height: 40px;
+      height: 40px;
+      padding: 0 36px 0 12px;
+      border: 1px solid var(--pr-border, #e3e3e8);
+      border-radius: 8px;
+      background: #fff;
+
+      .icon_container {
+        display: none !important;
+      }
+
+      .icon_dropdown {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+        color: var(--pr-text-secondary, #5d5872) !important;
+      }
+
+      .options {
+        top: calc(100% + 4px);
+        bottom: auto;
+        max-height: 260px;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+      }
+    }
+  }
 }
 
 .rc-more-label {
