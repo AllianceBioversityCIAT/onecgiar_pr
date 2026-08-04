@@ -225,14 +225,28 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   // ----- P2-2929 (2026): Contributing Science Program/Accelerator split (VISUAL ONLY; pending/save deferred per Juan David) -----
   readonly OTHER_SP_CODE = '__OTHER_SCIENCE__';
   // QA 2026-07-14: wording unified with the Report-result popup (aow-hlo-create-modal) — keep both in sync.
+  // P2-3201 (INC-158283): the previous note tied this field to the 2026 ToC and was flagged as
+  // inaccurate by the CGIAR System Org. Replaced by the self-registration note.
   contributingScienceInfoNote =
-    "The Science Programs listed below were identified in your 2026 ToC. To select a different Science Program, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
+    'The P/A submitting the result is automatically recorded as a contributor. You do not need to add your own P/A to the list of contributors.';
   noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
 
   // P2-3112: generic "result" wording of the linked/bundled question for non-innovation result types
   // (Innovation Use/Dev keep their existing "innovation" wording).
-  linkedResultQuestionLabel =
-    'Is this result linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?';
+  // P2-3201 (INC-158283): unified wording, with a dedicated variant for Policy change.
+  // Reported by Santiago on 4 Aug: the previous fix only touched the FieldsManager entry used by
+  // Innovation types, so every other category — Policy change included — still showed the old text.
+  readonly LINKED_RESULT_QUESTION = 'Is this result linked to, or (for innovations) bundled with, another reported result?';
+  readonly POLICY_CHANGE_LINKED_QUESTION =
+    'Have other reported results contributed to this policy change? Such as knowledge product, capacity sharing for development, innovation development, innovation use?';
+  /** Mirrors the server's `ResultTypeEnum.POLICY_CHANGE`; the client has no shared enum for result types. */
+  private readonly POLICY_CHANGE_RESULT_TYPE_ID = 1;
+
+  linkedResultQuestionLabel = computed(() =>
+    this.api.dataControlSE.currentResultSignal()?.result_type_id == this.POLICY_CHANGE_RESULT_TYPE_ID
+      ? this.POLICY_CHANGE_LINKED_QUESTION
+      : this.LINKED_RESULT_QUESTION
+  );
 
   // The result's own (owner/primary) Science Program: it can never be a contributor to its own result
   // (backend rejects "The owner initiative cannot be shared with itself"), so it must not appear in either dropdown.
