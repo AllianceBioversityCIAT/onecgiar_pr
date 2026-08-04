@@ -1185,14 +1185,16 @@
             activeTab="reporting"
             [search]="plannedSearch()"
             [statusValue]="reportingStatusFilter()"
-            [aowOptions]="plannedAowSelectOptions()"
+            [aowOptions]="reportingSectionOptions()"
             [aowValue]="reportingAowFilter()"
+            [typeValue]="reportingTypeFilter()"
             [typologyOptions]="reportingTypologyOptions()"
             [typologyValue]="reportingTypologyFilter()"
             [viewMode]="reportingViewMode()"
             (searchChange)="plannedSearch.set($event)"
             (statusChange)="reportingStatusFilter.set($event)"
             (aowChange)="reportingAowFilter.set($event)"
+            (typeChange)="reportingTypeFilter.set($event)"
             (typologyChange)="reportingTypologyFilter.set($event)"
             (viewModeChange)="reportingViewMode.set($event)" />
 

@@ -120,8 +120,8 @@ Same box as a programme card, except the marker is a **rotated square**:
 |---|---|
 | Box | `height: 36px`, `gap: 10px`, `padding: 0 8px`, `border-radius: 8px` |
 | Text | `14px / 500`, `color: #E9E4FA` |
-| Icon | `15×15`, `color: #A79BD4`, `stroke-width: 1.75` |
-| Hover | `background: rgba(255,255,255,.07)`, `color: #FFFFFF` |
+| Icon | `20×20` (CURRENT SVG), `color: #A79BD4` → `--pr-sidebar-fg-muted`, `stroke-width: 1.75` |
+| Hover | `background: rgba(255,255,255,.07)`, label + icon `#FFFFFF` |
 | Active | `background` + `box-shadow` per state, **plus a left rail**: `position: absolute; left: -6px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 2px 2px 0; background: #6B46E5` |
 | Badge dot | `6×6`, `border-radius: 999px`, `background: #6B46E5`, positioned `top: 8px; right: 8px` (collapsed rail) |
 

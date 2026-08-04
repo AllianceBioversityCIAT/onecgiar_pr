@@ -1,7 +1,7 @@
 <!--
   Program band + tabs + Reporting toolbar.
   Reference: docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html:315-395 (band) and
-             :883-962 (toolbar). Every px below is read from that markup, not inferred.
+             :883-1002 (toolbar). Every px below is read from that markup, not inferred.
   Spec:      docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §3
 
   ⚠️ html/body is 12px — NEVER use rem Tailwind spacing/type here (px-8 ≠ 32px, h-12 ≠ 48px).
@@ -129,10 +129,14 @@
   </nav>
 </div>
 
-<!-- ═══ TOOLBAR — first thing in the 32px content pad (reference :883) ═══ -->
+<!-- ═══ TOOLBAR — first thing in the 32px content pad (CURRENT :895-1002) ═══
+     Search · Section · Type · Category · Status  ……  Grouped | All indicators  -->
 @if (showToolbar()) {
-  <div class="flex flex-wrap items-center gap-[12px] px-[32px] pb-[24px] pt-[32px]">
-    <!-- Search: 320×36, radius 8 -->
+  <div
+    class="flex flex-wrap items-center gap-[12px] px-[32px] pb-[24px] pt-[32px]"
+    role="search"
+    aria-label="Reporting filters">
+    <!-- Search: 320×36 -->
     <div class="relative h-[36px] w-[320px] shrink-0">
       <span
         class="pointer-events-none absolute left-[12px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
@@ -147,33 +151,41 @@
         (input)="searchChange.emit($any($event.target).value)" />
     </div>
 
-    <!-- AoW / Indicator / Status — custom chevron (native OS arrow is not vertically centred). -->
-    @if (aowOptions().length) {
-      <select
-        class="pr-band-select w-[140px]"
-        aria-label="Filter by area of work"
-        (change)="onSelect(aowChange, $event)">
-        <option value="all" [selected]="aowValue() === 'all'">AoW</option>
-        @for (o of aowOptions(); track o.value) {
-          <option [value]="o.value" [selected]="aowValue() === o.value">{{ o.label }}</option>
-        }
-      </select>
-    }
-
-    @if (typologyOptions().length) {
-      <select
-        class="pr-band-select w-[170px]"
-        aria-label="Filter by indicator type"
-        (change)="onSelect(typologyChange, $event)">
-        <option value="all" [selected]="typologyValue() === 'all'">Indicator</option>
-        @for (o of typologyOptions(); track o.value) {
-          <option [value]="o.value" [selected]="typologyValue() === o.value">{{ o.label }}</option>
-        }
-      </select>
-    }
-
+    <!-- Section (AoW + Intermediate + 2030) — always visible -->
     <select
-      class="pr-band-select w-[130px]"
+      class="pr-band-select min-w-[120px]"
+      aria-label="Filter by section"
+      (change)="onSelect(aowChange, $event)">
+      <option value="all" [selected]="aowValue() === 'all'">Section</option>
+      @for (o of aowOptions(); track o.value) {
+        <option [value]="o.value" [selected]="aowValue() === o.value">{{ o.label }}</option>
+      }
+    </select>
+
+    <!-- Type (HLO / Outcome / Intermediate / 2030) — CURRENT selType -->
+    <select
+      class="pr-band-select min-w-[110px]"
+      aria-label="Filter by type"
+      (change)="onSelect(typeChange, $event)">
+      @for (o of typeOptions; track o.value) {
+        <option [value]="o.value" [selected]="typeValue() === o.value">{{ o.label }}</option>
+      }
+    </select>
+
+    <!-- Category (result type name) — always visible -->
+    <select
+      class="pr-band-select min-w-[120px]"
+      aria-label="Filter by category"
+      (change)="onSelect(typologyChange, $event)">
+      <option value="all" [selected]="typologyValue() === 'all'">Category</option>
+      @for (o of typologyOptions(); track o.value) {
+        <option [value]="o.value" [selected]="typologyValue() === o.value">{{ o.label }}</option>
+      }
+    </select>
+
+    <!-- Status -->
+    <select
+      class="pr-band-select min-w-[110px]"
       aria-label="Filter by status"
       (change)="onSelect(statusChange, $event)">
       @for (o of statusOptions; track o.value) {
@@ -181,7 +193,7 @@
       }
     </select>
 
-    <!-- Segmented: track #EEEEF1, active pill white (reference :958). -->
+    <!-- Segmented: Grouped | All indicators (CURRENT :1001) -->
     <div
       role="tablist"
       aria-label="Grouping"
@@ -197,7 +209,7 @@
         "
         [attr.aria-selected]="viewMode() === 'grouped'"
         (click)="viewModeChange.emit('grouped')">
-        Indicators by AoW
+        Grouped
       </button>
       <button
         type="button"

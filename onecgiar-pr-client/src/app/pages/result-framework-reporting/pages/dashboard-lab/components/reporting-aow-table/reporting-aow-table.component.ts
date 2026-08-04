@@ -45,12 +45,24 @@ export interface ReportingAowGroup {
 /** A row's workflow state, as far as the data allows. See `statusOf`. */
 export type RowStatus = 'not-started' | 'in-progress' | 'achieved' | 'overachieved';
 
+/** Collapsible group under a band (or bare under Intermediate / 2030). */
 interface HloGroup {
   key: string;
-  eyebrow: string;
-  code: string;
+  /** Display title — CURRENT shows the full ToC name only (no HLO + code chrome). */
   name: string;
   rows: ReportingIndicator[];
+}
+
+/**
+ * CURRENT band inside an AoW card (`a.bands` in PRMS-Shell.dc.html ~3642):
+ * "HIGH LEVEL OUTPUTS · N KPIs" then group rows; then "OUTCOMES · N KPIs".
+ * Intermediate / 2030 cards use a single band with `hasEyebrow: false`.
+ */
+interface IndicatorBand {
+  key: string;
+  eyebrow: string;
+  hasEyebrow: boolean;
+  groups: HloGroup[];
 }
 
 /**
@@ -171,61 +183,127 @@ export class ReportingAowTableComponent {
     return row?.result_type_name || row?.type_name || 'Not provided';
   }
 
+  /**
+   * Meta under the title — CURRENT uses the short KPI name. We do not get a separate short name
+   * from the API, so typology is the stable secondary fact; in flat view the AoW code prefixes it.
+   */
+  metaLine(row: ReportingIndicator, showAow = false): string {
+    const type = this.typologyOf(row);
+    if (!showAow) return type;
+    const aow = row.__aowCode?.trim();
+    return aow ? `${aow} · ${type}` : type;
+  }
+
+  /**
+   * "Show more" only when the title actually overflows two lines (~110 chars at 15px/600).
+   * Short titles must never show a useless control (CURRENT row.showMore).
+   */
+  needsShowMore(row: ReportingIndicator): boolean {
+    const t = (row?.indicator_description ?? '').trim();
+    return t.length > 110;
+  }
+
   // ── Grouping ──────────────────────────────────────────────────────────────
   /**
-   * Second-level groups inside a top-level card.
+   * CURRENT organisation inside a top-level card (PRMS-Shell.dc.html `a.bands` ~3642):
    *
-   * - **AoW card** → High-Level Outputs only (HLO eyebrow + title). Outcomes never live here.
-   * - **Intermediate Outcomes card** → one fill-header per source AoW (siblings of HLOs, not nested
-   *   under an AoW card — the reference bug this corrects).
-   * - **2030 Outcomes card** → groups by the ToC result title returned by `GET_2030Outcomes`.
+   * - **AoW** → two bands when data exists:
+   *     HIGH LEVEL OUTPUTS · N KPIs  → collapsible ToC groups (name only)
+   *     OUTCOMES · N KPIs            → collapsible outcome groups
+   * - **Intermediate / 2030** → one band, no eyebrow (groups only). Program-level siblings
+   *   of AoWs — never nested under an AoW card.
    */
-  hloGroupsOf(group: ReportingAowGroup): HloGroup[] {
+  bandsOf(group: ReportingAowGroup): IndicatorBand[] {
     const kind = group.kind ?? 'aow';
-    const byKey = new Map<string, HloGroup>();
+    const rows = this.visibleRows(group);
 
-    for (const row of this.visibleRows(group)) {
-      let key: string;
-      let eyebrow: string;
-      let code: string;
-      let name: string;
-
-      if (kind === 'intermediate') {
-        // Sub-group = the intermediate-outcome ToC node (or its source AoW when present).
-        const title = row.__hlo?.trim() || row.__aowName?.trim() || 'Intermediate outcome';
-        const aowCode = row.__aowCode?.trim();
-        key = `io::${aowCode ?? ''}::${title}`;
-        eyebrow = aowCode && aowCode !== 'intermediate-outcomes' ? aowCode : 'IO';
-        code = '';
-        name = title;
-      } else if (kind === '2030') {
-        const title = row.__hlo?.trim() || '2030 Outcomes';
-        key = `o30::${title}`;
-        eyebrow = '2030';
-        code = '';
-        name = title;
-      } else {
-        const title = row.__hlo?.trim() || 'Unassigned';
-        key = `${group.aow.code}::${title}`;
-        if (row.__tier === 'outcome') {
-          eyebrow = 'Outcome';
-          code = '';
-          name = title;
-        } else {
-          const match = /^((?:HLO|IO|EOI)[\w.\-]*)\s+(.*)$/i.exec(title);
-          eyebrow = 'HLO';
-          code = match?.[1] ?? '';
-          name = match?.[2] ?? title;
-        }
+    if (kind === 'aow') {
+      const hloRows = rows.filter(r => r.__tier !== 'outcome');
+      const outRows = rows.filter(r => r.__tier === 'outcome');
+      const bands: IndicatorBand[] = [];
+      if (hloRows.length) {
+        bands.push({
+          key: `${group.aow.code}::band-hlo`,
+          eyebrow: 'High level outputs',
+          hasEyebrow: true,
+          groups: this.clusterByTitle(hloRows, `${group.aow.code}::hlo`)
+        });
       }
+      if (outRows.length) {
+        bands.push({
+          key: `${group.aow.code}::band-out`,
+          eyebrow: 'Outcomes',
+          hasEyebrow: true,
+          groups: this.clusterByTitle(outRows, `${group.aow.code}::out`)
+        });
+      }
+      return bands;
+    }
 
+    if (kind === 'intermediate') {
+      return [
+        {
+          key: 'band-io',
+          eyebrow: '',
+          hasEyebrow: false,
+          groups: this.clusterByTitle(
+            rows.map(r => ({
+              ...r,
+              // Prefer the intermediate ToC title; fall back to source AoW name.
+              __hlo: r.__hlo?.trim() || r.__aowName?.trim() || 'Intermediate outcome'
+            })),
+            'io'
+          )
+        }
+      ];
+    }
+
+    // 2030
+    return [
+      {
+        key: 'band-o30',
+        eyebrow: '',
+        hasEyebrow: false,
+        groups: this.clusterByTitle(
+          rows.map(r => ({
+            ...r,
+            __hlo: r.__hlo?.trim() || '2030 Outcomes'
+          })),
+          'o30'
+        )
+      }
+    ];
+  }
+
+  /**
+   * Cluster indicators by ToC title. Display name is the full descriptive title (CURRENT `g.name`).
+   * Leading codes like `HL04.AOW1.I01` are stripped when present so the row reads as a sentence.
+   */
+  private clusterByTitle(rows: ReportingIndicator[], keyPrefix: string): HloGroup[] {
+    const byKey = new Map<string, HloGroup>();
+    for (const row of rows) {
+      const raw = row.__hlo?.trim() || 'Unassigned';
+      const match = /^((?:HLO|HL|IO|EOI)[\w.\-]*)\s+(.*)$/i.exec(raw);
+      const name = (match?.[2] || raw).trim() || raw;
+      const key = `${keyPrefix}::${raw}`;
       if (!byKey.has(key)) {
-        byKey.set(key, { key, eyebrow, code, name, rows: [] });
+        byKey.set(key, { key, name, rows: [] });
       }
       byKey.get(key)!.rows.push(row);
     }
-
     return [...byKey.values()];
+  }
+
+  /** KPI count for a band header (`4 KPIs`). */
+  bandKpiCount(band: IndicatorBand): number {
+    return band.groups.reduce((n, g) => n + g.rows.length, 0);
+  }
+
+  /**
+   * Flat list of every group (all bands). Kept for tests / callers that do not need band chrome.
+   */
+  hloGroupsOf(group: ReportingAowGroup): HloGroup[] {
+    return this.bandsOf(group).flatMap(b => b.groups);
   }
 
   /** Flat list of every indicator that survives the toolbar filters (All indicators view). */
@@ -243,12 +321,31 @@ export class ReportingAowTableComponent {
     return kind === 'intermediate' || kind === '2030';
   }
 
-  /** Chip label in the 68px header — AoW code, or a short bucket tag. */
+  /**
+   * Chip label in the 68px header.
+   * AoW → code (AOW01). Intermediate → "Intermediate". 2030 → "2030"
+   * (CURRENT mkCard tags at PRMS-Shell.dc.html ~3654).
+   */
   headerChip(group: ReportingAowGroup): string {
     const kind = group.kind ?? 'aow';
-    if (kind === 'intermediate') return 'IO';
+    if (kind === 'intermediate') return 'Intermediate';
     if (kind === '2030') return '2030';
     return group.aow.code;
+  }
+
+  /**
+   * Chip colours from CURRENT: Intermediate indigo soft, 2030 teal soft.
+   * AoW keeps the brand-soft violet chip.
+   */
+  headerChipClass(group: ReportingAowGroup): string {
+    const kind = group.kind ?? 'aow';
+    if (kind === 'intermediate') {
+      return 'bg-[#E0E7FF] text-[#3730A3]';
+    }
+    if (kind === '2030') {
+      return 'bg-[#D1FAE5] text-[#0F766E]';
+    }
+    return 'bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-400)]';
   }
 
   /** Rows surviving the toolbar filters. */

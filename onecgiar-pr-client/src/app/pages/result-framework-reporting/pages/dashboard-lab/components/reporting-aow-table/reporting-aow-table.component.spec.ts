@@ -41,7 +41,17 @@ describe('ReportingAowTableComponent', () => {
   };
 
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
-  const rows = () => (fixture.nativeElement as HTMLElement).querySelectorAll('.pr-reporting-row');
+  /**
+   * Visible indicator rows. Collapsed panels stay mounted for height animation, so we only
+   * count rows under open HLO panels (or every row in flat view, which has no `.pr-collapse`).
+   */
+  const rows = () => {
+    const root = fixture.nativeElement as HTMLElement;
+    if (!root.querySelector('.pr-collapse')) {
+      return root.querySelectorAll('.pr-reporting-row');
+    }
+    return root.querySelectorAll('section > .pr-collapse.is-open .pr-collapse.is-open .pr-reporting-row');
+  };
 
   // ── status ────────────────────────────────────────────────────────────────
   describe('status', () => {
@@ -103,22 +113,28 @@ describe('ReportingAowTableComponent', () => {
   });
 
   // ── grouping ──────────────────────────────────────────────────────────────
-  describe('HLO grouping', () => {
-    it('splits the code out of the title the API already carries', async () => {
+  describe('HLO / band grouping', () => {
+    it('strips a leading ToC code so the group shows the descriptive name only', async () => {
       await build([group([row()])]);
       const [hlo] = component.hloGroupsOf(group([row()]));
-      expect(hlo.code).toBe('HLO4.AOW1.IO1');
       expect(hlo.name).toBe('Foster motivations');
-      expect(hlo.eyebrow).toBe('HLO');
     });
 
-    it('labels outcome tiers differently from outputs', async () => {
-      const g = group([row({ __tier: 'outcome', __hlo: 'Some outcome without a code' })]);
+    it('splits AoW into HIGH LEVEL OUTPUTS + OUTCOMES bands (CURRENT organisation)', async () => {
+      const g = group([
+        row({ indicator_id: 1, __tier: 'output', __hlo: 'HLO1 First output' }),
+        row({ indicator_id: 2, __tier: 'outcome', __hlo: 'Some outcome without a code' })
+      ]);
       await build([g]);
-      const [hlo] = component.hloGroupsOf(g);
-      expect(hlo.eyebrow).toBe('Outcome');
-      expect(hlo.code).toBe('');
-      expect(hlo.name).toBe('Some outcome without a code');
+      const bands = component.bandsOf(g);
+      expect(bands.length).toBe(2);
+      expect(bands[0].eyebrow).toBe('High level outputs');
+      expect(bands[0].hasEyebrow).toBe(true);
+      expect(bands[0].groups[0].name).toBe('First output');
+      expect(bands[1].eyebrow).toBe('Outcomes');
+      expect(bands[1].groups[0].name).toBe('Some outcome without a code');
+      expect(component.bandKpiCount(bands[0])).toBe(1);
+      expect(component.bandKpiCount(bands[1])).toBe(1);
     });
 
     it('groups rows sharing an HLO and keeps distinct ones apart', async () => {
@@ -138,6 +154,11 @@ describe('ReportingAowTableComponent', () => {
       const g = group([row({ __hlo: undefined })]);
       await build([g]);
       expect(component.hloGroupsOf(g)[0].name).toBe('Unassigned');
+    });
+
+    it('renders the HIGH LEVEL OUTPUTS band label in the DOM', async () => {
+      await build([group([row()])]);
+      expect(text().toLowerCase()).toContain('high level outputs');
     });
   });
 
@@ -252,9 +273,10 @@ describe('ReportingAowTableComponent', () => {
         row({ indicator_id: 2, __hlo: 'HLO2 Second' })
       ]);
       await build([g]);
-      // Both sub-group headers show, only the first one's row does.
+      // Band + both group headers show; only the first group's indicator row is open.
       expect(text()).toContain('First');
       expect(text()).toContain('Second');
+      expect(text().toLowerCase()).toContain('high level outputs');
       expect(rows().length).toBe(1);
     });
 
@@ -295,19 +317,32 @@ describe('ReportingAowTableComponent', () => {
     });
 
     it('Show more toggles the clamp without opening the row', async () => {
-      await build([group([row()])]);
+      const long =
+        'Global land-use change, emissions and biodiversity model data and code for the land-use module of IMPACT+ that tracks greenhouse gas emissions and agrobiodiversity across cereal systems with national partners.';
+      await build([group([row({ indicator_id: 1, indicator_description: long })])]);
       const openSpy = jest.fn();
       component.openRow.subscribe(openSpy);
 
+      expect(component.needsShowMore(row({ indicator_description: long }))).toBe(true);
+      expect(component.needsShowMore(row({ indicator_description: 'Short title' }))).toBe(false);
       expect(component.isTitleExpanded(1)).toBe(false);
-      const more = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll("button")).find(b =>
+      const more = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
         b.textContent?.includes('Show more')
       ) as HTMLElement;
+      expect(more).toBeTruthy();
       more.click();
       fixture.detectChanges();
 
       expect(component.isTitleExpanded(1)).toBe(true);
       expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it('renders the concentric bullseye status mark (CURRENT target icon)', async () => {
+      await build([group([row()])]);
+      const mark = (fixture.nativeElement as HTMLElement).querySelector('.pr-status-mark svg');
+      expect(mark).toBeTruthy();
+      // Outer + mid rings + filled centre.
+      expect(mark!.querySelectorAll('circle').length).toBe(3);
     });
   });
 });
