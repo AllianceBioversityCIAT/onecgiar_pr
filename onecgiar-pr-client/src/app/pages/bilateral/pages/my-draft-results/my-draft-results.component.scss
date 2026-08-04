@@ -6,10 +6,6 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 28px;
-
-  @media (min-width: 1400px) {
-    margin-left: max(28px, calc((100vw - 1100px) / 2));
-  }
 }
 
 .mdr-header {
