@@ -10,29 +10,41 @@
       : this.resultsListFilterSE.selectedFundingSource()
       : this.resultsListFilterSE.selectedLeadCenters();
 @let activeButtons = this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
+@let totalLoaded = this.api.dataControlSE.resultsListSignal().length;
+@let shown = filteredResults?.length ?? 0;
 
-<div class="page_section_header">
-  <div class="title_section_header">Results table</div>
-
-  <div>
-    <app-results-list-filters [isAdmin]="this.api.rolesSE.isAdmin" [hasFilteredResults]="(filteredResults?.length ?? 0) > 0"></app-results-list-filters>
-  </div>
-
-  <div class="action_buttons">
-    <div>
-      <app-report-new-result-button [ngClass]="{ disabledButtons: !activeButtons }"> </app-report-new-result-button>
+<div class="rc-page">
+  <!-- CURRENT chrome: title + subtitle + report new -->
+  <header class="rc-page-header">
+    <div class="rc-page-header__text">
+      <h1 class="rc-page-title">Results Center</h1>
+      <p class="rc-page-sub">Search and export results across all Science Programs.</p>
     </div>
-  </div>
-</div>
+    <div class="rc-page-header__actions">
+      <app-report-new-result-button [ngClass]="{ disabledButtons: !activeButtons }"></app-report-new-result-button>
+    </div>
+  </header>
 
-<div class="section_content">
+  <app-results-list-filters
+    [isAdmin]="this.api.rolesSE.isAdmin"
+    [hasFilteredResults]="shown > 0"></app-results-list-filters>
+
   @if (this.api.dataControlSE.resultsListNoDataMessage(); as noResultsMsg) {
     <app-alert-status
       status="warning"
       [description]="noResultsMsg"
       inlineStyles="margin: 0 0 16px 0 !important;"></app-alert-status>
   }
-  <div class="table">
+
+  <p class="rc-showing">
+    @if (shown > 0) {
+      Showing {{ shown }} of {{ totalLoaded }} results.
+    } @else {
+      No results to show.
+    }
+  </p>
+
+  <div class="table rc-table">
     <app-pr-table
       id="resultListTable"
       #table
@@ -208,9 +220,8 @@
     </app-pr-table>
 
     @if (filteredResults?.length) {
-      <div class="total" style="margin-top: 10px">
-        Total:
-        {{ filteredResults?.length }}/{{ this.api.dataControlSE.resultsListSignal().length }}
+      <div class="rc-footer-total">
+        Showing {{ filteredResults?.length }} of {{ this.api.dataControlSE.resultsListSignal().length }}
       </div>
     }
   </div>

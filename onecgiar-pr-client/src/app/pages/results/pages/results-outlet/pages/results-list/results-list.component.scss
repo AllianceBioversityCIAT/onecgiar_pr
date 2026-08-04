@@ -1,34 +1,72 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
 
-.page_section_header {
-  display: grid;
-  color: var(--pr-color-primary-800);
-  font-size: 14px;
-  font-weight: 600;
-  padding: 5px 30px;
+/* ── Results Center page shell (CURRENT) ── */
+.rc-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 32px 32px;
+}
 
-  align-items: center;
+.rc-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  &__actions {
+    flex: none;
+  }
+}
+
+.rc-page-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--pr-text-heading, #191524);
+  line-height: 1.15;
+}
+
+.rc-page-sub {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--pr-text-secondary, #5d5872);
+}
+
+.rc-showing {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--pr-text-secondary, #5d5872);
+}
+
+.rc-footer-total {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--pr-text-secondary, #5d5872);
+}
+
+/* legacy hooks */
+.page_section_header {
+  display: none;
 }
 
 .title_section_header {
-  font-size: 14px;
-  font-weight: 500;
-  padding: 20px 0;
+  display: none;
 }
 
 .action_buttons {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 20px;
-  align-items: center;
-
-  > div:first-child {
-    app-pr-button {
-      ::ng-deep .pr_button .text {
-        white-space: nowrap;
-      }
-    }
-  }
+  display: none;
 }
 
 .table {
@@ -38,19 +76,40 @@
   padding-bottom: 100px;
   position: relative;
 
+  border: 1px solid var(--pr-border, #e3e3e8);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+
   // Restore the pre-redesign table behavior: honor the fixed column widths so the columns
   // stay compact (collapse to their defined size) instead of auto-stretching to fit content.
-  // With table-layout:auto the browser ignores the widths and widens each column to its
-  // content; `fixed` respects them, and `min-width` makes the wrapper's overflow-x kick in
-  // automatically once the viewport can't fit the whole table.
   ::ng-deep .pr-table {
     table-layout: fixed;
     min-width: 1300px;
 
-    // With fixed widths the header labels (previously nowrap) would overflow their column and
-    // overlap the next header — let them wrap by words within their own column instead.
     thead th {
       white-space: normal;
+      background: #f7f7f9 !important;
+      color: #6b6580;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      height: 40px;
+      border-bottom: 1px solid #e3e3e8 !important;
+    }
+
+    tbody tr {
+      height: 44px;
+
+      &:hover {
+        background: #fafafb;
+      }
+    }
+
+    tbody td {
+      border-bottom: 1px solid #eeeef1 !important;
+      font-size: 13px;
     }
   }
 
@@ -58,13 +117,100 @@
     display: flex;
     gap: 8px;
     align-items: center;
-    padding: 2px 10px; // trim the tall vertical whitespace inside the header cells
+    padding: 2px 10px;
   }
 }
 
 .section_content {
-  padding: 0px 10px;
-  padding-top: 20px;
+  padding: 0;
+  padding-top: 0;
+}
+
+/* Status chips — CURRENT palette */
+.status_tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+// Editing / draft-like
+.status_tag.status_1 {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+// Quality Assessed
+.status_tag.status_2 {
+  color: #0e7490;
+  background: #cffafe;
+}
+// Submitted
+.status_tag.status_3 {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+// Discontinued
+.status_tag.status_4 {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+// Pending review / In progress-ish
+.status_tag.status_5 {
+  color: #b45309;
+  background: #fef3c7;
+}
+// Approved
+.status_tag.status_6 {
+  color: #047857;
+  background: #d1fae5;
+}
+// Rejected
+.status_tag.status_7 {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.meta_chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #f3f2f7;
+  color: #2b2838;
+
+  &--type {
+    background: #ede9fe;
+    color: #5733c4;
+  }
+
+  &--center {
+    background: #f3f2f7;
+    color: #2b2838;
+  }
+
+  &--bilateral {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fdba74;
+  }
+}
+
+.new_tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  margin-right: 6px;
+  border-radius: 6px;
+  background: #6b46e5;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .subResults {
@@ -167,38 +313,59 @@ td {
   opacity: 0.5;
 }
 
+/* final status chips win over any earlier definitions */
 .status_tag {
-  padding: 2px 5px;
-  border: 1px solid;
-  text-align: center;
-  border-radius: 5px;
-  font-weight: 500;
+  display: inline-flex !important;
+  align-items: center;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 3px 9px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
   white-space: nowrap;
+  text-align: center;
 }
 
 .status_1 {
-  border-color: var(--pr-color-blue-400);
-  color: var(--pr-color-blue-400);
+  border-color: transparent !important;
+  color: #6b7280 !important;
+  background: #f3f4f6 !important;
 }
 
 .status_2 {
-  border-color: var(--pr-color-yellow-400);
-  color: var(--pr-color-yellow-400);
+  border-color: transparent !important;
+  color: #0e7490 !important;
+  background: #cffafe !important;
 }
 
 .status_3 {
-  border-color: var(--pr-color-green-600);
-  color: var(--pr-color-green-600);
+  border-color: transparent !important;
+  color: #1d4ed8 !important;
+  background: #dbeafe !important;
 }
 
 .status_4 {
-  border-color: var(--pr-color-secondary-400);
-  color: var(--pr-color-secondary-400);
+  border-color: transparent !important;
+  color: #6b7280 !important;
+  background: #f3f4f6 !important;
 }
 
 .status_5 {
-  border-color: var(--pr-color-orange-600);
-  color: var(--pr-color-orange-600);
+  border-color: transparent !important;
+  color: #b45309 !important;
+  background: #fef3c7 !important;
+}
+
+.status_6 {
+  border-color: transparent !important;
+  color: #047857 !important;
+  background: #d1fae5 !important;
+}
+
+.status_7 {
+  border-color: transparent !important;
+  color: #b91c1c !important;
+  background: #fee2e2 !important;
 }
 
 .status_6 {

@@ -1,21 +1,282 @@
-.filters {
+/* ── Results Center toolbar (CURRENT) ── */
+.rc-toolbar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
-  padding: 0 0 20px 0;
-  .filters_items_container_left {
-    display: flex;
-    align-items: center;
-    flex: 1;
+  margin-bottom: 8px;
+}
 
-    p-iconfield {
-      display: flex;
-      align-items: center;
-      height: 100%;
+.rc-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.rc-search {
+  position: relative;
+  width: 360px;
+  max-width: 100%;
+  height: 36px;
+  flex: 0 1 360px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--pr-border, #e3e3e8);
+  border-radius: 8px;
+  background: #fff;
+
+  &__icon {
+    color: var(--pr-text-subtle, #9691a8);
+    font-size: 14px;
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: none;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--pr-text-heading, #191524);
+
+    &::placeholder {
+      color: var(--pr-text-subtle, #9691a8);
     }
   }
+}
+
+.rc-select-wrap {
+  min-width: 120px;
+  max-width: 200px;
+  flex: 0 1 auto;
+
+  &--wide {
+    min-width: 140px;
+    max-width: 220px;
+  }
+
+  // Force multiselect trigger height toward CURRENT 40px
+  ::ng-deep .p-multiselect,
+  ::ng-deep .pr-filter-multiselect,
+  ::ng-deep .p-multiselect-label-container {
+    min-height: 40px;
+  }
+}
+
+.rc-more-wrap {
+  position: relative;
+  flex: none;
+}
+
+.rc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background: #fff;
+  color: var(--pr-color-primary-400, #5733c4);
+  transition: background 150ms ease, border-color 150ms ease;
+
+  &--soft {
+    border-color: #ddd6fe;
+    color: #5733c4;
+
+    &:hover {
+      background: #f5f3ff;
+    }
+  }
+
+  &--active {
+    border-color: var(--pr-color-primary-300, #6b46e5);
+    background: #f5f3ff;
+  }
+
+  &--primary {
+    border: none;
+    background: var(--pr-color-primary-300, #6b46e5);
+    color: #fff;
+    font-weight: 600;
+    padding: 0 14px;
+
+    &:hover:not(:disabled) {
+      background: var(--pr-color-primary-400, #5733c4);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &--ghost {
+    border: 1px solid var(--pr-border, #e3e3e8);
+    color: var(--pr-text, #2b2838);
+    background: #fff;
+
+    &:hover {
+      background: #f7f7f9;
+    }
+  }
+
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.rc-more-panel {
+  position: absolute;
+  left: 0;
+  top: 44px;
+  z-index: 40;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--pr-border, #e3e3e8);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+}
+
+.rc-more-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rc-more-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pr-text-heading, #191524);
+}
+
+.rc-more-divider {
+  height: 1px;
+  background: #eeeef1;
+  margin: 2px 0;
+}
+
+.rc-more-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pr-text-subtle, #9691a8);
+}
+
+.rc-check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--pr-text, #2b2838);
+  cursor: pointer;
+}
+
+.rc-more-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+
+  .rc-btn {
+    flex: 1;
+  }
+}
+
+.rc-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+}
+
+.rc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.rc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 6px 0 10px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #5733c4;
+  font-size: 12px;
+  font-weight: 500;
+
+  &__x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover {
+      background: #ddd6fe;
+    }
+
+    .pi {
+      font-size: 10px;
+    }
+  }
+}
+
+.rc-clear-all {
+  height: 26px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #5733c4;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: #f5f3ff;
+  }
+}
+
+.rc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* legacy class hooks kept for any remaining references */
+.filters {
+  display: none;
 }
 
 .filters_items_container_left,
