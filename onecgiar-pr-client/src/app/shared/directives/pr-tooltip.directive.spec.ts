@@ -298,6 +298,24 @@ describe('PrTooltipDirective', () => {
       expect(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))).not.toThrow();
     });
 
+    it('shows the dismiss hint only while pinned', () => {
+      directive.onEnter();
+      expect(tooltipEl()?.querySelector('.pr-tooltip__hint')).toBeNull();
+      directive.onLeave();
+
+      directive.onClick();
+      const hint = tooltipEl()?.querySelector('.pr-tooltip__hint');
+      expect(hint).not.toBeNull();
+      expect(hint?.textContent).toBe('Click outside to close');
+    });
+
+    it('clicking the dismiss hint does not close the tooltip (it is inside)', () => {
+      directive.onClick();
+      const hint = tooltipEl()?.querySelector('.pr-tooltip__hint') as HTMLElement;
+      hint.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(tooltipEl()).not.toBeNull();
+    });
+
     it('does not pin when the tooltip is disabled', () => {
       directive.appPrTooltipDisabled = true;
       directive.onClick();

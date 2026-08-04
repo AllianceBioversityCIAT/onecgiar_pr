@@ -141,7 +141,15 @@ export class PrTooltipDirective implements OnDestroy {
     // The base .pr-tooltip sets `pointer-events: none` so a hover tooltip never blocks the cursor.
     // A pinned one must accept the pointer, otherwise its own links (e.g. the CGIAR 2030 Strategy
     // link in the Impact Area guidance) are unreachable — which defeats the purpose of pinning.
-    if (this.tooltipEl) this.renderer.addClass(this.tooltipEl, 'pr-tooltip--pinned');
+    if (this.tooltipEl) {
+      this.renderer.addClass(this.tooltipEl, 'pr-tooltip--pinned');
+      // Tell the user how to dismiss it — a pinned tooltip that stays put looks stuck otherwise.
+      // Requested by Santiago (Slack, 4 Aug) and shown in his mockup.
+      const hint = this.renderer.createElement('div') as HTMLElement;
+      this.renderer.addClass(hint, 'pr-tooltip__hint');
+      this.renderer.setProperty(hint, 'textContent', 'Click outside to close');
+      this.renderer.appendChild(this.tooltipEl, hint);
+    }
     this.pinnedListeners.push(
       this.renderer.listen('document', 'click', (event: Event) => {
         const target = event.target as Node | null;

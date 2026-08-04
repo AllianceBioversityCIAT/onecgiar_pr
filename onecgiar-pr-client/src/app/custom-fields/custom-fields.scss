@@ -296,3 +296,13 @@ input::placeholder,
     opacity: 1;
   }
 }
+
+/* P2-3201: dismiss hint shown only while the tooltip is pinned (Santiago's mockup, 4 Aug). */
+.pr-tooltip__hint {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 10px;
+  font-style: italic;
+  opacity: 0.75;
+}

@@ -62,7 +62,9 @@ export class FieldsManagerService {
       '[general-info]-title': {
         label: 'Title',
         placeholder: 'Enter text',
-        description: `<ul>
+        // P2-3201: Santiago confirmed on Slack (4 Aug) that Title and Description get the same
+        // tooltip treatment as Lead contact person — the guidance no longer renders inline.
+        tooltip: `<ul>
             <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
             <li>Avoid abbreviations or (technical) jargon.</li>
             ${this.isP25() ? '<li>For innovations, varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>' : ''}
@@ -73,7 +75,7 @@ export class FieldsManagerService {
         label: 'Description of Result',
         placeholder: 'Enter text',
         required: !this.dataControlSE.isKnowledgeProductSignal(),
-        description: `<ul>
+        tooltip: `<ul>
     <li>Ensure the description is understandable for a non-specialist reader.</li>
      <li>Avoid acronyms and technical jargon.</li>
     <li>Avoid repetition of the title.</li>

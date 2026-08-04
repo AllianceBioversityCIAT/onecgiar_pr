@@ -68,15 +68,32 @@ describe('FieldsManagerService', () => {
       expect(service.isP22()).toBeFalsy();
     });
 
+    // P2-3201: Santiago asked (Slack, 4 Aug) for Title, Description of Result and Lead contact person
+    // to carry their guidance in the ⓘ tooltip, not in the inline grey box.
+    describe('P2-3201 guidance lives in the tooltip, not inline', () => {
+      it.each([['[general-info]-title'], ['[general-info]-description'], ['[general-info]-lead_contact_person']])(
+        '%s exposes guidance through tooltip and not through description',
+        ref => {
+          const field = service.fields()[ref];
+          expect(field.tooltip).toBeTruthy();
+          expect(field.description).toBeUndefined();
+        }
+      );
+
+      it('renames the description field label to "Description of Result"', () => {
+        expect(service.fields()['[general-info]-description'].label).toBe('Description of Result');
+      });
+    });
+
     describe('fields computed - P25 specific branches', () => {
-      it('should include P25-specific description bullet for title field', () => {
+      it('should include the P25-specific bullet in the title tooltip', () => {
         const fields = service.fields();
-        expect(fields['[general-info]-title'].description).toContain('For innovations, varieties or breeds');
+        expect(fields['[general-info]-title'].tooltip).toContain('For innovations, varieties or breeds');
       });
 
-      it('should include P25-specific description bullet for description field', () => {
+      it('should include the P25-specific bullet in the description tooltip', () => {
         const fields = service.fields();
-        expect(fields['[general-info]-description'].description).toContain('Varieties or breeds should be described');
+        expect(fields['[general-info]-description'].tooltip).toContain('Varieties or breeds should be described');
       });
 
       it('should hide is_krs field for P25', () => {
@@ -181,14 +198,14 @@ describe('FieldsManagerService', () => {
     });
 
     describe('fields computed - P22 specific branches', () => {
-      it('should NOT include P25-specific description bullet for title field', () => {
+      it('should NOT include the P25-specific bullet in the title tooltip', () => {
         const fields = service.fields();
-        expect(fields['[general-info]-title'].description).not.toContain('For innovations, varieties or breeds');
+        expect(fields['[general-info]-title'].tooltip).not.toContain('For innovations, varieties or breeds');
       });
 
-      it('should NOT include P25-specific description bullet for description field', () => {
+      it('should NOT include the P25-specific bullet in the description tooltip', () => {
         const fields = service.fields();
-        expect(fields['[general-info]-description'].description).not.toContain('Varieties or breeds should be described');
+        expect(fields['[general-info]-description'].tooltip).not.toContain('Varieties or breeds should be described');
       });
 
       it('should not hide is_krs for P22', () => {
