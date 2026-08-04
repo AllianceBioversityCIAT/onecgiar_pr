@@ -113,22 +113,28 @@ describe('ReportingAowTableComponent', () => {
   });
 
   // ── grouping ──────────────────────────────────────────────────────────────
-  describe('HLO grouping', () => {
-    it('splits the code out of the title the API already carries', async () => {
+  describe('HLO / band grouping', () => {
+    it('strips a leading ToC code so the group shows the descriptive name only', async () => {
       await build([group([row()])]);
       const [hlo] = component.hloGroupsOf(group([row()]));
-      expect(hlo.code).toBe('HLO4.AOW1.IO1');
       expect(hlo.name).toBe('Foster motivations');
-      expect(hlo.eyebrow).toBe('HLO');
     });
 
-    it('labels outcome tiers differently from outputs', async () => {
-      const g = group([row({ __tier: 'outcome', __hlo: 'Some outcome without a code' })]);
+    it('splits AoW into HIGH LEVEL OUTPUTS + OUTCOMES bands (CURRENT organisation)', async () => {
+      const g = group([
+        row({ indicator_id: 1, __tier: 'output', __hlo: 'HLO1 First output' }),
+        row({ indicator_id: 2, __tier: 'outcome', __hlo: 'Some outcome without a code' })
+      ]);
       await build([g]);
-      const [hlo] = component.hloGroupsOf(g);
-      expect(hlo.eyebrow).toBe('Outcome');
-      expect(hlo.code).toBe('');
-      expect(hlo.name).toBe('Some outcome without a code');
+      const bands = component.bandsOf(g);
+      expect(bands.length).toBe(2);
+      expect(bands[0].eyebrow).toBe('High level outputs');
+      expect(bands[0].hasEyebrow).toBe(true);
+      expect(bands[0].groups[0].name).toBe('First output');
+      expect(bands[1].eyebrow).toBe('Outcomes');
+      expect(bands[1].groups[0].name).toBe('Some outcome without a code');
+      expect(component.bandKpiCount(bands[0])).toBe(1);
+      expect(component.bandKpiCount(bands[1])).toBe(1);
     });
 
     it('groups rows sharing an HLO and keeps distinct ones apart', async () => {
@@ -148,6 +154,11 @@ describe('ReportingAowTableComponent', () => {
       const g = group([row({ __hlo: undefined })]);
       await build([g]);
       expect(component.hloGroupsOf(g)[0].name).toBe('Unassigned');
+    });
+
+    it('renders the HIGH LEVEL OUTPUTS band label in the DOM', async () => {
+      await build([group([row()])]);
+      expect(text().toLowerCase()).toContain('high level outputs');
     });
   });
 
@@ -262,9 +273,10 @@ describe('ReportingAowTableComponent', () => {
         row({ indicator_id: 2, __hlo: 'HLO2 Second' })
       ]);
       await build([g]);
-      // Both sub-group headers show, only the first one's row does.
+      // Band + both group headers show; only the first group's indicator row is open.
       expect(text()).toContain('First');
       expect(text()).toContain('Second');
+      expect(text().toLowerCase()).toContain('high level outputs');
       expect(rows().length).toBe(1);
     });
 

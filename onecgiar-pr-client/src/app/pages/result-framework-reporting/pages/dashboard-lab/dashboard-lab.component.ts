@@ -1258,12 +1258,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
               count: 0,
               loading: false
             };
+            // Type=all → both HLO + outcome tiers (table splits them into CURRENT bands).
+            // Type=hlo / outcome → one tier only.
+            const all = bundle.indicators ?? [];
             const tierRows =
               typeFilter === 'outcome'
-                ? (bundle.indicators ?? []).filter(i => i?.__tier === 'outcome')
+                ? all.filter(i => i?.__tier === 'outcome')
                 : typeFilter === 'hlo'
-                  ? (bundle.indicators ?? []).filter(i => i?.__tier !== 'outcome')
-                  : (bundle.indicators ?? []).filter(i => i?.__tier !== 'outcome');
+                  ? all.filter(i => i?.__tier !== 'outcome')
+                  : all;
             const rows = tierRows.filter(matchTypology);
             return {
               aow,

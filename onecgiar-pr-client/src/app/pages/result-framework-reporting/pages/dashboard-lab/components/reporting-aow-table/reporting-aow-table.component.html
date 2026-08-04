@@ -92,9 +92,9 @@
             @if (group.loading) {
               <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
             } @else {
-              @let hloGroups = hloGroupsOf(group);
+              @let bands = bandsOf(group);
 
-              @if (!hloGroups.length) {
+              @if (!bands.length) {
                 <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">
                   @if (search().trim() || statusFilter() !== 'all') {
                     No indicators match the current filters.
@@ -106,53 +106,60 @@
                 </div>
               }
 
-              @for (hlo of hloGroups; track hlo.key; let hloIndex = $index) {
-                <!-- Second level: HLO under AoW, or source-AoW under Intermediate, etc. -->
-                <button
-                  type="button"
-                  class="flex h-[44px] w-full items-center gap-[8px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-[24px] text-left"
-                  [attr.aria-expanded]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))"
-                  (click)="toggle(hlo.key, isDefaultOpenHlo(hloIndex))">
-                  <ng-icon
-                    name="lucideChevronDown"
-                    class="shrink-0 text-[13px] text-[var(--pr-text-secondary)] transition-transform duration-200"
-                    [class.rotate-180]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))" />
-
-                  <span
-                    class="shrink-0 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]"
-                    [prTooltip]="hlo.name">
-                    {{ hlo.eyebrow }}
-                  </span>
-
-                  @if (hlo.code) {
-                    <span class="pr-code shrink-0 text-[var(--pr-text-secondary)]">{{ hlo.code }}</span>
-                  }
-
-                  @if (hlo.name) {
+              <!-- CURRENT: AoW → band (HIGH LEVEL OUTPUTS / OUTCOMES) → group (name only) → rows -->
+              @for (band of bands; track band.key; let bandIndex = $index) {
+                @if (band.hasEyebrow) {
+                  <!-- 36px band label — not a control (PRMS-Shell.dc.html :1077) -->
+                  <div
+                    class="flex h-[36px] items-center gap-[10px] px-[24px]"
+                    [class.mt-[20px]]="bandIndex > 0">
                     <span
-                      class="min-w-0 flex-1 truncate text-[13px] font-medium leading-[16px] text-[var(--pr-text-secondary)]"
+                      class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+                      {{ band.eyebrow }}
+                    </span>
+                    <span class="pr-figure-sm text-[12px] font-medium text-[var(--pr-text-subtle)]">
+                      {{ countLabel(bandKpiCount(band)) }}
+                    </span>
+                  </div>
+                }
+
+                @for (hlo of band.groups; track hlo.key; let hloIndex = $index) {
+                  @let defaultOpen = bandIndex === 0 && hloIndex === 0 && isDefaultOpenAow(aowIndex);
+                  <button
+                    type="button"
+                    class="flex h-[44px] w-full items-center gap-[8px] border-t border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] py-0 pl-[36px] pr-[24px] text-left hover:bg-[#EFEEF3]"
+                    [attr.aria-expanded]="isOpen(hlo.key, defaultOpen)"
+                    (click)="toggle(hlo.key, defaultOpen)">
+                    <span
+                      class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] text-[var(--pr-text-secondary)]">
+                      <ng-icon
+                        name="lucideChevronDown"
+                        class="text-[16px] transition-transform duration-200"
+                        [class.rotate-180]="isOpen(hlo.key, defaultOpen)" />
+                    </span>
+
+                    <span
+                      class="min-w-0 max-w-[620px] flex-1 truncate text-[13px] font-medium text-[var(--pr-text)]"
                       [title]="hlo.name">
                       {{ hlo.name }}
                     </span>
-                  } @else {
-                    <span class="flex-1"></span>
-                  }
 
-                  <span class="pr-figure-sm shrink-0 text-[var(--pr-text-subtle)]">
-                    {{ countLabel(hlo.rows.length) }}
-                  </span>
-                </button>
+                    <span class="pr-figure-sm shrink-0 text-[12px] font-normal text-[var(--pr-text-subtle)]">
+                      {{ countLabel(hlo.rows.length) }}
+                    </span>
+                  </button>
 
-                <div
-                  class="pr-collapse"
-                  [class.is-open]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))"
-                  [attr.aria-hidden]="!isOpen(hlo.key, isDefaultOpenHlo(hloIndex))">
-                  <div class="pr-collapse-inner">
-                    @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
-                      <ng-container *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: false }" />
-                    }
+                  <div
+                    class="pr-collapse"
+                    [class.is-open]="isOpen(hlo.key, defaultOpen)"
+                    [attr.aria-hidden]="!isOpen(hlo.key, defaultOpen)">
+                    <div class="pr-collapse-inner">
+                      @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
+                        <ng-container *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: false }" />
+                      }
+                    </div>
                   </div>
-                </div>
+                }
               }
             }
           </div>
