@@ -24,6 +24,23 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 export class RdGeneralInformationComponent implements OnInit {
   @ViewChild('saveConfirmationModal') saveConfirmationModal!: SaveConfirmationModalComponent;
 
+  /**
+   * P2-3201 (INC-158283) — approved AI notes. Both are static blocks: not collapsible and with no
+   * "How it works" link. An earlier draft of the ticket proposed both; the revised description rules
+   * them out explicitly.
+   *
+   * The enabling sentence below says "once all sections are completed" rather than the draft's
+   * "after the required data fields that trigger the AI assistant have been completed". The AI Review
+   * button (panel-menu.component.html) is gated on `greenChecksSE.submit`, the same gate as Submit,
+   * so the draft wording described behaviour that does not exist. Santiago approved the correction
+   * on Slack, 30 Jul 10:33: "Haz el cambio a once all sections are completed".
+   */
+  readonly aiAssistantTitlesNote =
+    '<strong>AI Assistant for result Titles and Descriptions:</strong> PRMS includes an AI assistant that generates suggested titles and descriptions for results based on the information entered by users. During the 2025 reporting cycle, its use contributed to a reduction in QA comments on result titles and descriptions, from 28% to 16%. Based on this positive experience and user feedback, we encourage Programs/Accelerators to use the AI assistant to improve the quality and consistency of reported results. To use the assistant, click <strong>AI Review</strong> once it becomes available. The button is automatically enabled once all sections are completed. All AI-generated text should be carefully reviewed, validated, and, where necessary, refined before submission.';
+
+  readonly aiImpactAreaScoresNote =
+    '<strong>AI-assisted Notification for Impact Area Scores:</strong> PRMS includes an AI assistant that reviews the result’s metadata (and supporting evidence for scores of 2), it assesses whether the information provided is consistent with and adequately supports the selected score, and flags potential mismatches. The assistant does not select or recommend a score; responsibility for assigning the score remains with the user. To use the assistant, click <strong>AI Review</strong> once it becomes available. Any AI-generated notifications should be carefully reviewed and used to validate, and, where necessary, revise the selected Impact Area score and its supporting evidence before submission.';
+
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
   isPhaseOpen = false;

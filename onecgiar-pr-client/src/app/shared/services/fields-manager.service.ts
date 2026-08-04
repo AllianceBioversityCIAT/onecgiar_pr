@@ -69,7 +69,8 @@ export class FieldsManagerService {
           </ul>`
       },
       '[general-info]-description': {
-        label: 'Description',
+        // P2-3201 (INC-158283): renamed from "Description" per the CGIAR System Org alignment request.
+        label: 'Description of Result',
         placeholder: 'Enter text',
         required: !this.dataControlSE.isKnowledgeProductSignal(),
         description: `<ul>
@@ -82,7 +83,9 @@ export class FieldsManagerService {
       '[general-info]-lead_contact_person': {
         label: 'Lead contact person',
         placeholder: 'Search for a person (min 4 characters)',
-        description: `For more precise results, we recommend searching by email or username.
+        // P2-3201 (INC-158283): this guidance moved out of the inline grey box and into the field
+        // tooltip, which is what removes the "Description:" header without losing the help text.
+        tooltip: `For more precise results, we recommend searching by email or username.
     <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`,
         required: this.isP25()
       },
@@ -157,7 +160,11 @@ export class FieldsManagerService {
             </ul>`
       },
       '[innovation-use-form]-has-innovation-link': {
-        label: 'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?',
+        // P2-3201 (INC-158283): one wording for every indicator category.
+        // NOTE: on this branch the question only renders for Innovation use / Innovation development
+        // (see rd-contributors-and-partners.component.html), so the Policy change variant requested by
+        // the ticket has no surface to render on yet. It is deferred, not forgotten.
+        label: 'Is this result linked to, or (for innovations) bundled with, another reported result?',
         hide: this.isP22(),
         required: true
       },

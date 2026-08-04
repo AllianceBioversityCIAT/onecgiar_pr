@@ -1,16 +1,10 @@
 <div class="detail_container">
   <div id="alert"></div>
-  <!-- P2-3036 (AC9): P25 Innovation in phase 2026+ uses the "location of benefit" wording; 2025 keeps "geographic focus". -->
-  <div
-    appFeedbackValidation
-    [labelText]="
-      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
-        ? this.fieldsManagerSE.isGeographicLocation2026()
-          ? 'What is the location of benefit for this result?'
-          : 'What is the current geographic focus of the innovation development, testing and/or use?'
-        : 'What is the main geographic focus of the Output?'
-    "
-    [isComplete]="!!this.geographicLocationBody.geo_scope_id"></div>
+  <!-- P2-3201 (INC-158283): the question is now identical for every result type and phase year, per the
+       CGIAR System Org alignment request. This supersedes the per-type wording AND the P2-3036 (AC9)
+       "location of benefit" variant for 2026+ — that variant was retired on purpose, not lost:
+       Santiago Sánchez was told the consequence explicitly and confirmed (Slack, 4 Aug 2026). -->
+  <div appFeedbackValidation [labelText]="geographicFocusQuestion" [isComplete]="!!this.geographicLocationBody.geo_scope_id"></div>
 
   <app-alert-status description="Select the geographic location/s where this result is taking place."> </app-alert-status>
 
@@ -27,13 +21,7 @@
           : 'This should reflect geographies where the innovation development, testing and/or use has taken place'
         : undefined
     "
-    [label]="
-      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
-        ? this.fieldsManagerSE.isGeographicLocation2026()
-          ? 'What is the location of benefit for this result?'
-          : 'What is the current geographic focus of the innovation development, testing and/or use?'
-        : undefined
-    "
+    [label]="geographicFocusQuestion"
     [body]="this.geographicLocationBody"
     module="reporting">
   </app-geoscope-management>

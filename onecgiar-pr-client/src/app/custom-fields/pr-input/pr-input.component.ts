@@ -43,6 +43,8 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() labelDescInlineStyles?: string = '';
   @Input() fieldRef: string | number;
   @Input() customLabel?: string;
+  /** P2-3201: guidance shown as a pinnable ⓘ tooltip; normally fed from FieldsManager. */
+  @Input() tooltip?: string = '';
   /** When true, `required` comes from the parent `@Input()` instead of FieldsManager (lead contact scan workaround). */
   @Input() lockRequiredFromFieldManager = false;
   @Input() showFieldHeader = true;
@@ -58,10 +60,11 @@ export class PrInputComponent implements ControlValueAccessor {
 
   preventFieldRender = computed<boolean>(() => {
     if (!this.fieldRef) return true;
-    const { hide, label, placeholder, description, required, useColon } = this.fieldsManager.fields()[this.fieldRef] || {};
+    const { hide, label, placeholder, description, required, useColon, tooltip } = this.fieldsManager.fields()[this.fieldRef] || {};
     this.label = label;
     this.placeholder = placeholder;
     this.description = description;
+    this.tooltip = tooltip ?? '';
     if (!this.lockRequiredFromFieldManager) {
       this.required = required;
     }

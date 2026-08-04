@@ -1,5 +1,5 @@
-<!-- P2-3061: when a tooltip is provided, render the label with a material-icons "info" + pTooltip (project line of design).
-     When there is no tooltip, the label markup stays identical to before (no impact on the rest of the app). -->
+<!-- P2-3201: when a tooltip is provided the label gets a material-icons "info" trigger next to it.
+     Without a tooltip the markup is identical to before, so no other screen is affected. -->
 <ng-container *ngIf="this.label">
   <div
     *ngIf="!this.tooltip"
@@ -13,7 +13,16 @@
       class="pr_label {{ labelDescStyleClass }}"
       [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
       [innerHTML]="this.label + (this.useColon ? ':' : '')"></div>
-    <i class="material-icons-round pr_label_tooltip" [pTooltip]="this.tooltip" tooltipPosition="top" [escape]="false">info</i>
+    <i
+      class="material-icons-round pr_label_tooltip"
+      tabindex="0"
+      role="button"
+      [attr.aria-label]="'Guidance for ' + this.label"
+      [appPrTooltip]="this.tooltip"
+      [appPrTooltipPinnable]="true"
+      appPrTooltipPosition="top"
+      >info</i
+    >
   </div>
 </ng-container>
 <div class="pr_description readOnly" *ngIf="this.description" [innerHTML]="this.descriptionLabel + this.description" [style]="descInlineStyles"></div>

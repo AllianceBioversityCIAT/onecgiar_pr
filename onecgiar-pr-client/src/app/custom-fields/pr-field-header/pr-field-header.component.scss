@@ -38,3 +38,22 @@
     color: var(--pr-color-accents-5);
   }
 }
+
+/* P2-3201: label + ⓘ trigger on one row, for guidance moved out of the grey description box. */
+.pr_label_row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pr_label_tooltip {
+  font-size: 16px;
+  color: var(--pr-color-primary-300);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+    border-radius: 50%;
+  }
+}

@@ -11,7 +11,10 @@ export class PrFieldHeaderComponent {
   @Input() simpleStyle: boolean;
   @Input() label: string;
   @Input() description: string;
-  // P2-3061: optional info tooltip shown as a material-icons "info" next to the label (project line: material-icons-round + pTooltip).
+  // P2-3061: optional info tooltip shown as a material-icons "info" next to the label.
+  // P2-3201: it is now pinnable — hover opens, click pins, Escape / outside click dismisses —
+  // so guidance carrying links stays reachable.
+
   @Input() tooltip?: string = '';
   @Input() required: boolean = true;
   @Input() readOnly: boolean;
