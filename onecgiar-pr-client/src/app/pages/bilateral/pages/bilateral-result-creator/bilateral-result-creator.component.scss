@@ -6,16 +6,13 @@
 }
 
 .bilateral-creator {
+  // Plain auto-centering within `main` (the Spartan sidebar is a flex sibling,
+  // not part of this box's width) — matches .bil-home. Don't reintroduce a
+  // 100vw-based margin-left here: 100vw includes the sidebar's width, which
+  // pushes this column further right than its own container's true center.
   max-width: 1100px;
   margin: 0 auto;
   padding: 36px 28px 100px;
-
-  @media (min-width: 1400px) {
-    // The progress aside is fixed at left:12px with width:280px (right edge = 292px).
-    // Content must start at ≥292px + 24px gap = 316px to avoid overlap.
-    // On very wide viewports the centering formula naturally exceeds that, so we take the max.
-    margin-left: max(316px, calc((100vw - 1100px) / 2));
-  }
 }
 
 .bcr-breadcrumb {
