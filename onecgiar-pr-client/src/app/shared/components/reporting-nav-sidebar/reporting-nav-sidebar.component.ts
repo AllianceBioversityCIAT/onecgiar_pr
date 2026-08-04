@@ -187,40 +187,53 @@ export class ReportingNavSidebarComponent {
   ];
 
   /**
-   * Conceptual RFR action links (subtle group label in the template — not a collapsible).
-   * Dashboard = full bento; the other three are single-section surfaces.
+   * Planned ToC / program shell — SP cards and the band land here.
+   * Emerging is NOT a Platform item (CURRENT): open it from the program band CTA.
    */
-  /**
-   * Platform links under Results Center that are NOT already covered by the programme / centre
-   * blocks above the divider. CURRENT reference only lists platform tools; Emerging stays because
-   * it has no other entry in the shell.
-   */
-  readonly rfrPlatformLinks: NavSubLink[] = [
-    { name: 'Report Emerging results', path: '/result-framework-reporting/emerging', icon: 'lucideSparkles' }
-  ];
-
-  /** Results Center = reporting home (reference label). SP cards deep-link into Planned ToC. */
-  readonly rfrResultsCenterPath = '/result-framework-reporting/home';
-
-  /** Planned ToC path — SP cards and the program shell land here. */
   readonly rfrPlannedPath = '/result-framework-reporting/planned-toc';
 
   /**
-   * Overview is the OTHER tab of the same program shell. The sidebar entry must stay lit there:
-   * switching tab does not leave the program, and dropping the highlight reads as "you navigated
-   * away" when nothing moved.
+   * Overview is the OTHER tab of the same program shell. Highlighting the active SP still
+   * applies here; switching tab does not leave the program.
    */
   readonly rfrOverviewPath = '/result-framework-reporting/overview';
 
   /**
-   * Primary nav sections + Admin module (admin-only, from extraRoutingApp).
-   * Same role gating as the horizontal nav for My Admin.
+   * Platform list order matches CURRENT reference:
+   * Results Center · Innovation Packages · Quality Assurance · Bilateral Results · My Admin
+   * (+ Admin module at the end when the user is admin — product need, not in the mock).
+   *
+   * `result-framework-reporting` is omitted: programme entry is My science programs above.
    */
+  private static readonly PLATFORM_ORDER = [
+    'result',
+    'ipsr',
+    'quality-assurance',
+    'bilateral',
+    'init-admin-module',
+    'admin-module'
+  ] as const;
+
   readonly sections = computed<PrRoute[]>(() => {
-    const primary = routingApp.filter(o => !(o.prHide || this.validateAdminModuleAndRole(o)));
-    if (!this.rolesSE?.isAdmin) return primary;
-    const admin = extraRoutingApp.find(o => o.path === 'admin-module' && !o.prHide);
-    return admin ? [...primary, admin] : primary;
+    const primary = routingApp.filter(
+      o =>
+        !(o.prHide || this.validateAdminModuleAndRole(o)) &&
+        o.path !== 'result-framework-reporting' &&
+        o.path !== 'outcome-indicator-module'
+    );
+    const withAdmin =
+      this.rolesSE?.isAdmin
+        ? (() => {
+            const admin = extraRoutingApp.find(o => o.path === 'admin-module' && !o.prHide);
+            return admin ? [...primary, admin] : primary;
+          })()
+        : primary;
+
+    const rank = (path: string) => {
+      const i = ReportingNavSidebarComponent.PLATFORM_ORDER.indexOf(path as (typeof ReportingNavSidebarComponent.PLATFORM_ORDER)[number]);
+      return i === -1 ? 99 : i;
+    };
+    return [...withAdmin].sort((a, b) => rank(a.path) - rank(b.path));
   });
 
   // --- Results Framework: level-1 group tag + 4 peer links; programs under Planned ---
@@ -245,8 +258,9 @@ export class ReportingNavSidebarComponent {
   // "Cannot read properties of undefined (reading 'length')" — taking the app's only navigation
   // down with it. Caught by the railPrograms test.
   readonly programGroups = computed<ProgramGroup[]>(() => [
-    { key: 'mine', label: 'My programs', items: this.homeSE.mySPsList() ?? [] },
-    { key: 'other', label: 'Other programs', items: this.homeSE.otherSPsList() ?? [] },
+    { key: 'mine', label: 'My science programs', items: this.homeSE.mySPsList() ?? [] },
+    { key: 'other', label: 'Other science programs', items: this.homeSE.otherSPsList() ?? [] },
+    // Product reality (not in the mock): non-SP projects still need a home.
     { key: 'projects', label: 'Other projects', items: this.homeSE.otherProjectsList() ?? [] }
   ]);
 

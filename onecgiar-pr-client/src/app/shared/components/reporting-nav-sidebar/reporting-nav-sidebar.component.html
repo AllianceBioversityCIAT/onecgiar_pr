@@ -1,6 +1,6 @@
 <hlm-sidebar collapsible="icon">
-  <!-- Header 64px — CURRENT :45-50. PR mark 32×32, PRMS 16/600, Reporting 11/500 muted. -->
-  <div hlmSidebarHeader class="gap-2 px-[12px] py-0">
+  <!-- Header 64px — CURRENT :45-50. pad 0 16px. PR mark 32×32, PRMS 16/600, Reporting 11 muted. -->
+  <div hlmSidebarHeader class="gap-0 px-[16px] py-0">
     <div
       class="flex h-[64px] items-center gap-[10px]"
       [class.justify-between]="!isCollapsed()"
@@ -95,8 +95,8 @@
           @for (group of programGroups(); track group.key) {
             @if (group.items.length) {
               @if (group.key === 'mine') {
-                <!-- MY SCIENCE PROGRAMS — 44px bordered cards -->
-                <div class="pr-nav-section-label">My science programs</div>
+                <!-- MY SCIENCE PROGRAMS — 44px cards, gap 6px (CURRENT) -->
+                <div class="pr-nav-section-label">{{ group.label }}</div>
                 <div class="flex flex-col gap-[6px]">
                   @for (sp of group.items; track sp.initiativeId) {
                     <a
@@ -116,7 +116,7 @@
                   }
                 </div>
               } @else {
-                <!-- OTHER SCIENCE PROGRAMS — toggle + count mono + scroll list + fade -->
+                <!-- OTHER SCIENCE PROGRAMS / OTHER PROJECTS — toggle + mono count -->
                 <button type="button" class="pr-nav-others-toggle" (click)="toggleGroup(group.key)" [attr.aria-expanded]="isGroupOpen(group.key)">
                   <span class="pr-nav-section-label pr-nav-section-label--inline">{{ group.label }}</span>
                   <span class="pr-nav-others-count">{{ group.items.length }}</span>
@@ -159,7 +159,7 @@
     @if (!isCollapsed() && getMyCenters().length > 0) {
       <div hlmSidebarGroup class="pr-nav-programs">
         <div class="pr-nav-section-label pr-nav-section-label--spaced">My CGIAR centers</div>
-        <div class="flex flex-col gap-1.5">
+        <div class="flex flex-col gap-[6px]">
           @for (center of getMyCenters(); track center.center_id) {
             <a
               class="pr-nav-program-card pr-nav-center-card"
@@ -184,52 +184,18 @@
       <div class="pr-nav-divider"></div>
     }
 
-    <div hlmSidebarGroup>
+    <div hlmSidebarGroup class="pr-nav-platform">
       @if (!isCollapsed()) {
-        <div class="pr-nav-section-label">Platform</div>
+        <div class="pr-nav-section-label pr-nav-section-label--platform">Platform</div>
       }
       <div hlmSidebarGroupContent>
-        <ul hlmSidebarMenu>
+        <!--
+          Flat Platform (CURRENT): Results Center · Innovation Packages · QA · Bilateral · My Admin.
+          No Emerging (band CTA). No second Results Center from RFR. No nested RFR group.
+        -->
+        <ul hlmSidebarMenu class="pr-nav-platform-menu">
           @for (section of sections(); track section.path) {
-            @if (section.path === 'result-framework-reporting') {
-              <!--
-                Platform is flat in CURRENT (Results Center · Innovation Packages · …).
-                Programmes and Centers already live ABOVE the divider, so we only keep the
-                reporting entry points that are not duplicated: Results Center + Emerging.
-                "Results planned in ToC" and "My CGIAR Centers" were removed from this list —
-                they opened the same surfaces as the SP cards / centers block above.
-              -->
-              <li class="list-none" role="group" aria-label="Results framework and reporting">
-                <ul class="pr-nav-rfr-box__menu" hlmSidebarMenu>
-                  <li hlmSidebarMenuItem>
-                    <a
-                      hlmSidebarMenuButton
-                      [routerLink]="rfrResultsCenterPath"
-                      [queryParams]="rfrSectionQueryParams()"
-                      [isActive]="isRfrSectionActive(rfrResultsCenterPath) || isPlannedActive()"
-                      (mouseenter)="openIconFlyout('rfr', $event)"
-                      (mouseleave)="scheduleCloseIconFlyout()"
-                      tooltip="Results Center">
-                      <ng-icon name="lucideLayoutDashboard" />
-                      <span>Results Center</span>
-                    </a>
-                  </li>
-                  @for (link of rfrPlatformLinks; track link.path) {
-                    <li hlmSidebarMenuItem>
-                      <a
-                        hlmSidebarMenuButton
-                        [routerLink]="link.path"
-                        [queryParams]="rfrSectionQueryParams()"
-                        [isActive]="isRfrSectionActive(link.path)"
-                        [tooltip]="link.name">
-                        <ng-icon [name]="link.icon" />
-                        <span>{{ link.name }}</span>
-                      </a>
-                    </li>
-                  }
-                </ul>
-              </li>
-            } @else if (section.path === 'init-admin-module') {
+            @if (section.path === 'init-admin-module') {
               <li hlmSidebarMenuItem>
                 <button
                   hlmSidebarMenuButton
@@ -410,9 +376,9 @@
 
     <div hlmSidebarSeparator></div>
 
-    <div hlmSidebarGroup>
+    <div hlmSidebarGroup class="pr-nav-extras">
       @if (!isCollapsed()) {
-        <div class="pr-nav-section-label">Extras</div>
+        <div class="pr-nav-section-label pr-nav-section-label--extras">Extras</div>
       }
       <div hlmSidebarGroupContent>
         <ul hlmSidebarMenu role="group" aria-label="Extra tools">

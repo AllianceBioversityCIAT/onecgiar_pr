@@ -116,11 +116,19 @@ describe('ReportingNavSidebarComponent', () => {
     expect(homeMock.getScienceProgramsProgress).not.toHaveBeenCalled();
   });
 
-  it('exposes a flat platform surface: Results Center + Emerging (no nested Planned/Centers)', async () => {
+  it('exposes Platform without RFR/Emerging; SP cards own reporting entry', async () => {
     await build();
-    expect(component.rfrResultsCenterPath).toBe('/result-framework-reporting/home');
-    expect(component.rfrPlatformLinks.map(l => l.path)).toEqual(['/result-framework-reporting/emerging']);
+    const paths = component.sections().map(s => s.path);
+    expect(paths).not.toContain('result-framework-reporting');
+    expect(paths).not.toContain('emerging');
+    // Reference order: Results Center before Bilateral before My Admin.
+    const result = paths.indexOf('result');
+    const bilateral = paths.indexOf('bilateral');
+    const myAdmin = paths.indexOf('init-admin-module');
+    if (result >= 0 && bilateral >= 0) expect(result).toBeLessThan(bilateral);
+    if (bilateral >= 0 && myAdmin >= 0) expect(bilateral).toBeLessThan(myAdmin);
     expect(component.rfrPlannedPath).toBe(PLANNED);
+    expect(component.programGroups().find(g => g.key === 'other')?.label).toBe('Other science programs');
     expect(component.fontScaleOptions.length).toBeGreaterThan(0);
   });
 
