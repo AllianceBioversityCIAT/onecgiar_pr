@@ -34,6 +34,7 @@ import { YesOrNotByBooleanPipe } from './pipes/yes-or-not-by-boolean.pipe';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { CustomValidationTooltipComponent } from './custom-validation-tooltip/custom-validation-tooltip.component';
 import { TooltipModule } from 'primeng/tooltip';
+import { PrTooltipDirectiveModule } from '../shared/directives/pr-tooltip-directive.module';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { MessageModule } from 'primeng/message';
@@ -74,7 +75,7 @@ const fieldComponents = [
     LabelNamePipe,
     YesOrNotByBooleanPipe
   ],
-  exports: [...fieldComponents, FormsModule],
+  exports: [...fieldComponents, FormsModule, PrTooltipDirectiveModule],
   imports: [
     CommonModule,
     FormsModule,
@@ -87,6 +88,7 @@ const fieldComponents = [
     ScrollingModule,
     InputNumberModule,
     TooltipModule,
+    PrTooltipDirectiveModule,
     IconFieldModule,
     InputIconModule,
     MessageModule

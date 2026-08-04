@@ -254,3 +254,45 @@ input::placeholder,
   font-style: italic;
   color: var(--pr-color-accents-5);
 }
+
+/* P2-3201 (INC-158283): tooltip for field guidance moved out of the inline grey "Description:" box.
+   Mounted on document.body by PrTooltipDirective so it is never clipped by an ancestor overflow. */
+.pr-tooltip {
+  position: absolute;
+  z-index: 100000;
+  max-width: 320px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background-color: var(--pr-color-secondary-400);
+  color: var(--pr-color-white);
+  font-size: 11px;
+  line-height: 1.45;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  animation: pr-tooltip-fade 0.12s ease-in;
+
+  ul {
+    margin: 0;
+    padding-left: 16px;
+  }
+
+  a {
+    color: var(--pr-color-white);
+    text-decoration: underline;
+  }
+}
+
+/* When pinned the tooltip must accept the pointer, otherwise its links are unreachable —
+   which is the whole reason pinning exists (e.g. the CGIAR 2030 Strategy link). */
+.pr-tooltip--pinned {
+  pointer-events: auto;
+}
+
+@keyframes pr-tooltip-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

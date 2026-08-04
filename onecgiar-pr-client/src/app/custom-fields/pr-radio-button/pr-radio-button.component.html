@@ -1,5 +1,10 @@
 @if (this.preventFieldRender()) {
-  <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required" [useColon]="false"> </app-pr-field-header>
+  <app-pr-field-header
+    [label]="this.label"
+    [description]="this.description"
+    [tooltip]="this.tooltip"
+    [required]="this.required"
+    [useColon]="false"> </app-pr-field-header>
 
   <div class="pr-field" [ngClass]="{ mandatory: this.required, complete: value !== null && value !== undefined }">
     <div

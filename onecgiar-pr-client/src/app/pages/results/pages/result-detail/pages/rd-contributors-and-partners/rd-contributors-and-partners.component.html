@@ -75,6 +75,9 @@
     }
   }
 
+  <!-- P2-3201 (INC-158283): CLARISA-based definition of a contributor, shown once before Contributing CGIAR Centers. -->
+  <app-alert-status [description]="contributorDefinitionNote"></app-alert-status>
+
   <app-pr-multi-select
     [options]="this.centersSE.centersList"
     label="Contributing CGIAR Centers"
@@ -113,12 +116,15 @@
       [required]="false"
       optionLabel="fullName"
       optionValue="project_id"
-      label="Contributing W3 and/or bilateral projects"
+      label="Contributing W3/Bilateral projects"
       selectedLabel="Projects selected"
       selectedOptionLabel="fullName"
       placeholder="Select project"
       [displayLabelFormatter]="formatBilateralProjectLabel.bind(this)">
     </app-pr-multi-select>
+
+    <!-- P2-3201 (INC-158283): the dropdown is fed by the 2026 mapping exercise, not by the ToC. -->
+    <app-alert-status [description]="bilateralProjectsInfoNote"></app-alert-status>
 
     @if (!this.rdPartnersSE.hasTocResultMapped() || this.rdPartnersSE.loadingBilateralProjects()) {
       <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.7); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: not-allowed; z-index: 2">
@@ -230,7 +236,7 @@
           <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
           <p>
             <b> {{ contributor?.official_code }} {{ contributor.short_name }} </b>
-            has not confirmed its contribution to this result, so its ToC mapping is currently unavailable.
+            has not confirmed its contribution to this result.
           </p>
         </div>
       }

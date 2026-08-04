@@ -19,6 +19,14 @@ export class RdGeographicLocationComponent {
   geographicLocationBody = new GeographicLocationBody();
   extraGeographicLocationBody = new ExtraGeographicLocationBody();
 
+  /**
+   * P2-3201 (INC-158283): a single geographic focus question for every result type. Replaces the
+   * previous pair of variants (the innovation wording and the generic Output wording). Decided by
+   * Santiago Sánchez on Slack, 4 Aug 2026: "para todos los resultados … debe de ser
+   * What is the geographic focus of the result?". The guidance line below it is deliberately unchanged.
+   */
+  readonly geographicFocusQuestion = 'What is the geographic focus of the result?';
+
   UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
   ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';
   geographic_focus = [

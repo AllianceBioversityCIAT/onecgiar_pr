@@ -17,6 +17,14 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
   standalone: false
 })
 export class RdContributorsAndPartnersComponent implements OnInit {
+  // P2-3201 (INC-158283): the dropdown's contents come from the 2026 mapping exercise, not from the ToC.
+  bilateralProjectsInfoNote =
+    'The dropdown list includes only the W3/Bilateral projects that were mapped to and agreed by the P/A during the 2026 mapping exercise.';
+
+  // P2-3201: CLARISA-based definition of a contributor, shown above Contributing CGIAR Centers.
+  readonly CLARISA_GLOSSARY_URL = 'https://clarisa.cgiar.org/clarisa-panel/documentation/One_CGIAR_Control_List/General_Control_List/Glossary';
+  contributorDefinitionNote = `As defined in the <a class="open_route" href="${this.CLARISA_GLOSSARY_URL}" target="_blank">CGIAR CLARISA Glossary</a>, a contributor is a partner — internal or external to CGIAR — that has made a significant contribution to the achievement of a result. Contributions may take many forms and the threshold for attribution is that the result would not have been achieved, or reported in its current form, without that partner’s contribution.`;
+
   resultLevelSE = inject(ResultLevelService);
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;

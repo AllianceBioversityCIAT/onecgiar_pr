@@ -22,6 +22,8 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() optionValue: string;
   @Input() label: string;
   @Input() description: string;
+  /** P2-3201: guidance shown as a pinnable ⓘ tooltip next to the label instead of an inline box. */
+  @Input() tooltip: string = '';
   @Input() subLabel: string;
   @Input() required: boolean = true;
   @Input() hideOptions: boolean;

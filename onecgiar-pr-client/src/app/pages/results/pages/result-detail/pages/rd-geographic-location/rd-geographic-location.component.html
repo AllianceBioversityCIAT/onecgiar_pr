@@ -1,13 +1,8 @@
 <div class="detail_container">
   <div id="alert"></div>
-  <div
-    appFeedbackValidation
-    [labelText]="
-      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
-        ? 'What is the current geographic focus of the innovation development, testing and/or use?'
-        : 'What is the main geographic focus of the Output?'
-    "
-    [isComplete]="!!this.geographicLocationBody.geo_scope_id"></div>
+  <!-- P2-3201 (INC-158283): the question is now identical for every result type, per the CGIAR System Org
+       alignment request. This supersedes the previous per-type wording. -->
+  <div appFeedbackValidation [labelText]="geographicFocusQuestion" [isComplete]="!!this.geographicLocationBody.geo_scope_id"></div>
 
   <app-alert-status description="Select the geographic location/s where this result is taking place."> </app-alert-status>
 
@@ -22,11 +17,7 @@
         ? 'This should reflect geographies where the innovation development, testing and/or use has taken place'
         : undefined
     "
-    [label]="
-      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
-        ? 'What is the current geographic focus of the innovation development, testing and/or use?'
-        : undefined
-    "
+    [label]="geographicFocusQuestion"
     [body]="this.geographicLocationBody"
     module="reporting">
   </app-geoscope-management>

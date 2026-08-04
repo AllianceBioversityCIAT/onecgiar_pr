@@ -11,6 +11,8 @@ export class PrFieldHeaderComponent {
   @Input() simpleStyle: boolean;
   @Input() label: string;
   @Input() description: string;
+  /** P2-3201: optional guidance shown as a pinnable ⓘ tooltip next to the label. */
+  @Input() tooltip?: string = '';
   @Input() required: boolean = true;
   @Input() readOnly: boolean;
   @Input() useColon: boolean = true;

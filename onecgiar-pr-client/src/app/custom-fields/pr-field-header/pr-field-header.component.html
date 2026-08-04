@@ -1,7 +1,28 @@
-<div
-  class="pr_label {{ labelDescStyleClass }}"
-  [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
-  *ngIf="this.label"
-  [innerHTML]="this.label + (this.useColon ? ':' : '')"
-  [style]="labelDescInlineStyles"></div>
+<!-- P2-3201: when a tooltip is provided the label gets a material-icons "info" trigger next to it.
+     Without a tooltip the markup is identical to before, so no other screen is affected. -->
+<ng-container *ngIf="this.label">
+  <div
+    *ngIf="!this.tooltip"
+    class="pr_label {{ labelDescStyleClass }}"
+    [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
+    [innerHTML]="this.label + (this.useColon ? ':' : '')"
+    [style]="labelDescInlineStyles"></div>
+
+  <div *ngIf="this.tooltip" class="pr_label_row" [style]="labelDescInlineStyles">
+    <div
+      class="pr_label {{ labelDescStyleClass }}"
+      [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
+      [innerHTML]="this.label + (this.useColon ? ':' : '')"></div>
+    <i
+      class="material-icons-round pr_label_tooltip"
+      tabindex="0"
+      role="button"
+      [attr.aria-label]="'Guidance for ' + this.label"
+      [appPrTooltip]="this.tooltip"
+      [appPrTooltipPinnable]="true"
+      appPrTooltipPosition="top"
+      >info</i
+    >
+  </div>
+</ng-container>
 <div class="pr_description readOnly" *ngIf="this.description" [innerHTML]="this.descriptionLabel + this.description" [style]="descInlineStyles"></div>

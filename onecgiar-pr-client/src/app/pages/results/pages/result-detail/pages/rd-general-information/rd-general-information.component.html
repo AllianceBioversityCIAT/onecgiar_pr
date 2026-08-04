@@ -25,9 +25,16 @@
     description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
   </app-alert-status>
 
+  <!-- P2-3201 (INC-158283): AI assistant note, rendered once between "Change result type" and
+       "Title of Result" so it covers both the title and the description field. The sentence about
+       when the button becomes enabled was amended to match the implementation (Santiago, 30 Jul):
+       the AI Review button is gated on all sections being complete, not on a subset of fields. -->
+  <app-alert-status [description]="aiAssistantTitlesNote"></app-alert-status>
+
   <app-pr-input
     fieldRef="[general-info]-title"
     [customLabel]="'Title of Result'"
+    [showDescription]="false"
     type="text"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_name"
@@ -36,6 +43,7 @@
 
   <app-pr-textarea
     fieldRef="[general-info]-description"
+    [showDescriptionLabel]="false"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description"
     [maxWords]="300"></app-pr-textarea>
@@ -48,8 +56,22 @@
       [isComplete]="!!this.generalInfoBody.lead_contact_person && !!this.generalInfoBody.lead_contact_person_data"></div>
   }
 
-  <h1 class="pr_label">Impact Area scores:</h1>
-  <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
+  <!-- P2-3201 (INC-158283): the AI note sits above the heading and covers the whole section. -->
+  <app-alert-status [description]="aiImpactAreaScoresNote"></app-alert-status>
+
+  <h1 class="pr_label impact_scores_heading">
+    Impact Area scores:
+    <i
+      class="material-icons-round impact_scores_info"
+      tabindex="0"
+      role="button"
+      aria-label="Impact Area scoring guidance"
+      [appPrTooltip]="impactAreaScoresInfo()"
+      [appPrTooltipPinnable]="true"
+      appPrTooltipPosition="bottom"
+      >info</i
+    >
+  </h1>
 
   <!-- Template reutilizable para checkboxes de áreas de impacto -->
   <ng-template #impactAreaCheckboxes let-fieldRef="fieldRef" let-fieldName="fieldName" let-optionsList="optionsList" let-prefix="prefix">
@@ -79,13 +101,13 @@
 
   <!------- [1] ------->
   <div class="block_container">
-    <app-alert-status [description]="genderInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-gender_tag_id"
+        [tooltip]="genderInformation()"
         [(ngModel)]="this.generalInfoBody.gender_tag_id">
       </app-pr-radio-button>
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
@@ -119,13 +141,13 @@
 
   <!------- [2] ------->
   <div class="block_container">
-    <app-alert-status [description]="climateInformation()"> </app-alert-status>
     <div class="radio_grid" id="climate_change_tag">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-climate_change_tag_id"
+        [tooltip]="climateInformation()"
         [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
       </app-pr-radio-button>
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
@@ -159,13 +181,13 @@
 
   <!------- [3] ------->
   <div class="block_container">
-    <app-alert-status [description]="nutritionInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-nutrition_tag_level_id"
+        [tooltip]="nutritionInformation()"
         [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id">
       </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
@@ -199,13 +221,13 @@
 
   <!------- [4] ------->
   <div class="block_container">
-    <app-alert-status [description]="environmentInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-environmental_biodiversity_tag_level_id"
+        [tooltip]="environmentInformation()"
         [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
       </app-pr-radio-button>
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3"></div>
@@ -239,13 +261,13 @@
 
   <!------- [5] ------->
   <div class="block_container">
-    <app-alert-status [description]="povertyInformation()"> </app-alert-status>
     <div class="radio_grid">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-poverty_tag_level_id"
+        [tooltip]="povertyInformation()"
         [(ngModel)]="this.generalInfoBody.poverty_tag_level_id">
       </app-pr-radio-button>
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>
