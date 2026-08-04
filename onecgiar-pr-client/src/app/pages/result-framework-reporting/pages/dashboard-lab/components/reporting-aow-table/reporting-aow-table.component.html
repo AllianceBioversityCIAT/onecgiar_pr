@@ -44,7 +44,8 @@
             [class.rotate-180]="isOpen(aowKey, isDefaultOpenAow(aowIndex))" />
 
           <span
-            class="pr-code shrink-0 rounded-[6px] bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[var(--pr-color-primary-400)]">
+            class="pr-code shrink-0 rounded-[6px] px-[8px] py-[3px] text-[12px] font-medium uppercase tracking-[0.02em]"
+            [class]="headerChipClass(group)">
             {{ headerChip(group) }}
           </span>
 
@@ -58,20 +59,25 @@
             <ng-icon name="lucideInfo" class="text-[14px]" />
           </span>
 
-          <span class="shrink-0 text-[13px] text-[var(--pr-text-subtle)]">{{ countLabel(group.count) }}</span>
+          <span class="shrink-0 whitespace-nowrap text-[13px] text-[var(--pr-text-subtle)]">
+            {{ countLabel(group.count) }}
+          </span>
 
           <span class="flex-1"></span>
 
+          <!-- Ratio must stay on one line — fixed 62px was wrapping "0 of 137". -->
           <span class="flex shrink-0 items-center gap-[12px]">
-            <span class="h-[8px] w-[120px] overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
+            <span class="h-[8px] w-[120px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
               <span
                 class="block h-[8px] rounded-[4px] bg-[var(--pr-color-primary-300)]"
                 [style.width.%]="ratio.percent"></span>
             </span>
-            <span class="pr-figure-sm w-[62px] text-right text-[14px] font-semibold text-[var(--pr-text-heading)]">
+            <span
+              class="pr-figure-sm shrink-0 whitespace-nowrap text-right text-[14px] font-semibold tabular-nums text-[var(--pr-text-heading)]">
               {{ ratio.done }} of {{ ratio.total }}
             </span>
-            <span class="w-[42px] text-right text-[14px] font-semibold text-[var(--pr-text-secondary)]">
+            <span
+              class="w-[42px] shrink-0 whitespace-nowrap text-right text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
               {{ ratio.percent }}%
             </span>
           </span>

@@ -205,11 +205,11 @@ export class ReportingAowTableComponent {
         code = '';
         name = title;
       } else {
-        // Pure HLO under an AoW — outcomes are filtered out upstream.
+        // Under an AoW card: outputs are HLOs; residual outcome tiers (if any) keep Outcome.
         const title = row.__hlo?.trim() || 'Unassigned';
         key = `${group.aow.code}::${title}`;
         const match = /^((?:HLO|IO|EOI)[\w.\-]*)\s+(.*)$/i.exec(title);
-        eyebrow = 'HLO';
+        eyebrow = row.__tier === 'outcome' ? 'Outcome' : 'HLO';
         code = match?.[1] ?? '';
         name = match?.[2] ?? title;
       }
@@ -238,12 +238,31 @@ export class ReportingAowTableComponent {
     return kind === 'intermediate' || kind === '2030';
   }
 
-  /** Chip label in the 68px header — AoW code, or a short bucket tag. */
+  /**
+   * Chip label in the 68px header.
+   * AoW → code (AOW01). Intermediate → "Intermediate". 2030 → "2030"
+   * (CURRENT mkCard tags at PRMS-Shell.dc.html ~3654).
+   */
   headerChip(group: ReportingAowGroup): string {
     const kind = group.kind ?? 'aow';
-    if (kind === 'intermediate') return 'IO';
+    if (kind === 'intermediate') return 'Intermediate';
     if (kind === '2030') return '2030';
     return group.aow.code;
+  }
+
+  /**
+   * Chip colours from CURRENT: Intermediate indigo soft, 2030 teal soft.
+   * AoW keeps the brand-soft violet chip.
+   */
+  headerChipClass(group: ReportingAowGroup): string {
+    const kind = group.kind ?? 'aow';
+    if (kind === 'intermediate') {
+      return 'bg-[#E0E7FF] text-[#3730A3]';
+    }
+    if (kind === '2030') {
+      return 'bg-[#D1FAE5] text-[#0F766E]';
+    }
+    return 'bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-400)]';
   }
 
   /** Rows surviving the toolbar filters. */
