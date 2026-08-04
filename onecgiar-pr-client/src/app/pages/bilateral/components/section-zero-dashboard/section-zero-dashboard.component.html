@@ -9,7 +9,16 @@
         </span>
       }
     </h3>
-    @if (creationService.selectedProject(); as project) {
+    @if (creationService.isLoadingResult()) {
+      <div class="bp-skel-code"></div>
+      <div class="bp-skel-name"></div>
+      <div class="bp-skel-name bp-skel-name--sm"></div>
+      <div class="bp-sp-badges">
+        <div class="bp-skel-pill"></div>
+        <div class="bp-skel-pill"></div>
+        <div class="bp-skel-pill bp-skel-pill--sm"></div>
+      </div>
+    } @else if (creationService.selectedProject(); as project) {
       <div class="bp-project-code">{{ project.shortName }}</div>
       <div class="bp-project-name">{{ project.fullName }}</div>
       @if (project.leadCenter) {

@@ -71,7 +71,11 @@ export class BilateralComponent implements OnInit, OnDestroy {
       return [home, { label: 'Create a result', link: null }];
     }
     if (rest[0] === 'result') {
-      return [home, { label: 'Edit result', link: null }];
+      return [
+        home,
+        { label: 'Results', link: ['/bilateral', acronym, 'results'] },
+        { label: 'Edit result', link: null }
+      ];
     }
     if (rest[0] === 'results') {
       return [home, { label: 'Results', link: null }];
