@@ -33,6 +33,7 @@ export interface BandFilterOption {
   standalone: true,
   imports: [RouterLink, NgIcon],
   templateUrl: './reporting-program-band.component.html',
+  styleUrls: ['./reporting-program-band.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [provideIcons({ lucideInfo, lucideSearch, lucideX, lucideZap })]
 })

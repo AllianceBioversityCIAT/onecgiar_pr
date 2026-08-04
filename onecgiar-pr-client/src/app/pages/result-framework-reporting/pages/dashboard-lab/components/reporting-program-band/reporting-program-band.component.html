@@ -147,10 +147,10 @@
         (input)="searchChange.emit($any($event.target).value)" />
     </div>
 
-    <!-- AoW / Indicator / Status — short native selects; height 36 to match search. -->
+    <!-- AoW / Indicator / Status — custom chevron (native OS arrow is not vertically centred). -->
     @if (aowOptions().length) {
       <select
-        class="h-[36px] w-[140px] shrink-0 cursor-pointer rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[14px] text-[var(--pr-text)] outline-none hover:border-[var(--pr-border-strong)] focus-visible:border-[var(--pr-color-primary-300)]"
+        class="pr-band-select w-[140px]"
         aria-label="Filter by area of work"
         (change)="onSelect(aowChange, $event)">
         <option value="all" [selected]="aowValue() === 'all'">AoW</option>
@@ -162,7 +162,7 @@
 
     @if (typologyOptions().length) {
       <select
-        class="h-[36px] w-[170px] shrink-0 cursor-pointer rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[14px] text-[var(--pr-text)] outline-none hover:border-[var(--pr-border-strong)] focus-visible:border-[var(--pr-color-primary-300)]"
+        class="pr-band-select w-[170px]"
         aria-label="Filter by indicator type"
         (change)="onSelect(typologyChange, $event)">
         <option value="all" [selected]="typologyValue() === 'all'">Indicator</option>
@@ -173,7 +173,7 @@
     }
 
     <select
-      class="h-[36px] w-[130px] shrink-0 cursor-pointer rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[14px] text-[var(--pr-text)] outline-none hover:border-[var(--pr-border-strong)] focus-visible:border-[var(--pr-color-primary-300)]"
+      class="pr-band-select w-[130px]"
       aria-label="Filter by status"
       (change)="onSelect(statusChange, $event)">
       @for (o of statusOptions; track o.value) {

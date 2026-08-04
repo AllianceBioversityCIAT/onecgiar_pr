@@ -1,0 +1,40 @@
+/**
+ * Toolbar filter selects — kill the OS chevron and paint a 16×16 arrow
+ * centred on the right edge (the native marker sits off-centre on macOS).
+ */
+.pr-band-select {
+  height: 36px;
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 0 36px 0 12px;
+  border: 1px solid var(--pr-border);
+  border-radius: 8px;
+  background-color: var(--pr-surface-card);
+  // Chevron: 16×16, vertically centred, 10px from the right edge.
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%235D5872' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px 16px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 36px;
+  color: var(--pr-text);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 150ms ease;
+
+  &:hover {
+    border-color: var(--pr-border-strong);
+  }
+
+  &:focus-visible {
+    border-color: var(--pr-color-primary-300);
+  }
+
+  // IE/legacy edge: hide the built-in arrow if any
+  &::-ms-expand {
+    display: none;
+  }
+}
