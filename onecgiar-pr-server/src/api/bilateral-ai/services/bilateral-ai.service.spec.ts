@@ -67,6 +67,9 @@ describe('BilateralAiService (unit)', () => {
         .fn()
         .mockResolvedValue(undefined),
     };
+    const userRepository = {
+      findOne: jest.fn().mockResolvedValue({ email: 'user@cgiar.org' }),
+    };
 
     const service = new BilateralAiService(
       jobRepository as any,
@@ -80,6 +83,7 @@ describe('BilateralAiService (unit)', () => {
       storage as any,
       textMining as any,
       bilateralService as any,
+      userRepository as any,
     );
 
     Object.assign(service, overrides);
@@ -98,6 +102,7 @@ describe('BilateralAiService (unit)', () => {
         storage,
         textMining,
         bilateralService,
+        userRepository,
       },
     };
   };
@@ -572,6 +577,8 @@ describe('BilateralAiService (unit)', () => {
         audio_keys: ['audio1'],
         text_context: 'some text',
         user_id: 42,
+        project_id: 25,
+        program_code: 'P25',
       });
 
       await service.processJob('j1');
@@ -581,7 +588,9 @@ describe('BilateralAiService (unit)', () => {
         keys: ['key1'],
         audio_keys: ['audio1'],
         text: 'some text',
-        user_id: '42',
+        user_id: 'user@cgiar.org',
+        project_id: 25,
+        program_code: 'P25',
       });
     });
 
