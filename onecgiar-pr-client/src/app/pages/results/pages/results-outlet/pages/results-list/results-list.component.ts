@@ -15,6 +15,7 @@ import {
   REVIEW_RESULT_ID_QUERY_PARAM,
   REVIEW_RESULT_QUERY_PARAM
 } from '../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
+import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 
 interface ResultRoute {
   commands: unknown[];
@@ -30,6 +31,51 @@ interface ItemMenu {
   tooltipShow?: boolean;
   disabled?: boolean;
   inlineStyle?: string;
+}
+
+/** Column catalog — matches CURRENT RC_COLUMNS (PRMS-Shell.dc.html). */
+export interface RcColumnDef {
+  key: string;
+  title: string;
+  attr: string;
+  width: string;
+  /** Default visibility when no localStorage preference exists. */
+  defaultOn: boolean;
+  class?: string;
+}
+
+const RC_COLUMN_STORAGE_KEY = 'pr.resultsCenter.visibleColumns';
+
+/** Full CURRENT column set (order = picker + table order). */
+export const RC_COLUMNS: readonly RcColumnDef[] = [
+  { key: 'code', title: 'Code', attr: 'result_code', width: '88px', defaultOn: true },
+  { key: 'title', title: 'Title', attr: 'title', width: '280px', defaultOn: true, class: 'notCenter' },
+  { key: 'program', title: 'Program', attr: 'submitter', width: '88px', defaultOn: true },
+  { key: 'center', title: 'Center', attr: 'lead_center', width: '110px', defaultOn: true },
+  { key: 'phase', title: 'Phase', attr: 'phase_name', width: '100px', defaultOn: true },
+  { key: 'category', title: 'Indicator category', attr: 'result_type', width: '140px', defaultOn: true },
+  { key: 'funding', title: 'Funding', attr: 'source_name', width: '100px', defaultOn: true },
+  { key: 'status', title: 'Status', attr: 'full_status_name_html', width: '110px', defaultOn: true },
+  { key: 'createdBy', title: 'Created by', attr: 'full_name', width: '130px', defaultOn: false },
+  { key: 'created', title: 'Created', attr: 'created_date', width: '100px', defaultOn: true },
+  { key: 'updated', title: 'Updated', attr: 'last_updated_date', width: '100px', defaultOn: false }
+];
+
+function readStoredColumnVisibility(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(RC_COLUMN_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, boolean>;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function defaultColumnVisibility(): Record<string, boolean> {
+  const map: Record<string, boolean> = {};
+  for (const col of RC_COLUMNS) map[col.key] = col.defaultOn;
+  return map;
 }
 
 @Component({
@@ -54,22 +100,37 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   gettingReport = false;
   combine = true;
 
+  /** Full catalog for the Columns picker (CURRENT). */
+  readonly allColumns = RC_COLUMNS;
+
+  /** Visibility map keyed by RC_COLUMNS.key — persisted. */
+  readonly columnVisibility = signal<Record<string, boolean>>({
+    ...defaultColumnVisibility(),
+    ...readStoredColumnVisibility()
+  });
+
+  columnsOpen = signal(false);
+
+  /** Table columns currently visible (CURRENT order, filtered). */
+  readonly visibleColumns = computed(() => {
+    const vis = this.columnVisibility();
+    return RC_COLUMNS.filter(c => vis[c.key] !== false).map(c => ({
+      key: c.key,
+      title: c.title,
+      attr: c.attr,
+      width: c.width,
+      class: c.class,
+      center: false
+    }));
+  });
+
   /**
-   * Default columns match CURRENT Results Center (PRMS-Shell.dc.html):
-   * Code · Title · Program · Center · Phase · Indicator category · Funding · Status · Created
-   * PDF / Created by are not default chrome — PDF lives in the row action menu.
+   * @deprecated Prefer `visibleColumns()` — kept for tests that read columnOrder shape.
+   * Mirrors default-on columns only.
    */
-  columnOrder = [
-    { title: 'Code', attr: 'result_code', center: false, width: '88px' },
-    { title: 'Title', attr: 'title', class: 'notCenter', width: '280px' },
-    { title: 'Program', attr: 'submitter', center: false, width: '88px' },
-    { title: 'Center', attr: 'lead_center', center: false, width: '110px' },
-    { title: 'Phase', attr: 'phase_name', center: false, width: '100px' },
-    { title: 'Indicator category', attr: 'result_type', center: false, width: '140px' },
-    { title: 'Funding', attr: 'source_name', center: false, width: '100px' },
-    { title: 'Status', attr: 'full_status_name_html', center: false, width: '110px' },
-    { title: 'Created', attr: 'created_date', center: false, width: '100px' }
-  ];
+  get columnOrder() {
+    return this.visibleColumns();
+  }
 
   /** Same deterministic palette as the sidebar program dots. */
   private readonly programDotPalette: readonly string[] = [
@@ -150,6 +211,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   ];
 
   @ViewChild('table') table: PrTableComponent;
+  @ViewChild('filters') filters: ResultsListFiltersComponent;
 
   // Action menu overlay state (replaces PrimeNG p-popover)
   menuOpen = signal(false);
@@ -216,6 +278,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   @HostListener('document:click')
   onDocumentClick() {
     if (this.menuOpen()) this.menuOpen.set(false);
+    if (this.columnsOpen()) this.columnsOpen.set(false);
   }
 
   @HostListener('window:scroll')
@@ -347,6 +410,58 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   pdfHref(result: CurrentResult): string {
     return `/reports/result-details/${result?.result_code}?phase=${result?.version_id}`;
+  }
+
+  isColumnVisible(key: string): boolean {
+    return this.columnVisibility()[key] !== false;
+  }
+
+  toggleColumn(key: string, event?: Event): void {
+    event?.stopPropagation();
+    // Keep at least one column visible so the table never collapses to empty.
+    const next = { ...this.columnVisibility() };
+    const turningOff = next[key] !== false;
+    if (turningOff) {
+      const remaining = RC_COLUMNS.filter(c => c.key !== key && next[c.key] !== false).length;
+      if (remaining === 0) return;
+    }
+    next[key] = !turningOff ? true : false;
+    this.columnVisibility.set(next);
+    try {
+      localStorage.setItem(RC_COLUMN_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // private mode — visibility still works for the session
+    }
+  }
+
+  toggleColumnsPanel(event?: Event): void {
+    event?.stopPropagation();
+    this.columnsOpen.update(v => !v);
+  }
+
+  closeColumnsPanel(): void {
+    if (this.columnsOpen()) this.columnsOpen.set(false);
+  }
+
+  onExportCsv(): void {
+    this.filters?.onClickFullMetadataExport();
+  }
+
+  exportDisabled(): boolean {
+    const f = this.filters;
+    if (!f) return true;
+    return !f.hasFilteredResults || !!f.fullMetadataExportBlockedReason() || f.requestingFullExport();
+  }
+
+  exportBusy(): boolean {
+    return !!this.filters?.requestingFullExport();
+  }
+
+  exportTitle(): string {
+    return (
+      this.filters?.fullMetadataExportBlockedReason() ||
+      'Queue a full metadata export. You will receive an email with a download link.'
+    );
   }
 
   onPressAction(result: CurrentResult): void {

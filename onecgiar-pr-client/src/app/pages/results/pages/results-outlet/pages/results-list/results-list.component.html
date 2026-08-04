@@ -12,17 +12,73 @@
 @let activeButtons = this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
 @let totalLoaded = this.api.dataControlSE.resultsListSignal().length;
 @let shown = filteredResults?.length ?? 0;
+@let cols = visibleColumns();
 
 <div class="rc-page">
-  <!-- CURRENT chrome: title + subtitle -->
+  <!-- CURRENT chrome: title + Columns + Export CSV (PRMS-Shell.dc.html :408–421) -->
   <header class="rc-page-header">
     <div class="rc-page-header__text">
       <h1 class="rc-page-title">Results Center</h1>
       <p class="rc-page-sub">Search and export results across all Science Programs.</p>
     </div>
+    <div class="rc-page-header__actions">
+      <div class="rc-cols-wrap">
+        <button
+          type="button"
+          class="rc-btn rc-btn--soft"
+          [class.rc-btn--active]="columnsOpen()"
+          [attr.aria-expanded]="columnsOpen()"
+          aria-haspopup="dialog"
+          (click)="toggleColumnsPanel($event)">
+          Columns
+          <i class="pi pi-sliders-h" aria-hidden="true"></i>
+        </button>
+        @if (columnsOpen()) {
+          <div
+            class="rc-cols-panel"
+            role="dialog"
+            aria-label="Visible columns"
+            (click)="$event.stopPropagation()">
+            <div class="rc-cols-panel__title">Visible columns</div>
+            <div class="rc-cols-panel__list">
+              @for (col of allColumns; track col.key) {
+                <button
+                  type="button"
+                  class="rc-cols-item"
+                  (click)="toggleColumn(col.key, $event)">
+                  <span
+                    class="rc-cols-check"
+                    [class.rc-cols-check--on]="isColumnVisible(col.key)"
+                    aria-hidden="true">
+                    @if (isColumnVisible(col.key)) {
+                      <i class="pi pi-check"></i>
+                    }
+                  </span>
+                  <span class="rc-cols-item__label">{{ col.title }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+      <button
+        type="button"
+        class="rc-btn rc-btn--primary"
+        [disabled]="exportDisabled()"
+        [attr.title]="exportTitle()"
+        (click)="onExportCsv()">
+        @if (exportBusy()) {
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+        } @else {
+          <i class="pi pi-download" aria-hidden="true"></i>
+        }
+        Export CSV
+      </button>
+    </div>
   </header>
 
   <app-results-list-filters
+    #filters
     [isAdmin]="this.api.rolesSE.isAdmin"
     [hasFilteredResults]="shown > 0"></app-results-list-filters>
 
@@ -58,7 +114,7 @@
       [rowsPerPageOptions]="[10, 50, 100]">
       <ng-template prTableHeader>
         <tr>
-          @for (column of columnOrder; track column.attr) {
+          @for (column of cols; track column.key) {
             <th
               (click)="validateOrder(column.attr)"
               (keydown.enter)="validateOrder(column.attr)"
@@ -81,7 +137,7 @@
 
       <ng-template prTableBody let-result>
         <tr class="rc-row">
-          @for (column of columnOrder; track column.attr) {
+          @for (column of cols; track column.key) {
             <td
               [class]="'rc-td rc-td--' + column.attr"
               [style.width]="column.width"
@@ -191,6 +247,23 @@
                     (click)="onResultLinkClick($event, subResult)">
                     {{ subResult.created_date | date: 'dd MMM yyyy' }}
                   </a>
+                } @else if (column.attr === 'last_updated_date') {
+                  <a
+                    class="rc-cell-link rc-date"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)">
+                    {{ subResult.last_updated_date ? (subResult.last_updated_date | date: 'dd MMM yyyy') : '—' }}
+                  </a>
+                } @else if (column.attr === 'full_name') {
+                  <a
+                    class="rc-cell-link rc-plain"
+                    [routerLink]="getResultLink(subResult)"
+                    [queryParams]="getResultQueryParams(subResult)"
+                    (click)="onResultLinkClick($event, subResult)"
+                    [attr.title]="subResult['full_name'] || ''">
+                    {{ subResult['full_name'] || '—' }}
+                  </a>
                 }
               }
             </td>
@@ -226,7 +299,7 @@
 
       <ng-template prTableEmpty>
         <tr style="height: 200px">
-          <td [attr.colspan]="columnOrder.length + 1" class="noDataText">There are no results for the selected filters.</td>
+          <td [attr.colspan]="cols.length + 1" class="noDataText">There are no results for the selected filters.</td>
         </tr>
       </ng-template>
     </app-pr-table>

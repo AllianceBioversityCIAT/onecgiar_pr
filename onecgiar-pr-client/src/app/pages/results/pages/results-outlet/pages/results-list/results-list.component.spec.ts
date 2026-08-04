@@ -463,18 +463,40 @@ describe('ResultsListComponent', () => {
   });
 
   describe('Component Properties', () => {
-    it('should have correct column order configuration', () => {
-      expect(component.columnOrder).toEqual([
-        { title: 'Code', attr: 'result_code', center: false, width: '88px' },
-        { title: 'Title', attr: 'title', class: 'notCenter', width: '280px' },
-        { title: 'Program', attr: 'submitter', center: false, width: '88px' },
-        { title: 'Center', attr: 'lead_center', center: false, width: '110px' },
-        { title: 'Phase', attr: 'phase_name', center: false, width: '100px' },
-        { title: 'Indicator category', attr: 'result_type', center: false, width: '140px' },
-        { title: 'Funding', attr: 'source_name', center: false, width: '100px' },
-        { title: 'Status', attr: 'full_status_name_html', center: false, width: '110px' },
-        { title: 'Created', attr: 'created_date', center: false, width: '100px' }
+    it('should have correct default visible column configuration', () => {
+      const attrs = component.visibleColumns().map(c => c.attr);
+      expect(attrs).toEqual([
+        'result_code',
+        'title',
+        'submitter',
+        'lead_center',
+        'phase_name',
+        'result_type',
+        'source_name',
+        'full_status_name_html',
+        'created_date'
       ]);
+      // Optional columns off by default
+      expect(component.isColumnVisible('createdBy')).toBe(false);
+      expect(component.isColumnVisible('updated')).toBe(false);
+    });
+
+    it('should toggle column visibility and keep at least one column', () => {
+      component.toggleColumn('status');
+      expect(component.isColumnVisible('status')).toBe(false);
+      component.toggleColumn('status');
+      expect(component.isColumnVisible('status')).toBe(true);
+
+      // Force every column off except code, then refuse to turn code off
+      for (const col of component.allColumns) {
+        if (col.key === 'code') continue;
+        // Ensure optional columns that start off are not flipped on; only turn off those currently on.
+        if (component.isColumnVisible(col.key)) component.toggleColumn(col.key);
+      }
+      expect(component.visibleColumns().map(c => c.key)).toEqual(['code']);
+      component.toggleColumn('code'); // attempt to turn off last
+      expect(component.isColumnVisible('code')).toBe(true);
+      expect(component.visibleColumns()).toHaveLength(1);
     });
 
     it('should initialize with correct default values', () => {
