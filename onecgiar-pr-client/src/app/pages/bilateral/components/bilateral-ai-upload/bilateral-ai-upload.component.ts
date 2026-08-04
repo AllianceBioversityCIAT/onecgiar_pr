@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -31,7 +31,7 @@ export class BilateralAiUploadComponent implements OnDestroy {
   private readonly creationService = inject(BilateralCreationService);
   private readonly bilateralApi = inject(BilateralApiService);
   private readonly bilateralAiService = inject(BilateralAiService);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(PrToastService);
 
   files = signal<UploadFileEntry[]>([]);
   contextText = signal('');

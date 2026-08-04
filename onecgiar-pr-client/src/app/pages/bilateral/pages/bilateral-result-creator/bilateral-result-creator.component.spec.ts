@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { BilateralResultCreatorComponent } from './bilateral-result-creator.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
@@ -108,7 +108,7 @@ describe('BilateralResultCreatorComponent', () => {
       .overrideComponent(BilateralResultCreatorComponent, {
         set: {
           providers: [
-            MessageService,
+            PrToastService,
             { provide: BilateralCreationService, useValue: creationService },
             { provide: BilateralMdsTrackerService, useValue: mdsTracker },
             { provide: BilateralAutoSaveService, useValue: autoSaveService },

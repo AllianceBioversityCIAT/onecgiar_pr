@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { MyDraftResultsComponent } from './my-draft-results.component';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 
@@ -16,7 +16,7 @@ describe('MyDraftResultsComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        MessageService,
+        PrToastService,
         BilateralAiService,
       ],
     }).compileComponents();

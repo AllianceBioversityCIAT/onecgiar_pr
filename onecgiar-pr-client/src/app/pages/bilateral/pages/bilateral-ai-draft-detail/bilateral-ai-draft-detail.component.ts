@@ -1,9 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { MessageService } from 'primeng/api';
+import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { BilateralContextService } from '../../services/bilateral-context.service';
@@ -12,14 +10,13 @@ import { DraftEvidenceListComponent } from './components/draft-evidence-list/dra
 
 @Component({
   selector: 'app-bilateral-ai-draft-detail',
-  imports: [CommonModule, RouterModule, DialogModule, ButtonModule, DraftResultCardComponent, DraftEvidenceListComponent],
+  imports: [CommonModule, RouterModule, PrDialogComponent, DraftResultCardComponent, DraftEvidenceListComponent],
   templateUrl: './bilateral-ai-draft-detail.component.html',
   styleUrl: './bilateral-ai-draft-detail.component.scss',
 })
 export class BilateralAiDraftDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   readonly bilateralAiService = inject(BilateralAiService);
-  private readonly messageService = inject(MessageService);
   readonly ctx = inject(BilateralContextService);
 
   showPromoteDialog = signal(false);

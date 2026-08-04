@@ -205,13 +205,18 @@ export class ReportingAowTableComponent {
         code = '';
         name = title;
       } else {
-        // Pure HLO under an AoW — outcomes are filtered out upstream.
         const title = row.__hlo?.trim() || 'Unassigned';
         key = `${group.aow.code}::${title}`;
-        const match = /^((?:HLO|IO|EOI)[\w.\-]*)\s+(.*)$/i.exec(title);
-        eyebrow = 'HLO';
-        code = match?.[1] ?? '';
-        name = match?.[2] ?? title;
+        if (row.__tier === 'outcome') {
+          eyebrow = 'Outcome';
+          code = '';
+          name = title;
+        } else {
+          const match = /^((?:HLO|IO|EOI)[\w.\-]*)\s+(.*)$/i.exec(title);
+          eyebrow = 'HLO';
+          code = match?.[1] ?? '';
+          name = match?.[2] ?? title;
+        }
       }
 
       if (!byKey.has(key)) {

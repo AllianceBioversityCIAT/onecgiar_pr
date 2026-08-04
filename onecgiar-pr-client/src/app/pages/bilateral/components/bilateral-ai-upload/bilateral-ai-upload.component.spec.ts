@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { BilateralAiUploadComponent } from './bilateral-ai-upload.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
@@ -17,7 +17,7 @@ describe('BilateralAiUploadComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        MessageService,
+        PrToastService,
         BilateralCreationService,
         BilateralAiService,
       ],

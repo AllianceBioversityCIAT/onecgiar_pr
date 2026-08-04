@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject, OnDestroy } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from '../../../shared/components/pr-toast/pr-toast.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { ResultsApiService } from '../../../shared/services/api/results-api.service';
 import { BilateralContextService } from './bilateral-context.service';
@@ -21,7 +21,7 @@ export class BilateralAiService implements OnDestroy {
   private readonly bilateralApi = inject(BilateralApiService);
   private readonly resultsApi = inject(ResultsApiService);
   private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(PrToastService);
   private readonly ctx = inject(BilateralContextService);
   private readonly creationService = inject(BilateralCreationService);
 

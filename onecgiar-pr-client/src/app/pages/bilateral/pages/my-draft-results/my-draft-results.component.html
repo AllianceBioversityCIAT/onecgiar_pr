@@ -142,23 +142,20 @@
   </div>
 }
 
-<p-dialog
+<app-pr-dialog
   styleClass="pr-dialog pr-dialog--promote"
   [modal]="true"
   [closable]="false"
   [dismissableMask]="false"
-  [style]="{ width: '480px' }"
   [visible]="promoteTarget() !== null"
   (onHide)="onPromoteCancel()"
 >
-  <ng-template pTemplate="header">
-    <div class="pr-dialog-header">
-      <span class="pr-dialog-header-icon pr-dialog-header-icon--promote">
-        <i class="material-icons-round">rocket_launch</i>
-      </span>
-      <span class="pr-dialog-header-title">Promote Draft</span>
-    </div>
-  </ng-template>
+  <div class="pr-dialog-header">
+    <span class="pr-dialog-header-icon pr-dialog-header-icon--promote">
+      <i class="material-icons-round">rocket_launch</i>
+    </span>
+    <span class="pr-dialog-header-title">Promote Draft</span>
+  </div>
   @if (promoteTarget(); as target) {
     <div class="pr-dialog-body">
       <p class="pr-dialog-text">Promote <strong>{{ getDraftTitle(target) }}</strong> as a bilateral result?</p>
@@ -190,41 +187,34 @@
       </div>
     </div>
   }
-  <ng-template pTemplate="footer">
-    <div class="pr-dialog-footer">
-      <p-button label="Cancel" severity="secondary" (onClick)="onPromoteCancel()" />
-      <p-button label="Promote" (onClick)="onPromoteConfirm()" />
-    </div>
-  </ng-template>
-</p-dialog>
+  <div pr-dialog-footer class="pr-dialog-footer">
+    <button hlmBtn variant="outline" (click)="onPromoteCancel()">Cancel</button>
+    <button hlmBtn (click)="onPromoteConfirm()">Promote</button>
+  </div>
+</app-pr-dialog>
 
-<p-dialog
+<app-pr-dialog
   styleClass="pr-dialog pr-dialog--discard"
   [modal]="true"
   [closable]="false"
   [dismissableMask]="false"
-  [style]="{ width: '420px' }"
   [visible]="discardTarget() !== null"
   (onHide)="onDiscardCancel()"
 >
-  <ng-template pTemplate="header">
-    <div class="pr-dialog-header">
-      <span class="pr-dialog-header-icon pr-dialog-header-icon--discard">
-        <i class="material-icons-round">delete_outline</i>
-      </span>
-      <span class="pr-dialog-header-title">Discard Draft</span>
-    </div>
-  </ng-template>
+  <div class="pr-dialog-header">
+    <span class="pr-dialog-header-icon pr-dialog-header-icon--discard">
+      <i class="material-icons-round">delete_outline</i>
+    </span>
+    <span class="pr-dialog-header-title">Discard Draft</span>
+  </div>
   @if (discardTarget(); as target) {
     <div class="pr-dialog-body">
       <p class="pr-dialog-text">Discard <strong>{{ getDraftTitle(target) }}</strong>?</p>
       <p class="pr-dialog-hint pr-dialog-hint--danger">All extracted data will be permanently deleted. This cannot be undone.</p>
     </div>
   }
-  <ng-template pTemplate="footer">
-    <div class="pr-dialog-footer">
-      <p-button label="Cancel" severity="secondary" (onClick)="onDiscardCancel()" />
-      <p-button label="Discard" severity="danger" (onClick)="onDiscardConfirm()" />
-    </div>
-  </ng-template>
-</p-dialog>
+  <div pr-dialog-footer class="pr-dialog-footer">
+    <button hlmBtn variant="outline" (click)="onDiscardCancel()">Cancel</button>
+    <button hlmBtn variant="destructive" (click)="onDiscardConfirm()">Discard</button>
+  </div>
+</app-pr-dialog>

@@ -1,9 +1,8 @@
 import { Component, inject, OnInit, OnDestroy, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { MessageService } from 'primeng/api';
+import { HlmButton } from '@spartan/button';
+import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { BilateralContextService } from '../../services/bilateral-context.service';
@@ -13,13 +12,12 @@ import { DraftEvidenceListComponent } from '../bilateral-ai-draft-detail/compone
 
 @Component({
   selector: 'app-my-draft-results',
-  imports: [CommonModule, RouterModule, DialogModule, ButtonModule, BilateralPageHeaderComponent, DraftResultCardComponent, DraftEvidenceListComponent],
+  imports: [CommonModule, RouterModule, HlmButton, PrDialogComponent, BilateralPageHeaderComponent, DraftResultCardComponent, DraftEvidenceListComponent],
   templateUrl: './my-draft-results.component.html',
   styleUrl: './my-draft-results.component.scss',
 })
 export class MyDraftResultsComponent implements OnInit, OnDestroy {
   readonly bilateralAiService = inject(BilateralAiService);
-  private readonly messageService = inject(MessageService);
   readonly ctx = inject(BilateralContextService);
 
   promoteTarget = signal<BilateralAiDraft | null>(null);

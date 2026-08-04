@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { tap } from 'rxjs';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
+import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -15,7 +15,7 @@ import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component'
 
 @Component({
   selector: 'app-section-evidence',
-  imports: [CommonModule, FormsModule, DialogModule, ButtonModule, FormSkeletonComponent],
+  imports: [CommonModule, FormsModule, HlmButton, PrDialogComponent, FormSkeletonComponent],
   templateUrl: './section-evidence.component.html',
   styleUrl: './section-evidence.component.scss'
 })
