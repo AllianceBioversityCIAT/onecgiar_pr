@@ -13,6 +13,19 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 36px 28px 100px;
+
+  // Once a result exists, app-bilateral-progress-aside renders as a fixed
+  // 280px-wide panel just right of the sidebar (see its left: max(...) calc).
+  // At viewport widths where auto-centering alone wouldn't leave enough room,
+  // it can slide under this column's left edge. Reserve a floor here so the
+  // two never overlap. This is relative to `main` (this element's own
+  // containing block via plain margin:auto above), so — unlike the aside's
+  // own calc — it needs no --sidebar-width term to stay sidebar-agnostic.
+  &--with-aside {
+    @media (min-width: 1679px) {
+      margin-left: max(316px, calc((100% - 1100px) / 2));
+    }
+  }
 }
 
 .bcr-breadcrumb {

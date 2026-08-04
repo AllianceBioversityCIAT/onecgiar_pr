@@ -1,6 +1,6 @@
 <app-bilateral-page-header />
 
-<div class="bilateral-creator">
+<div class="bilateral-creator" [class.bilateral-creator--with-aside]="!isCreating() && resultId()">
 
   @if (isCreating()) {
     <div [class.bcr-step--locked]="isAiProcessing()">
