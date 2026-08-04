@@ -31,6 +31,8 @@ export class PrTextareaComponent implements ControlValueAccessor {
   @Input() fieldRef: string | number;
   @Input() disabled: boolean;
   @Input() showDescriptionLabel: boolean = true;
+  /** P2-3201: guidance shown as a pinnable ⓘ tooltip; normally fed from FieldsManager. */
+  @Input() tooltip: string = '';
   fieldsManager = inject(FieldsManagerService);
   @Input() labelDescInlineStyles?: string = '';
 
@@ -41,10 +43,11 @@ export class PrTextareaComponent implements ControlValueAccessor {
 
   preventFieldRender = computed<boolean>(() => {
     if (!this.fieldRef) return true;
-    const { hide, label, placeholder, description, required } = this.fieldsManager.fields()[this.fieldRef] || {};
+    const { hide, label, placeholder, description, required, tooltip } = this.fieldsManager.fields()[this.fieldRef] || {};
     this.label = label;
     this.placeholder = placeholder;
     this.description = description;
+    this.tooltip = tooltip ?? '';
     this.required = required;
     return !hide;
   });

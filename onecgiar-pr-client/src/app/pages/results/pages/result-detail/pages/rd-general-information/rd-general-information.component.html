@@ -34,7 +34,6 @@
   <app-pr-input
     fieldRef="[general-info]-title"
     [customLabel]="'Title of Result'"
-    [showDescription]="false"
     type="text"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_name"
@@ -43,7 +42,6 @@
 
   <app-pr-textarea
     fieldRef="[general-info]-description"
-    [showDescriptionLabel]="false"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description"
     [maxWords]="300"></app-pr-textarea>
