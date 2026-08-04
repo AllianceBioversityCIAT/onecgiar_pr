@@ -44,7 +44,7 @@ describe('SectionGeneralInfoComponent', () => {
       notifyBlur: jest.fn(),
       fieldStatus: signal<Record<string, string>>({})
     };
-    mdsTracker = { updateSection: jest.fn(), setTotalFields: jest.fn() };
+    mdsTracker = { setSectionFields: jest.fn() };
     creation = {
       resultTitle: signal(''),
       resultDescription: signal(''),
@@ -97,7 +97,10 @@ describe('SectionGeneralInfoComponent', () => {
     it('counts nothing while the fields are empty', () => {
       build();
       fixture.detectChanges();
-      expect(mdsTracker.updateSection).toHaveBeenCalledWith('general-info', 0);
+      expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('general-info', [
+        { key: 'title', label: 'Title', filled: false },
+        { key: 'description', label: 'Description', filled: false },
+      ]);
     });
 
     it('ignores a placeholder draft title', () => {
@@ -105,7 +108,10 @@ describe('SectionGeneralInfoComponent', () => {
       creation.resultDescription.set('Some description');
       build();
       fixture.detectChanges();
-      expect(mdsTracker.updateSection).toHaveBeenLastCalledWith('general-info', 1);
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
+        { key: 'title', label: 'Title', filled: false },
+        { key: 'description', label: 'Description', filled: true },
+      ]);
     });
 
     it('counts a real title and a description', () => {
@@ -113,7 +119,10 @@ describe('SectionGeneralInfoComponent', () => {
       creation.resultDescription.set('Some description');
       build();
       fixture.detectChanges();
-      expect(mdsTracker.updateSection).toHaveBeenLastCalledWith('general-info', 2);
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
+        { key: 'title', label: 'Title', filled: true },
+        { key: 'description', label: 'Description', filled: true },
+      ]);
     });
   });
 

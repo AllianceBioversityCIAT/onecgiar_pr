@@ -1,10 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpClient } from '@angular/common/http';
 import { signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 
 import { SectionEvidenceComponent } from './section-evidence.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
+import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 
@@ -18,9 +19,10 @@ describe('SectionEvidenceComponent', () => {
   let fixture: ComponentFixture<SectionEvidenceComponent>;
   let component: SectionEvidenceComponent;
   let api: any;
+  let bilateralApi: any;
+  let autoSave: any;
   let creation: any;
   let mdsTracker: any;
-  let http: any;
 
   const build = () => {
     fixture = TestBed.createComponent(SectionEvidenceComponent);
@@ -30,12 +32,11 @@ describe('SectionEvidenceComponent', () => {
 
   beforeEach(async () => {
     creation = { currentResultId: signal<number | null>(101) };
-    mdsTracker = { updateSection: jest.fn(), setTotalFields: jest.fn() };
+    mdsTracker = { setSectionFields: jest.fn() };
 
     api = {
       resultsSE: {
         apiBaseUrl: 'http://api/',
-        GET_evidences: jest.fn().mockReturnValue(of({ response: { evidences: [] } })),
         POST_createUploadSession: jest.fn().mockResolvedValue('http://upload/'),
         PUT_loadFileInUploadSession: jest.fn().mockResolvedValue({
           webUrl: 'http://sp/file',
@@ -46,7 +47,18 @@ describe('SectionEvidenceComponent', () => {
       }
     };
 
-    http = { post: jest.fn().mockReturnValue(of({})) };
+    bilateralApi = {
+      GET_evidences: jest.fn().mockReturnValue(of({ response: { evidences: [] } })),
+      POST_evidences: jest.fn().mockReturnValue(of({}))
+    };
+
+    autoSave = {
+      manualSave$: new Subject<void>(),
+      runImmediate: jest.fn().mockImplementation((_key: string, factory: () => any) => {
+        factory().subscribe({ error: () => {} });
+      }),
+      fieldStatus: signal<Record<string, string>>({})
+    };
 
     (window as any).alert = jest.fn();
     (window as any).confirm = jest.fn().mockReturnValue(true);
@@ -55,9 +67,10 @@ describe('SectionEvidenceComponent', () => {
       imports: [SectionEvidenceComponent],
       providers: [
         { provide: ApiService, useValue: api },
+        { provide: BilateralApiService, useValue: bilateralApi },
+        { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralCreationService, useValue: creation },
-        { provide: BilateralMdsTrackerService, useValue: mdsTracker },
-        { provide: HttpClient, useValue: http }
+        { provide: BilateralMdsTrackerService, useValue: mdsTracker }
       ]
     })
       .overrideTemplate(SectionEvidenceComponent, '<div></div>')
@@ -101,12 +114,12 @@ describe('SectionEvidenceComponent', () => {
       creation.currentResultId.set(null);
       build();
       fixture.detectChanges();
-      expect(api.resultsSE.GET_evidences).not.toHaveBeenCalled();
+      expect(bilateralApi.GET_evidences).not.toHaveBeenCalled();
       expect(component.isLoading()).toBe(false);
     });
 
     it('loads and sorts the evidences', () => {
-      api.resultsSE.GET_evidences.mockReturnValue(
+      bilateralApi.GET_evidences.mockReturnValue(
         of({
           response: {
             evidences: [
@@ -120,19 +133,23 @@ describe('SectionEvidenceComponent', () => {
       fixture.detectChanges();
       expect(component.evidences[0].id).toBe(2);
       expect(component.isLoading()).toBe(false);
-      expect(mdsTracker.updateSection).toHaveBeenCalledWith('evidence', 1);
+      expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('evidence', [
+        { key: 'valid-link', label: 'Evidence with valid link', filled: true }
+      ]);
     });
 
     it('falls back to an empty evidences body when the response is null', () => {
-      api.resultsSE.GET_evidences.mockReturnValue(of({ response: null }));
+      bilateralApi.GET_evidences.mockReturnValue(of({ response: null }));
       build();
       fixture.detectChanges();
       expect(component.evidences).toEqual([]);
-      expect(mdsTracker.updateSection).toHaveBeenCalledWith('evidence', 0);
+      expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('evidence', [
+        { key: 'valid-link', label: 'Evidence with valid link', filled: false }
+      ]);
     });
 
     it('stops the loading flag on error', () => {
-      api.resultsSE.GET_evidences.mockReturnValue(throwError(() => new Error('boom')));
+      bilateralApi.GET_evidences.mockReturnValue(throwError(() => new Error('boom')));
       build();
       fixture.detectChanges();
       expect(component.isLoading()).toBe(false);
@@ -382,7 +399,7 @@ describe('SectionEvidenceComponent', () => {
       await component.saveSection();
       expect(component.saveStatus()).toBe('error');
       expect(component.isSaving()).toBe(false);
-      expect(http.post).not.toHaveBeenCalled();
+      expect(bilateralApi.POST_evidences).not.toHaveBeenCalled();
     });
 
     it('posts the payload and marks the section as saved', async () => {
@@ -392,13 +409,13 @@ describe('SectionEvidenceComponent', () => {
         evidences: [{ id: 1, link: 'https://a.com' }, { id: 2, link: 'https://b.com', file: makeFile('a.pdf') }]
       }));
       await component.saveSection();
-      expect(http.post).toHaveBeenCalledWith('http://api/evidences/create/101', expect.any(FormData));
+      expect(bilateralApi.POST_evidences).toHaveBeenCalledWith(101, expect.any(FormData));
       expect(component.saveStatus()).toBe('saved');
       expect(component.isSaving()).toBe(false);
     });
 
     it('flags an error when the request fails', async () => {
-      http.post.mockReturnValue(throwError(() => new Error('boom')));
+      bilateralApi.POST_evidences.mockReturnValue(throwError(() => new Error('boom')));
       build();
       await component.saveSection();
       expect(component.saveStatus()).toBe('error');
@@ -465,7 +482,7 @@ describe('SectionEvidenceComponent', () => {
       expect(component.evidences[0].link).toBe('https://example.org');
       expect(component.showDraft()).toBe(false);
       await new Promise(resolve => setTimeout(resolve, 0));
-      expect(http.post).toHaveBeenCalled();
+      expect(bilateralApi.POST_evidences).toHaveBeenCalled();
     });
 
     it('replaces the edited evidence', () => {
@@ -498,23 +515,27 @@ describe('SectionEvidenceComponent', () => {
   });
 
   describe('deleteItem', () => {
-    it('does nothing when the confirmation is rejected', () => {
-      (window.confirm as jest.Mock).mockReturnValue(false);
+    it('does nothing when delete is cancelled', () => {
       build();
       const item = { id: 1, link: 'https://a.com' };
       component.evidenceBody.update(b => ({ ...b, evidences: [item] }));
-      component.deleteItem(item);
+      component.confirmDelete(item);
+      expect(component.deleteTarget()).toBe(item);
+      component.cancelDelete();
+      expect(component.deleteTarget()).toBeNull();
       expect(component.evidences.length).toBe(1);
     });
 
-    it('removes the evidence when confirmed', async () => {
+    it('removes the evidence when delete is executed', async () => {
       build();
       const item = { id: 1, link: 'https://a.com' };
       component.evidenceBody.update(b => ({ ...b, evidences: [item] }));
-      component.deleteItem(item);
+      component.confirmDelete(item);
+      component.executeDelete();
       expect(component.evidences.length).toBe(0);
+      expect(component.deleteTarget()).toBeNull();
       await new Promise(resolve => setTimeout(resolve, 0));
-      expect(http.post).toHaveBeenCalled();
+      expect(bilateralApi.POST_evidences).toHaveBeenCalled();
     });
   });
 

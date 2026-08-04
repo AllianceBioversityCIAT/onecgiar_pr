@@ -38,7 +38,8 @@ describe('SectionContributorsComponent', () => {
       resultLeadCenterId: signal<number | null>(null),
       resultContributingCenterIds: signal<number[]>([]),
       resultContributingProjectIds: signal<number[]>([]),
-      resultContributingProjects: signal<any[]>([])
+      resultContributingProjects: signal<any[]>([]),
+      isLoadingResult: signal(false)
     };
 
     autoSave = {
@@ -63,7 +64,7 @@ describe('SectionContributorsComponent', () => {
       providers: [
         { provide: BilateralCreationService, useValue: creation },
         { provide: BilateralAutoSaveService, useValue: autoSave },
-        { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn(), setTotalFields: jest.fn() } },
+        { provide: BilateralMdsTrackerService, useValue: { setSectionFields: jest.fn() } },
         { provide: CentersService, useValue: centersService },
         { provide: ApiService, useValue: api }
       ]

@@ -284,11 +284,11 @@ export class BilateralAutoSaveService {
     this._inFlight.set(endpointKey, true);
     this.setFieldStatuses(statusKeys, 'saving');
 
-    const request$ = executor
-      ? executor(resultId, body)
-      : this.patchByEndpoint(endpointKey, resultId, body);
-
     try {
+      const request$ = executor
+        ? executor(resultId, body)
+        : this.patchByEndpoint(endpointKey, resultId, body);
+
       request$.subscribe({
         next: () => {
           if (generation !== this._generation) {

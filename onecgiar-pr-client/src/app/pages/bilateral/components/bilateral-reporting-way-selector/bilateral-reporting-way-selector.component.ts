@@ -22,6 +22,7 @@ interface ReportingWayOption {
 export class BilateralReportingWaySelectorComponent {
   isLoading = input(false);
   canUseAi = input(false);
+  selectedWay = input<ReportingWay | null>(null);
   waySelected = output<ReportingWay>();
 
   options: ReportingWayOption[] = [
