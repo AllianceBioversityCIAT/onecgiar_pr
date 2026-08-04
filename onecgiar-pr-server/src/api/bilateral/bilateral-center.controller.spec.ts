@@ -21,7 +21,9 @@ describe('BilateralCenterController', () => {
         {
           provide: BilateralCenterService,
           useValue: {
-            getProjects: jest.fn().mockResolvedValue({ response: { projects: [] } }),
+            getProjects: jest
+              .fn()
+              .mockResolvedValue({ response: { projects: [] } }),
             createResultHeader: jest.fn().mockResolvedValue({
               response: { id: 99, status_id: 1 },
             }),

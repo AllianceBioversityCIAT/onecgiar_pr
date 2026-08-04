@@ -3140,6 +3140,7 @@ export class ResultsService {
 
   async getBilateralResultById(
     resultId: number,
+    versionId?: number,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
       if (!resultId || resultId <= 0) {
@@ -3150,9 +3151,17 @@ export class ResultsService {
         };
       }
 
-      const result = await this._resultRepository.findOne({
-        where: { id: resultId, source: SourceEnum.Bilateral },
-      });
+      const result = versionId
+        ? await this._resultRepository.findOne({
+            where: {
+              result_code: resultId,
+              version_id: versionId,
+              source: SourceEnum.Bilateral,
+            },
+          })
+        : await this._resultRepository.findOne({
+            where: { id: resultId, source: SourceEnum.Bilateral },
+          });
 
       if (!result) {
         return {
@@ -3162,24 +3171,26 @@ export class ResultsService {
         };
       }
 
+      const internalId = result.id;
+
       const [commonFields, tocMetadata, geoScope, contributingCenters] =
-        await this._loadBilateralBaseData(resultId);
+        await this._loadBilateralBaseData(internalId);
 
       const contributingInstitutions =
-        await this._loadContributingInstitutions(resultId);
+        await this._loadContributingInstitutions(internalId);
 
       const [contributingProjects, contributingInitiatives, evidence] =
-        await this._loadBilateralRelatedData(resultId);
+        await this._loadBilateralRelatedData(internalId);
 
       const resultTypeResponse = await this._loadBilateralResultTypeData(
-        resultId,
+        internalId,
         result.result_type_id,
       );
 
       const tocResponse = (tocMetadata?.response as Record<string, any>) ?? {};
 
       const impactAreaScores = await this._resultImpactAreaScoresService.find(
-        resultId,
+        internalId,
         undefined,
         {
           impact_area_score: true,
@@ -4314,6 +4325,7 @@ export class ResultsService {
     }
 
     const newRecord = repo.create({
+      results_id: resultId,
       result_object: { id: resultId } as Result,
       created_by: userId,
       last_updated_by: userId,
@@ -4867,6 +4879,41 @@ export class ResultsService {
           status: error.getStatus(),
         };
       }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getBilateralCenterResults(centerId: string, versionId: string) {
+    try {
+      const parsedVersionId = Number(versionId);
+
+      if (!centerId?.trim()) {
+        return {
+          response: [],
+          message: 'centerId is required.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!parsedVersionId || isNaN(parsedVersionId)) {
+        return {
+          response: [],
+          message: 'versionId is required and must be a valid number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const results = await this._resultRepository.getResultsByBilateralCenter(
+        centerId,
+        parsedVersionId,
+      );
+
+      return {
+        response: results,
+        message: 'Bilateral center results retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }

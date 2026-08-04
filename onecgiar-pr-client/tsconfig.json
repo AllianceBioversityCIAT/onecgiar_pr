@@ -29,7 +29,8 @@
       "@spartan/separator": ["./src/app/spartan/separator/src/index.ts"],
       "@spartan/sheet": ["./src/app/spartan/sheet/src/index.ts"],
       "@spartan/skeleton": ["./src/app/spartan/skeleton/src/index.ts"],
-      "@spartan/tooltip": ["./src/app/spartan/tooltip/src/index.ts"]
+      "@spartan/tooltip": ["./src/app/spartan/tooltip/src/index.ts"],
+      "@spartan/breadcrumb": ["./src/app/spartan/breadcrumb/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

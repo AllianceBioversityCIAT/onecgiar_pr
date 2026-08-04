@@ -294,6 +294,173 @@ describe('SummaryService', () => {
     });
   });
 
+  describe('saveInnovationDev', () => {
+    it('creates innovation-dev with result_object (not RelationId results_id alone)', async () => {
+      const dto = {
+        short_title: '',
+        responsible_innovation_and_scaling: {
+          q1: { options: [] },
+          q2: { options: [] },
+        },
+        intellectual_property_rights: {
+          q1: { options: [] },
+          q2: { options: [] },
+          q3: { options: [] },
+        },
+        innovation_team_diversity: { options: [] },
+        megatrends: { options: [] },
+        reference_materials: [],
+      } as any;
+
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        null,
+      );
+      mockResultsInnovationsDevRepository.save.mockImplementation(
+        async (payload) => ({ result_innovation_dev_id: 1, ...payload }),
+      );
+
+      const res = await service.saveInnovationDev(dto, {} as any, 11144, user);
+
+      expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          results_id: 11144,
+          result_object: { id: 11144 },
+          created_by: user.id,
+          is_active: true,
+        }),
+      );
+      expect(res.status).toBe(HttpStatus.CREATED);
+    });
+
+    it('accepts bilateral partial DTO without questionnaire blocks (no q1 crash)', async () => {
+      const dto = {
+        short_title: 'Partial title',
+        innovation_developers: 'Devs',
+        innovation_collaborators: '',
+        evidences_justification: '',
+      } as any;
+
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        null,
+      );
+      mockResultsInnovationsDevRepository.save.mockImplementation(
+        async (payload) => ({ result_innovation_dev_id: 2, ...payload }),
+      );
+
+      const res = await service.saveInnovationDev(dto, dto, 11144, user);
+
+      expect(res.status).toBe(HttpStatus.CREATED);
+      expect(
+        mockInnoDevService.saveOptionsAndSubOptions,
+      ).not.toHaveBeenCalled();
+      expect(mockInnoDevService.saveEvidence).not.toHaveBeenCalled();
+      expect(
+        mockInnoDevService.saveInitiativeInvestment,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still runs questionnaire saves when Result Review full DTO is present', async () => {
+      const option = { result_question_id: 1, answer_boolean: true };
+      const dto = {
+        short_title: 'Full',
+        responsible_innovation_and_scaling: {
+          q1: { options: [option] },
+          q2: { options: [option] },
+        },
+        intellectual_property_rights: {
+          q1: { options: [option] },
+          q2: { options: [option] },
+          q3: { options: [option] },
+        },
+        innovation_team_diversity: { options: [option] },
+        megatrends: { options: [option] },
+        reference_materials: [{ link: 'https://example.com' }],
+        initiative_expected_investment: [],
+        bilateral_expected_investment: [],
+        institutions_expected_investment: [],
+      } as any;
+
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        { result_innovation_dev_id: 9 },
+      );
+      mockResultsInnovationsDevRepository.save.mockResolvedValueOnce({
+        result_innovation_dev_id: 9,
+      });
+
+      const res = await service.saveInnovationDev(
+        dto,
+        { innovatonUse: {} } as any,
+        55,
+        user,
+      );
+
+      expect(res.status).toBe(HttpStatus.CREATED);
+      expect(mockInnoDevService.saveOptionsAndSubOptions).toHaveBeenCalledTimes(
+        7,
+      );
+      expect(mockInnoDevService.saveEvidence).toHaveBeenCalledWith(
+        55,
+        user.id,
+        dto.reference_materials,
+        4,
+      );
+      expect(mockInnoDevService.saveAnticipatedInnoUser).toHaveBeenCalled();
+    });
+
+    it('does not force null result_innovation_dev_id on create (AUTO_INCREMENT)', async () => {
+      const dto = {
+        short_title: 'Title',
+        innovation_readiness_level_id: 17,
+        result_innovation_dev_id: null,
+      } as any;
+
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        null,
+      );
+      mockResultsInnovationsDevRepository.save.mockImplementation(
+        async (payload) => payload,
+      );
+
+      await service.saveInnovationDev(dto, null, 11145, user);
+
+      expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
+        expect.not.objectContaining({
+          result_innovation_dev_id: null,
+        }),
+      );
+      const saved = mockResultsInnovationsDevRepository.save.mock.calls[0][0];
+      expect(saved.result_innovation_dev_id).toBeUndefined();
+      expect(saved.results_id).toBe(11145);
+    });
+
+    it('persists nature/readiness via relation objects (not RelationId scalars)', async () => {
+      const dto = {
+        short_title: 'Title',
+        innovation_nature_id: 12,
+        innovation_readiness_level_id: 3,
+        innovation_developers: 'Dev',
+      } as any;
+
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        null,
+      );
+      mockResultsInnovationsDevRepository.save.mockImplementation(
+        async (payload) => payload,
+      );
+
+      await service.saveInnovationDev(dto, null, 11144, user);
+
+      expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          results_id: 11144,
+          innovation_nature: { code: 12 },
+          innovation_readiness_level: { id: 3 },
+          innovation_developers: 'Dev',
+        }),
+      );
+    });
+  });
+
   describe('savePolicyChanges', () => {
     it('creates policy change, institutions and answers', async () => {
       const dto = {

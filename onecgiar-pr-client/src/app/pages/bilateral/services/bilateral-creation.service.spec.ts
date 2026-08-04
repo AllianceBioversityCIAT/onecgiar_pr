@@ -110,7 +110,7 @@ describe('BilateralCreationService', () => {
     expect(service.resultDescription()).toBe('');
     expect(service.resultContributingProjectIds()).toEqual([]);
     expect(service.resultTitle()).toBe('New');
-    expect(mockBilateralApi.GET_BilateralResultDetail).toHaveBeenCalledWith(7);
+    expect(mockBilateralApi.GET_BilateralResultDetail).toHaveBeenCalledWith(7, undefined);
   });
 
   it('should select a primary SP', () => {
@@ -147,6 +147,23 @@ describe('BilateralCreationService', () => {
       decision: 'APPROVE',
       justification: 'Submitted by Center User',
     });
+  });
+
+  it('should identify persisted AI results from the detail payload', () => {
+    mockBilateralApi.GET_BilateralResultDetail.mockReturnValue({
+      subscribe: ({ next }: any) =>
+        next({
+          response: {
+            commonFields: { creation_method: 'AI' },
+            contributingProjects: [],
+            contributingCenters: [],
+          },
+        }),
+    } as any);
+
+    service.loadResult(8706);
+
+    expect(service.isAiGenerated()).toBe(true);
   });
 
   // ---------------------------------------------------------------------------
@@ -448,7 +465,7 @@ describe('BilateralCreationService', () => {
   });
 
   describe('local storage persistence', () => {
-    it('rehydrates the wizard from local storage on creation', () => {
+    it('always starts empty (no localStorage rehydration)', () => {
       const project = { id: 3, shortName: 'BP3', fullName: 'Bilateral Project 3', summary: null, description: null, leadCenter: null, sciencePrograms: [] };
       localStorage.setItem('bp_project', JSON.stringify(project));
       localStorage.setItem('bp_primary_sp', JSON.stringify({ programId: 1, programCode: 'P11', allocation: '10' }));
@@ -464,9 +481,9 @@ describe('BilateralCreationService', () => {
       });
       const fresh = TestBed.inject(BilateralCreationService);
 
-      expect(fresh.selectedProject()).toEqual(project);
-      expect(fresh.selectedPrimarySp()!.programCode).toBe('P11');
-      expect(fresh.selectedSecondarySps()).toHaveLength(1);
+      expect(fresh.selectedProject()).toBeNull();
+      expect(fresh.selectedPrimarySp()).toBeNull();
+      expect(fresh.selectedSecondarySps()).toHaveLength(0);
     });
 
     it('ignores corrupted local storage entries', () => {

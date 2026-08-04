@@ -1,0 +1,728 @@
+:host {
+  display: block;
+}
+
+.brl {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 28px 56px;
+}
+
+// ─── Phase tabs ───────────────────────────────────────────────────────────────
+
+.brl_phases_wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+  margin-bottom: 16px;
+}
+
+.brl_phases {
+  display: flex;
+  gap: 4px;
+  padding: 12px 0 0;
+  white-space: nowrap;
+}
+
+.brl_phase_tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pr-color-accents-5);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+  margin-bottom: -1px;
+
+  &:hover {
+    color: var(--pr-color-secondary-400);
+  }
+
+  &--active {
+    color: var(--pr-color-primary-300);
+    border-bottom-color: var(--pr-color-primary-300);
+  }
+}
+
+.brl_phase_open {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 20px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--pr-color-primary-300);
+  letter-spacing: 0.3px;
+}
+
+// ─── Filter chips bar ─────────────────────────────────────────────────────────
+
+// Color tokens for the four chip types
+$w3-color:           #5569dd;
+$w3-color-light:     #eef2ff;
+$w3-color-border:    #c7d2fe;
+
+$w1w2-color:         #7c3aed;
+$w1w2-color-light:   #f5f3ff;
+$w1w2-color-border:  #ddd6fe;
+
+$lead-color:         #059669;
+$lead-color-light:   #ecfdf5;
+$lead-color-border:  #a7f3d0;
+
+$contrib-color:      #0284c7;
+$contrib-color-light:#e0f2fe;
+$contrib-color-border:#bae6fd;
+
+.brl_filter_bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: #fafbff;
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.brl_filter_label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--pr-color-accents-5);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  .pi {
+    font-size: 11px;
+  }
+}
+
+.brl_filter_groups {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.brl_filter_group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.brl_filter_group_label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--pr-color-accents-4);
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.brl_chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.brl_filter_divider {
+  width: 1px;
+  height: 22px;
+  background: var(--pr-color-accents-2);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+// Base chip
+.brl_chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  border: 1.5px solid var(--pr-color-accents-2);
+  background: #fff;
+  color: var(--pr-color-accents-5);
+  user-select: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
+.brl_chip_dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
+}
+
+.brl_chip--active .brl_chip_dot {
+  opacity: 1;
+}
+
+.brl_chip_icon {
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.brl_chip_icon--add {
+  opacity: 0.5;
+}
+
+// W3 Bilateral chip
+.brl_chip_dot--w3 { background: $w3-color; }
+
+.brl_chip--w3 {
+  &:hover:not(.brl_chip--active) {
+    border-color: $w3-color-border;
+    background: $w3-color-light;
+    color: $w3-color;
+  }
+  &.brl_chip--active {
+    background: $w3-color-light;
+    border-color: $w3-color-border;
+    color: $w3-color;
+  }
+}
+
+// W1/W2 chip
+.brl_chip_dot--w1w2 { background: $w1w2-color; }
+
+.brl_chip--w1w2 {
+  &:hover:not(.brl_chip--active) {
+    border-color: $w1w2-color-border;
+    background: $w1w2-color-light;
+    color: $w1w2-color;
+  }
+  &.brl_chip--active {
+    background: $w1w2-color-light;
+    border-color: $w1w2-color-border;
+    color: $w1w2-color;
+  }
+}
+
+// Lead chip
+.brl_chip_dot--lead { background: $lead-color; }
+
+.brl_chip--lead {
+  &:hover:not(.brl_chip--active) {
+    border-color: $lead-color-border;
+    background: $lead-color-light;
+    color: $lead-color;
+  }
+  &.brl_chip--active {
+    background: $lead-color-light;
+    border-color: $lead-color-border;
+    color: $lead-color;
+  }
+}
+
+// Contributing chip
+.brl_chip_dot--contributing { background: $contrib-color; }
+
+.brl_chip--contributing {
+  &:hover:not(.brl_chip--active) {
+    border-color: $contrib-color-border;
+    background: $contrib-color-light;
+    color: $contrib-color;
+  }
+  &.brl_chip--active {
+    background: $contrib-color-light;
+    border-color: $contrib-color-border;
+    color: $contrib-color;
+  }
+}
+
+// ─── Body ─────────────────────────────────────────────────────────────────────
+
+.brl_body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+// ─── Toolbar ──────────────────────────────────────────────────────────────────
+
+.brl_toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brl_toolbar_left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brl_count {
+  font-size: 11px;
+  color: var(--pr-color-accents-5);
+  font-weight: 600;
+}
+
+// ─── Search ───────────────────────────────────────────────────────────────────
+
+.brl_search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.brl_search_icon {
+  position: absolute;
+  left: 10px;
+  font-size: 12px;
+  color: var(--pr-color-accents-4);
+  pointer-events: none;
+}
+
+.brl_search_input {
+  height: 32px;
+  padding: 0 30px;
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--pr-color-secondary-400);
+  background: #fff;
+  width: 260px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &::placeholder { color: var(--pr-color-accents-4); }
+
+  &:focus {
+    border-color: var(--pr-color-primary-300);
+    box-shadow: 0 0 0 3px rgba(85, 105, 221, 0.1);
+  }
+}
+
+.brl_search_clear {
+  position: absolute;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--pr-color-accents-4);
+  padding: 0;
+  border-radius: 50%;
+
+  i { font-size: 10px; }
+
+  &:hover { color: var(--pr-color-secondary-400); }
+}
+
+// ─── States ───────────────────────────────────────────────────────────────────
+
+.brl_state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 0;
+  color: var(--pr-color-accents-5);
+  font-size: 12px;
+
+  &--error { color: var(--pr-color-red-300); }
+}
+
+.brl_state_icon { font-size: 16px; }
+
+// ─── Table ────────────────────────────────────────────────────────────────────
+
+.brl_table_wrap {
+  overflow-x: auto;
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 10px;
+}
+
+.brl_table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.brl_th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pr-color-accents-5);
+  border-bottom: 1px solid var(--pr-color-accents-2);
+  background: #fafafa;
+  white-space: nowrap;
+}
+
+.brl_row {
+  cursor: pointer;
+  transition: background 0.12s ease;
+
+  &:hover { background: #f5f7ff; }
+
+  &:not(:last-child) td {
+    border-bottom: 1px solid var(--pr-color-accents-1);
+  }
+
+  &:focus { outline: 2px solid var(--pr-color-primary-300); outline-offset: -2px; }
+}
+
+.brl_td {
+  padding: 11px 14px;
+  vertical-align: middle;
+  color: var(--pr-color-secondary-400);
+}
+
+// ─── Column widths ────────────────────────────────────────────────────────────
+
+.brl_col_source { width: 70px; }
+.brl_col_code   { width: 80px; }
+.brl_col_title  { min-width: 180px; }
+.brl_col_type   { width: 170px; }
+.brl_col_role   { width: 110px; }
+.brl_col_status { width: 110px; }
+.brl_col_date   { width: 100px; white-space: nowrap; }
+
+// ─── Cell content ─────────────────────────────────────────────────────────────
+
+.brl_code {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  background: #f0f4ff;
+  color: var(--pr-color-primary-300);
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid #dde5ff;
+}
+
+.brl_title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 340px;
+  color: var(--pr-color-secondary-400);
+  font-weight: 500;
+}
+
+.brl_type_chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--pr-color-accents-1);
+  border: 1px solid var(--pr-color-accents-2);
+  font-size: 10px;
+  color: var(--pr-color-accents-6);
+  font-weight: 600;
+}
+
+// ─── Source badges — match chip colors ────────────────────────────────────────
+
+.brl_source_badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+
+  &--w3 {
+    background: $w3-color-light;
+    color: $w3-color;
+    border: 1px solid $w3-color-border;
+  }
+
+  &--w1w2 {
+    background: $w1w2-color-light;
+    color: $w1w2-color;
+    border: 1px solid $w1w2-color-border;
+  }
+}
+
+.brl_ai_badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: #f1eaff;
+  color: #7048b8;
+  border: 1px solid #d8c4ff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.15px;
+  line-height: 1;
+  white-space: nowrap;
+
+  .pi { font-size: 9px; }
+}
+
+// ─── Role badges — match chip colors ─────────────────────────────────────────
+
+.brl_role_badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &--lead {
+    background: $lead-color-light;
+    color: $lead-color;
+    border: 1px solid $lead-color-border;
+  }
+
+  &--contributing {
+    background: $contrib-color-light;
+    color: $contrib-color;
+    border: 1px solid $contrib-color-border;
+  }
+}
+
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+.brl_pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 4px 4px;
+}
+
+.brl_pagination_info {
+  font-size: 11px;
+  color: var(--pr-color-accents-5);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.brl_pagination_nav {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.brl_page_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--pr-color-accents-5);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+
+  &:hover:not(:disabled):not(.brl_page_btn--active) {
+    background: #f5f7ff;
+    border-color: var(--pr-color-primary-300);
+    color: var(--pr-color-primary-300);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  &--active {
+    background: var(--pr-color-primary-300);
+    border-color: var(--pr-color-primary-300);
+    color: #fff;
+    cursor: default;
+  }
+
+  &--arrow {
+    color: var(--pr-color-accents-5);
+
+    .pi { font-size: 10px; }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
+.brl_page_ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  font-size: 11px;
+  color: var(--pr-color-accents-4);
+  letter-spacing: 1px;
+  user-select: none;
+}
+
+// ─── Actions column ───────────────────────────────────────────────────────────
+
+// Sticky so the actions are always visible even when the table scrolls horizontally.
+.brl_col_actions {
+  min-width: 110px;
+  text-align: right;
+  position: sticky;
+  right: 0;
+  background: inherit;
+
+  // Keep the sticky cell visually aligned with the rest of the row.
+  box-shadow: none;
+}
+
+// Header cell needs its own background so rows don't bleed through.
+.brl_th.brl_col_actions {
+  background: #fafafa;
+  z-index: 1;
+}
+
+// Keep row hover color consistent on the sticky cell.
+.brl_row:hover .brl_td.brl_col_actions {
+  background: #f5f7ff;
+}
+
+.brl_actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.brl_actions_confirm {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.brl_actions_confirm_text {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--pr-color-red-300);
+}
+
+.brl_action_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s ease;
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+
+  &--edit {
+    background: #f0f4ff;
+    color: var(--pr-color-primary-300);
+    border-color: #dde5ff;
+    font-size: 11px;
+
+    &:hover { background: #dde5ff; }
+  }
+
+  &--delete {
+    background: #fef2f2;
+    color: var(--pr-color-red-300);
+    border-color: #fecaca;
+    font-size: 11px;
+
+    &:hover { background: #fecaca; }
+  }
+
+  &--danger {
+    width: auto;
+    height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--pr-color-red-300);
+    color: #fff;
+    border-color: var(--pr-color-red-300);
+
+    &:hover:not(:disabled) { filter: brightness(0.9); }
+
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  &--ghost {
+    width: auto;
+    height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
+    font-weight: 600;
+    background: transparent;
+    color: var(--pr-color-accents-5);
+    border-color: var(--pr-color-accents-2);
+
+    &:hover { background: var(--pr-color-accents-1); }
+  }
+}
+
+// ─── Status badges ────────────────────────────────────────────────────────────
+
+.brl_status {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &--draft    { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+  &--active   { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+  &--pending  { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+  &--approved { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  &--rejected { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+}

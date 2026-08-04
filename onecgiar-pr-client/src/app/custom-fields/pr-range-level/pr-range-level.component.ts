@@ -25,39 +25,24 @@ export class PrRangeLevelComponent {
   @Input() disabled: boolean = false;
   @Output() selectOptionEvent = new EventEmitter<any>();
 
-  hoverData = {
-    show: false,
-    object: {},
-    index: null,
-    handleMouseEnter: (data: any, index: any) => {
-      this.hoverData.object = data;
-      this.hoverData.index = index;
-      this.hoverData.show = true;
-    },
-    handleMouseLeave: () => {
-      this.hoverData.object = {};
-      this.hoverData.index = null;
-      this.hoverData.show = false;
-    }
-  };
-  public list = [];
+  public list: number[] = [];
 
-  constructor(private rolesSE: RolesService) {}
+  constructor(public rolesSE: RolesService) {}
 
-  private _value: string;
+  private _value: any;
 
   get value(): any {
     return this._value;
   }
 
-  set value(v: string) {
+  set value(v: any) {
     if (v !== this._value) {
       this._value = v;
       this.onChange(v);
     }
   }
 
-  onChange(_) {}
+  onChange(_: any) {}
 
   onTouch() {}
 
@@ -73,23 +58,78 @@ export class PrRangeLevelComponent {
     this.onTouch = fn;
   }
 
-  get sizeArray() {
-    if (!this.list?.length) Array.from({ length: this.size + 1 }).forEach((_, i) => this.list.push(i));
-
+  get sizeArray(): number[] {
+    if (!this.list?.length) {
+      Array.from({ length: this.size + 1 }).forEach((_, i) => this.list.push(i));
+    }
     return this.list;
   }
 
-  getRangeIndexByValue(value) {
-    return this.options.findIndex(item => item[this.optionValue] == value);
+  get levels(): any[] {
+    return this.options?.length ? this.options : this.sizeArray;
   }
 
-  onSelectLevel(option, circle: HTMLElement) {
+  get selectedIndex(): number {
+    if (this.options?.length && this.optionValue) {
+      return this.options.findIndex((item: any) => item[this.optionValue] == this.value);
+    }
+    return this.sizeArray.findIndex(item => item == this.value);
+  }
+
+  get progressPercent(): number {
+    const count = this.levels.length;
+    if (count <= 1 || this.selectedIndex < 0) return 0;
+    return (this.selectedIndex / (count - 1)) * 100;
+  }
+
+  get selectedOption(): any {
+    if (this.selectedIndex < 0) return null;
+    return this.levels[this.selectedIndex] ?? null;
+  }
+
+  get hasNarrativeFields(): boolean {
+    return !!(this.itemTitle || this.itemDescription);
+  }
+
+  get selectedTitle(): string {
+    const opt = this.selectedOption;
+    if (!opt || !this.itemTitle) return '';
+    return typeof opt === 'object' ? (opt[this.itemTitle] ?? '') : String(opt);
+  }
+
+  get selectedDescription(): string {
+    const opt = this.selectedOption;
+    if (!opt || !this.itemDescription || typeof opt !== 'object') return '';
+    return opt[this.itemDescription] ?? '';
+  }
+
+  levelValue(item: any): any {
+    if (this.options?.length && this.optionValue) {
+      return item[this.optionValue];
+    }
+    return item;
+  }
+
+  levelLabel(index: number): number {
+    return index;
+  }
+
+  isReached(index: number): boolean {
+    return this.selectedIndex >= 0 && index <= this.selectedIndex;
+  }
+
+  isActive(index: number): boolean {
+    return index === this.selectedIndex;
+  }
+
+  /** @deprecated kept for callers */
+  getRangeIndexByValue(value: any): number {
+    if (!this.options?.length) return -1;
+    return this.options.findIndex((item: any) => item[this.optionValue] == value);
+  }
+
+  onSelectLevel(option: any): void {
     if (this.disabled || this.rolesSE.readOnly) return;
-    const htmlElement: HTMLElement = circle;
-    htmlElement.parentElement.querySelectorAll('.circle').forEach(circle => {
-      circle.classList.remove('active');
-    });
-    htmlElement.classList.add('active');
     this.value = option;
     this.selectOptionEvent.emit(option);
   }

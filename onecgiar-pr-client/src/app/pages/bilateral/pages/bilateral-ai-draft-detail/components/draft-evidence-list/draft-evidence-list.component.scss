@@ -1,0 +1,168 @@
+.del {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.del-section {
+  background: #FFFFFF;
+  border: 1px solid #E8ECEE;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.del-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4A5568;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 12px;
+
+  i { font-size: 16px; color: #718096; }
+}
+
+.del-loading-badge {
+  font-size: 9px;
+  font-weight: 600;
+  color: #D69E2E;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.del-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4A5568;
+  margin: 0 0 8px;
+
+  i { font-size: 15px; color: #718096; }
+}
+
+.del-text-snippet {
+  font-size: 13px;
+  color: #4A5568;
+  line-height: 1.6;
+  padding: 12px;
+  background: #FAFAFA;
+  border: 1px solid #EDF2F7;
+  border-radius: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.del-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.del-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #FAFAFA;
+  border: 1px solid #EDF2F7;
+  border-radius: 8px;
+  transition: all 150ms ease;
+
+  &:hover {
+    border-color: #D1FAE5;
+  }
+}
+
+.del-item--audio {
+  &:hover {
+    border-color: #FDE68A;
+  }
+}
+
+.del-item-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #EDF2F7;
+  border-radius: 6px;
+  flex-shrink: 0;
+
+  i { font-size: 18px; color: #718096; }
+}
+
+.del-item-icon--audio {
+  background: #FEF3C7;
+  i { color: #D97706; }
+}
+
+.del-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.del-item-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #2D3748;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.del-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 150ms ease;
+  color: #A0AEC0;
+  text-decoration: none;
+  flex-shrink: 0;
+
+  i { font-size: 18px; }
+
+  &:hover {
+    color: #2B6CB0;
+    background: #EBF4FF;
+  }
+
+  &--disabled {
+    cursor: default;
+    opacity: 0.5;
+
+    &:hover {
+      color: #A0AEC0;
+      background: transparent;
+    }
+  }
+}
+
+.del-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: #A0AEC0;
+
+  i {
+    font-size: 36px;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 13px;
+    margin: 0;
+  }
+}

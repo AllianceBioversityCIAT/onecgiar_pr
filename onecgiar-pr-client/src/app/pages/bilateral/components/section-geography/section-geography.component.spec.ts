@@ -1,9 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { Subject, of, throwError } from 'rxjs';
+import { Subject, of } from 'rxjs';
 
 import { SectionGeographyComponent } from './section-geography.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { RegionsCountriesService } from '../../../../shared/services/global/regions-countries.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
@@ -14,6 +15,7 @@ describe('SectionGeographyComponent', () => {
   let fixture: ComponentFixture<SectionGeographyComponent>;
   let component: SectionGeographyComponent;
   let api: any;
+  let bilateralApi: any;
   let creation: any;
   let autoSave: any;
   let mdsTracker: any;
@@ -30,9 +32,10 @@ describe('SectionGeographyComponent', () => {
     creation = { currentResultId: signal<number | null>(77) };
     autoSave = {
       manualSave$,
-      fieldStatus: signal<Record<string, string>>({})
+      fieldStatus: signal<Record<string, string>>({}),
+      schedulePayload: jest.fn(),
     };
-    mdsTracker = { updateSection: jest.fn(), setTotalFields: jest.fn() };
+    mdsTracker = { setSectionFields: jest.fn() };
 
     api = {
       resultsSE: {
@@ -42,10 +45,15 @@ describe('SectionGeographyComponent', () => {
       }
     };
 
+    bilateralApi = {
+      PATCH_geographic: jest.fn().mockReturnValue(of({})),
+    };
+
     await TestBed.configureTestingModule({
       imports: [SectionGeographyComponent],
       providers: [
         { provide: ApiService, useValue: api },
+        { provide: BilateralApiService, useValue: bilateralApi },
         { provide: RegionsCountriesService, useValue: { regionsList: [], countriesList: [] } },
         { provide: BilateralCreationService, useValue: creation },
         { provide: BilateralAutoSaveService, useValue: autoSave },
@@ -73,7 +81,7 @@ describe('SectionGeographyComponent', () => {
       build();
       fixture.detectChanges();
       expect(component.geographicLocationBody().geo_scope_id).toBeUndefined();
-      expect(mdsTracker.updateSection).not.toHaveBeenCalled();
+      expect(mdsTracker.setSectionFields).not.toHaveBeenCalled();
     });
 
     it('hydrates both bodies from the response', () => {
@@ -98,7 +106,6 @@ describe('SectionGeographyComponent', () => {
       fixture.detectChanges();
       expect(component.geographicLocationBody().regions).toEqual([{ id: 1 }]);
       expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBe(true);
-      expect(mdsTracker.updateSection).toHaveBeenCalledWith('geography', 1);
     });
 
     it('defaults the region and country lists when they are missing', () => {
@@ -111,24 +118,22 @@ describe('SectionGeographyComponent', () => {
       expect(component.geographicLocationBody().countries).toEqual([]);
       expect(component.extraGeographicLocationBody().regions).toEqual([]);
       expect(component.extraGeographicLocationBody().countries).toEqual([]);
-      expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBe(false);
+      expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBeNull();
     });
 
-    it('saves when a manual save is requested and stops after destroy', () => {
+    it('calls queueGeographySave once on successful load with data', () => {
+      api.resultsSE.GET_geographicSectionp25.mockReturnValue(
+        of({ response: { geo_scope_id: GeoScopeEnum.REGIONAL } })
+      );
       build();
       fixture.detectChanges();
-      manualSave$.next();
-      expect(api.resultsSE.http.patch).toHaveBeenCalledTimes(1);
-      component.ngOnDestroy();
-      manualSave$.next();
-      expect(api.resultsSE.http.patch).toHaveBeenCalledTimes(1);
+      expect(mdsTracker.setSectionFields).toHaveBeenCalledTimes(1);
     });
   });
 
   // ── saving ───────────────────────────────────────────────────────────
-  describe('saveGeography', () => {
-    it('builds the payload and reports the saved status', () => {
-      jest.useFakeTimers();
+  describe('queueGeographySave', () => {
+    it('calls schedulePayload with the built payload', () => {
       build();
       component.geographicLocationBody.set({
         has_countries: true,
@@ -137,31 +142,28 @@ describe('SectionGeographyComponent', () => {
         countries: [{ id: 9 }],
         geo_scope_id: GeoScopeEnum.COUNTRY
       });
-      component.saveGeography();
-      expect(api.resultsSE.http.patch).toHaveBeenCalledWith(
-        'http://api/v2/geographic-location/update/geographic/77',
-        expect.objectContaining({ geo_scope_id: GeoScopeEnum.COUNTRY, extra_geo_scope_id: null })
+      component.queueGeographySave();
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
+        'geography',
+        expect.objectContaining({ geo_scope_id: GeoScopeEnum.COUNTRY, extra_geo_scope_id: null }),
+        expect.objectContaining({ statusKey: 'geography' })
       );
-      expect(component.scopeStatus).toBe('saved');
-      jest.advanceTimersByTime(2000);
-      expect(component.scopeStatus).toBe('idle');
-      jest.useRealTimers();
     });
 
     it('keeps the extra scope id when there is one', () => {
       build();
       component.extraGeographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.REGIONAL }));
-      component.saveGeography();
-      expect(api.resultsSE.http.patch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({ extra_geo_scope_id: GeoScopeEnum.REGIONAL })
+      component.queueGeographySave();
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
+        'geography',
+        expect.objectContaining({ extra_geo_scope_id: GeoScopeEnum.REGIONAL }),
+        expect.any(Object)
       );
     });
 
-    it('reports the error status when the request fails', () => {
-      api.resultsSE.http.patch.mockReturnValue(throwError(() => new Error('boom')));
+    it('reflects the error status via scopeStatus', () => {
+      autoSave.fieldStatus.set({ geography: 'error' });
       build();
-      component.saveGeography();
       expect(component.scopeStatus).toBe('error');
     });
 
@@ -380,13 +382,23 @@ describe('SectionGeographyComponent', () => {
 
   // ── tracker ──────────────────────────────────────────────────────────
   describe('updateTracker', () => {
-    it('reports zero when there is no scope and one when there is', () => {
+    it('reports geo-scope as unfilled when there is no scope', () => {
       build();
       component.updateTracker();
-      expect(mdsTracker.updateSection).toHaveBeenLastCalledWith('geography', 0);
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith(
+        'geography',
+        expect.arrayContaining([expect.objectContaining({ key: 'geo-scope', filled: false })])
+      );
+    });
+
+    it('reports geo-scope as filled when a scope is set', () => {
+      build();
       component.geographicLocationBody.update(b => ({ ...b, geo_scope_id: GeoScopeEnum.GLOBAL }));
       component.updateTracker();
-      expect(mdsTracker.updateSection).toHaveBeenLastCalledWith('geography', 1);
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith(
+        'geography',
+        expect.arrayContaining([expect.objectContaining({ key: 'geo-scope', filled: true })])
+      );
     });
   });
 });

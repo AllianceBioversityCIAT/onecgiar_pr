@@ -80,8 +80,12 @@ export class SectionGeneralInfoComponent implements OnInit {
       const t = this.title();
       const d = this.description();
       const isPlaceholderTitle = /^Bilateral Draft #\d+$/.test(t.trim());
-      const filled = (!isPlaceholderTitle && t.trim() ? 1 : 0) + (d.trim() ? 1 : 0);
-      this.mdsTracker.updateSection('general-info', filled);
+      const titleFilled = !isPlaceholderTitle && !!t.trim();
+      const descriptionFilled = !!d.trim();
+      this.mdsTracker.setSectionFields('general-info', [
+        { key: 'title', label: 'Title', filled: titleFilled },
+        { key: 'description', label: 'Description', filled: descriptionFilled },
+      ]);
     });
 
     effect(() => {

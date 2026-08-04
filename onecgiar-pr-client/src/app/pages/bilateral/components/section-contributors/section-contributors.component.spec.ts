@@ -38,7 +38,8 @@ describe('SectionContributorsComponent', () => {
       resultLeadCenterId: signal<number | null>(null),
       resultContributingCenterIds: signal<number[]>([]),
       resultContributingProjectIds: signal<number[]>([]),
-      resultContributingProjects: signal<any[]>([])
+      resultContributingProjects: signal<any[]>([]),
+      isLoadingResult: signal(false)
     };
 
     autoSave = {
@@ -63,7 +64,7 @@ describe('SectionContributorsComponent', () => {
       providers: [
         { provide: BilateralCreationService, useValue: creation },
         { provide: BilateralAutoSaveService, useValue: autoSave },
-        { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn(), setTotalFields: jest.fn() } },
+        { provide: BilateralMdsTrackerService, useValue: { setSectionFields: jest.fn() } },
         { provide: CentersService, useValue: centersService },
         { provide: ApiService, useValue: api }
       ]
@@ -178,16 +179,13 @@ describe('SectionContributorsComponent', () => {
       expect(component.availableCenters()[1].full_name).toBe('C2 - Center 2');
     });
 
-    it('persists the lead center as soon as the cached centers are mapped', () => {
+    it('sets lead center and selection when centers and lead center id are ready', () => {
       centersService.centersList = [center(5), center(6)];
       creation.resultLeadCenterId.set(5);
       build();
       fixture.detectChanges();
       expect(component.readonlyLeadCenterInstitutionId).toBe(5);
       expect(component.selectedCenterInstitutionIds()).toContain(5);
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_center: [{ institution_id: 5 }]
-      });
     });
 
     it('keeps the lead center from the project when it is already selected', () => {
@@ -200,14 +198,15 @@ describe('SectionContributorsComponent', () => {
       expect(component.selectedCenterInstitutionIds()).toEqual([5]);
     });
 
-    it('drops already selected ids that are unknown while persisting the lead center', () => {
+    it('drops unknown ids from the payload via onCentersChange', () => {
       centersService.centersList = [center(5)];
       creation.resultLeadCenterId.set(5);
       build();
-      component.selectedCenterInstitutionIds.set([404]);
       fixture.detectChanges();
+      component.onCentersChange([404]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_center: [{ institution_id: 5 }]
+        contributing_center: [{ institution_id: 5 }],
+        contributing_bilateral_projects: []
       });
     });
 
@@ -282,17 +281,14 @@ describe('SectionContributorsComponent', () => {
 
   // ── effects ──────────────────────────────────────────────────────────
   describe('lead center effect', () => {
-    it('marks the lead center as read-only and persists it', () => {
+    it('marks the lead center as read-only on hydration', () => {
+      centersService.centersList = [center(5), center(6)];
       build();
       fixture.detectChanges();
-      component.availableCenters.set([center(5), center(6)] as any);
       creation.resultLeadCenterId.set(5);
       fixture.detectChanges();
       expect(component.readonlyLeadCenterInstitutionId).toBe(5);
       expect(component.selectedCenterInstitutionIds()).toContain(5);
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_center: [{ institution_id: 5 }]
-      });
     });
 
     it('ignores a lead center that is not part of the available list', () => {
@@ -313,9 +309,9 @@ describe('SectionContributorsComponent', () => {
     });
 
     it('swaps the previous read-only lead center out of the selection', () => {
+      centersService.centersList = [center(5), center(6)];
       build();
       fixture.detectChanges();
-      component.availableCenters.set([center(5), center(6)] as any);
       creation.resultLeadCenterId.set(5);
       fixture.detectChanges();
       creation.resultLeadCenterId.set(6);
@@ -325,24 +321,24 @@ describe('SectionContributorsComponent', () => {
       expect(component.selectedCenterInstitutionIds()).not.toContain(5);
     });
 
-    it('drops unknown ids while building the payload', () => {
+    it('drops unknown ids from the payload via onCentersChange (effect section)', () => {
+      centersService.centersList = [center(5)];
+      creation.resultLeadCenterId.set(5);
       build();
       fixture.detectChanges();
-      component.availableCenters.set([center(5)] as any);
-      component.selectedCenterInstitutionIds.set([404]);
-      creation.resultLeadCenterId.set(5);
-      fixture.detectChanges();
+      component.onCentersChange([404]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_center: [{ institution_id: 5 }]
+        contributing_center: [{ institution_id: 5 }],
+        contributing_bilateral_projects: []
       });
     });
   });
 
   describe('saved contributing centers effect', () => {
     it('merges saved ids with the read-only lead center', () => {
+      centersService.centersList = [center(5), center(7)];
       build();
       fixture.detectChanges();
-      component.availableCenters.set([center(5), center(7)] as any);
       creation.resultLeadCenterId.set(5);
       fixture.detectChanges();
       creation.resultContributingCenterIds.set([7]);
@@ -351,9 +347,9 @@ describe('SectionContributorsComponent', () => {
     });
 
     it('uses only the saved ids when there is no lead center', () => {
+      centersService.centersList = [center(7)];
       build();
       fixture.detectChanges();
-      component.availableCenters.set([center(7)] as any);
       creation.resultContributingCenterIds.set([7]);
       fixture.detectChanges();
       expect(component.selectedCenterInstitutionIds()).toEqual([7]);
@@ -361,19 +357,16 @@ describe('SectionContributorsComponent', () => {
   });
 
   describe('lead project effect', () => {
-    it('marks the lead project as read-only and persists it', () => {
+    it('marks the lead project as read-only on hydration', () => {
+      centersService.centersList = [center(1)];
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({ response: [{ id: '1', shortName: 'P1', fullName: 'Project 1' }, { id: '2', shortName: 'P2', fullName: 'Project 2' }] })
+      );
       build();
       fixture.detectChanges();
-      component.availableProjects.set([
-        { id: 1, shortName: 'P1', fullName: 'Project 1' },
-        { id: 2, shortName: 'P2', fullName: 'Project 2' }
-      ]);
       creation.selectedProject.set({ id: 1 });
       fixture.detectChanges();
       expect(component.readonlyLeadProjectId).toBe(1);
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_bilateral_projects: [{ project_id: 1, is_lead: true }]
-      });
     });
 
     it('ignores a lead project missing from the available list', () => {
@@ -394,12 +387,12 @@ describe('SectionContributorsComponent', () => {
     });
 
     it('swaps the previous read-only lead project out of the selection', () => {
+      centersService.centersList = [center(1)];
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({ response: [{ id: '1', shortName: 'P1', fullName: 'Project 1' }, { id: '2', shortName: 'P2', fullName: 'Project 2' }] })
+      );
       build();
       fixture.detectChanges();
-      component.availableProjects.set([
-        { id: 1, shortName: 'P1', fullName: 'Project 1' },
-        { id: 2, shortName: 'P2', fullName: 'Project 2' }
-      ]);
       creation.selectedProject.set({ id: 1 });
       fixture.detectChanges();
       creation.selectedProject.set({ id: 2 });
@@ -408,27 +401,31 @@ describe('SectionContributorsComponent', () => {
       expect(component.selectedProjectIds()).not.toContain(1);
     });
 
-    it('drops unknown project ids while building the payload', () => {
+    it('drops unknown project ids from the payload via onProjectsChange', () => {
+      centersService.centersList = [center(1)];
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({ response: [{ id: '1', shortName: 'P1', fullName: 'Project 1' }] })
+      );
       build();
       fixture.detectChanges();
-      component.availableProjects.set([{ id: 1, shortName: 'P1', fullName: 'Project 1' }]);
-      component.selectedProjectIds.set([987]);
       creation.selectedProject.set({ id: 1 });
       fixture.detectChanges();
+      component.onProjectsChange([987]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_bilateral_projects: [{ project_id: 1, is_lead: true }]
+        contributing_bilateral_projects: [{ project_id: 1, is_lead: true }],
+        contributing_center: []
       });
     });
   });
 
   describe('saved contributing projects effect', () => {
     it('merges saved ids with the read-only lead project', () => {
+      centersService.centersList = [center(1)];
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({ response: [{ id: '1', shortName: 'P1', fullName: 'Project 1' }, { id: '3', shortName: 'P3', fullName: 'Project 3' }] })
+      );
       build();
       fixture.detectChanges();
-      component.availableProjects.set([
-        { id: 1, shortName: 'P1', fullName: 'Project 1' },
-        { id: 3, shortName: 'P3', fullName: 'Project 3' }
-      ]);
       creation.selectedProject.set({ id: 1 });
       fixture.detectChanges();
       creation.resultContributingProjectIds.set([3]);
@@ -437,9 +434,12 @@ describe('SectionContributorsComponent', () => {
     });
 
     it('uses only the saved ids when there is no lead project', () => {
+      centersService.centersList = [center(1)];
+      api.resultsSE.GET_ClarisaProjects.mockReturnValue(
+        of({ response: [{ id: '3', shortName: 'P3', fullName: 'Project 3' }] })
+      );
       build();
       fixture.detectChanges();
-      component.availableProjects.set([{ id: 3, shortName: 'P3', fullName: 'Project 3' }]);
       creation.resultContributingProjectIds.set([3]);
       fixture.detectChanges();
       expect(component.selectedProjectIds()).toEqual([3]);
@@ -502,7 +502,7 @@ describe('SectionContributorsComponent', () => {
       build();
       component.onCentersChange(null as any);
       expect(component.selectedCenterInstitutionIds()).toEqual([]);
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({ contributing_center: [] });
+      expect(autoSave.saveContributors).toHaveBeenCalledWith({ contributing_center: [], contributing_bilateral_projects: [] });
     });
 
     it('skips ids that are not part of the available centers', () => {
@@ -510,7 +510,8 @@ describe('SectionContributorsComponent', () => {
       component.availableCenters.set([center(5)] as any);
       component.onCentersChange([5, 404]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_center: [{ institution_id: 5 }]
+        contributing_center: [{ institution_id: 5 }],
+        contributing_bilateral_projects: []
       });
     });
 
@@ -525,6 +526,7 @@ describe('SectionContributorsComponent', () => {
       component.onProjectsChange([2]);
       expect(component.selectedProjectIds()).toEqual([1, 2]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({
+        contributing_center: [],
         contributing_bilateral_projects: [
           { project_id: 1, is_lead: true },
           { project_id: 2, is_lead: false }
@@ -536,7 +538,7 @@ describe('SectionContributorsComponent', () => {
       build();
       component.onProjectsChange(null as any);
       expect(component.selectedProjectIds()).toEqual([]);
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({ contributing_bilateral_projects: [] });
+      expect(autoSave.saveContributors).toHaveBeenCalledWith({ contributing_bilateral_projects: [], contributing_center: [] });
     });
 
     it('skips ids that are not part of the available projects', () => {
@@ -544,7 +546,8 @@ describe('SectionContributorsComponent', () => {
       component.availableProjects.set([{ id: 1, shortName: 'P1', fullName: 'Project 1' }]);
       component.onProjectsChange([1, 99]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_bilateral_projects: [{ project_id: 1, is_lead: false }]
+        contributing_bilateral_projects: [{ project_id: 1, is_lead: false }],
+        contributing_center: []
       });
     });
   });

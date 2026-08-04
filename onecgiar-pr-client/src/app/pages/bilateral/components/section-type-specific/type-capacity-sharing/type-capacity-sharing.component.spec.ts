@@ -1,15 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import { signal } from '@angular/core';
 
 import { TypeCapacitySharingComponent } from './type-capacity-sharing.component';
-import { ApiService } from '../../../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
+import { BilateralCreationService } from '../../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-tracker.service';
+import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 
 describe('TypeCapacitySharingComponent', () => {
   let fixture: ComponentFixture<TypeCapacitySharingComponent>;
   let component: TypeCapacitySharingComponent;
-  let api: any;
+  let bilateralApi: any;
+  let creation: any;
   let mdsTracker: any;
+  let autoSave: any;
 
   const build = () => {
     fixture = TestBed.createComponent(TypeCapacitySharingComponent);
@@ -18,20 +23,25 @@ describe('TypeCapacitySharingComponent', () => {
   };
 
   beforeEach(async () => {
-    mdsTracker = { updateSection: jest.fn(), setTotalFields: jest.fn() };
-    api = {
-      resultsSE: {
-        GET_capacityDevelopent: jest.fn().mockReturnValue(of({ response: {} })),
-        GET_capdevsDeliveryMethod: jest.fn().mockReturnValue(of({ response: [{ code: 1 }] })),
-        PATCH_capacityDevelopent: jest.fn().mockReturnValue(of({}))
-      }
+    mdsTracker = { setSectionFields: jest.fn() };
+    autoSave = {
+      fieldStatus: signal<Record<string, string>>({}),
+      schedulePayload: jest.fn()
+    };
+    creation = { currentResultId: signal<number | null>(123) };
+    bilateralApi = {
+      GET_capacityDevelopment: jest.fn().mockReturnValue(of({ response: {} })),
+      GET_capdevsDeliveryMethod: jest.fn().mockReturnValue(of({ response: [{ code: 1 }] })),
+      PATCH_capacityDevelopment: jest.fn().mockReturnValue(of({}))
     };
 
     await TestBed.configureTestingModule({
       imports: [TypeCapacitySharingComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-        { provide: BilateralMdsTrackerService, useValue: mdsTracker }
+        { provide: BilateralApiService, useValue: bilateralApi },
+        { provide: BilateralCreationService, useValue: creation },
+        { provide: BilateralMdsTrackerService, useValue: mdsTracker },
+        { provide: BilateralAutoSaveService, useValue: autoSave }
       ]
     })
       .overrideTemplate(TypeCapacitySharingComponent, '<div></div>')
@@ -42,47 +52,66 @@ describe('TypeCapacitySharingComponent', () => {
     expect(build()).toBeTruthy();
   });
 
-  it('registers the total number of fields and loads the data', () => {
-    api.resultsSE.GET_capacityDevelopent.mockReturnValue(
+  it('loads the data and updates the MDS tracker', () => {
+    bilateralApi.GET_capacityDevelopment.mockReturnValue(
       of({ response: { female_using: 1, male_using: 2, non_binary_using: 0, capdev_delivery_method_id: 4 } })
     );
     build();
     fixture.detectChanges();
-    expect(mdsTracker.setTotalFields).toHaveBeenCalledWith('type-specific', 4);
     expect(component.body.female_using).toBe(1);
     expect(component.deliveryMethods).toEqual([{ code: 1 }]);
-    expect(mdsTracker.updateSection).toHaveBeenCalledWith('type-specific', 4);
+    expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('type-specific', [
+      { key: 'female-using', label: 'Female participants', filled: true },
+      { key: 'male-using', label: 'Male participants', filled: true },
+      { key: 'non-binary-using', label: 'Non-binary participants', filled: true },
+      { key: 'delivery-method', label: 'Delivery method', filled: true },
+    ]);
   });
 
   it('falls back to empty defaults when the responses are empty', () => {
-    api.resultsSE.GET_capacityDevelopent.mockReturnValue(of({ response: null }));
-    api.resultsSE.GET_capdevsDeliveryMethod.mockReturnValue(of({ response: null }));
+    bilateralApi.GET_capacityDevelopment.mockReturnValue(of({ response: null }));
+    bilateralApi.GET_capdevsDeliveryMethod.mockReturnValue(of({ response: null }));
     build();
     fixture.detectChanges();
     expect(component.body).toEqual({});
     expect(component.deliveryMethods).toEqual([]);
-    expect(mdsTracker.updateSection).toHaveBeenCalledWith('type-specific', 0);
+    expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('type-specific', [
+      { key: 'female-using', label: 'Female participants', filled: false },
+      { key: 'male-using', label: 'Male participants', filled: false },
+      { key: 'non-binary-using', label: 'Non-binary participants', filled: false },
+      { key: 'delivery-method', label: 'Delivery method', filled: false },
+    ]);
   });
 
   it('counts a zero delivery method id as empty but zero people as filled', () => {
     build();
     component.body = { female_using: 0, male_using: null, non_binary_using: undefined, capdev_delivery_method_id: 0 };
     component.updateMds();
-    expect(mdsTracker.updateSection).toHaveBeenLastCalledWith('type-specific', 1);
+    expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
+      { key: 'female-using', label: 'Female participants', filled: true },
+      { key: 'male-using', label: 'Male participants', filled: false },
+      { key: 'non-binary-using', label: 'Non-binary participants', filled: false },
+      { key: 'delivery-method', label: 'Delivery method', filled: false },
+    ]);
   });
 
-  it('saves and reloads on success', () => {
+  it('queues a save via autoSave.schedulePayload on onSave', () => {
     build();
+    component.body = { female_using: 5 };
     component.onSave();
-    expect(api.resultsSE.PATCH_capacityDevelopent).toHaveBeenCalledWith(component.body);
-    expect(api.resultsSE.GET_capacityDevelopent).toHaveBeenCalled();
+    expect(autoSave.schedulePayload).toHaveBeenCalledWith(
+      'typeSpecific',
+      { female_using: 5 },
+      expect.objectContaining({ debounceMs: 0 })
+    );
+  });
+
+  it('tracks the saving state from fieldStatus', () => {
+    build();
     expect(component.saving()).toBe(false);
-  });
-
-  it('clears the saving flag when the request fails', () => {
-    api.resultsSE.PATCH_capacityDevelopent.mockReturnValue(throwError(() => new Error('boom')));
-    build();
-    component.onSave();
+    autoSave.fieldStatus.set({ 'type-specific': 'saving' });
+    expect(component.saving()).toBe(true);
+    autoSave.fieldStatus.set({ 'type-specific': 'saved' });
     expect(component.saving()).toBe(false);
   });
 });

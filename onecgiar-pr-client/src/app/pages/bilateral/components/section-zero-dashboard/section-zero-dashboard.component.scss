@@ -1,12 +1,8 @@
 .bp-dashboard {
   display: grid;
-  grid-template-columns: 1fr 200px 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 18px;
   margin-bottom: 28px;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: 1fr 1fr;
-  }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -31,12 +27,6 @@
     align-items: center;
     border: 1.5px solid var(--pr-color-primary-50);
     background: linear-gradient(to bottom, var(--pr-color-primary-25), #FFFFFF);
-  }
-
-  &--actions {
-    @media (max-width: 1200px) {
-      grid-column: 1 / -1;
-    }
   }
 }
 
@@ -122,6 +112,69 @@
   font-style: italic;
 }
 
+@keyframes bp-skel-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.bp-skel-code,
+.bp-skel-name,
+.bp-skel-pill {
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    var(--pr-color-accents-1, #eee) 0%,
+    var(--pr-color-accents-2, #f5f5f5) 50%,
+    var(--pr-color-accents-1, #eee) 100%);
+  background-size: 200% 100%;
+  animation: bp-skel-shimmer 1.8s ease-in-out infinite;
+}
+
+.bp-skel-code {
+  width: 110px;
+  height: 20px;
+}
+
+.bp-skel-name {
+  width: 100%;
+  height: 12px;
+  margin-top: 8px;
+
+  &--sm {
+    width: 60%;
+    margin-top: 6px;
+  }
+}
+
+.bp-skel-pill {
+  width: 70px;
+  height: 24px;
+  border-radius: 16px;
+
+  &--sm {
+    width: 50px;
+  }
+}
+
+.bp-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  background: linear-gradient(135deg, #7C3AED, #A855F7);
+  color: #FFFFFF;
+  box-shadow: 0 2px 7px rgba(124, 58, 237, 0.3);
+  margin-left: 4px;
+}
+
+.bp-ai-badge-icon {
+  font-size: 11px;
+}
+
 .bp-progress-center {
   display: flex;
   justify-content: center;
@@ -205,6 +258,16 @@
     color: #78909C;
   }
 
+  .bp-action-status {
+    margin-left: auto;
+    color: #90A4AE;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.45px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
   &:hover:not(:disabled) {
     background: #F5F8FA;
     border-color: #B0BEC5;
@@ -224,6 +287,10 @@
     box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.15);
 
     i { color: rgba(255, 255, 255, 0.85); }
+
+    .bp-action-status {
+      color: rgba(255, 255, 255, 0.78);
+    }
 
     &:hover:not(:disabled) {
       background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-500));

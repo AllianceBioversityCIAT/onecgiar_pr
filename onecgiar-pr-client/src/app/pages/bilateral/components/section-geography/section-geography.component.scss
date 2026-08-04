@@ -106,6 +106,13 @@
   color: var(--pr-color-red-300);
 }
 
+.sg-field-error {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--pr-color-red-300);
+}
+
 .sg-toggle-buttons {
   display: flex;
   gap: 8px;

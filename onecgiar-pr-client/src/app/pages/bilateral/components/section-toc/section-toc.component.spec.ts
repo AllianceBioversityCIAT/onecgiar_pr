@@ -57,10 +57,12 @@ describe('SectionTocComponent', () => {
       providers: [
         { provide: BilateralCreationService, useValue: creationService },
         { provide: BilateralAutoSaveService, useValue: autoSave },
-        { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn() } },
+        { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn(), setSectionFields: jest.fn() } },
         { provide: ApiService, useValue: api },
       ],
-    }).compileComponents();
+    })
+      .overrideTemplate(SectionTocComponent, '<div></div>')
+      .compileComponents();
 
     fixture = TestBed.createComponent(SectionTocComponent);
     component = fixture.componentInstance;

@@ -56,6 +56,16 @@ import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/cl
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResultByLevelModule } from '../results/result-by-level/result-by-level.module';
+import { Result } from '../results/entities/result.entity';
+import { BilateralAiJob } from '../bilateral-ai/entities/bilateral-ai-job.entity';
+import { BilateralAiDraft } from '../bilateral-ai/entities/bilateral-ai-draft.entity';
+import { DraftEvidence } from '../bilateral-ai/entities/draft-evidence.entity';
+import { BilateralAiController } from '../bilateral-ai/bilateral-ai.controller';
+import { BilateralAiConsumer } from '../bilateral-ai/bilateral-ai.consumer';
+import { BilateralAiService } from '../bilateral-ai/services/bilateral-ai.service';
+import { BilateralAiFileStorageService } from '../bilateral-ai/services/bilateral-ai-file-storage.service';
+import { BilateralAiTextMiningService } from '../bilateral-ai/services/bilateral-ai-text-mining.service';
+import { BilateralAiProcessingQueueModule } from '../../shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.module';
 
 @Module({
   imports: [
@@ -64,6 +74,10 @@ import { ResultByLevelModule } from '../results/result-by-level/result-by-level.
       ClarisaProject,
       ClarisaInitiative,
       ClarisaCenter,
+      Result,
+      BilateralAiJob,
+      BilateralAiDraft,
+      DraftEvidence,
     ]),
     ResultsModule,
     VersioningModule,
@@ -99,8 +113,14 @@ import { ResultByLevelModule } from '../results/result-by-level/result-by-level.
     ShareResultRequestModule,
     PathwayModule,
     ResultByLevelModule,
+    BilateralAiProcessingQueueModule,
   ],
-  controllers: [BilateralCenterController, BilateralController],
+  controllers: [
+    BilateralCenterController,
+    BilateralController,
+    BilateralAiController,
+    BilateralAiConsumer,
+  ],
   providers: [
     ClarisaApiKeyValidationService,
     ClarisaApiKeyGuard,
@@ -118,6 +138,9 @@ import { ResultByLevelModule } from '../results/result-by-level/result-by-level.
     ResultsCapacityDevelopmentsRepository,
     ResultsPolicyChangesRepository,
     NonPooledProjectBudgetRepository,
+    BilateralAiService,
+    BilateralAiFileStorageService,
+    BilateralAiTextMiningService,
   ],
 })
 export class BilateralModule {}

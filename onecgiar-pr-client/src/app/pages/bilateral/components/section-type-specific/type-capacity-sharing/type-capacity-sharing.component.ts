@@ -1,10 +1,10 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
+import { BilateralCreationService } from '../../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-tracker.service';
-
-const TOTAL_FIELDS = 4;
+import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 
 @Component({
   selector: 'app-type-capacity-sharing',
@@ -13,45 +13,58 @@ const TOTAL_FIELDS = 4;
   styleUrl: './type-capacity-sharing.component.scss',
 })
 export class TypeCapacitySharingComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly bilateralApi = inject(BilateralApiService);
+  private readonly creationService = inject(BilateralCreationService);
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
+  private readonly autoSave = inject(BilateralAutoSaveService);
 
   body: any = {};
   deliveryMethods: any[] = [];
-  saving = signal(false);
+  readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
 
   ngOnInit(): void {
-    this.mdsTracker.setTotalFields('type-specific', TOTAL_FIELDS);
     this.loadData();
   }
 
   private loadData(): void {
-    this.api.resultsSE.GET_capacityDevelopent().subscribe(({ response }) => {
+    const resultId = this.creationService.currentResultId();
+    if (!resultId) return;
+    this.bilateralApi.GET_capacityDevelopment(resultId).subscribe(({ response }) => {
       this.body = response || {};
       this.updateMds();
     });
-    this.api.resultsSE.GET_capdevsDeliveryMethod().subscribe(({ response }) => {
+    this.bilateralApi.GET_capdevsDeliveryMethod().subscribe(({ response }) => {
       this.deliveryMethods = response || [];
     });
   }
 
+  onFieldChange(): void {
+    this.updateMds();
+    this.queueTypeSave();
+  }
+
   onSave(): void {
-    this.saving.set(true);
-    this.api.resultsSE.PATCH_capacityDevelopent(this.body).subscribe({
-      next: () => {
-        this.loadData();
-        this.saving.set(false);
-      },
-      error: () => this.saving.set(false),
+    this.queueTypeSave(0);
+  }
+
+  private queueTypeSave(debounceMs = 800): void {
+    this.autoSave.schedulePayload('typeSpecific', { ...this.body }, {
+      debounceMs,
+      statusKey: 'type-specific',
+      executor: (resultId, body) => this.bilateralApi.PATCH_capacityDevelopment(resultId, body),
     });
   }
 
   updateMds(): void {
-    const filled =
-      (this.body.female_using != null ? 1 : 0) +
-      (this.body.male_using != null ? 1 : 0) +
-      (this.body.non_binary_using != null ? 1 : 0) +
-      (this.body.capdev_delivery_method_id ? 1 : 0);
-    this.mdsTracker.updateSection('type-specific', filled);
+    this.mdsTracker.setSectionFields('type-specific', [
+      { key: 'female-using', label: 'Female participants', filled: this.body.female_using != null },
+      { key: 'male-using', label: 'Male participants', filled: this.body.male_using != null },
+      { key: 'non-binary-using', label: 'Non-binary participants', filled: this.body.non_binary_using != null },
+      {
+        key: 'delivery-method',
+        label: 'Delivery method',
+        filled: !!this.body.capdev_delivery_method_id,
+      },
+    ]);
   }
 }

@@ -63,9 +63,13 @@ export class InnovationDevelopmentBilateralHandler
     });
 
     if (existing) {
-      existing.innovation_nature_id = innovationNatureId;
+      existing.innovation_nature =
+        innovationNatureId == null
+          ? null
+          : ({ code: innovationNatureId } as any);
       existing.innovation_developers = innovation.innovation_developers;
-      existing.innovation_readiness_level_id = readinessLevelId;
+      existing.innovation_readiness_level =
+        readinessLevelId == null ? null : ({ id: readinessLevelId } as any);
       existing.last_updated_by = userId;
       await this._resultsInnovationsDevRepository.save(existing);
       this.logger.debug(
@@ -75,13 +79,14 @@ export class InnovationDevelopmentBilateralHandler
     }
 
     const newRecord = this._resultsInnovationsDevRepository.create({
+      results_id: resultId,
       result_object: { id: resultId } as any,
       created_by: userId,
       is_active: true,
       short_title: bilateralDto.title,
-      innovation_nature_id: innovationNatureId,
+      innovation_nature: { code: innovationNatureId } as any,
       innovation_developers: innovation.innovation_developers,
-      innovation_readiness_level_id: readinessLevelId,
+      innovation_readiness_level: { id: readinessLevelId } as any,
     });
     await this._resultsInnovationsDevRepository.save(newRecord);
     this.logger.log(
