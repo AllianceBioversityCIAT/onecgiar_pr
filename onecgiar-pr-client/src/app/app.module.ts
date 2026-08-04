@@ -30,6 +30,7 @@ import { RouteReuseStrategy } from '@angular/router';
 import { PrmsRouteReuseStrategy } from './shared/components/ai-assistant/prms-route-reuse.strategy';
 import { HlmSidebarImports } from '@spartan/sidebar';
 import { ReportingNavSidebarComponent } from './shared/components/reporting-nav-sidebar/reporting-nav-sidebar.component';
+import { ShellTopbarComponent } from './shared/components/shell-topbar/shell-topbar.component';
 
 function initializeClarityService(clarityService: ClarityService) {
   return () => clarityService.init();
@@ -53,7 +54,8 @@ function initializeClarityService(clarityService: ClarityService) {
     UserRolesInfoModalComponent,
     AiAssistantPanelComponent,
     ...HlmSidebarImports,
-    ReportingNavSidebarComponent
+    ReportingNavSidebarComponent,
+    ShellTopbarComponent
     // SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
   ],
   providers: [

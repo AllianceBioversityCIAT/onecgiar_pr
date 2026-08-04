@@ -9,8 +9,14 @@
       <app-reporting-nav-sidebar />
     }
 
-    <main hlmSidebarInset class="min-w-0 flex-1">
-      <router-outlet></router-outlet>
+    <main hlmSidebarInset class="flex min-h-svh min-w-0 flex-1 flex-col">
+      <!-- CURRENT topbar: toggle · search · notif · user (phase later) -->
+      @if (!this.api.dataControlSE.show_qa_full_screen && !this.api.dataControlSE.focusMode()) {
+        <app-shell-topbar />
+      }
+      <div class="min-h-0 min-w-0 flex-1">
+        <router-outlet></router-outlet>
+      </div>
     </main>
   </div>
 
