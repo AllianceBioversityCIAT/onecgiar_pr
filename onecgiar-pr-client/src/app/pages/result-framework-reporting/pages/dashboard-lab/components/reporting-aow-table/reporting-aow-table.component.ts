@@ -171,6 +171,26 @@ export class ReportingAowTableComponent {
     return row?.result_type_name || row?.type_name || 'Not provided';
   }
 
+  /**
+   * Meta under the title — CURRENT uses the short KPI name. We do not get a separate short name
+   * from the API, so typology is the stable secondary fact; in flat view the AoW code prefixes it.
+   */
+  metaLine(row: ReportingIndicator, showAow = false): string {
+    const type = this.typologyOf(row);
+    if (!showAow) return type;
+    const aow = row.__aowCode?.trim();
+    return aow ? `${aow} · ${type}` : type;
+  }
+
+  /**
+   * "Show more" only when the title actually overflows two lines (~110 chars at 15px/600).
+   * Short titles must never show a useless control (CURRENT row.showMore).
+   */
+  needsShowMore(row: ReportingIndicator): boolean {
+    const t = (row?.indicator_description ?? '').trim();
+    return t.length > 110;
+  }
+
   // ── Grouping ──────────────────────────────────────────────────────────────
   /**
    * Second-level groups inside a top-level card.

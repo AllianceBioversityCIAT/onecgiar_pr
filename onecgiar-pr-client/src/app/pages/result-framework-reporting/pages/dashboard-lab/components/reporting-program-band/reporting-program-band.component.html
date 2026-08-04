@@ -147,13 +147,13 @@
         (input)="searchChange.emit($any($event.target).value)" />
     </div>
 
-    <!-- AoW / Indicator / Status — custom chevron (native OS arrow is not vertically centred). -->
+    <!-- Section / Category / Status — CURRENT placeholders (selSection / selInd / selStatus). -->
     @if (aowOptions().length) {
       <select
         class="pr-band-select w-[140px]"
-        aria-label="Filter by area of work"
+        aria-label="Filter by section"
         (change)="onSelect(aowChange, $event)">
-        <option value="all" [selected]="aowValue() === 'all'">AoW</option>
+        <option value="all" [selected]="aowValue() === 'all'">Section</option>
         @for (o of aowOptions(); track o.value) {
           <option [value]="o.value" [selected]="aowValue() === o.value">{{ o.label }}</option>
         }
@@ -163,9 +163,9 @@
     @if (typologyOptions().length) {
       <select
         class="pr-band-select w-[170px]"
-        aria-label="Filter by indicator type"
+        aria-label="Filter by category"
         (change)="onSelect(typologyChange, $event)">
-        <option value="all" [selected]="typologyValue() === 'all'">Indicator</option>
+        <option value="all" [selected]="typologyValue() === 'all'">Category</option>
         @for (o of typologyOptions(); track o.value) {
           <option [value]="o.value" [selected]="typologyValue() === o.value">{{ o.label }}</option>
         }
@@ -181,7 +181,7 @@
       }
     </select>
 
-    <!-- Segmented: track #EEEEF1, active pill white (reference :958). -->
+    <!-- Segmented: Grouped | All indicators (CURRENT :1001). -->
     <div
       role="tablist"
       aria-label="Grouping"
@@ -197,7 +197,7 @@
         "
         [attr.aria-selected]="viewMode() === 'grouped'"
         (click)="viewModeChange.emit('grouped')">
-        Indicators by AoW
+        Grouped
       </button>
       <button
         type="button"

@@ -41,7 +41,17 @@ describe('ReportingAowTableComponent', () => {
   };
 
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
-  const rows = () => (fixture.nativeElement as HTMLElement).querySelectorAll('.pr-reporting-row');
+  /**
+   * Visible indicator rows. Collapsed panels stay mounted for height animation, so we only
+   * count rows under open HLO panels (or every row in flat view, which has no `.pr-collapse`).
+   */
+  const rows = () => {
+    const root = fixture.nativeElement as HTMLElement;
+    if (!root.querySelector('.pr-collapse')) {
+      return root.querySelectorAll('.pr-reporting-row');
+    }
+    return root.querySelectorAll('section > .pr-collapse.is-open .pr-collapse.is-open .pr-reporting-row');
+  };
 
   // ── status ────────────────────────────────────────────────────────────────
   describe('status', () => {
@@ -295,19 +305,32 @@ describe('ReportingAowTableComponent', () => {
     });
 
     it('Show more toggles the clamp without opening the row', async () => {
-      await build([group([row()])]);
+      const long =
+        'Global land-use change, emissions and biodiversity model data and code for the land-use module of IMPACT+ that tracks greenhouse gas emissions and agrobiodiversity across cereal systems with national partners.';
+      await build([group([row({ indicator_id: 1, indicator_description: long })])]);
       const openSpy = jest.fn();
       component.openRow.subscribe(openSpy);
 
+      expect(component.needsShowMore(row({ indicator_description: long }))).toBe(true);
+      expect(component.needsShowMore(row({ indicator_description: 'Short title' }))).toBe(false);
       expect(component.isTitleExpanded(1)).toBe(false);
-      const more = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll("button")).find(b =>
+      const more = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
         b.textContent?.includes('Show more')
       ) as HTMLElement;
+      expect(more).toBeTruthy();
       more.click();
       fixture.detectChanges();
 
       expect(component.isTitleExpanded(1)).toBe(true);
       expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it('renders the concentric bullseye status mark (CURRENT target icon)', async () => {
+      await build([group([row()])]);
+      const mark = (fixture.nativeElement as HTMLElement).querySelector('.pr-status-mark svg');
+      expect(mark).toBeTruthy();
+      // Outer + mid rings + filled centre.
+      expect(mark!.querySelectorAll('circle').length).toBe(3);
     });
   });
 });

@@ -83,69 +83,80 @@
           </span>
         </button>
 
-        @if (isOpen(aowKey, isDefaultOpenAow(aowIndex))) {
-          @if (group.loading) {
-            <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
-          } @else {
-            @let hloGroups = hloGroupsOf(group);
+        <!-- Always in DOM so height can animate (no @if pop). -->
+        <div
+          class="pr-collapse"
+          [class.is-open]="isOpen(aowKey, isDefaultOpenAow(aowIndex))"
+          [attr.aria-hidden]="!isOpen(aowKey, isDefaultOpenAow(aowIndex))">
+          <div class="pr-collapse-inner">
+            @if (group.loading) {
+              <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
+            } @else {
+              @let hloGroups = hloGroupsOf(group);
 
-            @if (!hloGroups.length) {
-              <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">
-                @if (search().trim() || statusFilter() !== 'all') {
-                  No indicators match the current filters.
-                } @else if (isBucket(group)) {
-                  No indicators in this bucket yet.
-                } @else {
-                  This area of work has no planned indicators yet.
-                }
-              </div>
-            }
+              @if (!hloGroups.length) {
+                <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">
+                  @if (search().trim() || statusFilter() !== 'all') {
+                    No indicators match the current filters.
+                  } @else if (isBucket(group)) {
+                    No indicators in this bucket yet.
+                  } @else {
+                    This area of work has no planned indicators yet.
+                  }
+                </div>
+              }
 
-            @for (hlo of hloGroups; track hlo.key; let hloIndex = $index) {
-              <!-- Second level: HLO under AoW, or source-AoW under Intermediate, etc. -->
-              <button
-                type="button"
-                class="flex h-[44px] w-full items-center gap-[8px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-[24px] text-left"
-                [attr.aria-expanded]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))"
-                (click)="toggle(hlo.key, isDefaultOpenHlo(hloIndex))">
-                <ng-icon
-                  name="lucideChevronDown"
-                  class="shrink-0 text-[13px] text-[var(--pr-text-secondary)] transition-transform duration-200"
-                  [class.rotate-180]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))" />
+              @for (hlo of hloGroups; track hlo.key; let hloIndex = $index) {
+                <!-- Second level: HLO under AoW, or source-AoW under Intermediate, etc. -->
+                <button
+                  type="button"
+                  class="flex h-[44px] w-full items-center gap-[8px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-[24px] text-left"
+                  [attr.aria-expanded]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))"
+                  (click)="toggle(hlo.key, isDefaultOpenHlo(hloIndex))">
+                  <ng-icon
+                    name="lucideChevronDown"
+                    class="shrink-0 text-[13px] text-[var(--pr-text-secondary)] transition-transform duration-200"
+                    [class.rotate-180]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))" />
 
-                <span
-                  class="shrink-0 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]"
-                  [prTooltip]="hlo.name">
-                  {{ hlo.eyebrow }}
-                </span>
-
-                @if (hlo.code) {
-                  <span class="pr-code shrink-0 text-[var(--pr-text-secondary)]">{{ hlo.code }}</span>
-                }
-
-                @if (hlo.name) {
                   <span
-                    class="min-w-0 flex-1 truncate text-[13px] font-medium leading-[16px] text-[var(--pr-text-secondary)]"
-                    [title]="hlo.name">
-                    {{ hlo.name }}
+                    class="shrink-0 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]"
+                    [prTooltip]="hlo.name">
+                    {{ hlo.eyebrow }}
                   </span>
-                } @else {
-                  <span class="flex-1"></span>
-                }
 
-                <span class="pr-figure-sm shrink-0 text-[var(--pr-text-subtle)]">
-                  {{ countLabel(hlo.rows.length) }}
-                </span>
-              </button>
+                  @if (hlo.code) {
+                    <span class="pr-code shrink-0 text-[var(--pr-text-secondary)]">{{ hlo.code }}</span>
+                  }
 
-              @if (isOpen(hlo.key, isDefaultOpenHlo(hloIndex))) {
-                @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
-                  <ng-container *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: false }" />
-                }
+                  @if (hlo.name) {
+                    <span
+                      class="min-w-0 flex-1 truncate text-[13px] font-medium leading-[16px] text-[var(--pr-text-secondary)]"
+                      [title]="hlo.name">
+                      {{ hlo.name }}
+                    </span>
+                  } @else {
+                    <span class="flex-1"></span>
+                  }
+
+                  <span class="pr-figure-sm shrink-0 text-[var(--pr-text-subtle)]">
+                    {{ countLabel(hlo.rows.length) }}
+                  </span>
+                </button>
+
+                <div
+                  class="pr-collapse"
+                  [class.is-open]="isOpen(hlo.key, isDefaultOpenHlo(hloIndex))"
+                  [attr.aria-hidden]="!isOpen(hlo.key, isDefaultOpenHlo(hloIndex))">
+                  <div class="pr-collapse-inner">
+                    @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
+                      <ng-container *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: false }" />
+                    }
+                  </div>
+                </div>
               }
             }
-          }
-        }
+          </div>
+        </div>
       </section>
     }
 
@@ -162,7 +173,7 @@
   </div>
 }
 
-<!-- Shared indicator row. `showAow` adds the AoW code under the typology line in flat mode. -->
+<!-- Shared indicator row. Status mark = CURRENT concentric bullseye (18px violet target). -->
 <ng-template #indicatorRow let-row let-showAow="showAow">
   <div
     class="pr-reporting-row"
@@ -172,65 +183,81 @@
     (click)="openRow.emit(row)"
     (keydown.enter)="openRow.emit(row)"
     (keydown.space)="openRow.emit(row)">
-    <span class="flex w-[36px] self-start pt-[3px]">
-      <span
-        class="pr-status-mark"
-        [class]="'pr-status-mark--' + statusOf(row)"
-        [prTooltip]="statusLabel(row)"
-        [attr.aria-label]="statusLabel(row)">
-        @if (statusOf(row) === 'achieved' || statusOf(row) === 'overachieved') {
-          <ng-icon name="lucideCheck" class="text-[10px] text-white" />
-        }
-      </span>
+    <!-- 1 — concentric bullseye (CURRENT :1096) — outer + mid ring + filled centre -->
+    <span
+      class="pr-status-mark"
+      [class]="'pr-status-mark--' + statusOf(row)"
+      [prTooltip]="statusLabel(row)"
+      [attr.aria-label]="statusLabel(row)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.75" />
+        <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.75" />
+        <circle cx="12" cy="12" r="1.1" fill="currentColor" />
+      </svg>
     </span>
 
-    <div class="flex min-w-0 max-w-[620px] flex-col">
-      <span
-        class="text-[15px] font-semibold leading-[1.45] text-[var(--pr-text-heading)]"
+    <!-- 2 — title + optional Show more + KPI / typology meta -->
+    <div class="flex min-w-0 max-w-[900px] flex-col">
+      <p
+        class="m-0 text-[15px] font-semibold leading-[1.45] text-[var(--pr-text-heading)] [text-wrap:pretty]"
         [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)">
         {{ row.indicator_description }}
-      </span>
-      <button
-        type="button"
-        class="mt-[2px] w-max border-0 bg-transparent p-0 text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]"
-        (click)="toggleTitle(row.indicator_id, $event)">
-        {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
-      </button>
+        @if (needsShowMore(row)) {
+          <button
+            type="button"
+            class="inline border-0 bg-transparent p-0 text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]"
+            (click)="toggleTitle(row.indicator_id, $event)">
+            {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
+          </button>
+        }
+      </p>
       <span
-        class="pr-clamp-1 mt-[6px] text-[13px] leading-[17px] text-[var(--pr-text-secondary)]"
-        [title]="typologyOf(row)">
-        {{ typologyOf(row) }}
-        @if (row.center_acronym) {
-          · {{ row.center_acronym }}
-        }
-        @if (showAow && row.__aowCode) {
-          · {{ row.__aowCode }}
-        }
+        class="pr-clamp-1 mt-[6px] text-[13px] font-normal leading-[17px] text-[var(--pr-text-secondary)]"
+        [title]="metaLine(row, showAow)">
+        {{ metaLine(row, showAow) }}
       </span>
     </div>
 
-    <div class="flex flex-col items-end gap-[1px]">
+    <!-- 3 — spacer 48px (CURRENT grid) -->
+    <span></span>
+
+    <!-- 4 — Target -->
+    <div class="relative text-right">
       <button
         type="button"
-        class="pr-figure border-0 bg-transparent p-0 text-[var(--pr-text-heading)] hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
+        class="block w-full border-0 bg-transparent p-0 text-right"
         (click)="emitAndStop(openTarget, row, $event)">
-        {{ targetText(row) }}
+        <span
+          class="pr-figure block text-[18px] font-medium tabular-nums text-[var(--pr-text-heading)] hover:underline hover:decoration-dotted hover:underline-offset-[3px]">
+          {{ targetText(row) }}
+        </span>
+        <span class="mt-[2px] block text-[11px] font-medium text-[var(--pr-text-subtle)]">Target</span>
       </button>
-      <span class="text-[11px] font-medium leading-[14px] text-[var(--pr-text-subtle)]">Target</span>
     </div>
 
-    <div class="flex flex-col items-end gap-[1px]">
+    <!-- 5 — spacer 20px -->
+    <span></span>
+
+    <!-- 6 — Achieved -->
+    <div class="relative text-right">
       <button
         type="button"
-        class="pr-figure border-0 bg-transparent p-0 hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
-        [class]="progressOf(row) > 0 ? 'text-[var(--pr-text-heading)]' : 'text-[var(--pr-text-subtle)]'"
+        class="block w-full border-0 bg-transparent p-0 text-right"
         (click)="emitAndStop(openAchieved, row, $event)">
-        {{ achievedText(row) }}
+        <span
+          class="pr-figure block text-[18px] font-medium tabular-nums hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
+          [class]="progressOf(row) > 0 ? 'text-[var(--pr-text-heading)]' : 'text-[var(--pr-text-subtle)]'">
+          {{ achievedText(row) }}
+        </span>
+        <span class="mt-[2px] block text-[11px] font-medium text-[var(--pr-text-subtle)]">Achieved</span>
       </button>
-      <span class="text-[11px] font-medium leading-[14px] text-[var(--pr-text-subtle)]">Achieved</span>
     </div>
 
-    <div class="flex justify-end">
+    <!-- 7 — spacer 56px -->
+    <span></span>
+
+    <!-- 8 — Report / Continue -->
+    <div>
       @if (canReport() && actionLabel(row)) {
         <button type="button" class="pr-row-action" (click)="emitAndStop(reportRow, row, $event)">
           {{ actionLabel(row) }}
@@ -238,10 +265,14 @@
       }
     </div>
 
-    <div class="flex justify-end">
+    <!-- 9 — spacer 8px -->
+    <span></span>
+
+    <!-- 10 — overflow ··· -->
+    <div class="relative">
       <button
         type="button"
-        class="flex h-[28px] w-[28px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-text)]"
+        class="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[#F3F2F7] hover:text-[var(--pr-text)]"
         aria-label="More actions"
         (click)="emitAndStop(openRowMenu, { row: row, event: $any($event) }, $event)">
         <ng-icon name="lucideEllipsis" class="text-[16px]" />

@@ -150,30 +150,36 @@ AOW header    64px · #FFFFFF · border-b --pr-border-strong · name 16/600
     ROW       88px min · #FFFFFF · border-b --pr-border-divider
 ```
 
-### Row grid (verbatim from the markup)
+### Row grid (verbatim from CURRENT `PRMS-Shell.dc.html` ~1090)
 
 ```css
 display: grid;
-grid-template-columns: 36px minmax(0,1fr) 110px 110px 120px 28px;
+grid-template-columns: 36px minmax(0,1fr) 48px 100px 20px 100px 56px 110px 8px 40px;
 align-items: center;
-gap: 12px;
-min-height: 88px;
-padding: 20px 24px;
+gap: 0;
+min-height: 96px;
+padding: 20px 24px 20px 44px;
 cursor: pointer;
 transition: background 400ms ease;
-/* hover */ background: #F7F7F9;
+/* hover */ background: #FCFCFD;
 ```
 
 Clicking anywhere on the row opens the result drawer.
 
-### Column 1 — status icon (36px cell, 16×16 mark)
+### Column 1 — status icon (36px cell, 18×18 bullseye)
 
-`16×16`, `border-radius: 999px`, `align-self: flex-start`, `margin-top: 3px`. Three visual states,
-all driven by the same mark:
+**CURRENT** draws a concentric **bullseye / target** (archery target), not a half-fill circle:
 
-- **not started** — ring only (border, transparent fill)
-- **in progress** — a `7×16` half-fill, `margin-right: 7px` (reads as a half-filled circle)
-- **submitted / approved** — solid fill + a white check SVG `10×10`, `stroke-width: 2.2`
+```html
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+  <circle cx="12" cy="12" r="8.5" stroke="#6B46E5" stroke-width="1.75"/>
+  <circle cx="12" cy="12" r="4.2" stroke="#6B46E5" stroke-width="1.75"/>
+  <circle cx="12" cy="12" r="1.1" fill="#6B46E5"/>
+</svg>
+```
+
+Always brand violet `#6B46E5`. Workflow state (Not started / In progress / Achieved / …) is carried
+by the tooltip / action label / filters — not by recolouring the mark into a traffic-light ring.
 
 ### Column 2 — text (max-width 620px)
 
