@@ -10,6 +10,7 @@ import {
   OnDestroy,
   viewChild,
   ElementRef,
+  HostListener,
 } from '@angular/core';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
@@ -271,10 +272,14 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   gettingReport = signal(false);
   /** Full-metadata async export (email + S3 link) */
   requestingFullExport = signal(false);
+  /** @deprecated side drawer — kept false; More filters uses moreFiltersOpen */
   visible = signal(false);
+  /** CURRENT "More filters" popover open state */
+  moreFiltersOpen = signal(false);
   clarisaPortfolios = signal([]);
   navbarHeight = signal(0);
   private resizeObserver: ResizeObserver | null = null;
+  private skipNextDocClick = false;
 
   // Temporary signals for filter selections (before applying)
   tempSelectedClarisaPortfolios = signal([]);
@@ -333,6 +338,23 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   filtersCountText = computed(() => {
     if (this.filtersCount() === 0) return 'Apply filters';
     return `Apply filters (${this.filtersCount()})`;
+  });
+
+  /**
+   * Badge for the More filters button — only secondary filters (CURRENT More filters count).
+   * Primary bar: search / program / phase / category / status are not counted here.
+   */
+  moreFiltersCount = computed(() => {
+    let n = 0;
+    if (this.resultsListFilterSE.selectedClarisaPortfolios().length > 0) n++;
+    if (this.resultsListFilterSE.selectedLeadCenters().length > 0) n++;
+    // Submitter lives both in primary Program and More filters — count once when set.
+    // Primary already shows Program; count only if we want dual signal. Still count for badge
+    // when portfolio/center/funding/my-activity apply. Submitter is primary Program → skip here.
+    if (this.resultsListFilterSE.selectedFundingSource().length > 0) n++;
+    if (this.resultsListFilterSE.filterCreatedByMe()) n++;
+    if (this.resultsListFilterSE.filterSubmittedByMe()) n++;
+    return n;
   });
 
   get activeButtons() {
@@ -707,8 +729,25 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.refreshTempSubmitterOptions();
   }
 
-  // Initialize temp values when opening the drawer
+  /** Open More filters popover — seed temp from applied secondary filters. */
   openFiltersDrawer() {
+    this.syncTempFromApplied();
+    this.refreshTempSubmitterOptions();
+    this.skipNextDocClick = true;
+    this.moreFiltersOpen.set(true);
+    this.visible.set(false);
+  }
+
+  toggleMoreFilters(event?: Event): void {
+    event?.stopPropagation();
+    if (this.moreFiltersOpen()) {
+      this.cancelFilters();
+      return;
+    }
+    this.openFiltersDrawer();
+  }
+
+  private syncTempFromApplied(): void {
     this.tempSelectedClarisaPortfolios.set([...this.resultsListFilterSE.selectedClarisaPortfolios()]);
     this.tempSelectedFundingSource.set([...this.resultsListFilterSE.selectedFundingSource()]);
     this.tempSelectedPhases.set([...this.resultsListFilterSE.selectedPhases()]);
@@ -718,37 +757,41 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedLeadCenters.set([...this.resultsListFilterSE.selectedLeadCenters()]);
     this.tempFilterCreatedByMe.set(this.resultsListFilterSE.filterCreatedByMe());
     this.tempFilterSubmittedByMe.set(this.resultsListFilterSE.filterSubmittedByMe());
-    this.refreshTempSubmitterOptions();
-    this.visible.set(true);
   }
 
-  // Apply filters when clicking "Apply filters" button
+  // Apply secondary filters from the More filters popover
   applyFilters() {
     this.resultsListFilterSE.selectedClarisaPortfolios.set([...this.tempSelectedClarisaPortfolios()]);
     this.resultsListFilterSE.selectedFundingSource.set([...this.tempSelectedFundingSource()]);
-    this.resultsListFilterSE.selectedPhases.set([...this.tempSelectedPhases()]);
+    // Submitter from More filters merges with primary Program (same signal)
     this.resultsListFilterSE.selectedSubmittersAdmin.set([...this.tempSelectedSubmittersAdmin()]);
-    this.resultsListFilterSE.selectedIndicatorCategories.set([...this.tempSelectedIndicatorCategories()]);
-    this.resultsListFilterSE.selectedStatus.set([...this.tempSelectedStatus()]);
     this.resultsListFilterSE.selectedLeadCenters.set([...this.tempSelectedLeadCenters()]);
     this.resultsListFilterSE.filterCreatedByMe.set(this.tempFilterCreatedByMe());
     this.resultsListFilterSE.filterSubmittedByMe.set(this.tempFilterSubmittedByMe());
+    this.moreFiltersOpen.set(false);
     this.visible.set(false);
   }
 
-  // Cancel and discard changes
+  // Cancel and discard More filters changes
   cancelFilters() {
-    // Reset temp values to current applied filters
-    this.tempSelectedClarisaPortfolios.set([...this.resultsListFilterSE.selectedClarisaPortfolios()]);
-    this.tempSelectedFundingSource.set([...this.resultsListFilterSE.selectedFundingSource()]);
-    this.tempSelectedPhases.set([...this.resultsListFilterSE.selectedPhases()]);
-    this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
-    this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
-    this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
-    this.tempSelectedLeadCenters.set([...this.resultsListFilterSE.selectedLeadCenters()]);
-    this.tempFilterCreatedByMe.set(this.resultsListFilterSE.filterCreatedByMe());
-    this.tempFilterSubmittedByMe.set(this.resultsListFilterSE.filterSubmittedByMe());
+    this.syncTempFromApplied();
+    this.moreFiltersOpen.set(false);
     this.visible.set(false);
+  }
+
+  /** Close More filters when clicking outside the panel. */
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.skipNextDocClick) {
+      this.skipNextDocClick = false;
+      return;
+    }
+    if (this.moreFiltersOpen()) this.cancelFilters();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.moreFiltersOpen()) this.cancelFilters();
   }
 
   /** Same filter payload as GET_reportingList / server BasicReportFiltersDto */
