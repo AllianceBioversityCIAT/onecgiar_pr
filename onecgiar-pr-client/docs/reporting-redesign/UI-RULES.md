@@ -17,7 +17,11 @@ independently confirmed correct.
 **Scope:** Reporting redesign (sidebar, program band, Reporting, Overview, Results Center, result drawer)
 **Suggested location:** `onecgiar-pr-client/docs/reporting-redesign/UI-RULES.md`, referenced from `onecgiar-pr-client/CLAUDE.md` and `AGENTS.md`.
 
-> This file is the **single source of truth for the Reporting redesign UI**. Where it conflicts with `docs/system-design/design.md`, this file wins for redesign surfaces; update `design.md` to match once each phase merges.
+> This file is the **single source of truth for the Reporting redesign UI rules** (stack, tokens, typography rules).  
+> **Visual/layout truth** lives only in  
+> [`docs/design-references/prms-shell-CURRENT/`](../../../docs/design-references/prms-shell-CURRENT/)  
+> (export 2026-08-04; live share: https://claude.ai/design/p/b6234307-e82b-43d0-b4c4-a2bb13b12242?file=PRMS+Shell.dc.html&via=share).  
+> Where it conflicts with `docs/system-design/design.md`, this file + that folder win for redesign surfaces.
 
 ---
 

@@ -6,7 +6,7 @@ validated it, and it is the authority on *how to get there without breaking thin
 
 - **Branch:** `performance-refactor` (baseline `9dc66fa39`)
 - **Written:** 2026-07-31
-- **Related:** [`../design-system-violet-migration.md`](../design-system-violet-migration.md) (the token research), [`../../docs/design-references/legacy-prms-reporting-tool-mockup/`](../../../docs/design-references/legacy-prms-reporting-tool-mockup/) (the mockup)
+- **Related:** [`../design-system-violet-migration.md`](../design-system-violet-migration.md) (token research), [`../../../docs/design-references/prms-shell-CURRENT/`](../../../docs/design-references/prms-shell-CURRENT/) (**only** design reference — 2026-08-04 export)
 - **Status:** design validated · **no code changed** · blocked on the SDD `propose`
 
 ---

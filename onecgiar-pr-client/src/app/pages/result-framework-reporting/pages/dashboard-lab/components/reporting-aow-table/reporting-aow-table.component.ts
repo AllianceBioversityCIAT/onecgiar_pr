@@ -57,7 +57,7 @@ interface HloGroup {
  * Reporting tab — the AoW → HLO → indicator table.
  *
  * Layout is the approved reference verbatim: `docs/reporting-redesign/PROGRAM-SHELL-SPEC.md` §5,
- * read from `docs/design-references/prms-reporting-tool-mockup/Resultados.dc.html:960-1150`.
+ * read from `docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html` (+ uploads PNGs).
  *
  * ⚠️ Sizes are absolute px on purpose. `html` is 12px in this app, so a rem-based Tailwind type
  * utility renders 25% small — `text-sm` would be 10.5px, not 14px (UI-RULES §1.3).

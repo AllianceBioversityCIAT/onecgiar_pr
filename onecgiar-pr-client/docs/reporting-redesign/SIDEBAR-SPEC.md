@@ -1,12 +1,13 @@
 # Sidebar — exact spec extracted from the mockup
 
-> ⚠️ **Line numbers below point at the LEGACY export.** The sidebar shipped from these values and
-> is verified in the browser, so the spec is accurate; only the `:NNN` anchors are stale. Current
-> reference: [`../../../docs/design-references/prms-shell-CURRENT/`](../../../docs/design-references/prms-shell-CURRENT/).
+> **Authoritative visual reference (only one):**  
+> [`../../../docs/design-references/prms-shell-CURRENT/`](../../../docs/design-references/prms-shell-CURRENT/)  
+> Live: https://claude.ai/design/p/b6234307-e82b-43d0-b4c4-a2bb13b12242?file=PRMS+Shell.dc.html&via=share  
+> Export date: **2026-08-04**. Legacy mockup folders were deleted — do not reintroduce them.
 
 
-**Source:** `docs/design-references/legacy-prms-reporting-tool-mockup/Resultados.dc.html` lines **28-197**
-(the `<nav>` element). Every value below was read from the markup, not interpreted from a screenshot.
+**Source:** `docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html` (sidebar `<aside>`).
+Every value below was read from the markup; re-check line numbers against the CURRENT export when editing.
 
 **Target component:** `src/app/shared/components/reporting-nav-sidebar/` (615-line template, 580-line
 TS, 569-line spec). Extend it — do not replace it. Its data model already supports this structure.

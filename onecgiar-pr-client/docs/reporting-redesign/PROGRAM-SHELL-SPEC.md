@@ -1,15 +1,15 @@
 # Program shell, Overview and Reporting — exact spec
 
-> ⚠️ **Line numbers below point at the LEGACY export.** The current reference is
-> [`../../../docs/design-references/prms-shell-CURRENT/`](../../../docs/design-references/prms-shell-CURRENT/)
-> (3574 lines vs 3200, and it carries the shell + Overview as markup). The VALUES here were
-> re-verified against the new export and its rendered PNG, so they are correct — but the
-> `:NNN` citations still resolve against the legacy file. Re-anchor them when next editing.
+> **Authoritative visual reference (only one):**  
+> [`../../../docs/design-references/prms-shell-CURRENT/`](../../../docs/design-references/prms-shell-CURRENT/)  
+> Live: https://claude.ai/design/p/b6234307-e82b-43d0-b4c4-a2bb13b12242?file=PRMS+Shell.dc.html&via=share  
+> Export date: **2026-08-04** (`PRMS-Shell.dc.html`, **4 768** lines). Older design-reference folders
+> were removed. Re-anchor any `:NNN` citations against this file when editing.
 
 
-**Source:** `docs/design-references/legacy-prms-reporting-tool-mockup/Resultados.dc.html` (the `<header>` at
-:200-264 and the Reporting table at :960-1150) plus the three Overview reference screenshots supplied
-by the owner on 2026-08-03. Every px/hex below was read from the markup, not inferred from an image.
+**Source:** `docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html` (program band, Overview,
+Reporting) plus the rendered PNGs in that folder’s `uploads/`. Every px/hex should be confirmed
+against the CURRENT markup, not inferred from memory.
 
 **Covers UI-RULES §6 Phases 4, 5 and 7.** This replaces the current
 `result-framework-reporting/home` layout — the owner's instruction is that the existing distribution

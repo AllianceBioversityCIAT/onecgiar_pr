@@ -17,7 +17,7 @@ document is the handoff so a fresh session can continue without re-deriving anyt
 
 - **Branch:** `performance-refactor` (baseline commit `9dc66fa39`)
 - **Date of research:** 2026-07-31
-- **Visual reference:** [`../../docs/design-references/legacy-prms-reporting-tool-mockup/`](../../docs/design-references/legacy-prms-reporting-tool-mockup/) — read its `README.md` first
+- **Visual reference:** [`../../docs/design-references/prms-shell-CURRENT/`](../../docs/design-references/prms-shell-CURRENT/) — only design reference; read its `README.md` first
 - **Companion docs:** [`spartan-tailwind-foundation.md`](./spartan-tailwind-foundation.md), [`refactor-angular21-spartan-migration.md`](./refactor-angular21-spartan-migration.md)
 
 **Two deliverables are in scope:**
