@@ -56,7 +56,8 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     BilateralPageHeaderComponent,
   ],
   templateUrl: './bilateral-result-creator.component.html',
-  styleUrl: './bilateral-result-creator.component.scss'
+  styleUrl: './bilateral-result-creator.component.scss',
+  providers: [BilateralAutoSaveService, BilateralMdsTrackerService]
 })
 export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);

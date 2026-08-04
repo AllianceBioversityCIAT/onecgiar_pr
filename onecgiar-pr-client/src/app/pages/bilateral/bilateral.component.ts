@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router, NavigationEnd, ActivatedRoute } from '@angular/router';
-import { filter, Subscription } from 'rxjs';
+import { RouterModule, ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ApiService } from '../../shared/services/api/api.service';
 import { BilateralAiService } from './services/bilateral-ai.service';
 import { BilateralContextService } from './services/bilateral-context.service';
@@ -17,15 +17,11 @@ import { CentersService } from '../../shared/services/global/centers.service';
 export class BilateralComponent implements OnInit, OnDestroy {
   api = inject(ApiService);
   bilateralAiService = inject(BilateralAiService);
-  router = inject(Router);
   private route = inject(ActivatedRoute);
   readonly ctx = inject(BilateralContextService);
   private readonly rolesService = inject(RolesService);
   private readonly centersService = inject(CentersService);
 
-  currentPageLabel = 'Home';
-  isAtHome = true;
-  private navSub?: Subscription;
   private paramSub?: Subscription;
 
   ngOnInit(): void {
@@ -34,13 +30,12 @@ export class BilateralComponent implements OnInit, OnDestroy {
 
     this.paramSub = this.route.paramMap.subscribe(params => {
       const acronym = params.get('acronym') ?? '';
+      // Set the acronym synchronously so links built from ctx.centerAcronym()
+      // (e.g. "Create result") are correct immediately, before the async
+      // center/name lookup below resolves.
+      this.ctx.setCenter(acronym, this.ctx.centerName(), this.ctx.centerId() ?? undefined);
       void this.resolveCenter(acronym);
     });
-
-    this.updateBreadcrumb(this.router.url);
-    this.navSub = this.router.events
-      .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe(e => this.updateBreadcrumb((e as NavigationEnd).urlAfterRedirects));
   }
 
   private async resolveCenter(acronym: string): Promise<void> {
@@ -88,23 +83,6 @@ export class BilateralComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.navSub?.unsubscribe();
     this.paramSub?.unsubscribe();
-  }
-
-  private updateBreadcrumb(url: string): void {
-    if (url.includes('/create') || url.includes('/result/')) {
-      this.currentPageLabel = 'Create result';
-      this.isAtHome = false;
-    } else if (url.includes('/drafts')) {
-      this.currentPageLabel = 'My draft results';
-      this.isAtHome = false;
-    } else if (url.includes('/results')) {
-      this.currentPageLabel = 'Result list';
-      this.isAtHome = false;
-    } else {
-      this.currentPageLabel = 'Home';
-      this.isAtHome = true;
-    }
   }
 }
