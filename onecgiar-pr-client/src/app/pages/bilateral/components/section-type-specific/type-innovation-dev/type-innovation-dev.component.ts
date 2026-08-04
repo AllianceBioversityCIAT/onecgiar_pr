@@ -1,61 +1,91 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
+import { BilateralCreationService } from '../../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-tracker.service';
-
-const TOTAL_FIELDS = 4;
+import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
+import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
+import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
 
 @Component({
   selector: 'app-type-innovation-dev',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CustomFieldsModule],
   templateUrl: './type-innovation-dev.component.html',
   styleUrl: './type-innovation-dev.component.scss',
 })
 export class TypeInnovationDevComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly bilateralApi = inject(BilateralApiService);
+  private readonly creationService = inject(BilateralCreationService);
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
+  private readonly autoSave = inject(BilateralAutoSaveService);
+  readonly innovationControlListSE = inject(InnovationControlListService);
 
   body: any = {};
-  readinessLevels: any[] = [];
-  saving = signal(false);
-
-  readonly typologies = [
-    { code: 12, label: 'Product innovation' },
-    { code: 13, label: 'Process innovation' },
-    { code: 14, label: 'Organizational innovation' },
-    { code: 15, label: 'Marketing innovation' },
-  ];
+  readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
 
   ngOnInit(): void {
-    this.mdsTracker.setTotalFields('type-specific', TOTAL_FIELDS);
     this.loadData();
   }
 
   private loadData(): void {
-    this.api.resultsSE.GET_innovationDev().subscribe(({ response }) => {
+    const resultId = this.creationService.currentResultId();
+    if (!resultId) return;
+    this.bilateralApi.GET_innovationDev(resultId).subscribe(({ response }) => {
       this.body = response || {};
       this.updateMds();
     });
   }
 
+  onFieldChange(): void {
+    this.updateMds();
+    this.queueTypeSave();
+  }
+
   onSave(): void {
-    this.saving.set(true);
-    this.api.resultsSE.PATCH_innovationDev(this.body).subscribe({
-      next: () => {
-        this.loadData();
-        this.saving.set(false);
-      },
-      error: () => this.saving.set(false),
+    this.queueTypeSave(0);
+  }
+
+  private queueTypeSave(debounceMs = 800): void {
+    this.autoSave.schedulePayload('typeSpecific', this.buildPayload(), {
+      debounceMs,
+      statusKey: 'type-specific',
+      executor: (resultId, body) => this.bilateralApi.PATCH_innovationDev(resultId, body),
     });
   }
 
+  private buildPayload(): Record<string, unknown> {
+    const payload: Record<string, unknown> = {
+      short_title: this.body.short_title ?? null,
+      innovation_nature_id: this.body.innovation_nature_id ?? null,
+      innovation_developers: this.body.innovation_developers ?? null,
+      innovation_readiness_level_id: this.body.innovation_readiness_level_id ?? null,
+    };
+    // Omit null PK so the server can AUTO_INCREMENT on first create.
+    if (this.body.result_innovation_dev_id != null) {
+      payload['result_innovation_dev_id'] = this.body.result_innovation_dev_id;
+    }
+    return payload;
+  }
+
   updateMds(): void {
-    const filled =
-      (this.body.short_title ? 1 : 0) +
-      (this.body.innovation_characterization_id ? 1 : 0) +
-      (this.body.innovation_readiness_level_id ? 1 : 0) +
-      (this.body.innovation_developers?.trim() ? 1 : 0);
-    this.mdsTracker.updateSection('type-specific', filled);
+    this.mdsTracker.setSectionFields('type-specific', [
+      { key: 'short-title', label: 'Short title', filled: !!this.body.short_title },
+      {
+        key: 'nature',
+        label: 'Innovation typology (nature)',
+        filled: this.body.innovation_nature_id != null,
+      },
+      {
+        key: 'developers',
+        label: 'Innovation developer',
+        filled: !!this.body.innovation_developers?.trim(),
+      },
+      {
+        key: 'readiness',
+        label: 'Readiness level',
+        filled: this.body.innovation_readiness_level_id != null,
+      },
+    ]);
   }
 }

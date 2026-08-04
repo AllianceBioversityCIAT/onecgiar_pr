@@ -21,7 +21,7 @@ interface ReportingWayOption {
 })
 export class BilateralReportingWaySelectorComponent {
   isLoading = input(false);
-  selectedWay = input<ReportingWay | null>(null);
+  canUseAi = input(false);
   waySelected = output<ReportingWay>();
 
   options: ReportingWayOption[] = [
@@ -31,8 +31,7 @@ export class BilateralReportingWaySelectorComponent {
       label: 'AI-Assisted',
       title: 'Reuse Information Without Duplicating Effort',
       description: 'Leverage existing result information, uploaded documents, or previously reported data to accelerate bilateral result creation using intelligent recommendations.',
-      enabled: false,
-      badge: 'Coming soon'
+      enabled: true,
     },
     {
       id: 'manual',
@@ -53,8 +52,14 @@ export class BilateralReportingWaySelectorComponent {
     }
   ];
 
+  isOptionDisabled(option: ReportingWayOption): boolean {
+    if (this.isLoading()) return true;
+    if (option.id === 'ai' && !this.canUseAi()) return true;
+    return !option.enabled;
+  }
+
   selectWay(option: ReportingWayOption): void {
-    if (!option.enabled || this.isLoading()) return;
+    if (this.isOptionDisabled(option)) return;
     this.waySelected.emit(option.id);
   }
 }

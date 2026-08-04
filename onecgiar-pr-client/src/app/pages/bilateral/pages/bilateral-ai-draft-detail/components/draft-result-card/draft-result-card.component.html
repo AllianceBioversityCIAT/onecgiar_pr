@@ -1,0 +1,137 @@
+<div class="drc">
+  <div class="drc-header">
+    <div class="drc-header-left">
+      <div class="drc-ai-badge">
+        <i class="material-icons-round">auto_awesome</i>
+        AI Suggested
+      </div>
+      <h2 class="drc-title">{{ getDraftTitle() }}</h2>
+    </div>
+  </div>
+
+  @if (draft().mapping_warnings?.length) {
+    <div class="drc-warnings">
+      @for (warning of draft().mapping_warnings ?? []; track warning) {
+        <div class="drc-warning">
+          <i class="material-icons-round">warning_amber</i>
+          <span>{{ warning }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="drc-meta">
+    @if (draft().job) {
+      <div class="drc-meta-item">
+        <span class="drc-meta-label">Project</span>
+        <span class="drc-meta-value">{{ projectName }}</span>
+      </div>
+      <div class="drc-meta-item">
+        <span class="drc-meta-label">Program</span>
+        <span class="drc-meta-value">{{ draft().job.program_code }}</span>
+      </div>
+    }
+    <div class="drc-meta-item">
+      <span class="drc-meta-label">Created</span>
+      <span class="drc-meta-value">{{ draft().created_date | date:'mediumDate' }}</span>
+    </div>
+    @if (draft().candidate_index !== undefined) {
+      <div class="drc-meta-item">
+        <span class="drc-meta-label">Candidate</span>
+        <span class="drc-meta-value">#{{ draft().candidate_index }}</span>
+      </div>
+    }
+  </div>
+
+  @if (getDraftDescription()) {
+    <div class="drc-section">
+      <h3 class="drc-section-title">Description</h3>
+      <p class="drc-description">{{ getDraftDescription() }}</p>
+    </div>
+  }
+
+  @if (hasGeoFocus()) {
+    <div class="drc-section">
+      <h3 class="drc-section-title">Geographic Focus</h3>
+
+      <div class="drc-geo-scope">
+        <i class="material-icons-round drc-geo-scope-icon">{{ getGeoScopeIcon() }}</i>
+        <span class="drc-geo-scope-label">{{ getGeoScope() }}</span>
+      </div>
+
+      @if (getGeoRegions().length) {
+        <div class="drc-geo-group">
+          <span class="drc-geo-group-label">Regions</span>
+          <div class="drc-geo-tags">
+            @for (region of getGeoRegions(); track region) {
+              <span class="drc-tag">{{ region }}</span>
+            }
+          </div>
+        </div>
+      }
+
+      @if (getGeoCountries().length) {
+        <div class="drc-geo-group">
+          <span class="drc-geo-group-label">Countries</span>
+          <div class="drc-geo-countries">
+            @for (country of getGeoCountries(); track country.iso) {
+              <div class="drc-geo-country">
+                <span class="drc-tag" [title]="country.iso">{{ getCountryName(country.iso) }}</span>
+                @if (country.subnational.length) {
+                  <div class="drc-geo-subnational">
+                    @for (area of country.subnational; track area) {
+                      <span class="drc-geo-sub-tag" [title]="area">{{ getSubnationalName(area) }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (hasLeadCenter()) {
+    <div class="drc-section">
+      <h3 class="drc-section-title">Lead Center</h3>
+      <span class="drc-tag">{{ getLeadCenterName() }}</span>
+    </div>
+  }
+
+  @if (hasContributingPartners()) {
+    <div class="drc-section">
+      <h3 class="drc-section-title">Contributing Partners</h3>
+      <div class="drc-partners">
+        @for (partner of getContributingPartners(); track partner.institution_id) {
+          <div class="drc-partner">
+            <span class="drc-partner-name">{{ partner.name }}</span>
+            @if (partner.acronym) {
+              <span class="drc-partner-acronym">{{ partner.acronym }}</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (hasInnovationDevelopment()) {
+    <div class="drc-section">
+      <h3 class="drc-section-title">Innovation Development</h3>
+      <div class="drc-innov-fields">
+        @if (getInnovationType()) {
+          <div class="drc-innov-field">
+            <span class="drc-innov-label">Typology</span>
+            <span class="drc-innov-value">{{ getInnovationType() }}</span>
+          </div>
+        }
+        @if (getReadinessLevel()) {
+          <div class="drc-innov-field">
+            <span class="drc-innov-label">Readiness Level</span>
+            <span class="drc-innov-value">{{ getReadinessLevel() }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

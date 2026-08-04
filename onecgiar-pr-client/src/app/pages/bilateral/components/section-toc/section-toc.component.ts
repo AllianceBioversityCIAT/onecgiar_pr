@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
-import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
+import { BilateralMdsTrackerService, MdsFieldItem } from '../../services/bilateral-mds-tracker.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
 
@@ -163,8 +163,6 @@ export class SectionTocComponent implements OnInit {
   });
 
   constructor() {
-    this.mdsTracker.updateSection('contributors', 3);
-
     effect(() => {
       const iId = this.creationService.resultInitiativeId();
       if (iId) {
@@ -178,6 +176,10 @@ export class SectionTocComponent implements OnInit {
       this.loadTocLevels();
       this.fetchLists();
       this.loadTocState();
+    });
+
+    effect(() => {
+      this.publishTocMds();
     });
   }
 
@@ -351,5 +353,55 @@ export class SectionTocComponent implements OnInit {
     if (item.extraInformation) return item.extraInformation;
     if (item.wp_short_name && item.title) return `${item.wp_short_name} - ${item.title}`;
     return item.title || 'Unnamed';
+  }
+
+  private publishTocMds(): void {
+    const planned = this.isPlanned();
+    const items: MdsFieldItem[] = [
+      {
+        key: 'toc-planned',
+        label: 'Mapped to planned ToC indicator',
+        filled: planned !== null,
+      },
+    ];
+
+    if (planned === false) {
+      items.push({
+        key: 'toc-why-reported',
+        label: 'Why is this result being reported',
+        filled: !!this.whyReported()?.trim(),
+      });
+    }
+
+    if (planned === true) {
+      if (this.showLevelSelector()) {
+        items.push({
+          key: 'toc-level',
+          label: 'Level',
+          filled: this.selectedLevelId() != null,
+        });
+      }
+      items.push({
+        key: 'toc-node',
+        label: this.selectedLevelName() || 'ToC result',
+        filled: this.selectedTocResultId() != null,
+      });
+      if (this.selectedTocResultId()) {
+        items.push({
+          key: 'toc-indicator',
+          label: 'Indicator',
+          filled: this.selectedIndicatorId() != null,
+        });
+        if (this.selectedIndicatorId()) {
+          items.push({
+            key: 'toc-contribution',
+            label: 'Contribution to indicator target',
+            filled: this.contributionValue() != null,
+          });
+        }
+      }
+    }
+
+    this.mdsTracker.setSectionFields('contributors', items, 'toc');
   }
 }

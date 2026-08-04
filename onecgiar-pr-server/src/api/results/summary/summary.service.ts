@@ -340,111 +340,138 @@ export class SummaryService {
         innDevExists.is_new_variety = is_new_variety;
         innDevExists.readiness_level = readiness_level;
         innDevExists.number_of_varieties = number_of_varieties;
-        innDevExists.innovation_nature_id = innovation_nature_id;
         innDevExists.innovation_developers = innovation_developers;
         innDevExists.evidences_justification = evidences_justification;
         innDevExists.innovation_collaborators = innovation_collaborators;
-        innDevExists.result_innovation_dev_id = result_innovation_dev_id;
-        innDevExists.innovation_readiness_level_id =
-          innovation_readiness_level_id;
-        innDevExists.innovation_characterization_id =
-          innovation_characterization_id;
+        if (result_innovation_dev_id != null) {
+          innDevExists.result_innovation_dev_id = result_innovation_dev_id;
+        }
         innDevExists.innovation_acknowledgement = innovation_acknowledgement;
         innDevExists.innovation_pdf = innovation_pdf;
         innDevExists.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
+        this.applyInnovationDevFkRelations(innDevExists, {
+          innovation_nature_id,
+          innovation_readiness_level_id,
+          innovation_characterization_id,
+        });
         InnDevRes = await this._resultsInnovationsDevRepository.save(
           innDevExists as any,
         );
       } else {
         const newInnDev = new ResultsInnovationsDev();
         newInnDev.created_by = user.id;
-        newInnDev.results_id = resultId;
+        // Persist FK via writable @Column (result_object stub alone is not enough).
+        newInnDev.results_id = Number(resultId);
+        newInnDev.result_object = { id: Number(resultId) } as any;
         newInnDev.last_updated_by = user.id;
         newInnDev.short_title = short_title;
         newInnDev.is_active = true;
         newInnDev.is_new_variety = is_new_variety;
         newInnDev.readiness_level = readiness_level;
         newInnDev.number_of_varieties = number_of_varieties;
-        newInnDev.innovation_nature_id = innovation_nature_id;
         newInnDev.innovation_developers = innovation_developers;
         newInnDev.evidences_justification = evidences_justification;
         newInnDev.innovation_collaborators = innovation_collaborators;
-        newInnDev.result_innovation_dev_id = result_innovation_dev_id;
-        newInnDev.innovation_readiness_level_id = innovation_readiness_level_id;
-        newInnDev.innovation_characterization_id =
-          innovation_characterization_id;
+        // Never assign null PK — TypeORM would INSERT NULL and break AUTO_INCREMENT.
         newInnDev.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
+        this.applyInnovationDevFkRelations(newInnDev, {
+          innovation_nature_id,
+          innovation_readiness_level_id,
+          innovation_characterization_id,
+        });
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 
-      // * Save Questions
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q2.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.intellectual_property_rights.q1.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.intellectual_property_rights.q2.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.intellectual_property_rights.q3.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.innovation_team_diversity.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.megatrends.options,
-      );
+      // Nested questionnaire / investment blocks are required for Result Review full saves,
+      // but bilateral type-specific autosave sends only core Inn Dev fields. Skip when absent.
+      const ris = createInnovationDevDto?.responsible_innovation_and_scaling;
+      if (ris?.q1?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          ris.q1.options,
+        );
+      }
+      if (ris?.q2?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          ris.q2.options,
+        );
+      }
 
-      // * Save Evidence
-      await this._innoDevService.saveEvidence(
-        resultId,
-        user.id,
-        createInnovationDevDto.reference_materials,
-        4,
-      );
+      const ipr = createInnovationDevDto?.intellectual_property_rights;
+      if (ipr?.q1?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          ipr.q1.options,
+        );
+      }
+      if (ipr?.q2?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          ipr.q2.options,
+        );
+      }
+      if (ipr?.q3?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          ipr.q3.options,
+        );
+      }
 
-      // * Save Investment
-      await this._innoDevService.saveInitiativeInvestment(
-        resultId,
-        user.id,
-        createInnovationDevDto,
-      );
-      await this._innoDevService.saveBillateralInvestment(
-        resultId,
-        user.id,
-        createInnovationDevDto,
-      );
-      await this._innoDevService.savePartnerInvestment(
-        user.id,
-        createInnovationDevDto,
-      );
+      if (createInnovationDevDto?.innovation_team_diversity?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          createInnovationDevDto.innovation_team_diversity.options,
+        );
+      }
+      if (createInnovationDevDto?.megatrends?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          createInnovationDevDto.megatrends.options,
+        );
+      }
 
-      if (
-        innovation_user_to_be_determined != false ||
-        innovation_user_to_be_determined != null
-      ) {
-        // * Save InnovationUser
+      if (createInnovationDevDto?.reference_materials != null) {
+        await this._innoDevService.saveEvidence(
+          resultId,
+          user.id,
+          createInnovationDevDto.reference_materials,
+          4,
+        );
+      }
+
+      if (createInnovationDevDto?.initiative_expected_investment != null) {
+        await this._innoDevService.saveInitiativeInvestment(
+          resultId,
+          user.id,
+          createInnovationDevDto,
+        );
+      }
+      if (createInnovationDevDto?.bilateral_expected_investment != null) {
+        await this._innoDevService.saveBillateralInvestment(
+          resultId,
+          user.id,
+          createInnovationDevDto,
+        );
+      }
+      if (createInnovationDevDto?.institutions_expected_investment != null) {
+        await this._innoDevService.savePartnerInvestment(
+          user.id,
+          createInnovationDevDto,
+        );
+      }
+
+      // Result Review always sends innovationUseDto; bilateral core save omits it.
+      if (innovationUseDto != null) {
         await this._innoDevService.saveAnticipatedInnoUser(
           resultId,
           user.id,
@@ -464,6 +491,45 @@ export class SummaryService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * FK fields on ResultsInnovationsDev are @RelationId (read-only). Persist via JoinColumn relations.
+   */
+  private applyInnovationDevFkRelations(
+    entity: any,
+    relations: {
+      innovation_readiness_level_id?: number | null;
+      innovation_nature_id?: number | null;
+      innovation_characterization_id?: number | null;
+    },
+  ): void {
+    const {
+      innovation_readiness_level_id,
+      innovation_nature_id,
+      innovation_characterization_id,
+    } = relations;
+
+    if (innovation_readiness_level_id !== undefined) {
+      entity.innovation_readiness_level =
+        innovation_readiness_level_id == null
+          ? null
+          : ({ id: innovation_readiness_level_id } as any);
+    }
+
+    if (innovation_nature_id !== undefined) {
+      entity.innovation_nature =
+        innovation_nature_id == null
+          ? null
+          : ({ code: innovation_nature_id } as any);
+    }
+
+    if (innovation_characterization_id !== undefined) {
+      entity.innovation_characterization =
+        innovation_characterization_id == null
+          ? null
+          : ({ id: innovation_characterization_id } as any);
     }
   }
 
@@ -685,7 +751,7 @@ export class SummaryService {
         );
       }
 
-      for (const answer of optionsWithAnswers) {
+      for (const answer of optionsWithAnswers ?? []) {
         const optionExist = await this._resultAnswerRepository.findOne({
           where: {
             result_id: resultId,

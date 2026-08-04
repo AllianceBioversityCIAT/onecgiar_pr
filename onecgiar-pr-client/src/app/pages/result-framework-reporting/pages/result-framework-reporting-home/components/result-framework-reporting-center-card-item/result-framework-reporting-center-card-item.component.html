@@ -13,7 +13,7 @@
 
   <a
     class="mt-auto inline-flex items-center gap-1.5 self-start rounded-lg bg-brand-300 px-3 py-1.5 text-xs font-semibold text-white no-underline transition-colors hover:bg-brand-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
-    routerLink="/bilateral/create">
+    [routerLink]="['/bilateral', item?.center_acronym, 'home']">
     Report
     <i class="material-icons-round text-[14px]" aria-hidden="true">arrow_forward</i>
   </a>

@@ -1,24 +1,31 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
+import { tap } from 'rxjs';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
+import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralEvidenceItem, BilateralEvidenceBody } from './section-evidence.model';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
 
 @Component({
   selector: 'app-section-evidence',
-  imports: [CommonModule, FormsModule, FormSkeletonComponent],
+  imports: [CommonModule, FormsModule, DialogModule, ButtonModule, FormSkeletonComponent],
   templateUrl: './section-evidence.component.html',
   styleUrl: './section-evidence.component.scss'
 })
-export class SectionEvidenceComponent implements OnInit {
+export class SectionEvidenceComponent implements OnInit, OnDestroy {
   readonly api = inject(ApiService);
   readonly creationService = inject(BilateralCreationService);
   readonly mdsTracker = inject(BilateralMdsTrackerService);
-  private readonly http = inject(HttpClient);
+  private readonly bilateralApi = inject(BilateralApiService);
+  private readonly autoSave = inject(BilateralAutoSaveService);
+  private manualSaveSub?: Subscription;
 
   evidenceBody = signal<BilateralEvidenceBody>({
     evidences: [],
@@ -34,6 +41,8 @@ export class SectionEvidenceComponent implements OnInit {
 
   draftItem = signal<BilateralEvidenceItem>({ is_sharepoint: false });
   showDraft = signal(false);
+
+  deleteTarget = signal<BilateralEvidenceItem | null>(null);
 
   saveStatus = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -61,6 +70,15 @@ export class SectionEvidenceComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadEvidences();
+    this.manualSaveSub = this.autoSave.manualSave$.subscribe(() => {
+      if (this.evidences.length > 0 || this.showDraft()) {
+        void this.saveSection();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.manualSaveSub?.unsubscribe();
   }
 
   loadEvidences(): void {
@@ -68,7 +86,7 @@ export class SectionEvidenceComponent implements OnInit {
     if (!resultId) return;
 
     this.isLoading.set(true);
-    this.api.resultsSE.GET_evidences().subscribe({
+    this.bilateralApi.GET_evidences(resultId).subscribe({
       next: ({ response }) => {
         const body = response ?? { evidences: [] };
         this.evidenceBody.set(body);
@@ -261,20 +279,22 @@ export class SectionEvidenceComponent implements OnInit {
       }
     });
 
-    this.http
-      .post<any>(`${this.api.resultsSE.apiBaseUrl}evidences/create/${resultId}`, formData)
-      .subscribe({
-        next: () => {
-          this.saveStatus.set('saved');
-          this.isSaving.set(false);
-          setTimeout(() => this.saveStatus.set('idle'), 2500);
-          this.loadEvidences();
-        },
-        error: () => {
-          this.saveStatus.set('error');
-          this.isSaving.set(false);
-        }
-      });
+    this.autoSave.runImmediate('evidence', () =>
+      this.bilateralApi.POST_evidences(resultId, formData).pipe(
+        tap({
+          next: () => {
+            this.saveStatus.set('saved');
+            this.isSaving.set(false);
+            setTimeout(() => this.saveStatus.set('idle'), 2500);
+            this.loadEvidences();
+          },
+          error: () => {
+            this.saveStatus.set('error');
+            this.isSaving.set(false);
+          }
+        })
+      )
+    );
   }
 
   private async uploadPendingFiles(): Promise<void> {
@@ -331,13 +351,23 @@ export class SectionEvidenceComponent implements OnInit {
 
   // ── Delete ──────────────────────────────────────────────────────────
 
-  deleteItem(item: BilateralEvidenceItem): void {
-    if (!confirm('Are you sure you want to delete this evidence?')) return;
+  confirmDelete(item: BilateralEvidenceItem): void {
+    this.deleteTarget.set(item);
+  }
+
+  cancelDelete(): void {
+    this.deleteTarget.set(null);
+  }
+
+  executeDelete(): void {
+    const item = this.deleteTarget();
+    if (!item) return;
 
     this.evidenceBody.update(body => ({
       ...body,
       evidences: body.evidences.filter(e => e !== item)
     }));
+    this.deleteTarget.set(null);
     this.updateTracker();
     void this.saveSection();
   }
@@ -353,7 +383,12 @@ export class SectionEvidenceComponent implements OnInit {
   }
 
   private updateTracker(): void {
-    const filled = this.hasValidLink ? 1 : 0;
-    this.mdsTracker.updateSection('evidence', filled);
+    this.mdsTracker.setSectionFields('evidence', [
+      {
+        key: 'valid-link',
+        label: 'Evidence with valid link',
+        filled: this.hasValidLink,
+      },
+    ]);
   }
 }

@@ -1,6 +1,6 @@
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-center-report-stub',
@@ -25,8 +25,10 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CenterReportStubComponent {
-  private readonly route = inject(ActivatedRoute);
+export class CenterReportStubComponent implements OnInit {
+  private readonly router = inject(Router);
 
-  centerCode = this.route.snapshot.paramMap.get('centerCode') ?? '';
+  ngOnInit(): void {
+    this.router.navigate(['/result-framework-reporting/home'], { replaceUrl: true });
+  }
 }

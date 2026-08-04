@@ -2897,6 +2897,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.result_type_id,
         r.title AS result_title,
         r.description AS result_description,
+        r.creation_method,
+        CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rt.name AS result_category,
         r.status_id,
         r.lead_contact_person,
@@ -3500,6 +3502,57 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     try {
       const results = await this.query(query, [programId, programId]);
       return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getResultsByBilateralCenter(
+    centerId: string,
+    versionId: number,
+  ): Promise<any[]> {
+    const query = `
+      SELECT
+        r.id,
+        r.result_code,
+        r.title,
+        rt.name  AS result_type,
+        rs.result_status_id AS status_id,
+        rs.status_name,
+        r.created_date,
+        r.version_id,
+        r.source,
+        r.creation_method,
+        CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
+        rc.is_leading_result
+      FROM result r
+      INNER JOIN results_center rc
+             ON rc.result_id = r.id
+            AND rc.is_active = 1
+            AND (
+              rc.center_id = ?
+              OR EXISTS (
+                SELECT 1
+                FROM clarisa_center cc
+                INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+                WHERE cc.code = rc.center_id
+                  AND ci.acronym = ?
+              )
+            )
+      INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
+      INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+      WHERE r.version_id = ?
+        AND r.source IN ('API', 'Result')
+        AND r.is_active = 1
+      ORDER BY r.created_date DESC, r.id DESC
+    `;
+
+    try {
+      return await this.query(query, [centerId, centerId, versionId]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

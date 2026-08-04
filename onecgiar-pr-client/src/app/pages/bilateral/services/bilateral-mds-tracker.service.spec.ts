@@ -11,19 +11,60 @@ describe('BilateralMdsTrackerService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should start with all sections at 0', () => {
+  it('should start with all sections empty', () => {
     const statuses = service.sectionStatus();
     expect(statuses.length).toBe(5);
     for (const s of statuses) {
       expect(s.filledFields).toBe(0);
+      expect(s.totalFields).toBe(0);
       expect(s.percentage).toBe(0);
       expect(s.status).toBe('empty' as MdsStatus);
+      expect(s.fields).toEqual([]);
     }
     expect(service.overallPercentage()).toBe(0);
     expect(service.overallStatus()).toBe('empty');
   });
 
-  it('should update section filled fields', () => {
+  it('should set named section fields and derive counts', () => {
+    service.setSectionFields('general-info', [
+      { key: 'title', label: 'Title', filled: true },
+      { key: 'description', label: 'Description', filled: false },
+    ]);
+    const info = service.sectionStatus().find(s => s.sectionName === 'general-info');
+    expect(info?.filledFields).toBe(1);
+    expect(info?.totalFields).toBe(2);
+    expect(info?.percentage).toBe(50);
+    expect(info?.status).toBe('partial');
+    expect(info?.fields[0].label).toBe('Title');
+  });
+
+  it('should upsert a field group without wiping other groups', () => {
+    service.setSectionFields(
+      'contributors',
+      [
+        { key: 'lead-center', label: 'Lead center', filled: true },
+        { key: 'lead-project', label: 'Lead project', filled: true },
+      ],
+      'partners'
+    );
+    service.setSectionFields(
+      'contributors',
+      [
+        { key: 'toc-planned', label: 'Planned', filled: false },
+        { key: 'toc-level', label: 'Level', filled: false },
+      ],
+      'toc'
+    );
+
+    const contrib = service.sectionStatus().find(s => s.sectionName === 'contributors');
+    expect(contrib?.totalFields).toBe(4);
+    expect(contrib?.filledFields).toBe(2);
+    expect(contrib?.fields.filter(f => f.group === 'toc').length).toBe(2);
+    expect(contrib?.fields.filter(f => f.group === 'partners').length).toBe(2);
+  });
+
+  it('should update section via legacy numeric API', () => {
+    service.setTotalFields('general-info', 2);
     service.updateSection('general-info', 2);
     const info = service.sectionStatus().find(s => s.sectionName === 'general-info');
     expect(info?.filledFields).toBe(2);
@@ -31,78 +72,57 @@ describe('BilateralMdsTrackerService', () => {
     expect(info?.status).toBe('complete');
   });
 
-  it('should cap filled fields at total fields', () => {
+  it('should cap filled fields at total fields (legacy)', () => {
+    service.setTotalFields('general-info', 2);
     service.updateSection('general-info', 5);
     const info = service.sectionStatus().find(s => s.sectionName === 'general-info');
     expect(info?.filledFields).toBe(2);
   });
 
-  it('should cap contributors at 3', () => {
-    service.updateSection('contributors', 6);
-    const contrib = service.sectionStatus().find(s => s.sectionName === 'contributors');
-    expect(contrib?.filledFields).toBe(3);
-    expect(contrib?.totalFields).toBe(3);
+  it('should compute overall percentage from named fields', () => {
+    service.setSectionFields('general-info', [
+      { key: 'title', label: 'Title', filled: true },
+      { key: 'description', label: 'Description', filled: true },
+    ]);
+    service.setSectionFields('contributors', [
+      { key: 'a', label: 'A', filled: true },
+      { key: 'b', label: 'B', filled: true },
+      { key: 'c', label: 'C', filled: false },
+    ]);
+    // 2/2 + 2/3 = 4/5 = 80%
+    expect(service.overallPercentage()).toBe(80);
   });
 
-  it('should compute overall percentage', () => {
-    service.updateSection('general-info', 2);
-    service.updateSection('contributors', 2);
-    // general-info 2/2 + contributors 2/3 + geography 0/1 + evidence 0/1 + type-specific 0/0 = 4/7
-    expect(service.overallPercentage()).toBe(57);
-  });
-
-  it('should return partial status at 50%', () => {
-    service.updateSection('general-info', 1);
+  it('should return partial status when some fields filled', () => {
+    service.setSectionFields('general-info', [
+      { key: 'title', label: 'Title', filled: true },
+      { key: 'description', label: 'Description', filled: false },
+    ]);
     expect(service.overallStatus()).toBe('partial');
   });
 
   it('should return complete status at 100%', () => {
-    service.setTotalFields('type-specific', 5);
-    service.updateSection('general-info', 2);
-    service.updateSection('contributors', 3);
-    service.updateSection('geography', 3);
-    service.updateSection('evidence', 1);
-    service.updateSection('type-specific', 5);
+    service.setSectionFields('general-info', [
+      { key: 'title', label: 'Title', filled: true },
+      { key: 'description', label: 'Description', filled: true },
+    ]);
+    service.setSectionFields('contributors', [
+      { key: 'a', label: 'A', filled: true },
+    ]);
+    service.setSectionFields('geography', [{ key: 'geo', label: 'Geography', filled: true }]);
+    service.setSectionFields('evidence', [{ key: 'ev', label: 'Evidence', filled: true }]);
+    service.setSectionFields('type-specific', [{ key: 't', label: 'Type', filled: true }]);
     expect(service.overallPercentage()).toBe(100);
     expect(service.overallStatus()).toBe('complete');
   });
 
-  it('should use dynamic totalFields via setTotalFields override', () => {
-    service.setTotalFields('type-specific', 3);
-    const ts = service.sectionStatus().find(s => s.sectionName === 'type-specific');
-    expect(ts?.totalFields).toBe(3);
-
-    service.updateSection('type-specific', 2);
-    const tsAfter = service.sectionStatus().find(s => s.sectionName === 'type-specific');
-    expect(tsAfter?.filledFields).toBe(2);
-    expect(tsAfter?.percentage).toBe(67);
-    expect(tsAfter?.status).toBe('partial');
-  });
-
-  it('should cap type-specific at overridden totalFields', () => {
-    service.setTotalFields('type-specific', 3);
-    service.updateSection('type-specific', 10);
-    const ts = service.sectionStatus().find(s => s.sectionName === 'type-specific');
-    expect(ts?.filledFields).toBe(3);
-    expect(ts?.percentage).toBe(100);
-    expect(ts?.status).toBe('complete');
-  });
-
-  it('should reset overrides on reset()', () => {
-    service.setTotalFields('type-specific', 4);
-    service.updateSection('type-specific', 4);
-    service.reset();
-    const ts = service.sectionStatus().find(s => s.sectionName === 'type-specific');
-    expect(ts?.totalFields).toBe(0);
-    expect(ts?.filledFields).toBe(0);
-  });
-
-  it('should reset all sections to zero', () => {
-    service.updateSection('general-info', 2);
+  it('should reset all sections', () => {
+    service.setSectionFields('general-info', [{ key: 'title', label: 'Title', filled: true }]);
     service.reset();
     expect(service.overallPercentage()).toBe(0);
     for (const s of service.sectionStatus()) {
       expect(s.filledFields).toBe(0);
+      expect(s.fields).toEqual([]);
     }
   });
 });

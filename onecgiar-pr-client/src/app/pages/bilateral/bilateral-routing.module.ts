@@ -5,9 +5,14 @@ import { BilateralRouting } from '../../shared/routing/routing-data';
 
 const routes: Routes = [
   {
-    path: '',
+    path: ':acronym',
     component: BilateralComponent,
     children: BilateralRouting
+  },
+  {
+    path: '**',
+    redirectTo: '/result-framework-reporting/home',
+    pathMatch: 'full'
   }
 ];
 

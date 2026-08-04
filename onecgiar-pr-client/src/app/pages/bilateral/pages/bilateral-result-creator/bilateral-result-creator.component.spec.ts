@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { BilateralResultCreatorComponent } from './bilateral-result-creator.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
@@ -8,7 +9,28 @@ import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.ser
 import { RolesService } from '../../../../shared/services/global/roles.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { signal } from '@angular/core';
+import { signal, Injectable } from '@angular/core';
+import { BilateralAiService } from '../../services/bilateral-ai.service';
+
+@Injectable()
+class MockBilateralAiService {
+  draftCount = signal(0);
+  uploadState = signal('idle');
+  isUploading = signal(false);
+  errorMessage = signal<string | null>(null);
+  canUseAi = signal(true);
+  startUpload = jest.fn();
+  resetUpload = jest.fn();
+  loadAllDrafts = jest.fn();
+  getDraft = jest.fn();
+  promoteDraft = jest.fn();
+  discardDraft = jest.fn();
+  toggleEvidence = jest.fn();
+  activeJobId = signal<number | null>(null);
+  pollIntervalRef = signal<any>(null);
+  draftList = signal([]);
+  isDraftListLoaded = signal(false);
+}
 
 describe('BilateralResultCreatorComponent', () => {
   let component: BilateralResultCreatorComponent;
@@ -28,10 +50,13 @@ describe('BilateralResultCreatorComponent', () => {
       isLoadingProjects: signal(false),
       resultLevelId: signal(null) as any,
       resultTypeId: signal(null) as any,
+      currentResultId: signal(null) as any,
       createResult: jest.fn().mockReturnValue(of({ response: { id: 42 } })),
       submitResult: jest.fn().mockReturnValue(of({})),
       selectProject: jest.fn(),
       loadResult: jest.fn(),
+      resetWizard: jest.fn(),
+      clearEditorState: jest.fn(),
     };
 
     mdsTracker = {
@@ -76,13 +101,22 @@ describe('BilateralResultCreatorComponent', () => {
       providers: [
         { provide: ActivatedRoute, useValue: mockRoute },
         { provide: Router, useValue: mockRouter },
-        { provide: BilateralCreationService, useValue: creationService },
-        { provide: BilateralMdsTrackerService, useValue: mdsTracker },
-        { provide: BilateralAutoSaveService, useValue: autoSaveService },
         { provide: RolesService, useValue: rolesService },
         { provide: CentersService, useValue: centersService },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(BilateralResultCreatorComponent, {
+        set: {
+          providers: [
+            MessageService,
+            { provide: BilateralCreationService, useValue: creationService },
+            { provide: BilateralMdsTrackerService, useValue: mdsTracker },
+            { provide: BilateralAutoSaveService, useValue: autoSaveService },
+            { provide: BilateralAiService, useClass: MockBilateralAiService },
+          ],
+        },
+      })
+      .compileComponents();
 
     const fixture = TestBed.createComponent(BilateralResultCreatorComponent);
     component = fixture.componentInstance;
@@ -96,6 +130,7 @@ describe('BilateralResultCreatorComponent', () => {
   it('should start in creating mode by default', () => {
     expect(component.isCreating()).toBe(true);
     expect(component.resultId()).toBeNull();
+    expect(creationService.resetWizard).toHaveBeenCalled();
   });
 
   it('should handle result level selection', () => {
@@ -153,10 +188,17 @@ describe('BilateralResultCreatorComponent', () => {
     component.selectedReportingWay.set('manual');
     component.resultLevelId.set(3);
     creationService.selectedPrimarySp.set({ programId: 100 });
-    const event = { target: { value: '2' } } as any;
-    component.onTypeSelected(event);
+    component.onTypeSelected(2);
     expect(component.resultTypeId()).toBe(2);
     expect(creationService.createResult).not.toHaveBeenCalled();
+  });
+
+  it('should close type dropdown when a type is selected', () => {
+    component.showTypeDropdown.set(true);
+    component.resultLevelId.set(3);
+    creationService.selectedPrimarySp.set({ programId: 100 });
+    component.onTypeSelected(1);
+    expect(component.showTypeDropdown()).toBe(false);
   });
 
   it('should create result on next click', () => {

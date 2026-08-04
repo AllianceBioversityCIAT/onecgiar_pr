@@ -15,11 +15,11 @@ describe('SectionZeroDashboardComponent', () => {
       selectedProject: signal(null) as any,
       selectedPrimarySp: signal(null) as any,
       selectedSecondarySps: signal([]) as any,
+      isAiGenerated: signal(false) as any,
+      currentResultId: signal(null) as any,
     };
 
     mdsTracker = {
-      sectionStatus: signal([{ sectionName: 'general-info', sectionLabel: 'General Information', totalFields: 2, filledFields: 0, percentage: 0, status: 'empty' }]),
-      overallPercentage: signal(0),
       overallStatus: signal('empty'),
     } as any;
 
@@ -46,12 +46,23 @@ describe('SectionZeroDashboardComponent', () => {
     expect(emitSpy).toHaveBeenCalled();
   });
 
-  it('should show overall percentage', () => {
-    expect(component.overallPct()).toBe(0);
-  });
-
   it('should show empty project hint when no project selected', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Select a project');
+  });
+
+  it('should label unavailable actions and keep submit status visible', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    const statuses = Array.from(el.querySelectorAll('.bp-action-status'))
+      .map(status => status.textContent?.trim());
+
+    expect(statuses).toEqual(['Coming soon', 'Coming soon', 'Coming soon', 'In progress']);
+  });
+
+  it('should show the AI Result badge when the result was generated with AI', () => {
+    (creationService.isAiGenerated as any).set(true);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('AI Result');
   });
 });

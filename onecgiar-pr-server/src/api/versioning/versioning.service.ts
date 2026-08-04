@@ -1060,21 +1060,32 @@ export class VersioningService {
       },
     });
 
-    for (const key in res) {
-      const otherPhase = await this._resultRepository.findOne({
-        where: {
-          version_id: res[key].id,
-          is_active: true,
-        },
-      });
+    if (res.length) {
+      const ids = res.map((r) => r.id);
 
-      const otherPreviousPhase = await this._versionRepository.findOne({
-        where: {
-          previous_phase: res[key].id,
-          is_active: true,
-        },
-      });
-      res[key]['can_be_deleted'] = !otherPreviousPhase && !otherPhase;
+      const [resultsWithPhase, versionsWithPrevPhase] = await Promise.all([
+        this._resultRepository.find({
+          select: ['version_id'],
+          where: { version_id: In(ids), is_active: true },
+        }),
+        this._versionRepository.find({
+          select: ['previous_phase'],
+          where: { previous_phase: In(ids), is_active: true },
+        }),
+      ]);
+
+      const versionIdsWithResults = new Set(
+        resultsWithPhase.map((r) => r.version_id),
+      );
+      const versionIdsAsPrevious = new Set(
+        versionsWithPrevPhase.map((v) => v.previous_phase),
+      );
+
+      for (const row of res) {
+        row['can_be_deleted'] =
+          !versionIdsWithResults.has(row.id) &&
+          !versionIdsAsPrevious.has(row.id);
+      }
     }
 
     return ReturnResponseUtil.format({

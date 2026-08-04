@@ -113,7 +113,7 @@ export const routingApp: PrRoute[] = [
   {
     prName: 'Bilateral Results',
     underConstruction: false,
-    prHide: false,
+    prHide: true,
     canActivate: [CheckLoginGuard],
     path: 'bilateral',
     loadChildren: () => import('../../pages/bilateral/bilateral.module').then(m => m.BilateralModule)
@@ -600,6 +600,15 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
 
 export const BilateralRouting: PrRoute[] = [
   {
+    prName: 'Bilateral Home',
+    path: 'home',
+    prHide: true,
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-home/bilateral-home.component').then(
+        m => m.BilateralHomeComponent
+      )
+  },
+  {
     prName: 'Bilateral Result Creator',
     path: 'create',
     loadComponent: () =>
@@ -610,12 +619,39 @@ export const BilateralRouting: PrRoute[] = [
   {
     prName: 'Bilateral Result Editor',
     path: 'result/:id',
+    prHide: true,
     loadComponent: () =>
       import('../../pages/bilateral/pages/bilateral-result-creator/bilateral-result-creator.component').then(
         m => m.BilateralResultCreatorComponent
       )
   },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'create' }
+  {
+    prName: 'My Drafts',
+    path: 'drafts',
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/my-draft-results/my-draft-results.component').then(
+        m => m.MyDraftResultsComponent
+      )
+  },
+  {
+    prName: 'Draft Detail',
+    path: 'drafts/:draftId',
+    prHide: true,
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-ai-draft-detail/bilateral-ai-draft-detail.component').then(
+        m => m.BilateralAiDraftDetailComponent
+      )
+  },
+  {
+    prName: 'Results',
+    path: 'results',
+    prHide: true,
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-results-list/bilateral-results-list.component').then(
+        m => m.BilateralResultsListComponent
+      )
+  },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
 
 export interface PrRoute extends Route {

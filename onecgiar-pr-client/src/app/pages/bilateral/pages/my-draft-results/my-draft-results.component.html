@@ -1,0 +1,230 @@
+<app-bilateral-page-header />
+
+<div class="mdr">
+  <div class="mdr-header">
+    <h2 class="mdr-title">My AI Draft Results</h2>
+    <p class="mdr-subtitle">
+      @if (bilateralAiService.isDraftListLoaded()) {
+        {{ hasDrafts ? drafts.length + ' draft' + (drafts.length !== 1 ? 's' : '') + ' ready for review' : 'No drafts yet' }}
+      } @else {
+        Loading drafts...
+      }
+    </p>
+  </div>
+
+  @if (hasDrafts) {
+    <div class="mdr-list">
+      @for (draft of drafts; track draft.id) {
+        <div class="mdr-card">
+          <div class="mdr-card-main">
+            <div class="mdr-card-header">
+              <h3 class="mdr-card-title">{{ getDraftTitle(draft) }}</h3>
+              @if (getDraftType(draft)) {
+                <span class="mdr-card-type">{{ getDraftType(draft) }}</span>
+              }
+            </div>
+
+            <div class="mdr-card-meta">
+              @if (draft.job) {
+                <span class="mdr-meta-item">
+                  <i class="material-icons-round">business</i>
+                  <span class="mdr-meta-label">Project</span>
+                  <span class="mdr-meta-value">
+                    {{ bilateralAiService.projectNameMap()[draft.job.project_id] ?? draft.job.project_id }}
+                  </span>
+                </span>
+                <span class="mdr-meta-item">
+                  <i class="material-icons-round">layers</i>
+                  <span class="mdr-meta-label">Program</span>
+                  <span class="mdr-meta-value">{{ draft.job.program_code }}</span>
+                </span>
+              }
+            </div>
+
+            @if (draft.mapping_warnings?.length) {
+              <div class="mdr-warnings">
+                @for (warning of draft.mapping_warnings ?? []; track warning) {
+                  <span class="mdr-warning-tag">
+                    <i class="material-icons-round">warning_amber</i>
+                    {{ warning }}
+                  </span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="mdr-card-side">
+            <div class="mdr-completeness">
+              <div class="mdr-pct-circle">
+                <svg viewBox="0 0 36 36" class="mdr-pct-svg">
+                  <path class="mdr-pct-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="mdr-pct-fill" stroke-dasharray="50, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <span class="mdr-pct-text">Draft</span>
+              </div>
+            </div>
+
+            <span class="mdr-date">{{ formatDate(draft.created_date) }}</span>
+
+            <div class="mdr-actions">
+              <button type="button" class="mdr-btn mdr-btn--review" (click)="onReview(draft)">
+                <i class="material-icons-round">visibility</i>
+                Review
+              </button>
+              <button type="button" class="mdr-btn mdr-btn--promote" (click)="onPromoteClick(draft)">
+                <i class="material-icons-round">arrow_upward</i>
+                Promote
+              </button>
+              <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscardClick(draft)">
+                <i class="material-icons-round">delete_outline</i>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (bilateralAiService.isDraftListLoaded()) {
+    <div class="mdr-empty">
+      <div class="mdr-empty-icon">
+        <i class="material-icons-round">drafts</i>
+      </div>
+      <h3 class="mdr-empty-title">No Drafts Yet</h3>
+      <p class="mdr-empty-text">AI-generated drafts will appear here after you upload source materials for analysis.</p>
+      <a class="mdr-empty-cta" [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']">
+        <i class="material-icons-round">add_circle_outline</i>
+        Create a New Result
+      </a>
+    </div>
+  } @else {
+    <div class="mdr-loading">
+      <div class="mdr-loading-spinner"></div>
+    </div>
+  }
+</div>
+
+@if (selectedDraft(); as draft) {
+  <div class="mdr-aside-backdrop" (click)="closeAside()"></div>
+  <aside class="mdr-aside">
+    <div class="mdr-aside-header">
+      <div class="mdr-aside-header-title">
+        <i class="material-icons-round">smart_toy</i>
+        <span>Draft Preview</span>
+      </div>
+      <button type="button" class="mdr-aside-close" (click)="closeAside()" aria-label="Close preview">
+        <i class="material-icons-round">close</i>
+      </button>
+    </div>
+
+    <div class="mdr-aside-body">
+      <app-draft-result-card [draft]="draft" />
+      <app-draft-evidence-list [job]="draft.job" />
+    </div>
+
+    <div class="mdr-aside-footer">
+      <button type="button" class="mdr-btn mdr-btn--promote mdr-btn--wide" (click)="onPromoteClick(draft)">
+        <i class="material-icons-round">arrow_upward</i>
+        Promote to Result
+      </button>
+      <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscardClick(draft)">
+        <i class="material-icons-round">delete_outline</i>
+        Discard
+      </button>
+    </div>
+  </aside>
+}
+
+@if (bilateralAiService.isPromoting()) {
+  <div class="mdr-promote-overlay">
+    <div class="mdr-promote-overlay-card">
+      <div class="mdr-promote-overlay-spinner"></div>
+      <span class="mdr-promote-overlay-text">Promoting result…</span>
+    </div>
+  </div>
+}
+
+<p-dialog
+  styleClass="pr-dialog pr-dialog--promote"
+  [modal]="true"
+  [closable]="false"
+  [dismissableMask]="false"
+  [style]="{ width: '480px' }"
+  [visible]="promoteTarget() !== null"
+  (onHide)="onPromoteCancel()"
+>
+  <ng-template pTemplate="header">
+    <div class="pr-dialog-header">
+      <span class="pr-dialog-header-icon pr-dialog-header-icon--promote">
+        <i class="material-icons-round">rocket_launch</i>
+      </span>
+      <span class="pr-dialog-header-title">Promote Draft</span>
+    </div>
+  </ng-template>
+  @if (promoteTarget(); as target) {
+    <div class="pr-dialog-body">
+      <p class="pr-dialog-text">Promote <strong>{{ getDraftTitle(target) }}</strong> as a bilateral result?</p>
+      <div class="pr-dialog-meta">
+        <div class="pr-dialog-meta-item">
+          <span class="pr-dialog-meta-label">Science Program</span>
+          <span class="pr-dialog-meta-value">
+            @if (getProgramLabel(target)) { {{ getProgramLabel(target) }} } @else { — }
+          </span>
+        </div>
+        <div class="pr-dialog-meta-item">
+          <span class="pr-dialog-meta-label">Project</span>
+          <span class="pr-dialog-meta-value">
+            @if (target.job?.project_id) {
+              {{ bilateralAiService.projectNameMap()[target.job!.project_id] ?? target.job!.project_id }}
+            } @else { — }
+          </span>
+        </div>
+        <div class="pr-dialog-meta-item">
+          <span class="pr-dialog-meta-label">Type</span>
+          <span class="pr-dialog-meta-value">
+            @if (getDraftType(target)) { {{ getDraftType(target) }} } @else { — }
+          </span>
+        </div>
+        <div class="pr-dialog-meta-item">
+          <span class="pr-dialog-meta-label">Center</span>
+          <span class="pr-dialog-meta-value">{{ ctx.centerAcronym() }}</span>
+        </div>
+      </div>
+    </div>
+  }
+  <ng-template pTemplate="footer">
+    <div class="pr-dialog-footer">
+      <p-button label="Cancel" severity="secondary" (onClick)="onPromoteCancel()" />
+      <p-button label="Promote" (onClick)="onPromoteConfirm()" />
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  styleClass="pr-dialog pr-dialog--discard"
+  [modal]="true"
+  [closable]="false"
+  [dismissableMask]="false"
+  [style]="{ width: '420px' }"
+  [visible]="discardTarget() !== null"
+  (onHide)="onDiscardCancel()"
+>
+  <ng-template pTemplate="header">
+    <div class="pr-dialog-header">
+      <span class="pr-dialog-header-icon pr-dialog-header-icon--discard">
+        <i class="material-icons-round">delete_outline</i>
+      </span>
+      <span class="pr-dialog-header-title">Discard Draft</span>
+    </div>
+  </ng-template>
+  @if (discardTarget(); as target) {
+    <div class="pr-dialog-body">
+      <p class="pr-dialog-text">Discard <strong>{{ getDraftTitle(target) }}</strong>?</p>
+      <p class="pr-dialog-hint pr-dialog-hint--danger">All extracted data will be permanently deleted. This cannot be undone.</p>
+    </div>
+  }
+  <ng-template pTemplate="footer">
+    <div class="pr-dialog-footer">
+      <p-button label="Cancel" severity="secondary" (onClick)="onDiscardCancel()" />
+      <p-button label="Discard" severity="danger" (onClick)="onDiscardConfirm()" />
+    </div>
+  </ng-template>
+</p-dialog>
