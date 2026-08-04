@@ -1231,34 +1231,49 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly reportingGroups = computed<ReportingAowGroup[]>(() => {
     const aowFilter = this.reportingAowFilter();
     const typology = this.reportingTypologyFilter();
+    const typeFilter = this.reportingTypeFilter();
     const matchTypology = (i: ReportingIndicator) =>
       typology === 'all' || (i?.result_type_name || i?.type_name || '').trim() === typology;
     const sp = this.selected()?.initiativeCode;
 
-    // 1) AoW cards — outputs only. Outcome tiers from the AoW ToC are ignored here.
-    const aowCards: ReportingAowGroup[] = this.plannedFilteredAows()
-      .filter(aow => aowFilter === 'all' || aow.code === aowFilter)
-      .map(aow => {
-        const bundle = this.indicatorsForAow(aow.code) ?? {
-          aow,
-          indicators: [] as ReportingIndicator[],
-          count: 0,
-          loading: false
-        };
-        const outputs = (bundle.indicators ?? []).filter(i => i?.__tier !== 'outcome');
-        // Header count = unfiltered output total; typology only narrows the rows shown.
-        const rows = outputs.filter(matchTypology);
-        return {
-          aow,
-          indicators: rows,
-          count: outputs.length,
-          loading: bundle.loading,
-          kind: 'aow' as const
-        };
-      });
+    // Type filter (CURRENT selType) — which top-level card families stay visible.
+    const wantAow = typeFilter === 'all' || typeFilter === 'hlo' || typeFilter === 'outcome';
+    const wantIo = typeFilter === 'all' || typeFilter === 'intermediate_outcome';
+    const wantO30 = typeFilter === 'all' || typeFilter === 'outcome_2030';
 
-    // Program-level buckets are hidden when an AoW filter is active — they are not owned by one AoW.
-    const showBuckets = aowFilter === 'all';
+    // Section filter — a real AoW code, or one of the two program-level bucket codes.
+    const sectionIsAow =
+      aowFilter === 'all' || (aowFilter !== INTERMEDIATE_OUTCOMES_CODE && aowFilter !== OUTCOMES_2030_CODE);
+    const sectionIsIo = aowFilter === 'all' || aowFilter === INTERMEDIATE_OUTCOMES_CODE;
+    const sectionIsO30 = aowFilter === 'all' || aowFilter === OUTCOMES_2030_CODE;
+
+    // 1) AoW cards — HLOs by default; outcome tier only when Type = Outcome.
+    const aowCards: ReportingAowGroup[] = wantAow
+      ? this.plannedFilteredAows()
+          .filter(aow => sectionIsAow && (aowFilter === 'all' || aow.code === aowFilter))
+          .map(aow => {
+            const bundle = this.indicatorsForAow(aow.code) ?? {
+              aow,
+              indicators: [] as ReportingIndicator[],
+              count: 0,
+              loading: false
+            };
+            const tierRows =
+              typeFilter === 'outcome'
+                ? (bundle.indicators ?? []).filter(i => i?.__tier === 'outcome')
+                : typeFilter === 'hlo'
+                  ? (bundle.indicators ?? []).filter(i => i?.__tier !== 'outcome')
+                  : (bundle.indicators ?? []).filter(i => i?.__tier !== 'outcome');
+            const rows = tierRows.filter(matchTypology);
+            return {
+              aow,
+              indicators: rows,
+              count: tierRows.length,
+              loading: bundle.loading,
+              kind: 'aow' as const
+            };
+          })
+      : [];
 
     // 2) Intermediate Outcomes — dedicated endpoint, cached under INTERMEDIATE_OUTCOMES_CODE.
     const ioKey = `${sp}::${INTERMEDIATE_OUTCOMES_CODE}`;
@@ -1266,7 +1281,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const ioLoading = this.loadingTocKeys().has(ioKey);
     const ioAll = this.flattenBucketIndicators(ioToc?.outputs, INTERMEDIATE_OUTCOMES_CODE, 'Intermediate Outcomes');
     const intermediateCard: ReportingAowGroup | null =
-      showBuckets && (ioAll.length || ioLoading)
+      wantIo && sectionIsIo && (ioAll.length || ioLoading)
         ? {
             aow: { code: INTERMEDIATE_OUTCOMES_CODE, name: 'Intermediate Outcomes' },
             indicators: ioAll.filter(matchTypology),
@@ -1282,7 +1297,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const o30Loading = this.loadingTocKeys().has(o30Key);
     const o30All = this.flattenBucketIndicators(o30Toc?.outputs, OUTCOMES_2030_CODE, '2030 Outcomes');
     const o30Card: ReportingAowGroup | null =
-      showBuckets && (o30All.length || o30Loading)
+      wantO30 && sectionIsO30 && (o30All.length || o30Loading)
         ? {
             aow: { code: OUTCOMES_2030_CODE, name: '2030 Outcomes' },
             indicators: o30All.filter(matchTypology),
@@ -1323,11 +1338,27 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly reportingViewMode = signal<'grouped' | 'flat'>('grouped');
   readonly reportingAowFilter = signal<string>('all');
   readonly reportingTypologyFilter = signal<string>('all');
+  /** CURRENT selType: all | hlo | outcome | intermediate_outcome | outcome_2030 */
+  readonly reportingTypeFilter = signal<string>('all');
 
   /**
-   * Indicator-type options for the band's `Indicator` filter, derived from what the loaded ToCs
-   * actually contain — so the dropdown never offers a type with zero rows behind it.
-   * Covers AoW outputs + Intermediate + 2030 buckets. `result_type_name` first, `type_name` fallback.
+   * Section dropdown = every AoW + Intermediate Outcomes + 2030 Outcomes (CURRENT selSection).
+   */
+  readonly reportingSectionOptions = computed(() => {
+    const aows = this.aows().map(a => ({
+      value: a.code,
+      label: `${a.code} · ${a.name}`
+    }));
+    return [
+      ...aows,
+      { value: INTERMEDIATE_OUTCOMES_CODE, label: 'Intermediate Outcomes' },
+      { value: OUTCOMES_2030_CODE, label: '2030 Outcomes' }
+    ];
+  });
+
+  /**
+   * Category options for the band filter, derived from loaded ToCs so the dropdown never
+   * offers a type with zero rows. Covers AoW outputs + Intermediate + 2030.
    */
   readonly reportingTypologyOptions = computed(() => {
     const set = new Set<string>();

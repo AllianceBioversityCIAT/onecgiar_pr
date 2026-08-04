@@ -60,6 +60,8 @@ export class ReportingProgramBandComponent {
   readonly statusValue = input<string>('all');
   readonly typologyValue = input<string>('all');
   readonly typologyOptions = input<BandFilterOption[]>([]);
+  /** Type filter: hlo | outcome | intermediate_outcome | outcome_2030 | all. */
+  readonly typeValue = input<string>('all');
   readonly aowValue = input<string>('all');
   readonly aowOptions = input<BandFilterOption[]>([]);
   readonly viewMode = input<'grouped' | 'flat'>('grouped');
@@ -69,6 +71,7 @@ export class ReportingProgramBandComponent {
   readonly searchChange = output<string>();
   readonly statusChange = output<string>();
   readonly typologyChange = output<string>();
+  readonly typeChange = output<string>();
   readonly aowChange = output<string>();
   readonly viewModeChange = output<'grouped' | 'flat'>();
 
@@ -137,6 +140,18 @@ export class ReportingProgramBandComponent {
     { value: 'in-progress', label: 'In progress' },
     { value: 'achieved', label: 'Achieved' },
     { value: 'overachieved', label: 'Overachieved' }
+  ];
+
+  /**
+   * CURRENT selType placeholders: Type / High level output / Outcome / Intermediate / 2030.
+   * First option doubles as the empty label ("Type") when value is `all`.
+   */
+  readonly typeOptions: readonly BandFilterOption[] = [
+    { value: 'all', label: 'Type' },
+    { value: 'hlo', label: 'High level output' },
+    { value: 'outcome', label: 'Outcome' },
+    { value: 'intermediate_outcome', label: 'Intermediate outcome' },
+    { value: 'outcome_2030', label: '2030 outcome' }
   ];
 
   toggleInfo(event: Event): void {

@@ -85,6 +85,9 @@ hlm-sidebar {
   }
 
   // Platform / menu rows — 36px, flat. Active = solid brand (CURRENT nav()).
+  // Icons: CURRENT SVG is 20×20; inactive stroke #A79BD4, active/hover #FFFFFF.
+  // Helm defaults to `[&_ng-icon]:text-[length:--spacing(4)]` which is ~12px with
+  // our 12px root and inherits generic sidebar-fg — override size + muted colour here.
   [data-slot='sidebar-menu-button'] {
     height: 36px !important;
     min-height: 36px !important;
@@ -94,6 +97,27 @@ hlm-sidebar {
     border-radius: 8px !important;
     font-size: 14px !important;
     font-weight: 500 !important;
+    color: var(--pr-sidebar-fg) !important; // #E9E4FA
+
+    // ng-icon sizes via --ng-icon__size (host width/height inherit from it).
+    > ng-icon {
+      flex: none;
+      --ng-icon__size: 20px !important;
+      --ng-icon__color: var(--pr-sidebar-fg-muted) !important; // #A79BD4
+      width: 20px !important;
+      height: 20px !important;
+      min-width: 20px !important;
+      color: var(--pr-sidebar-fg-muted) !important;
+      line-height: 1;
+    }
+
+    // Trailing chevron stays smaller than the leading nav glyph.
+    > ng-icon.ms-auto {
+      --ng-icon__size: 16px !important;
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+    }
   }
 
   [data-slot='sidebar-menu-button'][data-active='true'],
@@ -103,10 +127,21 @@ hlm-sidebar {
     color: #fff !important;
     font-weight: 600 !important;
     box-shadow: none !important;
+
+    > ng-icon {
+      --ng-icon__color: #fff !important;
+      color: #fff !important;
+    }
   }
 
   [data-slot='sidebar-menu-button']:hover {
     background-color: var(--pr-sidebar-hover);
+    color: #fff !important;
+
+    > ng-icon {
+      --ng-icon__color: #fff !important;
+      color: #fff !important;
+    }
   }
 
   /**
