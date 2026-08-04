@@ -1,72 +1,65 @@
 <!--
-  Overview tab — seven blocks, in the reference's order.
-  Reference: docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html:752-878
-  Spec:      docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §4
-
-  All cards: #FFFFFF, 1px --pr-border, radius 12, padding 20 — separated by BORDER, not shadow
-  (rule 10). 12-column grid, 16px gutter, inside the 32px content pad.
-
-  🛑 Every number on this screen is placeholder data — see the component doc for the per-block
-  reason. Nothing here is derived from a real endpoint yet.
+  Overview — CURRENT reference PRMS-Shell.dc.html:753-891
+  12-col · gap 16px · pad 32px · cards white / 1px #E3E3E8 / radius 12 / pad 20
+  No section icons. No "Largest gaps" (removed in 2026-08-04 export).
+  ⚠️ html is 12px — only arbitrary px values.
 -->
-<div class="grid grid-cols-12 content-start gap-4 p-8">
-  <!-- ═══ 1 · About this program ═══ -->
-  <section class="col-span-12 rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-5">
-    <h2 class="m-0 mb-5 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">About this program</h2>
-    <p class="m-0 text-[14px] leading-[1.6] text-[var(--pr-text)] [text-wrap:pretty]" [class.pr-overview-clamp-3]="!descriptionExpanded()">
+<div class="grid grid-cols-12 content-start gap-[16px] p-[32px]">
+  <!-- 1 · About this program · span 12 -->
+  <section class="col-span-12 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+    <h2 class="m-0 mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+      About this program
+    </h2>
+    <p class="m-0 text-[14px] font-normal leading-[1.6] text-[var(--pr-text)] [text-wrap:pretty]">
       {{ description() }}
     </p>
-    <button
-      type="button"
-      class="mt-2 border-0 bg-transparent p-0 text-[14px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]"
-      (click)="descriptionExpanded.set(!descriptionExpanded())">
-      {{ descriptionExpanded() ? 'Show less' : 'Show more' }}
-    </button>
   </section>
 
-  <!-- ═══ 2 · Reporting status ═══
-       The ONE place a segmented meter is allowed: the number is a COUNT of results, so the bar is
-       a true proportion (rule 15). -->
-  <section class="col-span-8 flex min-h-[180px] flex-col gap-4 rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-5 max-[1180px]:col-span-12">
-    <div class="flex items-center gap-2">
-      <ng-icon name="lucideChartColumn" class="text-[18px] text-[var(--pr-color-primary-300)]" />
-      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
-    </div>
+  <!-- 2 · Reporting status · span 8 -->
+  <section
+    class="col-span-8 flex min-h-[180px] flex-col gap-[16px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
+    <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
 
-    <div class="flex h-[44px] overflow-hidden rounded-lg">
-      @for (segment of statusSegments(); track segment.key) {
-        @if (segment.count > 0) {
-          <div
-            class="flex h-[44px] items-center justify-center"
-            [style.width.%]="segmentWidth(segment)"
-            [style.background]="segment.bg"
-            [title]="segment.label + ': ' + segment.count">
-            <span class="pr-figure-sm text-[14px] font-semibold" [style.color]="segment.fg">{{ segment.count }}</span>
+    @if (statusTotal() > 0) {
+      <div class="flex h-[44px] overflow-hidden rounded-[8px]">
+        @for (segment of statusSegments(); track segment.key) {
+          @if (segment.count > 0) {
+            <div
+              class="flex h-[44px] items-center justify-center"
+              [style.width.%]="segmentWidth(segment)"
+              [style.background]="segment.bg"
+              [title]="segment.label + ': ' + segment.count">
+              <span class="pr-figure-sm text-[14px] font-semibold" [style.color]="segment.fg">{{ segment.count }}</span>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="flex flex-wrap gap-x-[20px] gap-y-[8px]">
+        @for (segment of statusSegments(); track segment.key) {
+          <div class="flex items-center gap-[8px]">
+            <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
+            <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
+            <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ segment.count }}</span>
           </div>
         }
-      }
-    </div>
-
-    <div class="flex flex-wrap gap-x-5 gap-y-2">
-      @for (segment of statusSegments(); track segment.key) {
-        <div class="flex items-center gap-2">
-          <span class="size-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
-          <span class="text-[13px] text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
-          <span class="pr-figure-sm text-[var(--pr-text-heading)]">{{ segment.count }}</span>
-        </div>
-      }
-    </div>
+      </div>
+    } @else {
+      <p class="m-0 text-[14px] text-[var(--pr-text-secondary)]">No results reported for this program yet.</p>
+    }
   </section>
 
-  <!-- ═══ 3 · Reporting pace ═══
-       Actual (solid violet) vs required (dashed grey), with the deadline as a red dashed marker. -->
-  <section class="col-span-4 flex min-h-[180px] flex-col gap-3 rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-5 max-[1180px]:col-span-12">
-    <div class="flex items-center gap-2">
-      <ng-icon name="lucideTrendingUp" class="text-[18px] text-[var(--pr-color-primary-300)]" />
-      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting pace</h2>
-    </div>
+  <!-- 3 · Reporting pace · span 4 -->
+  <section
+    class="col-span-4 flex min-h-[180px] flex-col gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
+    <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting pace</h2>
 
-    <svg viewBox="0 0 320 88" preserveAspectRatio="none" class="block h-[88px] w-full" role="img" aria-label="Reporting pace to date and projected">
+    <svg
+      viewBox="0 0 320 88"
+      preserveAspectRatio="none"
+      class="block h-[88px] w-full"
+      role="img"
+      aria-label="Reporting pace">
       <defs>
         <linearGradient id="prPaceFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="rgba(107,70,229,.16)" />
@@ -74,119 +67,174 @@
         </linearGradient>
       </defs>
       <path d="M8 72 L96 64 L150 52 L150 84 L8 84 Z" fill="url(#prPaceFill)" />
-      <path d="M8 72 L96 64 L150 52" fill="none" stroke="var(--pr-color-primary-300)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
-      <path d="M150 52 L232 34 L312 22" fill="none" stroke="var(--pr-text-subtle)" stroke-width="2" stroke-dasharray="4 4" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+      <path
+        d="M8 72 L96 64 L150 52"
+        fill="none"
+        stroke="var(--pr-color-primary-300)"
+        stroke-width="2"
+        stroke-linejoin="round"
+        stroke-linecap="round"
+        vector-effect="non-scaling-stroke" />
+      <path
+        d="M150 52 L232 34 L312 22"
+        fill="none"
+        stroke="var(--pr-text-subtle)"
+        stroke-width="2"
+        stroke-dasharray="4 4"
+        stroke-linecap="round"
+        vector-effect="non-scaling-stroke" />
       <circle cx="150" cy="52" r="3.5" fill="var(--pr-color-primary-300)" />
-      <line x1="252" y1="4" x2="252" y2="84" stroke="var(--pr-color-red-300)" stroke-width="1.5" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" />
+      <line
+        x1="252"
+        y1="4"
+        x2="252"
+        y2="84"
+        stroke="var(--pr-color-red-300)"
+        stroke-width="1.5"
+        stroke-dasharray="3 3"
+        vector-effect="non-scaling-stroke" />
     </svg>
 
-    <p class="m-0 text-[14px] leading-[1.45] text-[var(--pr-text)] [text-wrap:pretty]">{{ paceHeadline }}</p>
-    <p class="m-0 text-[13px] leading-[1.45] text-[var(--pr-text-secondary)] [text-wrap:pretty]">{{ paceSub }}</p>
+    <p class="m-0 text-[14px] font-normal leading-[1.45] text-[var(--pr-text)] [text-wrap:pretty]">
+      {{ paceHeadline() }}
+    </p>
+    <p class="m-0 text-[13px] font-normal leading-[1.45] text-[var(--pr-text-secondary)] [text-wrap:pretty]">
+      {{ paceSub() }}
+    </p>
   </section>
 
-  <!-- ═══ 4 · Progress by area of work — least complete FIRST ═══ -->
-  <section class="col-span-12 flex flex-col rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-5">
-    <h2 class="m-0 mb-5 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Progress by area of work</h2>
-    @for (row of aowProgress(); track row.code) {
-      <div class="flex h-12 items-center gap-2.5 px-2 text-left">
-        <span class="pr-code shrink-0 text-[var(--pr-text-secondary)]">{{ row.code }}</span>
-        <span class="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--pr-text-heading)]">{{ row.name }}</span>
-        <span class="h-[8px] w-[120px] shrink-0 overflow-hidden rounded" [style.background]="'var(--pr-border)'">
-          <span class="block h-[8px] rounded bg-[var(--pr-color-primary-300)]" [style.width.%]="percentOf(row)"></span>
-        </span>
-        <span class="pr-figure-sm w-[44px] shrink-0 text-right text-[var(--pr-text-heading)]">{{ row.done }}/{{ row.total }}</span>
-        <span class="w-10 shrink-0 text-right text-[13px] font-semibold text-[var(--pr-text-secondary)]">{{ percentOf(row) }}%</span>
+  <!-- 4 · Progress by area of work · span 6 (+ xcut footer) -->
+  <section
+    class="col-span-6 flex flex-col gap-[8px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
+    <h2 class="m-0 mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+      Progress by area of work
+    </h2>
+
+    @if (aowProgress().length) {
+      @for (row of aowProgress(); track row.code) {
+        <div class="flex h-[48px] items-center gap-[10px] px-[8px] text-left">
+          <span class="pr-code shrink-0 text-[12px] font-medium text-[var(--pr-text-secondary)]">{{ row.code }}</span>
+          <span class="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--pr-text-heading)]">{{ row.name }}</span>
+          <span class="h-[8px] w-[120px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
+            <span
+              class="block h-[8px] rounded-[4px] bg-[var(--pr-color-primary-300)]"
+              [style.width.%]="percentOf(row)"></span>
+          </span>
+          <span class="pr-figure-sm w-[44px] shrink-0 text-right text-[13px] font-medium text-[var(--pr-text-heading)]">
+            {{ row.done }}/{{ row.total }}
+          </span>
+          <span class="w-[40px] shrink-0 text-right text-[13px] font-semibold text-[var(--pr-text-secondary)]">
+            {{ percentOf(row) }}%
+          </span>
+        </div>
+      }
+    } @else {
+      <p class="m-0 px-[8px] py-[12px] text-[14px] text-[var(--pr-text-secondary)]">No areas of work loaded yet.</p>
+    }
+
+    @if (xcutProgress().length) {
+      <div class="mt-[12px] flex flex-col border-t border-[var(--pr-border-divider)] pt-[12px]">
+        @for (row of xcutProgress(); track row.code) {
+          <div class="flex h-[48px] items-center gap-[10px] px-[8px]">
+            <span class="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--pr-text-heading)]">{{ row.name }}</span>
+            <span class="h-[8px] w-[120px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
+              <span
+                class="block h-[8px] rounded-[4px] bg-[var(--pr-color-primary-300)]"
+                [style.width.%]="percentOf(row)"></span>
+            </span>
+            <span class="pr-figure-sm w-[44px] shrink-0 text-right text-[13px] font-medium text-[var(--pr-text-heading)]">
+              {{ row.done }}/{{ row.total }}
+            </span>
+            <span class="w-[40px] shrink-0 text-right text-[13px] font-semibold text-[var(--pr-text-secondary)]">
+              {{ percentOf(row) }}%
+            </span>
+          </div>
+        }
       </div>
     }
   </section>
 
-  <!-- ═══ 5 · Needs attention ═══ -->
-  <section class="col-span-6 flex flex-col rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-5 max-[1180px]:col-span-12">
-    <div class="mb-5 flex items-center gap-2">
-      <ng-icon name="lucideTriangleAlert" class="text-[18px] text-[var(--pr-status-in-progress-fg)]" />
-      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Needs attention</h2>
-    </div>
+  <!-- 5 · Needs attention · span 6 — reference: icon + text only, no action buttons -->
+  <section
+    class="col-span-6 flex flex-col gap-[4px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
+    <h2 class="m-0 mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Needs attention</h2>
 
-    @for (row of attention(); track row.text) {
-      <div class="flex min-h-12 items-center gap-2.5 border-t border-[var(--pr-border-divider)] py-2 first:border-t-0">
-        <ng-icon [name]="row.icon" class="shrink-0 text-[16px]" [style.color]="row.color" />
-        <span class="min-w-0 flex-1 text-[14px] text-[var(--pr-text)]">{{ row.text }}</span>
-        <!-- ⚠️ Not wired: each action must land on the matching FILTERED Reporting view
-             (UI-RULES §6 Phase 7 gate). The filters it needs do not exist yet. -->
-        <button
-          type="button"
-          class="shrink-0 border-0 bg-transparent p-0 text-[14px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]">
-          {{ row.action }}
-        </button>
+    @if (attention().length) {
+      <div class="flex flex-col">
+        @for (row of attention(); track row.text) {
+          <div
+            class="flex min-h-[48px] items-center gap-[10px] border-t border-[var(--pr-border-divider)] py-[8px] first:border-t-0">
+            <span
+              class="h-[10px] w-[10px] shrink-0 rounded-full"
+              [style.background]="row.color"
+              aria-hidden="true"></span>
+            <span class="min-w-0 flex-1 text-[14px] font-normal text-[var(--pr-text)]">{{ row.text }}</span>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="flex h-[120px] items-center justify-center">
+        <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">
+          Nothing needs your attention right now.
+        </p>
       </div>
     }
   </section>
 
-  <!-- ═══ 6 · Largest gaps to target ═══
-       The gap is mono + amber; units are respected (money, percent, plain counts). -->
-  <section class="col-span-6 flex flex-col rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-5 max-[1180px]:col-span-12">
-    <div class="mb-5 flex items-center gap-2">
-      <ng-icon name="lucideTarget" class="text-[18px] text-[var(--pr-color-red-300)]" />
-      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Largest gaps to target</h2>
-    </div>
+  <!-- 6 · Impact so far · span 12 -->
+  <section
+    class="col-span-12 flex min-h-[260px] flex-col gap-[16px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+    <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Impact so far</h2>
 
-    @for (row of gaps(); track row.name) {
-      <div class="flex items-center gap-3 border-t border-[var(--pr-border-divider)] py-2.5 first:border-t-0">
-        <span class="min-w-0 flex-1">
-          <span class="block text-[14px] font-medium leading-snug text-[var(--pr-text-heading)]">{{ row.name }}</span>
-          <span class="mt-0.5 block text-[13px] text-[var(--pr-text-secondary)]">{{ row.meta }}</span>
-        </span>
-        <span class="pr-figure-sm shrink-0 text-[var(--pr-status-in-progress-fg)]">{{ row.gap }}</span>
-      </div>
-    }
-  </section>
-
-  <!-- ═══ 7 · Impact so far ═══ -->
-  <section class="col-span-12 flex min-h-[260px] flex-col gap-4 rounded-xl border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-5">
-    <div class="flex items-center gap-2">
-      <ng-icon name="lucideTrendingUp" class="text-[18px] text-[var(--pr-status-approved-fg)]" />
-      <h2 class="m-0 flex-1 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Impact so far</h2>
-    </div>
-
-    <div class="grid grid-cols-2 gap-8 max-[900px]:grid-cols-1">
-      <!-- Countries reached -->
-      <div class="flex flex-col gap-3">
-        <span class="flex items-center gap-2 text-[13px] font-medium text-[var(--pr-text-heading)]">
-          <ng-icon name="lucideGlobe" class="text-[15px] text-[var(--pr-text-subtle)]" />
-          Countries reached
-        </span>
-        <div class="flex items-baseline gap-2">
-          <span class="pr-figure text-[32px] font-bold text-[var(--pr-text-heading)]">{{ countriesReached }}</span>
-          <span class="text-[13px] text-[var(--pr-text-secondary)]">countries</span>
-        </div>
-        <div class="flex flex-col gap-2">
-          @for (country of countries(); track country.name) {
-            <div class="flex items-center gap-3">
-              <span class="w-[88px] shrink-0 text-[13px] text-[var(--pr-text)]">{{ country.name }}</span>
-              <span class="h-[8px] flex-1 overflow-hidden rounded bg-[var(--pr-border-divider)]">
-                <span class="block h-[8px] rounded" [style.width.%]="countryWidth(country)" [style.background]="country.color"></span>
-              </span>
-              <span class="pr-figure-sm w-6 shrink-0 text-right text-[var(--pr-text-heading)]">{{ country.count }}</span>
-            </div>
-          }
-        </div>
+    <div class="grid grid-cols-2 gap-[32px] max-[900px]:grid-cols-1">
+      <div class="flex flex-col gap-[12px]">
+        <span class="text-[13px] font-medium text-[var(--pr-text-heading)]">Countries reached</span>
+        @if (countries().length) {
+          <div class="flex items-baseline gap-[8px]">
+            <span class="pr-figure text-[32px] font-bold text-[var(--pr-text-heading)]">{{ countriesReached() }}</span>
+            <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">countries</span>
+          </div>
+          <div class="flex flex-col gap-[8px]">
+            @for (country of countries(); track country.name) {
+              <div class="flex items-center gap-[12px]">
+                <span class="w-[88px] shrink-0 text-[13px] font-normal text-[var(--pr-text)]">{{ country.name }}</span>
+                <span class="h-[8px] flex-1 overflow-hidden rounded-[4px] bg-[#F3F2F7]">
+                  <span
+                    class="block h-[8px] rounded-[4px]"
+                    [style.width.%]="countryWidth(country)"
+                    [style.background]="country.color"></span>
+                </span>
+                <span class="pr-figure-sm w-[24px] shrink-0 text-right text-[13px] font-medium text-[var(--pr-text-heading)]">
+                  {{ country.count }}
+                </span>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="m-0 text-[14px] text-[var(--pr-text-secondary)]">Country reach is not available yet for this program.</p>
+        }
       </div>
 
-      <!-- Results by indicator category -->
-      <div class="flex flex-col gap-3">
-        <span class="flex items-center gap-2 text-[13px] font-medium text-[var(--pr-text-heading)]">
-          <ng-icon name="lucideChartColumn" class="text-[15px] text-[var(--pr-text-subtle)]" />
-          Results by indicator category
-        </span>
-        <div class="flex h-[186px] items-end gap-8 pt-2">
-          @for (bar of categories(); track bar.name) {
-            <div class="flex h-[186px] w-[88px] flex-col items-center justify-end gap-1.5">
-              <span class="pr-figure-sm text-[var(--pr-text-heading)]">{{ bar.count }}</span>
-              <span class="w-12 rounded-t-md" [style.height.px]="categoryHeight(bar)" [style.background]="bar.color"></span>
-              <span class="h-[34px] text-center text-[12px] leading-[1.35] text-[var(--pr-text-secondary)]">{{ bar.name }}</span>
-            </div>
-          }
-        </div>
+      <div class="flex flex-col gap-[12px]">
+        <span class="text-[13px] font-medium text-[var(--pr-text-heading)]">Results by indicator category</span>
+        @if (categories().length) {
+          <div class="flex h-[186px] items-end gap-[32px] pt-[8px]">
+            @for (bar of categories(); track bar.name) {
+              <div class="flex h-[186px] w-[88px] flex-col items-center justify-end gap-[6px]">
+                <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ bar.count }}</span>
+                <span
+                  class="w-[48px] rounded-t-[6px]"
+                  [style.height.px]="categoryHeight(bar)"
+                  [style.background]="bar.color"></span>
+                <span class="h-[34px] text-center text-[12px] font-normal leading-[1.35] text-[var(--pr-text-secondary)]">
+                  {{ bar.name }}
+                </span>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="m-0 text-[14px] text-[var(--pr-text-secondary)]">No result categories reported yet.</p>
+        }
       </div>
     </div>
   </section>

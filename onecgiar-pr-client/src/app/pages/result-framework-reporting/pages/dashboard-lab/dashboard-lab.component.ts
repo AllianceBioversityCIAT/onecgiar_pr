@@ -22,8 +22,51 @@ import { GuidedCreationComponent } from './components/guided-creation/guided-cre
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
 import { ReportingProgramBandComponent } from './components/reporting-program-band/reporting-program-band.component';
-import { ProgramOverviewComponent } from './components/program-overview/program-overview.component';
+import {
+  ProgramOverviewComponent,
+  StatusSegment as OverviewStatusSegment,
+  AowProgressRow as OverviewAowProgressRow,
+  AttentionRow as OverviewAttentionRow,
+  CategoryBar as OverviewCategoryBar
+} from './components/program-overview/program-overview.component';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
+
+/** Status tokens for the Overview segmented meter (rule 9 — fixed pairs). */
+const OVERVIEW_STATUS_TOKENS: Record<number, { key: string; label: string; bg: string; fg: string }> = {
+  1: {
+    key: 'in-progress',
+    label: 'In progress',
+    bg: 'var(--pr-status-in-progress-bg)',
+    fg: 'var(--pr-status-in-progress-fg)'
+  },
+  2: { key: 'in-qa', label: 'In QA', bg: 'var(--pr-status-in-qa-bg)', fg: 'var(--pr-status-in-qa-fg)' },
+  3: {
+    key: 'submitted',
+    label: 'Submitted',
+    bg: 'var(--pr-status-submitted-bg)',
+    fg: 'var(--pr-status-submitted-fg)'
+  },
+  4: {
+    key: 'not-started',
+    label: 'Discontinued',
+    bg: 'var(--pr-status-not-started-bg)',
+    fg: 'var(--pr-status-not-started-fg)'
+  },
+  5: {
+    key: 'not-started',
+    label: 'Pending',
+    bg: 'var(--pr-status-not-started-bg)',
+    fg: 'var(--pr-status-not-started-fg)'
+  },
+  6: {
+    key: 'approved',
+    label: 'Approved',
+    bg: 'var(--pr-status-approved-bg)',
+    fg: 'var(--pr-status-approved-fg)'
+  }
+};
+
+const CHART_COLORS = ['var(--pr-chart-1)', 'var(--pr-chart-2)', 'var(--pr-chart-3)', 'var(--pr-chart-4)'];
 
 /** Vibrant, high-contrast palette for the status charts (no pastels). */
 const STATUS_COLOR: Record<number, string> = {
@@ -483,16 +526,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
     });
 
-    // The Reporting tab renders every AoW's indicators inline and expanded, so every ToC is needed
-    // up front — not only when a search is active, which is all the previous condition covered.
-    // Without this the table paints "0 of 0 / no planned indicators" on every card: the data was
-    // lazy-loaded by the old list's expand click, and there is no expand click any more.
-    // `loadToc` is idempotent (it early-outs on a key already loaded or in flight), so re-running
-    // this effect costs nothing.
+    // Reporting + Overview both need every AoW's ToC (and Intermediate / 2030 buckets).
+    // Without this the table paints empty cards and Overview progress stays blank.
+    // `loadToc` is idempotent (early-out when cached / in flight).
     effect(() => {
-      if (this.rfrView() !== 'planned') return;
-      const view = this.plannedBrowseView();
-      if (view === 'aows' || view === 'indicators') this.loadAllTocs();
+      const view = this.rfrView();
+      if (view === 'planned' || view === 'overview') this.loadAllTocs();
     });
 
     // Only the guided flow claims the whole viewport (focus mode). Inside an open
@@ -650,6 +689,116 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (fromReporting > 0) return fromReporting;
     const fromToc = this.indicatorsByAow().reduce((sum, b) => sum + (b.count || 0), 0);
     return fromToc > 0 ? fromToc : this.selectedTotal();
+  });
+
+  // ── Overview tab feeds (real SP / AoW / ToC data) ─────────────────────────
+
+  /** Reporting-status meter + legend — maps phase status counts onto design tokens. */
+  readonly overviewStatusSegments = computed<OverviewStatusSegment[]>(() => {
+    const statuses = this.latestVersion(this.selected())?.statuses ?? [];
+    if (!statuses.length) return [];
+    return [...statuses]
+      .sort((a, b) => (STATUS_ORDER[a.statusId] ?? 99) - (STATUS_ORDER[b.statusId] ?? 99))
+      .map(s => {
+        const tok = OVERVIEW_STATUS_TOKENS[s.statusId];
+        return {
+          key: tok?.key ?? String(s.statusId),
+          label: tok?.label ?? s.statusName,
+          count: s.count,
+          bg: tok?.bg ?? 'var(--pr-status-not-started-bg)',
+          fg: tok?.fg ?? 'var(--pr-status-not-started-fg)'
+        };
+      });
+  });
+
+  /**
+   * Progress by AoW — least complete first. `done` = KPIs with something reported;
+   * `total` = planned indicators (same rule as the Reporting table ratio).
+   */
+  readonly overviewAowProgress = computed<OverviewAowProgressRow[]>(() => {
+    return this.indicatorsByAow()
+      .map(b => {
+        const inds = (b.indicators ?? []).filter(i => i?.__tier !== 'outcome');
+        const done = inds.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
+        return {
+          code: b.aow.code,
+          name: b.aow.name,
+          done,
+          total: inds.length
+        };
+      })
+      .filter(r => r.total > 0 || !this.loadingAows())
+      .sort((a, b) => {
+        const pa = a.total ? a.done / a.total : 0;
+        const pb = b.total ? b.done / b.total : 0;
+        return pa - pb || a.code.localeCompare(b.code);
+      });
+  });
+
+  /** Intermediate + 2030 as cross-cutting rows under Progress by AoW (CURRENT xcutProgress). */
+  readonly overviewXcutProgress = computed<OverviewAowProgressRow[]>(() => {
+    return this.reportingGroups()
+      .filter(g => g.kind === 'intermediate' || g.kind === '2030')
+      .map(g => {
+        const inds = g.indicators ?? [];
+        const done = inds.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
+        return { code: g.aow.code, name: g.aow.name, done, total: g.count || inds.length };
+      })
+      .filter(r => r.total > 0);
+  });
+
+  /** Needs-attention rows derived from live counts — no invented alerts. */
+  readonly overviewAttention = computed<OverviewAttentionRow[]>(() => {
+    const rows: OverviewAttentionRow[] = [];
+    const p = this.pipelineStats();
+    if (p.editing > 0) {
+      rows.push({
+        text: `${p.editing} result${p.editing === 1 ? '' : 's'} still in Editing`,
+        color: 'var(--pr-status-in-progress-fg)'
+      });
+    }
+    if (p.pending > 0) {
+      rows.push({
+        text: `${p.pending} result${p.pending === 1 ? '' : 's'} pending review`,
+        color: 'var(--pr-text-subtle)'
+      });
+    }
+    const emptyAows = this.overviewAowProgress().filter(a => a.total > 0 && a.done === 0);
+    for (const a of emptyAows.slice(0, 3)) {
+      rows.push({
+        text: `${a.code} has no results reported yet`,
+        color: 'var(--pr-text-subtle)'
+      });
+    }
+    return rows;
+  });
+
+  /** Results by indicator category — from the program's type summaries. */
+  readonly overviewCategories = computed<OverviewCategoryBar[]>(() => {
+    const { outputs, outcomes } = this.groupedSummaries();
+    const all = [...outputs, ...outcomes];
+    return all
+      .map((c, i) => ({
+        name: c.resultTypeName,
+        count: (c.editing || 0) + (c.submitted || 0),
+        color: CHART_COLORS[i % CHART_COLORS.length]
+      }))
+      .filter(c => c.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 4);
+  });
+
+  readonly overviewPaceHeadline = computed(() => {
+    const pct = this.submittedPct();
+    const total = this.selectedTotal();
+    if (!total) return 'No results reported for this phase yet.';
+    return `${pct}% of ${total} results are quality-assessed or submitted this phase.`;
+  });
+
+  readonly overviewPaceSub = computed(() => {
+    const p = this.pipelineStats();
+    if (!p.total) return 'Start reporting against the planned ToC to build pace.';
+    return `${p.editing} still editing · ${p.qaed} in QA · ${p.submitted} submitted.`;
   });
 
   /** % of results in a "reported" state (QAed / Submitted). */

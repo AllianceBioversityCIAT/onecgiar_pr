@@ -96,22 +96,17 @@ all on one line. The band is `position: sticky`.
 
 ## 4. Tab: Overview
 
-> **Implementation status (2026-08-03).** Shipped as
-> `dashboard-lab/components/program-overview/`, routed at **`/result-framework-reporting/overview`**
-> (`rfrView: 'overview'`). The tab used to point at `/home`, i.e. the retired bento — that is fixed.
-> **Every figure in it is placeholder data**: not one of the seven blocks has a feed today (see the
-> per-block table in the component's doc comment, and open questions 4 and 5 in §7). The layout is
-> the deliverable; wiring is a separate change, and each block reads from ONE signal so swapping in
-> a real source is a one-line edit per block.
+> **Implementation status (2026-08-04).** Shipped as
+> `dashboard-lab/components/program-overview/`, routed at **`/result-framework-reporting/overview`**.
+> Layout matches **CURRENT** `PRMS-Shell.dc.html:753-891`. Figures are wired from live SP status
+> counts, AoW ToC ratios, Intermediate/2030 buckets, and result-type summaries where those APIs
+> exist. Pace is approximate (no cycle end date). Countries stay empty until a geo endpoint exists.
+> **Largest gaps was removed** in the 2026-08-04 export.
 
-Seven blocks, in order. All cards: `background: #FFFFFF`, `border: 1px solid #E3E3E8`,
-`border-radius: 12px` — separated by border, not shadow (rule 10). 12-column grid, 16px gutter,
-inside the 32px content pad. Spans: About 12 · Reporting status 8 + Reporting pace 4 · Progress by
-area of work 12 · Needs attention 6 + Largest gaps 6 · Impact so far 12.
-
-⚠️ `Largest gaps to target` is in the rendered screenshots but **not** in the current export's
-markup (`PRMS-Shell.dc.html` has two empty slots at :836/:838 where it used to sit). Its values
-below were read from the screenshots.
+Six blocks, in order. All cards: `background: #FFFFFF`, `border: 1px solid #E3E3E8`,
+`border-radius: 12px` — separated by border, not shadow (rule 10). 12-column grid, **16px** gutter,
+**32px** content pad. Spans: About **12** · Reporting status **8** + Reporting pace **4** ·
+Progress by area of work **6** + Needs attention **6** · Impact so far **12**.
 
 1. **About this program** — body copy `14px/400`, `line-height 1.5`, `#2B2838`, clamped to 3 lines with
    an inline `Show more` (`#6B46E5`).

@@ -1,17 +1,3 @@
-/**
- * Overview tab — only what Tailwind cannot express cleanly. Everything else is a utility in the
- * template, per the client's Tailwind-first rule.
- */
-
 :host {
   display: block;
-}
-
-/* Rule 16: long copy is CLAMPED, never broken. `line-clamp-3` would work, but the collapsed
-   height has to survive `[text-wrap:pretty]`, so the box model is written out. */
-.pr-overview-clamp-3 {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
 }

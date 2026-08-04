@@ -1171,7 +1171,15 @@
           activeTab="overview"
           [showToolbar]="false" />
 
-        <app-program-overview [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''" />
+        <app-program-overview
+          [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
+          [statusSegments]="overviewStatusSegments()"
+          [aowProgress]="overviewAowProgress()"
+          [xcutProgress]="overviewXcutProgress()"
+          [attention]="overviewAttention()"
+          [categories]="overviewCategories()"
+          [paceHeadline]="overviewPaceHeadline()"
+          [paceSub]="overviewPaceSub()" />
       </article>
       }
 
