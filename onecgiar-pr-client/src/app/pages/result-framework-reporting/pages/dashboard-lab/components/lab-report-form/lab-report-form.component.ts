@@ -8,6 +8,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ResultsListFilterService } from '../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
+import { HlmButton } from '@spartan/button';
 
 interface CreateResultBody {
   handler: string;
@@ -35,7 +36,7 @@ interface CreateResultBody {
 @Component({
   selector: 'app-lab-report-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomFieldsModule, PrFilterMultiselectModule],
+  imports: [CommonModule, FormsModule, CustomFieldsModule, PrFilterMultiselectModule, HlmButton],
   templateUrl: './lab-report-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

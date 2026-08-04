@@ -30,6 +30,7 @@ import {
   CategoryBar as OverviewCategoryBar
 } from './components/program-overview/program-overview.component';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
+import { HlmButton } from '@spartan/button';
 
 /** Status tokens for the Overview segmented meter (rule 9 — fixed pairs). */
 const OVERVIEW_STATUS_TOKENS: Record<number, { key: string; label: string; bg: string; fg: string }> = {
@@ -174,7 +175,8 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     HighlightSearchPipe,
     ReportingAowTableComponent,
     ReportingProgramBandComponent,
-    ProgramOverviewComponent
+    ProgramOverviewComponent,
+    HlmButton
   ],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],

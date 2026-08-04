@@ -190,8 +190,10 @@
   <div class="sticky bottom-0 col-span-full -mx-1 mt-1 bg-gradient-to-t from-white via-white to-transparent px-1 pb-1 pt-4">
     <button
       type="submit"
+      hlmBtn
+      variant="brand"
       [disabled]="!canSave()"
-      class="flex w-full appearance-none items-center justify-center gap-2 rounded-xl border-0 bg-[linear-gradient(135deg,#6b46e5_0%,#5733c4_100%)] px-5 py-3.5 text-[14px] font-bold text-white shadow-[0_8px_20px_rgba(87,51,196,0.4)] transition-transform duration-200 hover:-translate-y-px disabled:pointer-events-none disabled:opacity-40">
+      class="w-full justify-center gap-2 py-3.5 text-[14px] disabled:pointer-events-none disabled:opacity-40">
       {{ creatingResult() ? 'Creating…' : 'Save and continue' }}
       <span class="material-icons-round text-[17px]">arrow_forward</span>
     </button>
