@@ -116,11 +116,10 @@ describe('ReportingNavSidebarComponent', () => {
     expect(homeMock.getScienceProgramsProgress).not.toHaveBeenCalled();
   });
 
-  it('exposes the four RFR section links split around the programs block', async () => {
+  it('exposes a flat platform surface: Results Center + Emerging (no nested Planned/Centers)', async () => {
     await build();
-    expect(component.rfrSectionLinks).toHaveLength(4);
-    expect(component.rfrLinksBeforePrograms).toEqual([component.rfrSectionLinks[0]]);
-    expect(component.rfrLinksAfterPrograms).toEqual(component.rfrSectionLinks.slice(2));
+    expect(component.rfrResultsCenterPath).toBe('/result-framework-reporting/home');
+    expect(component.rfrPlatformLinks.map(l => l.path)).toEqual(['/result-framework-reporting/emerging']);
     expect(component.rfrPlannedPath).toBe(PLANNED);
     expect(component.fontScaleOptions.length).toBeGreaterThan(0);
   });

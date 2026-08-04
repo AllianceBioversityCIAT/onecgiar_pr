@@ -40,17 +40,12 @@ hlm-sidebar {
   --ring: var(--pr-sidebar-accent);
 
   color: var(--pr-sidebar-fg);
+  // CURRENT reference: flat #271862 — no radial glow, no outer drop shadow.
   background-color: var(--pr-sidebar-bg) !important;
-  // Subtle depth at the top edge. Kept low-contrast: rule 11 forbids gradients on large
-  // surfaces, and this reads as a glow rather than a fill.
-  background-image: radial-gradient(135% 85% at 50% -8%, rgba(var(--pr-color-primary-rgb), 0.22) 0%, rgba(var(--pr-color-primary-rgb), 0) 58%) !important;
-  box-shadow:
-    0 22px 50px rgba(25, 21, 36, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background-image: none !important;
+  box-shadow: none;
 
   // Right edge — Spartan uses `border-r` on the fixed container.
-  // Now tracks --sidebar-border instead of a second hardcoded copy of the alpha, which
-  // previously disagreed with the token (0.55 vs 0.10).
   [data-slot='sidebar-container'] {
     border-right: 1px solid var(--pr-sidebar-border) !important;
   }
@@ -79,20 +74,27 @@ hlm-sidebar {
     text-decoration: none;
   }
 
-  // Active item — same indigo lift as the old premium sidebar
+  // Platform / menu rows — 36px, flat. Active = solid brand (CURRENT nav()), not a gradient card.
+  [data-slot='sidebar-menu-button'] {
+    height: 36px !important;
+    min-height: 36px !important;
+    gap: 10px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+  }
+
   [data-slot='sidebar-menu-button'][data-active='true'],
   [data-slot='sidebar-menu-button'][data-active='true']:hover {
-    background-image: linear-gradient(180deg, #6b46e5 0%, #5733c4 100%) !important;
+    background-image: none !important;
+    background-color: var(--pr-sidebar-active) !important; // #6B46E5
     color: #fff !important;
-    font-weight: 600;
-    box-shadow:
-      0 8px 20px rgba(87, 51, 196, 0.45),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.14),
-      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    font-weight: 600 !important;
+    box-shadow: none !important;
   }
 
   [data-slot='sidebar-menu-button']:hover {
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: var(--pr-sidebar-hover);
   }
 
   /**
@@ -254,8 +256,9 @@ hlm-sidebar {
   }
 
   &--active {
-    border-color: var(--pr-sidebar-accent);
-    background: var(--pr-color-primary-700);
+    border: none;
+    background: var(--pr-sidebar-active);
+    box-shadow: 0 2px 6px rgba(107, 70, 229, 0.35);
   }
 }
 
@@ -281,30 +284,66 @@ hlm-sidebar {
   }
 }
 
-/* ── "My" programmes — 44px bordered cards ── */
+/* ── "My" programmes — 44px cards.
+   CURRENT active: solid #6B46E5 + 3px left rail #C4B5FD + white type + white check.
+   Inactive: elevated #33227A + 1px white/10 border. */
 .pr-nav-program-card {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   height: 44px;
   width: 100%;
-  padding: 0 10px;
-  border: 1px solid transparent;
+  padding: 0 12px;
+  border: 1px solid var(--pr-sidebar-border);
   border-radius: 8px;
-  background: transparent;
+  background: var(--pr-sidebar-elevated); // #33227A
+  overflow: hidden;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 
   &:hover {
-    background: var(--pr-color-primary-700);
+    background: #3a2789;
   }
 
   &--active {
-    border-color: var(--pr-sidebar-accent);
-    background: var(--pr-color-primary-700);
+    border: none;
+    padding-left: 14px;
+    background: var(--pr-sidebar-active); // #6B46E5
+    box-shadow: 0 2px 8px rgba(107, 70, 229, 0.35);
+
+    // 3px lilac rail on the left edge (CURRENT :60)
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--pr-sidebar-accent); // #C4B5FD
+    }
+
+    .pr-nav-program-code,
+    .pr-nav-program-name {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .pr-nav-program-dot {
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+    }
+
+    .pr-nav-program-check {
+      color: #ffffff;
+    }
   }
+}
+
+.pr-nav-program-check {
+  flex: none;
+  color: var(--pr-sidebar-accent);
 }
 
 .pr-nav-program-dot {
@@ -330,6 +369,7 @@ hlm-sidebar {
   &--sm {
     font-size: 11px;
     font-weight: 500;
+    color: var(--pr-sidebar-fg-muted);
   }
 }
 
@@ -378,13 +418,29 @@ hlm-sidebar {
   color: var(--pr-sidebar-fg-muted);
 }
 
+/* Wrapper so the bottom fade sits on top of the scroll list (CURRENT :119). */
+.pr-nav-others-wrap {
+  position: relative;
+}
+
 .pr-nav-others-list {
   display: flex;
   flex-direction: column;
   flex: none;
   gap: 1px;
-  max-height: 196px;
+  max-height: 246px;
   overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+.pr-nav-others-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 24px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(39, 24, 98, 0), var(--pr-sidebar-bg));
 }
 
 .pr-nav-program-row {
@@ -478,10 +534,11 @@ hlm-sidebar {
     }
 
     &--active {
-      background-image: linear-gradient(180deg, #6b46e5 0%, #5733c4 100%);
+      background-image: none;
+      background-color: var(--pr-sidebar-active);
       color: #fff;
       font-weight: 600;
-      box-shadow: 0 6px 14px rgba(87, 51, 196, 0.4);
+      box-shadow: none;
     }
   }
 }

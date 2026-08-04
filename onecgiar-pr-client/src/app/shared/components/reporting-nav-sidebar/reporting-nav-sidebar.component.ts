@@ -190,15 +190,19 @@ export class ReportingNavSidebarComponent {
    * Conceptual RFR action links (subtle group label in the template — not a collapsible).
    * Dashboard = full bento; the other three are single-section surfaces.
    */
-  /** Full RFR action list (Dashboard → Planned → Emerging → Centers). */
-  readonly rfrSectionLinks: NavSubLink[] = [
-    { name: 'Dashboard', path: '/result-framework-reporting/home', icon: 'lucideLayoutDashboard' },
-    { name: 'Results planned in your 2026 ToC', path: '/result-framework-reporting/planned-toc', icon: 'lucideClipboardCheck' },
-    { name: 'Report Emerging results', path: '/result-framework-reporting/emerging', icon: 'lucideSparkles' },
-    { name: 'My CGIAR Centers', path: '/result-framework-reporting/centers', icon: 'lucideBuilding2' }
+  /**
+   * Platform links under Results Center that are NOT already covered by the programme / centre
+   * blocks above the divider. CURRENT reference only lists platform tools; Emerging stays because
+   * it has no other entry in the shell.
+   */
+  readonly rfrPlatformLinks: NavSubLink[] = [
+    { name: 'Report Emerging results', path: '/result-framework-reporting/emerging', icon: 'lucideSparkles' }
   ];
 
-  /** Planned ToC path — Science Programs nest under this entry (AoW children live on that surface). */
+  /** Results Center = reporting home (reference label). SP cards deep-link into Planned ToC. */
+  readonly rfrResultsCenterPath = '/result-framework-reporting/home';
+
+  /** Planned ToC path — SP cards and the program shell land here. */
   readonly rfrPlannedPath = '/result-framework-reporting/planned-toc';
 
   /**
@@ -207,12 +211,6 @@ export class ReportingNavSidebarComponent {
    * away" when nothing moved.
    */
   readonly rfrOverviewPath = '/result-framework-reporting/overview';
-
-  /** Section links that sit above the Planned + programs block. */
-  readonly rfrLinksBeforePrograms: NavSubLink[] = [this.rfrSectionLinks[0]];
-
-  /** Section links that sit below the Planned + programs block. */
-  readonly rfrLinksAfterPrograms: NavSubLink[] = this.rfrSectionLinks.slice(2);
 
   /**
    * Primary nav sections + Admin module (admin-only, from extraRoutingApp).

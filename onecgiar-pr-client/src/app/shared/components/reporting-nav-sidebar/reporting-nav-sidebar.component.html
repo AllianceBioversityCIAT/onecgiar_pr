@@ -1,14 +1,20 @@
 <hlm-sidebar collapsible="icon">
-  <div hlmSidebarHeader class="gap-2 p-2">
-    <div class="flex items-center gap-2" [class.justify-between]="!isCollapsed()" [class.justify-center]="isCollapsed()">
-      <div class="flex min-w-0 items-center gap-2 px-1" [class.justify-center]="isCollapsed()">
-        <span class="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold">PR</span>
+  <!-- Header 64px — CURRENT :45-50. PR mark 32×32, PRMS 16/600, Reporting 11/500 muted. -->
+  <div hlmSidebarHeader class="gap-2 px-[12px] py-0">
+    <div
+      class="flex h-[64px] items-center gap-[10px]"
+      [class.justify-between]="!isCollapsed()"
+      [class.justify-center]="isCollapsed()">
+      <div class="flex min-w-0 items-center gap-[10px]" [class.justify-center]="isCollapsed()">
+        <span
+          class="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] text-[13px] font-bold tracking-[0.02em] text-white"
+          style="background-color: rgba(109, 75, 226, 0.42)">
+          PR
+        </span>
         @if (!isCollapsed()) {
-          <div class="min-w-0 leading-tight">
-            <span class="block text-sm font-semibold">PRMS Reporting</span>
-            @if (reportingPhaseLabel()) {
-              <span class="text-sidebar-foreground/60 block truncate text-[10px]">{{ reportingPhaseLabel() }}</span>
-            }
+          <div class="flex min-w-0 flex-col gap-px">
+            <span class="text-[16px] font-semibold leading-none tracking-[-0.01em] text-white">PRMS</span>
+            <span class="text-[11px] font-medium leading-none text-[var(--pr-sidebar-fg-muted)]">Reporting</span>
           </div>
         }
       </div>
@@ -91,7 +97,7 @@
               @if (group.key === 'mine') {
                 <!-- MY SCIENCE PROGRAMS — 44px bordered cards -->
                 <div class="pr-nav-section-label">My science programs</div>
-                <div class="flex flex-col gap-1.5">
+                <div class="flex flex-col gap-[6px]">
                   @for (sp of group.items; track sp.initiativeId) {
                     <a
                       class="pr-nav-program-card"
@@ -104,37 +110,40 @@
                       <span class="pr-nav-program-code">{{ sp.initiativeCode }}</span>
                       <span class="pr-nav-program-name">{{ sp.initiativeShortName || sp.initiativeName }}</span>
                       @if (sp.initiativeId === activeSpId()) {
-                        <!-- Uses --pr-sidebar-accent (the lilac #c4b5fd FOREGROUND), NOT Helm's
-                             --sidebar-accent (the elevated SURFACE #33227a). Those two names differ by
-                             one prefix and mean opposite things: the surface is exactly the active
-                             card's own background, so `text-sidebar-accent` rendered at 1.0000:1 —
-                             an invisible checkmark. On #33227a the lilac measures ~7.4:1. -->
-                        <ng-icon name="lucideCheck" class="shrink-0 text-[13px] text-[var(--pr-sidebar-accent)]" />
+                        <ng-icon name="lucideCheck" class="pr-nav-program-check shrink-0 text-[14px]" />
                       }
                     </a>
                   }
                 </div>
               } @else {
-                <!-- OTHER SCIENCE PROGRAMS / OTHER PROJECTS — 32px toggle + 30px rows -->
+                <!-- OTHER SCIENCE PROGRAMS — toggle + count mono + scroll list + fade -->
                 <button type="button" class="pr-nav-others-toggle" (click)="toggleGroup(group.key)" [attr.aria-expanded]="isGroupOpen(group.key)">
-                  <ng-icon name="lucideChevronDown" class="shrink-0 text-[12px] transition-transform duration-200" [class.-rotate-90]="!isGroupOpen(group.key)" />
                   <span class="pr-nav-section-label pr-nav-section-label--inline">{{ group.label }}</span>
                   <span class="pr-nav-others-count">{{ group.items.length }}</span>
+                  <ng-icon
+                    name="lucideChevronDown"
+                    class="shrink-0 text-[14px] transition-transform duration-200"
+                    [class.rotate-180]="isGroupOpen(group.key)" />
                 </button>
                 @if (isGroupOpen(group.key)) {
-                  <div class="pr-nav-others-list">
-                    @for (sp of group.items; track sp.initiativeId) {
-                      <a
-                        class="pr-nav-program-row"
-                        [class.pr-nav-program-row--active]="sp.initiativeId === activeSpId()"
-                        [routerLink]="rfrPlannedPath"
-                        [queryParams]="{ sp: sp.initiativeId }"
-                        [attr.aria-current]="sp.initiativeId === activeSpId() ? 'page' : null"
-                        [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
-                        <span class="pr-nav-program-dot pr-nav-program-dot--sm" [style.background]="programDotColor(sp.initiativeCode)"></span>
-                        <span class="pr-nav-program-code pr-nav-program-code--sm">{{ sp.initiativeCode }}</span>
-                        <span class="pr-nav-program-name pr-nav-program-name--sm">{{ sp.initiativeShortName || sp.initiativeName }}</span>
-                      </a>
+                  <div class="pr-nav-others-wrap">
+                    <div class="pr-nav-others-list">
+                      @for (sp of group.items; track sp.initiativeId) {
+                        <a
+                          class="pr-nav-program-row"
+                          [class.pr-nav-program-row--active]="sp.initiativeId === activeSpId()"
+                          [routerLink]="rfrPlannedPath"
+                          [queryParams]="{ sp: sp.initiativeId }"
+                          [attr.aria-current]="sp.initiativeId === activeSpId() ? 'page' : null"
+                          [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
+                          <span class="pr-nav-program-dot pr-nav-program-dot--sm" [style.background]="programDotColor(sp.initiativeCode)"></span>
+                          <span class="pr-nav-program-code pr-nav-program-code--sm">{{ sp.initiativeCode }}</span>
+                          <span class="pr-nav-program-name pr-nav-program-name--sm">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                        </a>
+                      }
+                    </div>
+                    @if (group.items.length > 6) {
+                      <div class="pr-nav-others-fade" aria-hidden="true"></div>
                     }
                   </div>
                 }
@@ -183,47 +192,29 @@
         <ul hlmSidebarMenu>
           @for (section of sections(); track section.path) {
             @if (section.path === 'result-framework-reporting') {
-              <!-- Squared group: tag + level-1 children inside one compact container -->
-              <!-- Flat group, no bordered container and no inner label: the reference lists
-                   platform entries at one level (rule 10 — cards separate with a border, not a
-                   frame-inside-a-frame). The RFR links stay because navigation must keep working;
-                   the reference reaches them through the programme, which is Phase 4 (program band). -->
+              <!--
+                Platform is flat in CURRENT (Results Center · Innovation Packages · …).
+                Programmes and Centers already live ABOVE the divider, so we only keep the
+                reporting entry points that are not duplicated: Results Center + Emerging.
+                "Results planned in ToC" and "My CGIAR Centers" were removed from this list —
+                they opened the same surfaces as the SP cards / centers block above.
+              -->
               <li class="list-none" role="group" aria-label="Results framework and reporting">
                 <ul class="pr-nav-rfr-box__menu" hlmSidebarMenu>
-                  @for (link of rfrLinksBeforePrograms; track link.path) {
-                    <li hlmSidebarMenuItem>
-                      <a
-                        hlmSidebarMenuButton
-                        [routerLink]="link.path"
-                        [queryParams]="rfrSectionQueryParams()"
-                        [isActive]="isRfrSectionActive(link.path)"
-                        [tooltip]="link.name">
-                        <ng-icon [name]="link.icon" />
-                        <span>{{ link.name }}</span>
-                      </a>
-                    </li>
-                  }
-
-                  <!-- Programmes moved to the top level (see the SCIENCE PROGRAMS block above),
-                       so this is now a plain link: there is nothing left to expand under it. -->
                   <li hlmSidebarMenuItem>
-                    <!-- queryParams is NOT optional here: without it this link drops ?sp= and the user
-                         leaves the selected programme's context, which also desyncs the programme
-                         highlight above. The two sibling RFR links already carry it. -->
                     <a
                       hlmSidebarMenuButton
-                      [routerLink]="rfrPlannedPath"
+                      [routerLink]="rfrResultsCenterPath"
                       [queryParams]="rfrSectionQueryParams()"
+                      [isActive]="isRfrSectionActive(rfrResultsCenterPath) || isPlannedActive()"
                       (mouseenter)="openIconFlyout('rfr', $event)"
                       (mouseleave)="scheduleCloseIconFlyout()"
-                      [isActive]="isPlannedActive()"
-                      tooltip="Results planned in your 2026 ToC">
-                      <ng-icon name="lucideClipboardCheck" />
-                      <span>Results planned in your 2026 ToC</span>
+                      tooltip="Results Center">
+                      <ng-icon name="lucideLayoutDashboard" />
+                      <span>Results Center</span>
                     </a>
                   </li>
-
-                  @for (link of rfrLinksAfterPrograms; track link.path) {
+                  @for (link of rfrPlatformLinks; track link.path) {
                     <li hlmSidebarMenuItem>
                       <a
                         hlmSidebarMenuButton
@@ -537,7 +528,7 @@
     (mouseleave)="scheduleCloseIconFlyout()"
     role="menu">
     @if (fly.key === 'rfr') {
-      <p class="pr-nav-flyout__title">Results planned in your 2026 ToC</p>
+      <p class="pr-nav-flyout__title">Science programs</p>
       @if (homeSE.isLoadingSPLists()) {
         <p class="m-0 px-2 py-2 text-xs text-white/55">Loading programs…</p>
       } @else {
