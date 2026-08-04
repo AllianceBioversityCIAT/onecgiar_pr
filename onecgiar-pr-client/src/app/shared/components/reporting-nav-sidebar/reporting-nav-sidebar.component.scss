@@ -85,9 +85,9 @@ hlm-sidebar {
   }
 
   // Platform / menu rows — 36px, flat. Active = solid brand (CURRENT nav()).
-  // Icons: CURRENT SVG is 20×20; inactive stroke #A79BD4, active/hover #FFFFFF.
-  // Helm defaults to `[&_ng-icon]:text-[length:--spacing(4)]` which is ~12px with
-  // our 12px root and inherits generic sidebar-fg — override size + muted colour here.
+  // Icons: 20×20, inactive #A79BD4, active/hover #FFFFFF.
+  // Labels: CURRENT nav().weight → 500 inactive / 600 active only (not bold/700).
+  // Force weight on > span too — Manrope can look heavy if a parent 600 leaks in.
   [data-slot='sidebar-menu-button'] {
     height: 36px !important;
     min-height: 36px !important;
@@ -96,8 +96,17 @@ hlm-sidebar {
     padding-right: 10px !important;
     border-radius: 8px !important;
     font-size: 14px !important;
-    font-weight: 500 !important;
+    font-weight: 500 !important; // CURRENT inactive
+    font-synthesis: none;
     color: var(--pr-sidebar-fg) !important; // #E9E4FA
+
+    // Label next to the icon — keep medium, never semibold/bold when idle.
+    > span {
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      line-height: 1.25;
+      color: inherit;
+    }
 
     // ng-icon sizes via --ng-icon__size (host width/height inherit from it).
     > ng-icon {
@@ -125,8 +134,12 @@ hlm-sidebar {
     background-image: none !important;
     background-color: var(--pr-sidebar-active) !important; // #6B46E5
     color: #fff !important;
-    font-weight: 600 !important;
+    font-weight: 600 !important; // CURRENT active only
     box-shadow: none !important;
+
+    > span {
+      font-weight: 600 !important;
+    }
 
     > ng-icon {
       --ng-icon__color: #fff !important;
@@ -134,9 +147,15 @@ hlm-sidebar {
     }
   }
 
-  [data-slot='sidebar-menu-button']:hover {
+  // Hover: colour only — do NOT bump weight (CURRENT keeps 500 until selected).
+  [data-slot='sidebar-menu-button']:hover:not([data-active='true']) {
     background-color: var(--pr-sidebar-hover);
     color: #fff !important;
+    font-weight: 500 !important;
+
+    > span {
+      font-weight: 500 !important;
+    }
 
     > ng-icon {
       --ng-icon__color: #fff !important;
@@ -162,14 +181,21 @@ hlm-sidebar {
     padding-block: 0 !important;
     padding-inline: 6px !important;
     font-size: 11px !important;
-    font-weight: 500;
+    font-weight: 500 !important; // not bold
+    font-synthesis: none;
     line-height: 1.2;
     color: rgba(255, 255, 255, 0.72);
 
+    > span {
+      font-weight: 500 !important;
+    }
+
     ng-icon {
+      --ng-icon__size: 14px !important;
       font-size: 14px !important;
       width: 14px;
       height: 14px;
+      color: var(--pr-sidebar-fg-muted);
     }
 
     img {
@@ -189,8 +215,16 @@ hlm-sidebar {
   a[hlmSidebarMenuSubButton][data-active='true'],
   button[hlmSidebarMenuSubButton][data-active='true'] {
     color: #fff;
-    font-weight: 600;
+    font-weight: 600 !important;
     background: rgba(107, 70, 229, 0.35) !important;
+
+    > span {
+      font-weight: 600 !important;
+    }
+
+    ng-icon {
+      color: #fff;
+    }
   }
 
   [data-slot='sidebar-group-label'] {
