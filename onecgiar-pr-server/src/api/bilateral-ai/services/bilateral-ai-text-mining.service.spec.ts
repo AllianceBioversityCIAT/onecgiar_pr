@@ -73,7 +73,7 @@ describe('BilateralAiTextMiningService', () => {
         keys: ['k1', 'k2'],
         audio_keys: ['a1'],
         text: 'hello',
-        user_id: '42',
+        user_id: 'user@cgiar.org',
       });
 
       expect(httpService.post).toHaveBeenCalledWith(
@@ -83,7 +83,7 @@ describe('BilateralAiTextMiningService', () => {
           keys: ['k1', 'k2'],
           audio_keys: ['a1'],
           text: 'hello',
-          user_id: '42',
+          user_id: 'user@cgiar.org',
         },
         expect.objectContaining({
           headers: {

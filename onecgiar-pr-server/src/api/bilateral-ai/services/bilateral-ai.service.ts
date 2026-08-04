@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { Result, SourceEnum } from '../../results/entities/result.entity';
 import { ResultCreationMethod } from '../../../shared/constants/result-creation-method.enum';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
@@ -57,6 +58,7 @@ export class BilateralAiService {
     private readonly storage: BilateralAiFileStorageService,
     private readonly textMining: BilateralAiTextMiningService,
     private readonly bilateralService: BilateralService,
+    private readonly userRepository: UserRepository,
   ) {}
 
   async createJob(
@@ -280,12 +282,24 @@ export class BilateralAiService {
       error_message: null,
     });
     try {
+      const user = await this.userRepository.findOne({
+        where: { id: job.user_id },
+        select: { email: true },
+      });
+      if (!user?.email) {
+        throw new Error(
+          'The user email could not be resolved for AI processing.',
+        );
+      }
+
       const response = await this.textMining.extract({
         bucketName: job.bucket_name,
         keys: job.document_keys ?? [],
         audio_keys: job.audio_keys ?? [],
         ...(job.text_context ? { text: job.text_context } : {}),
-        user_id: String(job.user_id),
+        user_id: user.email,
+        project_id: job.project_id,
+        program_code: job.program_code,
       });
       const normalized = this.textMining.normalize(response);
       let resultCount = 0;

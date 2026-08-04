@@ -1,5 +1,9 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { env } from 'node:process';
 
@@ -9,10 +13,14 @@ export interface TextMiningRequest {
   audio_keys: string[];
   text?: string;
   user_id?: string;
+  project_id?: number;
+  program_code?: string;
 }
 
 @Injectable()
 export class BilateralAiTextMiningService {
+  private readonly logger = new Logger(BilateralAiTextMiningService.name);
+
   constructor(private readonly http: HttpService) {}
 
   async extract(request: TextMiningRequest): Promise<Record<string, unknown>> {
@@ -26,11 +34,18 @@ export class BilateralAiTextMiningService {
       );
     }
     try {
+      this.logger.log(
+        `Sending payload to bilateral AI text mining: ${JSON.stringify(request)}`,
+      );
+
       const response = await firstValueFrom(
         this.http.post(`${url.replace(/\/$/, '')}/prms/text-mining`, request, {
           timeout: Number(env.BILATERAL_AI_TEXT_MINING_TIMEOUT_MS || 600_000),
           headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
         }),
+      );
+      this.logger.log(
+        `Received response from bilateral AI text mining: ${JSON.stringify(response.data)}`,
       );
       return response.data as Record<string, unknown>;
     } catch (error: any) {
