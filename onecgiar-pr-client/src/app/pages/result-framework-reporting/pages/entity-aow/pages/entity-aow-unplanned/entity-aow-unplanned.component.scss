@@ -39,6 +39,37 @@ p {
   color: var(--pr-color-accents-5);
 }
 
+.entity-aow-unplanned_note {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 20px 25px 0;
+  padding: 12px 15px;
+  border-radius: 9px;
+  background-color: var(--pr-color-blue-50);
+  border: 1px solid var(--pr-color-blue-200);
+}
+
+.entity-aow-unplanned_note_icon {
+  flex: 0 0 auto;
+  font-size: 20px;
+  color: var(--pr-color-blue-500);
+}
+
+.entity-aow-unplanned_note_text {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-blue-800);
+  line-height: 1.5;
+
+  strong {
+    font-weight: 600;
+  }
+}
+
 .entity-aow-unplanned_content_table {
   padding: 25px;
+}
+
+.entity-aow-unplanned_note + .entity-aow-unplanned_content_table {
+  padding-top: 15px;
 }
