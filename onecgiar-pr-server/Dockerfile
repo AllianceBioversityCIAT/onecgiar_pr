@@ -22,7 +22,8 @@ RUN echo "{\"compilerOptions\": {\
     \"emitDecoratorMetadata\": true,\
     \"experimentalDecorators\": true,\
     \"allowSyntheticDefaultImports\": true,\
-    \"target\": \"es2017\",\
+    \"target\": \"es2022\",\
+    \"lib\": [\"es2022\"],\
     \"sourceMap\": true,\
     \"outDir\": \"./dist\",\
     \"baseUrl\": \"./\",\
