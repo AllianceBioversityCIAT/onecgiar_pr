@@ -38,7 +38,6 @@
       </dl>
     }
 
-    <h3 class="bp-card-title">Project</h3>
 
     @if (creationService.isLoadingResult()) {
       <div class="bp-skel-name"></div>
@@ -49,26 +48,26 @@
         <div class="bp-skel-pill bp-skel-pill--sm"></div>
       </div>
     } @else if (creationService.selectedProject(); as project) {
-      <div class="bp-project-name" [title]="project.fullName || project.shortName">
-        {{ project.fullName || project.shortName }}
-      </div>
-
-      @if (project.leadCenter || creationService.selectedPrimarySp()) {
-        <div class="bp-meta-row">
-          @if (project.leadCenter) {
-            <span class="bp-meta-chip bp-meta-chip--center" [title]="project.leadCenter.name">
-              <i class="material-icons-round">apartment</i>
-              <span class="bp-meta-chip-label">{{ project.leadCenter.acronym }}</span>
-            </span>
-          }
-          @if (creationService.selectedPrimarySp(); as primarySp) {
-            <span class="bp-meta-chip bp-meta-chip--program" [title]="primarySp.name">
-              <i class="material-icons-round">hub</i>
-              <span class="bp-meta-chip-label">{{ primarySp.name || primarySp.shortName }}</span>
-            </span>
-          }
+      <dl class="bp-project-fields">
+        <div class="bp-meta-field bp-meta-field--project">
+          <dt class="bp-meta-field-label">Project</dt>
+          <dd class="bp-meta-field-value bp-meta-field-value--project" [title]="project.fullName || project.shortName">
+            {{ project.fullName || project.shortName }}
+          </dd>
         </div>
-      }
+        @if (project.leadCenter) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Center</dt>
+            <dd class="bp-meta-field-value" [title]="project.leadCenter.name">{{ project.leadCenter.acronym }}</dd>
+          </div>
+        }
+        @if (creationService.selectedPrimarySp(); as primarySp) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Program</dt>
+            <dd class="bp-meta-field-value" [title]="primarySp.name">{{ primarySp.name || primarySp.shortName }}</dd>
+          </div>
+        }
+      </dl>
 
       <div class="bp-sp-badges">
         @for (sp of project.sciencePrograms; track sp.programId) {
