@@ -562,6 +562,7 @@ describe('AowHloTableComponent', () => {
     });
 
     it('should not render the search input when showSearch is false', () => {
+      // setInput (not a plain assignment) so the OnPush view is marked dirty and actually re-renders.
       fixture.componentRef.setInput('showSearch', false);
       fixture.detectChanges();
 
@@ -593,6 +594,7 @@ describe('AowHloTableComponent', () => {
     });
 
     it('should suffix the table id with instanceId so two instances stay unique', () => {
+      // setInput (not a plain assignment) so the OnPush view is marked dirty and actually re-renders.
       fixture.componentRef.setInput('instanceId', 'NonExclusive');
       fixture.detectChanges();
 
