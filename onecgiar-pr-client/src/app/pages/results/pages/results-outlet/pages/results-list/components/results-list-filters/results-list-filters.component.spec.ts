@@ -1097,29 +1097,27 @@ describe('ResultsListFiltersComponent', () => {
       expect(component.tempSelectedIndicatorCategories()).toEqual([{ id: 5 }]);
       expect(component.tempSelectedStatus()).toEqual([{ id: 6 }]);
       expect(component.tempSelectedLeadCenters()).toEqual([{ id: 7 }]);
-      expect(component.visible()).toBe(true);
+      expect(component.moreFiltersOpen()).toBe(true);
+      expect(component.visible()).toBe(false);
     });
   });
 
   describe('applyFilters', () => {
     it('should copy temp values to applied filter signals and close drawer', () => {
+      // Phases/indicator categories/status are primary-bar filters bound directly to the
+      // service signals — applyFilters() only owns the "More filters" secondary filters.
       component.tempSelectedClarisaPortfolios.set([{ id: 1 }] as any);
       component.tempSelectedFundingSource.set([{ id: 2 }] as any);
-      component.tempSelectedPhases.set([{ id: 3 }] as any);
       component.tempSelectedSubmittersAdmin.set([{ id: 4 }] as any);
-      component.tempSelectedIndicatorCategories.set([{ id: 5 }] as any);
-      component.tempSelectedStatus.set([{ id: 6 }] as any);
       component.tempSelectedLeadCenters.set([{ id: 7 }] as any);
 
       component.applyFilters();
 
       expect(mockResultsListFilterService.selectedClarisaPortfolios()).toEqual([{ id: 1 }]);
       expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 2 }]);
-      expect(mockResultsListFilterService.selectedPhases()).toEqual([{ id: 3 }]);
       expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([{ id: 4 }]);
-      expect(mockResultsListFilterService.selectedIndicatorCategories()).toEqual([{ id: 5 }]);
-      expect(mockResultsListFilterService.selectedStatus()).toEqual([{ id: 6 }]);
       expect(mockResultsListFilterService.selectedLeadCenters()).toEqual([{ id: 7 }]);
+      expect(component.moreFiltersOpen()).toBe(false);
       expect(component.visible()).toBe(false);
     });
   });

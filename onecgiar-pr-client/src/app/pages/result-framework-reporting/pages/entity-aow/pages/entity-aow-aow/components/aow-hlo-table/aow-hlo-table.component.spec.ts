@@ -562,7 +562,7 @@ describe('AowHloTableComponent', () => {
     });
 
     it('should not render the search input when showSearch is false', () => {
-      component.showSearch = false;
+      fixture.componentRef.setInput('showSearch', false);
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('#aowIndicatorSearchInput')).toBeNull();
@@ -570,7 +570,7 @@ describe('AowHloTableComponent', () => {
 
     it('should not render the report-result modal when renderOverlays is false', () => {
       mockEntityAowService.showReportResultModal.set(true);
-      component.renderOverlays = false;
+      fixture.componentRef.setInput('renderOverlays', false);
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('app-aow-hlo-create-modal')).toBeNull();
@@ -578,7 +578,7 @@ describe('AowHloTableComponent', () => {
 
     it('should not render the view-results drawer when renderOverlays is false', () => {
       mockEntityAowService.showViewResultDrawer.set(true);
-      component.renderOverlays = false;
+      fixture.componentRef.setInput('renderOverlays', false);
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('app-aow-view-results-drawer')).toBeNull();
@@ -586,14 +586,14 @@ describe('AowHloTableComponent', () => {
 
     it('should not render the target-details drawer when renderOverlays is false', () => {
       mockEntityAowService.showTargetDetailsDrawer.set(true);
-      component.renderOverlays = false;
+      fixture.componentRef.setInput('renderOverlays', false);
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('app-aow-target-details-drawer')).toBeNull();
     });
 
     it('should suffix the table id with instanceId so two instances stay unique', () => {
-      component.instanceId = 'NonExclusive';
+      fixture.componentRef.setInput('instanceId', 'NonExclusive');
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('#tocResultsByAowIdTableNonExclusive')).toBeTruthy();
