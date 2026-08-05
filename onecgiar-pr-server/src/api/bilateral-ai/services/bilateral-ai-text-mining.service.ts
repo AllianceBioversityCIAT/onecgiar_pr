@@ -52,6 +52,9 @@ export class BilateralAiTextMiningService {
       const status = error?.response?.status;
       const message =
         error?.response?.data?.detail || 'Text mining service request failed.';
+      this.logger.error(
+        `Bilateral AI text mining request failed (host: ${url}, networkErrorCode: ${error?.code ?? 'n/a'}, httpStatus: ${status ?? 'n/a'}, axiosMessage: ${error?.message ?? 'n/a'}).`,
+      );
       const failure = new Error(message);
       (failure as any).status = status;
       throw failure;

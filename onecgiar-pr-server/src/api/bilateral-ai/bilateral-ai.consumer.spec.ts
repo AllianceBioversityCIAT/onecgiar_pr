@@ -86,7 +86,7 @@ describe('BilateralAiConsumer', () => {
       await consumer.process({ jobId: 'err-job' }, context);
 
       expect(errorSpy).toHaveBeenCalledWith(
-        'Bilateral AI job err-job will be retried (attempt 0/3).',
+        'Bilateral AI job err-job will be retried (attempt 0/3): AI service error',
       );
     });
   });
