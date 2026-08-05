@@ -120,7 +120,12 @@ describe('BilateralAiService (unit)', () => {
       stubs.queue.isEnabled.mockReturnValue(false);
 
       await expect(
-        service.createJob({ project_id: 1, center_id: 7, program_code: 'WLE' }, [], [], user),
+        service.createJob(
+          { project_id: 1, center_id: 7, program_code: 'WLE' },
+          [],
+          [],
+          user,
+        ),
       ).rejects.toThrow(ServiceUnavailableException);
     });
 
@@ -179,7 +184,12 @@ describe('BilateralAiService (unit)', () => {
       stubs.jobRepository.save.mockResolvedValue({ job_id: 'fail-job' });
 
       await expect(
-        service.createJob({ project_id: 1, center_id: 7, program_code: 'WLE' }, [], [], user),
+        service.createJob(
+          { project_id: 1, center_id: 7, program_code: 'WLE' },
+          [],
+          [],
+          user,
+        ),
       ).rejects.toThrow('Queue unavailable');
 
       expect(stubs.jobRepository.update).toHaveBeenCalledWith('fail-job', {

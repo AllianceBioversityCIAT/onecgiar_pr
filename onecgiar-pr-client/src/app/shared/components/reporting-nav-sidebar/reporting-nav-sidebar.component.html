@@ -70,7 +70,7 @@
           @for (center of getMyCenters(); track center.center_id) {
             <a
               class="pr-nav-rail-btn"
-              routerLink="/result-framework-reporting/centers"
+              [routerLink]="['/bilateral', center.center_acronym, 'home']"
               routerLinkActive
               #rlaRailCenter="routerLinkActive"
               [class.pr-nav-rail-btn--active]="rlaRailCenter.isActive"
@@ -159,7 +159,7 @@
           @for (center of getMyCenters(); track center.center_id) {
             <a
               class="pr-nav-program-card pr-nav-center-card"
-              routerLink="/result-framework-reporting/centers"
+              [routerLink]="['/bilateral', center.center_acronym, 'home']"
               routerLinkActive
               #rlaCenter="routerLinkActive"
               [class.pr-nav-program-card--active]="rlaCenter.isActive"
