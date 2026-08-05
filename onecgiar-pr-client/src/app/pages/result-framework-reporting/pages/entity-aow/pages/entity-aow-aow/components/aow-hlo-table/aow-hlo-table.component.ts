@@ -47,14 +47,29 @@ export class AowHloTableComponent {
   entityAowService = inject(EntityAowService);
   resultLevelService = inject(ResultLevelService);
 
-  @Input() tableType: 'outputs' | 'outcomes' | '2030-outcomes' | 'intermediate-outcomes' = 'outputs';
+  @Input() tableType:
+    | 'outputs'
+    | 'outcomes'
+    | 'outcomes-non-exclusive'
+    | '2030-outcomes'
+    | 'intermediate-outcomes' = 'outputs';
+
+  // Set to false on secondary instances: the search box and the modal/drawers below are driven by
+  // shared service signals, so rendering them twice would duplicate the input and stack the dialogs.
+  @Input() showSearch = true;
+  @Input() renderOverlays = true;
+
+  // Suffix appended to the table and column header ids so two instances on the same page stay unique.
+  @Input() instanceId = '';
 
   tableData = computed(() => {
     switch (this.tableType) {
       case 'outputs':
         return this.entityAowService.tocResultsOutputsByAowId();
       case 'outcomes':
-        return this.entityAowService.tocResultsOutcomesByAowId();
+        return this.entityAowService.tocResultsOutcomesExclusiveByAowId();
+      case 'outcomes-non-exclusive':
+        return this.entityAowService.tocResultsOutcomesNonExclusiveByAowId();
       case '2030-outcomes':
         return this.entityAowService.tocResults2030Outcomes();
       case 'intermediate-outcomes':
@@ -116,6 +131,8 @@ export class AowHloTableComponent {
     switch (this.tableType) {
       case 'outcomes':
         return 'There are no Intermediate Outcomes indicators found.';
+      case 'outcomes-non-exclusive':
+        return 'There are no Intermediate Outcomes shared with other Areas of Work.';
       case '2030-outcomes':
         return 'There are no 2030 Outcomes indicators configured for this program in the current reporting phase.';
       case 'intermediate-outcomes':
