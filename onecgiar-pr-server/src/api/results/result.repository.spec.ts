@@ -124,6 +124,19 @@ describe('ResultRepository (unit)', () => {
     ).rejects.toMatchObject({ status: HttpStatus.INTERNAL_SERVER_ERROR });
   });
 
+  it('includes source, result type, and reporting year in the bilateral common-fields query', async () => {
+    queryMock.mockResolvedValueOnce([{ id: 8731 }]);
+
+    await repo.getCommonFieldsBilateralResultById(8731);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.source');
+    expect(sql).toContain('v.phase_year AS reporting_year');
+    expect(sql).toContain('LEFT JOIN version v');
+    expect(sql).toContain('rt.name AS result_category');
+    expect(params).toEqual([8731]);
+  });
+
   it('includes AI provenance fields in bilateral center results ordered newest first', async () => {
     queryMock.mockResolvedValueOnce([]);
 

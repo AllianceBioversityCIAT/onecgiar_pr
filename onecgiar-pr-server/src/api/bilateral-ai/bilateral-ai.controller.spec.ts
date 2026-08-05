@@ -63,6 +63,7 @@ describe('BilateralAiController', () => {
     it('should delegate to service.createJob with documents and audio', async () => {
       const dto: CreateBilateralAiJobDto = {
         project_id: 10,
+        center_id: 7,
         program_code: 'WLE',
       };
       const documents = [{ originalname: 'doc.pdf', buffer: Buffer.from('') }];
@@ -86,6 +87,7 @@ describe('BilateralAiController', () => {
     it('should pass empty arrays when files are undefined', async () => {
       const dto: CreateBilateralAiJobDto = {
         project_id: 10,
+        center_id: 7,
         program_code: 'WLE',
       };
 
@@ -124,10 +126,10 @@ describe('BilateralAiController', () => {
   });
 
   describe('listDrafts', () => {
-    it('should delegate to service.listDrafts with userId', async () => {
-      const result = await controller.listDrafts(user);
+    it('should delegate to service.listDrafts with centerId and userId', async () => {
+      const result = await controller.listDrafts(7, user);
 
-      expect(service.listDrafts).toHaveBeenCalledWith(user.id);
+      expect(service.listDrafts).toHaveBeenCalledWith(user.id, 7);
       expect(result).toEqual([]);
     });
   });

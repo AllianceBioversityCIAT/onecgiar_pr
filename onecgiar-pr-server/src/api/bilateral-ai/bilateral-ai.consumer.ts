@@ -18,17 +18,18 @@ export class BilateralAiConsumer {
     try {
       await this.bilateralAiService.processJob(payload.jobId);
       context.getChannelRef().ack(context.getMessage());
-    } catch {
+    } catch (error) {
       const job = await this.bilateralAiService.getJobRaw(payload.jobId);
       const attempts = job?.attempts ?? 0;
+      const reason = error instanceof Error ? error.message : 'Unknown error';
       if (attempts < maxRetries) {
         this.logger.error(
-          `Bilateral AI job ${payload.jobId} will be retried (attempt ${attempts}/${maxRetries}).`,
+          `Bilateral AI job ${payload.jobId} will be retried (attempt ${attempts}/${maxRetries}): ${reason}`,
         );
         context.getChannelRef().nack(context.getMessage(), false, true);
       } else {
         this.logger.error(
-          `Bilateral AI job ${payload.jobId} failed after ${maxRetries} attempts. Discarding.`,
+          `Bilateral AI job ${payload.jobId} failed after ${maxRetries} attempts. Discarding. Last error: ${reason}`,
         );
         context.getChannelRef().ack(context.getMessage());
       }

@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject, OnDestroy } from '@angular/core';
+import { Injectable, signal, computed, inject, effect, OnDestroy } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Router } from '@angular/router';
 import { PrToastService } from '../../../shared/components/pr-toast/pr-toast.service';
@@ -50,6 +50,19 @@ export class BilateralAiService implements OnDestroy {
     if (count === 0) return '';
     return count > 9 ? '9+' : String(count);
   });
+
+  constructor() {
+    // Re-fetch drafts whenever the resolved center changes — covers both the
+    // initial page-load race (center context resolves asynchronously after
+    // this service's first loadAllDrafts() call) and switching centers
+    // mid-session without a full reload.
+    effect(() => {
+      const centerId = this.ctx.centerInstitutionId();
+      if (centerId != null) {
+        this.loadAllDrafts();
+      }
+    });
+  }
 
   ngOnDestroy(): void {
     this.stopPolling();
@@ -134,9 +147,12 @@ export class BilateralAiService implements OnDestroy {
   // ── Draft CRUD ──────────────────────────────────────────────────────
 
   loadAllDrafts(): void {
+    const centerId = this.ctx.centerInstitutionId();
+    if (centerId == null) return;
+
     this.loadProjectNames();
     this.loadInitiativeNames();
-    this.bilateralApi.GET_bilateralAiDrafts().subscribe({
+    this.bilateralApi.GET_bilateralAiDrafts(centerId).subscribe({
       next: (data: any) => {
         this.draftList.set(data ?? []);
         this.isDraftListLoaded.set(true);

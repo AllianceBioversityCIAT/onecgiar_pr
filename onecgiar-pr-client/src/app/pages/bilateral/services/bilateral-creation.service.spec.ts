@@ -202,6 +202,10 @@ describe('BilateralCreationService', () => {
           nutrition_tag_level_id: 3,
           environmental_biodiversity_tag_level_id: 0,
           poverty_tag_level_id: 1,
+          result_code: 'BEANS4WOMEN-001',
+          source: 'API',
+          result_category: 'Knowledge product',
+          reporting_year: '2025',
         },
         impactAreaScores: [
           { impact_area: 'Gender', impact_area_score_id: 11 },
@@ -231,6 +235,17 @@ describe('BilateralCreationService', () => {
       });
       expect(service.resultDacSubScores()).toEqual({ gender: [11, 12], climate_change: [13] });
       expect(service.isLoadingResult()).toBe(false);
+      expect(service.resultCode()).toBe('BEANS4WOMEN-001');
+      expect(service.isW3Bilateral()).toBe(true);
+      expect(service.resultTypeName()).toBe('Knowledge product');
+      expect(service.reportingYear()).toBe(2025);
+    });
+
+    it('treats a non-API source as not W3/Bilateral', () => {
+      respondWith({ commonFields: { source: 'Result' } });
+      service.loadResult(10);
+
+      expect(service.isW3Bilateral()).toBe(false);
     });
 
     it('falls back to empty values for a bare common-fields payload', () => {

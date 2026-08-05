@@ -2891,6 +2891,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ci_lead.acronym AS lead_center_name,
         r.id,
         r.result_code,
+        r.source,
         r.external_submitter,
         CONCAT(u.first_name, ' ', u.last_name) AS submitter_name,
         r.result_level_id,
@@ -2907,11 +2908,14 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.climate_change_tag_level_id,
         r.nutrition_tag_level_id,
         r.environmental_biodiversity_tag_level_id,
-        r.poverty_tag_level_id
+        r.poverty_tag_level_id,
+        v.phase_year AS reporting_year
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
         AND rt.is_active = 1
+      LEFT JOIN version v
+        ON v.id = r.version_id
       LEFT JOIN results_by_projects rbp
         ON r.id = rbp.result_id
         AND rbp.is_active = 1

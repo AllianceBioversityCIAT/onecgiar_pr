@@ -1,16 +1,45 @@
 <div class="bp-dashboard">
-  <div class="bp-dashboard-card">
-    <h3 class="bp-card-title">
-      Project
-      @if (creationService.isAiGenerated()) {
-        <span class="bp-ai-badge">
-          <i class="material-icons-round bp-ai-badge-icon">auto_awesome</i>
-          AI Result
-        </span>
-      }
-    </h3>
+  <div class="bp-dashboard-card bp-project-card">
+    @if (creationService.isAiGenerated()) {
+      <span class="bp-ai-badge" title="This result was generated with AI">
+        <i class="material-icons-round bp-ai-badge-icon">auto_awesome</i>
+        AI Result
+      </span>
+    }
+
     @if (creationService.isLoadingResult()) {
-      <div class="bp-skel-code"></div>
+      <div class="bp-skel-pill bp-skel-pill--sm"></div>
+    } @else if (creationService.resultCode() || creationService.resultTypeName() || creationService.reportingYear() || creationService.isW3Bilateral()) {
+      <dl class="bp-result-meta">
+        @if (creationService.resultCode()) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Result code</dt>
+            <dd class="bp-meta-field-value bp-meta-field-value--code">{{ creationService.resultCode() }}</dd>
+          </div>
+        }
+        @if (creationService.resultTypeName()) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Result type</dt>
+            <dd class="bp-meta-field-value">{{ creationService.resultTypeName() }}</dd>
+          </div>
+        }
+        @if (creationService.reportingYear()) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Reporting phase</dt>
+            <dd class="bp-meta-field-value">{{ creationService.reportingYear() }}</dd>
+          </div>
+        }
+        @if (creationService.isW3Bilateral()) {
+          <div class="bp-meta-field" title="Source: API">
+            <dt class="bp-meta-field-label">Funding source</dt>
+            <dd class="bp-meta-field-value bp-meta-field-value--w3">W3 / Bilateral</dd>
+          </div>
+        }
+      </dl>
+    }
+
+
+    @if (creationService.isLoadingResult()) {
       <div class="bp-skel-name"></div>
       <div class="bp-skel-name bp-skel-name--sm"></div>
       <div class="bp-sp-badges">
@@ -19,11 +48,27 @@
         <div class="bp-skel-pill bp-skel-pill--sm"></div>
       </div>
     } @else if (creationService.selectedProject(); as project) {
-      <div class="bp-project-code">{{ project.shortName }}</div>
-      <div class="bp-project-name">{{ project.fullName }}</div>
-      @if (project.leadCenter) {
-        <div class="bp-lead-center">{{ project.leadCenter.acronym }}</div>
-      }
+      <dl class="bp-project-fields">
+        <div class="bp-meta-field bp-meta-field--project">
+          <dt class="bp-meta-field-label">Project</dt>
+          <dd class="bp-meta-field-value bp-meta-field-value--project" [title]="project.fullName || project.shortName">
+            {{ project.fullName || project.shortName }}
+          </dd>
+        </div>
+        @if (project.leadCenter) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Center</dt>
+            <dd class="bp-meta-field-value" [title]="project.leadCenter.name">{{ project.leadCenter.acronym }}</dd>
+          </div>
+        }
+        @if (creationService.selectedPrimarySp(); as primarySp) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Program</dt>
+            <dd class="bp-meta-field-value" [title]="primarySp.name">{{ primarySp.name || primarySp.shortName }}</dd>
+          </div>
+        }
+      </dl>
+
       <div class="bp-sp-badges">
         @for (sp of project.sciencePrograms; track sp.programId) {
           <span class="bp-sp-badge" [class.bp-sp-badge--primary]="creationService.selectedPrimarySp()?.programId === sp.programId">

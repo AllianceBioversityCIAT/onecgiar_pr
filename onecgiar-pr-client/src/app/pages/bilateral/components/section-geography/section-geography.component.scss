@@ -15,6 +15,17 @@
   z-index: 10;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 
+  // Every .sg-card shares the same z-index, so they tie within .sg-fields' stacking
+  // context and paint order falls back to DOM order — a later card then paints over
+  // an earlier card's ENTIRE subtree, including a dropdown panel nested inside it no
+  // matter how high that panel's own z-index is (it's trapped inside this card's
+  // stacking context). Raising z-index on the card that currently has focus — the
+  // one whose dropdown is open, via the same :focus-within already driving the
+  // dropdown's own visibility — lets it (and its dropdown) rise above sibling cards.
+  &:focus-within {
+    z-index: 30;
+  }
+
   &__header {
     display: flex;
     align-items: center;

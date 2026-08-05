@@ -21,8 +21,8 @@ export class BilateralAiJob {
   @Column({ name: 'user_id', type: 'int' })
   user_id: number;
 
-  @Column({ name: 'center_id', type: 'int', nullable: true })
-  center_id: number | null;
+  @Column({ name: 'center_id', type: 'int' })
+  center_id: number;
 
   @Column({ name: 'project_id', type: 'int' })
   project_id: number;

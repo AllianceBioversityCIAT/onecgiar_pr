@@ -61,8 +61,12 @@ export class BilateralAiController {
   }
 
   @Get('drafts')
-  listDrafts(@UserToken() user: TokenDto) {
-    return this.bilateralAiService.listDrafts(user.id);
+  @ApiQuery({ name: 'centerId', required: true, type: Number })
+  listDrafts(
+    @Query('centerId', ParseIntPipe) centerId: number,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.bilateralAiService.listDrafts(user.id, centerId);
   }
 
   @Get('drafts/:draftId')

@@ -1,6 +1,6 @@
 .bp-dashboard {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 7fr 3fr;
   gap: 18px;
   margin-bottom: 28px;
 
@@ -10,6 +10,12 @@
 }
 
 .bp-dashboard-card {
+  // Grid items default to `min-width: auto`, which lets their min-content (here, the
+  // un-wrapped `.bp-project-name`) override the `1fr 1fr` split and grow this card
+  // past its track — squeezing the actions card and overflowing the whole row past
+  // `.bilateral-creator`'s fixed width. `min-width: 0` lets `1fr` actually apply and
+  // lets `.bp-project-name`'s ellipsis truncate instead of forcing extra width.
+  min-width: 0;
   background: #FFFFFF;
   border: 1px solid #E8ECEE;
   border-radius: 10px;
@@ -51,26 +57,96 @@
   }
 }
 
-.bp-project-code {
-  font-family: 'JetBrains Mono', 'SF Mono', monospace;
-  font-size: 17px;
+.bp-project-card {
+  position: relative;
+}
+
+// A labeled metadata strip (code / type / phase / funding source) — read as a data
+// record (label above value, thin dividers) rather than a row of colorful chips.
+// The label itself disambiguates each field, which reads as more deliberate/precise
+// than color-coding and doesn't rely on color perception to tell fields apart.
+.bp-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  margin: 0 0 14px;
+  padding-right: 90px;
+}
+
+.bp-meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 14px;
+  border-left: 1px solid var(--pr-color-accents-2, #E8ECEE);
+
+  &:first-child {
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+.bp-meta-field-label {
+  margin: 0;
+  font-size: 9px;
   font-weight: 700;
-  color: var(--pr-color-primary-600);
-  letter-spacing: -0.3px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--pr-color-accents-4, #888);
 }
 
-.bp-project-name {
-  font-size: 12px;
-  color: #607D8B;
-  margin-top: 4px;
-  line-height: 1.4;
+.bp-meta-field-value {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pr-color-secondary-400);
+  white-space: nowrap;
+
+  // Identifier — monospace, the academic-record convention for a code/accession number.
+  &--code {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  }
+
+  // The one field worth a color, since it's an operational distinction (W3 vs W1/W2)
+  // reviewers act on — reuses the app's own brand accent instead of a new hue.
+  &--w3 {
+    color: var(--pr-color-primary-500);
+  }
+
+  // The project name is the card's primary identifier — same label-above-value shape
+  // as its siblings, just larger/bolder so it still reads as the lead field.
+  &--project {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--pr-color-primary-600);
+    letter-spacing: -0.2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
-.bp-lead-center {
-  font-size: 12px;
-  color: #90A4AE;
-  margin-top: 4px;
-  font-weight: 500;
+// Project / Center / Program as a labeled list — same label-above-value shape as
+// .bp-result-meta above, stacked instead of side-by-side so each field gets full
+// width for its value (the project name in particular needs the room to read).
+.bp-project-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.bp-project-fields .bp-meta-field {
+  padding: 0;
+  border-left: none;
+
+  &:not(:first-child) {
+    padding-top: 10px;
+    border-top: 1px solid var(--pr-color-accents-2, #E8ECEE);
+  }
+}
+
+.bp-meta-field-value--project {
+  white-space: normal;
 }
 
 .bp-sp-badges {
@@ -117,7 +193,6 @@
   100% { background-position: 200% 0; }
 }
 
-.bp-skel-code,
 .bp-skel-name,
 .bp-skel-pill {
   border-radius: 4px;
@@ -129,19 +204,16 @@
   animation: bp-skel-shimmer 1.8s ease-in-out infinite;
 }
 
-.bp-skel-code {
-  width: 110px;
-  height: 20px;
-}
-
 .bp-skel-name {
   width: 100%;
-  height: 12px;
+  height: 16px;
   margin-top: 8px;
 
   &--sm {
-    width: 60%;
-    margin-top: 6px;
+    width: 40%;
+    height: 22px;
+    border-radius: 14px;
+    margin-top: 10px;
   }
 }
 
@@ -156,6 +228,9 @@
 }
 
 .bp-ai-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -165,10 +240,12 @@
   font-weight: 600;
   letter-spacing: 0.3px;
   text-transform: none;
-  background: linear-gradient(135deg, #7C3AED, #A855F7);
+  // Same emerald gradient as the AI upload/text-mining flow's submit button
+  // (bilateral-ai-upload.component.scss `.aiu-submit-btn`) — one consistent
+  // "AI" color across the module instead of an unrelated purple.
+  background: linear-gradient(135deg, #047857, #059669);
   color: #FFFFFF;
-  box-shadow: 0 2px 7px rgba(124, 58, 237, 0.3);
-  margin-left: 4px;
+  box-shadow: 0 2px 7px rgba(5, 150, 105, 0.3);
 }
 
 .bp-ai-badge-icon {

@@ -293,7 +293,7 @@ export class BilateralAiUploadComponent implements OnDestroy {
 
     const project = this.creationService.selectedProject();
     const sp = this.creationService.selectedPrimarySp();
-    if (!project?.id || !sp?.programCode) {
+    if (!project?.id || !sp?.programCode || !project?.leadCenter?.id) {
       this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Project and Science Program required.' });
       return;
     }
@@ -303,6 +303,7 @@ export class BilateralAiUploadComponent implements OnDestroy {
 
     const formData = new FormData();
     formData.append('project_id', String(project.id));
+    formData.append('center_id', String(project.leadCenter.id));
     formData.append('program_code', sp.programCode);
     if (this.contextText().trim()) {
       formData.append('text', this.contextText().trim());

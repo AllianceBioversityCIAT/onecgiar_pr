@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -42,6 +43,8 @@ const TYPE_BY_INDICATOR: Record<string, { type: number; level: number }> = {
 
 @Injectable()
 export class BilateralAiService {
+  private readonly logger = new Logger(BilateralAiService.name);
+
   constructor(
     @InjectRepository(BilateralAiJob)
     private readonly jobRepository: Repository<BilateralAiJob>,
@@ -87,7 +90,7 @@ export class BilateralAiService {
       this.jobRepository.create({
         job_id: jobId,
         user_id: user.id,
-        center_id: null,
+        center_id: dto.center_id,
         project_id: dto.project_id,
         program_code: dto.program_code,
         bucket_name: this.storage.getBucketName(),
@@ -153,9 +156,12 @@ export class BilateralAiService {
     return this.jobRepository.findOne({ where: { job_id: jobId } });
   }
 
-  async listDrafts(userId: number) {
+  async listDrafts(userId: number, centerId: number) {
     return this.draftRepository.find({
-      where: { is_discarded: false, job: { user_id: userId } },
+      where: {
+        is_discarded: false,
+        job: { user_id: userId, center_id: centerId },
+      },
       relations: { job: true, result: true },
       order: { created_date: 'DESC' },
     });
@@ -292,6 +298,9 @@ export class BilateralAiService {
         );
       }
 
+      this.logger.log(
+        `Sending job ${jobId} to bilateral AI text mining (bucket: ${job.bucket_name}, documents: ${job.document_keys?.length ?? 0}, audio: ${job.audio_keys?.length ?? 0}).`,
+      );
       const response = await this.textMining.extract({
         bucketName: job.bucket_name,
         keys: job.document_keys ?? [],

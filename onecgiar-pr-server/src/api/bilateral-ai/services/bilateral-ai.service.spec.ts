@@ -120,13 +120,13 @@ describe('BilateralAiService (unit)', () => {
       stubs.queue.isEnabled.mockReturnValue(false);
 
       await expect(
-        service.createJob({ project_id: 1, program_code: 'WLE' }, [], [], user),
+        service.createJob({ project_id: 1, center_id: 7, program_code: 'WLE' }, [], [], user),
       ).rejects.toThrow(ServiceUnavailableException);
     });
 
     it('should validate sources before creating job', async () => {
       const { service, stubs } = makeService();
-      const dto = { project_id: 1, program_code: 'WLE' };
+      const dto = { project_id: 1, center_id: 7, program_code: 'WLE' };
       const docs = [{ originalname: 'doc.pdf' }];
       const audio = [];
 
@@ -147,7 +147,7 @@ describe('BilateralAiService (unit)', () => {
       ]);
 
       await service.createJob(
-        { project_id: 1, program_code: 'WLE' },
+        { project_id: 1, center_id: 7, program_code: 'WLE' },
         [{ originalname: 'doc.pdf' }],
         [{ originalname: 'audio.mp3' }],
         user,
@@ -162,7 +162,7 @@ describe('BilateralAiService (unit)', () => {
       stubs.jobRepository.save.mockResolvedValue({ job_id: 'saved-job' });
 
       await service.createJob(
-        { project_id: 1, program_code: 'WLE' },
+        { project_id: 1, center_id: 7, program_code: 'WLE' },
         [],
         [],
         user,
@@ -179,7 +179,7 @@ describe('BilateralAiService (unit)', () => {
       stubs.jobRepository.save.mockResolvedValue({ job_id: 'fail-job' });
 
       await expect(
-        service.createJob({ project_id: 1, program_code: 'WLE' }, [], [], user),
+        service.createJob({ project_id: 1, center_id: 7, program_code: 'WLE' }, [], [], user),
       ).rejects.toThrow('Queue unavailable');
 
       expect(stubs.jobRepository.update).toHaveBeenCalledWith('fail-job', {
@@ -194,7 +194,7 @@ describe('BilateralAiService (unit)', () => {
       const { service, stubs } = makeService();
 
       await service.createJob(
-        { project_id: 1, program_code: 'WLE', text: '  hello  ' },
+        { project_id: 1, center_id: 7, program_code: 'WLE', text: '  hello  ' },
         [],
         [],
         user,
@@ -215,7 +215,7 @@ describe('BilateralAiService (unit)', () => {
       });
 
       const result = await service.createJob(
-        { project_id: 1, program_code: 'WLE' },
+        { project_id: 1, center_id: 7, program_code: 'WLE' },
         [],
         [],
         user,
@@ -329,18 +329,36 @@ describe('BilateralAiService (unit)', () => {
   });
 
   describe('listDrafts', () => {
-    it('should return non-discarded drafts for the user', async () => {
+    it('should return non-discarded drafts for the user scoped to the given center', async () => {
       const { service, stubs } = makeService();
       stubs.draftRepository.find.mockResolvedValue([{ id: 1 }]);
 
-      const result = await service.listDrafts(42);
+      const result = await service.listDrafts(42, 7);
 
       expect(stubs.draftRepository.find).toHaveBeenCalledWith({
-        where: { is_discarded: false, job: { user_id: 42 } },
+        where: {
+          is_discarded: false,
+          job: { user_id: 42, center_id: 7 },
+        },
         relations: { job: true, result: true },
         order: { created_date: 'DESC' },
       });
       expect(result).toEqual([{ id: 1 }]);
+    });
+
+    it('should scope the query to a different center independently', async () => {
+      const { service, stubs } = makeService();
+      stubs.draftRepository.find.mockResolvedValue([]);
+
+      await service.listDrafts(42, 99);
+
+      expect(stubs.draftRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            job: { user_id: 42, center_id: 99 },
+          }),
+        }),
+      );
     });
   });
 
