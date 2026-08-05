@@ -23,6 +23,14 @@ export class BilateralCreationService {
   isLoadingProjects = signal(false);
   isLoadingResult = signal(false);
   isAiGenerated = signal(false);
+  /** Human-facing result identifier (`result_code`), distinct from the internal `id`. */
+  resultCode = signal<string | number | null>(null);
+  /** True when `source = SourceEnum.Bilateral` ('API') — a W3/bilateral result, vs. a W1/W2 'Result' one. */
+  isW3Bilateral = signal(false);
+  /** Result type label (e.g. "Knowledge product"), sourced from `result_category`. */
+  resultTypeName = signal<string | null>(null);
+  /** Reporting phase year the result belongs to. */
+  reportingYear = signal<number | null>(null);
   resultTitle = signal('');
   resultDescription = signal('');
   resultLeadContact = signal('');
@@ -51,6 +59,10 @@ export class BilateralCreationService {
   /** Clears editor signals so a previous result cannot leak into a new one. */
   clearEditorState(): void {
     this.isAiGenerated.set(false);
+    this.resultCode.set(null);
+    this.isW3Bilateral.set(false);
+    this.resultTypeName.set(null);
+    this.reportingYear.set(null);
     this.resultTitle.set('');
     this.resultDescription.set('');
     this.resultLeadContact.set('');
@@ -80,8 +92,16 @@ export class BilateralCreationService {
             this.currentResultId.set(cf.id);
             this.api.resultsSE.currentResultId = cf.id;
           }
+          // `is_ai_generated` comes from a SQL CASE literal and can arrive as the string '0',
+          // which `!!` treats as truthy — compare numerically instead.
           this.isAiGenerated.set(
-            !!cf.is_ai_generated || cf.creation_method === 'AI',
+            Number(cf.is_ai_generated) === 1 || cf.creation_method === 'AI',
+          );
+          this.resultCode.set(cf.result_code ?? null);
+          this.isW3Bilateral.set(cf.source === 'API');
+          this.resultTypeName.set(cf.result_category ?? null);
+          this.reportingYear.set(
+            cf.reporting_year != null ? Number(cf.reporting_year) : null,
           );
           this.resultTitle.set(cf.result_title ?? '');
           this.resultDescription.set(cf.result_description ?? '');
