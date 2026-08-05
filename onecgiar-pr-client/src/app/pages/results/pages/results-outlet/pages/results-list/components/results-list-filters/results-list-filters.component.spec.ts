@@ -1097,30 +1097,46 @@ describe('ResultsListFiltersComponent', () => {
       expect(component.tempSelectedIndicatorCategories()).toEqual([{ id: 5 }]);
       expect(component.tempSelectedStatus()).toEqual([{ id: 6 }]);
       expect(component.tempSelectedLeadCenters()).toEqual([{ id: 7 }]);
-      expect(component.visible()).toBe(true);
+      expect(component.moreFiltersOpen()).toBe(true);
     });
   });
 
   describe('applyFilters', () => {
-    it('should copy temp values to applied filter signals and close drawer', () => {
+    it('should copy secondary temp values to applied filter signals and close the More filters popover', () => {
       component.tempSelectedClarisaPortfolios.set([{ id: 1 }] as any);
       component.tempSelectedFundingSource.set([{ id: 2 }] as any);
-      component.tempSelectedPhases.set([{ id: 3 }] as any);
       component.tempSelectedSubmittersAdmin.set([{ id: 4 }] as any);
-      component.tempSelectedIndicatorCategories.set([{ id: 5 }] as any);
-      component.tempSelectedStatus.set([{ id: 6 }] as any);
       component.tempSelectedLeadCenters.set([{ id: 7 }] as any);
+      component.tempFilterCreatedByMe.set(true);
+      component.tempFilterSubmittedByMe.set(true);
+      component.moreFiltersOpen.set(true);
 
       component.applyFilters();
 
       expect(mockResultsListFilterService.selectedClarisaPortfolios()).toEqual([{ id: 1 }]);
       expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 2 }]);
-      expect(mockResultsListFilterService.selectedPhases()).toEqual([{ id: 3 }]);
       expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([{ id: 4 }]);
+      expect(mockResultsListFilterService.selectedLeadCenters()).toEqual([{ id: 7 }]);
+      expect(mockResultsListFilterService.filterCreatedByMe()).toBe(true);
+      expect(mockResultsListFilterService.filterSubmittedByMe()).toBe(true);
+      expect(component.moreFiltersOpen()).toBe(false);
+    });
+
+    // Phases, indicator categories and status are PRIMARY filters now: the template writes them
+    // straight to the service via (ngModelChange), so applyFilters must leave them untouched.
+    it('should not overwrite the primary filter signals', () => {
+      mockResultsListFilterService.selectedPhases.set([{ id: 3 }]);
+      mockResultsListFilterService.selectedIndicatorCategories.set([{ id: 5 }]);
+      mockResultsListFilterService.selectedStatus.set([{ id: 6 }]);
+      component.tempSelectedPhases.set([{ id: 99 }] as any);
+      component.tempSelectedIndicatorCategories.set([{ id: 99 }] as any);
+      component.tempSelectedStatus.set([{ id: 99 }] as any);
+
+      component.applyFilters();
+
+      expect(mockResultsListFilterService.selectedPhases()).toEqual([{ id: 3 }]);
       expect(mockResultsListFilterService.selectedIndicatorCategories()).toEqual([{ id: 5 }]);
       expect(mockResultsListFilterService.selectedStatus()).toEqual([{ id: 6 }]);
-      expect(mockResultsListFilterService.selectedLeadCenters()).toEqual([{ id: 7 }]);
-      expect(component.visible()).toBe(false);
     });
   });
 

@@ -562,7 +562,8 @@ describe('AowHloTableComponent', () => {
     });
 
     it('should not render the search input when showSearch is false', () => {
-      component.showSearch = false;
+      // setInput (not a plain assignment) so the OnPush view is marked dirty and actually re-renders.
+      fixture.componentRef.setInput('showSearch', false);
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('#aowIndicatorSearchInput')).toBeNull();
@@ -593,7 +594,8 @@ describe('AowHloTableComponent', () => {
     });
 
     it('should suffix the table id with instanceId so two instances stay unique', () => {
-      component.instanceId = 'NonExclusive';
+      // setInput (not a plain assignment) so the OnPush view is marked dirty and actually re-renders.
+      fixture.componentRef.setInput('instanceId', 'NonExclusive');
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('#tocResultsByAowIdTableNonExclusive')).toBeTruthy();
