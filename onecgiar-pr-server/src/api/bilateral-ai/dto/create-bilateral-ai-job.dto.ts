@@ -10,6 +10,9 @@ export class CreateBilateralAiJobDto {
   @IsInt()
   project_id: number;
 
+  @IsInt()
+  center_id: number;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)

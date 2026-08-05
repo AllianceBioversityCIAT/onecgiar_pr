@@ -45,7 +45,7 @@ export class BilateralComponent implements OnInit, OnDestroy {
       // Set the acronym synchronously so links built from ctx.centerAcronym()
       // (e.g. "Create result") are correct immediately, before the async
       // center/name lookup below resolves.
-      this.ctx.setCenter(acronym, this.ctx.centerName(), this.ctx.centerId() ?? undefined);
+      this.ctx.setCenter(acronym, this.ctx.centerName(), this.ctx.centerId() ?? undefined, this.ctx.centerInstitutionId());
       void this.resolveCenter(acronym);
     });
 
@@ -118,34 +118,46 @@ export class BilateralComponent implements OnInit, OnDestroy {
       centers = this.rolesService.getMyCenters();
     }
 
+    // The role-by-user catalog only carries the CLARISA center *code* — the numeric
+    // institution id (needed to scope bilateral AI drafts per center) always comes
+    // from the CLARISA centers catalog, regardless of which branch below resolves
+    // the acronym/name.
+    const allCenters = await this.centersService.getData().catch(() => []);
+    const clarisaCenter = this.findClarisaCenter(allCenters, acronym);
+
     const center = centers.find((c: any) => c.center_acronym === acronym);
     if (center) {
-      this.ctx.setCenter(acronym, center.center_name ?? '', center.center_id ?? undefined);
+      this.ctx.setCenter(
+        acronym,
+        center.center_name ?? '',
+        center.center_id ?? undefined,
+        clarisaCenter?.institutionId ?? null,
+      );
       return;
     }
 
     // Admin users (or users without a matching center assignment): resolve via CLARISA catalog.
-    const allCenters = await this.centersService.getData().catch(() => []);
-
-    // Direct acronym match first.
-    let clarisaCenter = allCenters.find((c: any) => c.acronym === acronym);
-
-    // Fallback: known aliases for the Alliance of Bioversity and CIAT
-    // (mirrors ALLIANCE_ALIASES in bilateral.service.ts on the server).
-    if (!clarisaCenter) {
-      const ALLIANCE_ACRONYMS = new Set(['ABC', 'CIAT-BIOVERSITY', 'CIAT (ALLIANCE)', 'BIOVERSITY (ALLIANCE)']);
-      if (ALLIANCE_ACRONYMS.has(acronym.toUpperCase())) {
-        clarisaCenter = allCenters.find((c: any) =>
-          (c.name as string).toLowerCase().includes('alliance') &&
-          (c.name as string).toLowerCase().includes('bioversity'),
-        );
-      }
-    }
-
     this.ctx.setCenter(
       acronym,
       clarisaCenter?.name ?? '',
       clarisaCenter?.code ?? undefined,
+      clarisaCenter?.institutionId ?? null,
+    );
+  }
+
+  /** Matches a bilateral acronym to its CLARISA center row, including the Alliance aliases. */
+  private findClarisaCenter(allCenters: any[], acronym: string): any {
+    const direct = allCenters.find((c: any) => c.acronym === acronym);
+    if (direct) return direct;
+
+    // Fallback: known aliases for the Alliance of Bioversity and CIAT
+    // (mirrors ALLIANCE_ALIASES in bilateral.service.ts on the server).
+    const ALLIANCE_ACRONYMS = new Set(['ABC', 'CIAT-BIOVERSITY', 'CIAT (ALLIANCE)', 'BIOVERSITY (ALLIANCE)']);
+    if (!ALLIANCE_ACRONYMS.has(acronym.toUpperCase())) return undefined;
+
+    return allCenters.find((c: any) =>
+      (c.name as string).toLowerCase().includes('alliance') &&
+      (c.name as string).toLowerCase().includes('bioversity'),
     );
   }
 

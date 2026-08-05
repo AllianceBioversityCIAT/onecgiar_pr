@@ -90,7 +90,7 @@ export class BilateralAiService {
       this.jobRepository.create({
         job_id: jobId,
         user_id: user.id,
-        center_id: null,
+        center_id: dto.center_id,
         project_id: dto.project_id,
         program_code: dto.program_code,
         bucket_name: this.storage.getBucketName(),
@@ -156,9 +156,12 @@ export class BilateralAiService {
     return this.jobRepository.findOne({ where: { job_id: jobId } });
   }
 
-  async listDrafts(userId: number) {
+  async listDrafts(userId: number, centerId: number) {
     return this.draftRepository.find({
-      where: { is_discarded: false, job: { user_id: userId } },
+      where: {
+        is_discarded: false,
+        job: { user_id: userId, center_id: centerId },
+      },
       relations: { job: true, result: true },
       order: { created_date: 'DESC' },
     });

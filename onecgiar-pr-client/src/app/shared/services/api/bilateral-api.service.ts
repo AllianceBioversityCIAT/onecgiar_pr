@@ -144,8 +144,8 @@ export class BilateralApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/jobs/${jobId}`);
   }
 
-  GET_bilateralAiDrafts() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts`);
+  GET_bilateralAiDrafts(centerId: number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/ai/drafts?centerId=${centerId}`);
   }
 
   GET_bilateralAiDraft(draftId: number) {
