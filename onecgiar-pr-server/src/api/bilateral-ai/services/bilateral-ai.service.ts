@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -42,6 +43,8 @@ const TYPE_BY_INDICATOR: Record<string, { type: number; level: number }> = {
 
 @Injectable()
 export class BilateralAiService {
+  private readonly logger = new Logger(BilateralAiService.name);
+
   constructor(
     @InjectRepository(BilateralAiJob)
     private readonly jobRepository: Repository<BilateralAiJob>,
@@ -292,6 +295,9 @@ export class BilateralAiService {
         );
       }
 
+      this.logger.log(
+        `Sending job ${jobId} to bilateral AI text mining (bucket: ${job.bucket_name}, documents: ${job.document_keys?.length ?? 0}, audio: ${job.audio_keys?.length ?? 0}).`,
+      );
       const response = await this.textMining.extract({
         bucketName: job.bucket_name,
         keys: job.document_keys ?? [],
