@@ -571,7 +571,7 @@ describe('AowHloTableComponent', () => {
 
     it('should not render the report-result modal when renderOverlays is false', () => {
       mockEntityAowService.showReportResultModal.set(true);
-      component.renderOverlays = false;
+      fixture.componentRef.setInput('renderOverlays', false);
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('app-aow-hlo-create-modal')).toBeNull();
@@ -579,7 +579,7 @@ describe('AowHloTableComponent', () => {
 
     it('should not render the view-results drawer when renderOverlays is false', () => {
       mockEntityAowService.showViewResultDrawer.set(true);
-      component.renderOverlays = false;
+      fixture.componentRef.setInput('renderOverlays', false);
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('app-aow-view-results-drawer')).toBeNull();
@@ -587,7 +587,7 @@ describe('AowHloTableComponent', () => {
 
     it('should not render the target-details drawer when renderOverlays is false', () => {
       mockEntityAowService.showTargetDetailsDrawer.set(true);
-      component.renderOverlays = false;
+      fixture.componentRef.setInput('renderOverlays', false);
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('app-aow-target-details-drawer')).toBeNull();
