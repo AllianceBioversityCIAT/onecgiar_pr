@@ -447,19 +447,21 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.filters?.onClickFullMetadataExport();
   }
 
-  exportDisabled(): boolean {
-    const f = this.filters;
-    if (!f) return true;
-    return !f.hasFilteredResults || !!f.fullMetadataExportBlockedReason() || f.requestingFullExport();
+  // These three feed the toolbar's export button. They read the FILTER SERVICE, never the
+  // `filters` ViewChild: Angular checks this parent before the child, so reading child state
+  // here raised NG0100 on `disabled` / `title` every time the page loaded.
+  /** `shown` comes from the template's `@let shown` so there is one source of truth for it. */
+  exportDisabled(shown: number): boolean {
+    return shown <= 0 || !!this.resultsListFilterSE.fullMetadataExportBlockedReason() || this.exportBusy();
   }
 
   exportBusy(): boolean {
-    return !!this.filters?.requestingFullExport();
+    return this.resultsListFilterSE.requestingFullExport();
   }
 
   exportTitle(): string {
     return (
-      this.filters?.fullMetadataExportBlockedReason() ||
+      this.resultsListFilterSE.fullMetadataExportBlockedReason() ||
       'Queue a full metadata export. You will receive an email with a download link.'
     );
   }
@@ -622,7 +624,9 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const route: ResultRoute = this.usesBilateralReviewFlow(result)
       ? {
-          commands: ['/result-framework-reporting', 'entity-details', result?.submitter, 'results-review'],
+          // Same fallback chain as programCode(): a raw `submitter` can be undefined and
+          // would build `/entity-details/undefined/results-review`.
+          commands: ['/result-framework-reporting', 'entity-details', this.programCode(result), 'results-review'],
           queryParams: { [REVIEW_RESULT_QUERY_PARAM]: result?.result_code, [REVIEW_RESULT_ID_QUERY_PARAM]: result?.id }
         }
       : {

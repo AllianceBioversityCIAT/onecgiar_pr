@@ -271,7 +271,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
   gettingReport = signal(false);
   /** Full-metadata async export (email + S3 link) */
-  requestingFullExport = signal(false);
+  /** Owned by ResultsListFilterService so the parent toolbar can read it without a ViewChild. */
+  readonly requestingFullExport = this.resultsListFilterSE.requestingFullExport;
   /** @deprecated side drawer — kept false; More filters uses moreFiltersOpen */
   visible = signal(false);
   /** CURRENT "More filters" popover open state */
@@ -317,7 +318,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     }
     return this.resultsListFilterSE.phasesOptionsOld().filter(phase => selectedPortfolios.some(portfolio => portfolio.id == phase.portfolio_id));
   });
-  fullMetadataExportBlockedReason = computed(() => this.getFullMetadataExportBlockedReason());
+  readonly fullMetadataExportBlockedReason = this.resultsListFilterSE.fullMetadataExportBlockedReason;
 
   filtersCount = computed(() => {
     let count = 0;
@@ -1099,42 +1100,6 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     if (!match) return null;
     const parsed = Number(match[1]);
     return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  private getFullMetadataExportBlockedReason(): string | null {
-    if (this.resultsListFilterSE.selectedPhases().length === 0) {
-      return 'Select at least one phase to export.';
-    }
-
-    const selectedPhasePortfolioIds = Array.from(
-      new Set(
-        this.resultsListFilterSE
-          .selectedPhases()
-          .map((phase: { portfolio_id?: string | number }) => String(phase?.portfolio_id ?? ''))
-          .filter(Boolean)
-      )
-    );
-    const selectedPortfolioIds = Array.from(
-      new Set(
-        this.resultsListFilterSE
-          .selectedClarisaPortfolios()
-          .map((portfolio: { id?: string | number }) => String(portfolio?.id ?? ''))
-          .filter(Boolean)
-      )
-    );
-
-    if (selectedPhasePortfolioIds.length > 1) {
-      return 'Full metadata export only supports one portfolio at a time. Please select phases from a single portfolio.';
-    }
-    if (selectedPortfolioIds.length > 1) {
-      return 'Full metadata export only supports one portfolio at a time. Please keep only one portfolio selected.';
-    }
-
-    if (selectedPhasePortfolioIds.length === 1 && selectedPortfolioIds.length === 1 && selectedPhasePortfolioIds[0] !== selectedPortfolioIds[0]) {
-      return 'Selected phases and selected portfolio must belong to the same portfolio.';
-    }
-
-    return null;
   }
 
   private async buildAndDownloadExcelReport(response: any[]): Promise<void> {

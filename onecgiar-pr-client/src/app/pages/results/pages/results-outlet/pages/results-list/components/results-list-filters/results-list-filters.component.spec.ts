@@ -3,7 +3,7 @@ import { ResultsListFiltersComponent } from './results-list-filters.component';
 import { FormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
 import { signal, SimpleChanges } from '@angular/core';
-import { ResultsListFilterService } from '../../services/results-list-filter.service';
+import { ResultsListFilterService, getFullMetadataExportBlockedReason } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -75,8 +75,15 @@ describe('ResultsListFiltersComponent', () => {
       centerOptions: createSignal<any[]>([]),
       fundingSourceOptions: createSignal<any[]>([]),
       filterCreatedByMe: createSignal(false),
-      filterSubmittedByMe: createSignal(false)
+      filterSubmittedByMe: createSignal(false),
+      requestingFullExport: createSignal(false)
     };
+    // Derived the same way the real service derives it, from the mock's own signals.
+    mockResultsListFilterService.fullMetadataExportBlockedReason = () =>
+      getFullMetadataExportBlockedReason(
+        mockResultsListFilterService.selectedPhases(),
+        mockResultsListFilterService.selectedClarisaPortfolios()
+      );
 
     // Create spy for the set method
     jest.spyOn(mockResultsListFilterService.submittersOptionsAdminOld, 'set');

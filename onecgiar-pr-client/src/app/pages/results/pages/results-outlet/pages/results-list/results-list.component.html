@@ -64,7 +64,7 @@
       <button
         type="button"
         class="rc-btn rc-btn--primary"
-        [disabled]="exportDisabled()"
+        [disabled]="exportDisabled(shown)"
         [attr.title]="exportTitle()"
         (click)="onExportCsv()">
         @if (exportBusy()) {
