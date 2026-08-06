@@ -1,18 +1,11 @@
-import { Component, OnInit, inject, OnDestroy, computed, signal } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
-import { RouterModule, Router, NavigationEnd, ActivatedRoute } from '@angular/router';
-import { filter, Subscription } from 'rxjs';
+import { Component, OnInit, inject, OnDestroy } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ApiService } from '../../shared/services/api/api.service';
 import { BilateralAiService } from './services/bilateral-ai.service';
 import { BilateralContextService } from './services/bilateral-context.service';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { CentersService } from '../../shared/services/global/centers.service';
-
-export interface BilateralBreadcrumbCrumb {
-  label: string;
-  /** null = current page (rendered as plain text, not a link). */
-  link: unknown[] | null;
-}
 
 @Component({
   selector: 'app-bilateral',
@@ -24,17 +17,11 @@ export class BilateralComponent implements OnInit, OnDestroy {
   api = inject(ApiService);
   bilateralAiService = inject(BilateralAiService);
   private route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly location = inject(Location);
   readonly ctx = inject(BilateralContextService);
   private readonly rolesService = inject(RolesService);
   private readonly centersService = inject(CentersService);
 
-  private readonly currentUrl = signal(this.router.url);
-  readonly crumbs = computed<BilateralBreadcrumbCrumb[]>(() => this.computeCrumbs(this.currentUrl()));
-
   private paramSub?: Subscription;
-  private navSub?: Subscription;
 
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Bilateral Results');
@@ -48,61 +35,6 @@ export class BilateralComponent implements OnInit, OnDestroy {
       this.ctx.setCenter(acronym, this.ctx.centerName(), this.ctx.centerId() ?? undefined, this.ctx.centerInstitutionId());
       void this.resolveCenter(acronym);
     });
-
-    this.navSub = this.router.events
-      .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe(e => this.currentUrl.set((e as NavigationEnd).urlAfterRedirects));
-  }
-
-  /** Builds the breadcrumb trail for the current bilateral route. */
-  private computeCrumbs(url: string): BilateralBreadcrumbCrumb[] {
-    const acronym = this.ctx.centerAcronym();
-    // Matches the acronym shown as the page title in bilateral-page-header
-    // (ctx.centerName() is the longer institution description shown below it).
-    const home: BilateralBreadcrumbCrumb = { label: acronym, link: ['/bilateral', acronym, 'home'] };
-
-    const segments = url.split('?')[0].split('/').filter(Boolean);
-    const rest = segments.slice(2); // drop 'bilateral' and the acronym segment
-
-    if (!rest.length || rest[0] === 'home') {
-      return [{ ...home, link: null }];
-    }
-    if (rest[0] === 'create') {
-      return [home, { label: 'Create a result', link: null }];
-    }
-    if (rest[0] === 'result') {
-      return [
-        home,
-        { label: 'Results', link: ['/bilateral', acronym, 'results'] },
-        { label: 'Edit result', link: null }
-      ];
-    }
-    if (rest[0] === 'results') {
-      return [home, { label: 'Results', link: null }];
-    }
-    if (rest[0] === 'drafts') {
-      if (rest.length > 1) {
-        return [
-          home,
-          { label: 'My drafts', link: ['/bilateral', acronym, 'drafts'] },
-          { label: 'Draft detail', link: null }
-        ];
-      }
-      return [home, { label: 'My drafts', link: null }];
-    }
-
-    return [{ ...home, link: null }];
-  }
-
-  /** Jumps to the immediate parent crumb, falling back to browser history. */
-  goBack(): void {
-    const crumbs = this.crumbs();
-    const parent = crumbs.length > 1 ? crumbs[crumbs.length - 2] : null;
-    if (parent?.link) {
-      void this.router.navigate(parent.link);
-    } else {
-      this.location.back();
-    }
   }
 
   private async resolveCenter(acronym: string): Promise<void> {
@@ -163,6 +95,5 @@ export class BilateralComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.paramSub?.unsubscribe();
-    this.navSub?.unsubscribe();
   }
 }

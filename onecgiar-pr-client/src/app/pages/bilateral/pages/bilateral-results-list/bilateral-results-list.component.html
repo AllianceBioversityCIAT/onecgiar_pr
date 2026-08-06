@@ -1,4 +1,4 @@
-<app-bilateral-page-header />
+<app-bilateral-page-header activeTab="results" />
 
 <div class="brl">
 
@@ -101,6 +101,44 @@
       </div>
 
     </div>
+
+    <!-- Columns picker + Export CSV — same pattern as the Results Center list -->
+    <div class="brl_filter_actions">
+      <div class="rc-cols-wrap">
+        <button
+          type="button"
+          class="rc-btn rc-btn--soft"
+          [class.rc-btn--active]="columnsOpen()"
+          [attr.aria-expanded]="columnsOpen()"
+          aria-haspopup="dialog"
+          (click)="toggleColumnsPanel($event)">
+          Columns
+          <i class="pi pi-sliders-h" aria-hidden="true"></i>
+        </button>
+        @if (columnsOpen()) {
+          <div class="rc-cols-panel" role="dialog" aria-label="Visible columns" (click)="$event.stopPropagation()">
+            <div class="rc-cols-panel__title">Visible columns</div>
+            <div class="rc-cols-panel__list">
+              @for (col of allColumns; track col.key) {
+                <button type="button" class="rc-cols-item" (click)="toggleColumn(col.key, $event)">
+                  <span class="rc-cols-check" [class.rc-cols-check--on]="isColumnVisible(col.key)" aria-hidden="true">
+                    @if (isColumnVisible(col.key)) {
+                      <i class="pi pi-check"></i>
+                    }
+                  </span>
+                  <span class="rc-cols-item__label">{{ col.title }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <button type="button" class="rc-btn rc-btn--primary" [disabled]="totalCount() === 0" (click)="exportCsv()">
+        <i class="pi pi-download" aria-hidden="true"></i>
+        Export CSV
+      </button>
+    </div>
   </div>
 
   <div class="brl_body">
@@ -110,7 +148,7 @@
       <div class="brl_toolbar_left">
         @if (!loading() && !error()) {
           <span class="brl_count">
-            {{ totalCount() }} result{{ totalCount() === 1 ? '' : 's' }}
+            Showing {{ totalCount() }} of {{ totalLoaded() }} result{{ totalLoaded() === 1 ? '' : 's' }}.
           </span>
         }
       </div>
@@ -130,173 +168,151 @@
       </div>
     </div>
 
-    <!-- States -->
-    @if (initializing() || loading()) {
-      <div class="brl_state">
-        <i class="pi pi-spin pi-spinner brl_state_icon"></i>
-        <span>Loading results…</span>
-      </div>
-    } @else if (error()) {
+    @if (error()) {
       <div class="brl_state brl_state--error">
         <i class="pi pi-exclamation-circle brl_state_icon"></i>
         <span>Could not load results. Please try refreshing the page.</span>
       </div>
-    } @else if (results().length === 0) {
-      <div class="brl_state">
-        <i class="pi pi-inbox brl_state_icon"></i>
-        <span>No results found for this center in this phase.</span>
-      </div>
-    } @else if (totalCount() === 0) {
-      <div class="brl_state">
-        <i class="pi pi-filter brl_state_icon"></i>
-        <span>No results match the active filters
-          @if (searchQuery()) { and search query <strong>"{{ searchQuery() }}"</strong> }.
-        </span>
-      </div>
     } @else {
-      <!-- Results table -->
-      <div class="brl_table_wrap">
-        <table class="brl_table">
-          <thead>
+      @let cols = visibleColumns();
+
+      <!-- Results table — same visual language as the Results Center list (app-pr-table, rc-* cells, status_tag chips) -->
+      <div class="table rc-table">
+        <app-pr-table
+          #table
+          sortField="result_code"
+          [sortOrder]="-1"
+          [value]="filteredResults()"
+          dataKey="result_code"
+          [loading]="initializing() || loading()"
+          [paginator]="filteredResults().length > 0"
+          [rows]="25"
+          [rowsPerPageOptions]="[25, 50, 100]"
+          [first]="searchQuery() && 0"
+          styleClass="rc-pr-table">
+          <ng-template prTableHeader>
             <tr>
-              <th class="brl_th brl_col_source">Source</th>
-              <th class="brl_th brl_col_code">Code</th>
-              <th class="brl_th brl_col_title">Title</th>
-              <th class="brl_th brl_col_type">Type</th>
-              <th class="brl_th brl_col_role">Role</th>
-              <th class="brl_th brl_col_status">Status</th>
-              <th class="brl_th brl_col_date">Created</th>
+              @for (column of cols; track column.key) {
+                <th [prSortableColumn]="column.attr" [style.width]="column.width">
+                  <div class="align-center">
+                    <pr-sort-icon [field]="column.attr"></pr-sort-icon>
+                    {{ column.title }}
+                  </div>
+                </th>
+              }
               @if (canManageW3()) {
-                <th class="brl_th brl_col_actions">Actions</th>
+                <th class="rc-th-action" style="width: 90px"></th>
               }
             </tr>
-          </thead>
-          <tbody>
-            @for (result of pagedResults(); track result.id) {
-              <tr class="brl_row" (click)="openResult(result)" tabindex="0" (keydown.enter)="openResult(result)">
-                <td class="brl_td brl_col_source">
-                  @if (result.source === 'API') {
-                    <span class="brl_source_badge brl_source_badge--w3">W3</span>
-                  } @else {
-                    <span class="brl_source_badge brl_source_badge--w1w2">W1/W2</span>
-                  }
-                  @if (isAiResult(result)) {
-                    <span class="brl_ai_badge" title="AI Result" aria-label="AI Result">
-                      <i class="pi pi-sparkles" aria-hidden="true"></i>
-                      <span>AI Result</span>
-                    </span>
-                  }
-                </td>
-                <td class="brl_td brl_col_code">
-                  <span class="brl_code">{{ result.result_code }}</span>
-                </td>
-                <td class="brl_td brl_col_title">
-                  <span class="brl_title" [title]="result.title">{{ result.title }}</span>
-                </td>
-                <td class="brl_td brl_col_type">
-                  <span class="brl_type_chip">{{ result.result_type }}</span>
-                </td>
-                <td class="brl_td brl_col_role">
-                  @if (result.is_leading_result === 1) {
-                    <span class="brl_role_badge brl_role_badge--lead">Lead</span>
-                  } @else {
-                    <span class="brl_role_badge brl_role_badge--contributing">Contributing</span>
-                  }
-                </td>
-                <td class="brl_td brl_col_status">
-                  <span class="brl_status brl_status--{{ statusClass(result.status_id) }}">
-                    {{ result.status_name }}
-                  </span>
-                </td>
-                <td class="brl_td brl_col_date">{{ result.created_date | date:'dd/MM/yyyy' }}</td>
-                @if (canManageW3()) {
-                  <td class="brl_td brl_col_actions" (click)="$event.stopPropagation()">
-                    @if (canEditResult(result)) {
-                      @if (confirmingDeleteId() === result.id) {
-                        <div class="brl_actions_confirm">
-                          <span class="brl_actions_confirm_text">Delete?</span>
-                          <button
-                            class="brl_action_btn brl_action_btn--danger"
-                            [disabled]="deletingId() === result.id"
-                            (click)="confirmDelete(result, $event)">
-                            @if (deletingId() === result.id) {
-                              <i class="pi pi-spin pi-spinner"></i>
-                            } @else {
-                              Yes
-                            }
-                          </button>
-                          <button class="brl_action_btn brl_action_btn--ghost" (click)="cancelDelete($event)">
-                            No
-                          </button>
-                        </div>
+          </ng-template>
+
+          <ng-template prTableBody let-result>
+            <tr class="rc-row" (click)="openResult(result)" tabindex="0" (keydown.enter)="openResult(result)">
+              @for (column of cols; track column.key) {
+                <td [class]="'rc-td rc-td--' + column.attr" [style.width]="column.width">
+                  @if (column.attr === 'source') {
+                    <div class="rc-cell-link">
+                      @if (result.source === 'API') {
+                        <span class="brl_source_badge brl_source_badge--w3">W3</span>
                       } @else {
-                        <div class="brl_actions">
-                          <button
-                            class="brl_action_btn brl_action_btn--edit"
-                            title="Edit result"
-                            (click)="editResult(result, $event)">
-                            <i class="pi pi-pencil"></i>
-                          </button>
-                          @if (canDeleteResult(result)) {
-                            <button
-                              class="brl_action_btn brl_action_btn--delete"
-                              title="Delete result"
-                              (click)="requestDelete(result, $event)">
-                              <i class="pi pi-trash"></i>
-                            </button>
-                          }
-                        </div>
+                        <span class="brl_source_badge brl_source_badge--w1w2">W1/W2</span>
                       }
+                      @if (isAiResult(result)) {
+                        <span class="brl_ai_badge" title="AI Result" aria-label="AI Result">
+                          <i class="pi pi-sparkles" aria-hidden="true"></i>
+                          <span>AI Result</span>
+                        </span>
+                      }
+                    </div>
+                  } @else if (column.attr === 'result_code') {
+                    <span class="rc-cell-link rc-code">{{ result.result_code }}</span>
+                  } @else if (column.attr === 'title') {
+                    <span class="rc-cell-link rc-title" [attr.title]="result.title">
+                      <span class="rc-title__text">{{ result.title }}</span>
+                    </span>
+                  } @else if (column.attr === 'result_type') {
+                    <span class="rc-cell-link rc-plain" [attr.title]="result.result_type">{{ result.result_type }}</span>
+                  } @else if (column.attr === 'is_leading_result') {
+                    @if (result.is_leading_result === 1) {
+                      <span class="brl_role_badge brl_role_badge--lead">Lead</span>
+                    } @else {
+                      <span class="brl_role_badge brl_role_badge--contributing">Contributing</span>
                     }
-                  </td>
-                }
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      @if (totalPages() > 1) {
-        <div class="brl_pagination">
-          <span class="brl_pagination_info">
-            {{ pageStart() }}–{{ pageEnd() }} of {{ totalCount() }}
-          </span>
-
-          <div class="brl_pagination_nav">
-            <button
-              class="brl_page_btn brl_page_btn--arrow"
-              [disabled]="currentPage() === 1"
-              (click)="prevPage()"
-              aria-label="Previous page">
-              <i class="pi pi-chevron-left"></i>
-            </button>
-
-            @for (page of pageNumbers(); track $index) {
-              @if (page === '…') {
-                <span class="brl_page_ellipsis">…</span>
-              } @else {
-                <button
-                  class="brl_page_btn"
-                  [class.brl_page_btn--active]="currentPage() === page"
-                  (click)="goToPage(page)"
-                  [attr.aria-label]="'Page ' + page"
-                  [attr.aria-current]="currentPage() === page ? 'page' : null">
-                  {{ page }}
-                </button>
+                  } @else if (column.attr === 'status_id') {
+                    <span class="rc-cell-link rc-status-wrap">
+                      <span [class]="statusClass(result.status_id)">{{ result.status_name }}</span>
+                    </span>
+                  } @else if (column.attr === 'created_date') {
+                    <span class="rc-cell-link rc-date">{{ result.created_date | date: 'dd MMM yyyy' }}</span>
+                  }
+                </td>
               }
-            }
 
-            <button
-              class="brl_page_btn brl_page_btn--arrow"
-              [disabled]="currentPage() === totalPages()"
-              (click)="nextPage()"
-              aria-label="Next page">
-              <i class="pi pi-chevron-right"></i>
-            </button>
-          </div>
-        </div>
-      }
+              @if (canManageW3()) {
+                <td class="rc-td rc-td--action" (click)="$event.stopPropagation()">
+                  @if (canEditResult(result)) {
+                    @if (confirmingDeleteId() === result.id) {
+                      <div class="brl_actions_confirm">
+                        <span class="brl_actions_confirm_text">Delete?</span>
+                        <button
+                          class="brl_action_btn brl_action_btn--danger"
+                          [disabled]="deletingId() === result.id"
+                          (click)="confirmDelete(result, $event)">
+                          @if (deletingId() === result.id) {
+                            <i class="pi pi-spin pi-spinner"></i>
+                          } @else {
+                            Yes
+                          }
+                        </button>
+                        <button class="brl_action_btn brl_action_btn--ghost" (click)="cancelDelete($event)">No</button>
+                      </div>
+                    } @else {
+                      <div class="brl_actions">
+                        <button class="brl_action_btn brl_action_btn--edit" title="Edit result" (click)="editResult(result, $event)">
+                          <i class="pi pi-pencil"></i>
+                        </button>
+                        @if (canDeleteResult(result)) {
+                          <button class="brl_action_btn brl_action_btn--delete" title="Delete result" (click)="requestDelete(result, $event)">
+                            <i class="pi pi-trash"></i>
+                          </button>
+                        }
+                      </div>
+                    }
+                  }
+                </td>
+              }
+            </tr>
+          </ng-template>
+
+          <ng-template prTableLoading>
+            <tr style="height: 200px">
+              <td [attr.colspan]="cols.length + 1" class="brl_state">
+                <i class="pi pi-spin pi-spinner brl_state_icon"></i>
+                <span>Loading results…</span>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template prTableEmpty>
+            <tr style="height: 200px">
+              <td [attr.colspan]="cols.length + 1" class="brl_state">
+                @if (results().length === 0) {
+                  <i class="pi pi-inbox brl_state_icon"></i>
+                  <span>No results found for this center in this phase.</span>
+                } @else {
+                  <i class="pi pi-filter brl_state_icon"></i>
+                  <span>
+                    No results match the active filters
+                    @if (searchQuery()) {
+                      and search query <strong>"{{ searchQuery() }}"</strong>
+                    }.
+                  </span>
+                }
+              </td>
+            </tr>
+          </ng-template>
+        </app-pr-table>
+      </div>
     }
 
   </div>

@@ -4,10 +4,12 @@ import {
   computed,
   DestroyRef,
   effect,
+  HostListener,
   inject,
   OnInit,
   signal,
   untracked,
+  ViewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
@@ -20,6 +22,15 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { RolesService } from '../../../../shared/services/global/roles.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective,
+  PrTableLoadingDirective,
+} from '../../../../shared/components/pr-table';
 
 export interface BilateralCenterResult {
   id: number;
@@ -36,12 +47,60 @@ export interface BilateralCenterResult {
   is_leading_result: 0 | 1;
 }
 
-const PAGE_SIZE = 25;
+/** Column catalog for the "Columns" picker — mirrors the Results Center pattern (RC_COLUMNS). */
+export interface BilateralColumnDef {
+  key: string;
+  title: string;
+  attr: string;
+  width: string;
+  /** Default visibility when no localStorage preference exists. */
+  defaultOn: boolean;
+}
+
+const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns';
+
+/** Full column set (order = picker + table order). Kept to the fields BilateralCenterResult actually has. */
+export const BILATERAL_COLUMNS: readonly BilateralColumnDef[] = [
+  { key: 'source', title: 'Source', attr: 'source', width: '100px', defaultOn: true },
+  { key: 'code', title: 'Code', attr: 'result_code', width: '100px', defaultOn: true },
+  { key: 'title', title: 'Title', attr: 'title', width: '280px', defaultOn: true },
+  { key: 'type', title: 'Type', attr: 'result_type', width: '160px', defaultOn: true },
+  { key: 'role', title: 'Role', attr: 'is_leading_result', width: '120px', defaultOn: true },
+  { key: 'status', title: 'Status', attr: 'status_id', width: '120px', defaultOn: true },
+  { key: 'created', title: 'Created', attr: 'created_date', width: '110px', defaultOn: true },
+];
+
+function readStoredColumnVisibility(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(BILATERAL_COLUMN_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, boolean>;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function defaultColumnVisibility(): Record<string, boolean> {
+  const map: Record<string, boolean> = {};
+  for (const col of BILATERAL_COLUMNS) map[col.key] = col.defaultOn;
+  return map;
+}
 
 @Component({
   selector: 'app-bilateral-results-list',
   standalone: true,
-  imports: [DatePipe, BilateralPageHeaderComponent],
+  imports: [
+    DatePipe,
+    BilateralPageHeaderComponent,
+    PrTableComponent,
+    PrSortIconComponent,
+    PrSortableColumnDirective,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective,
+    PrTableLoadingDirective,
+  ],
   templateUrl: './bilateral-results-list.component.html',
   styleUrl: './bilateral-results-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -73,6 +132,23 @@ export class BilateralResultsListComponent implements OnInit {
   readonly confirmingDeleteId = signal<number | null>(null);
   readonly deletingId = signal<number | null>(null);
 
+  /** Full catalog for the Columns picker. */
+  readonly allColumns = BILATERAL_COLUMNS;
+
+  /** Visibility map keyed by BILATERAL_COLUMNS.key — persisted. */
+  readonly columnVisibility = signal<Record<string, boolean>>({
+    ...defaultColumnVisibility(),
+    ...readStoredColumnVisibility(),
+  });
+
+  readonly columnsOpen = signal(false);
+
+  /** Table columns currently visible (order preserved, filtered). */
+  readonly visibleColumns = computed(() => {
+    const vis = this.columnVisibility();
+    return BILATERAL_COLUMNS.filter(c => vis[c.key] !== false);
+  });
+
   /** True when the user can manage (edit/delete) W3 bilateral results for this center. */
   readonly canManageW3 = computed(() => {
     if (this.rolesService.isAdmin) return true;
@@ -85,9 +161,7 @@ export class BilateralResultsListComponent implements OnInit {
     );
   });
 
-  // Pagination
-  readonly currentPage = signal(1);
-  readonly pageSize = PAGE_SIZE;
+  @ViewChild('table') table?: PrTableComponent;
 
   readonly filteredResults = computed(() => {
     const showW3 = this.showW3();
@@ -116,48 +190,7 @@ export class BilateralResultsListComponent implements OnInit {
   });
 
   readonly totalCount = computed(() => this.filteredResults().length);
-
-  readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.totalCount() / PAGE_SIZE))
-  );
-
-  readonly pagedResults = computed(() => {
-    const page = this.currentPage();
-    const start = (page - 1) * PAGE_SIZE;
-    return this.filteredResults().slice(start, start + PAGE_SIZE);
-  });
-
-  readonly pageStart = computed(() =>
-    this.totalCount() === 0
-      ? 0
-      : (this.currentPage() - 1) * PAGE_SIZE + 1
-  );
-
-  readonly pageEnd = computed(() =>
-    Math.min(this.currentPage() * PAGE_SIZE, this.totalCount())
-  );
-
-  /** Page numbers to render — handles ellipsis when > 7 total pages. */
-  readonly pageNumbers = computed<(number | '…')[]>(() => {
-    const total = this.totalPages();
-    const current = this.currentPage();
-
-    if (total <= 7) {
-      return Array.from({ length: total }, (_, i) => i + 1);
-    }
-
-    const pages: (number | '…')[] = [1];
-
-    const left  = Math.max(2, current - 1);
-    const right = Math.min(total - 1, current + 1);
-
-    if (left > 2)       pages.push('…');
-    for (let p = left; p <= right; p++) pages.push(p);
-    if (right < total - 1) pages.push('…');
-
-    pages.push(total);
-    return pages;
-  });
+  readonly totalLoaded = computed(() => this.results().length);
 
   constructor() {
     // Use centerId when resolved; fall back to centerAcronym so admin users browsing
@@ -178,10 +211,11 @@ export class BilateralResultsListComponent implements OnInit {
       .pipe(takeUntilDestroyed())
       .subscribe(([, phase]) => this.loadResults(phase.id));
 
-    // Reset to page 1 whenever the filtered set changes (filter chips, search, new data).
+    // Reset the table to its default sort + page 0 whenever the filtered set changes
+    // (filter chips, search, new data) — mirrors the Results Center pattern.
     effect(() => {
       this.filteredResults();
-      untracked(() => this.currentPage.set(1));
+      untracked(() => this.table?.reset());
     });
   }
 
@@ -208,23 +242,81 @@ export class BilateralResultsListComponent implements OnInit {
     }
   }
 
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.columnsOpen()) this.columnsOpen.set(false);
+  }
+
+  isColumnVisible(key: string): boolean {
+    return this.columnVisibility()[key] !== false;
+  }
+
+  toggleColumn(key: string, event?: Event): void {
+    event?.stopPropagation();
+    // Keep at least one column visible so the table never collapses to empty.
+    const next = { ...this.columnVisibility() };
+    const turningOff = next[key] !== false;
+    if (turningOff) {
+      const remaining = BILATERAL_COLUMNS.filter(c => c.key !== key && next[c.key] !== false).length;
+      if (remaining === 0) return;
+    }
+    next[key] = !turningOff;
+    this.columnVisibility.set(next);
+    try {
+      localStorage.setItem(BILATERAL_COLUMN_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // private mode — visibility still works for the session
+    }
+  }
+
+  toggleColumnsPanel(event?: Event): void {
+    event?.stopPropagation();
+    this.columnsOpen.update(v => !v);
+  }
+
+  /** Immediate client-side CSV of the currently filtered rows and visible columns. */
+  exportCsv(): void {
+    const cols = this.visibleColumns();
+    const rows = this.filteredResults();
+    const escape = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+    const header = cols.map(c => escape(c.title)).join(',');
+    const lines = rows.map(r => cols.map(c => escape(this.cellText(r, c.attr))).join(','));
+    const csv = [header, ...lines].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bilateral-results-${this.ctx.centerAcronym() || 'center'}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private cellText(result: BilateralCenterResult, attr: string): string {
+    switch (attr) {
+      case 'source':
+        return result.source === 'API' ? 'W3 Bilateral' : 'W1/W2';
+      case 'result_code':
+        return result.result_code;
+      case 'title':
+        return result.title;
+      case 'result_type':
+        return result.result_type;
+      case 'is_leading_result':
+        return result.is_leading_result === 1 ? 'Lead' : 'Contributing';
+      case 'status_id':
+        return result.status_name;
+      case 'created_date':
+        return result.created_date;
+      default:
+        return '';
+    }
+  }
+
   selectPhase(phase: Phases): void {
     this.selectedPhase.set(phase);
     this.searchQuery.set('');
-  }
-
-  goToPage(page: number | '…'): void {
-    if (page === '…') return;
-    if (page < 1 || page > this.totalPages()) return;
-    this.currentPage.set(page);
-  }
-
-  prevPage(): void {
-    if (this.currentPage() > 1) this.currentPage.update(p => p - 1);
-  }
-
-  nextPage(): void {
-    if (this.currentPage() < this.totalPages()) this.currentPage.update(p => p + 1);
   }
 
   toggleW3(): void {
@@ -326,15 +418,7 @@ export class BilateralResultsListComponent implements OnInit {
   }
 
   statusClass(statusId: number): string {
-    const map: Record<number, string> = {
-      1: 'draft',
-      2: 'active',
-      3: 'active',
-      5: 'pending',
-      6: 'approved',
-      7: 'rejected',
-    };
-    return map[statusId] ?? 'draft';
+    return `status_tag status_${statusId ?? ''}`;
   }
 }
 
