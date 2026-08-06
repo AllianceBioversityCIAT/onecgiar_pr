@@ -393,6 +393,71 @@ describe('DataControlService', () => {
       expect(service.fieldFeedbackList()).toContain('tag');
     });
 
+    it('finds the label through an app-field-card wrapper (the .fch_title layout)', () => {
+      // Regression: the old code hard-coded parentElement x3 and only looked for `.pr_label`.
+      // Wrapping a field in app-field-card adds a level AND renames the label to `.fch_title`,
+      // so the field was silently dropped from the missing-fields list.
+      dom = parser.parseFromString(
+        `
+      <div class="container">
+        <app-pr-input>
+          <app-field-card>
+            <span class="fch_title">Result title</span>
+            <div class="pr-input mandatory">
+              <div class="input_container"><div class="input-validation"></div></div>
+            </div>
+          </app-field-card>
+        </app-pr-input>
+      </div>`,
+        'text/html'
+      );
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
+
+      expect(service.someMandatoryFieldIncompleteResultDetail('.container')).toBe(true);
+      expect(service.fieldFeedbackList()).toEqual(['Result title']);
+    });
+
+    it('finds the label when appFeedbackValidation renders it as a SIBLING with no field component', () => {
+      dom = parser.parseFromString(
+        `
+      <div class="container">
+        <div style="display:none">
+          <div class="pr_label">Lead Center</div>
+          <div class="pr-field mandatory"></div>
+        </div>
+      </div>`,
+        'text/html'
+      );
+      dom.querySelector('.pr_label').innerText = 'Lead Center';
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
+
+      expect(service.someMandatoryFieldIncompleteResultDetail('.container')).toBe(true);
+      expect(service.fieldFeedbackList()).toEqual(['Lead Center']);
+    });
+
+    it('returns false and empties the list when every mandatory field is complete', () => {
+      // `Boolean([])` is true, so the previous implementation answered "incomplete" even with
+      // everything filled in.
+      dom = parser.parseFromString(
+        `
+      <div class="container">
+        <app-pr-select>
+          <span class="pr_label">Submitter</span>
+          <div class="pr-field mandatory complete"></div>
+        </app-pr-select>
+      </div>`,
+        'text/html'
+      );
+      dom.querySelector('.pr_label').innerText = 'Submitter';
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
+
+      expect(service.someMandatoryFieldIncompleteResultDetail('.container')).toBe(false);
+      expect(service.fieldFeedbackList()).toEqual([]);
+    });
+
     it('should set the title and currentSectionName', () => {
       const sectionName = 'Test Section';
       const title = 'Test Title';

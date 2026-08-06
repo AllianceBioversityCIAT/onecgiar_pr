@@ -228,25 +228,30 @@ export class DataControlService {
       return true;
     }
     const feedback: string[] = [];
-    let inputs;
-    let selects;
+    let incompleteInputs = 0;
+    let incompleteSelects = 0;
     try {
-      inputs = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-input.mandatory .input-validation')).filter(field => {
-        const tagValue = field?.parentElement?.parentElement?.parentElement?.querySelector('.pr_label')?.innerText;
-        const isEmpty = !field?.innerText;
+      incompleteInputs = Array.prototype.slice
+        .call(htmlContainer.querySelectorAll('.pr-input.mandatory .input-validation'))
+        .filter((field: HTMLElement) => {
+          const isEmpty = !field?.innerText;
+          const label = this.mandatoryFieldLabel(field);
 
-        if (tagValue && isEmpty) feedback.push(tagValue);
+          if (label && isEmpty) feedback.push(label);
 
-        return isEmpty;
-      });
-      selects = Array.prototype.slice.call(htmlContainer.querySelectorAll('.pr-field.mandatory')).filter((field: HTMLElement) => {
-        let tagValue: any = field?.parentElement?.querySelector('.pr_label');
-        tagValue = tagValue?.innerText;
-        const isIncomplete = !field.classList.contains('complete');
+          return isEmpty;
+        }).length;
 
-        if (tagValue && isIncomplete) feedback.push(tagValue);
-        return isIncomplete;
-      });
+      incompleteSelects = Array.prototype.slice
+        .call(htmlContainer.querySelectorAll('.pr-field.mandatory'))
+        .filter((field: HTMLElement) => {
+          const isIncomplete = !field.classList.contains('complete');
+          const label = this.mandatoryFieldLabel(field);
+
+          if (label && isIncomplete) feedback.push(label);
+
+          return isIncomplete;
+        }).length;
     } catch (error) {
       console.error(error);
     }
@@ -255,7 +260,66 @@ export class DataControlService {
     if (!this.sameFeedback(this.fieldFeedbackList(), feedback)) {
       this.fieldFeedbackList.set(feedback);
     }
-    return Boolean(inputs) || Boolean(selects);
+    // Counts, not the arrays: `Boolean([])` is `true`, so the previous version answered
+    // "something is incomplete" on every call, even with every field filled in.
+    return incompleteInputs > 0 || incompleteSelects > 0;
+  }
+
+  /**
+   * Field hosts that own a label. Used to find the label of a mandatory field by walking UP
+   * to its component, instead of assuming a fixed DOM depth.
+   */
+  private static readonly LABELLED_FIELD_HOSTS = [
+    'app-pr-input',
+    'app-pr-textarea',
+    'app-pr-select',
+    'app-pr-multi-select',
+    'app-pr-checkbox',
+    'app-pr-radio-button',
+    'app-pr-yes-or-not',
+    'app-pr-range-level',
+    'app-field-card'
+  ].join(',');
+
+  /**
+   * Human label of a mandatory field, for the "X alerts / <name> is missing" list.
+   *
+   * The old code hard-coded the hop count (`parentElement` ×3 for inputs, ×1 for selects) and
+   * queried `.pr_label`. Wrapping fields in `app-field-card` added a level and moved the label
+   * to `.fch_title`, so the lookup silently returned undefined and the field was dropped from
+   * the list — the user saw "0 alerts" while a required field sat empty. Walk up through the
+   * field hosts instead and accept either label element.
+   */
+  private mandatoryFieldLabel(field: Element): string {
+    // 1. Nearest field component that carries a label, widening outwards. This is the precise
+    //    path and it is what makes an `app-field-card` wrapper work.
+    let host: Element | null = field.closest(DataControlService.LABELLED_FIELD_HOSTS);
+    while (host) {
+      const text = this.labelTextIn(host);
+      if (text) return text;
+      host = host.parentElement?.closest(DataControlService.LABELLED_FIELD_HOSTS) ?? null;
+    }
+
+    // 2. No field component in the chain — `appFeedbackValidation` builds the label as a plain
+    //    SIBLING of the `.pr-field.mandatory` div inside an ordinary page element. Walk up a
+    //    bounded number of ancestors so a far-away label can never be mis-attributed.
+    let node: Element | null = field.parentElement;
+    for (let hops = 0; node && hops < 4; hops++) {
+      const text = this.labelTextIn(node);
+      if (text) return text;
+      node = node.parentElement;
+    }
+
+    return '';
+  }
+
+  private labelTextIn(scope: Element): string {
+    const label = scope.querySelector('.pr_label, .fch_title');
+    if (!label) return '';
+    // `innerText` respects rendered text but is not implemented in jsdom; `textContent`
+    // is the correct fallback rather than crashing the whole scan.
+    const raw = (label as HTMLElement).innerText ?? label.textContent ?? '';
+    return raw.trim();
   }
 
   private sameFeedback(a: string[], b: string[]): boolean {
