@@ -119,7 +119,13 @@
       <div class="pr-topbar-user-card">
         <span class="pr-topbar-avatar pr-topbar-avatar--lg">{{ getUserInitials() }}</span>
         <div class="min-w-0">
-          <p class="pr-topbar-user-card__name">{{ getUserName() }}</p>
+          <div class="flex min-w-0 items-center gap-1.5">
+            <p class="pr-topbar-user-card__name min-w-0 truncate">{{ getUserName() }}</p>
+            <span
+              class="shrink-0 truncate rounded bg-[var(--pr-color-primary-50)] px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-400)]"
+              >{{ getPlatformRole() }}</span
+            >
+          </div>
           <p class="pr-topbar-user-card__email">{{ api.authSE.localStorageUser?.email }}</p>
         </div>
       </div>

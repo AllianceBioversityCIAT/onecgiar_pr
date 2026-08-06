@@ -90,6 +90,15 @@ export class ShellTopbarComponent implements OnInit {
     return this.api.authSE.localStorageUser?.user_name ?? '';
   }
 
+  /**
+   * Platform role badge ("ADMIN", "Guest", …). It used to live on the sidebar footer user chip;
+   * that chip was removed (Account is the topbar's, PROGRAM-SHELL-SPEC.md §2) so the role moved
+   * here to keep everything the user could see before visible.
+   */
+  getPlatformRole(): string {
+    return this.api.rolesSE.roles?.application?.description ?? 'Guest';
+  }
+
   getMyCenters() {
     return this.api.rolesSE.getMyCenters?.() ?? [];
   }

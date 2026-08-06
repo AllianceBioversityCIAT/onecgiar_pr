@@ -14,9 +14,10 @@
           </div>
         }
       </div>
-      @if (!isCollapsed()) {
-        <button hlmSidebarTrigger type="button"></button>
-      }
+      <!-- No collapse control here: CURRENT's sidebar header is mark + PRMS/Reporting only
+           (SIDEBAR-SPEC §1) and the topbar already owns the toggle. Keeping both put two
+           identical buttons 60px apart — and this one was a Helm `ghost`, whose light
+           `--muted` hover painted a white pill on the dark sidebar. -->
     </div>
 
     @if (!isProduction && !isCollapsed()) {
@@ -56,10 +57,9 @@
         @for (sp of railPrograms(); track sp.initiativeId) {
           <a
             class="pr-nav-rail-btn"
-            [class.pr-nav-rail-btn--active]="sp.initiativeId === activeSpId()"
-            [routerLink]="rfrPlannedPath"
-            [queryParams]="{ sp: sp.initiativeId }"
-            [attr.aria-current]="sp.initiativeId === activeSpId() ? 'page' : null"
+            [class.pr-nav-rail-btn--active]="sp.initiativeCode === activeSpCode()"
+            [routerLink]="programLink(sp)"
+            [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
             [attr.aria-label]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)"
             [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
             <span class="pr-nav-program-dot" [style.background]="programDotColor(sp.initiativeCode)"></span>
@@ -70,7 +70,7 @@
           @for (center of getMyCenters(); track center.center_id) {
             <a
               class="pr-nav-rail-btn"
-              [routerLink]="['/bilateral', center.center_acronym, 'home']"
+              [routerLink]="centerHomeLink(center)"
               routerLinkActive
               #rlaRailCenter="routerLinkActive"
               [class.pr-nav-rail-btn--active]="rlaRailCenter.isActive"
@@ -97,15 +97,14 @@
                   @for (sp of group.items; track sp.initiativeId) {
                     <a
                       class="pr-nav-program-card"
-                      [class.pr-nav-program-card--active]="sp.initiativeId === activeSpId()"
-                      [routerLink]="rfrPlannedPath"
-                      [queryParams]="{ sp: sp.initiativeId }"
-                      [attr.aria-current]="sp.initiativeId === activeSpId() ? 'page' : null"
+                      [class.pr-nav-program-card--active]="sp.initiativeCode === activeSpCode()"
+                      [routerLink]="programLink(sp)"
+                      [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
                       [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
                       <span class="pr-nav-program-dot" [style.background]="programDotColor(sp.initiativeCode)"></span>
                       <span class="pr-nav-program-code">{{ sp.initiativeCode }}</span>
                       <span class="pr-nav-program-name">{{ sp.initiativeShortName || sp.initiativeName }}</span>
-                      @if (sp.initiativeId === activeSpId()) {
+                      @if (sp.initiativeCode === activeSpCode()) {
                         <ng-icon name="lucideCheck" class="pr-nav-program-check shrink-0 text-[14px]" />
                       }
                     </a>
@@ -127,10 +126,9 @@
                       @for (sp of group.items; track sp.initiativeId) {
                         <a
                           class="pr-nav-program-row"
-                          [class.pr-nav-program-row--active]="sp.initiativeId === activeSpId()"
-                          [routerLink]="rfrPlannedPath"
-                          [queryParams]="{ sp: sp.initiativeId }"
-                          [attr.aria-current]="sp.initiativeId === activeSpId() ? 'page' : null"
+                          [class.pr-nav-program-row--active]="sp.initiativeCode === activeSpCode()"
+                          [routerLink]="programLink(sp)"
+                          [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
                           [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
                           <span class="pr-nav-program-dot pr-nav-program-dot--sm" [style.background]="programDotColor(sp.initiativeCode)"></span>
                           <span class="pr-nav-program-code pr-nav-program-code--sm">{{ sp.initiativeCode }}</span>
@@ -159,7 +157,7 @@
           @for (center of getMyCenters(); track center.center_id) {
             <a
               class="pr-nav-program-card pr-nav-center-card"
-              [routerLink]="['/bilateral', center.center_acronym, 'home']"
+              [routerLink]="centerHomeLink(center)"
               routerLinkActive
               #rlaCenter="routerLinkActive"
               [class.pr-nav-program-card--active]="rlaCenter.isActive"
@@ -417,8 +415,12 @@
     </div>
   </div>
 
-  <div hlmSidebarFooter class="border-sidebar-border gap-2 border-t p-2">
-    @if (inResultDetail() && !isCollapsed()) {
+  <!-- Footer = Result metadata ONLY. There is no user chip here: Account lives in the TOPBAR
+       (PROGRAM-SHELL-SPEC.md §2); the platform role badge the chip carried moved to the topbar
+       user menu. The whole footer is conditional now — with the chip gone it would otherwise
+       render as an empty bordered strip on every non-result page. -->
+  @if (inResultDetail() && !isCollapsed()) {
+    <div hlmSidebarFooter class="border-sidebar-border gap-2 border-t p-2">
       <!-- Result metadata — the white rounded container: sits at the very bottom, separated
            from the dark nav, primary-tinted text. Reads as a distinct reference card. -->
       <div class="rounded-xl bg-white p-2.5 shadow-[0_6px_18px_rgba(var(--pr-color-black-rgb),0.28)]">
@@ -452,30 +454,8 @@
           </div>
         </dl>
       </div>
-    }
-    <button
-      type="button"
-      cdkOverlayOrigin
-      #userTrigger="cdkOverlayOrigin"
-      (click)="userMenuOpen.set(!userMenuOpen())"
-      aria-label="User menu"
-      [attr.aria-expanded]="userMenuOpen()"
-      [attr.title]="isCollapsed() ? getUserName() : null"
-      class="pr-nav-user-chip flex w-full items-center gap-2 rounded-xl border p-1.5 text-left transition-colors"
-      [class.justify-center]="isCollapsed()">
-      <span class="pr-avatar" [style]="{ width: '32px', height: '32px', minWidth: '32px' }">{{ getUserInitials() }}</span>
-      @if (!isCollapsed()) {
-        <span class="flex min-w-0 flex-col leading-tight">
-          <span class="flex items-center gap-1.5">
-            <span class="min-w-0 truncate text-xs font-semibold text-white">{{ getUserName() }}</span>
-            <span class="pr-nav-user-chip__role shrink-0 truncate rounded px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px]">{{ getPlatformRole() }}</span>
-          </span>
-          <span class="truncate text-[10px] text-white/60">{{ getUserEmail() }}</span>
-        </span>
-        <i class="material-icons-round ms-auto text-[18px] text-white/70 transition-transform duration-200" [class.rotate-180]="userMenuOpen()" aria-hidden="true">expand_more</i>
-      }
-    </button>
-  </div>
+    </div>
+  }
 
   <button type="button" hlmSidebarRail aria-label="Toggle sidebar"></button>
 </hlm-sidebar>
@@ -502,9 +482,8 @@
                 <li>
                   <a
                     class="pr-nav-flyout__link"
-                    [class.pr-nav-flyout__link--active]="isRfrSectionActive(rfrPlannedPath) && sp.initiativeId === activeSpId()"
-                    [routerLink]="rfrPlannedPath"
-                    [queryParams]="{ sp: sp.initiativeId }"
+                    [class.pr-nav-flyout__link--active]="sp.initiativeCode === activeSpCode()"
+                    [routerLink]="programLink(sp)"
                     (click)="closeIconFlyout()">
                     <img [src]="iconSrc(sp)" [alt]="sp.initiativeCode" width="16" height="16" class="size-4 shrink-0 rounded object-cover" />
                     <span class="font-semibold">{{ sp.initiativeCode }}</span>
@@ -592,58 +571,5 @@
         Reset to default
       </button>
     }
-  </div>
-</ng-template>
-
-<!-- User menu popover (opens upward from the footer) -->
-<ng-template
-  cdkConnectedOverlay
-  [cdkConnectedOverlayOrigin]="userTrigger"
-  [cdkConnectedOverlayOpen]="userMenuOpen()"
-  [cdkConnectedOverlayHasBackdrop]="true"
-  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
-  [cdkConnectedOverlayPositions]="userMenuPositions"
-  (backdropClick)="userMenuOpen.set(false)">
-  <div class="overlay_panel mb-2.5 w-[260px] rounded-2xl bg-white shadow-[4px_4px_10px_4px_rgba(var(--pr-color-black-rgb),0.25)]">
-    <div class="flex items-center gap-2.5 px-3.5 pt-3.5">
-      <span class="pr-avatar" [style]="{ minWidth: '36px', maxWidth: '36px', minHeight: '36px', maxHeight: '36px' }">{{ getUserInitials() }}</span>
-      <div class="flex min-w-0 flex-col">
-        <p class="m-0 truncate text-sm font-semibold text-[var(--pr-color-secondary-400)]">{{ getUserName() }}</p>
-        <p class="m-0 truncate text-[10px] font-light text-[var(--pr-color-accents-5)]">{{ getUserEmail() }}</p>
-      </div>
-    </div>
-
-    <div class="mx-3.5 my-2.5 h-px bg-[var(--pr-color-accents-2)]"></div>
-
-    <div class="flex max-h-[280px] flex-col gap-3.5 overflow-auto px-3.5 pb-3">
-      @if (getInitiativeSeparatedByPortfolio().length > 0) {
-        <div class="flex flex-col gap-1">
-          <p class="m-0 text-xs font-semibold text-[var(--pr-color-accents-5)]">My Science Programs/Accelerators</p>
-          @for (item of getInitiativeSeparatedByPortfolio(); track $index) {
-            <p class="m-0 text-xs font-medium text-[var(--pr-color-secondary-300)]">{{ item.official_code }} - {{ item.role }}</p>
-          }
-        </div>
-      }
-
-      @if (getMyCenters().length > 0) {
-        <div class="flex flex-col gap-1">
-          <p class="m-0 text-xs font-semibold text-[var(--pr-color-accents-5)]">My Centers</p>
-          @for (item of getMyCenters(); track item.center_id) {
-            <p class="m-0 text-xs font-medium text-[var(--pr-color-secondary-300)]">{{ item.center_id }} - {{ item.center_name }} ({{ item.role_name }})</p>
-          }
-        </div>
-      }
-    </div>
-
-    <div class="mx-3.5 h-px bg-[var(--pr-color-accents-2)]"></div>
-
-    <button
-      type="button"
-      class="group flex w-full cursor-pointer items-center gap-1.5 px-3.5 pb-4 pt-2.5"
-      (click)="logout()"
-      aria-label="Log out">
-      <i class="material-icons-round text-[15px] text-[var(--pr-color-red-300)] transition-colors group-hover:text-[var(--pr-color-red-500)]" aria-hidden="true">logout</i>
-      <p class="m-0 text-xs font-normal text-[var(--pr-color-red-300)] transition-colors group-hover:text-[var(--pr-color-red-500)]">Log out</p>
-    </button>
   </div>
 </ng-template>

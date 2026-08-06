@@ -86,7 +86,7 @@ describe('ReportingNavSidebarComponent', () => {
 
     apiMock = {
       authSE: { localStorageUser: null as any, logout: jest.fn() },
-      rolesSE: { roles: null as any, getMyCenters: jest.fn().mockReturnValue(['CIAT']) },
+      rolesSE: { roles: null as any, getMyCenters: jest.fn().mockReturnValue([{ center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Member' }]) },
       dataControlSE: { myInitiativesList: [] as any[] }
     };
 
@@ -287,6 +287,33 @@ describe('ReportingNavSidebarComponent', () => {
       routerMock.parseUrl.mockReturnValue({ queryParams: { sp: 'abc' } });
       navigateTo(`${PLANNED}?sp=abc`);
       expect(component.activeSpId()).toBeNull();
+    });
+
+    it('programLink addresses a programme by CODE, matching the path prtest uses', async () => {
+      await build();
+      expect(component.programLink({ initiativeCode: 'SP01' } as any)).toEqual([
+        '/result-framework-reporting/entity-details',
+        'SP01'
+      ]);
+    });
+
+    it('reads the open programme CODE from the entity-details path segment', async () => {
+      await build();
+      expect(component.activeSpCode()).toBeNull();
+
+      navigateTo('/result-framework-reporting/entity-details/SP06');
+      expect(component.activeSpCode()).toBe('SP06');
+
+      navigateTo('/result-framework-reporting/entity-details/SP06/aow/all');
+      expect(component.activeSpCode()).toBe('SP06');
+    });
+
+    it('still resolves a CODE from a legacy ?sp=<id> link so old saved URLs stay highlighted', async () => {
+      homeMock.mySPsList.set([{ initiativeId: 12, initiativeCode: 'SP12' }]);
+      await build();
+      routerMock.parseUrl.mockReturnValue({ queryParams: { sp: '12' } });
+      navigateTo(`${PLANNED}?sp=12`);
+      expect(component.activeSpCode()).toBe('SP12');
     });
   });
 
@@ -492,58 +519,38 @@ describe('ReportingNavSidebarComponent', () => {
     });
   });
 
-  // ------------------------------------------------------------------ user menu
-  describe('user chrome', () => {
-    it('getUserInitials prefers the stored acronym', async () => {
-      apiMock.authSE.localStorageUser = { user_acronym: 'YZ', user_name: 'Yecksin Zuniga' };
+  // ---------------------------------------------------- footer / rail chrome
+  // The user (account) menu is NOT part of this component any more — it lives only in the
+  // topbar (PROGRAM-SHELL-SPEC.md §2). Its getters and their specs moved to
+  // shell-topbar.component.spec.ts; what stays here is the centres / notifications /
+  // text-size chrome the sidebar still owns.
+  describe('sidebar chrome', () => {
+    it('no longer exposes the user-menu members the topbar owns', async () => {
       await build();
-      expect(component.getUserInitials()).toBe('YZ');
-    });
-
-    it('getUserInitials derives them from the full name', async () => {
-      apiMock.authSE.localStorageUser = { user_name: 'yecksin mauricio zuniga' };
-      await build();
-      expect(component.getUserInitials()).toBe('YM');
-    });
-
-    it('getUserInitials falls back to the email local part', async () => {
-      apiMock.authSE.localStorageUser = { user_name: '', email: 'yecksin.zuniga@cgiar.org' };
-      await build();
-      expect(component.getUserInitials()).toBe('YZ');
-    });
-
-    it('getUserInitials returns an empty string when there is no user', async () => {
-      await build();
-      expect(component.getUserInitials()).toBe('');
-      expect(component.getUserName()).toBe('');
-      expect(component.getUserEmail()).toBe('');
-    });
-
-    it('exposes the user name / email when present', async () => {
-      apiMock.authSE.localStorageUser = { user_name: 'Yecksin', email: 'y@cgiar.org', user_acronym: 'Y' };
-      await build();
-      expect(component.getUserName()).toBe('Yecksin');
-      expect(component.getUserEmail()).toBe('y@cgiar.org');
-    });
-
-    it('getPlatformRole falls back to Guest', async () => {
-      await build();
-      expect(component.getPlatformRole()).toBe('Guest');
-
-      apiMock.rolesSE.roles = { application: { description: 'Admin' } };
-      expect(component.getPlatformRole()).toBe('Admin');
-    });
-
-    it('getInitiativeSeparatedByPortfolio only keeps portfolio 3', async () => {
-      apiMock.dataControlSE.myInitiativesList = [{ portfolio_id: 3 }, { portfolio_id: 2 }];
-      await build();
-      expect(component.getInitiativeSeparatedByPortfolio()).toHaveLength(1);
+      const c = component as unknown as Record<string, unknown>;
+      ['userMenuOpen', 'userMenuPositions', 'getUserName', 'getUserInitials', 'getUserEmail', 'getPlatformRole', 'getInitiativeSeparatedByPortfolio', 'logout'].forEach(
+        member => expect(c[member]).toBeUndefined()
+      );
     });
 
     it('getMyCenters delegates to the roles service', async () => {
       await build();
-      expect(component.getMyCenters()).toEqual(['CIAT']);
+      expect(component.getMyCenters()).toEqual([
+        { center_id: 'CIAT', center_name: 'CIAT', center_acronym: 'CIAT', role_name: 'Member' }
+      ]);
       expect(apiMock.rolesSE.getMyCenters).toHaveBeenCalled();
+    });
+
+    it('drops centres that have neither an acronym nor an id, so no link resolves to /bilateral/undefined/home', async () => {
+      apiMock.rolesSE.getMyCenters.mockReturnValue([{ center_name: 'Nameless' }, { center_acronym: 'CIP' }]);
+      await build();
+      expect(component.getMyCenters()).toEqual([{ center_acronym: 'CIP' }]);
+    });
+
+    it('centerHomeLink falls back to the centre id when the acronym is missing', async () => {
+      await build();
+      expect(component.centerHomeLink({ center_acronym: 'CIP' })).toEqual(['/bilateral', 'CIP', 'home']);
+      expect(component.centerHomeLink({ center_id: 42 })).toEqual(['/bilateral', '42', 'home']);
     });
 
     it('notificationBadgeCount counts the pending updates and tolerates no service data', async () => {
@@ -567,20 +574,10 @@ describe('ReportingNavSidebarComponent', () => {
       expect(fontScaleMock.set).toHaveBeenCalledWith('large');
     });
 
-    it('logout closes the menu and delegates to auth', async () => {
-      await build();
-      component.userMenuOpen.set(true);
-      component.logout();
-      expect(component.userMenuOpen()).toBe(false);
-      expect(apiMock.authSE.logout).toHaveBeenCalled();
-    });
-
     it('escape closes every overlay', async () => {
       await build();
-      component.userMenuOpen.set(true);
       component.fontMenuOpen.set(true);
       component.onEscape();
-      expect(component.userMenuOpen()).toBe(false);
       expect(component.fontMenuOpen()).toBe(false);
       expect(component.iconFlyout()).toBeNull();
     });

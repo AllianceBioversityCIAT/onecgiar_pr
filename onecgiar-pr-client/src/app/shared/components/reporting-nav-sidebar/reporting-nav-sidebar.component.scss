@@ -613,21 +613,6 @@ hlm-sidebar {
   }
 }
 
-.pr-nav-user-chip {
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: #fff;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-  }
-
-  .pr-nav-user-chip__role {
-    background: rgba(107, 70, 229, 0.35);
-    color: var(--pr-sidebar-accent);
-  }
-}
-
 /* Collapsed-rail hover flyout — same dark console language */
 .pr-nav-flyout {
   border-color: rgba(255, 255, 255, 0.1) !important;

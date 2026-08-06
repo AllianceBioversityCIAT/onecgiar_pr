@@ -191,6 +191,8 @@ export class ReportingNavSidebarComponent {
    * Emerging is NOT a Platform item (CURRENT): open it from the program band CTA.
    */
   readonly rfrPlannedPath = '/result-framework-reporting/planned-toc';
+  /** Programme pages are addressed by CODE in the path, like prtest. */
+  readonly rfrProgramPath = '/result-framework-reporting/entity-details';
 
   /**
    * Overview is the OTHER tab of the same program shell. Highlighting the active SP still
@@ -264,7 +266,38 @@ export class ReportingNavSidebarComponent {
     { key: 'projects', label: 'Other projects', items: this.homeSE.otherProjectsList() ?? [] }
   ]);
 
-  /** Currently selected program id from the URL `?sp=` query param (so the tree highlights it). */
+  /** Programme page for a card: `…/entity-details/SP01`, addressed by CODE (prtest's shape). */
+  programLink(sp: SPProgress): unknown[] {
+    return [this.rfrProgramPath, sp?.initiativeCode];
+  }
+
+  /**
+   * Code of the programme currently open, so the tree highlights it. Read from the
+   * `…/entity-details/<CODE>` path segment; the legacy `?sp=<id>` query param is still
+   * honoured (mapped through the programme lists) so old saved links keep highlighting.
+   */
+  readonly activeSpCode = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      startWith(null),
+      map(() => this.readActiveSpCode())
+    ),
+    { initialValue: null as string | null }
+  );
+
+  private readActiveSpCode(): string | null {
+    const url = this.router.url;
+    const fromPath = /\/result-framework-reporting\/entity-details\/([^/?#]+)/.exec(url.split('?')[0]);
+    if (fromPath) return decodeURIComponent(fromPath[1]);
+
+    const raw = Number(this.router.parseUrl(url).queryParams['sp']);
+    if (Number.isNaN(raw)) return null;
+
+    const all = [...(this.homeSE.mySPsList() ?? []), ...(this.homeSE.otherSPsList() ?? []), ...(this.homeSE.otherProjectsList() ?? [])];
+    return all.find(sp => sp.initiativeId === raw)?.initiativeCode ?? null;
+  }
+
+  /** Currently selected program id — kept for the legacy `?sp=` section links. */
   readonly activeSpId = toSignal(
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
@@ -428,10 +461,9 @@ export class ReportingNavSidebarComponent {
     return sp != null ? { sp } : {};
   }
 
-  // --- Footer chrome (moved from the top header) ---
-  readonly userMenuOpen = signal(false);
+  // --- Footer chrome. The user/account menu is NOT here: it lives in the topbar
+  // (PROGRAM-SHELL-SPEC.md §2), so only the text-size popover remains. ---
   readonly fontMenuOpen = signal(false);
-  readonly userMenuPositions: ConnectedPosition[] = [{ originX: 'start', overlayX: 'start', originY: 'top', overlayY: 'bottom' }];
   readonly fontMenuPositions: ConnectedPosition[] = [{ originX: 'start', overlayX: 'start', originY: 'top', overlayY: 'bottom' }];
 
   iconFor(section: PrRoute): string {
@@ -529,44 +561,6 @@ export class ReportingNavSidebarComponent {
     return !hasLeadOrCoordinator;
   }
 
-  // --- User / notifications / text-size (reuse the same shell services) ---
-  getUserInitials(): string {
-    const user = this.api.authSE.localStorageUser;
-    if (user?.user_acronym) return user.user_acronym;
-    const fromName = (user?.user_name ?? '')
-      .split(' ')
-      .filter(n => !!n)
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-    if (fromName) return fromName;
-    const localPart = (user?.email ?? '').split('@')[0] ?? '';
-    return localPart
-      .split(/[._-]+/)
-      .filter(p => !!p)
-      .map(p => p[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  }
-
-  getUserName(): string {
-    return this.api.authSE.localStorageUser?.user_name ?? '';
-  }
-
-  getUserEmail(): string {
-    return this.api.authSE.localStorageUser?.email ?? '';
-  }
-
-  getPlatformRole(): string {
-    return this.api.rolesSE.roles?.application?.description ?? 'Guest';
-  }
-
-  getInitiativeSeparatedByPortfolio() {
-    return this.api.dataControlSE.myInitiativesList.filter(item => item.portfolio_id == 3);
-  }
-
   /**
    * Per-programme dot colour, as in the approved reference (SIDEBAR-SPEC.md §2).
    *
@@ -607,7 +601,16 @@ export class ReportingNavSidebarComponent {
   }
 
   getMyCenters() {
-    return this.api.rolesSE.getMyCenters();
+    // A centre with no acronym AND no id would build `/bilateral/undefined/home`, which the
+    // `:acronym` route happily matches — rendering a bilateral shell for a nonexistent centre.
+    return (this.api.rolesSE.getMyCenters() ?? []).filter((center: { center_acronym?: string; center_id?: unknown }) =>
+      Boolean(center?.center_acronym || center?.center_id)
+    );
+  }
+
+  /** Bilateral home for a centre, falling back to its id when the acronym is missing. */
+  centerHomeLink(center: { center_acronym?: string; center_id?: unknown }): unknown[] {
+    return ['/bilateral', center?.center_acronym || String(center?.center_id ?? ''), 'home'];
   }
 
   notificationBadgeCount(): number {
@@ -622,14 +625,8 @@ export class ReportingNavSidebarComponent {
     this.fontScaleSE.set(value);
   }
 
-  logout(): void {
-    this.userMenuOpen.set(false);
-    this.api.authSE.logout();
-  }
-
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    this.userMenuOpen.set(false);
     this.fontMenuOpen.set(false);
     this.closeIconFlyout();
   }
