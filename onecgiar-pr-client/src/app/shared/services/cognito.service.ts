@@ -184,8 +184,15 @@ export class CognitoService {
   }
 
   redirectToHome() {
-    // setTimeout(() => {
+    // Back to the deep link the user was denied before logging in; otherwise '/', which
+    // the landing resolver turns into their first science program (or the Results Center).
+    const pending = this.authService.consumePendingRedirectUrl();
+    if (pending) {
+      this.router.navigateByUrl(pending).then(ok => {
+        if (!ok) this.router.navigate(['/']);
+      });
+      return;
+    }
     this.router.navigate(['/']);
-    // }, 1000);
   }
 }

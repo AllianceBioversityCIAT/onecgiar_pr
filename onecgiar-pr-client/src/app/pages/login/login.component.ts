@@ -36,7 +36,15 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (this.authService.localStorageUser) {
-      this.router.navigate(['/']);
+      // Already signed in: honour the deep link that sent them here, if any.
+      const pending = this.authService.consumePendingRedirectUrl();
+      if (pending) {
+        this.router.navigateByUrl(pending).then(ok => {
+          if (!ok) this.router.navigate(['/']);
+        });
+      } else {
+        this.router.navigate(['/']);
+      }
     }
 
     this.authService.inLogin.set(true);

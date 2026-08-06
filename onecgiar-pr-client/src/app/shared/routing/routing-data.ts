@@ -118,7 +118,15 @@ export const routingApp: PrRoute[] = [
     path: 'bilateral',
     loadChildren: () => import('../../pages/bilateral/bilateral.module').then(m => m.BilateralModule)
   },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result-framework-reporting', prHide: true }
+  {
+    // Session entry point. Resolves to the user's first assigned science program, or to the
+    // Results Center when they have none. See `LandingRedirectComponent`.
+    prName: '',
+    path: '**',
+    prHide: true,
+    canActivate: [CheckLoginGuard],
+    loadComponent: () => import('../../pages/landing-redirect/landing-redirect.component').then(m => m.LandingRedirectComponent)
+  }
 ];
 
 export const extraRoutingApp: PrRoute[] = [
@@ -498,13 +506,17 @@ const loadDashboardLab = () =>
 
 export const ResultFrameworkReportingRouting: PrRoute[] = [
   {
-    // The home now serves the redesigned dashboard-lab experience. The original
-    // home component is kept in the codebase (no longer routed here) and the
-    // experimental /dashboard-lab route below still points at the same component.
-    prName: 'Dashboard',
+    // Restored to the Science Programs listing — the page this path has always served
+    // (and still serves on prtest), which is what the "Science programs" breadcrumb root
+    // points at. The widget dashboard that briefly lived here is retired; the experimental
+    // /dashboard-lab route below still reaches that component.
+    prName: 'Science programs',
     path: 'home',
-    data: { sidebar: { width: 300 }, rfrView: 'dashboard' },
-    loadComponent: loadDashboardLab
+    data: { sidebar: { width: 300 } },
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/result-framework-reporting-home/result-framework-reporting-home.component').then(
+        m => m.ResultFrameworkReportingHomeComponent
+      )
   },
   {
     // Overview tab of the program shell. Its own route (not `home`) so the band's tabs are real
