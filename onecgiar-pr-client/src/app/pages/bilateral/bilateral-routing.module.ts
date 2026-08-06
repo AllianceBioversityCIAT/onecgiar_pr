@@ -10,8 +10,10 @@ const routes: Routes = [
     children: BilateralRouting
   },
   {
+    // Unknown bilateral URL: hand back to the session landing resolver rather than to the
+    // RFR dashboard, which is no longer the app's entry point.
     path: '**',
-    redirectTo: '/result-framework-reporting/home',
+    redirectTo: '/',
     pathMatch: 'full'
   }
 ];

@@ -17,15 +17,32 @@ p {
   align-items: center;
   justify-content: flex-start;
   padding: 0 30px;
-  gap: 6px;
   border-bottom: 1px solid var(--pr-color-accents-2);
   background-color: var(--pr-color-white);
 
   @media (max-width: 768px) {
     padding: 0 16px;
-    flex-wrap: wrap;
     height: auto;
     min-height: 40px;
+  }
+}
+
+.entity-details_breadcrumb_list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
   }
 }
 
@@ -33,9 +50,11 @@ p {
   font-weight: 400;
   color: var(--pr-color-accents-5);
   cursor: pointer;
+  text-decoration: none;
 
   &:hover {
     color: var(--pr-color-accents-6);
+    text-decoration: underline;
   }
 }
 

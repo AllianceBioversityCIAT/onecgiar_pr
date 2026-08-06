@@ -7,18 +7,35 @@
   align-items: center;
   justify-content: flex-start;
   padding: 0 30px;
-  gap: 6px;
   border-bottom: 1px solid var(--pr-color-accents-2);
   background-color: var(--pr-color-white);
+}
+
+.bilateral-results_breadcrumb_list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 }
 
 .bilateral-results_breadcrumb_homeLink {
   font-weight: 400;
   color: var(--pr-color-accents-5);
   cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
 
   &:hover {
     color: var(--pr-color-accents-6);
+    text-decoration: underline;
   }
 }
 
@@ -41,7 +58,8 @@
 .bilateral-results-layout {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 80px);
+  // Shell topbar is 56px; the old 80px was the retired app header.
+  height: calc(100vh - 56px);
   overflow: hidden;
 }
 

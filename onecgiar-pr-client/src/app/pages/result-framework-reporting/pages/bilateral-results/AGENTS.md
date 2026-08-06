@@ -61,7 +61,7 @@ bilateral-results/
 └────────────────┴───────────────────────────────────────────────────┘
 ```
 
-`calc(100vh - 80px)` height (assumes shell header = 80px). Below 1115px the layout is unchanged but the table scrolls horizontally.
+`calc(100vh - 56px)` height (shell topbar = 56px). Below 1115px the layout is unchanged but the table scrolls horizontally.
 
 ---
 

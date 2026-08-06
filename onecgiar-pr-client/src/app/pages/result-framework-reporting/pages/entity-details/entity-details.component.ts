@@ -55,6 +55,9 @@ export class EntityDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
 
   cd = inject(ChangeDetectorRef);
 
+  /** Breadcrumb root: the Science Programs listing (the original target of this crumb). */
+  readonly programsListPath = '/result-framework-reporting/home';
+
   @ViewChild('outputsCanvas') private readonly outputsCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('outcomesCanvas') private readonly outcomesCanvas?: ElementRef<HTMLCanvasElement>;
   private outputsChart?: Chart;

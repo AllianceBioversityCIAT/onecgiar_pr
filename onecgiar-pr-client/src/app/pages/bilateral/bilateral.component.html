@@ -1,5 +1,8 @@
-@if (ctx.centerAcronym()) {
-  <div class="sticky top-0 z-[100] border-b border-[var(--pr-color-accents-2)] bg-white">
+<!-- Hidden on the center home: there the single crumb carries no navigation and only
+     repeats the <h1> rendered by bilateral-page-header. Sticks BELOW the 56px shell
+     topbar (which is sticky top:0 z:30) instead of on top of it. -->
+@if (ctx.centerAcronym() && crumbs().length > 1) {
+  <div class="sticky top-[56px] z-20 border-b border-[var(--pr-color-accents-2)] bg-white">
     <div class="mx-auto flex max-w-[1100px] items-center gap-2 px-7 py-2.5">
       @if (crumbs().length > 1) {
         <button

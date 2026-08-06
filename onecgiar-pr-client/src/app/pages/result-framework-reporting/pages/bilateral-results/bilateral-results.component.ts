@@ -24,6 +24,14 @@ export class BilateralResultsComponent implements OnInit {
     });
   }
 
+  /** Breadcrumb root: the Science Programs listing. */
+  readonly programsListPath = '/result-framework-reporting/home';
+
+  /** The review queue for this program, with no centre filter applied. */
+  resultsReviewPath(): string {
+    return `/result-framework-reporting/entity-details/${this.bilateralResultsService.entityId()}/results-review`;
+  }
+
   get hasCenter(): boolean {
     const center = this.activatedRoute.snapshot.queryParams['center'];
     return !!center;
@@ -33,9 +41,14 @@ export class BilateralResultsComponent implements OnInit {
     return this.bilateralResultsService.centers().find(center => center.code === this.activatedRoute.snapshot.queryParams['center'])?.acronym || '';
   }
 
-  navigateToResultsReview(): void {
+  /** Drops the centre filter from the review queue state. */
+  clearSelectedCenter(): void {
     this.bilateralResultsService.selectedCenterCode.set(null);
     this.bilateralResultsService.selectCenter(null);
+  }
+
+  navigateToResultsReview(): void {
+    this.clearSelectedCenter();
 
     this.router.navigate([], {
       relativeTo: this.activatedRoute,

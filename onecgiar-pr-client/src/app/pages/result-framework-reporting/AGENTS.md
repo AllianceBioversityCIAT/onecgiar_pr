@@ -1256,7 +1256,7 @@ All headings use the `pr-typography(...)` SCSS mixin from `styles/fonts.scss`. B
 
 - Home and entity-details: `1115px` (md). Below: collapse two-column to one-column.
 - Other SPs: `1500px` (xl) → fixed `repeat(3, 1fr)`.
-- Bilateral results: page height = `calc(100vh - 80px)` (assumes shell header = 80px).
+- Bilateral results: page height = `calc(100vh - 56px)` (shell topbar = 56px).
 
 ### 9.4 Assets used
 
