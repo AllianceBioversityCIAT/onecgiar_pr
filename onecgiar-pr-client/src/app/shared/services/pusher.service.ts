@@ -85,6 +85,13 @@ export class PusherService {
     if (this.beforeRoute) this.pusher.disconnect();
     if (this.beforeRoute) this.pusher.unsubscribe('presence-prms' + this.beforeRoute);
 
+    // No result in the URL → nothing to share presence on. The previous channel has just been
+    // torn down above, so returning here is the correct end state.
+    if (resultId == null || resultId === '') {
+      this.beforeRoute = null;
+      return;
+    }
+
     PRRoute = PRRoute.split('/').join('').split('-').join('');
     this.pusher = new Pusher(environment.pusher.key, {
       cluster: environment.pusher.cluster,

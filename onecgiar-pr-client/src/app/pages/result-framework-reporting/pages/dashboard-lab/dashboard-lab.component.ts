@@ -545,6 +545,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // Default landing: first assigned Science Program under My Programs (skip when
     // `?sp=` is present — restoreFromUrl / the queryParam subscription own that).
     effect(() => {
+      // Retry a programme code that arrived in the path before the list did.
+      const programs = this.allPrograms();
+      if (this.pendingProgramCode) {
+        const match = programs.find(sp => sp.initiativeCode === this.pendingProgramCode);
+        if (match) {
+          this.pendingProgramCode = null;
+          this.selectedId.set(match.initiativeId);
+          this.scope.set('program');
+          return;
+        }
+        // Still unresolved — do NOT fall back to the first programme, or a valid deep link
+        // would silently show a different programme while the list loads.
+        return;
+      }
       if (this.selectedId() != null) return;
       const rawSp = this.route.snapshot.queryParamMap.get('sp');
       if (rawSp && !Number.isNaN(Number(rawSp))) return;
@@ -604,7 +618,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       this.router.navigate([], {
         relativeTo: this.route,
         queryParams: {
-          sp: scope === 'program' ? sp : null,
+          // The programme is addressed by the path (`…/entity-details/SP01`) — never mirror it
+          // back as `?sp=`, or the URL would carry two competing sources of truth.
+          sp: null,
           aow: aow ?? null,
           // filters only make sense inside an open AOW
           typ: aow ? typ ?? null : null,
@@ -974,14 +990,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   private spParamSub?: Subscription;
+  private entityParamSub?: Subscription;
+  /** Programme code from the path still waiting for the programme list to load. */
+  private pendingProgramCode: string | null = null;
 
   ngOnInit(): void {
     this.restoreFromUrl();
     if (this.allPrograms().length === 0) {
       this.homeSE.getScienceProgramsProgress();
     }
-    // React to `?sp=` changes coming from the Spartan sidebar (in-app navigation keeps the
-    // component alive, so the snapshot read in restoreFromUrl only covers the first load).
+    // The programme now comes from the PATH (`…/entity-details/SP01`), by code. In-app
+    // navigation keeps this component alive, so react to param changes as well as the first load.
+    this.entityParamSub = this.route.paramMap.subscribe(pm => this.selectProgramByCode(pm.get('entityId')));
+
+    // React to `?sp=` changes — kept for links saved before the move to path addressing.
     this.spParamSub = this.route.queryParamMap.subscribe(qp => {
       const raw = qp.get('sp');
       const id = raw ? Number(raw) : NaN;
@@ -1019,6 +1041,22 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
     });
     this.startCenterRotation();
+  }
+
+  /**
+   * Selects the programme named by the `:entityId` path segment (a CODE such as `SP01`).
+   * The list may not have arrived yet on a cold load, so the pending code is retried from the
+   * `allPrograms()` effect below.
+   */
+  private selectProgramByCode(code: string | null): void {
+    if (!code) return;
+    this.pendingProgramCode = code;
+    const match = this.allPrograms().find(sp => sp.initiativeCode === code);
+    if (match) {
+      this.pendingProgramCode = null;
+      this.selectedId.set(match.initiativeId);
+      this.scope.set('program');
+    }
   }
 
   /** Rehydrate the view from the URL so a reload stays on the same program + AOW + Planned mode. */
@@ -1064,6 +1102,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.dataControlSE.focusMode.set(false);
     this.dataControlSE.slimNav.set(false);
     this.spParamSub?.unsubscribe();
+    this.entityParamSub?.unsubscribe();
     if (this.centerTimer) clearInterval(this.centerTimer);
   }
 

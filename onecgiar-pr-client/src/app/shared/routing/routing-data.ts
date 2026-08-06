@@ -566,10 +566,22 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
       )
   },
   {
-    prName: 'Entity details',
+    // Overview tab of the redesigned programme shell. Declared before the 2-segment route
+    // below purely for readability — they cannot collide (different segment counts).
+    prName: 'Program overview',
+    path: 'entity-details/:entityId/overview',
+    data: { sidebar: { width: 300 }, rfrView: 'overview' },
+    loadComponent: loadDashboardLab
+  },
+  {
+    // THE programme page. Serves the redesigned shell (band + Overview/Reporting tabs +
+    // the CURRENT reporting table) at the path that was always the programme's address and
+    // that people have saved as links. The legacy `EntityDetailsComponent` (Insights bento)
+    // is retired and no longer routed — the file is kept in the tree.
+    prName: 'Program reporting',
     path: 'entity-details/:entityId',
-    loadComponent: () =>
-      import('../../pages/result-framework-reporting/pages/entity-details/entity-details.component').then(m => m.EntityDetailsComponent)
+    data: { sidebar: { width: 300 }, rfrView: 'planned' },
+    loadComponent: loadDashboardLab
   },
   {
     prName: 'Bilateral results review',

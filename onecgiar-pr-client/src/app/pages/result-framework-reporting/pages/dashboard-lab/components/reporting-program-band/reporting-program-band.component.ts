@@ -79,8 +79,12 @@ export class ReportingProgramBandComponent {
    * Overview is its OWN surface now (`/overview`), not the retired bento at `/home` — sending the
    * tab back there was the bug this route fixes.
    */
-  readonly overviewPath = '/result-framework-reporting/overview';
-  readonly reportingPath = '/result-framework-reporting/planned-toc';
+  /**
+   * Both tabs live UNDER the programme now (`…/entity-details/SP01`), so the trail is
+   * path-addressed and shareable. The `?sp=<id>` shape they used before is gone.
+   */
+  readonly reportingPath = computed(() => `/result-framework-reporting/entity-details/${this.programCode()}`);
+  readonly overviewPath = computed(() => `${this.reportingPath()}/overview`);
   readonly emergingPath = '/result-framework-reporting/emerging';
 
   /** ⓘ popover open state — click toggles, Escape / outside click close (reference :348). */

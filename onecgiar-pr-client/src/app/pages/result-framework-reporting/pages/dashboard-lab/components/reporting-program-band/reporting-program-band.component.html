@@ -111,7 +111,7 @@
           : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
       "
       [attr.aria-current]="activeTab() === 'overview' ? 'page' : null"
-      [routerLink]="overviewPath"
+      [routerLink]="overviewPath()"
       queryParamsHandling="preserve">
       Overview
     </a>
@@ -123,7 +123,7 @@
           : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
       "
       [attr.aria-current]="activeTab() === 'reporting' ? 'page' : null"
-      [routerLink]="reportingPath"
+      [routerLink]="reportingPath()"
       queryParamsHandling="preserve">
       Reporting
     </a>
