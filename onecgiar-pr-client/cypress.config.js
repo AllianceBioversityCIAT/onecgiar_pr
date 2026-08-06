@@ -1,6 +1,7 @@
 const { defineConfig } = require('cypress')
 
-// Try to import Cypress environment configuration
+// Try to import Cypress environment configuration.
+// The keys read here MUST match cypress.env.js.example (guestEmail / guestPassword / userToken).
 let cypressEnvironment
 try {
   cypressEnvironment = require('./cypress.env')
@@ -9,12 +10,15 @@ try {
   cypressEnvironment = {
     environment: {
       cypress: {
-        testEmail: '',
-        testPassword: ''
+        guestEmail: '',
+        guestPassword: '',
+        userToken: ''
       }
     }
   }
 }
+
+const cypressEnv = (cypressEnvironment && cypressEnvironment.environment && cypressEnvironment.environment.cypress) || {}
 
 module.exports = defineConfig({
   projectId: 'snnzit',
@@ -77,12 +81,16 @@ module.exports = defineConfig({
   responseTimeout: 10000,
   pageLoadTimeout: 30000,
   env: {
-    // Test credentials for Guest role
-    guestEmail: cypressEnvironment.environment.cypress.guestEmail,
-    guestPassword: cypressEnvironment.environment.cypress.guestPassword,
+    // Test credentials for Guest role (UI login — slow path)
+    guestEmail: cypressEnv.guestEmail || '',
+    guestPassword: cypressEnv.guestPassword || '',
 
-    // Check if credentials are available
-    hasCredentials: cypressEnvironment.environment.cypress.guestEmail &&
-      cypressEnvironment.environment.cypress.guestPassword
+    // Raw JWT for the fast session login (cy.loginByToken) — same value the app
+    // stores under localStorage['token']. NEVER commit this; cypress.env.js is gitignored.
+    userToken: cypressEnv.userToken || '',
+
+    // Availability flags used by the specs to skip gracefully on machines without secrets
+    hasCredentials: !!(cypressEnv.guestEmail && cypressEnv.guestPassword),
+    hasToken: !!cypressEnv.userToken
   }
 });
