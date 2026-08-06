@@ -539,6 +539,9 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
     loadComponent: loadDashboardLab
   },
   {
+    // ⚠️ RESERVED — no link in the app points here (verified 2026-08-06). Kept on purpose:
+    // this is where the per-centre dashboard from the 2026-08-04 ops meeting is meant to
+    // land. Do NOT delete it as dead code.
     prName: 'My CGIAR Centers',
     path: 'centers',
     data: { sidebar: { width: 300 }, rfrView: 'centers' },
@@ -552,6 +555,9 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
     loadComponent: loadDashboardLab
   },
   {
+    // ⚠️ RESERVED — nothing links here and the component immediately redirects to the
+    // landing, so its own "Back to home" anchor is unreachable today. Kept on purpose as
+    // the entry point for the per-centre report. Do NOT delete it as dead code.
     prName: 'Center report',
     path: 'center/:centerCode/report',
     loadComponent: () =>

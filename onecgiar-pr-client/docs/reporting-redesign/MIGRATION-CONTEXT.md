@@ -277,3 +277,40 @@ and `npm run test:ct` green.
 2. **Is `--pr-color-primary-200` allowed to remain a light tint** (designer's `#ddd6fe`) once the ~20
    legacy border/focus sites are repointed off it? Our reading: **yes** — that is exactly what §1.2
    delivers, and it is what makes the designer's ramp and Rule 7 consistent.
+
+---
+
+## 6. Deferred: unify programme addressing (`?sp=<id>` → `entity-details/<CODE>`)
+
+**Status: deliberately deferred after the demo (decided by Yeck, 2026-08-06). Not a bug — debt.**
+
+The app now addresses a programme by its **CODE in the path**, which is the shape prtest serves and
+that users have saved as links:
+
+| Surface | Path |
+|---|---|
+| Session landing | `/result-framework-reporting/entity-details/<CODE>` |
+| Sidebar programme cards (all 4 render sites) | `/result-framework-reporting/entity-details/<CODE>` |
+| Programme page → AoW → indicators | `entity-details/<CODE>` → `/aow/<id>` |
+| Science Programs listing | `/result-framework-reporting/home` |
+
+**Two routes still address the programme by numeric id via `?sp=`:**
+`/result-framework-reporting/planned-toc` (the redesigned Reporting table) and `/overview`. Both render
+`dashboard-lab`.
+
+**Why it was not done in the same pass.** `dashboard-lab` does not merely *read* `?sp=` — it also
+**writes it back** (a `queryParams` subscription, `restoreFromUrl`, and a writer using
+`queryParamsHandling: 'merge'`). Re-parenting it under `entity-details/:entityId` means converting all
+of that from a numeric id to a code param: a refactor of a ~1200-line component, on the exact surface
+being demonstrated. That is not a routing change.
+
+**Why it is not urgent.** After the sidebar and breadcrumb changes, **nothing outside `dashboard-lab`
+links to `planned-toc` or `overview`** — the only remaining references are its own band tabs and one
+internal link. Its filters already travel as query params (`aow`, `typ`, `st`, `q`, `tocView`,
+`tocAow`), so filtered views are already shareable.
+
+**When picked up**, the shape to land on is `entity-details/<CODE>/reporting` and
+`entity-details/<CODE>/overview`, with the old paths redirecting through a resolver (an `?sp=<id>` →
+code lookup needs the programme list, so a static `redirectTo` will not do it — reuse the
+`LandingRedirectComponent` pattern). Re-verify that whole surface afterwards: it has no DOM-level
+coverage today.

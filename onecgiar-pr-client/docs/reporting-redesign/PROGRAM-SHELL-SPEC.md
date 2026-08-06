@@ -227,10 +227,11 @@ This is exactly the `brandSoft` variant already added to `hlm-button`.
 **The label is state-dependent (rule 17):** `Report` when not started · `Continue` when in progress ·
 **no button at all** once submitted. Nomenclature is fixed to `Target` / `Achieved` (rule 14).
 
-⚠️ **Known deviation to reconcile:** `brandSoft` currently ships `border-brand-300`, not the
-reference's `#DDD6FE` (= `brand-200`). That was a deliberate accessibility fix — on a white card the
-200 border measured **1.39:1**, under the 3:1 non-text floor (`AUDIT-FINDINGS.md` #19). Keep -300 and
-let the reference bend here, or introduce a dedicated `--pr-border-control` at ~3:1. **Decision needed.**
+✅ **Accepted deviation (decided by Yeck, 2026-08-06):** `brandSoft` keeps `border-brand-300` instead
+of the reference's `#DDD6FE` (= `brand-200`). On a white card the 200 border measures **1.39:1**, under
+the 3:1 non-text floor (`AUDIT-FINDINGS.md` #19), so **the reference bends here and accessibility wins**.
+This is the only place the implementation departs from CURRENT for a measured reason rather than an
+oversight — do not "correct" it back to `#DDD6FE`.
 
 ### Column 6 — overflow menu (28px)
 
@@ -265,7 +266,7 @@ Before deleting anything, note what only exists in the current app and has no ho
 
 ## 7. Open questions that block implementation
 
-1. **`brandSoft` border** — reference `#DDD6FE` (1.39:1) vs the shipped accessible `-300`. §5 above.
+1. ~~**`brandSoft` border**~~ — **CLOSED 2026-08-06**: keep the accessible `-300`; the reference bends. §5 above.
 2. **Intermediate / 2030 Outcomes cadence** — same cycle as HLOs or a longer horizon? If different they
    need visual separation from work closing this cycle. (`UI-RULES.md` §8 q3.)
 3. **Where do `dashboard-lab`'s flows go** once the page is retired?
