@@ -1,5 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, OnDestroy, viewChild } from '@angular/core';
 import { Chart } from 'chart.js/auto';
+// Type-only side-effect import: chartjs-plugin-datalabels augments Chart.js's
+// `PluginOptionsByType`, which is what makes the `datalabels` option below a known key.
+// Without it the file does not compile — it only went unnoticed while this component was
+// orphaned (unrouted code is never type-checked by the dev build).
+import 'chartjs-plugin-datalabels';
 import { ResultFrameworkReportingHomeService } from '../../services/result-framework-reporting-home.service';
 import { SPProgress } from '../../../../../../shared/interfaces/SP-progress.interface';
 import { REPORTED_STATUS_IDS, STATUS_META } from '../../status-meta';
@@ -160,7 +165,7 @@ export class ResultFrameworkReportingInsightsComponent implements OnDestroy {
         cutout: '68%',
         plugins: {
           legend: { display: false },
-          datalabels: { display: false } as never,
+          datalabels: { display: false },
           tooltip: {
             callbacks: {
               label: context => ` ${context.parsed} ${context.label}`
@@ -211,7 +216,7 @@ export class ResultFrameworkReportingInsightsComponent implements OnDestroy {
         },
         plugins: {
           legend: { display: false },
-          datalabels: { display: false } as never,
+          datalabels: { display: false },
           tooltip: {
             filter: item => item.datasetIndex === 0,
             callbacks: {
