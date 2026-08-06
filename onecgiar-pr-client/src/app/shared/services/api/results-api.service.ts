@@ -255,9 +255,10 @@ export class ResultsApiService {
       .pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  // Standard envelope: the section body arrives under `response`.
   GET_partnersSection() {
     return this.http
-      .get<PartnersBody>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`)
+      .get<{ response: PartnersBody }>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`)
       .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
@@ -741,16 +742,11 @@ export class ResultsApiService {
     if (this.ipsrDataControlSE.inIpsr) {
       throw new Error('Full metadata export is only available from the Results module.');
     }
-    return this.http.post<any>(
-      `${this.apiBaseUrl}get/reporting/full-metadata-export/jobs`,
-      filtersParams
-    );
+    return this.http.post<any>(`${this.apiBaseUrl}get/reporting/full-metadata-export/jobs`, filtersParams);
   }
 
   GET_reportingFullMetadataExportJob(jobId: string) {
-    return this.http.get<any>(
-      `${this.apiBaseUrl}get/reporting/full-metadata-export/jobs/${jobId}`
-    );
+    return this.http.get<any>(`${this.apiBaseUrl}get/reporting/full-metadata-export/jobs/${jobId}`);
   }
 
   POST_AdminKPExcelReport(body) {
@@ -842,7 +838,9 @@ export class ResultsApiService {
   }
 
   PATCH_primaryImpactAreaKrs(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/type-one-report/primary/primary-impact-area/create`, body);
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/type-one-report/primary/primary-impact-area/create`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GETallInnovations(initiativesList) {
@@ -1435,7 +1433,7 @@ export class ResultsApiService {
   }
 
   POST_createResult(body: any) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body);
+    return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GET_ExistingResultsContributors(resultTocResultId: string, tocResultIndicatorId: string) {

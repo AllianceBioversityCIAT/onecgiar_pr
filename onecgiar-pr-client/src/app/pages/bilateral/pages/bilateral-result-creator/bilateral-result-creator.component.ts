@@ -53,7 +53,7 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     SectionEvidenceComponent,
     SectionTypeSpecificComponent,
     BilateralProgressAsideComponent,
-    BilateralPageHeaderComponent,
+    BilateralPageHeaderComponent
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
@@ -76,6 +76,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   isCreatingResult = signal(false);
   openSectionName = signal<string | null>('general-info');
   isSubmitting = signal(false);
+  isManualSaving = signal(false);
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
   sectionZeroOpen = signal(true);
   showTypeDropdown = signal(false);
@@ -209,10 +210,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.creationService.clearEditorState();
         this.autoSaveService.reset();
         this.mdsTracker.reset();
-        this.router.navigate(
-          ['/bilateral', this.ctx.centerAcronym(), 'result', response.result_code ?? response.id],
-          { queryParams: response.version_id ? { phase: response.version_id } : {} },
-        );
+        this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', response.result_code ?? response.id], {
+          queryParams: response.version_id ? { phase: response.version_id } : {}
+        });
       },
       error: (err: HttpErrorResponse) => {
         this.isCreatingResult.set(false);
@@ -264,16 +264,47 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     });
   }
 
-  triggerManualSave(): void {
-    this.autoSaveService.flush();
-    this.autoSaveService.manualSave$.next();
-    this.api.alertsFe.show({
-      id: 'bilateralManualSave',
-      title: 'Success',
-      description: 'All changes saved successfully.',
-      status: 'success',
-      closeIn: 2000
-    });
+  /** Upper bound for the manual-save wait so a stuck request can never freeze the button. */
+  private static readonly MANUAL_SAVE_TIMEOUT_MS = 15000;
+
+  async triggerManualSave(): Promise<void> {
+    if (this.isManualSaving()) return;
+    this.isManualSaving.set(true);
+    try {
+      // The success alert used to fire before flush() resolved and before the dispatched
+      // PATCHes came back, so it claimed "All changes saved" while requests were still in
+      // flight. Await the flush, let the sections push their payloads, then wait for the
+      // queue to drain before reporting anything.
+      await this.autoSaveService.flush();
+      this.autoSaveService.manualSave$.next();
+      await this.waitForPendingSaves();
+
+      const failed = this.autoSaveService.globalSaveState() === 'error';
+      this.api.alertsFe.show({
+        id: 'bilateralManualSave',
+        title: failed ? 'Save failed' : 'Success',
+        description: failed ? 'Some changes could not be saved. Please try again.' : 'All changes saved successfully.',
+        status: failed ? 'error' : 'success',
+        closeIn: failed ? 5000 : 2000
+      });
+    } catch {
+      this.api.alertsFe.show({
+        id: 'bilateralManualSave',
+        title: 'Save failed',
+        description: 'Some changes could not be saved. Please try again.',
+        status: 'error',
+        closeIn: 5000
+      });
+    } finally {
+      this.isManualSaving.set(false);
+    }
+  }
+
+  private async waitForPendingSaves(): Promise<void> {
+    const start = Date.now();
+    while (this.autoSaveService.hasPendingSaves() && Date.now() - start < BilateralResultCreatorComponent.MANUAL_SAVE_TIMEOUT_MS) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   }
 
   ngOnDestroy(): void {

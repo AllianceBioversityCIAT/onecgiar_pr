@@ -23,7 +23,7 @@ export class SaveButtonComponent {
   constructor(public rolesSE: RolesService, public saveButtonSE: SaveButtonService, public dataControlSE: DataControlService) {}
 
   onClickSave() {
-    if (this.saveButtonSE.isSaving) return;
+    if (this.saveButtonSE.isSaving()) return;
     this.clickSave.emit();
   }
 

@@ -111,22 +111,16 @@ describe('TorKeyResultStoryComponent', () => {
   });
 
   describe('onSaveSection()', () => {
-    it('should call GET_keyResultStoryInitiativeId and show success alert on PATCH_primaryImpactAreaKrs success', () => {
+    // The success alert now comes from SaveButtonService.isSavingPipe() (which also drives the
+    // <app-save-button> spinner), so the component no longer emits a duplicate one.
+    it('should reload the section on PATCH_primaryImpactAreaKrs success without emitting its own alert', () => {
       const spy = jest.spyOn(component, 'GET_keyResultStoryInitiativeId');
       const spyAlerts = jest.spyOn(mockApiService.alertsFe, 'show');
-      const spyGET_keyResultStoryInitiativeId = jest.spyOn(component, 'GET_keyResultStoryInitiativeId');
 
       component.onSaveSection();
 
       expect(spy).toHaveBeenCalled();
-      expect(spyGET_keyResultStoryInitiativeId).toHaveBeenCalled();
-      expect(spyAlerts).toHaveBeenCalledWith({
-        id: 'save-button',
-        title: 'Key result story informaion saved correctly',
-        description: '',
-        status: 'success',
-        closeIn: 500
-      });
+      expect(spyAlerts).not.toHaveBeenCalled();
     });
     it('should log error on PATCH_primaryImpactAreaKrs error', () => {
       const errorResponse = { status: 500, message: 'Internal Server Error' };

@@ -1,4 +1,4 @@
-import { Component, inject, output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
@@ -13,6 +13,9 @@ export class SectionZeroDashboardComponent {
   readonly creationService = inject(BilateralCreationService);
   readonly mdsTracker = inject(BilateralMdsTrackerService);
 
+  /** Submit request in flight — owned by BilateralResultCreatorComponent. */
+  isSubmitting = input<boolean>(false);
+
   submitRequested = output<void>();
 
   overallStatus = this.mdsTracker.overallStatus;
@@ -24,6 +27,7 @@ export class SectionZeroDashboardComponent {
   }
 
   onSubmit(): void {
+    if (this.isSubmitting()) return;
     this.submitRequested.emit();
   }
 }

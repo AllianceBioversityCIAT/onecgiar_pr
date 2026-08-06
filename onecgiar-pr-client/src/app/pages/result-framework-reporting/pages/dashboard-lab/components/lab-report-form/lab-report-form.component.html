@@ -3,7 +3,9 @@
   <!-- indicator category: only asked when the ToC node does not fix it -->
   @if (resultTypes().length && !indicator()?.result_type_id) {
     <div>
-      <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Indicator category <span class="text-[var(--pr-color-red-300)]">*</span></p>
+      <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+        Indicator category <span class="text-[var(--pr-color-red-300)]">*</span>
+      </p>
       <app-pr-select
         [options]="resultTypes()"
         optionLabel="name"
@@ -28,7 +30,9 @@
   <!-- knowledge products come from a repository handle -->
   @if (currentResultIsKnowledgeProduct()) {
     <div class="col-span-full">
-      <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span></p>
+      <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+        Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span>
+      </p>
       <div class="flex items-start gap-2">
         <div class="min-w-0 flex-1">
           <app-pr-input
@@ -65,17 +69,18 @@
       [readOnly]="currentResultIsKnowledgeProduct()"
       placeholder="Result title..."
       name="resultName"
-      [isStatic]="true"
-    />
+      [isStatic]="true" />
   </div>
 
   <!-- contribution to the indicator target -->
   <div class="col-span-full">
     <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contribution to indicator target</p>
-    <div class="mb-2 rounded-lg border-l-[3px] border-[var(--pr-color-primary-300)] bg-[var(--pr-color-accents-1)] p-3 text-[12px] leading-relaxed text-[var(--pr-color-accents-6)]">
+    <div
+      class="mb-2 rounded-lg border-l-[3px] border-[var(--pr-color-primary-300)] bg-[var(--pr-color-accents-1)] p-3 text-[12px] leading-relaxed text-[var(--pr-color-accents-6)]">
       Indicate the numerical value your result contributes toward the {{ indicator()?.target_date || 'current' }} target of this indicator.
       <span class="mt-1.5 block">
-        <b class="text-[var(--pr-color-secondary-400)]">Example:</b> if the target is 200 people trained and your result evidences 90, enter <b>90</b>.
+        <b class="text-[var(--pr-color-secondary-400)]">Example:</b> if the target is 200 people trained and your result evidences 90, enter
+        <b>90</b>.
       </span>
     </div>
     <div class="max-w-[300px]">
@@ -99,8 +104,7 @@
       (ngModelChange)="patch('toc_progressive_narrative', $event)"
       placeholder="How does this result move the indicator forward?"
       name="narrative"
-      [isStatic]="true"
-    />
+      [isStatic]="true" />
   </div>
 
   <!-- contributing CGIAR Centers: ToC first, "Other(s)" opens the rest -->
@@ -117,8 +121,7 @@
       (ngModelChange)="onContributingCentersChange($event)"
       placeholder="Select Centers"
       name="centers"
-      [isStatic]="true"
-    />
+      [isStatic]="true" />
 
     @if (showOtherCenters()) {
       <div class="mt-2.5">
@@ -128,10 +131,9 @@
           [ngModel]="otherCentersSelected()"
           [ngModelOptions]="{ standalone: true }"
           (ngModelChange)="onOtherCentersChange($event)"
-              placeholder="Other CGIAR Centers"
+          placeholder="Other CGIAR Centers"
           name="otherCenters"
-      [isStatic]="true"
-    />
+          [isStatic]="true" />
       </div>
     }
   </div>
@@ -150,8 +152,7 @@
       (ngModelChange)="onScienceChange($event)"
       placeholder="Select Science Programs"
       name="science"
-      [isStatic]="true"
-    />
+      [isStatic]="true" />
 
     @if (showOtherScience()) {
       <div class="mt-2.5">
@@ -161,10 +162,9 @@
           [ngModel]="otherScienceSelected()"
           [ngModelOptions]="{ standalone: true }"
           (ngModelChange)="onOtherScienceChange($event)"
-              placeholder="Other Science Programs"
+          placeholder="Other Science Programs"
           name="otherScience"
-      [isStatic]="true"
-    />
+          [isStatic]="true" />
       </div>
     }
   </div>
@@ -179,10 +179,9 @@
         [ngModel]="selectedBilateral()"
         [ngModelOptions]="{ standalone: true }"
         (ngModelChange)="selectedBilateral.set($event ?? [])"
-          placeholder="Select projects"
+        placeholder="Select projects"
         name="bilateral"
-      [isStatic]="true"
-    />
+        [isStatic]="true" />
     </div>
   }
 
@@ -192,10 +191,12 @@
       type="submit"
       hlmBtn
       variant="brand"
-      [disabled]="!canSave()"
-      class="w-full justify-center gap-2 py-3.5 text-[14px] disabled:pointer-events-none disabled:opacity-40">
+      [disabled]="!canSave() || creatingResult()"
+      class="w-full justify-center gap-2 py-3.5 text-[14px] disabled:pointer-events-none disabled:opacity-40 disabled:cursor-wait">
       {{ creatingResult() ? 'Creating…' : 'Save and continue' }}
-      <span class="material-icons-round text-[17px]">arrow_forward</span>
+      <span class="material-icons-round text-[17px]" [class.animate-spin]="creatingResult()">{{
+        creatingResult() ? 'progress_activity' : 'arrow_forward'
+      }}</span>
     </button>
   </div>
 </form>

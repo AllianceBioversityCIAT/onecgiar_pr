@@ -24,7 +24,7 @@ import { mountCFHost, patchHost } from '../../../../cypress/support/ct-utils';
  *  - VISIBILITY: `*ngIf="pdfSE.enabled() || !rolesSE.readOnly || editable"`.
  *    `RolesService.readOnly` DEFAULTS TO TRUE and is lowered asynchronously once the role/phase
  *    check resolves, so "hidden then shown" is the normal lifecycle, not an edge case.
- *  - SAVING: `SaveButtonService.isSaving` drives the label ('Saving'), the rotating icon and the
+ *  - SAVING: `SaveButtonService.isSaving()` drives the label ('Saving'), the rotating icon and the
  *    click guard. It is a PLAIN boolean flipped inside an RxJS `tap` (i.e. inside an HTTP
  *    callback).
  *  - FEEDBACK: `DataControlService.fieldFeedbackList()` is a SIGNAL and drives the alert counter.
@@ -121,7 +121,7 @@ describe('SaveButtonComponent — contract', () => {
     });
   });
 
-  describe('saving state (SaveButtonService.isSaving — plain boolean, flipped inside an HTTP callback)', () => {
+  describe('saving state (SaveButtonService.isSaving — signal, flipped inside an HTTP callback)', () => {
     it('[contract] shows the "Saving" label while a save is in flight', () => {
       mount();
       cy.get('app-pr-button .text').should('contain.text', 'Save');

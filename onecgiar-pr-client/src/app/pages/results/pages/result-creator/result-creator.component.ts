@@ -1,4 +1,5 @@
-import { Component, DoCheck, OnInit, NgZone } from '@angular/core';
+import { Component, DoCheck, OnDestroy, OnInit, NgZone, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { internationalizationData } from '../../../../shared/data/internationalization-data';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
@@ -7,10 +8,7 @@ import { ResultBody } from '../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { CreateResultManagementService } from './services/create-result-management.service';
 import { TerminologyService } from '../../../../internationalization/terminology.service';
-import {
-  filterOutAvisaFromGroupedInitiativeOptions,
-  filterOutAvisaInitiatives
-} from '../../../../shared/utils/avisa-initiative.util';
+import { filterOutAvisaFromGroupedInitiativeOptions, filterOutAvisaInitiatives } from '../../../../shared/utils/avisa-initiative.util';
 
 @Component({
   selector: 'app-result-creator',
@@ -18,11 +16,16 @@ import {
   styleUrls: ['./result-creator.component.scss'],
   standalone: false
 })
-export class ResultCreatorComponent implements OnInit, DoCheck {
+export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
   naratives = internationalizationData.reportNewResult;
   depthSearchList: any[] = [];
   exactTitleFound = false;
   titleCheckFailed = false;
+  /** Title depth-search / uniqueness check in flight (mirrors ReportResultFormComponent). */
+  loadingDepthSearch = signal(false);
+  /** Initial 4-deep serial chain (phases → roles → initiatives) still running. */
+  loadingInitialData = signal(true);
+  private phasesSub: Subscription | null = null;
   mqapJson: {};
   validating = false;
   kpAlertDescription = `Please add the handle generated in your Center's institutional repository (e.g., CGSpace, MELSpace, WorldFish Repository) to report your knowledge product. Only knowledge products entered into these repositories are accepted in the PRMS Reporting Tool.<br><br>
@@ -50,20 +53,26 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   ) {}
 
   ngOnInit(): void {
-    this.api.dataControlSE.getCurrentPhases().subscribe(() => {
-      this.api.rolesSE.validateReadOnly().then(() => {
-        this.GET_AllInitiatives();
-      });
-      this.api.alertsFs.show({
-        id: 'indoasd',
-        status: 'success',
-        title: '',
-        description: this.naratives.alerts(
-          this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)
-        ),
-        querySelector: '.report_container',
-        position: 'beforebegin'
-      });
+    this.loadingInitialData.set(true);
+    this.api.dataControlSE.getCurrentPhases().subscribe({
+      next: () => {
+        this.api.rolesSE.validateReadOnly().then(() => {
+          this.GET_AllInitiatives(() => this.loadingInitialData.set(false));
+          // Non-admins never hit GET_AllInitiatives (it early-returns): release the guard here.
+          if (!this.api.rolesSE.isAdmin) this.loadingInitialData.set(false);
+        });
+        this.api.alertsFs.show({
+          id: 'indoasd',
+          status: 'success',
+          title: '',
+          description: this.naratives.alerts(
+            this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)
+          ),
+          querySelector: '.report_container',
+          position: 'beforebegin'
+        });
+      },
+      error: () => this.loadingInitialData.set(false)
     });
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.currentResultTypeList = [];
@@ -74,9 +83,30 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
       if (initiatives.length == 1) this.resultLevelSE.resultBody.initiative_id = initiatives[0].id;
     });
 
-    setTimeout(() => {
+    this.loadAllPhases();
+  }
+
+  ngOnDestroy(): void {
+    this.phasesSub?.unsubscribe();
+    this.phasesSub = null;
+    if (this.trailingScanId !== null) {
+      clearTimeout(this.trailingScanId);
+      this.trailingScanId = null;
+    }
+  }
+
+  /**
+   * Chained off PhasesService instead of the old `setTimeout(..., 600)` guess: read the phases
+   * straight away when they are already cached, otherwise wait for the fetch to emit.
+   */
+  private loadAllPhases(): void {
+    const alreadyLoaded = !!this.phasesService?.phases?.reporting?.length || !!this.phasesService?.phases?.ipsr?.length;
+    if (alreadyLoaded) {
       this.getAllPhases();
-    }, 600);
+      return;
+    }
+
+    this.phasesSub = this.phasesService.getPhasesObservable().subscribe(() => this.getAllPhases());
   }
 
   onSelectInit() {
@@ -174,8 +204,13 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
       this.depthSearchList = [];
       this.exactTitleFound = false;
       this.titleCheckFailed = false;
+      this.loadingDepthSearch.set(false);
       return;
     }
+
+    // Both calls fire on every keystroke; surface that they are running (mirrors
+    // ReportResultFormComponent.loadingDepthSearch) instead of leaving the user with a silent UI.
+    this.loadingDepthSearch.set(true);
 
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
 
@@ -195,10 +230,12 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
       next: resp => {
         this.titleCheckFailed = false;
         this.exactTitleFound = resp?.response?.isUnique === false;
+        this.loadingDepthSearch.set(false);
       },
       error: () => {
         this.titleCheckFailed = true;
         this.exactTitleFound = false;
+        this.loadingDepthSearch.set(false);
       }
     });
   }

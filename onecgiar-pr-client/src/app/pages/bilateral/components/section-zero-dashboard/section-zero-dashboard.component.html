@@ -9,7 +9,9 @@
 
     @if (creationService.isLoadingResult()) {
       <div class="bp-skel-pill bp-skel-pill--sm"></div>
-    } @else if (creationService.resultCode() || creationService.resultTypeName() || creationService.reportingYear() || creationService.isW3Bilateral()) {
+    } @else if (
+      creationService.resultCode() || creationService.resultTypeName() || creationService.reportingYear() || creationService.isW3Bilateral()
+    ) {
       <dl class="bp-result-meta">
         @if (creationService.resultCode()) {
           <div class="bp-meta-field">
@@ -37,7 +39,6 @@
         }
       </dl>
     }
-
 
     @if (creationService.isLoadingResult()) {
       <div class="bp-skel-name"></div>
@@ -105,9 +106,14 @@
       <span>AI Review</span>
       <span class="bp-action-status">Coming soon</span>
     </button>
-    <button class="bp-action-btn bp-action-btn--primary" [disabled]="overallStatus() !== 'complete'" type="button" (click)="onSubmit()">
-      <i class="material-icons-round">send</i>
-      <span>Submit for Review</span>
+    <button
+      class="bp-action-btn bp-action-btn--primary"
+      [disabled]="overallStatus() !== 'complete' || isSubmitting()"
+      [attr.aria-busy]="isSubmitting()"
+      type="button"
+      (click)="onSubmit()">
+      <i class="material-icons-round" [class.animate-spin]="isSubmitting()">{{ isSubmitting() ? 'progress_activity' : 'send' }}</i>
+      <span>{{ isSubmitting() ? 'Submitting…' : 'Submit for Review' }}</span>
       <span class="bp-action-status">In progress</span>
     </button>
   </div>

@@ -1,20 +1,33 @@
-import { Injectable, signal } from '@angular/core';
-import { tap, catchError, throwError, pipe } from 'rxjs';
+import { Injectable, Injector, inject, signal } from '@angular/core';
+import { NavigationCancel, NavigationEnd, NavigationError, Router } from '@angular/router';
+import { tap, catchError, throwError, pipe, filter, take, Subscription, MonoTypeOperatorFunction } from 'rxjs';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SaveButtonService {
-  isSaving = false;
   /**
-   * Signal (not a plain boolean) so the spinner *ngIf reacts to changes directly.
-   * The flag is flipped inside a Promise microtask; on Angular 21 + Spartan the
-   * implicit global CD tick that used to render a plain-boolean flip is no longer
+   * Signals (not plain booleans) so the spinner bindings react to changes directly.
+   * The flags are flipped inside HTTP callbacks / Promise microtasks; on Angular 21 + Spartan
+   * the implicit global CD tick that used to render a plain-boolean flip is no longer
    * guaranteed, which left the loading spinner stuck. A signal read registers a
    * reactive consumer, so CD is notified regardless of zone/scheduler timing.
    */
+  isSaving = signal(false);
   isGettingSection = signal(false);
+
+  /**
+   * Safety net for {@link isCreatingPipe}: if a "create" response never triggers a navigation
+   * (e.g. the caller stays on the same page) the button is released anyway.
+   */
+  private static readonly CREATING_HOLD_TIMEOUT_MS = 15000;
+  private creatingNavSub: Subscription | null = null;
+  private creatingHoldId: any = null;
+
+  /** Resolved lazily so the Router is never instantiated just to construct this service (tests). */
+  private readonly injector = inject(Injector);
+
   constructor(private customizedAlertsFeSE: CustomizedAlertsFeService) {}
 
   /** Parses Nest/Angular HTTP error bodies for a user-facing message. */
@@ -37,13 +50,14 @@ export class SaveButtonService {
     return '';
   }
   showSaveSpinner() {
-    this.isSaving = true;
+    this.isSaving.set(true);
   }
   hideSaveSpinner() {
-    this.isSaving = false;
+    this.releaseCreatingHold();
+    this.isSaving.set(false);
   }
 
-  isGettingSectionPipe(): any {
+  isGettingSectionPipe<T = any>(): MonoTypeOperatorFunction<T> {
     Promise.resolve().then(() => {
       this.isGettingSection.set(true);
     });
@@ -62,7 +76,7 @@ export class SaveButtonService {
     );
   }
 
-  isSavingPipe(): any {
+  isSavingPipe<T = any>(): MonoTypeOperatorFunction<T> {
     this.showSaveSpinner();
     return pipe(
       tap(resp => {
@@ -84,7 +98,7 @@ export class SaveButtonService {
     );
   }
 
-  isSavingPipeNextStep(nextPrevious: string): any {
+  isSavingPipeNextStep<T = any>(nextPrevious: string): MonoTypeOperatorFunction<T> {
     const decrip = `Redirecting to the ` + nextPrevious + ` step`;
     this.showSaveSpinner();
     return pipe(
@@ -113,16 +127,50 @@ export class SaveButtonService {
     );
   }
 
-  isCreatingPipe(): any {
+  isCreatingPipe<T = any>(): MonoTypeOperatorFunction<T> {
     this.showSaveSpinner();
     return pipe(
-      tap(resp => {
-        this.hideSaveSpinner();
+      tap(() => {
+        // Do NOT clear the spinner here. `tap` runs BEFORE the subscriber navigates to the
+        // freshly created result, so clearing it now produces the reported bug: the button
+        // goes idle, then the destination route renders empty while it resolves its own data
+        // — a blank gap that reads as "nothing is happening". Keep the creating state alive
+        // until the router actually lands on the destination.
+        this.holdCreatingUntilNavigation();
       }),
       catchError(err => {
         this.hideSaveSpinner();
         return throwError(() => err);
       })
     );
+  }
+
+  /** Keeps `isSaving` on until the next navigation settles (or the safety timeout fires). */
+  private holdCreatingUntilNavigation(): void {
+    this.releaseCreatingHold();
+
+    const router = this.injector.get(Router, null);
+    if (!router) {
+      this.isSaving.set(false);
+      return;
+    }
+
+    this.creatingNavSub = router.events
+      .pipe(
+        filter(event => event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError),
+        take(1)
+      )
+      .subscribe(() => this.hideSaveSpinner());
+
+    this.creatingHoldId = setTimeout(() => this.hideSaveSpinner(), SaveButtonService.CREATING_HOLD_TIMEOUT_MS);
+  }
+
+  private releaseCreatingHold(): void {
+    this.creatingNavSub?.unsubscribe();
+    this.creatingNavSub = null;
+    if (this.creatingHoldId !== null) {
+      clearTimeout(this.creatingHoldId);
+      this.creatingHoldId = null;
+    }
   }
 }

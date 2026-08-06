@@ -152,16 +152,21 @@ export class LabReportFormComponent {
         this.createResultBody.update(b => ({ ...b, result_type_id: emerging.id }));
       } else if (!ind?.result_type_id) {
         this.resultTypes.set(
-          this.resultsListFilterSE.filters.resultLevel?.find(
-            (item: any) => item.id === (ind?.result_level_id || this.tocNode()?.result_level_id)
-          )?.options ?? []
+          this.resultsListFilterSE.filters.resultLevel?.find((item: any) => item.id === (ind?.result_level_id || this.tocNode()?.result_level_id))
+            ?.options ?? []
         );
       }
     });
   }
 
   private resetForm(): void {
-    this.createResultBody.set({ handler: '', result_name: '', toc_progressive_narrative: '', result_type_id: null, contribution_to_indicator_target: null });
+    this.createResultBody.set({
+      handler: '',
+      result_name: '',
+      toc_progressive_narrative: '',
+      result_type_id: null,
+      contribution_to_indicator_target: null
+    });
     this.mqapJson.set(null);
     this.mqapUrlError.set({ status: false, message: '' });
     this.contributingCenters.set([]);
@@ -343,11 +348,14 @@ export class LabReportFormComponent {
     this.api.resultsSE.POST_createResult(body).subscribe({
       next: (resp: any) => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-        this.creatingResult.set(false);
         this.created.emit();
-        this.router.navigate([`/result/result-detail/${resp?.response?.result?.result_code}/general-information`], {
-          queryParams: { phase: resp?.response?.result?.version_id }
-        });
+        // Keep the button in its "Creating…" state until the router actually lands on the new
+        // result — clearing it before navigating leaves a blank gap with no loading feedback.
+        void this.router
+          .navigate([`/result/result-detail/${resp?.response?.result?.result_code}/general-information`], {
+            queryParams: { phase: resp?.response?.result?.version_id }
+          })
+          .finally(() => this.creatingResult.set(false));
       },
       error: (err: any) => {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });

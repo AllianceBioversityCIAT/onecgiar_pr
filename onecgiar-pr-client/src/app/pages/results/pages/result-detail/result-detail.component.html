@@ -6,6 +6,26 @@
 
     <div class="section_container">
       <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
+
+      <!-- The result code → id conversion (GET_resultIdToCode) gates the outlet above. Without this
+           placeholder the freshly created result lands on an empty page — the "nothing is loading"
+           gap reported after hitting Create. -->
+      <div
+        *ngIf="!this.currentResultSE.resultIdIsconverted"
+        class="flex flex-col gap-4 py-2"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        data-testid="result-detail-loading">
+        <span class="sr-only">Loading result...</span>
+        <div class="pr-skeleton" style="width: 40%; height: 24px"></div>
+        <div class="pr-skeleton" style="width: 100%; height: 14px"></div>
+        <div class="pr-skeleton" style="width: 85%; height: 14px"></div>
+        <div class="pr-skeleton" style="width: 100%; height: 180px"></div>
+        <div class="pr-skeleton" style="width: 60%; height: 14px"></div>
+        <div class="pr-skeleton" style="width: 100%; height: 120px"></div>
+      </div>
+
       <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection()">
         <div class="info">
           <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
