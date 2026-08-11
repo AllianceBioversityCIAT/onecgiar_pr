@@ -432,6 +432,7 @@ Other bilateral-supported types (e.g. other output / other outcome) may **not** 
 | 2026 | IPSR bilateral `step_four`: only initiative/bilateral/institution investments, `ipsr_materials`, `has_scaling_studies`, `scaling_studies_urls`. |
 | 2026 | Bilateral budget rows unified: `initiative_budget` / `bilateral_project_budget` / `partner_budget` share one slim shape (Clarisa `initiative` / `project` / `institution` objects + amounts); IPSR `step_four` uses these **same keys and row shape** (replacing raw `initiative_expected_investment` / `bilateral_expected_investment` / `institutions_expected_investment` on the bilateral payload only). |
 | 2026-08 | `POST /create` accepts an optional `lead_contact_person` object (`{ email, name }`, see `LeadContactPersonDto`). When present, the server matches or creates the AD/PRMS user record and stores it as the result's lead contact (same resolution used by the self-service reporting tool). Input-only — no change to the `data.lead_contact_person` **output** shape documented above. |
+| 2026-08 | **Breaking:** `lead_contact_person` on `POST /create` is now **mandatory** (per P2-3227 — Lead Contact Person is an MDS field and must be requested/enforced transversally across all indicator types). `email` and `name` inside it were already required whenever the object was present; only the outer object itself changed from optional to required. External producers that previously omitted this field will now get a validation error and must start sending it. |
 
 ---
 

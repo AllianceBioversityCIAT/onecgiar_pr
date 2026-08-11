@@ -1124,16 +1124,15 @@ export class CreateBilateralDto {
   @Type(() => LeadCenterDto)
   lead_center: LeadCenterDto;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description:
-      'Lead contact person for this result. Resolved/matched against Active Directory by email; falls back to storing the name only if no match is found.',
+      'Lead contact person for this result (MDS field, mandatory). Resolved/matched against Active Directory by email; falls back to storing the name only if no match is found.',
     type: () => LeadContactPersonDto,
   })
-  @IsOptional()
   @IsObject()
   @ValidateNested()
   @Type(() => LeadContactPersonDto)
-  lead_contact_person?: LeadContactPersonDto;
+  lead_contact_person: LeadContactPersonDto;
 
   @ApiPropertyOptional({
     description:
