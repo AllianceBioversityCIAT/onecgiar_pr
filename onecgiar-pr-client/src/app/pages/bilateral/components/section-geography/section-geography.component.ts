@@ -12,6 +12,11 @@ import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
 import { GeoscopeManagementModule } from '../../../../shared/components/geoscope-management/geoscope-management.module';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 
+const YES_NO_OPTIONS = [
+  { id: true, name: 'Yes' },
+  { id: false, name: 'No' },
+];
+
 @Component({
   selector: 'app-section-geography',
   imports: [
@@ -62,6 +67,8 @@ export class SectionGeographyComponent implements OnInit {
     { name: 'Country', id: GeoScopeEnum.COUNTRY },
     { name: 'Sub-national', id: GeoScopeEnum.SUB_NATIONAL }
   ];
+
+  readonly yesNoOptions = YES_NO_OPTIONS;
 
   ngOnInit(): void {
     this.loadGeographicData();

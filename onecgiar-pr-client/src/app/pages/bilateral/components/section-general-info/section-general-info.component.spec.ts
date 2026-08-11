@@ -360,7 +360,7 @@ describe('SectionGeneralInfoComponent', () => {
   describe('field handlers', () => {
     it('updates and flushes the title', () => {
       build();
-      component.onTitleChange({ target: { value: 'New title' } } as any);
+      component.onTitleChange('New title');
       expect(component.title()).toBe('New title');
       expect(autoSave.updateField).toHaveBeenCalledWith('title', 'New title', 'text');
       component.onTitleBlur();
@@ -369,7 +369,7 @@ describe('SectionGeneralInfoComponent', () => {
 
     it('updates and flushes the description', () => {
       build();
-      component.onDescriptionChange({ target: { value: 'New desc' } } as any);
+      component.onDescriptionChange('New desc');
       expect(component.description()).toBe('New desc');
       expect(autoSave.updateField).toHaveBeenCalledWith('description', 'New desc', 'text');
       component.onDescriptionBlur();

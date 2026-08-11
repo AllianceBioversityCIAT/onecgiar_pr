@@ -7,6 +7,7 @@ import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 import { User } from '../../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 import { environment } from '../../../../../environments/environment';
@@ -24,11 +25,57 @@ interface LeadContactBody {
 }
 
 const DAC_AREAS = [
-  { key: 'gender', label: 'Gender', dtoKey: 'gender_tag_level_id' },
-  { key: 'climate_change', label: 'Climate change', dtoKey: 'climate_change_tag_level_id' },
-  { key: 'nutrition', label: 'Nutrition', dtoKey: 'nutrition_tag_level_id' },
-  { key: 'environmental_biodiversity', label: 'Environmental / Biodiversity', dtoKey: 'environmental_biodiversity_tag_level_id' },
-  { key: 'poverty', label: 'Poverty', dtoKey: 'poverty_tag_level_id' },
+  {
+    key: 'gender',
+    label: 'Gender equality, youth and social inclusion tag',
+    dtoKey: 'gender_tag_level_id',
+    tooltip: `<strong>Gender equality, youth and social inclusion</strong>
+      <ul>
+        <li><strong>Example topics:</strong> Empowering women and youth, encouraging women and youth entrepreneurship, and addressing socio-political barriers to social inclusion in food systems; ensuring equal access to resources; and meeting the specific crop and breed requirements and preferences of women, youth, and disadvantaged groups.</li>
+        <li><strong>Collective global targets:</strong> Close the gender gap in rights to economic resources, access to ownership and control over land and natural resources for over 500 million women who work in food, land and water systems; and offer rewardable opportunities to 267 million young people who are not in employment, education or training.</li>
+        <li><strong>Note:</strong> Additional guidance on scoring for gender equality is available in the <a href="https://docs.google.com/document/d/1krxwqVsmCfiQREh-DwGNcS72EPYRA7cn/edit?usp=sharing&ouid=100701138371542982320&rtpof=true&sd=true" target="_blank" rel="noopener noreferrer">result-level Impact Area scoring guidance</a>.</li>
+      </ul>`,
+  },
+  {
+    key: 'climate_change',
+    label: 'Climate adaptation and mitigation tag',
+    dtoKey: 'climate_change_tag_level_id',
+    tooltip: `<strong>Climate adaptation and mitigation</strong>
+      <ul>
+        <li><strong>Example topics:</strong> Generating scientific evidence on the impact of climate change on food, land and water systems, and vice versa; developing evidence-based solutions that support climate action; enhancing adaptive capacity while reducing GHG emissions; providing climate-informed services; developing climate-resilient crop varieties and breeds; securing genetic resources; and improving methods such as modeling and forecasts.</li>
+        <li><strong>Collective global targets:</strong> Turn agriculture and forest systems into a net sink for carbon by 2050; equip 500 million small-scale producers to be more resilient by 2030; and support countries in implementing National Adaptation Plans and Nationally Determined Contributions.</li>
+      </ul>`,
+  },
+  {
+    key: 'nutrition',
+    label: 'Nutrition, health and food security tag',
+    dtoKey: 'nutrition_tag_level_id',
+    tooltip: `<strong>Nutrition, health and food security</strong>
+      <ul>
+        <li><strong>Example topics:</strong> Improving diets, nutrition, and food security (affordability, accessibility, desirability, and stability); human health; and managing zoonotic diseases, food safety, and antimicrobial resistance.</li>
+        <li><strong>Collective global targets:</strong> End hunger for all and enable affordable, healthy diets for the 3 billion people who do not currently have access to safe and nutritious food; and reduce cases of foodborne illness and zoonotic disease by one third.</li>
+      </ul>`,
+  },
+  {
+    key: 'environmental_biodiversity',
+    label: 'Environmental health and biodiversity tag',
+    dtoKey: 'environmental_biodiversity_tag_level_id',
+    tooltip: `<strong>Environmental health and biodiversity</strong>
+      <ul>
+        <li><strong>Example topics:</strong> Staying within planetary boundaries for natural resource use and biodiversity; improving management of water, land, soil, nutrients, waste, and pollution; conserving biodiversity through ex situ or in situ conservation; and breeding to reduce environmental footprint.</li>
+        <li><strong>Collective global targets:</strong> Stay within planetary and regional environmental boundaries; and maintain the genetic diversity of seed varieties, cultivated plants, farmed and domesticated animals, and their related wild species through soundly managed genebanks.</li>
+      </ul>`,
+  },
+  {
+    key: 'poverty',
+    label: 'Poverty reduction, livelihoods and jobs tag',
+    dtoKey: 'poverty_tag_level_id',
+    tooltip: `<strong>Poverty reduction, livelihoods and jobs</strong>
+      <ul>
+        <li><strong>Example topics:</strong> Improving social protection and employment opportunities by supporting access to resources and markets; developing resilient, income-generating agriculture for small farmers; and reducing poverty through adoption of new varieties and breeds with better yields.</li>
+        <li><strong>Collective global targets:</strong> Lift at least 500 million people living in rural areas above the extreme poverty line of US $1.90 per day (2011 PPP); and reduce by at least half the proportion of people living in poverty in all its dimensions, according to national definitions.</li>
+      </ul>`,
+  },
 ] as const;
 
 const TAG_LEVELS = [
@@ -39,7 +86,7 @@ const TAG_LEVELS = [
 
 @Component({
   selector: 'app-section-general-info',
-  imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule],
+  imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule, PrTooltipDirectiveModule],
   templateUrl: './section-general-info.component.html',
   styleUrl: './section-general-info.component.scss'
 })
@@ -217,16 +264,14 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
     return map[key] === impactArea;
   }
 
-  onTitleChange(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
+  onTitleChange(value: string): void {
     this.title.set(value);
     this.autoSaveService.updateField('title', value, 'text');
   }
 
   onTitleBlur(): void { this.autoSaveService.notifyBlur('title', this.title()); }
 
-  onDescriptionChange(event: Event): void {
-    const value = (event.target as HTMLTextAreaElement).value;
+  onDescriptionChange(value: string): void {
     this.description.set(value);
     this.autoSaveService.updateField('description', value, 'text');
   }

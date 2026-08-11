@@ -352,6 +352,29 @@ input::placeholder,
   animation: pr-tooltip-fade 0.12s ease-in;
 }
 
+/* Impact Area guidance contains the same contextual helper text used by W1/W2. */
+.pr-tooltip.sgi-dac-tooltip {
+  max-width: 380px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  padding: 10px 12px;
+  line-height: 1.45;
+
+  ul {
+    margin: 6px 0 0;
+    padding-left: 17px;
+  }
+
+  li + li {
+    margin-top: 6px;
+  }
+
+  a {
+    color: var(--pr-color-white);
+    text-decoration: underline;
+  }
+}
+
 @keyframes pr-tooltip-fade {
   from {
     opacity: 0;
