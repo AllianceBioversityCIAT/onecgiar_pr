@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, signal } from '@angular/core';
 import { InstitutionsInterface, PartnersBody, UnmappedMQAPInstitutionDto } from './models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
@@ -26,6 +26,14 @@ export class RdPartnersService implements OnDestroy {
 
   updatingLeadData: boolean = false;
   disableLeadPartner: boolean = false;
+
+  /**
+   * Drives `[appSectionSkeleton]` for the Partners section. It lives on the service because the
+   * body it guards (`partnersBody`) does too. The service is `providedIn: 'root'`, so the
+   * component raises it again on `ngOnInit` — otherwise the second result opened would render
+   * with no skeleton. Released on `next` AND `error`.
+   */
+  readonly sectionLoading = signal(true);
 
   constructor(
     public api: ApiService,
@@ -125,8 +133,10 @@ export class RdPartnersService implements OnDestroy {
         this.setLeadPartnerOnLoad(onSave);
         this.setPossibleLeadCenters(onSave);
         this.setLeadCenterOnLoad(onSave);
+        this.sectionLoading.set(false);
       },
       error: _err => {
+        this.sectionLoading.set(false);
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       }
     });

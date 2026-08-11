@@ -103,20 +103,6 @@ export class PrInputComponent implements ControlValueAccessor {
   }
 
   /**
-   * Field status drives the colored card header:
-   * - error   (red)    → exceeds the word limit / invalid
-   * - optional(blue)   → not required
-   * - done    (green)  → required and filled
-   * - pending (yellow) → required and empty
-   */
-  get fieldState(): 'optional' | 'pending' | 'done' | 'error' {
-    const maxWords = this.maxWords();
-    if (maxWords && this.wordCount() > maxWords && !this.autogenerate()) return 'error';
-    if (this.hasValue) return 'done'; // green = filled/valid (optional or required)
-    return this.effectiveRequired() ? 'pending' : 'optional'; // yellow vs blue when empty
-  }
-
-  /**
    * Currency field (replaces the old numeric field). `currencyRaw` is what the
    * `<input>` shows. While editing it holds exactly what the user types (so
    * decimals like "10." work — nothing rewrites the field mid-typing). It only

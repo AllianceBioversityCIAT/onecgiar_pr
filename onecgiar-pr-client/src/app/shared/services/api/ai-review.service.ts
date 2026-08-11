@@ -87,7 +87,24 @@ export class AiReviewService {
     }
   }
 
+  /**
+   * Index of the proposal whose save is in flight, or null when idle.
+   * An index and not a boolean because the dialog renders one "Save changes" button per field and
+   * only the clicked one may show the spinner. The global `SaveButtonService.isSaving` cannot be
+   * used here: it drives the fixed save bar hidden behind this dialog, so the user saw no feedback
+   * at all while the request ran.
+   */
+  readonly savingProposalIndex = signal<number | null>(null);
+
+  isSavingProposal(index: number): boolean {
+    return this.savingProposalIndex() === index;
+  }
+
   async onApplyProposal(field, index: number) {
+    // Re-entry guard in TS, not only via the `globalDisabled` class: a CSS-only block is one
+    // stylesheet regression away from firing the POST twice.
+    if (this.savingProposalIndex() !== null) return;
+    this.savingProposalIndex.set(index);
     field.canSave = false;
     const body: POSTAIAssistantCreateEvent = {
       session_id: this.sessionId(),
@@ -100,8 +117,14 @@ export class AiReviewService {
     fieldToSave.new_value = fieldToSave.original_text;
     fieldToSave.change_reason = 'AI proposal applied';
     fieldToSave.was_ai_suggested = true;
-    await this.POST_saveSession({ fields: [fieldToSave] });
-    field.canSave = true;
+    try {
+      await this.POST_saveSession({ fields: [fieldToSave] });
+    } finally {
+      // `finally`, because a rejected save used to leave `canSave` false forever — a dead button
+      // the user could only recover from by reloading the result.
+      field.canSave = true;
+      this.savingProposalIndex.set(null);
+    }
   }
 
   // STEP 1: Create AI session

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { InnovationUseInfoBody, PolicyChangeQuestions } from './model/innovationUseInfoBody';
 import { PolicyControlListService } from '../../../../../../../shared/services/global/policy-control-list.service';
@@ -28,6 +28,13 @@ export class PolicyChangeInfoComponent implements OnInit {
     this.api.dataControlSE.currentResultSectionName.set('Policy change information');
   }
 
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction: the body object is empty until the
+   * section GET lands, so without it every mandatory field paints orange ("empty") first.
+   * Released on `next` AND `error` — a failed GET must not leave the section shimmering.
+   */
+  readonly sectionLoading = signal(true);
+
   ngOnInit(): void {
     this.getSectionInformation();
     this.getPolicyChangesQuestions();
@@ -49,8 +56,12 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_policyChanges().subscribe(({ response }) => {
-      this.innovationUseInfoBody = response;
+    this.api.resultsSE.GET_policyChanges().subscribe({
+      next: ({ response }) => {
+        this.innovationUseInfoBody = response;
+        this.sectionLoading.set(false);
+      },
+      error: () => this.sectionLoading.set(false)
     });
   }
 

@@ -30,9 +30,11 @@ import { HlmInput } from '@spartan/input';
 import { CustomValidationTooltipComponent } from './custom-validation-tooltip/custom-validation-tooltip.component';
 import { LeadContactPersonFieldComponent } from './lead-contact-person-field/lead-contact-person-field.component';
 import { FieldCardComponent } from './field-card/field-card.component';
+import { SectionSkeletonDirective } from './section-skeleton/section-skeleton.directive';
 
 const fieldComponents = [
   FieldCardComponent,
+  SectionSkeletonDirective,
   PrInputComponent,
   PrSelectComponent,
   PrRadioButtonComponent,

@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit, effect, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, effect, inject, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeographicLocationBody } from './models/geographicLocationBody';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
@@ -23,6 +23,16 @@ export class RdGeographicLocationComponent {
   private readonly cdr = inject(ChangeDetectorRef);
   geographicLocationBody = new GeographicLocationBody();
   extraGeographicLocationBody = new ExtraGeographicLocationBody();
+
+  /**
+   * Drives `[appSectionSkeleton]`. This section fetches from an `effect()` gated on
+   * `currentResultSignal()?.portfolio`, so between first paint and the request there is no
+   * request in flight at all — hence TRUE from construction rather than "true while requesting".
+   * Neither GET was piped through `isGettingSectionPipe()`, so until now this section had ZERO
+   * loading feedback. Released on `next` AND `error`; the two GETs had no error branch, which
+   * would have left the skeleton stuck forever.
+   */
+  readonly sectionLoading = signal(true);
 
   UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
   ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';
@@ -79,9 +89,19 @@ export class RdGeographicLocationComponent {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
-      this.fillGeographicLocationBody(response);
+    this.api.resultsSE.GET_geographicSection().subscribe({
+      next: ({ response }) => {
+        this.fillGeographicLocationBody(response);
+        this.releaseSkeleton();
+      },
+      error: () => this.releaseSkeleton()
     });
+  }
+
+  /** Zoneless: the effect-driven load has no zone tick, so the signal flip needs an explicit CD. */
+  private releaseSkeleton() {
+    this.sectionLoading.set(false);
+    this.cdr.markForCheck();
   }
 
   fillGeographicLocationBody(response: any) {
@@ -106,9 +126,13 @@ export class RdGeographicLocationComponent {
   }
 
   getSectionInformationp25() {
-    this.api.resultsSE.GET_geographicSectionp25().subscribe(({ response }) => {
-      this.fillGeographicLocationBody(response);
-      this.fillExtraGeographicLocationBody(response);
+    this.api.resultsSE.GET_geographicSectionp25().subscribe({
+      next: ({ response }) => {
+        this.fillGeographicLocationBody(response);
+        this.fillExtraGeographicLocationBody(response);
+        this.releaseSkeleton();
+      },
+      error: () => this.releaseSkeleton()
     });
   }
 

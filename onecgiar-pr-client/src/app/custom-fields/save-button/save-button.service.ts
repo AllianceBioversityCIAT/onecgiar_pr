@@ -1,6 +1,6 @@
-import { Injectable, Injector, inject, signal } from '@angular/core';
+import { Injectable, Injector, WritableSignal, inject, signal } from '@angular/core';
 import { NavigationCancel, NavigationEnd, NavigationError, Router } from '@angular/router';
-import { tap, catchError, throwError, pipe, filter, take, Subscription, MonoTypeOperatorFunction } from 'rxjs';
+import { tap, catchError, throwError, pipe, filter, take, defer, finalize, Subscription, MonoTypeOperatorFunction } from 'rxjs';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 
 @Injectable({
@@ -55,6 +55,43 @@ export class SaveButtonService {
   hideSaveSpinner() {
     this.releaseCreatingHold();
     this.isSaving.set(false);
+  }
+
+  /**
+   * Per-surface in-flight tracking for save/submit buttons that are NOT the single fixed save bar
+   * (modal, drawer, inline icon action).
+   *
+   * `isSaving` is ONE root signal shared by the whole app: binding it inside a dialog would spin
+   * every other save button on screen and give contradictory feedback. Those surfaces own a local
+   * signal each and hand it here, so the lifecycle bookkeeping lives in one place instead of being
+   * re-written (and half-forgotten) per component.
+   *
+   * `defer` flips the flag on SUBSCRIBE, so a piped-but-never-subscribed observable cannot leave a
+   * button dead; `finalize` clears it on success, on error AND on unsubscribe — the error branch is
+   * the one that was consistently missed by hand-written flags.
+   *
+   * Note it does NOT touch `isSaving` and raises no global toast: those belong to the fixed save
+   * bar and would double-report next to the surface's own feedback.
+   */
+  inFlightPipe<T = any>(flag: WritableSignal<boolean>): MonoTypeOperatorFunction<T> {
+    return source =>
+      defer(() => {
+        flag.set(true);
+        return source;
+      }).pipe(finalize(() => flag.set(false)));
+  }
+
+  /**
+   * `async/await` counterpart of {@link inFlightPipe} for handlers built on promises.
+   * The rejection still propagates — only the flag is guaranteed to be released.
+   */
+  async runInFlight<T>(flag: WritableSignal<boolean>, work: () => Promise<T>): Promise<T> {
+    flag.set(true);
+    try {
+      return await work();
+    } finally {
+      flag.set(false);
+    }
   }
 
   isGettingSectionPipe<T = any>(): MonoTypeOperatorFunction<T> {

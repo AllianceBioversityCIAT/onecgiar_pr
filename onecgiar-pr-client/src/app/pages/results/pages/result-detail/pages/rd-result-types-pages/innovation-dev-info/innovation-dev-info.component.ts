@@ -1,4 +1,4 @@
-import { Component, computed, effect } from '@angular/core';
+import { Component, computed, effect, signal } from '@angular/core';
 import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
@@ -24,6 +24,14 @@ export class InnovationDevInfoComponent {
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
   evidencesBody: EvidencesBody = new EvidencesBody();
+
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction and NOT from "a request is in flight":
+   * this section loads from an `effect()` gated on `currentResultSignal()?.portfolio`, so between
+   * first paint and the GET there is no request at all and the empty body would paint as a
+   * mandatory-but-empty form. Released on `next` AND `error`.
+   */
+  readonly sectionLoading = signal(true);
 
   constructor(
     private readonly api: ApiService,
@@ -52,11 +60,19 @@ export class InnovationDevInfoComponent {
   });
 
   getSectionInformationp25(): void {
-    this.api.resultsSE.GET_innovationDevP25().subscribe(({ response }) => {
-      this.innovationDevInfoBody = response;
-      this.convertOrganizations(response?.innovatonUse?.organization);
-      this.normalizeInnovationDevBooleans();
-      this.savingSection = false;
+    this.api.resultsSE.GET_innovationDevP25().subscribe({
+      next: ({ response }) => {
+        this.innovationDevInfoBody = response;
+        this.convertOrganizations(response?.innovatonUse?.organization);
+        this.normalizeInnovationDevBooleans();
+        this.savingSection = false;
+        this.sectionLoading.set(false);
+      },
+      error: err => {
+        console.error(err);
+        this.savingSection = false;
+        this.sectionLoading.set(false);
+      }
     });
     this.api.resultsSE.GET_questionsInnovationDevelopmentP25().subscribe(({ response }) => {
       this.innovationDevelopmentQuestions = response;
@@ -97,10 +113,12 @@ export class InnovationDevInfoComponent {
         this.innovationDevInfoBody = response;
         this.normalizeInnovationDevBooleans();
         this.savingSection = false;
+        this.sectionLoading.set(false);
       },
       error: err => {
         console.error(err);
         this.savingSection = false;
+        this.sectionLoading.set(false);
       }
     });
   }

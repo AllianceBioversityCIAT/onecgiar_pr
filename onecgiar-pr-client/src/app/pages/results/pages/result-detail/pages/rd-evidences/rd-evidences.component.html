@@ -1,4 +1,4 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
   <app-alert-status [description]="alertStatus()"> </app-alert-status>
 
   <app-alert-status *ngIf="isOptional" description="No evidence is required for innovations that are at innovation readiness level 0 (idea).">

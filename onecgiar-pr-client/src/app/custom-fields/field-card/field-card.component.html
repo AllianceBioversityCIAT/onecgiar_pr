@@ -1,5 +1,5 @@
-<div class="field_card" [ngClass]="'fc-' + computedState">
-  @if (showHeader) {
+<div [class.field_card]="!isBare" [ngClass]="isBare ? '' : 'fc-' + computedState">
+  @if (showHeaderRow) {
     <div class="field_card_header">
       <span class="fch_title" [innerHTML]="label"></span>
       <span class="fch_tag">{{ required ? 'Mandatory' : 'Optional' }}</span>
@@ -14,7 +14,7 @@
       </span>
     </div>
   }
-  @if (showHeader && showDescription && description) {
+  @if (showDescriptionBlock) {
     <div class="field_card_desc" [style]="descInlineStyles">
       <span class="desc_chip">Description</span>
       <div class="desc_text" [innerHTML]="description"></div>

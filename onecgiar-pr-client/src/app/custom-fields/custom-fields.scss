@@ -1,4 +1,6 @@
 @use '../../styles/fonts.scss' as fonts;
+// Global mask for [appSectionSkeleton]; must reach projected/legacy descendant DOM.
+@use './section-skeleton/section-skeleton.scss';
 
 .pr_description {
   @include fonts.pr-typography('body-2');

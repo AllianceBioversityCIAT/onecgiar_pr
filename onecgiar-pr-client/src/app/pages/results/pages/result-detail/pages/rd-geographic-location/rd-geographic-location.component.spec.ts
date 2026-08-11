@@ -8,7 +8,7 @@ import { SyncButtonComponent } from '../../../../../../custom-fields/sync-button
 import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
 import { DetailSectionTitleComponent } from '../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { FormsModule } from '@angular/forms';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { GeoScopeEnum } from '../../../../../../shared/enum/geo-scope.enum';
@@ -145,4 +145,48 @@ describe('RdGeographicLocationComponent', () => {
       expect(result).toBe(expectedText);
     });
   });
+
+  /**
+   * This section loads from an `effect()` gated on the portfolio, so between first paint and the
+   * GET there is no request in flight at all — the skeleton must therefore start raised. Neither
+   * GET had an `error` branch before, which would have left it shimmering forever.
+   */
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised, before any request has been made', () => {
+      expect(component.sectionLoading()).toBe(true);
+    });
+
+    it('is released when the P22 section GET responds', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_geographicSection').mockReturnValue(of({ response: {} }));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the P22 section GET fails, so the skeleton can never get stuck', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_geographicSection').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the P25 section GET responds', () => {
+      mockApiService.resultsSE.GET_geographicSectionp25 = () => of({ response: {} });
+
+      component.getSectionInformationp25();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the P25 section GET fails', () => {
+      mockApiService.resultsSE.GET_geographicSectionp25 = () => throwError(() => new Error('boom'));
+
+      component.getSectionInformationp25();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+  });
+
 });

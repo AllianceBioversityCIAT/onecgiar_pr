@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { EvidencesBody, EvidencesCreateInterface } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
@@ -69,19 +69,32 @@ export class RdEvidencesComponent implements OnInit {
     this.api.dataControlSE.currentResultSectionName.set('Evidence');
   }
 
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction so the empty `EvidencesBody()` never
+   * paints as a filled-in-and-lost form; released on both `next` and `error`.
+   */
+  readonly sectionLoading = signal(true);
+
   ngOnInit(): void {
     this.getSectionInformation();
     this.validateCheckBoxes();
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_evidences().subscribe(({ response }) => {
-      this.evidencesBody = response;
-      this.sortEvidences();
-      this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
-      this.isOptional = Boolean(this.readinessLevel === 0);
-      this.isOptionalReadinessLevel = Boolean(this.readinessLevel === 0);
-      this.isSaving = false;
+    this.api.resultsSE.GET_evidences().subscribe({
+      next: ({ response }) => {
+        this.evidencesBody = response;
+        this.sortEvidences();
+        this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
+        this.isOptional = Boolean(this.readinessLevel === 0);
+        this.isOptionalReadinessLevel = Boolean(this.readinessLevel === 0);
+        this.isSaving = false;
+        this.sectionLoading.set(false);
+      },
+      error: () => {
+        this.isSaving = false;
+        this.sectionLoading.set(false);
+      }
     });
   }
 

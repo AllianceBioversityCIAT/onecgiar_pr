@@ -9,7 +9,7 @@ import { SaveButtonComponent } from '../../../../../../../custom-fields/save-but
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { LabelNamePipe } from '../../../../../../../custom-fields/pr-select/label-name.pipe';
 import { FormsModule } from '@angular/forms';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { signal } from '@angular/core';
 
@@ -70,6 +70,26 @@ describe('PolicyChangeInfoComponent', () => {
     fixture = TestBed.createComponent(PolicyChangeInfoComponent);
     component = fixture.componentInstance;
   });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('is released once the section GET responds', () => {
+      component.sectionLoading.set(true);
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+  });
+
 
   describe('changeAnswerBoolean()', () => {
     it('should set answer_boolean to true for the selected value', () => {

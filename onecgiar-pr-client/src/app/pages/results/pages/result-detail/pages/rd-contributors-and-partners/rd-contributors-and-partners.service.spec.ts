@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { RdContributorsAndPartnersService } from './rd-contributors-and-partners.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -54,6 +54,37 @@ describe('RdContributorsAndPartnersService', () => {
 
     service = TestBed.inject(RdContributorsAndPartnersService);
     service.partnersBody = new ContributorsAndPartnersBody();
+  });
+
+  /**
+   * The skeleton reuses `getConsumed` rather than adding a second flag: it already means "the
+   * section GET came back", it is reset by `resetState()` (which the component calls on entry, so
+   * the root singleton does not leak across results) and it is set on BOTH next and error.
+   */
+  describe('sectionLoading (skeleton)', () => {
+    it('is raised while the section GET has not come back', () => {
+      service.resetState();
+
+      expect(service.sectionLoading()).toBe(true);
+    });
+
+    it('mirrors getConsumed — the flag the section GET already sets on both next and error', () => {
+      service.resetState();
+      expect(service.sectionLoading()).toBe(true);
+
+      service.getConsumed.set(true);
+
+      expect(service.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      service.resetState();
+      mockApi.resultsSE.GET_ContributorsPartners.mockReturnValue(throwError(() => new Error('boom')));
+
+      service.getSectionInformation();
+
+      expect(service.sectionLoading()).toBe(false);
+    });
   });
 
   describe('tryAutoAssignLeadCenter', () => {

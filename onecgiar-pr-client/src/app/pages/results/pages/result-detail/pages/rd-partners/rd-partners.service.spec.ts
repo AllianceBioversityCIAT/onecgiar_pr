@@ -2,7 +2,7 @@ import { RdPartnersService } from './rd-partners.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
-import { Observable, of, Subject } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 import { ViewRefreshService } from '../../../../../../shared/services/view-refresh.service';
 
 describe('RdPartnersService', () => {
@@ -52,6 +52,28 @@ describe('RdPartnersService', () => {
 
     expect(institutionsUnsubscribeSpy).toHaveBeenCalled();
     expect(centersUnsubscribeSpy).toHaveBeenCalled();
+  });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised', () => {
+      expect(service.sectionLoading()).toBe(true);
+    });
+
+    it('is released once the section GET responds', () => {
+      apiServiceMock.resultsSE.GET_partnersSection = jest.fn().mockReturnValue(of({ response: {} }));
+
+      service.getSectionInformation();
+
+      expect(service.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      apiServiceMock.resultsSE.GET_partnersSection = jest.fn().mockReturnValue(throwError(() => new Error('boom')));
+
+      service.getSectionInformation();
+
+      expect(service.sectionLoading()).toBe(false);
+    });
   });
 
   describe('validateDeliverySelection', () => {

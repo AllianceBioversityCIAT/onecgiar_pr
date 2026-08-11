@@ -22,8 +22,12 @@ export class SaveButtonComponent {
 
   constructor(public rolesSE: RolesService, public saveButtonSE: SaveButtonService, public dataControlSE: DataControlService) {}
 
+  /**
+   * The guard lives here rather than in the template so it survives a CSS regression: `.globalDisabled`
+   * (pointer-events: none) is the second line of defence, never the only one.
+   */
   onClickSave() {
-    if (this.saveButtonSE.isSaving()) return;
+    if (this.saveButtonSE.isSaving() || this.disabled) return;
     this.clickSave.emit();
   }
 
