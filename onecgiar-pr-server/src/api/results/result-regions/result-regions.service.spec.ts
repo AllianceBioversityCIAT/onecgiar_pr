@@ -12,7 +12,9 @@ describe('ResultRegionsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    resultRegionRepository.getResultRegionByResultIdAndRegionId.mockResolvedValue(undefined);
+    resultRegionRepository.getResultRegionByResultIdAndRegionId.mockResolvedValue(
+      undefined,
+    );
     service = new ResultRegionsService(
       {} as any,
       resultRegionRepository as any,

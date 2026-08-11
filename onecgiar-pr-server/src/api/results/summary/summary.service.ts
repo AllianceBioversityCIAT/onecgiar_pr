@@ -87,11 +87,9 @@ export class SummaryService {
 
       const { innov_use_to_be_determined, innovation_use_level_id } =
         innovationUseDto;
-      const innUseExists = await this._resultsInnovationsUseRepository.findOne(
-        {
-          where: { results_id: resultId, is_active: true },
-        },
-      );
+      const innUseExists = await this._resultsInnovationsUseRepository.findOne({
+        where: { results_id: resultId, is_active: true },
+      });
       if (innUseExists) {
         innUseExists.innov_use_to_be_determined =
           innov_use_to_be_determined ?? null;
@@ -142,11 +140,9 @@ export class SummaryService {
         el['men_non_youth'] = el.men - el.men_youth;
         el['women_non_youth'] = el.women - el.women_youth;
       });
-      const innUseExists = await this._resultsInnovationsUseRepository.findOne(
-        {
-          where: { results_id: resultId, is_active: true },
-        },
-      );
+      const innUseExists = await this._resultsInnovationsUseRepository.findOne({
+        where: { results_id: resultId, is_active: true },
+      });
       const innovatonUse = {
         innov_use_to_be_determined:
           innUseExists?.innov_use_to_be_determined ?? null,
@@ -525,8 +521,9 @@ export class SummaryService {
         has_scaling_studies &&
         scaling_studies_urls?.length
       ) {
-        const scalingStudyUrlRepository =
-          this._dataSource.getRepository(ResultScalingStudyUrl);
+        const scalingStudyUrlRepository = this._dataSource.getRepository(
+          ResultScalingStudyUrl,
+        );
         await scalingStudyUrlRepository.update(
           { result_innov_dev_id: InnDevRes.result_innovation_dev_id },
           { is_active: false },

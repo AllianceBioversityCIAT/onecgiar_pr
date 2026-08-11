@@ -179,10 +179,7 @@ export class ResultRegionsService {
     geoScopeId,
     role,
   }): Promise<Result> {
-    if (
-      (!hasRegions && geoScopeId != 2) ||
-      geoScopeId == 4
-    ) {
+    if ((!hasRegions && geoScopeId != 2) || geoScopeId == 4) {
       await this._resultRegionRepository.updateRegionsV2(result.id, [], role);
       if (role === EnumGeoScopeRole.EXTRA) {
         result.has_extra_regions = false;

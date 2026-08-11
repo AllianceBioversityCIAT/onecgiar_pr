@@ -176,10 +176,11 @@ export class BilateralAiService {
       where: { institutionId: centerId },
     });
     if (!center) throw new NotFoundException('Center not found.');
-    const isMember = await this.roleByUserRepository.validationCenterPermissions(
-      userId,
-      center.code,
-    );
+    const isMember =
+      await this.roleByUserRepository.validationCenterPermissions(
+        userId,
+        center.code,
+      );
     if (!isMember) {
       throw new ForbiddenException('You do not have access to this center.');
     }

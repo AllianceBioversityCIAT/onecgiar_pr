@@ -1,4 +1,4 @@
-import { Component, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -26,7 +26,7 @@ const YES_NO_OPTIONS = [
   templateUrl: './section-geography.component.html',
   styleUrl: './section-geography.component.scss'
 })
-export class SectionGeographyComponent implements OnInit {
+export class SectionGeographyComponent {
   readonly bilateralApi = inject(BilateralApiService);
   readonly regionsCountriesSE = inject(RegionsCountriesService);
   readonly creationService = inject(BilateralCreationService);
@@ -91,12 +91,6 @@ export class SectionGeographyComponent implements OnInit {
       this.hydratedResultId = resultId;
       this.loadGeographicData();
     });
-  }
-
-  ngOnInit(): void {
-    // Hydration is triggered by the effect above once the internal result id
-    // is available. Calling it here would use the public result code on a
-    // refreshed deep link.
   }
 
   loadGeographicData(): void {

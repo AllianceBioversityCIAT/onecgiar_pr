@@ -589,7 +589,10 @@ describe('SummaryService', () => {
         short_title: 'Title',
         innovation_readiness_level_id: 17, // Level_6
         has_scaling_studies: true,
-        scaling_studies_urls: ['https://example.com/study-a', 'https://example.com/study-b'],
+        scaling_studies_urls: [
+          'https://example.com/study-a',
+          'https://example.com/study-b',
+        ],
       } as any;
 
       mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
@@ -692,7 +695,9 @@ describe('SummaryService', () => {
   describe('getInnovationDev', () => {
     beforeEach(() => {
       mockEvidencesRepository.find.mockResolvedValue([]);
-      mockResultRepository.getResultById = jest.fn().mockResolvedValue({ id: 11144 });
+      mockResultRepository.getResultById = jest
+        .fn()
+        .mockResolvedValue({ id: 11144 });
       mockResultActorRepository.find.mockResolvedValue([]);
       mockResultIpMeasureRepository.find.mockResolvedValue([]);
       mockResultByIntitutionsTypeRepository.find.mockResolvedValue([]);
@@ -706,10 +711,12 @@ describe('SummaryService', () => {
     });
 
     it('merges legacy (non_pooled_projetct_id) and results_by_projects (result_project_id) budget rows', async () => {
-      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce({
-        result_innovation_dev_id: 50,
-        innovation_readiness_level_id: 10,
-      });
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        {
+          result_innovation_dev_id: 50,
+          innovation_readiness_level_id: 10,
+        },
+      );
       mockNonPooledProjectRepository.find.mockResolvedValueOnce([{ id: 1 }]);
       mockResultsByProjectsRepository.find.mockResolvedValueOnce([{ id: 2 }]);
       mockResultBilateralBudgetRepository.find
@@ -723,12 +730,20 @@ describe('SummaryService', () => {
         where: { result_id: 11144, is_active: true },
       });
       expect(mockResultBilateralBudgetRepository.find).toHaveBeenCalledTimes(2);
-      const [firstCallArgs] = mockResultBilateralBudgetRepository.find.mock.calls[0];
-      const [secondCallArgs] = mockResultBilateralBudgetRepository.find.mock.calls[1];
-      expect(firstCallArgs.where.non_pooled_projetct_id).toEqual(expect.anything());
-      expect(firstCallArgs.relations).toEqual({ obj_non_pooled_projetct: { obj_funder_institution_id: true } });
+      const [firstCallArgs] =
+        mockResultBilateralBudgetRepository.find.mock.calls[0];
+      const [secondCallArgs] =
+        mockResultBilateralBudgetRepository.find.mock.calls[1];
+      expect(firstCallArgs.where.non_pooled_projetct_id).toEqual(
+        expect.anything(),
+      );
+      expect(firstCallArgs.relations).toEqual({
+        obj_non_pooled_projetct: { obj_funder_institution_id: true },
+      });
       expect(secondCallArgs.where.result_project_id).toEqual(expect.anything());
-      expect(secondCallArgs.relations).toEqual({ obj_result_project: { obj_clarisa_project: true } });
+      expect(secondCallArgs.relations).toEqual({
+        obj_result_project: { obj_clarisa_project: true },
+      });
       expect(response.bilateral_expected_investment).toEqual([
         { non_pooled_projetct_id: 1, kind_cash: 100 },
         { result_project_id: 2, kind_cash: 200 },
@@ -736,10 +751,12 @@ describe('SummaryService', () => {
     });
 
     it('returns an empty bilateral investment array when neither link exists', async () => {
-      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce({
-        result_innovation_dev_id: 51,
-        innovation_readiness_level_id: 10,
-      });
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        {
+          result_innovation_dev_id: 51,
+          innovation_readiness_level_id: 10,
+        },
+      );
 
       const res = await service.getInnovationDev(11144);
       const response: any = res.response as any;

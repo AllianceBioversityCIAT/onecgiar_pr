@@ -451,7 +451,7 @@ describe('BilateralAiService (unit)', () => {
       );
     });
 
-    it('should throw ForbiddenException when the requesting user is not a member of the draft\'s center', async () => {
+    it("should throw ForbiddenException when the requesting user is not a member of the draft's center", async () => {
       const { service, stubs } = makeService();
       stubs.draftRepository.findOne.mockResolvedValue({
         id: 5,
