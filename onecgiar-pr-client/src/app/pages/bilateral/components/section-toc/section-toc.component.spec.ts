@@ -279,14 +279,16 @@ describe('SectionTocComponent', () => {
   describe('tocResultItems', () => {
     beforeEach(() => component.selectedLevelId.set(1));
 
-    it('flags a match and appends the result type badge', () => {
+    it('flags a match and exposes it as a match chip', () => {
       creationService.resultTypeId.set(1);
       component.outputList.set([
         { toc_result_id: 1, wp_short_name: 'WP1', title: 'T', indicators: [{ type_value: '%Number of Policy%' }] },
       ]);
       const item = component.tocResultItems()[0];
       expect(item.hasMatch).toBe(true);
-      expect(item.select_label).toContain('Match [Policy Change]');
+      expect(item.select_label).toBe('WP1 — T');
+      expect(item.select_badge).toBe('Match · Policy Change');
+      expect(item.select_badge_tone).toBe('match');
     });
 
     it('flags a review-needed item when only other indicators exist', () => {
@@ -297,7 +299,8 @@ describe('SectionTocComponent', () => {
       const item = component.tocResultItems()[0];
       expect(item.hasMatch).toBe(false);
       expect(item.hasOther).toBe(true);
-      expect(item.select_label).toContain('Review needed');
+      expect(item.select_badge).toBe('Review needed');
+      expect(item.select_badge_tone).toBe('review');
     });
 
     it('adds no badge for neutral indicators and does not duplicate extraInformation', () => {

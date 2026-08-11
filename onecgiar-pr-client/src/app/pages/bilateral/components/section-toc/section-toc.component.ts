@@ -108,14 +108,17 @@ export class SectionTocComponent implements OnInit {
       });
       const code = this.escapeHtml(this.toPlainText(item.wp_short_name || item.extraInformation) || 'AOW');
       const title = this.escapeHtml(this.toPlainText(item.title || item.extraInformation));
-      let badge = '';
+      let select_badge = '';
+      let select_badge_tone = 'neutral';
       if (hasMatch) {
-        badge = ` · Match [${this.escapeHtml(this.resultTypeLabel())}]`;
+        select_badge = `Match · ${this.resultTypeLabel()}`;
+        select_badge_tone = 'match';
       } else if (hasOther) {
-        badge = ' · Review needed';
+        select_badge = 'Review needed';
+        select_badge_tone = 'review';
       }
-      const select_label = title && code !== title ? `${code}${badge} — ${title}` : `${code}${badge}`;
-      return { ...item, hasMatch, hasOther, select_label };
+      const select_label = title && code !== title ? `${code} — ${title}` : code;
+      return { ...item, hasMatch, hasOther, select_label, select_badge, select_badge_tone };
     });
   });
 

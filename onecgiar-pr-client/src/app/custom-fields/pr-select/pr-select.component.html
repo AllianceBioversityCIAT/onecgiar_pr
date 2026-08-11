@@ -70,12 +70,19 @@
               <img *ngIf="flagsCode()" [src]="'https://countryflagsapi.com/png/' + option[flagsCode()]" alt="" srcset="" />
 
               <div
-                class="label"
+                class="label pr-select-option-label"
                 [innerHtml]="
                   !option?.isLabel
                     ? (option?.disabled || option?.disabledd ? disableOptionsText() : '') + option[optionLabel()]
                     : option[groupName()]
                 "></div>
+              @if (!option?.isLabel && optionBadgeLabel() && option[optionBadgeLabel()]) {
+                <span
+                  class="pr-select-option-badge"
+                  [class]="'pr-select-option-badge pr-select-option-badge--' + (option[optionBadgeTone()] || 'neutral')">
+                  {{ option[optionBadgeLabel()] }}
+                </span>
+              }
 
               <div class="event"></div>
             </div>

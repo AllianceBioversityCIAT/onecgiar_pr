@@ -115,3 +115,31 @@
 :host ::ng-deep .virtual_scroll {
   overscroll-behavior: contain;
 }
+
+.option {
+  .pr-select-option-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pr-select-option-badge {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.2;
+
+    &--match {
+      background: #e7f8ed;
+      color: #1d7a42;
+    }
+
+    &--review {
+      background: #fff3d4;
+      color: #a66a00;
+    }
+  }
+}

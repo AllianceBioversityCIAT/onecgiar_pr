@@ -53,6 +53,9 @@ export class PrSelectComponent implements ControlValueAccessor {
   readonly expandSpaceOnOpen = input<boolean>(false); // Enable 300px expansion when open
   /** Consumer-provided inline styles for the dropdown panel (used only when overlayToBody is false). */
   readonly optionsInlineStyles = input<string>('');
+  /** Optional per-option label and tone rendered as a compact chip in the dropdown. */
+  readonly optionBadgeLabel = input<string>('');
+  readonly optionBadgeTone = input<string>('');
 
   readonly selectOptionEvent = output<any>();
 
