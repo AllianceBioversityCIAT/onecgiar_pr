@@ -4,4 +4,5 @@ export class ClarisaCenterDto {
   institutionId: number;
   name: string;
   acronym: string;
+  is_active: boolean;
 }
