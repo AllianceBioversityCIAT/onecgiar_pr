@@ -96,11 +96,16 @@ describe('SectionEvidenceComponent', () => {
       expect(component.canAddMore).toBe(false);
     });
 
-    it('reports a valid link only for non-cloud links', () => {
+    it('reports a valid external link or an uploaded file as valid evidence', () => {
       build();
       expect(component.hasValidLink).toBe(false);
       component.evidenceBody.update(b => ({ ...b, evidences: [{ link: 'https://drive.google.com/x' }] }));
       expect(component.hasValidLink).toBe(false);
+      component.evidenceBody.update(b => ({
+        ...b,
+        evidences: [{ is_sharepoint: true, sp_document_id: 'document-1', sp_file_name: 'evidence.xlsx' }]
+      }));
+      expect(component.hasValidLink).toBe(true);
       component.evidenceBody.update(b => ({ ...b, evidences: [{ link: 'https://cgspace.cgiar.org/handle/10568/1' }] }));
       expect(component.hasValidLink).toBe(true);
       component.evidenceBody.update(b => ({ ...b, evidences: [{ description: 'no link' }] }));

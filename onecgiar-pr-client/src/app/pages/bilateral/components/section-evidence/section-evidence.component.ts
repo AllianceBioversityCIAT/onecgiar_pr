@@ -57,7 +57,15 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   }
 
   get hasValidLink(): boolean {
-    return this.evidences.some(e => e.link && !this.isCloudLink(e.link));
+    return this.evidences.some(e => {
+      // Uploaded files are valid evidence. Their link is intentionally a
+      // SharePoint URL, which external-link validation correctly rejects but
+      // must not make the Evidence section incomplete.
+      if (e.is_sharepoint) {
+        return Boolean(e.sp_document_id || e.sp_file_name || e.link);
+      }
+      return Boolean(e.link && !this.isCloudLink(e.link));
+    });
   }
 
   private readonly CLOUD_REGEX =
