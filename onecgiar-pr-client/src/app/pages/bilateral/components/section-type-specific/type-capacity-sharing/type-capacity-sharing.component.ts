@@ -71,7 +71,14 @@ export class TypeCapacitySharingComponent implements OnInit {
     const resultId = this.creationService.currentResultId();
     if (!resultId) return;
     this.bilateralApi.GET_capacityDevelopment(resultId).subscribe(({ response }) => {
-      this.body = response || {};
+      this.body = { ...(response || {}) };
+      // MySQL returns tinyint values (0/1) from this legacy endpoint. The radio
+      // options use booleans, so normalize them before binding to the control.
+      if ('is_attending_for_organization' in this.body) {
+        this.body.is_attending_for_organization = this.normalizeAttendanceValue(
+          this.body.is_attending_for_organization,
+        );
+      }
       this.hydrateTermCascade();
       this.updateMds();
     });
@@ -83,6 +90,12 @@ export class TypeCapacitySharingComponent implements OnInit {
       this.capdevsSubTerms = terms.splice(0, 2);
       this.capdevsTerms = terms.splice(0, 2);
     });
+  }
+
+  private normalizeAttendanceValue(value: unknown): boolean | null {
+    if (value === true || value === 1 || value === '1') return true;
+    if (value === false || value === 0 || value === '0') return false;
+    return null;
   }
 
   /** Term id 4 is a parent bucket disambiguated by a sub-term (1 or 2); term 3 stands alone. */

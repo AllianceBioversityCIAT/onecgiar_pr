@@ -113,6 +113,19 @@ describe('TypeCapacitySharingComponent', () => {
       expect(component.capdevsSubTerms).toEqual([]);
       expect(component.capdevsTerms).toEqual([]);
     });
+
+    it.each([
+      [1, true],
+      ['1', true],
+      [0, false],
+      ['0', false],
+      [null, null],
+    ])('normalizes the legacy attendance value %p to %p for the radio control', (storedValue, expectedValue) => {
+      bilateralApi.GET_capacityDevelopment.mockReturnValue(of({ response: { is_attending_for_organization: storedValue } }));
+      build();
+      fixture.detectChanges();
+      expect(component.body.is_attending_for_organization).toBe(expectedValue);
+    });
   });
 
   describe('term cascade hydration on load', () => {
