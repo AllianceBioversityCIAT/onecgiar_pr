@@ -27,7 +27,7 @@ import { ClarisaGeographicScope } from './clarisa-geographic-scopes/entities/cla
 import { ClarisaGeoscopeDto } from './dtos/clarisa-geoscope.dto';
 import { ClarisaCenter } from './clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaCgiarEntityTypeDto } from './dtos/clarisa-cgiar-entity-type.dto';
-import { ClarisaCgiarEntityDto } from './dtos/clarisa-cgiar-entity.dto';
+import { ClarisaCenterDto } from './clarisa-centers/dto/clarisa-center.dto';
 import { ClarisaPolicyType } from './clarisa-policy-types/entities/clarisa-policy-type.entity';
 import { ClarisaSdg } from './clarisa-sdgs/entities/clarisa-sdg.entity';
 import { ClarisaSdgsTarget } from './clarisa-sdgs-targets/entities/clarisa-sdgs-target.entity';
@@ -275,13 +275,25 @@ export class ClarisaEndpoints<Entity, Dto> {
   );
 
   /**
-   * Represents the endpoint configuration for fetching all CGIAR entities.
+   * Represents the endpoint configuration for fetching all active centers.
    */
-  public static readonly CGIAR_ENTITIES = new ClarisaEndpoints(
-    'cgiar-entities',
+  public static readonly CENTERS_ACTIVE = new ClarisaEndpoints(
+    'centers',
     'GET',
     ClarisaCenter,
-    ClarisaEndpoints.cgiarEntityMapper,
+    (data: ClarisaCenterDto[]) => ClarisaEndpoints.centerMapper(data, true),
+    { show: 'active' },
+  );
+
+  /**
+   * Represents the endpoint configuration for fetching all inactive centers.
+   */
+  public static readonly CENTERS_INACTIVE = new ClarisaEndpoints(
+    'centers',
+    'GET',
+    ClarisaCenter,
+    (data: ClarisaCenterDto[]) => ClarisaEndpoints.centerMapper(data, false),
+    { show: 'inactive' },
   );
 
   /**
@@ -516,20 +528,24 @@ export class ClarisaEndpoints<Entity, Dto> {
   }
 
   /**
-   * Maps an array of `ClarisaCgiarEntityDto` objects to an array of `DeepPartial<ClarisaCenter>` objects.
-   * Filters the input data to include only entities with `cgiarEntityTypeDTO` codes 4 or 21.
+   * Maps an array of `ClarisaCenterDto` objects to an array of `DeepPartial<ClarisaCenter>` objects.
+   * The `isActive` flag is provided by the endpoint (`show=active` / `show=inactive`) because the
+   * CLARISA `/centers` response never includes an `is_active` field.
    *
-   * @param data - An array of `ClarisaCgiarEntityDto` objects to be filtered and mapped.
-   * @returns An array of `DeepPartial<ClarisaCenter>` objects that match the filter criteria.
+   * @param data - An array of `ClarisaCenterDto` objects to be mapped.
+   * @param isActive - Whether the fetched centers are active or inactive.
+   * @returns An array of `DeepPartial<ClarisaCenter>` objects.
    */
-  static cgiarEntityMapper(
-    data: ClarisaCgiarEntityDto[],
+  static centerMapper(
+    data: ClarisaCenterDto[],
+    isActive: boolean,
   ): DeepPartial<ClarisaCenter>[] {
-    return data.filter(
-      (item) =>
-        item.cgiarEntityTypeDTO?.code == 4 ||
-        item.cgiarEntityTypeDTO?.code == 21,
-    ) as DeepPartial<ClarisaCenter>[];
+    return data.map((item) => ({
+      code: item.code,
+      institutionId: item.institutionId,
+      financial_code: item.financial_code,
+      isActive,
+    }));
   }
 
   /**
