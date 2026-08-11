@@ -128,6 +128,16 @@ describe('BilateralApiService', () => {
     req.flush(mockResponse);
   });
 
+  it('GET_geographic should GET the geographic state for the supplied internal result id', done => {
+    service.GET_geographic(77).subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}v2/api/geographic-location/get/geographic/77`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
   it('PATCH_BilateralResultTitle should PATCH title', done => {
     const body = { title: 'New' };
     service.PATCH_BilateralResultTitle(123, body).subscribe(response => {

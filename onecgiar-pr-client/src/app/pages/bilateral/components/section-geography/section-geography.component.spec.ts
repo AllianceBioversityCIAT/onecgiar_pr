@@ -3,7 +3,6 @@ import { signal } from '@angular/core';
 import { Subject, of } from 'rxjs';
 
 import { SectionGeographyComponent } from './section-geography.component';
-import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { RegionsCountriesService } from '../../../../shared/services/global/regions-countries.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -14,7 +13,6 @@ import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
 describe('SectionGeographyComponent', () => {
   let fixture: ComponentFixture<SectionGeographyComponent>;
   let component: SectionGeographyComponent;
-  let api: any;
   let bilateralApi: any;
   let creation: any;
   let autoSave: any;
@@ -40,22 +38,14 @@ describe('SectionGeographyComponent', () => {
     };
     mdsTracker = { setSectionFields: jest.fn() };
 
-    api = {
-      resultsSE: {
-        baseApiBaseUrlV2: 'http://api/v2/',
-        http: { patch: jest.fn().mockReturnValue(of({})) },
-        GET_geographicSectionp25: jest.fn().mockReturnValue(of({ response: null }))
-      }
-    };
-
     bilateralApi = {
       PATCH_geographic: jest.fn().mockReturnValue(of({})),
+      GET_geographic: jest.fn().mockReturnValue(of({ response: null })),
     };
 
     await TestBed.configureTestingModule({
       imports: [SectionGeographyComponent],
       providers: [
-        { provide: ApiService, useValue: api },
         { provide: BilateralApiService, useValue: bilateralApi },
         { provide: RegionsCountriesService, useValue: { regionsList: [], countriesList: [] } },
         { provide: BilateralCreationService, useValue: creation },
@@ -77,7 +67,7 @@ describe('SectionGeographyComponent', () => {
       creation.currentResultId.set(null);
       build();
       fixture.detectChanges();
-      expect(api.resultsSE.GET_geographicSectionp25).not.toHaveBeenCalled();
+      expect(bilateralApi.GET_geographic).not.toHaveBeenCalled();
     });
 
     it('waits for the internal result id after a deep-link refresh', () => {
@@ -86,13 +76,13 @@ describe('SectionGeographyComponent', () => {
 
       build();
       fixture.detectChanges();
-      expect(api.resultsSE.GET_geographicSectionp25).not.toHaveBeenCalled();
+      expect(bilateralApi.GET_geographic).not.toHaveBeenCalled();
 
       creation.currentResultId.set(77);
       creation.isLoadingResult.set(false);
       fixture.detectChanges();
 
-      expect(api.resultsSE.GET_geographicSectionp25).toHaveBeenCalledTimes(1);
+      expect(bilateralApi.GET_geographic).toHaveBeenCalledWith(77);
     });
 
     it('ignores an empty response', () => {
@@ -103,12 +93,12 @@ describe('SectionGeographyComponent', () => {
     });
 
     it('hydrates both bodies from the response', () => {
-      api.resultsSE.GET_geographicSectionp25.mockReturnValue(
+      bilateralApi.GET_geographic.mockReturnValue(
         of({
           response: {
             geo_scope_id: GeoScopeEnum.REGIONAL,
-            has_regions: true,
-            has_countries: false,
+            has_regions: 1,
+            has_countries: 0,
             regions: [{ id: 1 }],
             countries: [{ id: 2 }],
             extra_geo_scope_id: GeoScopeEnum.COUNTRY,
@@ -123,11 +113,13 @@ describe('SectionGeographyComponent', () => {
       build();
       fixture.detectChanges();
       expect(component.geographicLocationBody().regions).toEqual([{ id: 1 }]);
+      expect(component.geographicLocationBody().has_regions).toBe(true);
+      expect(component.geographicLocationBody().has_countries).toBe(false);
       expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBe(true);
     });
 
     it('defaults the region and country lists when they are missing', () => {
-      api.resultsSE.GET_geographicSectionp25.mockReturnValue(
+      bilateralApi.GET_geographic.mockReturnValue(
         of({ response: { geo_scope_id: GeoScopeEnum.GLOBAL } })
       );
       build();
@@ -140,7 +132,7 @@ describe('SectionGeographyComponent', () => {
     });
 
     it('calls queueGeographySave once on successful load with data', () => {
-      api.resultsSE.GET_geographicSectionp25.mockReturnValue(
+      bilateralApi.GET_geographic.mockReturnValue(
         of({ response: { geo_scope_id: GeoScopeEnum.REGIONAL } })
       );
       build();
@@ -150,7 +142,7 @@ describe('SectionGeographyComponent', () => {
 
     it('does not overwrite a local change when the initial GET completes later', () => {
       const pendingLoad$ = new Subject<any>();
-      api.resultsSE.GET_geographicSectionp25.mockReturnValue(pendingLoad$);
+      bilateralApi.GET_geographic.mockReturnValue(pendingLoad$);
 
       build();
       fixture.detectChanges();
@@ -213,7 +205,7 @@ describe('SectionGeographyComponent', () => {
       options.executor(77, { geo_scope_id: GeoScopeEnum.GLOBAL }).subscribe();
 
       expect(bilateralApi.PATCH_geographic).toHaveBeenCalledWith(77, { geo_scope_id: GeoScopeEnum.GLOBAL });
-      expect(api.resultsSE.GET_geographicSectionp25).not.toHaveBeenCalled();
+      expect(bilateralApi.GET_geographic).not.toHaveBeenCalled();
     });
 
     it('defaults the scope status to idle', () => {

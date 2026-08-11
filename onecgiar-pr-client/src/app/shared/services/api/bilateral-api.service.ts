@@ -64,6 +64,16 @@ export class BilateralApiService {
     );
   }
 
+  /**
+   * Geographic Location belongs to the bilateral editor, so its read must use
+   * the same resolved internal result id as its autosave PATCH.
+   */
+  GET_geographic(resultId: number | string) {
+    return this.http.get<any>(
+      `${environment.apiBaseUrl}v2/api/geographic-location/get/geographic/${resultId}`
+    );
+  }
+
   PATCH_BilateralResultTitle(resultId: number | string, body: any) {
     return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/${resultId}/title`, body);
   }

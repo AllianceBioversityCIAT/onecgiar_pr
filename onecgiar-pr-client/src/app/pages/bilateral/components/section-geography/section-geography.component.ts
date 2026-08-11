@@ -1,7 +1,6 @@
 import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { RegionsCountriesService } from '../../../../shared/services/global/regions-countries.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -28,7 +27,6 @@ const YES_NO_OPTIONS = [
   styleUrl: './section-geography.component.scss'
 })
 export class SectionGeographyComponent implements OnInit {
-  readonly api = inject(ApiService);
   readonly bilateralApi = inject(BilateralApiService);
   readonly regionsCountriesSE = inject(RegionsCountriesService);
   readonly creationService = inject(BilateralCreationService);
@@ -105,14 +103,14 @@ export class SectionGeographyComponent implements OnInit {
     const resultId = this.creationService.currentResultId();
     if (!resultId || this.hasLocalGeographyChanges) return;
 
-    this.api.resultsSE.GET_geographicSectionp25().subscribe({
+    this.bilateralApi.GET_geographic(resultId).subscribe({
       next: ({ response }) => {
         if (response && !this.hasLocalGeographyChanges) {
           this.geographicLocationBody.update(b => ({
             ...b,
             geo_scope_id: response.geo_scope_id,
-            has_regions: response.has_regions,
-            has_countries: response.has_countries,
+            has_regions: this.toBoolean(response.has_regions),
+            has_countries: this.toBoolean(response.has_countries),
             regions: response.regions || [],
             countries: response.countries || []
           }));
@@ -120,20 +118,25 @@ export class SectionGeographyComponent implements OnInit {
           this.extraGeographicLocationBody.update(b => ({
             ...b,
             geo_scope_id: response.extra_geo_scope_id,
-            has_regions: response.has_extra_regions,
-            has_countries: response.has_extra_countries,
+            has_regions: this.toBoolean(response.has_extra_regions),
+            has_countries: this.toBoolean(response.has_extra_countries),
             regions: response.extra_regions || [],
             countries: response.extra_countries || [],
             has_extra_geo_scope:
               response.has_extra_geo_scope === null || response.has_extra_geo_scope === undefined
                 ? null
-                : Boolean(response.has_extra_geo_scope)
+                : this.toBoolean(response.has_extra_geo_scope)
           }));
 
           this.updateTracker();
         }
       }
     });
+  }
+
+  /** API flags can be serialized as booleans, 0/1, or their string forms. */
+  private toBoolean(value: unknown): boolean {
+    return value === true || value === 1 || value === '1' || value === 'true';
   }
 
   private buildGeographyPayload(): Record<string, unknown> {
