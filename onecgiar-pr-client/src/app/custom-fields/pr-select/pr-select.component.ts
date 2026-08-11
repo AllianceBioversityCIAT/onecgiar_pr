@@ -17,6 +17,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
   standalone: false
 })
 export class PrSelectComponent implements ControlValueAccessor {
+  private static nextInstanceId = 0;
   readonly optionLabel = input<string>();
   readonly optionValue = input<string>();
   readonly options = input<any>();
@@ -65,6 +66,14 @@ export class PrSelectComponent implements ControlValueAccessor {
   readonly isDropdownOpen = signal<boolean>(false); // Track dropdown state
   /** Internal overlay positioning styles (no consumer binds this; kept internal). */
   readonly overlayStyles = signal<string>('');
+  private readonly instanceId = PrSelectComponent.nextInstanceId++;
+
+  /** Unique trigger id so adjacent selects with the same optionValue do not blur each other. */
+  get triggerId(): string {
+    const key = this.idKey() || this.optionValue() || 'pr-select';
+    const index = this.indexReference();
+    return index != null ? `${key}_${index}` : `${key}_${this.instanceId}`;
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
@@ -110,8 +119,7 @@ export class PrSelectComponent implements ControlValueAccessor {
 
   removeFocus(option?) {
     if (option?.disabled) return;
-    const triggerId = (this.idKey() || this.optionValue()) + '_' + (this.indexReference() ?? '');
-    const element: any = document.getElementById(triggerId);
+    const element: any = document.getElementById(this.triggerId);
     element?.blur();
     if (this.expandSpaceOnOpen()) {
       this.isDropdownOpen.set(false); // Close dropdown only if expansion is enabled
@@ -127,8 +135,7 @@ export class PrSelectComponent implements ControlValueAccessor {
       this.isDropdownOpen.set(true); // Only track state if expansion is enabled
     }
     if (this.overlayToBody()) {
-      const triggerId = (this.idKey() || this.optionValue()) + '_' + (this.indexReference() ?? '');
-      const triggerElement: any = document.getElementById(triggerId);
+      const triggerElement: any = document.getElementById(this.triggerId);
       if (triggerElement) {
         const rect = triggerElement.getBoundingClientRect();
         const top = rect.bottom + 4;

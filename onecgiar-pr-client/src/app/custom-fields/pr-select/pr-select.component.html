@@ -24,7 +24,7 @@
       <a
         class="field"
         tabindex="0"
-        [id]="(idKey() || optionValue()) + '_' + (indexReference() ?? '')"
+        [id]="triggerId"
         [ngClass]="{ 'select-disable': disabled() }"
         [ngClass]="{ globalDisabled: fieldDisabled() }"
         (focus)="onDropdownOpen()">

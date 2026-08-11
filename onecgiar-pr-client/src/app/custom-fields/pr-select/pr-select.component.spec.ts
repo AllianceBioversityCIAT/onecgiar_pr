@@ -24,4 +24,26 @@ describe('PrSelectComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('uses a distinct trigger id for select instances with the same option value', () => {
+    fixture.componentRef.setInput('optionValue', 'id');
+    fixture.detectChanges();
+
+    const secondFixture = TestBed.createComponent(PrSelectComponent);
+    secondFixture.componentRef.setInput('optionValue', 'id');
+    secondFixture.detectChanges();
+
+    expect(component.triggerId).not.toBe(secondFixture.componentInstance.triggerId);
+  });
+
+  it('closes its own expanded dropdown after selecting an option', () => {
+    fixture.componentRef.setInput('optionValue', 'id');
+    fixture.componentRef.setInput('expandSpaceOnOpen', true);
+    fixture.detectChanges();
+    component.isDropdownOpen.set(true);
+
+    component.removeFocus({ id: 2 });
+
+    expect(component.isDropdownOpen()).toBe(false);
+  });
 });
