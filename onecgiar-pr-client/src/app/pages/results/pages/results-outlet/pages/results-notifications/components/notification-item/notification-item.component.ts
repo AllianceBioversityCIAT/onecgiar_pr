@@ -83,14 +83,23 @@ export class NotificationItemComponent {
     return name || sentinel || '—';
   }
 
+  private get isIpsrNotification(): boolean {
+    const typeId = this.notification?.obj_result?.obj_result_type?.id;
+    return typeId === 10 || typeId === 11;
+  }
+
   invalidateRequest() {
+    const currentPhaseId = this.isIpsrNotification
+      ? this.api.dataControlSE.IPSRCurrentPhase?.phaseId
+      : this.api.dataControlSE.reportingCurrentPhase.phaseId;
+
     return (
       this.requestingAccept ||
       this.requestingReject ||
       this.api.rolesSE.platformIsClosed ||
       this.isQAed ||
       (!this.api.rolesSE.isAdmin &&
-        this.notification.obj_result.obj_version.id != this.api.dataControlSE.reportingCurrentPhase.phaseId &&
+        this.notification.obj_result.obj_version.id != currentPhaseId &&
         this.notification.obj_result.status_id != 3)
     );
   }
@@ -107,6 +116,7 @@ export class NotificationItemComponent {
       title: obj_result?.title,
       submitter: `${obj_owner_initiative?.official_code} - ${obj_owner_initiative?.name}`,
       result_level_id: obj_result?.obj_result_level?.id,
+      result_type_id: obj_result?.obj_result_type?.id,
       result_type: obj_result?.obj_result_type?.name,
       initiative_id: obj_owner_initiative?.id,
       portfolio: obj_result?.obj_version?.obj_portfolio?.acronym,
@@ -118,6 +128,7 @@ export class NotificationItemComponent {
       title: obj_result?.title,
       submitter: `${obj_owner_initiative?.official_code} - ${obj_owner_initiative?.name}`,
       result_level_id: obj_result?.obj_result_level?.id,
+      result_type_id: obj_result?.obj_result_type?.id,
       result_type: obj_result?.obj_result_type?.name,
       initiative_id: obj_owner_initiative?.id,
       portfolio: obj_result?.obj_version?.obj_portfolio?.acronym,
@@ -175,9 +186,9 @@ export class NotificationItemComponent {
   resultUrl(notification) {
     const resultCode = notification?.obj_result?.result_code;
     const phase = notification?.obj_result?.obj_version?.id;
-    const isIpsr = notification?.obj_result?.obj_result_type?.id === 10;
+    const typeId = notification?.obj_result?.obj_result_type?.id;
 
-    if (isIpsr) {
+    if (typeId === 10 || typeId === 11) {
       return `/ipsr/detail/${resultCode}/general-information?phase=${phase}`;
     }
 

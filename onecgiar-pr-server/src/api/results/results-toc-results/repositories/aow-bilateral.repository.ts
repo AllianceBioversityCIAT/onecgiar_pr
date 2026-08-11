@@ -26,6 +26,7 @@ interface TocResultRow {
   result_type_id?: number | null;
   result_type_name?: string | null;
   result_level_id?: number | null;
+  is_aow?: number | null;
   center_id?: number | null;
   center_acronym?: string | null;
 }
@@ -38,6 +39,8 @@ export interface TocResultResponse {
   result_level_id?: number | null;
   /** P2-3114: Clarisa initiative ids from toc_result_synergy_programs (same contract as C&P toc v2). */
   contributing_synergy_program_initiative_ids?: number[];
+  /** True when the ToC node is explicitly linked to the queried AOW (wp_id IS NOT NULL and matched). False for program-level nodes that appear under all AOWs. */
+  is_aow?: boolean;
   indicators: Array<{
     indicator_id: number;
     indicator_description: string | null;
@@ -59,19 +62,6 @@ export interface TocResultResponse {
     /** Center for this disaggregated indicator row (toc_result_indicator_target_center → clarisa_institutions). */
     center_id?: number | null;
     center_acronym?: string | null;
-    targets_by_center?: {
-      targets: Array<{
-        toc_indicator_target_id: number;
-        year: number;
-        target_value: number;
-        number_target: string;
-      }>;
-      centers: Array<{
-        center_id: number;
-        center_acronym: string;
-        center_name: string;
-      }>;
-    };
   }>;
 }
 
@@ -79,6 +69,8 @@ interface TocQueryOptions {
   areaAcronym?: string;
   categories?: string[];
   context: ReportingTocContext;
+  /** When true, restricts results to toc_results with wp_id IS NULL (not linked to any Area of Work). */
+  intermediateOnly?: boolean;
 }
 
 export interface TocWorkPackageRow {
@@ -226,6 +218,45 @@ export class AoWBilateralRepository {
     }
   }
 
+  async countProgramLevelOutcomes(
+    programOfficialCode: string,
+    context: ReportingTocContext,
+  ): Promise<{ intermediateCount: number; eoi2030Count: number }> {
+    try {
+      const [intermediateRows, eoiRows] = await Promise.all([
+        this.dataSource.query(
+          `SELECT COUNT(*) AS cnt
+           FROM \`${env.DB_TOC}\`.toc_results tr
+           WHERE tr.official_code = ?
+             AND tr.category IN ('OUTPUT', 'OUTCOME')
+             AND tr.wp_id IS NULL
+             AND tr.is_active = 1
+             AND tr.phase = ?`,
+          [programOfficialCode, context.phaseUuid],
+        ),
+        this.dataSource.query(
+          `SELECT COUNT(*) AS cnt
+           FROM \`${env.DB_TOC}\`.toc_results tr
+           WHERE tr.official_code = ?
+             AND tr.category = 'EOI'
+             AND tr.is_active = 1
+             AND tr.phase = ?`,
+          [programOfficialCode, context.phaseUuid],
+        ),
+      ]);
+      return {
+        intermediateCount: Number(intermediateRows[0]?.cnt ?? 0),
+        eoi2030Count: Number(eoiRows[0]?.cnt ?? 0),
+      };
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
+
   async findUnitAcronymsByProgram(
     programOfficialCode: string,
     contextOrYear?: ReportingTocContext | number,
@@ -251,6 +282,37 @@ export class AoWBilateralRepository {
     }
   }
 
+  private async fetchAndGroupTocResults(
+    program: string,
+    context: ReportingTocContext,
+    queryOptions: Omit<TocQueryOptions, 'context'>,
+    contributionOptions?: {
+      isCumulative?: boolean;
+      fromYear?: number;
+      toYear?: number;
+    },
+  ): Promise<TocResultResponse[]> {
+    const { query, params } = this.buildTocQuery(program, {
+      ...queryOptions,
+      context,
+    });
+
+    const [rows, contributions] = await Promise.all([
+      this.dataSource.query(query, params) as Promise<TocResultRow[]>,
+      this.getIndicatorContributions(program, context, contributionOptions),
+    ]);
+
+    const enhancedRows = rows.map((row) => ({
+      ...row,
+      actual_achieved_value_sum:
+        contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
+      progress_percentage:
+        contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
+    }));
+
+    return this.groupTocRows(enhancedRows);
+  }
+
   async findByCompositeCode(
     program: string,
     composite_code: string,
@@ -258,27 +320,11 @@ export class AoWBilateralRepository {
   ) {
     const context = await this.resolveContext(contextOrYear);
     const areaAcronym = this.resolveAreaAcronym(program, composite_code);
-    const { query, params } = this.buildTocQuery(program, {
-      areaAcronym,
-      categories: ['OUTPUT', 'OUTCOME'],
-      context,
-    });
-
     try {
-      const [rows, contributions] = await Promise.all([
-        this.dataSource.query(query, params) as Promise<TocResultRow[]>,
-        this.getIndicatorContributions(program, context),
-      ]);
-
-      const enhancedRows = rows.map((row) => ({
-        ...row,
-        actual_achieved_value_sum:
-          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
-        progress_percentage:
-          contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
-      }));
-
-      return this.groupTocRows(enhancedRows);
+      return await this.fetchAndGroupTocResults(program, context, {
+        areaAcronym,
+        categories: ['OUTPUT', 'OUTCOME'],
+      });
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
@@ -293,30 +339,34 @@ export class AoWBilateralRepository {
     contextOrYear: ReportingTocContext | number,
   ) {
     const context = await this.resolveContext(contextOrYear);
-    const { query, params } = this.buildTocQuery(program, {
-      categories: ['EOI'],
-      context,
-    });
-
     try {
-      const [rows, contributions] = await Promise.all([
-        this.dataSource.query(query, params) as Promise<TocResultRow[]>,
-        this.getIndicatorContributions(program, context, {
-          isCumulative: true,
-          fromYear: 2025,
-          toYear: 2030,
-        }),
-      ]);
+      // P2-2928: 2030 targets are long-term, so the achieved value accumulates
+      // every contribution from 2025 through 2030 rather than the current year only.
+      return await this.fetchAndGroupTocResults(
+        program,
+        context,
+        { categories: ['EOI'] },
+        { isCumulative: true, fromYear: 2025, toYear: 2030 },
+      );
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
 
-      const enhancedRows = rows.map((row) => ({
-        ...row,
-        actual_achieved_value_sum:
-          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
-        progress_percentage:
-          contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
-      }));
-
-      return this.groupTocRows(enhancedRows);
+  async findIntermediateOutcomes(
+    program: string,
+    contextOrYear: ReportingTocContext | number,
+  ) {
+    const context = await this.resolveContext(contextOrYear);
+    try {
+      return await this.fetchAndGroupTocResults(program, context, {
+        categories: ['OUTPUT', 'OUTCOME'],
+        intermediateOnly: true,
+      });
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
@@ -344,6 +394,7 @@ export class AoWBilateralRepository {
         tr.category,
         tr.result_title AS result_title,
         tr.related_node_id AS related_node_id,
+        ${options.areaAcronym ? '(wp.toc_id IS NOT NULL)' : 'NULL'} AS is_aow,
         tri.id AS indicator_id,
         tri.indicator_description,
         tri.toc_result_indicator_id,
@@ -386,8 +437,10 @@ export class AoWBilateralRepository {
     `;
 
     if (options.areaAcronym) {
+      // LEFT JOIN + (matched AOW OR null wp_id): ToC nodes without a work package /
+      // area of work must appear under every AOW of the science program.
       query += `
-        JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
+        LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
           AND wp.year = ?
           AND UPPER(TRIM(wp.acronym)) = ?
           AND wp.wp_official_code LIKE CONCAT(?, '-%')
@@ -421,6 +474,14 @@ export class AoWBilateralRepository {
     params.push(program, ...categories);
     query += ` AND tr.phase = ?`;
     params.push(options.context.phaseUuid);
+
+    if (options.areaAcronym) {
+      query += ` AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)`;
+    }
+
+    if (options.intermediateOnly) {
+      query += ` AND tr.wp_id IS NULL`;
+    }
 
     query += `
       GROUP BY
@@ -458,6 +519,7 @@ export class AoWBilateralRepository {
           result_title: row.result_title,
           related_node_id: row.related_node_id,
           result_level_id: row.result_level_id ?? null,
+          is_aow: Boolean(row.is_aow),
           indicators: [],
         });
       }
@@ -489,7 +551,11 @@ export class AoWBilateralRepository {
       }
     }
 
-    return Array.from(grouped.values());
+    const results = Array.from(grouped.values());
+    if (results.some((r) => r.is_aow)) {
+      results.sort((a, b) => Number(b.is_aow) - Number(a.is_aow));
+    }
+    return results;
   }
 
   async findResultById(tocResultId: number, phaseUuid: string) {
@@ -779,11 +845,15 @@ export class AoWBilateralRepository {
   }
 
   /**
-   * Get all targets for an indicator across all years with their contributing centers
+   * Get all targets for an indicator from the reporting year onward with their contributing centers.
    * @param indicatorId The indicator ID from toc_results_indicators
+   * @param reportingYear Active reporting phase year (from ReportingTocContext)
    * @returns Array of targets with their centers
    */
-  async findTargetsWithCentersByIndicatorId(indicatorId: number) {
+  async findTargetsWithCentersByIndicatorId(
+    indicatorId: number,
+    reportingYear: number,
+  ) {
     const query = `
       SELECT
         trit.toc_indicator_target_id,
@@ -799,12 +869,15 @@ export class AoWBilateralRepository {
       LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci 
         ON tritc.center_id = ci.id
       WHERE trit.id_indicator = ?
-        AND trit.target_date >= 2025
+        AND trit.target_date >= ?
       ORDER BY trit.target_date ASC, ci.acronym ASC
     `;
 
     try {
-      const rows = await this.dataSource.query(query, [indicatorId]);
+      const rows = await this.dataSource.query(query, [
+        indicatorId,
+        reportingYear,
+      ]);
 
       // Group by target_id to consolidate centers
       const targetsMap = new Map<

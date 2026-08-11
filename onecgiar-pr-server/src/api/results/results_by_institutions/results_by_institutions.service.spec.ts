@@ -22,6 +22,7 @@ describe('ResultsByInstitutionsService', () => {
   };
   const mockDeliveriesTypeRepository = {
     update: jest.fn(),
+    save: jest.fn(),
   };
   const mockHandlersError = {
     returnErrorRes: jest.fn((payload) => payload),
@@ -34,6 +35,7 @@ describe('ResultsByInstitutionsService', () => {
   };
   const mockResultInstitutionsBudgetRepository = {
     update: jest.fn(),
+    save: jest.fn(),
   };
   const mockGlobalParameterRepository = {
     findOne: jest.fn(),
@@ -58,7 +60,10 @@ describe('ResultsByInstitutionsService', () => {
   const mockResultsByProjectsService = {
     syncBilateralProjects: jest.fn(),
   };
-  const mockResultsByProjectsRepository = {};
+  const mockResultsByProjectsRepository = {
+    findResultsByProjectsByResultId: jest.fn(),
+    find: jest.fn(),
+  };
 
   const createService = () =>
     new ResultsByInstitutionsService(
@@ -80,6 +85,9 @@ describe('ResultsByInstitutionsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockResultByInstitutionsRepository.find.mockReset();
+    mockResultKnowledgeProductRepository.findOne.mockReset();
+    mockResultsByProjectsRepository.findResultsByProjectsByResultId.mockReset();
     service = createService();
   });
 
@@ -186,6 +194,142 @@ describe('ResultsByInstitutionsService', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('getInstitutionsPartnersByResultIdV2', () => {
+    const baseResult = {
+      id: 42,
+      no_applicable_partner: false,
+      is_lead_by_partner: false,
+      result_type_id: 2,
+    };
+
+    it('excludes partners whose Clarisa institution is inactive', async () => {
+      mockResultRepository.getResultById.mockResolvedValueOnce(baseResult);
+      mockResultKnowledgeProductRepository.findOne.mockResolvedValue(null);
+      mockResultByInstitutionsRepository.find.mockResolvedValue([
+        {
+          id: 1,
+          institutions_id: 11585,
+          delivery: [{ id: 10, is_active: true }],
+          obj_institutions: {
+            is_active: false,
+            name: 'ARTIS',
+            website_link: null,
+            obj_institution_type_code: { code: 1, name: 'Type' },
+          },
+        },
+        {
+          id: 2,
+          institutions_id: 100,
+          delivery: [{ id: 11, is_active: true }],
+          obj_institutions: {
+            is_active: true,
+            name: 'Active Partner',
+            website_link: null,
+            obj_institution_type_code: { code: 2, name: 'Type B' },
+          },
+        },
+      ]);
+      mockResultsCenterRepository.getAllResultsCenterByResultId.mockResolvedValue(
+        [],
+      );
+      mockResultsByProjectsRepository.findResultsByProjectsByResultId.mockResolvedValue(
+        [],
+      );
+
+      const response = await service.getInstitutionsPartnersByResultIdV2(42);
+      const payload = response.response as {
+        institutions: Array<{ id: number; institutions_id: number }>;
+      };
+
+      expect(payload.institutions).toHaveLength(1);
+      expect(payload.institutions[0]).toMatchObject({
+        id: 2,
+        institutions_id: 100,
+      });
+    });
+  });
+
+  describe('handleInstitutions', () => {
+    it('soft-deletes deliveries by result_by_institution_id when removing partners', async () => {
+      mockResultByInstitutionsRepository.update.mockResolvedValueOnce(
+        {} as any,
+      );
+      mockResultInstitutionsBudgetRepository.update.mockResolvedValueOnce(
+        {} as any,
+      );
+      mockDeliveriesTypeRepository.update.mockResolvedValueOnce({} as any);
+
+      const oldInstitutions = [
+        { id: 77, institutions_id: 11585, delivery: [{ id: 900 }] },
+      ] as any[];
+      const incomingInstitutions = [] as any[];
+
+      await (service as any).handleInstitutions(
+        incomingInstitutions,
+        oldInstitutions,
+        false,
+        false,
+        42,
+        5,
+      );
+
+      expect(mockDeliveriesTypeRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_by_institution_id: expect.anything(),
+        }),
+        { is_active: false, last_updated_by: 5 },
+      );
+      const deliveryWhere =
+        mockDeliveriesTypeRepository.update.mock.calls[0][0];
+      expect(deliveryWhere.id).toBeUndefined();
+    });
+
+    it('reactivates inactive partner without cascading delivery on RBI save', async () => {
+      const inactiveRbi = {
+        id: 500,
+        institutions_id: 11585,
+        is_active: false,
+        delivery: [{ id: 90553, partner_delivery_type_id: 1, is_active: true }],
+      };
+      mockResultByInstitutionsRepository.find.mockResolvedValueOnce([
+        inactiveRbi,
+      ]);
+      mockResultByInstitutionsRepository.update.mockResolvedValueOnce(
+        {} as any,
+      );
+      mockResultByInstitutionsRepository.save.mockResolvedValueOnce([]);
+
+      const incomingInstitutions = [
+        {
+          institutions_id: 11585,
+          is_leading_result: false,
+          delivery: [{ partner_delivery_type_id: 2 }],
+        },
+      ] as any[];
+
+      await (service as any).handleInstitutions(
+        incomingInstitutions,
+        [],
+        false,
+        false,
+        32177,
+        5,
+      );
+
+      expect(mockResultByInstitutionsRepository.update).toHaveBeenCalledWith(
+        { id: 500 },
+        expect.objectContaining({ is_active: true, last_updated_by: 5 }),
+      );
+      expect(mockResultByInstitutionsRepository.save).not.toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ id: 500 })]),
+      );
+      expect(mockDeliveriesTypeRepository.save).toHaveBeenCalled();
+      const savedDeliveries =
+        mockDeliveriesTypeRepository.save.mock.calls[0][0] ?? [];
+      expect(savedDeliveries[0]?.result_by_institution_id).toBe(500);
     });
   });
 

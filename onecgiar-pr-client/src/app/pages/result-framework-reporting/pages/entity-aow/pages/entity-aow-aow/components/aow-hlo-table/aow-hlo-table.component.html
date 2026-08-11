@@ -1,19 +1,21 @@
-<div class="search_input" style="width: 100%; margin-bottom: 1rem">
-  <i class="material-icons-round">search</i>
-  <input
-    id="aowIndicatorSearchInput"
-    type="text"
-    placeholder="Find indicator..."
-    aria-label="Find indicator"
-    [ngModel]="entityAowService.searchText()"
-    (ngModelChange)="entityAowService.searchText.set($event)" />
-</div>
+@if (showSearch) {
+  <div class="search_input" style="width: 100%; margin-bottom: 1rem">
+    <i class="material-icons-round">search</i>
+    <input
+      id="aowIndicatorSearchInput"
+      type="text"
+      placeholder="Find indicator..."
+      aria-label="Find indicator"
+      [ngModel]="entityAowService.searchText()"
+      (ngModelChange)="entityAowService.searchText.set($event)" />
+  </div>
+}
 
 <p-table
-  id="tocResultsByAowIdTable"
+  [id]="'tocResultsByAowIdTable' + instanceId"
   styleClass="p-datatable-gridlines p-datatable-sm"
   [value]="filteredTableData()"
-  [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes()"
+  [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes() || entityAowService.isLoadingIntermediateOutcomes()"
   sortField="result_title"
   [sortOrder]="1"
   responsiveLayout="scroll"
@@ -25,11 +27,11 @@
   <ng-template pTemplate="header">
     <tr>
       @for (column of columnOrder(); track column.attr) {
-        <th [id]="column.attr" style="text-align: center" [style.width]="column.width">
+        <th [id]="column.attr + instanceId" style="text-align: center" [style.width]="column.width">
           {{ column.title }}
         </th>
       }
-      <th id="actions" style="text-align: center; width: 16%">Actions</th>
+      <th [id]="'actions' + instanceId" style="text-align: center; width: 16%">Actions</th>
     </tr>
   </ng-template>
 
@@ -46,6 +48,14 @@
               [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
 
             <span style="font-weight: bold">{{ item.result_title }}</span>
+
+            @if (tableType === 'outcomes-non-exclusive') {
+              <span
+                class="tab-content_chip non-exclusive-chip"
+                pTooltip="This Intermediate Outcome is not assigned to a single Area of Work, so it appears under all of them.">
+                Not exclusive to this AoW
+              </span>
+            }
           </div>
         </div>
       </td>
@@ -54,7 +64,7 @@
 
   <ng-template #expandedrow let-item>
     @if (item.indicators.length) {
-      @for (result of item.indicators; track result.indicator_id + '-' + (result.center_id ?? 'none')) {
+      @for (result of item.indicators; track result.indicator_id + '-' + (result.center_id ?? $index)) {
         <tr>
           <td class="text-secondary-300" style="min-width: 150px !important">
             <div class="kpi-statement-cell">
@@ -107,7 +117,7 @@
                   label="Target details"
                   type="button"
                   class="p-button-outlined pr-body-3 tab-content_actions_button"
-                  (click)="openTargetDetailsDrawer(item, result.indicator_id, result.center_id)"></button>
+                  (click)="openTargetDetailsDrawer(item, result)"></button>
               }
             </div>
           </td>
@@ -143,21 +153,23 @@
         @if (entityAowService.searchText().trim()) {
           No indicators match your search.
         } @else {
-          There are no High-Level Outputs Indicators found.
+          {{ emptyStateMessage() }}
         }
       </td>
     </tr>
   </ng-template>
 </p-table>
 
-@if (entityAowService.showReportResultModal()) {
-  <app-aow-hlo-create-modal></app-aow-hlo-create-modal>
-}
+@if (renderOverlays) {
+  @if (entityAowService.showReportResultModal()) {
+    <app-aow-hlo-create-modal></app-aow-hlo-create-modal>
+  }
 
-@if (entityAowService.showViewResultDrawer()) {
-  <app-aow-view-results-drawer></app-aow-view-results-drawer>
-}
+  @if (entityAowService.showViewResultDrawer()) {
+    <app-aow-view-results-drawer></app-aow-view-results-drawer>
+  }
 
-@if (entityAowService.showTargetDetailsDrawer()) {
-  <app-aow-target-details-drawer></app-aow-target-details-drawer>
+  @if (entityAowService.showTargetDetailsDrawer()) {
+    <app-aow-target-details-drawer></app-aow-target-details-drawer>
+  }
 }

@@ -1,3 +1,75 @@
-:host {
-  display: block;
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+.entity-aow-unplanned_content {
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 8px;
+  box-shadow: 0px 4.17px 31.31px 0px #2e2d740d;
+}
+
+.entity-aow-unplanned_content_header {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.entity-aow-unplanned_content_header_dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--pr-color-accents-5);
+}
+
+.entity-aow-unplanned_content_header_phase {
+  @include fonts.pr-typography('body-2');
+  font-weight: 400;
+  color: var(--pr-color-accents-5);
+}
+
+.entity-aow-unplanned_note {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 20px 25px 0;
+  padding: 12px 15px;
+  border-radius: 9px;
+  background-color: var(--pr-color-blue-50);
+  border: 1px solid var(--pr-color-blue-200);
+}
+
+.entity-aow-unplanned_note_icon {
+  flex: 0 0 auto;
+  font-size: 20px;
+  color: var(--pr-color-blue-500);
+}
+
+.entity-aow-unplanned_note_text {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-blue-800);
+  line-height: 1.5;
+
+  strong {
+    font-weight: 600;
+  }
+}
+
+.entity-aow-unplanned_content_table {
+  padding: 25px;
+}
+
+.entity-aow-unplanned_note + .entity-aow-unplanned_content_table {
+  padding-top: 15px;
 }

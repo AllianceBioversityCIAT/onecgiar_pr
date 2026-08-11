@@ -138,11 +138,6 @@ describe('FieldsManagerService', () => {
         expect(fields['[innovation-use-form]-2030-to-be-determined'].hide).toBe(false);
       });
 
-      it('should not hide contributors-partners for P25', () => {
-        const fields = service.fields();
-        expect(fields['[contributors-partners]-is-lead-by-partner'].hide).toBe(false);
-      });
-
       it('should use P25 label for ost_submitted', () => {
         const fields = service.fields();
         expect(fields['[knowledge-product-info]-ost_submitted'].label).toBe('Do you have a MELIA study planned in your TOC?');
@@ -270,11 +265,6 @@ describe('FieldsManagerService', () => {
         expect(fields['[innovation-use-form]-core-innovation'].hide).toBe(true);
         expect(fields['[innovation-use-form]-has-studies-links'].hide).toBe(true);
         expect(fields['[innovation-use-form]-2030-to-be-determined'].hide).toBe(true);
-      });
-
-      it('should hide contributors-partners for P22', () => {
-        const fields = service.fields();
-        expect(fields['[contributors-partners]-is-lead-by-partner'].hide).toBe(true);
       });
 
       it('should use P22 label for ost_submitted', () => {
@@ -556,10 +546,8 @@ describe('FieldsManagerService', () => {
       expect(fields['[knowledge-product-info]-ost_melia_select'].required).toBe(true);
     });
 
-    it('should have contributors-partners required true', () => {
-      const fields = service.fields();
-      expect(fields['[contributors-partners]-is-lead-by-partner'].required).toBe(true);
-    });
+    // P2-3199: the duplicated '[contributors-partners]-is-lead-by-partner' definition was removed.
+    // Contributors and partners renders the question through the key asserted above.
   });
 
   describe('edge case: isAnInnovation with only result_type_id == 2 (left side of ||)', () => {

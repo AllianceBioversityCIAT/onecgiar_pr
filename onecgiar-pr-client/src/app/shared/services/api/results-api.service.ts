@@ -77,6 +77,27 @@ export class ResultsApiService {
     return this.http.delete<any>(`${this.baseApiBaseUrl}manage-data/result/${resultIdToDelete}/delete`);
   }
 
+  GET_checkTitleUniqueness(title: string, excludeResultId?: number) {
+    const params: Record<string, string> = { title: title ?? '' };
+    if (excludeResultId !== undefined && excludeResultId !== null) {
+      params['excludeResultId'] = String(excludeResultId);
+    }
+    return this.http.get<{
+      response: {
+        isUnique: boolean;
+        existing?: {
+          id: number;
+          result_code: number;
+          title: string;
+          version_id: number;
+        } | null;
+      };
+      message: string;
+      statusCode?: number;
+      status?: number;
+    }>(`${this.apiBaseUrl}check-title-uniqueness`, { params });
+  }
+
   GET_FindResultsElastic(search?: string, type?: string) {
     const body = {
       size: 20,
@@ -1389,6 +1410,10 @@ export class ResultsApiService {
 
   GET_2030Outcomes(entityId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=${entityId}`);
+  }
+
+  GET_IntermediateOutcomes(entityId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=${entityId}`);
   }
 
   GET_W3BilateralProjects(tocResultId: string) {

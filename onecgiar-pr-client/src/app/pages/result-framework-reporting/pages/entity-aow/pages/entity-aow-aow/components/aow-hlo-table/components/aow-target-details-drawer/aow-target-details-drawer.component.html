@@ -25,7 +25,7 @@
           <i
             class="pi pi-times"
             style="font-size: 16px; cursor: pointer"
-            (click)="entityAowService.showTargetDetailsDrawer.set(false); entityAowService.targetDetailsDrawerFullScreen.set(false)"></i>
+            (click)="closeDrawer()"></i>
         </div>
       </div>
       <p class="target-details-drawer-header_title">{{ entityAowService.currentTargetToView()?.result_title }}</p>
@@ -57,7 +57,7 @@
         </tr>
       </ng-template>
       <ng-template #body let-row>
-        <tr>
+        <tr [class.selected-row]="isSelectedCenter(row)">
           <td class="center-cell">
             <div class="center-content">
               <i class="pi pi-building"></i>

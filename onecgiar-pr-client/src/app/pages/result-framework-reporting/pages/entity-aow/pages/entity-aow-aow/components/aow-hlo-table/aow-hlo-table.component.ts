@@ -40,16 +40,33 @@ export class AowHloTableComponent {
   entityAowService = inject(EntityAowService);
   resultLevelService = inject(ResultLevelService);
 
-  @Input() tableType: 'outputs' | 'outcomes' | '2030-outcomes' = 'outputs';
+  @Input() tableType:
+    | 'outputs'
+    | 'outcomes'
+    | 'outcomes-non-exclusive'
+    | '2030-outcomes'
+    | 'intermediate-outcomes' = 'outputs';
+
+  // Set to false on secondary instances: the search box and the modal/drawers below are driven by
+  // shared service signals, so rendering them twice would duplicate the input and stack the dialogs.
+  @Input() showSearch = true;
+  @Input() renderOverlays = true;
+
+  // Suffix appended to the table and column header ids so two instances on the same page stay unique.
+  @Input() instanceId = '';
 
   tableData = computed(() => {
     switch (this.tableType) {
       case 'outputs':
         return this.entityAowService.tocResultsOutputsByAowId();
       case 'outcomes':
-        return this.entityAowService.tocResultsOutcomesByAowId();
+        return this.entityAowService.tocResultsOutcomesExclusiveByAowId();
+      case 'outcomes-non-exclusive':
+        return this.entityAowService.tocResultsOutcomesNonExclusiveByAowId();
       case '2030-outcomes':
         return this.entityAowService.tocResults2030Outcomes();
+      case 'intermediate-outcomes':
+        return this.entityAowService.tocResultsIntermediateOutcomes();
       default:
         return [];
     }
@@ -84,6 +101,22 @@ export class AowHloTableComponent {
     });
     return expanded;
   });
+
+  emptyStateMessage(): string {
+    switch (this.tableType) {
+      case 'outcomes':
+        return 'There are no Intermediate Outcomes indicators found.';
+      case 'outcomes-non-exclusive':
+        return 'There are no Intermediate Outcomes shared with other Areas of Work.';
+      case '2030-outcomes':
+        return 'There are no 2030 Outcomes indicators configured for this program in the current reporting phase.';
+      case 'intermediate-outcomes':
+        return 'There are no Intermediate Outcomes configured for this program in the current reporting phase.';
+      case 'outputs':
+      default:
+        return 'There are no High-Level Outputs indicators found.';
+    }
+  }
 
   // P2-3053: agreed nomenclature + dynamic phase year ("<year> target") instead of hardcoded "2025".
   // P2-3133: the 2030 Outcomes view shows a cumulative "2030 target"; "Achieved value" replaces "Achieved target" globally.
@@ -152,18 +185,43 @@ export class AowHloTableComponent {
     this.entityAowService.currentResultToView.set(selectedCurrentItem);
   }
 
-  openTargetDetailsDrawer(item: any, currentItemId: string, centerId?: number | null) {
+  openTargetDetailsDrawer(item: any, selectedIndicator: any) {
     const selectedCurrentItem = {
       ...item,
-      indicators: item.indicators.filter(
-        (indicator: any) =>
-          indicator.indicator_id === currentItemId &&
-          (centerId == null || indicator.center_id === centerId)
-      )
+      indicators: [selectedIndicator]
     };
 
+    this.entityAowService.targetDetailsSelectedCenterId.set(
+      this.resolveTargetDetailsCenterId(selectedIndicator)
+    );
     this.entityAowService.showTargetDetailsDrawer.set(true);
     this.entityAowService.currentTargetToView.set(selectedCurrentItem);
+  }
+
+  private resolveTargetDetailsCenterId(indicator: any): string | number | null {
+    if (indicator?.center_id != null) {
+      return indicator.center_id;
+    }
+
+    const reportingYear = String(this.entityAowService.reportingPhaseYear ?? '').trim();
+    const targetValue = indicator?.target_value_sum ?? indicator?.target_value;
+
+    if (!reportingYear || targetValue == null || `${targetValue}`.trim() === '') {
+      return null;
+    }
+
+    const normalizedTarget = String(targetValue);
+    const centers = indicator?.targets_by_center?.centers ?? [];
+
+    const matchedCenter = centers.find((center: any) =>
+      center.targets?.some(
+        (target: any) =>
+          String(target.year) === reportingYear &&
+          String(target.target_value) === normalizedTarget
+      )
+    );
+
+    return matchedCenter?.center_id ?? null;
   }
 
   hasTargets(item: any, indicatorId: string, centerId?: number | null): boolean {

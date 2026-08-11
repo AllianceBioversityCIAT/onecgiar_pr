@@ -4,21 +4,22 @@ import { EntityAowService } from '../../../../../../services/entity-aow.service'
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 
-interface Center {
-  center_id: string;
-  center_acronym: string;
-  center_name: string;
-}
-
 interface Target {
   number_target: string;
-  target_value: string;
-  toc_indicator_target_id: string;
-  year: string;
+  target_value: string | number;
+  toc_indicator_target_id: string | number;
+  year: string | number;
+}
+
+interface CenterWithTargets {
+  center_id: string | number;
+  center_acronym: string;
+  center_name: string;
+  targets?: Target[];
 }
 
 interface TableRow {
-  center: Center;
+  center: CenterWithTargets;
   targetsByYear: Map<string, string>;
 }
 
@@ -32,41 +33,32 @@ interface TableRow {
 export class AowTargetDetailsDrawerComponent implements OnInit, OnDestroy {
   entityAowService = inject(EntityAowService);
 
-  years = computed(() => {
-    const targetsByCenter = this.entityAowService.currentTargetToView()?.indicators?.[0]?.targets_by_center;
-    if (!targetsByCenter?.targets) return [];
+  private readonly centersWithTargets = computed(() => {
+    const centers = this.entityAowService.currentTargetToView()?.indicators?.[0]?.targets_by_center?.centers;
+    return Array.isArray(centers) ? (centers as CenterWithTargets[]) : [];
+  });
 
+  years = computed(() => {
     const yearsSet = new Set<string>();
-    targetsByCenter.targets.forEach((target: Target) => {
-      if (target.year) yearsSet.add(target.year);
+
+    this.centersWithTargets().forEach((center: CenterWithTargets) => {
+      center.targets?.forEach((target: Target) => {
+        if (target.year != null && `${target.year}`.trim() !== '') {
+          yearsSet.add(String(target.year));
+        }
+      });
     });
 
-    return Array.from(yearsSet).sort((a, b) => a.localeCompare(b));
+    return Array.from(yearsSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   });
 
   tableData = computed(() => {
-    const targetsByCenter = this.entityAowService.currentTargetToView()?.indicators?.[0]?.targets_by_center;
-    if (!targetsByCenter?.centers || !targetsByCenter?.targets) return [];
-
-    const centers: Center[] = targetsByCenter.centers;
-    const targets: Target[] = targetsByCenter.targets;
-
-    // Create a map of year -> target_value for quick lookup
-    const targetsByYearMap = new Map<string, string>();
-    targets.forEach((target: Target) => {
-      if (target.year && target.target_value) {
-        targetsByYearMap.set(target.year, target.target_value);
-      }
-    });
-
-    return centers.map((center: Center) => {
+    return this.centersWithTargets().map((center: CenterWithTargets) => {
       const targetsByYear = new Map<string, string>();
 
-      // All centers share the same targets by year
-      this.years().forEach(year => {
-        const value = targetsByYearMap.get(year);
-        if (value) {
-          targetsByYear.set(year, value);
+      center.targets?.forEach((target: Target) => {
+        if (target.year != null && target.target_value != null && `${target.target_value}`.trim() !== '') {
+          targetsByYear.set(String(target.year), String(target.target_value));
         }
       });
 
@@ -78,7 +70,22 @@ export class AowTargetDetailsDrawerComponent implements OnInit, OnDestroy {
   });
 
   getTargetValue(row: TableRow, year: string): string {
-    return row.targetsByYear.get(year) || '';
+    return row.targetsByYear.get(year) ?? '';
+  }
+
+  isSelectedCenter(row: TableRow): boolean {
+    const selectedCenterId = this.entityAowService.targetDetailsSelectedCenterId();
+    if (selectedCenterId == null) {
+      return false;
+    }
+
+    return String(row.center.center_id) === String(selectedCenterId);
+  }
+
+  closeDrawer(): void {
+    this.entityAowService.showTargetDetailsDrawer.set(false);
+    this.entityAowService.targetDetailsDrawerFullScreen.set(false);
+    this.entityAowService.targetDetailsSelectedCenterId.set(null);
   }
 
   ngOnInit() {
@@ -87,5 +94,6 @@ export class AowTargetDetailsDrawerComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     document.body.style.overflow = 'auto';
+    this.entityAowService.targetDetailsSelectedCenterId.set(null);
   }
 }

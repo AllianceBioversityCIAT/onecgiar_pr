@@ -60,6 +60,8 @@ const mockTocResultsRepository = {
   findWorkPackagesByProgram: jest.fn(),
   findByCompositeCode: jest.fn(),
   find2030Outcomes: jest.fn(),
+  findIntermediateOutcomes: jest.fn(),
+  countProgramLevelOutcomes: jest.fn(),
   findResultById: jest.fn(),
   findIndicatorById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
@@ -263,6 +265,10 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getGlobalUnitsByProgram', () => {
     beforeEach(() => {
       mockDataSource.query.mockResolvedValue([]);
+      mockTocResultsRepository.countProgramLevelOutcomes.mockResolvedValue({
+        intermediateCount: 0,
+        eoi2030Count: 0,
+      });
     });
 
     it('should return formatted units when all checks pass', async () => {
@@ -852,6 +858,185 @@ describe('ResultsFrameworkReportingService', () => {
       expect(
         mockTocResultsRepository.findByCompositeCode,
       ).not.toHaveBeenCalled();
+    });
+
+    it('should enrich indicator targets using the resolved reporting year', async () => {
+      const tocContext = { reportingYear: 2026, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          id: 1,
+          category: 'OUTPUT',
+          result_title: 'Result 1',
+          related_node_id: 'NODE-1',
+          indicators: [
+            {
+              indicator_id: 55,
+              indicator_description: 'Indicator 1',
+              target_date: 2026,
+              target_value: 95,
+            },
+          ],
+        },
+      ]);
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockResolvedValueOnce(
+        [
+          {
+            toc_indicator_target_id: 10,
+            year: 2026,
+            target_value: 95,
+            number_target: '1',
+            centers: [
+              {
+                center_id: 1,
+                center_acronym: 'ABC',
+                center_name: 'Alliance of Bioversity and CIAT - Headquarter',
+              },
+            ],
+          },
+          {
+            toc_indicator_target_id: 11,
+            year: 2026,
+            target_value: 79,
+            number_target: '1',
+            centers: [
+              {
+                center_id: 3,
+                center_acronym: 'CIP',
+                center_name: 'International Potato Center',
+              },
+            ],
+          },
+        ],
+      );
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2026',
+      );
+
+      expect(
+        mockTocResultsRepository.findTargetsWithCentersByIndicatorId,
+      ).toHaveBeenCalledWith(55, 2026);
+      expect(
+        result.response.tocResultsOutputs[0].indicators[0].targets_by_center,
+      ).toEqual({
+        centers: [
+          {
+            center_id: 1,
+            center_acronym: 'ABC',
+            center_name: 'Alliance of Bioversity and CIAT - Headquarter',
+            targets: [
+              {
+                toc_indicator_target_id: 10,
+                year: 2026,
+                target_value: 95,
+                number_target: '1',
+              },
+            ],
+          },
+          {
+            center_id: 3,
+            center_acronym: 'CIP',
+            center_name: 'International Potato Center',
+            targets: [
+              {
+                toc_indicator_target_id: 11,
+                year: 2026,
+                target_value: 79,
+                number_target: '1',
+              },
+            ],
+          },
+        ],
+      });
+      expect(
+        result.response.tocResultsOutputs[0].indicators[0].center_acronym,
+      ).toBe('ABC');
+      expect(result.response.tocResultsOutputs[0].indicators[0].center_id).toBe(
+        1,
+      );
+    });
+
+    it('should preserve SQL center_acronym when multiple centers share the same target value', async () => {
+      const tocContext = { reportingYear: 2026, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          toc_result_id: 10,
+          category: 'OUTCOME',
+          result_title: 'Outcome with same targets',
+          related_node_id: 'NODE-OUT',
+          indicators: [
+            {
+              indicator_id: 100,
+              indicator_description: 'Shared KPI',
+              target_date: 2026,
+              target_value: 2,
+              center_id: 1,
+              center_acronym: 'ABC',
+            },
+            {
+              indicator_id: 100,
+              indicator_description: 'Shared KPI',
+              target_date: 2026,
+              target_value: 2,
+              center_id: 3,
+              center_acronym: 'CIP',
+            },
+          ],
+        },
+      ]);
+      mockTocResultsRepository.findTargetsWithCentersByIndicatorId.mockResolvedValue(
+        [
+          {
+            toc_indicator_target_id: 10,
+            year: 2026,
+            target_value: 2,
+            number_target: '1',
+            centers: [
+              {
+                center_id: 1,
+                center_acronym: 'ABC',
+                center_name: 'Alliance of Bioversity and CIAT - Headquarter',
+              },
+            ],
+          },
+          {
+            toc_indicator_target_id: 11,
+            year: 2026,
+            target_value: 2,
+            number_target: '1',
+            centers: [
+              {
+                center_id: 3,
+                center_acronym: 'CIP',
+                center_name: 'International Potato Center',
+              },
+            ],
+          },
+        ],
+      );
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2026',
+      );
+
+      expect(result.response.tocResultsOutcomes[0].indicators).toEqual([
+        expect.objectContaining({
+          indicator_id: 100,
+          center_id: 1,
+          center_acronym: 'ABC',
+        }),
+        expect.objectContaining({
+          indicator_id: 100,
+          center_id: 3,
+          center_acronym: 'CIP',
+        }),
+      ]);
     });
   });
 

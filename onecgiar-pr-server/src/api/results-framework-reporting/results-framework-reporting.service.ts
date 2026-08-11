@@ -81,11 +81,17 @@ export class ResultsFrameworkReportingService {
           tocContext,
         );
 
-      const resultCountsByUnit = await this.getResultsCountByUnitAndStatus(
-        initiative.id,
-        workPackages.map((u) => u.code),
-        tocContext,
-      );
+      const [resultCountsByUnit, programLevelOutcomes] = await Promise.all([
+        this.getResultsCountByUnitAndStatus(
+          initiative.id,
+          workPackages.map((u) => u.code),
+          tocContext,
+        ),
+        this._tocResultsRepository.countProgramLevelOutcomes(
+          initiative.official_code.toUpperCase(),
+          tocContext,
+        ),
+      ]);
 
       let totalTargetValue = 0;
       let totalActualValue = 0;
@@ -214,6 +220,14 @@ export class ResultsFrameworkReportingService {
             year: tocContext.reportingYear,
           },
           units: filteredUnits,
+          intermediateOutcomes: {
+            count: programLevelOutcomes.intermediateCount,
+            hasData: programLevelOutcomes.intermediateCount > 0,
+          },
+          outcomes2030: {
+            count: programLevelOutcomes.eoi2030Count,
+            hasData: programLevelOutcomes.eoi2030Count > 0,
+          },
           metadata: {
             activeYear: tocContext.reportingYear,
             phaseUuid: tocContext.phaseUuid,
@@ -305,37 +319,53 @@ export class ResultsFrameworkReportingService {
         const targetsWithCenters =
           await this._tocResultsRepository.findTargetsWithCentersByIndicatorId(
             indicator.indicator_id,
+            resolvedYear,
           );
 
-        const centersMap = new Map<
+        const centerTargetsMap = new Map<
           number,
-          { center_id: number; center_acronym: string; center_name: string }
+          {
+            center_id: number;
+            center_acronym: string;
+            center_name: string;
+            targets: Array<{
+              toc_indicator_target_id: number;
+              year: number;
+              target_value: number;
+              number_target: string;
+            }>;
+          }
         >();
 
-        const targets = targetsWithCenters.map((target) => {
-          target.centers.forEach((center) => {
-            if (!centersMap.has(center.center_id)) {
-              centersMap.set(center.center_id, {
+        for (const target of targetsWithCenters) {
+          for (const center of target.centers ?? []) {
+            if (!center?.center_id) {
+              continue;
+            }
+
+            if (!centerTargetsMap.has(center.center_id)) {
+              centerTargetsMap.set(center.center_id, {
                 center_id: center.center_id,
                 center_acronym: center.center_acronym,
                 center_name: center.center_name,
+                targets: [],
               });
             }
-          });
 
-          return {
-            toc_indicator_target_id: target.toc_indicator_target_id,
-            year: target.year,
-            target_value: target.target_value,
-            number_target: target.number_target,
-          };
-        });
+            centerTargetsMap.get(center.center_id)?.targets.push({
+              toc_indicator_target_id: target.toc_indicator_target_id,
+              year: target.year,
+              target_value: target.target_value,
+              number_target: target.number_target,
+            });
+          }
+        }
 
-        const centers = Array.from(centersMap.values());
-
-        indicator.targets_by_center = centers.length
-          ? { targets, centers }
+        indicator.targets_by_center = centerTargetsMap.size
+          ? { centers: Array.from(centerTargetsMap.values()) }
           : {};
+
+        this.assignIndicatorCenterContext(indicator, resolvedYear);
       };
 
       const enrichTocResult = async (tocResult: any) => {
@@ -387,6 +417,46 @@ export class ResultsFrameworkReportingService {
     }
   }
 
+  private assignIndicatorCenterContext(
+    indicator: any,
+    resolvedYear: number,
+  ): void {
+    // Prefer center already resolved from SQL (one row per target×center).
+    if (indicator?.center_id != null && indicator?.center_acronym) {
+      return;
+    }
+
+    const centers = indicator?.targets_by_center?.centers;
+    if (!Array.isArray(centers) || !centers.length) {
+      return;
+    }
+
+    const reportingYear = String(indicator.target_date ?? resolvedYear);
+    const targetValue =
+      indicator.target_value ?? indicator.target_value_sum ?? null;
+
+    if (targetValue == null || `${targetValue}`.trim() === '') {
+      return;
+    }
+
+    const normalizedTarget = String(targetValue);
+    const matchedCenter = centers.find((center: any) =>
+      center.targets?.some(
+        (target: any) =>
+          String(target.year) === reportingYear &&
+          String(target.target_value) === normalizedTarget,
+      ),
+    );
+
+    if (!matchedCenter) {
+      return;
+    }
+
+    indicator.center_id = matchedCenter.center_id;
+    indicator.center_acronym = matchedCenter.center_acronym;
+    indicator.center_name = matchedCenter.center_name;
+  }
+
   async getToc2030Outcomes(programId?: string) {
     try {
       const normalizedProgram = programId?.trim();
@@ -429,6 +499,43 @@ export class ResultsFrameworkReportingService {
           },
         },
         message: 'ToC 2030 outcomes retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getIntermediateOutcomes(programId?: string) {
+    try {
+      const normalizedProgram = programId?.trim();
+
+      if (!normalizedProgram) {
+        throwServiceError(
+          'The program identifier is required in the query params.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const tocContext = await this._reportingTocContextService.resolve();
+
+      const intermediateOutcomes =
+        await this._tocResultsRepository.findIntermediateOutcomes(
+          normalizedProgram.toUpperCase(),
+          tocContext,
+        );
+
+      return {
+        response: {
+          program: normalizedProgram.toUpperCase(),
+          year: tocContext.reportingYear,
+          tocResults: intermediateOutcomes ?? [],
+          metadata: {
+            total: intermediateOutcomes?.length ?? 0,
+            phaseUuid: tocContext.phaseUuid,
+          },
+        },
+        message: 'Intermediate outcomes retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {

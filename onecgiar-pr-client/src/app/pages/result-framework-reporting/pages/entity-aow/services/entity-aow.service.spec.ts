@@ -190,6 +190,35 @@ describe('EntityAowService', () => {
       expect(service.isLoadingDetails()).toBe(false);
     });
 
+    it('should disable reporting when initiative status returns reporting_enabled false', async () => {
+      service.entityId.set('SP01');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_phaseInitiativeStatus').mockReturnValue(
+        of({ response: { reporting_enabled: false } })
+      );
+
+      service.getAllDetailsData();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockApiService.resultsSE.GET_phaseInitiativeStatus).toHaveBeenCalledWith(34, 1);
+      expect(service.reportingEnabled()).toBe(false);
+    });
+
+    it('should keep reporting enabled when initiative status request fails', async () => {
+      service.entityId.set('SP01');
+      jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_phaseInitiativeStatus').mockReturnValue(
+        throwError(() => new Error('phase status unavailable'))
+      );
+
+      service.getAllDetailsData();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(service.reportingEnabled()).toBe(true);
+    });
+
     it('should handle empty units array', async () => {
       service.entityId.set('SP01');
       const responseWithEmptyUnits = {
@@ -396,7 +425,25 @@ describe('EntityAowService', () => {
 
       service.getTocResultsByAowId(entityId, aowId);
 
-      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId, undefined);
+    });
+
+    it('should call API with reporting phase year when configured', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      (mockApiService as any).dataControlSE.reportingCurrentPhase = {
+        phaseId: 34,
+        phaseYear: 2026,
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(of(mockTocApiResponse));
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(
+        entityId,
+        aowId,
+        '2026',
+      );
     });
 
     it('should update tocResultsOutputsByAowId and tocResultsOutcomesByAowId and set loading to false on successful API call', () => {
@@ -524,15 +571,42 @@ describe('EntityAowService', () => {
               itemLink: '/aow/AOW-002'
             }
           ]
-        },
-        {
-          isTree: false,
-          label: '2030 Outcomes',
-          itemLink: '/aow/2030-outcomes'
         }
       ];
 
       expect(service.sideBarItems()).toEqual(expectedSideBarItems);
+    });
+
+    it('should include Intermediate Outcomes item when hasData is true', () => {
+      service.entityAows.set(mockUnits);
+      service.intermediateOutcomes.set({ count: 3, hasData: true });
+      service.setSideBarItems();
+
+      const items = service.sideBarItems();
+      expect(items).toHaveLength(2);
+      expect(items[1]).toEqual({ isTree: false, label: 'Intermediate Outcomes', itemLink: '/aow/unplanned' });
+    });
+
+    it('should include 2030 Outcomes item when hasData is true', () => {
+      service.entityAows.set(mockUnits);
+      service.outcomes2030.set({ count: 2, hasData: true });
+      service.setSideBarItems();
+
+      const items = service.sideBarItems();
+      expect(items).toHaveLength(2);
+      expect(items[1]).toEqual({ isTree: false, label: '2030 Outcomes', itemLink: '/aow/2030-outcomes' });
+    });
+
+    it('should include both conditional items when both hasData are true', () => {
+      service.entityAows.set(mockUnits);
+      service.intermediateOutcomes.set({ count: 3, hasData: true });
+      service.outcomes2030.set({ count: 2, hasData: true });
+      service.setSideBarItems();
+
+      const items = service.sideBarItems();
+      expect(items).toHaveLength(3);
+      expect(items[1]).toEqual({ isTree: false, label: 'Intermediate Outcomes', itemLink: '/aow/unplanned' });
+      expect(items[2]).toEqual({ isTree: false, label: '2030 Outcomes', itemLink: '/aow/2030-outcomes' });
     });
 
     it('should handle empty units array', () => {
@@ -545,11 +619,6 @@ describe('EntityAowService', () => {
           label: 'By AOW',
           isOpen: true,
           items: []
-        },
-        {
-          isTree: false,
-          label: '2030 Outcomes',
-          itemLink: '/aow/2030-outcomes'
         }
       ];
 
@@ -702,6 +771,58 @@ describe('EntityAowService', () => {
       const currentAow = service.currentAowSelected();
 
       expect(currentAow).toBeUndefined();
+    });
+  });
+
+  // The server marks every ToC node it returns for an AoW with `is_aow`. `false` means the node is
+  // not linked to any Area of Work, so it is returned under every AoW of the program.
+  describe('Outcomes split by the is_aow flag', () => {
+    const own = { toc_result_id: 1, result_title: 'Own outcome', is_aow: true };
+    const shared = { toc_result_id: 2, result_title: 'Shared outcome', is_aow: false };
+
+    it('should keep only the AoW-exclusive outcomes in the exclusive list', () => {
+      service.tocResultsOutcomesByAowId.set([own, shared]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([own]);
+    });
+
+    it('should keep only the non-exclusive outcomes in the shared list', () => {
+      service.tocResultsOutcomesByAowId.set([own, shared]);
+
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([shared]);
+    });
+
+    it('should treat a missing is_aow as exclusive so the previous single-list behaviour is kept', () => {
+      const legacy = { toc_result_id: 3, result_title: 'No flag' };
+      service.tocResultsOutcomesByAowId.set([legacy]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([legacy]);
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([]);
+    });
+
+    it('should return empty lists when there are no outcomes', () => {
+      service.tocResultsOutcomesByAowId.set([]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([]);
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([]);
+    });
+
+    it('should handle an AoW whose outcomes are all non-exclusive', () => {
+      service.tocResultsOutcomesByAowId.set([shared]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([]);
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([shared]);
+    });
+
+    it('should not mutate the source signal', () => {
+      const source = [own, shared];
+      service.tocResultsOutcomesByAowId.set(source);
+
+      service.tocResultsOutcomesExclusiveByAowId();
+      service.tocResultsOutcomesNonExclusiveByAowId();
+
+      expect(service.tocResultsOutcomesByAowId()).toEqual([own, shared]);
+      expect(service.tocResultsOutcomesByAowId().length).toBe(2);
     });
   });
 
@@ -996,7 +1117,7 @@ describe('EntityAowService', () => {
       expect(service.isLoadingDetails()).toBe(false);
 
       const sideBarItems = service.sideBarItems();
-      expect(sideBarItems).toHaveLength(2);
+      expect(sideBarItems).toHaveLength(1);
       expect(sideBarItems[0].isTree).toBe(true);
       expect(sideBarItems[0].items).toHaveLength(2);
     });
@@ -1011,7 +1132,7 @@ describe('EntityAowService', () => {
       expect(service.tocResultsOutputsByAowId()).toEqual(mockTocResults);
       expect(service.tocResultsOutcomesByAowId()).toEqual([]);
       expect(service.isLoadingTocResultsByAowId()).toBe(false);
-      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId, undefined);
     });
 
     it('should maintain state consistency across multiple TOC operations', () => {
@@ -1049,7 +1170,7 @@ describe('EntityAowService', () => {
       expect(service.tocResultsOutputsByAowId()).toEqual(customTocResults);
       expect(service.tocResultsOutcomesByAowId()).toEqual([]);
       expect(service.isLoadingTocResultsByAowId()).toBe(false);
-      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId2);
+      expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId2, undefined);
     });
 
     it('should handle complete modal workflow', () => {

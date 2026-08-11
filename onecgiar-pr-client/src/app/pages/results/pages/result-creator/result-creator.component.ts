@@ -22,6 +22,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   naratives = internationalizationData.reportNewResult;
   depthSearchList: any[] = [];
   exactTitleFound = false;
+  titleCheckFailed = false;
   mqapJson: {};
   validating = false;
   kpAlertDescription = `Please add the handle generated in your Center's institutional repository (e.g., CGSpace, MELSpace, WorldFish Repository) to report your knowledge product. Only knowledge products entered into these repositories are accepted in the PRMS Reporting Tool.<br><br>
@@ -168,7 +169,13 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
   }
 
   depthSearch(title: string) {
-    const cleanSpaces = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
+    if (!title?.trim()) {
+      this.depthSearchList = [];
+      this.exactTitleFound = false;
+      this.titleCheckFailed = false;
+      return;
+    }
+
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
 
     this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe({
@@ -177,11 +184,19 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
           ...result,
           phase: this.allPhases.find(phase => phase.id === result?.version_id)
         }));
-
-        this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
       },
       error: () => {
         this.depthSearchList = [];
+      }
+    });
+
+    this.api.resultsSE.GET_checkTitleUniqueness(title).subscribe({
+      next: resp => {
+        this.titleCheckFailed = false;
+        this.exactTitleFound = resp?.response?.isUnique === false;
+      },
+      error: () => {
+        this.titleCheckFailed = true;
         this.exactTitleFound = false;
       }
     });

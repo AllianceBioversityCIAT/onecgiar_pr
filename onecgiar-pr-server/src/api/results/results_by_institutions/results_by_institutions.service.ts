@@ -538,6 +538,11 @@ export class ResultsByInstitutionsService {
         order: { id: 'ASC' },
       });
 
+      // Align with P22 GET: hide partners whose Clarisa institution is inactive (P2-3181).
+      institutions = institutions.filter(
+        (i) => i.obj_institutions?.is_active !== false,
+      );
+
       institutions = institutions.map((i) => ({
         ...i,
         delivery: i.delivery.filter((d) => d.is_active),
@@ -945,7 +950,7 @@ export class ResultsByInstitutionsService {
       { is_active: false, last_updated_by: userId },
     );
     await this._resultByInstitutionsByDeliveriesTypeRepository.update(
-      { id: In(removedIds) },
+      { result_by_institution_id: In(removedIds) },
       { is_active: false, last_updated_by: userId },
     );
   }
@@ -994,7 +999,6 @@ export class ResultsByInstitutionsService {
         existing.institutions_id = incoming.institutions_id;
         existing.is_leading_result = incoming.is_leading_result;
         existing.from_toc = !!incoming.from_toc;
-        existing.delivery = incoming.delivery ?? [];
         institutionsToReactivate.push(existing);
         continue;
       }
@@ -1013,8 +1017,24 @@ export class ResultsByInstitutionsService {
       institutionsToCreate.push(toAdd);
     }
 
+    // Persist reactivations without cascading delivery relations (P2-3181):
+    // a targeted update() keeps `existing.delivery` untouched, so the later
+    // delivery diff in _syncPartnerInstitutionDeliveries still sees the old value.
     if (institutionsToReactivate.length) {
-      await this._resultByIntitutionsRepository.save(institutionsToReactivate);
+      await Promise.all(
+        institutionsToReactivate.map((rbi) =>
+          this._resultByIntitutionsRepository.update(
+            { id: rbi.id },
+            {
+              is_active: rbi.is_active,
+              last_updated_by: rbi.last_updated_by,
+              institutions_id: rbi.institutions_id,
+              is_leading_result: rbi.is_leading_result,
+              from_toc: rbi.from_toc,
+            },
+          ),
+        ),
+      );
     }
 
     let savedAdded: ResultsByInstitution[];
@@ -1131,7 +1151,13 @@ export class ResultsByInstitutionsService {
         continue;
       }
 
-      const dto = incomingInstitutions.find((i) => i.id === institution.id);
+      // Reactivated partners may arrive without a matching row id (the client
+      // only knows the institution was picked again), so fall back to institutions_id.
+      const dto = incomingInstitutions.find(
+        (i) =>
+          i.id === institution.id ||
+          i.institutions_id === institution.institutions_id,
+      );
       if (!this._dtoHasDelivery(dto)) {
         continue;
       }
