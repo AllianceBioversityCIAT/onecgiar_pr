@@ -46,4 +46,23 @@ describe('PrSelectComponent', () => {
 
     expect(component.isDropdownOpen()).toBe(false);
   });
+
+  it('stops wheel events from propagating outside the options viewport', () => {
+    const event = { stopPropagation: jest.fn() } as unknown as WheelEvent;
+
+    component.onOptionsWheel(event);
+
+    expect(event.stopPropagation).toHaveBeenCalled();
+  });
+
+  it('closes a fixed overlay when the result page scrolls', () => {
+    fixture.componentRef.setInput('overlayToBody', true);
+    fixture.componentRef.setInput('expandSpaceOnOpen', true);
+    fixture.detectChanges();
+    component.isDropdownOpen.set(true);
+
+    component.onWindowScroll();
+
+    expect(component.isDropdownOpen()).toBe(false);
+  });
 });

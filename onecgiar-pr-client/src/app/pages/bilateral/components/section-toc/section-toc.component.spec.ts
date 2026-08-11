@@ -300,23 +300,29 @@ describe('SectionTocComponent', () => {
       expect(item.select_label).toContain('Review needed');
     });
 
-    it('adds no badge for neutral indicators and falls back to AOW + extraInformation', () => {
+    it('adds no badge for neutral indicators and does not duplicate extraInformation', () => {
       component.outputList.set([{ toc_result_id: 1, extraInformation: 'Extra' }]);
       const item = component.tocResultItems()[0];
       expect(item.hasMatch).toBe(false);
       expect(item.hasOther).toBe(false);
-      expect(item.select_label).toBe('Extra — Extra');
+      expect(item.select_label).toBe('Extra');
     });
 
     it('falls back to AOW and an empty title when nothing is provided', () => {
       component.outputList.set([{ toc_result_id: 1 }]);
-      expect(component.tocResultItems()[0].select_label).toBe('AOW — ');
+      expect(component.tocResultItems()[0].select_label).toBe('AOW');
     });
 
-    it('escapes HTML in the label', () => {
-      component.outputList.set([{ toc_result_id: 1, wp_short_name: '<b>&"', title: 'x' }]);
-      const label = component.tocResultItems()[0].select_label;
-      expect(label).toContain('&lt;b&gt;&amp;&quot;');
+    it('strips source markup and avoids repeating an identical title', () => {
+      component.outputList.set([
+        {
+          toc_result_id: 1,
+          wp_short_name: '<div class="select_item_description">1.1 Pinpoint and act</div>',
+          title: '1.1 Pinpoint and act',
+        },
+      ]);
+
+      expect(component.tocResultItems()[0].select_label).toBe('1.1 Pinpoint and act');
     });
   });
 

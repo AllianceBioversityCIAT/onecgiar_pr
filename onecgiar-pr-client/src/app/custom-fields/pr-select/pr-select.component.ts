@@ -82,6 +82,14 @@ export class PrSelectComponent implements ControlValueAccessor {
     }
   }
 
+  /** A fixed overlay becomes detached from its trigger when the page moves, so close it on page scroll. */
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    if (this.overlayToBody()) {
+      this.removeFocus();
+    }
+  }
+
   get value(): any {
     return this._sig();
   }
@@ -144,6 +152,11 @@ export class PrSelectComponent implements ControlValueAccessor {
         this.overlayStyles.set(`position: fixed; left: ${left}px; top: ${top}px; width: ${width}px; max-height: 300px; z-index: 10000; transform: none; bottom: auto;`);
       }
     }
+  }
+
+  /** Keep wheel events inside the option viewport instead of passing them to the result page. */
+  onOptionsWheel(event: WheelEvent): void {
+    event.stopPropagation();
   }
 
   /**

@@ -106,15 +106,15 @@ export class SectionTocComponent implements OnInit {
         const info = this.getIndicatorMatchInfo(ind);
         return info.cssClass === 'bp-toc-match--other';
       });
-      const code = this.escapeHtml(item.wp_short_name || item.extraInformation || 'AOW');
-      const title = this.escapeHtml(item.title || item.extraInformation || '');
+      const code = this.escapeHtml(this.toPlainText(item.wp_short_name || item.extraInformation) || 'AOW');
+      const title = this.escapeHtml(this.toPlainText(item.title || item.extraInformation));
       let badge = '';
       if (hasMatch) {
         badge = ` · Match [${this.escapeHtml(this.resultTypeLabel())}]`;
       } else if (hasOther) {
         badge = ' · Review needed';
       }
-      const select_label = `${code}${badge} — ${title}`;
+      const select_label = title && code !== title ? `${code}${badge} — ${title}` : `${code}${badge}`;
       return { ...item, hasMatch, hasOther, select_label };
     });
   });
@@ -137,7 +137,7 @@ export class SectionTocComponent implements OnInit {
       return {
         ...ind,
         matchInfo,
-        select_label: `${this.escapeHtml(ind.indicator_description || 'Unnamed')}${badges}`,
+        select_label: `${this.escapeHtml(this.toPlainText(ind.indicator_description) || 'Unnamed')}${badges}`,
       };
     });
   });
@@ -148,6 +148,14 @@ export class SectionTocComponent implements OnInit {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  /** ToC sources sometimes wrap the node text in display markup; selects must show plain text only. */
+  private toPlainText(value: unknown): string {
+    return String(value ?? '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   readonly selectedIndicatorData = computed(() => {

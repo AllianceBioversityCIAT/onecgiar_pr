@@ -56,7 +56,7 @@
             <input type="text" hlmInput placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
           </div>
 
-          <cdk-virtual-scroll-viewport [itemSize]="7" class="custom_scroll virtual_scroll">
+          <cdk-virtual-scroll-viewport [itemSize]="7" class="custom_scroll virtual_scroll" (wheel)="onOptionsWheel($event)">
             <div
               *cdkVirtualFor="let option of optionsIntance() | listFilterByTextAndAttr: optionLabel() : this.searchText"
               class="option pr-body-2"
