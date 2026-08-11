@@ -44,7 +44,7 @@ describe('TypeCapacitySharingComponent', () => {
       getShowAllFields: jest.fn().mockReturnValue(false),
       setShowAllFields: jest.fn(),
     };
-    institutionsSE = { institutionsList: [{ institutions_id: 1, full_name: 'Org A' }] };
+    institutionsSE = { institutionsList: [{ institutions_id: 1, institutions_name: 'Org A' }] };
     bilateralApi = {
       GET_capacityDevelopment: jest.fn().mockReturnValue(of({ response: {} })),
       GET_capdevsDeliveryMethod: jest.fn().mockReturnValue(of({ response: [{ capdev_delivery_method_id: 1, name: 'In person' }] })),

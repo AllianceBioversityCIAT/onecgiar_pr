@@ -128,6 +128,17 @@ describe('BilateralResultCreatorComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('does not flush autosave while the browser is refreshing or closing', () => {
+    creationService.currentResultId.set(42);
+    component.resultId.set(42);
+
+    component.onPageExit();
+    component.ngOnDestroy();
+
+    expect(autoSaveService.flush).not.toHaveBeenCalled();
+    expect(autoSaveService.reset).toHaveBeenCalled();
+  });
+
   it('should start in creating mode by default', () => {
     expect(component.isCreating()).toBe(true);
     expect(component.resultId()).toBeNull();

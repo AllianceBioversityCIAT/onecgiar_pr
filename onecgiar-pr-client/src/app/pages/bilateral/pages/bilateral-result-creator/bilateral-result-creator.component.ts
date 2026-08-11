@@ -1,4 +1,4 @@
-import { Component, effect, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
+import { Component, effect, HostListener, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -84,6 +84,7 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   validatingKpHandle = signal(false);
   kpSyncedTitle = signal<string | null>(null);
   kpHandleError = signal<string | null>(null);
+  private isPageUnloading = false;
 
   /** Knowledge Product (result_type_id 6) is created purely from a repository handle (CGSpace, MELSpace, or WorldFish DSpace). */
   readonly isKnowledgeProductType = computed(() => this.resultTypeId() === 6);
@@ -369,8 +370,19 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * A browser refresh/close destroys the component while requests are being
+   * cancelled. Do not start a new async flush during that lifecycle; it can
+   * surface a misleading save error even when the last autosave succeeded.
+   */
+  @HostListener('window:beforeunload')
+  @HostListener('window:pagehide')
+  onPageExit(): void {
+    this.isPageUnloading = true;
+  }
+
   ngOnDestroy(): void {
-    if (this.resultId()) {
+    if (!this.isPageUnloading && this.resultId()) {
       void this.autoSaveService.flush();
     }
     this.autoSaveService.reset();
