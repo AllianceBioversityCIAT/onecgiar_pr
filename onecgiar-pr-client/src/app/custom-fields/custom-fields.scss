@@ -375,6 +375,24 @@ input::placeholder,
   }
 }
 
+/* Policy-type guidance is intentionally long, so keep it readable without taking over the form. */
+.pr-tooltip.tsf-policy-guidance-tooltip {
+  max-width: 520px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  padding: 10px 12px;
+  line-height: 1.45;
+
+  ul {
+    margin: 6px 0 0;
+    padding-left: 17px;
+  }
+
+  li + li {
+    margin-top: 6px;
+  }
+}
+
 @keyframes pr-tooltip-fade {
   from {
     opacity: 0;

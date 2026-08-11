@@ -33,6 +33,8 @@ export class PrInputComponent implements ControlValueAccessor {
   readonly editable = input<boolean>(false);
   readonly noDataText = input<string>('');
   readonly autogenerate = input<boolean>(false);
+  /** Lets a consumer keep a syntactically present value in the pending state when it is not valid for that field. */
+  readonly valueValid = input<boolean>(true);
 
   readonly variant = input<'xs' | 'sm'>();
   readonly numberMode = input<'decimal'>();
@@ -99,7 +101,7 @@ export class PrInputComponent implements ControlValueAccessor {
   /** Whether the field currently holds a non-empty value. */
   get hasValue(): boolean {
     const v = this._value();
-    return v !== null && v !== undefined && String(v).trim() !== '';
+    return this.valueValid() && v !== null && v !== undefined && String(v).trim() !== '';
   }
 
   /**

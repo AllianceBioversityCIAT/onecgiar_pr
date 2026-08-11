@@ -205,8 +205,7 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   private updateGeneralInfoMdsFields(): void {
     const t = this.title();
     const d = this.description();
-    const isPlaceholderTitle = /^Bilateral Draft #\d+$/.test(t.trim());
-    const titleFilled = !isPlaceholderTitle && !!t.trim();
+    const titleFilled = !this.isPlaceholderTitle(t) && !!t.trim();
     const descriptionFilled = !!d.trim();
     const body = this.leadContactBody();
     const leadContactFilled = !!body.lead_contact_person && !!body.lead_contact_person_data;
@@ -221,6 +220,10 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
       lead_contact_person: body.lead_contact_person,
       lead_contact_person_data: body.lead_contact_person_data,
     });
+  }
+
+  isPlaceholderTitle(title: string): boolean {
+    return /^Bilateral Draft #\d+$/.test(title.trim());
   }
 
   private loadDacOptions(): void {

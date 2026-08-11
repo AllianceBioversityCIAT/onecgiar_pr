@@ -1,5 +1,16 @@
 <div class="tsf-fields">
-  <app-alert-status status="info" [description]="policyTypeDesc"></app-alert-status>
+  <div class="tsf-policy-guidance">
+    <span>Policy type guidance</span>
+    <button
+      type="button"
+      class="tsf-policy-guidance__info"
+      [prTooltip]="policyTypeDesc"
+      prTooltipPosition="right"
+      prTooltipStyleClass="tsf-policy-guidance-tooltip"
+      aria-label="More information about policy types">
+      <i class="material-icons-round" aria-hidden="true">info_outline</i>
+    </button>
+  </div>
 
   <app-pr-select
     [options]="policyControlList.policyTypesList"
@@ -43,8 +54,8 @@
     label="Whose policy is this? (Implementing organizations)"
     [description]="institutionsDesc"
     selectedLabel="Organization"
-    selectedOptionLabel="full_name"
-    optionLabel="full_name"
+    selectedOptionLabel="institutions_name"
+    optionLabel="institutions_name"
     optionValue="institutions_id"
     placeholder="Select organization(s)"
     [required]="true"
@@ -82,6 +93,7 @@
         optionValue="id"
         placeholder="Select status"
         [required]="false"
+        [expandSpaceOnOpen]="true"
         [(ngModel)]="body.status_amount"
         (ngModelChange)="onFieldChange()">
       </app-pr-select>

@@ -5,6 +5,7 @@
     [maxWords]="30"
     [required]="true"
     placeholder="Enter result title"
+    [valueValid]="!isPlaceholderTitle(title())"
     [ngModel]="title()"
     (ngModelChange)="onTitleChange($event)"
     (focusout)="onTitleBlur()">

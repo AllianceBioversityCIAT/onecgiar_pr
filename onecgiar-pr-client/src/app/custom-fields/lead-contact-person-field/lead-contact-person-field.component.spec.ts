@@ -124,6 +124,14 @@ describe('LeadContactPersonFieldComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('only considers the field filled when a directory user is selected', () => {
+    component.body = { lead_contact_person: null, lead_contact_person_data: null };
+    expect(component.hasSelectedContact).toBe(false);
+
+    component.body = { lead_contact_person: 'John Doe', lead_contact_person_data: mockJohnDoe };
+    expect(component.hasSelectedContact).toBe(true);
+  });
+
   describe('User Search Functionality', () => {
     describe('onSearchInput', () => {
       it('should update search query and reset selected user', () => {

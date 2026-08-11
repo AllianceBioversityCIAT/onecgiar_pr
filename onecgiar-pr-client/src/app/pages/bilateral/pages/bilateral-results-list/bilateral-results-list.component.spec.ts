@@ -79,6 +79,9 @@ describe('BilateralResultsListComponent', () => {
   it('loads results for the active phase once the center resolves', () => {
     expect(bilateralApiService.GET_bilateralCenterResults).toHaveBeenCalledWith('CIAT-BIOVERSITY', 36);
     expect(component.results().length).toBe(1);
+    expect(component.visibleColumns().find(c => c.attr === 'result_type')).toEqual(
+      expect.objectContaining({ title: 'Result type' }),
+    );
   });
 
   describe('column visibility', () => {
@@ -91,7 +94,7 @@ describe('BilateralResultsListComponent', () => {
       expect(component.isColumnVisible('type')).toBe(false);
       expect(component.visibleColumns().find(c => c.key === 'type')).toBeUndefined();
 
-      const stored = JSON.parse(localStorage.getItem('pr.bilateralResults.visibleColumns') ?? '{}');
+      const stored = JSON.parse(localStorage.getItem('pr.bilateralResults.visibleColumns.v2') ?? '{}');
       expect(stored.type).toBe(false);
     });
 

@@ -24,4 +24,13 @@ describe('PrInputComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('keeps a present value pending when the consumer marks it as invalid', () => {
+    component.writeValue('Bilateral Draft #1199');
+    fixture.componentRef.setInput('valueValid', false);
+    fixture.detectChanges();
+
+    expect(component.hasValue).toBe(false);
+    expect(component.fieldState).toBe('pending');
+  });
 });

@@ -51,7 +51,7 @@ describe('TypePolicyChangeComponent', () => {
       policyTypesList: [{ id: 1, name: 'Policy or strategy' }],
       policyStages: [{ id: 2, full_name: 'Design' }],
     };
-    institutionsService = { institutionsList: [{ institutions_id: 1, full_name: 'Org A' }] };
+    institutionsService = { institutionsList: [{ institutions_id: 1, institutions_name: 'Org A' }] };
     bilateralApi = {
       GET_policyChanges: jest.fn().mockReturnValue(of({ response: {} })),
       GET_policyChangesQuestions: jest.fn().mockReturnValue(of({ response: { ...QUESTIONS_RESPONSE } })),

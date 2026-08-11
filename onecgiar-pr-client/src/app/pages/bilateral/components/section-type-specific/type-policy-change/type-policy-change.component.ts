@@ -8,6 +8,7 @@ import { BilateralExpandableStateService } from '../../../services/bilateral-exp
 import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
 import { PolicyControlListService } from '../../../../../shared/services/global/policy-control-list.service';
 import { InstitutionsService } from '../../../../../shared/services/global/institutions.service';
+import { PrTooltipDirectiveModule } from '../../../../../shared/directives/pr-tooltip-directive.module';
 
 const SECTION_NAME = 'type-specific';
 
@@ -28,7 +29,7 @@ const STATUS_OPTIONS = [
 
 @Component({
   selector: 'app-type-policy-change',
-  imports: [FormsModule, CustomFieldsModule],
+  imports: [FormsModule, CustomFieldsModule, PrTooltipDirectiveModule],
   templateUrl: './type-policy-change.component.html',
   styleUrl: './type-policy-change.component.scss',
 })
