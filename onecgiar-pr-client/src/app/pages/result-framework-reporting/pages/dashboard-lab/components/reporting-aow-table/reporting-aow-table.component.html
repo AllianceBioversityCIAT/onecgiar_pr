@@ -27,21 +27,23 @@
 } @else {
   <!-- ═══ GROUPED — 20px between top-level cards ═══ -->
   <div class="flex flex-col gap-[20px]">
-    @for (group of visibleGroups(); track group.aow.code; let aowIndex = $index) {
+    @for (group of visibleGroups(); track group.aow.code) {
       @let ratio = ratioOf(group);
       @let aowKey = 'aow::' + group.aow.code;
+      <!-- Every card starts collapsed (reference seed `expandedAows: {}`) — resolved once per card. -->
+      @let aowOpen = isOpen(aowKey, isDefaultOpenAow());
 
       <section class="overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
         <!-- Top-level header: 68px. Same chrome for AoW and for Intermediate / 2030 buckets. -->
         <button
           type="button"
           class="flex h-[68px] w-full items-center gap-[10px] border-b border-[var(--pr-border-strong)] bg-[var(--pr-surface-card)] px-[24px] text-left"
-          [attr.aria-expanded]="isOpen(aowKey, isDefaultOpenAow(aowIndex))"
-          (click)="toggle(aowKey, isDefaultOpenAow(aowIndex))">
+          [attr.aria-expanded]="aowOpen"
+          (click)="toggle(aowKey, isDefaultOpenAow())">
           <ng-icon
             name="lucideChevronDown"
             class="shrink-0 text-[16px] text-[var(--pr-text-secondary)] transition-transform duration-200"
-            [class.rotate-180]="isOpen(aowKey, isDefaultOpenAow(aowIndex))" />
+            [class.rotate-180]="aowOpen" />
 
           <span
             class="pr-code shrink-0 rounded-[6px] px-[8px] py-[3px] text-[12px] font-medium uppercase tracking-[0.02em]"
@@ -84,10 +86,7 @@
         </button>
 
         <!-- Always in DOM so height can animate (no @if pop). -->
-        <div
-          class="pr-collapse"
-          [class.is-open]="isOpen(aowKey, isDefaultOpenAow(aowIndex))"
-          [attr.aria-hidden]="!isOpen(aowKey, isDefaultOpenAow(aowIndex))">
+        <div class="pr-collapse" [class.is-open]="aowOpen" [attr.aria-hidden]="!aowOpen">
           <div class="pr-collapse-inner">
             @if (group.loading) {
               <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
@@ -123,8 +122,9 @@
                   </div>
                 }
 
-                @for (hlo of band.groups; track hlo.key; let hloIndex = $index) {
-                  @let defaultOpen = bandIndex === 0 && hloIndex === 0 && isDefaultOpenAow(aowIndex);
+                @for (hlo of band.groups; track hlo.key) {
+                  <!-- Sub-groups are seeded OPEN in the reference, so an expanded card shows rows. -->
+                  @let defaultOpen = isDefaultOpenHlo();
                   <button
                     type="button"
                     class="flex h-[44px] w-full items-center gap-[8px] border-t border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] py-0 pl-[36px] pr-[24px] text-left hover:bg-[#EFEEF3]"
@@ -204,21 +204,28 @@
       </svg>
     </span>
 
-    <!-- 2 — title + optional Show more + KPI / typology meta -->
+    <!-- 2 — title + optional Show more + indicator-name meta -->
     <div class="flex min-w-0 max-w-[900px] flex-col">
       <p
         class="m-0 text-[15px] font-semibold leading-[1.45] text-[var(--pr-text-heading)] [text-wrap:pretty]"
         [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)">
         {{ row.indicator_description }}
-        @if (needsShowMore(row)) {
-          <button
-            type="button"
-            class="inline border-0 bg-transparent p-0 text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]"
-            (click)="toggleTitle(row.indicator_id, $event)">
-            {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
-          </button>
-        }
       </p>
+      <!--
+        Show more lives OUTSIDE the clamped <p> on purpose. The reference truncates the string in JS
+        and appends the control inline; we clamp in CSS, and `-webkit-line-clamp` + `overflow:hidden`
+        clip anything past line 2 — an inline button inside the paragraph was rendered but invisible,
+        i.e. a long title had no way out. Self-aligned so it stays a link-sized target, not a block.
+      -->
+      @if (needsShowMore(row)) {
+        <button
+          type="button"
+          class="mt-[2px] self-start border-0 bg-transparent p-0 text-left text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:underline hover:text-[var(--pr-color-primary-400)]"
+          [attr.aria-expanded]="isTitleExpanded(row.indicator_id)"
+          (click)="toggleTitle(row.indicator_id, $event)">
+          {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
+        </button>
+      }
       <span
         class="pr-clamp-1 mt-[6px] text-[13px] font-normal leading-[17px] text-[var(--pr-text-secondary)]"
         [title]="metaLine(row, showAow)">
@@ -246,15 +253,16 @@
     <!-- 5 — spacer 20px -->
     <span></span>
 
-    <!-- 6 — Achieved -->
+    <!-- 6 — Achieved. `—` = nothing reported; `0` = a reported zero. Two different facts. -->
     <div class="relative text-right">
       <button
         type="button"
         class="block w-full border-0 bg-transparent p-0 text-right"
+        [prTooltip]="achievedTooltip(row)"
         (click)="emitAndStop(openAchieved, row, $event)">
         <span
           class="pr-figure block text-[18px] font-medium tabular-nums hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
-          [class]="progressOf(row) > 0 ? 'text-[var(--pr-text-heading)]' : 'text-[var(--pr-text-subtle)]'">
+          [class]="achievedIsEmpty(row) ? 'text-[var(--pr-text-subtle)]' : 'text-[var(--pr-text-heading)]'">
           {{ achievedText(row) }}
         </span>
         <span class="mt-[2px] block text-[11px] font-medium text-[var(--pr-text-subtle)]">Achieved</span>

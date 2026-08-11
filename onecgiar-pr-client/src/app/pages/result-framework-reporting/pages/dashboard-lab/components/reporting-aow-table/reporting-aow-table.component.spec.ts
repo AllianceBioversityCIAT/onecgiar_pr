@@ -41,6 +41,16 @@ describe('ReportingAowTableComponent', () => {
   };
 
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+  /**
+   * Every card now starts collapsed (P18), so any DOM assertion about rows has to open one first.
+   * `false` is the AoW default the template passes to `toggle`.
+   */
+  const openAow = (code = 'AOW01') => {
+    component.toggle(`aow::${code}`, false);
+    fixture.detectChanges();
+  };
+
   /**
    * Visible indicator rows. Collapsed panels stay mounted for height animation, so we only
    * count rows under open HLO panels (or every row in flat view, which has no `.pr-collapse`).
@@ -109,6 +119,58 @@ describe('ReportingAowTableComponent', () => {
       await build([group([row({ target_value_sum: '3' })])]);
       expect(component.targetText(row({ target_value_sum: '3' }))).toBe('3');
       expect(component.achievedText(row({ actual_achieved_value_sum: 1 }))).toBe('1');
+    });
+
+    // P21 — the reference prints `—` for an unreported indicator. "Nothing was reported" and
+    // "zero was reported" are different facts and must not collapse into the same glyph.
+    it('shows — for an unreported achieved value but keeps a reported zero', async () => {
+      await build([group([row()])]);
+      expect(component.achievedText(row({ actual_achieved_value_sum: undefined }))).toBe('—');
+      expect(component.achievedText(row({ actual_achieved_value_sum: null as any }))).toBe('—');
+      expect(component.achievedText(row({ actual_achieved_value_sum: 0 }))).toBe('0');
+      expect(component.achievedText(row({ actual_achieved_value_sum: 4 }))).toBe('4');
+
+      expect(component.hasAchievedValue(row({ actual_achieved_value_sum: undefined }))).toBe(false);
+      expect(component.hasAchievedValue(row({ actual_achieved_value_sum: null as any }))).toBe(false);
+      expect(component.hasAchievedValue(row({ actual_achieved_value_sum: 0 }))).toBe(true);
+    });
+
+    it('mutes the Achieved cell and explains itself while nothing is reported', async () => {
+      await build([group([row()])]);
+      // Empty covers both "no figure" and "a zero" — neither is progress worth highlighting.
+      expect(component.achievedIsEmpty(row({ actual_achieved_value_sum: undefined }))).toBe(true);
+      expect(component.achievedIsEmpty(row({ actual_achieved_value_sum: 0 }))).toBe(true);
+      expect(component.achievedIsEmpty(row({ actual_achieved_value_sum: 2 }))).toBe(false);
+      expect(component.achievedTooltip(row({ actual_achieved_value_sum: 0 }))).toBe('Nothing reported yet for this indicator');
+      expect(component.achievedTooltip(row({ actual_achieved_value_sum: 2 }))).toBe('');
+    });
+  });
+
+  // ── subtitle ──────────────────────────────────────────────────────────────
+  // P20 — the reference's secondary line is the KPI/indicator name, not the category. The payload
+  // carries both: `type_name` = the indicator name, `result_type_name` = the category.
+  describe('indicator name (meta line)', () => {
+    it('prefers type_name, falls back to the category, then to Not provided', async () => {
+      await build([group([row()])]);
+      const name = 'Number of knowledge products published and quality-assured';
+      expect(component.indicatorNameOf(row({ type_name: name, result_type_name: 'Knowledge product' }))).toBe(name);
+      expect(component.indicatorNameOf(row({ type_name: undefined, result_type_name: 'Knowledge product' }))).toBe(
+        'Knowledge product'
+      );
+      expect(component.indicatorNameOf(row({ type_name: undefined, result_type_name: undefined }))).toBe('Not provided');
+    });
+
+    it('renders the indicator name under the title, not the category', async () => {
+      const name = 'Number of knowledge products published and quality-assured';
+      await build([group([row({ type_name: name, result_type_name: 'Knowledge product' })])]);
+      openAow();
+      expect(text()).toContain(name);
+      expect(component.metaLine(row({ type_name: name }))).toBe(name);
+    });
+
+    it('prefixes the AoW code in the flat view only', async () => {
+      await build([group([row({ type_name: 'Number of policies' })])]);
+      expect(component.metaLine(row({ type_name: 'Number of policies' }), true)).toBe('AOW01 · Number of policies');
     });
   });
 
@@ -202,13 +264,24 @@ describe('ReportingAowTableComponent', () => {
 
   // ── filtering ─────────────────────────────────────────────────────────────
   describe('filters', () => {
-    it('matches the title, the HLO and the typology', async () => {
+    it('matches the title, the HLO and the category', async () => {
       const g = group([
         row({ indicator_id: 1, indicator_description: 'cassava segmentation' }),
         row({ indicator_id: 2, indicator_description: 'barley survey', result_type_name: 'Innovation development' })
       ]);
       await build([g], { search: 'innovation' });
+      // The meta line now shows the indicator name, but the category stays searchable — users type
+      // "innovation" expecting the result type, and it only lives in `result_type_name`.
       expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([2]);
+    });
+
+    it('matches the indicator name shown under the title', async () => {
+      const g = group([
+        row({ indicator_id: 1, indicator_description: 'cassava segmentation', type_name: 'Number of varieties released' }),
+        row({ indicator_id: 2, indicator_description: 'barley survey', type_name: 'Number of policies changed' })
+      ]);
+      await build([g], { search: 'varieties' });
+      expect(component.visibleRows(g).map(r => r.indicator_id)).toEqual([1]);
     });
 
     it('filters by status', async () => {
@@ -228,6 +301,7 @@ describe('ReportingAowTableComponent', () => {
   describe('rendering', () => {
     it('renders one row per indicator with both figure labels', async () => {
       await build([group([row(), row({ indicator_id: 2 })])]);
+      openAow();
       expect(rows().length).toBe(2);
       expect(text()).toContain('Target');
       expect(text()).toContain('Achieved');
@@ -249,35 +323,59 @@ describe('ReportingAowTableComponent', () => {
       expect(text()).toContain('1 KPI');
     });
 
-    it('collapses the first AoW on click and hides its rows', async () => {
-      await build([group([row()])]);
-      expect(rows().length).toBe(1);
-      // The first AoW defaults to OPEN, so toggling it must pass that default in.
-      component.toggle('aow::AOW01', true);
-      fixture.detectChanges();
-      expect(rows().length).toBe(0);
-    });
-
-    it('opens only the FIRST AoW by default; the rest are collapsed', async () => {
+    // P18 — the reference seeds `expandedAows: {}`, i.e. NOTHING is open on arrival. The page has to
+    // read as a list of card headers, not as one exploded card followed by a stack of headers.
+    it('starts with EVERY AoW collapsed, and opens one on click', async () => {
       const a = group([row({ indicator_id: 1 })]);
       const b = { ...group([row({ indicator_id: 2 })]), aow: { id: 2, code: 'AOW02', name: 'Breeding Pipelines' } };
       await build([a, b]);
-      // Two cards, but only the first one's rows are rendered.
+      expect(text()).toContain('AOW01');
       expect(text()).toContain('AOW02');
+      expect(rows().length).toBe(0);
+
+      openAow('AOW01');
       expect(rows().length).toBe(1);
+
+      // Collapsing again is symmetric — the manual toggle keeps working in both directions.
+      openAow('AOW01');
+      expect(rows().length).toBe(0);
     });
 
-    it('opens only the FIRST sub-group inside the open AoW', async () => {
+    it('opens EVERY sub-group of the card the user expanded', async () => {
       const g = group([
         row({ indicator_id: 1, __hlo: 'HLO1 First' }),
         row({ indicator_id: 2, __hlo: 'HLO2 Second' })
       ]);
       await build([g]);
-      // Band + both group headers show; only the first group's indicator row is open.
+      openAow();
+      // Reference seeds `expandedGroups` true for every group, so expanding a card shows its rows
+      // rather than a second layer of collapsed headers.
       expect(text()).toContain('First');
       expect(text()).toContain('Second');
       expect(text().toLowerCase()).toContain('high level outputs');
+      expect(rows().length).toBe(2);
+    });
+
+    it('lets the user collapse a single sub-group without touching the card', async () => {
+      const g = group([
+        row({ indicator_id: 1, __hlo: 'HLO1 First' }),
+        row({ indicator_id: 2, __hlo: 'HLO2 Second' })
+      ]);
+      await build([g]);
+      openAow();
+      const [first] = component.hloGroupsOf(g);
+      component.toggle(first.key, true);
+      fixture.detectChanges();
       expect(rows().length).toBe(1);
+    });
+
+    // P22 — the chip is the short tag (reference :4248). The group's full name renders beside it,
+    // so repeating it there printed "Intermediate outcomes │ Intermediate outcomes".
+    it('tags the program-level buckets without repeating their name', async () => {
+      await build([group([row()])]);
+      expect(component.headerChip(group([row()], { kind: 'intermediate' }))).toBe('Intermediate');
+      expect(component.headerChip(group([row()], { kind: '2030' }))).toBe('2030');
+      expect(component.headerChip(group([row()]))).toBe('AOW01');
     });
 
     it('shows the loading state instead of an empty table', async () => {
@@ -295,6 +393,7 @@ describe('ReportingAowTableComponent', () => {
   describe('outputs', () => {
     it('emits openRow when the row is clicked', async () => {
       await build([group([row()])]);
+      openAow();
       const spy = jest.fn();
       component.openRow.subscribe(spy);
       (rows()[0] as HTMLElement).click();
@@ -316,29 +415,70 @@ describe('ReportingAowTableComponent', () => {
       expect(openSpy).not.toHaveBeenCalled();
     });
 
-    it('Show more toggles the clamp without opening the row', async () => {
+    it('Show more toggles the clamp without opening the row, and flips to Show less', async () => {
       const long =
         'Global land-use change, emissions and biodiversity model data and code for the land-use module of IMPACT+ that tracks greenhouse gas emissions and agrobiodiversity across cereal systems with national partners.';
       await build([group([row({ indicator_id: 1, indicator_description: long })])]);
+      openAow();
       const openSpy = jest.fn();
       component.openRow.subscribe(openSpy);
 
       expect(component.needsShowMore(row({ indicator_description: long }))).toBe(true);
       expect(component.needsShowMore(row({ indicator_description: 'Short title' }))).toBe(false);
       expect(component.isTitleExpanded(1)).toBe(false);
-      const more = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
-        b.textContent?.includes('Show more')
-      ) as HTMLElement;
-      expect(more).toBeTruthy();
-      more.click();
+
+      const toggle = () =>
+        Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
+          /Show (more|less)/.test(b.textContent ?? '')
+        ) as HTMLElement;
+
+      const title = (fixture.nativeElement as HTMLElement).querySelector('.pr-reporting-row p') as HTMLElement;
+      expect(title.classList).toContain('pr-clamp-2');
+      expect(toggle().textContent?.trim()).toBe('Show more');
+
+      toggle().click();
       fixture.detectChanges();
 
       expect(component.isTitleExpanded(1)).toBe(true);
+      expect(title.classList).not.toContain('pr-clamp-2');
+      expect(toggle().textContent?.trim()).toBe('Show less');
       expect(openSpy).not.toHaveBeenCalled();
+
+      toggle().click();
+      fixture.detectChanges();
+      expect(component.isTitleExpanded(1)).toBe(false);
+    });
+
+    /**
+     * P19 regression guard. The control used to sit INSIDE the clamped `<p>`, where
+     * `-webkit-line-clamp: 2` + `overflow: hidden` clipped it — the markup existed, the affordance
+     * did not. jsdom does not clip, so only its position in the DOM can catch this.
+     */
+    it('keeps Show more outside the clamped paragraph so the clamp cannot hide it', async () => {
+      const long =
+        'Global land-use change, emissions and biodiversity model data and code for the land-use module of IMPACT+ that tracks greenhouse gas emissions and agrobiodiversity across cereal systems with national partners.';
+      await build([group([row({ indicator_id: 1, indicator_description: long })])]);
+      openAow();
+
+      const root = fixture.nativeElement as HTMLElement;
+      const more = Array.from(root.querySelectorAll('button')).find(b => b.textContent?.includes('Show more'))!;
+      expect(more).toBeTruthy();
+      expect(more.closest('p')).toBeNull();
+      expect(root.querySelector('.pr-reporting-row p')!.contains(more)).toBe(false);
+    });
+
+    it('does not offer Show more on a title that fits', async () => {
+      await build([group([row({ indicator_id: 1, indicator_description: 'Short title' })])]);
+      openAow();
+      const more = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
+        b.textContent?.includes('Show more')
+      );
+      expect(more).toBeUndefined();
     });
 
     it('renders the concentric bullseye status mark (CURRENT target icon)', async () => {
       await build([group([row()])]);
+      openAow();
       const mark = (fixture.nativeElement as HTMLElement).querySelector('.pr-status-mark svg');
       expect(mark).toBeTruthy();
       // Outer + mid rings + filled centre.

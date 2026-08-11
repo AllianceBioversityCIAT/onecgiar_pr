@@ -25,11 +25,15 @@
         @for (segment of statusSegments(); track segment.key) {
           @if (segment.count > 0) {
             <div
-              class="flex h-[44px] items-center justify-center"
+              class="flex h-[44px] items-center justify-center overflow-hidden"
               [style.width.%]="segmentWidth(segment)"
               [style.background]="segment.bg"
               [title]="segment.label + ': ' + segment.count">
-              <span class="pr-figure-sm text-[14px] font-semibold" [style.color]="segment.fg">{{ segment.count }}</span>
+              <!-- Reference prints the count only in segments wider than 8% — narrow neighbours
+                   would otherwise overlap their numbers ("1 1" stacked). -->
+              @if (showsSegmentCount(segment)) {
+                <span class="pr-figure-sm text-[14px] font-semibold" [style.color]="segment.fg">{{ segment.count }}</span>
+              }
             </div>
           }
         }
@@ -66,33 +70,37 @@
           <stop offset="100%" stop-color="rgba(107,70,229,0)" />
         </linearGradient>
       </defs>
-      <path d="M8 72 L96 64 L150 52 L150 84 L8 84 Z" fill="url(#prPaceFill)" />
+      <path [attr.d]="paceChart().areaD" fill="url(#prPaceFill)" />
       <path
-        d="M8 72 L96 64 L150 52"
+        [attr.d]="paceChart().lineD"
         fill="none"
         stroke="var(--pr-color-primary-300)"
         stroke-width="2"
         stroke-linejoin="round"
         stroke-linecap="round"
         vector-effect="non-scaling-stroke" />
-      <path
-        d="M150 52 L232 34 L312 22"
-        fill="none"
-        stroke="var(--pr-text-subtle)"
-        stroke-width="2"
-        stroke-dasharray="4 4"
-        stroke-linecap="round"
-        vector-effect="non-scaling-stroke" />
-      <circle cx="150" cy="52" r="3.5" fill="var(--pr-color-primary-300)" />
-      <line
-        x1="252"
-        y1="4"
-        x2="252"
-        y2="84"
-        stroke="var(--pr-color-red-300)"
-        stroke-width="1.5"
-        stroke-dasharray="3 3"
-        vector-effect="non-scaling-stroke" />
+      @if (paceChart().projD) {
+        <path
+          [attr.d]="paceChart().projD"
+          fill="none"
+          stroke="var(--pr-text-subtle)"
+          stroke-width="2"
+          stroke-dasharray="4 4"
+          stroke-linecap="round"
+          vector-effect="non-scaling-stroke" />
+      }
+      <circle [attr.cx]="paceChart().pointX" [attr.cy]="paceChart().pointY" r="3.5" fill="var(--pr-color-primary-300)" />
+      @if (paceChart().deadlineX !== null) {
+        <line
+          [attr.x1]="paceChart().deadlineX"
+          y1="4"
+          [attr.x2]="paceChart().deadlineX"
+          y2="84"
+          stroke="var(--pr-color-red-300)"
+          stroke-width="1.5"
+          stroke-dasharray="3 3"
+          vector-effect="non-scaling-stroke" />
+      }
     </svg>
 
     <p class="m-0 text-[14px] font-normal leading-[1.45] text-[var(--pr-text)] [text-wrap:pretty]">
@@ -164,10 +172,13 @@
         @for (row of attention(); track row.text) {
           <div
             class="flex min-h-[48px] items-center gap-[10px] border-t border-[var(--pr-border-divider)] py-[8px] first:border-t-0">
-            <span
-              class="h-[10px] w-[10px] shrink-0 rounded-full"
-              [style.background]="row.color"
-              aria-hidden="true"></span>
+            <!-- One glyph per alert type, as in the reference (clock / dot / bolt / file). -->
+            <ng-icon
+              class="shrink-0"
+              [name]="attentionIcon(row)"
+              size="16px"
+              [style.color]="attentionColor(row)"
+              aria-hidden="true" />
             <span class="min-w-0 flex-1 text-[14px] font-normal text-[var(--pr-text)]">{{ row.text }}</span>
           </div>
         }
