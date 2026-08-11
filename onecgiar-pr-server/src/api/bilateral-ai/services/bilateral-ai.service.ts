@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -10,6 +11,8 @@ import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { ClarisaCentersRepository } from '../../../clarisa/clarisa-centers/clarisa-centers.repository';
 import { Result, SourceEnum } from '../../results/entities/result.entity';
 import { ResultCreationMethod } from '../../../shared/constants/result-creation-method.enum';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
@@ -62,6 +65,8 @@ export class BilateralAiService {
     private readonly textMining: BilateralAiTextMiningService,
     private readonly bilateralService: BilateralService,
     private readonly userRepository: UserRepository,
+    private readonly roleByUserRepository: RoleByUserRepository,
+    private readonly clarisaCentersRepository: ClarisaCentersRepository,
   ) {}
 
   async createJob(
@@ -156,11 +161,36 @@ export class BilateralAiService {
     return this.jobRepository.findOne({ where: { job_id: jobId } });
   }
 
+  /**
+   * A draft is visible/actionable by any member of the Center it belongs to, not
+   * just its creator — drafts are collaborative team artifacts before promotion.
+   * `centerId` is a client-supplied filter on listDrafts, so this is the sole
+   * authorization gate on that path; for the other methods it's derived from the
+   * draft's own resolved job.center_id rather than trusted client input.
+   */
+  private async assertCenterEntitlement(
+    userId: number,
+    centerId: number,
+  ): Promise<void> {
+    const center = await this.clarisaCentersRepository.findOne({
+      where: { institutionId: centerId },
+    });
+    if (!center) throw new NotFoundException('Center not found.');
+    const isMember = await this.roleByUserRepository.validationCenterPermissions(
+      userId,
+      center.code,
+    );
+    if (!isMember) {
+      throw new ForbiddenException('You do not have access to this center.');
+    }
+  }
+
   async listDrafts(userId: number, centerId: number) {
+    await this.assertCenterEntitlement(userId, centerId);
     return this.draftRepository.find({
       where: {
         is_discarded: false,
-        job: { user_id: userId, center_id: centerId },
+        job: { center_id: centerId },
       },
       relations: { job: true, result: true },
       order: { created_date: 'DESC' },
@@ -169,10 +199,11 @@ export class BilateralAiService {
 
   private async getDraftRaw(draftId: number, userId: number) {
     const draft = await this.draftRepository.findOne({
-      where: { id: draftId, is_discarded: false, job: { user_id: userId } },
+      where: { id: draftId, is_discarded: false },
       relations: { job: true, result: true },
     });
     if (!draft) throw new NotFoundException('AI draft not found.');
+    await this.assertCenterEntitlement(userId, draft.job.center_id);
     return draft;
   }
 

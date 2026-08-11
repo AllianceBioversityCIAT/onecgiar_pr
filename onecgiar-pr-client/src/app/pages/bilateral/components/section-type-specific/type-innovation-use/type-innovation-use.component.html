@@ -1,23 +1,218 @@
 <div class="tsf-fields">
-  <div class="tsf-field">
-    <label class="tsf-label">Innovation Use to be Determined <span class="tsf-required">*</span></label>
-    <div class="tsf-radio-group">
-      <label class="tsf-radio-label">
-        <input type="radio" name="tbd" [value]="true" [(ngModel)]="body.innov_use_to_be_determined" (ngModelChange)="onFieldChange()" />
-        Yes
-      </label>
-      <label class="tsf-radio-label">
-        <input type="radio" name="tbd" [value]="false" [(ngModel)]="body.innov_use_to_be_determined" (ngModelChange)="onFieldChange()" />
-        No
-      </label>
-    </div>
-  </div>
+  <app-pr-radio-button
+    label="Innovation Use to be Determined"
+    [options]="[
+      { value: true, label: 'Yes' },
+      { value: false, label: 'No' }
+    ]"
+    optionLabel="label"
+    optionValue="value"
+    [required]="true"
+    [(ngModel)]="body.innov_use_to_be_determined"
+    (ngModelChange)="onFieldChange()">
+  </app-pr-radio-button>
 
   @if (body.innov_use_to_be_determined === false) {
-    <div class="tsf-field">
-      <label class="tsf-label">Actors <span class="tsf-required">*</span></label>
-      <p class="tsf-hint">Describe the actors involved in innovation use</p>
-      <textarea class="tsf-textarea" [(ngModel)]="body.actors" (ngModelChange)="onFieldChange()" placeholder="Enter actors..."></textarea>
+    <div>
+      <app-pr-field-header label="Actors" description="Describe the actors involved in innovation use" [required]="true"></app-pr-field-header>
+
+      @for (actor of visibleActors; track $index) {
+        <div class="mb-3 flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
+          <div class="flex items-start gap-2">
+            <div class="min-w-0 flex-1">
+              <app-pr-select
+                label="Actor type"
+                [options]="actorsTypeList"
+                optionLabel="name"
+                optionValue="actor_type_id"
+                placeholder="Select actor type"
+                [required]="true"
+                [(ngModel)]="actor.actor_type_id"
+                (ngModelChange)="onFieldChange()">
+              </app-pr-select>
+            </div>
+            <button type="button" class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteActor(actor)" aria-label="Remove actor">
+              <i class="material-icons-round">delete</i>
+            </button>
+          </div>
+
+          @if (actor.actor_type_id === otherActorTypeId) {
+            <app-pr-input label="Other actor type" [required]="true" [(ngModel)]="actor.other_actor_type" (ngModelChange)="onFieldChange()"></app-pr-input>
+          }
+
+          <app-pr-yes-or-not
+            label="Sex and age disaggregated data available?"
+            [(ngModel)]="actor.sex_and_age_disaggregation"
+            (ngModelChange)="onDisaggregationChange(actor)">
+          </app-pr-yes-or-not>
+
+          @if (actor.sex_and_age_disaggregation) {
+            <div class="grid grid-cols-2 gap-3">
+              <app-pr-input label="Women" type="number" placeholder="0" [required]="false" [(ngModel)]="actor.women" (ngModelChange)="onFieldChange()"></app-pr-input>
+              <app-pr-input label="Women (youth)" type="number" placeholder="0" [required]="false" [(ngModel)]="actor.women_youth" (ngModelChange)="onFieldChange()"></app-pr-input>
+              <app-pr-input label="Men" type="number" placeholder="0" [required]="false" [(ngModel)]="actor.men" (ngModelChange)="onFieldChange()"></app-pr-input>
+              <app-pr-input label="Men (youth)" type="number" placeholder="0" [required]="false" [(ngModel)]="actor.men_youth" (ngModelChange)="onFieldChange()"></app-pr-input>
+            </div>
+          } @else {
+            <app-pr-input label="How many" type="number" placeholder="0" [required]="false" [(ngModel)]="actor.how_many" (ngModelChange)="onFieldChange()"></app-pr-input>
+          }
+
+          <app-pr-textarea
+            label="Addressing demands"
+            [required]="false"
+            placeholder="Describe how this actor addresses the innovation's demand..."
+            [(ngModel)]="actor.addressing_demands"
+            (ngModelChange)="onFieldChange()">
+          </app-pr-textarea>
+        </div>
+      }
+
+      @if (!visibleActors.length) {
+        <app-no-data-text title="No actors added"></app-no-data-text>
+      }
+
+      <app-add-button name="Add another actor" (clickEvent)="addActor()"></app-add-button>
+    </div>
+  }
+
+  <app-pr-field-header
+    label="How would you assess the current use level of the innovation?"
+    description="Use the slider to select the appropriate use level.">
+  </app-pr-field-header>
+
+  <div class="tsf-readiness">
+    <app-pr-range-level
+      itemTitle="name"
+      itemDescription="definition"
+      optionLabel="name"
+      optionValue="id"
+      [options]="innovationControlListSE.useLevelsList"
+      [(ngModel)]="body.innovation_use_level_id"
+      (ngModelChange)="onFieldChange()">
+    </app-pr-range-level>
+  </div>
+
+  <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
+    <app-alert-status
+      class="flex-1"
+      status="info"
+      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
+    </app-alert-status>
+    <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
+      {{ showAllFields() ? 'Hide full metadata' : 'Full metadata' }}
+    </button>
+  </div>
+
+  @if (showAllFields()) {
+    <div class="flex flex-col gap-[18px]">
+      <div>
+        <app-pr-field-header
+          label="Organizations"
+          description="Types of organizations involved in innovation use, with counts."
+          [required]="false">
+        </app-pr-field-header>
+
+        @for (organization of visibleOrganizations; track $index) {
+          <div class="mb-3 flex flex-col gap-3 rounded-md border border-[#E0E0E0] p-3">
+            <div class="flex items-start gap-2">
+              <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+                <app-pr-select
+                  label="Institution type"
+                  [options]="institutionsTypeTreeList"
+                  optionLabel="name"
+                  optionValue="code"
+                  placeholder="Select institution type"
+                  [required]="false"
+                  [(ngModel)]="organization.institution_types_id"
+                  (ngModelChange)="onOrganizationTypeChange(organization)">
+                </app-pr-select>
+
+                @if (organization.institution_types_id && getInstitutionsTypeTreeChildren(organization.institution_types_id).length) {
+                  <app-pr-select
+                    label="Institution sub-type"
+                    [options]="getInstitutionsTypeTreeChildren(organization.institution_types_id)"
+                    optionLabel="name"
+                    optionValue="code"
+                    placeholder="Select sub-type"
+                    [required]="false"
+                    [(ngModel)]="organization.institution_sub_type_id"
+                    (ngModelChange)="onFieldChange()">
+                  </app-pr-select>
+                }
+              </div>
+              <button type="button" class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteOrganization(organization)" aria-label="Remove organization">
+                <i class="material-icons-round">delete</i>
+              </button>
+            </div>
+
+            @if (organization.institution_types_id === otherInstitutionTypeId) {
+              <app-pr-input label="Other institution" [required]="false" [(ngModel)]="organization.other_institution" (ngModelChange)="onFieldChange()"></app-pr-input>
+            }
+
+            @if (organization.institution_types_id === graduateStudentsInstitutionTypeId) {
+              <app-pr-input label="Graduate students" [required]="false" [(ngModel)]="organization.graduate_students" (ngModelChange)="onFieldChange()"></app-pr-input>
+            }
+
+            <app-pr-input label="How many" type="number" placeholder="0" [required]="false" [(ngModel)]="organization.how_many" (ngModelChange)="onFieldChange()"></app-pr-input>
+
+            <app-pr-textarea
+              label="Addressing demands"
+              [required]="false"
+              placeholder="Describe how this organization addresses the innovation's demand..."
+              [(ngModel)]="organization.addressing_demands"
+              (ngModelChange)="onFieldChange()">
+            </app-pr-textarea>
+          </div>
+        }
+
+        @if (!visibleOrganizations.length) {
+          <app-no-data-text title="No organizations added"></app-no-data-text>
+        }
+
+        <app-add-button name="Add another organization" (clickEvent)="addOrganization()"></app-add-button>
+      </div>
+
+      <div>
+        <app-pr-field-header
+          label="Other quantitative measures of innovation use"
+          description="E.g. # of hectares."
+          [required]="false">
+        </app-pr-field-header>
+
+        @for (measure of visibleMeasures; track $index) {
+          <div class="mb-3 flex items-start gap-2 rounded-md border border-[#E0E0E0] p-3">
+            <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+              <app-pr-input label="Unit of measure" placeholder="e.g. # of projects" [required]="false" [(ngModel)]="measure.unit_of_measure" (ngModelChange)="onFieldChange()"></app-pr-input>
+              <app-pr-input label="Quantity" type="number" placeholder="0" [required]="false" [(ngModel)]="measure.quantity" (ngModelChange)="onFieldChange()"></app-pr-input>
+            </div>
+            <button type="button" class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteMeasure(measure)" aria-label="Remove measure">
+              <i class="material-icons-round">delete</i>
+            </button>
+          </div>
+        }
+
+        @if (!visibleMeasures.length) {
+          <app-no-data-text title="Other quantitative measures not added"></app-no-data-text>
+        }
+
+        <app-add-button name="Add other" (clickEvent)="addMeasure()"></app-add-button>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <span class="tsf-label">Investment (USD)</span>
+        <div class="tsf-readonly-row">
+          <span class="tsf-readonly-label">CGIAR Programs / Initiatives</span>
+          <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
+        </div>
+        <div class="tsf-readonly-row">
+          <span class="tsf-readonly-label">Bilateral Projects</span>
+          <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
+        </div>
+        <div class="tsf-readonly-row">
+          <span class="tsf-readonly-label">Partner Institutions</span>
+          <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
+        </div>
+      </div>
     </div>
   }
 </div>

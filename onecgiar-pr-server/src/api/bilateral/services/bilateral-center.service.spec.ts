@@ -16,6 +16,7 @@ import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institut
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { ResultsByProjectsService } from '../../results/results_by_projects/results_by_projects.service';
+import { ResultsKnowledgeProductsService } from '../../results/results-knowledge-products/results-knowledge-products.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { SourceEnum } from '../../results/entities/result.entity';
 
@@ -146,6 +147,12 @@ describe('BilateralCenterService', () => {
             }),
           },
         },
+        {
+          provide: ResultsKnowledgeProductsService,
+          useValue: {
+            populateKPFromCGSpace: jest.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compile();
 
@@ -184,7 +191,7 @@ describe('BilateralCenterService', () => {
     it('should create a result header', async () => {
       const result = await service.createResultHeader(user, {
         result_level_id: 2,
-        result_type_id: 6,
+        result_type_id: 7,
       });
 
       expect(result.response.id).toBe(99);
@@ -194,7 +201,7 @@ describe('BilateralCenterService', () => {
         expect.objectContaining({
           created_by: 42,
           result_level_id: 2,
-          result_type_id: 6,
+          result_type_id: 7,
           result_code: 0,
           source: SourceEnum.Bilateral,
           status_id: 1,
@@ -246,6 +253,63 @@ describe('BilateralCenterService', () => {
           result_type_id: 6,
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    describe('Knowledge Product via CGSpace handle', () => {
+      it('should populate the result from CGSpace when a handle is provided', async () => {
+        const resultsKnowledgeProductsService =
+          module.get<ResultsKnowledgeProductsService>(
+            ResultsKnowledgeProductsService,
+          );
+
+        await service.createResultHeader(user, {
+          result_level_id: 2,
+          result_type_id: 6,
+          handle: '10568/175322',
+        });
+
+        expect(
+          resultsKnowledgeProductsService.populateKPFromCGSpace,
+        ).toHaveBeenCalledWith(99, '10568/175322', user);
+      });
+
+      it('should soft-delete the result and reject when CGSpace population fails', async () => {
+        const resultsKnowledgeProductsService =
+          module.get<ResultsKnowledgeProductsService>(
+            ResultsKnowledgeProductsService,
+          );
+        jest
+          .spyOn(resultsKnowledgeProductsService, 'populateKPFromCGSpace')
+          .mockRejectedValue(new Error('Handle not found on CGSpace'));
+
+        await expect(
+          service.createResultHeader(user, {
+            result_level_id: 2,
+            result_type_id: 6,
+            handle: 'bad-handle',
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        expect(resultRepository.update).toHaveBeenCalledWith(99, {
+          is_active: false,
+        });
+      });
+
+      it('should not call CGSpace population for non-Knowledge-Product types', async () => {
+        const resultsKnowledgeProductsService =
+          module.get<ResultsKnowledgeProductsService>(
+            ResultsKnowledgeProductsService,
+          );
+
+        await service.createResultHeader(user, {
+          result_level_id: 2,
+          result_type_id: 7,
+        });
+
+        expect(
+          resultsKnowledgeProductsService.populateKPFromCGSpace,
+        ).not.toHaveBeenCalled();
+      });
     });
   });
 

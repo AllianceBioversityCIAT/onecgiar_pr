@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import { ApiService } from '../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { BilateralProject } from './bilateral-creation.interfaces';
+import { User } from '../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 
 const LS_PROJECT_KEY = 'bp_project';
 const LS_SP_KEY = 'bp_primary_sp';
@@ -34,6 +35,8 @@ export class BilateralCreationService {
   resultTitle = signal('');
   resultDescription = signal('');
   resultLeadContact = signal('');
+  /** Directory match for resultLeadContact, when the name was resolved against Active Directory. */
+  resultLeadContactData = signal<User | null>(null);
   resultDacLevels = signal<Record<string, number>>({});
   resultDacSubScores = signal<Record<string, number[]>>({});
   resultInitiativeId = signal<number | null>(null);
@@ -66,6 +69,7 @@ export class BilateralCreationService {
     this.resultTitle.set('');
     this.resultDescription.set('');
     this.resultLeadContact.set('');
+    this.resultLeadContactData.set(null);
     this.resultDacLevels.set({});
     this.resultDacSubScores.set({});
     this.resultInitiativeId.set(null);
@@ -106,6 +110,7 @@ export class BilateralCreationService {
           this.resultTitle.set(cf.result_title ?? '');
           this.resultDescription.set(cf.result_description ?? '');
           this.resultLeadContact.set(cf.lead_contact_person ?? '');
+          this.resultLeadContactData.set(cf.lead_contact_person_data ?? null);
           this.resultLevelId.set(cf.result_level_id ?? null);
           this.resultTypeId.set(cf.result_type_id ?? null);
           if (cf.project_id) {
@@ -233,7 +238,7 @@ export class BilateralCreationService {
     }
   }
 
-  createResult(resultLevelId: number, resultTypeId: number): Observable<any> {
+  createResult(resultLevelId: number, resultTypeId: number, handle?: string): Observable<any> {
     const body: Record<string, unknown> = {
       result_level_id: resultLevelId,
       result_type_id: resultTypeId,
@@ -253,6 +258,9 @@ export class BilateralCreationService {
     const project = this.selectedProject();
     if (project?.id) {
       body['project_id'] = Number(project.id);
+    }
+    if (handle?.trim()) {
+      body['handle'] = handle.trim();
     }
     return this.bilateralApi.POST_createBilateralHeader(body);
   }

@@ -19,6 +19,7 @@ import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
+import { AdUserService } from '../ad_users/ad_users.service';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { DataSource, In, IsNull, Like, SelectQueryBuilder } from 'typeorm';
 import { GenderTagLevel } from '../results/gender_tag_levels/entities/gender_tag_level.entity';
@@ -224,6 +225,7 @@ export class BilateralService {
     private readonly _policyChangeHandler: PolicyChangeBilateralHandler,
     private readonly _otherOutputHandler: NoopBilateralHandler,
     private readonly _otherOutcomeHandler: NoopBilateralHandler,
+    private readonly _adUserService: AdUserService,
   ) {
     this.resultTypeHandlerMap = new Map<number, BilateralResultTypeHandler>([
       [_knowledgeProductHandler.resultType, _knowledgeProductHandler],
@@ -351,6 +353,20 @@ export class BilateralService {
               bilateralDto.lead_center,
               userId,
             );
+
+            if (bilateralDto.lead_contact_person?.email) {
+              const adUser = await this._adUserService.resolveOrCreateContact(
+                bilateralDto.lead_contact_person.email,
+                {
+                  mail: bilateralDto.lead_contact_person.email,
+                  displayName: bilateralDto.lead_contact_person.name,
+                },
+              );
+              await this._resultRepository.update(resultId, {
+                lead_contact_person: bilateralDto.lead_contact_person.name,
+                lead_contact_person_id: adUser?.id ?? null,
+              });
+            }
 
             const isKpType =
               bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
@@ -4108,6 +4124,7 @@ export class BilateralService {
       capacity_sharing: extractedMds['capacity_sharing'],
       innovation_use: extractedMds['innovation_use'],
       policy_change: extractedMds['policy_change'],
+      knowledge_product: extractedMds['knowledge_product'],
     } as any;
 
     try {

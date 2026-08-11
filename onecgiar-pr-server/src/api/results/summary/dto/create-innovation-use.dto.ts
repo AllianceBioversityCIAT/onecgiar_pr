@@ -6,6 +6,8 @@ export class InnovationUseDto {
   public result_innovation_use_id?: number;
   public male_using: number;
   public female_using: number;
+  public innov_use_to_be_determined?: boolean;
+  public innovation_use_level_id?: number;
   public other: otherMeasuresInterface[];
   public innovatonUse: innovatonUseInterface;
 }

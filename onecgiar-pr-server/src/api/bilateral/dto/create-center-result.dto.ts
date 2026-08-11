@@ -3,10 +3,12 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 export class LeadCenterDto {
   @ApiPropertyOptional({ description: 'Institution ID', example: 49 })
@@ -70,4 +72,15 @@ export class CreateCenterResultDto {
   @IsNumber()
   @IsOptional()
   project_id?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'CGSpace handle. Required when result_type_id is Knowledge Product — ' +
+      'the result is created and its metadata auto-populated from CGSpace.',
+    example: '10568/175322',
+  })
+  @ValidateIf((o) => o.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT)
+  @IsString()
+  @IsNotEmpty()
+  handle?: string;
 }

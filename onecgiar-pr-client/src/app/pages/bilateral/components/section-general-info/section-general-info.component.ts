@@ -1,12 +1,14 @@
-import { Component, inject, signal, effect, OnInit } from '@angular/core';
+import { Component, inject, signal, effect, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, Subject, switchMap, EMPTY } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
+import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
+import { User } from '../../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 import { environment } from '../../../../../environments/environment';
 
 interface ScoreOption {
@@ -15,10 +17,10 @@ interface ScoreOption {
   name?: string;
 }
 
-interface AdUser {
-  display_name: string;
-  mail: string;
-  title: string;
+/** Plain body shape `<app-lead-contact-person-field>` expects and mutates in place. */
+interface LeadContactBody {
+  lead_contact_person: string | null;
+  lead_contact_person_data: User | null;
 }
 
 const DAC_AREAS = [
@@ -37,25 +39,34 @@ const TAG_LEVELS = [
 
 @Component({
   selector: 'app-section-general-info',
-  imports: [FormsModule, FormSkeletonComponent],
+  imports: [FormsModule, FormSkeletonComponent, CustomFieldsModule],
   templateUrl: './section-general-info.component.html',
   styleUrl: './section-general-info.component.scss'
 })
-export class SectionGeneralInfoComponent implements OnInit {
+export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   private readonly autoSaveService = inject(BilateralAutoSaveService);
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
   private readonly creationService = inject(BilateralCreationService);
+  private readonly userSearchService = inject(UserSearchService);
   selectedSubScores = signal<Record<string, number[]>>({});
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
 
   title = signal('');
   description = signal('');
-  leadContactPerson = signal('');
-  leadContactSearchQuery = '';
-  leadContactResults: AdUser[] = [];
-  leadContactSelected: AdUser | null = null;
-  isSearchingLeads = false;
+
+  /**
+   * Reassigned (never mutated) whenever the loaded result's lead contact changes,
+   * so `<app-lead-contact-person-field>`'s `ngOnChanges` (which only fires on
+   * reference change) picks up server-loaded data. Each instance's getters/setters
+   * close over their own backing values; the setters are the child's only way to
+   * report a user-driven selection back to us (it has no `@Output()`), and — since
+   * `selectUser()`/`clearContact()` always assign `lead_contact_person` before
+   * `lead_contact_person_data` — the `lead_contact_person_data` setter is the
+   * single deterministic point where both values are guaranteed current, so
+   * that's where autosave + MDS-tracker updates fire.
+   */
+  leadContactBody = signal<LeadContactBody>(this.makeLeadContactBody(null, null));
 
   showAllFields = signal(this.loadShowAllFromStorage());
 
@@ -64,8 +75,6 @@ export class SectionGeneralInfoComponent implements OnInit {
   impactAreaSubScores = signal<Record<string, ScoreOption[]>>({});
   selectedDacLevels = signal<Record<string, number>>({});
   isLoadingDac = signal(true);
-
-  private readonly leadSearchSubject = new Subject<string>();
 
   constructor() {
     this.autoSaveService.registerField('title', 'text');
@@ -76,16 +85,14 @@ export class SectionGeneralInfoComponent implements OnInit {
       this.autoSaveService.registerField(area.dtoKey, 'select');
     }
 
+    // Reacts to title/description edits AND to leadContactBody being reassigned
+    // on load (see makeLeadContactBody) — NOT to in-place mutation by the child,
+    // which instead calls updateGeneralInfoMdsFields() directly from commit().
     effect(() => {
-      const t = this.title();
-      const d = this.description();
-      const isPlaceholderTitle = /^Bilateral Draft #\d+$/.test(t.trim());
-      const titleFilled = !isPlaceholderTitle && !!t.trim();
-      const descriptionFilled = !!d.trim();
-      this.mdsTracker.setSectionFields('general-info', [
-        { key: 'title', label: 'Title', filled: titleFilled },
-        { key: 'description', label: 'Description', filled: descriptionFilled },
-      ]);
+      this.title();
+      this.description();
+      this.leadContactBody();
+      this.updateGeneralInfoMdsFields();
     });
 
     effect(() => {
@@ -96,14 +103,8 @@ export class SectionGeneralInfoComponent implements OnInit {
     });
     effect(() => {
       const lc = this.creationService.resultLeadContact();
-      this.leadContactPerson.set(lc);
-      this.leadContactSearchQuery = lc;
-      if (lc) {
-        this.leadContactSelected = { display_name: lc, mail: '', title: '' };
-        this.showAllFields.set(true);
-      } else {
-        this.leadContactSelected = null;
-      }
+      const lcData = this.creationService.resultLeadContactData();
+      this.leadContactBody.set(this.makeLeadContactBody(lc || null, lcData));
     });
 
     effect(() => {
@@ -117,29 +118,62 @@ export class SectionGeneralInfoComponent implements OnInit {
     effect(() => {
       this.selectedSubScores.set(this.creationService.resultDacSubScores());
     });
-
-    this.leadSearchSubject.pipe(
-      debounceTime(400),
-      distinctUntilChanged(),
-      switchMap((query: string) => {
-        if (query.length < 3) {
-          this.leadContactResults = [];
-          return EMPTY;
-        }
-        this.isSearchingLeads = true;
-        return this.http.get<any>(`${environment.apiBaseUrl}api/ad-users/search?query=${encodeURIComponent(query)}`);
-      })
-    ).subscribe({
-      next: ({ response }) => {
-        this.isSearchingLeads = false;
-        this.leadContactResults = (response ?? []).filter((u: AdUser) => u.mail && !u.mail.includes('test'));
-      },
-      error: () => { this.isSearchingLeads = false; this.leadContactResults = []; }
-    });
   }
 
   ngOnInit(): void {
     this.loadDacOptions();
+    // UserSearchService is app-wide (providedIn: 'root') — reset it so a
+    // previous Result Detail visit or a different bilateral result can't leak
+    // its selected/locked contact state into this one.
+    this.resetUserSearchService();
+  }
+
+  ngOnDestroy(): void {
+    this.resetUserSearchService();
+  }
+
+  private resetUserSearchService(): void {
+    this.userSearchService.selectedUser = null;
+    this.userSearchService.searchQuery = '';
+    this.userSearchService.hasValidContact = true;
+    this.userSearchService.showContactError = false;
+  }
+
+  /** Builds a fresh getter/setter-backed body; see the `leadContactBody` doc comment. */
+  private makeLeadContactBody(name: string | null, data: User | null): LeadContactBody {
+    let currentName = name;
+    let currentData = data;
+    const commit = () => this.updateGeneralInfoMdsFields();
+    return {
+      get lead_contact_person() { return currentName; },
+      set lead_contact_person(v: string | null) { currentName = v; },
+      get lead_contact_person_data() { return currentData; },
+      set lead_contact_person_data(v: User | null) {
+        currentData = v;
+        commit();
+      },
+    } as LeadContactBody;
+  }
+
+  private updateGeneralInfoMdsFields(): void {
+    const t = this.title();
+    const d = this.description();
+    const isPlaceholderTitle = /^Bilateral Draft #\d+$/.test(t.trim());
+    const titleFilled = !isPlaceholderTitle && !!t.trim();
+    const descriptionFilled = !!d.trim();
+    const body = this.leadContactBody();
+    const leadContactFilled = !!body.lead_contact_person && !!body.lead_contact_person_data;
+
+    this.mdsTracker.setSectionFields('general-info', [
+      { key: 'title', label: 'Title', filled: titleFilled },
+      { key: 'description', label: 'Description', filled: descriptionFilled },
+      { key: 'lead_contact_person', label: 'Lead Contact Person', filled: leadContactFilled },
+    ]);
+
+    this.autoSaveService.updateFieldsBatch({
+      lead_contact_person: body.lead_contact_person,
+      lead_contact_person_data: body.lead_contact_person_data,
+    });
   }
 
   private loadDacOptions(): void {
@@ -198,32 +232,6 @@ export class SectionGeneralInfoComponent implements OnInit {
   }
 
   onDescriptionBlur(): void { this.autoSaveService.notifyBlur('description', this.description()); }
-
-  onLeadContactSearch(query: string): void {
-    this.leadContactSearchQuery = query;
-    this.leadContactSelected = null;
-    this.leadSearchSubject.next(query);
-  }
-
-  selectLeadContact(user: AdUser): void {
-    this.leadContactSelected = user;
-    this.leadContactSearchQuery = user.display_name;
-    this.leadContactResults = [];
-    this.leadContactPerson.set(user.display_name);
-    this.autoSaveService.updateField('lead_contact_person', user.display_name, 'text');
-  }
-
-  clearLeadContact(): void {
-    this.leadContactSelected = null;
-    this.leadContactSearchQuery = '';
-    this.leadContactResults = [];
-    this.leadContactPerson.set('');
-    this.autoSaveService.updateField('lead_contact_person', '', 'text');
-  }
-
-  onLeadContactBlur(): void {
-    setTimeout(() => { this.leadContactResults = []; }, 200);
-  }
 
   onDacTagChange(areaKey: string, value: number): void {
     const numValue = Number(value);

@@ -162,4 +162,34 @@ describe('BilateralApiService', () => {
     expect(req.request.method).toBe('PATCH');
     req.flush(mockResponse);
   });
+
+  it('GET_capdevsTerms should GET the capdevs-terms catalog', done => {
+    service.GET_capdevsTerms().subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/capdevs-terms/get/all`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
+  it('GET_actorsTypes should GET the actor types catalog', done => {
+    service.GET_actorsTypes().subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/actors/type/all`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
+  it('GET_institutionsTypeTree should GET the institutions-type tree catalog', done => {
+    service.GET_institutionsTypeTree().subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
 });

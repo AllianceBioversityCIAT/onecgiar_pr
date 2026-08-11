@@ -94,6 +94,10 @@ export class BilateralApiService {
     return this.http.get<any>(`${this.resultsApiBaseUrl}capdevs-delivery-methods/get/all`);
   }
 
+  GET_capdevsTerms() {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}capdevs-terms/get/all`);
+  }
+
   GET_innovationDev(resultId: number | string) {
     return this.http.get<any>(`${this.resultsApiBaseUrl}summary/innovation-dev/get/result/${resultId}`);
   }
@@ -108,6 +112,14 @@ export class BilateralApiService {
 
   PATCH_innovationUse(resultId: number | string, body: Record<string, unknown>) {
     return this.http.patch<any>(`${this.resultsApiBaseUrl}summary/innovation-use/create/result/${resultId}`, body);
+  }
+
+  GET_actorsTypes() {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}actors/type/all`);
+  }
+
+  GET_institutionsTypeTree() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
   }
 
   GET_policyChanges(resultId: number | string) {

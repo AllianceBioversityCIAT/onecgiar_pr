@@ -1,31 +1,96 @@
 <div class="tsf-fields">
-  <div class="tsf-field">
-    <label class="tsf-label">Policy Type <span class="tsf-required">*</span></label>
-    <select class="tsf-select" [(ngModel)]="body.policy_type_id" (ngModelChange)="onFieldChange()">
-      <option [ngValue]="null" disabled>Select policy type</option>
-      <option *ngFor="let pt of policyControlList.policyTypesList" [ngValue]="pt.id">{{ pt.name }}</option>
-    </select>
+  <app-alert-status status="info" [description]="policyTypeDesc"></app-alert-status>
+
+  <app-pr-select
+    [options]="policyControlList.policyTypesList"
+    label="Policy type"
+    description="Select policy type"
+    optionLabel="name"
+    optionValue="id"
+    placeholder="Select policy type"
+    [required]="true"
+    [(ngModel)]="body.policy_type_id"
+    (ngModelChange)="onFieldChange()">
+  </app-pr-select>
+
+  <app-pr-select
+    [options]="policyControlList.policyStages"
+    label="Stage"
+    description="Select stage"
+    optionLabel="full_name"
+    optionValue="id"
+    placeholder="Select stage"
+    [required]="true"
+    [(ngModel)]="body.policy_stage_id"
+    (ngModelChange)="onFieldChange()">
+  </app-pr-select>
+
+  @if (questions?.optionsWithAnswers?.length) {
+    <app-pr-select
+      [options]="questions.optionsWithAnswers"
+      [label]="questions.question_text"
+      optionLabel="question_text"
+      optionValue="result_question_id"
+      placeholder="Select an answer"
+      [required]="true"
+      [(ngModel)]="relatedTo"
+      (ngModelChange)="onRelatedToChange(relatedTo)">
+    </app-pr-select>
+  }
+
+  <app-pr-multi-select
+    [options]="institutionsService.institutionsList"
+    label="Whose policy is this? (Implementing organizations)"
+    [description]="institutionsDesc"
+    selectedLabel="Organization"
+    selectedOptionLabel="full_name"
+    optionLabel="full_name"
+    optionValue="institutions_id"
+    placeholder="Select organization(s)"
+    [required]="true"
+    [(ngModel)]="body.institutions"
+    (ngModelChange)="onFieldChange()">
+  </app-pr-multi-select>
+
+  <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
+    <app-alert-status
+      class="flex-1"
+      status="info"
+      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
+    </app-alert-status>
+    <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
+      {{ showAllFields() ? 'Hide full metadata' : 'Full metadata' }}
+    </button>
   </div>
 
-  <div class="tsf-field">
-    <label class="tsf-label">Stage <span class="tsf-required">*</span></label>
-    <select class="tsf-select" [(ngModel)]="body.policy_stage_id" (ngModelChange)="onFieldChange()">
-      <option [ngValue]="null" disabled>Select stage</option>
-      <option *ngFor="let ps of policyControlList.policyStages" [ngValue]="ps.id">{{ ps.full_name }}</option>
-    </select>
-  </div>
+  @if (showAllFields() && body.policy_type_id == 1) {
+    <div class="flex flex-col gap-[18px]">
+      <app-pr-input
+        label="USD amount"
+        type="currency"
+        placeholder="0"
+        [required]="false"
+        [(ngModel)]="body.amount"
+        (ngModelChange)="onFieldChange()">
+      </app-pr-input>
 
-  <div class="tsf-field">
-    <label class="tsf-label">Implementing Organizations <span class="tsf-required">*</span></label>
-    <p class="tsf-hint">Select at least 1 organization</p>
-    <select class="tsf-select tsf-select--multi" multiple [(ngModel)]="body.institutions" (ngModelChange)="onFieldChange()">
-      <option *ngFor="let inst of institutionsService.institutionsList" [ngValue]="inst.institutions_id">{{ inst.full_name }}</option>
-    </select>
-  </div>
+      <app-pr-select
+        [options]="statusOptions"
+        label="Status"
+        description="Select Status"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Select status"
+        [required]="false"
+        [(ngModel)]="body.status_amount"
+        (ngModelChange)="onFieldChange()">
+      </app-pr-select>
+    </div>
+  }
 </div>
 
 <div class="tsf-actions">
-  <button class="tsf-save-btn" [disabled]="saving()" (click)="onSave()">
+  <button class="tsf-save-btn" type="button" [disabled]="saving()" (click)="onSave()">
     <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
     {{ saving() ? 'Saving...' : 'Save' }}
   </button>

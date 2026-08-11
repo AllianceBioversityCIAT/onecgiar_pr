@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { SummaryService } from './summary.service';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsCapacityDevelopmentsRepository } from './repositories/results-capacity-developments.repository';
@@ -19,6 +20,8 @@ import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-pr
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from './innovation_dev.service';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
+import { ResultsInnovationsUseRepository } from './repositories/results-innovations-use.repository';
+import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
 
 describe('SummaryService', () => {
   let service: SummaryService;
@@ -40,6 +43,10 @@ describe('SummaryService', () => {
   let mockResultInstitutionsBudgetRepository: any;
   let mockInnoDevService: any;
   let mockResultAnswerRepository: any;
+  let mockDataSource: any;
+  let mockScalingStudyUrlRepository: any;
+  let mockResultsInnovationsUseRepository: any;
+  let mockResultsByProjectsRepository: any;
 
   const user = { id: 10 } as any;
 
@@ -108,6 +115,21 @@ describe('SummaryService', () => {
       findOne: jest.fn(),
       save: jest.fn(),
     };
+    mockScalingStudyUrlRepository = {
+      find: jest.fn().mockResolvedValue([]),
+      update: jest.fn(),
+      save: jest.fn(),
+    };
+    mockDataSource = {
+      getRepository: jest.fn().mockReturnValue(mockScalingStudyUrlRepository),
+    };
+    mockResultsInnovationsUseRepository = {
+      findOne: jest.fn(),
+      save: jest.fn(),
+    };
+    mockResultsByProjectsRepository = {
+      find: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -169,6 +191,15 @@ describe('SummaryService', () => {
           provide: ResultAnswerRepository,
           useValue: mockResultAnswerRepository,
         },
+        { provide: DataSource, useValue: mockDataSource },
+        {
+          provide: ResultsInnovationsUseRepository,
+          useValue: mockResultsInnovationsUseRepository,
+        },
+        {
+          provide: ResultsByProjectsRepository,
+          useValue: mockResultsByProjectsRepository,
+        },
       ],
     }).compile();
 
@@ -187,6 +218,7 @@ describe('SummaryService', () => {
       mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValueOnce({
         id: 9,
       });
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
 
       const res = await service.saveInnovationUse(dto, 5, user);
 
@@ -200,6 +232,68 @@ describe('SummaryService', () => {
       );
       expect(res.status).toBe(HttpStatus.CREATED);
       expect(res.response).toEqual({ id: 9 });
+    });
+
+    it('creates a new results_innovations_use row with the level and to-be-determined flag when none exists', async () => {
+      const dto = {
+        innov_use_to_be_determined: false,
+        innovation_use_level_id: 4,
+      } as any;
+      mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+      mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValueOnce({});
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+      await service.saveInnovationUse(dto, 5, user);
+
+      expect(mockResultsInnovationsUseRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          results_id: 5,
+          created_by: user.id,
+          is_active: true,
+          innov_use_to_be_determined: false,
+          innovation_use_level_id: 4,
+        }),
+      );
+    });
+
+    it('updates the existing results_innovations_use row in place', async () => {
+      const dto = {
+        innov_use_to_be_determined: true,
+        innovation_use_level_id: 7,
+      } as any;
+      mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+      mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValueOnce({});
+      const existing = { result_innovation_use_id: 1, results_id: 5 } as any;
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(
+        existing,
+      );
+
+      await service.saveInnovationUse(dto, 5, user);
+
+      expect(mockResultsInnovationsUseRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_innovation_use_id: 1,
+          innov_use_to_be_determined: true,
+          innovation_use_level_id: 7,
+          last_updated_by: user.id,
+        }),
+      );
+    });
+
+    it('nulls the level and to-be-determined flag when the DTO omits them', async () => {
+      const dto = {} as any;
+      mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+      mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValueOnce({});
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+      await service.saveInnovationUse(dto, 5, user);
+
+      expect(mockResultsInnovationsUseRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          innov_use_to_be_determined: null,
+          innovation_use_level_id: null,
+        }),
+      );
     });
   });
 
@@ -216,6 +310,7 @@ describe('SummaryService', () => {
           },
         },
       ]);
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
 
       const res = await service.getInnovationUse(15);
       const response: any = res.response as any;
@@ -227,6 +322,35 @@ describe('SummaryService', () => {
         women_non_youth: 6,
       });
       expect(response.organization[0].parent_institution_type_id).toBe(99);
+    });
+
+    it('includes the persisted to-be-determined flag and use level when a row exists', async () => {
+      mockResultActorRepository.find.mockResolvedValueOnce([]);
+      mockResultIpMeasureRepository.find.mockResolvedValueOnce([]);
+      mockResultByIntitutionsTypeRepository.find.mockResolvedValueOnce([]);
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce({
+        innov_use_to_be_determined: true,
+        innovation_use_level_id: 6,
+      });
+
+      const res = await service.getInnovationUse(15);
+      const response: any = res.response as any;
+
+      expect(response.innov_use_to_be_determined).toBe(true);
+      expect(response.innovation_use_level_id).toBe(6);
+    });
+
+    it('defaults to null when no results_innovations_use row exists yet', async () => {
+      mockResultActorRepository.find.mockResolvedValueOnce([]);
+      mockResultIpMeasureRepository.find.mockResolvedValueOnce([]);
+      mockResultByIntitutionsTypeRepository.find.mockResolvedValueOnce([]);
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+      const res = await service.getInnovationUse(15);
+      const response: any = res.response as any;
+
+      expect(response.innov_use_to_be_determined).toBeNull();
+      expect(response.innovation_use_level_id).toBeNull();
     });
   });
 
@@ -458,6 +582,206 @@ describe('SummaryService', () => {
           innovation_developers: 'Dev',
         }),
       );
+    });
+
+    it('persists has_scaling_studies and replaces the scaling study URLs once readiness reaches level 6', async () => {
+      const dto = {
+        short_title: 'Title',
+        innovation_readiness_level_id: 17, // Level_6
+        has_scaling_studies: true,
+        scaling_studies_urls: ['https://example.com/study-a', 'https://example.com/study-b'],
+      } as any;
+
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        null,
+      );
+      mockResultsInnovationsDevRepository.save.mockResolvedValueOnce({
+        result_innovation_dev_id: 42,
+      });
+
+      await service.saveInnovationDev(dto, null, 11144, user);
+
+      expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ has_scaling_studies: true }),
+      );
+      expect(mockDataSource.getRepository).toHaveBeenCalled();
+      expect(mockScalingStudyUrlRepository.update).toHaveBeenCalledWith(
+        { result_innov_dev_id: 42 },
+        { is_active: false },
+      );
+      expect(mockScalingStudyUrlRepository.save).toHaveBeenCalledWith([
+        {
+          result_innov_dev_id: 42,
+          study_url: 'https://example.com/study-a',
+          is_active: true,
+          created_by: user.id,
+        },
+        {
+          result_innov_dev_id: 42,
+          study_url: 'https://example.com/study-b',
+          is_active: true,
+          created_by: user.id,
+        },
+      ]);
+    });
+
+    it('does not touch scaling study URLs when has_scaling_studies is false, even with URLs present', async () => {
+      const dto = {
+        short_title: 'Title',
+        innovation_readiness_level_id: 17,
+        has_scaling_studies: false,
+        scaling_studies_urls: ['https://example.com/study-a'],
+      } as any;
+
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        null,
+      );
+      mockResultsInnovationsDevRepository.save.mockResolvedValueOnce({
+        result_innovation_dev_id: 43,
+      });
+
+      await service.saveInnovationDev(dto, null, 11144, user);
+
+      expect(mockScalingStudyUrlRepository.update).not.toHaveBeenCalled();
+      expect(mockScalingStudyUrlRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('does not touch scaling study URLs below readiness level 6', async () => {
+      const dto = {
+        short_title: 'Title',
+        innovation_readiness_level_id: 16, // Level_5
+        has_scaling_studies: true,
+        scaling_studies_urls: ['https://example.com/study-a'],
+      } as any;
+
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        null,
+      );
+      mockResultsInnovationsDevRepository.save.mockResolvedValueOnce({
+        result_innovation_dev_id: 44,
+      });
+
+      await service.saveInnovationDev(dto, null, 11144, user);
+
+      expect(mockScalingStudyUrlRepository.update).not.toHaveBeenCalled();
+      expect(mockScalingStudyUrlRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('does not touch scaling study URLs when the URL list is empty', async () => {
+      const dto = {
+        short_title: 'Title',
+        innovation_readiness_level_id: 17,
+        has_scaling_studies: true,
+        scaling_studies_urls: [],
+      } as any;
+
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        null,
+      );
+      mockResultsInnovationsDevRepository.save.mockResolvedValueOnce({
+        result_innovation_dev_id: 45,
+      });
+
+      await service.saveInnovationDev(dto, null, 11144, user);
+
+      expect(mockScalingStudyUrlRepository.update).not.toHaveBeenCalled();
+      expect(mockScalingStudyUrlRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getInnovationDev', () => {
+    beforeEach(() => {
+      mockEvidencesRepository.find.mockResolvedValue([]);
+      mockResultRepository.getResultById = jest.fn().mockResolvedValue({ id: 11144 });
+      mockResultActorRepository.find.mockResolvedValue([]);
+      mockResultIpMeasureRepository.find.mockResolvedValue([]);
+      mockResultByIntitutionsTypeRepository.find.mockResolvedValue([]);
+      mockResultByInitiativeRepository.find.mockResolvedValue([]);
+      mockResultInitiativesBudgetRepository.find.mockResolvedValue([]);
+      mockNonPooledProjectRepository.find.mockResolvedValue([]);
+      mockResultBilateralBudgetRepository.find.mockResolvedValue([]);
+      mockResultByIntitutionsRepository.find.mockResolvedValue([]);
+      mockResultInstitutionsBudgetRepository.find.mockResolvedValue([]);
+      mockResultsByProjectsRepository.find.mockResolvedValue([]);
+    });
+
+    it('merges legacy (non_pooled_projetct_id) and results_by_projects (result_project_id) budget rows', async () => {
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce({
+        result_innovation_dev_id: 50,
+        innovation_readiness_level_id: 10,
+      });
+      mockNonPooledProjectRepository.find.mockResolvedValueOnce([{ id: 1 }]);
+      mockResultsByProjectsRepository.find.mockResolvedValueOnce([{ id: 2 }]);
+      mockResultBilateralBudgetRepository.find
+        .mockResolvedValueOnce([{ non_pooled_projetct_id: 1, kind_cash: 100 }])
+        .mockResolvedValueOnce([{ result_project_id: 2, kind_cash: 200 }]);
+
+      const res = await service.getInnovationDev(11144);
+      const response: any = res.response as any;
+
+      expect(mockResultsByProjectsRepository.find).toHaveBeenCalledWith({
+        where: { result_id: 11144, is_active: true },
+      });
+      expect(mockResultBilateralBudgetRepository.find).toHaveBeenCalledTimes(2);
+      const [firstCallArgs] = mockResultBilateralBudgetRepository.find.mock.calls[0];
+      const [secondCallArgs] = mockResultBilateralBudgetRepository.find.mock.calls[1];
+      expect(firstCallArgs.where.non_pooled_projetct_id).toEqual(expect.anything());
+      expect(firstCallArgs.relations).toEqual({ obj_non_pooled_projetct: { obj_funder_institution_id: true } });
+      expect(secondCallArgs.where.result_project_id).toEqual(expect.anything());
+      expect(secondCallArgs.relations).toEqual({ obj_result_project: { obj_clarisa_project: true } });
+      expect(response.bilateral_expected_investment).toEqual([
+        { non_pooled_projetct_id: 1, kind_cash: 100 },
+        { result_project_id: 2, kind_cash: 200 },
+      ]);
+    });
+
+    it('returns an empty bilateral investment array when neither link exists', async () => {
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce({
+        result_innovation_dev_id: 51,
+        innovation_readiness_level_id: 10,
+      });
+
+      const res = await service.getInnovationDev(11144);
+      const response: any = res.response as any;
+
+      expect(response.bilateral_expected_investment).toEqual([]);
+    });
+
+    it('includes the scaling study URLs once readiness reaches level 6', async () => {
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        {
+          result_innovation_dev_id: 42,
+          innovation_readiness_level_id: 17,
+          has_scaling_studies: true,
+        },
+      );
+      mockScalingStudyUrlRepository.find.mockResolvedValueOnce([
+        { study_url: 'https://example.com/study-a' },
+      ]);
+
+      const res = await service.getInnovationDev(11144);
+
+      expect(mockScalingStudyUrlRepository.find).toHaveBeenCalledWith({
+        where: { result_innov_dev_id: 42, is_active: true },
+      });
+      expect((res as any).response.scaling_studies_urls).toEqual([
+        'https://example.com/study-a',
+      ]);
+    });
+
+    it('returns an empty scaling_studies_urls array below readiness level 6, without querying the repository', async () => {
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValueOnce(
+        {
+          result_innovation_dev_id: 43,
+          innovation_readiness_level_id: 16,
+          has_scaling_studies: true,
+        },
+      );
+
+      const res = await service.getInnovationDev(11144);
+
+      expect(mockScalingStudyUrlRepository.find).not.toHaveBeenCalled();
+      expect((res as any).response.scaling_studies_urls).toEqual([]);
     });
   });
 

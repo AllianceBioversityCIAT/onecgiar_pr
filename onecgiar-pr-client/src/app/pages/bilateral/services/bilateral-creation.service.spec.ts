@@ -193,6 +193,7 @@ describe('BilateralCreationService', () => {
           result_title: 'Title',
           result_description: 'Description',
           lead_contact_person: 'Ada',
+          lead_contact_person_data: { display_name: 'Ada', mail: 'ada@cgiar.org' },
           result_level_id: 2,
           result_type_id: 7,
           project_id: '31',
@@ -222,6 +223,7 @@ describe('BilateralCreationService', () => {
       expect(service.resultTitle()).toBe('Title');
       expect(service.resultDescription()).toBe('Description');
       expect(service.resultLeadContact()).toBe('Ada');
+      expect(service.resultLeadContactData()).toEqual({ display_name: 'Ada', mail: 'ada@cgiar.org' });
       expect(service.resultLevelId()).toBe(2);
       expect(service.resultTypeId()).toBe(7);
       expect(service.resultProjectId()).toBe(31);
@@ -255,6 +257,7 @@ describe('BilateralCreationService', () => {
       expect(service.resultTitle()).toBe('');
       expect(service.resultDescription()).toBe('');
       expect(service.resultLeadContact()).toBe('');
+      expect(service.resultLeadContactData()).toBeNull();
       expect(service.resultLevelId()).toBeNull();
       expect(service.resultTypeId()).toBeNull();
       expect(service.resultProjectId()).toBeNull();
@@ -476,6 +479,25 @@ describe('BilateralCreationService', () => {
       service.selectProject({ id: 0, shortName: 'BP', fullName: 'BP', summary: null, description: null, leadCenter: null, sciencePrograms: [] } as any);
       service.createResult(1, 2).subscribe();
       expect(mockBilateralApi.POST_createBilateralHeader).toHaveBeenCalledWith({ result_level_id: 1, result_type_id: 2 });
+    });
+
+    it('includes a trimmed handle when provided (Knowledge Product)', () => {
+      service.resetWizard();
+      service.createResult(4, 6, '  10568/175322  ').subscribe();
+      expect(mockBilateralApi.POST_createBilateralHeader).toHaveBeenCalledWith({
+        result_level_id: 4,
+        result_type_id: 6,
+        handle: '10568/175322',
+      });
+    });
+
+    it('omits the handle when it is blank', () => {
+      service.resetWizard();
+      service.createResult(4, 6, '   ').subscribe();
+      expect(mockBilateralApi.POST_createBilateralHeader).toHaveBeenCalledWith({
+        result_level_id: 4,
+        result_type_id: 6,
+      });
     });
   });
 

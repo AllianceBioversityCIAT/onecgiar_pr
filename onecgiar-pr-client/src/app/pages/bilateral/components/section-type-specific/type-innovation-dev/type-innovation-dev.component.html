@@ -1,13 +1,13 @@
 <div class="tsf-fields">
-  <div class="tsf-field">
-    <label class="tsf-label">Short Title <span class="tsf-required">*</span></label>
-    <input
-      class="tsf-input"
-      type="text"
-      [(ngModel)]="body.short_title"
-      (ngModelChange)="onFieldChange()"
-      placeholder="Enter short title" />
-  </div>
+  <app-pr-input
+    label="Short title"
+    placeholder="Enter short title"
+    [maxWords]="10"
+    [required]="true"
+    [description]="shortTitleDesc"
+    [(ngModel)]="body.short_title"
+    (ngModelChange)="onFieldChange()">
+  </app-pr-input>
 
   <app-pr-select
     [options]="innovationControlListSE.typeList"
@@ -47,6 +47,140 @@
       (ngModelChange)="onFieldChange()">
     </app-pr-range-level>
   </div>
+
+  <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
+    <app-alert-status
+      class="flex-1"
+      status="info"
+      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
+    </app-alert-status>
+    <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
+      {{ showAllFields() ? 'Hide full metadata' : 'Full metadata' }}
+    </button>
+  </div>
+
+  @if (showAllFields()) {
+    <div class="flex flex-col gap-[18px]">
+      @if (isVarietyType) {
+        <app-pr-yes-or-not
+          label="Are you profiling a new or improved variety or breed?"
+          [(ngModel)]="body.is_new_variety"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-yes-or-not>
+
+        @if (body.is_new_variety) {
+          <app-pr-input
+            label="Indicate the number of individual new or improved lines/ varieties"
+            type="number"
+            placeholder="0"
+            [required]="false"
+            [(ngModel)]="body.number_of_varieties"
+            (ngModelChange)="onFieldChange()">
+          </app-pr-input>
+        }
+      }
+
+      <app-pr-textarea
+        placeholder="Contact persons info goes here..."
+        [required]="false"
+        label="Innovation collaborators"
+        [description]="collaboratorsDesc"
+        [(ngModel)]="body.innovation_collaborators"
+        (ngModelChange)="onFieldChange()">
+      </app-pr-textarea>
+
+      <app-pr-textarea
+        placeholder="Provide a brief explanation here..."
+        [maxWords]="50"
+        [required]="false"
+        label="Please provide a brief explanation that explains how the provided evidence (inputted in the Evidence section) justifies the chosen innovation readiness level"
+        [description]="evidenceJustificationDesc"
+        [(ngModel)]="body.evidences_justification"
+        (ngModelChange)="onFieldChange()">
+      </app-pr-textarea>
+
+      <div>
+        <app-pr-field-header
+          label="Innovation reference materials"
+          [description]="referenceMaterialsDesc"
+          [required]="false"
+          [useColon]="false">
+        </app-pr-field-header>
+
+        @for (material of body.reference_materials; track $index) {
+          <div class="flex items-center gap-2">
+            <div class="w-5 shrink-0 text-center text-xs text-[#90A4AE]">{{ $index + 1 }}</div>
+            <div class="min-w-0 flex-1">
+              <app-pr-input placeholder="Add link" type="link" [required]="true" [(ngModel)]="body.reference_materials[$index].link" (ngModelChange)="onFieldChange()">
+              </app-pr-input>
+            </div>
+            <button type="button" class="shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteReferenceMaterial($index)" aria-label="Delete reference material link">
+              <i class="material-icons-round">delete</i>
+            </button>
+          </div>
+        }
+
+        @if (!body.reference_materials?.length) {
+          <app-no-data-text title="No link to reference material added"></app-no-data-text>
+        }
+
+        <app-add-button name="Add another link to reference material" (clickEvent)="addReferenceMaterial()"></app-add-button>
+      </div>
+
+      @if (isReadyForScalingStudies) {
+        <app-pr-radio-button
+          [options]="hasScalingStudiesOptions"
+          optionLabel="label"
+          optionValue="value"
+          label="Have any studies been conducted to inform the innovation scaling strategy design (e.g. willingness to pay, ex-ante impact study, policy integration, cost-benefit analysis, market sizing, scaling partner network, etc.)?"
+          [required]="false"
+          [(ngModel)]="body.has_scaling_studies"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-radio-button>
+
+        @if (body.has_scaling_studies) {
+          <div>
+            <app-pr-field-header label="Provide URL to those studies" [required]="false" [useColon]="false"></app-pr-field-header>
+
+            @for (url of body.scaling_studies_urls; track $index) {
+              <div class="flex items-center gap-2">
+                <div class="w-5 shrink-0 text-center text-xs text-[#90A4AE]">{{ $index + 1 }}</div>
+                <div class="min-w-0 flex-1">
+                  <app-pr-input placeholder="Add link" type="link" [required]="true" [(ngModel)]="body.scaling_studies_urls[$index]" (ngModelChange)="onFieldChange()">
+                  </app-pr-input>
+                </div>
+                <button type="button" class="shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteScalingStudyUrl($index)" aria-label="Delete study link">
+                  <i class="material-icons-round">delete</i>
+                </button>
+              </div>
+            }
+
+            @if (!body.scaling_studies_urls?.length) {
+              <app-no-data-text title="No study link added"></app-no-data-text>
+            }
+
+            <app-add-button name="Add another study link" (clickEvent)="addScalingStudyUrl()"></app-add-button>
+          </div>
+        }
+      }
+
+      <div class="flex flex-col gap-2">
+        <span class="tsf-label">Investment (USD)</span>
+        <div class="tsf-readonly-row">
+          <span class="tsf-readonly-label">CGIAR Programs / Initiatives</span>
+          <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
+        </div>
+        <div class="tsf-readonly-row">
+          <span class="tsf-readonly-label">Bilateral Projects</span>
+          <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
+        </div>
+        <div class="tsf-readonly-row">
+          <span class="tsf-readonly-label">Partner Institutions</span>
+          <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
+        </div>
+      </div>
+    </div>
+  }
 </div>
 
 <div class="tsf-actions">

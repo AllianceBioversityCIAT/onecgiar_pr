@@ -158,6 +158,44 @@ export class AdUserService {
   }
 
   /**
+   * Resolve a directory-matched contact by identifier (email/username/UPN),
+   * creating a local cache row from the provided AD data when one doesn't
+   * exist yet. Used to persist a `lead_contact_person_id` FK alongside the
+   * free-text `lead_contact_person` name on a Result. Never throws — returns
+   * null on any failure so the caller can gracefully fall back to name-only.
+   */
+  async resolveOrCreateContact(
+    identifier?: string | null,
+    fallbackAdUserData?: Record<string, any>,
+  ): Promise<AdUser | null> {
+    if (!identifier) return null;
+
+    try {
+      const existing = await this.getUserByIdentifier(identifier);
+      if (existing) {
+        this.logger.log(
+          `Found existing AD user: ${existing.mail} with ID: ${existing.id}`,
+        );
+        return existing;
+      }
+
+      if (!fallbackAdUserData) return null;
+
+      const created =
+        await this.adUserRepository.saveFromADUser(fallbackAdUserData);
+      this.logger.log(
+        `Created new AD user: ${created.mail} with ID: ${created.id}`,
+      );
+      return created;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to resolve or create contact for identifier '${identifier}': ${error.message}`,
+      );
+      return null;
+    }
+  }
+
+  /**
    * Validate lead contact person
    */
   async validateLeadContactPerson(email: string): Promise<{

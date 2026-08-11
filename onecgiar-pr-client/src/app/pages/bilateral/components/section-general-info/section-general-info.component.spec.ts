@@ -8,6 +8,7 @@ import { SectionGeneralInfoComponent } from './section-general-info.component';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
+import { UserSearchService } from '../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 
 describe('SectionGeneralInfoComponent', () => {
   let fixture: ComponentFixture<SectionGeneralInfoComponent>;
@@ -17,14 +18,13 @@ describe('SectionGeneralInfoComponent', () => {
   let creation: any;
   let http: any;
   let route: any;
+  let userSearch: any;
 
   const TAG_URL = 'gender-tag-levels/all';
   const SCORES_URL = 'impact-areas-scores-components/all';
-  const AD_URL = 'ad-users/search';
 
   let tagResponse: any;
   let scoresResponse: any;
-  let adResponse: any;
 
   const build = () => {
     fixture = TestBed.createComponent(SectionGeneralInfoComponent);
@@ -35,7 +35,6 @@ describe('SectionGeneralInfoComponent', () => {
   beforeEach(async () => {
     tagResponse = of({ response: [{ id: 1, description: 'Not targeted' }] });
     scoresResponse = of({ response: [{ id: 10, name: 'Score A', impact_area: 'Gender', is_active: true }] });
-    adResponse = of({ response: [{ display_name: 'Jane', mail: 'jane@x.org', title: 'Dr' }] });
 
     autoSave = {
       registerField: jest.fn(),
@@ -49,16 +48,22 @@ describe('SectionGeneralInfoComponent', () => {
       resultTitle: signal(''),
       resultDescription: signal(''),
       resultLeadContact: signal(''),
+      resultLeadContactData: signal<any>(null),
       resultDacLevels: signal<Record<string, number>>({}),
       resultDacSubScores: signal<Record<string, number[]>>({}),
       setDacSubScores: jest.fn()
+    };
+    userSearch = {
+      selectedUser: null,
+      searchQuery: '',
+      hasValidContact: true,
+      showContactError: false
     };
 
     http = {
       get: jest.fn((url: string) => {
         if (url.includes(TAG_URL)) return tagResponse;
         if (url.includes(SCORES_URL)) return scoresResponse;
-        if (url.includes(AD_URL)) return adResponse;
         return of({ response: [] });
       })
     };
@@ -73,6 +78,7 @@ describe('SectionGeneralInfoComponent', () => {
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralMdsTrackerService, useValue: mdsTracker },
         { provide: BilateralCreationService, useValue: creation },
+        { provide: UserSearchService, useValue: userSearch },
         { provide: HttpClient, useValue: http },
         { provide: ActivatedRoute, useValue: route }
       ]
@@ -89,6 +95,7 @@ describe('SectionGeneralInfoComponent', () => {
     build();
     expect(component).toBeTruthy();
     expect(autoSave.registerField).toHaveBeenCalledWith('title', 'text');
+    expect(autoSave.registerField).toHaveBeenCalledWith('lead_contact_person', 'text');
     expect(autoSave.registerField).toHaveBeenCalledWith('gender_tag_level_id', 'select');
   });
 
@@ -100,6 +107,7 @@ describe('SectionGeneralInfoComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('general-info', [
         { key: 'title', label: 'Title', filled: false },
         { key: 'description', label: 'Description', filled: false },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
       ]);
     });
 
@@ -111,6 +119,7 @@ describe('SectionGeneralInfoComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
         { key: 'title', label: 'Title', filled: false },
         { key: 'description', label: 'Description', filled: true },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
       ]);
     });
 
@@ -122,30 +131,72 @@ describe('SectionGeneralInfoComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
         { key: 'title', label: 'Title', filled: true },
         { key: 'description', label: 'Description', filled: true },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
+      ]);
+    });
+
+    it('only counts the lead contact once it is matched against the directory', () => {
+      creation.resultLeadContact.set('Jane Doe');
+      build();
+      fixture.detectChanges();
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
+        { key: 'title', label: 'Title', filled: false },
+        { key: 'description', label: 'Description', filled: false },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
+      ]);
+
+      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
+      fixture.detectChanges();
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
+        { key: 'title', label: 'Title', filled: false },
+        { key: 'description', label: 'Description', filled: false },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: true }
       ]);
     });
   });
 
   // ── creation service sync effects ────────────────────────────────────
   describe('sync effects', () => {
-    it('mirrors title, description and lead contact', () => {
+    it('mirrors title, description and lead contact into a fresh body', () => {
       creation.resultTitle.set('T');
       creation.resultDescription.set('D');
       creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
       build();
       fixture.detectChanges();
       expect(component.title()).toBe('T');
       expect(component.description()).toBe('D');
-      expect(component.leadContactPerson()).toBe('Jane Doe');
-      expect(component.leadContactSelected).toEqual({ display_name: 'Jane Doe', mail: '', title: '' });
-      expect(component.showAllFields()).toBe(true);
+      expect(component.leadContactBody().lead_contact_person).toBe('Jane Doe');
+      expect(component.leadContactBody().lead_contact_person_data).toEqual({
+        display_name: 'Jane Doe',
+        mail: 'jane@x.org',
+        title: ''
+      });
     });
 
-    it('clears the lead contact selection when there is none', () => {
+    it('starts with an empty lead contact body when there is none', () => {
       build();
       fixture.detectChanges();
-      expect(component.leadContactSelected).toBeNull();
+      expect(component.leadContactBody().lead_contact_person).toBeNull();
+      expect(component.leadContactBody().lead_contact_person_data).toBeNull();
+    });
+
+    it('does not auto-expand additional fields for a lead contact alone (the field is always visible now)', () => {
+      creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
+      build();
+      fixture.detectChanges();
       expect(component.showAllFields()).toBe(false);
+    });
+
+    it('reassigns a fresh lead contact body (rather than mutating) when the loaded result changes', () => {
+      build();
+      fixture.detectChanges();
+      const before = component.leadContactBody();
+      creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
+      fixture.detectChanges();
+      expect(component.leadContactBody()).not.toBe(before);
     });
 
     it('expands the extra fields when DAC levels are already set', () => {
@@ -161,6 +212,85 @@ describe('SectionGeneralInfoComponent', () => {
       build();
       fixture.detectChanges();
       expect(component.selectedSubScores()).toEqual({ gender: [1, 2] });
+    });
+  });
+
+  // ── lead contact body reactivity (fed to <app-lead-contact-person-field>) ──
+  describe('lead contact body', () => {
+    it('commits an autosave batch and the mds tracker once the child sets both name and directory match', () => {
+      build();
+      fixture.detectChanges();
+      mdsTracker.setSectionFields.mockClear();
+      autoSave.updateFieldsBatch.mockClear();
+
+      const body = component.leadContactBody();
+      body.lead_contact_person = 'New Contact';
+      body.lead_contact_person_data = { display_name: 'New Contact', mail: 'new@x.org', title: '' };
+
+      expect(autoSave.updateFieldsBatch).toHaveBeenCalledWith({
+        lead_contact_person: 'New Contact',
+        lead_contact_person_data: { display_name: 'New Contact', mail: 'new@x.org', title: '' }
+      });
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
+        { key: 'title', label: 'Title', filled: false },
+        { key: 'description', label: 'Description', filled: false },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: true }
+      ]);
+    });
+
+    it('does not commit while only the name has been set (matches selectUser()/clearContact() ordering)', () => {
+      build();
+      fixture.detectChanges();
+      autoSave.updateFieldsBatch.mockClear();
+
+      component.leadContactBody().lead_contact_person = 'Only a name';
+
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+    });
+
+    it('commits a clear (both null) the same way it commits a selection', () => {
+      creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
+      build();
+      fixture.detectChanges();
+      autoSave.updateFieldsBatch.mockClear();
+
+      const body = component.leadContactBody();
+      body.lead_contact_person = null;
+      body.lead_contact_person_data = null;
+
+      expect(autoSave.updateFieldsBatch).toHaveBeenCalledWith({
+        lead_contact_person: null,
+        lead_contact_person_data: null
+      });
+    });
+  });
+
+  // ── UserSearchService reset (app-wide singleton — must not leak state) ──
+  describe('UserSearchService reset', () => {
+    it('resets stale state on init', () => {
+      userSearch.selectedUser = { display_name: 'Stale' };
+      userSearch.searchQuery = 'stale query';
+      userSearch.hasValidContact = false;
+      userSearch.showContactError = true;
+
+      build();
+      fixture.detectChanges();
+
+      expect(userSearch.selectedUser).toBeNull();
+      expect(userSearch.searchQuery).toBe('');
+      expect(userSearch.hasValidContact).toBe(true);
+      expect(userSearch.showContactError).toBe(false);
+    });
+
+    it('resets again on destroy', () => {
+      build();
+      fixture.detectChanges();
+      userSearch.selectedUser = { display_name: 'Selected during this visit' };
+
+      fixture.destroy();
+
+      expect(userSearch.selectedUser).toBeNull();
     });
   });
 
@@ -255,82 +385,6 @@ describe('SectionGeneralInfoComponent', () => {
       expect(component.titleStatus).toBe('saving');
       expect(component.descriptionStatus).toBe('saved');
       expect(component.leadContactStatus).toBe('error');
-    });
-  });
-
-  // ── lead contact search ──────────────────────────────────────────────
-  describe('lead contact search', () => {
-    it('skips short queries', () => {
-      jest.useFakeTimers();
-      build();
-      component.leadContactResults = [{ display_name: 'stale' }];
-      component.onLeadContactSearch('ab');
-      jest.advanceTimersByTime(400);
-      expect(component.leadContactResults).toEqual([]);
-      expect(http.get).not.toHaveBeenCalledWith(expect.stringContaining(AD_URL));
-    });
-
-    it('searches and filters out test mailboxes and users without mail', () => {
-      adResponse = of({
-        response: [
-          { display_name: 'Jane', mail: 'jane@x.org', title: 'Dr' },
-          { display_name: 'Test', mail: 'test@x.org', title: '' },
-          { display_name: 'No mail', mail: '', title: '' }
-        ]
-      });
-      jest.useFakeTimers();
-      build();
-      component.onLeadContactSearch('jane');
-      jest.advanceTimersByTime(400);
-      expect(component.leadContactResults).toEqual([{ display_name: 'Jane', mail: 'jane@x.org', title: 'Dr' }]);
-      expect(component.isSearchingLeads).toBe(false);
-    });
-
-    it('defaults to an empty result list when the response is null', () => {
-      adResponse = of({ response: null });
-      jest.useFakeTimers();
-      build();
-      component.onLeadContactSearch('jane');
-      jest.advanceTimersByTime(400);
-      expect(component.leadContactResults).toEqual([]);
-    });
-
-    it('clears the results when the search fails', () => {
-      adResponse = throwError(() => new Error('boom'));
-      jest.useFakeTimers();
-      build();
-      component.onLeadContactSearch('jane');
-      jest.advanceTimersByTime(400);
-      expect(component.isSearchingLeads).toBe(false);
-      expect(component.leadContactResults).toEqual([]);
-    });
-
-    it('selects a lead contact', () => {
-      build();
-      component.selectLeadContact({ display_name: 'Jane', mail: 'jane@x.org', title: 'Dr' });
-      expect(component.leadContactSearchQuery).toBe('Jane');
-      expect(component.leadContactPerson()).toBe('Jane');
-      expect(component.leadContactResults).toEqual([]);
-      expect(autoSave.updateField).toHaveBeenCalledWith('lead_contact_person', 'Jane', 'text');
-    });
-
-    it('clears the lead contact', () => {
-      build();
-      component.selectLeadContact({ display_name: 'Jane', mail: 'jane@x.org', title: 'Dr' });
-      component.clearLeadContact();
-      expect(component.leadContactSelected).toBeNull();
-      expect(component.leadContactSearchQuery).toBe('');
-      expect(component.leadContactPerson()).toBe('');
-      expect(autoSave.updateField).toHaveBeenLastCalledWith('lead_contact_person', '', 'text');
-    });
-
-    it('clears the results shortly after blur', () => {
-      jest.useFakeTimers();
-      build();
-      component.leadContactResults = [{ display_name: 'Jane' }];
-      component.onLeadContactBlur();
-      jest.advanceTimersByTime(200);
-      expect(component.leadContactResults).toEqual([]);
     });
   });
 

@@ -108,6 +108,9 @@ describe('BilateralService (unit)', () => {
     const policyChangeHandler = makeHandler(ResultTypeEnum.POLICY_CHANGE);
     const otherOutputHandler = makeHandler(ResultTypeEnum.OTHER_OUTPUT);
     const otherOutcomeHandler = makeHandler(ResultTypeEnum.OTHER_OUTCOME);
+    const adUserService = {
+      resolveOrCreateContact: jest.fn().mockResolvedValue(null),
+    };
 
     const service = new BilateralService(
       dataSource,
@@ -154,6 +157,7 @@ describe('BilateralService (unit)', () => {
       policyChangeHandler as any,
       otherOutputHandler as any,
       otherOutcomeHandler as any,
+      adUserService as any,
     ) as any;
 
     Object.assign(service, overrides);
@@ -184,6 +188,7 @@ describe('BilateralService (unit)', () => {
         resultsTocResultsRepository,
         resultByInitiativesRepository,
         resultsKnowledgeProductsService,
+        adUserService,
       },
       handlers: {
         knowledgeProductHandler,
@@ -529,6 +534,35 @@ describe('BilateralService (unit)', () => {
     await expect(
       service.handleLeadCenter(1, {} as any, 1),
     ).resolves.toBeUndefined();
+  });
+
+  describe('populateTypeSpecificFromExtractedMds', () => {
+    it('forwards knowledge_product to the KP handler when promoting a KP draft', async () => {
+      const { service, handlers } = makeService();
+      const extractedMds = {
+        knowledge_product: { handle: '10568/175322' },
+      };
+
+      await service.populateTypeSpecificFromExtractedMds(
+        {
+          id: 42,
+          result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+          title: 'Some KP title',
+        } as any,
+        extractedMds,
+        7,
+      );
+
+      expect(handlers.knowledgeProductHandler.afterCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bilateralDto: expect.objectContaining({
+            knowledge_product: extractedMds['knowledge_product'],
+          }),
+          resultId: 42,
+          userId: 7,
+        }),
+      );
+    });
   });
 
   describe('normalizeInstitutionValue (ALLIANCE_ALIASES)', () => {

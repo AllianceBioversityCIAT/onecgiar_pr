@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
+import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralResultCreatorComponent } from './bilateral-result-creator.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
@@ -167,7 +168,7 @@ describe('BilateralResultCreatorComponent', () => {
     component.resultTypeId.set(2);
     creationService.selectedPrimarySp.set({ programId: 100 });
     component.createResult();
-    expect(creationService.createResult).toHaveBeenCalledWith(3, 2);
+    expect(creationService.createResult).toHaveBeenCalledWith(3, 2, undefined);
   });
 
   it('should have null reporting way by default', () => {
@@ -207,7 +208,102 @@ describe('BilateralResultCreatorComponent', () => {
     component.resultTypeId.set(2);
     creationService.selectedPrimarySp.set({ programId: 100 });
     component.onNext();
-    expect(creationService.createResult).toHaveBeenCalledWith(3, 2);
+    expect(creationService.createResult).toHaveBeenCalledWith(3, 2, undefined);
+  });
+
+  describe('Knowledge Product via CGSpace handle', () => {
+    beforeEach(() => {
+      component.resultLevelId.set(4);
+      component.resultTypeId.set(6);
+      creationService.selectedPrimarySp.set({ programId: 100 });
+    });
+
+    it('should identify Knowledge Product as the selected type', () => {
+      expect(component.isKnowledgeProductType()).toBe(true);
+    });
+
+    it('should not allow creation until the handle has been synced', () => {
+      component.kpHandle.set('');
+      expect(component.canCreate).toBe(false);
+
+      component.kpHandle.set('https://cgspace.cgiar.org/handle/10568/175322');
+      expect(component.canCreate).toBe(false);
+
+      component.kpSyncedTitle.set('Some retrieved title');
+      expect(component.canCreate).toBe(true);
+    });
+
+    it('should invalidate a previous sync when the handle is edited', () => {
+      component.kpSyncedTitle.set('Some retrieved title');
+      component.onKpHandleInput('https://cgspace.cgiar.org/handle/10568/999999');
+      expect(component.kpSyncedTitle()).toBeNull();
+      expect(component.canCreate).toBe(false);
+    });
+
+    describe('syncKpHandle', () => {
+      it('should error when the handle is blank', () => {
+        component.kpHandle.set('   ');
+        component.syncKpHandle();
+        expect(component.kpHandleError()).toBe('Please enter a valid handle.');
+        expect(component.kpSyncedTitle()).toBeNull();
+      });
+
+      it('should error when the handle format is not from an accepted repository', () => {
+        component.kpHandle.set('10568/175322');
+        component.syncKpHandle();
+        expect(component.kpHandleError()).toContain('CGSpace, MELSpace or WorldFish');
+        expect(component.kpSyncedTitle()).toBeNull();
+      });
+
+      it('should preview the title on a successful sync', () => {
+        const apiService = TestBed.inject(ApiService);
+        jest.spyOn(apiService.resultsSE, 'GET_mqapValidation').mockReturnValue(of({ response: { title: 'A retrieved title' } }) as any);
+
+        component.kpHandle.set('https://cgspace.cgiar.org/handle/10568/175322');
+        component.syncKpHandle();
+
+        expect(apiService.resultsSE.GET_mqapValidation).toHaveBeenCalledWith('https://cgspace.cgiar.org/handle/10568/175322');
+        expect(component.kpSyncedTitle()).toBe('A retrieved title');
+        expect(component.kpHandleError()).toBeNull();
+        expect(component.validatingKpHandle()).toBe(false);
+      });
+
+      it('should surface the server error message when the sync fails', () => {
+        const apiService = TestBed.inject(ApiService);
+        jest
+          .spyOn(apiService.resultsSE, 'GET_mqapValidation')
+          .mockReturnValue(throwError(() => ({ error: { message: 'Handle already reported.' } })) as any);
+
+        component.kpHandle.set('https://cgspace.cgiar.org/handle/10568/175322');
+        component.syncKpHandle();
+
+        expect(component.kpHandleError()).toBe('Handle already reported.');
+        expect(component.kpSyncedTitle()).toBeNull();
+        expect(component.validatingKpHandle()).toBe(false);
+      });
+    });
+
+    it('should pass the trimmed handle through to createResult', () => {
+      component.kpHandle.set('  10568/175322  ');
+      component.createResult();
+      expect(creationService.createResult).toHaveBeenCalledWith(4, 6, '10568/175322');
+    });
+
+    it('should not create when the handle is blank', () => {
+      component.kpHandle.set('   ');
+      component.createResult();
+      expect(creationService.createResult).not.toHaveBeenCalled();
+    });
+
+    it('should reset the handle and its synced state when the level changes', () => {
+      component.kpHandle.set('10568/175322');
+      component.kpSyncedTitle.set('Some retrieved title');
+      component.kpHandleError.set('some error');
+      component.onLevelSelected(3);
+      expect(component.kpHandle()).toBe('');
+      expect(component.kpSyncedTitle()).toBeNull();
+      expect(component.kpHandleError()).toBeNull();
+    });
   });
 
   it('should reset reporting way on project change', () => {

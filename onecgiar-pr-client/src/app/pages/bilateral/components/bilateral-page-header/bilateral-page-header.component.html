@@ -1,6 +1,6 @@
 @if (ctx.centerAcronym()) {
   <div class="sticky top-0 z-20 flex-none bg-[var(--pr-surface-band)]">
-    <div class="relative flex flex-col justify-center gap-[6px] px-[32px] py-[20px]">
+    <div class="relative flex h-[88px] flex-col justify-center gap-[6px] px-[32px]">
       <div class="flex items-center gap-[7px]">
         <span class="h-[8px] w-[8px] shrink-0 rounded-full bg-[var(--pr-color-primary-300)]"></span>
         <span
@@ -9,23 +9,25 @@
         </span>
       </div>
 
-      <h1
-        class="m-0 min-w-0 truncate pr-[220px] text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
-        {{ ctx.centerAcronym() }}
-      </h1>
+      <div class="min-w-0 pr-[220px]">
+        <h1
+          class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
+          {{ ctx.centerAcronym() }}
+        </h1>
 
-      @if (ctx.centerName()) {
-        <p class="m-0 min-w-0 truncate pr-[220px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
-          {{ ctx.centerName() }}
-        </p>
-      }
+        @if (ctx.centerName()) {
+          <p class="m-0 min-w-0 truncate text-[13px] font-normal text-[var(--pr-text-secondary)]">
+            {{ ctx.centerName() }}
+          </p>
+        }
+      </div>
 
       @if (activeTab()) {
         <a
-          class="absolute right-[32px] top-[24px] z-[22] flex h-[36px] shrink-0 items-center gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
+          class="absolute right-[32px] top-[68px] z-[22] flex h-[36px] shrink-0 -translate-y-1/2 items-center gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
           [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']">
           <i class="pi pi-bolt text-[14px]"></i>
-          Report emerging result
+          {{ reportCtaLabel() }}
         </a>
       }
     </div>

@@ -62,6 +62,50 @@
           </div>
         </div>
 
+        @if (isKnowledgeProductType()) {
+          <div id="bcr-kp-handle-section" class="bcr-type-section">
+            <label class="bcr-label" for="bcr-kp-handle">Repository link/handle <span class="bcr-required">*</span></label>
+            <div class="flex items-start gap-[8px]">
+              <input
+                id="bcr-kp-handle"
+                type="text"
+                class="w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] py-[10px] text-[14px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)]"
+                placeholder="https://cgspace.cgiar.org/handle/10568/175322"
+                [value]="kpHandle()"
+                (input)="onKpHandleInput($any($event.target).value)" />
+              <button
+                type="button"
+                class="flex h-[42px] shrink-0 items-center gap-[6px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white transition-colors hover:bg-[var(--pr-color-primary-400)] disabled:cursor-wait disabled:opacity-60"
+                [disabled]="!kpHandle().trim() || validatingKpHandle()"
+                (click)="syncKpHandle()">
+                <i class="material-icons-round text-[18px]" [class.animate-spin]="validatingKpHandle()">sync</i>
+                {{ validatingKpHandle() ? 'Syncing…' : 'Sync' }}
+              </button>
+            </div>
+            <p class="mt-[6px] text-[12px] text-[var(--pr-text-subtle)]">
+              The result is created automatically from CGSpace, MELSpace, or WorldFish DSpace — title, description, and metadata are populated from this handle.
+              Click "Sync" to verify the handle and preview the title before creating the result.
+            </p>
+
+            @if (kpHandleError()) {
+              <p class="mt-[6px] text-[12px] text-[var(--pr-color-red-300)]">{{ kpHandleError() }}</p>
+            }
+
+            @if (kpSyncedTitle()) {
+              <div class="mt-[10px]">
+                <label class="bcr-label" for="bcr-kp-title-preview">Title retrieved from the repository</label>
+                <input
+                  id="bcr-kp-title-preview"
+                  type="text"
+                  disabled
+                  readonly
+                  class="w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[12px] py-[10px] text-[14px] text-[var(--pr-text-heading)] outline-none"
+                  [value]="kpSyncedTitle()" />
+              </div>
+            }
+          </div>
+        }
+
         <div id="bcr-actions" class="bcr-actions">
           <button class="bcr-create-btn" (click)="onNext()" [disabled]="!canCreate || isCreatingResult()" type="button">
             {{ isCreatingResult() ? 'Creating result...' : 'Next' }}
