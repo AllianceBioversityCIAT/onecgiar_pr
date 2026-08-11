@@ -129,18 +129,25 @@ export class SectionTocComponent implements OnInit {
     return (result?.indicators ?? []).map((ind: any) => {
       const matchInfo = this.getIndicatorMatchInfo(ind);
       let badges = '';
+      let select_badge = '';
+      let select_badge_tone = 'neutral';
       if (matchInfo.cssClass === 'bp-toc-match--match') {
+        select_badge = `Match · ${this.resultTypeLabel()}`;
+        select_badge_tone = 'match';
         if (ind.unit_messurament) {
           badges += ` · ${this.escapeHtml(ind.unit_messurament)}`;
         }
         badges += ` · Target: ${this.escapeHtml(String(ind.targets?.[0]?.target_value ?? 'N/A'))}`;
       } else if (matchInfo.cssClass === 'bp-toc-match--other') {
-        badges += ` · [${this.escapeHtml(matchInfo.label)}]`;
+        select_badge = 'Review needed';
+        select_badge_tone = 'review';
       }
       return {
         ...ind,
         matchInfo,
         select_label: `${this.escapeHtml(this.toPlainText(ind.indicator_description) || 'Unnamed')}${badges}`,
+        select_badge,
+        select_badge_tone,
       };
     });
   });

@@ -363,6 +363,8 @@ describe('SectionTocComponent', () => {
       ]);
       component.selectedTocResultId.set(1);
       expect(component.indicatorsList()[0].select_label).toBe('Desc · policies · Target: 12');
+      expect(component.indicatorsList()[0].select_badge).toBe('Match · Policy Change');
+      expect(component.indicatorsList()[0].select_badge_tone).toBe('match');
     });
 
     it('falls back to N/A when no target exists and no unit is given', () => {
@@ -384,7 +386,9 @@ describe('SectionTocComponent', () => {
         },
       ]);
       component.selectedTocResultId.set(1);
-      expect(component.indicatorsList()[0].select_label).toBe('D · [Innovation Development]');
+      expect(component.indicatorsList()[0].select_label).toBe('D');
+      expect(component.indicatorsList()[0].select_badge).toBe('Review needed');
+      expect(component.indicatorsList()[0].select_badge_tone).toBe('review');
     });
 
     it('adds no badge for neutral indicators and tolerates a missing indicators array', () => {
