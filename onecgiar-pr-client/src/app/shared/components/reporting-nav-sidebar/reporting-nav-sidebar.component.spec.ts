@@ -93,6 +93,9 @@ describe('ReportingNavSidebarComponent', () => {
     fontScaleMock = { set: jest.fn(), scale: signal('default') };
     notificationsMock = { updatesPopUpData: [] as any[] };
     sidebarMock = { state: signal('expanded'), isMobile: signal(false) };
+
+    // Pinned programmes persist in localStorage, so one test's pins would otherwise seed the next.
+    localStorage.clear();
   });
 
   afterEach(() => {
@@ -121,12 +124,16 @@ describe('ReportingNavSidebarComponent', () => {
     const paths = component.sections().map(s => s.path);
     expect(paths).not.toContain('result-framework-reporting');
     expect(paths).not.toContain('emerging');
-    // Reference order: Results Center before Bilateral before My Admin.
+    // Reference order: Results Center · Innovation Packages · Quality Assurance · Bilateral · My Admin.
+    // Bilateral used to be absent because its route carried `prHide: true` (GAP-ANALYSIS §1 S1).
     const result = paths.indexOf('result');
+    const qa = paths.indexOf('quality-assurance');
     const bilateral = paths.indexOf('bilateral');
     const myAdmin = paths.indexOf('init-admin-module');
-    if (result >= 0 && bilateral >= 0) expect(result).toBeLessThan(bilateral);
-    if (bilateral >= 0 && myAdmin >= 0) expect(bilateral).toBeLessThan(myAdmin);
+    expect(bilateral).toBeGreaterThanOrEqual(0);
+    expect(result).toBeLessThan(bilateral);
+    expect(qa).toBeLessThan(bilateral);
+    if (myAdmin >= 0) expect(bilateral).toBeLessThan(myAdmin);
     expect(component.rfrPlannedPath).toBe(PLANNED);
     expect(component.programGroups().find(g => g.key === 'other')?.label).toBe('Other science programs');
     expect(component.fontScaleOptions.length).toBeGreaterThan(0);
@@ -333,6 +340,35 @@ describe('ReportingNavSidebarComponent', () => {
       expect(component.adminModuleExpanded()).toBe(true);
     });
 
+    // Task 7 — inside a result, "Results Center" is a LINK back to the table and the chevron is a
+    // separate action. The template is stubbed out in this suite (`set: { template: '' }`), so the
+    // link target is asserted on the helper both branches bind to, not on rendered DOM.
+    it('the Results Center row points at the same destination in and out of a result', async () => {
+      await build();
+      const section = component.sections().find(s => s.path === 'result')!;
+      expect(component.sectionRootLink(section)).toBe('/result');
+
+      navigateTo('/result/result-detail/1234/general-information');
+      expect(component.inResultDetail()).toBe(true);
+      // Entering a result must not change where the row goes — only add the chevron next to it.
+      expect(component.sectionRootLink(section)).toBe('/result');
+    });
+
+    it('the chevron still expands/collapses the result sections, and still no-ops on the rail', async () => {
+      await build('/result/result-detail/1234/general-information');
+      // Entering a result auto-opens the section list (unchanged behaviour).
+      expect(component.resultCenterExpanded()).toBe(true);
+
+      component.toggleResultCenter();
+      expect(component.resultCenterExpanded()).toBe(false);
+      component.toggleResultCenter();
+      expect(component.resultCenterExpanded()).toBe(true);
+
+      sidebarMock.state.set('collapsed');
+      component.toggleResultCenter();
+      expect(component.resultCenterExpanded()).toBe(true);
+    });
+
     it('toggleGroup adds and removes a program group', async () => {
       await build();
       expect(component.isGroupOpen('mine')).toBe(true);
@@ -472,12 +508,12 @@ describe('ReportingNavSidebarComponent', () => {
     // not carry a result count. Its three tests went with it — a passing test for unreachable
     // code is worse than no test, it reads as coverage.
 
-    it('railPrograms exposes only the user\'s own programmes', async () => {
+    it('railPrograms exposes the user\'s own programmes and nothing unpinned', async () => {
       homeMock.mySPsList.set([{ initiativeId: 1, initiativeCode: 'SP01' }]);
       homeMock.otherSPsList.set([{ initiativeId: 2, initiativeCode: 'SP99' }]);
       await build();
-      // The collapsed rail has no room for "other programmes" — listing them there would push the
-      // user's own off-screen, and the reference uses a dashed "+" affordance for the rest.
+      // Projects and unpinned "other" programmes stay off the rail — listing them all would push
+      // the user's own off-screen.
       expect(component.railPrograms().map((sp: any) => sp.initiativeCode)).toEqual(['SP01']);
     });
 
@@ -524,6 +560,156 @@ describe('ReportingNavSidebarComponent', () => {
   // topbar (PROGRAM-SHELL-SPEC.md §2). Its getters and their specs moved to
   // shell-topbar.component.spec.ts; what stays here is the centres / notifications /
   // text-size chrome the sidebar still owns.
+  // ------------------------------------------------------------- pinned programmes
+  describe('pinned programmes (favourites)', () => {
+    const KEY = 'pr-sidebar-pinned-programs';
+    const sp = (id: number, code: string) => ({ initiativeId: id, initiativeCode: code, initiativeName: code });
+    /** A click on the star also hits the row's routerLink, so both must be stopped. */
+    const clickEvent = () => ({ preventDefault: jest.fn(), stopPropagation: jest.fn() }) as unknown as Event;
+
+    const seedOthers = (...codes: string[]) => homeMock.otherSPsList.set(codes.map((c, i) => sp(100 + i, c)));
+
+    it('starts empty when nothing was ever pinned', async () => {
+      await build();
+      expect(component.pinnedCodes()).toEqual([]);
+      expect(component.canPinMore()).toBe(true);
+    });
+
+    it('restores the pinned codes from localStorage, clamped to the cap', async () => {
+      localStorage.setItem(KEY, JSON.stringify(['SP01', 'SP02', 'SP03', 'SP04', 'SP05', 'SP06']));
+      await build();
+      expect(component.pinnedCodes()).toEqual(['SP01', 'SP02', 'SP03', 'SP04', 'SP05']);
+      expect(component.canPinMore()).toBe(false);
+    });
+
+    it('survives a stored value that is not JSON', async () => {
+      localStorage.setItem(KEY, '{not json');
+      await build();
+      expect(component.pinnedCodes()).toEqual([]);
+    });
+
+    it('survives a stored value that is not an array', async () => {
+      localStorage.setItem(KEY, JSON.stringify({ SP01: true }));
+      await build();
+      expect(component.pinnedCodes()).toEqual([]);
+    });
+
+    it('drops non-string and empty entries from the stored list', async () => {
+      localStorage.setItem(KEY, JSON.stringify(['SP01', 7, null, '']));
+      await build();
+      expect(component.pinnedCodes()).toEqual(['SP01']);
+    });
+
+    it('pins, persists, and never lets the star navigate the row', async () => {
+      seedOthers('SP10');
+      await build();
+
+      const event = clickEvent();
+      component.togglePin('SP10', event);
+
+      expect(component.pinnedCodes()).toEqual(['SP10']);
+      expect(JSON.parse(localStorage.getItem(KEY) as string)).toEqual(['SP10']);
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(event.stopPropagation).toHaveBeenCalled();
+    });
+
+    it('unpins an already pinned programme and clears its warning', async () => {
+      localStorage.setItem(KEY, JSON.stringify(['SP10']));
+      await build();
+      component.pinLimitWarningCode.set('SP10');
+
+      component.togglePin('SP10', clickEvent());
+
+      expect(component.pinnedCodes()).toEqual([]);
+      expect(component.pinLimitWarningCode()).toBeNull();
+      expect(JSON.parse(localStorage.getItem(KEY) as string)).toEqual([]);
+    });
+
+    it('ignores a missing code', async () => {
+      await build();
+      component.togglePin(null, clickEvent());
+      component.togglePin(undefined, clickEvent());
+      expect(component.pinnedCodes()).toEqual([]);
+    });
+
+    it('refuses the 6th pin and raises the "up to 5" tooltip on that row', async () => {
+      localStorage.setItem(KEY, JSON.stringify(['SP01', 'SP02', 'SP03', 'SP04', 'SP05']));
+      await build();
+
+      component.togglePin('SP06', clickEvent());
+
+      expect(component.pinnedCodes()).toHaveLength(5);
+      expect(component.pinnedCodes()).not.toContain('SP06');
+      expect(component.pinLimitWarningCode()).toBe('SP06');
+    });
+
+    it('warns on hover only while the cap is reached, and clears on leave', async () => {
+      localStorage.setItem(KEY, JSON.stringify(['SP01', 'SP02', 'SP03', 'SP04']));
+      await build();
+
+      // Room left → no tooltip.
+      component.onOtherRowEnter('SP09');
+      expect(component.pinLimitWarningCode()).toBeNull();
+
+      component.togglePin('SP05', clickEvent()); // now full
+      component.onOtherRowEnter('SP09');
+      expect(component.pinLimitWarningCode()).toBe('SP09');
+
+      // An already pinned row is not "blocked", so it must not warn.
+      component.onOtherRowLeave('SP09');
+      component.onOtherRowEnter('SP05');
+      expect(component.pinLimitWarningCode()).toBeNull();
+
+      // Leaving a different row must not clear someone else's tooltip.
+      component.onOtherRowEnter('SP09');
+      component.onOtherRowLeave('SP08');
+      expect(component.pinLimitWarningCode()).toBe('SP09');
+      component.onOtherRowLeave('SP09');
+      expect(component.pinLimitWarningCode()).toBeNull();
+    });
+
+    it('pinnedPrograms keeps the PIN order and drops codes that no longer resolve', async () => {
+      localStorage.setItem(KEY, JSON.stringify(['SP30', 'SP10', 'SP-GONE']));
+      seedOthers('SP10', 'SP20', 'SP30');
+      await build();
+
+      expect(component.pinnedPrograms().map((p: any) => p.initiativeCode)).toEqual(['SP30', 'SP10']);
+      expect(component.isPinned('SP30')).toBe(true);
+      expect(component.isPinned('SP20')).toBe(false);
+      expect(component.isPinned(null)).toBe(false);
+    });
+
+    it('otherProgramsRest excludes whatever the pinned block already shows', async () => {
+      localStorage.setItem(KEY, JSON.stringify(['SP20']));
+      seedOthers('SP10', 'SP20', 'SP30');
+      await build();
+      expect(component.otherProgramsRest().map((p: any) => p.initiativeCode)).toEqual(['SP10', 'SP30']);
+    });
+
+    it('carries the pinned favourites onto the collapsed rail, deduped against "my" programmes', async () => {
+      localStorage.setItem(KEY, JSON.stringify(['SP20', 'SP01']));
+      homeMock.mySPsList.set([sp(1, 'SP01')]);
+      // SP01 is both a member programme and (stale) pinned — it must appear once.
+      homeMock.otherSPsList.set([sp(2, 'SP20'), sp(1, 'SP01')]);
+      await build();
+
+      expect(component.railPrograms().map((p: any) => p.initiativeCode)).toEqual(['SP01', 'SP20']);
+    });
+
+    it('keeps the pins session-only when localStorage refuses to write', async () => {
+      seedOthers('SP10');
+      await build();
+      const setItem = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      expect(() => component.togglePin('SP10', clickEvent())).not.toThrow();
+      expect(component.pinnedCodes()).toEqual(['SP10']);
+
+      setItem.mockRestore();
+    });
+  });
+
   describe('sidebar chrome', () => {
     it('no longer exposes the user-menu members the topbar owns', async () => {
       await build();

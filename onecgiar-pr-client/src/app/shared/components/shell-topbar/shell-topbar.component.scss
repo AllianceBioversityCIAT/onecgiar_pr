@@ -3,9 +3,16 @@
  * Phase chip deferred.
  */
 
+// The sticky lives on the HOST, not on the inner `<header>`: a sticky element can only travel
+// inside its own containing block, and the host box is exactly 56px tall — the bar scrolled away
+// with the page. The host is a flex child of `<main>`, which spans the whole document, so pinning
+// it there keeps the bar on screen for the full scroll.
 :host {
   display: block;
   flex: none;
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 
 .pr-shell-topbar {
@@ -16,9 +23,6 @@
   padding: 0 16px;
   background: #ffffff;
   border-bottom: 1px solid var(--pr-border, #e3e3e8);
-  position: sticky;
-  top: 0;
-  z-index: 30;
 }
 
 .pr-topbar-icon-btn {

@@ -111,9 +111,15 @@ export const routingApp: PrRoute[] = [
     loadComponent: () => import('../../pages/rfr-explanation/rfr-explanation.component').then(m => m.RfrExplanationComponent)
   },
   {
+    // `prHide` was `true` while the bilateral module was being built. The approved reference lists
+    // "Bilateral Results" as the 4th PLATFORM entry (GAP-ANALYSIS-2026-08-11 §1 S1) and
+    // `PLATFORM_ORDER` in the nav sidebar already reserves its slot, so the route is now visible.
+    // The only other reader of `prHide` over `routingApp` is `NavigationBarComponent`, which renders
+    // exclusively inside `HeaderPanelComponent` — no longer mounted by any template since the Spartan
+    // sidebar replaced the old header. So nothing else changes by unhiding it.
     prName: 'Bilateral Results',
     underConstruction: false,
-    prHide: true,
+    prHide: false,
     canActivate: [CheckLoginGuard],
     path: 'bilateral',
     loadChildren: () => import('../../pages/bilateral/bilateral.module').then(m => m.BilateralModule)

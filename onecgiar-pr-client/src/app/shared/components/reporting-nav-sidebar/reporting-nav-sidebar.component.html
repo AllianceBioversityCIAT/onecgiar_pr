@@ -6,7 +6,17 @@
       [class.justify-between]="!isCollapsed()"
       [class.justify-center]="isCollapsed()">
       <div class="flex min-w-0 items-center gap-[10px]" [class.justify-center]="isCollapsed()">
-        <img src="assets/brand/prms-logo.png" alt="PRMS" class="h-[32px] w-[32px] shrink-0 rounded-[8px]" />
+        <!-- Typographic 32×32 brand tile (reference). It replaces assets/brand/prms-logo.png: the PNG
+             is a raster square that turned to mush at 32px on the rail, and the reference tints the
+             tile differently per state — violet wash expanded, plain white wash on the rail — which a
+             flat image cannot do. `aria-hidden` + the sr-only name keep it announced once. -->
+        <div
+          class="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] text-[13px] font-bold leading-none tracking-[0.02em] text-white"
+          [style.background]="isCollapsed() ? 'rgba(255, 255, 255, 0.12)' : 'rgba(109, 75, 226, 0.42)'"
+          aria-hidden="true">
+          PR
+        </div>
+        <span class="sr-only">PRMS Reporting</span>
         @if (!isCollapsed()) {
           <div class="flex min-w-0 flex-col gap-px">
             <span class="text-[16px] font-semibold leading-none tracking-[-0.01em] text-white">PRMS</span>
@@ -123,22 +133,74 @@
                 @if (isGroupOpen(group.key)) {
                   <div class="pr-nav-others-wrap">
                     <div class="pr-nav-others-list">
-                      @for (sp of group.items; track sp.initiativeId) {
-                        <a
+                      <!-- Pinned favourites ride at the top of the SAME scroll box as the rest,
+                           separated by a hairline (reference). Only "Other science programs" is
+                           pinnable — "my" programmes are already permanent, and projects are not
+                           part of the reference's favourites model. -->
+                      @if (isPinnable(group) && pinnedPrograms().length) {
+                        @for (sp of pinnedPrograms(); track sp.initiativeId) {
+                          <!-- The row is a DIV wrapping the link, not an <a> itself: the star is a
+                               real <button>, and an interactive control nested inside an anchor is
+                               invalid HTML and an ARIA violation (two focusables, one name). -->
+                          <div class="pr-nav-program-row" [class.pr-nav-program-row--active]="sp.initiativeCode === activeSpCode()">
+                            <a
+                              class="pr-nav-program-link"
+                              [routerLink]="programLink(sp)"
+                              [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
+                              [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
+                              <span class="pr-nav-program-dot pr-nav-program-dot--sm" [style.background]="programDotColor(sp.initiativeCode)"></span>
+                              <span class="pr-nav-program-code pr-nav-program-code--sm">{{ sp.initiativeCode }}</span>
+                              <span class="pr-nav-program-name pr-nav-program-name--sm">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                            </a>
+                            <button
+                              type="button"
+                              class="pr-nav-pin pr-nav-pin--on"
+                              (click)="togglePin(sp.initiativeCode, $event)"
+                              [attr.aria-label]="'Unpin ' + sp.initiativeCode"
+                              [attr.aria-pressed]="true">
+                              <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">star</i>
+                            </button>
+                          </div>
+                        }
+                        <div class="pr-nav-pinned-divider" aria-hidden="true"></div>
+                      }
+
+                      @for (sp of rowsOf(group); track sp.initiativeId) {
+                        <div
                           class="pr-nav-program-row"
                           [class.pr-nav-program-row--active]="sp.initiativeCode === activeSpCode()"
-                          [routerLink]="programLink(sp)"
-                          [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
-                          [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
-                          <span class="pr-nav-program-dot pr-nav-program-dot--sm" [style.background]="programDotColor(sp.initiativeCode)"></span>
-                          <span class="pr-nav-program-code pr-nav-program-code--sm">{{ sp.initiativeCode }}</span>
-                          <span class="pr-nav-program-name pr-nav-program-name--sm">{{ sp.initiativeShortName || sp.initiativeName }}</span>
-                        </a>
+                          (mouseenter)="isPinnable(group) && onOtherRowEnter(sp.initiativeCode)"
+                          (mouseleave)="isPinnable(group) && onOtherRowLeave(sp.initiativeCode)">
+                          <a
+                            class="pr-nav-program-link"
+                            [routerLink]="programLink(sp)"
+                            [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
+                            [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
+                            <span class="pr-nav-program-dot pr-nav-program-dot--sm" [style.background]="programDotColor(sp.initiativeCode)"></span>
+                            <span class="pr-nav-program-code pr-nav-program-code--sm">{{ sp.initiativeCode }}</span>
+                            <span class="pr-nav-program-name pr-nav-program-name--sm">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                          </a>
+                          @if (isPinnable(group)) {
+                            <button
+                              type="button"
+                              class="pr-nav-pin"
+                              (click)="togglePin(sp.initiativeCode, $event)"
+                              [attr.aria-label]="'Pin ' + sp.initiativeCode"
+                              [attr.aria-pressed]="false"
+                              [attr.aria-describedby]="pinLimitWarningCode() === sp.initiativeCode ? 'pr-nav-pin-limit' : null">
+                              <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">star_border</i>
+                            </button>
+                            @if (pinLimitWarningCode() === sp.initiativeCode) {
+                              <span id="pr-nav-pin-limit" class="pr-nav-pin-tip" role="tooltip">You can pin up to 5 programs.</span>
+                            }
+                          }
+                        </div>
                       }
                     </div>
-                    @if (group.items.length > 6) {
-                      <div class="pr-nav-others-fade" aria-hidden="true"></div>
-                    }
+                    <!-- The fade is the affordance that says "this box scrolls", so it stays on
+                         whenever the block is open — the old `> 6` guard hid it exactly when the
+                         list was short enough to be ambiguous. -->
+                    <div class="pr-nav-others-fade" aria-hidden="true"></div>
                   </div>
                 }
               }
@@ -260,7 +322,7 @@
                 @if (!inResultDetail()) {
                   <a
                     hlmSidebarMenuButton
-                    [routerLink]="'/' + section.path"
+                    [routerLink]="sectionRootLink(section)"
                     routerLinkActive
                     #rlaResult="routerLinkActive"
                     [isActive]="rlaResult.isActive"
@@ -269,27 +331,45 @@
                     <span>{{ section.prName }}</span>
                   </a>
                 } @else {
-                  <button
+                  <!-- Inside a result the row is SPLIT into two hit targets, the standard tree
+                       pattern: the label keeps the destination it has everywhere else (the results
+                       table), and the chevron owns expand/collapse. Folding both into one button
+                       made the row's behaviour depend on hidden state — the section list
+                       auto-expands on entry, so the very first click already meant something
+                       different from the second.
+                       The native `title` is suppressed on the icon rail: `hlmSidebarMenuButton`
+                       enables its own Brn tooltip exactly there, and the two fired together. -->
+                  <a
                     hlmSidebarMenuButton
-                    type="button"
-                    (click)="toggleResultCenter()"
+                    [routerLink]="sectionRootLink(section)"
                     [isActive]="true"
-                    [attr.aria-expanded]="!isCollapsed() && resultCenterExpanded()"
-                    [attr.aria-label]="section.prName">
+                    tooltip="Back to all results"
+                    [attr.aria-label]="'Back to ' + section.prName"
+                    [attr.title]="isCollapsed() ? null : 'Back to all results'">
                     <ng-icon [name]="iconFor(section)" />
                     <span>{{ section.prName }}</span>
-                    @if (!isCollapsed()) {
+                  </a>
+                  @if (!isCollapsed()) {
+                    <!-- `hlmSidebarMenuAction` is the right-edge affordance slot of a menu item:
+                         absolutely placed against the item, and auto-hidden on the icon rail. -->
+                    <button
+                      hlmSidebarMenuAction
+                      type="button"
+                      (click)="toggleResultCenter()"
+                      [attr.aria-expanded]="resultCenterExpanded()"
+                      aria-controls="pr-nav-result-sections"
+                      aria-label="Toggle result sections">
                       <ng-icon
                         name="lucideChevronDown"
-                        class="ms-auto text-[16px] transition-transform duration-200"
+                        class="text-[16px] transition-transform duration-200"
                         [class.rotate-180]="resultCenterExpanded()" />
-                    }
-                  </button>
+                    </button>
+                  }
 
                   <!-- Sections render like any other sidebar nav children (dark, with icons +
                        green-check), same as My Admin / Admin module. -->
                   @if (!isCollapsed() && resultCenterExpanded()) {
-                    <ul hlmSidebarMenuSub>
+                    <ul hlmSidebarMenuSub id="pr-nav-result-sections">
                       @for (sec of resultSections(); track sec.path) {
                         <li hlmSidebarMenuSubItem>
                           <a
@@ -353,7 +433,7 @@
               <li hlmSidebarMenuItem>
                 <a
                   hlmSidebarMenuButton
-                  [routerLink]="'/' + section.path"
+                  [routerLink]="sectionRootLink(section)"
                   routerLinkActive
                   #rla="routerLinkActive"
                   [isActive]="rla.isActive"
@@ -368,8 +448,9 @@
       </div>
     </div>
 
-    <div hlmSidebarSeparator></div>
-
+    <!-- No rule between PLATFORM and EXTRAS: the reference separates them with the EXTRAS label's
+         own `padding-top: 20px` alone. The `hlmSidebarSeparator` that used to sit here read as a
+         second, competing divider next to the real one above the programme block. -->
     <div hlmSidebarGroup class="pr-nav-extras">
       @if (!isCollapsed()) {
         <div class="pr-nav-section-label pr-nav-section-label--extras">Extras</div>
@@ -415,47 +496,11 @@
     </div>
   </div>
 
-  <!-- Footer = Result metadata ONLY. There is no user chip here: Account lives in the TOPBAR
-       (PROGRAM-SHELL-SPEC.md §2); the platform role badge the chip carried moved to the topbar
-       user menu. The whole footer is conditional now — with the chip gone it would otherwise
-       render as an empty bordered strip on every non-result page. -->
-  @if (inResultDetail() && !isCollapsed()) {
-    <div hlmSidebarFooter class="border-sidebar-border gap-2 border-t p-2">
-      <!-- Result metadata — the white rounded container: sits at the very bottom, separated
-           from the dark nav, primary-tinted text. Reads as a distinct reference card. -->
-      <div class="rounded-xl bg-white p-2.5 shadow-[0_6px_18px_rgba(var(--pr-color-black-rgb),0.28)]">
-        <p class="mb-1.5 text-[9px] font-bold uppercase tracking-[1px] text-[var(--pr-color-primary-300)]">Result metadata</p>
-        <dl class="m-0 flex flex-col gap-1">
-          <div class="flex items-baseline justify-between gap-2 text-[10px]">
-            <dt class="shrink-0 text-[var(--pr-color-accents-5)]">Code</dt>
-            <dd class="m-0 text-right font-semibold text-[var(--pr-color-primary-500)]">{{ api.resultsSE.currentResultCode }}</dd>
-          </div>
-          <div class="flex items-baseline justify-between gap-2 text-[10px]">
-            <dt class="shrink-0 text-[var(--pr-color-accents-5)]">Status</dt>
-            <dd class="m-0 text-right font-semibold text-[var(--pr-color-primary-500)]">{{ dataControlSE.currentResult?.status_name }}</dd>
-          </div>
-          <div class="flex items-baseline justify-between gap-2 text-[10px]">
-            <dt class="shrink-0 text-[var(--pr-color-accents-5)]">Level</dt>
-            <dd class="m-0 text-right font-semibold text-[var(--pr-color-primary-500)]">{{ dataControlSE.currentResult?.result_level_name }}</dd>
-          </div>
-          <div class="flex items-baseline justify-between gap-2 text-[10px]">
-            <dt class="shrink-0 text-[var(--pr-color-accents-5)]">Category</dt>
-            <dd class="m-0 text-right font-semibold text-[var(--pr-color-primary-500)]">{{ dataControlSE.currentResult?.result_type_name }}</dd>
-          </div>
-          <div class="flex items-baseline justify-between gap-2 text-[10px]">
-            <dt class="shrink-0 text-[var(--pr-color-accents-5)]">Submitter</dt>
-            <dd class="m-0 text-right font-semibold text-[var(--pr-color-primary-500)]">
-              {{ dataControlSE.currentResult?.initiative_official_code }}{{ dataControlSE.currentResult?.initiative_name ? ' · ' + dataControlSE.currentResult?.initiative_name : '' }}
-            </dd>
-          </div>
-          <div class="flex items-baseline justify-between gap-2 text-[10px]">
-            <dt class="shrink-0 text-[var(--pr-color-accents-5)]">Funding</dt>
-            <dd class="m-0 text-right font-semibold text-[var(--pr-color-primary-500)]">{{ dataControlSE.currentResult?.source_name }}</dd>
-          </div>
-        </dl>
-      </div>
-    </div>
-  }
+  <!-- No footer. The RESULT METADATA card that used to live here moved into the result-detail
+       content, next to "Phases:", where it can also be popped out as a floating card
+       (`shared/components/result-metadata/`). Rendering it in both places would show the same six
+       fields twice. Account lives in the TOPBAR (PROGRAM-SHELL-SPEC.md §2), so nothing else is
+       left for a footer slot. -->
 
   <button type="button" hlmSidebarRail aria-label="Toggle sidebar"></button>
 </hlm-sidebar>

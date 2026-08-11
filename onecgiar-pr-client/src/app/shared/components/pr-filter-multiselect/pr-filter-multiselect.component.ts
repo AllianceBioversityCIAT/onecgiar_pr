@@ -38,6 +38,12 @@ export class PrFilterMultiselectComponent implements ControlValueAccessor {
   @Input() group = false;
   @Input() optionGroupChildren: string;
   @Input() optionGroupLabel = 'name';
+  /**
+   * Noun for the trigger when more than one option is picked ("3 sections"). When set, a single
+   * selection shows that option's own label instead of "1 …" — the reference behaviour for the
+   * reporting Section filter. Left unset the trigger keeps the historical "N selected".
+   */
+  @Input() countLabel: string;
   @Output() changed = new EventEmitter<any[]>();
 
   value: any[] = [];
@@ -96,9 +102,21 @@ export class PrFilterMultiselectComponent implements ControlValueAccessor {
     return list.filter(o => `${this.optionLabel ? o?.[this.optionLabel] : o}`.toLowerCase().includes(q));
   }
 
+  /** Flattens grouped options so a selected value can be resolved back to its label. */
+  private get allOptions(): any[] {
+    const opts = this.options || [];
+    return this.group ? opts.flatMap(g => g?.[this.optionGroupChildren] || []) : opts;
+  }
+
   get triggerLabel(): string {
-    const count = (this.value || []).length;
-    return count ? `${count} selected` : this.placeholder;
+    const selected = this.value || [];
+    if (!selected.length) return this.placeholder;
+    if (!this.countLabel) return `${selected.length} selected`;
+    if (selected.length === 1) {
+      const option = this.allOptions.find(o => this.valueOf(o) === selected[0]);
+      if (option) return this.optionLabel ? option[this.optionLabel] : option;
+    }
+    return `${selected.length} ${this.countLabel}`;
   }
 
   removeFocus(el: HTMLElement): void {

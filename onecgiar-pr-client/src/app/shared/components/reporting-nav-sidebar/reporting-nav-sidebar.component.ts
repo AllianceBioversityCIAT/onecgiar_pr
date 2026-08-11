@@ -179,10 +179,11 @@ export class ReportingNavSidebarComponent {
   ];
 
   /** Platform Admin module children (admin-only). Mirrors admin-section.sections. */
+  /** Sentence case throughout, matching the reference and the two siblings already spelled that way. */
   readonly adminModuleLinks: NavSubLink[] = [
-    { name: 'Tickets Dashboard', path: '/admin-module/tickets-dashboard', icon: 'lucideTicket' },
+    { name: 'Tickets dashboard', path: '/admin-module/tickets-dashboard', icon: 'lucideTicket' },
     { name: 'Phase management', path: '/admin-module/phase-management', icon: 'lucideLayers' },
-    { name: 'Knowledge Products', path: '/admin-module/knowledge-products', icon: 'lucideBookOpen' },
+    { name: 'Knowledge products', path: '/admin-module/knowledge-products', icon: 'lucideBookOpen' },
     { name: 'User management', path: '/admin-module/user-management', icon: 'lucideUserCog' }
   ];
 
@@ -248,12 +249,126 @@ export class ReportingNavSidebarComponent {
   /** Ensures the (lazy) programs fetch is triggered at most once. */
   private rfrLoadTriggered = false;
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // Pinned programmes (favourites) — reference: a star on every "Other science
+  // programs" row, capped at 5, pinned ones lifted into their own block above
+  // the rest and carried onto the collapsed rail.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /** localStorage key. Project convention: every key this app owns starts with `pr-`. */
+  private static readonly PINNED_STORAGE_KEY = 'pr-sidebar-pinned-programs';
+
+  /** The reference caps favourites at 5 and shows a tooltip when a 6th is attempted. */
+  static readonly MAX_PINNED = 5;
+
+  /** Pinned programme CODES, in the order the user pinned them. Survives reloads. */
+  readonly pinnedCodes = signal<string[]>(ReportingNavSidebarComponent.readPinnedCodes());
+
   /**
-   * Programmes shown on the collapsed icon rail — the user's own only. The rail has no room for
-   * "other programmes" or projects, and the reference shows a dashed "+" affordance for those
-   * instead of listing them.
+   * Code of the row currently showing the "you can pin up to 5 programs." tooltip.
+   * Kept as a single code rather than a boolean so only the hovered/attempted row shows it.
    */
-  readonly railPrograms = computed<SPProgress[]>(() => this.homeSE.mySPsList() ?? []);
+  readonly pinLimitWarningCode = signal<string | null>(null);
+
+  /** Whether the user still has room for another favourite. */
+  readonly canPinMore = computed(() => this.pinnedCodes().length < ReportingNavSidebarComponent.MAX_PINNED);
+
+  /**
+   * Pinned programmes resolved against the "other" list, in PIN order (not API order) —
+   * a favourites list that reshuffles itself on every fetch is not a favourites list.
+   * Codes that no longer resolve (programme gone from the user's portfolio) simply drop out.
+   */
+  readonly pinnedPrograms = computed<SPProgress[]>(() => {
+    const others = this.homeSE.otherSPsList() ?? [];
+    return this.pinnedCodes()
+      .map(code => others.find(sp => sp.initiativeCode === code))
+      .filter((sp): sp is SPProgress => !!sp);
+  });
+
+  /** "Other science programs" minus whatever is already rendered in the pinned block. */
+  readonly otherProgramsRest = computed<SPProgress[]>(() => {
+    const pinned = new Set(this.pinnedCodes());
+    return (this.homeSE.otherSPsList() ?? []).filter(sp => !pinned.has(sp.initiativeCode));
+  });
+
+  /** Rows a collapsible group renders: "other" hides whatever the pinned block already shows. */
+  rowsOf(group: ProgramGroup): SPProgress[] {
+    return group.key === 'other' ? this.otherProgramsRest() : group.items;
+  }
+
+  /** Only "Other science programs" is pinnable — "my" programmes are permanent by definition. */
+  isPinnable(group: ProgramGroup): boolean {
+    return group.key === 'other';
+  }
+
+  isPinned(code: string | null | undefined): boolean {
+    return !!code && this.pinnedCodes().includes(code);
+  }
+
+  /**
+   * Pin / unpin from a row that is itself a router link — hence the explicit
+   * `preventDefault()`: without it the click both toggles the star AND navigates away.
+   */
+  togglePin(code: string | null | undefined, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!code) return;
+
+    const current = this.pinnedCodes();
+    if (current.includes(code)) {
+      this.persistPinned(current.filter(c => c !== code));
+      if (this.pinLimitWarningCode() === code) this.pinLimitWarningCode.set(null);
+      return;
+    }
+    if (current.length >= ReportingNavSidebarComponent.MAX_PINNED) {
+      // Silently ignoring the click reads as a broken button, so explain the cap instead.
+      this.pinLimitWarningCode.set(code);
+      return;
+    }
+    this.persistPinned([...current, code]);
+  }
+
+  /** Hovering an unpinnable row explains WHY the star will not take, before the click. */
+  onOtherRowEnter(code: string | null | undefined): void {
+    if (code && !this.canPinMore() && !this.isPinned(code)) this.pinLimitWarningCode.set(code);
+  }
+
+  onOtherRowLeave(code: string | null | undefined): void {
+    if (this.pinLimitWarningCode() === code) this.pinLimitWarningCode.set(null);
+  }
+
+  private persistPinned(codes: string[]): void {
+    this.pinnedCodes.set(codes);
+    try {
+      localStorage.setItem(ReportingNavSidebarComponent.PINNED_STORAGE_KEY, JSON.stringify(codes));
+    } catch {
+      // Private-browsing / quota errors must not take the navigation down: the pins simply
+      // stay session-only.
+    }
+  }
+
+  private static readPinnedCodes(): string[] {
+    try {
+      const raw = localStorage.getItem(ReportingNavSidebarComponent.PINNED_STORAGE_KEY);
+      const parsed: unknown = raw ? JSON.parse(raw) : null;
+      if (!Array.isArray(parsed)) return [];
+      // Re-clamp on read: the cap could have been lowered, or the value hand-edited.
+      return parsed.filter((c): c is string => typeof c === 'string' && !!c).slice(0, ReportingNavSidebarComponent.MAX_PINNED);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Programmes shown on the collapsed icon rail — the user's own, plus their pinned favourites
+   * (that is what pinning is FOR: reaching a non-member programme without expanding the sidebar).
+   * Projects are still excluded; the rail has no room for the full list.
+   */
+  readonly railPrograms = computed<SPProgress[]>(() => {
+    const mine = this.homeSE.mySPsList() ?? [];
+    const mineCodes = new Set(mine.map(sp => sp.initiativeCode));
+    return [...mine, ...this.pinnedPrograms().filter(sp => !mineCodes.has(sp.initiativeCode))];
+  });
 
   // `?? []` is load-bearing, not defensive noise: the template reads `group.items.length`, so a
   // list that arrives undefined (a failed or in-flight fetch) crashed the whole sidebar with
@@ -468,6 +583,16 @@ export class ReportingNavSidebarComponent {
 
   iconFor(section: PrRoute): string {
     return this.sectionIcons[section.path ?? ''] ?? 'lucideCircleDot';
+  }
+
+  /**
+   * Router target of a Platform row. Deliberately shared by every branch of the template —
+   * including the in-result "Results Center" row — so the label always resolves to the same
+   * destination whether or not a result happens to be open. `/result` redirects through
+   * `results-outlet` to `results-list` (see `resultRouting` in `shared/routing/routing-data.ts`).
+   */
+  sectionRootLink(section: PrRoute): string {
+    return `/${section.path}`;
   }
 
   ensureRfrLoaded(): void {
