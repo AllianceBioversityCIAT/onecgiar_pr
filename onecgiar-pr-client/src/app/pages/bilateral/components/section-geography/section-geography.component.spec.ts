@@ -29,7 +29,10 @@ describe('SectionGeographyComponent', () => {
 
   beforeEach(async () => {
     manualSave$ = new Subject<void>();
-    creation = { currentResultId: signal<number | null>(77) };
+    creation = {
+      currentResultId: signal<number | null>(77),
+      isLoadingResult: signal(false),
+    };
     autoSave = {
       manualSave$,
       fieldStatus: signal<Record<string, string>>({}),
@@ -75,6 +78,21 @@ describe('SectionGeographyComponent', () => {
       build();
       fixture.detectChanges();
       expect(api.resultsSE.GET_geographicSectionp25).not.toHaveBeenCalled();
+    });
+
+    it('waits for the internal result id after a deep-link refresh', () => {
+      creation.currentResultId.set(8761);
+      creation.isLoadingResult.set(true);
+
+      build();
+      fixture.detectChanges();
+      expect(api.resultsSE.GET_geographicSectionp25).not.toHaveBeenCalled();
+
+      creation.currentResultId.set(77);
+      creation.isLoadingResult.set(false);
+      fixture.detectChanges();
+
+      expect(api.resultsSE.GET_geographicSectionp25).toHaveBeenCalledTimes(1);
     });
 
     it('ignores an empty response', () => {
@@ -129,6 +147,26 @@ describe('SectionGeographyComponent', () => {
       fixture.detectChanges();
       expect(mdsTracker.setSectionFields).toHaveBeenCalledTimes(1);
     });
+
+    it('does not overwrite a local change when the initial GET completes later', () => {
+      const pendingLoad$ = new Subject<any>();
+      api.resultsSE.GET_geographicSectionp25.mockReturnValue(pendingLoad$);
+
+      build();
+      fixture.detectChanges();
+      component.onScopeChange(GeoScopeEnum.GLOBAL);
+
+      pendingLoad$.next({
+        response: {
+          geo_scope_id: GeoScopeEnum.REGIONAL,
+          has_regions: true,
+          regions: [{ id: 1 }],
+        },
+      });
+
+      expect(component.geographicLocationBody().geo_scope_id).toBe(GeoScopeEnum.GLOBAL);
+      expect(component.geographicLocationBody().regions).toEqual([]);
+    });
   });
 
   // ── saving ───────────────────────────────────────────────────────────
@@ -165,6 +203,17 @@ describe('SectionGeographyComponent', () => {
       autoSave.fieldStatus.set({ geography: 'error' });
       build();
       expect(component.scopeStatus).toBe('error');
+    });
+
+    it('does not refresh geography with a GET after the PATCH executor completes', () => {
+      build();
+      component.queueGeographySave(0);
+
+      const options = autoSave.schedulePayload.mock.calls.at(-1)[2];
+      options.executor(77, { geo_scope_id: GeoScopeEnum.GLOBAL }).subscribe();
+
+      expect(bilateralApi.PATCH_geographic).toHaveBeenCalledWith(77, { geo_scope_id: GeoScopeEnum.GLOBAL });
+      expect(api.resultsSE.GET_geographicSectionp25).not.toHaveBeenCalled();
     });
 
     it('defaults the scope status to idle', () => {

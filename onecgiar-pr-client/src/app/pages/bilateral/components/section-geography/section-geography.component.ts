@@ -1,7 +1,6 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { tap } from 'rxjs';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { RegionsCountriesService } from '../../../../shared/services/global/regions-countries.service';
@@ -35,6 +34,15 @@ export class SectionGeographyComponent implements OnInit {
   readonly creationService = inject(BilateralCreationService);
   readonly autoSaveService = inject(BilateralAutoSaveService);
   readonly mdsTracker = inject(BilateralMdsTrackerService);
+
+  /**
+   * The initial GET must never replace a value the user has already edited.
+   * Saves are optimistic and serialized by BilateralAutoSaveService, so a
+   * post-PATCH GET would only rehydrate stale intermediate state and can race
+   * with the next queued save.
+   */
+  private hasLocalGeographyChanges = false;
+  private hydratedResultId: number | null = null;
 
   geographicLocationBody = signal<any>({
     has_countries: false,
@@ -70,17 +78,36 @@ export class SectionGeographyComponent implements OnInit {
 
   readonly yesNoOptions = YES_NO_OPTIONS;
 
+  constructor() {
+    // On a deep link, currentResultId initially contains the public result
+    // code. BilateralCreationService replaces it with the internal DB id only
+    // after GET_BilateralResultDetail completes. Geographic Location must wait
+    // for that resolution before calling its own endpoint.
+    effect(() => {
+      const resultId = this.creationService.currentResultId();
+      if (!resultId || this.creationService.isLoadingResult() || resultId === this.hydratedResultId) {
+        return;
+      }
+
+      this.hasLocalGeographyChanges = false;
+      this.hydratedResultId = resultId;
+      this.loadGeographicData();
+    });
+  }
+
   ngOnInit(): void {
-    this.loadGeographicData();
+    // Hydration is triggered by the effect above once the internal result id
+    // is available. Calling it here would use the public result code on a
+    // refreshed deep link.
   }
 
   loadGeographicData(): void {
     const resultId = this.creationService.currentResultId();
-    if (!resultId) return;
+    if (!resultId || this.hasLocalGeographyChanges) return;
 
     this.api.resultsSE.GET_geographicSectionp25().subscribe({
       next: ({ response }) => {
-        if (response) {
+        if (response && !this.hasLocalGeographyChanges) {
           this.geographicLocationBody.update(b => ({
             ...b,
             geo_scope_id: response.geo_scope_id,
@@ -128,13 +155,14 @@ export class SectionGeographyComponent implements OnInit {
   }
 
   queueGeographySave(debounceMs = 500): void {
+    this.hasLocalGeographyChanges = true;
     this.autoSaveService.schedulePayload('geography', this.buildGeographyPayload(), {
       debounceMs,
       statusKey: 'geography',
-      executor: (resultId, body) =>
-        this.bilateralApi.PATCH_geographic(resultId, body).pipe(
-          tap(() => this.loadGeographicData()),
-        ),
+      // Keep the optimistic local state as the source of truth while the
+      // serialized autosave drains. A GET here would reapply stale state from
+      // an earlier request and overwrite newer user selections.
+      executor: (resultId, body) => this.bilateralApi.PATCH_geographic(resultId, body),
     });
     this.updateTracker();
   }
