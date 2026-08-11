@@ -2,6 +2,7 @@
   <app-field-card
     [label]="effectiveLabel()"
     [description]="effectiveDescription()"
+    [tooltip]="tooltip()"
     [required]="effectiveRequired()"
     [hasValue]="hasValue"
     [hasError]="!!maxWords() && wordCount() > maxWords() && !autogenerate()"

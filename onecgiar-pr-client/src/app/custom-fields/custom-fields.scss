@@ -352,6 +352,37 @@ input::placeholder,
   animation: pr-tooltip-fade 0.12s ease-in;
 }
 
+// Shared trigger used by Impact Area Scores and Type-Specific guidance.
+.sgi-dac-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--pr-color-primary-400);
+  background: transparent;
+  cursor: help;
+  font-size: 16px;
+  line-height: 1;
+
+  .material-icons-round {
+    font-size: 16px;
+  }
+
+  &:hover {
+    color: var(--pr-color-primary-600);
+    background: var(--pr-color-primary-50);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 1px;
+  }
+}
+
 /* Impact Area guidance contains the same contextual helper text used by W1/W2. */
 .pr-tooltip.sgi-dac-tooltip {
   max-width: 380px;

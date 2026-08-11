@@ -4,7 +4,7 @@
     placeholder="Enter short title"
     [maxWords]="10"
     [required]="true"
-    [description]="shortTitleDesc"
+    [tooltip]="shortTitleDesc"
     [(ngModel)]="body.short_title"
     (ngModelChange)="onFieldChange()">
   </app-pr-input>
@@ -12,7 +12,7 @@
   <app-pr-select
     [options]="innovationControlListSE.typeList"
     label="Which of the below typologies best fits the nature of the innovation?"
-    description="Choose 'other' if you feel the Innovation does not fit well with the proposed categories."
+    tooltip="Choose 'other' if you feel the Innovation does not fit well with the proposed categories."
     optionLabel="extraInformation"
     optionValue="code"
     placeholder="Select innovation type"
@@ -26,14 +26,14 @@
     placeholder="Contact persons info goes here..."
     [required]="true"
     label="Innovation Developer"
-    description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person."
+    [tooltip]="'Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person.'"
     [(ngModel)]="body.innovation_developers"
     (ngModelChange)="onFieldChange()">
   </app-pr-textarea>
 
   <app-pr-field-header
     label="How would you assess the current readiness of this innovation?"
-    description="Use the slider to select the appropriate readiness level. Readiness levels range from 1 (basic research) to 9 (proven in operational environment).">
+    [tooltip]="'Use the slider to select the appropriate readiness level. Readiness levels range from 1 (basic research) to 9 (proven in operational environment).'">
   </app-pr-field-header>
 
   <div class="tsf-readiness">
@@ -84,7 +84,7 @@
         placeholder="Contact persons info goes here..."
         [required]="false"
         label="Innovation collaborators"
-        [description]="collaboratorsDesc"
+        [tooltip]="collaboratorsDesc"
         [(ngModel)]="body.innovation_collaborators"
         (ngModelChange)="onFieldChange()">
       </app-pr-textarea>
@@ -94,7 +94,7 @@
         [maxWords]="50"
         [required]="false"
         label="Please provide a brief explanation that explains how the provided evidence (inputted in the Evidence section) justifies the chosen innovation readiness level"
-        [description]="evidenceJustificationDesc"
+        [tooltip]="evidenceJustificationDesc"
         [(ngModel)]="body.evidences_justification"
         (ngModelChange)="onFieldChange()">
       </app-pr-textarea>
@@ -102,7 +102,7 @@
       <div>
         <app-pr-field-header
           label="Innovation reference materials"
-          [description]="referenceMaterialsDesc"
+          [tooltip]="referenceMaterialsDesc"
           [required]="false"
           [useColon]="false">
         </app-pr-field-header>

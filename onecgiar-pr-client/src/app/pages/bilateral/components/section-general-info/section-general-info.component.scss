@@ -59,34 +59,6 @@
   gap: 5px;
 }
 
-.sgi-dac-info {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  color: var(--pr-color-primary-400);
-  background: transparent;
-  cursor: help;
-
-  .material-icons-round {
-    font-size: 16px;
-  }
-
-  &:hover {
-    color: var(--pr-color-primary-600);
-    background: var(--pr-color-primary-50);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--pr-color-primary-300);
-    outline-offset: 1px;
-  }
-}
-
 .sgi-dac-tags {
   display: flex;
   gap: 0;

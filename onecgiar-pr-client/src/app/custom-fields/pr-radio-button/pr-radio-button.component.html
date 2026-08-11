@@ -1,5 +1,5 @@
 @if (this.preventFieldRender()) {
-  <app-field-card [label]="this.label" [description]="this.description" [required]="this.required" [hasValue]="hasValue">
+  <app-field-card [label]="this.label" [description]="this.description" [tooltip]="this.tooltip" [required]="this.required" [hasValue]="hasValue">
     <div class="pr-field" [ngClass]="{ mandatory: this.required, complete: value !== null && value !== undefined }">
     <div
       class="radioButtonList"

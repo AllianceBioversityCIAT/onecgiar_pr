@@ -318,41 +318,56 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 9px 14px;
-  margin-bottom: 8px;
-  border: 1.5px solid #E0E0E0;
-  border-radius: 6px;
+  min-height: 40px;
+  padding: 9px 12px;
+  margin-bottom: 7px;
+  border: 1px solid #E4E9EC;
+  border-radius: 8px;
   background: #FFFFFF;
   cursor: pointer;
   font-size: 12px;
-  color: #455A64;
+  color: #52636C;
   font-family: inherit;
   font-weight: 500;
-  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  text-align: left;
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 
   i {
+    flex: 0 0 20px;
+    width: 20px;
     font-size: 16px;
-    color: #78909C;
+    line-height: 1;
+    text-align: center;
+    color: #9AAAB2;
   }
 
   .bp-action-status {
     margin-left: auto;
-    color: #90A4AE;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.45px;
+    padding: 3px 6px;
+    border-radius: 999px;
+    background: #F4F7F8;
+    color: #9AAAB2;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.35px;
     text-transform: uppercase;
     white-space: nowrap;
   }
 
   &:hover:not(:disabled) {
-    background: #F5F8FA;
-    border-color: #B0BEC5;
+    background: #F8FAFB;
+    border-color: #C8D3D8;
+    box-shadow: 0 2px 7px rgba(38, 50, 56, 0.06);
+    transform: translateY(-1px);
   }
 
   &:disabled {
-    opacity: 0.4;
+    background: #FBFCFD;
+    border-color: #EEF1F3;
+    color: #A9B5BB;
     cursor: not-allowed;
+
+    i { color: #C2CDD2; }
   }
 
   &--primary {
@@ -373,5 +388,17 @@
       background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-500));
       box-shadow: 0 4px 12px rgba(var(--pr-color-primary-rgb), 0.25);
     }
+
+    &:disabled {
+      opacity: 1;
+      background: linear-gradient(135deg, var(--pr-color-primary-200), var(--pr-color-primary-300));
+      border-color: transparent;
+      color: #FFFFFF;
+
+      i { color: rgba(255, 255, 255, 0.85); }
+      .bp-action-status { background: rgba(255, 255, 255, 0.14); }
+    }
   }
+
+  &--submit { margin-top: 5px; }
 }

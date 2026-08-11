@@ -23,6 +23,7 @@ export class PrInputComponent implements ControlValueAccessor {
   readonly type = input<string>();
   readonly label = input<string>();
   readonly description = input<string>();
+  readonly tooltip = input<string>('');
   readonly maxWords = input<number>();
   readonly readOnly = input<boolean>();
   readonly isStatic = input<boolean>(false);
