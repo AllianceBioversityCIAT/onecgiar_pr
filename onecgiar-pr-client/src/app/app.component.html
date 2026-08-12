@@ -10,10 +10,30 @@
     }
 
     <main hlmSidebarInset class="flex min-h-svh min-w-0 flex-1 flex-col">
-      <!-- CURRENT topbar: toggle · search · notif · user (phase later) -->
-      @if (!this.api.dataControlSE.show_qa_full_screen && !this.api.dataControlSE.focusMode()) {
-        <app-shell-topbar />
-      }
+      <div class="app-shell-header">
+        @if (testEnvironmentBanner?.enabled) {
+          <div class="test-env-banner" role="note">
+            <span class="test-env-banner__badge">TEST ENVIRONMENT</span>
+            <div class="test-env-banner__main">
+              <strong>New look &amp; feel preview.</strong>
+              Explore and get familiar with the new design. Keep in mind this environment is still evolving
+              and will keep changing to improve the user experience.
+            </div>
+            <div class="test-env-banner__actions">
+              <span>Need to test something different? Use the
+                <a [href]="testEnvironmentBanner.legacyUrl" target="_blank" rel="noopener">previous design</a>.
+              </span>
+              <span>Comments or improvement ideas?
+                <a [href]="'mailto:' + testEnvironmentBanner.supportEmail">PRMSTechSupport&#64;cgiar.org</a>
+              </span>
+            </div>
+          </div>
+        }
+        <!-- CURRENT topbar: toggle · search · notif · user (phase later) -->
+        @if (!this.api.dataControlSE.show_qa_full_screen && !this.api.dataControlSE.focusMode()) {
+          <app-shell-topbar />
+        }
+      </div>
       <div class="min-h-0 min-w-0 flex-1">
         <router-outlet></router-outlet>
       </div>
