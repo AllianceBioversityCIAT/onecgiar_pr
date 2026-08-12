@@ -40,6 +40,7 @@ export class ClarisaCentersRepository extends Repository<ClarisaCenter> {
       from clarisa_center cc
       inner join clarisa_institutions ci on ci.id  = cc.institutionId
         and ci.is_active > 0
+        and cc.is_active > 0
         and cc.institutionId not in (${REPORTING_EXCLUDED_INSTITUTION_IDS.join(',')});
     `;
     try {

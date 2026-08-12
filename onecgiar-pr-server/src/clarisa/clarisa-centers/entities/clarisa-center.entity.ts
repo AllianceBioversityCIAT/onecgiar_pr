@@ -34,6 +34,9 @@ export class ClarisaCenter {
   })
   financial_code: string;
 
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
+
   //object relations
   @ManyToOne(() => ClarisaInstitution, (ci) => ci.clarisa_center)
   @JoinColumn({
