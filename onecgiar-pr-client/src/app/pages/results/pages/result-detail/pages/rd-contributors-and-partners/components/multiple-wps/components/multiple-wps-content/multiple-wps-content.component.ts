@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, WritableSignal, computed, effect, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, WritableSignal, computed, effect, inject, signal } from '@angular/core';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-change/components/toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
@@ -83,6 +83,11 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   // `outcome_statement` (mapped from the TOC board `description`). We find the selected node by toc_result_id
   // in the list that matches the chosen level (1=output, 2=outcome, 3=eoi), mirroring updateSelectedIndicatorData().
   private selectedTocNode = computed(() => {
+    // P2-3063: reactive trigger. The node dropdown writes `toc_result_id` in place on the plain `activeTab`
+    // object, so no signal in this computed's dependency set notifies and the memo would keep the previously
+    // selected node's statement until the parent re-set the lists on save. `selectionVersion` (P2-2998, bumped
+    // by getIndicatorsList() from every node dropdown's ngModelChange) is the trigger that closes that gap.
+    this.selectionVersion();
     const id = this.activeTabSignal()?.toc_result_id ?? this.activeTab?.toc_result_id;
     if (id === null || id === undefined) return null;
     switch (this.activeTabSignal()?.toc_level_id) {
@@ -110,12 +115,33 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   hloStatementTooltip = computed(() => (this.isCP2026() ? 'Maps to TOC: Output or Outcome statement' : ''));
 
   // P2-3063 (L3): read-only Indicator Typology = the "Type" of the selected KPI in TOC.
-  // Comes as `indicator_typology` (alias of `type_value`) on the selected indicator (Juan David's enrichment df27cc55a).
   // `selectedIndicatorData()` already holds the selected indicator (set by updateSelectedIndicatorData()).
+  // P2-3204: the TOC sends TWO fields per indicator and they are not interchangeable:
+  //   - `type_value` is an internal sentinel: literally "custom", or the catalogue type name, or empty.
+  //   - `type_name` is the descriptive text shown in the TOC "Type" column — what the user expects here.
+  // `indicator_typology` is a backend alias of `type_value`, so the old `indicator_typology ?? type_value`
+  // chain never reached `type_name` and rendered "custom" for every custom KPI.
+  // Both values are shown, sentinel first ("custom — <real KPI name>"), so the user keeps the TOC marker in
+  // sight without losing the descriptive text. They are only joined when they actually differ: in 43 of the
+  // 59 KPIs surveyed in prtest they are identical, and "Innovation Use — Innovation Use" is pure noise.
   indicatorTypologyValue = computed(() => {
     const ind: any = this.selectedIndicatorData();
-    return ind?.indicator_typology ?? ind?.type_value ?? '';
+    const name = this.firstNonEmpty(ind?.type_name);
+    const sentinel = this.firstNonEmpty(ind?.type_value, ind?.indicator_typology);
+    if (name && sentinel && name !== sentinel) return `${sentinel} — ${name}`;
+    return name || sentinel;
   });
+
+  // P2-3204: the field is always rendered once a KPI is selected, so an empty typology must read like its
+  // sibling read-only fields ("Unit of measurement" / "Target") instead of making the whole field vanish.
+  indicatorTypologyDisplay = computed(() => this.indicatorTypologyValue() || 'Not specified');
+
+  private firstNonEmpty(...values: unknown[]): string {
+    for (const value of values) {
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+    return '';
+  }
 
   indicatorTypologyTooltip = computed(() => (this.isCP2026() ? 'Maps to TOC: [Type]' : ''));
 
@@ -139,7 +165,12 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     // P2-2998: subscribe to in-tab HLO/KPI selection changes (see selectionVersion + getIndicatorsList/mapTocResultsIndicatorId).
     this.selectionVersion();
     const tabs: any[] = this.allTabsCreated ?? [];
-    const listForLevel = (lvl: any): any[] => (lvl === 3 ? eoi : lvl === 2 ? oc : lvl === 1 ? out : []);
+    const listForLevel = (lvl: any): any[] => {
+      if (lvl === 3) return eoi;
+      if (lvl === 2) return oc;
+      if (lvl === 1) return out;
+      return [];
+    };
     const num = (v: any) => Number(v);
     const centerIds = new Set<number>();
     const synergyIds = new Set<number>();
@@ -225,9 +256,9 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   ) {}
 
   getIndicatorsList() {
-    const filterIndicators = list => {
+    const filterIndicators = (list: any[]) => {
       if (!list.length) return;
-      const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
+      const itemSelected = list.find((item: any) => item.toc_result_id === this.activeTab.toc_result_id);
       this.indicatorsList.set(itemSelected?.indicators || []);
       this.fieldsManagerSE.activeIndicatorsLength.set(this.indicatorsList().length);
 
@@ -416,8 +447,8 @@ export class CPMultipleWPsContentComponent implements OnChanges {
       return false;
     }
 
-    return this.activeTab.indicators.some(indicator => {
-      return indicator.targets?.some(target => target.indicator_question === false);
+    return this.activeTab.indicators.some((indicator: any) => {
+      return indicator.targets?.some((target: any) => target.indicator_question === false);
     });
   }
 }

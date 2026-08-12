@@ -20,7 +20,11 @@
         <p class="report-result-content_left_header_title">{{ entityAowService.currentResultToReport()?.result_title }}</p>
         @if (entityAowService.currentResultToReport()?.indicators?.length) {
           <p class="report-result-content_left_header_desc">
-            <strong>Indicator name:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}
+            <strong>Indicator name:</strong>
+            {{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}
+            @if (entityAowService.currentResultToReport()?.indicators?.[0]?.center_acronym) {
+              <span class="center-chip">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.center_acronym }}</span>
+            }
           </p>
           <p class="report-result-content_left_header_desc">
             <strong>Indicator type:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}
@@ -93,25 +97,6 @@
         </app-pr-input>
 
         <div class="separator"></div>
-
-        <div>
-          <app-pr-field-header
-            [label]="'Explanation of how the result aligns with/contributes to the Program’s TOC pathway'"
-            [required]="false"
-            [labelDescInlineStyles]="'margin-top: 0 !important'">
-          </app-pr-field-header>
-          <app-alert-status
-            status="info"
-            description="Where results are qualitative and do not contribute numerically to the indicator target, provide here a short explanation of how the result supports or aligns with the Program’s TOC pathway."
-            inlineStyles="margin: 0; margin: 10px 0;"></app-alert-status>
-
-          <app-pr-textarea
-            [isStatic]="true"
-            placeholder="Provide input here..."
-            [(ngModel)]="createResultBody().toc_progressive_narrative"
-            type="text"
-            [disabled]="creatingResult()"></app-pr-textarea>
-        </div>
 
         <div>
           <app-pr-field-header label="Contribution to indicator target" [required]="false" [labelDescInlineStyles]="'margin-top: 0 !important'">
