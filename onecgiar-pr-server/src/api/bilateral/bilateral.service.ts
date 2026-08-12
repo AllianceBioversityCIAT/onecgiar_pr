@@ -708,7 +708,6 @@ export class BilateralService {
 
     const qb = this._resultRepository
       .createQueryBuilder('r')
-      .where('r.is_active = :isActive', { isActive: true })
       .orderBy('r.result_code', 'DESC');
 
     this.applyListResultsFilters(qb, query);
@@ -725,6 +724,7 @@ export class BilateralService {
         });
         const filtered = this.filterActiveRelations(resultWithRelations);
         await this.enrichBilateralResultResponse(filtered);
+        this.attachResultLinks(filtered);
         return filtered;
       }),
     );
@@ -737,6 +737,25 @@ export class BilateralService {
       message: 'Results list retrieved successfully.',
       status: 200,
     };
+  }
+
+  /**
+   * Attaches the public links documented in the bilateral contract:
+   * `pdf_link` (PDF / report view) and `prms_link` (web UI deep link).
+   * Same pattern as result.repository.ts (pdf_link) and the fetcher mapper.
+   */
+  private attachResultLinks(result: any): void {
+    if (!result?.result_code) return;
+    const phase = result.version_id ?? result.obj_version?.id ?? 6;
+    const pdfBase = (
+      process.env.FRONT_END_PDF_ENDPOINT ??
+      'https://reporting.cgiar.org/reports/result-details/'
+    ).replace(/\/+$/, '');
+    const frontendBase =
+      pdfBase.replace(/\/reports\/result-details$/, '') ||
+      'https://reporting.cgiar.org';
+    result.pdf_link = `${pdfBase}/${result.result_code}?phase=${phase}`;
+    result.prms_link = `${frontendBase}/result/result-detail/${result.result_code}/general-information?phase=${phase}`;
   }
 
   async getResultsForSync(
