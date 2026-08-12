@@ -39,6 +39,9 @@ const TYPE_BY_INDICATOR: Record<string, { type: number; level: number }> = {
   'Innovation Use': { type: 2, level: 3 },
   'Other Outcome': { type: 4, level: 3 },
   'Capacity Sharing for Development': { type: 5, level: 4 },
+  // Knowledge Product is listed for completeness, but the text-mining/model
+  // pipeline does not identify Knowledge Products, so this entry is never hit
+  // in practice (see the guard in createDraftFromCandidate).
   'Knowledge Product': { type: 6, level: 4 },
   'Innovation Development': { type: 7, level: 4 },
   'Other Output': { type: 8, level: 4 },
@@ -382,6 +385,10 @@ export class BilateralAiService {
   ): Promise<BilateralAiDraft | null> {
     const indicator = String(candidate.indicator || '');
     const mapping = TYPE_BY_INDICATOR[indicator];
+    // Knowledge Product candidates are intentionally not drafted (out of scope):
+    // the text-mining / model pipeline does not identify Knowledge Products, so
+    // this branch is defensive and effectively unreachable today. If KP extraction
+    // is ever enabled, handle them here instead of silently skipping (P2-3103).
     if (!mapping || mapping.type === 6) return null;
     const phase = await this.versioningService.$_findActivePhase(1);
     const year = await this.yearRepository.findOne({ where: { active: true } });

@@ -1,5 +1,12 @@
 @if (uploadState().status === 'idle' || uploadState().status === 'uploading') {
   <div class="aiu-card">
+    @if (reportingCenterName()) {
+      <div class="aiu-info-note" role="note">
+        <i class="material-icons-round">info</i>
+        <span>You are reporting on behalf of <strong>{{ reportingCenterName() }}</strong></span>
+      </div>
+    }
+
     <div class="aiu-header">
       <div class="aiu-header-icon">
         <i class="material-icons-round">auto_awesome</i>

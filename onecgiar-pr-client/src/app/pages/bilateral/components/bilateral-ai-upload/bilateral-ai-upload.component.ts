@@ -57,6 +57,11 @@ export class BilateralAiUploadComponent implements OnDestroy {
   readonly acceptedDocumentTypes = DOCUMENT_EXTENSIONS.join(',');
   readonly acceptedAudioTypes = AUDIO_EXTENSIONS.join(',');
 
+  /** P2-3103 AC2: full name of the center the user is reporting on behalf of. */
+  reportingCenterName = computed(
+    () => this.creationService.selectedProject()?.leadCenter?.name ?? '',
+  );
+
   fileList = computed(() => this.files());
   documentCount = computed(() => this.files().filter(f => f.type === 'document').length);
   audioCount = computed(() => this.files().filter(f => f.type === 'audio').length);
