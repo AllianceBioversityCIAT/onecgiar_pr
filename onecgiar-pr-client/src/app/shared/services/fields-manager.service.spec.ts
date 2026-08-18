@@ -47,6 +47,42 @@ describe('FieldsManagerService', () => {
     });
   });
 
+  /**
+   * P2-3201 (INC-158283): the reporting-form guidance redesign is scoped to the current portfolio,
+   * so the threshold is the phase year — not the P22/P25 portfolio acronym, which 2025 results share.
+   */
+  describe('isReportingFormGuidance2026', () => {
+    it('is true from the 2026 phase on', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);
+      expect(service.isReportingFormGuidance2026()).toBe(true);
+    });
+
+    it('is false for a 2025 result, even on the P25 portfolio', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 } as any);
+      expect(service.isReportingFormGuidance2026()).toBe(false);
+    });
+
+    it('is false when no phase year is known anywhere', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = undefined as any;
+      expect(service.isReportingFormGuidance2026()).toBe(false);
+    });
+
+    it('falls back to the open reporting phase when the result carries no year', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+      expect(service.isReportingFormGuidance2026()).toBe(true);
+    });
+
+    it('renames the description label only from 2026 on', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 } as any);
+      expect(service.fields()['[general-info]-description'].label).toBe('Description');
+
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);
+      expect(service.fields()['[general-info]-description'].label).toBe('Description of Result');
+    });
+  });
+
   describe('P25 portfolio scenario', () => {
     beforeEach(() => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25', result_type_id: 1 } as CurrentResult);

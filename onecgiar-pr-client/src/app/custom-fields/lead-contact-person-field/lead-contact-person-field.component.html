@@ -1,4 +1,12 @@
-<app-field-card [label]="leadContactField.label" [description]="leadContactField.description" [required]="required" [hasValue]="hasSelectedContact">
+<!-- P2-3201: from the 2026 cycle on, the guidance moves from the grey "Description" box into the
+     ⓘ tooltip next to the label. Opt-in per caller so IPSR and Bilateral, which reuse this field,
+     keep their current presentation. -->
+<app-field-card
+  [label]="leadContactField.label"
+  [description]="guidanceAsTooltip ? '' : leadContactField.description"
+  [tooltip]="guidanceAsTooltip ? leadContactField.description : ''"
+  [required]="required"
+  [hasValue]="hasSelectedContact">
 <div class="lead-contact-container">
   <div class="contact-select-wrapper">
     <app-pr-input

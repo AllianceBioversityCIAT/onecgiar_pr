@@ -33,6 +33,30 @@ export class RdGeneralInformationComponent implements OnInit {
   fieldsManagerSE = inject(FieldsManagerService);
 
   /**
+   * P2-3201 (INC-158283) — reporting-form guidance redesign, scoped to the CURRENT portfolio.
+   *
+   * The PO confirmed on 18 Aug 2026 that this ticket applies to the 2026 portfolio only, so the
+   * gate is the shared phase-year threshold in {@link ReportingDesignYear} (via FieldsManager) and
+   * NOT a hand-rolled year comparison. Results from earlier phases keep their inline grey guidance
+   * boxes and never see the AI notes.
+   */
+  readonly guidanceAsTooltip = computed(() => this.fieldsManagerSE.isReportingFormGuidance2026());
+
+  /**
+   * Approved AI notes (P2-3201, points 1 and 2). Static blocks by explicit request: not collapsible
+   * and with no "How it works" link — an earlier draft of the ticket proposed both and the revised
+   * description rules them out.
+   *
+   * Copy is the ticket's literal text; only the leading label and the "AI Review" button name are
+   * emphasised, as in the approved mockup.
+   */
+  readonly aiAssistantTitlesNote =
+    '<strong>AI Assistant for result Titles and Descriptions:</strong> PRMS includes an AI assistant that generates suggested titles and descriptions for results based on the information entered by users. During the 2025 reporting cycle, its use contributed to a reduction in QA comments on result titles and descriptions, from 28% to 16%. Based on this positive experience and user feedback, we encourage Programs/Accelerators to use the AI assistant to improve the quality and consistency of reported results. To use the assistant, click <strong>AI Review</strong> once it becomes available. The button is automatically enabled once all sections are completed. All AI-generated text should be carefully reviewed, validated, and, where necessary, refined before submission.';
+
+  readonly aiImpactAreaScoresNote =
+    "<strong>AI-assisted Notification for Impact Area Scores:</strong> PRMS includes an AI assistant that reviews the result's metadata (and supporting evidence for scores of 2), it assesses whether the information provided is consistent with and adequately supports the selected score, and flags potential mismatches. The assistant does not select or recommend a score; responsibility for assigning the score remains with the user. To use the assistant, click <strong>AI Review</strong> once it becomes available. Any AI-generated notifications should be carefully reviewed and used to validate, and, where necessary, revise the selected Impact Area score and its supporting evidence before submission.";
+
+  /**
    * Drives `[appSectionSkeleton]`. TRUE from construction: the form is built from an empty
    * `GeneralInfoBody()` and only filled inside the GET's subscriber, so between first paint and
    * the response every field would otherwise read as "mandatory, empty". Released on BOTH `next`
@@ -116,6 +140,20 @@ export class RdGeneralInformationComponent implements OnInit {
   getImpactAreaFieldDescription(fieldRef: string): string {
     const field = this.fieldsManagerSE.fields()[fieldRef];
     return field?.description || '';
+  }
+
+  /**
+   * P2-3201: the guidance a field used to render inside its grey "Description" box, returned as
+   * tooltip content once the 2026 presentation applies. Empty string before 2026 so the caller
+   * keeps the inline box and grows no ⓘ trigger.
+   */
+  guidanceTooltip(fieldRef: string): string {
+    return this.guidanceAsTooltip() ? this.getImpactAreaFieldDescription(fieldRef) : '';
+  }
+
+  /** P2-3201: same rule for guidance authored in this component instead of FieldsManager. */
+  sectionGuidanceTooltip(guidance: string): string {
+    return this.guidanceAsTooltip() ? guidance : '';
   }
 
   getImpactAreaFieldRequired(fieldRef: string): boolean {

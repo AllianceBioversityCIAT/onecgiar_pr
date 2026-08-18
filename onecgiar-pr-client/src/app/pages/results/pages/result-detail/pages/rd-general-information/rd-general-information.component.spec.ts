@@ -335,6 +335,199 @@ describe('RdGeneralInformationComponent', () => {
     });
   });
 
+  /**
+   * P2-3201 (INC-158283) — points 1 and 2. The PO scoped the whole ticket to the CURRENT portfolio
+   * on 18 Aug 2026, so every assertion below is paired with its pre-2026 counterpart: results from
+   * earlier phases must keep the inline grey guidance boxes and never see the AI notes.
+   */
+  describe('reporting-form guidance redesign (2026)', () => {
+    const renderForPhase = (phaseYear: number) => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: phaseYear });
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(
+        of({ response: { ...mockGET_generalInformationByResultIdResponse, phase_year: phaseYear } })
+      );
+      fixture.detectChanges();
+    };
+
+    const alertTexts = (): string[] =>
+      fixture.debugElement.queryAll(By.css('app-alert-status')).map(de => (de.nativeElement as HTMLElement).textContent ?? '');
+
+    const countAlertsContaining = (needle: string): number => alertTexts().filter(text => text.includes(needle)).length;
+
+    describe('gate', () => {
+      it('is open for a 2026 result', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        expect(component.guidanceAsTooltip()).toBe(true);
+      });
+
+      it('stays closed for a 2025 result', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        expect(component.guidanceAsTooltip()).toBe(false);
+      });
+    });
+
+    describe('point 1 — titles and description', () => {
+      it('renders the AI assistant note exactly once', () => {
+        renderForPhase(2026);
+        expect(countAlertsContaining('AI Assistant for result Titles and Descriptions')).toBe(1);
+      });
+
+      it('places the AI assistant note between "Change result type" and "Title of Result"', () => {
+        renderForPhase(2026);
+        const host = fixture.nativeElement as HTMLElement;
+        const nodes = Array.from(host.querySelectorAll('app-pr-button, app-alert-status, app-pr-input'));
+        const noteIndex = nodes.findIndex(n => (n.textContent ?? '').includes('AI Assistant for result Titles'));
+        const titleIndex = nodes.findIndex(n => n.tagName.toLowerCase() === 'app-pr-input');
+        const buttonIndex = nodes.findIndex(n => n.tagName.toLowerCase() === 'app-pr-button');
+        expect(noteIndex).toBeGreaterThan(buttonIndex);
+        expect(noteIndex).toBeLessThan(titleIndex);
+      });
+
+      it('keeps the AI assistant note off a 2025 result', () => {
+        renderForPhase(2025);
+        expect(countAlertsContaining('AI Assistant for result Titles and Descriptions')).toBe(0);
+      });
+
+      it('quotes the approved copy, including the AI Review call to action', () => {
+        expect(component.aiAssistantTitlesNote).toContain('from 28% to 16%');
+        expect(component.aiAssistantTitlesNote).toContain('<strong>AI Review</strong>');
+        expect(component.aiAssistantTitlesNote).toContain('carefully reviewed, validated, and, where necessary, refined before submission');
+      });
+
+      it('renames the field label to "Description of Result" from 2026', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        expect(component.fieldsManagerSE.fields()['[general-info]-description'].label).toBe('Description of Result');
+      });
+
+      it('keeps the 2025 label untouched', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        expect(component.fieldsManagerSE.fields()['[general-info]-description'].label).toBe('Description');
+      });
+
+      it('moves the field guidance into the tooltip without losing text', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        const guidance = component.fieldsManagerSE.fields()['[general-info]-title'].description;
+        expect(component.guidanceTooltip('[general-info]-title')).toBe(guidance);
+        expect(component.guidanceTooltip('[general-info]-title')).toContain('non-specialist reader');
+      });
+
+      it('leaves the guidance inline before 2026 (no tooltip trigger)', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        expect(component.guidanceTooltip('[general-info]-title')).toBe('');
+        expect(component.guidanceTooltip('[general-info]-description')).toBe('');
+      });
+
+      it('hands the tooltip to the title and description fields and hides their description box', () => {
+        renderForPhase(2026);
+        const title = fixture.debugElement.query(By.css('app-pr-input[fieldRef="[general-info]-title"]'));
+        const description = fixture.debugElement.query(By.css('app-pr-textarea'));
+        expect(title.componentInstance.tooltip()).toContain('non-specialist reader');
+        expect(title.componentInstance.showDescription()).toBe(false);
+        expect(description.componentInstance.tooltip()).toContain('Avoid repetition of the title');
+        expect(description.componentInstance.showDescriptionLabel()).toBe(false);
+      });
+
+      it('keeps the description box on a 2025 result', () => {
+        renderForPhase(2025);
+        const title = fixture.debugElement.query(By.css('app-pr-input[fieldRef="[general-info]-title"]'));
+        expect(title.componentInstance.tooltip()).toBe('');
+        expect(title.componentInstance.showDescription()).toBe(true);
+      });
+    });
+
+    describe('point 2 — Impact Area scores', () => {
+      it('renders the AI-assisted notification exactly once', () => {
+        renderForPhase(2026);
+        expect(countAlertsContaining('AI-assisted Notification for Impact Area Scores')).toBe(1);
+      });
+
+      it('places it above the section heading', () => {
+        renderForPhase(2026);
+        const host = fixture.nativeElement as HTMLElement;
+        const nodes = Array.from(host.querySelectorAll('app-alert-status, h1.pr_label'));
+        const noteIndex = nodes.findIndex(n => (n.textContent ?? '').includes('AI-assisted Notification'));
+        const headingIndex = nodes.findIndex(n => n.tagName.toLowerCase() === 'h1');
+        expect(noteIndex).toBeGreaterThan(-1);
+        expect(noteIndex).toBeLessThan(headingIndex);
+      });
+
+      it('renders it as a static block — no collapse control and no "How it works" link', () => {
+        renderForPhase(2026);
+        const note = fixture.debugElement
+          .queryAll(By.css('app-alert-status'))
+          .find(de => ((de.nativeElement as HTMLElement).textContent ?? '').includes('AI-assisted Notification'));
+        const el = note.nativeElement as HTMLElement;
+        expect(el.querySelector('button')).toBeNull();
+        expect(el.textContent).not.toContain('How it works');
+      });
+
+      it('keeps the AI-assisted notification off a 2025 result', () => {
+        renderForPhase(2025);
+        expect(countAlertsContaining('AI-assisted Notification for Impact Area Scores')).toBe(0);
+      });
+
+      it('quotes the approved copy', () => {
+        expect(component.aiImpactAreaScoresNote).toContain('does not select or recommend a score');
+        expect(component.aiImpactAreaScoresNote).toContain('<strong>AI Review</strong>');
+      });
+
+      it('moves the 0/1/2 scoring guidance into a pinnable tooltip on the heading', () => {
+        renderForPhase(2026);
+        const trigger = fixture.nativeElement.querySelector('h1.impact_scores_heading .sgi-dac-info');
+        expect(trigger).toBeTruthy();
+        expect(fixture.nativeElement.textContent).not.toContain('0 = Not targeted');
+      });
+
+      it('keeps the scoring guidance inline on a 2025 result', () => {
+        renderForPhase(2025);
+        expect(fixture.nativeElement.querySelector('h1.impact_scores_heading')).toBeNull();
+        expect(countAlertsContaining('0 = Not targeted')).toBe(1);
+      });
+
+      it('moves each of the five Impact Areas guidance onto its tag label', () => {
+        renderForPhase(2026);
+        const tooltips = fixture.debugElement
+          .queryAll(By.css('app-pr-radio-button'))
+          .map(de => de.componentInstance.tooltip)
+          .filter((tooltip: string) => !!tooltip);
+        expect(tooltips).toHaveLength(5);
+        expect(countAlertsContaining('Example topics')).toBe(0);
+      });
+
+      it('keeps the five guidance boxes inline on a 2025 result', () => {
+        renderForPhase(2025);
+        const tooltips = fixture.debugElement
+          .queryAll(By.css('app-pr-radio-button'))
+          .map(de => de.componentInstance.tooltip)
+          .filter((tooltip: string) => !!tooltip);
+        expect(tooltips).toHaveLength(0);
+        // Portfolio is still P25 here, so the guidance is the P25 wording ("Example topics"),
+        // one inline box per Impact Area — exactly what the 2026 gate must not disturb.
+        expect(countAlertsContaining('Example topics')).toBe(5);
+      });
+
+      it('returns the guidance verbatim through sectionGuidanceTooltip', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        expect(component.sectionGuidanceTooltip(component.genderInformation())).toBe(component.genderInformation());
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+        expect(component.sectionGuidanceTooltip(component.genderInformation())).toBe('');
+      });
+
+      /** The ticket freezes score-2 behaviour: this is presentation only. */
+      it('leaves the score-2 branch untouched', () => {
+        mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+        mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(
+          of({ response: { ...mockGET_generalInformationByResultIdResponse, phase_year: 2026, gender_tag_id: 3, gender_impact_area_id: [] } })
+        );
+        (component.getImpactAreasScoresComponents as any).genderTagScoreList = signal([{ id: 1, name: 'Component A' }]);
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('input.pr-native-check')).toBeTruthy();
+        expect(component.generalInfoBody.gender_tag_id).toBe(3);
+      });
+    });
+  });
+
   describe('sectionLoading (skeleton)', () => {
     it('starts raised so the empty GeneralInfoBody never paints every field as "mandatory, empty"', () => {
       expect(component.sectionLoading()).toBe(true);

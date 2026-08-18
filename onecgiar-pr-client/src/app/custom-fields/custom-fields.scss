@@ -354,6 +354,13 @@ input::placeholder,
   animation: pr-tooltip-fade 0.12s ease-in;
 }
 
+/* P2-3201: a pinned tooltip must accept the pointer, otherwise its links and its scrollbar are
+   unreachable — which is the whole reason pinning exists (e.g. the CGIAR 2030 Strategy link in
+   the Impact Area scoring guidance). */
+.pr-tooltip.pr-tooltip--pinned {
+  pointer-events: auto;
+}
+
 // Shared trigger used by Impact Area Scores and Type-Specific guidance.
 .sgi-dac-info {
   display: inline-flex;

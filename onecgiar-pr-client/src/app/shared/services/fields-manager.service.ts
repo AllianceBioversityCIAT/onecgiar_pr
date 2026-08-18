@@ -36,6 +36,16 @@ export class FieldsManagerService {
     const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
     return typeof year === 'number' && year >= ReportingDesignYear.GeographicLocationRedesign;
   });
+  /**
+   * True when the open result's reporting phase is 2026+ → reporting-form guidance redesign
+   * (P2-3201 / INC-158283): AI assistant notes, "Description of Result" label and the guidance
+   * moved from inline grey boxes into ⓘ tooltips. 2025 and earlier keep the legacy presentation.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isReportingFormGuidance2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof year === 'number' && year >= ReportingDesignYear.ReportingFormGuidanceRedesign;
+  });
   isAnInnovation = computed(
     () => this.dataControlSE.currentResultSignal()?.result_type_id == 2 || this.dataControlSE.currentResultSignal()?.result_type_id == 7
   );
@@ -69,7 +79,8 @@ export class FieldsManagerService {
           </ul>`
       },
       '[general-info]-description': {
-        label: 'Description',
+        // P2-3201: renamed to "Description of Result" from the 2026 cycle on; earlier phases keep "Description".
+        label: this.isReportingFormGuidance2026() ? 'Description of Result' : 'Description',
         placeholder: 'Enter text',
         required: !this.dataControlSE.isKnowledgeProductSignal(),
         description: `<ul>

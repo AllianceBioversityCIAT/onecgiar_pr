@@ -23,5 +23,13 @@ export const ReportingDesignYear = {
    * Geographic location "location of benefit" wording (P2-3036 AC9) ships in the 2026 cycle
    * for P25 Innovation results. Earlier phases keep the "geographic focus" wording.
    */
-  GeographicLocationRedesign: 2026
+  GeographicLocationRedesign: 2026,
+
+  /**
+   * Reporting-form guidance redesign (P2-3201 / INC-158283) ships in the 2026 cycle: the AI
+   * assistant notes and the guidance moved from inline grey boxes into ⓘ tooltips.
+   * Confirmed with the PO on 18 Aug 2026 — it applies to the current portfolio only, so results
+   * in the 2025 phase (and earlier) keep their inline guidance boxes and show no AI notes.
+   */
+  ReportingFormGuidanceRedesign: 2026
 } as const;

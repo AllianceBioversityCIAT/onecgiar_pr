@@ -4,13 +4,20 @@
       <span class="fch_title" [innerHTML]="label"></span>
       <span class="fch_tag">{{ required ? 'Mandatory' : 'Optional' }}</span>
       @if (tooltip) {
+        <!-- P2-3201: pinnable. Field guidance moved out of the inline grey box carries links and
+             several paragraphs, so it must survive the pointer leaving; Escape / outside click closes it. -->
         <button
           type="button"
           class="sgi-dac-info"
           [prTooltip]="tooltip"
+          [prTooltipPinnable]="true"
           prTooltipPosition="right"
           prTooltipStyleClass="sgi-dac-tooltip"
-          aria-label="More information">info_outline</button>
+          aria-label="More information">
+          <!-- The glyph needs its own `material-icons-round` element: `.sgi-dac-info` styles the
+               button but does not set the icon font, so the bare word rendered as literal text. -->
+          <i class="material-icons-round" aria-hidden="true">info_outline</i>
+        </button>
       }
       @if (!tooltip) {
         <span class="fch_info_wrap">
