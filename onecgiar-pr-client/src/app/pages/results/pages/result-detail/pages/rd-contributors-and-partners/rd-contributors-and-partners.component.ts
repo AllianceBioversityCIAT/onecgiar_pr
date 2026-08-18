@@ -110,7 +110,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   );
 
   // P2-3171 (AC5): inform the user that External Partners are inherited from the HLO/Outcome level in the ToC.
-  externalPartnersInfoNote = 'Partner information is inherited/sourced from the HLO/Outcome level in the ToC.';
+  // P2-3248: also ask the user to review the inherited list before saving (remove non-applicable partners, add missing ones).
+  externalPartnersInfoNote =
+    'Partner information is inherited/sourced from the HLO/Outcome level in the ToC. Please review this list before saving — remove any partner that does not apply to this specific result, or add the ones that do.';
 
   tocQuestionInfoNote = computed(() =>
     this.isCP2026()
