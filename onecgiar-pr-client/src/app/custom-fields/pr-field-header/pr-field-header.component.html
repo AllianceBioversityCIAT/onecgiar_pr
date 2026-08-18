@@ -1,7 +1,19 @@
-<div
-  class="pr_label {{ labelDescStyleClass }}"
-  [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
-  *ngIf="this.label"
-  [innerHTML]="this.label + (this.useColon ? ':' : '')"
-  [style]="labelDescInlineStyles"></div>
+<!-- P2-3061: when a tooltip is provided, render the label with a material-icons "info" + pTooltip (project line of design).
+     When there is no tooltip, the label markup stays identical to before (no impact on the rest of the app). -->
+<ng-container *ngIf="this.label">
+  <div
+    *ngIf="!this.tooltip"
+    class="pr_label {{ labelDescStyleClass }}"
+    [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
+    [innerHTML]="this.label + (this.useColon ? ':' : '')"
+    [style]="labelDescInlineStyles"></div>
+
+  <div *ngIf="this.tooltip" class="pr_label_row" [style]="labelDescInlineStyles">
+    <div
+      class="pr_label {{ labelDescStyleClass }}"
+      [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
+      [innerHTML]="this.label + (this.useColon ? ':' : '')"></div>
+    <i class="material-icons-round pr_label_tooltip" [pTooltip]="this.tooltip" tooltipPosition="top" [escape]="false">info</i>
+  </div>
+</ng-container>
 <div class="pr_description readOnly" *ngIf="this.description" [innerHTML]="this.descriptionLabel + this.description" [style]="descInlineStyles"></div>

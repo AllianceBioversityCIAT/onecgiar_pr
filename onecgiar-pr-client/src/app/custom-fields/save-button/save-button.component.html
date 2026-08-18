@@ -15,10 +15,8 @@
             </div>
         </div>
         <div class="counter" *ngIf="!expand">
-            <i class="material-icons-round">
-                warning
-            </i>
-            {{this.dataControlSE?.fieldFeedbackList?.length}} <div class="text">alerts</div>
+            <i class="material-icons-round">warning</i>
+            <span>{{ this.dataControlSE?.fieldFeedbackList?.length }} <span class="text">alerts</span></span>
         </div>
     </div>
     <div (click)="this.saveButtonSE.isSaving || disabled ? null:onClickSave()">

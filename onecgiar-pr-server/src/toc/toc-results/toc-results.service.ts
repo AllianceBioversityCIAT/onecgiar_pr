@@ -214,16 +214,16 @@ export class TocResultsService {
           );
 
           const indicatorRows =
-            await this._tocResultsRepository.getTocIndicatorsByResultIds(
+            await this._tocResultsRepository.getTocIndicatorsByResultIds({
               result,
-              reportingYear,
+              targetYear: reportingYear,
               tocResultIds,
-              result.result_type_id,
+              resultTypeId: result.result_type_id,
               linkedIndicatorNodeIds,
-              result_id,
-              init_id,
+              resultId: result_id,
+              initId: init_id,
               includeInactiveIndicators,
-            );
+            });
 
           const indicatorMap = new Map<
             number,
@@ -416,36 +416,86 @@ export class TocResultsService {
             }
           }
 
+          const [partnerRows, synergyRows, centerRows] = await Promise.all([
+            this._tocResultsRepository.getTocPartnersByResultIds(
+              tocResultIds,
+              tocPhaseId,
+            ),
+            this._tocResultsRepository.getTocSynergyProgramsByResultIds(
+              tocResultIds,
+              tocPhaseId,
+            ),
+            this._tocResultsRepository.getTocTargetCentersByResultIds(
+              tocResultIds,
+              tocPhaseId,
+              reportingYear,
+            ),
+          ]);
+
+          const partnersMap = this.groupTocPartnersByResultId(
+            partnerRows ?? [],
+          );
+          const synergyMap = this.groupSynergyProgramsByResultId(
+            synergyRows ?? [],
+          );
+          const centersMap = this.groupTargetCentersByResultAndIndicator(
+            centerRows ?? [],
+          );
+
           enrichedResults = res.map((row) => {
             const tocId = Number(row?.toc_result_id);
             const mappingInfo = resultMappingInfo.get(tocId);
-            return {
-              ...row,
-              result_toc_result_id: mappingInfo?.result_toc_result_id ?? null,
-              planned_result: mappingInfo?.planned_result ?? null,
-              toc_progressive_narrative:
-                mappingInfo?.toc_progressive_narrative ?? null,
-              indicators: indicatorMap.get(tocId) ?? [],
-            };
+            const indicators = (indicatorMap.get(tocId) ?? []).map(
+              (indicator) =>
+                this.enrichIndicatorCatalogItem(
+                  indicator,
+                  centersMap.get(`${tocId}:${indicator.indicator_id}`) ?? [],
+                ),
+            );
+
+            return this.enrichTocCatalogRow(
+              row,
+              {
+                result_toc_result_id: mappingInfo?.result_toc_result_id ?? null,
+                planned_result: mappingInfo?.planned_result ?? null,
+                toc_progressive_narrative:
+                  mappingInfo?.toc_progressive_narrative ?? null,
+                indicators,
+              },
+              partnersMap.get(tocId) ?? [],
+              synergyMap.get(tocId) ?? [],
+            );
           });
         } else {
-          enrichedResults = res.map((row) => ({
-            ...row,
-            result_toc_result_id: null,
-            planned_result: null,
-            toc_progressive_narrative: null,
-            indicators: [],
-          }));
+          enrichedResults = res.map((row) =>
+            this.enrichTocCatalogRow(
+              row,
+              {
+                result_toc_result_id: null,
+                planned_result: null,
+                toc_progressive_narrative: null,
+                indicators: [],
+              },
+              [],
+              [],
+            ),
+          );
         }
       } else {
         enrichedResults = Array.isArray(res)
-          ? res.map((row) => ({
-              ...row,
-              result_toc_result_id: null,
-              planned_result: null,
-              toc_progressive_narrative: null,
-              indicators: [],
-            }))
+          ? res.map((row) =>
+              this.enrichTocCatalogRow(
+                row,
+                {
+                  result_toc_result_id: null,
+                  planned_result: null,
+                  toc_progressive_narrative: null,
+                  indicators: [],
+                },
+                [],
+                [],
+              ),
+            )
           : [];
       }
 
@@ -510,7 +560,7 @@ export class TocResultsService {
     const candidateKeys = [
       indicator.related_node_id,
       indicator.toc_result_indicator_id,
-      indicator.indicator_id != null ? String(indicator.indicator_id) : null,
+      indicator.indicator_id == null ? null : String(indicator.indicator_id),
     ]
       .filter(
         (value): value is string =>
@@ -526,5 +576,123 @@ export class TocResultsService {
     }
 
     return null;
+  }
+
+  private enrichTocCatalogRow(
+    row: Record<string, unknown>,
+    mapping: {
+      result_toc_result_id: number | null;
+      planned_result: boolean | null;
+      toc_progressive_narrative: string | null;
+      indicators: Array<Record<string, unknown>>;
+    },
+    tocPartners: Array<{ code: number | string }>,
+    synergyProgramInitiativeIds: number[],
+  ) {
+    const description =
+      typeof row?.description === 'string' ? row.description : null;
+
+    return {
+      ...row,
+      outcome_statement: description,
+      toc_partners: tocPartners,
+      contributing_synergy_program_initiative_ids: synergyProgramInitiativeIds,
+      result_toc_result_id: mapping.result_toc_result_id,
+      planned_result: mapping.planned_result,
+      toc_progressive_narrative: mapping.toc_progressive_narrative,
+      indicators: mapping.indicators,
+    };
+  }
+
+  private enrichIndicatorCatalogItem<
+    T extends {
+      type_value: string | null;
+      indicator_id: number;
+    },
+  >(indicator: T, centerIds: number[]) {
+    return {
+      ...indicator,
+      indicator_typology: indicator.type_value ?? null,
+      toc_target_center_ids: centerIds,
+    };
+  }
+
+  private groupTocPartnersByResultId(
+    rows: Array<{ toc_result_id: number; code: number | string }>,
+  ): Map<number, Array<{ code: number | string }>> {
+    const map = new Map<number, Array<{ code: number | string }>>();
+
+    for (const row of rows ?? []) {
+      const tocId = Number(row?.toc_result_id);
+      if (
+        !Number.isFinite(tocId) ||
+        row?.code === null ||
+        row?.code === undefined
+      ) {
+        continue;
+      }
+
+      const current = map.get(tocId) ?? [];
+      if (!current.some((item) => `${item.code}` === `${row.code}`)) {
+        current.push({ code: row.code });
+      }
+      map.set(tocId, current);
+    }
+
+    return map;
+  }
+
+  private groupSynergyProgramsByResultId(
+    rows: Array<{ toc_result_id: number; initiative_id: number }>,
+  ): Map<number, number[]> {
+    const map = new Map<number, number[]>();
+
+    for (const row of rows ?? []) {
+      const tocId = Number(row?.toc_result_id);
+      const initiativeId = Number(row?.initiative_id);
+      if (!Number.isFinite(tocId) || !Number.isFinite(initiativeId)) {
+        continue;
+      }
+
+      const current = map.get(tocId) ?? [];
+      if (!current.includes(initiativeId)) {
+        current.push(initiativeId);
+      }
+      map.set(tocId, current);
+    }
+
+    return map;
+  }
+
+  private groupTargetCentersByResultAndIndicator(
+    rows: Array<{
+      toc_result_id: number;
+      indicator_id: number;
+      center_id: number | string;
+    }>,
+  ): Map<string, number[]> {
+    const map = new Map<string, number[]>();
+
+    for (const row of rows ?? []) {
+      const tocId = Number(row?.toc_result_id);
+      const indicatorId = Number(row?.indicator_id);
+      const centerId = Number(row?.center_id);
+      if (
+        !Number.isFinite(tocId) ||
+        !Number.isFinite(indicatorId) ||
+        !Number.isFinite(centerId)
+      ) {
+        continue;
+      }
+
+      const key = `${tocId}:${indicatorId}`;
+      const current = map.get(key) ?? [];
+      if (!current.includes(centerId)) {
+        current.push(centerId);
+      }
+      map.set(key, current);
+    }
+
+    return map;
   }
 }

@@ -49,14 +49,14 @@ export class UpdateContributorsPartnersDto extends CreateResultsTocResultV2Dto {
 
   @ApiPropertyOptional({
     description:
-      'Indicator if innovation result has linked innovations. Applicable for innovation development and innovation use results.',
+      'Indicator if the result has linked results (all result types, P25 Contributors & Partners).',
   })
   has_innovation_link?: boolean;
 
   @ApiPropertyOptional({
     type: [Number],
     description:
-      'Result identifiers linked to the innovation. Only considered when has_innovation_link is true.',
+      'Result identifiers linked to this result. Only considered when has_innovation_link is true.',
   })
   linked_results?: Array<number | string>;
 }

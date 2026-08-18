@@ -70,8 +70,8 @@ export class ShareResultRequestRepository
     ShareResultRequestRepository.name,
   );
   constructor(
-    private dataSource: DataSource,
-    private _handlersError: HandlersError,
+    private readonly dataSource: DataSource,
+    private readonly _handlersError: HandlersError,
   ) {
     super(ShareResultRequest, dataSource.createEntityManager());
   }
@@ -434,6 +434,37 @@ export class ShareResultRequestRepository
         [userId],
       );
       return shareResultRequest.length ? shareResultRequest[0] : undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ShareResultRequestRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async updateFromTocByResultAndInitiative(
+    resultId: number,
+    sharedInitiativeId: number,
+    fromToc: boolean,
+    userId: number,
+  ): Promise<void> {
+    const queryData = `
+      UPDATE share_result_request
+      SET from_toc = ?,
+          requested_by = ?,
+          requested_date = NOW()
+      WHERE result_id = ?
+        AND shared_inititiative_id = ?
+        AND is_active > 0
+    `;
+    try {
+      await this.query(queryData, [
+        fromToc ? 1 : 0,
+        userId,
+        resultId,
+        sharedInitiativeId,
+      ]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ShareResultRequestRepository.name,

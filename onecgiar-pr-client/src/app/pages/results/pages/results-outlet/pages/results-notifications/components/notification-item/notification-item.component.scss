@@ -139,3 +139,40 @@ p {
 .reject {
   color: var(--pr-color-red-500);
 }
+
+/* P2-3085: read-only ToC metadata block in the Contribution Request review */
+.toc_review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 4px;
+
+  &_card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid var(--pr-color-neutral-300);
+    border-radius: 8px;
+    background: var(--pr-color-accents-1);
+  }
+
+  &_row {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  &_label {
+    color: var(--pr-color-neutral-600);
+    font-weight: 500;
+    flex: 0 0 auto;
+    max-width: 60%;
+  }
+
+  &_value {
+    color: var(--pr-color-black);
+    text-align: right;
+  }
+}

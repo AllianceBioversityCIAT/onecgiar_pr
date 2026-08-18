@@ -44,7 +44,7 @@
         class="segment_title_margin"
         [group]="true"
         groupName="name"
-        [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio"
+        [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.selectableInitiatives"
         label="Report for"
         [isStatic]="true"
         optionLabel="full_name"
@@ -135,7 +135,5 @@
 
 @if (this.createResultManagementService.showModal()) {
   <app-result-ai-assistant
-    [initiatives]="
-      this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio
-    "></app-result-ai-assistant>
+    [initiatives]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.selectableInitiatives"></app-result-ai-assistant>
 }

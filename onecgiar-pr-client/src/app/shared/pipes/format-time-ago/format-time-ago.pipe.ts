@@ -23,16 +23,20 @@ export class FormatTimeAgoPipe implements PipeTransform {
       date = subHours(date, serverTimezone);
     }
 
-    const localTimezoneOffset = new Date().getTimezoneOffset() / 60;
-    const localDate = subHours(date, localTimezoneOffset);
-
+    // Relative/elapsed time is timezone-agnostic: `date` is already a correct
+    // absolute (UTC) instant and `now` is absolute too, so their difference is
+    // valid for every viewer. Do NOT subtract the viewer's local offset here —
+    // that shifted every "time ago" by the viewer's UTC offset (e.g. showed a
+    // just-created item as "5 hours ago" in UTC-5). The >1-week absolute-date
+    // fallback uses the native Date, which `format` renders in the viewer's
+    // local day by design.
     const now = new Date();
     const oneWeekInMilliseconds = 7 * 24 * 60 * 60 * 1000;
 
-    if (now.getTime() - localDate.getTime() > oneWeekInMilliseconds) {
-      return format(localDate, 'yyyy MMM dd', { locale: enUS });
+    if (now.getTime() - date.getTime() > oneWeekInMilliseconds) {
+      return format(date, 'yyyy MMM dd', { locale: enUS });
     }
 
-    return `${formatDistanceToNowStrict(localDate, { addSuffix: false, locale: enUS })} ${showAgo ? 'ago' : ''}`;
+    return `${formatDistanceToNowStrict(date, { addSuffix: false, locale: enUS })} ${showAgo ? 'ago' : ''}`;
   }
 }

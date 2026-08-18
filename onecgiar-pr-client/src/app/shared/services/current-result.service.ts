@@ -4,6 +4,7 @@ import { ApiService } from './api/api.service';
 import { RolesService } from './global/roles.service';
 import { DataControlService } from './data-control.service';
 import { Router } from '@angular/router';
+import { isAvisaInitiative } from '../utils/avisa-initiative.util';
 
 @Injectable({
   providedIn: 'root'
@@ -50,6 +51,15 @@ export class CurrentResultService {
             }
             break;
           }
+        }
+
+        if (
+          isAvisaInitiative({
+            initiative_id: response.initiative_id,
+            official_code: response.initiative_official_code
+          })
+        ) {
+          this.api.rolesSE.readOnly = true;
         }
       },
       error: err => {

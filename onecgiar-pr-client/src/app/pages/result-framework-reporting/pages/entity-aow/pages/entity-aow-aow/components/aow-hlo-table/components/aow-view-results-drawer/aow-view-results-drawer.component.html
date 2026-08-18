@@ -29,7 +29,12 @@
         </div>
       </div>
       <p class="view-result-drawer-header_title">{{ entityAowService.currentResultToView()?.result_title }}</p>
-      <p class="view-result-drawer-header_desc">{{ entityAowService.currentResultToView()?.indicators?.[0]?.indicator_description }}</p>
+      <p class="view-result-drawer-header_desc">
+        {{ entityAowService.currentResultToView()?.indicators?.[0]?.indicator_description }}
+        @if (entityAowService.currentResultToView()?.indicators?.[0]?.center_acronym) {
+          <span class="center-chip">{{ entityAowService.currentResultToView()?.indicators?.[0]?.center_acronym }}</span>
+        }
+      </p>
     </div>
   </ng-template>
 

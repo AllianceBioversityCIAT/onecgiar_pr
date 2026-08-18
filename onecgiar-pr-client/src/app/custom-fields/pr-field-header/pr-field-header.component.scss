@@ -9,6 +9,19 @@
   opacity: 0.8;
 }
 
+// P2-3061: label + info icon row (only used when a tooltip is provided)
+.pr_label_row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pr_label_tooltip {
+  font-size: 16px;
+  color: var(--pr-color-primary-300);
+  cursor: pointer;
+}
+
 .pr_description.readOnly {
   font-weight: 400;
   font-style: italic;

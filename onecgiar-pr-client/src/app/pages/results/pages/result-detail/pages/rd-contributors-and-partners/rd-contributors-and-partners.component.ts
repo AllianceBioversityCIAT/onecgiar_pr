@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef, computed } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, computed, effect, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -9,6 +9,7 @@ import { RdContributorsAndPartnersService } from './rd-contributors-and-partners
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } from '../../../../../../shared/utils/avisa-initiative.util';
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -21,6 +22,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;
   contributingInitiativesList = [];
+  allScienceProgramsList = signal<any[]>([]);
   alertStatusMessage: string = `Partner organization or CG Center that you collaborated with or are currently collaborating with to generate this result.`;
   cgCentersMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
   tocConsumed = true;
@@ -70,8 +72,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   isAvisaInitiative = computed(() => {
-    const code = this.api.dataControlSE.currentResultSignal?.()?.initiative_official_code ?? this.api.dataControlSE.currentResult?.initiative_official_code;
-    return code === 'SGP-02' || code === 'SGP02';
+    const result = this.api.dataControlSE.currentResultSignal?.() ?? this.api.dataControlSE.currentResult;
+    return checkAvisaInitiative({
+      official_code: result?.initiative_official_code,
+      initiative_id: result?.initiative_id
+    });
   });
 
   hideWhyReportedField = computed(() => {
@@ -79,13 +84,231 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return initiativeId === 41 && this.fieldsManagerSE.isP25();
   });
 
+  // P2-3036: the 2026 redesign of this section applies only to phase 2026+. 2025 keeps the legacy copy/fields.
+  isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
+
+  // P2-3063 / P2-3036 AC6 (2026, unplanned scenario): single mandatory Yes/No radio
+  // "Did the Program invest financial resources in the achievement of this result?".
+  // Backend persists per row in result_toc_results[] (matched by result_toc_result_id, no dedup), so the single
+  // on-screen radio reads the first row and writes the same value across every active row (per Juan David's contract).
+  financialResourcesInfoNote =
+    "Select 'Yes' if direct program funds were utilized to achieve this result. Select 'No' if the result was achieved organically (e.g., policy influence) without financial investment from the program.";
+
+  get programInvestedFinancialResources(): boolean | null {
+    return this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results?.[0]?.program_invested_financial_resources ?? null;
+  }
+  set programInvestedFinancialResources(value: boolean) {
+    (this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results || []).forEach((row: any) => {
+      row.program_invested_financial_resources = value;
+    });
+  }
+
+  tocQuestionLabel = computed(() =>
+    this.isCP2026()
+      ? 'Can this result be mapped to a ToC KPI?'
+      : "Does this result align with the Program's planned TOC indicators?"
+  );
+
+  // P2-3171 (AC5): inform the user that External Partners are inherited from the HLO/Outcome level in the ToC.
+  externalPartnersInfoNote = 'Partner information is inherited/sourced from the HLO/Outcome level in the ToC.';
+
+  tocQuestionInfoNote = computed(() =>
+    this.isCP2026()
+      ? 'If <strong>Yes</strong>, please select the relevant level, KPI and indicator, and indicate the result contribution to the indicator target. If <strong>No</strong>, please provide a short justification explaining why this result is being reported outside the 2026 TOC KPI. No-mapped results will be shared with the Program team for consideration as part of the adaptive management process, and may feed into updates to the Program’s 2027 TOC.'
+      : 'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These “No”-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program’s 2026 ToC and planned indicators.'
+  );
+
+  // P2-2998 / P2-3036 (2026): split the Contributing CGIAR Centers dropdown into "from ToC" + "Other(s)".
+  // The first shows only CLARISA centers whose institutionId matches the selected TOC node (toc_partners ∪
+  // toc_target_center_ids, fed via the shared service). "Other(s)" shows the rest. Save wired in onSaveSection (from_toc tagging).
+  contributingCentersInfoNote =
+    "The CGIAR Centers listed below were identified in your 2026 ToC. To select a different Center, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
+
+  referenceCenters = computed(() => {
+    const ids = this.rdPartnersSE.tocReferenceCenterInstitutionIds();
+    return (this.centersSE.centersList ?? []).filter(c => ids.includes(c.institutionId));
+  });
+
+  otherCentersList = computed(() => {
+    const ids = this.rdPartnersSE.tocReferenceCenterInstitutionIds();
+    return (this.centersSE.centersList ?? []).filter(c => !ids.includes(c.institutionId));
+  });
+
+  // P2-2998 AC4 (empty state): true when the ToC brought at least one reference center. When false, show the note
+  // and auto-activate the "Other(s)" dropdown with ALL centers (mirrors hasReferenceScience for Science Programs).
+  hasReferenceCenters = computed(() => this.rdPartnersSE.tocReferenceCenterInstitutionIds().length > 0);
+  noCentersNote = 'No CGIAR Centers related to the established HLO/Outcomes were found';
+
+  // "Other(s) CGIAR Centers" is a special item at the END of the first dropdown's list (per Excel), not an outside
+  // checkbox. Selecting it toggles the second dropdown; it is never persisted as a real center.
+  readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
+  dropdown1Options = computed(() => [
+    ...this.referenceCenters(),
+    { code: this.OTHER_CENTERS_CODE, name: 'Other(s) CGIAR Centers', acronym: 'Other(s)', full_name: '<strong>Other(s) CGIAR Centers</strong>', institutionId: -1 }
+  ]);
+
+  // QA P2-2929/P2-2998 (2026-07-03): reconcile the from-ToC Centers preselection whenever the resolved ToC
+  // reference set changes (node added/changed/removed) — remove session-preloaded (`new: true`) centers that left
+  // the refs and preselect the missing ones (union+dedup across nodes). "Other(s)" sentinel, manual Other picks and
+  // persisted/GET-hydrated centers are never removed here (removing persisted items stays a manual user action).
+  private lastCentersRefSignature: string | null = null;
+  preselectCentersEffect = effect(() => {
+    if (!this.isCP2026()) return;
+    const refs = this.referenceCenters();
+    // Signature over the RESOLVED refs (ids ∩ catalog) so a late CLARISA catalog doesn't fake a node change,
+    // and unrelated signal re-runs never churn the user's selection.
+    const signature = refs
+      .map(c => c.institutionId)
+      .sort((a, b) => a - b)
+      .join(',');
+    if (signature === this.lastCentersRefSignature) return;
+    // P2-3115: don't resurrect a deliberately-emptied, saved Centers selection on reload; only a user-driven ToC
+    // HLO/KPI selection (markUserTocSelection) authorizes prefill after the section was hydrated from the persisted GET.
+    if (this.rdPartnersSE.sectionHydratedFromToc() && !this.rdPartnersSE.tocSelectionTouched()) return;
+    this.lastCentersRefSignature = signature;
+
+    const current = this.rdPartnersSE.partnersBody?.contributing_center || [];
+    const refIds = new Set(refs.map(c => c.institutionId));
+    // Keep everything except session-preloaded centers that no longer belong to the mapped node(s).
+    const kept = current.filter((c: any) => c.code === this.OTHER_CENTERS_CODE || !c.new || refIds.has(c.institutionId));
+    const keptIds = new Set(kept.map((c: any) => c.institutionId));
+    const added = refs.filter(c => !keptIds.has(c.institutionId)).map(c => ({ ...c, new: true, is_active: true }));
+    if (added.length === 0 && kept.length === current.length) return;
+
+    const removed = current.filter((c: any) => !kept.includes(c));
+    this.rdPartnersSE.partnersBody.contributing_center = [...kept, ...added] as any[];
+    // If the reconciliation dropped the current lead center, clear it so we don't save an orphaned lead.
+    if (removed.some((c: any) => c.code === this.rdPartnersSE.leadCenterCode)) {
+      this.rdPartnersSE.leadCenterCode = null;
+    }
+    this.rdPartnersSE.setPossibleLeadCenters(true);
+  });
+
+  // "Other(s)" stays selected like any other center (shows as a chip); its presence reveals the second dropdown.
+  get showOtherCenters(): boolean {
+    return (this.rdPartnersSE.partnersBody?.contributing_center || []).some(c => c.code === this.OTHER_CENTERS_CODE);
+  }
+
+  onContributingCenterSelect(_event: any) {
+    // when "Other(s)" is deselected, clear whatever was picked in the Other(s) dropdown
+    if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
+    // OTHER_CENTERS_CODE isn't in the CLARISA list, so it doesn't affect lead-center options.
+    this.rdPartnersSE.setPossibleLeadCenters(true);
+  }
+
+  deleteOtherCenter(index: number) {
+    // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
+    // Parity with deleteScience: reassign a NEW array (not splice) so the multi-select ngModel refreshes and the chip stays removed.
+    const removed = (this.rdPartnersSE.otherCentersSelected || [])[index];
+    this.rdPartnersSE.otherCentersSelected = (this.rdPartnersSE.otherCentersSelected || []).filter((_: any, i: number) => i !== index);
+    // Parity with deleteContributingCenter: if the removed "Other" center was the lead, clear the lead so we don't save an orphaned lead.
+    if (this.rdPartnersSE.leadCenterCode === removed?.code) {
+      this.rdPartnersSE.leadCenterCode = null;
+    }
+    // Recompute lead-center eligibility now that an "Other" center is gone.
+    this.rdPartnersSE.setPossibleLeadCenters(true);
+  }
+
+  // ----- P2-2929 (2026): Contributing Science Program/Accelerator split (VISUAL ONLY; pending/save deferred per Juan David) -----
+  readonly OTHER_SP_CODE = '__OTHER_SCIENCE__';
+  // QA 2026-07-14: wording unified with the Report-result popup (aow-hlo-create-modal) — keep both in sync.
+  contributingScienceInfoNote =
+    "The Science Programs listed below were identified in your 2026 ToC. To select a different Science Program, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
+  noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
+
+  // P2-3112: generic "result" wording of the linked/bundled question for non-innovation result types
+  // (Innovation Use/Dev keep their existing "innovation" wording).
+  linkedResultQuestionLabel =
+    'Is this result linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?';
+
+  // The result's own (owner/primary) Science Program: it can never be a contributor to its own result
+  // (backend rejects "The owner initiative cannot be shared with itself"), so it must not appear in either dropdown.
+  ownerInitiativeId = computed(
+    () => this.api.dataControlSE.currentResultSignal?.()?.initiative_id ?? this.api.dataControlSE.currentResult?.initiative_id
+  );
+
+  referenceScience = computed(() => {
+    const ids = this.rdPartnersSE.tocReferenceSynergyInitiativeIds();
+    const ownerId = this.ownerInitiativeId();
+    return (this.allScienceProgramsList() ?? []).filter(sp => ids.includes(sp.id) && sp.id !== ownerId);
+  });
+
+  otherScienceList = computed(() => {
+    const ids = this.rdPartnersSE.tocReferenceSynergyInitiativeIds();
+    const ownerId = this.ownerInitiativeId();
+    return (this.allScienceProgramsList() ?? []).filter(sp => !ids.includes(sp.id) && sp.id !== ownerId);
+  });
+
+  // True when the ToC brought at least one Science Program that actually resolves in the catalog. Based on the resolved
+  // referenceScience() (not the raw synergy ids) so a node whose ids don't map to a known SP still shows the empty state.
+  hasReferenceScience = computed(() => this.referenceScience().length > 0);
+
+  dropdown1OptionsSP = computed(() => [
+    ...this.referenceScience(),
+    { id: this.OTHER_SP_CODE, official_code: 'Other(s)', short_name: 'Science Program(s)', full_name: '<strong>Other(s) Science Program(s)</strong>' }
+  ]);
+
+  get showOtherScience(): boolean {
+    return (this.rdPartnersSE.scienceSelected || []).some(sp => sp.id === this.OTHER_SP_CODE);
+  }
+
+  // QA P2-2929 (2026-07-03): reconcile the from-ToC SP preselection whenever the resolved ToC reference set
+  // changes — remove session-preloaded (`new: true`) SP that left the refs, preselect the missing ones (union+dedup).
+  // "Other(s)" sentinel, manual Other picks and persisted/accepted/pending SP are never removed here.
+  private lastScienceRefSignature: string | null = null;
+  preselectScienceEffect = effect(() => {
+    if (!this.isCP2026()) return;
+    const refs = this.referenceScience();
+    // Signature over the RESOLVED refs so a late SP catalog doesn't fake a node change and unrelated
+    // signal re-runs never churn the user's selection.
+    const signature = refs
+      .map(sp => sp.id)
+      .sort((a, b) => a - b)
+      .join(',');
+    if (signature === this.lastScienceRefSignature) return;
+    // P2-3115: don't resurrect a deliberately-emptied, saved selection. Once the section is hydrated from the
+    // persisted GET, that (possibly empty) state is authoritative — only a user-driven ToC HLO/KPI selection prefills.
+    if (this.rdPartnersSE.sectionHydratedFromToc() && !this.rdPartnersSE.tocSelectionTouched()) return;
+    this.lastScienceRefSignature = signature;
+
+    const current = this.rdPartnersSE.scienceSelected || [];
+    const refIds = new Set(refs.map(sp => sp.id));
+    // Keep everything except session-preloaded SP that no longer belong to the mapped node(s).
+    const kept = current.filter((sp: any) => sp.id === this.OTHER_SP_CODE || !sp.new || refIds.has(sp.id));
+    const keptIds = new Set(kept.map((sp: any) => sp.id));
+    const added = refs.filter(sp => !keptIds.has(sp.id)).map(sp => ({ ...sp, new: true, is_active: true }));
+    if (added.length === 0 && kept.length === current.length) return;
+
+    this.rdPartnersSE.scienceSelected = [...kept, ...added];
+  });
+
+  onScienceSelect(_event: any) {
+    if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
+  }
+
+  deleteScience(index: number) {
+    // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
+    // Reassign a NEW array reference (not splice in place) so the multi-select ngModel refreshes and the chip stays removed.
+    this.rdPartnersSE.scienceSelected = (this.rdPartnersSE.scienceSelected || []).filter((_: any, i: number) => i !== index);
+    if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
+  }
+
+  deleteOtherScience(index: number) {
+    this.rdPartnersSE.otherScienceSelected = (this.rdPartnersSE.otherScienceSelected || []).filter((_: any, i: number) => i !== index);
+  }
+
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {
         this.api.dataControlSE.currentResult = response;
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
-          this.contributingInitiativesList = response;
+          this.contributingInitiativesList = filterOutAvisaInitiatives(response);
+        });
+        // P2-2929 (2026): full Science Programs/initiatives list to split "from ToC" vs "Other(s)".
+        // P2-3131: AVISA (SGP-02) must not be selectable in the "Other(s) Science Program" dropdown either.
+        this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(({ response }) => {
+          this.allScienceProgramsList.set(filterOutAvisaInitiatives(response || []));
         });
       },
       error: err => {
@@ -106,7 +329,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         confirmText: 'Yes, sync information'
       },
       () => {
-        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(resp => {
+        this.api.resultsSE.PATCH_resyncKnowledgeProducts().subscribe(() => {
           this.rdPartnersSE.getSectionInformation();
         });
       }
@@ -122,15 +345,22 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   deleteContributingCenter(index: number, updateComponent: boolean = false) {
+    // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
     if (updateComponent) {
       this.rdPartnersSE.updatingLeadData = true;
     }
 
-    const deletedCenter = this.rdPartnersSE.partnersBody?.contributing_center.splice(index, 1);
+    // Reassign a NEW array reference (not splice) so the multi-select ngModel refreshes and object identity stays predictable.
+    const deletedCenter = (this.rdPartnersSE.partnersBody?.contributing_center || []).slice(index, index + 1);
+    this.rdPartnersSE.partnersBody.contributing_center = (this.rdPartnersSE.partnersBody?.contributing_center || []).filter(
+      (_: any, i: number) => i !== index
+    );
     if (deletedCenter.length === 1 && this.rdPartnersSE.leadCenterCode === deletedCenter[0].code) {
       //always should happen
       this.rdPartnersSE.leadCenterCode = null;
     }
+    // P2-2998: removing the "Other(s)" chip hides the second dropdown and clears its selection.
+    if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
     if (updateComponent) {
       setTimeout(() => {
         this.rdPartnersSE.updatingLeadData = false;
@@ -154,6 +384,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   onSaveSection() {
     if (this.rdPartnersSE.partnersBody.no_applicable_partner) {
       this.rdPartnersSE.partnersBody.institutions = [];
+      this.rdPartnersSE.otherPartnersSelected = [];
     }
 
     if (this.rdPartnersSE.partnersBody.is_lead_by_partner) {
@@ -178,16 +409,72 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
     const linkedResultsIds = (this.rdPartnersSE.partnersBody.linked_results || []).map((r: any) => Number(r?.id ?? r));
 
+    // P2-2998 / P2-2929 (2026): tag each center/SP with from_toc and strip the UI-only sentinels.
+    // Centers = ToC-selected (contributing_center, minus sentinel) ∪ Other(s). SP = scienceSelected ∪ otherScienceSelected,
+    // split into accepted (kept) vs pending (new contribution request) by the _was_accepted tag set on load.
+    const isCP2026 = this.isCP2026();
+    let contributingCenterPayload: any[] = this.rdPartnersSE.partnersBody.contributing_center;
+    let institutionsPayload: any[] = this.rdPartnersSE.partnersBody.institutions;
+    let contributingInitiativesPayload: any = {
+      ...this.rdPartnersSE.partnersBody.contributing_initiatives,
+      pending_contributing_initiatives: [
+        ...this.rdPartnersSE.partnersBody.contributing_initiatives.pending_contributing_initiatives,
+        ...this.rdPartnersSE.contributingInitiativeNew
+      ]
+    };
+    let cancelPendingRequests: number[] = [];
+
+    if (isCP2026) {
+      const tocCenters = (this.rdPartnersSE.partnersBody.contributing_center || [])
+        .filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE)
+        .map((c: any) => ({ ...c, from_toc: true }));
+      const otherCenters = (this.rdPartnersSE.otherCentersSelected || []).map((c: any) => ({
+        ...c,
+        from_toc: false,
+        is_leading_result: this.rdPartnersSE.leadCenterCode === c.code
+      }));
+      contributingCenterPayload = [...tocCenters, ...otherCenters];
+
+      // P2-3066: External Partners — ToC partners (institutions minus the sentinel, from_toc true) ∪ Other(s) (from_toc false).
+      const isLeadByPartner = this.rdPartnersSE.partnersBody.is_lead_by_partner;
+      const tocPartners = (this.rdPartnersSE.partnersBody.institutions || [])
+        .filter((p: any) => p?.institutions_id !== this.rdPartnersSE.OTHER_PARTNERS_CODE)
+        .map((p: any) => ({ ...p, from_toc: true, is_leading_result: isLeadByPartner && this.rdPartnersSE.leadPartnerId === p.institutions_id }));
+      const otherPartners = (this.rdPartnersSE.otherPartnersSelected || []).map((p: any) => ({
+        ...p,
+        from_toc: false,
+        is_leading_result: isLeadByPartner && this.rdPartnersSE.leadPartnerId === p.institutions_id
+      }));
+      institutionsPayload = [...tocPartners, ...otherPartners];
+
+      const allSP = [
+        ...(this.rdPartnersSE.scienceSelected || []).filter((sp: any) => sp?.id !== this.OTHER_SP_CODE).map((sp: any) => ({ ...sp, from_toc: true })),
+        ...(this.rdPartnersSE.otherScienceSelected || []).map((sp: any) => ({ ...sp, from_toc: false }))
+      ];
+      // Classify by the loaded accepted-ids set (identity), not the per-object _was_accepted (lost on deselect+reselect).
+      const wasAccepted = (sp: any) => this.rdPartnersSE.loadedAcceptedScienceIds.has(sp.id);
+      contributingInitiativesPayload = {
+        ...this.rdPartnersSE.partnersBody.contributing_initiatives,
+        accepted_contributing_initiatives: allSP.filter((sp: any) => wasAccepted(sp)).map((sp: any) => ({ id: sp.id, from_toc: !!sp.from_toc })),
+        pending_contributing_initiatives: allSP.filter((sp: any) => !wasAccepted(sp)).map((sp: any) => ({ id: sp.id, from_toc: !!sp.from_toc }))
+      };
+
+      // Cancel the pending contribution requests the user deselected: pending SP loaded on entry that are
+      // no longer in the current selection → send their share_result_request_id in cancel_pending_requests.
+      const selectedSpIds = new Set(allSP.map((sp: any) => sp.id));
+      cancelPendingRequests = (this.rdPartnersSE.loadedPendingScience || [])
+        .filter((p: any) => !selectedSpIds.has(p.id))
+        .map((p: any) => p.share_result_request_id)
+        .filter((id: any) => id != null);
+    }
+
     const sendedData = {
       ...this.rdPartnersSE.partnersBody,
+      contributing_center: contributingCenterPayload,
+      institutions: institutionsPayload,
       linked_results: linkedResultsIds,
-      contributing_initiatives: {
-        ...this.rdPartnersSE.partnersBody.contributing_initiatives,
-        pending_contributing_initiatives: [
-          ...this.rdPartnersSE.partnersBody.contributing_initiatives.pending_contributing_initiatives,
-          ...this.rdPartnersSE.contributingInitiativeNew
-        ]
-      },
+      contributing_initiatives: contributingInitiativesPayload,
+      ...(isCP2026 ? { cancel_pending_requests: cancelPendingRequests } : {}),
       email_template: 'email_template_contribution'
     };
 
@@ -204,7 +491,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
   }
 
-  toggleActiveContributor(item) {
+  toggleActiveContributor(item: any) {
     item.is_active = !item.is_active;
   }
 
@@ -236,7 +523,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   getContributorDescription(contributor: any) {
-    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Does this result align with the Program's planned TOC indicators?`;
+    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - ${this.tocQuestionLabel()}`;
 
     if (!contributor?.result_toc_results?.length) {
       return `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Pending confirmation`;

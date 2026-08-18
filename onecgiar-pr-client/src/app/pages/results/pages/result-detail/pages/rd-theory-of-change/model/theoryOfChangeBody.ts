@@ -67,4 +67,7 @@ export class ResultTocResultsInterface {
   initiative_id: number | string = null;
   toc_level_id?: number | string = null;
   indicators: IndicatorsTocInterface[] = new Array<IndicatorsTocInterface>();
+  // P2-3063 / P2-3036 AC6: "Did the Program invest financial resources…?" radio. Persisted per row by the backend
+  // (matched by result_toc_result_id); the single on-screen radio writes the same value across the active rows.
+  program_invested_financial_resources: boolean = null;
 }

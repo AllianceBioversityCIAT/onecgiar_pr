@@ -1,5 +1,6 @@
 import { Component, DoCheck, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { filterOutAvisaInitiatives } from '../../../../shared/utils/avisa-initiative.util';
 import { InnovationPackageCreatorBody } from './model/innovation-package-creator.model';
 import { Router } from '@angular/router';
 import { ManageInnovationsListService } from '../../services/manage-innovations-list.service';
@@ -120,7 +121,8 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
       next: ({ response }) => {
         this.GET_cgiarEntityTypes(entityTypesResponse => {
           this.cgiarEntityTypes = entityTypesResponse;
-          this.allInitiatives = response;
+          // P2-3138: exclude AVISA (SGP-02) from the Innovation Package creation project list too.
+          this.allInitiatives = filterOutAvisaInitiatives(response);
 
           this.allInitiatives.forEach(initiative => {
             const { code, name } = initiative?.obj_cgiar_entity_type || {};

@@ -492,6 +492,14 @@ export class Result {
   is_lead_by_partner: boolean;
 
   @Column({
+    name: 'has_innovation_link',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  has_innovation_link: boolean | null;
+
+  @Column({
     name: 'source',
     nullable: true,
     default: 'Result',

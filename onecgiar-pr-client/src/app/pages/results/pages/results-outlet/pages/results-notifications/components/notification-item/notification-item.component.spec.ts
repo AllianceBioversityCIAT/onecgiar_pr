@@ -392,4 +392,65 @@ describe('NotificationItemComponent', () => {
       expect(emitSpy).toHaveBeenCalled();
     });
   });
+
+  describe('tocReview getter (P2-3085)', () => {
+    it('should return [] when toc_contribution_review is absent', () => {
+      component.notification = { is_map_to_toc: true };
+      expect(component.tocReview).toEqual([]);
+    });
+
+    it('should return [] when notification is null', () => {
+      component.notification = null;
+      expect(component.tocReview).toEqual([]);
+    });
+
+    it('should return the review entries when present', () => {
+      const entry = {
+        level: 'Output',
+        outcome_label: 'HLO1.AOW1.IO1',
+        outcome_statement: 'Statement text',
+        indicator_typology: 'Number of knowledge products',
+        unit_of_measurement: 'Number',
+        target: 6,
+        contribution_target: 2
+      };
+      component.notification = { is_map_to_toc: true, toc_contribution_review: [entry] };
+      expect(component.tocReview.length).toBe(1);
+      expect(component.tocReview[0].outcome_label).toBe('HLO1.AOW1.IO1');
+      expect(component.tocReview[0].contribution_target).toBe(2);
+    });
+  });
+
+  // P2-3204: the backend sends the TOC type name as `statement` and the internal sentinel as
+  // `indicator_typology`. The panel must show the name, matching Contributors & Partners.
+  describe('tocTypologyOf() (P2-3204)', () => {
+    it('should show the sentinel and the TOC type name together', () => {
+      const review = {
+        statement: '# partners supporting changes to more gender-equitable norms',
+        indicator_typology: 'custom'
+      };
+      expect(component.tocTypologyOf(review)).toBe('custom — # partners supporting changes to more gender-equitable norms');
+    });
+
+    it('should not repeat the value when both fields are identical', () => {
+      expect(component.tocTypologyOf({ statement: 'Innovation Use', indicator_typology: 'Innovation Use' })).toBe('Innovation Use');
+    });
+
+    it('should fall back to indicator_typology when statement is missing', () => {
+      expect(component.tocTypologyOf({ indicator_typology: 'Innovation Use' })).toBe('Innovation Use');
+    });
+
+    it('should fall back to indicator_typology when statement is blank', () => {
+      expect(component.tocTypologyOf({ statement: '   ', indicator_typology: 'Innovation Use' })).toBe('Innovation Use');
+    });
+
+    it('should show the em dash placeholder when neither field is populated', () => {
+      expect(component.tocTypologyOf({})).toBe('—');
+      expect(component.tocTypologyOf({ statement: '', indicator_typology: '' })).toBe('—');
+    });
+
+    it('should not break when the review entry is null', () => {
+      expect(component.tocTypologyOf(null as any)).toBe('—');
+    });
+  });
 });

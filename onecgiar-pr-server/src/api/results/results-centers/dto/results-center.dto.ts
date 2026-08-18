@@ -64,4 +64,11 @@ export class ResultsCenterDto {
       'Flag that marks whether the center is leading the reported result.',
   })
   is_leading_result: boolean;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Flag that indicates the center was prefilled from the Theory of Change mapping.',
+  })
+  from_toc?: boolean;
 }

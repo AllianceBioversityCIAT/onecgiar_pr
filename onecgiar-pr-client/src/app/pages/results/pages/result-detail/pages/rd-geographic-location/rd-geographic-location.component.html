@@ -1,10 +1,13 @@
 <div class="detail_container">
   <div id="alert"></div>
+  <!-- P2-3036 (AC9): P25 Innovation in phase 2026+ uses the "location of benefit" wording; 2025 keeps "geographic focus". -->
   <div
     appFeedbackValidation
     [labelText]="
       this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
-        ? 'What is the current geographic focus of the innovation development, testing and/or use?'
+        ? this.fieldsManagerSE.isGeographicLocation2026()
+          ? 'What is the location of benefit for this result?'
+          : 'What is the current geographic focus of the innovation development, testing and/or use?'
         : 'What is the main geographic focus of the Output?'
     "
     [isComplete]="!!this.geographicLocationBody.geo_scope_id"></div>
@@ -19,12 +22,16 @@
   <app-geoscope-management
     [description]="
       this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
-        ? 'This should reflect geographies where the innovation development, testing and/or use has taken place'
+        ? this.fieldsManagerSE.isGeographicLocation2026()
+          ? 'Location of benefit refers to the country, region, or global area where this result is reasonably expected to create benefit — directly or through partners.'
+          : 'This should reflect geographies where the innovation development, testing and/or use has taken place'
         : undefined
     "
     [label]="
       this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
-        ? 'What is the current geographic focus of the innovation development, testing and/or use?'
+        ? this.fieldsManagerSE.isGeographicLocation2026()
+          ? 'What is the location of benefit for this result?'
+          : 'What is the current geographic focus of the innovation development, testing and/or use?'
         : undefined
     "
     [body]="this.geographicLocationBody"

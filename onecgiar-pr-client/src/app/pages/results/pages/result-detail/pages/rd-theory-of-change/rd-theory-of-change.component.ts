@@ -6,6 +6,7 @@ import { InstitutionsService } from '../../../../../../shared/services/global/in
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -46,7 +47,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
         this.api.dataControlSE.currentResult = response;
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
-          this.contributingInitiativesList = response;
+          this.contributingInitiativesList = filterOutAvisaInitiatives(response);
           this.changeDetectorRef.detectChanges();
         });
       },

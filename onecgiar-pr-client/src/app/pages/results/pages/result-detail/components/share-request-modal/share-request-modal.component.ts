@@ -41,8 +41,11 @@ export class ShareRequestModalComponent implements OnInit {
 
   validateAcceptOrReject() {
     const plannedResult = this.shareRequestModalSE.shareRequestBody.planned_result;
+    // P2-3106: in the notifications accept flow, the ToC ids are only required when the user answered "Yes"
+    // (so "No" / default enables Accept without ToC mapping). The result-detail share flow keeps its original strictness.
+    const tocRequired = this.api.dataControlSE.inNotifications ? !!plannedResult : true;
     const resultWithoutTRI = this.shareRequestModalSE.shareRequestBody.result_toc_results.some(result => {
-      const missingTocIds = !result.toc_result_id || !result?.toc_level_id;
+      const missingTocIds = tocRequired && (!result.toc_result_id || !result?.toc_level_id);
       const missingIndicator = plannedResult && this.fieldsManagerSE.activeIndicatorsLength() > 0 && !this.fieldsManagerSE.hasSelectedIndicator();
 
       return missingTocIds || missingIndicator;

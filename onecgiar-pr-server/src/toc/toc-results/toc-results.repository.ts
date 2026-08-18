@@ -14,6 +14,17 @@ import {
   formatUnknownError,
 } from '../../shared/utils/service-error.util';
 
+export type GetTocIndicatorsByResultIdsParams = {
+  result: Result;
+  targetYear: number;
+  tocResultIds: Array<number | string>;
+  resultTypeId?: number;
+  linkedIndicatorNodeIds?: string[];
+  resultId?: number;
+  initId?: number;
+  includeInactiveIndicators?: boolean;
+};
+
 @Injectable()
 export class TocResultsRepository extends Repository<TocResult> {
   private readonly logger = new Logger(TocResultsRepository.name);
@@ -488,23 +499,12 @@ export class TocResultsRepository extends Repository<TocResult> {
     return false;
   }
 
-  async $_getResultTocByConfigV2(
-    init_id: number,
-    toc_level: number,
-    reportingYear: number,
-    resultTypeId?: number,
-    resultId?: number,
-    planned?: boolean | string,
-    explicitTocPhaseId?: string | number,
-  ) {
-    const isPlanned = planned === true || planned === 'true';
-
-    const categoryMap = {
+  private _resolveTocCategory(toc_level: number): string {
+    const categoryMap: Record<number, string> = {
       1: 'OUTPUT',
       2: 'OUTCOME',
       3: 'EOI',
     };
-
     const category = categoryMap[toc_level];
     if (!category) {
       throwServiceError(
@@ -512,67 +512,75 @@ export class TocResultsRepository extends Repository<TocResult> {
         HttpStatus.BAD_REQUEST,
       );
     }
+    return category;
+  }
 
-    const isInitiativeValidation = await this.$_initiativeValidation(init_id);
-    let tocPhaseId: string = null;
-
+  private async _resolveTocPhaseIdForConfigV2(
+    reportingYear: number,
+    explicitTocPhaseId: string | number | undefined,
+    isInitiativeValidation: boolean,
+  ): Promise<string | null> {
     if (isInitiativeValidation) {
-      tocPhaseId = await this.dataSource
+      const globalParameter = await this.dataSource
         .getRepository(GlobalParameter)
         .findOne({
-          where: {
-            name: 'sgp_02_toc_version',
-          },
-        })
-        .then((el) => el.value);
-    } else if (
+          where: { name: 'sgp_02_toc_version' },
+        });
+      return globalParameter?.value ?? null;
+    }
+
+    if (
       explicitTocPhaseId !== null &&
       explicitTocPhaseId !== undefined &&
       String(explicitTocPhaseId).trim() !== ''
     ) {
-      tocPhaseId = String(explicitTocPhaseId).trim();
-    } else {
-      tocPhaseId = await this.getTocPhaseIdForReportingYear(reportingYear);
+      return String(explicitTocPhaseId).trim();
     }
 
-    const params: (string | number)[] = isInitiativeValidation
-      ? [init_id, category]
-      : [reportingYear, init_id, category];
-    let whereTocPhaseId = '';
-    let workPackageJoin = `
+    return this.getTocPhaseIdForReportingYear(reportingYear);
+  }
+
+  private _buildTocConfigV2PhaseClause(
+    tocPhaseId: string | null,
+    isInitiativeValidation: boolean,
+  ): { whereTocPhaseId: string; workPackageJoin: string } {
+    const defaultWorkPackageJoin = `
       LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
         ON wp.toc_id = tr.wp_id
     `;
 
-    if (tocPhaseId) {
-      params.push(tocPhaseId);
-      if (isInitiativeValidation) {
-        whereTocPhaseId = `AND tr.version_id = ?`;
-      } else {
-        whereTocPhaseId = `AND tr.phase = ?`;
-        workPackageJoin = `
+    if (!tocPhaseId) {
+      return { whereTocPhaseId: '', workPackageJoin: defaultWorkPackageJoin };
+    }
+
+    if (isInitiativeValidation) {
+      return {
+        whereTocPhaseId: `AND tr.version_id = ?`,
+        workPackageJoin: defaultWorkPackageJoin,
+      };
+    }
+
+    return {
+      whereTocPhaseId: `AND tr.phase = ?`,
+      workPackageJoin: `
       LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
         ON wp.toc_id = tr.wp_id
           AND wp.year = ?
-    `;
-      }
-    }
+    `,
+    };
+  }
 
-    let indicatorFilter = '';
-    if (
-      isPlanned &&
-      resultTypeId &&
-      RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
-    ) {
-      const currentTypePatterns =
-        RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
-      const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
-
-      const currentLikeConditions = currentTypePatterns
-        .map(() => 'tri.type_value LIKE ?')
-        .join(' OR ');
-
-      const currentTypeExists = `
+  private _buildPlannedResultTypeIndicatorExistsFilter(
+    resultTypeId: number,
+    resultId: number | undefined,
+    params: (string | number)[],
+  ): string {
+    const currentTypePatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
+    const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
+    const currentLikeConditions = currentTypePatterns
+      .map(() => 'tri.type_value LIKE ?')
+      .join(' OR ');
+    const currentTypeExists = `
         EXISTS (
           SELECT 1
           FROM ${env.DB_TOC}.toc_results_indicators tri
@@ -582,12 +590,12 @@ export class TocResultsRepository extends Repository<TocResult> {
         )
       `;
 
-      let otherTypesCondition = '';
-      if (otherTypesPatterns.length > 0) {
-        const otherLikeConditions = otherTypesPatterns
-          .map(() => 'tri_other.type_value LIKE ?')
-          .join(' OR ');
-        otherTypesCondition = `
+    let otherTypesCondition = '';
+    if (otherTypesPatterns.length > 0) {
+      const otherLikeConditions = otherTypesPatterns
+        .map(() => 'tri_other.type_value LIKE ?')
+        .join(' OR ');
+      otherTypesCondition = `
           OR NOT EXISTS (
             SELECT 1
             FROM ${env.DB_TOC}.toc_results_indicators tri_other
@@ -596,10 +604,14 @@ export class TocResultsRepository extends Repository<TocResult> {
               AND (${otherLikeConditions})
           )
         `;
-      }
+    }
 
-      if (resultId && Number.isFinite(resultId) && resultId > 0) {
-        indicatorFilter = `
+    const hasMappedResult =
+      resultId != null && Number.isFinite(resultId) && resultId > 0;
+
+    if (hasMappedResult) {
+      params.push(...currentTypePatterns, ...otherTypesPatterns, resultId);
+      return `
           AND (
             (${currentTypeExists} ${otherTypesCondition})
             OR EXISTS (
@@ -611,19 +623,76 @@ export class TocResultsRepository extends Repository<TocResult> {
             )
           )
         `;
-        params.push(...currentTypePatterns, ...otherTypesPatterns, resultId);
-      } else {
-        indicatorFilter = `
+    }
+
+    params.push(...currentTypePatterns, ...otherTypesPatterns);
+    return `
           AND (${currentTypeExists} ${otherTypesCondition})
         `;
-        params.push(...currentTypePatterns, ...otherTypesPatterns);
-      }
+  }
+
+  private _buildPlannedIndicatorFilter(
+    isPlanned: boolean,
+    resultTypeId: number | undefined,
+    resultId: number | undefined,
+    params: (string | number)[],
+  ): string {
+    if (
+      !isPlanned ||
+      !resultTypeId ||
+      !RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
+    ) {
+      return '';
     }
+
+    return this._buildPlannedResultTypeIndicatorExistsFilter(
+      resultTypeId,
+      resultId,
+      params,
+    );
+  }
+
+  async $_getResultTocByConfigV2(
+    init_id: number,
+    toc_level: number,
+    reportingYear: number,
+    resultTypeId?: number,
+    resultId?: number,
+    planned?: boolean | string,
+    explicitTocPhaseId?: string | number,
+  ) {
+    const isPlanned = planned === true || planned === 'true';
+    const category = this._resolveTocCategory(toc_level);
+    const isInitiativeValidation = await this.$_initiativeValidation(init_id);
+    const tocPhaseId = await this._resolveTocPhaseIdForConfigV2(
+      reportingYear,
+      explicitTocPhaseId,
+      isInitiativeValidation,
+    );
+
+    const params: (string | number)[] = isInitiativeValidation
+      ? [init_id, category]
+      : [reportingYear, init_id, category];
+
+    const { whereTocPhaseId, workPackageJoin } =
+      this._buildTocConfigV2PhaseClause(tocPhaseId, isInitiativeValidation);
+
+    if (tocPhaseId) {
+      params.push(tocPhaseId);
+    }
+
+    const indicatorFilter = this._buildPlannedIndicatorFilter(
+      isPlanned,
+      resultTypeId,
+      resultId,
+      params,
+    );
 
     const queryData = `
       SELECT DISTINCT
         tr.id AS toc_result_id,
         tr.toc_result_id AS toc_internal_id,
+        tr.related_node_id,
         tr.result_title AS title,
         tr.result_description AS description,
         tr.result_type AS toc_type_id,
@@ -655,15 +724,142 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
-  async getTocIndicatorsByResultIds(
-    result: Result,
-    targetYear: number,
-    tocResultIds: Array<number | string>,
-    resultTypeId?: number,
+  private _normalizeLinkedIndicatorNodeIds(
     linkedIndicatorNodeIds?: string[],
+  ): string[] {
+    return (linkedIndicatorNodeIds ?? [])
+      .map((value) => `${value}`.trim())
+      .filter((value) => value !== '');
+  }
+
+  private _tripleLinkedIndicatorParams(
+    normalizedLinkedIndicators: string[],
+  ): string[] {
+    return [
+      ...normalizedLinkedIndicators,
+      ...normalizedLinkedIndicators,
+      ...normalizedLinkedIndicators,
+    ];
+  }
+
+  private async _isUnplannedTocResult(
     resultId?: number,
     initId?: number,
-    includeInactiveIndicators = false,
+  ): Promise<boolean> {
+    if (!resultId || !initId || !Number.isFinite(resultId) || resultId <= 0) {
+      return false;
+    }
+
+    try {
+      const firstResultToc = await this.query(
+        `
+          SELECT planned_result
+          FROM ${env.DB_NAME}.results_toc_result
+          WHERE results_id = ?
+            AND initiative_id = ?
+            AND is_active = 1
+          ORDER BY created_date ASC
+          LIMIT 1
+        `,
+        [resultId, initId],
+      );
+      return (
+        firstResultToc?.length > 0 && firstResultToc[0]?.planned_result === 0
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Error checking planned_result for result ${resultId} in getTocIndicatorsByResultIds: ${formatUnknownError(error)}`,
+      );
+      return false;
+    }
+  }
+
+  private _appendResultTypeIndicatorFilter(
+    indicatorConditions: string[],
+    queryParams: unknown[],
+    resultTypeId: number | undefined,
+    isUnplanned: boolean,
+  ): void {
+    if (
+      isUnplanned ||
+      !resultTypeId ||
+      !RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
+    ) {
+      return;
+    }
+
+    const currentTypePatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
+    const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
+    const currentLikeConditions = currentTypePatterns
+      .map(() => 'tri.type_value LIKE ?')
+      .join(' OR ');
+
+    indicatorConditions.push(`(${currentLikeConditions})`);
+    queryParams.push(...currentTypePatterns);
+
+    if (otherTypesPatterns.length === 0) {
+      return;
+    }
+
+    const otherNotLikeConditions = otherTypesPatterns
+      .map(() => 'tri.type_value NOT LIKE ?')
+      .join(' AND ');
+    indicatorConditions.push(
+      `((${otherNotLikeConditions}) OR (tri.type_value IS NULL OR tri.type_value = ''))`,
+    );
+    queryParams.push(...otherTypesPatterns);
+  }
+
+  private _appendLinkedIndicatorFilter(
+    indicatorConditions: string[],
+    queryParams: unknown[],
+    normalizedLinkedIndicators: string[],
+  ): void {
+    if (!normalizedLinkedIndicators.length) {
+      return;
+    }
+
+    const linkedPlaceholders = normalizedLinkedIndicators
+      .map(() => '?')
+      .join(', ');
+    indicatorConditions.push(`(
+        tri.related_node_id IN (${linkedPlaceholders})
+        OR tri.toc_result_indicator_id IN (${linkedPlaceholders})
+        OR CAST(tri.id AS CHAR) IN (${linkedPlaceholders})
+      )`);
+    queryParams.push(
+      ...this._tripleLinkedIndicatorParams(normalizedLinkedIndicators),
+    );
+  }
+
+  private _buildIndicatorVisibilityClause(
+    includeInactiveIndicators: boolean,
+    normalizedLinkedIndicators: string[],
+  ): { clause: string; params: string[] } {
+    if (includeInactiveIndicators) {
+      return { clause: '', params: [] };
+    }
+
+    if (!normalizedLinkedIndicators.length) {
+      return { clause: 'AND tri.is_active = 1', params: [] };
+    }
+
+    const linkedPlaceholders = normalizedLinkedIndicators
+      .map(() => '?')
+      .join(', ');
+    return {
+      clause: `AND (
+        tri.is_active = 1
+        OR tri.related_node_id IN (${linkedPlaceholders})
+        OR tri.toc_result_indicator_id IN (${linkedPlaceholders})
+        OR CAST(tri.id AS CHAR) IN (${linkedPlaceholders})
+      )`,
+      params: this._tripleLinkedIndicatorParams(normalizedLinkedIndicators),
+    };
+  }
+
+  async getTocIndicatorsByResultIds(
+    params: GetTocIndicatorsByResultIdsParams,
   ): Promise<
     Array<{
       toc_result_id: number;
@@ -678,6 +874,16 @@ export class TocResultsRepository extends Repository<TocResult> {
       target_value: number | null;
     }>
   > {
+    const {
+      targetYear,
+      tocResultIds,
+      resultTypeId,
+      linkedIndicatorNodeIds,
+      resultId,
+      initId,
+      includeInactiveIndicators = false,
+    } = params;
+
     const numericIds = (tocResultIds ?? [])
       .map(Number)
       .filter((id) => Number.isFinite(id));
@@ -688,116 +894,34 @@ export class TocResultsRepository extends Repository<TocResult> {
 
     const placeholders = numericIds.map(() => '?').join(', ');
     const indicatorTargetYear = Number(targetYear);
-
-    const queryParams: any[] = [indicatorTargetYear, ...numericIds];
-
-    // Check if the result is unplanned (planned_result = 0 in the first record)
-    let isUnplanned = false;
-    if (resultId && initId && Number.isFinite(resultId) && resultId > 0) {
-      try {
-        const firstResultTocQuery = `
-          SELECT planned_result
-          FROM ${env.DB_NAME}.results_toc_result
-          WHERE results_id = ?
-            AND initiative_id = ?
-            AND is_active = 1
-          ORDER BY created_date ASC
-          LIMIT 1
-        `;
-        const firstResultToc = await this.query(firstResultTocQuery, [
-          resultId,
-          initId,
-        ]);
-        if (
-          firstResultToc?.length > 0 &&
-          firstResultToc[0]?.planned_result === 0
-        ) {
-          isUnplanned = true;
-        }
-      } catch (error) {
-        this.logger.warn(
-          `Error checking planned_result for result ${resultId} in getTocIndicatorsByResultIds: ${formatUnknownError(error)}`,
-        );
-      }
-    }
-
+    const queryParams: unknown[] = [indicatorTargetYear, ...numericIds];
+    const isUnplanned = await this._isUnplannedTocResult(resultId, initId);
     const indicatorConditions: string[] = [];
 
-    if (
-      !isUnplanned &&
-      resultTypeId &&
-      RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
-    ) {
-      const currentTypePatterns =
-        RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
-      const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
+    this._appendResultTypeIndicatorFilter(
+      indicatorConditions,
+      queryParams,
+      resultTypeId,
+      isUnplanned,
+    );
 
-      // Indicators that match the type of result
-      const currentLikeConditions = currentTypePatterns
-        .map(() => 'tri.type_value LIKE ?')
-        .join(' OR ');
-      indicatorConditions.push(`(${currentLikeConditions})`);
-      queryParams.push(...currentTypePatterns);
-
-      // Indicators that do not match any "other" type (neutral/non-standard ToCs)
-      // Also include type_value NULL or empty (in SQL NULL NOT LIKE 'x' is not TRUE)
-      if (otherTypesPatterns.length > 0) {
-        const otherNotLikeConditions = otherTypesPatterns
-          .map(() => 'tri.type_value NOT LIKE ?')
-          .join(' AND ');
-        indicatorConditions.push(
-          `((${otherNotLikeConditions}) OR (tri.type_value IS NULL OR tri.type_value = ''))`,
-        );
-        queryParams.push(...otherTypesPatterns);
-      }
-    }
-
-    const normalizedLinkedIndicators = (linkedIndicatorNodeIds ?? [])
-      .map((value) => `${value}`.trim())
-      .filter((value) => value !== '');
-
-    if (normalizedLinkedIndicators.length) {
-      const linkedPlaceholders = normalizedLinkedIndicators
-        .map(() => '?')
-        .join(', ');
-      // Saved toc_results_indicator_id may match related_node_id, toc_result_indicator_id, or numeric id.
-      indicatorConditions.push(`(
-        tri.related_node_id IN (${linkedPlaceholders})
-        OR tri.toc_result_indicator_id IN (${linkedPlaceholders})
-        OR CAST(tri.id AS CHAR) IN (${linkedPlaceholders})
-      )`);
-      queryParams.push(
-        ...normalizedLinkedIndicators,
-        ...normalizedLinkedIndicators,
-        ...normalizedLinkedIndicators,
-      );
-    }
+    const normalizedLinkedIndicators = this._normalizeLinkedIndicatorNodeIds(
+      linkedIndicatorNodeIds,
+    );
+    this._appendLinkedIndicatorFilter(
+      indicatorConditions,
+      queryParams,
+      normalizedLinkedIndicators,
+    );
 
     const typeFilter = indicatorConditions.length
       ? `AND (${indicatorConditions.join(' OR ')})`
       : '';
-
-    const visibilityParams: Array<string | number> = [];
-    let visibilityFilter = 'AND tri.is_active = 1';
-
-    if (includeInactiveIndicators) {
-      visibilityFilter = '';
-    } else if (normalizedLinkedIndicators.length) {
-      const linkedPlaceholders = normalizedLinkedIndicators
-        .map(() => '?')
-        .join(', ');
-      visibilityFilter = `AND (
-        tri.is_active = 1
-        OR tri.related_node_id IN (${linkedPlaceholders})
-        OR tri.toc_result_indicator_id IN (${linkedPlaceholders})
-        OR CAST(tri.id AS CHAR) IN (${linkedPlaceholders})
-      )`;
-      visibilityParams.push(
-        ...normalizedLinkedIndicators,
-        ...normalizedLinkedIndicators,
-        ...normalizedLinkedIndicators,
+    const { clause: visibilityFilter, params: visibilityParams } =
+      this._buildIndicatorVisibilityClause(
+        includeInactiveIndicators,
+        normalizedLinkedIndicators,
       );
-    }
 
     const query = `
       SELECT
@@ -1010,6 +1134,138 @@ export class TocResultsRepository extends Repository<TocResult> {
     } catch (error) {
       throwServiceError(
         `[${TocResultsRepository.name}] => getCatalogTargetsByIndicatorNodeIds error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getTocPartnersByResultIds(
+    tocResultIds: Array<number | string>,
+    tocPhaseId: string,
+  ): Promise<Array<{ toc_result_id: number; code: number | string }>> {
+    const numericIds = (tocResultIds ?? [])
+      .map(Number)
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    const normalizedPhaseId = `${tocPhaseId ?? ''}`.trim();
+    if (!numericIds.length || !normalizedPhaseId) {
+      return [];
+    }
+
+    const placeholders = numericIds.map(() => '?').join(', ');
+    const query = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        trp.code
+      FROM ${env.DB_TOC}.toc_results tr
+      INNER JOIN ${env.DB_TOC}.toc_result_partners trp
+        ON trp.toc_result_id_toc = tr.related_node_id
+      WHERE tr.id IN (${placeholders})
+        AND tr.phase = ?
+    `;
+
+    try {
+      return await this.query(query, [...numericIds, normalizedPhaseId]);
+    } catch (error) {
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocPartnersByResultIds error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getTocSynergyProgramsByResultIds(
+    tocResultIds: Array<number | string>,
+    tocPhaseId: string,
+  ): Promise<Array<{ toc_result_id: number; initiative_id: number }>> {
+    const numericIds = (tocResultIds ?? [])
+      .map(Number)
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    const normalizedPhaseId = `${tocPhaseId ?? ''}`.trim();
+    if (!numericIds.length || !normalizedPhaseId) {
+      return [];
+    }
+
+    const placeholders = numericIds.map(() => '?').join(', ');
+    const query = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        ci.id AS initiative_id
+      FROM ${env.DB_TOC}.toc_results tr
+      INNER JOIN ${env.DB_TOC}.toc_result_synergy_programs trsp
+        ON trsp.toc_results_id = tr.id
+      INNER JOIN clarisa_initiatives ci
+        ON ci.official_code = trsp.initiative_id
+      WHERE tr.id IN (${placeholders})
+        AND trsp.phase = ?
+    `;
+
+    try {
+      return await this.query(query, [...numericIds, normalizedPhaseId]);
+    } catch (error) {
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocSynergyProgramsByResultIds error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getTocTargetCentersByResultIds(
+    tocResultIds: Array<number | string>,
+    tocPhaseId: string,
+    reportingYear: number,
+  ): Promise<
+    Array<{
+      toc_result_id: number;
+      indicator_id: number;
+      center_id: number;
+    }>
+  > {
+    const numericIds = (tocResultIds ?? [])
+      .map(Number)
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    const normalizedPhaseId = `${tocPhaseId ?? ''}`.trim();
+    const targetYear = Number(reportingYear);
+
+    if (
+      !numericIds.length ||
+      !normalizedPhaseId ||
+      !Number.isFinite(targetYear)
+    ) {
+      return [];
+    }
+
+    const placeholders = numericIds.map(() => '?').join(', ');
+    const query = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        tri.id AS indicator_id,
+        tritc.center_id
+      FROM ${env.DB_TOC}.toc_results tr
+      INNER JOIN ${env.DB_TOC}.toc_results_indicators tri
+        ON tri.toc_results_id = tr.id
+        AND tri.is_active = 1
+      INNER JOIN ${env.DB_TOC}.toc_result_indicator_target trit
+        ON trit.id_indicator = tri.id
+        AND trit.target_date = ?
+      INNER JOIN ${env.DB_TOC}.toc_result_indicator_target_center tritc
+        ON tritc.toc_indicator_target_id = trit.toc_indicator_target_id
+      WHERE tr.id IN (${placeholders})
+        AND tr.phase = ?
+        AND tritc.center_id IS NOT NULL
+    `;
+
+    try {
+      return await this.query(query, [
+        targetYear,
+        ...numericIds,
+        normalizedPhaseId,
+      ]);
+    } catch (error) {
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocTargetCentersByResultIds error: ${formatUnknownError(error)}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

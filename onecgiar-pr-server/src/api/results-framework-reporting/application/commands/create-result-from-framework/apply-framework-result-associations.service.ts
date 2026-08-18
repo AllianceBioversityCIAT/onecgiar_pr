@@ -22,7 +22,7 @@ export class ApplyFrameworkResultAssociationsService {
   ): Promise<void> {
     await this._shareContributors(payload, user, createdResultId);
     await this._linkBilateralProjects(payload, user, createdResultId);
-    await this._applyContributingCenters(payload, user, createdResultId);
+    await this._applyPartnersSection(payload, user, createdResultId);
   }
 
   private async _shareContributors(
@@ -35,17 +35,22 @@ export class ApplyFrameworkResultAssociationsService {
     }
 
     const initiativeShareId = payload.contributors_result_toc_result
-      .map((contributor) => Number(contributor.initiative_id))
-      .filter((id) => Number.isFinite(id) && id > 0);
+      .map((contributor) => this.resolveContributorInitiativeId(contributor))
+      .filter((id): id is number => id !== null);
 
     if (!initiativeShareId.length) {
       return;
     }
 
+    const initiativeFromToc = this.buildInitiativeFromTocMap(
+      payload.contributors_result_toc_result,
+    );
+
     const shareRequest: CreateTocShareResult = {
       initiativeShareId,
       isToc: false,
       contributors_result_toc_result: payload.contributors_result_toc_result,
+      ...(Object.keys(initiativeFromToc).length ? { initiativeFromToc } : {}),
     };
 
     await this._shareResultRequestService.resultRequest(
@@ -79,7 +84,7 @@ export class ApplyFrameworkResultAssociationsService {
     }
   }
 
-  private async _applyContributingCenters(
+  private async _applyPartnersSection(
     payload: CreateResultsFrameworkResultDto,
     user: TokenDto,
     createdResultId: number,
@@ -88,17 +93,68 @@ export class ApplyFrameworkResultAssociationsService {
       payload ?? {},
       'contributing_center',
     );
+    const hasInstitutionsPayload = objectHasOwn(payload ?? {}, 'institutions');
 
-    if (!hasContributingCentersPayload) {
+    if (!hasContributingCentersPayload && !hasInstitutionsPayload) {
       return;
     }
 
-    await this._resultsByInstitutionsService.handleContributingCenters(
+    let contributingCenter = [];
+    if (
+      hasContributingCentersPayload &&
       Array.isArray(payload.contributing_center)
-        ? payload.contributing_center
-        : [],
-      { result_id: createdResultId },
+    ) {
+      contributingCenter = payload.contributing_center;
+    }
+
+    let institutions: CreateResultsFrameworkResultDto['institutions'];
+    if (hasInstitutionsPayload) {
+      institutions = Array.isArray(payload.institutions)
+        ? payload.institutions
+        : [];
+    }
+
+    await this._resultsByInstitutionsService.savePartnersInstitutionsByResultV2(
+      {
+        result_id: createdResultId,
+        contributing_center: contributingCenter,
+        institutions,
+        mqap_institutions: [],
+      },
       user,
     );
+  }
+
+  private resolveContributorInitiativeId(contributor: {
+    initiative_id?: number | string;
+    id?: number | string;
+  }): number | null {
+    const id = Number(contributor?.initiative_id ?? contributor?.id);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  }
+
+  private buildInitiativeFromTocMap(
+    contributors: Array<{
+      initiative_id?: number | string;
+      id?: number | string;
+      from_toc?: boolean;
+    }>,
+  ): Record<number, boolean> {
+    const map: Record<number, boolean> = {};
+
+    for (const contributor of contributors ?? []) {
+      const id = this.resolveContributorInitiativeId(contributor);
+      if (id === null) {
+        continue;
+      }
+      if (
+        contributor?.from_toc !== undefined &&
+        contributor?.from_toc !== null
+      ) {
+        map[id] = Boolean(contributor.from_toc);
+      }
+    }
+
+    return map;
   }
 }

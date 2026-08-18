@@ -27,27 +27,53 @@
     <div
       appFeedbackValidation
       [labelText]="dataControlSE.isKnowledgeProduct ? 'Partners' : 'Select partner'"
-      [isComplete]="!!this.rdPartnersSE.partnersBody.institutions?.length"></div>
-    <app-pr-multi-select
-      [options]="this.institutionsSE.institutionsWithoutCentersListPartners"
-      [required]="true"
-      [label]="dataControlSE.isKnowledgeProduct ? 'Partners' : null"
-      selectedOptionLabel="institutions_name"
-      optionLabel="full_name"
-      optionValue="institutions_id"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.institutions"
-      [disableOptions]="this.disableOptions"
-      placeholder="Select partner"
-      labelDescInlineStyles="margin-top: 0 !important;"
-      (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle + 1; getOnlyPartnerTypes(); emitPartnerEvent($event)">
-    </app-pr-multi-select>
+      [isComplete]="!!this.institutionsNoSentinel.length || !!this.rdPartnersSE.otherPartnersSelected?.length"></div>
+
+    <!-- P2-3066 (2026): External Partners split into "from ToC" + "Other(s)". 2025 keeps the single legacy dropdown. -->
+    @if (isCP2026() && !dataControlSE.isKnowledgeProduct) {
+      @if (hasReferencePartners()) {
+        <app-pr-multi-select
+          [options]="dropdown1OptionsPartners()"
+          [required]="true"
+          selectedOptionLabel="institutions_name"
+          optionLabel="full_name"
+          optionValue="institutions_id"
+          [(ngModel)]="this.rdPartnersSE.partnersBody.institutions"
+          [disableOptions]="this.disableOptions"
+          placeholder="Select partner"
+          labelDescInlineStyles="margin-top: 0 !important;"
+          (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle + 1; onPartnerSelect($event)">
+        </app-pr-multi-select>
+      } @else {
+        <!-- AC4: ToC returned no External Partners → note + the "Other(s)" dropdown below auto-activates with ALL partners. -->
+        <div class="pr-message">
+          <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+          <p>{{ noPartnersNote }}</p>
+        </div>
+      }
+    } @else {
+      <app-pr-multi-select
+        [options]="this.institutionsSE.institutionsWithoutCentersListPartners"
+        [required]="true"
+        [label]="dataControlSE.isKnowledgeProduct ? 'Partners' : null"
+        selectedOptionLabel="institutions_name"
+        optionLabel="full_name"
+        optionValue="institutions_id"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.institutions"
+        [disableOptions]="this.disableOptions"
+        placeholder="Select partner"
+        labelDescInlineStyles="margin-top: 0 !important;"
+        (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle + 1; getOnlyPartnerTypes(); emitPartnerEvent($event)">
+      </app-pr-multi-select>
+    }
+
     <div class="partners_selected_header" [style]="this.rolesSE.readOnly ? 'margin-top: -15px' : ''">
-      <app-pr-field-header [description]="'Partner(s) selected (' + this.rdPartnersSE.partnersBody.institutions?.length + '):'">
+      <app-pr-field-header [description]="'Partner(s) selected (' + this.allSelectedPartners.length + '):'">
       </app-pr-field-header>
     </div>
 
     <div class="chips_container custom_scroll partners_selected">
-      <div class="pr_chip_selected" *ngFor="let option of this.rdPartnersSE.partnersBody.institutions; let i = index">
+      <div class="pr_chip_selected" *ngFor="let option of this.institutionsNoSentinel; let i = index">
         <div appFeedbackValidation labelText="Institution type" [isComplete]="!!option?.delivery?.length"></div>
         <div>
           <div class="name">{{ option?.obj_institutions?.name }}</div>
@@ -94,18 +120,85 @@
         </div>
       </div>
     </div>
+
+    <!-- P2-3066 (2026): "Other(s)" External Partners dropdown — appears when "Other" is picked or (AC4) when the ToC had none. -->
+    @if (isCP2026() && !dataControlSE.isKnowledgeProduct && showOtherPartners) {
+      <div appFeedbackValidation [labelText]="'Other(s) External Partners'" [isComplete]="true"></div>
+      <app-pr-multi-select
+        [options]="otherPartnersList()"
+        label="Other(s) External Partners"
+        [required]="false"
+        selectedOptionLabel="institutions_name"
+        optionLabel="full_name"
+        optionValue="institutions_id"
+        [(ngModel)]="this.rdPartnersSE.otherPartnersSelected"
+        [disableOptions]="this.disableOptions"
+        placeholder="Select other partner(s)"
+        labelDescInlineStyles="margin-top: 0 !important;"
+        (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle + 1; onOtherPartnerSelect($event)">
+      </app-pr-multi-select>
+
+      <div class="chips_container custom_scroll partners_selected">
+        <div class="pr_chip_selected" *ngFor="let option of this.rdPartnersSE.otherPartnersSelected; let i = index">
+          <div appFeedbackValidation labelText="Institution type" [isComplete]="!!option?.delivery?.length"></div>
+          <div>
+            <div class="name">{{ option?.obj_institutions?.name }}</div>
+            <div class="type"><strong>Institution type:</strong> {{ option?.obj_institutions?.obj_institution_type_code?.name }}</div>
+          </div>
+          <div class="deliveries_container">
+            <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
+              <div
+                class="delivery"
+                *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 1) : true"
+                [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 1) }"
+                (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 1)"
+                pTooltip="Organizations or entities that CGIAR collaborates with to advance the uptake and use of innovations at scale."
+                tooltipPosition="top">
+                Scaling
+              </div>
+              <div
+                class="delivery"
+                *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 2) : true"
+                [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 2) }"
+                (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 2)"
+                pTooltip="Organizations or entities that have (expressed) an explicit or implicit demand for an innovation, change or who aspire to a specific goal or impact to which CGIAR can contribute."
+                tooltipPosition="top">
+                Demand
+              </div>
+              <div
+                class="delivery"
+                *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 3) : true"
+                [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 3) }"
+                (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 3)"
+                pTooltip="Organizations or entities that CGIAR collaborates and co-invests with to develop, improve the readiness of, or apply innovations to contribute to impact at scale."
+                tooltipPosition="top">
+                Innovation
+              </div>
+              <div
+                class="delivery"
+                *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 4) : true"
+                [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 4) }"
+                (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 4)">
+                Other
+              </div>
+            </div>
+            <i class="material-icons-round" *ngIf="!this.rolesSE.readOnly" (click)="deleteOtherPartner(i)">delete</i>
+          </div>
+        </div>
+      </div>
+    }
   </div>
 
   <div class="partner_types_container">
     <app-pr-field-header
-      [label]="'Partner types (' + (this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle)?.length + ')'"
+      [label]="'Partner types (' + (this.allSelectedPartners | countInstitutionsTypes: this.rdPartnersSE.toggle)?.length + ')'"
       labelDescInlineStyles="margin-top: 8px !important;"
       [required]="false">
     </app-pr-field-header>
 
     <div
       class="partner_type_chip_selected"
-      *ngFor="let option of this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle; let i = index">
+      *ngFor="let option of this.allSelectedPartners | countInstitutionsTypes: this.rdPartnersSE.toggle; let i = index">
       <div class="name">{{ option?.count_name }}</div>
       <i class="material-icons-round" *ngIf="false">remove_circle </i>
     </div>
