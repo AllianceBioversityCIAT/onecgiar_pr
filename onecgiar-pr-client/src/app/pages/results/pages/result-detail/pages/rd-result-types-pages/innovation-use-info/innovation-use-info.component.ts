@@ -1,4 +1,4 @@
-import { Component, effect } from '@angular/core';
+import { Component, effect, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { IpsrStep1Body } from '../../../../../../ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
@@ -21,6 +21,14 @@ export class InnovationUseInfoComponent {
     this.api.dataControlSE.currentResultSectionName.set('Innovation use information');
   }
 
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction and NOT from "a request is in flight":
+   * this section loads from an `effect()` gated on `currentResultSignal()?.portfolio`, so between
+   * first paint and the GET there is no request at all and the empty body would paint as a
+   * mandatory-but-empty form. Released on `next` AND `error`.
+   */
+  readonly sectionLoading = signal(true);
+
   OnChangePortfolio = effect(() => {
     if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
       this.fieldsManagerSE.isP25() ? this.getSectionInformationp25() : this.getSectionInformation();
@@ -33,9 +41,11 @@ export class InnovationUseInfoComponent {
         this.innovationUseInfoBody.innovatonUse = response;
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
         this.convertOrganizations(this.innovationUseInfoBody?.innovation_use_2030?.organization);
+        this.sectionLoading.set(false);
       },
       error: err => {
         console.error(err);
+        this.sectionLoading.set(false);
       }
     });
   }
@@ -71,9 +81,11 @@ export class InnovationUseInfoComponent {
         }
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
         this.convertOrganizations(this.innovationUseInfoBody?.innovation_use_2030?.organization);
+        this.sectionLoading.set(false);
       },
       error: err => {
         console.error(err);
+        this.sectionLoading.set(false);
       }
     });
   }

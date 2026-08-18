@@ -1,4 +1,4 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
   <app-alert-status [description]="alertInfoText()"> </app-alert-status>
   <app-pr-input fieldRef="[innovation-dev-info]-long_title" [required]="false" [readOnly]="true" [ngModel]="innovationDevInfoBody?.result?.title">
   </app-pr-input>

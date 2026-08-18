@@ -1,46 +1,115 @@
+// The host box is only as tall as band + toolbar (~280px), and a sticky element cannot travel
+// outside its containing block — the band unpinned after 280px of scroll and disappeared with the
+// page. `display: contents` drops the host box so the band's `sticky` resolves against the page
+// column instead, which spans the whole route.
+:host {
+  display: contents;
+}
+
 /**
- * Toolbar filter selects — CURRENT height 40px, kill the OS chevron and paint a
- * 16×16 arrow centred on the right edge (native marker sits off-centre on macOS).
+ * Compact band — the pieces that only exist while scrolled (dot + name, 32px CTA) are inserted by
+ * `@if`, so a CSS transition has nothing to transition FROM. A keyframe is the one thing Tailwind
+ * cannot express here (UI-RULES: SCSS only for at-rules). Mirrors the reference's
+ * `animation: prmsFade .16s ease-out` on its `bandCollapsed` row (:383). The height change itself
+ * is a plain Tailwind transition on the identity block — that one has both endpoints.
  */
-.pr-band-select {
-  height: 40px;
-  min-width: 110px;
-  max-width: 240px;
-  flex-shrink: 0;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  padding: 0 36px 0 12px;
-  border: 1px solid var(--pr-border);
-  border-radius: 8px;
-  background-color: var(--pr-surface-card);
-  // Chevron: 16×16, vertically centred, 10px from the right edge.
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%235D5872' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 16px 16px;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 40px;
-  color: var(--pr-text);
-  cursor: pointer;
-  outline: none;
-  transition: border-color 150ms ease;
-
-  &:hover {
-    border-color: var(--pr-border-strong);
+@keyframes pr-band-fade {
+  from {
+    opacity: 0;
   }
 
-  &:focus-visible {
-    border-color: var(--pr-color-primary-300);
-  }
-
-  &::-ms-expand {
-    display: none;
+  to {
+    opacity: 1;
   }
 }
 
-/* Placeholder state (value=all) — muted like CURRENT labelColor when empty. */
-.pr-band-select:has(option[value='all']:checked) {
-  color: var(--pr-text-secondary);
+.pr-band-fade {
+  animation: pr-band-fade 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-band-fade {
+    animation: none;
+  }
+}
+
+/**
+ * Toolbar filter pills — `app-pr-filter-select` / `app-pr-filter-multiselect` wrapped to the
+ * reference metrics: 40px tall, 8px radius, 14px label, placeholder in the muted ink until a value
+ * is picked. The native `<select>` these replaced painted the OS control and broke the design line.
+ */
+.pr-band-filter {
+  flex-shrink: 0;
+
+  // Same treatment the Results Center toolbar applies to these pills (`results-list-filters.scss`):
+  // plain 40px white field, muted chevron, no purple dropdown bar.
+  ::ng-deep .custom_select {
+    width: 100%;
+
+    .field {
+      min-height: 40px;
+      height: 40px;
+      padding: 0 36px 0 12px;
+      border: 1px solid var(--pr-border);
+      border-radius: 8px;
+      background: var(--pr-surface-card);
+      box-shadow: none;
+      gap: 8px;
+      transition: border-color 150ms ease;
+
+      &:hover {
+        border-color: var(--pr-border-strong);
+      }
+
+      &:focus-within {
+        border-color: var(--pr-color-primary-200, #a78bfa);
+        box-shadow: 0 0 0 3px rgba(107, 70, 229, 0.12);
+      }
+
+      .text {
+        padding-right: 0;
+        font-size: 14px;
+        font-weight: 400;
+        color: var(--pr-text-heading);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        // Empty state — CURRENT `labelColor` when nothing is picked.
+        &.select_placeholder {
+          color: var(--pr-text-subtle);
+        }
+      }
+
+      .icon_container {
+        display: none !important;
+      }
+
+      .icon_dropdown {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+        font-size: 12px;
+        color: var(--pr-text-secondary) !important;
+        pointer-events: none;
+      }
+
+      .options {
+        top: calc(100% + 4px);
+        bottom: auto;
+        left: 0;
+        min-width: 100%;
+        width: max-content;
+        max-width: 320px;
+        max-height: 320px;
+        border: 1px solid var(--pr-border);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+        overflow: hidden;
+        transform-origin: top center;
+      }
+    }
+  }
 }

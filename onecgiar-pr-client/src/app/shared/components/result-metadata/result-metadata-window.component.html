@@ -1,0 +1,32 @@
+@if (panelSE.floating()) {
+  <!-- The card is anchored at left:0/top:0 ON PURPOSE. cdkDrag positions with a transform delta
+       measured from the element's natural box, so a zero-offset box makes that delta equal plain
+       viewport coordinates — which is exactly what the service stores. Give this host a non-zero
+       top/right and every previously saved position silently shifts. -->
+  <div
+    cdkDrag
+    [cdkDragFreeDragPosition]="panelSE.position()"
+    (cdkDragEnded)="onDragEnded($event)"
+    class="fixed left-0 top-0 z-[1050] w-[280px] rounded-xl bg-white p-[10px] shadow-[0_6px_18px_rgba(var(--pr-color-black-rgb),0.28)]"
+    role="dialog"
+    aria-label="Result metadata"
+    data-testid="result-metadata-window">
+    <div class="mb-[8px] flex items-center justify-between gap-[8px]">
+      <!-- Only the title strip is the drag handle: with the whole header draggable, a press on the
+           close button both moved the card and fired the click. -->
+      <p cdkDragHandle class="m-0 flex-1 cursor-move text-[9px] font-bold uppercase tracking-[1px] text-[var(--pr-color-primary-300)]">
+        Result metadata
+      </p>
+      <button
+        type="button"
+        class="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-md text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)] hover:text-[var(--pr-color-primary-300)]"
+        (click)="panelSE.close()"
+        aria-label="Dock result metadata back into the page"
+        data-testid="result-metadata-window-close">
+        <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">close</i>
+      </button>
+    </div>
+
+    <app-result-metadata-list orientation="stacked" />
+  </div>
+}

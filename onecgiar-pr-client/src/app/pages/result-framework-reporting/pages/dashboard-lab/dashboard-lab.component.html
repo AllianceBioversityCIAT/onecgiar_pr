@@ -605,13 +605,16 @@
                             </td>
                             <td class="px-3 py-2.5 text-right">
                               <div class="flex items-center justify-end gap-1.5">
-                                <button
-                                  type="button"
-                                  (click)="manageIndicator(ind, group.result_title, 'report')"
-                                  class="flex appearance-none items-center gap-1 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
-                                  <span class="material-icons-round text-[13px]">edit_note</span>
-                                  Report
-                                </button>
+                                <!-- Gated like the legacy table: no Report CTA for users who cannot submit. -->
+                                @if (entityAowService.canReportResults()) {
+                                  <button
+                                    type="button"
+                                    (click)="openLegacyReportModal(ind, group)"
+                                    class="flex appearance-none items-center gap-1 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
+                                    <span class="material-icons-round text-[13px]">edit_note</span>
+                                    Report
+                                  </button>
+                                }
                                 <button
                                   type="button"
                                   (click)="manageIndicator(ind, group.result_title, 'info')"
@@ -679,14 +682,17 @@
                           of {{ ind.target_value_sum ?? 0 }}
                         </span>
                         <div class="flex shrink-0 items-center gap-1.5">
-                          <button
-                            type="button"
-                            [attr.data-guide]="$first ? 'aow-report' : null"
-                            (click)="manageIndicator(ind, group.result_title, 'report')"
-                            class="flex appearance-none items-center gap-1.5 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-3 py-1.5 text-[12px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
-                            <span class="material-icons-round text-[14px]">edit_note</span>
-                            Report result
-                          </button>
+                          <!-- Gated like the legacy table: no Report CTA for users who cannot submit. -->
+                          @if (entityAowService.canReportResults()) {
+                            <button
+                              type="button"
+                              [attr.data-guide]="$first ? 'aow-report' : null"
+                              (click)="openLegacyReportModal(ind, group)"
+                              class="flex appearance-none items-center gap-1.5 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-3 py-1.5 text-[12px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
+                              <span class="material-icons-round text-[14px]">edit_note</span>
+                              Report result
+                            </button>
+                          }
                           <button
                             type="button"
                             (click)="manageIndicator(ind, group.result_title, 'info')"
@@ -1150,6 +1156,8 @@
           [cyclePhase]="dataControlSE.reportingCurrentPhase.portfolioAcronym || ''"
           [programDotColor]="accentTheme().solid"
           activeTab="overview"
+          [canReport]="canReportEmerging()"
+          (reportEmerging)="openReportModal()"
           [showToolbar]="false" />
 
         <app-program-overview
@@ -1159,8 +1167,7 @@
           [xcutProgress]="overviewXcutProgress()"
           [attention]="overviewAttention()"
           [categories]="overviewCategories()"
-          [paceHeadline]="overviewPaceHeadline()"
-          [paceSub]="overviewPaceSub()" />
+          [paceSeries]="overviewPaceSeries()" />
       </article>
       }
 
@@ -1183,6 +1190,8 @@
             [cyclePhase]="dataControlSE.reportingCurrentPhase.portfolioAcronym || ''"
             [programDotColor]="accentTheme().solid"
             activeTab="reporting"
+            [canReport]="canReportEmerging()"
+            (reportEmerging)="openReportModal()"
             [search]="plannedSearch()"
             [statusValue]="reportingStatusFilter()"
             [aowOptions]="reportingSectionOptions()"
@@ -1221,12 +1230,16 @@
                    Spec: docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §5
                    Presentation lives in the child; this page keeps owning the data and the drawer.
                    ════════════════════════════════════════════════════════════════════════ -->
+              <!-- `canReport` mirrors the gate of the surface this replaced
+                   (`aow-hlo-table.component.html:111,145,149`): a read-only user, or anyone browsing a
+                   programme they do not belong to, must not be offered a Report CTA that opens a modal
+                   with no way to submit. -->
               <app-reporting-aow-table
                 [groups]="reportingGroups()"
                 [search]="plannedSearch()"
                 [statusFilter]="reportingStatusFilter()"
                 [viewMode]="reportingViewMode()"
-                [canReport]="true"
+                [canReport]="entityAowService.canReportResults()"
                 (openRow)="onReportingRowOpen($event)"
                 (reportRow)="onReportingRowReport($event)"
                 (openTarget)="onReportingOpenTarget($event)"
@@ -1294,7 +1307,7 @@
                                     <td class="px-3 py-2.5 tabular-nums">{{ ind.target_value_sum ?? 0 }}</td>
                                     <td class="px-3 py-2.5 tabular-nums">{{ ind.actual_achieved_value_sum ?? 0 }}</td>
                                     <td class="px-3 py-2.5 text-right">
-                                      <button type="button" (click)="manageIndicator(ind, ind.__hlo, 'report')" class="appearance-none rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
+                                      <button type="button" (click)="openLegacyReportModal(ind)" class="appearance-none rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
                                     </td>
                                   </tr>
                                 }
@@ -1322,7 +1335,7 @@
                                   </div>
                                   <button
                                     type="button"
-                                    (click)="manageIndicator(ind, ind.__hlo, 'report')"
+                                    (click)="openLegacyReportModal(ind)"
                                     class="flex appearance-none items-center gap-0.5 rounded-md border border-[var(--pr-color-primary-300)] bg-white px-2 py-0.5 text-[10.5px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
                                     <span class="material-icons-round text-[12px]">edit_note</span> Report
                                   </button>
@@ -1381,7 +1394,7 @@
                           <td class="px-3 py-2.5 tabular-nums">{{ ind.target_value_sum ?? 0 }}</td>
                           <td class="px-3 py-2.5 tabular-nums">{{ ind.actual_achieved_value_sum ?? 0 }}</td>
                           <td class="px-3 py-2.5 text-right">
-                            <button type="button" (click)="manageIndicator(ind, ind.__hlo, 'report')" class="appearance-none rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
+                            <button type="button" (click)="openLegacyReportModal(ind)" class="appearance-none rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
                           </td>
                         </tr>
                       }
@@ -1408,7 +1421,7 @@
                           <span class="text-[10px] text-[var(--pr-color-accents-5)]">{{ ind.actual_achieved_value_sum ?? 0 }}/{{ ind.target_value_sum ?? 0 }}</span>
                         </div>
                       </div>
-                      <button type="button" (click)="manageIndicator(ind, ind.__hlo, 'report')" class="shrink-0 appearance-none rounded-md border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
+                      <button type="button" (click)="openLegacyReportModal(ind)" class="shrink-0 appearance-none rounded-md border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
                     </div>
                   }
                 </div>
@@ -1534,4 +1547,47 @@
     [initialTab]="manageTab()"
     (widthChange)="managePanelWidth.set($event)"
     (closed)="closeManage()" />
+}
+
+<!-- ==================== LEGACY "Report result" MODAL (planned ToC) ====================
+     Reused verbatim from the AoW pages: zero inputs/outputs, driven entirely by
+     EntityAowService. The @if is load-bearing, not cosmetic — the modal fetches in ngOnInit,
+     so it has to be destroyed and re-created per open (same mount as aow-hlo-table). It wraps
+     itself in app-pr-dialog and ships its own sizing, so it needs nothing from this host. -->
+@if (entityAowService.showReportResultModal()) {
+  <app-aow-hlo-create-modal />
+}
+
+<!-- ==================== LEGACY "Report emerging result" MODAL ====================
+     Copied from the retired entity-details page so the emerging pathway keeps the exact
+     dialog, header copy and form it always had. The programme is pre-filled and locked;
+     Output/Outcome and Indicator category stay the user's choice (a single CTA cannot infer
+     them, so no `setPendingResultType` is issued). -->
+@if (showReportModal()) {
+  <app-pr-dialog
+    [visible]="showReportModal()"
+    [modal]="true"
+    [closeOnEscape]="true"
+    [showHeader]="false"
+    [dismissableMask]="true"
+    styleClass="report-emerging-dialog"
+    (onHide)="closeReportModal()">
+    <div class="report-result-header">
+      <span style="font-weight: 550; color: #000000; font-size: 16px !important; padding-left: 30px">
+        This reporting pathway is intended for results that are not planned for in the Program’s ToC
+      </span>
+      <button
+        type="button"
+        (click)="closeReportModal()"
+        aria-label="Close modal"
+        style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center">
+        <i class="material-icons-round" style="font-size: 20px">close</i>
+      </button>
+    </div>
+    <app-report-result-form
+      [selectedInitiativeId]="selected()?.initiativeId"
+      [disableInitiativeSelect]="true"
+      (resultCreated)="closeReportModal()">
+    </app-report-result-form>
+  </app-pr-dialog>
 }

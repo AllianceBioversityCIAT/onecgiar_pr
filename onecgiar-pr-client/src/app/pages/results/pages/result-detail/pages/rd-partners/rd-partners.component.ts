@@ -35,6 +35,10 @@ export class RdPartnersComponent implements OnInit {
 
   ngOnInit() {
     this.rdPartnersSE.partnersBody = new PartnersBody();
+    // Root-singleton service: without this the skeleton would only ever show on the first result
+    // opened in the session. Raised here (first entry) and NOT in getSectionInformation, so the
+    // post-save reload does not re-flash on top of the save spinner.
+    this.rdPartnersSE.sectionLoading.set(true);
     this.rdPartnersSE.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {
       try {

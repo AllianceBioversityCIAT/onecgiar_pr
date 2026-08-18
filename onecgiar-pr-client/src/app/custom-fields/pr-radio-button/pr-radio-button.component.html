@@ -1,4 +1,6 @@
 @if (this.preventFieldRender()) {
+  <!-- No [hasError]: a radio group has no word/char limit and no format to break, so `fc-error` is
+       unreachable here by design — not an omission. -->
   <app-field-card [label]="this.label" [description]="this.description" [tooltip]="this.tooltip" [required]="this.required" [hasValue]="hasValue">
     <div class="pr-field" [ngClass]="{ mandatory: this.required, complete: value !== null && value !== undefined }">
     <div

@@ -1,6 +1,6 @@
 import chroma from 'chroma-js';
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { FairSpecificData, FullFairData, KnowledgeProductBody } from './model/knowledgeProductBody';
 import { KnowledgeProductBodyMapped } from './model/KnowledgeProductBodyMapped';
@@ -39,31 +39,42 @@ export class KnowledgeProductInfoComponent implements OnInit {
     return `FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in ${repositoryName}. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center's knowledge management team to implement improvements.`;
   }
 
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction: the body object is empty until the
+   * section GET lands, so without it every mandatory field paints orange ("empty") first.
+   * Released on `next` AND `error` — a failed GET must not leave the section shimmering.
+   */
+  readonly sectionLoading = signal(true);
+
   ngOnInit(): void {
     this.getSectionInformation();
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_resultknowledgeProducts().subscribe(({ response }) => {
-      this.knowledgeProductBody = this._mapFields(response as KnowledgeProductBody);
-      this.sectionData.clarisaMeliaTypeId = response.melia_type_id;
-      this.sectionData.isMeliaProduct = response.is_melia;
-      this.sectionData.ostMeliaId = response.ost_melia_study_id;
-      this.sectionData.ostSubmitted = response.melia_previous_submitted;
-      if (this.api.fieldsManagerSE.isP25()) {
-        this.sectionData.tocMeliaStudyId = response.toc_melia_study_id ?? null;
-        const currentResult = this.api.dataControlSE.currentResultSignal() ?? this.api.dataControlSE.currentResult;
-        const programId = currentResult?.initiative_id;
-        if (programId != null) {
-          this.api.resultsSE.GET_meliaStudiesByToc(programId).subscribe(({ response: tocResponse }) => {
-            this.tocMeliaStudiesList = tocResponse ?? [];
+    this.api.resultsSE.GET_resultknowledgeProducts().subscribe({
+      next: ({ response }) => {
+        this.knowledgeProductBody = this._mapFields(response as KnowledgeProductBody);
+        this.sectionData.clarisaMeliaTypeId = response.melia_type_id;
+        this.sectionData.isMeliaProduct = response.is_melia;
+        this.sectionData.ostMeliaId = response.ost_melia_study_id;
+        this.sectionData.ostSubmitted = response.melia_previous_submitted;
+        if (this.api.fieldsManagerSE.isP25()) {
+          this.sectionData.tocMeliaStudyId = response.toc_melia_study_id ?? null;
+          const currentResult = this.api.dataControlSE.currentResultSignal() ?? this.api.dataControlSE.currentResult;
+          const programId = currentResult?.initiative_id;
+          if (programId != null) {
+            this.api.resultsSE.GET_meliaStudiesByToc(programId).subscribe(({ response: tocResponse }) => {
+              this.tocMeliaStudiesList = tocResponse ?? [];
+            });
+          }
+        } else {
+          this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response: ostResponse }) => {
+            this.ostMeliaStudies = ostResponse ?? [];
           });
         }
-      } else {
-        this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response: ostResponse }) => {
-          this.ostMeliaStudies = ostResponse ?? [];
-        });
-      }
+        this.sectionLoading.set(false);
+      },
+      error: () => this.sectionLoading.set(false)
     });
     this.api.resultsSE.GET_allClarisaMeliaStudyTypes().subscribe(({ response }) => {
       this.meliaTypes = response;

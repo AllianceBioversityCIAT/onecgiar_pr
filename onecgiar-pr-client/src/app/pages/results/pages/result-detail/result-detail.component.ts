@@ -8,6 +8,7 @@ import { ShareRequestModalService } from './components/share-request-modal/share
 import { CurrentResultService } from '../../../../shared/services/current-result.service';
 import { environment } from '../../../../../environments/environment';
 import { PdfExportService } from '../../../../shared/services/pdf-export.service';
+import { ResultMetadataPanelService } from '../../../../shared/components/result-metadata/result-metadata-panel.service';
 
 @Component({
   selector: 'app-result-detail',
@@ -18,6 +19,8 @@ import { PdfExportService } from '../../../../shared/services/pdf-export.service
 export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
   private readonly pdfSE = inject(PdfExportService);
   private readonly ngZone = inject(NgZone);
+  /** Docked vs floating state of the RESULT METADATA card — root-scoped so it outlives this view. */
+  readonly metadataPanelSE = inject(ResultMetadataPanelService);
 
   constructor(
     public currentResultSE: CurrentResultService,

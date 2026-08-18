@@ -1,4 +1,4 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
   <app-alert-status [description]="warning" *ngFor="let warning of this.knowledgeProductBody?.warnings"> </app-alert-status>
   <app-alert-status
     description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in {{

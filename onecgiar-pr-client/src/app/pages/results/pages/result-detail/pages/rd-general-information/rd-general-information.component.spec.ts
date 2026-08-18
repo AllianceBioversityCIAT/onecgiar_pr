@@ -26,6 +26,11 @@ import { RolesService } from './../../../../../../shared/services/global/roles.s
 import { InstitutionsService } from './../../../../../../shared/services/global/institutions.service';
 import { PusherService } from './../../../../../../shared/services/pusher.service';
 import { signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { FieldCardComponent } from './../../../../../../custom-fields/field-card/field-card.component';
+import { SectionSkeletonDirective } from './../../../../../../custom-fields/section-skeleton/section-skeleton.directive';
+import { GetImpactAreasScoresService } from './../../../../../../shared/services/global/get-impact-areas-scores.service';
+import { FieldsManagerService } from './../../../../../../shared/services/fields-manager.service';
 
 describe('RdGeneralInformationComponent', () => {
   let component: RdGeneralInformationComponent;
@@ -217,7 +222,9 @@ describe('RdGeneralInformationComponent', () => {
         PrFieldValidationsComponent,
         DetailSectionTitleComponent,
         YesOrNotByBooleanPipe,
-        ChangeResultTypeModalComponent
+        ChangeResultTypeModalComponent,
+        FieldCardComponent,
+        SectionSkeletonDirective
       ],
       providers: [
         {
@@ -274,6 +281,97 @@ describe('RdGeneralInformationComponent', () => {
       result_description: ''
     };
     component.isPhaseOpen = true;
+  });
+
+  /**
+   * P2 screenshot bug: the "Which component of the Impact Area…" question rendered as a bare label
+   * + red asterisk with unstyled checkboxes, while its sibling tag question sat in a field card.
+   * These lock the fix AND the rule that must NOT move with it.
+   */
+  describe('Impact Area component checkboxes (P25)', () => {
+    const renderP25GenderComponents = () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
+      // The section GET runs on ngOnInit and REPLACES generalInfoBody, so the tag must come from
+      // the response, not from a field set beforehand.
+      mockApiService.resultsSE.GET_generalInformationByResultId.mockReturnValue(
+        of({ response: { ...mockGET_generalInformationByResultIdResponse, gender_tag_id: 3, gender_impact_area_id: [] } })
+      );
+      (component.getImpactAreasScoresComponents as any).genderTagScoreList = signal([{ id: 1, name: 'Component A' }]);
+      jest
+        .spyOn(component.fieldsManagerSE, 'fields')
+        .mockReturnValue({ '[general-info]-gender_impact_area_id': { label: 'Which component of the Impact Area?', required: true } } as any);
+      fixture.detectChanges();
+    };
+
+    /** The Impact-Area card is the only one projecting the native checkbox group. */
+    const impactAreaCard = (): HTMLElement =>
+      fixture.debugElement
+        .queryAll(By.css('app-field-card'))
+        .map(de => de.nativeElement as HTMLElement)
+        .find(el => !!el.querySelector('input.pr-native-check'));
+
+    it('renders the question inside a field card, like its sibling tag question', () => {
+      renderP25GenderComponents();
+
+      const card = impactAreaCard();
+      expect(card).toBeTruthy();
+      expect(card.querySelector('.fch_title').textContent).toContain('Which component of the Impact Area?');
+      // The legacy red asterisk is gone: requiredness now reads as the card's pill.
+      expect(card.querySelector('.fch_tag').textContent.trim()).toBe('Mandatory');
+    });
+
+    /**
+     * The card must NOT introduce a scan entry. This field is counted through the hidden
+     * `appFeedbackValidation` div, whose `isComplete` also encodes the conditional rule
+     * (`tag != 3 || !isP25`). A `mandatory` class here would double-count it and make it required
+     * even when the tag is not 3 — a change to the mandatory rules, which are frozen.
+     */
+    it('does not add a mandatory scan class to the checkbox group', () => {
+      renderP25GenderComponents();
+
+      const groupField = impactAreaCard().querySelector('.pr-field');
+      expect(groupField).toBeTruthy();
+      expect(groupField.classList.contains('mandatory')).toBe(false);
+    });
+  });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised so the empty GeneralInfoBody never paints every field as "mandatory, empty"', () => {
+      expect(component.sectionLoading()).toBe(true);
+    });
+
+    it('is released once the section GET responds', () => {
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    /**
+     * The mask carries `inert`. If the release sat AFTER the response mapping, any exception in
+     * that mapping (`[...institutions_type]` spreads a key the response may not carry) would leave
+     * the section masked and permanently uneditable — worse than the half-filled but usable form
+     * the same exception produced before the skeleton existed.
+     */
+    it('is released BEFORE the response mapping runs, so a mapping error cannot leave the section inert', () => {
+      component.sectionLoading.set(true);
+      let loadingWhileMapping: boolean | null = null;
+      jest.spyOn(component as any, 'normalizeImpactAreaFields').mockImplementation(() => {
+        loadingWhileMapping = component.sectionLoading();
+      });
+
+      component.getSectionInformation();
+
+      expect(loadingWhileMapping).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      mockApiService.resultsSE.GET_generalInformationByResultId = jest.fn(() => throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
   });
 
   describe('ngOnInit', () => {

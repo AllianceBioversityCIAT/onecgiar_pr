@@ -3,7 +3,7 @@
   [generalInfoBody]="this.generalInfoBody"
   [isPhaseOpen]="this.isPhaseOpen"></app-rd-annual-updating>
 
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
   @if (!this.api.rolesSE.readOnly && this.isPhaseOpen) {
     <div style="max-width: 200px">
       <app-pr-button
@@ -51,30 +51,38 @@
   <h1 class="pr_label">Impact Area scores:</h1>
   <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
 
-  <!-- Template reutilizable para checkboxes de áreas de impacto -->
+  <!-- Reusable template for the Impact Area component checkboxes (P25).
+       The header is an `app-field-card` (not the legacy `app-pr-field-header` + red asterisk) so this
+       question reads like its sibling tag questions, which render through `app-pr-radio-button` → card.
+       `hasValue` reuses `isImpactAreaComplete()` — the SAME expression the sibling `appFeedbackValidation`
+       below already uses — so the card colour and the alert list can never disagree.
+       The inner `.pr-field` deliberately carries NO `mandatory` class: this field's entry in the DOM scan
+       is the hidden `appFeedbackValidation` div in each block, whose `isComplete` also encodes the
+       conditional rule (`tag != 3 || !isP25`). Marking it here would double-count the field AND make it
+       mandatory even when the tag is not 3 — a validation change. -->
   <ng-template #impactAreaCheckboxes let-fieldRef="fieldRef" let-fieldName="fieldName" let-optionsList="optionsList" let-prefix="prefix">
-    <app-pr-field-header
+    <app-field-card
       [label]="this.getImpactAreaFieldLabel(fieldRef)"
       [description]="this.getImpactAreaFieldDescription(fieldRef)"
       [required]="this.getImpactAreaFieldRequired(fieldRef)"
-      [useColon]="false">
-    </app-pr-field-header>
-    <div class="pr-field">
-      <div class="radioButtonList">
-        @for (option of optionsList; track option.id; let i = $index) {
-          <div class="radioButton">
-            <input
-              type="checkbox"
-              class="pr-native-check"
-              [id]="prefix + '_checkbox_' + i"
-              [ngModel]="this.isImpactAreaSelected(fieldName, option.id)"
-              (ngModelChange)="this.toggleImpactAreaSelection(fieldName, option.id)"
-              [disabled]="this.rolesSE.readOnly" />
-            <label [for]="prefix + '_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
-          </div>
-        }
+      [hasValue]="this.isImpactAreaComplete(fieldName)">
+      <div class="pr-field">
+        <div class="radioButtonList">
+          @for (option of optionsList; track option.id; let i = $index) {
+            <div class="radioButton">
+              <input
+                type="checkbox"
+                class="pr-native-check"
+                [id]="prefix + '_checkbox_' + i"
+                [ngModel]="this.isImpactAreaSelected(fieldName, option.id)"
+                (ngModelChange)="this.toggleImpactAreaSelection(fieldName, option.id)"
+                [disabled]="this.rolesSE.readOnly" />
+              <label [for]="prefix + '_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
+            </div>
+          }
+        </div>
       </div>
-    </div>
+    </app-field-card>
   </ng-template>
 
   <!------- [1] ------->

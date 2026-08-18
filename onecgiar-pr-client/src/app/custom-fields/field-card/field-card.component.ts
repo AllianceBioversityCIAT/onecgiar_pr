@@ -35,4 +35,37 @@ export class FieldCardComponent {
     if (this.hasValue) return 'done';
     return this.required ? 'pending' : 'optional';
   }
+
+  /** A label is what makes a field addressable — blank/whitespace does not count as one. */
+  get hasLabel(): boolean {
+    return !!this.label?.trim();
+  }
+
+  get showHeaderRow(): boolean {
+    return this.showHeader && this.hasLabel;
+  }
+
+  get showDescriptionBlock(): boolean {
+    return this.showHeader && this.showDescription && !!this.description;
+  }
+
+  /**
+   * No label and no description → render no card chrome at all, only the projected control.
+   *
+   * WHY: the component this card replaced (`app-pr-field-header`) gated its whole label block on
+   * `*ngIf="this.label"`, so a label-less field showed nothing. Roughly 60 call sites rely on
+   * that — currency cells in the investment/estimates tables, sub-inputs inside a radio option,
+   * "Other" specifiers — and most of them default to `required = true`. Without this guard each
+   * one grew an orphan "Mandatory" pill over an empty title, an orange border, an 18px margin and
+   * 14px of body padding. Those fields were never marked mandatory before the redesign and the
+   * DOM scan does not read the card anyway (it reads `.pr-input.mandatory` / `.pr-field.mandatory`
+   * on the control), so the marker was pure noise.
+   *
+   * A description with no label keeps the card, so that copy is never dropped. This looks at the
+   * CONTENT only, never at `showHeader`: a consumer that hides the header of a labelled field is
+   * asking for a chromeless card, not for no card — that behaviour is unchanged.
+   */
+  get isBare(): boolean {
+    return !this.hasLabel && !(this.showDescription && !!this.description);
+  }
 }

@@ -1,4 +1,4 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="rdPartnersSE.sectionLoading()">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
   <!-- Contributing Centers start -->
   <div appFeedbackValidation labelText="Contributing CG Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>

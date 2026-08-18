@@ -66,15 +66,14 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
     }
   }
 
-  /** Whether an option is selected. */
+  /**
+   * Whether an option is selected — deliberately the SAME test as the `complete` class in the
+   * template, which is what `DataControlService` scans (and which is unchanged since before the
+   * redesign). Rejecting `''` here too would paint the card orange for a value the alert list
+   * counts as complete.
+   */
   get hasValue(): boolean {
-    return this._value !== null && this._value !== undefined && this._value !== '';
-  }
-
-  /** Field status → colored card header (no error state: radio has no char limit). */
-  get fieldState(): 'optional' | 'pending' | 'done' {
-    if (this.hasValue) return 'done';
-    return this.required ? 'pending' : 'optional';
+    return this._value !== null && this._value !== undefined;
   }
 
   onChange(_) {}

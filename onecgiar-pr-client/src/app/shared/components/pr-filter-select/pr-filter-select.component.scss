@@ -1,0 +1,35 @@
+// Panel list only — the trigger, the open/close behaviour and the chevron come from the shared
+// `.custom_select` block in `custom-fields/custom-fields.scss`.
+.pr-filter-select {
+  .pr-fs-list {
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 4px 0;
+
+    .option {
+      padding: 7px 12px;
+      cursor: pointer;
+      color: var(--pr-color-accents-5);
+      white-space: normal;
+
+      &:hover {
+        background-color: var(--pr-color-primary-25, #f5f6ff);
+      }
+
+      // Active row — reference `mkSelect`: tinted background, brand text, medium weight.
+      &.is-active {
+        background-color: var(--pr-color-primary-50, #f5f3ff);
+        color: var(--pr-color-primary-400, #5733c4);
+        font-weight: 500;
+      }
+    }
+
+    .no_info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: var(--pr-color-primary-300);
+    }
+  }
+}

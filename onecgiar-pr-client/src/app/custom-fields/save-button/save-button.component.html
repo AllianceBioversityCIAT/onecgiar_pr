@@ -47,10 +47,12 @@
                 {{this.dataControlSE?.fieldFeedbackList()?.length}} <div class="text">alerts</div>
             </div>
         </div>
-        <div (click)="this.saveButtonSE.isSaving() || disabled ? null:onClickSave()">
-            <app-pr-button padding="medium" [text]="this.saveButtonSE.isSaving()?'Saving':text"
-                [rotating]="this.saveButtonSE.isSaving()" [icon]="this.saveButtonSE.isSaving()?'loop':'save'"
-                [ngClass]="{'globalDisabled': this.saveButtonSE.isSaving() || disabled}"></app-pr-button>
+        <!-- [loading] carries label + icon + spin + pointer-events in one binding; the click guard
+             itself is in onClickSave(). [disabled] is a consumer-side veto, not an in-flight state. -->
+        <div (click)="onClickSave()">
+            <app-pr-button padding="medium" [text]="text" icon="save"
+                [loading]="this.saveButtonSE.isSaving()" loadingText="Saving"
+                [ngClass]="{'globalDisabled': disabled}"></app-pr-button>
         </div>
     </ng-container>
 </div>

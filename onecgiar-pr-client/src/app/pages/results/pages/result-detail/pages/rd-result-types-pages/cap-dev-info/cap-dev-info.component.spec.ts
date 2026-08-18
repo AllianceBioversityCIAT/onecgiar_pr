@@ -10,7 +10,7 @@ import { YesOrNotByBooleanPipe } from '../../../../../../../custom-fields/pipes/
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { FormsModule } from '@angular/forms';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { environment } from '../../../../../../../../environments/environment';
 import { signal } from '@angular/core';
@@ -213,4 +213,24 @@ describe('CapDevInfoComponent', () => {
       expect(description).toEqual(expectedDescription);
     });
   });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('is released once the section GET responds', () => {
+      component.sectionLoading.set(true);
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_capacityDevelopent').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+  });
+
 });

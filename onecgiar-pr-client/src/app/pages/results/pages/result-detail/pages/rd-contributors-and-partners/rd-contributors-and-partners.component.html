@@ -1,4 +1,4 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="rdPartnersSE.sectionLoading()">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
 
   <!-- ! Submitter: shown in ALL reporting phases. Removed in the 2026 redesign (P2-3036 Level 2) but restored by business decision (Nicoleta / Santi) — it must not be phase-gated. changePrimaryInit is still set in the service, so save is unaffected. -->

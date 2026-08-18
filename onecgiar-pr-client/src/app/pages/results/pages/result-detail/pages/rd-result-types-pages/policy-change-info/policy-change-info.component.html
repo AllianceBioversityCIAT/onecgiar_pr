@@ -1,4 +1,4 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
   <app-alert-status description="Please fill in the following required fields for this indicator category."> </app-alert-status>
 
   <app-alert-status [description]="policyTypeDescriptions()"> </app-alert-status>

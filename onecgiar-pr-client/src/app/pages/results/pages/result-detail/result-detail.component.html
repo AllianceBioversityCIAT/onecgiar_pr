@@ -1,8 +1,44 @@
 <div class="rd_layout">
   <div class="rd_content">
+    <!-- Explicit way back to the results table. The sidebar's "Results Center" row navigates here
+         too, but a user several sections deep should not have to hunt through the nav to get out.
+         The fully-resolved path is used (rather than `/result`) so the link does not depend on the
+         redirect chain. -->
+    <div class="mx-auto mb-[12px] w-[95%]">
+      <a
+        routerLink="/result/results-outlet/results-list"
+        class="inline-flex items-center gap-[6px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] hover:underline"
+        title="Back to all results"
+        data-testid="result-detail-back-link">
+        <i class="material-icons-round text-[16px] leading-none" aria-hidden="true">arrow_back</i>
+        Back to results
+      </a>
+    </div>
+
     <div class="phase_switcher_container">
       <app-phase-switcher></app-phase-switcher>
     </div>
+
+    <!-- RESULT METADATA docked next to "Phases:" — its home when it is not popped out. The floating
+         card at the bottom of this template renders the SAME component, so the six fields exist in
+         the markup once. -->
+    @if (!metadataPanelSE.floating()) {
+      <div class="mx-auto mb-[12px] w-[95%] rounded-xl border border-[var(--pr-color-accents-2)] bg-white px-[12px] py-[10px]">
+        <div class="mb-[8px] flex items-center justify-between gap-[8px]">
+          <p class="m-0 text-[9px] font-bold uppercase tracking-[1px] text-[var(--pr-color-primary-300)]">Result metadata</p>
+          <button
+            type="button"
+            class="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-md text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)] hover:text-[var(--pr-color-primary-300)]"
+            (click)="metadataPanelSE.open()"
+            aria-label="Pop out result metadata into a floating card"
+            title="Pop out result metadata"
+            data-testid="result-detail-metadata-popout">
+            <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">open_in_new</i>
+          </button>
+        </div>
+        <app-result-metadata-list />
+      </div>
+    }
 
     <div class="section_container">
       <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
@@ -26,15 +62,22 @@
         <div class="pr-skeleton" style="width: 100%; height: 120px"></div>
       </div>
 
-      <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection()">
-        <div class="info">
-          <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
-          <div class="text">Loading section...</div>
-        </div>
-      </div>
+      <!-- The dark "Loading section..." veil used to live here. It was driven by the boolean
+           `saveButtonSE.isGettingSection()`, so on a multi-GET section it cleared when the FIRST
+           response landed while the rest of the form was still empty, and three sections load from
+           an `effect()` with no request in flight at first paint, so it never showed for them at
+           all. Per-section `[appSectionSkeleton]` replaces it: it tracks the GET that actually
+           fills the body, and its `inert` + `pointer-events: none` keep the interaction lock the
+           veil provided. `SaveButtonService.isGettingSection` and `isGettingSectionPipe()` stay —
+           IPSR still renders the veil from them. -->
     </div>
   </div>
 </div>
+
+<!-- Floating RESULT METADATA card. Its position and open state live in a root-scoped service, so
+     switching result — which `PrmsRouteReuseStrategy` handles by re-creating this component — brings
+     the card back at exactly the coordinates the user left it at. -->
+<app-result-metadata-window />
 
 <app-submission-modal></app-submission-modal>
 <app-unsubmit-modal></app-unsubmit-modal>

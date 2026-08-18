@@ -76,24 +76,16 @@ export class PrTextareaComponent implements ControlValueAccessor {
     }
   }
 
-  /** Whether the field currently holds a non-empty value. */
-  get hasValue(): boolean {
-    const v = this._value();
-    return v !== null && v !== undefined && String(v).trim() !== '';
-  }
-
   /**
-   * Field status drives the colored card header:
-   * - error   (red)    → exceeds the word limit / invalid
-   * - optional(blue)   → not required
-   * - done    (green)  → required and filled
-   * - pending (yellow) → required and empty
+   * Whether the field currently holds a value — deliberately the SAME truthiness test as the
+   * `complete` class in the template, which is what `DataControlService` scans. A trimming test
+   * would paint a whitespace-only textarea orange while the alert list still counted it complete;
+   * the scan is the rule and predates the redesign, so the card follows it, not the other way
+   * round. (`pr-input` can trim because its scan reads `.input-validation` innerText, which
+   * already collapses whitespace to empty.)
    */
-  get fieldState(): 'optional' | 'pending' | 'done' | 'error' {
-    const maxWords = this.maxWords();
-    if (maxWords && this.wordCount() > maxWords && !this.autogenerate()) return 'error';
-    if (this.hasValue) return 'done'; // green = filled/valid (optional or required)
-    return this.effectiveRequired() ? 'pending' : 'optional'; // yellow vs blue when empty
+  get hasValue(): boolean {
+    return !!this._value();
   }
 
   onChange(_) {}

@@ -109,8 +109,8 @@ export class ReportingAowTableComponent {
   readonly openRowMenu = output<{ row: ReportingIndicator; event: MouseEvent }>();
 
   /**
-   * Disclosure = a user override on top of a per-index default. The rendered reference opens only
-   * the FIRST AoW and, inside it, only the FIRST sub-group; everything else is collapsed.
+   * Disclosure = a user override on top of a level default (see `isDefaultOpenAow` /
+   * `isDefaultOpenHlo`). The reference seeds NO expanded card and EVERY expanded sub-group.
    */
   private readonly overrides = signal<ReadonlyMap<string, boolean>>(new Map());
   /** Row titles the user expanded past the 2-line clamp. */
@@ -178,20 +178,49 @@ export class ReportingAowTableComponent {
     return this.figure(row?.actual_achieved_value_sum, row?.unit_messurament);
   }
 
-  /** The secondary line: the indicator's typology, falling back through the two fields that carry it. */
-  typologyOf(row: ReportingIndicator): string {
-    return row?.result_type_name || row?.type_name || 'Not provided';
+  /**
+   * True once the API actually sent an achieved figure. `null` / `undefined` mean NOTHING WAS
+   * REPORTED and render as an em dash; a literal `0` is a reported fact and renders as `0`.
+   */
+  hasAchievedValue(row: ReportingIndicator): boolean {
+    const raw = row?.actual_achieved_value_sum;
+    if (raw === null || raw === undefined || (raw as unknown) === '') return false;
+    return Number.isFinite(typeof raw === 'number' ? raw : parseFloat(String(raw)));
   }
 
   /**
-   * Meta under the title — CURRENT uses the short KPI name. We do not get a separate short name
-   * from the API, so typology is the stable secondary fact; in flat view the AoW code prefixes it.
+   * Nothing to celebrate in the Achieved cell — either no figure arrived at all, or the figure is
+   * a zero. Drives the muted colour and the reference's `achievedTip`
+   * ("Nothing reported yet for this indicator", `PRMS Reporting.dc.html` :4067).
    */
+  achievedIsEmpty(row: ReportingIndicator): boolean {
+    return !this.hasAchievedValue(row) || Number(row?.actual_achieved_value_sum) === 0;
+  }
+
+  achievedTooltip(row: ReportingIndicator): string {
+    return this.achievedIsEmpty(row) ? 'Nothing reported yet for this indicator' : '';
+  }
+
+  /**
+   * The secondary line under the title = the INDICATOR NAME (`row.kpiName` in the reference,
+   * `PRMS Reporting.dc.html` :1306).
+   *
+   * An earlier pass used the category ("Knowledge product") on the belief that the API carries no
+   * short name. It does: `/api/results-framework-reporting/toc-results` sends BOTH `type_name` (the
+   * indicator name, e.g. "Number of knowledge products published and quality-assured") and
+   * `result_type_name` (the category). So `type_name` leads, with the category as the fallback for
+   * the rows where it is null.
+   */
+  indicatorNameOf(row: ReportingIndicator): string {
+    return row?.type_name || row?.result_type_name || 'Not provided';
+  }
+
+  /** Meta under the title — the indicator name; in flat view the AoW code prefixes it. */
   metaLine(row: ReportingIndicator, showAow = false): string {
-    const type = this.typologyOf(row);
-    if (!showAow) return type;
+    const name = this.indicatorNameOf(row);
+    if (!showAow) return name;
     const aow = row.__aowCode?.trim();
-    return aow ? `${aow} · ${type}` : type;
+    return aow ? `${aow} · ${name}` : name;
   }
 
   /**
@@ -322,9 +351,12 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Chip label in the 68px header.
-   * AoW → code (AOW01). Intermediate → "Intermediate". 2030 → "2030"
-   * (CURRENT mkCard tags at PRMS-Shell.dc.html ~3654).
+   * Chip label in the 68px header. AoW → code (AOW01). Buckets → the short tag ("Intermediate",
+   * "2030"), exactly as the reference (:4248).
+   *
+   * The chip is deliberately NOT the full noun phrase: the group's own name renders right next to
+   * it, so "Intermediate outcomes" in both slots read as "Intermediate outcomes │ Intermediate
+   * outcomes". The chip qualifies the name, it does not repeat it.
    */
   headerChip(group: ReportingAowGroup): string {
     const kind = group.kind ?? 'aow';
@@ -355,7 +387,11 @@ export class ReportingAowTableComponent {
     return (group.indicators ?? []).filter(row => {
       if (status !== 'all' && this.statusOf(row) !== status) return false;
       if (!q) return true;
-      return [row.indicator_description, row.__hlo, this.typologyOf(row)].some(v => (v ?? '').toLowerCase().includes(q));
+      // Both name fields are searched: the visible meta line is the indicator name now, but users
+      // still type categories ("innovation use"), which only live in `result_type_name`.
+      return [row.indicator_description, row.__hlo, this.indicatorNameOf(row), row.result_type_name].some(v =>
+        (v ?? '').toLowerCase().includes(q)
+      );
     });
   }
 
@@ -382,16 +418,23 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Default disclosure, from the rendered reference: only the FIRST AoW is expanded, and inside it
-   * only the FIRST sub-group. Everything else is collapsed. Expanding all of it (the first pass)
-   * buried the page in rows and made the AoW headers useless as an overview.
+   * Default disclosure, read from the reference's seed state (`PRMS Reporting.dc.html` :3265):
+   *
+   * ```js
+   * expandedAows: {},                       // every card starts COLLAPSED (68px header only)
+   * expandedGroups: { …every group: true }  // every sub-group starts OPEN
+   * ```
+   *
+   * So the page opens as a scannable list of card headers, and the moment a user expands one they
+   * see its rows — not a second wall of collapsed group headers. Auto-opening the first AoW (the
+   * previous behaviour) made the very first card the odd one out and pushed the rest below the fold.
    */
-  isDefaultOpenAow(index: number): boolean {
-    return index === 0;
+  isDefaultOpenAow(): boolean {
+    return false;
   }
 
-  isDefaultOpenHlo(index: number): boolean {
-    return index === 0;
+  isDefaultOpenHlo(): boolean {
+    return true;
   }
 
   /**

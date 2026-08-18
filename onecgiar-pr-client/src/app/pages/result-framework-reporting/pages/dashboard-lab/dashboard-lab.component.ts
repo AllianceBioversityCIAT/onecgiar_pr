@@ -21,51 +21,86 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
 import { GuidedCreationComponent } from './components/guided-creation/guided-creation.component';
 import { IndicatorDrawerComponent } from './components/indicator-drawer/indicator-drawer.component';
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './components/reporting-aow-table/reporting-aow-table.component';
+import { buildReportModalNode } from './components/reporting-aow-table/report-modal-context.util';
 import { ReportingProgramBandComponent } from './components/reporting-program-band/reporting-program-band.component';
+import { AowHloCreateModalComponent } from '../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
+import { EntityAowService } from '../entity-aow/services/entity-aow.service';
+import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
+import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
+import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
+import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 import {
   ProgramOverviewComponent,
   StatusSegment as OverviewStatusSegment,
   AowProgressRow as OverviewAowProgressRow,
   AttentionRow as OverviewAttentionRow,
-  CategoryBar as OverviewCategoryBar
+  CategoryBar as OverviewCategoryBar,
+  PaceSeries as OverviewPaceSeries
 } from './components/program-overview/program-overview.component';
+import { PhasesService } from '../../../../shared/services/global/phases.service';
+import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
 import { HlmButton } from '@spartan/button';
 
-/** Status tokens for the Overview segmented meter (rule 9 — fixed pairs). */
-const OVERVIEW_STATUS_TOKENS: Record<number, { key: string; label: string; bg: string; fg: string }> = {
-  1: {
+/**
+ * Reporting-status meter — the reference's five canonical states, in this exact order.
+ * PRMS phase statuses map onto them: 5 "Pending" is a result nobody has opened yet, i.e.
+ * "Not started"; 6 "Approved" has no rows in PRMS today but the reference always prints
+ * "Approved 0", so the meter renders this fixed list rather than whatever the API returns.
+ * Colours come from the `--pr-status-*` tokens, which already match the mockup's palette.
+ */
+const OVERVIEW_STATUS_SLOTS: { key: string; label: string; statusId: number; bg: string; fg: string }[] = [
+  {
+    key: 'not-started',
+    label: 'Not started',
+    statusId: 5,
+    bg: 'var(--pr-status-not-started-bg)',
+    fg: 'var(--pr-status-not-started-fg)'
+  },
+  {
     key: 'in-progress',
     label: 'In progress',
+    statusId: 1,
     bg: 'var(--pr-status-in-progress-bg)',
     fg: 'var(--pr-status-in-progress-fg)'
   },
-  2: { key: 'in-qa', label: 'In QA', bg: 'var(--pr-status-in-qa-bg)', fg: 'var(--pr-status-in-qa-fg)' },
-  3: {
+  {
     key: 'submitted',
     label: 'Submitted',
+    statusId: 3,
     bg: 'var(--pr-status-submitted-bg)',
     fg: 'var(--pr-status-submitted-fg)'
   },
-  4: {
-    key: 'not-started',
-    label: 'Discontinued',
-    bg: 'var(--pr-status-not-started-bg)',
-    fg: 'var(--pr-status-not-started-fg)'
-  },
-  5: {
-    key: 'not-started',
-    label: 'Pending',
-    bg: 'var(--pr-status-not-started-bg)',
-    fg: 'var(--pr-status-not-started-fg)'
-  },
-  6: {
+  { key: 'in-qa', label: 'In QA', statusId: 2, bg: 'var(--pr-status-in-qa-bg)', fg: 'var(--pr-status-in-qa-fg)' },
+  {
     key: 'approved',
     label: 'Approved',
+    statusId: 6,
     bg: 'var(--pr-status-approved-bg)',
     fg: 'var(--pr-status-approved-fg)'
   }
+];
+
+/**
+ * Discontinued is not one of the reference's five states, but hiding real rows would make the
+ * meter lie about the total — so it is appended after Approved, and only when it has rows.
+ */
+const OVERVIEW_DISCONTINUED_SLOT = {
+  key: 'discontinued',
+  label: 'Discontinued',
+  statusId: 4,
+  bg: 'var(--pr-status-not-started-bg)',
+  fg: 'var(--pr-status-not-started-fg)'
 };
+
+/** PRMS status id that the Overview presents as "Not started". */
+const NOT_STARTED_STATUS_ID = 5;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** "Intermediate Outcomes" → "Intermediate outcomes" (the reference uses sentence case). */
+function sentenceCaseOutcomes(name: string): string {
+  return (name ?? '').replace(/\bOutcomes\b/g, 'outcomes');
+}
 
 const CHART_COLORS = ['var(--pr-chart-1)', 'var(--pr-chart-2)', 'var(--pr-chart-3)', 'var(--pr-chart-4)'];
 
@@ -176,7 +211,12 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     ReportingAowTableComponent,
     ReportingProgramBandComponent,
     ProgramOverviewComponent,
-    HlmButton
+    HlmButton,
+    // Legacy reporting surfaces reused VERBATIM — the drawer/guided copies stay in the tree but are
+    // no longer the ones users reach (see `openLegacyReportModal` / `openReportModal`).
+    AowHloCreateModalComponent,
+    PrDialogComponent,
+    ResultCreatorModule
   ],
   templateUrl: './dashboard-lab.component.html',
   styleUrls: ['./dashboard-lab.component.scss'],
@@ -190,6 +230,27 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly guideSE = inject(ReportingGuideService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly phasesSE = inject(PhasesService);
+  /**
+   * Public: the template reads `showReportResultModal()` to mount the legacy report modal, which has
+   * ZERO inputs/outputs and is driven entirely by this root-scoped service.
+   */
+  readonly entityAowService = inject(EntityAowService);
+  /**
+   * Injected for its CONSTRUCTOR side effect, not for its API: it fetches the result types and fills
+   * `ResultsListFilterService.filters.resultLevel`, which is where the legacy modal's "Indicator
+   * category" dropdown gets its options for indicators that carry no `result_type_id`. `aow-hlo-table`
+   * injects it for exactly this reason; without it that dropdown opens empty and cannot be submitted.
+   * It also owns `resultBody` / `cleanData()` for the emerging-result form below.
+   */
+  private readonly resultLevelSE = inject(ResultLevelService);
+
+  /**
+   * Reporting phases (with their start / end dates) — the only source of the cycle deadline the
+   * Overview's pace card needs. PhasesService already fetches them app-wide, so this only mirrors
+   * its plain array into a signal; ngOnInit re-seeds and subscribes for the cold-load case.
+   */
+  private readonly reportingPhases = signal<Phases[]>(this.phasesSE.phases.reporting ?? []);
 
   /** Sidebar section mode — Dashboard = leadership metrics; others = that card only. */
   readonly rfrView = toSignal(
@@ -371,6 +432,78 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.managed.set(null);
   }
 
+  // ---- Legacy report surfaces (the ones the users actually get) ----
+  /**
+   * Seed the root-scoped `EntityAowService` with the selected programme.
+   *
+   * Both legacy surfaces read their context off this service and this page never touched it, so
+   * without the seed they open half-blind: `entityDetails().id` is what becomes `initiative_id` in
+   * the create payload, and `canReportResults()` stays FALSE for every non-admin until
+   * `getAllDetailsData` resolves the phase check — which renders the modal without its submit
+   * button. Called from the `selected()` effect so the data is warm before any click, and again at
+   * click time as a cold-load safety net. Guarded on the code so tab switches do not refetch.
+   */
+  private primeEntityAowContext(): void {
+    const code = this.selected()?.initiativeCode;
+    if (!code || this.entityAowService.entityId() === code) return;
+    this.entityAowService.entityId.set(code);
+    this.entityAowService.getAllDetailsData(code);
+  }
+
+  /**
+   * KPI "Report" → the ORIGINAL report modal, not the new drawer.
+   *
+   * Mirrors `aow-hlo-table.openReportResultModal`: prime the service, point it at the clicked row's
+   * ToC node (narrowed to the one indicator) and flip the visibility signal. The modal reads
+   * everything else — programme, AoW header line, reporting rights — off the same service.
+   *
+   * `node` is explicit because not every surface on this page feeds rows through
+   * `indicatorsByAow()`: inside an open Area of Work the buttons iterate the RAW ToC group, so its
+   * rows carry no `__hloNode` and the template passes the group it is already looping over.
+   * Dropping the node would cost the modal its ToC context (centers / Science Programs preselect).
+   */
+  openLegacyReportModal(row: ReportingIndicator, node?: unknown): void {
+    this.primeEntityAowContext();
+
+    const raw = row as unknown as Record<string, unknown>;
+    const tocNode = (node ?? raw['__hloNode']) as Record<string, unknown> | null | undefined;
+    // `entityAows` + `aowId` feed `currentAowSelected()`, the `AOW01 - name` line in the modal
+    // header. For the Intermediate / 2030 buckets `__aowCode` is a sentinel that matches no unit,
+    // so the computed stays undefined and the header line hides itself — same as the old pages.
+    this.entityAowService.entityAows.set(this.aows());
+    this.entityAowService.aowId.set(String(raw['__aowCode'] ?? this.activeAowCode() ?? ''));
+    this.entityAowService.currentResultToReport.set(buildReportModalNode(tocNode, raw));
+    this.entityAowService.showReportResultModal.set(true);
+  }
+
+  // ---- Emerging result (legacy `app-report-result-form` in a pr-dialog) ----
+  readonly showReportModal = signal(false);
+
+  /**
+   * P2-3139 parity: AVISA (SGP-02) is a deactivated project — view only. The retired
+   * entity-details page hid the whole "Report Emerging results" block for it, so the band CTA is
+   * hidden here too rather than opening a modal that must not create anything.
+   */
+  readonly canReportEmerging = computed(() => {
+    const sp = this.selected();
+    return !!sp && !isAvisaInitiative({ initiativeCode: sp.initiativeCode, initiativeId: sp.initiativeId });
+  });
+
+  openReportModal(): void {
+    if (!this.canReportEmerging()) return;
+    // The reporting rights gate on the form's Save button lives in EntityAowService.
+    this.primeEntityAowContext();
+    // Deliberately NO `resultLevelSE.setPendingResultType(...)`: the retired call site had a
+    // category card as context, a single "Report emerging result" button has none — so the
+    // Output/Outcome cards and the Indicator category radios stay the user's choice.
+    this.showReportModal.set(true);
+  }
+
+  closeReportModal(): void {
+    this.showReportModal.set(false);
+    this.resultLevelSE.cleanData?.();
+  }
+
   // ---- Guided creation (full-screen flow) ----
   readonly guidedOpen = signal(false);
   readonly guidedPath = signal<'planned' | 'emerging' | null>(null);
@@ -505,6 +638,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       if (code) {
         this.loadAows(code);
         this.loadSummaries(code);
+        // Warm the legacy modals' context here, not on click: `canReportResults()` needs an async
+        // phase check and would otherwise hide the submit button on a cold open.
+        this.primeEntityAowContext();
         this.plannedHloAowCode.set(null);
         this.plannedTypeFilter.set([]);
         this.plannedSearch.set('');
@@ -711,22 +847,32 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   // ── Overview tab feeds (real SP / AoW / ToC data) ─────────────────────────
 
-  /** Reporting-status meter + legend — maps phase status counts onto design tokens. */
+  /**
+   * Reporting-status meter + legend. Built from the fixed slot list, not from the API order, so
+   * the five reference states always show in the same order and `Approved` still reads `0`.
+   */
   readonly overviewStatusSegments = computed<OverviewStatusSegment[]>(() => {
     const statuses = this.latestVersion(this.selected())?.statuses ?? [];
     if (!statuses.length) return [];
-    return [...statuses]
-      .sort((a, b) => (STATUS_ORDER[a.statusId] ?? 99) - (STATUS_ORDER[b.statusId] ?? 99))
-      .map(s => {
-        const tok = OVERVIEW_STATUS_TOKENS[s.statusId];
-        return {
-          key: tok?.key ?? String(s.statusId),
-          label: tok?.label ?? s.statusName,
-          count: s.count,
-          bg: tok?.bg ?? 'var(--pr-status-not-started-bg)',
-          fg: tok?.fg ?? 'var(--pr-status-not-started-fg)'
-        };
+    const countOf = (statusId: number) => statuses.find(s => s.statusId === statusId)?.count ?? 0;
+    const segments: OverviewStatusSegment[] = OVERVIEW_STATUS_SLOTS.map(slot => ({
+      key: slot.key,
+      label: slot.label,
+      count: countOf(slot.statusId),
+      bg: slot.bg,
+      fg: slot.fg
+    }));
+    const discontinued = countOf(OVERVIEW_DISCONTINUED_SLOT.statusId);
+    if (discontinued > 0) {
+      segments.push({
+        key: OVERVIEW_DISCONTINUED_SLOT.key,
+        label: OVERVIEW_DISCONTINUED_SLOT.label,
+        count: discontinued,
+        bg: OVERVIEW_DISCONTINUED_SLOT.bg,
+        fg: OVERVIEW_DISCONTINUED_SLOT.fg
       });
+    }
+    return segments;
   });
 
   /**
@@ -760,7 +906,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .map(g => {
         const inds = g.indicators ?? [];
         const done = inds.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
-        return { code: g.aow.code, name: g.aow.name, done, total: g.count || inds.length };
+        // Sentence case per the reference ("Intermediate outcomes" / "2030 outcomes"). Only the
+        // Overview row is relabelled — the Reporting table keeps the group's own name.
+        return { code: g.aow.code, name: sentenceCaseOutcomes(g.aow.name), done, total: g.count || inds.length };
       })
       .filter(r => r.total > 0);
   });
@@ -770,23 +918,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const rows: OverviewAttentionRow[] = [];
     const p = this.pipelineStats();
     if (p.editing > 0) {
-      rows.push({
-        text: `${p.editing} result${p.editing === 1 ? '' : 's'} still in Editing`,
-        color: 'var(--pr-status-in-progress-fg)'
-      });
+      rows.push({ kind: 'stale-drafts', text: `${p.editing} result${p.editing === 1 ? '' : 's'} still in Editing` });
     }
     if (p.pending > 0) {
-      rows.push({
-        text: `${p.pending} result${p.pending === 1 ? '' : 's'} pending review`,
-        color: 'var(--pr-text-subtle)'
-      });
+      // Status 5 is presented as "Not started" in the meter — keep the wording consistent here.
+      rows.push({ kind: 'not-started', text: `${p.pending} result${p.pending === 1 ? '' : 's'} not started yet` });
     }
+    // Collapsed into a single row: one line per empty AoW flooded the card with near-identical text.
     const emptyAows = this.overviewAowProgress().filter(a => a.total > 0 && a.done === 0);
-    for (const a of emptyAows.slice(0, 3)) {
-      rows.push({
-        text: `${a.code} has no results reported yet`,
-        color: 'var(--pr-text-subtle)'
-      });
+    if (emptyAows.length === 1) {
+      rows.push({ kind: 'empty-aow', text: `${emptyAows[0].code} has no results reported yet` });
+    } else if (emptyAows.length > 1) {
+      rows.push({ kind: 'empty-aow', text: `${emptyAows.length} areas of work with no results reported yet` });
     }
     return rows;
   });
@@ -806,17 +949,31 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .slice(0, 4);
   });
 
-  readonly overviewPaceHeadline = computed(() => {
-    const pct = this.submittedPct();
-    const total = this.selectedTotal();
-    if (!total) return 'No results reported for this phase yet.';
-    return `${pct}% of ${total} results are quality-assessed or submitted this phase.`;
-  });
-
-  readonly overviewPaceSub = computed(() => {
+  /**
+   * Raw pace numbers for the Overview card. The reporting cycle's start / end dates DO exist —
+   * `GET /api/versioning` returns them per phase, and the SP payload's `versionId` is that phase's
+   * id — so the projection is real, not invented. When the phase has no dates (or has not opened
+   * yet) the weeks come through as 0 and the card falls back to non-projecting copy.
+   */
+  readonly overviewPaceSeries = computed<OverviewPaceSeries>(() => {
+    const version = this.latestVersion(this.selected());
+    const statuses = version?.statuses ?? [];
+    const total = statuses.reduce((sum, s) => sum + s.count, 0);
+    const notStarted = statuses.find(s => s.statusId === NOT_STARTED_STATUS_ID)?.count ?? 0;
     const p = this.pipelineStats();
-    if (!p.total) return 'Start reporting against the planned ToC to build pace.';
-    return `${p.editing} still editing · ${p.qaed} in QA · ${p.submitted} submitted.`;
+    const phase = this.reportingPhases().find(ph => Number(ph?.id) === Number(version?.versionId));
+    const now = Date.now();
+    const start = phase?.start_date ? new Date(phase.start_date).getTime() : NaN;
+    const end = phase?.end_date ? new Date(phase.end_date).getTime() : NaN;
+    return {
+      done: total - notStarted,
+      total,
+      elapsedWeeks: Number.isFinite(start) ? (now - start) / WEEK_MS : 0,
+      leftWeeks: Number.isFinite(end) ? (end - now) / WEEK_MS : 0,
+      inProgress: p.editing,
+      inQa: p.qaed,
+      submitted: p.submitted
+    };
   });
 
   /** % of results in a "reported" state (QAed / Submitted). */
@@ -991,6 +1148,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   private spParamSub?: Subscription;
   private entityParamSub?: Subscription;
+  private phasesSub?: Subscription;
   /** Programme code from the path still waiting for the programme list to load. */
   private pendingProgramCode: string | null = null;
 
@@ -1002,6 +1160,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // The programme now comes from the PATH (`…/entity-details/SP01`), by code. In-app
     // navigation keeps this component alive, so react to param changes as well as the first load.
     this.entityParamSub = this.route.paramMap.subscribe(pm => this.selectProgramByCode(pm.get('entityId')));
+
+    // Phases may already be loaded (shared service) or still in flight — cover both.
+    this.reportingPhases.set(this.phasesSE.phases.reporting ?? []);
+    this.phasesSub = this.phasesSE.getPhasesObservable().subscribe(list => this.reportingPhases.set(list ?? []));
 
     // React to `?sp=` changes — kept for links saved before the move to path addressing.
     this.spParamSub = this.route.queryParamMap.subscribe(qp => {
@@ -1101,8 +1263,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.dataControlSE.focusMode.set(false);
     this.dataControlSE.slimNav.set(false);
+    // EntityAowService is providedIn:'root': leaving the page mid-modal would otherwise strand
+    // `showReportResultModal = true` and a stale node for the next surface that reads them.
+    this.entityAowService.onCloseReportResultModal();
     this.spParamSub?.unsubscribe();
     this.entityParamSub?.unsubscribe();
+    this.phasesSub?.unsubscribe();
     if (this.centerTimer) clearInterval(this.centerTimer);
   }
 
@@ -1273,8 +1439,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const aowFilter = this.reportingAowFilter();
     const typology = this.reportingTypologyFilter();
     const typeFilter = this.reportingTypeFilter();
-    const matchTypology = (i: ReportingIndicator) =>
-      typology === 'all' || (i?.result_type_name || i?.type_name || '').trim() === typology;
+    // Category == `result_type_name` ONLY (Knowledge product, Innovation development, …). The old
+    // fallback to `type_name` was wrong: that field carries the indicator's own name ("Proportion of
+    // CGIAR-NARS-SME breeding pipelines within…"), so indicators without a result type polluted the
+    // filter with 160+ one-off entries.
+    const matchTypology = (i: ReportingIndicator) => typology === 'all' || (i?.result_type_name ?? '').trim() === typology;
     const sp = this.selected()?.initiativeCode;
 
     // Type filter (CURRENT selType) — which top-level card families stay visible.
@@ -1282,16 +1451,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const wantIo = typeFilter === 'all' || typeFilter === 'intermediate_outcome';
     const wantO30 = typeFilter === 'all' || typeFilter === 'outcome_2030';
 
-    // Section filter — a real AoW code, or one of the two program-level bucket codes.
-    const sectionIsAow =
-      aowFilter === 'all' || (aowFilter !== INTERMEDIATE_OUTCOMES_CODE && aowFilter !== OUTCOMES_2030_CODE);
-    const sectionIsIo = aowFilter === 'all' || aowFilter === INTERMEDIATE_OUTCOMES_CODE;
-    const sectionIsO30 = aowFilter === 'all' || aowFilter === OUTCOMES_2030_CODE;
+    // Section filter — a set of AoW codes and/or the two program-level bucket codes. Empty = all.
+    const noSection = aowFilter.length === 0;
+    const sectionPicked = (code: string) => noSection || aowFilter.includes(code);
+    const sectionIsAow = noSection || aowFilter.some(c => c !== INTERMEDIATE_OUTCOMES_CODE && c !== OUTCOMES_2030_CODE);
+    const sectionIsIo = sectionPicked(INTERMEDIATE_OUTCOMES_CODE);
+    const sectionIsO30 = sectionPicked(OUTCOMES_2030_CODE);
 
     // 1) AoW cards — HLOs by default; outcome tier only when Type = Outcome.
     const aowCards: ReportingAowGroup[] = wantAow
       ? this.plannedFilteredAows()
-          .filter(aow => sectionIsAow && (aowFilter === 'all' || aow.code === aowFilter))
+          .filter(aow => sectionIsAow && sectionPicked(aow.code))
           .map(aow => {
             const bundle = this.indicatorsForAow(aow.code) ?? {
               aow,
@@ -1327,7 +1497,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const intermediateCard: ReportingAowGroup | null =
       wantIo && sectionIsIo && (ioAll.length || ioLoading)
         ? {
-            aow: { code: INTERMEDIATE_OUTCOMES_CODE, name: 'Intermediate Outcomes' },
+            // Sentence case, like every other surface (the reference never title-cases "outcomes").
+            aow: { code: INTERMEDIATE_OUTCOMES_CODE, name: 'Intermediate outcomes' },
             indicators: ioAll.filter(matchTypology),
             count: ioAll.length,
             loading: ioLoading && !ioAll.length,
@@ -1343,7 +1514,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const o30Card: ReportingAowGroup | null =
       wantO30 && sectionIsO30 && (o30All.length || o30Loading)
         ? {
-            aow: { code: OUTCOMES_2030_CODE, name: '2030 Outcomes' },
+            aow: { code: OUTCOMES_2030_CODE, name: '2030 outcomes' },
             indicators: o30All.filter(matchTypology),
             count: o30All.length,
             loading: o30Loading && !o30All.length,
@@ -1380,7 +1551,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly reportingStatusFilter = signal<string>('all');
   readonly reportingViewMode = signal<'grouped' | 'flat'>('grouped');
-  readonly reportingAowFilter = signal<string>('all');
+  /** Section filter — multi-select like the reference; empty array means "every section". */
+  readonly reportingAowFilter = signal<string[]>([]);
   readonly reportingTypologyFilter = signal<string>('all');
   /** CURRENT selType: all | hlo | outcome | intermediate_outcome | outcome_2030 */
   readonly reportingTypeFilter = signal<string>('all');
@@ -1393,10 +1565,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       value: a.code,
       label: `${a.code} · ${a.name}`
     }));
+    // Two groups, as in the reference panel: the programme's areas of work, then the two
+    // programme-level buckets.
     return [
-      ...aows,
-      { value: INTERMEDIATE_OUTCOMES_CODE, label: 'Intermediate Outcomes' },
-      { value: OUTCOMES_2030_CODE, label: '2030 Outcomes' }
+      { label: 'Areas of work', items: aows },
+      {
+        label: 'Programme-level',
+        items: [
+          { value: INTERMEDIATE_OUTCOMES_CODE, label: 'Intermediate outcomes' },
+          { value: OUTCOMES_2030_CODE, label: '2030 outcomes' }
+        ]
+      }
     ];
   });
 
@@ -1406,9 +1585,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly reportingTypologyOptions = computed(() => {
     const set = new Set<string>();
+    // Only `result_type_name` — see `matchTypology` in `reportingGroups` for why `type_name` is not
+    // a category. Indicators without a result type simply do not contribute an option.
     const collect = (rows: ReportingIndicator[] | undefined) => {
       for (const i of rows ?? []) {
-        const t = i?.result_type_name || i?.type_name;
+        const t = i?.result_type_name;
         if (t) set.add(String(t).trim());
       }
     };
@@ -1417,16 +1598,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const map = this.tocByKey();
     collect(this.flattenBucketIndicators(map.get(`${sp}::${INTERMEDIATE_OUTCOMES_CODE}`)?.outputs, INTERMEDIATE_OUTCOMES_CODE, 'IO'));
     collect(this.flattenBucketIndicators(map.get(`${sp}::${OUTCOMES_2030_CODE}`)?.outputs, OUTCOMES_2030_CODE, '2030'));
-    return [...set].sort((a, b) => a.localeCompare(b)).map(v => ({ value: v, label: v }));
+    // Leading row resets the pill back to its placeholder (`all` is the band's empty sentinel).
+    return [
+      { value: 'all', label: 'All categories' },
+      ...[...set].sort((a, b) => a.localeCompare(b)).map(v => ({ value: v, label: v }))
+    ];
   });
 
-  /** Row click / Report — both land on the existing indicator drawer, on the matching tab. */
+  /**
+   * Row click opens the read-only indicator context in the drawer; "Report" no longer goes there —
+   * it opens the legacy report modal, the surface this flow has always used to create a result.
+   */
   onReportingRowOpen(row: ReportingIndicator): void {
     this.manageIndicator(row, row.__hlo ?? '', 'info');
   }
 
   onReportingRowReport(row: ReportingIndicator): void {
-    this.manageIndicator(row, row.__hlo ?? '', 'report');
+    this.openLegacyReportModal(row);
   }
 
   /**

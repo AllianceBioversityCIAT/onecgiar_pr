@@ -1,4 +1,4 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
   @if (!!this.dataControlSE?.currentResult?.is_replicated) {
     <app-alert-status
       [description]="

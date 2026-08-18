@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, inject, signal } from '@angular/core';
+import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
 import { InstitutionsInterface, UnmappedMQAPInstitutionDto } from '../rd-partners/models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
@@ -17,6 +17,13 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   partnersBody = new ContributorsAndPartnersBody();
   toggle = 0;
   getConsumed = signal<boolean>(false);
+  /**
+   * Drives `[appSectionSkeleton]`. No new state: `getConsumed` already is "the section GET came
+   * back" — false out of `resetState()` (which the component calls on `ngOnInit`, so it is
+   * correctly re-raised per result despite the root singleton) and true on both `next` and
+   * `error`. Exposed as its own name so the template reads as intent, not as a double negative.
+   */
+  readonly sectionLoading = computed(() => !this.getConsumed());
   cgspaceDisabledList: any = [];
   savedActiveTabIndex: number | null = null;
 

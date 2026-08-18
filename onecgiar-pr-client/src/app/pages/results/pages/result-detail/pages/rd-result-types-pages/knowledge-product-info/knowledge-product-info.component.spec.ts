@@ -10,7 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { AlertStatusComponent } from '../../../../../../../custom-fields/alert-status/alert-status.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
@@ -135,6 +135,27 @@ describe('KnowledgeProductInfoComponent', () => {
 
     fixture = TestBed.createComponent(KnowledgeProductInfoComponent);
     component = fixture.componentInstance;
+  });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised', () => {
+      expect(component.sectionLoading()).toBe(true);
+    });
+
+    it('is released once the section GET responds', () => {
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_resultknowledgeProducts').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
   });
 
   describe('ngOnInit()', () => {

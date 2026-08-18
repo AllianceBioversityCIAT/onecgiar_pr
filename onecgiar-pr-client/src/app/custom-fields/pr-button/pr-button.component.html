@@ -7,19 +7,19 @@
   [style]="'margin: ' + this.verticalMargin + 'px 0px'"
   [ngClass]="{
     width: 'max-content',
-    'b-disabled': this.disabled,
+    'b-disabled': this.blocked,
     reverse: this.reverse,
     show_background: this.showBackground,
-    animate__pulse_infinite: this.pulse || this.rotating
+    animate__pulse_infinite: this.pulse || this.spinning
   }"
   [ngStyle]="this.showBackground ? { 'background-color': generateColor() } : {}">
-  <div class="text">{{ this.text }}</div>
+  <div class="text">{{ this.currentText }}</div>
 
   <i
-    [class]="iconsStylesClass === 'pi' ? 'pi pi-' + this.icon : iconsStylesClass"
-    [ngClass]="{ rotating: this.rotating, 'rotate-right': this.rotateRight }"
-    *ngIf="this.icon && !this.use_png_icon; else pngicon">
-    {{ this.iconsStylesClass === 'pi' ? null : this.icon }}
+    [class]="iconsStylesClass === 'pi' ? 'pi pi-' + this.currentIcon : iconsStylesClass"
+    [ngClass]="{ rotating: this.spinning, 'rotate-right': this.rotateRight }"
+    *ngIf="this.currentIcon && !this.use_png_icon; else pngicon">
+    {{ this.iconsStylesClass === 'pi' ? null : this.currentIcon }}
   </i>
 
   <ng-template #pngicon>

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, effect, ViewChild, computed } from '@angular/core';
+import { Component, OnInit, inject, effect, ViewChild, computed, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -31,6 +31,16 @@ export class RdGeneralInformationComponent implements OnInit {
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
   isP25 = computed(() => this.dataControlSE.currentResultSignal()?.portfolio === 'P25');
   fieldsManagerSE = inject(FieldsManagerService);
+
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction: the form is built from an empty
+   * `GeneralInfoBody()` and only filled inside the GET's subscriber, so between first paint and
+   * the response every field would otherwise read as "mandatory, empty". Released on BOTH `next`
+   * and `error` so a failed request can never leave the section shimmering forever.
+   * Deliberately NOT raised again by the post-save reload — the save spinner already covers that
+   * round-trip and a second flash reads as a glitch.
+   */
+  readonly sectionLoading = signal(true);
 
   constructor(
     public api: ApiService,
@@ -114,16 +124,24 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_generalInformationByResultId(this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe(({ response }) => {
-      this.generalInfoBody = response;
-      this.generalInfoBody.reporting_year = response['phase_year'];
-      this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
+    this.api.resultsSE.GET_generalInformationByResultId(this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe({
+      next: ({ response }) => {
+        // Released FIRST, before any mapping. The mask carries `inert`, so an exception thrown
+        // further down (`[...institutions_type]` spreads a possibly-absent key) would leave the
+        // section permanently uneditable — strictly worse than the half-filled-but-usable form
+        // the same exception produced before the skeleton existed. Same tick, so no visual change.
+        this.sectionLoading.set(false);
+        this.generalInfoBody = response;
+        this.generalInfoBody.reporting_year = response['phase_year'];
+        this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
 
-      // Normalize impact area fields to arrays (backend returns arrays, but handle single numbers for backward compatibility)
-      this.normalizeImpactAreaFields();
+        // Normalize impact area fields to arrays (backend returns arrays, but handle single numbers for backward compatibility)
+        this.normalizeImpactAreaFields();
 
-      this.GET_investmentDiscontinuedOptions(response.result_type_id);
-      this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
+        this.GET_investmentDiscontinuedOptions(response.result_type_id);
+        this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
+      },
+      error: () => this.sectionLoading.set(false)
     });
   }
 

@@ -28,6 +28,9 @@ import { signal } from '@angular/core';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { environment } from '../../../../../environments/environment';
+import { ResultMetadataListComponent } from '../../../../shared/components/result-metadata/result-metadata-list.component';
+import { ResultMetadataWindowComponent } from '../../../../shared/components/result-metadata/result-metadata-window.component';
+import { ResultMetadataPanelService } from '../../../../shared/components/result-metadata/result-metadata-panel.service';
 
 jest.useFakeTimers();
 
@@ -118,7 +121,9 @@ describe('ResultDetailComponent', () => {
         HttpClientTestingModule,
         RouterTestingModule,
         PageHeaderComponent,
-        ClipboardModule
+        ClipboardModule,
+        ResultMetadataListComponent,
+        ResultMetadataWindowComponent
       ],
       providers: [
         {
@@ -262,6 +267,41 @@ describe('ResultDetailComponent', () => {
 
       expect(mockApiService.dataControlSE.someMandatoryFieldIncompleteResultDetail).toHaveBeenCalledWith('.section_container');
       rafSpy.mockRestore();
+    });
+  });
+
+  // Task 7/8 — the shell now owns the way back to the results table and the metadata card.
+  describe('back link + result metadata', () => {
+    beforeEach(() => {
+      // The panel persists to localStorage, so one test's pop-out would otherwise seed the next.
+      localStorage.clear();
+      jest.spyOn(ResultDetailComponent.prototype, 'getData').mockImplementation(async () => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('renders an explicit link back to the results list', () => {
+      fixture.detectChanges();
+      const link: HTMLAnchorElement = fixture.nativeElement.querySelector('[data-testid="result-detail-back-link"]');
+      expect(link).toBeTruthy();
+      expect(link.getAttribute('href')).toBe('/result/results-outlet/results-list');
+    });
+
+    it('docks the metadata next to the phase switcher and pops it out on demand', () => {
+      const panelSE = TestBed.inject(ResultMetadataPanelService);
+      fixture.detectChanges();
+
+      // Docked: the card sits in the content column, the floating window is not rendered.
+      expect(fixture.nativeElement.querySelector('app-result-metadata-list')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('[data-testid="result-metadata-window"]')).toBeNull();
+
+      fixture.nativeElement.querySelector('[data-testid="result-detail-metadata-popout"]').click();
+      fixture.detectChanges();
+
+      expect(panelSE.floating()).toBe(true);
+      // The docked card collapses so the six fields are never on screen twice.
+      expect(fixture.nativeElement.querySelector('[data-testid="result-detail-metadata-popout"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="result-metadata-window"]')).toBeTruthy();
     });
   });
 

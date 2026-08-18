@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { environment } from '../../../../../../../../environments/environment';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
@@ -31,6 +31,13 @@ export class CapDevInfoComponent implements OnInit {
     this.api.dataControlSE.currentResultSectionName.set('Capacity Sharing for Development information');
   }
 
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction: the body object is empty until the
+   * section GET lands, so without it every mandatory field paints orange ("empty") first.
+   * Released on `next` AND `error` — a failed GET must not leave the section shimmering.
+   */
+  readonly sectionLoading = signal(true);
+
   ngOnInit(): void {
     this.getSectionInformation();
     this.requestEvent();
@@ -51,10 +58,14 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_capacityDevelopent().subscribe(({ response }) => {
-      this.capDevInfoRoutingBody = response;
+    this.api.resultsSE.GET_capacityDevelopent().subscribe({
+      next: ({ response }) => {
+        this.capDevInfoRoutingBody = response;
 
-      this.get_capdev_term_id();
+        this.get_capdev_term_id();
+        this.sectionLoading.set(false);
+      },
+      error: () => this.sectionLoading.set(false)
     });
   }
 

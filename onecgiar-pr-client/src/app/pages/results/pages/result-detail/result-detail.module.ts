@@ -17,6 +17,8 @@ import { PhaseSwitcherModule } from '../../../../shared/components/phase-switche
 import { AiReviewComponent } from './components/ai-review/ai-review.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { ClipboardModule } from '@angular/cdk/clipboard';
+import { ResultMetadataListComponent } from '../../../../shared/components/result-metadata/result-metadata-list.component';
+import { ResultMetadataWindowComponent } from '../../../../shared/components/result-metadata/result-metadata-window.component';
 
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent],
@@ -33,7 +35,9 @@ import { ClipboardModule } from '@angular/cdk/clipboard';
     PhaseSwitcherModule,
     AiReviewComponent,
     PageHeaderComponent,
-    ClipboardModule
+    ClipboardModule,
+    ResultMetadataListComponent,
+    ResultMetadataWindowComponent
   ]
 })
 export class ResultDetailModule {}

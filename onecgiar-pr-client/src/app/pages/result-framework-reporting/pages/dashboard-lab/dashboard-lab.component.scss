@@ -1,3 +1,5 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
 // Styling lives in the template via Tailwind utilities; SCSS only holds what
 // Tailwind can't express — the :host box and the flyout entrance keyframe.
 // Column geometry lives here, ONCE. Every fixed column and the content offset
@@ -227,5 +229,68 @@
     transition-duration: 1ms;
     animation-duration: 1ms;
     animation-delay: 0ms;
+  }
+}
+
+// ─── Legacy "Report emerging result" dialog ───────────────────────────────────
+// Moved AS-IS from entity-details.component.scss (the retired host of this same modal).
+// Deliberately NOT re-authored in Tailwind: `::ng-deep` is component-scoped, so without this
+// block the dialog falls back to the `.pr-dialog` defaults (320px min-width, padded body) and
+// the form renders in a narrow strip. The `!important` widths exist to beat those base styles.
+.report-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 20px;
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+}
+
+// Class renamed from the source's `report-result-dialog` — the values below are byte-identical.
+// `::ng-deep` with no `:host` prefix emits an UNSCOPED, document-global rule that lives as long as
+// the app does, and the legacy create modal (`aow-hlo-create-modal`) styles a dialog of the SAME
+// name at `width: 80vw` with no max-width. This page is now the host of BOTH dialogs, so keeping
+// the name would cap the create modal at 1000px, round it to 26px and strip its body padding —
+// i.e. reusing the legacy modal verbatim would silently restyle it. The name is the only isolation
+// `::ng-deep` offers.
+::ng-deep {
+  .report-emerging-dialog {
+    width: 70vw !important;
+    max-width: 1000px !important;
+    min-height: 50vh !important;
+    max-height: 90vh !important;
+    border-radius: 26px !important;
+
+    @media screen and (max-width: 1100px) {
+      width: 85vw !important;
+      max-width: none !important;
+    }
+
+    @media screen and (max-width: 768px) {
+      width: 95vw !important;
+    }
+
+    // The form is taller than the dialog once a level is picked, and the dialog is capped at 90vh.
+    // `hidden` (inherited from the retired page) simply swallowed the overflow.
+    .pr-dialog__body {
+      padding: 0 !important;
+      overflow-y: auto;
+    }
+
+    // `app-save-button` ships `.fixed_button { position: fixed; right: 0; bottom: 0 }` — it is built
+    // for the Result Detail page, where the button floats over the whole viewport. Inside a dialog
+    // that anchors it to the WINDOW corner, so "Save and continue" rendered outside the modal (it
+    // only looked right on the retired page because that dialog nearly filled the screen). Anchor it
+    // to the dialog instead. Scoped to this dialog: the page-level behaviour is untouched.
+    position: relative;
+
+    .fixed_button {
+      position: absolute !important;
+      right: 24px !important;
+      bottom: 20px !important;
+      margin: 0 !important;
+    }
   }
 }
