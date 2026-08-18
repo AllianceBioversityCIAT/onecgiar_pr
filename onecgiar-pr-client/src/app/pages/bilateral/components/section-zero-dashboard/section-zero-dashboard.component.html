@@ -1,5 +1,15 @@
 <div class="bp-dashboard">
   <div class="bp-dashboard-card bp-project-card">
+    <app-alert-status
+      status="info"
+      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
+    </app-alert-status>
+
+    <div class="bp-section-header">
+      <h3 class="bp-section-title">W3/Bilateral Project Details</h3>
+      <p class="bp-section-subtitle">Fill in the project details to report a new bilateral results in PRMS</p>
+    </div>
+
     @if (creationService.isAiGenerated()) {
       <span class="bp-ai-badge" title="This result was generated with AI">
         <i class="material-icons-round bp-ai-badge-icon">auto_awesome</i>
@@ -68,6 +78,17 @@
             <dd class="bp-meta-field-value" [title]="primarySp.name">{{ primarySp.name || primarySp.shortName }}</dd>
           </div>
         }
+      </dl>
+
+      <dl class="bp-project-summary-fields">
+        <div class="bp-meta-field bp-meta-field--full">
+          <dt class="bp-meta-field-label">Project Summary</dt>
+          <dd class="bp-meta-field-value">{{ displayText(project.summary) }}</dd>
+        </div>
+        <div class="bp-meta-field bp-meta-field--full">
+          <dt class="bp-meta-field-label">Project Description</dt>
+          <dd class="bp-meta-field-value">{{ displayText(project.description) }}</dd>
+        </div>
       </dl>
 
       <div class="bp-sp-badges">

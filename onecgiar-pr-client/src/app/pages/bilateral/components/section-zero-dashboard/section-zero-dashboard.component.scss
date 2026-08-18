@@ -61,6 +61,23 @@
   position: relative;
 }
 
+.bp-section-header {
+  margin: 0 0 14px;
+}
+
+.bp-section-title {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pr-color-secondary-400);
+}
+
+.bp-section-subtitle {
+  margin: 0;
+  font-size: 11px;
+  color: var(--pr-color-accents-4, #888);
+}
+
 // A labeled metadata strip (code / type / phase / funding source) — read as a data
 // record (label above value, thin dividers) rather than a row of colorful chips.
 // The label itself disambiguates each field, which reads as more deliberate/precise
@@ -147,6 +164,29 @@
 
 .bp-meta-field-value--project {
   white-space: normal;
+}
+
+// Summary/Description read as short paragraphs, not single-line values — same
+// labeled-list shape as .bp-project-fields but wrapping instead of truncating.
+.bp-project-summary-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--pr-color-accents-2, #E8ECEE);
+}
+
+.bp-meta-field--full {
+  padding: 0;
+  border-left: none;
+
+  .bp-meta-field-value {
+    white-space: normal;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
 }
 
 .bp-sp-badges {
