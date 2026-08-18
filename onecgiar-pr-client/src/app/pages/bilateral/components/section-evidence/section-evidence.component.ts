@@ -256,8 +256,31 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   }
 
   // ── Save ────────────────────────────────────────────────────────────
+  // Serialized: confirmDraft()/executeDelete() can each trigger a save while one
+  // is still in flight (e.g. two evidences added in quick succession). Without
+  // this guard, two overlapping POSTs race — whichever's updateEvidences() call
+  // lands last on the server wins, and the corresponding loadEvidences() refetch
+  // can silently drop whichever addition "lost." Only one save runs at a time;
+  // a save requested mid-flight is deferred and re-run once the current one
+  // finishes, so it always POSTs the latest local state instead of a stale copy.
+  private saveInFlight = false;
+  private savePending = false;
 
   async saveSection(): Promise<void> {
+    if (this.saveInFlight) {
+      this.savePending = true;
+      return;
+    }
+    this.saveInFlight = true;
+    await this.performSave();
+    this.saveInFlight = false;
+    if (this.savePending) {
+      this.savePending = false;
+      await this.saveSection();
+    }
+  }
+
+  private async performSave(): Promise<void> {
     this.saveStatus.set('saving');
     this.isSaving.set(true);
 
@@ -288,22 +311,26 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.autoSave.runImmediate('evidence', () =>
-      this.bilateralApi.POST_evidences(resultId, formData).pipe(
-        tap({
-          next: () => {
-            this.saveStatus.set('saved');
-            this.isSaving.set(false);
-            setTimeout(() => this.saveStatus.set('idle'), 2500);
-            this.loadEvidences();
-          },
-          error: () => {
-            this.saveStatus.set('error');
-            this.isSaving.set(false);
-          }
-        })
-      )
-    );
+    await new Promise<void>(resolve => {
+      this.autoSave.runImmediate('evidence', () =>
+        this.bilateralApi.POST_evidences(resultId, formData).pipe(
+          tap({
+            next: () => {
+              this.saveStatus.set('saved');
+              this.isSaving.set(false);
+              setTimeout(() => this.saveStatus.set('idle'), 2500);
+              this.loadEvidences();
+              resolve();
+            },
+            error: () => {
+              this.saveStatus.set('error');
+              this.isSaving.set(false);
+              resolve();
+            }
+          })
+        )
+      );
+    });
   }
 
   private async uploadPendingFiles(): Promise<void> {
