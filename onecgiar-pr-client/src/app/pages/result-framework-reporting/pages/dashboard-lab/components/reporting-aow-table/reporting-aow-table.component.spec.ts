@@ -1,5 +1,38 @@
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './reporting-aow-table.component';
+
+/**
+ * Stand-in for the real page: the toolbar label is rendered BEFORE the table, exactly as in
+ * `dashboard-lab.component.html` (the band sits above `app-reporting-aow-table`). It exists to prove
+ * the state travelling UP from the table into an already-checked view does not blow up change
+ * detection — `fixture.detectChanges()` runs `checkNoChanges`, so an
+ * ExpressionChangedAfterItHasBeenChecked would fail here.
+ */
+@Component({
+  standalone: true,
+  imports: [ReportingAowTableComponent],
+  template: `
+    <p class="label">{{ allOpen() ? 'Collapse all' : 'Expand all' }}</p>
+    <app-reporting-aow-table
+      [groups]="groups()"
+      [expandAll]="expandAll()"
+      [expandAllNonce]="nonce()"
+      (allOpenChange)="allOpen.set($event)" />
+  `
+})
+class ToolbarHostComponent {
+  readonly groups = signal<ReportingAowGroup[]>([]);
+  readonly expandAll = signal(false);
+  readonly nonce = signal(0);
+  readonly allOpen = signal(false);
+
+  /** Same body as `DashboardLabComponent.toggleReportingExpandAll`. */
+  press(): void {
+    this.expandAll.set(!this.allOpen());
+    this.nonce.update(n => n + 1);
+  }
+}
 
 /**
  * The audit's standing complaint about this refactor was new code shipping with zero DOM coverage.
@@ -369,6 +402,115 @@ describe('ReportingAowTableComponent', () => {
       expect(rows().length).toBe(1);
     });
 
+    // ── P2-3251 / P2-3252 · disclosure across the whole list ────────────────
+    describe('expand all / collapse all', () => {
+      /** AOW01 with two HLO sub-groups (2 rows) + AOW02 with one row → 3 rows in total. */
+      const twoCards = (): ReportingAowGroup[] => [
+        group([row({ indicator_id: 1, __hlo: 'HLO1 First' }), row({ indicator_id: 2, __hlo: 'HLO2 Second' })]),
+        { ...group([row({ indicator_id: 3 })]), aow: { id: 2, code: 'AOW02', name: 'Breeding Pipelines' } }
+      ];
+
+      // P2-3251 — "expanding or collapsing one AOW must not modify the state of the other AOWs".
+      it('opens only the AoW the user clicked and leaves its siblings collapsed', async () => {
+        await build(twoCards());
+        openAow('AOW01');
+
+        expect(component.isOpen('aow::AOW01', component.isDefaultOpenAow())).toBe(true);
+        expect(component.isOpen('aow::AOW02', component.isDefaultOpenAow())).toBe(false);
+        // Only AOW01's two rows — AOW02's row stays hidden.
+        expect(rows().length).toBe(2);
+      });
+
+      // P2-3252 — one switch opens every AoW AND every HLO sub-group under them.
+      it('shows every indicator of every card while expandAll is on', async () => {
+        await build(twoCards(), { expandAll: true });
+        expect(rows().length).toBe(3);
+      });
+
+      it('collapses the whole list again, discarding the cards the user had toggled by hand', async () => {
+        await build(twoCards(), { expandAll: true });
+
+        // The user closes one card while everything else is open.
+        component.toggle('aow::AOW01', component.isDefaultOpenAow());
+        fixture.detectChanges();
+        expect(rows().length).toBe(1);
+
+        fixture.componentRef.setInput('expandAll', false);
+        fixture.detectChanges();
+        expect(rows().length).toBe(0);
+
+        // Expanding again must not resurrect the stale "AOW01 is closed" override.
+        fixture.componentRef.setInput('expandAll', true);
+        fixture.detectChanges();
+        expect(rows().length).toBe(3);
+      });
+
+      // The dead click QA rejected: everything already open BY HAND, so the host asks for the value
+      // `expandAll` is already in. Without the nonce nothing moved and only the label flipped.
+      it('collapses on the FIRST press when the user had opened every card by hand', async () => {
+        await build(twoCards(), { expandAll: false, expandAllNonce: 0 });
+        openAow('AOW01');
+        openAow('AOW02');
+        expect(rows().length).toBe(3);
+        expect(component.allOpen()).toBe(true);
+
+        // What the host does on a press when `allOpen` is true: ask for `false` (unchanged) + nonce.
+        fixture.componentRef.setInput('expandAll', false);
+        fixture.componentRef.setInput('expandAllNonce', 1);
+        fixture.detectChanges();
+
+        expect(rows().length).toBe(0);
+        expect(component.allOpen()).toBe(false);
+      });
+
+      it('expands on the FIRST press when the user had closed every card by hand', async () => {
+        await build(twoCards(), { expandAll: true, expandAllNonce: 0 });
+        component.toggle('aow::AOW01', component.isDefaultOpenAow());
+        component.toggle('aow::AOW02', component.isDefaultOpenAow());
+        fixture.detectChanges();
+        expect(rows().length).toBe(0);
+        expect(component.allOpen()).toBe(false);
+
+        fixture.componentRef.setInput('expandAll', true);
+        fixture.componentRef.setInput('expandAllNonce', 1);
+        fixture.detectChanges();
+
+        expect(rows().length).toBe(3);
+        expect(component.allOpen()).toBe(true);
+      });
+
+      it('tells the toolbar the list is open once the last card is expanded by hand', async () => {
+        await build(twoCards());
+        const emitted: boolean[] = [];
+        component.allOpenChange.subscribe(v => emitted.push(v));
+
+        openAow('AOW01');
+        expect(component.allOpen()).toBe(false); // AOW02 still closed
+
+        openAow('AOW02');
+        expect(component.allOpen()).toBe(true);
+        // Only real transitions are announced — `allOpen` is a computed.
+        expect(emitted).toEqual([true]);
+      });
+
+      it('never calls an empty list expanded — there would be nothing to collapse', async () => {
+        await build([], { expandAll: true });
+        expect(component.allOpen()).toBe(false);
+      });
+
+      // P2-3251 — the shell reuses this table between programmes and AoW codes are not unique,
+      // so a card left open in SP06 must not open itself again in SP09.
+      it('starts collapsed again when the surface moves to another programme', async () => {
+        await build(twoCards(), { scopeKey: 'SP06' });
+        openAow('AOW01');
+        expect(rows().length).toBe(2);
+
+        fixture.componentRef.setInput('scopeKey', 'SP09');
+        fixture.detectChanges();
+        expect(rows().length).toBe(0);
+      });
+    });
+
     // P22 — the chip is the short tag (reference :4248). The group's full name renders beside it,
     // so repeating it there printed "Intermediate outcomes │ Intermediate outcomes".
     it('tags the program-level buckets without repeating their name', async () => {
@@ -483,6 +625,60 @@ describe('ReportingAowTableComponent', () => {
       expect(mark).toBeTruthy();
       // Outer + mid rings + filled centre.
       expect(mark!.querySelectorAll('circle').length).toBe(3);
+    });
+  });
+
+  // ── P2-3252 · the label the user actually sees, in page order ─────────────
+  describe('toolbar label round-trip', () => {
+    let host: ComponentFixture<ToolbarHostComponent>;
+
+    const label = () => (host.nativeElement as HTMLElement).querySelector('.label')?.textContent?.trim();
+    const openCards = () =>
+      (host.nativeElement as HTMLElement).querySelectorAll('section > .pr-collapse.is-open').length;
+
+    const two = (): ReportingAowGroup[] => [
+      group([row({ indicator_id: 1 })]),
+      { ...group([row({ indicator_id: 2 })]), aow: { id: 2, code: 'AOW02', name: 'Breeding Pipelines' } }
+    ];
+
+    const buildHost = async (groups: ReportingAowGroup[]) => {
+      await TestBed.configureTestingModule({ imports: [ToolbarHostComponent] }).compileComponents();
+      host = TestBed.createComponent(ToolbarHostComponent);
+      host.componentInstance.groups.set(groups);
+      host.detectChanges();
+    };
+
+    it('one press expands everything and renames itself, a second press collapses it', async () => {
+      await buildHost(two());
+      expect(label()).toBe('Expand all');
+      expect(openCards()).toBe(0);
+
+      host.componentInstance.press();
+      host.detectChanges();
+      expect(openCards()).toBe(2);
+      expect(label()).toBe('Collapse all');
+
+      host.componentInstance.press();
+      host.detectChanges();
+      expect(openCards()).toBe(0);
+      expect(label()).toBe('Expand all');
+    });
+
+    it('never asks for a dead press: cards opened by hand already read Collapse all', async () => {
+      await buildHost(two());
+      const table = host.debugElement.children[1].componentInstance as ReportingAowTableComponent;
+
+      table.toggle('aow::AOW01', table.isDefaultOpenAow());
+      table.toggle('aow::AOW02', table.isDefaultOpenAow());
+      host.detectChanges();
+      expect(openCards()).toBe(2);
+      // The label followed the DOM, not the last press (which never happened).
+      expect(label()).toBe('Collapse all');
+
+      host.componentInstance.press();
+      host.detectChanges();
+      expect(openCards()).toBe(0);
+      expect(label()).toBe('Expand all');
     });
   });
 });

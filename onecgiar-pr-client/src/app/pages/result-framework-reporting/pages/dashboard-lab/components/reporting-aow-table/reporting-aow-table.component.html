@@ -30,7 +30,8 @@
     @for (group of visibleGroups(); track group.aow.code) {
       @let ratio = ratioOf(group);
       @let aowKey = 'aow::' + group.aow.code;
-      <!-- Every card starts collapsed (reference seed `expandedAows: {}`) — resolved once per card. -->
+      <!-- Every card starts collapsed (reference seed `expandedAows: {}`), unless the toolbar's
+           Expand all switch moved the default — resolved once per card. -->
       @let aowOpen = isOpen(aowKey, isDefaultOpenAow());
 
       <section class="overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">

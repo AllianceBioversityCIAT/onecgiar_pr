@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, input, linkedSignal, output, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo } from '@ng-icons/lucide';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
@@ -100,6 +100,29 @@ export class ReportingAowTableComponent {
   readonly viewMode = input<'grouped' | 'flat'>('grouped');
   /** Whether the current user may report — the parent passes `canReportResults()` through. */
   readonly canReport = input<boolean>(false);
+  /**
+   * Global disclosure switch owned by the toolbar (`Expand all` / `Collapse all`, P2-3252).
+   *
+   * It moves the LEVEL DEFAULT, it does not write one entry per card: flipping it drops the user's
+   * per-card overrides (see `overrides`), so `true` opens every AoW and every sub-group at once and
+   * `false` puts the whole list back to the collapsed reading state.
+   */
+  readonly expandAll = input<boolean>(false);
+  /**
+   * Identity of the data the disclosure state belongs to — the programme code in practice.
+   * Changing it resets every override so a newly opened Science Program starts collapsed (P2-3251);
+   * the shell reuses this component across programmes, and the AoW codes are not unique between them.
+   */
+  readonly scopeKey = input<string>('');
+  /**
+   * Bumped by the host on every press of Expand all / Collapse all.
+   *
+   * `expandAll` alone cannot drive the switch: when the user has already opened every card BY HAND
+   * the host asks for the state the boolean is ALREADY in, the input never changes, and the press
+   * would do nothing while the label flipped — the dead click QA rejected. The nonce is part of the
+   * override-reset key, so a press always re-seeds the list from the level default.
+   */
+  readonly expandAllNonce = input<number>(0);
 
   readonly openAow = output<string>();
   readonly openRow = output<ReportingIndicator>();
@@ -107,12 +130,27 @@ export class ReportingAowTableComponent {
   readonly openTarget = output<ReportingIndicator>();
   readonly openAchieved = output<ReportingIndicator>();
   readonly openRowMenu = output<{ row: ReportingIndicator; event: MouseEvent }>();
+  /**
+   * Announces whether EVERY visible top-level card is open right now — overrides included, not just
+   * the level default. The toolbar label is written from this, so it always describes what the next
+   * press will actually do (P2-3252).
+   */
+  readonly allOpenChange = output<boolean>();
 
   /**
    * Disclosure = a user override on top of a level default (see `isDefaultOpenAow` /
    * `isDefaultOpenHlo`). The reference seeds NO expanded card and EVERY expanded sub-group.
+   *
+   * Every override is dropped whenever the global Expand all / Collapse all switch flips, or when
+   * the surface moves to another programme: the level default takes over again, so one click puts
+   * the WHOLE list in the requested state instead of leaving the cards the user had touched behind
+   * (P2-3252), and AoW codes repeat across programmes (`AOW01` exists in every SP), so keeping the
+   * map would leak one programme's open cards into the next (P2-3251).
    */
-  private readonly overrides = signal<ReadonlyMap<string, boolean>>(new Map());
+  private readonly overrides = linkedSignal<string, ReadonlyMap<string, boolean>>({
+    source: () => `${this.scopeKey()}::${this.expandAll()}::${this.expandAllNonce()}`,
+    computation: () => new Map()
+  });
   /** Row titles the user expanded past the 2-line clamp. */
   private readonly expandedTitles = signal<ReadonlySet<number>>(new Set());
 
@@ -428,9 +466,12 @@ export class ReportingAowTableComponent {
    * So the page opens as a scannable list of card headers, and the moment a user expands one they
    * see its rows — not a second wall of collapsed group headers. Auto-opening the first AoW (the
    * previous behaviour) made the very first card the odd one out and pushed the rest below the fold.
+   *
+   * `expandAll()` is the only thing that lifts that seed: the toolbar's Expand all switch moves the
+   * default for every card at once (P2-3252) instead of writing an override per AoW.
    */
   isDefaultOpenAow(): boolean {
-    return false;
+    return this.expandAll();
   }
 
   isDefaultOpenHlo(): boolean {
@@ -458,6 +499,28 @@ export class ReportingAowTableComponent {
   toggle(key: string, defaultOpen = false): void {
     const now = this.isOpen(key, defaultOpen);
     this.overrides.update(map => new Map(map).set(key, !now));
+  }
+
+  /**
+   * Is the WHOLE visible list open right now? Read over the real per-card state (override first,
+   * level default second), which is what makes the toolbar label honest even after the user opened
+   * or closed cards one by one.
+   *
+   * Top-level cards only. A sub-group the user folded inside an open AoW does not turn the list
+   * "not expanded": the card is still open, and the next press must therefore collapse.
+   * An empty list is never "all open" — there would be nothing to collapse.
+   */
+  readonly allOpen = computed(() => {
+    const groups = this.visibleGroups();
+    if (!groups.length) return false;
+    const defaultOpen = this.expandAll();
+    return groups.every(group => this.isOpen(`aow::${group.aow.code}`, defaultOpen));
+  });
+
+  constructor() {
+    // The host owns the toolbar, which sits ABOVE this table and cannot read into it — so the state
+    // is pushed out. `allOpen` is a computed, so this only fires when the answer actually changes.
+    effect(() => this.allOpenChange.emit(this.allOpen()));
   }
 
   isTitleExpanded(id: number): boolean {

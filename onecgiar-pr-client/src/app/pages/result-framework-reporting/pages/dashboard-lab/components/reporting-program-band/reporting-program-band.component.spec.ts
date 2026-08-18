@@ -245,6 +245,64 @@ describe('ReportingProgramBandComponent', () => {
     });
   });
 
+  // ── P2-3252 · global Expand all / Collapse all ────────────────────────────
+  describe('expand all / collapse all', () => {
+    const control = () =>
+      Array.from(root().querySelectorAll('button')).find(b => /Expand all|Collapse all/.test(b.textContent ?? '')) as
+        | HTMLButtonElement
+        | undefined;
+
+    it('offers Expand all while the list is collapsed', async () => {
+      await build({ showToolbar: true });
+
+      expect(control()?.textContent?.trim()).toBe('Expand all');
+    });
+
+    it('flips to Collapse all once everything is open', async () => {
+      await build({ showToolbar: true, allExpanded: true });
+
+      expect(control()?.textContent?.trim()).toBe('Collapse all');
+      expect(text()).not.toContain('Expand all');
+      // The changing label is the whole state — `aria-pressed` on top of it announces
+      // "Collapse all, pressed", i.e. two contradictory facts to a screen reader.
+      expect(control()?.hasAttribute('aria-pressed')).toBe(false);
+    });
+
+    it('announces the intent instead of holding the state itself', async () => {
+      await build({ showToolbar: true });
+      const emitted = jest.fn();
+      component.toggleExpandAll.subscribe(emitted);
+
+      control()?.click();
+
+      expect(emitted).toHaveBeenCalledTimes(1);
+      // The band is stateless — the label only moves when the host says so.
+      expect(control()?.textContent?.trim()).toBe('Expand all');
+    });
+
+    it('is absent in All indicators, a flat list with nothing to open', async () => {
+      await build({ showToolbar: true, viewMode: 'flat' });
+
+      expect(control()).toBeUndefined();
+    });
+
+    it('is absent on Overview, where there is no toolbar at all', async () => {
+      await build({ showToolbar: false });
+
+      expect(control()).toBeUndefined();
+    });
+
+    // The band renders OUTSIDE the host's browse-view switch, so `?tocView=byAow` / `?tocView=indicators`
+    // put it above surfaces that keep their own inline disclosure state and ignore this control.
+    it('is absent when the surface below cannot answer the switch', async () => {
+      await build({ showToolbar: true, canExpandAll: false });
+
+      expect(control()).toBeUndefined();
+      // The grouping switch is unaffected — it is the browse surface that changed, not the mode.
+      expect(text()).toContain('All indicators');
+    });
+  });
+
   // ── P3 · eyebrow metric ───────────────────────────────────────────────────
   describe('eyebrow', () => {
     it('renders the code in the mono family via the Tailwind utility, not the unlayered .pr-code', async () => {
