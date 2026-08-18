@@ -19,8 +19,21 @@ export class EstimatesComponent {
     private terminologyService: TerminologyService
   ) {}
 
-  resultCode = this.api.dataControlSE?.currentResult?.result_code;
-  versionId = this.api.dataControlSE?.currentResult?.version_id;
+  /**
+   * P2-3276: these were class-field initializers, so they were read ONCE at construction time.
+   * `app-estimates` is rendered eagerly by innovation-dev-info, i.e. before `GET_resultById`
+   * fills `dataControlSE.currentResult` (which `result-detail` resets to null on entry), so both
+   * were frozen as `undefined` and the deep links became `/result/result-detail/undefined/...`.
+   * As getters they are re-evaluated on every change detection, and they fall back to the values
+   * `result-detail` sets synchronously from the route (code + phase) if the result is not loaded yet.
+   */
+  get resultCode() {
+    return this.api.dataControlSE?.currentResult?.result_code ?? this.api.resultsSE?.currentResultCode;
+  }
+
+  get versionId() {
+    return this.api.dataControlSE?.currentResult?.version_id ?? this.api.resultsSE?.currentResultPhase;
+  }
 
   headerDescriptions() {
     const n1 = `<ul>
