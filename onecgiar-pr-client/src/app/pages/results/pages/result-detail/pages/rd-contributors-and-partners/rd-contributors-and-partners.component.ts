@@ -387,6 +387,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
     if (updateComponent) {
       setTimeout(() => {
+        // P2-3322 (2026): this delayed write is what re-shows the Lead partner/center select. It repaints because
+        // `updatingLeadData` is signal-backed on the service — a plain field would leave the select hidden under
+        // zoneless change detection (a `setTimeout` notifies nothing).
         this.rdPartnersSE.updatingLeadData = false;
       }, 50);
     }

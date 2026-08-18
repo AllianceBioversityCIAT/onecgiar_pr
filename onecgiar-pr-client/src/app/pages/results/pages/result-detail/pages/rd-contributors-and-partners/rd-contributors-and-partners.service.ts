@@ -43,7 +43,20 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   leadPartnerId: number = null;
   leadCenterCode: string = null;
   initiativeIdSignal = signal<any>(null);
-  updatingLeadData: boolean = false;
+  // P2-3322 (2026): signal-backed flag. Every `setPossibleLead*` / `setLead*OnLoad` raises it and clears it
+  // again inside a `setTimeout(..., 25)`; that second write happens outside any Angular notification, so under
+  // zoneless change detection the Lead partner / Lead center selects stayed hidden behind
+  // `*ngIf="!rdPartnersSE.updatingLeadData"` until a reload. Reading the signal from the template makes the
+  // write schedule its own render pass. Same shape as the signal-backed input in CPMultipleWPsComponent
+  // (P2-3245 / P2-3275); it also covers the writes the components do (rd-contributors-and-partners,
+  // ipsr-contributors) because they go through this setter. Public API stays a plain boolean.
+  private readonly _updatingLeadData = signal<boolean>(false);
+  get updatingLeadData(): boolean {
+    return this._updatingLeadData();
+  }
+  set updatingLeadData(value: boolean) {
+    this._updatingLeadData.set(value);
+  }
   disableLeadPartner: boolean = false;
 
   // P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split in two dropdowns.
