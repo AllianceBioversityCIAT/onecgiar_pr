@@ -19,6 +19,7 @@ import { Component, Input } from '@angular/core';
 export class FieldCardComponent {
   @Input() label: string;
   @Input() description: string;
+  @Input() tooltip = '';
   @Input() required = true;
   @Input() hasValue = false;
   @Input() hasError = false;

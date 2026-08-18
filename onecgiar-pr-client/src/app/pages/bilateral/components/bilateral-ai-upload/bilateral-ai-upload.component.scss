@@ -13,6 +13,27 @@
   position: relative;
   overflow: hidden;
 
+  // P2-3103 AC2: "You are reporting on behalf of [Full Center Name]".
+  .aiu-info-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: -28px -28px 20px;
+    padding: 10px 28px;
+    background: var(--pr-color-primary-50);
+    border-bottom: 1px solid var(--pr-color-primary-100);
+    color: var(--pr-color-primary-600);
+    font-size: 0.8125rem;
+
+    i {
+      font-size: 18px;
+    }
+
+    strong {
+      font-weight: 600;
+    }
+  }
+
   &::before {
     content: '';
     position: absolute;

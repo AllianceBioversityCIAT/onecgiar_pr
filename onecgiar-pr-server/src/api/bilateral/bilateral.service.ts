@@ -19,6 +19,7 @@ import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
+import { AdUserService } from '../ad_users/ad_users.service';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { DataSource, In, IsNull, Like, SelectQueryBuilder } from 'typeorm';
 import { GenderTagLevel } from '../results/gender_tag_levels/entities/gender_tag_level.entity';
@@ -224,6 +225,7 @@ export class BilateralService {
     private readonly _policyChangeHandler: PolicyChangeBilateralHandler,
     private readonly _otherOutputHandler: NoopBilateralHandler,
     private readonly _otherOutcomeHandler: NoopBilateralHandler,
+    private readonly _adUserService: AdUserService,
   ) {
     this.resultTypeHandlerMap = new Map<number, BilateralResultTypeHandler>([
       [_knowledgeProductHandler.resultType, _knowledgeProductHandler],
@@ -351,6 +353,20 @@ export class BilateralService {
               bilateralDto.lead_center,
               userId,
             );
+
+            if (bilateralDto.lead_contact_person?.email) {
+              const adUser = await this._adUserService.resolveOrCreateContact(
+                bilateralDto.lead_contact_person.email,
+                {
+                  mail: bilateralDto.lead_contact_person.email,
+                  displayName: bilateralDto.lead_contact_person.name,
+                },
+              );
+              await this._resultRepository.update(resultId, {
+                lead_contact_person: bilateralDto.lead_contact_person.name,
+                lead_contact_person_id: adUser?.id ?? null,
+              });
+            }
 
             const isKpType =
               bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
@@ -710,7 +726,6 @@ export class BilateralService {
 
     const qb = this._resultRepository
       .createQueryBuilder('r')
-      .where('r.is_active = :isActive', { isActive: true })
       .orderBy('r.result_code', 'DESC');
 
     this.applyListResultsFilters(qb, query);
@@ -727,6 +742,7 @@ export class BilateralService {
         });
         const filtered = this.filterActiveRelations(resultWithRelations);
         await this.enrichBilateralResultResponse(filtered);
+        this.attachResultLinks(filtered);
         return filtered;
       }),
     );
@@ -739,6 +755,25 @@ export class BilateralService {
       message: 'Results list retrieved successfully.',
       status: 200,
     };
+  }
+
+  /**
+   * Attaches the public links documented in the bilateral contract:
+   * `pdf_link` (PDF / report view) and `prms_link` (web UI deep link).
+   * Same pattern as result.repository.ts (pdf_link) and the fetcher mapper.
+   */
+  private attachResultLinks(result: any): void {
+    if (!result?.result_code) return;
+    const phase = result.version_id ?? result.obj_version?.id ?? 6;
+    const pdfBase = (
+      process.env.FRONT_END_PDF_ENDPOINT ??
+      'https://reporting.cgiar.org/reports/result-details/'
+    ).replace(/\/+$/, '');
+    const frontendBase =
+      pdfBase.replace(/\/reports\/result-details$/, '') ||
+      'https://reporting.cgiar.org';
+    result.pdf_link = `${pdfBase}/${result.result_code}?phase=${phase}`;
+    result.prms_link = `${frontendBase}/result/result-detail/${result.result_code}/general-information?phase=${phase}`;
   }
 
   async getResultsForSync(
@@ -4108,6 +4143,7 @@ export class BilateralService {
       capacity_sharing: extractedMds['capacity_sharing'],
       innovation_use: extractedMds['innovation_use'],
       policy_change: extractedMds['policy_change'],
+      knowledge_product: extractedMds['knowledge_product'],
     } as any;
 
     try {

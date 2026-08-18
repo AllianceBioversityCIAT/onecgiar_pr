@@ -64,6 +64,16 @@ export class BilateralApiService {
     );
   }
 
+  /**
+   * Geographic Location belongs to the bilateral editor, so its read must use
+   * the same resolved internal result id as its autosave PATCH.
+   */
+  GET_geographic(resultId: number | string) {
+    return this.http.get<any>(
+      `${environment.apiBaseUrl}v2/api/geographic-location/get/geographic/${resultId}`
+    );
+  }
+
   PATCH_BilateralResultTitle(resultId: number | string, body: any) {
     return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/${resultId}/title`, body);
   }
@@ -94,6 +104,10 @@ export class BilateralApiService {
     return this.http.get<any>(`${this.resultsApiBaseUrl}capdevs-delivery-methods/get/all`);
   }
 
+  GET_capdevsTerms() {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}capdevs-terms/get/all`);
+  }
+
   GET_innovationDev(resultId: number | string) {
     return this.http.get<any>(`${this.resultsApiBaseUrl}summary/innovation-dev/get/result/${resultId}`);
   }
@@ -108,6 +122,14 @@ export class BilateralApiService {
 
   PATCH_innovationUse(resultId: number | string, body: Record<string, unknown>) {
     return this.http.patch<any>(`${this.resultsApiBaseUrl}summary/innovation-use/create/result/${resultId}`, body);
+  }
+
+  GET_actorsTypes() {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}actors/type/all`);
+  }
+
+  GET_institutionsTypeTree() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
   }
 
   GET_policyChanges(resultId: number | string) {

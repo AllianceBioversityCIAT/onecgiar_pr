@@ -13,6 +13,8 @@ export class CreateInnovationDevDto {
   public innovation_nature_id: number;
   public innovation_readiness_level_id: number;
   public is_new_variety: boolean;
+  public has_scaling_studies: boolean;
+  public scaling_studies_urls: string[];
   public number_of_varieties: number;
   public innovation_developers: string;
   public innovation_collaborators: string;

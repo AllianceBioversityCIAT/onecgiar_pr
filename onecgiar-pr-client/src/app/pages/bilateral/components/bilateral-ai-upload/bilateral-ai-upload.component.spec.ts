@@ -45,4 +45,39 @@ describe('BilateralAiUploadComponent', () => {
   it('should not submit without files or text', () => {
     expect(component.canSubmit()).toBe(false);
   });
+
+  it('P2-3103 AC2: should show the reporting-on-behalf-of note with the center full name', () => {
+    const creationService = TestBed.inject(BilateralCreationService);
+    creationService.selectProject({
+      id: 1,
+      shortName: 'P1',
+      fullName: 'Full Project',
+      summary: null,
+      description: null,
+      leadCenter: {
+        id: 66,
+        name: 'International Livestock Research Institute',
+        acronym: 'ILRI',
+      },
+      sciencePrograms: [],
+    } as never);
+    fixture.detectChanges();
+
+    expect(component.reportingCenterName()).toBe(
+      'International Livestock Research Institute',
+    );
+    const note: HTMLElement = fixture.nativeElement.querySelector(
+      '.aiu-info-note',
+    );
+    expect(note).toBeTruthy();
+    expect(note.textContent).toContain('You are reporting on behalf of');
+    expect(note.textContent).toContain(
+      'International Livestock Research Institute',
+    );
+  });
+
+  it('P2-3103 AC2: should not render the note without a selected center', () => {
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.aiu-info-note')).toBeNull();
+  });
 });

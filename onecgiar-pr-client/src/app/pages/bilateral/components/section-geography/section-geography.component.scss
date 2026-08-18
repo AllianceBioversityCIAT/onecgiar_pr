@@ -96,25 +96,6 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-
-  &--toggle {
-    gap: 8px;
-  }
-}
-
-.sg-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #607D8B;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.sg-required {
-  color: var(--pr-color-red-300);
 }
 
 .sg-field-error {
@@ -122,40 +103,6 @@
   font-size: 12px;
   line-height: 1.35;
   color: var(--pr-color-red-300);
-}
-
-.sg-toggle-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.sg-toggle-btn {
-  padding: 8px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 20px;
-  border: 1.5px solid #CFD8DC;
-  background: #FFFFFF;
-  color: #546E7A;
-  cursor: pointer;
-  transition: all 200ms ease;
-
-  &:hover {
-    background: #ECEFF1;
-    border-color: #B0BEC5;
-  }
-
-  &--active {
-    background: var(--pr-color-primary-50);
-    border-color: var(--pr-color-primary-300);
-    color: var(--pr-color-primary-600);
-    box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.12);
-
-    &:hover {
-      background: var(--pr-color-primary-50);
-      border-color: var(--pr-color-primary-300);
-    }
-  }
 }
 
 .sg-card__actions {
@@ -213,15 +160,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.sg-subnational-title {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--pr-color-secondary-400);
-  letter-spacing: 0.5px;
-  margin: 0;
 }
 
 .sg-subnational-card {

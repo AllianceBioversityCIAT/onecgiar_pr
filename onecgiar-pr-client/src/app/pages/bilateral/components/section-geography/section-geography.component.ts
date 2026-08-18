@@ -1,8 +1,6 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { tap } from 'rxjs';
-import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { RegionsCountriesService } from '../../../../shared/services/global/regions-countries.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -11,6 +9,11 @@ import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker
 import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
 import { GeoscopeManagementModule } from '../../../../shared/components/geoscope-management/geoscope-management.module';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+
+const YES_NO_OPTIONS = [
+  { id: true, name: 'Yes' },
+  { id: false, name: 'No' },
+];
 
 @Component({
   selector: 'app-section-geography',
@@ -23,13 +26,21 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
   templateUrl: './section-geography.component.html',
   styleUrl: './section-geography.component.scss'
 })
-export class SectionGeographyComponent implements OnInit {
-  readonly api = inject(ApiService);
+export class SectionGeographyComponent {
   readonly bilateralApi = inject(BilateralApiService);
   readonly regionsCountriesSE = inject(RegionsCountriesService);
   readonly creationService = inject(BilateralCreationService);
   readonly autoSaveService = inject(BilateralAutoSaveService);
   readonly mdsTracker = inject(BilateralMdsTrackerService);
+
+  /**
+   * The initial GET must never replace a value the user has already edited.
+   * Saves are optimistic and serialized by BilateralAutoSaveService, so a
+   * post-PATCH GET would only rehydrate stale intermediate state and can race
+   * with the next queued save.
+   */
+  private hasLocalGeographyChanges = false;
+  private hydratedResultId: number | null = null;
 
   geographicLocationBody = signal<any>({
     has_countries: false,
@@ -63,22 +74,37 @@ export class SectionGeographyComponent implements OnInit {
     { name: 'Sub-national', id: GeoScopeEnum.SUB_NATIONAL }
   ];
 
-  ngOnInit(): void {
-    this.loadGeographicData();
+  readonly yesNoOptions = YES_NO_OPTIONS;
+
+  constructor() {
+    // On a deep link, currentResultId initially contains the public result
+    // code. BilateralCreationService replaces it with the internal DB id only
+    // after GET_BilateralResultDetail completes. Geographic Location must wait
+    // for that resolution before calling its own endpoint.
+    effect(() => {
+      const resultId = this.creationService.currentResultId();
+      if (!resultId || this.creationService.isLoadingResult() || resultId === this.hydratedResultId) {
+        return;
+      }
+
+      this.hasLocalGeographyChanges = false;
+      this.hydratedResultId = resultId;
+      this.loadGeographicData();
+    });
   }
 
   loadGeographicData(): void {
     const resultId = this.creationService.currentResultId();
-    if (!resultId) return;
+    if (!resultId || this.hasLocalGeographyChanges) return;
 
-    this.api.resultsSE.GET_geographicSectionp25().subscribe({
+    this.bilateralApi.GET_geographic(resultId).subscribe({
       next: ({ response }) => {
-        if (response) {
+        if (response && !this.hasLocalGeographyChanges) {
           this.geographicLocationBody.update(b => ({
             ...b,
             geo_scope_id: response.geo_scope_id,
-            has_regions: response.has_regions,
-            has_countries: response.has_countries,
+            has_regions: this.toBoolean(response.has_regions),
+            has_countries: this.toBoolean(response.has_countries),
             regions: response.regions || [],
             countries: response.countries || []
           }));
@@ -86,20 +112,25 @@ export class SectionGeographyComponent implements OnInit {
           this.extraGeographicLocationBody.update(b => ({
             ...b,
             geo_scope_id: response.extra_geo_scope_id,
-            has_regions: response.has_extra_regions,
-            has_countries: response.has_extra_countries,
+            has_regions: this.toBoolean(response.has_extra_regions),
+            has_countries: this.toBoolean(response.has_extra_countries),
             regions: response.extra_regions || [],
             countries: response.extra_countries || [],
             has_extra_geo_scope:
               response.has_extra_geo_scope === null || response.has_extra_geo_scope === undefined
                 ? null
-                : Boolean(response.has_extra_geo_scope)
+                : this.toBoolean(response.has_extra_geo_scope)
           }));
 
           this.updateTracker();
         }
       }
     });
+  }
+
+  /** API flags can be serialized as booleans, 0/1, or their string forms. */
+  private toBoolean(value: unknown): boolean {
+    return value === true || value === 1 || value === '1' || value === 'true';
   }
 
   private buildGeographyPayload(): Record<string, unknown> {
@@ -121,13 +152,14 @@ export class SectionGeographyComponent implements OnInit {
   }
 
   queueGeographySave(debounceMs = 500): void {
+    this.hasLocalGeographyChanges = true;
     this.autoSaveService.schedulePayload('geography', this.buildGeographyPayload(), {
       debounceMs,
       statusKey: 'geography',
-      executor: (resultId, body) =>
-        this.bilateralApi.PATCH_geographic(resultId, body).pipe(
-          tap(() => this.loadGeographicData()),
-        ),
+      // Keep the optimistic local state as the source of truth while the
+      // serialized autosave drains. A GET here would reapply stale state from
+      // an earlier request and overwrite newer user selections.
+      executor: (resultId, body) => this.bilateralApi.PATCH_geographic(resultId, body),
     });
     this.updateTracker();
   }

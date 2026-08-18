@@ -128,6 +128,16 @@ describe('BilateralApiService', () => {
     req.flush(mockResponse);
   });
 
+  it('GET_geographic should GET the geographic state for the supplied internal result id', done => {
+    service.GET_geographic(77).subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}v2/api/geographic-location/get/geographic/77`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
   it('PATCH_BilateralResultTitle should PATCH title', done => {
     const body = { title: 'New' };
     service.PATCH_BilateralResultTitle(123, body).subscribe(response => {
@@ -160,6 +170,36 @@ describe('BilateralApiService', () => {
     });
     const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/bilateral/review-update/data-standard/123`);
     expect(req.request.method).toBe('PATCH');
+    req.flush(mockResponse);
+  });
+
+  it('GET_capdevsTerms should GET the capdevs-terms catalog', done => {
+    service.GET_capdevsTerms().subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/capdevs-terms/get/all`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
+  it('GET_actorsTypes should GET the actor types catalog', done => {
+    service.GET_actorsTypes().subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/actors/type/all`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
+  it('GET_institutionsTypeTree should GET the institutions-type tree catalog', done => {
+    service.GET_institutionsTypeTree().subscribe(response => {
+      expect(response).toEqual(mockResponse);
+      done();
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/institutions-type/tree`);
+    expect(req.request.method).toBe('GET');
     req.flush(mockResponse);
   });
 });

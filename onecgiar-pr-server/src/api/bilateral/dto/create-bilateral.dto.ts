@@ -1048,6 +1048,24 @@ export class LeadCenterDto {
   institution_id?: number;
 }
 
+export class LeadContactPersonDto {
+  @ApiProperty({
+    description: 'Email of the lead contact person for this result',
+    example: 'jane.doe@cgiar.org',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty({
+    description: 'Full name of the lead contact person for this result',
+    example: 'Jane Doe',
+  })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                               MAIN DTO                                     */
 /* -------------------------------------------------------------------------- */
@@ -1105,6 +1123,16 @@ export class CreateBilateralDto {
   @ValidateNested()
   @Type(() => LeadCenterDto)
   lead_center: LeadCenterDto;
+
+  @ApiProperty({
+    description:
+      'Lead contact person for this result (MDS field, mandatory). Resolved/matched against Active Directory by email; falls back to storing the name only if no match is found.',
+    type: () => LeadContactPersonDto,
+  })
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LeadContactPersonDto)
+  lead_contact_person: LeadContactPersonDto;
 
   @ApiPropertyOptional({
     description:

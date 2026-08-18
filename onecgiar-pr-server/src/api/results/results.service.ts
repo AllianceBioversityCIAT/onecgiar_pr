@@ -835,45 +835,18 @@ export class ResultsService {
 
       let leadContactPersonId: number = null;
 
-      if (
-        resultGeneralInformation.lead_contact_person_data?.mail &&
-        this._adUserService
-      ) {
-        try {
-          let adUser = await this._adUserService.getUserByIdentifier(
+      if (resultGeneralInformation.lead_contact_person_data?.mail) {
+        if (this._adUserService) {
+          const adUser = await this._adUserService.resolveOrCreateContact(
             resultGeneralInformation.lead_contact_person_data.mail,
+            resultGeneralInformation.lead_contact_person_data,
           );
-
-          if (!adUser) {
-            const adUserRepository = this._adUserService['adUserRepository'];
-            if (adUserRepository && adUserRepository.saveFromADUser) {
-              adUser = await adUserRepository.saveFromADUser(
-                resultGeneralInformation.lead_contact_person_data,
-              );
-
-              this._logger.log(
-                `Created new AD user: ${adUser.mail} with ID: ${adUser.id}`,
-              );
-            }
-          } else {
-            this._logger.log(
-              `Found existing AD user: ${adUser.mail} with ID: ${adUser.id}`,
-            );
-          }
-
-          leadContactPersonId = adUser?.id || null;
-        } catch (error) {
+          leadContactPersonId = adUser?.id ?? null;
+        } else {
           this._logger.warn(
-            `Failed to process lead_contact_person_data: ${error.message}`,
+            'AdUserService not available, skipping lead_contact_person_data processing',
           );
         }
-      } else if (
-        resultGeneralInformation.lead_contact_person_data?.mail &&
-        !this._adUserService
-      ) {
-        this._logger.warn(
-          'AdUserService not available, skipping lead_contact_person_data processing',
-        );
       }
 
       const trimmedGeneralTitle = await this.assertUniqueActiveResultTitle(
@@ -3238,6 +3211,20 @@ export class ResultsService {
       this._logger.warn(
         `Common fields for Bilateral result data not found (resultId: ${resultId})`,
       );
+    } else if (commonFields.lead_contact_person_id && this._adUserRepository) {
+      try {
+        commonFields.lead_contact_person_data =
+          await this._adUserRepository.findOne({
+            where: {
+              id: commonFields.lead_contact_person_id,
+              is_active: true,
+            },
+          });
+      } catch (error) {
+        this._logger.warn(
+          `Failed to get lead contact person data for Bilateral result (resultId: ${resultId}): ${error.message}`,
+        );
+      }
     }
 
     if (!tocMetadata) {
@@ -4731,6 +4718,7 @@ export class ResultsService {
         !dto.title?.trim() &&
         !dto.description?.trim() &&
         dto.lead_contact_person === undefined &&
+        dto.lead_contact_person_data === undefined &&
         dto.gender_tag_level_id === undefined &&
         dto.climate_change_tag_level_id === undefined &&
         dto.nutrition_tag_level_id === undefined &&
@@ -4789,6 +4777,16 @@ export class ResultsService {
 
       if (dto.lead_contact_person !== undefined) {
         (updates as any).lead_contact_person = dto.lead_contact_person || null;
+      }
+
+      if (dto.lead_contact_person_data?.mail && this._adUserService) {
+        const adUser = await this._adUserService.resolveOrCreateContact(
+          dto.lead_contact_person_data.mail,
+          dto.lead_contact_person_data,
+        );
+        (updates as any).lead_contact_person_id = adUser?.id ?? null;
+      } else if (dto.lead_contact_person_data !== undefined) {
+        (updates as any).lead_contact_person_id = null;
       }
 
       const DAC_TAG_FIELDS: { dtoKey: string; col: string }[] = [

@@ -1,13 +1,9 @@
+@use '../section-type-specific/section-type-shared';
+
 .sgi-fields {
   display: flex;
   flex-direction: column;
   gap: 22px;
-}
-
-.sgi-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 .sgi-label {
@@ -19,198 +15,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.sgi-required {
-  color: var(--pr-color-red-300);
-  font-weight: 700;
-}
-
-.sgi-input {
-  padding: 11px 12px;
-  border: 1.5px solid #E0E0E0;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #212121;
-  font-family: inherit;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-
-  &:focus {
-    outline: none;
-    border-color: var(--pr-color-primary-300);
-    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.08);
-  }
-
-  &::placeholder {
-    color: #BDBDBD;
-    font-size: 13px;
-  }
-}
-
-.sgi-textarea {
-  padding: 11px 12px;
-  border: 1.5px solid #E0E0E0;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #212121;
-  font-family: inherit;
-  resize: vertical;
-  line-height: 1.6;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-
-  &:focus {
-    outline: none;
-    border-color: var(--pr-color-primary-300);
-    box-shadow: 0 0 0 3px rgba(var(--pr-color-primary-rgb), 0.08);
-  }
-
-  &::placeholder {
-    color: #BDBDBD;
-    font-size: 13px;
-  }
-}
-
-.sgi-status {
-  font-size: 10px;
-  color: #90A4AE;
-  letter-spacing: 0.3px;
-  transition: color 200ms ease;
-
-  &--saved {
-    color: var(--pr-color-green-500);
-  }
-
-  &--error {
-    color: var(--pr-color-red-300);
-  }
-}
-
-.sgi-show-all {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--pr-color-primary-400);
-  cursor: pointer;
-  text-decoration: none;
-  padding: 4px 0;
-  font-weight: 500;
-  transition: color 150ms ease;
-
-  &:hover {
-    color: var(--pr-color-primary-600);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--pr-color-primary-300);
-    outline-offset: 2px;
-    border-radius: 2px;
-  }
-}
-
-.sgi-lead-search-wrapper {
-  position: relative;
-}
-
-.sgi-lead-searching {
-  font-size: 10px;
-  color: #90A4AE;
-  display: block;
-  margin-top: 4px;
-  font-style: italic;
-}
-
-.sgi-lead-results {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #FFFFFF;
-  border: 1.5px solid #E0E0E0;
-  border-radius: 6px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 10;
-  margin-top: 2px;
-}
-
-.sgi-lead-result-item {
-  padding: 11px 14px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  border-bottom: 1px solid #F5F5F5;
-  transition: background 100ms ease;
-
-  &:last-child { border-bottom: none; }
-
-  &:hover {
-    background: var(--pr-color-primary-25);
-  }
-}
-
-.sgi-lead-result-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--pr-color-secondary-400);
-}
-
-.sgi-lead-result-detail {
-  font-size: 11px;
-  color: #78909C;
-}
-
-.sgi-lead-selected {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-  padding: 11px 14px;
-  background: var(--pr-color-primary-25);
-  border: 1.5px solid var(--pr-color-primary-300);
-  border-radius: 6px;
-}
-
-.sgi-lead-selected-icon {
-  font-size: 20px;
-  color: var(--pr-color-primary-400);
-}
-
-.sgi-lead-selected-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--pr-color-secondary-400);
-}
-
-.sgi-lead-selected-detail {
-  font-size: 11px;
-  color: #546E7A;
-}
-
-.sgi-lead-clear {
-  margin-left: auto;
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: #90A4AE;
-  cursor: pointer;
-  padding: 0 4px;
-  line-height: 1;
-  transition: color 150ms ease;
-
-  &:hover {
-    color: var(--pr-color-red-300);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--pr-color-primary-300);
-    outline-offset: 1px;
-    border-radius: 2px;
-  }
 }
 
 .sgi-extra {
@@ -250,6 +54,9 @@
   font-weight: 600;
   color: var(--pr-color-secondary-400);
   letter-spacing: -0.1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .sgi-dac-tags {

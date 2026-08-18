@@ -17,7 +17,9 @@ import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
 import { PolicyChangeDto } from '../dto/review-update.dto';
 import { EvidencesRepository } from '../evidences/evidences.repository';
-import { In } from 'typeorm';
+import { DataSource, In } from 'typeorm';
+import { ResultScalingStudyUrl } from '../../results-framework-reporting/result_scaling_study_urls/entities/result_scaling_study_url.entity';
+import { InnovationReadinessLevelByLevel } from '../../results-framework-reporting/innovation_dev/enum/innov-readiness-level.enum';
 import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
 import { ResultByIntitutionsTypeRepository } from '../results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
@@ -30,6 +32,9 @@ import { InnoDevService } from './innovation_dev.service';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
 import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 import { Result } from '../entities/result.entity';
+import { ResultsInnovationsUseRepository } from './repositories/results-innovations-use.repository';
+import { ResultsInnovationsUse } from './entities/results-innovations-use.entity';
+import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
 
 @Injectable()
 export class SummaryService {
@@ -52,6 +57,9 @@ export class SummaryService {
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _innoDevService: InnoDevService,
     private readonly _resultAnswerRepository: ResultAnswerRepository,
+    private readonly _dataSource: DataSource,
+    private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    private readonly _resultsByProjectsRepository: ResultsByProjectsRepository,
   ) {}
 
   /**
@@ -76,6 +84,31 @@ export class SummaryService {
         user.id,
         innovationUseDto,
       );
+
+      const { innov_use_to_be_determined, innovation_use_level_id } =
+        innovationUseDto;
+      const innUseExists = await this._resultsInnovationsUseRepository.findOne({
+        where: { results_id: resultId, is_active: true },
+      });
+      if (innUseExists) {
+        innUseExists.innov_use_to_be_determined =
+          innov_use_to_be_determined ?? null;
+        innUseExists.innovation_use_level_id = innovation_use_level_id ?? null;
+        innUseExists.last_updated_by = user.id;
+        await this._resultsInnovationsUseRepository.save(innUseExists);
+      } else {
+        const newInnUse = new ResultsInnovationsUse();
+        // Persist FK via writable @Column (obj_result stub alone is not enough).
+        newInnUse.results_id = Number(resultId);
+        newInnUse.obj_result = { id: Number(resultId) } as any;
+        newInnUse.created_by = user.id;
+        newInnUse.last_updated_by = user.id;
+        newInnUse.is_active = true;
+        newInnUse.innov_use_to_be_determined =
+          innov_use_to_be_determined ?? null;
+        newInnUse.innovation_use_level_id = innovation_use_level_id ?? null;
+        await this._resultsInnovationsUseRepository.save(newInnUse);
+      }
 
       await this._resultRepository.update(resultId, {
         last_updated_by: user.id,
@@ -107,7 +140,13 @@ export class SummaryService {
         el['men_non_youth'] = el.men - el.men_youth;
         el['women_non_youth'] = el.women - el.women_youth;
       });
+      const innUseExists = await this._resultsInnovationsUseRepository.findOne({
+        where: { results_id: resultId, is_active: true },
+      });
       const innovatonUse = {
+        innov_use_to_be_determined:
+          innUseExists?.innov_use_to_be_determined ?? null,
+        innovation_use_level_id: innUseExists?.innovation_use_level_id ?? null,
         actors: actorsData,
         measures: await this._resultIpMeasureRepository.find({
           where: { result_id: resultId, is_active: true },
@@ -324,6 +363,8 @@ export class SummaryService {
         innovation_nature_id,
         innovation_readiness_level_id,
         is_new_variety,
+        has_scaling_studies,
+        scaling_studies_urls,
         number_of_varieties,
         readiness_level,
         result_innovation_dev_id,
@@ -338,6 +379,7 @@ export class SummaryService {
         innDevExists.short_title = short_title;
         innDevExists.last_updated_by = user.id;
         innDevExists.is_new_variety = is_new_variety;
+        innDevExists.has_scaling_studies = has_scaling_studies;
         innDevExists.readiness_level = readiness_level;
         innDevExists.number_of_varieties = number_of_varieties;
         innDevExists.innovation_developers = innovation_developers;
@@ -368,6 +410,7 @@ export class SummaryService {
         newInnDev.short_title = short_title;
         newInnDev.is_active = true;
         newInnDev.is_new_variety = is_new_variety;
+        newInnDev.has_scaling_studies = has_scaling_studies;
         newInnDev.readiness_level = readiness_level;
         newInnDev.number_of_varieties = number_of_varieties;
         newInnDev.innovation_developers = innovation_developers;
@@ -467,6 +510,31 @@ export class SummaryService {
         await this._innoDevService.savePartnerInvestment(
           user.id,
           createInnovationDevDto,
+        );
+      }
+
+      // Same gating rule as the v2 innovation-dev service: scaling studies only
+      // apply once the innovation itself has reached readiness level 6+.
+      if (
+        Number(innovation_readiness_level_id) >=
+          InnovationReadinessLevelByLevel.Level_6 &&
+        has_scaling_studies &&
+        scaling_studies_urls?.length
+      ) {
+        const scalingStudyUrlRepository = this._dataSource.getRepository(
+          ResultScalingStudyUrl,
+        );
+        await scalingStudyUrlRepository.update(
+          { result_innov_dev_id: InnDevRes.result_innovation_dev_id },
+          { is_active: false },
+        );
+        await scalingStudyUrlRepository.save(
+          scaling_studies_urls.map((url) => ({
+            result_innov_dev_id: InnDevRes.result_innovation_dev_id,
+            study_url: url,
+            is_active: true,
+            created_by: user.id,
+          })),
         );
       }
 
@@ -610,7 +678,7 @@ export class SummaryService {
         },
       });
 
-      const bilateral_expected_investment =
+      const legacyBilateralInvestment =
         await this._resultBilateralBudgetRepository.find({
           where: {
             non_pooled_projetct_id: In(npp.map((el) => el.id)),
@@ -622,6 +690,31 @@ export class SummaryService {
             },
           },
         });
+
+      // Bilateral projects are linked via `results_by_projects` (not the legacy
+      // `non_pooled_project` catalog), so their budget rows are keyed by
+      // `result_project_id` instead — read-only merge here; saving through this
+      // (legacy) endpoint still only understands `non_pooled_projetct_id`.
+      const resultProjects = await this._resultsByProjectsRepository.find({
+        where: { result_id: resultId, is_active: true },
+      });
+      const resultProjectBilateralInvestment =
+        await this._resultBilateralBudgetRepository.find({
+          where: {
+            result_project_id: In(resultProjects.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_result_project: {
+              obj_clarisa_project: true,
+            },
+          },
+        });
+
+      const bilateral_expected_investment = [
+        ...legacyBilateralInvestment,
+        ...resultProjectBilateralInvestment,
+      ];
 
       const institutions: ResultsByInstitution[] =
         await this._resultByIntitutionsRepository.find({
@@ -642,6 +735,22 @@ export class SummaryService {
           },
         });
 
+      let scaling_studies_urls: string[] = [];
+      if (
+        Number(innDevExists?.innovation_readiness_level_id) >=
+        InnovationReadinessLevelByLevel.Level_6
+      ) {
+        const urls = await this._dataSource
+          .getRepository(ResultScalingStudyUrl)
+          .find({
+            where: {
+              result_innov_dev_id: innDevExists.result_innovation_dev_id,
+              is_active: true,
+            },
+          });
+        scaling_studies_urls = urls.map((u) => u.study_url);
+      }
+
       return {
         response: {
           ...innDevExists,
@@ -650,6 +759,7 @@ export class SummaryService {
           initiative_expected_investment,
           bilateral_expected_investment,
           institutions_expected_investment,
+          scaling_studies_urls,
           reference_materials,
           result,
         },

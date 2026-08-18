@@ -1,5 +1,6 @@
 import { IsOptional, IsString, IsNumber, IsArray } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ADUser } from '../../../auth/services/active-directory.service';
 
 export class UpdateBilateralGeneralInfoDto {
   @ApiPropertyOptional({ description: 'Updated title' })
@@ -16,6 +17,14 @@ export class UpdateBilateralGeneralInfoDto {
   @IsOptional()
   @IsString()
   lead_contact_person?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Active Directory data for the lead contact person when matched from the directory search. Resolves/creates the lead_contact_person_id FK.',
+    type: Object,
+  })
+  @IsOptional()
+  lead_contact_person_data?: ADUser;
 
   @ApiPropertyOptional({
     description:

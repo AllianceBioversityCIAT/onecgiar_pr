@@ -57,14 +57,15 @@ export interface BilateralColumnDef {
   defaultOn: boolean;
 }
 
-const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns';
+// Versioned so older preferences cannot leave the newly required Result type column hidden.
+const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns.v2';
 
 /** Full column set (order = picker + table order). Kept to the fields BilateralCenterResult actually has. */
 export const BILATERAL_COLUMNS: readonly BilateralColumnDef[] = [
   { key: 'source', title: 'Source', attr: 'source', width: '100px', defaultOn: true },
   { key: 'code', title: 'Code', attr: 'result_code', width: '100px', defaultOn: true },
   { key: 'title', title: 'Title', attr: 'title', width: '280px', defaultOn: true },
-  { key: 'type', title: 'Type', attr: 'result_type', width: '160px', defaultOn: true },
+  { key: 'type', title: 'Result type', attr: 'result_type', width: '180px', defaultOn: true },
   { key: 'role', title: 'Role', attr: 'is_leading_result', width: '120px', defaultOn: true },
   { key: 'status', title: 'Status', attr: 'status_id', width: '120px', defaultOn: true },
   { key: 'created', title: 'Created', attr: 'created_date', width: '110px', defaultOn: true },

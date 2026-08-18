@@ -106,16 +106,19 @@ export class SectionTocComponent implements OnInit {
         const info = this.getIndicatorMatchInfo(ind);
         return info.cssClass === 'bp-toc-match--other';
       });
-      const code = this.escapeHtml(item.wp_short_name || item.extraInformation || 'AOW');
-      const title = this.escapeHtml(item.title || item.extraInformation || '');
-      let badge = '';
+      const code = this.escapeHtml(this.toPlainText(item.wp_short_name || item.extraInformation) || 'AOW');
+      const title = this.escapeHtml(this.toPlainText(item.title || item.extraInformation));
+      let select_badge = '';
+      let select_badge_tone = 'neutral';
       if (hasMatch) {
-        badge = ` · Match [${this.escapeHtml(this.resultTypeLabel())}]`;
+        select_badge = `Match · ${this.resultTypeLabel()}`;
+        select_badge_tone = 'match';
       } else if (hasOther) {
-        badge = ' · Review needed';
+        select_badge = 'Review needed';
+        select_badge_tone = 'review';
       }
-      const select_label = `${code}${badge} — ${title}`;
-      return { ...item, hasMatch, hasOther, select_label };
+      const select_label = title && code !== title ? `${code} — ${title}` : code;
+      return { ...item, hasMatch, hasOther, select_label, select_badge, select_badge_tone };
     });
   });
 
@@ -126,18 +129,25 @@ export class SectionTocComponent implements OnInit {
     return (result?.indicators ?? []).map((ind: any) => {
       const matchInfo = this.getIndicatorMatchInfo(ind);
       let badges = '';
+      let select_badge = '';
+      let select_badge_tone = 'neutral';
       if (matchInfo.cssClass === 'bp-toc-match--match') {
+        select_badge = `Match · ${this.resultTypeLabel()}`;
+        select_badge_tone = 'match';
         if (ind.unit_messurament) {
           badges += ` · ${this.escapeHtml(ind.unit_messurament)}`;
         }
         badges += ` · Target: ${this.escapeHtml(String(ind.targets?.[0]?.target_value ?? 'N/A'))}`;
       } else if (matchInfo.cssClass === 'bp-toc-match--other') {
-        badges += ` · [${this.escapeHtml(matchInfo.label)}]`;
+        select_badge = 'Review needed';
+        select_badge_tone = 'review';
       }
       return {
         ...ind,
         matchInfo,
-        select_label: `${this.escapeHtml(ind.indicator_description || 'Unnamed')}${badges}`,
+        select_label: `${this.escapeHtml(this.toPlainText(ind.indicator_description) || 'Unnamed')}${badges}`,
+        select_badge,
+        select_badge_tone,
       };
     });
   });
@@ -148,6 +158,14 @@ export class SectionTocComponent implements OnInit {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  /** ToC sources sometimes wrap the node text in display markup; selects must show plain text only. */
+  private toPlainText(value: unknown): string {
+    return String(value ?? '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   readonly selectedIndicatorData = computed(() => {

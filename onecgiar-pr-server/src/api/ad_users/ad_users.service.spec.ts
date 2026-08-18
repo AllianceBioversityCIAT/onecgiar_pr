@@ -165,4 +165,70 @@ describe('AdUsersService', () => {
       });
     });
   });
+
+  describe('resolveOrCreateContact', () => {
+    it('should return null when no identifier is provided', async () => {
+      const result = await service.resolveOrCreateContact(undefined, {
+        mail: 'a@cgiar.org',
+      });
+
+      expect(result).toBeNull();
+      expect(adUserRepository.findByIdentifier).not.toHaveBeenCalled();
+    });
+
+    it('should return the existing AD user without creating a new one', async () => {
+      const mockUser = {
+        id: 5,
+        mail: 'existing@cgiar.org',
+        is_active: true,
+      };
+      mockAdUserRepository.findByIdentifier.mockResolvedValueOnce(mockUser);
+
+      const result = await service.resolveOrCreateContact(
+        'existing@cgiar.org',
+        { mail: 'existing@cgiar.org', displayName: 'Existing User' },
+      );
+
+      expect(result).toEqual(mockUser);
+      expect(adUserRepository.saveFromADUser).not.toHaveBeenCalled();
+    });
+
+    it('should create a new AD user from the fallback data when none exists locally or in AD', async () => {
+      mockAdUserRepository.findByIdentifier.mockResolvedValueOnce(null);
+      mockActiveDirectoryService.getUserDetails.mockResolvedValueOnce(null);
+      const fallback = { mail: 'new@cgiar.org', displayName: 'New User' };
+      const created = { id: 9, mail: 'new@cgiar.org' };
+      mockAdUserRepository.saveFromADUser.mockResolvedValueOnce(created);
+
+      const result = await service.resolveOrCreateContact(
+        'new@cgiar.org',
+        fallback,
+      );
+
+      expect(adUserRepository.saveFromADUser).toHaveBeenCalledWith(fallback);
+      expect(result).toEqual(created);
+    });
+
+    it('should return null when nothing resolves and no fallback data is given', async () => {
+      mockAdUserRepository.findByIdentifier.mockResolvedValueOnce(null);
+      mockActiveDirectoryService.getUserDetails.mockResolvedValueOnce(null);
+
+      const result = await service.resolveOrCreateContact('missing@cgiar.org');
+
+      expect(result).toBeNull();
+      expect(adUserRepository.saveFromADUser).not.toHaveBeenCalled();
+    });
+
+    it('should return null and never throw when the repository errors', async () => {
+      mockAdUserRepository.findByIdentifier.mockRejectedValueOnce(
+        new Error('DB down'),
+      );
+
+      const result = await service.resolveOrCreateContact('broken@cgiar.org', {
+        mail: 'broken@cgiar.org',
+      });
+
+      expect(result).toBeNull();
+    });
+  });
 });

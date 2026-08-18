@@ -17,6 +17,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
   standalone: false
 })
 export class PrSelectComponent implements ControlValueAccessor {
+  private static nextInstanceId = 0;
   readonly optionLabel = input<string>();
   readonly optionValue = input<string>();
   readonly options = input<any>();
@@ -52,6 +53,9 @@ export class PrSelectComponent implements ControlValueAccessor {
   readonly expandSpaceOnOpen = input<boolean>(false); // Enable 300px expansion when open
   /** Consumer-provided inline styles for the dropdown panel (used only when overlayToBody is false). */
   readonly optionsInlineStyles = input<string>('');
+  /** Optional per-option label and tone rendered as a compact chip in the dropdown. */
+  readonly optionBadgeLabel = input<string>('');
+  readonly optionBadgeTone = input<string>('');
 
   readonly selectOptionEvent = output<any>();
 
@@ -65,11 +69,27 @@ export class PrSelectComponent implements ControlValueAccessor {
   readonly isDropdownOpen = signal<boolean>(false); // Track dropdown state
   /** Internal overlay positioning styles (no consumer binds this; kept internal). */
   readonly overlayStyles = signal<string>('');
+  private readonly instanceId = PrSelectComponent.nextInstanceId++;
+
+  /** Unique trigger id so adjacent selects with the same optionValue do not blur each other. */
+  get triggerId(): string {
+    const key = this.idKey() || this.optionValue() || 'pr-select';
+    const index = this.indexReference();
+    return index != null ? `${key}_${index}` : `${key}_${this.instanceId}`;
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
     if (this.expandSpaceOnOpen() && this.isDropdownOpen() && !this.elementRef.nativeElement.contains(event.target)) {
       this.isDropdownOpen.set(false);
+    }
+  }
+
+  /** A fixed overlay becomes detached from its trigger when the page moves, so close it on page scroll. */
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    if (this.overlayToBody()) {
+      this.removeFocus();
     }
   }
 
@@ -110,8 +130,7 @@ export class PrSelectComponent implements ControlValueAccessor {
 
   removeFocus(option?) {
     if (option?.disabled) return;
-    const triggerId = (this.idKey() || this.optionValue()) + '_' + (this.indexReference() ?? '');
-    const element: any = document.getElementById(triggerId);
+    const element: any = document.getElementById(this.triggerId);
     element?.blur();
     if (this.expandSpaceOnOpen()) {
       this.isDropdownOpen.set(false); // Close dropdown only if expansion is enabled
@@ -127,8 +146,7 @@ export class PrSelectComponent implements ControlValueAccessor {
       this.isDropdownOpen.set(true); // Only track state if expansion is enabled
     }
     if (this.overlayToBody()) {
-      const triggerId = (this.idKey() || this.optionValue()) + '_' + (this.indexReference() ?? '');
-      const triggerElement: any = document.getElementById(triggerId);
+      const triggerElement: any = document.getElementById(this.triggerId);
       if (triggerElement) {
         const rect = triggerElement.getBoundingClientRect();
         const top = rect.bottom + 4;
@@ -137,6 +155,11 @@ export class PrSelectComponent implements ControlValueAccessor {
         this.overlayStyles.set(`position: fixed; left: ${left}px; top: ${top}px; width: ${width}px; max-height: 300px; z-index: 10000; transform: none; bottom: auto;`);
       }
     }
+  }
+
+  /** Keep wheel events inside the option viewport instead of passing them to the result page. */
+  onOptionsWheel(event: WheelEvent): void {
+    event.stopPropagation();
   }
 
   /**

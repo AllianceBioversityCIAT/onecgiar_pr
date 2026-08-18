@@ -13,6 +13,11 @@ export interface TocContributionReview {
   level?: string;
   outcome_label?: string;
   outcome_statement?: string;
+  // P2-3204: the backend sends the TOC `type_name` under the legacy alias `statement` and the internal
+  // sentinel (`type_value`, literally "custom" for custom KPIs) as `indicator_typology`. The descriptive
+  // name is what the user reads in the TOC "Type" column, so it takes precedence. Not to be confused with
+  // `outcome_statement`, which comes from a different column.
+  statement?: string;
   indicator_typology?: string;
   unit_of_measurement?: string;
   target?: string | number;
@@ -66,6 +71,16 @@ export class NotificationItemComponent {
   // Sourced from the backend `toc_contribution_review[]` (P2-3086); empty when absent / non-ToC requests.
   get tocReview(): TocContributionReview[] {
     return this.notification?.toc_contribution_review ?? [];
+  }
+
+  // P2-3204: same resolution as Contributors & Partners — the sentinel first, then the TOC type name
+  // ("custom — <real KPI name>"), joined only when they differ so identical values are not repeated.
+  tocTypologyOf(review: TocContributionReview): string {
+    const clean = (value?: string) => (typeof value === 'string' && value.trim() ? value.trim() : '');
+    const name = clean(review?.statement);
+    const sentinel = clean(review?.indicator_typology);
+    if (name && sentinel && name !== sentinel) return `${sentinel} — ${name}`;
+    return name || sentinel || '—';
   }
 
   private get isIpsrNotification(): boolean {

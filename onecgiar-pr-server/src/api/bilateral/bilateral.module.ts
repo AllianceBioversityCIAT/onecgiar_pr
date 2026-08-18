@@ -66,6 +66,8 @@ import { BilateralAiService } from '../bilateral-ai/services/bilateral-ai.servic
 import { BilateralAiFileStorageService } from '../bilateral-ai/services/bilateral-ai-file-storage.service';
 import { BilateralAiTextMiningService } from '../bilateral-ai/services/bilateral-ai-text-mining.service';
 import { BilateralAiProcessingQueueModule } from '../../shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.module';
+import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.module';
+import { AdUsersModule } from '../ad_users/ad_users.module';
 
 @Module({
   imports: [
@@ -114,6 +116,8 @@ import { BilateralAiProcessingQueueModule } from '../../shared/microservices/bil
     PathwayModule,
     ResultByLevelModule,
     BilateralAiProcessingQueueModule,
+    RoleByUserModule,
+    AdUsersModule,
   ],
   controllers: [
     BilateralCenterController,

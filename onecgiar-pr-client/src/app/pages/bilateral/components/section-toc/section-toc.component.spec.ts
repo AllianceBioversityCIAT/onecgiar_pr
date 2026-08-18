@@ -279,14 +279,16 @@ describe('SectionTocComponent', () => {
   describe('tocResultItems', () => {
     beforeEach(() => component.selectedLevelId.set(1));
 
-    it('flags a match and appends the result type badge', () => {
+    it('flags a match and exposes it as a match chip', () => {
       creationService.resultTypeId.set(1);
       component.outputList.set([
         { toc_result_id: 1, wp_short_name: 'WP1', title: 'T', indicators: [{ type_value: '%Number of Policy%' }] },
       ]);
       const item = component.tocResultItems()[0];
       expect(item.hasMatch).toBe(true);
-      expect(item.select_label).toContain('Match [Policy Change]');
+      expect(item.select_label).toBe('WP1 — T');
+      expect(item.select_badge).toBe('Match · Policy Change');
+      expect(item.select_badge_tone).toBe('match');
     });
 
     it('flags a review-needed item when only other indicators exist', () => {
@@ -297,26 +299,33 @@ describe('SectionTocComponent', () => {
       const item = component.tocResultItems()[0];
       expect(item.hasMatch).toBe(false);
       expect(item.hasOther).toBe(true);
-      expect(item.select_label).toContain('Review needed');
+      expect(item.select_badge).toBe('Review needed');
+      expect(item.select_badge_tone).toBe('review');
     });
 
-    it('adds no badge for neutral indicators and falls back to AOW + extraInformation', () => {
+    it('adds no badge for neutral indicators and does not duplicate extraInformation', () => {
       component.outputList.set([{ toc_result_id: 1, extraInformation: 'Extra' }]);
       const item = component.tocResultItems()[0];
       expect(item.hasMatch).toBe(false);
       expect(item.hasOther).toBe(false);
-      expect(item.select_label).toBe('Extra — Extra');
+      expect(item.select_label).toBe('Extra');
     });
 
     it('falls back to AOW and an empty title when nothing is provided', () => {
       component.outputList.set([{ toc_result_id: 1 }]);
-      expect(component.tocResultItems()[0].select_label).toBe('AOW — ');
+      expect(component.tocResultItems()[0].select_label).toBe('AOW');
     });
 
-    it('escapes HTML in the label', () => {
-      component.outputList.set([{ toc_result_id: 1, wp_short_name: '<b>&"', title: 'x' }]);
-      const label = component.tocResultItems()[0].select_label;
-      expect(label).toContain('&lt;b&gt;&amp;&quot;');
+    it('strips source markup and avoids repeating an identical title', () => {
+      component.outputList.set([
+        {
+          toc_result_id: 1,
+          wp_short_name: '<div class="select_item_description">1.1 Pinpoint and act</div>',
+          title: '1.1 Pinpoint and act',
+        },
+      ]);
+
+      expect(component.tocResultItems()[0].select_label).toBe('1.1 Pinpoint and act');
     });
   });
 
@@ -354,6 +363,8 @@ describe('SectionTocComponent', () => {
       ]);
       component.selectedTocResultId.set(1);
       expect(component.indicatorsList()[0].select_label).toBe('Desc · policies · Target: 12');
+      expect(component.indicatorsList()[0].select_badge).toBe('Match · Policy Change');
+      expect(component.indicatorsList()[0].select_badge_tone).toBe('match');
     });
 
     it('falls back to N/A when no target exists and no unit is given', () => {
@@ -375,7 +386,9 @@ describe('SectionTocComponent', () => {
         },
       ]);
       component.selectedTocResultId.set(1);
-      expect(component.indicatorsList()[0].select_label).toBe('D · [Innovation Development]');
+      expect(component.indicatorsList()[0].select_label).toBe('D');
+      expect(component.indicatorsList()[0].select_badge).toBe('Review needed');
+      expect(component.indicatorsList()[0].select_badge_tone).toBe('review');
     });
 
     it('adds no badge for neutral indicators and tolerates a missing indicators array', () => {

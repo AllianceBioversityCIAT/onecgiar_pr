@@ -24,4 +24,45 @@ describe('PrSelectComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('uses a distinct trigger id for select instances with the same option value', () => {
+    fixture.componentRef.setInput('optionValue', 'id');
+    fixture.detectChanges();
+
+    const secondFixture = TestBed.createComponent(PrSelectComponent);
+    secondFixture.componentRef.setInput('optionValue', 'id');
+    secondFixture.detectChanges();
+
+    expect(component.triggerId).not.toBe(secondFixture.componentInstance.triggerId);
+  });
+
+  it('closes its own expanded dropdown after selecting an option', () => {
+    fixture.componentRef.setInput('optionValue', 'id');
+    fixture.componentRef.setInput('expandSpaceOnOpen', true);
+    fixture.detectChanges();
+    component.isDropdownOpen.set(true);
+
+    component.removeFocus({ id: 2 });
+
+    expect(component.isDropdownOpen()).toBe(false);
+  });
+
+  it('stops wheel events from propagating outside the options viewport', () => {
+    const event = { stopPropagation: jest.fn() } as unknown as WheelEvent;
+
+    component.onOptionsWheel(event);
+
+    expect(event.stopPropagation).toHaveBeenCalled();
+  });
+
+  it('closes a fixed overlay when the result page scrolls', () => {
+    fixture.componentRef.setInput('overlayToBody', true);
+    fixture.componentRef.setInput('expandSpaceOnOpen', true);
+    fixture.detectChanges();
+    component.isDropdownOpen.set(true);
+
+    component.onWindowScroll();
+
+    expect(component.isDropdownOpen()).toBe(false);
+  });
 });

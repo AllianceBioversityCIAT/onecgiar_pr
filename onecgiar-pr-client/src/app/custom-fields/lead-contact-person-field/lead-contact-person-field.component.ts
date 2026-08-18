@@ -24,6 +24,12 @@ export class LeadContactPersonFieldComponent implements OnChanges {
   get leadContactField() {
     return this.fieldsManager.fields()['[general-info]-lead_contact_person'] ?? {};
   }
+
+  /** A mandatory contact is complete only after a directory user is selected. */
+  get hasSelectedContact(): boolean {
+    return !!this.body?.lead_contact_person?.trim() && !!this.body?.lead_contact_person_data;
+  }
+
   searchResults: User[] = [];
   showResults: boolean = false;
   isSearching: boolean = false;

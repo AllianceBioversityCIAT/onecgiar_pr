@@ -21,6 +21,8 @@ export class AppComponent implements OnInit {
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
   aiAssistantEnabled = environment.aiAssistant?.enabled ?? false;
+  /** Test-environment banner (new look & feel preview on performance-refactor). */
+  testEnvironmentBanner = environment.testEnvironmentBanner ?? null;
   /** Same gate the old header used so Tawk does not load in local embeds. */
   readonly inLocal = (environment as { inLocal?: boolean }).inLocal;
 

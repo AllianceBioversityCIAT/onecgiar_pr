@@ -1,4 +1,4 @@
-import { Component, effect, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
+import { Component, effect, HostListener, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -80,6 +80,18 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
   sectionZeroOpen = signal(true);
   showTypeDropdown = signal(false);
+  kpHandle = signal('');
+  validatingKpHandle = signal(false);
+  kpSyncedTitle = signal<string | null>(null);
+  kpHandleError = signal<string | null>(null);
+  private isPageUnloading = false;
+
+  /** Knowledge Product (result_type_id 6) is created purely from a repository handle (CGSpace, MELSpace, or WorldFish DSpace). */
+  readonly isKnowledgeProductType = computed(() => this.resultTypeId() === 6);
+
+  // Mirrors report-result-form.component.ts's GET_mqapValidation() regex — keep both in sync.
+  private readonly KP_HANDLE_REGEX =
+    /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
 
   canUseAi = computed(() => !!this.creationService.selectedProject() && !!this.creationService.selectedPrimarySp());
 
@@ -134,6 +146,8 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.resultLevelId.set(null);
         this.resultTypeId.set(null);
         this.showTypeDropdown.set(false);
+        this.kpHandle.set('');
+        this.resetKpSync();
         this.autoSaveService.reset();
         this.mdsTracker.reset();
         this.creationService.resetWizard();
@@ -150,6 +164,8 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.selectedReportingWay.set(null);
     this.resultLevelId.set(null);
     this.resultTypeId.set(null);
+    this.kpHandle.set('');
+    this.resetKpSync();
     this.scrollToSection('bcr-sp-section');
   }
 
@@ -173,6 +189,8 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.resultTypeId.set(null);
     this.creationService.resultTypeId.set(null);
     this.showTypeDropdown.set(false);
+    this.kpHandle.set('');
+    this.resetKpSync();
     this.scrollToSection('bcr-type-section');
   }
 
@@ -195,12 +213,55 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     this.createResult();
   }
 
+  onKpHandleInput(value: string): void {
+    this.kpHandle.set(value);
+    this.resetKpSync();
+  }
+
+  /** Validates the handle format, then previews the title via the same mqap endpoint P25's creation flows use. */
+  syncKpHandle(): void {
+    const handle = this.kpHandle().trim();
+    this.kpSyncedTitle.set(null);
+
+    if (!handle) {
+      this.kpHandleError.set('Please enter a valid handle.');
+      return;
+    }
+    if (!this.KP_HANDLE_REGEX.test(handle)) {
+      this.kpHandleError.set(
+        'Please ensure that the handle is from the CGSpace, MELSpace or WorldFish repository and not other CGIAR repositories.'
+      );
+      return;
+    }
+
+    this.kpHandleError.set(null);
+    this.validatingKpHandle.set(true);
+    this.api.resultsSE.GET_mqapValidation(handle).subscribe({
+      next: (resp: any) => {
+        this.validatingKpHandle.set(false);
+        this.kpSyncedTitle.set(resp?.response?.title ?? null);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.validatingKpHandle.set(false);
+        this.kpHandleError.set(err.error?.message || 'Unable to retrieve metadata for this handle.');
+      }
+    });
+  }
+
+  private resetKpSync(): void {
+    this.validatingKpHandle.set(false);
+    this.kpSyncedTitle.set(null);
+    this.kpHandleError.set(null);
+  }
+
   createResult(): void {
     const level = this.resultLevelId();
     const type = this.resultTypeId();
     if (!level || !type) return;
+    const handle = this.isKnowledgeProductType() ? this.kpHandle().trim() : undefined;
+    if (this.isKnowledgeProductType() && !handle) return;
     this.isCreatingResult.set(true);
-    this.creationService.createResult(level, type).subscribe({
+    this.creationService.createResult(level, type, handle).subscribe({
       next: ({ response }) => {
         this.isCreatingResult.set(false);
         if (!response?.id) {
@@ -244,7 +305,9 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   }
 
   get canCreate(): boolean {
-    return !!this.creationService.selectedPrimarySp() && !!this.resultLevelId() && !!this.resultTypeId();
+    const baseReady = !!this.creationService.selectedPrimarySp() && !!this.resultLevelId() && !!this.resultTypeId();
+    if (!baseReady) return false;
+    return this.isKnowledgeProductType() ? !!this.kpSyncedTitle()?.trim() : true;
   }
 
   submitResult(): void {
@@ -307,8 +370,19 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * A browser refresh/close destroys the component while requests are being
+   * cancelled. Do not start a new async flush during that lifecycle; it can
+   * surface a misleading save error even when the last autosave succeeded.
+   */
+  @HostListener('window:beforeunload')
+  @HostListener('window:pagehide')
+  onPageExit(): void {
+    this.isPageUnloading = true;
+  }
+
   ngOnDestroy(): void {
-    if (this.resultId()) {
+    if (!this.isPageUnloading && this.resultId()) {
       void this.autoSaveService.flush();
     }
     this.autoSaveService.reset();

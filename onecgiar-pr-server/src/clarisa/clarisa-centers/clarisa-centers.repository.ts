@@ -38,7 +38,8 @@ export class ClarisaCentersRepository extends Repository<ClarisaCenter> {
       ci.acronym 
       from clarisa_center cc
       inner join clarisa_institutions ci on ci.id  = cc.institutionId
-        and ci.is_active > 0;
+        and ci.is_active > 0
+        and cc.is_active > 0;
     `;
     try {
       const centers: ClarisaCenterDto[] = await this.query(queryData);

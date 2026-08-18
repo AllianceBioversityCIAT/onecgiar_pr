@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -70,6 +71,12 @@ describe('BilateralAiService (unit)', () => {
     const userRepository = {
       findOne: jest.fn().mockResolvedValue({ email: 'user@cgiar.org' }),
     };
+    const roleByUserRepository = {
+      validationCenterPermissions: jest.fn().mockResolvedValue(1),
+    };
+    const clarisaCentersRepository = {
+      findOne: jest.fn().mockResolvedValue({ code: 'TEST_CENTER' }),
+    };
 
     const service = new BilateralAiService(
       jobRepository as any,
@@ -84,6 +91,8 @@ describe('BilateralAiService (unit)', () => {
       textMining as any,
       bilateralService as any,
       userRepository as any,
+      roleByUserRepository as any,
+      clarisaCentersRepository as any,
     );
 
     Object.assign(service, overrides);
@@ -103,6 +112,8 @@ describe('BilateralAiService (unit)', () => {
         textMining,
         bilateralService,
         userRepository,
+        roleByUserRepository,
+        clarisaCentersRepository,
       },
     };
   };
@@ -339,7 +350,7 @@ describe('BilateralAiService (unit)', () => {
   });
 
   describe('listDrafts', () => {
-    it('should return non-discarded drafts for the user scoped to the given center', async () => {
+    it('should return non-discarded drafts scoped to the center, shared across all its members', async () => {
       const { service, stubs } = makeService();
       stubs.draftRepository.find.mockResolvedValue([{ id: 1 }]);
 
@@ -348,7 +359,7 @@ describe('BilateralAiService (unit)', () => {
       expect(stubs.draftRepository.find).toHaveBeenCalledWith({
         where: {
           is_discarded: false,
-          job: { user_id: 42, center_id: 7 },
+          job: { center_id: 7 },
         },
         relations: { job: true, result: true },
         order: { created_date: 'DESC' },
@@ -365,17 +376,60 @@ describe('BilateralAiService (unit)', () => {
       expect(stubs.draftRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            job: { user_id: 42, center_id: 99 },
+            job: { center_id: 99 },
           }),
         }),
       );
+    });
+
+    it('should resolve the center code and check membership before querying', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaCentersRepository.findOne.mockResolvedValue({
+        code: 'ABC',
+      });
+      stubs.draftRepository.find.mockResolvedValue([]);
+
+      await service.listDrafts(42, 7);
+
+      expect(stubs.clarisaCentersRepository.findOne).toHaveBeenCalledWith({
+        where: { institutionId: 7 },
+      });
+      expect(
+        stubs.roleByUserRepository.validationCenterPermissions,
+      ).toHaveBeenCalledWith(42, 'ABC');
+    });
+
+    it('should throw NotFoundException when the center does not resolve', async () => {
+      const { service, stubs } = makeService();
+      stubs.clarisaCentersRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.listDrafts(42, 7)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(stubs.draftRepository.find).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException when the user is not a member of the center', async () => {
+      const { service, stubs } = makeService();
+      stubs.roleByUserRepository.validationCenterPermissions.mockResolvedValue(
+        0,
+      );
+
+      await expect(service.listDrafts(42, 7)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(stubs.draftRepository.find).not.toHaveBeenCalled();
     });
   });
 
   describe('getDraft', () => {
     it('should return draft with evidence when found', async () => {
       const { service, stubs } = makeService();
-      const mockDraft = { id: 5, is_discarded: false };
+      const mockDraft = {
+        id: 5,
+        is_discarded: false,
+        job: { center_id: 7 },
+      };
       stubs.draftRepository.findOne.mockResolvedValue(mockDraft);
       stubs.evidenceRepository.find.mockResolvedValue([{ id: 10 }]);
 
@@ -396,6 +450,22 @@ describe('BilateralAiService (unit)', () => {
         NotFoundException,
       );
     });
+
+    it("should throw ForbiddenException when the requesting user is not a member of the draft's center", async () => {
+      const { service, stubs } = makeService();
+      stubs.draftRepository.findOne.mockResolvedValue({
+        id: 5,
+        is_discarded: false,
+        job: { center_id: 7 },
+      });
+      stubs.roleByUserRepository.validationCenterPermissions.mockResolvedValue(
+        0,
+      );
+
+      await expect(service.getDraft(5, 999)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
   });
 
   describe('setFormalEvidence', () => {
@@ -404,6 +474,7 @@ describe('BilateralAiService (unit)', () => {
       stubs.draftRepository.findOne.mockResolvedValue({
         id: 5,
         is_discarded: false,
+        job: { center_id: 7 },
       });
       stubs.evidenceRepository.find.mockResolvedValue([
         { id: 10, source_type: DraftEvidenceSourceType.DOCUMENT },
@@ -427,6 +498,7 @@ describe('BilateralAiService (unit)', () => {
       stubs.draftRepository.findOne.mockResolvedValue({
         id: 5,
         is_discarded: false,
+        job: { center_id: 7 },
       });
       stubs.evidenceRepository.find.mockResolvedValue([
         { id: 10, source_type: DraftEvidenceSourceType.VOICE_NOTE },
@@ -448,6 +520,7 @@ describe('BilateralAiService (unit)', () => {
       stubs.draftRepository.findOne.mockResolvedValue({
         id: 5,
         is_discarded: false,
+        job: { center_id: 7 },
       });
       stubs.evidenceRepository.find.mockResolvedValue([]);
       stubs.evidenceRepository.findOne.mockResolvedValue(null);
@@ -465,7 +538,7 @@ describe('BilateralAiService (unit)', () => {
         id: 5,
         is_discarded: false,
         result_id: 100,
-        job: { program_code: 'EXCELLENCE', user_id: 42 },
+        job: { program_code: 'EXCELLENCE', user_id: 42, center_id: 7 },
         extracted_mds: null,
       });
       stubs.evidenceRepository.find.mockResolvedValue([
@@ -488,7 +561,7 @@ describe('BilateralAiService (unit)', () => {
         id: 5,
         is_discarded: false,
         result_id: 100,
-        job: { program_code: 'CLIMATE', user_id: 42 },
+        job: { program_code: 'CLIMATE', user_id: 42, center_id: 7 },
         extracted_mds: null,
       });
       stubs.evidenceRepository.find.mockResolvedValue([]);
@@ -506,7 +579,7 @@ describe('BilateralAiService (unit)', () => {
         id: 5,
         is_discarded: false,
         result_id: 100,
-        job: { program_code: null, user_id: 42 },
+        job: { program_code: null, user_id: 42, center_id: 7 },
         extracted_mds: null,
       });
       stubs.evidenceRepository.find.mockResolvedValue([
@@ -529,6 +602,7 @@ describe('BilateralAiService (unit)', () => {
         id: 5,
         is_discarded: false,
         result_id: 100,
+        job: { center_id: 7 },
       });
       stubs.evidenceRepository.find.mockResolvedValue([]);
 

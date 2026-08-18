@@ -3,7 +3,17 @@
     <div class="field_card_header">
       <span class="fch_title" [innerHTML]="label"></span>
       <span class="fch_tag">{{ required ? 'Mandatory' : 'Optional' }}</span>
-      <span class="fch_info_wrap">
+      @if (tooltip) {
+        <button
+          type="button"
+          class="sgi-dac-info"
+          [prTooltip]="tooltip"
+          prTooltipPosition="right"
+          prTooltipStyleClass="sgi-dac-tooltip"
+          aria-label="More information">info_outline</button>
+      }
+      @if (!tooltip) {
+        <span class="fch_info_wrap">
         <i class="material-icons-round fch_info" aria-label="Field color legend">info</i>
         <div class="fch_legend">
           <div class="legend_row"><span class="dot dot-blue"></span> Optional (empty)</div>
@@ -11,7 +21,8 @@
           <div class="legend_row"><span class="dot dot-green"></span> Filled / valid</div>
           <div class="legend_row"><span class="dot dot-red"></span> Over limit / invalid</div>
         </div>
-      </span>
+        </span>
+      }
     </div>
   }
   @if (showDescriptionBlock) {

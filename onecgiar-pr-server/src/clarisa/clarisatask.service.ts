@@ -213,7 +213,8 @@ export class ClarisaTaskService {
         return this.syncControlList(ClarisaEndpoints.GEOSCOPES, index);
       },
       async (index: number) => {
-        return this.syncControlList(ClarisaEndpoints.CGIAR_ENTITIES, index);
+        await this.syncControlList(ClarisaEndpoints.CENTERS_ACTIVE, index);
+        return this.syncControlList(ClarisaEndpoints.CENTERS_INACTIVE, index);
       },
       async (index: number) => {
         return this.syncControlList(ClarisaEndpoints.POLICY_TYPES, index);

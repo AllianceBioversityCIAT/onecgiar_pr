@@ -24,7 +24,7 @@
       <a
         class="field"
         tabindex="0"
-        [id]="(idKey() || optionValue()) + '_' + (indexReference() ?? '')"
+        [id]="triggerId"
         [ngClass]="{ 'select-disable': disabled() }"
         [ngClass]="{ globalDisabled: fieldDisabled() }"
         (focus)="onDropdownOpen()">
@@ -56,7 +56,7 @@
             <input type="text" hlmInput placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
           </div>
 
-          <cdk-virtual-scroll-viewport [itemSize]="7" class="custom_scroll virtual_scroll">
+          <cdk-virtual-scroll-viewport [itemSize]="7" class="custom_scroll virtual_scroll" (wheel)="onOptionsWheel($event)">
             <div
               *cdkVirtualFor="let option of optionsIntance() | listFilterByTextAndAttr: optionLabel() : this.searchText"
               class="option pr-body-2"
@@ -70,12 +70,19 @@
               <img *ngIf="flagsCode()" [src]="'https://countryflagsapi.com/png/' + option[flagsCode()]" alt="" srcset="" />
 
               <div
-                class="label"
+                class="label pr-select-option-label"
                 [innerHtml]="
                   !option?.isLabel
                     ? (option?.disabled || option?.disabledd ? disableOptionsText() : '') + option[optionLabel()]
                     : option[groupName()]
                 "></div>
+              @if (!option?.isLabel && optionBadgeLabel() && option[optionBadgeLabel()]) {
+                <span
+                  class="pr-select-option-badge"
+                  [class]="'pr-select-option-badge pr-select-option-badge--' + (option[optionBadgeTone()] || 'neutral')">
+                  {{ option[optionBadgeLabel()] }}
+                </span>
+              }
 
               <div class="event"></div>
             </div>

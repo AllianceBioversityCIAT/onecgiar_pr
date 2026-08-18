@@ -28,6 +28,7 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
 import { ClarisaCentersRepository } from '../../../clarisa/clarisa-centers/clarisa-centers.repository';
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ResultCreationMethod } from '../../../shared/constants/result-creation-method.enum';
+import { ResultsKnowledgeProductsService } from '../../results/results-knowledge-products/results-knowledge-products.service';
 
 @Injectable()
 export class BilateralCenterService {
@@ -47,6 +48,7 @@ export class BilateralCenterService {
     private readonly resultsCenterRepository: ResultsCenterRepository,
     private readonly resultsByProjectsRepository: ResultsByProjectsRepository,
     private readonly resultsByProjectsService: ResultsByProjectsService,
+    private readonly resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
   ) {}
 
   async getProjects(centerId: number) {
@@ -138,6 +140,23 @@ export class BilateralCenterService {
         created_by: user.id,
         is_lead: true,
       });
+    }
+
+    if (dto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT) {
+      try {
+        await this.resultsKnowledgeProductsService.populateKPFromCGSpace(
+          result.id,
+          dto.handle,
+          user,
+        );
+      } catch (error) {
+        await this.resultRepository.update(result.id, { is_active: false });
+        throw new BadRequestException(
+          error instanceof Error
+            ? error.message
+            : 'Failed to populate Knowledge Product metadata from CGSpace.',
+        );
+      }
     }
 
     return {

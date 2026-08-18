@@ -19,6 +19,7 @@ const FIELD_ENDPOINT_KEYS: Record<string, EndpointKey> = {
   title: 'generalInfo',
   description: 'generalInfo',
   lead_contact_person: 'generalInfo',
+  lead_contact_person_data: 'generalInfo',
   gender_tag_level_id: 'generalInfo',
   climate_change_tag_level_id: 'generalInfo',
   nutrition_tag_level_id: 'generalInfo',

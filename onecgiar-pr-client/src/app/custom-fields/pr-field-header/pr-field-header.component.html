@@ -13,7 +13,13 @@
       class="pr_label {{ labelDescStyleClass }}"
       [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
       [innerHTML]="this.label + (this.useColon ? ':' : '')"></div>
-    <i class="material-icons-round pr_label_tooltip" [prTooltip]="this.tooltip" prTooltipPosition="top">info</i>
+    <button
+      type="button"
+      class="material-icons-round sgi-dac-info"
+      [prTooltip]="this.tooltip"
+      prTooltipPosition="right"
+      prTooltipStyleClass="sgi-dac-tooltip"
+      aria-label="More information">info_outline</button>
   </div>
 </ng-container>
 <div class="pr_description readOnly" *ngIf="this.description" [innerHTML]="this.descriptionLabel + this.description" [style]="descInlineStyles"></div>
