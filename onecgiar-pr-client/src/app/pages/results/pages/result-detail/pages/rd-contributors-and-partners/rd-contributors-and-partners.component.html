@@ -436,6 +436,11 @@
 
   <!-- P2-3112: the linked/bundled question shows for Innovation Use/Dev (all phases) AND, in 2026+, for every other result type. -->
   @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7 || isCP2026()) {
+    <!-- P2-3201 (point 4): 2026-only header above the question. Not rendered for Policy change, whose own
+         wording is self-contained, nor for earlier phases, which keep today's layout untouched. -->
+    @if (showLinkedResultHeader()) {
+      <app-pr-field-header [label]="linkedResultHeaderLabel" [required]="false" [useColon]="false"></app-pr-field-header>
+    }
     @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7) {
       <app-pr-radio-button
         fieldRef="[innovation-use-form]-has-innovation-link"
@@ -448,9 +453,10 @@
         optionValue="value">
       </app-pr-radio-button>
     } @else {
-      <!-- P2-3112: non-innovation types use the generic "result" wording (no fieldRef, so the explicit label is not overridden). -->
+      <!-- P2-3112 / P2-3201: non-innovation types (this branch only renders in 2026) get their label from the
+           component, which swaps in the Policy change variant. No fieldRef, so the explicit label wins. -->
       <app-pr-radio-button
-        [label]="linkedResultQuestionLabel"
+        [label]="linkedResultQuestionLabel()"
         [required]="true"
         [options]="[
           { value: true, label: 'Yes' },

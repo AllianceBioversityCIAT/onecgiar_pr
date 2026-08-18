@@ -189,4 +189,43 @@ describe('RdGeographicLocationComponent', () => {
     });
   });
 
+  // ----- P2-3201 (point 5): geographic focus question, unified inside 2026 only -----
+  describe('P2-3201 — geographic focus question wording', () => {
+    const asContext = (opts: { is2026: boolean; isP25?: boolean; isInnovation?: boolean }) => {
+      (component as any).fieldsManagerSE = {
+        isGeographicLocation2026: () => opts.is2026,
+        isP25: () => opts.isP25 ?? true,
+        isAnInnovation: () => opts.isInnovation ?? false
+      };
+    };
+
+    it('uses the unified 2026 question for an innovation, replacing the P2-3036 (AC9) "location of benefit" wording', () => {
+      asContext({ is2026: true, isP25: true, isInnovation: true });
+
+      expect(component.geographicFocusLabel()).toBe('What is the geographic focus of the result?');
+      expect(component.geographicFocusHeader()).toBe('What is the geographic focus of the result?');
+    });
+
+    it('uses the same unified question for a non-innovation result in 2026', () => {
+      asContext({ is2026: true, isP25: true, isInnovation: false });
+
+      expect(component.geographicFocusLabel()).toBe('What is the geographic focus of the result?');
+      expect(component.geographicFocusHeader()).toBe('What is the geographic focus of the result?');
+    });
+
+    it('keeps the legacy innovation wording for a P25 innovation before 2026', () => {
+      asContext({ is2026: false, isP25: true, isInnovation: true });
+
+      expect(component.geographicFocusLabel()).toBe('What is the current geographic focus of the innovation development, testing and/or use?');
+      expect(component.geographicFocusHeader()).toBe('What is the current geographic focus of the innovation development, testing and/or use?');
+    });
+
+    it('leaves the label undefined before 2026 for other results, so app-geoscope-management keeps building its own', () => {
+      asContext({ is2026: false, isP25: true, isInnovation: false });
+
+      expect(component.geographicFocusLabel()).toBeUndefined();
+      expect(component.geographicFocusHeader()).toBe('What is the main geographic focus of the Output?');
+    });
+  });
+
 });

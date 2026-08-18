@@ -218,10 +218,32 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     "The Science Programs listed below were identified in your 2026 ToC. To select a different Science Program, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
   noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
 
-  // P2-3112: generic "result" wording of the linked/bundled question for non-innovation result types
-  // (Innovation Use/Dev keep their existing "innovation" wording).
-  linkedResultQuestionLabel =
-    'Is this result linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?';
+  // ----- P2-3201 (point 4 / INC-158283): linked / bundled question -----
+  // `result_type_id` 1 = Policy change (same numbering as `prHide` in `routing-data.ts → rdResultTypesPages`
+  // and as the server's ResultTypeEnum). Kept as a named constant so the template stays readable.
+  private readonly POLICY_CHANGE_RESULT_TYPE_ID = 1;
+
+  isPolicyChangeResult = computed(
+    () => this.api.dataControlSE.currentResultSignal?.()?.result_type_id == this.POLICY_CHANGE_RESULT_TYPE_ID
+  );
+
+  /**
+   * Label of the linked/bundled radio for result types that are NOT Innovation Use/Dev (those read their
+   * label from `FieldsManagerService.fields()['[innovation-use-form]-has-innovation-link']`).
+   *
+   * This branch only ever renders under `isCP2026()` — see the template gate — so both texts are
+   * 2026-only by construction and earlier phases keep exactly what they have today, which is what the
+   * Product Owner asked for ("esa pregunta debe ser para este portafolio, no para los pasados").
+   */
+  linkedResultQuestionLabel = computed(() =>
+    this.isPolicyChangeResult()
+      ? 'Have other reported results contributed to this policy change? Such as knowledge product, capacity sharing for development, innovation development, innovation use?'
+      : 'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?'
+  );
+
+  /** Header sitting above the question. 2026 only, and never for Policy change (it has its own self-contained wording). */
+  readonly linkedResultHeaderLabel = 'Is this result linked to, or (for innovations) bundled with, another reported result?';
+  showLinkedResultHeader = computed(() => this.isCP2026() && !this.isPolicyChangeResult());
 
   // The result's own (owner/primary) Science Program: it can never be a contributor to its own result
   // (backend rejects "The owner initiative cannot be shared with itself"), so it must not appear in either dropdown.

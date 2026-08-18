@@ -437,6 +437,59 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(result).toBe('');
     });
   });
+
+  // ----- P2-3201 (point 4): linked / bundled question, 2026 only -----
+  describe('P2-3201 — linked/bundled question wording', () => {
+    const asPhase = (isCP2026: boolean) => {
+      (component as any).fieldsManagerSE = { isContributorsPartners2026: () => isCP2026, isP25: () => true };
+    };
+    const asResultType = (result_type_id: number) => {
+      mockApiService.dataControlSE.currentResultSignal = signal({ result_type_id });
+    };
+
+    it('asks the Policy change variant for a Policy change result (result_type_id 1)', () => {
+      asPhase(true);
+      asResultType(1);
+
+      expect(component.isPolicyChangeResult()).toBe(true);
+      expect(component.linkedResultQuestionLabel()).toBe(
+        'Have other reported results contributed to this policy change? Such as knowledge product, capacity sharing for development, innovation development, innovation use?'
+      );
+    });
+
+    it('asks the innovation-worded question for every other result type', () => {
+      asPhase(true);
+      asResultType(5); // Capacity sharing for development
+
+      expect(component.isPolicyChangeResult()).toBe(false);
+      expect(component.linkedResultQuestionLabel()).toBe(
+        'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?'
+      );
+    });
+
+    it('shows the header in 2026 for a non-Policy-change result', () => {
+      asPhase(true);
+      asResultType(2); // Innovation use
+
+      expect(component.showLinkedResultHeader()).toBe(true);
+      expect(component.linkedResultHeaderLabel).toBe('Is this result linked to, or (for innovations) bundled with, another reported result?');
+    });
+
+    it('never shows the header for Policy change, even in 2026', () => {
+      asPhase(true);
+      asResultType(1);
+
+      expect(component.showLinkedResultHeader()).toBe(false);
+    });
+
+    it('does not show the header before 2026 — earlier phases keep their current layout', () => {
+      asPhase(false);
+      asResultType(2);
+
+      expect(component.showLinkedResultHeader()).toBe(false);
+    });
+  });
+
 });
 
 describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconciliation (QA P2-2929/P2-2998)', () => {
