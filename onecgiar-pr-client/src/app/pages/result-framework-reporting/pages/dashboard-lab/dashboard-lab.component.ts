@@ -644,6 +644,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         this.plannedHloAowCode.set(null);
         this.plannedTypeFilter.set([]);
         this.plannedSearch.set('');
+        // Every programme opens in the collapsed reading state (P2-3251) — the switch is per
+        // programme, not a preference that follows the user from the last SP they browsed.
+        this.reportingAllExpanded.set(false);
+        this.reportingAllOpen.set(false);
+        this.reportingExpandNonce.set(0);
       }
     });
 
@@ -1551,11 +1556,43 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly reportingStatusFilter = signal<string>('all');
   readonly reportingViewMode = signal<'grouped' | 'flat'>('grouped');
+  /**
+   * Global disclosure switch of the Reporting tab (P2-3252). `false` = the collapsed reading state
+   * every programme opens in (P2-3251); the toolbar's single control flips it and the grouped table
+   * takes it as the level default for BOTH AoW cards and their HLO sub-groups.
+   */
+  readonly reportingAllExpanded = signal(false);
+  /**
+   * What the table reports back: every visible AoW card is open right now (overrides included).
+   * The toolbar label is written from THIS, not from `reportingAllExpanded` — otherwise a user who
+   * opened every card by hand got a press that changed nothing and a label that lied (QA: dead click).
+   */
+  readonly reportingAllOpen = signal(false);
+  /**
+   * Press counter. `reportingAllExpanded` can legitimately be asked for the value it already holds
+   * (everything opened by hand → the press means "collapse", i.e. `false`, which is where it already
+   * is), so the boolean alone cannot re-seed the list. The nonce makes every press a real change.
+   */
+  readonly reportingExpandNonce = signal(0);
   /** Section filter — multi-select like the reference; empty array means "every section". */
   readonly reportingAowFilter = signal<string[]>([]);
   readonly reportingTypologyFilter = signal<string>('all');
   /** CURRENT selType: all | hlo | outcome | intermediate_outcome | outcome_2030 */
   readonly reportingTypeFilter = signal<string>('all');
+
+  /**
+   * Toolbar's single Expand all / Collapse all control (P2-3252). One level default, not a per-card
+   * map: the table takes `reportingAllExpanded` as its default and drops the user's individual
+   * overrides on every press (the nonce guarantees the reset even when the boolean repeats).
+   *
+   * The intent is read from what is ON SCREEN (`reportingAllOpen`), not from the last press: with
+   * everything already open by hand the press must COLLAPSE, and with everything closed by hand it
+   * must EXPAND. Negating the previous press instead is what produced the dead click.
+   */
+  toggleReportingExpandAll(): void {
+    this.reportingAllExpanded.set(!this.reportingAllOpen());
+    this.reportingExpandNonce.update(n => n + 1);
+  }
 
   /**
    * Section dropdown = every AoW + Intermediate Outcomes + 2030 Outcomes (CURRENT selSection).

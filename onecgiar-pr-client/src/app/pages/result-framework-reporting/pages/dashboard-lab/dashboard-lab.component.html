@@ -1200,6 +1200,9 @@
             [typologyOptions]="reportingTypologyOptions()"
             [typologyValue]="reportingTypologyFilter()"
             [viewMode]="reportingViewMode()"
+            [allExpanded]="reportingAllOpen()"
+            [canExpandAll]="plannedBrowseView() === 'aows'"
+            (toggleExpandAll)="toggleReportingExpandAll()"
             (searchChange)="plannedSearch.set($event)"
             (statusChange)="reportingStatusFilter.set($event)"
             (aowChange)="reportingAowFilter.set($event)"
@@ -1239,11 +1242,15 @@
                 [search]="plannedSearch()"
                 [statusFilter]="reportingStatusFilter()"
                 [viewMode]="reportingViewMode()"
+                [expandAll]="reportingAllExpanded()"
+                [expandAllNonce]="reportingExpandNonce()"
+                [scopeKey]="selected()?.initiativeCode || ''"
                 [canReport]="entityAowService.canReportResults()"
                 (openRow)="onReportingRowOpen($event)"
                 (reportRow)="onReportingRowReport($event)"
                 (openTarget)="onReportingOpenTarget($event)"
                 (openAchieved)="onReportingOpenAchieved($event)"
+                (allOpenChange)="reportingAllOpen.set($event)"
                 (openAow)="openAow($event)" />
               <!-- Intermediate Outcomes + 2030 Outcomes are top-level cards inside the table
                    (siblings of AoWs). The old "open 2030 detail" jump button is gone. -->

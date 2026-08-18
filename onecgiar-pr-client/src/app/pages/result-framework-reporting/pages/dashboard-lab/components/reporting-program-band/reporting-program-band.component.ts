@@ -13,7 +13,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
+import { lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap } from '@ng-icons/lucide';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { PrFilterSelectComponent } from '../../../../../../shared/components/pr-filter-select/pr-filter-select.component';
 
@@ -47,7 +47,7 @@ export interface BandFilterGroup {
   templateUrl: './reporting-program-band.component.html',
   styleUrls: ['./reporting-program-band.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [provideIcons({ lucideInfo, lucideSearch, lucideX, lucideZap })]
+  providers: [provideIcons({ lucideChevronsDownUp, lucideChevronsUpDown, lucideInfo, lucideSearch, lucideX, lucideZap })]
 })
 export class ReportingProgramBandComponent {
   private readonly zone = inject(NgZone);
@@ -81,6 +81,19 @@ export class ReportingProgramBandComponent {
   readonly aowValue = input<string[]>([]);
   readonly aowOptions = input<BandFilterGroup[]>([]);
   readonly viewMode = input<'grouped' | 'flat'>('grouped');
+  /**
+   * State of the global disclosure switch (P2-3252): `true` once every AoW / HLO is open, which is
+   * what turns `Expand all` into `Collapse all`. The band only renders and announces it — the
+   * grouped table owns the actual disclosure state.
+   */
+  readonly allExpanded = input<boolean>(false);
+  /**
+   * Whether the surface below the toolbar actually answers to that switch. The Reporting tab has
+   * other browse surfaces reachable by URL (`?tocView=byAow` / `?tocView=indicators`) that keep
+   * their own inline disclosure state, and the band renders OUTSIDE that switch — so without this
+   * the control painted itself over a list it could not move (a button that does nothing).
+   */
+  readonly canExpandAll = input<boolean>(true);
   /** Overview has no filters, so the band renders on its own there. */
   readonly showToolbar = input<boolean>(true);
   /**
@@ -97,6 +110,8 @@ export class ReportingProgramBandComponent {
   readonly typeChange = output<string>();
   readonly aowChange = output<string[]>();
   readonly viewModeChange = output<'grouped' | 'flat'>();
+  /** Expand all / Collapse all was pressed. The host flips the switch; the band stays stateless. */
+  readonly toggleExpandAll = output<void>();
   /**
    * The emerging pathway is a MODAL owned by the host, not a page. The band only announces the
    * intent so both CTA copies (expanded + condensed) stay a single behaviour.

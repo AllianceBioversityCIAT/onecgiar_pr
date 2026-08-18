@@ -259,37 +259,57 @@
         (changed)="statusChange.emit($event)"></app-pr-filter-select>
     </div>
 
-    <!-- Segmented: Grouped | All indicators (CURRENT :1001) -->
-    <div
-      role="tablist"
-      aria-label="Grouping"
-      class="ml-auto flex h-[36px] shrink-0 items-center gap-[2px] rounded-[8px] bg-[var(--pr-border-divider)] p-[3px]">
-      <button
-        type="button"
-        role="tab"
-        class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
-        [class]="
-          viewMode() === 'grouped'
-            ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
-            : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-        "
-        [attr.aria-selected]="viewMode() === 'grouped'"
-        (click)="viewModeChange.emit('grouped')">
-        Grouped
-      </button>
-      <button
-        type="button"
-        role="tab"
-        class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
-        [class]="
-          viewMode() === 'flat'
-            ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
-            : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
-        "
-        [attr.aria-selected]="viewMode() === 'flat'"
-        (click)="viewModeChange.emit('flat')">
-        All indicators
-      </button>
+    <!-- Right-hand controls. The auto margin lives on the wrapper so the Expand all button and the
+         segmented switch stay glued together at the end of the row (two `ml-auto` siblings would
+         split the leftover space between them and drift apart). -->
+    <div class="ml-auto flex shrink-0 items-center gap-[12px]">
+      <!-- Expand all / Collapse all — global disclosure for the grouped table (P2-3252). Hidden in
+           `All indicators`, which is a flat list with nothing to open. -->
+      @if (viewMode() === 'grouped' && canExpandAll()) {
+        <!-- The changing label IS the state (`Expand all` ⇄ `Collapse all`), so there is no
+             `aria-pressed`: a toggle that also renames itself announces "Collapse all, pressed",
+             which reads as two contradictory facts. -->
+        <button
+          type="button"
+          class="flex h-[36px] shrink-0 items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[14px] font-medium text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]"
+          (click)="toggleExpandAll.emit()">
+          <ng-icon [name]="allExpanded() ? 'lucideChevronsDownUp' : 'lucideChevronsUpDown'" class="text-[16px]" />
+          {{ allExpanded() ? 'Collapse all' : 'Expand all' }}
+        </button>
+      }
+
+      <!-- Segmented: Grouped | All indicators (CURRENT :1001) -->
+      <div
+        role="tablist"
+        aria-label="Grouping"
+        class="flex h-[36px] shrink-0 items-center gap-[2px] rounded-[8px] bg-[var(--pr-border-divider)] p-[3px]">
+        <button
+          type="button"
+          role="tab"
+          class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
+          [class]="
+            viewMode() === 'grouped'
+              ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-selected]="viewMode() === 'grouped'"
+          (click)="viewModeChange.emit('grouped')">
+          Grouped
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
+          [class]="
+            viewMode() === 'flat'
+              ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-selected]="viewMode() === 'flat'"
+          (click)="viewModeChange.emit('flat')">
+          All indicators
+        </button>
+      </div>
     </div>
   </div>
 }
