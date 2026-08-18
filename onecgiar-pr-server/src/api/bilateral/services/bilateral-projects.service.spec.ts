@@ -31,7 +31,7 @@ describe('BilateralProjectsService', () => {
 
   it('matches on organizationCode alone and skips the alias fallback query', async () => {
     centerRepo.findOne.mockResolvedValueOnce({
-      code: 'CENTER-05',
+      code: 'CENTER-99',
       institutionId: 5,
     });
     projectRepo.find.mockResolvedValueOnce([
@@ -53,7 +53,7 @@ describe('BilateralProjectsService', () => {
 
     const result = await service.getProjectsByCenter(5);
 
-    // CENTER-05 has no entry in the alias map -> the fallback query is skipped.
+    // CENTER-99 is not a real center / has no entry in the alias map -> the fallback query is skipped.
     expect(projectRepo.find).toHaveBeenCalledTimes(1);
     expect(result.projects[0].sciencePrograms[0]).toEqual({
       programId: 1,
@@ -108,7 +108,7 @@ describe('BilateralProjectsService', () => {
 
   it('falls back to programCode when programName/programShortName are null', async () => {
     centerRepo.findOne.mockResolvedValueOnce({
-      code: 'CENTER-05',
+      code: 'CENTER-99',
       institutionId: 5,
     });
     projectRepo.find.mockResolvedValueOnce([
