@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnInit, inject } from '@angular/core';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
 import { FieldsManagerService } from '../../../../../../../../../shared/services/fields-manager.service';
@@ -19,6 +19,7 @@ export class TocInitiativeOutComponent implements OnInit {
   fullInitiativeToc = null;
 
   fieldsManagerSE = inject(FieldsManagerService);
+  private readonly cdr = inject(ChangeDetectorRef);
   constructor(
     public api: ApiService,
     public theoryOfChangesServices: RdTheoryOfChangesServicesService
@@ -68,6 +69,14 @@ export class TocInitiativeOutComponent implements OnInit {
 
     setTimeout(() => {
       this.initiative.showMultipleWPsContent = true;
+      // P2-3320: this flag lives on the external `initiative` object, so — unlike P2-3245 / P2-3275,
+      // where it was a component field turned into a signal — no signal in this component can track
+      // it. Under zoneless change detection the write above happens outside any listener, nothing
+      // notifies the scheduler, the `[showMultipleWPsContent]` binding to <app-multiple-wps> is never
+      // re-evaluated and the ToC mapping stays hidden after changing the "planned result" answer.
+      // `markForCheck()` marks this view (and its ancestors) dirty and notifies the scheduler, which
+      // is what re-runs the binding. See ViewRefreshService for the wider zoneless context.
+      this.cdr.markForCheck();
     }, 20);
   }
 
