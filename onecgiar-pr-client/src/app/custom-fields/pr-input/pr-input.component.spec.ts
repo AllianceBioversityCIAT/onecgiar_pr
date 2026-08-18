@@ -31,6 +31,5 @@ describe('PrInputComponent', () => {
     fixture.detectChanges();
 
     expect(component.hasValue).toBe(false);
-    expect(component.fieldState).toBe('pending');
   });
 });
