@@ -14,6 +14,8 @@ import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { environment } from '../../../../../../../../environments/environment';
 import { signal } from '@angular/core';
+import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fields.module';
+import { RolesService } from '../../../../../../../shared/services/global/roles.service';
 
 describe('CapDevInfoComponent', () => {
   let component: CapDevInfoComponent;
@@ -214,6 +216,53 @@ describe('CapDevInfoComponent', () => {
     });
   });
 
+  describe('normalizeAttendanceValue()', () => {
+    it.each([
+      [1, true],
+      ['1', true],
+      [true, true],
+      [0, false],
+      ['0', false],
+      [false, false],
+      [null, null],
+      [undefined, null]
+    ])('maps %p to %p', (input, expected) => {
+      expect(component.normalizeAttendanceValue(input)).toBe(expected);
+    });
+  });
+
+  describe('getSectionInformation() — tinyint attendance hydration (P2-3246)', () => {
+    it('normalizes the tinyint 0 returned by MySQL into the boolean false the radio options use', () => {
+      jest
+        .spyOn(mockApiService.resultsSE, 'GET_capacityDevelopent')
+        .mockReturnValue(of({ response: { capdev_term_id: 1, is_attending_for_organization: 0 } }));
+
+      component.getSectionInformation();
+
+      expect(component.capDevInfoRoutingBody.is_attending_for_organization).toBe(false);
+    });
+
+    it('normalizes the tinyint 1 returned by MySQL into the boolean true the radio options use', () => {
+      jest
+        .spyOn(mockApiService.resultsSE, 'GET_capacityDevelopent')
+        .mockReturnValue(of({ response: { capdev_term_id: 1, is_attending_for_organization: 1 } }));
+
+      component.getSectionInformation();
+
+      expect(component.capDevInfoRoutingBody.is_attending_for_organization).toBe(true);
+    });
+
+    it('leaves an unanswered field as null instead of coercing it to a selected option', () => {
+      jest
+        .spyOn(mockApiService.resultsSE, 'GET_capacityDevelopent')
+        .mockReturnValue(of({ response: { capdev_term_id: 1, is_attending_for_organization: null } }));
+
+      component.getSectionInformation();
+
+      expect(component.capDevInfoRoutingBody.is_attending_for_organization).toBeNull();
+    });
+  });
+
   describe('sectionLoading (skeleton)', () => {
     it('is released once the section GET responds', () => {
       component.sectionLoading.set(true);
@@ -233,4 +282,85 @@ describe('CapDevInfoComponent', () => {
     });
   });
 
+});
+
+describe('CapDevInfoComponent — attendance radio reflects the saved value (P2-3246)', () => {
+  let fixture: ComponentFixture<CapDevInfoComponent>;
+  let capDevResponse: any;
+
+  const attendanceRadios = (): HTMLInputElement[] => {
+    const groups: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('app-pr-radio-button'));
+    const attendanceGroup = groups.find(group => Array.from(group.querySelectorAll('label.name')).some(label => label.textContent.trim() === 'Yes'));
+    return Array.from(attendanceGroup.querySelectorAll('input.pr-native-radio'));
+  };
+
+  const renderWith = async (isAttendingForOrganization: unknown) => {
+    capDevResponse = { capdev_term_id: 1, institutions: [], is_attending_for_organization: isAttendingForOrganization };
+    fixture = TestBed.createComponent(CapDevInfoComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+
+    const apiServiceMock = {
+      resultsSE: {
+        GET_capdevsTerms: () =>
+          of({
+            response: [
+              { capdev_term_id: 1, name: 'Long-term' },
+              { capdev_term_id: 2, name: 'Short-term' },
+              { capdev_term_id: 3, name: 'Not applicable' },
+              { capdev_term_id: 4, name: 'Training' }
+            ]
+          }),
+        GET_capdevsDeliveryMethod: () => of({ response: [{ capdev_delivery_method_id: 1, name: 'In person' }] }),
+        GET_capacityDevelopent: () => of({ response: capDevResponse }),
+        PATCH_capacityDevelopent: () => of({}),
+        GET_allInstitutions: () => of({ response: [] }),
+        GET_allInstitutionTypes: () => of({ response: [] }),
+        GET_allChildlessInstitutionTypes: () => of({ response: [] }),
+        currentResultCode: 1,
+        currentResultPhase: 1
+      },
+      dataControlSE: {
+        currentResultSectionName: signal<string>('Capacity Sharing for Development information'),
+        findClassTenSeconds: jest.fn(() => Promise.resolve())
+      }
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [CapDevInfoComponent],
+      imports: [HttpClientTestingModule, FormsModule, CustomFieldsModule],
+      providers: [{ provide: ApiService, useValue: apiServiceMock }]
+    }).compileComponents();
+
+    TestBed.inject(RolesService).readOnly = false;
+  });
+
+  it('checks "No" when the backend returns the tinyint 0', async () => {
+    await renderWith(0);
+
+    const [yesRadio, noRadio] = attendanceRadios();
+    expect(noRadio.checked).toBe(true);
+    expect(yesRadio.checked).toBe(false);
+  });
+
+  it('checks "Yes" when the backend returns the tinyint 1', async () => {
+    await renderWith(1);
+
+    const [yesRadio, noRadio] = attendanceRadios();
+    expect(yesRadio.checked).toBe(true);
+    expect(noRadio.checked).toBe(false);
+  });
+
+  it('leaves both options unchecked when the field was never answered', async () => {
+    await renderWith(null);
+
+    const [yesRadio, noRadio] = attendanceRadios();
+    expect(yesRadio.checked).toBe(false);
+    expect(noRadio.checked).toBe(false);
+  });
 });
