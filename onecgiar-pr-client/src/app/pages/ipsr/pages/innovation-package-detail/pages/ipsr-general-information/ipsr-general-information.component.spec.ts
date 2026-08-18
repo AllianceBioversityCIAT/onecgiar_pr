@@ -594,4 +594,64 @@ describe('IpsrGeneralInformationComponent', () => {
       expect(consoleSpy).toHaveBeenCalled();
     });
   });
+
+  describe('evidenceSectionUrl', () => {
+    it('should point to step 3 of the innovation use pathway, not to general information', () => {
+      mockIpsrDataControlService.resultInnovationCode = 'IP-123';
+      mockIpsrDataControlService.resultInnovationPhase = '5';
+
+      expect(component.evidenceSectionUrl).toBe('http://localhost:4200/ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3?phase=5');
+    });
+
+    it('should omit the phase query param when the phase is not available (no "undefined" in the URL)', () => {
+      mockIpsrDataControlService.resultInnovationCode = 'IP-123';
+      mockIpsrDataControlService.resultInnovationPhase = undefined;
+
+      expect(component.evidenceSectionUrl).toBe('http://localhost:4200/ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3');
+      expect(component.evidenceSectionUrl).not.toContain('undefined');
+    });
+
+    it('should read the code and phase at call time (not frozen at construction)', () => {
+      mockIpsrDataControlService.resultInnovationCode = 'FIRST';
+      mockIpsrDataControlService.resultInnovationPhase = '1';
+      expect(component.evidenceSectionUrl).toContain('/ipsr/detail/FIRST/');
+
+      mockIpsrDataControlService.resultInnovationCode = 'SECOND';
+      mockIpsrDataControlService.resultInnovationPhase = '2';
+      expect(component.evidenceSectionUrl).toBe('http://localhost:4200/ipsr/detail/SECOND/ipsr-innovation-use-pathway/step-3?phase=2');
+    });
+  });
+
+  describe('showAlerts() evidence links (P2-3210 AC3)', () => {
+    const alertSelectors = ['#gender_tag_alert', '#climate_change_tag_alert', '#nutrition_tag_alert', '#environment_tag_alert', '#poverty_tag_alert'];
+
+    it('should point every score-2 alert to the innovation use pathway step 3', () => {
+      mockIpsrDataControlService.resultInnovationCode = 'IP-123';
+      mockIpsrDataControlService.resultInnovationPhase = '5';
+
+      component.showAlerts();
+
+      const calls = mockApiService.alertsFs.show.mock.calls.map(call => call[0]);
+      expect(calls).toHaveLength(5);
+      expect(calls.map(alert => alert.querySelector)).toEqual(alertSelectors);
+      calls.forEach(alert => {
+        expect(alert.description).toContain('href="http://localhost:4200/ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3?phase=5"');
+        expect(alert.description).not.toContain('/general-information');
+      });
+    });
+
+    it('should never render "undefined" in the evidence link when the phase is missing', () => {
+      mockIpsrDataControlService.resultInnovationCode = 'IP-123';
+      mockIpsrDataControlService.resultInnovationPhase = undefined;
+
+      component.showAlerts();
+
+      const calls = mockApiService.alertsFs.show.mock.calls.map(call => call[0]);
+      expect(calls).toHaveLength(5);
+      calls.forEach(alert => {
+        expect(alert.description).toContain('href="http://localhost:4200/ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3"');
+        expect(alert.description).not.toContain('undefined');
+      });
+    });
+  });
 });
