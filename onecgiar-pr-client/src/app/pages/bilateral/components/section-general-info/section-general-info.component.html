@@ -1,4 +1,15 @@
 <div class="sgi-fields">
+  <div class="flex items-center justify-between gap-3 border-b border-[#ECEFF1] pb-3">
+    <app-alert-status
+      class="flex-1"
+      status="info"
+      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
+    </app-alert-status>
+    <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
+      {{ showAllFields() ? 'Hide full metadata' : 'Full metadata' }}
+    </button>
+  </div>
+
   <app-pr-input
     label="Title"
     type="text"
@@ -23,17 +34,6 @@
   </app-pr-textarea>
 
   <app-lead-contact-person-field [body]="leadContactBody()" [required]="true" />
-
-  <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
-    <app-alert-status
-      class="flex-1"
-      status="info"
-      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
-    </app-alert-status>
-    <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
-      {{ showAllFields() ? 'Hide full metadata' : 'Full metadata' }}
-    </button>
-  </div>
 
   @if (showAllFields()) {
     <div class="sgi-extra">
