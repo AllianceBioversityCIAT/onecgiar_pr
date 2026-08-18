@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
-import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ClarisaProject } from '../../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
+import { W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE } from '../constants/w3-center-alias.constants';
 
 @Injectable()
 export class BilateralProjectsService {
@@ -12,8 +12,6 @@ export class BilateralProjectsService {
   constructor(
     @InjectRepository(ClarisaProject)
     private readonly projectRepo: Repository<ClarisaProject>,
-    @InjectRepository(ClarisaInitiative)
-    private readonly initiativeRepo: Repository<ClarisaInitiative>,
     @InjectRepository(ClarisaCenter)
     private readonly centerRepo: Repository<ClarisaCenter>,
   ) {}
@@ -48,13 +46,46 @@ export class BilateralProjectsService {
       `Querying projects with organization_code=${organizationCode}`,
     );
 
-    const projects = await this.projectRepo.find({
+    const relations = {
+      obj_organization: true,
+      obj_project_mappings: true,
+    };
+
+    const primaryProjects = await this.projectRepo.find({
       where: { organizationCode },
-      relations: {
-        obj_organization: true,
-        obj_project_mappings: true,
-      },
+      relations,
     });
+
+    // Defensive fallback for CLARISA's own W3 institution-acronym-matching bug
+    // (see constants/w3-center-alias.constants.ts). Only look up acronyms mapped
+    // to *this* center's code, and only among projects the primary match missed.
+    const aliasAcronymsForThisCenter = Object.entries(
+      W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE,
+    )
+      .filter(([, code]) => code === center.code)
+      .map(([acronym]) => acronym);
+
+    const fallbackProjects = aliasAcronymsForThisCenter.length
+      ? await this.projectRepo.find({
+          where: {
+            organizationCode: IsNull(),
+            sourceCenterAcronym: In(aliasAcronymsForThisCenter),
+          },
+          relations,
+        })
+      : [];
+
+    if (fallbackProjects.length) {
+      this.logger.log(
+        `Found ${fallbackProjects.length} additional project(s) via source_center_acronym fallback for center code=${center.code}`,
+      );
+    }
+
+    const projectsById = new Map<number, ClarisaProject>();
+    for (const project of [...primaryProjects, ...fallbackProjects]) {
+      projectsById.set(project.id, project);
+    }
+    const projects = [...projectsById.values()];
 
     this.logger.log(`Found ${projects.length} projects`);
 
@@ -66,21 +97,6 @@ export class BilateralProjectsService {
         `All ${projects.length} projects have isActive=false — check DB`,
       );
     }
-
-    const allProgramCodes = activeProjects.flatMap((p) =>
-      (p.obj_project_mappings ?? []).map((m) => m.programCode).filter(Boolean),
-    );
-
-    const uniqueCodes = [...new Set(allProgramCodes)];
-    const initiatives = uniqueCodes.length
-      ? await this.initiativeRepo.find({
-          where: { official_code: In(uniqueCodes) },
-        })
-      : [];
-
-    const initiativeMap = new Map(
-      initiatives.map((init) => [init.official_code, init]),
-    );
 
     const mapped = activeProjects.map((project) => ({
       id: project.id,
@@ -95,18 +111,13 @@ export class BilateralProjectsService {
             acronym: project.obj_organization.acronym,
           }
         : null,
-      sciencePrograms: (project.obj_project_mappings ?? []).map((mapping) => {
-        const initiative = mapping.programCode
-          ? initiativeMap.get(mapping.programCode)
-          : null;
-        return {
-          programId: mapping.programId,
-          programCode: mapping.programCode,
-          allocation: mapping.allocation,
-          spName: initiative?.name ?? mapping.programCode ?? '',
-          spShortName: initiative?.short_name ?? mapping.programCode ?? '',
-        };
-      }),
+      sciencePrograms: (project.obj_project_mappings ?? []).map((mapping) => ({
+        programId: mapping.programId,
+        programCode: mapping.programCode,
+        allocation: mapping.allocation,
+        spName: mapping.programName ?? mapping.programCode ?? '',
+        spShortName: mapping.programShortName ?? mapping.programCode ?? '',
+      })),
     }));
 
     return { projects: mapped };

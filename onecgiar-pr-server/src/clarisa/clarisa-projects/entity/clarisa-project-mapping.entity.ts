@@ -29,6 +29,12 @@ export class ClarisaProjectMapping {
   })
   programCode: string | null;
 
+  @Column({ name: 'program_name', type: 'text', nullable: true })
+  programName: string | null;
+
+  @Column({ name: 'program_short_name', type: 'text', nullable: true })
+  programShortName: string | null;
+
   @Column({
     type: 'decimal',
     precision: 5,

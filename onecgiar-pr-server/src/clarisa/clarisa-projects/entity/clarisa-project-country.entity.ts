@@ -25,6 +25,15 @@ export class ClarisaProjectCountry {
   @Column({ name: 'country_code', type: 'bigint', nullable: true })
   countryCode: number | null;
 
+  @Column({
+    name: 'allocation_percentage',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
+  allocationPercentage: string | null;
+
   @ManyToOne(() => ClarisaProject, (project) => project.obj_project_countries, {
     onDelete: 'CASCADE',
   })

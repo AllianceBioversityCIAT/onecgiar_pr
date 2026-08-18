@@ -117,6 +117,53 @@ export class ClarisaProject {
   @Column({ name: 'updated_by', type: 'bigint', nullable: true })
   updatedBy: number | null;
 
+  @Column({ type: 'int', nullable: true })
+  phase: number | null;
+
+  @Column({
+    name: 'external_source',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  externalSource: string | null;
+
+  @Column({
+    name: 'external_project_id',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  externalProjectId: string | null;
+
+  @Column({
+    name: 'external_code',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  externalCode: string | null;
+
+  @Index('IDX_clarisa_projects_source_center_acronym')
+  @Column({
+    name: 'source_center_acronym',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  sourceCenterAcronym: string | null;
+
+  @Column({ name: 'source_center_name', type: 'text', nullable: true })
+  sourceCenterName: string | null;
+
+  @Column({
+    name: 'source_status',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  sourceStatus: string | null;
+
   @OneToMany(
     () => ResultsByProjects,
     (resultProject) => resultProject.obj_clarisa_project,

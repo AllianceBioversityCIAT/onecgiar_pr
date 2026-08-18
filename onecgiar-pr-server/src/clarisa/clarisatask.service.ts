@@ -744,6 +744,8 @@ export class ClarisaTaskService {
         projectId: row.project_id,
         programId: row.program_id,
         programCode: row.global_unit_object?.smo_code ?? null,
+        programName: row.global_unit_object?.name ?? null,
+        programShortName: row.global_unit_object?.short_name ?? null,
         allocation:
           row.allocation === null || row.allocation === undefined
             ? null
@@ -769,6 +771,11 @@ export class ClarisaTaskService {
           projectId: row?.project_id,
           countryId: countryCode,
           countryCode: countryCode,
+          allocationPercentage:
+            row.allocation_percentage === null ||
+            row.allocation_percentage === undefined
+              ? null
+              : String(row.allocation_percentage),
         };
       })
       .filter(

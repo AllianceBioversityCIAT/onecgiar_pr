@@ -59,8 +59,16 @@ type Params = {
  * @property {'version'} version - Denotes the version of the endpoint.
  * @property {'type'} type - Defines the type or category of the item.
  * @property {'status'} status - Represents the current status of the item.
+ * @property {'phase'} phase - Filters W3 Registry-sourced projects by reporting phase (e.g. 2026).
  */
-type ClarisaParam = 'show' | 'from' | 'version' | 'type' | 'status' | 'year';
+type ClarisaParam =
+  | 'show'
+  | 'from'
+  | 'version'
+  | 'type'
+  | 'status'
+  | 'year'
+  | 'phase';
 
 /**
  * Represents the HTTP methods that can be used in requests.
@@ -347,11 +355,28 @@ export class ClarisaEndpoints<Entity, Dto> {
     ClarisaEndpoints.portfolioMapper,
   );
 
+  /**
+   * Params for the W3 Registry cutover on the `projects` endpoint.
+   *
+   * CLARISA's `w3-registry-integration` branch tags W3-sourced bilateral projects
+   * with `phase: 2026`; legacy CLARISA-native rows are 2020-2025. As of writing
+   * that branch is not yet deployed to CLARISA's test or prod environments, so
+   * PROJECTS below intentionally does NOT pass this param yet — sending it against
+   * an environment that doesn't recognize `phase` is harmless (ignored), but
+   * activating it before an environment actually has phase-2026 data would make
+   * the bilateral project selector return a near-empty list for every center.
+   *
+   * To activate once CLARISA confirms the environment is ready, pass this as
+   * PROJECTS' 5th constructor argument.
+   */
+  private static readonly PROJECTS_W3_PARAMS: Params = { phase: 2026 };
+
   public static readonly PROJECTS = new ClarisaEndpoints(
     'projects',
     'GET',
     ClarisaProject,
     ClarisaEndpoints.projectMapper,
+    // Not yet active — see PROJECTS_W3_PARAMS above.
   );
 
   /**
@@ -628,6 +653,13 @@ export class ClarisaEndpoints<Entity, Dto> {
       isActive: item.is_active ?? null,
       createdBy: item.created_by ?? null,
       updatedBy: item.updated_by ?? null,
+      phase: item.phase ?? null,
+      externalSource: item.external_source ?? null,
+      externalProjectId: item.external_project_id ?? null,
+      externalCode: item.external_code ?? null,
+      sourceCenterAcronym: item.source_center_acronym ?? null,
+      sourceCenterName: item.source_center_name ?? null,
+      sourceStatus: item.source_status ?? null,
     }));
   }
 }
