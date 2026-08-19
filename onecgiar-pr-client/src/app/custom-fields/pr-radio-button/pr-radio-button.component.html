@@ -14,12 +14,17 @@
             class="pr-native-radio"
             (click)="onSelect(option[optionValue])"
             (ngModelChange)="onValueChange($event)"
-            [id]="'radio_' + i"
+            [id]="groupName + '_' + i"
             [name]="groupName"
             [value]="option[optionValue]"
             [(ngModel)]="value"
             [disabled]="(readOnly || disabled || this.rolesSE.readOnly) && !isStatic" />
-          <label [for]="'radio_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
+          <!-- P2-3321: the id must carry `groupName`, not just the option index. With several radio groups on
+               one screen (the five Impact Area scores) every instance emitted the same `radio_0/1/2` ids, and
+               `label[for]` resolves to the FIRST match in the document — so clicking the text of an option in
+               the Poverty group selected that option in the Gender group instead. `name` was already made
+               per-instance for the same reason; the id/for pair was left behind. -->
+          <label [for]="groupName + '_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
         </div>
 
         <div
