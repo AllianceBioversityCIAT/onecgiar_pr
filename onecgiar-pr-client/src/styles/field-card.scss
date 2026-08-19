@@ -42,6 +42,15 @@
       color: var(--pr-color-accents-5); // tinted per state below
     }
 
+    // P2-3339: the tooltip trigger is the `.fch_info_wrap` sibling for cards that DO have guidance
+    // text. It was the only one of the two without `margin-left: auto`, so it sat glued to the
+    // Mandatory badge instead of at the right edge. Scoped to this header — `.sgi-dac-info` is also
+    // used inline next to labels elsewhere, where pushing it right would be wrong.
+    .sgi-dac-info {
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
     // Info button + custom color-legend popover (pushed to the right)
     .fch_info_wrap {
       margin-left: auto;

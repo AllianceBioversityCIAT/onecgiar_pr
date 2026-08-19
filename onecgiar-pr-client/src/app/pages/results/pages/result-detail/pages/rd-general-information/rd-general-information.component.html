@@ -76,12 +76,14 @@
       Impact Area scores:
       <button
         type="button"
-        class="material-icons-round sgi-dac-info"
+        class="sgi-dac-info"
         [prTooltip]="impactAreaScoresInfo()"
         [prTooltipPinnable]="true"
         prTooltipPosition="bottom"
         prTooltipStyleClass="sgi-dac-tooltip"
-        aria-label="Impact Area scoring guidance">info_outline</button>
+        aria-label="Impact Area scoring guidance">
+        <app-pr-info-icon />
+      </button>
     </h1>
   } @else {
     <h1 class="pr_label">Impact Area scores:</h1>

@@ -31,6 +31,7 @@ import { CustomValidationTooltipComponent } from './custom-validation-tooltip/cu
 import { LeadContactPersonFieldComponent } from './lead-contact-person-field/lead-contact-person-field.component';
 import { FieldCardComponent } from './field-card/field-card.component';
 import { SectionSkeletonDirective } from './section-skeleton/section-skeleton.directive';
+import { PrInfoIconComponent } from './pr-info-icon/pr-info-icon.component';
 
 const fieldComponents = [
   FieldCardComponent,
@@ -67,7 +68,9 @@ const fieldComponents = [
     LabelNamePipe,
     YesOrNotByBooleanPipe
   ],
-  exports: [...fieldComponents, FormsModule, PrTooltipDirectiveModule, HlmInput],
-  imports: [CommonModule, FormsModule, ScrollingModule, HlmInput, PrTooltipDirectiveModule]
+  // PrInfoIconComponent is standalone, so it is imported (not declared) and re-exported for every
+  // template that already pulls in CustomFieldsModule.
+  exports: [...fieldComponents, PrInfoIconComponent, FormsModule, PrTooltipDirectiveModule, HlmInput],
+  imports: [CommonModule, FormsModule, ScrollingModule, HlmInput, PrTooltipDirectiveModule, PrInfoIconComponent]
 })
 export class CustomFieldsModule {}

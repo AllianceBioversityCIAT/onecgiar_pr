@@ -14,9 +14,9 @@
           prTooltipPosition="right"
           prTooltipStyleClass="sgi-dac-tooltip"
           aria-label="More information">
-          <!-- The glyph needs its own `material-icons-round` element: `.sgi-dac-info` styles the
-               button but does not set the icon font, so the bare word rendered as literal text. -->
-          <i class="material-icons-round" aria-hidden="true">info_outline</i>
+          <!-- P2-3339: inline SVG, not an icon-font ligature. The ligature name used to paint as
+               literal text and overflow this 18px button onto the Mandatory badge. -->
+          <app-pr-info-icon />
         </button>
       }
       @if (!tooltip) {

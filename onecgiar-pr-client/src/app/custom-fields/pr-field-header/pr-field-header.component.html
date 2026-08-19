@@ -1,4 +1,4 @@
-<!-- P2-3061: when a tooltip is provided, render the label with a material-icons "info" + prTooltip (project line of design).
+<!-- P2-3061: when a tooltip is provided, render the label with an info icon + prTooltip (project line of design).
      When there is no tooltip, the label markup stays identical to before (no impact on the rest of the app). -->
 <ng-container *ngIf="this.label">
   <div
@@ -13,13 +13,16 @@
       class="pr_label {{ labelDescStyleClass }}"
       [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
       [innerHTML]="this.label + (this.useColon ? ':' : '')"></div>
+    <!-- P2-3339: inline SVG, not an icon-font ligature — see PrInfoIconComponent. -->
     <button
       type="button"
-      class="material-icons-round sgi-dac-info"
+      class="sgi-dac-info"
       [prTooltip]="this.tooltip"
       prTooltipPosition="right"
       prTooltipStyleClass="sgi-dac-tooltip"
-      aria-label="More information">info_outline</button>
+      aria-label="More information">
+      <app-pr-info-icon />
+    </button>
   </div>
 </ng-container>
 <div class="pr_description readOnly" *ngIf="this.description" [innerHTML]="this.descriptionLabel + this.description" [style]="descInlineStyles"></div>

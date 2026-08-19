@@ -5,6 +5,7 @@ import { By } from '@angular/platform-browser';
 import { FieldCardComponent } from './field-card.component';
 import { PrTooltipDirective } from '../../shared/directives/pr-tooltip.directive';
 import { PrTooltipDirectiveModule } from '../../shared/directives/pr-tooltip-directive.module';
+import { PrInfoIconComponent } from '../pr-info-icon/pr-info-icon.component';
 
 @Component({
   template: `<app-field-card
@@ -42,7 +43,7 @@ describe('FieldCardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [FieldCardComponent, HostComponent],
-      imports: [CommonModule, PrTooltipDirectiveModule]
+      imports: [CommonModule, PrTooltipDirectiveModule, PrInfoIconComponent]
     }).compileComponents();
 
     fixture = TestBed.createComponent(HostComponent);
@@ -62,10 +63,15 @@ describe('FieldCardComponent', () => {
       expect(q('.fch_info_wrap')).toBeNull();
     });
 
-    it('renders the glyph as a material icon, not as the literal word', () => {
-      const icon = q('.sgi-dac-info .material-icons-round');
-      expect(icon).toBeTruthy();
-      expect(icon.nativeElement.textContent.trim()).toBe('info_outline');
+    // P2-3339: this used to assert the ligature name `info_outline` as the button's text content.
+    // That is exactly the failure mode QA reported — when the icon font does not resolve, the
+    // ligature name IS what the user sees, painted over the Mandatory badge. The glyph is now an
+    // inline SVG, so there is no text content to leak.
+    it('draws the glyph as inline SVG, with no ligature text to fall back to', () => {
+      const trigger = q('.sgi-dac-info');
+      expect(trigger).toBeTruthy();
+      expect(trigger.nativeElement.querySelector('svg')).toBeTruthy();
+      expect(trigger.nativeElement.textContent.trim()).toBe('');
     });
 
     it('is pinnable, so the guidance survives the pointer leaving and its links stay clickable', () => {
