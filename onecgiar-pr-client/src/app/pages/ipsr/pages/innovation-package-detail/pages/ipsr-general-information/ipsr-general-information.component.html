@@ -55,7 +55,11 @@
   [(ngModel)]="this.ipsrGeneralInformationBody.description">
 </app-pr-textarea>
 
-<app-lead-contact-person-field [body]="this.ipsrGeneralInformationBody"></app-lead-contact-person-field>
+<!-- P2-3225: mandatory MDS field for P25 from the 2026 phase on; 2025 and P22 keep it optional. -->
+<app-lead-contact-person-field
+  [body]="this.ipsrGeneralInformationBody"
+  [required]="this.isLeadContactPersonRequired"></app-lead-contact-person-field>
+<div appFeedbackValidation labelText="Lead contact person" [isComplete]="this.isLeadContactPersonComplete"></div>
 
 @if (this.fieldsManagerSE.isP25()) {
   <h1 class="pr_label">Impact Area scores:</h1>

@@ -46,6 +46,17 @@ export class FieldsManagerService {
     const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
     return typeof year === 'number' && year >= ReportingDesignYear.ReportingFormGuidanceRedesign;
   });
+  /**
+   * True when Lead Contact Person must be filled in: P25 from the 2026 phase on (P2-3225).
+   * Unlike the other thresholds here this one also gates on the portfolio, because P22 keeps the
+   * field optional regardless of year. Mirrors the server-side green check in
+   * `validation_general_information_P25`, so UI and validation agree on the same cut-off.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isLeadContactPersonMandatory2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return this.isP25() && typeof year === 'number' && year >= ReportingDesignYear.LeadContactPersonMandatory;
+  });
   isAnInnovation = computed(
     () => this.dataControlSE.currentResultSignal()?.result_type_id == 2 || this.dataControlSE.currentResultSignal()?.result_type_id == 7
   );
@@ -95,7 +106,7 @@ export class FieldsManagerService {
         placeholder: 'Search for a person (min 4 characters)',
         description: `For more precise results, we recommend searching by email or username.
     <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`,
-        required: this.isP25()
+        required: this.isLeadContactPersonMandatory2026()
       },
       '[general-info]-is_krs': {
         label: 'Is this result featured in a Key Result Story for the reporting year?',

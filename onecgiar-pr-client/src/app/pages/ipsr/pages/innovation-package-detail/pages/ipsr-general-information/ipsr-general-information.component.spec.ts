@@ -115,6 +115,8 @@ describe('IpsrGeneralInformationComponent', () => {
     mockFieldsManagerService = {
       isP25: jest.fn().mockReturnValue(false),
       isP22: jest.fn().mockReturnValue(true),
+      // P2-3225: gates the Lead Contact Person asterisk and its incomplete-fields entry.
+      isLeadContactPersonMandatory2026: jest.fn().mockReturnValue(false),
       fields: jest.fn().mockReturnValue({})
     };
 
@@ -652,6 +654,51 @@ describe('IpsrGeneralInformationComponent', () => {
         expect(alert.description).toContain('href="http://localhost:4200/ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3"');
         expect(alert.description).not.toContain('undefined');
       });
+    });
+  });
+
+  /**
+   * P2-3225 — Lead Contact Person is a mandatory MDS field for P25 from the 2026 phase on.
+   * Innovation Packages share the very same green check as pooled results
+   * (`validation_general_information_P25`), so the form asks for it under the same gate.
+   */
+  describe('Lead Contact Person mandatory gate (P2-3225)', () => {
+    it('marks the field required when the gate is open', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(true);
+      expect(component.isLeadContactPersonRequired).toBe(true);
+    });
+
+    it('leaves the field optional when the gate is closed', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(false);
+      expect(component.isLeadContactPersonRequired).toBe(false);
+    });
+
+    it('never flags the field as incomplete while the gate is closed', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(false);
+      component.ipsrGeneralInformationBody.lead_contact_person = null;
+      component.ipsrGeneralInformationBody.lead_contact_person_data = null;
+      expect(component.isLeadContactPersonComplete).toBe(true);
+    });
+
+    it('flags an empty contact as incomplete once the gate is open', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(true);
+      component.ipsrGeneralInformationBody.lead_contact_person = null;
+      component.ipsrGeneralInformationBody.lead_contact_person_data = null;
+      expect(component.isLeadContactPersonComplete).toBe(false);
+    });
+
+    it('requires the Active Directory match, not just the typed name', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(true);
+      component.ipsrGeneralInformationBody.lead_contact_person = 'John Doe';
+      component.ipsrGeneralInformationBody.lead_contact_person_data = null;
+      expect(component.isLeadContactPersonComplete).toBe(false);
+    });
+
+    it('is complete when both the name and the directory match are present', () => {
+      mockFieldsManagerService.isLeadContactPersonMandatory2026.mockReturnValue(true);
+      component.ipsrGeneralInformationBody.lead_contact_person = 'John Doe';
+      component.ipsrGeneralInformationBody.lead_contact_person_data = { mail: 'john.doe@cgiar.org' } as any;
+      expect(component.isLeadContactPersonComplete).toBe(true);
     });
   });
 });

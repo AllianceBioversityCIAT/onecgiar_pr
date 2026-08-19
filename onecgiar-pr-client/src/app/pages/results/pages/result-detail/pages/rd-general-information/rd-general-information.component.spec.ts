@@ -336,6 +336,41 @@ describe('RdGeneralInformationComponent', () => {
   });
 
   /**
+   * P2-3225 — Lead Contact Person as a mandatory MDS field, scoped to P25 from the 2026 phase on.
+   * The gate deliberately pairs portfolio AND year: P22 never requires it, and the closed 2025
+   * cycle keeps it optional so already-reported results stay valid.
+   */
+  describe('Lead Contact Person mandatory gate (P2-3225)', () => {
+    const feedbackBlocks = (): number =>
+      (fixture.nativeElement as HTMLElement).querySelectorAll('[appFeedbackValidation]').length;
+
+    it('is open for a 2026 P25 result', () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+      expect(component.isLeadContactPersonRequired()).toBe(true);
+    });
+
+    it('stays closed for a 2025 P25 result', () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+      expect(component.isLeadContactPersonRequired()).toBe(false);
+    });
+
+    it('stays closed for P22 even in a 2026 phase', () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P22', phase_year: 2026 });
+      expect(component.isLeadContactPersonRequired()).toBe(false);
+    });
+
+    it('adds the incomplete-fields entry only from 2026', () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 });
+      fixture.detectChanges();
+      const before = feedbackBlocks();
+
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 });
+      fixture.detectChanges();
+      expect(feedbackBlocks()).toBe(before + 1);
+    });
+  });
+
+  /**
    * P2-3201 (INC-158283) — points 1 and 2. The PO scoped the whole ticket to the CURRENT portfolio
    * on 18 Aug 2026, so every assertion below is paired with its pre-2026 counterpart: results from
    * earlier phases must keep the inline grey guidance boxes and never see the AI notes.

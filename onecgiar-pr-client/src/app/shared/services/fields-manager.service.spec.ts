@@ -83,6 +83,43 @@ describe('FieldsManagerService', () => {
     });
   });
 
+  /**
+   * P2-3225: Lead Contact Person becomes a mandatory MDS field. Unlike the other 2026 thresholds
+   * this one is gated on BOTH the portfolio and the phase year — P22 keeps it optional at any year,
+   * and P25 results from the closed 2025 cycle keep it optional too.
+   */
+  describe('isLeadContactPersonMandatory2026', () => {
+    it('is true for a P25 result from the 2026 phase on', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);
+      expect(service.isLeadContactPersonMandatory2026()).toBe(true);
+      expect(service.fields()['[general-info]-lead_contact_person'].required).toBe(true);
+    });
+
+    it('is false for a 2025 P25 result, since that cycle is closed', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 } as any);
+      expect(service.isLeadContactPersonMandatory2026()).toBe(false);
+      expect(service.fields()['[general-info]-lead_contact_person'].required).toBe(false);
+    });
+
+    it('is false for P22 even in a 2026 phase', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P22', phase_year: 2026 } as any);
+      expect(service.isLeadContactPersonMandatory2026()).toBe(false);
+      expect(service.fields()['[general-info]-lead_contact_person'].required).toBe(false);
+    });
+
+    it('falls back to the open reporting phase when the result carries no year', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+      expect(service.isLeadContactPersonMandatory2026()).toBe(true);
+    });
+
+    it('is false when no phase year is known anywhere', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = undefined as any;
+      expect(service.isLeadContactPersonMandatory2026()).toBe(false);
+    });
+  });
+
   describe('P25 portfolio scenario', () => {
     beforeEach(() => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25', result_type_id: 1 } as CurrentResult);
@@ -505,7 +542,9 @@ describe('FieldsManagerService', () => {
 
   describe('fields computed - static properties', () => {
     beforeEach(() => {
-      dataControlSE.currentResultSignal.set({ portfolio: 'P25', result_type_id: 1 } as CurrentResult);
+      // phase_year is part of the fixture because Lead Contact Person is only mandatory from the
+      // 2026 phase on (P2-3225) — without it the field would fall back to optional.
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', result_type_id: 1, phase_year: 2026 } as CurrentResult);
     });
 
     it('should have correct placeholder for title', () => {
