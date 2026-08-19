@@ -98,7 +98,21 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   gettingReport = false;
-  combine = true;
+  // P2-3322 (2026): signal-backed flag. `validateOrder()` is called from the column headers
+  // (`(click)` / `(keydown.enter)`) but writes the flag 100 ms later inside a `setTimeout`, once the
+  // table has applied `aria-sort`. The template reads it at `@let filteredResults = ... |
+  // resultsListFilter : ... : this.combine : ...`, where it decides whether phases of the same
+  // `result_code` are merged into one row or listed separately. As a plain field the delayed write
+  // notified nothing, so under zoneless change detection sorting by any column other than the code
+  // left the rows merged. The public API stays a plain boolean, so the template, the pipe and the
+  // existing specs are untouched.
+  private readonly _combine = signal<boolean>(true);
+  get combine(): boolean {
+    return this._combine();
+  }
+  set combine(value: boolean) {
+    this._combine.set(value);
+  }
 
   /** Full catalog for the Columns picker (CURRENT). */
   readonly allColumns = RC_COLUMNS;

@@ -14,11 +14,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
   standalone: false
 })
 export class RdPartnersComponent implements OnInit {
-  resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
-  versionId = this?.api?.dataControlSE?.currentResult?.version_id;
-
   alertStatusMessage: string = `Partner organization or CG Center that you collaborated with or are currently collaborating with to generate this result.`;
-  cgCentersMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
 
   disabledText = 'To remove this center, please contact your librarian';
 

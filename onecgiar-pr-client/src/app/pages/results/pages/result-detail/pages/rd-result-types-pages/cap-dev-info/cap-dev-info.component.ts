@@ -61,12 +61,25 @@ export class CapDevInfoComponent implements OnInit {
     this.api.resultsSE.GET_capacityDevelopent().subscribe({
       next: ({ response }) => {
         this.capDevInfoRoutingBody = response;
+        // MySQL returns tinyint values (0/1) from this legacy endpoint. The radio
+        // options use booleans, so normalize them before binding to the control.
+        if (this.capDevInfoRoutingBody && 'is_attending_for_organization' in this.capDevInfoRoutingBody) {
+          this.capDevInfoRoutingBody.is_attending_for_organization = this.normalizeAttendanceValue(
+            this.capDevInfoRoutingBody.is_attending_for_organization
+          );
+        }
 
         this.get_capdev_term_id();
         this.sectionLoading.set(false);
       },
       error: () => this.sectionLoading.set(false)
     });
+  }
+
+  normalizeAttendanceValue(value: unknown): boolean | null {
+    if (value === true || value === 1 || value === '1') return true;
+    if (value === false || value === 0 || value === '0') return false;
+    return null;
   }
 
   clean_capdev_term_2() {

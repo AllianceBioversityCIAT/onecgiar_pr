@@ -1,4 +1,4 @@
-import { Component, Input, EventEmitter, Output } from '@angular/core';
+import { Component, Input, EventEmitter, Output, signal } from '@angular/core';
 import { EvidencesCreateInterface } from '../model/evidencesBody.model';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
@@ -27,7 +27,20 @@ export class EvidenceItemComponent {
   // hide its own index badge and delete button (those live in the accordion header / modal footer).
   @Input() embedded: boolean = false;
   @Output() deleteEvent = new EventEmitter();
-  incorrectFile = false;
+  // P2-3322 (2026): signal-backed flag. `onFileDropped()` sets it to `true` and clears it from a
+  // `setTimeout`, and the template reads it at `[ngClass]` (drag-and-drop border) and at the
+  // `*ngIf` of the "Incorrect format..." message. As a plain field the delayed write notified
+  // nothing, so under zoneless change detection the error message never disappeared. Reading the
+  // signal from the template makes the write schedule its own render pass. Same shape as
+  // ShareRequestModalComponent / CPMultipleWPsComponent; the public API stays a plain boolean, so
+  // the template and the existing specs are untouched.
+  private readonly _incorrectFile = signal<boolean>(false);
+  get incorrectFile(): boolean {
+    return this._incorrectFile();
+  }
+  set incorrectFile(value: boolean) {
+    this._incorrectFile.set(value);
+  }
 
   evidencesType = [
     { id: 0, name: 'Link' },

@@ -17,6 +17,8 @@ export class LeadContactPersonFieldComponent implements OnChanges {
   @Input() body: { lead_contact_person?: string | null; lead_contact_person_data?: User | null };
   /** P25: show required asterisk without using `.pr-input.mandatory` scan on free-text search. */
   @Input() required = false;
+  /** P2-3201: render the field guidance as an ⓘ tooltip instead of the inline grey description box. */
+  @Input() guidanceAsTooltip = false;
   isContactLocked: boolean = false;
 
   private readonly fieldsManager = inject(FieldsManagerService);

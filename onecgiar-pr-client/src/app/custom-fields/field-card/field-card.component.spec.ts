@@ -3,6 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { By } from '@angular/platform-browser';
 import { FieldCardComponent } from './field-card.component';
+import { PrTooltipDirective } from '../../shared/directives/pr-tooltip.directive';
+import { PrTooltipDirectiveModule } from '../../shared/directives/pr-tooltip-directive.module';
 
 @Component({
   template: `<app-field-card
@@ -11,6 +13,7 @@ import { FieldCardComponent } from './field-card.component';
     [required]="required()"
     [hasValue]="hasValue()"
     [hasError]="hasError()"
+    [tooltip]="tooltip()"
     [showHeader]="showHeader()"
     [showDescription]="showDescription()">
     <input class="projected-control" />
@@ -27,6 +30,7 @@ class HostComponent {
   readonly hasError = signal(false);
   readonly showHeader = signal(true);
   readonly showDescription = signal(true);
+  readonly tooltip = signal('');
 }
 
 describe('FieldCardComponent', () => {
@@ -38,12 +42,43 @@ describe('FieldCardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [FieldCardComponent, HostComponent],
-      imports: [CommonModule]
+      imports: [CommonModule, PrTooltipDirectiveModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(HostComponent);
     host = fixture.componentInstance;
     fixture.detectChanges();
+  });
+
+  /** P2-3201: guidance moved out of the inline grey box is only reachable through this trigger. */
+  describe('guidance tooltip trigger', () => {
+    beforeEach(() => {
+      host.tooltip.set('<a href="https://example.org">Glossary</a>');
+      fixture.detectChanges();
+    });
+
+    it('replaces the colour legend with the ⓘ trigger', () => {
+      expect(q('.sgi-dac-info')).toBeTruthy();
+      expect(q('.fch_info_wrap')).toBeNull();
+    });
+
+    it('renders the glyph as a material icon, not as the literal word', () => {
+      const icon = q('.sgi-dac-info .material-icons-round');
+      expect(icon).toBeTruthy();
+      expect(icon.nativeElement.textContent.trim()).toBe('info_outline');
+    });
+
+    it('is pinnable, so the guidance survives the pointer leaving and its links stay clickable', () => {
+      const directive = fixture.debugElement.query(By.directive(PrTooltipDirective)).injector.get(PrTooltipDirective);
+      expect(directive.prTooltipPinnable).toBe(true);
+    });
+
+    it('keeps the colour legend when no guidance is provided', () => {
+      host.tooltip.set('');
+      fixture.detectChanges();
+      expect(q('.sgi-dac-info')).toBeNull();
+      expect(q('.fch_info_wrap')).toBeTruthy();
+    });
   });
 
   describe('header gating', () => {

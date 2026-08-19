@@ -25,10 +25,20 @@
     description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
   </app-alert-status>
 
+  <!-- P2-3201 (INC-158283): the AI assistant note renders once, between "Change result type" and
+       "Title of Result", so it covers both the title and the description field. 2026 portfolio only. -->
+  @if (guidanceAsTooltip()) {
+    <app-alert-status [description]="aiAssistantTitlesNote"></app-alert-status>
+  }
+
+  <!-- P2-3201: from 2026 the guidance leaves the grey "Description" box and becomes an ⓘ tooltip
+       next to the label. Earlier phases keep the inline box (empty tooltip → no trigger rendered). -->
   <app-pr-input
     fieldRef="[general-info]-title"
     [customLabel]="'Title of Result'"
     type="text"
+    [showDescription]="!guidanceAsTooltip()"
+    [tooltip]="guidanceTooltip('[general-info]-title')"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_name"
     [maxWords]="30">
@@ -36,11 +46,16 @@
 
   <app-pr-textarea
     fieldRef="[general-info]-description"
+    [showDescriptionLabel]="!guidanceAsTooltip()"
+    [tooltip]="guidanceTooltip('[general-info]-description')"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description"
     [maxWords]="300"></app-pr-textarea>
 
-  <app-lead-contact-person-field [body]="this.generalInfoBody" [required]="this.isP25()"></app-lead-contact-person-field>
+  <app-lead-contact-person-field
+    [body]="this.generalInfoBody"
+    [required]="this.isP25()"
+    [guidanceAsTooltip]="guidanceAsTooltip()"></app-lead-contact-person-field>
   @if (this.isP25()) {
     <div
       appFeedbackValidation
@@ -48,8 +63,30 @@
       [isComplete]="!!this.generalInfoBody.lead_contact_person && !!this.generalInfoBody.lead_contact_person_data"></div>
   }
 
-  <h1 class="pr_label">Impact Area scores:</h1>
-  <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
+  <!-- P2-3201: the AI-assisted notification sits above the heading and covers the whole section.
+       Static block by explicit request — not collapsible, no "How it works" link. 2026 only. -->
+  @if (guidanceAsTooltip()) {
+    <app-alert-status [description]="aiImpactAreaScoresNote"></app-alert-status>
+  }
+
+  <!-- P2-3201: from 2026 the 0/1/2 scoring guidance moves into an ⓘ tooltip on the heading so the
+       section does not become note-heavy once the AI note is added. Earlier phases keep the box. -->
+  @if (guidanceAsTooltip()) {
+    <h1 class="pr_label impact_scores_heading">
+      Impact Area scores:
+      <button
+        type="button"
+        class="material-icons-round sgi-dac-info"
+        [prTooltip]="impactAreaScoresInfo()"
+        [prTooltipPinnable]="true"
+        prTooltipPosition="bottom"
+        prTooltipStyleClass="sgi-dac-tooltip"
+        aria-label="Impact Area scoring guidance">info_outline</button>
+    </h1>
+  } @else {
+    <h1 class="pr_label">Impact Area scores:</h1>
+    <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
+  }
 
   <!-- Reusable template for the Impact Area component checkboxes (P25).
        The header is an `app-field-card` (not the legacy `app-pr-field-header` + red asterisk) so this
@@ -87,13 +124,17 @@
 
   <!------- [1] ------->
   <div class="block_container">
-    <app-alert-status [description]="genderInformation()"> </app-alert-status>
+    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
+    @if (!guidanceAsTooltip()) {
+      <app-alert-status [description]="genderInformation()"> </app-alert-status>
+    }
     <div class="radio_grid">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-gender_tag_id"
+        [tooltip]="sectionGuidanceTooltip(genderInformation())"
         [(ngModel)]="this.generalInfoBody.gender_tag_id">
       </app-pr-radio-button>
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
@@ -127,13 +168,17 @@
 
   <!------- [2] ------->
   <div class="block_container">
-    <app-alert-status [description]="climateInformation()"> </app-alert-status>
+    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
+    @if (!guidanceAsTooltip()) {
+      <app-alert-status [description]="climateInformation()"> </app-alert-status>
+    }
     <div class="radio_grid" id="climate_change_tag">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-climate_change_tag_id"
+        [tooltip]="sectionGuidanceTooltip(climateInformation())"
         [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
       </app-pr-radio-button>
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
@@ -167,13 +212,17 @@
 
   <!------- [3] ------->
   <div class="block_container">
-    <app-alert-status [description]="nutritionInformation()"> </app-alert-status>
+    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
+    @if (!guidanceAsTooltip()) {
+      <app-alert-status [description]="nutritionInformation()"> </app-alert-status>
+    }
     <div class="radio_grid">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-nutrition_tag_level_id"
+        [tooltip]="sectionGuidanceTooltip(nutritionInformation())"
         [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id">
       </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
@@ -207,13 +256,17 @@
 
   <!------- [4] ------->
   <div class="block_container">
-    <app-alert-status [description]="environmentInformation()"> </app-alert-status>
+    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
+    @if (!guidanceAsTooltip()) {
+      <app-alert-status [description]="environmentInformation()"> </app-alert-status>
+    }
     <div class="radio_grid">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-environmental_biodiversity_tag_level_id"
+        [tooltip]="sectionGuidanceTooltip(environmentInformation())"
         [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
       </app-pr-radio-button>
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3"></div>
@@ -247,13 +300,17 @@
 
   <!------- [5] ------->
   <div class="block_container">
-    <app-alert-status [description]="povertyInformation()"> </app-alert-status>
+    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
+    @if (!guidanceAsTooltip()) {
+      <app-alert-status [description]="povertyInformation()"> </app-alert-status>
+    }
     <div class="radio_grid">
       <app-pr-radio-button
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-poverty_tag_level_id"
+        [tooltip]="sectionGuidanceTooltip(povertyInformation())"
         [(ngModel)]="this.generalInfoBody.poverty_tag_level_id">
       </app-pr-radio-button>
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>

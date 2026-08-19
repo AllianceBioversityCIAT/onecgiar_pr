@@ -19,12 +19,9 @@ import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } 
 })
 export class RdContributorsAndPartnersComponent implements OnInit {
   resultLevelSE = inject(ResultLevelService);
-  resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
-  versionId = this?.api?.dataControlSE?.currentResult?.version_id;
   contributingInitiativesList = [];
   allScienceProgramsList = signal<any[]>([]);
   alertStatusMessage: string = `Partner organization or CG Center that you collaborated with or are currently collaborating with to generate this result.`;
-  cgCentersMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
   tocConsumed = true;
   disabledText = 'To remove this center, please contact your librarian';
   innovationUseResultsSE = inject(InnovationUseResultsService);
@@ -126,14 +123,20 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   contributingCentersInfoNote =
     "The CGIAR Centers listed below were identified in your 2026 ToC. To select a different Center, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
 
+  // P2-3190: read the catalogue through `centersSE.centers()` (signal), NOT `centersSE.centersList` (plain array).
+  // The CLARISA catalogue resolves asynchronously; a plain array is not a reactive dependency, so these computeds
+  // used to cache the empty list they saw on their first evaluation and never rebuilt when the response landed —
+  // the dropdowns opened with "No information found". With the signal they recompute as soon as the catalogue
+  // arrives. This also covers results not aligned to a work package, where `tocReferenceCenterInstitutionIds()`
+  // never changes and therefore was the only thing that could have invalidated the cache.
   referenceCenters = computed(() => {
     const ids = this.rdPartnersSE.tocReferenceCenterInstitutionIds();
-    return (this.centersSE.centersList ?? []).filter(c => ids.includes(c.institutionId));
+    return (this.centersSE.centers() ?? []).filter(c => ids.includes(c.institutionId));
   });
 
   otherCentersList = computed(() => {
     const ids = this.rdPartnersSE.tocReferenceCenterInstitutionIds();
-    return (this.centersSE.centersList ?? []).filter(c => !ids.includes(c.institutionId));
+    return (this.centersSE.centers() ?? []).filter(c => !ids.includes(c.institutionId));
   });
 
   // P2-2998 AC4 (empty state): true when the ToC brought at least one reference center. When false, show the note
@@ -218,10 +221,32 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     "The Science Programs listed below were identified in your 2026 ToC. To select a different Science Program, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
   noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
 
-  // P2-3112: generic "result" wording of the linked/bundled question for non-innovation result types
-  // (Innovation Use/Dev keep their existing "innovation" wording).
-  linkedResultQuestionLabel =
-    'Is this result linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?';
+  // ----- P2-3201 (point 4 / INC-158283): linked / bundled question -----
+  // `result_type_id` 1 = Policy change (same numbering as `prHide` in `routing-data.ts → rdResultTypesPages`
+  // and as the server's ResultTypeEnum). Kept as a named constant so the template stays readable.
+  private readonly POLICY_CHANGE_RESULT_TYPE_ID = 1;
+
+  isPolicyChangeResult = computed(
+    () => this.api.dataControlSE.currentResultSignal?.()?.result_type_id == this.POLICY_CHANGE_RESULT_TYPE_ID
+  );
+
+  /**
+   * Label of the linked/bundled radio for result types that are NOT Innovation Use/Dev (those read their
+   * label from `FieldsManagerService.fields()['[innovation-use-form]-has-innovation-link']`).
+   *
+   * This branch only ever renders under `isCP2026()` — see the template gate — so both texts are
+   * 2026-only by construction and earlier phases keep exactly what they have today, which is what the
+   * Product Owner asked for ("esa pregunta debe ser para este portafolio, no para los pasados").
+   */
+  linkedResultQuestionLabel = computed(() =>
+    this.isPolicyChangeResult()
+      ? 'Have other reported results contributed to this policy change? Such as knowledge product, capacity sharing for development, innovation development, innovation use?'
+      : 'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?'
+  );
+
+  /** Header sitting above the question. 2026 only, and never for Policy change (it has its own self-contained wording). */
+  readonly linkedResultHeaderLabel = 'Is this result linked to, or (for innovations) bundled with, another reported result?';
+  showLinkedResultHeader = computed(() => this.isCP2026() && !this.isPolicyChangeResult());
 
   // The result's own (owner/primary) Science Program: it can never be a contributor to its own result
   // (backend rejects "The owner initiative cannot be shared with itself"), so it must not appear in either dropdown.
@@ -365,6 +390,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
     if (updateComponent) {
       setTimeout(() => {
+        // P2-3322 (2026): this delayed write is what re-shows the Lead partner/center select. It repaints because
+        // `updatingLeadData` is signal-backed on the service — a plain field would leave the select hidden under
+        // zoneless change detection (a `setTimeout` notifies nothing).
         this.rdPartnersSE.updatingLeadData = false;
       }, 50);
     }

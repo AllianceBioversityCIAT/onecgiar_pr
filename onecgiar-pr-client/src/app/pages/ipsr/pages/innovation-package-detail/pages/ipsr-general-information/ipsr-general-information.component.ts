@@ -348,40 +348,52 @@ export class IpsrGeneralInformationComponent implements OnInit {
     </ul>`;
   }
 
+  /**
+   * URL of the section where IPSR evidence is reported (step 3 "Package and Assess").
+   * Implemented as a getter so the result code and phase are read at call time
+   * (a class field initializer would freeze them as undefined).
+   */
+  get evidenceSectionUrl(): string {
+    const resultCode = this.ipsrDataControlSE.resultInnovationCode;
+    const phase = this.ipsrDataControlSE.resultInnovationPhase;
+    const phaseQueryParam = phase ? `?phase=${phase}` : '';
+    return `${environment.frontBaseUrl}ipsr/detail/${resultCode}/ipsr-innovation-use-pathway/step-3${phaseQueryParam}`;
+  }
+
   showAlerts() {
     try {
       this.api.alertsFs.show({
         status: 'success',
         title: 'sd',
-        description: `As a score of 2 has been selected, you are required to provide evidence of the Gender equality tag in the <a href="${environment.frontBaseUrl}ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/general-information" target='_blank' class="open_route">Evidence</a> section `,
+        description: `As a score of 2 has been selected, you are required to provide evidence of the Gender equality tag in the <a href="${this.evidenceSectionUrl}" target='_blank' class="open_route">Evidence</a> section `,
         querySelector: '#gender_tag_alert',
         position: 'beforeend'
       });
       this.api.alertsFs.show({
         status: 'success',
         title: 'sd',
-        description: `As a score of 2 has been selected, you are required to provide evidence of the climate change tag in the <a class="open_route" href="${environment.frontBaseUrl}ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/general-information" target='_blank'>Evidence</a> section`,
+        description: `As a score of 2 has been selected, you are required to provide evidence of the climate change tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
         querySelector: '#climate_change_tag_alert',
         position: 'beforeend'
       });
       this.api.alertsFs.show({
         status: 'success',
         title: 'sd',
-        description: `As a score of 2 has been selected, you are required to provide evidence of the Nutrition, health and food security tag in the <a class="open_route" href="${environment.frontBaseUrl}ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/general-information" target='_blank'>Evidence</a> section`,
+        description: `As a score of 2 has been selected, you are required to provide evidence of the Nutrition, health and food security tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
         querySelector: '#nutrition_tag_alert',
         position: 'beforeend'
       });
       this.api.alertsFs.show({
         status: 'success',
         title: 'sd',
-        description: `As a score of 2 has been selected, you are required to provide evidence of the Environmental health and biodiversity tag in the <a class="open_route" href="${environment.frontBaseUrl}ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/general-information" target='_blank'>Evidence</a> section`,
+        description: `As a score of 2 has been selected, you are required to provide evidence of the Environmental health and biodiversity tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
         querySelector: '#environment_tag_alert',
         position: 'beforeend'
       });
       this.api.alertsFs.show({
         status: 'success',
         title: 'sd',
-        description: `As a score of 2 has been selected, you are required to provide evidence of the Poverty reduction, livelihoods and jobs tag in the <a class="open_route" href="${environment.frontBaseUrl}ipsr/detail/${this.ipsrDataControlSE.resultInnovationCode}/general-information" target='_blank'>Evidence</a> section`,
+        description: `As a score of 2 has been selected, you are required to provide evidence of the Poverty reduction, livelihoods and jobs tag in the <a class="open_route" href="${this.evidenceSectionUrl}" target='_blank'>Evidence</a> section`,
         querySelector: '#poverty_tag_alert',
         position: 'beforeend'
       });

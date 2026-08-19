@@ -9,7 +9,13 @@ function fakeRenderer(): Renderer2 {
     setProperty: (el: any, name: string, value: any) => (el[name] = value),
     appendChild: (parent: Node, child: Node) => parent.appendChild(child),
     removeChild: (parent: Node, child: Node) => parent.removeChild(child),
-    setStyle: (el: HTMLElement, style: string, value: string) => el.style.setProperty(style, value)
+    setStyle: (el: HTMLElement, style: string, value: string) => el.style.setProperty(style, value),
+    // P2-3201: pinning registers document listeners; mirror Renderer2's "returns an unlisten fn" contract.
+    listen: (target: 'document' | Node, event: string, handler: (e: any) => void) => {
+      const node: any = target === 'document' ? document : target;
+      node.addEventListener(event, handler);
+      return () => node.removeEventListener(event, handler);
+    }
   } as unknown as Renderer2;
 }
 
@@ -51,6 +57,7 @@ describe('PrTooltipDirective', () => {
     expect(fresh.prTooltipStyleClass).toBe('');
     expect(fresh.prTooltipDisabled).toBe(false);
     expect(fresh.prTooltipShowDelay).toBe(0);
+    expect(fresh.prTooltipPinnable).toBe(false);
   });
 
   describe('onEnter', () => {
@@ -190,6 +197,103 @@ describe('PrTooltipDirective', () => {
 
     it('destroy without a visible tooltip does not throw', () => {
       expect(() => directive.ngOnDestroy()).not.toThrow();
+    });
+  });
+
+  /**
+   * P2-3201 (INC-158283): guidance tooltips carry links and long scrollable text, so they must
+   * survive the pointer leaving. Opt-in — the ~40 existing hover-only triggers keep click-hides.
+   */
+  describe('pinnable', () => {
+    beforeEach(() => {
+      directive.prTooltipPinnable = true;
+    });
+
+    it('pins on click and keeps the tooltip after the pointer leaves', () => {
+      directive.onEnter();
+      directive.onClick();
+      directive.onLeave();
+      expect(tooltipEl()).not.toBeNull();
+    });
+
+    it('marks the pinned tooltip so it can accept the pointer', () => {
+      directive.onClick();
+      expect(tooltipEl()!.classList.contains('pr-tooltip--pinned')).toBe(true);
+    });
+
+    it('shows the tooltip when clicked without a previous hover', () => {
+      directive.onClick();
+      expect(tooltipEl()).not.toBeNull();
+    });
+
+    it('unpins on a second click', () => {
+      directive.onClick();
+      directive.onClick();
+      expect(tooltipEl()).toBeNull();
+    });
+
+    it('ignores hover while pinned so no second tooltip is created', () => {
+      directive.onClick();
+      directive.onEnter();
+      expect(document.body.querySelectorAll('.pr-tooltip')).toHaveLength(1);
+    });
+
+    it('closes on a click outside the tooltip and outside the trigger', () => {
+      directive.onClick();
+      const outside = document.createElement('div');
+      document.body.appendChild(outside);
+      outside.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(tooltipEl()).toBeNull();
+    });
+
+    it('stays open when the click lands inside the tooltip, so its links stay usable', () => {
+      directive.text = '<a href="#">Glossary</a>';
+      directive.onClick();
+      const link = tooltipEl()!.querySelector('a')!;
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(tooltipEl()).not.toBeNull();
+    });
+
+    it('stays open when the click lands back on the trigger (the host toggles it itself)', () => {
+      document.body.appendChild(host);
+      directive.onClick();
+      host.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(tooltipEl()).not.toBeNull();
+    });
+
+    it('closes on Escape', () => {
+      directive.onClick();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(tooltipEl()).toBeNull();
+    });
+
+    it('ignores other keys', () => {
+      directive.onClick();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      expect(tooltipEl()).not.toBeNull();
+    });
+
+    it('stops listening once dismissed, so a later Escape cannot throw', () => {
+      directive.onClick();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))).not.toThrow();
+    });
+
+    it('does not pin when the tooltip never rendered (disabled trigger)', () => {
+      directive.prTooltipDisabled = true;
+      directive.onClick();
+      expect(tooltipEl()).toBeNull();
+      // Not pinned → a later enable + hover + leave behaves like a plain hover tooltip.
+      directive.prTooltipDisabled = false;
+      directive.onEnter();
+      directive.onLeave();
+      expect(tooltipEl()).toBeNull();
+    });
+
+    it('cleans up a pinned tooltip on destroy', () => {
+      directive.onClick();
+      directive.ngOnDestroy();
+      expect(tooltipEl()).toBeNull();
     });
   });
 

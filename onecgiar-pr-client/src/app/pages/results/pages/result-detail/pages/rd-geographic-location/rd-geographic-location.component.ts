@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit, effect, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeographicLocationBody } from './models/geographicLocationBody';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
@@ -36,6 +36,32 @@ export class RdGeographicLocationComponent {
 
   UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
   ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';
+
+  /**
+   * P2-3201 (point 5 / INC-158283): inside the 2026 portfolio the question is the SAME for every
+   * result type. It supersedes the P2-3036 (AC9) "location of benefit" wording — but only within
+   * 2026: the Product Owner asked explicitly for the change to reach "this portfolio, not the past
+   * ones", so earlier phases keep byte-for-byte the wording they have today.
+   *
+   * `undefined` on the legacy non-innovation path is deliberate: it is what the template passes to
+   * `app-geoscope-management` today, letting that component build its own dynamic label from the
+   * result level. Do not turn it into a string.
+   *
+   * Phase gate reused from {@link FieldsManagerService.isGeographicLocation2026} (thresholds live in
+   * `ReportingDesignYear`), not from a hand-rolled year comparison.
+   */
+  readonly geographicFocusLabel = computed<string | undefined>(() => {
+    if (this.fieldsManagerSE.isGeographicLocation2026()) return 'What is the geographic focus of the result?';
+    return this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
+      ? 'What is the current geographic focus of the innovation development, testing and/or use?'
+      : undefined;
+  });
+
+  /**
+   * Same question, but for the completeness feedback list (`appFeedbackValidation`), which needs a
+   * real string. Falls back to the legacy hard-coded header that the template used before P2-3201.
+   */
+  readonly geographicFocusHeader = computed<string>(() => this.geographicFocusLabel() ?? 'What is the main geographic focus of the Output?');
   geographic_focus = [
     {
       name: 'Global',

@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, signal } from '@angular/core';
 import { ApiService } from '../../services/api/api.service';
 import { ResultsListService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list.service';
 import { LinksToResultsBody } from '../../../pages/results/pages/result-detail/pages/rd-links-to-results/models/linksToResultsBody';
@@ -16,7 +16,21 @@ export class LinksToResultsGlobalComponent implements OnInit {
   linksToResultsBody = new LinksToResultsBody();
   text_to_search: string = '';
   counterPipe = 0;
-  combine = true;
+  // P2-3322: signal-backed flag, same shape as the fix already applied to ResultsListComponent.
+  // `validateOrder()` runs from the column headers' `(click)` but writes the flag 100 ms later inside a
+  // `setTimeout`, once <app-pr-table> has applied `aria-sort`. The template feeds it to the
+  // `filterResultNotLinked` pipe in five places (the table value, the paginator, the total and the empty
+  // state), where it decides whether phases of the same result are merged into one row. As a plain field
+  // the delayed write notified nothing, so under zoneless change detection sorting by any column other than
+  // the result code left the rows merged. The public API stays a plain boolean, so the template, the pipe
+  // and the existing specs are untouched.
+  private readonly _combine = signal<boolean>(true);
+  get combine(): boolean {
+    return this._combine();
+  }
+  set combine(value: boolean) {
+    this._combine.set(value);
+  }
   columnOrder = [
     // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },

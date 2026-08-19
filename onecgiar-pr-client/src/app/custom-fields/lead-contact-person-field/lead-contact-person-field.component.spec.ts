@@ -132,6 +132,32 @@ describe('LeadContactPersonFieldComponent', () => {
     expect(component.hasSelectedContact).toBe(true);
   });
 
+  /**
+   * P2-3201: the guidance moves into an ⓘ tooltip for the 2026 reporting form. Opt-in, because
+   * IPSR and Bilateral reuse this same field and were left on the inline description box.
+   */
+  describe('guidanceAsTooltip', () => {
+    const card = () => fixture.nativeElement.querySelector('app-field-card');
+
+    beforeEach(() => {
+      component.body = { lead_contact_person: null, lead_contact_person_data: null };
+    });
+
+    it('defaults to the inline description box, so other screens are untouched', () => {
+      expect(component.guidanceAsTooltip).toBe(false);
+      fixture.detectChanges();
+      expect(card().querySelector('.field_card_desc')).toBeTruthy();
+      expect(card().querySelector('.sgi-dac-info')).toBeNull();
+    });
+
+    it('moves the same guidance into the tooltip when enabled, losing no text', () => {
+      component.guidanceAsTooltip = true;
+      fixture.detectChanges();
+      expect(card().querySelector('.field_card_desc')).toBeNull();
+      expect(card().querySelector('.sgi-dac-info')).toBeTruthy();
+    });
+  });
+
   describe('User Search Functionality', () => {
     describe('onSearchInput', () => {
       it('should update search query and reset selected user', () => {
