@@ -46,7 +46,13 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   } = { listAttr: '', optionLabel: '', optionValue: '', optionTextValue: '', showInputIfAttr: '' };
   @Output() selectOptionEvent = new EventEmitter<any>();
   private _value: string;
-  /** Unique native radio-group name per instance so browser grouping never bleeds across components. */
+  /**
+   * Unique per-instance prefix. It names the native radio group (so browser grouping never bleeds
+   * across components) AND seeds each option's `id`/`for` pair. P2-3350: the ids used to be
+   * `radio_{{i}}`, indexed only within this component's own *ngFor, so every instance on a page
+   * emitted the same ids — and `<label for>` resolves through getElementById(), which always
+   * returns the FIRST match. Clicking a later group's option text checked an earlier group's radio.
+   */
   private static _nextId = 0;
   readonly groupName = `pr-radio-group-${PrRadioButtonComponent._nextId++}`;
   fieldsManager = inject(FieldsManagerService);

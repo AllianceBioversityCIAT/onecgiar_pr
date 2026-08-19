@@ -7,6 +7,9 @@
       class="radioButtonList"
       [ngClass]="{ verticalAlignment: this.verticalAlignment, 'block-field': (readOnly || disabled || this.rolesSE.readOnly) && !isStatic }"
       [hidden]="hideOptions">
+      <!-- P2-3350: `[name]` alone is swallowed by NgModel's own `name` input and never reaches the
+           DOM, so the radios were never natively grouped (breaking arrow-key navigation). `[attr.name]`
+           puts the attribute back; `[name]` stays for NgModel's form registration. -->
       <div *ngFor="let option of this.options; let i = index">
         <div class="radioButton">
           <input
@@ -14,12 +17,13 @@
             class="pr-native-radio"
             (click)="onSelect(option[optionValue])"
             (ngModelChange)="onValueChange($event)"
-            [id]="'radio_' + i"
+            [id]="groupName + '_' + i"
             [name]="groupName"
+            [attr.name]="groupName"
             [value]="option[optionValue]"
             [(ngModel)]="value"
             [disabled]="(readOnly || disabled || this.rolesSE.readOnly) && !isStatic" />
-          <label [for]="'radio_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
+          <label [for]="groupName + '_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
         </div>
 
         <div

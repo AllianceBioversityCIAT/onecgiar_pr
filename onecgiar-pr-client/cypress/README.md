@@ -171,7 +171,9 @@ documenta y encapsula lo esencial:
   `.pr-input .input_container input`. Nunca recibe `.complete`.
 - **`app-pr-textarea`**: raíz `.pr-field` (+`mandatory`/`complete`), control
   `.pr-field .input_container textarea`.
-- **`app-pr-radio-button`**: los ids `radio_{{i}}` **colisionan** entre grupos → anclar por texto:
+- **`app-pr-radio-button`**: desde P2-3350 los ids son únicos por instancia
+  (`pr-radio-group-{{n}}_{{i}}`), así que el `<label for>` ya activa siempre su propio input. Aun así
+  el id no es estable entre corridas (depende del orden de instanciación) → seguir anclando por texto:
   `cy.contains('.radioButton', 'Yes').find('input.pr-native-radio')`.
 - **`app-pr-yes-or-not`**: `cy.contains('.field_container .choice', 'Yes').click()`; el estado
   seleccionado es `.choice.yes` / `.choice.no`. `FieldsManagerService` puede ocultarlo por portfolio.
