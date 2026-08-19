@@ -38,16 +38,21 @@ export class CPNormalSelectorComponent {
   readonly OTHER_PARTNERS_CODE = this.rdPartnersSE.OTHER_PARTNERS_CODE;
   noPartnersNote = 'No External Partners related to the established HLO/Outcomes were found';
 
+  // P2-3335: both lists read the signal-backed catalogue, not the plain array. The catalogue resolves after the
+  // screen is drawn, and a `computed()` over a plain array caches its first (empty) result forever — that is why
+  // "Other(s) External Partners" showed "No information found" even though the server had returned the whole
+  // catalogue. Reading the signal makes these recompute when it arrives. See InstitutionsService for the detail.
+
   // ToC reference partners = institutions (excluding centers) whose id was referenced by the selected ToC node(s).
   referenceExternalPartners = computed(() => {
     const ids = this.rdPartnersSE.tocReferencePartnerInstitutionIds();
-    return (this.institutionsSE.institutionsWithoutCentersListPartners ?? []).filter((i: any) => ids.includes(i.institutions_id));
+    return (this.institutionsSE.institutionsWithoutCentersPartners() ?? []).filter((i: any) => ids.includes(i.institutions_id));
   });
 
   // "Other(s)" options = the remaining institutions (not referenced by the ToC).
   otherPartnersList = computed(() => {
     const ids = this.rdPartnersSE.tocReferencePartnerInstitutionIds();
-    return (this.institutionsSE.institutionsWithoutCentersListPartners ?? []).filter((i: any) => !ids.includes(i.institutions_id));
+    return (this.institutionsSE.institutionsWithoutCentersPartners() ?? []).filter((i: any) => !ids.includes(i.institutions_id));
   });
 
   // True when the ToC brought at least one EXTERNAL (non-center) partner. toc_partners also carries CENTERS, so we must
