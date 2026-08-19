@@ -63,12 +63,14 @@ describe('PrRadioButtonComponent (CT)', () => {
   });
 
   /**
-   * P2-3321 regression. Several radio groups share one screen (the five Impact Area scores in
-   * General information). The ids used to be `radio_<index>` on every instance, so `label[for]`
-   * resolved to the FIRST matching input in the document and clicking an option's TEXT in a later
-   * group selected that option in the first group instead.
+   * P2-3342 regression, found while validating the Other Output flow (P2-3321).
+   *
+   * Several radio groups share one screen — the five Impact Area scores in General information.
+   * The ids used to be `radio_<index>` on every instance, so `label[for]` resolved to the FIRST
+   * matching input in the document, and clicking an option's TEXT in a later group selected that
+   * option in the first group instead.
    */
-  describe('multiple groups on the same screen (P2-3321)', () => {
+  describe('multiple groups on the same screen (P2-3342)', () => {
     const TWO_GROUPS = `
       <app-pr-radio-button
         label="First group"
