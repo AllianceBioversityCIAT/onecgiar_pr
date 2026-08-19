@@ -9,6 +9,16 @@ export class AddW3RegistryFieldsToClarisaProjects1786980549228
     await queryRunner.query(
       `ALTER TABLE \`clarisa_projects\` ADD \`phase\` int NULL`,
     );
+    // Backfill: every project that existed before this migration is, by
+    // definition, legacy CLARISA-native data (2020-2025), matching the
+    // same phase=2025 backfill CLARISA applied on its own `project` table.
+    // Column stays nullable (not NOT NULL DEFAULT 2025) because
+    // ClarisaEndpoints.projectMapper() always sends an explicit `phase`
+    // value (possibly null, if the source CLARISA env doesn't send it yet)
+    // on every insert/update — a NOT NULL default would break those writes.
+    await queryRunner.query(
+      `UPDATE \`clarisa_projects\` SET \`phase\` = 2025 WHERE \`phase\` IS NULL`,
+    );
     await queryRunner.query(
       `ALTER TABLE \`clarisa_projects\` ADD \`external_source\` varchar(50) NULL`,
     );

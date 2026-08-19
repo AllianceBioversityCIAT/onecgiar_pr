@@ -3,21 +3,31 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { BilateralProjectsService } from './bilateral-projects.service';
 import { ClarisaProject } from '../../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { YearRepository } from '../../results/years/year.repository';
+
+const CURRENT_YEAR = 2026;
 
 describe('BilateralProjectsService', () => {
   let service: BilateralProjectsService;
   let projectRepo: { find: jest.Mock };
   let centerRepo: { findOne: jest.Mock };
+  let yearRepo: { findOne: jest.Mock };
 
   beforeEach(async () => {
     projectRepo = { find: jest.fn().mockResolvedValue([]) };
     centerRepo = { findOne: jest.fn().mockResolvedValue(null) };
+    yearRepo = {
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ year: CURRENT_YEAR, active: true }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BilateralProjectsService,
         { provide: getRepositoryToken(ClarisaProject), useValue: projectRepo },
         { provide: getRepositoryToken(ClarisaCenter), useValue: centerRepo },
+        { provide: YearRepository, useValue: yearRepo },
       ],
     }).compile();
 
@@ -29,6 +39,19 @@ describe('BilateralProjectsService', () => {
     expect(result).toEqual({ projects: [] });
   });
 
+  it('returns empty projects when there is no active year configured', async () => {
+    centerRepo.findOne.mockResolvedValueOnce({
+      code: 'CENTER-99',
+      institutionId: 5,
+    });
+    yearRepo.findOne.mockResolvedValueOnce(null);
+
+    const result = await service.getProjectsByCenter(5);
+
+    expect(result).toEqual({ projects: [] });
+    expect(projectRepo.find).not.toHaveBeenCalled();
+  });
+
   it('matches on organizationCode alone and skips the alias fallback query', async () => {
     centerRepo.findOne.mockResolvedValueOnce({
       code: 'CENTER-99',
@@ -38,6 +61,7 @@ describe('BilateralProjectsService', () => {
       {
         id: 1,
         isActive: true,
+        phase: CURRENT_YEAR,
         obj_organization: { id: 5, name: 'X', acronym: 'X' },
         obj_project_mappings: [
           {
@@ -75,6 +99,7 @@ describe('BilateralProjectsService', () => {
         {
           id: 42,
           isActive: true,
+          phase: CURRENT_YEAR,
           obj_organization: null,
           obj_project_mappings: [],
         },
@@ -94,6 +119,7 @@ describe('BilateralProjectsService', () => {
     const project = {
       id: 7,
       isActive: true,
+      phase: CURRENT_YEAR,
       obj_organization: null,
       obj_project_mappings: [],
     };
@@ -115,6 +141,7 @@ describe('BilateralProjectsService', () => {
       {
         id: 2,
         isActive: true,
+        phase: CURRENT_YEAR,
         obj_organization: null,
         obj_project_mappings: [
           {
@@ -132,5 +159,52 @@ describe('BilateralProjectsService', () => {
 
     expect(result.projects[0].sciencePrograms[0].spName).toBe('SP02');
     expect(result.projects[0].sciencePrograms[0].spShortName).toBe('SP02');
+  });
+
+  it('excludes projects whose phase does not match the current active year', async () => {
+    centerRepo.findOne.mockResolvedValueOnce({
+      code: 'CENTER-99',
+      institutionId: 5,
+    });
+    projectRepo.find.mockResolvedValueOnce([
+      {
+        id: 3,
+        isActive: true,
+        phase: 2025, // legacy phase, active year is 2026 in this test suite
+        obj_organization: null,
+        obj_project_mappings: [],
+      },
+    ]);
+
+    const result = await service.getProjectsByCenter(5);
+
+    expect(result.projects).toEqual([]);
+  });
+
+  it('only returns the subset of projects matching the current phase when phases are mixed', async () => {
+    centerRepo.findOne.mockResolvedValueOnce({
+      code: 'CENTER-99',
+      institutionId: 5,
+    });
+    projectRepo.find.mockResolvedValueOnce([
+      {
+        id: 4,
+        isActive: true,
+        phase: 2025,
+        obj_organization: null,
+        obj_project_mappings: [],
+      },
+      {
+        id: 5,
+        isActive: true,
+        phase: CURRENT_YEAR,
+        obj_organization: null,
+        obj_project_mappings: [],
+      },
+    ]);
+
+    const result = await service.getProjectsByCenter(5);
+
+    expect(result.projects.map((p) => p.id)).toEqual([5]);
   });
 });

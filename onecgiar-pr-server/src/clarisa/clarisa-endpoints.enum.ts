@@ -653,13 +653,32 @@ export class ClarisaEndpoints<Entity, Dto> {
       isActive: item.is_active ?? null,
       createdBy: item.created_by ?? null,
       updatedBy: item.updated_by ?? null,
-      phase: item.phase ?? null,
-      externalSource: item.external_source ?? null,
-      externalProjectId: item.external_project_id ?? null,
-      externalCode: item.external_code ?? null,
-      sourceCenterAcronym: item.source_center_acronym ?? null,
-      sourceCenterName: item.source_center_name ?? null,
-      sourceStatus: item.source_status ?? null,
+      // W3 Registry fields: CLARISA environments before `w3-registry-integration`
+      // don't send these at all (the key is `undefined`, not `null`). Omit the key
+      // entirely in that case so syncProjects()'s update() doesn't null out a
+      // column CLARISA simply doesn't support yet on this environment — an
+      // explicit `null` here means "CLARISA sent null", not "CLARISA has no such
+      // field". Without this, every 8h sync would wipe the phase-2025 backfill
+      // (and any other W3 field) back to NULL on every existing project.
+      ...(item.phase !== undefined ? { phase: item.phase } : {}),
+      ...(item.external_source !== undefined
+        ? { externalSource: item.external_source }
+        : {}),
+      ...(item.external_project_id !== undefined
+        ? { externalProjectId: item.external_project_id }
+        : {}),
+      ...(item.external_code !== undefined
+        ? { externalCode: item.external_code }
+        : {}),
+      ...(item.source_center_acronym !== undefined
+        ? { sourceCenterAcronym: item.source_center_acronym }
+        : {}),
+      ...(item.source_center_name !== undefined
+        ? { sourceCenterName: item.source_center_name }
+        : {}),
+      ...(item.source_status !== undefined
+        ? { sourceStatus: item.source_status }
+        : {}),
     }));
   }
 }

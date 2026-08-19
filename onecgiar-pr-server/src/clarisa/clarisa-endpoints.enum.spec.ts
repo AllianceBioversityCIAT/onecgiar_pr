@@ -51,17 +51,45 @@ describe('ClarisaEndpoints', () => {
     });
   });
 
-  it('projectMapper should null out W3 Registry fields when absent (legacy CLARISA-native rows)', () => {
+  it('projectMapper should OMIT W3 Registry fields entirely when the source field is undefined (not send them as null)', () => {
+    // Regression guard: syncProjects() spreads this object straight into
+    // projectRepo.update(). If these keys were present with value `null` (the
+    // old behavior), every 8h sync against a CLARISA environment that doesn't
+    // yet send these fields would silently wipe out real/backfilled data
+    // (e.g. the phase=2025 legacy backfill) on every existing project.
     const [mapped] = ClarisaEndpoints.projectMapper([{ id: 2 } as any]);
 
-    expect(mapped).toMatchObject({
-      phase: null,
-      externalSource: null,
-      externalProjectId: null,
-      externalCode: null,
-      sourceCenterAcronym: null,
-      sourceCenterName: null,
-      sourceStatus: null,
-    });
+    expect(Object.prototype.hasOwnProperty.call(mapped, 'phase')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(mapped, 'externalSource')).toBe(
+      false,
+    );
+    expect(
+      Object.prototype.hasOwnProperty.call(mapped, 'externalProjectId'),
+    ).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(mapped, 'externalCode')).toBe(
+      false,
+    );
+    expect(
+      Object.prototype.hasOwnProperty.call(mapped, 'sourceCenterAcronym'),
+    ).toBe(false);
+    expect(
+      Object.prototype.hasOwnProperty.call(mapped, 'sourceCenterName'),
+    ).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(mapped, 'sourceStatus')).toBe(
+      false,
+    );
+  });
+
+  it('projectMapper should still set an explicit null when CLARISA sends null (vs. omitting the field entirely)', () => {
+    const [mapped] = ClarisaEndpoints.projectMapper([
+      { id: 3, phase: null, source_center_acronym: null } as any,
+    ]);
+
+    expect(Object.prototype.hasOwnProperty.call(mapped, 'phase')).toBe(true);
+    expect(mapped.phase).toBeNull();
+    expect(
+      Object.prototype.hasOwnProperty.call(mapped, 'sourceCenterAcronym'),
+    ).toBe(true);
+    expect(mapped.sourceCenterAcronym).toBeNull();
   });
 });

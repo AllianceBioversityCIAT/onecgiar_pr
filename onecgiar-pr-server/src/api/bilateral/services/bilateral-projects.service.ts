@@ -4,6 +4,7 @@ import { In, IsNull, Repository } from 'typeorm';
 import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaProject } from '../../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE } from '../constants/w3-center-alias.constants';
+import { YearRepository } from '../../results/years/year.repository';
 
 @Injectable()
 export class BilateralProjectsService {
@@ -14,6 +15,7 @@ export class BilateralProjectsService {
     private readonly projectRepo: Repository<ClarisaProject>,
     @InjectRepository(ClarisaCenter)
     private readonly centerRepo: Repository<ClarisaCenter>,
+    private readonly yearRepository: YearRepository,
   ) {}
 
   async getProjectsByCenter(centerId: number | string) {
@@ -34,6 +36,16 @@ export class BilateralProjectsService {
 
     if (!center) {
       this.logger.warn(`Center not found for code: ${centerId}`);
+      return { projects: [] };
+    }
+
+    const activeYear = await this.yearRepository.findOne({
+      where: { active: true },
+    });
+    if (!activeYear) {
+      this.logger.warn(
+        'No active year configured (year.active) — cannot scope bilateral projects by phase',
+      );
       return { projects: [] };
     }
 
@@ -98,7 +110,25 @@ export class BilateralProjectsService {
       );
     }
 
-    const mapped = activeProjects.map((project) => ({
+    const currentPhaseProjects = activeProjects.filter(
+      (p) => p.phase === activeYear.year,
+    );
+    this.logger.log(
+      `${currentPhaseProjects.length} projects match current phase=${activeYear.year}`,
+    );
+
+    if (currentPhaseProjects.length === 0 && activeProjects.length > 0) {
+      const foundPhases = [...new Set(activeProjects.map((p) => p.phase))].join(
+        ', ',
+      );
+      this.logger.warn(
+        `All ${activeProjects.length} active project(s) have a phase different from ` +
+          `the current active year (${activeYear.year}) — found phase(s): ${foundPhases}. ` +
+          `Check whether the CLARISA project sync is up to date for this phase.`,
+      );
+    }
+
+    const mapped = currentPhaseProjects.map((project) => ({
       id: project.id,
       shortName: project.shortName,
       fullName: project.fullName,
