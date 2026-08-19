@@ -97,7 +97,7 @@ describe('RdContributorsAndPartnersComponent', () => {
         { provide: ChangeDetectorRef, useValue: mockChangeDetectorRef },
         { provide: InstitutionsService, useValue: {} },
         { provide: RolesService, useValue: {} },
-        { provide: CentersService, useValue: {} },
+        { provide: CentersService, useValue: { centers: signal([]) } },
         { provide: ResultLevelService, useValue: {} },
         { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => false, isP25: () => false } }
       ],
@@ -547,7 +547,7 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
         { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn() } },
         { provide: InstitutionsService, useValue: {} },
         { provide: RolesService, useValue: {} },
-        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG } },
+        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) } },
         { provide: ResultLevelService, useValue: {} },
         { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => true, isP25: () => true } }
       ],

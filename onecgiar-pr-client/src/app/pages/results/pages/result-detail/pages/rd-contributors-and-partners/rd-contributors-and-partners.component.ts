@@ -123,14 +123,20 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   contributingCentersInfoNote =
     "The CGIAR Centers listed below were identified in your 2026 ToC. To select a different Center, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
 
+  // P2-3190: read the catalogue through `centersSE.centers()` (signal), NOT `centersSE.centersList` (plain array).
+  // The CLARISA catalogue resolves asynchronously; a plain array is not a reactive dependency, so these computeds
+  // used to cache the empty list they saw on their first evaluation and never rebuilt when the response landed —
+  // the dropdowns opened with "No information found". With the signal they recompute as soon as the catalogue
+  // arrives. This also covers results not aligned to a work package, where `tocReferenceCenterInstitutionIds()`
+  // never changes and therefore was the only thing that could have invalidated the cache.
   referenceCenters = computed(() => {
     const ids = this.rdPartnersSE.tocReferenceCenterInstitutionIds();
-    return (this.centersSE.centersList ?? []).filter(c => ids.includes(c.institutionId));
+    return (this.centersSE.centers() ?? []).filter(c => ids.includes(c.institutionId));
   });
 
   otherCentersList = computed(() => {
     const ids = this.rdPartnersSE.tocReferenceCenterInstitutionIds();
-    return (this.centersSE.centersList ?? []).filter(c => !ids.includes(c.institutionId));
+    return (this.centersSE.centers() ?? []).filter(c => !ids.includes(c.institutionId));
   });
 
   // P2-2998 AC4 (empty state): true when the ToC brought at least one reference center. When false, show the note
