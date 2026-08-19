@@ -644,4 +644,38 @@ describe('SectionContributorsComponent', () => {
       expect(component.selectedProjectIds()).toEqual([1]);
     });
   });
+
+  // P2-3348 (same defect class, found while fixing Capacity Sharing): `contributing-selection` was
+  // tracked here while both multi-selects that feed it render `[required]="false"`. Submit is gated on
+  // overallStatus() === 'complete', so a field the UI labels Optional could hold the button disabled
+  // with nothing on screen explaining why.
+  describe('updateContributorsMds', () => {
+    it('tracks only the lead pair, never the optional contributing selection', () => {
+      build();
+      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+      component.readonlyLeadCenterInstitutionId = 7;
+      component.readonlyLeadProjectId = 3;
+      component.selectedCenterInstitutionIds.set([7, 9]);
+      component.selectedProjectIds.set([3, 4]);
+
+      component.updateContributorsMds();
+
+      const [section, items, group] = tracker.setSectionFields.mock.calls.at(-1);
+      expect(section).toBe('contributors');
+      expect(group).toBe('partners');
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project']);
+    });
+
+    it('leaves the lead pair unfilled when the result has no lead center or project yet', () => {
+      build();
+      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+      component.readonlyLeadCenterInstitutionId = null;
+      component.readonlyLeadProjectId = null;
+
+      component.updateContributorsMds();
+
+      const items = tracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(items.every((i: any) => i.filled === false)).toBe(true);
+    });
+  });
 });

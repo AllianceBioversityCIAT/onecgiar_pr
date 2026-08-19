@@ -150,15 +150,18 @@ describe('TypeCapacitySharingComponent', () => {
     });
   });
 
+  // P2-3346/P2-3348: the four participant counts render as OPTIONAL, so tracking three of them
+  // individually (and ignoring "Unknown" entirely) both contradicted the labels and could hold the
+  // Submit button disabled — it is gated on overallStatus() === 'complete'. AC1 lists "Number of
+  // people trained" as one mandatory field, and the on-screen hint sends users to "Unknown" when the
+  // gender split is unavailable, so the group is what has to be satisfied.
   describe('updateMds', () => {
     it('counts nothing while every field is empty', () => {
       build();
       component.body = {};
       component.updateMds();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
-        { key: 'female-using', label: 'Female participants', filled: false },
-        { key: 'male-using', label: 'Male participants', filled: false },
-        { key: 'non-binary-using', label: 'Non-binary participants', filled: false },
+        { key: 'people-trained', label: 'Number of people trained', filled: false },
         { key: 'delivery-method', label: 'Delivery method', filled: false },
         { key: 'length-of-training', label: 'Length of training', filled: false },
         { key: 'attendance', label: 'Attendance on behalf of an organization', filled: false },
@@ -177,13 +180,22 @@ describe('TypeCapacitySharingComponent', () => {
       };
       component.updateMds();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
-        { key: 'female-using', label: 'Female participants', filled: true },
-        { key: 'male-using', label: 'Male participants', filled: false },
-        { key: 'non-binary-using', label: 'Non-binary participants', filled: false },
+        { key: 'people-trained', label: 'Number of people trained', filled: true },
         { key: 'delivery-method', label: 'Delivery method', filled: false },
         { key: 'length-of-training', label: 'Length of training', filled: true },
         { key: 'attendance', label: 'Attendance on behalf of an organization', filled: true },
       ]);
+    });
+
+    // The exact path the field's own hint tells the user to take.
+    it('satisfies the group from "Unknown" alone, with no gender split at all', () => {
+      build();
+      component.body = { has_unkown_using: 12 };
+      component.updateMds();
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith(
+        'type-specific',
+        expect.arrayContaining([{ key: 'people-trained', label: 'Number of people trained', filled: true }])
+      );
     });
 
     it('counts a fully answered form as filled', () => {
@@ -198,9 +210,7 @@ describe('TypeCapacitySharingComponent', () => {
       };
       component.updateMds();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
-        { key: 'female-using', label: 'Female participants', filled: true },
-        { key: 'male-using', label: 'Male participants', filled: true },
-        { key: 'non-binary-using', label: 'Non-binary participants', filled: true },
+        { key: 'people-trained', label: 'Number of people trained', filled: true },
         { key: 'delivery-method', label: 'Delivery method', filled: true },
         { key: 'length-of-training', label: 'Length of training', filled: true },
         { key: 'attendance', label: 'Attendance on behalf of an organization', filled: true },

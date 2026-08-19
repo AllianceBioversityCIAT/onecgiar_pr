@@ -153,10 +153,24 @@ export class TypeCapacitySharingComponent implements OnInit {
   }
 
   updateMds(): void {
+    // P2-3348: the checklist used to track Female/Male/Non-binary as three separate items even though
+    // all four counts render as OPTIONAL — and since Submit is gated on overallStatus() === 'complete',
+    // fields the UI marks optional silently held the button disabled. "Unknown" was neither required
+    // nor tracked, so there was no rule at all. One group item, satisfied by any single count, matches
+    // both AC1 and the on-screen guidance. `0 != null` is true, so a zero counts as answered.
+    const peopleTrained = [
+      this.body.female_using,
+      this.body.male_using,
+      this.body.non_binary_using,
+      this.body.has_unkown_using,
+    ];
+
     this.mdsTracker.setSectionFields('type-specific', [
-      { key: 'female-using', label: 'Female participants', filled: this.body.female_using != null },
-      { key: 'male-using', label: 'Male participants', filled: this.body.male_using != null },
-      { key: 'non-binary-using', label: 'Non-binary participants', filled: this.body.non_binary_using != null },
+      {
+        key: 'people-trained',
+        label: 'Number of people trained',
+        filled: peopleTrained.some(count => count != null),
+      },
       { key: 'delivery-method', label: 'Delivery method', filled: !!this.body.capdev_delivery_method_id },
       { key: 'length-of-training', label: 'Length of training', filled: this.body.capdev_term_id != null },
       {

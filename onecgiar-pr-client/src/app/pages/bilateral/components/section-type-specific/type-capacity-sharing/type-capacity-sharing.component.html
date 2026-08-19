@@ -1,6 +1,10 @@
 <div class="tsf-fields">
+  <!-- P2-3346/P2-3348: AC1 lists "Number of people trained" as ONE mandatory MDS field, and the hint
+       below tells the user to fall back to "Unknown" when the gender split is unavailable. So the
+       GROUP is mandatory — any one of the four counts satisfies it — while the individual inputs stay
+       optional. The MDS tracker registers a single `people-trained` item to match (see updateMds). -->
   <div class="tsf-field">
-    <label class="tsf-label">Number of people trained</label>
+    <label class="tsf-label">Number of people trained <span class="tsf-required">*</span></label>
     <p class="tsf-hint">{{ peopleTrainedDesc }}</p>
   </div>
 

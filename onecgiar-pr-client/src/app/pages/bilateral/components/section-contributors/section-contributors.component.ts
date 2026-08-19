@@ -227,13 +227,18 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     this.updateContributorsMds();
   }
 
-  /** Partner slots for the progress aside (ToC publishes its own group). */
+  /**
+   * Partner slots for the progress aside (ToC publishes its own group).
+   *
+   * Same defect class as P2-3348, found while fixing it: `contributing-selection` used to be tracked
+   * here even though both multi-selects that feed it render `[required]="false"` — and Submit is gated
+   * on `overallStatus() === 'complete'`, so a field the UI labels Optional could hold the button
+   * disabled with nothing on screen explaining why. The tracker must mirror the Mandatory/Optional
+   * affordance the user actually sees. Contributing centers and projects are genuinely optional
+   * additions beyond the lead pair, so they are no longer counted. If product wants them mandatory,
+   * flip `[required]` in the template and re-add the item here — not the other way round.
+   */
   updateContributorsMds(): void {
-    const hasExtra =
-      this.selectedCenterInstitutionIds().some(id => id !== this.readonlyLeadCenterInstitutionId) ||
-      this.selectedProjectIds().some(id => id !== this.readonlyLeadProjectId) ||
-      this.selectedCenterInstitutionIds().length > 0 ||
-      this.selectedProjectIds().length > 0;
     this.mdsTracker.setSectionFields(
       'contributors',
       [
@@ -246,11 +251,6 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
           key: 'lead-project',
           label: 'Lead project',
           filled: this.readonlyLeadProjectId != null,
-        },
-        {
-          key: 'contributing-selection',
-          label: 'Contributing centers / projects',
-          filled: hasExtra,
         },
       ],
       PARTNERS_MDS_GROUP
