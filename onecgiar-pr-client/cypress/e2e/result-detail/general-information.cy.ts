@@ -94,9 +94,10 @@ describeWithToken('Result Detail — General information', () => {
       });
 
     // ---- radio group (app-pr-radio-button) ------------------------------------------------
-    // Ids (`radio_0`, `radio_1`, …) repeat across every group, so the option is anchored by text
-    // inside the first group. Only the first two options are used: the highest score opens an extra
-    // mandatory impact-area sub-question that would change what "saveable" means for this section.
+    // The option is anchored by text inside the first group. (Radio ids no longer repeat across
+    // groups — P2-3342 made them per-instance — but text anchoring is clearer here and survives
+    // renaming.) Only the first two options are used: the highest score opens an extra mandatory
+    // impact-area sub-question that would change what "saveable" means for this section.
     cy.get('app-rd-general-information app-pr-radio-button')
       .first()
       .within(() => {

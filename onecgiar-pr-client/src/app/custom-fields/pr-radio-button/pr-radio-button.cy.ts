@@ -61,4 +61,69 @@ describe('PrRadioButtonComponent (CT)', () => {
       cy.wrap(null).then(() => expect((w.component as any).model).to.equal(null));
     });
   });
+
+  /**
+   * P2-3342 regression, found while validating the Other Output flow (P2-3321).
+   *
+   * Several radio groups share one screen — the five Impact Area scores in General information.
+   * The ids used to be `radio_<index>` on every instance, so `label[for]` resolved to the FIRST
+   * matching input in the document, and clicking an option's TEXT in a later group selected that
+   * option in the first group instead.
+   */
+  describe('multiple groups on the same screen (P2-3342)', () => {
+    const TWO_GROUPS = `
+      <app-pr-radio-button
+        label="First group"
+        [options]="options"
+        optionValue="id"
+        optionLabel="name"
+        [isStatic]="true"
+        [(ngModel)]="modelA">
+      </app-pr-radio-button>
+      <app-pr-radio-button
+        label="Second group"
+        [options]="options"
+        optionValue="id"
+        optionLabel="name"
+        [isStatic]="true"
+        [(ngModel)]="modelB">
+      </app-pr-radio-button>`;
+
+    const mountTwo = () =>
+      mountCF(TWO_GROUPS, { componentProperties: { options: OPTIONS, modelA: null, modelB: null } });
+
+    it('gives every radio a document-unique id', () => {
+      mountTwo();
+      cy.get(RADIO).should('have.length', 6);
+      cy.get(RADIO).then($radios => {
+        const ids = [...$radios].map(r => r.id);
+        expect(ids.filter(Boolean), 'every radio has an id').to.have.length(6);
+        expect(new Set(ids).size, `ids must be unique, got ${ids.join(', ')}`).to.equal(6);
+      });
+    });
+
+    it('each label points at a radio inside its own group', () => {
+      mountTwo();
+      cy.get('app-pr-radio-button').each($group => {
+        cy.wrap($group).within(() => {
+          cy.get('label').each($label => {
+            const target = $label.attr('for');
+            cy.wrap($group).find(`#${target}`).should('have.length', 1);
+          });
+        });
+      });
+    });
+
+    it('clicking an option label in the second group updates only the second model', () => {
+      mountTwo().then(w => {
+        cy.get('app-pr-radio-button')
+          .eq(1)
+          .within(() => cy.contains('label.name', 'Option C').click({ force: true }));
+        cy.wrap(null).then(() => {
+          expect((w.component as any).modelB, 'second group took the click').to.equal(3);
+          expect((w.component as any).modelA, 'first group was not touched').to.equal(null);
+        });
+      });
+    });
+  });
 });

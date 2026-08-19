@@ -14,9 +14,10 @@
  *  - `app-pr-multi-select` has NO `.pr-field`; `a.field .text` always shows the placeholder. The
  *    selection is rendered as `.selected_container .pr_chip_selected` chips plus a
  *    `.selected_container .pr_description` reading `<selectedLabel> (n)`.
- *  - Radio ids are unique per instance since P2-3350 (`pr-radio-group-<n>_<i>`), but `<n>` depends on
- *    instantiation order and is not stable across runs, so everything is still anchored by text or by
- *    a component-scoped `cy.get`.
+ *  - Radio ids are per-instance since P2-3342 / P2-3350 (`pr-radio-group-<n>_<i>`); they used to
+ *    collide as `radio_0`, `radio_1`, … across groups. `<n>` comes from instantiation order, so it is
+ *    NOT stable across runs: keep anchoring by text or by a component-scoped `cy.get`, which is stable
+ *    either way — do not start relying on the ids.
  *  - `app-save-button`'s clickable node is a wrapping `<div>`, not a `<button>` — click
  *    `app-save-button app-pr-button`. While saving it renders `Saving`; the missing-field panel is
  *    `.fields-feedback-list`, collapsed to a `.counter` (`n alerts`) until `.back_icon` is clicked.

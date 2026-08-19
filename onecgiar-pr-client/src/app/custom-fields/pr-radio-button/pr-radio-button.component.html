@@ -23,6 +23,12 @@
             [value]="option[optionValue]"
             [(ngModel)]="value"
             [disabled]="(readOnly || disabled || this.rolesSE.readOnly) && !isStatic" />
+          <!-- P2-3342 / P2-3350 (same defect, reported twice): the id must carry `groupName`, not just the
+               option index. With several radio groups on one screen (the five Impact Area scores, or Capacity
+               Sharing's three questions) every instance emitted the same `radio_0/1/2` ids, and `label[for]`
+               resolves to the FIRST match in the document — so clicking the text of an option in the Poverty
+               group selected that option in the Gender group instead. `name` was already made per-instance for
+               the same reason; the id/for pair was left behind. -->
           <label [for]="groupName + '_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
         </div>
 
