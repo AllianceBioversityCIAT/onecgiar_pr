@@ -7,8 +7,17 @@ import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.
 import { BilateralExpandableStateService } from '../../../services/bilateral-expandable-state.service';
 import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
 import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
+import { WordCounterService } from '../../../../../shared/services/word-counter.service';
 
 const SECTION_NAME = 'type-specific';
+
+/**
+ * P2-3340: the ceiling `pr-input` already paints red. It never blocked anything — `maxWords` is
+ * presentational across the whole platform — so a 12-word short title saved happily. The bilateral
+ * Submit now refuses on it; the threshold is inclusive (10 words is valid, 11 is not), matching
+ * `pr-word-counter`'s own contract test.
+ */
+const SHORT_TITLE_MAX_WORDS = 10;
 
 /** Nature/typology id whose innovations are varieties or breeds — gates is_new_variety/number_of_varieties. */
 const VARIETY_NATURE_ID = 12;
@@ -55,6 +64,7 @@ export class TypeInnovationDevComponent implements OnInit {
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
   private readonly autoSave = inject(BilateralAutoSaveService);
   private readonly expandableState = inject(BilateralExpandableStateService);
+  private readonly wordCounter = inject(WordCounterService);
   readonly innovationControlListSE = inject(InnovationControlListService);
 
   body: any = {};
@@ -62,6 +72,8 @@ export class TypeInnovationDevComponent implements OnInit {
   showAllFields = signal(false);
 
   readonly shortTitleDesc = SHORT_TITLE_DESC;
+  /** Bound by the template so the counter and the Submit check can never drift apart. */
+  readonly shortTitleMaxWords = SHORT_TITLE_MAX_WORDS;
   readonly collaboratorsDesc = COLLABORATORS_DESC;
   readonly evidenceJustificationDesc = EVIDENCE_JUSTIFICATION_DESC;
   readonly referenceMaterialsDesc = REFERENCE_MATERIALS_DESC;
@@ -157,8 +169,20 @@ export class TypeInnovationDevComponent implements OnInit {
   }
 
   updateMds(): void {
+    const shortTitleWords = this.wordCounter.counter(this.body.short_title);
+    const shortTitleOverLimit = shortTitleWords > SHORT_TITLE_MAX_WORDS;
+
     this.mdsTracker.setSectionFields('type-specific', [
-      { key: 'short-title', label: 'Short title', filled: !!this.body.short_title },
+      {
+        key: 'short-title',
+        label: 'Short title',
+        // Still "filled" when over the limit — it IS answered, just not acceptably. See MdsFieldItem.
+        filled: !!this.body.short_title,
+        invalid: shortTitleOverLimit,
+        invalidReason: shortTitleOverLimit
+          ? `${shortTitleWords} words; the maximum is ${SHORT_TITLE_MAX_WORDS}`
+          : undefined,
+      },
       {
         key: 'nature',
         label: 'Innovation typology (nature)',

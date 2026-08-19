@@ -125,4 +125,24 @@ describe('BilateralMdsTrackerService', () => {
       expect(s.fields).toEqual([]);
     }
   });
+
+  // P2-3340: an over-limit field is answered but not acceptable. It has to keep counting toward the
+  // percentage (otherwise the section silently reopens) while still refusing Submit.
+  describe('invalidFields', () => {
+    it('is empty while nothing breaks a rule', () => {
+      service.setSectionFields('type-specific', [{ key: 'short-title', label: 'Short title', filled: true }]);
+      expect(service.invalidFields()).toEqual([]);
+    });
+
+    it('collects invalid fields across sections without unfilling them', () => {
+      service.setSectionFields('general-info', [{ key: 'title', label: 'Title', filled: true }]);
+      service.setSectionFields('type-specific', [
+        { key: 'short-title', label: 'Short title', filled: true, invalid: true, invalidReason: 'too long' },
+      ]);
+
+      expect(service.invalidFields().map(f => f.key)).toEqual(['short-title']);
+      expect(service.overallPercentage()).toBe(100);
+      expect(service.overallStatus()).toBe('complete');
+    });
+  });
 });

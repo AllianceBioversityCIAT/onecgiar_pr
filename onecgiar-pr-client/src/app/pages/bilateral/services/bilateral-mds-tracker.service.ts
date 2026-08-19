@@ -8,6 +8,15 @@ export interface MdsFieldItem {
   filled: boolean;
   /** Optional subgroup label in the aside (e.g. "Theory of Change"). */
   group?: string;
+  /**
+   * P2-3340: the field holds a value but that value breaks a rule — today only the word ceilings,
+   * which `pr-input`/`pr-textarea` merely paint red without blocking anything. Kept separate from
+   * `filled` on purpose: an over-limit field IS answered, so it must keep counting toward the
+   * percentage. It blocks Submit through `invalidFields`, not by silently reopening a section.
+   */
+  invalid?: boolean;
+  /** Shown to the user when Submit is refused. Required whenever `invalid` is true. */
+  invalidReason?: string;
 }
 
 export interface MdsSectionStatus {
@@ -54,6 +63,14 @@ export class BilateralMdsTrackerService {
     if (pct >= 100) return 'complete';
     return 'partial';
   });
+
+  /**
+   * Every answered-but-invalid field, across all sections. Submit reads this to refuse and say WHY;
+   * deliberately not folded into `overallStatus`, which would disable the button with no explanation.
+   */
+  readonly invalidFields = computed<MdsFieldItem[]>(() =>
+    this.sectionStatus().flatMap(section => section.fields.filter(field => field.invalid))
+  );
 
   /** Replace all checklist items for a section (or only a group when `group` is set). */
   setSectionFields(sectionName: string, items: MdsFieldItem[], group?: string): void {

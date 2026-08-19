@@ -313,6 +313,23 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   submitResult(): void {
     const rid = this.resultId();
     if (!rid) return;
+
+    // P2-3340: word ceilings are painted red by pr-input but have never blocked anything anywhere in
+    // PRMS, so an over-limit Short title used to submit unchanged. Refuse here and name the offending
+    // fields — the alternative, folding this into overallStatus(), would grey out Submit with nothing
+    // on screen explaining why.
+    const invalid = this.mdsTracker.invalidFields();
+    if (invalid.length) {
+      this.api.alertsFe.show({
+        id: 'bilateralSubmitInvalidFields',
+        title: 'Fix these fields before submitting',
+        description: invalid.map(field => `${field.label}: ${field.invalidReason}`).join('<br>'),
+        status: 'error',
+        closeIn: 8000
+      });
+      return;
+    }
+
     this.isSubmitting.set(true);
     this.creationService.submitResult(rid).subscribe({
       next: () => {

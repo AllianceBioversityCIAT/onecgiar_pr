@@ -64,6 +64,7 @@ describe('BilateralResultCreatorComponent', () => {
       sectionStatus: signal([]),
       overallPercentage: signal(0),
       overallStatus: signal('empty'),
+      invalidFields: signal([]),
       reset: jest.fn(),
     };
 
@@ -172,6 +173,24 @@ describe('BilateralResultCreatorComponent', () => {
     component.resultId.set(42);
     component.submitResult();
     expect(creationService.submitResult).toHaveBeenCalledWith(42);
+  });
+
+  // P2-3340: word ceilings never blocked anything in PRMS, so an over-limit Short title used to
+  // submit unchanged. Refused here rather than by grepping out overallStatus(), so the user is told why.
+  it('refuses to submit while any field is answered but invalid', () => {
+    const show = jest.spyOn((component as any).api.alertsFe, 'show').mockImplementation(() => undefined);
+    mdsTracker.invalidFields.set([
+      { key: 'short-title', label: 'Short title', filled: true, invalid: true, invalidReason: '12 words; the maximum is 10' },
+    ]);
+    component.resultId.set(42);
+
+    component.submitResult();
+
+    expect(creationService.submitResult).not.toHaveBeenCalled();
+    expect(component.isSubmitting()).toBe(false);
+    expect(show).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'Short title: 12 words; the maximum is 10', status: 'error' }),
+    );
   });
 
   it('should create result and navigate to editor', () => {

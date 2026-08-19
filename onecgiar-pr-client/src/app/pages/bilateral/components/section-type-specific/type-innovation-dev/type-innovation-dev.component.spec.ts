@@ -74,11 +74,40 @@ describe('TypeInnovationDevComponent', () => {
       fixture.detectChanges();
       expect(component.body.short_title).toBe('T');
       expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('type-specific', [
-        { key: 'short-title', label: 'Short title', filled: true },
+        { key: 'short-title', label: 'Short title', filled: true, invalid: false, invalidReason: undefined },
         { key: 'nature', label: 'Innovation typology (nature)', filled: true },
         { key: 'developers', label: 'Innovation developer', filled: true },
         { key: 'readiness', label: 'Readiness level', filled: true },
       ]);
+    });
+
+    // P2-3340: `maxWords` only ever coloured the counter, so a 12-word short title saved unchanged.
+    // The field stays "filled" — it IS answered — and is flagged invalid so Submit can refuse and say why.
+    it('flags an over-limit short title as invalid without unfilling it', () => {
+      bilateralApi.GET_innovationDev.mockReturnValue(
+        of({ response: { short_title: 'one two three four five six seven eight nine ten eleven twelve' } }),
+      );
+      build();
+      fixture.detectChanges();
+
+      const shortTitle = mdsTracker.setSectionFields.mock.calls.at(-1)[1][0];
+      expect(shortTitle).toEqual({
+        key: 'short-title',
+        label: 'Short title',
+        filled: true,
+        invalid: true,
+        invalidReason: '12 words; the maximum is 10',
+      });
+    });
+
+    it('accepts exactly the maximum — the ceiling is inclusive', () => {
+      bilateralApi.GET_innovationDev.mockReturnValue(
+        of({ response: { short_title: 'one two three four five six seven eight nine ten' } }),
+      );
+      build();
+      fixture.detectChanges();
+
+      expect(mdsTracker.setSectionFields.mock.calls.at(-1)[1][0].invalid).toBe(false);
     });
 
     it('restores the show-all-fields toggle from the expandable state service', () => {
