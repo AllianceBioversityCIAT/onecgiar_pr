@@ -17,3 +17,33 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+// P2-3355: a failed metadata fetch used to render as an empty section.
+.tsf-load-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 20px;
+  border: 1.5px solid var(--pr-color-red-300);
+  border-radius: 8px;
+  background: #FFEBEE;
+
+  i {
+    color: var(--pr-color-red-300);
+    font-size: 20px;
+    line-height: 1.2;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #212121;
+  }
+
+  &__hint {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #607D8B;
+  }
+}

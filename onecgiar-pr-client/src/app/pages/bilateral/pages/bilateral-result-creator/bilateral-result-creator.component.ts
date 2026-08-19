@@ -271,8 +271,26 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.creationService.clearEditorState();
         this.autoSaveService.reset();
         this.mdsTracker.reset();
-        this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', response.result_code ?? response.id], {
-          queryParams: response.version_id ? { phase: response.version_id } : {}
+
+        // The detail endpoint resolves by `result_code` when a phase is present, and by `id` when it
+        // is not. `result_code ?? id` used to let a 0 through — 0 is not nullish — and a 0 code is
+        // shared by every bilateral row, so `/result/0?phase=X` resolves to whichever draft the
+        // server finds first. Route by id (and drop the phase) rather than risk opening someone
+        // else's result, and say so instead of failing quietly.
+        const resultCode = Number(response.result_code);
+        const hasResultCode = Number.isFinite(resultCode) && resultCode > 0;
+        if (!hasResultCode) {
+          this.api.alertsFe.show({
+            id: 'bilateralCreateNoResultCode',
+            title: 'Result created without a result code',
+            description: 'Opening it by internal id. Please report this — the result code sequence may not be configured.',
+            status: 'warning',
+            closeIn: 8000
+          });
+        }
+
+        this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', hasResultCode ? resultCode : response.id], {
+          queryParams: hasResultCode && response.version_id ? { phase: response.version_id } : {}
         });
       },
       error: (err: HttpErrorResponse) => {

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { In } from 'typeorm';
 import { BilateralProjectsService } from './bilateral-projects.service';
 import { BilateralService } from '../bilateral.service';
@@ -32,6 +32,8 @@ import { ResultsKnowledgeProductsService } from '../../results/results-knowledge
 
 @Injectable()
 export class BilateralCenterService {
+  private readonly logger = new Logger(BilateralCenterService.name);
+
   constructor(
     private readonly bilateralProjectsService: BilateralProjectsService,
     private readonly bilateralService: BilateralService,
@@ -159,10 +161,25 @@ export class BilateralCenterService {
       }
     }
 
+    // `result_code` is assigned by the `result_auto_code` BEFORE INSERT trigger, not by this insert —
+    // the 0 above is only a placeholder. If the trigger is missing from an environment, every
+    // bilateral row keeps code 0, and the detail endpoint (which resolves by result_code whenever a
+    // phase is supplied) will hand back whichever draft it finds first. Say so in the logs instead of
+    // shipping a code that silently points at someone else's result. Not thrown: that would take the
+    // whole feature down in a mis-migrated environment, and the client already routes by id in this
+    // case (see bilateral-result-creator.createResult).
+    const assignedResultCode = savedResult?.result_code ?? result.result_code;
+    if (!assignedResultCode || assignedResultCode <= 0) {
+      this.logger.error(
+        `Result ${result.id} was created without a result_code. ` +
+          'Check that the `result_auto_code` trigger and `result_code_seq` table exist in this environment.',
+      );
+    }
+
     return {
       response: {
         id: result.id,
-        result_code: savedResult?.result_code ?? result.result_code,
+        result_code: assignedResultCode,
         version_id: savedResult?.version_id ?? result.version_id,
         result_level_id: result.result_level_id,
         result_type_id: result.result_type_id,

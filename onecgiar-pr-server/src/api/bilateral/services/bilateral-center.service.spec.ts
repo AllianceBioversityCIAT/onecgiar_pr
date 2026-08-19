@@ -62,7 +62,13 @@ describe('BilateralCenterService', () => {
               status_id: 1,
             }),
             update: jest.fn().mockResolvedValue({}),
-            findOne: jest.fn(),
+            // Re-read after the insert. `result_code` is assigned by the `result_auto_code` trigger,
+            // so a realistic row carries a real code here — the 0 passed to save() is a placeholder.
+            findOne: jest.fn().mockResolvedValue({
+              id: 99,
+              result_code: 8852,
+              version_id: 1,
+            }),
           },
         },
         {
@@ -197,6 +203,8 @@ describe('BilateralCenterService', () => {
       expect(result.response.id).toBe(99);
       expect(result.response.source).toBe(SourceEnum.Bilateral);
       expect(result.response.status_id).toBe(1);
+      // The trigger-assigned code, not the 0 placeholder handed to save().
+      expect(result.response.result_code).toBe(8852);
       expect(resultRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           created_by: 42,
@@ -206,6 +214,31 @@ describe('BilateralCenterService', () => {
           source: SourceEnum.Bilateral,
           status_id: 1,
         }),
+      );
+    });
+
+    // A 0 result_code means the `result_auto_code` trigger is missing from the environment. Every
+    // bilateral row then shares code 0, and the detail endpoint resolves by result_code whenever a
+    // phase is supplied — so the user would silently open somebody else's draft. Logged rather than
+    // thrown: throwing would take bilateral creation down entirely in a mis-migrated environment.
+    it('logs when the row comes back without a trigger-assigned result_code', async () => {
+      const logger = jest
+        .spyOn((service as any).logger, 'error')
+        .mockImplementation(() => undefined);
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 99,
+        result_code: 0,
+        version_id: 1,
+      } as any);
+
+      const result = await service.createResultHeader(user, {
+        result_level_id: 2,
+        result_type_id: 7,
+      });
+
+      expect(result.response.result_code).toBe(0);
+      expect(logger).toHaveBeenCalledWith(
+        expect.stringContaining('was created without a result_code'),
       );
     });
 

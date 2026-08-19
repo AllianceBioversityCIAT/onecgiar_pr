@@ -4,6 +4,18 @@
       <i class="material-icons-round">hourglass_empty</i>
       <span>Loading metadata...</span>
     </div>
+  } @else if (loadFailed()) {
+    <!-- P2-3355: this used to render as an empty section with a "0/0 fields" counter, which reads as
+         "nothing is required here" rather than "we could not load it". -->
+    <div class="tsf-load-error">
+      <i class="material-icons-round">error_outline</i>
+      <div>
+        <p class="tsf-load-error__title">Knowledge Product metadata could not be loaded</p>
+        <p class="tsf-load-error__hint">
+          The record may not have finished syncing from CGSpace. Reload the page, and report it if it keeps failing.
+        </p>
+      </div>
+    </div>
   } @else {
     <div class="tsf-readonly-row">
       <span class="tsf-readonly-label">Handle</span>
