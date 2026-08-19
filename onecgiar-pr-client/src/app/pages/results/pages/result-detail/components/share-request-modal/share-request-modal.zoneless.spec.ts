@@ -168,3 +168,119 @@ describe('ShareRequestModalComponent (zoneless change detection)', () => {
     expect(tocBlockEl()).toBeTruthy();
   });
 });
+
+@Component({
+  selector: 'app-pr-select',
+  template: '<button type="button" class="stub-select" (click)="ngModelChange.emit(1)">select</button>',
+  standalone: false
+})
+class StubPrSelectComponent {
+  @Input() label: string;
+  @Input() options: any[];
+  @Input() optionLabel: string;
+  @Input() optionValue: string;
+  @Input() placeholder: string;
+  @Input() disabled: boolean;
+  @Input() required: boolean;
+  @Input() ngModel: any;
+  @Output() ngModelChange = new EventEmitter<any>();
+}
+
+/**
+ * P2-3322 — `showTocOut` is toggled `false -> setTimeout(50) -> true` by `modelChange()` so that
+ * <app-toc-initiative-out> remounts against the newly selected entity. It is read through the
+ * `shouldShowTocInitiativeOut` getter, which the template consumes in an `@if`. As a plain field the delayed
+ * write notified nothing, so switching entity dropped the ToC block for good.
+ */
+describe('ShareRequestModalComponent (zoneless change detection) — showTocOut', () => {
+  let component: ShareRequestModalComponent;
+  let fixture: ComponentFixture<ShareRequestModalComponent>;
+  let shareRequestModalSE: any;
+
+  const tocOutEl = () => fixture.nativeElement.querySelector('app-toc-initiative-out');
+
+  const tick = async (ms: number) => {
+    await new Promise(resolve => setTimeout(resolve, ms));
+    await fixture.whenStable();
+  };
+
+  beforeEach(async () => {
+    const currentResult = {
+      id: 1,
+      result_level_id: 3,
+      result_type_id: 5,
+      result_type: 'Capacity sharing',
+      title: 'A result',
+      submitter: 'INIT-01',
+      source_name: 'W1/W2',
+      portfolio: 'P22'
+    };
+
+    const apiMock = {
+      resultsSE: {
+        GET_AllInitiatives: () => of({ response: [{ initiative_id: 1, official_code: 'INIT-02', full_name: 'Initiative 2', portfolio_id: 1 }] }),
+        POST_createRequest: () => of({ response: [] }),
+        PATCH_updateRequest: () => of({ response: [] }),
+        ipsrDataControlSE: { inIpsr: false }
+      },
+      alertsFe: { show: jest.fn() },
+      dataControlSE: {
+        showShareRequest: true,
+        inNotifications: false,
+        currentResult,
+        currentResultSignal: signal(currentResult),
+        reportingCurrentPhase: { portfolioId: 1 },
+        myInitiativesList: []
+      },
+      rolesSE: { isAdmin: true, platformIsClosed: false }
+    };
+
+    shareRequestModalSE = { shareRequestBody: new ShareRequestBody() };
+
+    await TestBed.configureTestingModule({
+      declarations: [ShareRequestModalComponent, StubPrDialogComponent, StubPrYesOrNotComponent, StubPrSelectComponent],
+      imports: [CommonModule],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: ApiService, useValue: apiMock },
+        { provide: ShareRequestModalService, useValue: shareRequestModalSE },
+        { provide: RetrieveModalService, useValue: {} },
+        { provide: RolesService, useValue: { validateInitiative: () => true, isAdmin: true } },
+        { provide: ResultsNotificationsService, useValue: { get_section_information: jest.fn(), get_section_innovation_packages: jest.fn() } },
+        { provide: RdTheoryOfChangesServicesService, useValue: {} },
+        {
+          provide: FieldsManagerService,
+          useValue: { isP25: () => false, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+        }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ShareRequestModalComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('repaints the ToC block after the entity dropdown fires modelChange()', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // Precondition only: an entity must already be picked for the ToC block to be on screen.
+    shareRequestModalSE.shareRequestBody.initiative_id = 1;
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(tocOutEl()).toBeTruthy();
+
+    // Real flow: `(ngModelChange)="modelChange()"` on the entity <app-pr-select>.
+    fixture.nativeElement.querySelector('.stub-select').click();
+    await fixture.whenStable();
+
+    expect(tocOutEl()).toBeFalsy();
+
+    await tick(120);
+
+    expect(component.showTocOut).toBe(true);
+    expect(tocOutEl()).toBeTruthy();
+  });
+});

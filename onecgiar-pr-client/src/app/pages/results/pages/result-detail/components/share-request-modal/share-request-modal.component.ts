@@ -32,7 +32,17 @@ export class ShareRequestModalComponent implements OnInit {
   set showForm(value: boolean) {
     this._showForm.set(value);
   }
-  showTocOut = true;
+  // P2-3322: `modelChange()` toggles this `false -> setTimeout(50) -> true` so <app-toc-initiative-out>
+  // remounts against the newly selected entity (it is read through `shouldShowTocInitiativeOut`). As a plain
+  // field the delayed write notified nothing, so under zoneless change detection the ToC block disappeared
+  // for good after switching entity. Signal-backed, the write schedules its own render.
+  private readonly _showTocOut = signal<boolean>(true);
+  get showTocOut(): boolean {
+    return this._showTocOut();
+  }
+  set showTocOut(value: boolean) {
+    this._showTocOut.set(value);
+  }
   disabledOptions = [{ initiative_id: 10 }];
   private readonly _tocConsumed = signal<boolean>(true);
   get tocConsumed(): boolean {

@@ -40,8 +40,15 @@ describe('RetrieveModalComponent', () => {
         GET_TypeByResultLevel: () => of({ response: [] }),
         POST_updateRequest: () => of({ response: mockPOST_updateRequestResponse }),
       },
+      // P2-3322: `showForm` is signal-backed now, so cleanObject()'s deferred re-show really repaints the
+      // *ngIf block. That block reads `rolesSE.isAdmin` and `dataControlSE.myInitiativesList`, which the
+      // mock never provided (the block used to stay unrendered and hid the gap).
+      rolesSE: {
+        isAdmin: false
+      },
       dataControlSE: {
-        showRetrieveRequest: false
+        showRetrieveRequest: false,
+        myInitiativesList: []
       },
       alertsFe: {
         show: jest.fn()
