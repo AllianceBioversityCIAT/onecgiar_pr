@@ -43,6 +43,15 @@ export class RdGeneralInformationComponent implements OnInit {
   readonly guidanceAsTooltip = computed(() => this.fieldsManagerSE.isReportingFormGuidance2026());
 
   /**
+   * P2-3225 — Lead Contact Person is a mandatory MDS field for P25 from the 2026 phase on.
+   *
+   * Gates both the asterisk and the incomplete-fields widget entry, so that what the form asks for
+   * matches what `validation_general_information_P25` actually enforces for the green check.
+   * Deliberately NOT `isP25()`: the 2025 cycle is closed and keeps the field optional.
+   */
+  readonly isLeadContactPersonRequired = computed(() => this.fieldsManagerSE.isLeadContactPersonMandatory2026());
+
+  /**
    * Approved AI notes (P2-3201, points 1 and 2). Static blocks by explicit request: not collapsible
    * and with no "How it works" link — an earlier draft of the ticket proposed both and the revised
    * description rules them out.

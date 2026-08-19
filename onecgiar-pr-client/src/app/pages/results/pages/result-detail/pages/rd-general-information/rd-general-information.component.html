@@ -54,9 +54,9 @@
 
   <app-lead-contact-person-field
     [body]="this.generalInfoBody"
-    [required]="this.isP25()"
+    [required]="this.isLeadContactPersonRequired()"
     [guidanceAsTooltip]="guidanceAsTooltip()"></app-lead-contact-person-field>
-  @if (this.isP25()) {
+  @if (this.isLeadContactPersonRequired()) {
     <div
       appFeedbackValidation
       labelText="Lead contact person"

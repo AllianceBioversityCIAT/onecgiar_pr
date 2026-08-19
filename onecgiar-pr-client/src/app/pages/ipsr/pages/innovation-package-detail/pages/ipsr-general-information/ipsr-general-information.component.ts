@@ -22,6 +22,26 @@ export class IpsrGeneralInformationComponent implements OnInit {
   fieldsManagerSE = inject(FieldsManagerService);
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
 
+  /**
+   * P2-3225 — Lead Contact Person is a mandatory MDS field for P25 from the 2026 phase on.
+   * Innovation Packages go through the very same green check as pooled results
+   * (`validation_general_information_P25`), so the form asks for it under the same gate.
+   */
+  get isLeadContactPersonRequired(): boolean {
+    return this.fieldsManagerSE.isLeadContactPersonMandatory2026();
+  }
+
+  /**
+   * Feeds the incomplete-fields alert. Reported complete whenever the gate is closed, so results
+   * from the 2025 cycle (and P22) are never flagged for a field that was optional back then.
+   * `lead_contact_person_data` is required alongside the name: the name alone means the typed text
+   * never resolved to an Active Directory match.
+   */
+  get isLeadContactPersonComplete(): boolean {
+    if (!this.isLeadContactPersonRequired) return true;
+    return !!this.ipsrGeneralInformationBody.lead_contact_person && !!this.ipsrGeneralInformationBody.lead_contact_person_data;
+  }
+
   constructor(
     public api: ApiService,
     public scoreSE: ScoreService,

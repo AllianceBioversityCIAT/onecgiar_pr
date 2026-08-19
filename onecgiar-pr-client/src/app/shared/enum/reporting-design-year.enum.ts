@@ -31,5 +31,13 @@ export const ReportingDesignYear = {
    * Confirmed with the PO on 18 Aug 2026 — it applies to the current portfolio only, so results
    * in the 2025 phase (and earlier) keep their inline guidance boxes and show no AI notes.
    */
-  ReportingFormGuidanceRedesign: 2026
+  ReportingFormGuidanceRedesign: 2026,
+
+  /**
+   * Lead Contact Person becomes a mandatory MDS field (P2-3225) in the 2026 cycle, for pooled
+   * results and Innovation Packages alike. The 2025 cycle is closed, so those results keep the
+   * field optional — matching `validation_general_information_P25`, which gates the green check
+   * on the same year.
+   */
+  LeadContactPersonMandatory: 2026
 } as const;
