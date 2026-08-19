@@ -113,6 +113,15 @@ export class StepN3CurrentUseComponent implements OnInit {
     if (!actorItem.sex_and_age_disaggregation) actorItem.how_many = Number(actorItem.women || 0) + Number(actorItem.men || 0);
   }
 
+  // P2-3322: every write below lands on `this.body.innovatonUse.actors[i]`, an external object reached
+  // through an @Input, and every one of them happens inside a timer. Unlike P2-3245 / P2-3275, where the
+  // flag was a component field that could be turned into a signal, nothing here can be made reactive: the
+  // "showWomenExplanation<gender>" key is even built at runtime. Under zoneless change detection a write
+  // inside a timer notifies no scheduler, so no second render pass ran: the "value of Youth cannot be
+  // greater than total of Women/Men" warning never appeared or never went away, the clamped Women/Men/Youth
+  // values stayed stale on screen, and the auto-calculated Non-youth field never refreshed.
+  // `markForCheck()` marks this view and its ancestors dirty and notifies the scheduler, so it keeps working
+  // regardless of the change detection strategy used above (unlike a refresh driven from the root).
   validateYouth(i, isWomen: boolean, actorItem) {
     const gender = isWomen ? 'women' : 'men';
     const genderYouth = isWomen ? 'women_youth' : 'men_youth';
@@ -122,10 +131,12 @@ export class StepN3CurrentUseComponent implements OnInit {
       if (this.body.innovatonUse.actors[i][genderYouth] < 0)
         setTimeout(() => {
           this.body.innovatonUse.actors[i][genderYouth] = null;
+          this.cdr.markForCheck();
         }, 90);
       if (this.body.innovatonUse.actors[i][gender] < 0)
         setTimeout(() => {
           this.body.innovatonUse.actors[i][gender] = 0;
+          this.cdr.markForCheck();
         }, 90);
     }
     if (this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth] < 0) {
@@ -136,8 +147,10 @@ export class StepN3CurrentUseComponent implements OnInit {
         const element: any = document.getElementById('removeFocus');
         element.focus();
         this.calculateTotalField(actorItem);
+        this.cdr.markForCheck();
         setTimeout(() => {
           this.body.innovatonUse.actors[i]['showWomenExplanation' + gender] = false;
+          this.cdr.markForCheck();
         }, 3000);
         this.calculateTotalField(actorItem);
       }, 1000);
@@ -148,6 +161,7 @@ export class StepN3CurrentUseComponent implements OnInit {
     setTimeout(() => {
       this.body.innovatonUse.actors[i][genderNonYouth] = this.body.innovatonUse.actors[i][gender] - this.body.innovatonUse.actors[i][genderYouth];
       this.calculateTotalField(actorItem);
+      this.cdr.markForCheck();
     }, 1100);
     this.calculateTotalField(actorItem);
   }
