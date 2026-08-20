@@ -129,4 +129,58 @@ describe('IpsrRepository (unit)', () => {
     expect(params).toEqual(['?', '?']);
     expect(res).toEqual(rows);
   });
+
+  describe('createQueries (replication)', () => {
+    const config = {
+      phase: 5,
+      user: { id: 77 } as any,
+      old_result_id: 1000,
+      new_result_id: 2000,
+    } as any;
+
+    const normalize = (sql: string) => sql.replace(/\s+/g, ' ').trim();
+
+    it('resolves the core innovation to its latest QAed version', () => {
+      const { insertQuery } = repo.createQueries(config);
+      const sql = normalize(insertQuery);
+
+      expect(sql).toContain('IF( rbip.ipsr_role_id = 1,');
+      expect(sql).toContain('r_lv.status_id = 2');
+      expect(sql).toContain('order by v_lv.phase_year desc, r_lv.id desc');
+      // complementary innovations keep their original reference
+      expect(sql).toContain('rbip.result_id ) AS result_id');
+    });
+
+    it('keeps remapping the innovation package id to the new result', () => {
+      const { insertQuery } = repo.createQueries(config);
+      const sql = normalize(insertQuery);
+
+      expect(sql).toContain('2000 AS result_innovation_package_id');
+      expect(sql).toContain('FROM result_by_innovation_package rbip');
+      expect(sql).toContain('result_innovation_package_id = 1000');
+    });
+
+    it('applies the same core innovation resolution in findQuery', () => {
+      const { findQuery, insertQuery } = repo.createQueries(config);
+
+      expect(normalize(findQuery)).toContain('IF( rbip.ipsr_role_id = 1,');
+      expect(normalize(findQuery)).toContain(
+        'FROM result_by_innovation_package rbip',
+      );
+      // both queries must resolve result_id the exact same way
+      const extract = (sql: string) =>
+        normalize(sql).match(
+          /IF\( rbip\.ipsr_role_id = 1,.*?\) AS result_id/,
+        )?.[0];
+      expect(extract(findQuery)).toBe(extract(insertQuery));
+    });
+
+    it('returns the core innovation row of the new package', () => {
+      const { returnQuery } = repo.createQueries(config);
+      const sql = normalize(returnQuery);
+
+      expect(sql).toContain('r1.result_innovation_package_id = 2000');
+      expect(sql).toContain('r1.ipsr_role_id = 1');
+    });
+  });
 });
