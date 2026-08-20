@@ -797,3 +797,102 @@ $contrib-color-border:#bae6fd;
     &:hover { background: var(--pr-color-accents-1); }
   }
 }
+
+/* P2-3157 — rejection justification affordance + notification deep-link focus.
+   New styles use --pr-color-* tokens; the legacy .status_* chips above still carry raw hex. */
+
+.rc-status-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.brl_justification_trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--pr-color-red-300);
+  cursor: pointer;
+  line-height: 1;
+
+  i {
+    font-size: 16px;
+  }
+
+  &:hover i {
+    color: var(--pr-color-red-400);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+/* AC3: the row the notification pointed at. */
+.rc-row--focused {
+  background: var(--pr-color-primary-25);
+  box-shadow: inset 3px 0 0 0 var(--pr-color-primary-300);
+}
+
+.brl_justification_body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0 12px;
+}
+
+.brl_justification_title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--pr-color-secondary-400);
+}
+
+.brl_justification_meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pr-color-accents-5);
+}
+
+.brl_justification_comment {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--pr-color-red-50);
+  border: 1px solid var(--pr-color-red-75);
+  color: var(--pr-color-secondary-400);
+  white-space: pre-wrap;
+}
+
+.brl_justification_state {
+  margin: 0;
+  font-size: 13px;
+  color: var(--pr-color-accents-5);
+
+  &--error {
+    color: var(--pr-color-red-300);
+  }
+}
+
+.brl_justification_actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.brl_justification_close {
+  padding: 6px 16px;
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 6px;
+  background: var(--pr-color-white);
+  color: var(--pr-color-secondary-400);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--pr-color-accents-1);
+  }
+}
