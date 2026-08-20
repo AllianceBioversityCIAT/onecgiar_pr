@@ -19,6 +19,7 @@ import { UserSearchService } from '../../../../../results/pages/result-detail/pa
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
+import { environment } from '../../../../../../../environments/environment';
 
 describe('IpsrGeneralInformationComponent', () => {
   let component: IpsrGeneralInformationComponent;
@@ -602,14 +603,14 @@ describe('IpsrGeneralInformationComponent', () => {
       mockIpsrDataControlService.resultInnovationCode = 'IP-123';
       mockIpsrDataControlService.resultInnovationPhase = '5';
 
-      expect(component.evidenceSectionUrl).toBe('http://localhost:4200/ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3?phase=5');
+      expect(component.evidenceSectionUrl).toBe(`${environment.frontBaseUrl}ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3?phase=5`);
     });
 
     it('should omit the phase query param when the phase is not available (no "undefined" in the URL)', () => {
       mockIpsrDataControlService.resultInnovationCode = 'IP-123';
       mockIpsrDataControlService.resultInnovationPhase = undefined;
 
-      expect(component.evidenceSectionUrl).toBe('http://localhost:4200/ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3');
+      expect(component.evidenceSectionUrl).toBe(`${environment.frontBaseUrl}ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3`);
       expect(component.evidenceSectionUrl).not.toContain('undefined');
     });
 
@@ -620,7 +621,7 @@ describe('IpsrGeneralInformationComponent', () => {
 
       mockIpsrDataControlService.resultInnovationCode = 'SECOND';
       mockIpsrDataControlService.resultInnovationPhase = '2';
-      expect(component.evidenceSectionUrl).toBe('http://localhost:4200/ipsr/detail/SECOND/ipsr-innovation-use-pathway/step-3?phase=2');
+      expect(component.evidenceSectionUrl).toBe(`${environment.frontBaseUrl}ipsr/detail/SECOND/ipsr-innovation-use-pathway/step-3?phase=2`);
     });
   });
 
@@ -637,7 +638,7 @@ describe('IpsrGeneralInformationComponent', () => {
       expect(calls).toHaveLength(5);
       expect(calls.map(alert => alert.querySelector)).toEqual(alertSelectors);
       calls.forEach(alert => {
-        expect(alert.description).toContain('href="http://localhost:4200/ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3?phase=5"');
+        expect(alert.description).toContain(`href="${environment.frontBaseUrl}ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3?phase=5"`);
         expect(alert.description).not.toContain('/general-information');
       });
     });
@@ -651,7 +652,7 @@ describe('IpsrGeneralInformationComponent', () => {
       const calls = mockApiService.alertsFs.show.mock.calls.map(call => call[0]);
       expect(calls).toHaveLength(5);
       calls.forEach(alert => {
-        expect(alert.description).toContain('href="http://localhost:4200/ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3"');
+        expect(alert.description).toContain(`href="${environment.frontBaseUrl}ipsr/detail/IP-123/ipsr-innovation-use-pathway/step-3"`);
         expect(alert.description).not.toContain('undefined');
       });
     });
