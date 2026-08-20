@@ -43,6 +43,7 @@ import { PrRoute, extraRoutingApp, resultDetailRouting, routingApp } from '../..
 import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
+import { APP_VERSION } from '../../constants/app-version.constants';
 import { ResultFrameworkReportingHomeService } from '../../../pages/result-framework-reporting/pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
@@ -138,6 +139,7 @@ export class ReportingNavSidebarComponent {
   private readonly unsubmitModalSE = inject(UnsubmitModalService);
 
   readonly isProduction = environment.production;
+  readonly appVersion = APP_VERSION;
   readonly fontScaleOptions = FONT_SCALE_OPTIONS;
 
   /** Icon-rail mode (Spartan `collapsible="icon"` + service state). */

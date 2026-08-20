@@ -28,6 +28,20 @@
            (SIDEBAR-SPEC §1) and the topbar already owns the toggle. Keeping both put two
            identical buttons 60px apart — and this one was a Helm `ghost`, whose light
            `--muted` hover painted a white pill on the dark sidebar. -->
+
+      <!-- Build number, in the free right half the header's `justify-between` already leaves.
+           It tells one deployed build apart from the next, so QA can see whether the environment
+           picked up a delivery instead of guessing. A plain counter on purpose — read out loud and
+           compared at a glance. Value + bump rule: shared/constants/app-version.constants.ts. -->
+      @if (!isCollapsed()) {
+        <span
+          class="shrink-0 rounded-full bg-white/10 px-2 py-[4px] text-[11px] font-semibold leading-none tracking-tight text-white/70"
+          [attr.data-app-version]="appVersion"
+          [title]="'Build ' + appVersion">
+          <span class="sr-only">Build</span>
+          v{{ appVersion }}
+        </span>
+      }
     </div>
 
     @if (!isProduction && !isCollapsed()) {
