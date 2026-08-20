@@ -57,16 +57,20 @@ export class InnovationUseBilateralHandler
       );
     }
 
-    let innovationUseLevelId: number | null = null;
+    let innovationUseLevel: number | null = null;
     if (innovationUse.innovation_use_level) {
-      innovationUseLevelId = await this.resolveInnovationUseLevelId(
+      innovationUseLevel = await this.resolveInnovationUseLevel(
         innovationUse.innovation_use_level,
       );
     }
 
     const innovationUseDto = {
       has_innovation_link: false,
-      innovation_use_level_id: innovationUseLevelId,
+      // Despite its `_id` suffix, `innovation_use_level_id` carries the use LEVEL
+      // (0-9), not the catalogue row id — `InnovationUseService.saveInnovationUse`
+      // resolves it with `where: { level: innovation_use_level_id }`, and the pooled
+      // client fills it from `response.level`. See P2-3359.
+      innovation_use_level_id: innovationUseLevel,
       linked_results: [],
       readiness_level_explanation: null,
       has_scaling_studies: false,
@@ -91,7 +95,17 @@ export class InnovationUseBilateralHandler
     );
   }
 
-  private async resolveInnovationUseLevelId(useLevel?: {
+  /**
+   * Validates the requested use level against the CLARISA catalogue and returns the
+   * canonical LEVEL (0-9), not the catalogue row id.
+   *
+   * The distinction matters: `clarisa_innovation_use_levels.id` is auto-increment
+   * from 1 while `level` runs 0-9, so the two are systematically off by one.
+   * Returning the id here made `InnovationUseService` — which looks the value up as
+   * `where: { level: ... }` — resolve the neighbouring level for 0-8, and find nothing
+   * at all for level 9, where the resulting `null.id` threw. See P2-3359.
+   */
+  private async resolveInnovationUseLevel(useLevel?: {
     level?: number;
     name?: string;
   }): Promise<number> {
@@ -110,7 +124,7 @@ export class InnovationUseBilateralHandler
           `Invalid innovation use level: ${useLevel.level}. Please provide a valid use level.`,
         );
       }
-      return found.id;
+      return found.level;
     }
 
     if (useLevel.name) {
@@ -119,12 +133,12 @@ export class InnovationUseBilateralHandler
         .createQueryBuilder('iul')
         .where('LOWER(iul.name) = :name', { name: normalized })
         .getOne();
-      if (!found) {
+      if (!found || found.level === null || found.level === undefined) {
         throw new BadRequestException(
           `Invalid innovation use level name: "${useLevel.name}". Please provide a valid use level name.`,
         );
       }
-      return found.id;
+      return found.level;
     }
 
     throw new BadRequestException(
