@@ -112,6 +112,7 @@ import {
   ResultReviewHistory,
   ReviewActionEnum,
 } from './result-review-history/entities/result-review-history.entity';
+import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
 import { isEmpty } from '../../shared/utils/object.utils';
@@ -217,6 +218,8 @@ export class ResultsService {
     private readonly _shareResultRequestService?: ShareResultRequestService,
     @Optional()
     private readonly _shareResultRequestRepository?: ShareResultRequestRepository,
+    @Optional()
+    private readonly _resultReviewHistoryRepository?: ResultReviewHistoryRepository,
   ) {}
 
   /**
@@ -2538,6 +2541,52 @@ export class ResultsService {
     );
   }
 
+  /**
+   * P2-3157 AC4 — review trail for a bilateral result, so a centre can read the exact
+   * justification the Science Program gave when rejecting it.
+   */
+  async getBilateralReviewHistory(resultId: number) {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return this._returnResponse.format({
+          message: 'The resultId parameter must be a valid positive number.',
+          statusCode: HttpStatus.BAD_REQUEST,
+          response: [],
+        });
+      }
+
+      if (!this._resultReviewHistoryRepository) {
+        this._logger.warn('ResultReviewHistoryRepository is not available');
+        return this._returnResponse.format({
+          message: 'Review history is not available',
+          statusCode: HttpStatus.OK,
+          response: [],
+        });
+      }
+
+      const history =
+        await this._resultReviewHistoryRepository.getReviewHistoryByResultId(
+          parsedResultId,
+        );
+
+      return this._returnResponse.format({
+        message: 'Review history retrieved successfully',
+        statusCode: HttpStatus.OK,
+        response: history ?? [],
+      });
+    } catch (error) {
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
+    }
+  }
+
   async getCenters(resultId: number) {
     try {
       const centers =
@@ -2555,6 +2604,126 @@ export class ResultsService {
         error,
         !EnvironmentExtractor.isProduction(),
       );
+    }
+  }
+
+  /**
+   * P2-3157 — in-app notification for a bilateral review decision (Approve / Reject).
+   *
+   * Recipients are the submitter plus every active Center User of the result's lead centre, so the
+   * centre still learns about the decision if the original submitter is gone. BR1 of the ticket
+   * forbids email for these transitions, so this deliberately does NOT consult
+   * `user_notification_settings` — those flags only gate email, and filtering on them here would
+   * silently suppress the in-app notification too.
+   *
+   * Never throws: the review decision is already committed by the time this runs.
+   */
+  private async emitBilateralReviewNotification(
+    resultId: number,
+    decision: ReviewDecisionEnum,
+    user: TokenDto,
+  ): Promise<void> {
+    try {
+      if (!this._notificationService) {
+        this._logger.warn(
+          `NotificationService unavailable; skipping bilateral review notification for result ${resultId}`,
+        );
+        return;
+      }
+
+      const recipientIds = await this.getBilateralReviewRecipientIds(
+        resultId,
+        user.id,
+      );
+
+      if (!recipientIds.length) {
+        this._logger.warn(
+          `No recipients resolved for bilateral review notification on result ${resultId}`,
+        );
+        return;
+      }
+
+      const notificationType =
+        decision === ReviewDecisionEnum.APPROVE
+          ? NotificationTypeEnum.BILATERAL_RESULT_APPROVED
+          : NotificationTypeEnum.BILATERAL_RESULT_REJECTED;
+
+      await this._notificationService.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        notificationType,
+        recipientIds,
+        user.id,
+        resultId,
+      );
+    } catch (error) {
+      this._logger.warn(
+        `Failed to emit bilateral review notification for result ${resultId}`,
+        error as Error,
+      );
+    }
+  }
+
+  /**
+   * Submitter + every active Center User of the result's lead centre, de-duplicated.
+   * The emitter is filtered out downstream by `emitResultNotification`.
+   */
+  private async getBilateralReviewRecipientIds(
+    resultId: number,
+    emitterUserId: number,
+  ): Promise<number[]> {
+    const recipientIds = new Set<number>();
+
+    const result = await this._resultRepository.findOne({
+      where: { id: resultId },
+      select: ['id', 'external_submitter', 'created_by'],
+    });
+
+    // `external_submitter` is the bilateral submitter resolved at ingestion; `created_by` is the
+    // fallback when the payload carried no `submitted_by` block.
+    const submitterId = Number(
+      result?.external_submitter ?? result?.created_by,
+    );
+    if (Number.isFinite(submitterId) && submitterId > 0) {
+      recipientIds.add(submitterId);
+    }
+
+    const leadCenterCode = await this.getLeadCenterCode(resultId);
+    if (leadCenterCode && this._roleByUserRepository) {
+      try {
+        const centerUserIds =
+          await this._roleByUserRepository.getUserIdsByCenter(leadCenterCode);
+        centerUserIds.forEach((id) => recipientIds.add(id));
+      } catch (error) {
+        this._logger.warn(
+          `Failed to resolve center users for center ${leadCenterCode}`,
+          error as Error,
+        );
+      }
+    }
+
+    recipientIds.delete(emitterUserId);
+    return Array.from(recipientIds.values());
+  }
+
+  /** CLARISA code of the result's lead centre, or null when none is flagged. */
+  private async getLeadCenterCode(resultId: number): Promise<string | null> {
+    try {
+      const centers =
+        await this._resultsCenterRepository.getAllResultsCenterByResultId(
+          resultId,
+        );
+
+      const leadCenter = (centers ?? []).find(
+        (center) => Number(center?.is_leading_result) === 1,
+      );
+
+      return leadCenter?.code ? String(leadCenter.code) : null;
+    } catch (error) {
+      this._logger.warn(
+        `Failed to resolve lead center for result ${resultId}`,
+        error as Error,
+      );
+      return null;
     }
   }
 
@@ -3534,6 +3703,14 @@ export class ResultsService {
           { is_active: false },
         );
       }
+
+      // P2-3157: notify the centre in-app. Post-commit and non-blocking on purpose — the
+      // decision is already persisted, so a notification failure must never fail the request.
+      await this.emitBilateralReviewNotification(
+        parsedResultId,
+        reviewDecisionDto.decision,
+        user,
+      );
 
       return {
         response: {
