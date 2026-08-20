@@ -18,6 +18,20 @@ export class BilateralPageHeaderComponent {
   /** Which center section is active. Omit (e.g. on the create-result wizard) to hide the tab bar and CTA. */
   readonly activeTab = input<'overview' | 'results' | 'drafts' | null>(null);
 
+  /**
+   * Page title for the single-page variant of this header (P2-3100 AC1). When set, the
+   * stacked centre block collapses into a one-line breadcrumb and the `h1` becomes this
+   * title. Left unset — as the three tabbed pages do — the header renders unchanged.
+   */
+  readonly pageTitle = input<string | null>(null);
+
+  /** `[Full Center Name] (INITIALS)`, the trailing breadcrumb segment required by AC1. */
+  readonly centerBreadcrumbLabel = computed(() => {
+    const name = this.ctx.centerName();
+    const acronym = this.ctx.centerAcronym();
+    return name ? `${name} (${acronym})` : acronym;
+  });
+
   /** Overview gets its own copy slot; the other tabs keep the shared CTA text. */
   readonly reportCtaLabel = computed(() =>
     this.activeTab() === 'overview' ? 'Report emerging result' : 'Report emerging result',
