@@ -295,6 +295,85 @@ describe('SummaryService', () => {
         }),
       );
     });
+
+    // P2-3359. `results_innovations_use.results_id` is the join column of a OneToOne,
+    // so it carries a UNIQUE constraint: an inactive row still owns the result's slot.
+    // Looking it up with `is_active: true` missed that row, drove us into the insert
+    // branch, and the insert died on ER_DUP_ENTRY — swallowed by `returnErrorRes`, so
+    // the user's answer silently disappeared on reload.
+    describe('an inactive row still owns the unique slot (P2-3359)', () => {
+      it('looks the row up without filtering on is_active', async () => {
+        mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+        mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValueOnce({});
+        mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+        await service.saveInnovationUse({} as any, 5, user);
+
+        expect(
+          mockResultsInnovationsUseRepository.findOne,
+        ).toHaveBeenCalledWith({ where: { results_id: 5 } });
+      });
+
+      it('reactivates and updates an inactive row instead of inserting a duplicate', async () => {
+        const dto = {
+          innov_use_to_be_determined: false,
+          innovation_use_level_id: 3,
+        } as any;
+        mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+        mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValueOnce({});
+        mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce({
+          result_innovation_use_id: 1,
+          results_id: 5,
+          is_active: false,
+        } as any);
+
+        await service.saveInnovationUse(dto, 5, user);
+
+        expect(mockResultsInnovationsUseRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_innovation_use_id: 1,
+            is_active: true,
+            innov_use_to_be_determined: false,
+            innovation_use_level_id: 3,
+          }),
+        );
+        expect(mockResultsInnovationsUseRepository.save).toHaveBeenCalledTimes(
+          1,
+        );
+      });
+
+      it('recovers by updating when a concurrent insert wins the slot', async () => {
+        const dto = {
+          innov_use_to_be_determined: true,
+          innovation_use_level_id: 6,
+        } as any;
+        mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+        mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValueOnce({});
+        mockResultsInnovationsUseRepository.findOne
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({
+            result_innovation_use_id: 2,
+            results_id: 5,
+          } as any);
+        mockResultsInnovationsUseRepository.save
+          .mockRejectedValueOnce({ driverError: { code: 'ER_DUP_ENTRY' } })
+          .mockResolvedValueOnce({} as any);
+
+        const res = await service.saveInnovationUse(dto, 5, user);
+
+        expect(res.status).toBe(HttpStatus.CREATED);
+        expect(
+          mockResultsInnovationsUseRepository.save,
+        ).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            result_innovation_use_id: 2,
+            is_active: true,
+            innov_use_to_be_determined: true,
+            innovation_use_level_id: 6,
+          }),
+        );
+      });
+    });
   });
 
   describe('getInnovationUse', () => {

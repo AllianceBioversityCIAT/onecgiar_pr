@@ -87,14 +87,22 @@ export class SummaryService {
 
       const { innov_use_to_be_determined, innovation_use_level_id } =
         innovationUseDto;
+      // Deliberately NOT filtered by `is_active`: `results_innovations_use` has a
+      // UNIQUE index on `results_id`, so an inactive row still occupies the slot.
+      // Filtering it out here made the lookup miss, sent us down the insert branch,
+      // and the insert died on ER_DUP_ENTRY — which `returnErrorRes` turned into a
+      // response the form never surfaced, so the answer simply vanished on reload.
+      // See P2-3359.
       const innUseExists = await this._resultsInnovationsUseRepository.findOne({
-        where: { results_id: resultId, is_active: true },
+        where: { results_id: resultId },
       });
       if (innUseExists) {
         innUseExists.innov_use_to_be_determined =
           innov_use_to_be_determined ?? null;
         innUseExists.innovation_use_level_id = innovation_use_level_id ?? null;
         innUseExists.last_updated_by = user.id;
+        // Reactivate rather than insert: the row owns this result's unique slot.
+        innUseExists.is_active = true;
         await this._resultsInnovationsUseRepository.save(innUseExists);
       } else {
         const newInnUse = new ResultsInnovationsUse();
@@ -107,7 +115,24 @@ export class SummaryService {
         newInnUse.innov_use_to_be_determined =
           innov_use_to_be_determined ?? null;
         newInnUse.innovation_use_level_id = innovation_use_level_id ?? null;
-        await this._resultsInnovationsUseRepository.save(newInnUse);
+
+        try {
+          await this._resultsInnovationsUseRepository.save(newInnUse);
+        } catch (saveError: any) {
+          // Concurrent request won the race for this result's unique slot.
+          if (saveError?.driverError?.code !== 'ER_DUP_ENTRY') throw saveError;
+
+          const raced = await this._resultsInnovationsUseRepository.findOne({
+            where: { results_id: resultId },
+          });
+          if (!raced) throw saveError;
+
+          raced.innov_use_to_be_determined = innov_use_to_be_determined ?? null;
+          raced.innovation_use_level_id = innovation_use_level_id ?? null;
+          raced.last_updated_by = user.id;
+          raced.is_active = true;
+          await this._resultsInnovationsUseRepository.save(raced);
+        }
       }
 
       await this._resultRepository.update(resultId, {
