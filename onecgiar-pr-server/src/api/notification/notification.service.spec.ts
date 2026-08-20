@@ -378,4 +378,96 @@ describe('NotificationService', () => {
       expect(result.status).toBe(200);
     });
   });
+
+  // P2-3157 AC2 — the standardized copy for a bilateral review decision.
+  describe('bilateral review notification copy', () => {
+    const emitAndReadDescription = async (
+      notificationType: NotificationTypeEnum,
+      resultOverrides: Record<string, any> = {},
+    ): Promise<string> => {
+      mockNotificationLevelRepository.findOne.mockResolvedValue({
+        notifications_level_id: 2,
+      });
+      mockNotificationTypeRepository.findOne.mockResolvedValue({
+        notifications_type_id: 6,
+      });
+      mockNotificationRepository.save.mockResolvedValue(null);
+      mockNotificationRepository.findOne.mockResolvedValue({
+        obj_emitter_user: {
+          id: 9,
+          first_name: 'Ana',
+          last_name: 'Reviewer',
+          email: 'ana@example.com',
+        },
+        obj_result: {
+          result_code: 4321,
+          title: 'A bilateral result title',
+          obj_result_by_initiatives: [
+            { obj_initiative: { id: 5, official_code: 'SP5' } },
+          ],
+          ...resultOverrides,
+        },
+      });
+      mockSocketManagementService.getActiveUsers.mockResolvedValue({
+        response: [{ userId: 2 }],
+        status: 200,
+      });
+      mockSocketManagementService.sendNotificationToUsers.mockResolvedValue({
+        status: 200,
+      });
+
+      await service.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        notificationType,
+        [2],
+        9,
+        4321,
+      );
+
+      const [, payload] =
+        mockSocketManagementService.sendNotificationToUsers.mock.calls.at(-1);
+      return payload.desc;
+    };
+
+    it('builds the approved copy with the result identity and the owner program code', async () => {
+      const desc = await emitAndReadDescription(
+        NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+      );
+
+      expect(desc).toBe(
+        '✅ Your Result 4321 - A bilateral result title has been Approved by the Science Program SP5.',
+      );
+    });
+
+    it('builds the rejected copy', async () => {
+      const desc = await emitAndReadDescription(
+        NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+      );
+
+      expect(desc).toBe(
+        '❌ Your Result 4321 - A bilateral result title has been Rejected by the Science Program SP5.',
+      );
+    });
+
+    it('truncates a long title', async () => {
+      const desc = await emitAndReadDescription(
+        NotificationTypeEnum.BILATERAL_RESULT_APPROVED,
+        { title: 'x'.repeat(80) },
+      );
+
+      expect(desc).toContain(`${'x'.repeat(60)}...`);
+      expect(desc).not.toContain('x'.repeat(61));
+    });
+
+    it('falls back to a generic program mention when no owner initiative is present', async () => {
+      const desc = await emitAndReadDescription(
+        NotificationTypeEnum.BILATERAL_RESULT_REJECTED,
+        { obj_result_by_initiatives: [] },
+      );
+
+      expect(desc).toBe(
+        '❌ Your Result 4321 - A bilateral result title has been Rejected by the Science Program.',
+      );
+    });
+  });
 });

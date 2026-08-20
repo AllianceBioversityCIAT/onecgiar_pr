@@ -9,4 +9,6 @@ export enum NotificationTypeEnum {
   RESULT_UNSUBMITTED = 'Result Unsubmitted',
   RESULT_QUALITY_ASSESED = 'Result QAed',
   ANNOUNCEMENT = 'Announcement',
+  BILATERAL_RESULT_APPROVED = 'Bilateral Result Approved',
+  BILATERAL_RESULT_REJECTED = 'Bilateral Result Rejected',
 }
