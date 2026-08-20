@@ -37,7 +37,7 @@ import {
   ModuleTypeEnum,
   StatusPhaseEnum,
 } from '../../shared/constants/role-type.enum';
-import { DataSource, In } from 'typeorm';
+import { DataSource, EntityManager, In } from 'typeorm';
 import { UpdateQaResults } from './dto/update-qa.dto';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
@@ -62,6 +62,14 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
+import { Ipsr } from '../ipsr/entities/ipsr.entity';
+import { ResultRegion } from '../results/result-regions/entities/result-region.entity';
+import { ResultCountry } from '../results/result-countries/entities/result-country.entity';
+import {
+  GEO_SCOPE_REGIONAL,
+  GEO_SCOPE_WITH_COUNTRIES,
+  buildInnovationPackageTitle,
+} from '../ipsr/utils/innovation-package-title.util';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 
 /** Clarisa `clarisa_initiatives.portfolio_id` for CGIAR Programs (P25). */
@@ -484,7 +492,7 @@ export class VersioningService {
       const tempDataIP = await this._ipsrRespository.replicate(manager, config);
       config.new_ipsr_id = tempDataIP[0].result_by_innovation_package_id;
       const rbip = await this._ipsrRespository.find({
-        select: ['result_by_innovation_package_id'],
+        select: ['result_by_innovation_package_id', 'result_id'],
         where: {
           result_innovation_package_id: result.id,
           ipsr_role_id: 1,
@@ -492,6 +500,13 @@ export class VersioningService {
         },
       });
       config.old_ipsr_id = rbip[0].result_by_innovation_package_id;
+
+      await this.$_refreshIpsrTitleFromCoreInnovation(
+        manager,
+        dataResult,
+        rbip[0].result_id,
+        user,
+      );
 
       await this._resultIpActionAreaOutcomeRepository.replicate(
         manager,
@@ -527,6 +542,94 @@ export class VersioningService {
       `IPSR: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data.id}`,
     );
     return data;
+  }
+
+  /**
+   * The Innovation Package title embeds the title of its core innovation. When
+   * replication re-points the core innovation link to a newer version (see
+   * `IpsrRepository.createQueries`), the inherited title would keep naming the
+   * previous version of the innovation, which is what users report as "the
+   * package title did not update".
+   *
+   * The title is only rebuilt when the link actually moved, so a title edited
+   * by hand through the general information section is preserved whenever the
+   * core innovation stayed the same.
+   */
+  private async $_refreshIpsrTitleFromCoreInnovation(
+    manager: EntityManager,
+    newResult: Result,
+    previousCoreInnovationId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    const newCoreLink = await manager.getRepository(Ipsr).findOne({
+      select: { result_id: true },
+      where: {
+        result_innovation_package_id: newResult.id,
+        ipsr_role_id: 1,
+        is_active: true,
+      },
+    });
+
+    if (
+      !newCoreLink?.result_id ||
+      Number(newCoreLink.result_id) === Number(previousCoreInnovationId)
+    ) {
+      return;
+    }
+
+    const coreInnovation = await manager.getRepository(Result).findOne({
+      select: { id: true, title: true },
+      where: { id: newCoreLink.result_id },
+    });
+
+    if (!coreInnovation?.title) return;
+
+    const geoScopeId = Number(newResult.geographic_scope_id);
+
+    const regionNames =
+      geoScopeId === GEO_SCOPE_REGIONAL
+        ? (
+            await manager.getRepository(ResultRegion).find({
+              where: { result_id: newResult.id, is_active: true },
+              relations: { region_object: true },
+              order: { result_region_id: 'ASC' },
+            })
+          )
+            .map((region) => region.region_object?.name)
+            .filter((name): name is string => !!name)
+        : [];
+
+    const countryNames = GEO_SCOPE_WITH_COUNTRIES.includes(geoScopeId)
+      ? (
+          await manager.getRepository(ResultCountry).find({
+            where: { result_id: newResult.id, is_active: true },
+            relations: { country_object: true },
+            order: { result_country_id: 'ASC' },
+          })
+        )
+          .map((country) => country.country_object?.name)
+          .filter((name): name is string => !!name)
+      : [];
+
+    const title = buildInnovationPackageTitle({
+      coreInnovationTitle: coreInnovation.title,
+      geoScopeId,
+      regionNames,
+      countryNames,
+    });
+
+    if (title === newResult.title) return;
+
+    await manager.update(
+      Result,
+      { id: newResult.id },
+      { title, last_updated_by: user.id },
+    );
+    newResult.title = title;
+
+    this._logger.log(
+      `IPSR: Title of result ${newResult.id} rebuilt from core innovation ${newCoreLink.result_id} (previously ${previousCoreInnovationId}).`,
+    );
   }
 
   async $_versionManagement(

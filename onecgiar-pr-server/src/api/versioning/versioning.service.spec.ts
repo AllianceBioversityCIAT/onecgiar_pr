@@ -500,4 +500,140 @@ describe('VersioningService', () => {
       }),
     );
   });
+  describe('$_refreshIpsrTitleFromCoreInnovation', () => {
+    const buildManager = (overrides: {
+      coreLink?: { result_id: number } | null;
+      coreInnovation?: { title: string } | null;
+      regions?: any[];
+      countries?: any[];
+      update?: jest.Mock;
+    }) => {
+      return {
+        getRepository: jest.fn((entity: any) => {
+          switch (entity?.name) {
+            case 'Ipsr':
+              return {
+                findOne: jest
+                  .fn()
+                  .mockResolvedValue(overrides.coreLink ?? null),
+              };
+            case 'Result':
+              return {
+                findOne: jest
+                  .fn()
+                  .mockResolvedValue(overrides.coreInnovation ?? null),
+              };
+            case 'ResultRegion':
+              return {
+                find: jest.fn().mockResolvedValue(overrides.regions ?? []),
+              };
+            case 'ResultCountry':
+              return {
+                find: jest.fn().mockResolvedValue(overrides.countries ?? []),
+              };
+            default:
+              throw new Error(`Unexpected repository: ${entity?.name}`);
+          }
+        }),
+        update: overrides.update ?? jest.fn(),
+      } as any;
+    };
+
+    const call = (manager: any, result: any, previousCoreId: number) =>
+      (service as any).$_refreshIpsrTitleFromCoreInnovation(
+        manager,
+        result,
+        previousCoreId,
+        { id: 601 } as any,
+      );
+
+    it('does nothing when the core innovation link did not move', async () => {
+      const update = jest.fn();
+      const manager = buildManager({ coreLink: { result_id: 900 }, update });
+
+      await call(manager, { id: 10, geographic_scope_id: 1 }, 900);
+
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when there is no active core innovation link', async () => {
+      const update = jest.fn();
+      const manager = buildManager({ coreLink: null, update });
+
+      await call(manager, { id: 10, geographic_scope_id: 1 }, 900);
+
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('rebuilds the title from the new core innovation for a global package', async () => {
+      const update = jest.fn();
+      const manager = buildManager({
+        coreLink: { result_id: 901 },
+        coreInnovation: { title: 'Drought Tolerant Maize' },
+        update,
+      });
+      const newResult: any = {
+        id: 10,
+        geographic_scope_id: 1,
+        title: 'old title',
+      };
+
+      await call(manager, newResult, 900);
+
+      expect(update).toHaveBeenCalledTimes(1);
+      const [, criteria, patch] = update.mock.calls[0];
+      expect(criteria).toEqual({ id: 10 });
+      expect(patch.title).toBe(
+        'Innovation Package and Scaling Readiness assessment for drought tolerant maize.',
+      );
+      expect(patch.last_updated_by).toBe(601);
+      expect(newResult.title).toBe(patch.title);
+    });
+
+    it('lists the replicated countries in the rebuilt title', async () => {
+      const update = jest.fn();
+      const manager = buildManager({
+        coreLink: { result_id: 901 },
+        coreInnovation: { title: 'Drought Tolerant Maize' },
+        countries: [
+          { country_object: { name: 'Morocco' } },
+          { country_object: { name: 'Peru' } },
+        ],
+        update,
+      });
+
+      await call(
+        manager,
+        { id: 10, geographic_scope_id: 3, title: 'old title' },
+        900,
+      );
+
+      const [, , patch] = update.mock.calls[0];
+      expect(patch.title).toBe(
+        'Innovation Package and Scaling Readiness assessment for drought tolerant maize in Morocco and Peru',
+      );
+    });
+
+    it('does not write when the rebuilt title matches the current one', async () => {
+      const update = jest.fn();
+      const manager = buildManager({
+        coreLink: { result_id: 901 },
+        coreInnovation: { title: 'Drought Tolerant Maize' },
+        update,
+      });
+
+      await call(
+        manager,
+        {
+          id: 10,
+          geographic_scope_id: 1,
+          title:
+            'Innovation Package and Scaling Readiness assessment for drought tolerant maize.',
+        },
+        900,
+      );
+
+      expect(update).not.toHaveBeenCalled();
+    });
+  });
 });
