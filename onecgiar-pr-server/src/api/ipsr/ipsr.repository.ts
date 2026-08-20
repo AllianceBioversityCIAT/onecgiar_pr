@@ -9,7 +9,10 @@ import {
   ConfigCustomQueryInterface,
   ReplicableConfigInterface,
 } from '../../shared/globalInterfaces/replicable.interface';
-import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
+import {
+  VERSIONING,
+  predeterminedDateValidation,
+} from '../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
 import { env } from 'node:process';
 import { ExcelReportDto } from './dto/excel-report-ipsr.dto';
@@ -35,7 +38,7 @@ export class IpsrRepository
           ${config.user.id} AS last_updated_by,
           result_by_innovation_package_id,
           result_innovation_package_id,
-          result_id,
+          ${this.$_coreInnovationLatestVersion()} AS result_id,
           ipsr_role_id,
           readinees_evidence_link,
           use_evidence_link,
@@ -48,7 +51,7 @@ export class IpsrRepository
           potential_innovation_readiness_level,
           potential_innovation_use_level
       FROM
-          result_by_innovation_package
+          result_by_innovation_package rbip
       WHERE
           result_innovation_package_id = ${config.old_result_id}
           AND is_active > 0;`,
@@ -83,7 +86,7 @@ export class IpsrRepository
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
           ${config.new_result_id} AS result_innovation_package_id,
-          result_id,
+          ${this.$_coreInnovationLatestVersion()} AS result_id,
           ipsr_role_id,
           readinees_evidence_link,
           use_evidence_link,
@@ -96,7 +99,7 @@ export class IpsrRepository
           potential_innovation_readiness_level,
           potential_innovation_use_level
       FROM
-          result_by_innovation_package
+          result_by_innovation_package rbip
       WHERE
           result_innovation_package_id = ${config.old_result_id}
           AND is_active > 0;
@@ -111,6 +114,21 @@ export class IpsrRepository
           AND r1.is_active > 0
           AND r1.ipsr_role_id = 1`,
     };
+  }
+
+  /**
+   * The core innovation (ipsr_role_id = 1) must follow its own versioning: when
+   * an Innovation Package is replicated into a new phase, the link has to point
+   * to the latest Quality Assessed version of that innovation instead of the
+   * frozen one it was created against. Complementary innovations
+   * (ipsr_role_id = 2) keep their original reference.
+   */
+  private $_coreInnovationLatestVersion(): string {
+    return `IF(
+            rbip.ipsr_role_id = 1,
+            ${VERSIONING.QUERY.Get_latest_qa_result_version('rbip.result_id')},
+            rbip.result_id
+          )`;
   }
 
   constructor(

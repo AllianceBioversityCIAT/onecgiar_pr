@@ -12,6 +12,31 @@ export const VERSIONING = {
       order by r_q1.status_id desc, r_q1.id desc
       limit 1)
 `,
+    /**
+     * Resolves the most recent Quality Assessed (status_id = 2) version of the
+     * result referenced by `result_id`, comparing by phase year. Never regresses
+     * to an older phase, and falls back to `result_id` when there is no newer
+     * QAed version. Used by IPSR replication to keep the core innovation link
+     * pointing at the latest version of the innovation.
+     */
+    Get_latest_qa_result_version: (result_id: string): string => `
+      IFNULL((
+        select r_lv.id
+        from result r_lv
+        inner join version v_lv on v_lv.id = r_lv.version_id
+        where r_lv.result_code = (select r_cur.result_code from result r_cur where r_cur.id = ${result_id})
+          and r_lv.is_active = 1
+          and r_lv.status_id = 2
+          and v_lv.phase_year >= (
+            select v_cur.phase_year
+            from result r_cur2
+            inner join version v_cur on v_cur.id = r_cur2.version_id
+            where r_cur2.id = ${result_id}
+          )
+        order by v_lv.phase_year desc, r_lv.id desc
+        limit 1
+      ), ${result_id})
+`,
   },
 };
 
