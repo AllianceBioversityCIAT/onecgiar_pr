@@ -44,7 +44,9 @@ describe('InnovationUseBilateralHandler', () => {
       findOne: jest.fn().mockResolvedValue({ id: 10, level: 2 }),
       createQueryBuilder: jest.fn().mockReturnValue({
         where: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue({ id: 10, name: 'Test Level' }),
+        getOne: jest
+          .fn()
+          .mockResolvedValue({ id: 10, level: 9, name: 'Test Level' }),
       }),
     };
     handler = new InnovationUseBilateralHandler(
@@ -158,7 +160,8 @@ describe('InnovationUseBilateralHandler', () => {
     expect(innovationUseServiceStub.saveInnovationUse).toHaveBeenCalledWith(
       expect.objectContaining({
         innov_use_to_be_determined: false,
-        innovation_use_level_id: 10,
+        // the LEVEL (2), never the catalogue row id (10) — see P2-3359
+        innovation_use_level_id: 2,
         actors: expect.any(Array),
       }),
       baseContext.resultId,
@@ -184,7 +187,7 @@ describe('InnovationUseBilateralHandler', () => {
     expect(useLevelRepoStub.createQueryBuilder).toHaveBeenCalledWith('iul');
     expect(innovationUseServiceStub.saveInnovationUse).toHaveBeenCalledWith(
       expect.objectContaining({
-        innovation_use_level_id: 10,
+        innovation_use_level_id: 9,
       }),
       baseContext.resultId,
       expect.objectContaining({ id: baseContext.userId }),
@@ -220,11 +223,45 @@ describe('InnovationUseBilateralHandler', () => {
     expect(innovationUseServiceStub.saveInnovationUse).toHaveBeenCalledWith(
       expect.objectContaining({
         innov_use_to_be_determined: false,
-        innovation_use_level_id: 10,
+        innovation_use_level_id: 2,
         actors: expect.any(Array),
       }),
       baseContext.resultId,
       expect.objectContaining({ id: baseContext.userId }),
+    );
+  });
+
+  // P2-3359. `clarisa_innovation_use_levels` seeds levels 0-9 without explicit ids,
+  // so the auto-increment id is always level + 1. Handing the id to
+  // InnovationUseService — which resolves the value as `where: { level }` — shifted
+  // every result one level up, and for level 9 resolved to nothing at all, where the
+  // service's `null.id` threw and the AI draft-promotion path swallowed it.
+  describe('use level is passed as a level, not a catalogue id (P2-3359)', () => {
+    it.each([
+      [0, 1],
+      [5, 6],
+      [9, 10],
+    ])(
+      'sends level %i even though its catalogue id is %i',
+      async (level, id) => {
+        useLevelRepoStub.findOne.mockResolvedValue({ id, level });
+
+        await handler.afterCreate({
+          ...baseContext,
+          bilateralDto: {
+            ...baseDto,
+            innovation_use: {
+              ...baseDto.innovation_use,
+              innovation_use_level: { level },
+            },
+          },
+        });
+
+        const [dto] =
+          innovationUseServiceStub.saveInnovationUse.mock.calls.at(-1);
+        expect(dto.innovation_use_level_id).toBe(level);
+        expect(dto.innovation_use_level_id).not.toBe(id);
+      },
     );
   });
 });
