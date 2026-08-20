@@ -156,6 +156,21 @@ describe('TypePolicyChangeComponent', () => {
   });
 
   describe('updateMds', () => {
+    // P2-3383: el tracker decía 'Policy stage' mientras el formulario muestra 'Stage'. El
+    // usuario ve dos nombres para el mismo campo y no puede saber cuál pendiente es cuál.
+    // El AC llama al campo "Stage in policy process", pero renombrar el campo visible quedó
+    // fuera de alcance (ver P2-3377), así que la fuente de verdad es la plantilla.
+    it('names the stage item exactly as the form labels it', () => {
+      build();
+      component.body = {};
+      component.questions = {};
+      component.updateMds();
+      const items = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      const stage = items.find((i: any) => i.key === 'policy-stage');
+      expect(stage.label).toBe('Stage');
+      expect(stage.label).not.toBe('Policy stage');
+    });
+
     it('counts nothing while every field is empty', () => {
       build();
       component.body = {};
@@ -164,7 +179,7 @@ describe('TypePolicyChangeComponent', () => {
       component.updateMds();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'policy-type', label: 'Policy type', filled: false },
-        { key: 'policy-stage', label: 'Policy stage', filled: false },
+        { key: 'policy-stage', label: 'Stage', filled: false },
         { key: 'related-to', label: 'Related to', filled: false },
         {
           key: 'policy-institutions',
@@ -196,7 +211,7 @@ describe('TypePolicyChangeComponent', () => {
       component.updateMds();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'policy-type', label: 'Policy type', filled: true },
-        { key: 'policy-stage', label: 'Policy stage', filled: true },
+        { key: 'policy-stage', label: 'Stage', filled: true },
         { key: 'related-to', label: 'Q', filled: true },
         {
           key: 'policy-institutions',

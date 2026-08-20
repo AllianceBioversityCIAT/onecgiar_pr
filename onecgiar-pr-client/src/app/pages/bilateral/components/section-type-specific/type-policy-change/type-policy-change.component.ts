@@ -109,7 +109,7 @@ export class TypePolicyChangeComponent implements OnInit {
   updateMds(): void {
     this.mdsTracker.setSectionFields('type-specific', [
       { key: 'policy-type', label: 'Policy type', filled: !!this.body.policy_type_id },
-      { key: 'policy-stage', label: 'Policy stage', filled: !!this.body.policy_stage_id },
+      { key: 'policy-stage', label: 'Stage', filled: !!this.body.policy_stage_id },
       {
         key: 'related-to',
         label: this.questions?.question_text || 'Related to',
