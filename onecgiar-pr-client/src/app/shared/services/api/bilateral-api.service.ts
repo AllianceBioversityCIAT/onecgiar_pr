@@ -49,8 +49,22 @@ export class BilateralApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`, params ? { params } : {});
   }
 
-  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification: string }) {
+  /** `justification` is mandatory on REJECT and an optional reviewer comment on APPROVE (P2-3157). */
+  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification?: string }) {
     return this.http.patch<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}/review-decision`, body);
+  }
+
+  /** P2-3157 AC4: review trail of a bilateral result — the rejection justification lives in `comment`. */
+  GET_bilateralReviewHistory(resultId: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}/review-history`);
+  }
+
+  /**
+   * P2-3157 AC3: centres linked to a result, used on notification click to find the lead centre and
+   * route to its bilateral dashboard. Fetched on demand so the notification list queries stay lean.
+   */
+  GET_centersByResultId(resultId: string | number) {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}get/centers/${resultId}`);
   }
 
   PATCH_generalInfo(resultId: number | string, body: Record<string, unknown>) {

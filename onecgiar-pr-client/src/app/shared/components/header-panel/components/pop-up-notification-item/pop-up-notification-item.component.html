@@ -1,25 +1,27 @@
 @let resultUrl = generateUrlLink(notification);
 
-<a class="notification" [href]="resultUrl" (click)="itemSelected.emit()">
+<a class="notification" [href]="resultUrl" (click)="onNotificationClick($event)">
   @if (!!notification?.notification_id) {
     @let officialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
-    @let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name;
+    @let textParts = textPartsOf(notification);
 
     <div class="init">{{ officialCode }}</div>
 
     <p style="font-weight: 500; margin: 0">
-      @if (notification?.notification_type === 1 || notification?.notification_type === 2 || notification?.notification_type === 5) {
-        <b> {{ emitterName }} has {{ getNotificationAction(notification?.notification_type) }} the result </b>
-      } @else {
-        The result
+      @if (textParts.prefix) {
+        @if (textParts.emphasizePrefix) {
+          <b> {{ textParts.prefix }} </b>
+        } @else {
+          {{ textParts.prefix }}
+        }
       }
 
       <span style="text-decoration: underline; color: var(--pr-color-black)">
         {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
       </span>
 
-      @if (notification?.notification_type === 3) {
-        <b> was successfully Quality Assessed. </b>
+      @if (textParts.suffix) {
+        <b> {{ textParts.suffix }} </b>
       }
     </p>
 
