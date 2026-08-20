@@ -38,6 +38,9 @@ describe('BilateralCenterController', () => {
             saveContributors: jest.fn().mockResolvedValue({
               response: { resultId: 1 },
             }),
+            submitForReview: jest.fn().mockResolvedValue({
+              response: { resultId: 1, status: 5 },
+            }),
           },
         },
       ],
@@ -107,6 +110,15 @@ describe('BilateralCenterController', () => {
       5,
       dto,
       user,
+    );
+  });
+
+  // P2-3157 — the transition that makes the review loop reachable from the centre UI.
+  it('submitForReview should delegate to service', async () => {
+    await controller.submitForReview(user, 77);
+    expect(bilateralCenterService.submitForReview).toHaveBeenCalledWith(
+      user,
+      77,
     );
   });
 });
