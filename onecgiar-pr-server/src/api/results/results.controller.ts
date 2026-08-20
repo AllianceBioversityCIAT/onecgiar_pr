@@ -912,6 +912,24 @@ export class ResultsController {
     );
   }
 
+  @Get('bilateral/:resultId/review-history')
+  @ApiOperation({
+    summary: 'Get the review history of a bilateral result',
+    description:
+      'Returns the review trail (APPROVE / REJECT / UPDATE entries) for a bilateral result, newest first. The rejection justification is carried in each entry comment.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiOkResponse({ description: 'Review history retrieved.' })
+  async getBilateralReviewHistory(@Param('resultId') resultId: number) {
+    return this.resultsService.getBilateralReviewHistory(resultId);
+  }
+
   @Patch('bilateral/:resultId/title')
   @ApiOperation({
     summary: 'Update bilateral result title',
