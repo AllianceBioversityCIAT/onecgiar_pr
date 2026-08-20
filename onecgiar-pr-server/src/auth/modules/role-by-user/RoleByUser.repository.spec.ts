@@ -57,4 +57,50 @@ describe('RoleByUserRepository', () => {
       expect(result).toBe(0);
     });
   });
+
+  // P2-3157 — centre → users, the inverse of validationCenterPermissions.
+  describe('getUserIdsByCenter', () => {
+    it('returns the active Center User ids for the centre', async () => {
+      mockQuery.mockResolvedValue([
+        { user_id: 11 },
+        { user_id: '12' },
+        { user_id: 13 },
+      ]);
+
+      const result = await repository.getUserIdsByCenter('CIAT');
+
+      expect(result).toEqual([11, 12, 13]);
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('rbu.center_id = ?'),
+        ['CIAT'],
+      );
+    });
+
+    it('scopes the query to the Center User role and active rows', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      await repository.getUserIdsByCenter('IRRI');
+
+      const [query] = mockQuery.mock.calls.at(-1);
+      expect(query).toContain('rbu.`role` = 9');
+      expect(query).toContain('rbu.active > 0');
+    });
+
+    it('returns an empty array when the centre has no users', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      expect(await repository.getUserIdsByCenter('IRRI')).toEqual([]);
+    });
+
+    it('drops rows without a usable user id', async () => {
+      mockQuery.mockResolvedValue([
+        { user_id: null },
+        { user_id: 0 },
+        { user_id: 'not-a-number' },
+        { user_id: 7 },
+      ]);
+
+      expect(await repository.getUserIdsByCenter('CIAT')).toEqual([7]);
+    });
+  });
 });

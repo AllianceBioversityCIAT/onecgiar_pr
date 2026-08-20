@@ -3,7 +3,10 @@ import { DataSource, Repository } from 'typeorm';
 import { RoleByUser } from './entities/role-by-user.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { GetSpecificRoleDto } from './dto/getSpecificRole.dto';
-import { RoleTypeEnum } from '../../../shared/constants/role-type.enum';
+import {
+  RoleEnum,
+  RoleTypeEnum,
+} from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class RoleByUserRepository extends Repository<RoleByUser> {
@@ -334,6 +337,42 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
         [userId, centerCode],
       );
       return result?.length ? Number.parseInt(result[0].validation) : 0;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * P2-3157 — every active Center User of a given centre.
+   *
+   * The inverse of {@link validationCenterPermissions}: that one answers "may this user act on
+   * this centre", this one answers "who belongs to this centre". Used to fan a bilateral review
+   * decision out to the whole centre, not just the submitter.
+   *
+   * @param centerCode CLARISA centre code, as stored in `role_by_user.center_id`.
+   */
+  async getUserIdsByCenter(centerCode: string): Promise<number[]> {
+    const queryData = `
+    SELECT DISTINCT
+      rbu.\`user\` AS user_id
+    FROM role_by_user rbu
+    WHERE rbu.center_id = ?
+      AND rbu.\`role\` = ${RoleEnum.CENTER_USER}
+      AND rbu.active > 0
+      AND rbu.\`user\` IS NOT NULL;
+    `;
+    try {
+      const result: Array<{ user_id: number | string }> = await this.query(
+        queryData,
+        [centerCode],
+      );
+      return (result ?? [])
+        .map((row) => Number(row.user_id))
+        .filter((id) => Number.isFinite(id) && id > 0);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: RoleByUserRepository.name,
