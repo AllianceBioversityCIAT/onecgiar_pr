@@ -41,6 +41,12 @@ export class IndicatorDrawerComponent {
   readonly accent = input<string>('#6b46e5');
   /** Tab to land on — set by the card button that opened the drawer. */
   readonly initialTab = input<DrawerTab>('report');
+  /**
+   * Whether the user may create a result against this indicator (phase open + member of the
+   * program). Forwarded to the form, which hides the submit affordance without it. Defaults to
+   * false so a host that forgets to pass it cannot accidentally expose the action.
+   */
+  readonly canReport = input<boolean>(false);
 
   readonly closed = output<void>();
   /** The host reserves this much room so the panel never covers the list. */
@@ -138,17 +144,30 @@ export class IndicatorDrawerComponent {
     this.closed.emit();
   }
 
+  /**
+   * Load what has already been reported against this indicator.
+   *
+   * Two things here are load-bearing and were both wrong:
+   *
+   *  - The id. The server persists `toc_results_indicator_id = indicatorRow.related_node_id` when a
+   *    result is created (`framework-result-toc-indicators.service.ts:72,81`) and the loader filters
+   *    on that same column. `related_node_id` and `toc_result_indicator_id` are two DIFFERENT
+   *    columns of the indicator payload, so querying with the latter matches nothing.
+   *  - The shape. The endpoint answers `{ response: { contributors, … } }` — an OBJECT, never an
+   *    array (`get-existing-result-contributors.handler.ts:37-45,69-77`). Reading `response`
+   *    straight left `length` undefined, so the list rendered as empty in every case.
+   */
   private loadExisting(ind: any): void {
     const tocResultId = ind?.toc_result_id ?? this.indicator()?.toc_result_id;
-    const indicatorId = ind?.toc_result_indicator_id;
+    const indicatorId = ind?.related_node_id ?? this.indicator()?.related_node_id;
     if (!tocResultId || !indicatorId) {
       this.existing.set([]);
       return;
     }
     this.loadingExisting.set(true);
     this.api.resultsSE.GET_ExistingResultsContributors(tocResultId, indicatorId).subscribe({
-      next: (res: { response?: any[] }) => {
-        const list = res?.response ?? [];
+      next: (res: { response?: { contributors?: any[] } }) => {
+        const list = res?.response?.contributors ?? [];
         this.existing.set(list);
         this.loadingExisting.set(false);
         // Smart default: if something is already reported here, someone opening the
