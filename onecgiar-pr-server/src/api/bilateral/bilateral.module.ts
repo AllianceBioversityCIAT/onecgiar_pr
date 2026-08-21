@@ -146,5 +146,10 @@ import { AdUsersModule } from '../ad_users/ad_users.module';
     BilateralAiFileStorageService,
     BilateralAiTextMiningService,
   ],
+  // P2-3166: the webhook dispatcher builds its payload from `BilateralService.findOne`, reusing the
+  // enrichment path that already serves `GET /api/bilateral/results` instead of writing a second
+  // serializer for the same document. Safe direction — `WebhookDispatchModule` imports this one and
+  // nothing imports it back.
+  exports: [BilateralService],
 })
 export class BilateralModule {}

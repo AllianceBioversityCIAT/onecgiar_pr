@@ -548,6 +548,55 @@ export class Result {
   })
   external_submitted_comment: string;
 
+  // P2-3166. `source` above says *how* a result arrived ('Result' | 'API'); these say *from whom*,
+  // which is what routing a webhook back needs. Naming follows the same convention
+  // `clarisa_projects` already uses for externally-sourced rows (external_source,
+  // external_project_id, external_code).
+  //
+  // Populated from the CLARISA API-key validation (`mis`), NOT from the request body's `tenant`:
+  // the former is authenticated against the key, the latter is declared by the caller.
+  //
+  // Nullable is a permanent property of the domain, not a migration convenience. Only the last of
+  // these four cases ever runs dry:
+  //   1. Pooled funding W1/W2 (`source = 'Result'`) — no external platform exists.
+  //   2. A bilateral result a centre creates in the PRMS UI — `source` is still 'API' (the enum
+  //      member is `SourceEnum.Bilateral`, so 'API' means "is W3/bilateral", NOT "arrived through
+  //      the external API"), but there is no API key and therefore no `mis`. See
+  //      `bilateral-center.service.ts` and the AI draft promotion in `bilateral-ai.service.ts`.
+  //   3. Any result created under initiative SGP-02 through the ordinary reporting UI:
+  //      `createOwnerResultV2` stamps `source = SourceEnum.Bilateral` purely from the initiative's
+  //      official_code, on a JWT-authenticated route with no API key in sight.
+  //   4. Bilateral results ingested before this column existed.
+  //
+  // So `source === 'API'` does NOT imply there is a platform to notify. Anything deciding whether
+  // to dispatch a webhook must test `external_platform_id != null` instead. `platform-report`
+  // already needs `source === Bilateral && primary_submitter_acronym !== 'SGP-02'` to pick its
+  // branch — the same lesson, learnt earlier, elsewhere.
+
+  @Column({
+    name: 'external_platform_id',
+    nullable: true,
+    type: 'int',
+  })
+  external_platform_id: number | null;
+
+  @Column({
+    name: 'external_platform_code',
+    nullable: true,
+    type: 'varchar',
+    length: 50,
+  })
+  external_platform_code: string | null;
+
+  /** The upstream's own `idempotencyKey` for the payload that carried this result. */
+  @Column({
+    name: 'external_reference',
+    nullable: true,
+    type: 'varchar',
+    length: 191,
+  })
+  external_reference: string | null;
+
   @Column({
     name: 'reviewed_by',
     nullable: true,

@@ -431,6 +431,11 @@ describe('InnovationPathwayStepFourService', () => {
         external_submitter: 2,
         external_submitted_date: new Date().toISOString(),
         external_submitted_comment: 'Test Comment',
+        // P2-3166. Null is the correct value here, not a placeholder: this is an IPSR result, so no
+        // external platform pushed it in. See the four null cases documented on `result.entity.ts`.
+        external_platform_id: null,
+        external_platform_code: null,
+        external_reference: null,
         evidence_array: [],
         results_capacity_development_object: null,
         results_innovations_dev_object: null,

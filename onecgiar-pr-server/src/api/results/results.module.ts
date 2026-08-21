@@ -110,10 +110,14 @@ import { EmailNotificationManagementModule } from '../../shared/microservices/em
 import { ReportingFullMetadataExportService } from './services/reporting-full-metadata-export.service';
 import { ReportingMetadataExportQueueModule } from '../../shared/microservices/reporting-metadata-export-queue/reporting-metadata-export-queue.module';
 import { ReportingMetadataExportConsumer } from './reporting-metadata-export.consumer';
+import { WebhookOutboxModule } from './webhook/webhook-outbox.module';
 
 @Module({
   controllers: [ResultsController, ReportingMetadataExportConsumer],
   imports: [
+    // P2-3166: the outbox write side. Entities + repository only, no services — that is what
+    // keeps the graph acyclic given BilateralModule already imports this module.
+    WebhookOutboxModule,
     RouterModule.register(ResultsRoutes),
     ResultLevelsModule,
     ResultTypesModule,
