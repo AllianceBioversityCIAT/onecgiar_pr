@@ -40,7 +40,7 @@ hlm-sidebar {
   --ring: var(--pr-sidebar-accent);
 
   color: var(--pr-sidebar-fg);
-  // CURRENT reference: flat #271862 — no radial glow, no outer drop shadow.
+  // The design: flat #271862 — no radial glow, no outer drop shadow.
   background-color: var(--pr-sidebar-bg) !important;
   background-image: none !important;
   box-shadow: none;
@@ -79,7 +79,7 @@ hlm-sidebar {
     text-decoration: none;
   }
 
-  // Content area: CURRENT `padding: 4px 12px 16px` on the scroll column.
+  // Content area: the design's `padding: 4px 12px 16px` on the scroll column.
   // Force the flex/scroll chain so tall Platform + programs lists can scroll
   // (h-svh shell → flex column → flex-1 min-h-0 → overflow-y auto).
   [data-slot='sidebar-content'] {
@@ -115,9 +115,9 @@ hlm-sidebar {
     padding-right: 16px !important;
   }
 
-  // Platform / menu rows — 36px, flat. Active = solid brand (CURRENT nav()).
+  // Platform / menu rows — 36px, flat. Active = solid brand.
   // Icons: 20×20, inactive #A79BD4, active/hover #FFFFFF.
-  // Labels: CURRENT nav().weight → 500 inactive / 600 active only (not bold/700).
+  // Labels: the design weights them 500 inactive / 600 active only (not bold/700).
   // Force weight on > span too — Manrope can look heavy if a parent 600 leaks in.
   [data-slot='sidebar-menu-button'] {
     height: 36px !important;
@@ -127,7 +127,7 @@ hlm-sidebar {
     padding-right: 10px !important;
     border-radius: 8px !important;
     font-size: 14px !important;
-    font-weight: 500 !important; // CURRENT inactive
+    font-weight: 500 !important; // inactive, per the design
     font-synthesis: none;
     color: var(--pr-sidebar-fg) !important; // #E9E4FA
 
@@ -165,7 +165,7 @@ hlm-sidebar {
     background-image: none !important;
     background-color: var(--pr-sidebar-active) !important; // #6B46E5
     color: #fff !important;
-    font-weight: 600 !important; // CURRENT active only
+    font-weight: 600 !important; // active only, per the design
     box-shadow: none !important;
 
     > span {
@@ -178,7 +178,7 @@ hlm-sidebar {
     }
   }
 
-  // Hover: colour only — do NOT bump weight (CURRENT keeps 500 until selected).
+  // Hover: colour only — do NOT bump weight (the design keeps 500 until selected).
   [data-slot='sidebar-menu-button']:hover:not([data-active='true']) {
     background-color: var(--pr-sidebar-hover);
     color: #fff !important;
@@ -285,16 +285,22 @@ hlm-sidebar {
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   SCIENCE PROGRAMS block — exact spec from the approved reference.
-   Source: docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html (sidebar)
-   Spec sheet: docs/reporting-redesign/SIDEBAR-SPEC.md §2
+   SCIENCE PROGRAMS block. The approved geometry is written out here because these
+   rules are now its only record: section labels 11px/600 uppercase at .08em
+   tracking; "my" programme cards 44px tall, 8px radius, 8×8 dot, code in mono
+   12px/600, name 14px; the "other programmes" toggle above 30px rows that scroll
+   inside the group; platform links 36px with a 3px left rail on the active one;
+   dark chrome closed off by a 1px rgba(255,255,255,.10) edge.
 
    Sizes are absolute px on purpose: html is 12px, so rem-based utilities would
-   render 25% small (UI-RULES §1.3). Colours come from the token layer only.
+   render 25% small. Colours come from the token layer only — and where a token
+   deliberately departs from the design (the section-label colour was raised to
+   clear WCAG AA on both sidebar surfaces), the reason is recorded in
+   docs/DESIGN-DEVIATIONS.md, not re-derived here.
    ════════════════════════════════════════════════════════════════════════════ */
 
 .pr-nav-section-label {
-  // CURRENT: first block 12px top / 4px side / 8px bottom; later blocks 16px top.
+  // Design: first block 12px top / 4px side / 8px bottom; later blocks 16px top.
   padding: 12px 4px 8px;
   font-size: 11px;
   font-weight: 600;
@@ -310,7 +316,7 @@ hlm-sidebar {
     text-align: left;
   }
 
-  // Centers / next blocks after a list (CURRENT 16px top).
+  // Centers / next blocks after a list (16px top in the design).
   &--spaced {
     padding-top: 16px;
   }
@@ -320,7 +326,7 @@ hlm-sidebar {
     padding-top: 16px;
   }
 
-  // Extras: more air above (CURRENT 20px).
+  // Extras: more air above (20px in the design).
   &--extras {
     padding-top: 20px;
   }
@@ -339,7 +345,7 @@ hlm-sidebar {
   transform: rotate(45deg);
 }
 
-// Content column: CURRENT scroll pad is 4px 12px 16px — horizontal 12px on groups.
+// Content column: the design's scroll pad is 4px 12px 16px — horizontal 12px on groups.
 .pr-nav-programs,
 .pr-nav-platform,
 .pr-nav-extras {
@@ -353,7 +359,7 @@ hlm-sidebar {
 
 .pr-nav-divider {
   height: 1px;
-  // CURRENT: margin 20px 4px 0 under the program/centre block.
+  // Design: margin 20px 4px 0 under the program/centre block.
   margin: 20px 4px 0;
   background: var(--pr-sidebar-border);
 }
@@ -367,7 +373,7 @@ hlm-sidebar {
   list-style: none;
 }
 
-/* ── Collapsed icon rail (SIDEBAR-SPEC.md §2 "Collapsed rail") ──
+/* ── Collapsed icon rail ──
    32×32 buttons, centred, so the programme band survives collapsing. */
 .pr-nav-rail {
   display: flex;
@@ -491,7 +497,7 @@ hlm-sidebar[data-collapsible='icon'] {
 }
 
 /* ── "My" programmes — 44px cards.
-   CURRENT active: solid #6B46E5 + 3px left rail #C4B5FD + white type + white check.
+   Active, per the design: solid #6B46E5 + 3px left rail #C4B5FD + white type + white check.
    Inactive: elevated #33227A + 1px white/10 border. */
 .pr-nav-program-card {
   position: relative;
@@ -520,7 +526,7 @@ hlm-sidebar[data-collapsible='icon'] {
     background: var(--pr-sidebar-active); // #6B46E5
     box-shadow: 0 2px 8px rgba(107, 70, 229, 0.35);
 
-    // 3px lilac rail on the left edge (CURRENT :60)
+    // 3px lilac rail on the left edge — the design's marker for the active item
     &::before {
       content: '';
       position: absolute;
@@ -595,13 +601,13 @@ hlm-sidebar[data-collapsible='icon'] {
   }
 }
 
-/* ── "Other" programmes — CURRENT toggle is a padded label row, not a 32px chip ── */
+/* ── "Other" programmes — the design's toggle is a padded label row, not a 32px chip ── */
 .pr-nav-others-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
   width: 100%;
-  // CURRENT: padding 16px 4px 8px on the other-programs control.
+  // Design: padding 16px 4px 8px on the other-programs control.
   margin-top: 0;
   padding: 16px 4px 8px;
   border: none;
@@ -624,7 +630,7 @@ hlm-sidebar[data-collapsible='icon'] {
   color: var(--pr-sidebar-fg-muted);
 }
 
-/* Wrapper so the bottom fade sits on top of the scroll list (CURRENT :119). */
+/* Wrapper so the bottom fade sits on top of the scroll list, as the design shows it. */
 .pr-nav-others-wrap {
   position: relative;
 }

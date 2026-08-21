@@ -24,6 +24,12 @@ import { FieldsManagerService } from '../fields-manager.service';
 export interface SearchParams {
   limit?: number;
   page?: number;
+  /**
+   * Free-text filter on the result title. The server turns it into
+   * `LOWER(title) LIKE LOWER('%<title>%')` (result.repository.ts) — a substring match, with no
+   * relevance ranking and no typo tolerance. Added for the global search palette.
+   */
+  title?: string;
   status_id?: string;
   portfolio_id?: string;
   result_type_id?: string;

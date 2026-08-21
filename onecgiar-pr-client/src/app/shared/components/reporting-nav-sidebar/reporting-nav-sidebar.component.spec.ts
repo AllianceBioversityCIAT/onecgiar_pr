@@ -125,7 +125,8 @@ describe('ReportingNavSidebarComponent', () => {
     expect(paths).not.toContain('result-framework-reporting');
     expect(paths).not.toContain('emerging');
     // Reference order: Results Center · Innovation Packages · Quality Assurance · Bilateral · My Admin.
-    // Bilateral used to be absent because its route carried `prHide: true` (GAP-ANALYSIS §1 S1).
+    // Bilateral used to be absent because its route carried `prHide: true`, which dropped it from
+    // `sections()`; the approved order lists it as the fourth PLATFORM entry, so it must be here.
     const result = paths.indexOf('result');
     const qa = paths.indexOf('quality-assurance');
     const bilateral = paths.indexOf('bilateral');
@@ -538,8 +539,8 @@ describe('ReportingNavSidebarComponent', () => {
   });
 
   // ---------------------------------------------------- footer / rail chrome
-  // The user (account) menu is NOT part of this component any more — it lives only in the
-  // topbar (PROGRAM-SHELL-SPEC.md §2). Its getters and their specs moved to
+  // The user (account) menu is NOT part of this component any more — the account chip belongs to
+  // the topbar and only to the topbar. Its getters and their specs moved to
   // shell-topbar.component.spec.ts; what stays here is the centres / notifications /
   // text-size chrome the sidebar still owns.
   // ------------------------------------------------------------- pinned programmes

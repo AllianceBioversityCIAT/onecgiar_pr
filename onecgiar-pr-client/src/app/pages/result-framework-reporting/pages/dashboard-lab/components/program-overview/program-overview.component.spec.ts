@@ -3,10 +3,8 @@ import {
   ProgramOverviewComponent,
   StatusSegment,
   AowProgressRow,
-  AttentionRow,
   CategoryBar,
-  CountryRow,
-  PaceSeries
+  BilateralRoleRow
 } from './program-overview.component';
 
 describe('ProgramOverviewComponent', () => {
@@ -24,6 +22,29 @@ describe('ProgramOverviewComponent', () => {
     { code: 'AOW01', name: 'Market', done: 3, total: 8 }
   ];
 
+  /** Mirrors the real prtest shape for SP02: 8 own categories, uncapped. */
+  const categories: CategoryBar[] = [
+    { name: 'Innovation development', count: 15 },
+    { name: 'Other output', count: 10 },
+    { name: 'Capacity sharing for development', count: 6 },
+    { name: 'Innovation use', count: 6 },
+    { name: 'Knowledge product', count: 6 },
+    { name: 'Policy change', count: 5 },
+    { name: 'Other outcome', count: 1 },
+    { name: 'Innovation Packages', count: 1 }
+  ];
+
+  const bilateralCategories: CategoryBar[] = [
+    { name: 'Capacity sharing for development', count: 70 },
+    { name: 'Innovation development', count: 30 }
+  ];
+
+  const bilateralRoles: BilateralRoleRow[] = [
+    { key: 'tagged', label: 'Results where this program is tagged', count: 142 },
+    { key: 'primary', label: 'Where this program is the primary science program', count: 134 },
+    { key: 'contributor', label: 'Where this program is a contributor', count: 8 }
+  ];
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [ProgramOverviewComponent] }).compileComponents();
     fixture = TestBed.createComponent(ProgramOverviewComponent);
@@ -31,27 +52,37 @@ describe('ProgramOverviewComponent', () => {
     fixture.componentRef.setInput('programName', 'Breeding for Tomorrow');
     fixture.componentRef.setInput('statusSegments', segments);
     fixture.componentRef.setInput('aowProgress', aows);
-    fixture.componentRef.setInput('categories', [
-      { name: 'Knowledge product', count: 11, color: 'var(--pr-chart-1)' }
-    ] satisfies CategoryBar[]);
-    fixture.componentRef.setInput('countries', [
-      { name: 'Kenya', count: 8, color: 'var(--pr-chart-1)' },
-      { name: 'Ethiopia', count: 7, color: 'var(--pr-chart-2)' }
-    ] satisfies CountryRow[]);
+    fixture.componentRef.setInput('categories', categories);
+    fixture.componentRef.setInput('bilateralCategories', bilateralCategories);
+    fixture.componentRef.setInput('bilateralRoles', bilateralRoles);
     fixture.detectChanges();
   });
 
-  it('renders the six CURRENT Overview blocks (no Largest gaps)', () => {
+  /**
+   * Guards the card ORDER, which is the whole point of P2-3303 ("prominent … under about this
+   * program"). Any reordering has to be a deliberate edit here, never an accident.
+   */
+  it('renders the six Overview cards in the approved design order', () => {
     const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
 
     expect(headings).toEqual([
       'About this program',
+      'Results by indicator category',
+      'Bilateral results by indicator category',
       'Reporting status',
-      'Reporting pace',
-      'Progress by area of work',
-      'Needs attention',
-      'Impact so far'
+      'Bilateral contributions',
+      'Progress by area of work'
     ]);
+  });
+
+  it('no longer renders the three cards removed on user request', () => {
+    const text = fixture.nativeElement.textContent as string;
+    // P2-3298 / P2-3300 / P2-3299 respectively.
+    expect(text).not.toContain('Reporting pace');
+    expect(text).not.toContain('Needs attention');
+    expect(text).not.toContain('Impact so far');
+    expect(text).not.toContain('Countries reached');
+    expect(fixture.nativeElement.querySelectorAll('svg').length).toBe(0);
   });
 
   it('uses the programme name in the fallback description', () => {
@@ -64,9 +95,7 @@ describe('ProgramOverviewComponent', () => {
   });
 
   it('never divides by zero when nothing has been reported', () => {
-    fixture.componentRef.setInput('statusSegments', [
-      { key: 'x', label: 'x', count: 0, bg: '', fg: '' }
-    ]);
+    fixture.componentRef.setInput('statusSegments', [{ key: 'x', label: 'x', count: 0, bg: '', fg: '' }]);
     fixture.detectChanges();
     expect(component.statusTotal()).toBe(0);
     expect(component.segmentWidth(component.statusSegments()[0])).toBe(0);
@@ -77,15 +106,94 @@ describe('ProgramOverviewComponent', () => {
     expect(percents[0]).toBeLessThanOrEqual(percents[1]);
   });
 
-  it('scales country and category bars against their own maximum', () => {
-    const [kenya, ethiopia] = component.countries();
-    expect(component.countryWidth(kenya)).toBe(100);
-    expect(component.countryWidth(ethiopia)).toBeCloseTo((7 / 8) * 100);
-    expect(component.categoryHeight(component.categories()[0])).toBe(130);
-  });
-
   it('treats an area of work with no planned indicators as 0%', () => {
     expect(component.percentOf({ code: 'AOW09', name: 'Empty', done: 0, total: 0 })).toBe(0);
+  });
+
+  describe('results by indicator category', () => {
+    it('scales each bar against the largest count in its own series', () => {
+      expect(component.categoryWidth(categories[0])).toBe(100);
+      expect(component.categoryWidth(categories[1])).toBeCloseTo((10 / 15) * 100);
+      expect(component.categoryWidth(categories[6])).toBeCloseTo((1 / 15) * 100);
+    });
+
+    /** The old vertical chart capped at 4 columns, which hid half of SP02's categories. */
+    it('renders every category, with no four-item cap', () => {
+      // Every bar row, singular or plural — the aria-label suffix varies with the count.
+      const rows = fixture.nativeElement.querySelectorAll('button[aria-label]');
+      expect(categories.length).toBe(8);
+      expect(rows.length).toBe(categories.length + bilateralCategories.length);
+    });
+
+    it('returns 0 instead of NaN for an all-zero series', () => {
+      const zeroes: CategoryBar[] = [{ name: 'A', count: 0 }, { name: 'B', count: 0 }];
+      fixture.componentRef.setInput('categories', zeroes);
+      fixture.detectChanges();
+      expect(component.categoryWidth(zeroes[0])).toBe(0);
+      expect(Number.isNaN(component.categoryWidth(zeroes[0]))).toBe(false);
+    });
+
+    it('shows an empty state instead of an empty chart', () => {
+      fixture.componentRef.setInput('categories', []);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('No result categories reported yet.');
+    });
+
+    it('exposes the count to assistive tech and hides the bar itself', () => {
+      const row = fixture.nativeElement.querySelector('button[aria-label^="Innovation development"]');
+      expect(row.getAttribute('aria-label')).toBe('Innovation development: 15 results');
+      expect(row.querySelector('[aria-hidden="true"]')).toBeTruthy();
+    });
+
+    it('says "1 result", not "1 results", for a single-result category', () => {
+      const singles = fixture.nativeElement.querySelectorAll('button[aria-label$="1 result"]');
+      // Two categories sit at count 1 in the fixture (Other outcome, Innovation Packages).
+      expect(singles.length).toBe(2);
+    });
+  });
+
+  describe('bilateral breakdowns', () => {
+    it('normalises the bilateral bars against their own maximum, not the own-results one', () => {
+      // 70 is the bilateral max even though the own-results series peaks at 15.
+      expect(component.bilateralCategoryWidth(bilateralCategories[0])).toBe(100);
+      expect(component.bilateralCategoryWidth(bilateralCategories[1])).toBeCloseTo((30 / 70) * 100);
+    });
+
+    it('renders the three counts P2-3302 asks for', () => {
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('Results where this program is tagged');
+      expect(text).toContain('142');
+      expect(text).toContain('134');
+      expect(text).toContain('8');
+    });
+
+    it('shows an empty state when no bilateral results are linked', () => {
+      fixture.componentRef.setInput('bilateralCategories', []);
+      fixture.componentRef.setInput('bilateralRoles', []);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('No bilateral results are linked to this program yet.');
+    });
+  });
+
+  describe('controls with no authorising ticket', () => {
+    it('ships the category rows visible but disabled, tagged Coming soon', () => {
+      const rows: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button[aria-label]'));
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every(row => row.disabled)).toBe(true);
+    });
+
+    /** One tag per section, never per row — repeating it would drown the data it annotates. */
+    it('announces Coming soon once per affected section', () => {
+      const tags = Array.from(fixture.nativeElement.querySelectorAll('span')).filter(
+        (s: any) => s.textContent.trim() === 'Coming soon'
+      );
+      expect(tags.length).toBe(3);
+    });
+
+    it('does not invent the primary-subset status breakdown', () => {
+      expect(fixture.nativeElement.textContent).toContain('Of those where this program is primary');
+      expect(fixture.nativeElement.textContent).toContain('A breakdown by review status is not shown yet.');
+    });
   });
 
   describe('status meter', () => {
@@ -103,98 +211,16 @@ describe('ProgramOverviewComponent', () => {
 
       const narrow = component.statusSegments().slice(1);
       expect(narrow.map(s => component.showsSegmentCount(s))).toEqual([false, false]);
-      // Exactly one number on screen — the two slivers must not stack their labels.
-      const printed = fixture.nativeElement.querySelectorAll('.pr-figure-sm.font-semibold');
+      // Exactly one number inside the meter — the two slivers must not stack their labels.
+      // Scoped to the 44px meter: the breakdown bars print counts in the same figure style.
+      const printed = fixture.nativeElement.querySelectorAll('div.h-\\[44px\\] > span.pr-figure-sm');
       expect(printed.length).toBe(1);
     });
 
     it('renders a legend entry for every segment, including zero-count ones', () => {
-      const legend = Array.from(fixture.nativeElement.querySelectorAll('.rounded-full')).length;
-      expect(legend).toBe(segments.length);
-    });
-  });
-
-  describe('needs attention', () => {
-    it('gives every alert kind its own icon and colour', () => {
-      const rows: AttentionRow[] = [
-        { kind: 'stale-drafts', text: '4 results still in Editing' },
-        { kind: 'empty-aow', text: '3 areas of work with no results reported yet' },
-        { kind: 'missing-evidence', text: '2 results are missing evidence links' }
-      ];
-      fixture.componentRef.setInput('attention', rows);
-      fixture.detectChanges();
-
-      const names = rows.map(r => component.attentionIcon(r));
-      expect(names).toEqual(['lucideClock', 'lucideCircleDot', 'lucideFileText']);
-      expect(new Set(names).size).toBe(3);
-      expect(component.attentionColor(rows[0])).not.toBe(component.attentionColor(rows[2]));
-      expect(fixture.nativeElement.querySelectorAll('ng-icon').length).toBe(3);
-    });
-  });
-
-  describe('reporting pace', () => {
-    const series = (patch: Partial<PaceSeries>): PaceSeries => ({
-      done: 0,
-      total: 0,
-      elapsedWeeks: 0,
-      leftWeeks: 0,
-      inProgress: 0,
-      inQa: 0,
-      submitted: 0,
-      ...patch
-    });
-
-    const setSeries = (patch: Partial<PaceSeries>) => {
-      fixture.componentRef.setInput('paceSeries', series(patch));
-      fixture.detectChanges();
-    };
-
-    it('projects the finish date against the deadline when the cycle dates are known', () => {
-      // 20 done in 10 weeks = 2/wk; 20 left needs 10 more weeks but only 5 remain → 35 days late.
-      setSeries({ done: 20, total: 40, elapsedWeeks: 10, leftWeeks: 5 });
-
-      expect(component.paceHeadline()).toBe("At this pace you'll finish 35 days after the deadline.");
-      expect(component.paceSub()).toBe('You need 4 results per week to close on time. Current pace: 2.');
-    });
-
-    it('says the program will finish early when the pace is ahead', () => {
-      setSeries({ done: 30, total: 40, elapsedWeeks: 10, leftWeeks: 10 });
-      expect(component.paceHeadline()).toBe("At this pace you'll finish 47 days before the deadline.");
-    });
-
-    it('never invents a deadline when the cycle dates are missing', () => {
-      setSeries({ done: 8, total: 40, inProgress: 30, inQa: 1, submitted: 1 });
-
-      expect(component.paceHeadline()).toBe('8 of 40 results have moved past Not started.');
-      expect(component.paceSub()).toBe('30 still in progress · 1 in QA · 1 submitted.');
-      expect(component.paceChart().projD).toBe('');
-      expect(component.paceChart().deadlineX).toBeNull();
-    });
-
-    it('falls back to the empty copy with no results at all', () => {
-      setSeries({});
-      expect(component.paceHeadline()).toBe('No results reported for this phase yet.');
-      expect(component.paceSub()).toBe('Start reporting against the planned ToC to build pace.');
-    });
-
-    it('reports an untouched cycle', () => {
-      setSeries({ done: 0, total: 12, elapsedWeeks: 3, leftWeeks: 4 });
-      expect(component.paceHeadline()).toBe('Nothing has been reported yet in this cycle.');
-    });
-
-    it('derives the sparkline from the data instead of a hard-coded path', () => {
-      setSeries({ done: 10, total: 40, elapsedWeeks: 4, leftWeeks: 4 });
-      const half = component.paceChart();
-
-      setSeries({ done: 35, total: 40, elapsedWeeks: 4, leftWeeks: 4 });
-      const most = component.paceChart();
-
-      // More progress ⇒ the line ends higher (smaller y) in the same viewBox.
-      expect(most.pointY).toBeLessThan(half.pointY);
-      expect(half.lineD).toMatch(/^M0 82 L\d/);
-      expect(half.areaD.endsWith('Z')).toBe(true);
-      expect(half.deadlineX).toBeGreaterThan(0);
-      expect(half.projD).not.toBe('');
+      // Scoped to the 8px legend dot: the breakdown bars are rounded-full too.
+      const legend = fixture.nativeElement.querySelectorAll('span.h-\\[8px\\].w-\\[8px\\].rounded-full');
+      expect(legend.length).toBe(segments.length);
     });
   });
 });

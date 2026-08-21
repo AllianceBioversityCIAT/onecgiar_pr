@@ -33,10 +33,10 @@ import {
   ProgramOverviewComponent,
   StatusSegment as OverviewStatusSegment,
   AowProgressRow as OverviewAowProgressRow,
-  AttentionRow as OverviewAttentionRow,
   CategoryBar as OverviewCategoryBar,
-  PaceSeries as OverviewPaceSeries
+  BilateralRoleRow as OverviewBilateralRoleRow
 } from './components/program-overview/program-overview.component';
+import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
@@ -93,16 +93,14 @@ const OVERVIEW_DISCONTINUED_SLOT = {
   fg: 'var(--pr-status-not-started-fg)'
 };
 
-/** PRMS status id that the Overview presents as "Not started". */
-const NOT_STARTED_STATUS_ID = 5;
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Science-Program role id for "Primary submitter" on a bilateral result. The wire sends a STRING. */
+const BILATERAL_PRIMARY_ROLE_ID = '1';
 
 /** "Intermediate Outcomes" → "Intermediate outcomes" (the reference uses sentence case). */
 function sentenceCaseOutcomes(name: string): string {
   return (name ?? '').replace(/\bOutcomes\b/g, 'outcomes');
 }
-
-const CHART_COLORS = ['var(--pr-chart-1)', 'var(--pr-chart-2)', 'var(--pr-chart-3)', 'var(--pr-chart-4)'];
 
 /** Vibrant, high-contrast palette for the status charts (no pastels). */
 const STATUS_COLOR: Record<number, string> = {
@@ -246,9 +244,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly resultLevelSE = inject(ResultLevelService);
 
   /**
-   * Reporting phases (with their start / end dates) — the only source of the cycle deadline the
-   * Overview's pace card needs. PhasesService already fetches them app-wide, so this only mirrors
-   * its plain array into a signal; ngOnInit re-seeds and subscribes for the cold-load case.
+   * Reporting phases with their start / end dates.
+   *
+   * ⚠️ CURRENTLY WRITTEN BUT NEVER READ. Its only consumer was the Overview's Reporting-pace
+   * card, removed by P2-3298. The plumbing (and its ngOnInit subscription) is kept deliberately
+   * so this change stays out of `ngOnInit`/`ngOnDestroy`, which a parallel workflow is editing.
+   * Delete it — and `phasesSE`, `Phases`, `phasesSub` with it — when nothing else claims it.
    */
   private readonly reportingPhases = signal<Phases[]>(this.phasesSE.phases.reporting ?? []);
 
@@ -417,12 +418,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    *  the drawer's default width so the report form opens two-column from the start. */
   readonly managePanelWidth = signal(740);
 
-  manageIndicator(indicator: any, groupTitle: string, tab: 'report' | 'info' = 'report'): void {
+  manageIndicator(indicator: any, groupTitle: string, tab: 'report' | 'info' = 'report', node?: unknown): void {
     // The group carries the ToC node id the existing-results endpoint needs; the
     // indicator row does not, so it is folded in here. Planned browse may pass
     // `__hloNode` / `toc_result_id` when no AoW detail is open.
+    //
+    // `node` wins when a caller hands one over. The report flow does exactly that: the ToC node is
+    // what carries `toc_partner_institution_ids` and `contributing_synergy_program_initiative_ids`,
+    // and losing them costs the form its Center / Science Program pre-selection SILENTLY — empty
+    // dropdowns, no error. Matching on `result_title` is too weak a hook to trust with that.
     const group =
-      this.indicatorGroups().find(g => g?.result_title === groupTitle) ?? indicator?.__hloNode ?? null;
+      (node as Record<string, unknown> | null | undefined) ??
+      this.indicatorGroups().find(g => g?.result_title === groupTitle) ??
+      indicator?.__hloNode ??
+      null;
     const tocId = indicator?.toc_result_id ?? group?.toc_result_id;
     this.manageTab.set(tab);
     this.managed.set({ indicator: { ...indicator, toc_result_id: tocId }, groupTitle, node: group });
@@ -677,6 +686,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       if (view === 'planned' || view === 'overview') this.loadAllTocs();
     });
 
+    // Overview-only: the programme's W3/Bilateral rows (P2-3302). Gated on the view so the other
+    // tabs never pay for a call they do not render.
+    effect(() => {
+      const code = this.selected()?.initiativeCode;
+      if (this.rfrView() === 'overview' && code) this.loadBilateralRows(code);
+    });
+
     // Only the guided flow claims the whole viewport (focus mode). Inside an open
     // Area of Work the header stays, but trimmed to the two reporting entries so it
     // does not compete with the AOW's own navigation.
@@ -918,68 +934,83 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .filter(r => r.total > 0);
   });
 
-  /** Needs-attention rows derived from live counts — no invented alerts. */
-  readonly overviewAttention = computed<OverviewAttentionRow[]>(() => {
-    const rows: OverviewAttentionRow[] = [];
-    const p = this.pipelineStats();
-    if (p.editing > 0) {
-      rows.push({ kind: 'stale-drafts', text: `${p.editing} result${p.editing === 1 ? '' : 's'} still in Editing` });
-    }
-    if (p.pending > 0) {
-      // Status 5 is presented as "Not started" in the meter — keep the wording consistent here.
-      rows.push({ kind: 'not-started', text: `${p.pending} result${p.pending === 1 ? '' : 's'} not started yet` });
-    }
-    // Collapsed into a single row: one line per empty AoW flooded the card with near-identical text.
-    const emptyAows = this.overviewAowProgress().filter(a => a.total > 0 && a.done === 0);
-    if (emptyAows.length === 1) {
-      rows.push({ kind: 'empty-aow', text: `${emptyAows[0].code} has no results reported yet` });
-    } else if (emptyAows.length > 1) {
-      rows.push({ kind: 'empty-aow', text: `${emptyAows.length} areas of work with no results reported yet` });
-    }
-    return rows;
-  });
-
-  /** Results by indicator category — from the program's type summaries. */
+  /**
+   * Results by indicator category — from the program's type summaries.
+   *
+   * NOT capped. The old `.slice(0, 4)` existed only because four 88px vertical columns were all
+   * that fitted; the card is now a full-height list of horizontal bars, and the cap was hiding
+   * half the data (SP02 reports 8 categories). Colour is per CARD now, so no per-row colour.
+   */
   readonly overviewCategories = computed<OverviewCategoryBar[]>(() => {
     const { outputs, outcomes } = this.groupedSummaries();
-    const all = [...outputs, ...outcomes];
-    return all
-      .map((c, i) => ({
-        name: c.resultTypeName,
-        count: (c.editing || 0) + (c.submitted || 0),
-        color: CHART_COLORS[i % CHART_COLORS.length]
-      }))
+    return [...outputs, ...outcomes]
+      .map(c => ({ name: c.resultTypeName, count: (c.editing || 0) + (c.submitted || 0) }))
       .filter(c => c.count > 0)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 4);
+      .sort((a, b) => b.count - a.count);
   });
 
+  // ── W3/Bilateral figures for the Overview tab (P2-3302) ───────────────────
+  //
+  // Source: GET /api/results/by-program-and-centers?programId=<SP>, the same call the bilateral
+  // review screen makes. `centerIds` is deliberately omitted — the endpoint only narrows when
+  // exactly ONE code is passed, so omitting it returns the programme's whole set.
+  //
+  // ⚠️ TWO limitations to know before trusting these numbers:
+  //  1. The server filters `status_id IN (5,6,7)`, so bilateral results still in Editing /
+  //     Submitted / Draft are invisible. "Tagged" therefore means "tagged AND reached review".
+  //     P2-3302 asks for "tagged", full stop — the gap is documented, not papered over.
+  //  2. `initiative_role_id` and `status_id` arrive as STRINGS ('1', '5'). Compare with
+  //     String(...), never `=== 1`.
+  private readonly bilateralRows = signal<ResultToReview[]>([]);
+
+  /** Only the rows where this programme is the primary submitter (role id '1'). */
+  private readonly bilateralPrimaryRows = computed(() =>
+    this.bilateralRows().filter(r => String(r.initiative_role_id ?? '') === BILATERAL_PRIMARY_ROLE_ID)
+  );
+
   /**
-   * Raw pace numbers for the Overview card. The reporting cycle's start / end dates DO exist —
-   * `GET /api/versioning` returns them per phase, and the SP payload's `versionId` is that phase's
-   * id — so the projection is real, not invented. When the phase has no dates (or has not opened
-   * yet) the weeks come through as 0 and the card falls back to non-projecting copy.
+   * Tagged / Primary / Contributor counts. Contributor is everything that is NOT primary, and its
+   * label comes from the payload's own `initiative_role_name`, so a third role would surface under
+   * its real name instead of being silently absorbed.
    */
-  readonly overviewPaceSeries = computed<OverviewPaceSeries>(() => {
-    const version = this.latestVersion(this.selected());
-    const statuses = version?.statuses ?? [];
-    const total = statuses.reduce((sum, s) => sum + s.count, 0);
-    const notStarted = statuses.find(s => s.statusId === NOT_STARTED_STATUS_ID)?.count ?? 0;
-    const p = this.pipelineStats();
-    const phase = this.reportingPhases().find(ph => Number(ph?.id) === Number(version?.versionId));
-    const now = Date.now();
-    const start = phase?.start_date ? new Date(phase.start_date).getTime() : NaN;
-    const end = phase?.end_date ? new Date(phase.end_date).getTime() : NaN;
-    return {
-      done: total - notStarted,
-      total,
-      elapsedWeeks: Number.isFinite(start) ? (now - start) / WEEK_MS : 0,
-      leftWeeks: Number.isFinite(end) ? (end - now) / WEEK_MS : 0,
-      inProgress: p.editing,
-      inQa: p.qaed,
-      submitted: p.submitted
-    };
+  readonly overviewBilateralRoles = computed<OverviewBilateralRoleRow[]>(() => {
+    const rows = this.bilateralRows();
+    if (!rows.length) return [];
+    const primary = this.bilateralPrimaryRows().length;
+    const contributors = rows.filter(r => String(r.initiative_role_id ?? '') !== BILATERAL_PRIMARY_ROLE_ID);
+    const contributorLabel = contributors.find(r => r.initiative_role_name)?.initiative_role_name?.trim();
+    return [
+      { key: 'tagged', label: 'Results where this program is tagged', count: rows.length },
+      { key: 'primary', label: 'Where this program is the primary science program', count: primary },
+      {
+        key: 'contributor',
+        label: contributorLabel ? `Where this program is a ${contributorLabel.toLowerCase()}` : 'Where this program is a contributor',
+        count: contributors.length
+      }
+    ];
   });
+
+  /** Bilateral results by category, primary-role only — matches the card's subtitle. */
+  readonly overviewBilateralCategories = computed<OverviewCategoryBar[]>(() => {
+    const byName = new Map<string, number>();
+    for (const row of this.bilateralPrimaryRows()) {
+      const name = row.indicator_category?.trim();
+      if (!name) continue;
+      byName.set(name, (byName.get(name) ?? 0) + 1);
+    }
+    return [...byName.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  });
+
+  /** Fetch the programme's bilateral rows. Overview only — the other tabs do not use them. */
+  private loadBilateralRows(code: string): void {
+    this.api.resultsSE.GET_ResultToReview(code).subscribe({
+      next: (res: { response?: { results?: ResultToReview[] }[] }) =>
+        this.bilateralRows.set((res?.response ?? []).flatMap(g => g.results ?? [])),
+      error: () => this.bilateralRows.set([])
+    });
+  }
 
   /** % of results in a "reported" state (QAed / Submitted). */
   readonly submittedPct = computed(() => {
@@ -1595,6 +1626,36 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Is ANY Reporting-tab control narrowing the list right now?
+   *
+   * The table cannot answer this itself: only `plannedSearch` and `reportingStatusFilter` are passed
+   * down, while Section / Type / Category are applied here in `reportingGroups()`. So a card emptied
+   * by Category reached the table indistinguishable from an Area of Work with nothing planned, and
+   * the empty state said "this area of work has no planned indicators yet" about a card full of
+   * them (P2-3405).
+   *
+   * ONE computed over all five signals on purpose: a sixth filter added later has exactly one place
+   * to be remembered, and forgetting it here is visible immediately rather than as a wrong sentence.
+   */
+  readonly reportingFiltersActive = computed(
+    () =>
+      !!this.plannedSearch().trim() ||
+      this.reportingAowFilter().length > 0 ||
+      this.reportingTypeFilter() !== 'all' ||
+      this.reportingTypologyFilter() !== 'all' ||
+      this.reportingStatusFilter() !== 'all'
+  );
+
+  /** `Clear filters` in the Reporting tab's empty state. Resets the same five signals, together. */
+  clearReportingFilters(): void {
+    this.plannedSearch.set('');
+    this.reportingAowFilter.set([]);
+    this.reportingTypeFilter.set('all');
+    this.reportingTypologyFilter.set('all');
+    this.reportingStatusFilter.set('all');
+  }
+
+  /**
    * Section dropdown = every AoW + Intermediate Outcomes + 2030 Outcomes (CURRENT selSection).
    */
   readonly reportingSectionOptions = computed(() => {
@@ -1650,14 +1711,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.manageIndicator(row, row.__hlo ?? '', 'info');
   }
 
+  /**
+   * KPI "Report" → the ASIDE, not the legacy modal.
+   *
+   * `primeEntityAowContext()` still runs first: `EntityAowService.canReportResults()` depends on
+   * the programme being seeded and on the phase check having resolved, and that flag is what
+   * decides whether the form shows a submit affordance at all.
+   *
+   * The ToC node is passed EXPLICITLY (`__hloNode`) rather than left to the title match inside
+   * `manageIndicator` — see the note there. Every other entry point in this file still opens the
+   * legacy modal; only this button moved.
+   */
   onReportingRowReport(row: ReportingIndicator): void {
-    this.openLegacyReportModal(row);
+    this.primeEntityAowContext();
+    const raw = row as unknown as Record<string, unknown>;
+    this.manageIndicator(row, row.__hlo ?? '', 'report', raw['__hloNode']);
   }
 
   /**
    * Target and Achieved open the same drawer on the tab that answers each question: `info` carries
    * the target breakdown, `report` the reported values. The reference uses popovers; the app already
    * ships this drawer, and forking it to add popovers would put the same data behind two surfaces.
+   *
+   * Recorded deviation — see docs/DESIGN-DEVIATIONS.md §9. Do not "restore fidelity" by adding the
+   * popovers back beside the drawer.
    */
   onReportingOpenTarget(row: ReportingIndicator): void {
     this.manageIndicator(row, row.__hlo ?? '', 'info');

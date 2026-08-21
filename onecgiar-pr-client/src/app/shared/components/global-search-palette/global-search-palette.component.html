@@ -1,0 +1,202 @@
+<!--
+  Palette overlay. `hlm-dialog` (CDK Dialog underneath) gives the focus trap, Esc, and focus
+  restore to the trigger — which is exactly what `app-pr-dialog` does NOT have, and why this is
+  not built on it. `--pr-scrim` (0.32) replaces Helm's `bg-black/10` via the `overlayClass` input.
+-->
+<hlm-dialog
+  [state]="open() ? 'open' : 'closed'"
+  overlayClass="bg-[var(--pr-scrim)] supports-backdrop-filter:backdrop-blur-none"
+  (stateChanged)="onDialogState($event)">
+  <hlm-dialog-content
+    *hlmDialogPortal="let ctx"
+    class="w-[640px] max-w-[calc(100vw-32px)] sm:max-w-[640px]! gap-0 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-0 shadow-[var(--pr-shadow-2)] ring-0"
+    [showCloseButton]="false">
+    <h2 class="sr-only" hlmDialogTitle>Search</h2>
+    <p class="sr-only" hlmDialogDescription>
+      Search results and programs across PRMS. Use the up and down arrows to move through the list and
+      Enter to open an item.
+    </p>
+
+    <!--
+      CHROME — the scope select and the Esc hint sit OUTSIDE [brnCommand] on purpose: its host binds
+      (keydown.enter) to selectActiveItem(), so Enter on a <select> inside it would both apply the
+      scope AND navigate to the highlighted row.
+    -->
+    <div brnCommand [filter]="alwaysVisible" class="flex w-full flex-col overflow-hidden">
+      <div
+        class="flex items-center gap-[12px] border-b border-[var(--pr-border)] px-[16px] py-[12px]">
+        <div class="flex min-w-0 flex-1 items-center gap-[8px]">
+          <ng-icon name="lucideSearch" class="shrink-0 text-[18px] text-[var(--pr-text-subtle)]" aria-hidden="true" />
+          <!--
+            aria-expanded and aria-controls are set HERE, not by Brain: the brain input host only
+            provides role=combobox, aria-autocomplete=list and aria-activedescendant (verified —
+            zero occurrences of either attribute in the shipped bundle). Without them JAWS reads a
+            plain text field with a stray id instead of a combobox.
+          -->
+          <input
+            brnCommandInput
+            class="h-[24px] w-full min-w-0 border-none bg-transparent p-0 text-[14px] font-normal text-[var(--pr-text-heading)] outline-none placeholder:text-[var(--pr-text-subtle)]"
+            placeholder="Search results, programs…"
+            aria-label="Search"
+            aria-expanded="true"
+            [attr.aria-controls]="listId"
+            [value]="search.query()"
+            (input)="search.query.set($any($event.target).value)" />
+        </div>
+
+        <label class="sr-only" for="pr-palette-scope">Limit the search to one program</label>
+        <!--
+          Spartan's `hlm-native-select`, not a bare `<select>`: the client CLAUDE.md forbids raw
+          native controls, and this keeps the design's native-looking select while staying on the
+          design system (it supplies the chevron and the token-based chrome). It also must NOT be
+          `custom-fields/pr-select` — those render `.pr-field.mandatory`, which the green-check DOM
+          scan counts (`data-control.service.ts:208`).
+        -->
+        <hlm-native-select
+          size="sm"
+          class="shrink-0"
+          selectId="pr-palette-scope"
+          selectClass="h-[28px] rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[8px] pr-[24px] text-[13px] font-medium text-[var(--pr-text)]"
+          [value]="scopeValue()"
+          (valueChange)="onScopeChange($event ?? '')">
+          <option hlmNativeSelectOption value="">All programs</option>
+          @for (opt of search.scopeOptions(); track opt.id) {
+            <option hlmNativeSelectOption [value]="opt.id">{{ opt.code }}</option>
+          }
+        </hlm-native-select>
+
+        <kbd
+          class="pointer-events-none inline-flex h-[20px] shrink-0 select-none items-center rounded-[4px] border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[6px] font-sans text-[11px] font-medium text-[var(--pr-text-secondary)]"
+          aria-hidden="true"
+          >Esc</kbd
+        >
+      </div>
+
+      <!-- LIST -->
+      <div
+        brnCommandList
+        [id]="listId"
+        class="light-scroll max-h-[420px] overflow-y-auto overflow-x-hidden p-[8px] outline-none"
+        [attr.aria-busy]="search.resultsLoading() ? 'true' : null">
+        <!-- ── RESULTS ────────────────────────────────────────────────────────────────────── -->
+        @if (search.resultsIdle()) {
+          <p class="px-[10px] py-[12px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+            Start typing to search results and programs.
+          </p>
+        } @else {
+          <div brnCommandGroup [attr.aria-labelledby]="resultsHeadingId">
+            <p
+              [id]="resultsHeadingId"
+              class="px-[10px] pb-[6px] pt-[8px] text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">
+              Results@if (!search.resultsTooShort()) { ({{ resultsCount() }}) }
+            </p>
+
+            @if (search.resultsTooShort()) {
+              <p class="px-[10px] py-[8px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                Type at least 2 characters to search results.
+              </p>
+            } @else if (search.resultsError()) {
+              <p class="px-[10px] py-[8px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                Results could not be loaded. Keep typing to try again.
+              </p>
+            } @else if (search.resultsLoading() && resultsCount() === 0) {
+              <p class="px-[10px] py-[8px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                Searching results…
+              </p>
+            } @else if (search.resultsEmpty()) {
+              <p class="px-[10px] py-[8px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                No matching results.
+              </p>
+            }
+
+            <!--
+              Only matches are rendered. Hiding misses with CSS would leave them reachable by the
+              arrow keys, because Brain's skipPredicate is `disabled || !visible()` and visible()
+              is only the (neutralised) filter's return value.
+            -->
+            @for (row of search.resultRows(); track row.id) {
+              <button
+                brnCommandItem
+                type="button"
+                [value]="resultValue(row)"
+                [attr.aria-label]="resultAriaLabel(row)"
+                class="flex w-full items-center gap-[10px] rounded-[6px] px-[10px] py-[7px] text-left outline-none data-[selected]:bg-[var(--pr-surface-band)] hover:bg-[var(--pr-surface-band)]"
+                (selected)="openResult(row)">
+                <span
+                  class="shrink-0 rounded-[6px] bg-[var(--pr-color-primary-50)] px-[8px] py-[2px] font-mono text-[12px] font-medium text-[var(--pr-color-primary-600)]"
+                  aria-hidden="true"
+                  >{{ row.submitterCode }}</span
+                >
+                <span class="min-w-0 flex-1 truncate text-[13px] font-normal text-[var(--pr-text)]">{{
+                  row.title
+                }}</span>
+                <span
+                  class="shrink-0 rounded-[999px] px-[8px] py-[2px] text-[11px] font-medium"
+                  [style.color]="statusFg(row.statusId)"
+                  [style.background]="statusBg(row.statusId)"
+                  aria-hidden="true"
+                  >{{ row.statusName }}</span
+                >
+              </button>
+            }
+          </div>
+
+          <!--
+            ── INDICATORS — visible but disabled, `Coming soon` (P2-3402) ─────────────────────
+            STATIC markup, deliberately OUTSIDE [brnCommandGroup] and not a brnCommandItem:
+            BrnCommandGroup hides itself when it has zero visible items
+            (`_visible = items().some(i => i.visible())`), so a real group would vanish; and a
+            disabled brnCommandItem would still be announced as an option in the listbox.
+          -->
+          <div class="mt-[4px]">
+            <p
+              class="flex items-center gap-[8px] px-[10px] pb-[6px] pt-[8px] text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">
+              Indicators
+              <span
+                class="rounded-[4px] bg-[var(--pr-surface-subtle)] px-[6px] py-[1px] text-[10px] font-semibold normal-case tracking-normal text-[var(--pr-text-muted)]"
+                >Coming soon</span
+              >
+            </p>
+            <p class="px-[10px] pb-[8px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+              Searching indicators is not available yet.
+            </p>
+          </div>
+
+          <!-- ── PROGRAMS ──────────────────────────────────────────────────────────────────── -->
+          @if (programsCount() > 0) {
+            <div brnCommandGroup [attr.aria-labelledby]="programsHeadingId">
+              <p
+                [id]="programsHeadingId"
+                class="px-[10px] pb-[6px] pt-[8px] text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">
+                Programs ({{ programsCount() }})
+              </p>
+              @for (row of search.programHits(); track row.id) {
+                <button
+                  brnCommandItem
+                  type="button"
+                  [value]="programValue(row)"
+                  [attr.aria-label]="programAriaLabel(row)"
+                  class="flex w-full items-center gap-[10px] rounded-[6px] px-[10px] py-[7px] text-left outline-none data-[selected]:bg-[var(--pr-surface-band)] hover:bg-[var(--pr-surface-band)]"
+                  (selected)="openProgram(row)">
+                  <span
+                    class="h-[6px] w-[6px] shrink-0 rounded-[999px]"
+                    [style.background]="dotColor(row.code)"
+                    aria-hidden="true"></span>
+                  <span class="shrink-0 font-mono text-[12px] font-medium text-[var(--pr-text-secondary)]">{{
+                    row.code
+                  }}</span>
+                  <span class="min-w-0 flex-1 truncate text-[13px] font-normal text-[var(--pr-text)]">{{
+                    row.name
+                  }}</span>
+                </button>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- VoiceOver mitigation: the active option's name, on active-row change only. -->
+    <span class="sr-only" aria-live="polite" aria-atomic="true">{{ activeLabel() }}</span>
+  </hlm-dialog-content>
+</hlm-dialog>

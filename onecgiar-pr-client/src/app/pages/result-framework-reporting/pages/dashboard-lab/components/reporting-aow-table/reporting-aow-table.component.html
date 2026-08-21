@@ -1,29 +1,228 @@
 <!--
   Reporting tab — AoW → HLO → indicator (+ program-level Intermediate / 2030 siblings).
-  Reference: docs/design-references/prms-shell-CURRENT/ (visual) + owner correction:
-  Intermediate Outcomes and 2030 Outcomes are top-level cards (siblings of AoWs), not HLO children.
-  Spec: docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §5
+  Intermediate Outcomes and 2030 Outcomes are top-level cards (siblings of AoWs), not HLO children —
+  which is what the LIVE design shows too (`a.hasTag`). See docs/DESIGN-DEVIATIONS.md §10.
 
-  ⚠️ html is 12px — only arbitrary px values (UI-RULES §1.3).
+  ⚠️ html is 12px — only arbitrary px values, never rem-based Tailwind utilities.
+  ⚠️ Read components/reporting-aow-table/CLAUDE.md before editing: the pr-table dark skin, the
+     absent card `overflow`, and the grid gutter are all load-bearing and all regressed once.
 -->
 
 @if (viewMode() === 'flat') {
-  <!-- ═══ ALL INDICATORS — flat list, no AoW chrome ═══ -->
-  <section class="overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
-    @if (!flatRows().length) {
-      <div class="px-[24px] py-[40px] text-center text-[13px] text-[var(--pr-text-secondary)]">
-        @if (search().trim() || statusFilter() !== 'all') {
-          No indicators match your filters.
-        } @else {
-          No planned indicators yet.
-        }
-      </div>
-    } @else {
-      @for (row of flatRows(); track row.indicator_id + '::' + (row.center_id ?? '') + '::' + (row.__aowCode ?? '')) {
-        <ng-container *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: true }" />
-      }
-    }
-  </section>
+  <!-- ═══ ALL INDICATORS — the design's sortable table (:1841). One horizontal scroller; the
+       status mark + indicator stay pinned left, the action + ··· stay pinned right.
+
+       Sorting is `app-pr-table`'s, not a second implementation: the header <th>s carry
+       `prSortableColumn` and it owns the order. Because it compares raw values with `<`/`>`, the
+       fields named here are the PRE-NORMALISED keys from `flatTableRows()` — sorting
+       `target_value_sum` directly would compare the API's strings ("9" > "100").
+
+       There is no `Parent` column: the payload has no parent field, and a column of placeholders is
+       worse than an absent column. Tracked on P2-3405. With `Parent` out and `Center` always shown,
+       the design's `Optional columns` popover has nothing left to toggle — and its trigger button is
+       missing from the mockup anyway (blank line at PRMS-Reporting.dc.html:1624). ═══ -->
+  <!-- No `overflow-x-auto` here: `app-pr-table` already renders its own `.pr-table-wrap` scroller,
+       and nesting a second one gives the user two scrollbars for one axis. This div only draws the
+       card (border + radius); the horizontal scrolling belongs to `.pr-flat-table` below. -->
+  <div class="pr-flat-scroll rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
+    <app-pr-table [value]="flatTableRows()" styleClass="pr-flat-table">
+      <ng-template prTableHeader>
+        <tr class="pr-flat-row pr-flat-head">
+          <th class="pr-flat-cell pr-flat-sticky-l1" scope="col" aria-hidden="true"></th>
+          <th class="pr-flat-cell pr-flat-sticky-l2" scope="col" prSortableColumn="indicator_description">
+            Indicator <pr-sort-icon field="indicator_description" />
+          </th>
+          <th class="pr-flat-cell" scope="col" prSortableColumn="__aowCode">AoW <pr-sort-icon field="__aowCode" /></th>
+          <th class="pr-flat-cell" scope="col" prSortableColumn="__typeLabel">Type <pr-sort-icon field="__typeLabel" /></th>
+          <th class="pr-flat-cell" scope="col" prSortableColumn="__centerLabel">
+            Center <pr-sort-icon field="__centerLabel" />
+          </th>
+          <th class="pr-flat-cell pr-flat-num" scope="col" prSortableColumn="__sortTarget">
+            Target <pr-sort-icon field="__sortTarget" />
+          </th>
+          <th class="pr-flat-cell pr-flat-num" scope="col" prSortableColumn="__sortAchieved">
+            Achieved <pr-sort-icon field="__sortAchieved" />
+          </th>
+          <th class="pr-flat-cell" scope="col" prSortableColumn="__sortStatus">
+            Status <pr-sort-icon field="__sortStatus" />
+          </th>
+          <th class="pr-flat-cell pr-flat-sticky-r1" scope="col" aria-hidden="true"></th>
+          <th class="pr-flat-cell pr-flat-sticky-r2" scope="col" aria-hidden="true"></th>
+        </tr>
+      </ng-template>
+
+      <ng-template prTableBody let-row>
+        <tr
+          class="pr-flat-row pr-flat-body"
+          role="button"
+          tabindex="0"
+          [attr.aria-label]="row.indicator_description"
+          (click)="openRow.emit(row)"
+          (keydown.enter)="openRow.emit(row)">
+          <!-- 1 — bullseye, pinned left -->
+          <td class="pr-flat-cell pr-flat-sticky-l1">
+            <span class="pr-status-mark" [prTooltip]="row.__statusText" [attr.aria-label]="row.__statusText">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.75" />
+                <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.75" />
+                <circle cx="12" cy="12" r="1.1" fill="currentColor" />
+              </svg>
+            </span>
+          </td>
+
+          <!-- 2 — indicator + its name, pinned left -->
+          <td class="pr-flat-cell pr-flat-sticky-l2">
+            <div class="flex min-w-0 flex-col">
+              <p
+                class="m-0 text-[15px] font-semibold leading-[1.45] text-[var(--pr-text-heading)] [text-wrap:pretty]"
+                [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)">
+                {{ row.indicator_description }}
+              </p>
+              @if (needsShowMore(row)) {
+                <button
+                  type="button"
+                  class="mt-[2px] self-start border-0 bg-transparent p-0 text-left text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)] hover:underline"
+                  [attr.aria-expanded]="isTitleExpanded(row.indicator_id)"
+                  (click)="toggleTitle(row.indicator_id, $event)">
+                  {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
+                </button>
+              }
+              <span
+                class="pr-clamp-1 mt-[6px] text-[13px] font-normal leading-[17px] text-[var(--pr-text-secondary)]"
+                [title]="indicatorNameOf(row)">
+                {{ indicatorNameOf(row) }}
+              </span>
+            </div>
+          </td>
+
+          <!-- 3 — AoW code chip, or an em dash for a programme-level bucket -->
+          <td class="pr-flat-cell">
+            @if (row.__aowCode) {
+              <span
+                class="pr-code inline-block rounded-[6px] bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[12px] font-medium text-[var(--pr-color-primary-400)]">
+                {{ row.__aowCode }}
+              </span>
+            } @else {
+              <span class="pr-figure-sm text-[14px] font-medium text-[var(--pr-text-subtle)]">—</span>
+            }
+          </td>
+
+          <!-- 4 — category chip -->
+          <td class="pr-flat-cell">
+            <span
+              class="inline-block whitespace-nowrap rounded-[6px] bg-[var(--pr-surface-subtle)] px-[8px] py-[2px] text-[12px] font-medium text-[var(--pr-text-secondary)]">
+              {{ row.__typeLabel }}
+            </span>
+          </td>
+
+          <!-- 5 — centre -->
+          <td class="pr-flat-cell">
+            <span class="pr-clamp-1 text-[13px] text-[var(--pr-text)]" [title]="row.__centerLabel">
+              {{ row.__centerLabel }}
+            </span>
+          </td>
+
+          <!-- 6 — Target -->
+          <td class="pr-flat-cell pr-flat-num">
+            <button
+              type="button"
+              class="block w-full border-0 bg-transparent p-0 text-right"
+              (click)="emitAndStop(openTarget, row, $event)">
+              <span
+                class="pr-figure block text-[18px] font-medium tabular-nums text-[var(--pr-text-heading)] hover:underline hover:decoration-dotted hover:underline-offset-[3px]">
+                {{ targetText(row) }}
+              </span>
+              <span class="mt-[2px] block text-[11px] font-medium text-[var(--pr-text-subtle)]">Target</span>
+            </button>
+          </td>
+
+          <!-- 7 — Achieved. `—` = nothing reported; `0` = a reported zero. -->
+          <td class="pr-flat-cell pr-flat-num">
+            <button
+              type="button"
+              class="block w-full border-0 bg-transparent p-0 text-right"
+              [prTooltip]="achievedTooltip(row)"
+              (click)="emitAndStop(openAchieved, row, $event)">
+              <span
+                class="pr-figure block text-[18px] font-medium tabular-nums hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
+                [class]="achievedIsEmpty(row) ? 'text-[var(--pr-text-subtle)]' : 'text-[var(--pr-text-heading)]'">
+                {{ achievedText(row) }}
+              </span>
+              <span class="mt-[2px] block text-[11px] font-medium text-[var(--pr-text-subtle)]">Achieved</span>
+            </button>
+          </td>
+
+          <!-- 8 — status pill with its dot -->
+          <td class="pr-flat-cell">
+            <span
+              class="inline-flex items-center gap-[6px] whitespace-nowrap rounded-full px-[9px] py-[3px] text-[12px] font-medium"
+              [class]="statusPillClass(row.__statusKey)">
+              <span class="h-[6px] w-[6px] rounded-full bg-current"></span>
+              {{ row.__statusText }}
+            </span>
+          </td>
+
+          <!-- 9 — Report / Continue, pinned right -->
+          <td class="pr-flat-cell pr-flat-sticky-r1">
+            @if (canReport() && actionLabel(row)) {
+              <button type="button" class="pr-row-action" (click)="emitAndStop(reportRow, row, $event)">
+                {{ actionLabel(row) }}
+              </button>
+            }
+          </td>
+
+          <!-- 10 — overflow ···, pinned right -->
+          <td class="pr-flat-cell pr-flat-sticky-r2">
+            <div class="relative">
+              <button
+                type="button"
+                class="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)]"
+                aria-label="More actions"
+                [attr.aria-expanded]="isRowMenuOpen(row)"
+                (click)="toggleRowMenu(row, $event)">
+                <ng-icon name="lucideEllipsis" class="text-[16px]" />
+              </button>
+              @if (isRowMenuOpen(row)) {
+                <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
+                  <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openAchieved, row, $event)">
+                    View reported results
+                  </button>
+                  <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openTarget, row, $event)">
+                    Target details
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="pr-row-menu_item pr-row-menu_item--disabled"
+                    disabled
+                    aria-disabled="true"
+                    title="Indicators do not have a code yet">
+                    <span>Copy indicator code</span>
+                    <span class="pr-row-menu_soon">Coming soon</span>
+                  </button>
+                </div>
+              }
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template prTableEmpty>
+        <tr>
+          <td colspan="10">
+            <div class="flex flex-col items-center justify-center gap-[12px] px-[24px] py-[40px] text-center text-[13px] text-[var(--pr-text-secondary)]">
+              @if (filtersActive()) {
+                <p class="m-0">No indicators match your filters.</p>
+                <button type="button" class="pr-clear-filters" (click)="clearFilters.emit()">Clear filters</button>
+              } @else {
+                <p class="m-0">No planned indicators yet.</p>
+              }
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </app-pr-table>
+  </div>
 } @else {
   <!-- ═══ GROUPED — 20px between top-level cards ═══ -->
   <div class="flex flex-col gap-[20px]">
@@ -34,7 +233,11 @@
            Expand all switch moved the default — resolved once per card. -->
       @let aowOpen = isOpen(aowKey, isDefaultOpenAow());
 
-      <section class="overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
+      <!-- No `overflow-hidden` here: it clipped the ⓘ popover to a 6px sliver, and the design's own
+           card carries no overflow either (PRMS-Reporting.dc.html:1682). The collapse animation is
+           clipped by `.pr-collapse-inner`, and the bottom corners are rounded by
+           `.pr-collapse--card > .pr-collapse-inner` — so nothing needed the card to clip. -->
+      <section class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)]">
         <!-- Top-level header: 68px. Same chrome for AoW and for Intermediate / 2030 buckets. -->
         <button
           type="button"
@@ -52,14 +255,54 @@
             {{ headerChip(group) }}
           </span>
 
-          <span class="min-w-0 truncate text-[17px] font-bold text-[var(--pr-text-heading)]">
+          <span class="min-w-0 truncate text-[16px] font-bold text-[var(--pr-text-heading)]">
             {{ group.aow.name }}
           </span>
 
-          <span
-            class="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-[var(--pr-text-subtle)]"
-            [prTooltip]="group.aow.name">
-            <ng-icon name="lucideInfo" class="text-[14px]" />
+          <!-- ⓘ — a real disclosure, not a hover that repeats the name printed to its left. -->
+          <span class="relative flex shrink-0 items-center">
+            <button
+              type="button"
+              class="flex h-[20px] w-[20px] shrink-0 appearance-none items-center justify-center border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:text-[var(--pr-color-primary-300)]"
+              aria-label="About this group"
+              [attr.aria-expanded]="isInfoOpen(group)"
+              (click)="toggleInfo(group, $event)">
+              <ng-icon name="lucideInfo" class="text-[14px]" />
+            </button>
+            @if (isInfoOpen(group)) {
+              <div
+                class="pr-info-pop"
+                role="dialog"
+                aria-label="About this group"
+                (click)="$event.stopPropagation()">
+                <div class="mb-[8px] flex items-center gap-[8px]">
+                  <span class="flex-1 text-[14px] font-semibold text-[var(--pr-text-heading)]">
+                    {{ headerChip(group) }} · {{ group.aow.name }}
+                  </span>
+                  <button
+                    type="button"
+                    class="flex h-[24px] w-[24px] appearance-none items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)]"
+                    aria-label="Close"
+                    (click)="toggleInfo(group, $event)">
+                    <ng-icon name="lucideX" class="text-[14px]" />
+                  </button>
+                </div>
+                <!-- The ONE field the payload does not carry. Marked, not invented: an AoW has no
+                     description in `toc-results`, and pasting another programme's blurb here would
+                     be worse than saying so. Tracked on P2-3405. -->
+                <div class="max-h-[132px] overflow-y-auto text-[14px] leading-[1.55] text-[var(--pr-text)]">
+                  <span class="text-[var(--pr-text-secondary)]">No description available yet.</span>
+                  <span
+                    class="ml-[6px] inline-flex items-center rounded-[6px] bg-[var(--pr-surface-subtle)] px-[6px] py-[1px] text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-subtle)]"
+                    >Coming soon</span
+                  >
+                </div>
+                <div
+                  class="mt-[12px] border-t border-[var(--pr-border-divider)] pt-[12px] text-[13px] text-[var(--pr-text-secondary)]">
+                  {{ infoMeta(group) }}
+                </div>
+              </div>
+            }
           </span>
 
           <span class="shrink-0 whitespace-nowrap text-[13px] text-[var(--pr-text-subtle)]">
@@ -80,14 +323,14 @@
               {{ ratio.done }} of {{ ratio.total }}
             </span>
             <span
-              class="w-[42px] shrink-0 whitespace-nowrap text-right text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+              class="shrink-0 whitespace-nowrap text-right text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
               {{ ratio.percent }}%
             </span>
           </span>
         </button>
 
         <!-- Always in DOM so height can animate (no @if pop). -->
-        <div class="pr-collapse" [class.is-open]="aowOpen" [attr.aria-hidden]="!aowOpen">
+        <div class="pr-collapse pr-collapse--card" [class.is-open]="aowOpen" [attr.aria-hidden]="!aowOpen">
           <div class="pr-collapse-inner">
             @if (group.loading) {
               <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
@@ -95,21 +338,22 @@
               @let bands = bandsOf(group);
 
               @if (!bands.length) {
-                <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">
-                  @if (search().trim() || statusFilter() !== 'all') {
-                    No indicators match the current filters.
+                <div class="flex flex-col items-start gap-[10px] px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">
+                  @if (filtersActive()) {
+                    <p class="m-0">No indicators match the current filters.</p>
+                    <button type="button" class="pr-clear-filters" (click)="clearFilters.emit()">Clear filters</button>
                   } @else if (isBucket(group)) {
-                    No indicators in this bucket yet.
+                    <p class="m-0">No indicators in this bucket yet.</p>
                   } @else {
-                    This area of work has no planned indicators yet.
+                    <p class="m-0">This area of work has no planned indicators yet.</p>
                   }
                 </div>
               }
 
-              <!-- CURRENT: AoW → band (HIGH LEVEL OUTPUTS / OUTCOMES) → group (name only) → rows -->
+              <!-- Structure: AoW → band (HIGH LEVEL OUTPUTS / OUTCOMES) → group (name only) → rows -->
               @for (band of bands; track band.key; let bandIndex = $index) {
                 @if (band.hasEyebrow) {
-                  <!-- 36px band label — not a control (PRMS-Shell.dc.html :1077) -->
+                  <!-- 36px band label — a label, not a control: nothing here is clickable -->
                   <div
                     class="flex h-[36px] items-center gap-[10px] px-[24px]"
                     [class.mt-[20px]]="bandIndex > 0">
@@ -128,7 +372,7 @@
                   @let defaultOpen = isDefaultOpenHlo();
                   <button
                     type="button"
-                    class="flex h-[44px] w-full items-center gap-[8px] border-t border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] py-0 pl-[36px] pr-[24px] text-left hover:bg-[#EFEEF3]"
+                    class="flex h-[44px] w-full items-center gap-[8px] border-t border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] py-0 pl-[36px] pr-[24px] text-left hover:bg-[var(--pr-surface-subtle-hover)]"
                     [attr.aria-expanded]="isOpen(hlo.key, defaultOpen)"
                     (click)="toggle(hlo.key, defaultOpen)">
                     <span
@@ -139,7 +383,7 @@
                         [class.rotate-180]="isOpen(hlo.key, defaultOpen)" />
                     </span>
 
-                    <!-- CURRENT group name: 13px / 500 (medium, not semibold/bold) -->
+                    <!-- Group name: 13px / 500 (medium, not semibold/bold) -->
                     <span
                       class="min-w-0 max-w-[620px] flex-1 truncate text-[13px] font-[500] text-[var(--pr-text)]"
                       [title]="hlo.name">
@@ -171,18 +415,22 @@
 
     @if (!visibleGroups().length) {
       <div
-        class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[24px] py-[40px] text-center text-[13px] text-[var(--pr-text-secondary)]">
-        @if (search().trim() || statusFilter() !== 'all') {
-          No indicators match your filters.
+        class="flex min-h-[160px] flex-col items-center justify-center gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[24px] py-[40px] text-center text-[13px] text-[var(--pr-text-secondary)]">
+        @if (filtersActive()) {
+          <!-- The design's string is "No results match these filters", but on this tab the list is
+               of INDICATORS and "result" is a reported entity in PRMS — the design's wording names
+               the wrong noun here. Deliberate copy deviation; see docs/DESIGN-DEVIATIONS.md. -->
+          <p class="m-0 text-[14px]">No indicators match your filters.</p>
+          <button type="button" class="pr-clear-filters" (click)="clearFilters.emit()">Clear filters</button>
         } @else {
-          No areas of work with planned indicators yet.
+          <p class="m-0">No areas of work with planned indicators yet.</p>
         }
       </div>
     }
   </div>
 }
 
-<!-- Shared indicator row. Status mark = CURRENT concentric bullseye (18px violet target). -->
+<!-- Shared indicator row. Status mark = the concentric bullseye (18px violet target). -->
 <ng-template #indicatorRow let-row let-showAow="showAow">
   <div
     class="pr-reporting-row"
@@ -192,7 +440,7 @@
     (click)="openRow.emit(row)"
     (keydown.enter)="openRow.emit(row)"
     (keydown.space)="openRow.emit(row)">
-    <!-- 1 — concentric bullseye (CURRENT :1096) — outer + mid ring + filled centre -->
+    <!-- 1 — concentric bullseye — outer + mid ring + filled centre -->
     <span
       class="pr-status-mark"
       [class]="'pr-status-mark--' + statusOf(row)"
@@ -234,7 +482,7 @@
       </span>
     </div>
 
-    <!-- 3 — spacer 48px (CURRENT grid) -->
+    <!-- 3 — spacer 48px (row grid) -->
     <span></span>
 
     <!-- 4 — Target -->
@@ -285,15 +533,42 @@
     <!-- 9 — spacer 8px -->
     <span></span>
 
-    <!-- 10 — overflow ··· -->
+    <!-- 10 — overflow ··· . Was inert: it emitted `openRowMenu`, which the host never bound
+         (P2-3405). The menu is owned here now, and its live items reuse the SAME outputs the Target
+         and Achieved cells emit, so there is no second path to the drawer. -->
     <div class="relative">
       <button
         type="button"
-        class="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[#F3F2F7] hover:text-[var(--pr-text)]"
+        class="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)]"
         aria-label="More actions"
-        (click)="emitAndStop(openRowMenu, { row: row, event: $any($event) }, $event)">
+        [attr.aria-expanded]="isRowMenuOpen(row)"
+        (click)="toggleRowMenu(row, $event)">
         <ng-icon name="lucideEllipsis" class="text-[16px]" />
       </button>
+      @if (isRowMenuOpen(row)) {
+        <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
+          <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openAchieved, row, $event)">
+            View reported results
+          </button>
+          <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openTarget, row, $event)">
+            Target details
+          </button>
+          <!-- The payload carries no user-facing indicator code — `indicator_id` is an internal key
+               that is never shown anywhere in the UI, so "copying the code" would hand the user a
+               number they have never seen. Visible but disabled, per the house rule, and tracked on
+               P2-3405 rather than silently dropped. -->
+          <button
+            type="button"
+            role="menuitem"
+            class="pr-row-menu_item pr-row-menu_item--disabled"
+            disabled
+            aria-disabled="true"
+            title="Indicators do not have a code yet">
+            <span>Copy indicator code</span>
+            <span class="pr-row-menu_soon">Coming soon</span>
+          </button>
+        </div>
+      }
     </div>
   </div>
 </ng-template>
