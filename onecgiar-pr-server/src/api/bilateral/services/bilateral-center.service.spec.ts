@@ -215,6 +215,24 @@ describe('BilateralCenterService', () => {
       last_name: 'User',
     };
 
+    // P2-3166. This flow writes `source = SourceEnum.Bilateral` ('API') but has no API key and so
+    // no CLARISA `mis` — so 'API' means "is W3/bilateral", NOT "arrived through the external API".
+    // The counterexample matters: anything deciding whether to dispatch a webhook must test
+    // `external_platform_id != null`, never `source === 'API'`, or every result a centre creates
+    // by hand would queue a delivery with nowhere to send it.
+    it('records no external platform for a result the centre creates itself', async () => {
+      await service.createResultHeader(user, {
+        result_level_id: 2,
+        result_type_id: 7,
+      });
+
+      const saved = (resultRepository.save as jest.Mock).mock.calls[0][0];
+      expect(saved.source).toBe(SourceEnum.Bilateral);
+      expect(saved.external_platform_id).toBeUndefined();
+      expect(saved.external_platform_code).toBeUndefined();
+      expect(saved.external_reference).toBeUndefined();
+    });
+
     it('should create a result header', async () => {
       const result = await service.createResultHeader(user, {
         result_level_id: 2,

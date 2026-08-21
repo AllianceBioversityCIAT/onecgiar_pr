@@ -555,7 +555,23 @@ export class Result {
   //
   // Populated from the CLARISA API-key validation (`mis`), NOT from the request body's `tenant`:
   // the former is authenticated against the key, the latter is declared by the caller.
-  // Null for every result created through the UI, and for API results predating this column.
+  //
+  // Nullable is a permanent property of the domain, not a migration convenience. Only the last of
+  // these four cases ever runs dry:
+  //   1. Pooled funding W1/W2 (`source = 'Result'`) — no external platform exists.
+  //   2. A bilateral result a centre creates in the PRMS UI — `source` is still 'API' (the enum
+  //      member is `SourceEnum.Bilateral`, so 'API' means "is W3/bilateral", NOT "arrived through
+  //      the external API"), but there is no API key and therefore no `mis`. See
+  //      `bilateral-center.service.ts` and the AI draft promotion in `bilateral-ai.service.ts`.
+  //   3. Any result created under initiative SGP-02 through the ordinary reporting UI:
+  //      `createOwnerResultV2` stamps `source = SourceEnum.Bilateral` purely from the initiative's
+  //      official_code, on a JWT-authenticated route with no API key in sight.
+  //   4. Bilateral results ingested before this column existed.
+  //
+  // So `source === 'API'` does NOT imply there is a platform to notify. Anything deciding whether
+  // to dispatch a webhook must test `external_platform_id != null` instead. `platform-report`
+  // already needs `source === Bilateral && primary_submitter_acronym !== 'SGP-02'` to pick its
+  // branch — the same lesson, learnt earlier, elsewhere.
 
   @Column({
     name: 'external_platform_id',

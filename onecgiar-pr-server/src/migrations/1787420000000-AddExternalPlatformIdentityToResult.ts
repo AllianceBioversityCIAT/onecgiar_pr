@@ -12,8 +12,19 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * - `external_reference`: the upstream's own `idempotencyKey` for the payload, so a platform can
  *   correlate our callback against its own record without us changing the request contract.
  *
- * Deliberately no backfill: existing rows genuinely do not carry this information, and inventing
- * it would be worse than leaving it null. The webhook skips a result with no platform and logs it.
+ * All three are nullable by design, and that is permanent rather than a backfill concern. Pooled
+ * funding W1/W2 (`source = 'Result'`) has no external platform at all; a bilateral result a centre
+ * creates in the PRMS UI carries `source = 'API'` — the enum member is `SourceEnum.Bilateral`, so
+ * that value means "is W3/bilateral", not "arrived through the external API" — yet has no API key
+ * and so no `mis`; and `createOwnerResultV2` stamps that same 'API' on any result under initiative
+ * SGP-02, from the ordinary JWT-authenticated reporting UI. Only results ingested through
+ * `/api/bilateral/create` with a valid key get populated.
+ *
+ * Consequence for the dispatcher: `source = 'API'` is NOT a proxy for "has a webhook target".
+ * Test `external_platform_id IS NOT NULL`.
+ *
+ * No backfill: existing rows genuinely do not carry this information, and inventing it would be
+ * worse than leaving it null.
  */
 export class AddExternalPlatformIdentityToResult1787420000000
   implements MigrationInterface
