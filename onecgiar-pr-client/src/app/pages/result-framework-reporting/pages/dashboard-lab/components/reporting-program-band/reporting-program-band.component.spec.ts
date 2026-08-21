@@ -137,6 +137,8 @@ describe('ReportingProgramBandComponent', () => {
       expect(nav.textContent).toContain('Breeding for Tomorrow');
       expect(nav.textContent).toContain('Overview');
       expect(nav.textContent).toContain('Reporting');
+      // One strip serves both shapes, so the third tab has to survive the collapse.
+      expect(nav.textContent).toContain('Results');
       expect(nav.textContent).toContain('Report emerging result');
       // dot + name row and the 32px CTA — both fade in.
       expect(collapsedParts().length).toBe(2);
@@ -300,6 +302,84 @@ describe('ReportingProgramBandComponent', () => {
       expect(control()).toBeUndefined();
       // The grouping switch is unaffected — it is the browse surface that changed, not the mode.
       expect(text()).toContain('All indicators');
+    });
+  });
+
+  // ── Tab strip — Overview · Reporting · Results (design `tabResults`) ───────
+  describe('tab strip', () => {
+    /** Only the tabs are anchors inside the nav; the CTA is a button. */
+    const tabs = () => Array.from((root().querySelector('nav') as HTMLElement).querySelectorAll('a'));
+    const tab = (label: string) => tabs().find(a => a.textContent?.trim() === label) as HTMLAnchorElement;
+
+    it('renders the three programme tabs in the order the design shows', async () => {
+      await build({ showToolbar: true });
+
+      expect(tabs().map(a => a.textContent?.trim())).toEqual(['Overview', 'Reporting', 'Results']);
+    });
+
+    it('points Results at the `/results` route under the programme', async () => {
+      await build({ showToolbar: true });
+
+      expect(component.resultsPath()).toBe('/result-framework-reporting/entity-details/SP01/results');
+      expect(tab('Results').getAttribute('href')).toBe('/result-framework-reporting/entity-details/SP01/results');
+    });
+
+    it('follows the programme code instead of freezing the href', async () => {
+      await build({ showToolbar: true });
+      fixture.componentRef.setInput('programCode', 'SP07');
+      fixture.detectChanges();
+
+      expect(tab('Results').getAttribute('href')).toBe('/result-framework-reporting/entity-details/SP07/results');
+    });
+
+    it('underlines and announces Results when it is the active tab', async () => {
+      await build({ showToolbar: true, activeTab: 'results' });
+
+      const results = tab('Results');
+      expect(results.className).toContain('border-[var(--pr-color-primary-300)]');
+      expect(results.className).toContain('font-semibold');
+      expect(results.getAttribute('aria-current')).toBe('page');
+    });
+
+    it('leaves Results neutral while another tab is active', async () => {
+      await build({ showToolbar: true, activeTab: 'reporting' });
+
+      const results = tab('Results');
+      expect(results.className).toContain('border-transparent');
+      expect(results.className).not.toContain('border-[var(--pr-color-primary-300)]');
+      expect(results.getAttribute('aria-current')).toBeNull();
+    });
+
+    it('moves the active treatment with `activeTab` — exactly one tab is current', async () => {
+      await build({ showToolbar: true, activeTab: 'overview' });
+      expect(tab('Overview').getAttribute('aria-current')).toBe('page');
+      expect(tab('Results').getAttribute('aria-current')).toBeNull();
+
+      fixture.componentRef.setInput('activeTab', 'results');
+      fixture.detectChanges();
+
+      expect(tab('Results').getAttribute('aria-current')).toBe('page');
+      expect(tab('Overview').getAttribute('aria-current')).toBeNull();
+      expect(tab('Reporting').getAttribute('aria-current')).toBeNull();
+      expect(tabs().filter(a => a.getAttribute('aria-current') === 'page')).toHaveLength(1);
+    });
+
+    it('keeps the three tabs in the condensed bar — one strip serves both shapes', async () => {
+      await build({ showToolbar: true, activeTab: 'results' });
+
+      scrollTo(200);
+
+      expect(tabs().map(a => a.textContent?.trim())).toEqual(['Overview', 'Reporting', 'Results']);
+      expect(tab('Results').getAttribute('aria-current')).toBe('page');
+    });
+
+    // The design's fourth tab (`tabDrafts`, PRMS-Reporting.dc.html:420 / :443) is wrapped in an
+    // `sc-if` on `centerMode`: it is a CENTER-view tab. Its absence here is the spec, not a gap.
+    it('does not render the Center-only Drafts tab', async () => {
+      await build({ showToolbar: true });
+
+      expect(tabs().map(a => a.textContent?.trim())).not.toContain('Drafts');
+      expect(text()).not.toContain('Drafts');
     });
   });
 
