@@ -250,6 +250,81 @@ describe('PopUpNotificationItemComponent', () => {
       expect(router.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('results-notifications/updates'));
     });
 
+    // P2-3214 AC4 + AC5. Before this, these types fell through to `generateUrlLink`, which points
+    // at the filtered notification LIST rather than the result the centre was tagged on.
+    describe('tagged centre / bilateral project (P2-3214)', () => {
+      const taggedNotification = (overrides: any = {}) => ({
+        notification_id: 88,
+        result_id: 99,
+        read: false,
+        obj_notification_type: { type: NotificationType.RESULT_CENTER_TAGGED },
+        text: 'created by SP04 has tagged the Africa Rice Center. Click to see the result.',
+        obj_result: {
+          result_code: 'R500',
+          title: 'A pooled funding result',
+          obj_version: { id: 'v9' },
+          obj_result_by_initiatives: []
+        },
+        ...overrides
+      });
+
+      it('navigates to the result detail rather than the notifications list', () => {
+        component.notification = taggedNotification();
+
+        component.onNotificationClick(clickEvent());
+
+        expect(router.navigateByUrl).toHaveBeenCalledWith('/result/result-detail/R500/general-information?phase=v9');
+        expect(router.navigateByUrl).not.toHaveBeenCalledWith(expect.stringContaining('results-notifications'));
+      });
+
+      it('routes IPSR result types to their own detail route', () => {
+        component.notification = taggedNotification({
+          obj_result: {
+            result_code: 'R900',
+            obj_version: { id: 'v9' },
+            obj_result_type: { id: 10 },
+            obj_result_by_initiatives: []
+          }
+        });
+
+        component.onNotificationClick(clickEvent());
+
+        expect(router.navigateByUrl).toHaveBeenCalledWith('/ipsr/detail/R900/general-information?phase=v9');
+      });
+
+      it('marks the notification as read on the way out (AC5)', () => {
+        component.notification = taggedNotification();
+
+        component.onNotificationClick(clickEvent());
+
+        expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(88);
+      });
+
+      it('does not re-mark an already read notification', () => {
+        component.notification = taggedNotification({ read: true });
+
+        component.onNotificationClick(clickEvent());
+
+        expect(resultsApi.PATCH_readNotification).not.toHaveBeenCalled();
+      });
+
+      it('keeps the plain anchor behaviour when the result has no code', () => {
+        component.notification = taggedNotification({ obj_result: { obj_version: { id: 'v9' } } });
+
+        component.onNotificationClick(clickEvent());
+
+        expect(router.navigateByUrl).not.toHaveBeenCalled();
+      });
+
+      it('does not go through the bilateral centre lookup', () => {
+        component.notification = taggedNotification();
+
+        component.onNotificationClick(clickEvent());
+
+        expect(bilateralApi.GET_centersByResultId).not.toHaveBeenCalled();
+      });
+    });
+
     it('falls back to the notifications list when the centre lookup fails', () => {
       bilateralApi.GET_centersByResultId.mockReturnValue(throwError(() => new Error('boom')));
       component.notification = bilateralNotification();

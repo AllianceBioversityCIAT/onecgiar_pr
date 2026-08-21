@@ -8,7 +8,8 @@ import {
   buildResultNotificationText,
   getNotificationActionVerb,
   getResultNotificationTextParts,
-  isBilateralReviewNotification
+  isBilateralReviewNotification,
+  isResultTaggedNotification
 } from '../../../../constants/notification-type.constants';
 
 @Component({
@@ -39,6 +40,27 @@ export class PopUpNotificationItemComponent {
     return isBilateralReviewNotification(notification);
   }
 
+  /** True for the P2-3214 tagged types, which route straight to the result. */
+  isResultTagged(notification): boolean {
+    return isResultTaggedNotification(notification);
+  }
+
+  /**
+   * P2-3214 AC4 — the tagged centre is sent to the result itself, not to the filtered notification
+   * list `generateUrlLink` builds. Mirrors `NotificationItemComponent.resultUrl`, including the
+   * IPSR result types, which live under a different route.
+   */
+  private resultDetailUrl(notification): string | null {
+    const resultCode = notification?.obj_result?.result_code;
+    if (!resultCode) return null;
+
+    const phase = notification?.obj_result?.obj_version?.id;
+    const typeId = notification?.obj_result?.obj_result_type?.id;
+    const base = typeId === 10 || typeId === 11 ? '/ipsr/detail' : '/result/result-detail';
+
+    return `${base}/${resultCode}/general-information?phase=${phase}`;
+  }
+
   generateUrlLink(notification) {
     const baseUrl = 'result/results-outlet/results-notifications';
     const versionId = notification?.obj_result?.obj_version?.id;
@@ -59,6 +81,20 @@ export class PopUpNotificationItemComponent {
    */
   onNotificationClick(event: MouseEvent): void {
     const notification = this.notification;
+
+    // P2-3214 AC4 + AC5.
+    if (this.isResultTagged(notification)) {
+      const url = this.resultDetailUrl(notification);
+      if (!url) {
+        this.itemSelected.emit();
+        return;
+      }
+      event.preventDefault();
+      this.markAsRead(notification);
+      this.itemSelected.emit();
+      this.router.navigateByUrl(url);
+      return;
+    }
 
     if (!this.isBilateralReview(notification)) {
       this.itemSelected.emit();

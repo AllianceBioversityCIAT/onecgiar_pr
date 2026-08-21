@@ -4,6 +4,7 @@ import {
   getNotificationActionVerb,
   getResultNotificationTextParts,
   isBilateralReviewNotification,
+  isResultTaggedNotification,
   resolveNotificationType
 } from './notification-type.constants';
 
@@ -149,6 +150,56 @@ describe('notification-type constants', () => {
       const parts = getResultNotificationTextParts(notificationOf(NotificationType.BILATERAL_RESULT_REJECTED));
       expect(parts.prefix).toBe('❌ Your Result');
       expect(parts.suffix).toBe('has been Rejected by the Science Program SP5.');
+    });
+  });
+
+  // P2-3214 AC3. The variable half of this sentence names the tagged centre or project, which the
+  // server composes at emit time and ships on `notification.text` — a result carries several
+  // centres, so it cannot be derived on read.
+  describe('tagged centre / bilateral project (P2-3214)', () => {
+    const TAGGED_SUFFIX = 'created by SP04 has tagged the Africa Rice Center. Click to see the result.';
+
+    it('composes the full AC3 sentence from the stored suffix', () => {
+      const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: TAGGED_SUFFIX });
+
+      expect(buildResultNotificationText(notification)).toBe(
+        `The result 4321 - A bilateral result title ${TAGGED_SUFFIX}`
+      );
+    });
+
+    it('uses the same shape for the tagged-project type', () => {
+      const notification = notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED, {
+        text: 'created by SP04 has tagged the P-1568-WBS0. Click to see the result.'
+      });
+
+      expect(buildResultNotificationText(notification)).toContain('has tagged the P-1568-WBS0.');
+    });
+
+    it('trims the stored suffix and does not emphasize the lead-in', () => {
+      const parts = getResultNotificationTextParts(
+        notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: `  ${TAGGED_SUFFIX}  ` })
+      );
+
+      expect(parts.prefix).toBe('The result');
+      expect(parts.suffix).toBe(TAGGED_SUFFIX);
+      expect(parts.emphasizePrefix).toBe(false);
+    });
+
+    it('renders the identity alone rather than half a sentence when text is missing', () => {
+      const notification = notificationOf(NotificationType.RESULT_CENTER_TAGGED, { text: '   ' });
+      const parts = getResultNotificationTextParts(notification);
+
+      expect(parts.suffix).toBeNull();
+      expect(buildResultNotificationText(notification)).toBe('The result 4321 - A bilateral result title');
+    });
+  });
+
+  describe('isResultTaggedNotification', () => {
+    it('is true only for the two tagged types', () => {
+      expect(isResultTaggedNotification(notificationOf(NotificationType.RESULT_CENTER_TAGGED))).toBe(true);
+      expect(isResultTaggedNotification(notificationOf(NotificationType.RESULT_BILATERAL_PROJECT_TAGGED))).toBe(true);
+      expect(isResultTaggedNotification(notificationOf(NotificationType.BILATERAL_RESULT_APPROVED))).toBe(false);
+      expect(isResultTaggedNotification({})).toBe(false);
     });
   });
 

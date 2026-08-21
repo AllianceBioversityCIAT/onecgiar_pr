@@ -1547,12 +1547,60 @@ describe('ResultReviewDrawerComponent', () => {
       const emitSpy = jest.spyOn(component.decisionMade, 'emit');
       component.resultToReview.set({ id: '5' } as any);
       component.confirmApprove();
-      // P2-3157 (commit acb251c66) stopped sending a hardcoded justification: the key is now
-      // omitted entirely when the reviewer left the comment box empty.
       expect(apiMock.resultsSE.PATCH_BilateralReviewDecision).toHaveBeenCalledWith('5', { decision: 'APPROVE' });
       expect(emitSpy).toHaveBeenCalled();
       expect(component.visible()).toBe(false);
       expect(component.isSaving()).toBe(false);
+    });
+
+    // P2-3157 / UX Finding 5.3.5: the approval comment is the reviewer's and is optional.
+    // It used to be the hardcoded literal 'Approved', which polluted the review history the
+    // centre now reads back — so an empty comment must send no `justification` key at all,
+    // not an empty string.
+    describe('approval comment (P2-3157)', () => {
+      beforeEach(() => {
+        component.resultToReview.set({ id: '5' } as any);
+      });
+
+      it('omits justification entirely when the reviewer left no comment', () => {
+        component.approveComment = '   ';
+        component.confirmApprove();
+
+        const [, body] = apiMock.resultsSE.PATCH_BilateralReviewDecision.mock.calls.at(-1);
+        expect(body).toEqual({ decision: 'APPROVE' });
+        expect('justification' in body).toBe(false);
+      });
+
+      it('sends the reviewer comment, trimmed, when there is one', () => {
+        component.approveComment = '  Looks good, evidence checked.  ';
+        component.confirmApprove();
+
+        expect(apiMock.resultsSE.PATCH_BilateralReviewDecision).toHaveBeenCalledWith('5', {
+          decision: 'APPROVE',
+          justification: 'Looks good, evidence checked.'
+        });
+      });
+
+      it('never sends the old hardcoded literal', () => {
+        component.approveComment = '';
+        component.confirmApprove();
+
+        const [, body] = apiMock.resultsSE.PATCH_BilateralReviewDecision.mock.calls.at(-1);
+        expect(body.justification).toBeUndefined();
+      });
+
+      it('clears the comment on success so it cannot leak into the next review', () => {
+        component.approveComment = 'One-off note';
+        component.confirmApprove();
+        expect(component.approveComment).toBe('');
+      });
+
+      it('clears the comment when the dialog is cancelled', () => {
+        component.approveComment = 'Typed then dismissed';
+        component.cancelApprove();
+        expect(component.approveComment).toBe('');
+        expect(component.showConfirmApproveDialog()).toBe(false);
+      });
     });
 
     it('confirmApprove handles the error branch', () => {

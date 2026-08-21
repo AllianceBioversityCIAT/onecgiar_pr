@@ -11,4 +11,6 @@ export enum NotificationTypeEnum {
   ANNOUNCEMENT = 'Announcement',
   BILATERAL_RESULT_APPROVED = 'Bilateral Result Approved',
   BILATERAL_RESULT_REJECTED = 'Bilateral Result Rejected',
+  RESULT_CENTER_TAGGED = 'Result Center Tagged',
+  RESULT_BILATERAL_PROJECT_TAGGED = 'Result Bilateral Project Tagged',
 }
