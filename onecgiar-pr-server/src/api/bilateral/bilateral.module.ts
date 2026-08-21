@@ -53,6 +53,7 @@ import { BilateralProjectsService } from './services/bilateral-projects.service'
 import { BilateralCenterService } from './services/bilateral-center.service';
 import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResultByLevelModule } from '../results/result-by-level/result-by-level.module';
 import { Result } from '../results/entities/result.entity';
@@ -74,6 +75,7 @@ import { AdUsersModule } from '../ad_users/ad_users.module';
     TypeOrmModule.forFeature([
       ClarisaProject,
       ClarisaCenter,
+      ClarisaInitiative,
       Result,
       BilateralAiJob,
       BilateralAiDraft,
