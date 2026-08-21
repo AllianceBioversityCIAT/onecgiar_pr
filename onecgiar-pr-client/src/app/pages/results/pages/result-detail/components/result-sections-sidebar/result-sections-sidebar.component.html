@@ -1,0 +1,124 @@
+<!-- Second sidebar of the result detail: sections + completion progress + result-level actions.
+     Geometry and colours come from the approved Claude Design mockup ("PRMS Reporting.dc.html",
+     the `pageOpen` aside): 240px, white, 1px right rule, 24/20 padding, 44px rows.
+     Every colour resolves through a token — the palette in `styles/colors.scss` already matches
+     the mockup's hexes 1:1 (primary-300 #6b46e5, primary-400 #5733c4, --pr-border #e3e3e8 …). -->
+<aside
+  class="sticky top-0 flex max-h-svh w-[240px] shrink-0 flex-col overflow-y-auto border-r border-[var(--pr-border)] bg-white px-[20px] py-[24px]"
+  data-testid="result-sections-sidebar">
+  <p class="m-0 px-[10px] pb-[8px] text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-muted)]">Sections</p>
+
+  <nav class="flex flex-col gap-[2px]" aria-label="Result sections">
+    @if (sectionsSE.isLoading()) {
+      @for (line of skeletonRows(); track line) {
+        <div class="flex h-[44px] items-center gap-[10px] px-[10px]">
+          <div class="pr-skeleton h-[12px] flex-1"></div>
+          <div class="pr-skeleton h-[14px] w-[14px] shrink-0 rounded-full"></div>
+        </div>
+      }
+    } @else {
+      @for (section of sectionsSE.sections(); track section.path) {
+        <a
+          [routerLink]="sectionsSE.sectionLink(section)"
+          [queryParams]="sectionsSE.sectionQueryParams()"
+          routerLinkActive
+          #rla="routerLinkActive"
+          [class]="rla.isActive ? activeRowClass : idleRowClass"
+          [attr.aria-current]="rla.isActive ? 'page' : null">
+          <span class="min-w-0 flex-1 truncate">{{ section.prName }}</span>
+
+          @if (section.underConstruction === true) {
+            <img class="h-[14px] w-[14px] shrink-0" src="assets/work-in-progress.png" alt="Under construction" />
+          } @else if (section.validation) {
+            <!-- Done: check on a green pill (mockup #d1fae5 / #047857 = the approved status pair). -->
+            <span
+              class="flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-full bg-[var(--pr-status-approved-bg)]"
+              role="img"
+              aria-label="Section complete">
+              <i class="material-icons-round text-[10px] leading-none text-[var(--pr-status-approved-fg)]" aria-hidden="true">check</i>
+            </span>
+          } @else {
+            <!-- Pending: empty ring, no icon. -->
+            <span
+              class="h-[14px] w-[14px] shrink-0 rounded-full border-[1.5px] border-[var(--pr-border-strong)]"
+              role="img"
+              aria-label="Section incomplete"></span>
+          }
+        </a>
+      }
+    }
+  </nav>
+
+  <!-- Completion progress. New in this design — the old panel-menu only had the per-row checks. -->
+  <div class="mt-[16px] flex flex-col gap-[8px] border-t border-[var(--pr-border)] pt-[16px]">
+    <div
+      class="h-[6px] w-full overflow-hidden rounded-[3px] bg-[var(--pr-border)]"
+      role="progressbar"
+      [attr.aria-valuenow]="sectionsSE.doneCount()"
+      aria-valuemin="0"
+      [attr.aria-valuemax]="sectionsSE.totalCount()"
+      [attr.aria-label]="sectionsSE.progressLabel()">
+      <div
+        class="h-full rounded-[3px] bg-[var(--pr-color-primary-300)] transition-[width] duration-300"
+        [style.width]="sectionsSE.progressWidth()"></div>
+    </div>
+    <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ sectionsSE.progressLabel() }}</span>
+  </div>
+
+  <div class="mt-[20px] flex flex-col gap-[10px]">
+    @if (sectionsSE.showAiReview) {
+      <div [prTooltip]="sectionsSE.incompleteTooltip" prTooltipPosition="right">
+        <button
+          type="button"
+          class="flex h-[40px] w-full items-center justify-center gap-[7px] rounded-[8px] border bg-white px-[12px] text-[14px] font-medium transition-colors"
+          [class]="
+            sectionsSE.aiReviewDisabled
+              ? 'cursor-not-allowed border-[var(--pr-border-divider)] text-[#cfc9de]'
+              : 'cursor-pointer border-[var(--pr-border)] text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]'
+          "
+          [disabled]="sectionsSE.aiReviewDisabled"
+          (click)="sectionsSE.runAiReview()"
+          data-testid="result-sections-ai-review">
+          <!-- Greyed out via opacity rather than a second asset: the mockup's disabled star is the
+               same glyph in #cfc9de, and the app only ships the coloured PNG. -->
+          <img src="assets/icons/stars.png" alt="" class="h-[16px] w-[16px]" [class.opacity-30]="sectionsSE.aiReviewDisabled" />
+          {{ sectionsSE.aiReviewLabel }}
+        </button>
+      </div>
+    }
+
+    @if (sectionsSE.showSubmit) {
+      <div [prTooltip]="sectionsSE.incompleteTooltip" prTooltipPosition="right">
+        <button
+          type="button"
+          class="h-[40px] w-full rounded-[8px] bg-[var(--pr-color-primary-300)] text-[14px] font-semibold text-white transition-colors"
+          [class]="sectionsSE.submitDisabled ? 'cursor-not-allowed opacity-[0.35]' : 'cursor-pointer hover:bg-[var(--pr-color-primary-400)]'"
+          [disabled]="sectionsSE.submitDisabled"
+          (click)="sectionsSE.openSubmit()"
+          data-testid="result-sections-submit">
+          Submit result
+        </button>
+      </div>
+    }
+
+    @if (sectionsSE.showUnsubmit) {
+      <button
+        type="button"
+        class="h-[40px] w-full cursor-pointer rounded-[8px] border border-[var(--pr-color-primary-200)] bg-white text-[14px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+        (click)="sectionsSE.openUnsubmit()"
+        data-testid="result-sections-unsubmit">
+        Unsubmit result
+      </button>
+    }
+
+    @if (sectionsSE.showQaAssessedNotice) {
+      <p class="m-0 text-[12px] font-normal text-[var(--pr-text-secondary)]">Quality Assessed results cannot be un-submited.</p>
+    }
+
+    @if (sectionsSE.showInQaNotice) {
+      <p class="m-0 text-[12px] font-normal text-[var(--pr-text-secondary)]">
+        This result is part of a QA process and cannot be un-submitted for editing.
+      </p>
+    }
+  </div>
+</aside>

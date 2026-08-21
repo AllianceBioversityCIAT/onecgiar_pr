@@ -1,0 +1,170 @@
+<header class="mx-auto mb-[16px] flex w-[95%] flex-col gap-[8px]" data-testid="result-header">
+  <!-- Explicit way back to the results table. The sidebar's "Results Center" row navigates here
+       too, but a user several sections deep should not have to hunt through the nav to get out.
+       The fully-resolved path is used (rather than `/result`) so the link does not depend on the
+       redirect chain. -->
+  <a
+    routerLink="/result/results-outlet/results-list"
+    class="inline-flex w-fit items-center gap-[5px] text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:underline"
+    title="Back to all results"
+    data-testid="result-detail-back-link">
+    <i class="material-icons-round text-[16px] leading-none" aria-hidden="true">arrow_back</i>
+    Back to results
+  </a>
+
+  <div class="flex items-start gap-[16px]">
+    <!-- Clamped to two lines: result titles run long and a five-line heading pushes the form below
+         the fold. The full text stays reachable in the Title field of General information. -->
+    <h1
+      class="m-0 line-clamp-2 min-w-0 flex-1 text-[26px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]"
+      [title]="title"
+      data-testid="result-header-title">
+      {{ title }}
+    </h1>
+
+    <div class="flex flex-none items-center gap-[8px]">
+      @if (pdfSE.enabled()) {
+        <div class="relative" data-testid="result-header-pdf">
+          <button
+            type="button"
+            class="flex h-[36px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[12px] text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+            (click)="pdfSE.toggle()"
+            [attr.aria-expanded]="pdfSE.menuOpen()"
+            aria-label="PDF options menu">
+            <i class="pi pi-file-pdf text-[14px]" aria-hidden="true"></i>
+            PDF
+            <i class="pi pi-angle-down text-[12px]" aria-hidden="true"></i>
+          </button>
+
+          @if (pdfSE.menuOpen()) {
+            <div
+              class="absolute right-0 top-[42px] z-30 w-[220px] rounded-[12px] border border-[var(--pr-border)] bg-white p-[6px] shadow-[0_8px_24px_rgba(var(--pr-color-secondary-rgb),0.14)]"
+              role="menu">
+              <button
+                type="button"
+                class="flex h-[36px] w-full items-center gap-[8px] rounded-[8px] px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]"
+                role="menuitem"
+                (click)="pdfSE.view()">
+                <i class="pi pi-file-pdf text-[14px]" aria-hidden="true"></i>
+                View PDF
+              </button>
+              <button
+                type="button"
+                class="flex h-[36px] w-full items-center gap-[8px] rounded-[8px] px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]"
+                role="menuitem"
+                (click)="pdfSE.copy()">
+                <i class="pi pi-copy text-[14px]" aria-hidden="true"></i>
+                Copy link
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="relative" data-testid="result-header-actions-wrap">
+        <button
+          type="button"
+          class="flex h-[36px] w-[36px] items-center justify-center rounded-[8px] border border-[var(--pr-border)] bg-white transition-colors hover:bg-[var(--pr-color-primary-50)]"
+          (click)="toggleActions()"
+          [attr.aria-expanded]="actionsOpen()"
+          aria-label="More actions"
+          data-testid="result-header-actions">
+          <i class="material-icons-round text-[18px] text-[var(--pr-text-secondary)]" aria-hidden="true">more_vert</i>
+        </button>
+
+        @if (actionsOpen()) {
+          <div
+            class="absolute right-0 top-[42px] z-30 w-[220px] rounded-[12px] border border-[var(--pr-border)] bg-white p-[6px] shadow-[0_8px_24px_rgba(var(--pr-color-secondary-rgb),0.14)]"
+            role="menu">
+            @if (canChangeResultType) {
+              <button
+                type="button"
+                class="flex h-[36px] w-full items-center gap-[8px] rounded-[8px] px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]"
+                role="menuitem"
+                (click)="openChangeResultType()"
+                data-testid="result-header-change-type">
+                <i class="material-icons-round text-[16px]" aria-hidden="true">move_up</i>
+                Change result type
+              </button>
+            }
+            <button
+              type="button"
+              class="flex h-[36px] w-full items-center gap-[8px] rounded-[8px] px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]"
+              role="menuitem"
+              (click)="copyLink()"
+              data-testid="result-header-copy-link">
+              <i class="material-icons-round text-[16px]" aria-hidden="true">link</i>
+              Copy link
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Identity strip: the six metadata fields the docked card used to spell out are behind the ⓘ;
+       the four that identify the result at a glance stay inline. -->
+  <div class="flex flex-wrap items-center gap-[10px] text-[12px] font-normal text-[var(--pr-text-secondary)]">
+    <span class="relative inline-flex items-center gap-[6px]" data-testid="result-header-meta-wrap">
+      <span class="font-mono text-[12px] font-medium text-[var(--pr-text)]" data-testid="result-header-code">{{ code }}</span>
+      <button
+        type="button"
+        class="flex h-[18px] w-[18px] items-center justify-center text-[var(--pr-text-muted)] hover:text-[var(--pr-color-primary-300)]"
+        (click)="toggleMeta()"
+        [attr.aria-expanded]="metaOpen()"
+        aria-label="Record details"
+        data-testid="result-header-meta-toggle">
+        <i class="material-icons-round text-[14px]" aria-hidden="true">info</i>
+      </button>
+
+      @if (metaOpen()) {
+        <div
+          class="absolute left-0 top-[26px] z-20 w-[340px] rounded-[12px] border border-[var(--pr-border)] bg-white p-[14px] shadow-[0_8px_24px_rgba(var(--pr-color-secondary-rgb),0.14)]"
+          role="dialog"
+          aria-label="Result metadata"
+          data-testid="result-header-meta-popover">
+          @for (row of metaRows; track row.label) {
+            <div class="flex h-[32px] items-center gap-[12px] border-b border-[var(--pr-border-divider)] last:border-b-0">
+              <span class="w-[120px] flex-none text-[13px] font-normal text-[var(--pr-text-muted)]">{{ row.label }}</span>
+              <span class="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--pr-text)]" [title]="row.value">{{ row.value }}</span>
+            </div>
+          }
+
+          <!-- The floating metadata card survives the docked card it was popped out of. -->
+          @if (!metadataPanelSE.floating()) {
+            <button
+              type="button"
+              class="mt-[10px] flex items-center gap-[6px] text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:underline"
+              (click)="popOutMetadata()"
+              data-testid="result-header-metadata-popout">
+              <i class="material-icons-round text-[14px]" aria-hidden="true">open_in_new</i>
+              Keep this open
+            </button>
+          }
+        </div>
+      }
+    </span>
+
+    @if (category) {
+      <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+      <span>{{ category }}</span>
+    }
+    @if (level) {
+      <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+      <span>{{ level }}</span>
+    }
+    @if (funding) {
+      <span class="h-[14px] w-px flex-none bg-[var(--pr-border)]" aria-hidden="true"></span>
+      <span>{{ funding }}</span>
+    }
+    @if (statusLabel) {
+      <span
+        class="rounded-full px-[9px] py-[2px] text-[12px] font-medium"
+        [style.color]="statusFg"
+        [style.background-color]="statusBg"
+        data-testid="result-header-status">
+        {{ statusLabel }}
+      </span>
+    }
+  </div>
+</header>

@@ -340,33 +340,15 @@ describe('ReportingNavSidebarComponent', () => {
       expect(component.adminModuleExpanded()).toBe(true);
     });
 
-    // Task 7 — inside a result, "Results Center" is a LINK back to the table and the chevron is a
-    // separate action. The template is stubbed out in this suite (`set: { template: '' }`), so the
-    // link target is asserted on the helper both branches bind to, not on rendered DOM.
-    it('the Results Center row points at the same destination in and out of a result', async () => {
+    // The result sections moved to `app-result-sections-sidebar`, so this row has no special
+    // in-result branch any more: it is a plain link to the results table everywhere.
+    it('the Results Center row points at the results table in and out of a result', async () => {
       await build();
       const section = component.sections().find(s => s.path === 'result')!;
       expect(component.sectionRootLink(section)).toBe('/result');
 
       navigateTo('/result/result-detail/1234/general-information');
-      expect(component.inResultDetail()).toBe(true);
-      // Entering a result must not change where the row goes — only add the chevron next to it.
       expect(component.sectionRootLink(section)).toBe('/result');
-    });
-
-    it('the chevron still expands/collapses the result sections, and still no-ops on the rail', async () => {
-      await build('/result/result-detail/1234/general-information');
-      // Entering a result auto-opens the section list (unchanged behaviour).
-      expect(component.resultCenterExpanded()).toBe(true);
-
-      component.toggleResultCenter();
-      expect(component.resultCenterExpanded()).toBe(false);
-      component.toggleResultCenter();
-      expect(component.resultCenterExpanded()).toBe(true);
-
-      sidebarMock.state.set('collapsed');
-      component.toggleResultCenter();
-      expect(component.resultCenterExpanded()).toBe(true);
     });
 
     it('toggleGroup adds and removes a program group', async () => {

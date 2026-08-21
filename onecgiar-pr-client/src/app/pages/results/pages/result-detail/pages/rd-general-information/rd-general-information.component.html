@@ -4,21 +4,10 @@
   [isPhaseOpen]="this.isPhaseOpen"></app-rd-annual-updating>
 
 <div class="detail_container" [appSectionSkeleton]="sectionLoading()">
-  @if (!this.api.rolesSE.readOnly && this.isPhaseOpen) {
-    <div style="max-width: 200px">
-      <app-pr-button
-        text="Change result type"
-        icon="move_up"
-        [reverse]="true"
-        tabindex="0"
-        (click)="this.api.dataControlSE.changeResultTypeModal = true"
-        (keydown.enter)="this.api.dataControlSE.changeResultTypeModal = true"
-        (keydown.space)="$event.preventDefault(); this.api.dataControlSE.changeResultTypeModal = true"
-        [rotateRight]="true"
-        [verticalMargin]="0">
-      </app-pr-button>
-    </div>
-  }
+  <!-- "Change result type" moved to the result header's ⋮ menu (app-result-header), where the
+       mockup puts result-level actions. The modal it opens still lives at the bottom of THIS
+       template, because it needs this section's `generalInfoBody` — which is also why the menu
+       only offers the action while this section is open. -->
 
   <app-alert-status
     *ngIf="this.api.dataControlSE.isKnowledgeProduct"
@@ -359,15 +348,14 @@
     [(ngModel)]="this.generalInfoBody.krs_url">
   </app-pr-input>
 
-  <app-save-button
-    class="position_sticky"
+  <app-section-bottom-bar
     (clickSave)="onSaveSection()"
     [editable]="
       this.api.dataControlSE.currentResult?.result_type_id == 7
         ? this.api.rolesSE.access.canDdit && !this.dataControlSE?.currentResult?.status
         : false
     "
-    [disabled]="!this.generalInfoBody.result_name"></app-save-button>
+    [disabled]="!this.generalInfoBody.result_name" />
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
 </div>
 

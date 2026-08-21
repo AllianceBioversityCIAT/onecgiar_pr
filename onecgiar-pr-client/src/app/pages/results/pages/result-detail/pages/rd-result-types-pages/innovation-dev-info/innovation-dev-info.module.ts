@@ -22,6 +22,7 @@ import { UserEvidenceComponent } from './components/user-evidence/user-evidence.
 import { InnovationUseFormModule } from '../../../../../../../shared/components/innovation-use-form/innovation-use-form.module';
 import { AssumptionsExaminationComponent } from './components/assumptions-examination/assumptions-examination.component';
 import { PartnersPoliciesSafeguardsComponent } from './components/partners-policies-safeguards/partners-policies-safeguards.component';
+import { SectionBottomBarComponent } from '../../../components/section-bottom-bar/section-bottom-bar.component';
 
 @NgModule({
   declarations: [
@@ -40,7 +41,7 @@ import { PartnersPoliciesSafeguardsComponent } from './components/partners-polic
     PartnersPoliciesSafeguardsComponent,
     NonPooledInfoP25Component
   ],
-  imports: [
+  imports: [SectionBottomBarComponent,
     CommonModule,
     InnovationDevInfoRoutingModule,
     CustomFieldsModule,

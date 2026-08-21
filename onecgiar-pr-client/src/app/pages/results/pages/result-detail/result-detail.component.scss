@@ -1,6 +1,23 @@
-// Result sections + metadata now live inside the app sidebar (Results Center card).
-// The detail page is just the content column, full width of the sidebar inset.
+// Two-column shell: the white sections rail (app-result-sections-sidebar, 240px) + the content.
+//
+// The page itself is the scroll container. Making `.rd_content` scroll internally was tried and
+// reverted: the `height: 100%` chain dies at `app-results` (a routed host with no height), so
+// `.rd_content` just grew to its content height — and because it had `overflow-y: auto` it became
+// the sticky containment block for its children WITHOUT ever scrolling, which pinned the bottom
+// bar off-screen. Both the rail and the bar stick to the viewport instead, which needs no height
+// chain at all.
+:host {
+  display: block;
+}
+
+.rd_layout {
+  display: flex;
+  align-items: flex-start;
+}
+
 .rd_content {
+  flex: 1;
+  min-width: 0;
   padding: 25px 0;
   box-sizing: border-box;
 

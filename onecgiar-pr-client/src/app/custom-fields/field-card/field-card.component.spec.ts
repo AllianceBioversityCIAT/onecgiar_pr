@@ -79,11 +79,13 @@ describe('FieldCardComponent', () => {
       expect(directive.prTooltipPinnable).toBe(true);
     });
 
-    it('keeps the colour legend when no guidance is provided', () => {
+    // The colour legend that used to take this slot explained the four card colours. With no
+    // colours left to explain, a field with no guidance now shows no icon at all.
+    it('shows no icon at all when no guidance is provided', () => {
       host.tooltip.set('');
       fixture.detectChanges();
       expect(q('.sgi-dac-info')).toBeNull();
-      expect(q('.fch_info_wrap')).toBeTruthy();
+      expect(q('.fch_info_wrap')).toBeNull();
     });
   });
 
@@ -97,14 +99,14 @@ describe('FieldCardComponent', () => {
      * `app-pr-field-header` — the component this card replaced — gated its whole label block on
      * `*ngIf="this.label"`. Around 60 label-less call sites (currency cells, sub-inputs, "Other"
      * specifiers) rely on that, and most default to `required = true`, so without this gate each
-     * one grows an orphan "Mandatory" pill over an empty title.
+     * one grows an orphan asterisk over an empty title.
      */
     it('renders no header at all when the field has no label', () => {
       host.label.set('');
       fixture.detectChanges();
 
       expect(q('.field_card_header')).toBeNull();
-      expect(q('.fch_tag')).toBeNull();
+      expect(q('.fch_required')).toBeNull();
     });
 
     it('treats a whitespace-only label as no label', () => {
@@ -142,55 +144,62 @@ describe('FieldCardComponent', () => {
     });
   });
 
-  describe('requiredness tag', () => {
-    it('tags a required field as Mandatory', () => {
-      expect(q('.fch_tag').nativeElement.textContent.trim()).toBe('Mandatory');
+  describe('required marker', () => {
+    // The redesign replaced the Mandatory/Optional pill with a single red asterisk: a field says
+    // what it is and whether it is required, and nothing about completion.
+    it('marks a required field with an asterisk', () => {
+      expect(q('.fch_required').nativeElement.textContent.trim()).toBe('*');
     });
 
-    it('tags a non-required field as Optional', () => {
+    it('announces requiredness to screen readers, not just with the glyph', () => {
+      expect(q('.sr-only').nativeElement.textContent.trim()).toBe('(required)');
+    });
+
+    it('shows no marker on a non-required field', () => {
       host.required.set(false);
       fixture.detectChanges();
 
-      expect(q('.fch_tag').nativeElement.textContent.trim()).toBe('Optional');
+      expect(q('.fch_required')).toBeNull();
+      expect(q('.sr-only')).toBeNull();
+    });
+
+    it('no longer renders the Mandatory/Optional pill', () => {
+      expect(q('.fch_tag')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Mandatory');
+      expect(fixture.nativeElement.textContent).not.toContain('Optional');
     });
   });
 
-  describe('derived state — this is what colours every field in the app', () => {
-    const stateClass = () =>
+  describe('state on the field', () => {
+    const stateClasses = () =>
       Array.from(q('.field_card').nativeElement.classList as DOMTokenList).filter((c: string) => c.startsWith('fc-'));
 
-    it('is pending when required and empty', () => {
-      expect(stateClass()).toEqual(['fc-pending']);
+    // Empty-but-required used to paint the whole card orange on load, which read as an error on a
+    // form the user had not started. Completion is now answered once per section, by the bottom bar.
+    it('paints nothing on a required, empty field', () => {
+      expect(stateClasses()).toEqual([]);
     });
 
-    it('is optional — not pending — when not required and empty', () => {
-      host.required.set(false);
-      fixture.detectChanges();
-
-      expect(stateClass()).toEqual(['fc-optional']);
-    });
-
-    it('is done once the field holds a value, required or not', () => {
+    it('paints nothing on a filled field', () => {
       host.hasValue.set(true);
       fixture.detectChanges();
 
-      expect(stateClass()).toEqual(['fc-done']);
+      expect(stateClasses()).toEqual([]);
     });
 
-    it('lets an error outrank a value', () => {
-      host.hasValue.set(true);
+    it('keeps the error state — an over-limit field must stay visible', () => {
       host.hasError.set(true);
       fixture.detectChanges();
 
-      expect(stateClass()).toEqual(['fc-error']);
+      expect(stateClasses()).toEqual(['fc-error']);
     });
 
-    it('lets an explicit [state] override everything derived', () => {
-      const card = fixture.debugElement.query(By.directive(FieldCardComponent)).componentInstance as FieldCardComponent;
-      card.hasValue = true;
-      card.state = 'pending';
+    it('does not paint an error on a bare (label-less) field', () => {
+      host.label.set('');
+      host.hasError.set(true);
+      fixture.detectChanges();
 
-      expect(card.computedState).toBe('pending');
+      expect(q('.field_card')).toBeNull();
     });
   });
 });

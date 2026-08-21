@@ -21,6 +21,7 @@ import {
 } from 'src/app/shared/components/pr-table';
 import { CPKnowledgeProductSelectorComponent } from './components/multiple-wps/components/knowledge-product-selector/knowledge-product-selector.component';
 import { CPNormalSelectorComponent } from './components/multiple-wps/components/normal-selector/normal-selector.component';
+import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
 @NgModule({
   declarations: [
     RdContributorsAndPartnersComponent,
@@ -30,7 +31,7 @@ import { CPNormalSelectorComponent } from './components/multiple-wps/components/
     CPKnowledgeProductSelectorComponent,
     CPNormalSelectorComponent
   ],
-  imports: [
+  imports: [SectionBottomBarComponent,
     CommonModule,
     RdContributorsAndPartnersRoutingModule,
     CustomFieldsModule,

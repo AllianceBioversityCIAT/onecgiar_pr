@@ -39,7 +39,7 @@ import {
   lucideUsers
 } from '@ng-icons/lucide';
 import { HlmSidebarImports, HlmSidebarService } from '@spartan/sidebar';
-import { PrRoute, extraRoutingApp, resultDetailRouting, routingApp } from '../../routing/routing-data';
+import { PrRoute, extraRoutingApp, routingApp } from '../../routing/routing-data';
 import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
@@ -49,14 +49,8 @@ import { SPProgress } from '../../interfaces/SP-progress.interface';
 import { ApiService } from '../../services/api/api.service';
 import { FontScale, FONT_SCALE_OPTIONS, FontScaleService } from '../../services/font-scale.service';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
-import { FieldsManagerService } from '../../services/fields-manager.service';
-import { GreenChecksService } from '../../services/global/green-checks.service';
-import { AiReviewService } from '../../services/api/ai-review.service';
-import { SubmissionModalService } from '../../../pages/results/pages/result-detail/components/submission-modal/submission-modal.service';
-import { UnsubmitModalService } from '../../../pages/results/pages/result-detail/components/unsubmit-modal/unsubmit-modal.service';
 
 /** A result-detail section row with the (dynamically injected) green-check state. */
-type RdSection = PrRoute & { validation?: number };
 
 interface ProgramGroup {
   key: string;
@@ -132,11 +126,6 @@ export class ReportingNavSidebarComponent {
   public readonly fontScaleSE = inject(FontScaleService);
   public readonly resultsNotificationsSE = inject(ResultsNotificationsService);
   public readonly sidebarSE = inject(HlmSidebarService);
-  public readonly fieldsManagerSE = inject(FieldsManagerService);
-  public readonly greenChecksSE = inject(GreenChecksService);
-  public readonly aiReviewSE = inject(AiReviewService);
-  private readonly submissionModalSE = inject(SubmissionModalService);
-  private readonly unsubmitModalSE = inject(UnsubmitModalService);
 
   readonly isProduction = environment.production;
   readonly appVersion = APP_VERSION;
@@ -448,119 +437,16 @@ export class ReportingNavSidebarComponent {
    * Clicking Planned toggles this — it does NOT navigate (pick a program to enter).
    */
 
-  // --- Result Detail context: "Results Center" expands into the open result's sections ---
-  /** True when the URL is a result-detail page (the white context card is shown). */
-  readonly inResultDetail = toSignal(
-    this.router.events.pipe(
-      filter(e => e instanceof NavigationEnd),
-      startWith(null),
-      map(() => this.router.url.includes('/result/result-detail/'))
-    ),
-    { initialValue: this.router.url.includes('/result/result-detail/') }
-  );
-
-  /** Whether the Results Center card is expanded (auto-opens on entering a result). */
-  readonly resultCenterExpanded = signal(this.router.url.includes('/result/result-detail/'));
-
-  /**
-   * Sections of the open result — filtered by portfolio (P22/P25) and result type, with the
-   * green-check state injected. Mirrors `PanelMenuPipe` so the logic lives in one shape only.
-   */
-  readonly resultSections = computed<RdSection[]>(() => {
-    this.dataControlSE.currentResultSignal(); // react to result load
-    this.dataControlSE.greenChecksString(); // react to green-check changes
-    const portfolio = this.fieldsManagerSE.portfolioAcronym();
-    if (!portfolio) return [];
-    const typeId = this.dataControlSE.currentResult?.result_type_id;
-    (this.dataControlSE.green_checks ?? []).forEach((gc: { section_name?: string; validation?: number | string }) => {
-      const opt = resultDetailRouting.find(o => o.path === gc.section_name) as RdSection | undefined;
-      if (opt) opt.validation = Number(gc.validation);
-    });
-    return (resultDetailRouting as RdSection[]).filter(o => {
-      if (o.path === '**') return false;
-      if (this.fieldsManagerSE.isP25() && o.portfolioAcronym === 'P22') return false;
-      if (this.fieldsManagerSE.isP22() && o.portfolioAcronym === 'P25') return false;
-      if (!Object.prototype.hasOwnProperty.call(o, 'prHide')) return true;
-      return o.prHide == typeId;
-    });
-  });
-
-  /** Lucide icon per result-detail section (matches the section `path`). */
-  private readonly rdSectionIcons: Record<string, string> = {
-    'general-information': 'lucideFileText',
-    'theory-of-change': 'lucideGitBranch',
-    partners: 'lucideHandshake',
-    'contributor-partners': 'lucideUsers',
-    'geographic-location': 'lucideMapPin',
-    'links-to-results': 'lucideLink',
-    evidences: 'lucidePaperclip',
-    'cap-dev-info': 'lucideGraduationCap',
-    'innovation-dev-info': 'lucideLightbulb',
-    'innovation-use-info': 'lucideRocket',
-    'knowledge-product-info': 'lucideBookOpen',
-    'policy-change-info': 'lucideScale'
-  };
-
-  sectionIcon(path?: string): string {
-    return this.rdSectionIcons[path ?? ''] ?? 'lucideCircleDot';
-  }
-
-  /** Router link for a result section (needs the open result's code + version). */
-  sectionLink(section: RdSection): string {
-    return `/result/result-detail/${this.dataControlSE.currentResult?.result_code}/${section.path}`;
-  }
-
-  sectionQueryParams(): { phase?: number | string } {
-    const version = this.dataControlSE.currentResult?.version_id;
-    return version != null ? { phase: version } : {};
-  }
-
-  toggleResultCenter(): void {
-    if (this.isCollapsed()) return;
-    this.resultCenterExpanded.update(v => !v);
-  }
-
-  // Result-level actions — gating mirrors panel-menu.component.html.
-  get showAiReview(): boolean {
-    const r = this.dataControlSE.currentResult;
-    return !!(r && r.result_type_id != 6 && r.status_id == 1);
-  }
-  get aiReviewDisabled(): boolean {
-    const r = this.dataControlSE.currentResult;
-    return !this.greenChecksSE.submit || !!(r?.inQA && this.api.globalVariablesSE.get?.in_qa && r?.status_id == 1);
-  }
-  get showSubmit(): boolean {
-    const list = this.dataControlSE.myInitiativesList ?? [];
-    return this.dataControlSE.currentResult?.status_id == 1 && (this.validateMember(list) !== 6 || this.rolesSE.isAdmin);
-  }
-  get submitDisabled(): boolean {
-    const r = this.dataControlSE.currentResult;
-    return !this.greenChecksSE.submit || !!(r?.inQA && this.api.globalVariablesSE.get?.in_qa);
-  }
-  get showUnsubmit(): boolean {
-    return this.dataControlSE.currentResult?.status_id == 3;
-  }
-  onAiReview(): void {
-    if (!this.aiReviewDisabled) this.aiReviewSE.onAIReviewClick();
-  }
-  openSubmit(): void {
-    this.submissionModalSE.showModal = true;
-  }
-  openUnsubmit(): void {
-    this.unsubmitModalSE.showModal = true;
-  }
-  validateMember(myInitiativesList: any[]): number {
-    const found = myInitiativesList.find(init => init?.initiative_id == this.dataControlSE?.currentResult?.initiative_id);
-    if (!found) return 6;
-    return found?.role === 'Member' ? 6 : 1;
-  }
+  // The open result's sections, progress and Submit / AI review actions used to live here as a
+  // collapsible subtree. They now belong to `ResultSectionsService` + `app-result-sections-sidebar`
+  // (pages/results/pages/result-detail/components/result-sections-sidebar), so this nav no longer
+  // knows about green checks or submission state.
 
   constructor() {
     this.ensureRfrLoaded();
     // Expand collapsibles when landing inside their module (don't force-collapse on leave).
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
       if (this.router.url.startsWith('/result-framework-reporting')) this.ensureRfrLoaded();
-      if (this.router.url.includes('/result/result-detail/')) this.resultCenterExpanded.set(true);
       if (this.router.url.startsWith('/init-admin-module')) this.myAdminExpanded.set(true);
       if (this.router.url.startsWith('/admin-module')) this.adminModuleExpanded.set(true);
     });

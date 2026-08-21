@@ -814,8 +814,8 @@ describe('LeadContactPersonFieldComponent', () => {
       component.body = { lead_contact_person: null, lead_contact_person_data: null };
       fixture.detectChanges();
 
-      const tag = fixture.nativeElement.querySelector('.fch_tag');
-      expect(tag?.textContent).toContain('Mandatory');
+      // The Mandatory/Optional pill was replaced by a red asterisk next to the label.
+      expect(fixture.nativeElement.querySelector('.fch_required')?.textContent).toContain('*');
       expect(fixture.nativeElement.querySelector('.fch_title')?.textContent).toContain('Lead contact person');
     });
 
@@ -823,7 +823,7 @@ describe('LeadContactPersonFieldComponent', () => {
       fixture.componentRef.setInput('required', false);
       fixture.detectChanges();
 
-      expect(fixture.nativeElement.querySelector('.fch_tag')?.textContent).toContain('Optional');
+      expect(fixture.nativeElement.querySelector('.fch_required')).toBeNull();
     });
   });
 

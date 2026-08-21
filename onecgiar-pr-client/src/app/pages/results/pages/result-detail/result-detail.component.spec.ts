@@ -271,37 +271,33 @@ describe('ResultDetailComponent', () => {
   });
 
   // Task 7/8 — the shell now owns the way back to the results table and the metadata card.
-  describe('back link + result metadata', () => {
+  describe('header', () => {
     beforeEach(() => {
-      // The panel persists to localStorage, so one test's pop-out would otherwise seed the next.
       localStorage.clear();
       jest.spyOn(ResultDetailComponent.prototype, 'getData').mockImplementation(async () => {});
     });
 
     afterEach(() => jest.restoreAllMocks());
 
-    it('renders an explicit link back to the results list', () => {
+    // The way back, the title, the PDF/⋮ actions and the metadata popover all moved into
+    // `app-result-header` — they are asserted in that component's own spec. This page is only
+    // responsible for mounting it, and for still hosting the floating metadata card.
+    it('mounts the result header', () => {
       fixture.detectChanges();
-      const link: HTMLAnchorElement = fixture.nativeElement.querySelector('[data-testid="result-detail-back-link"]');
-      expect(link).toBeTruthy();
-      expect(link.getAttribute('href')).toBe('/result/results-outlet/results-list');
+
+      expect(fixture.nativeElement.querySelector('app-result-header')).toBeTruthy();
     });
 
-    it('docks the metadata next to the phase switcher and pops it out on demand', () => {
-      const panelSE = TestBed.inject(ResultMetadataPanelService);
+    it('no longer renders a second, docked copy of the metadata fields', () => {
       fixture.detectChanges();
 
-      // Docked: the card sits in the content column, the floating window is not rendered.
-      expect(fixture.nativeElement.querySelector('app-result-metadata-list')).toBeTruthy();
-      expect(fixture.nativeElement.querySelector('[data-testid="result-metadata-window"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('app-result-metadata-list')).toBeNull();
+    });
 
-      fixture.nativeElement.querySelector('[data-testid="result-detail-metadata-popout"]').click();
+    it('keeps hosting the floating metadata card', () => {
       fixture.detectChanges();
 
-      expect(panelSE.floating()).toBe(true);
-      // The docked card collapses so the six fields are never on screen twice.
-      expect(fixture.nativeElement.querySelector('[data-testid="result-detail-metadata-popout"]')).toBeNull();
-      expect(fixture.nativeElement.querySelector('[data-testid="result-metadata-window"]')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('app-result-metadata-window')).toBeTruthy();
     });
   });
 

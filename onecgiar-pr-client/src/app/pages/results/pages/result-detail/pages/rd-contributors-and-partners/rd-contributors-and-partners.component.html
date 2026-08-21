@@ -494,7 +494,7 @@
 
   <!-- Sync -->
 
-  <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+  <app-section-bottom-bar (clickSave)="onSaveSection()" />
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
   <div [style.height.px]="this.rdPartnersSE.partnersBody.linked_results.length ? 80 : 20" style="transition: height 0.3s ease-in-out"></div>
 </div>

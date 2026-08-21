@@ -14,6 +14,7 @@ import { FilterIndicatorsPipe } from './components/toc-impact-section/pipes/filt
 import { TocInitiativeOutModule } from './components/shared/toc-initiative-out/toc-initiative-out.module';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
+import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
 
 @NgModule({
   declarations: [
@@ -26,7 +27,7 @@ import { TermPipe } from '../../../../../../internationalization/term.pipe';
     FilterTargetsPipe,
     FilterIndicatorsPipe
   ],
-  imports: [
+  imports: [SectionBottomBarComponent,
     CommonModule,
     RdTheoryOfChangeRoutingModule,
     CustomFieldsModule,

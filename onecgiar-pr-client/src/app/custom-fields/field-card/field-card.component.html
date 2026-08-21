@@ -1,8 +1,17 @@
-<div [class.field_card]="!isBare" [ngClass]="isBare ? '' : 'fc-' + computedState">
+<!-- Field block. Redesigned to match the approved mockup ("PRMS Reporting.dc.html" §pg-general):
+     a plain label with a red asterisk when required, an optional info button, and the control
+     underneath keeping its own neutral border. No status-coloured card, no Mandatory/Optional
+     pill, no colour legend — the state a user needs is now told once per section by the bottom
+     bar, not repeated on every field.
+     `.field_card` is kept as the root class name: `[appSectionSkeleton]` targets it. -->
+<div [class.field_card]="!isBare" [class.fc-error]="!isBare && hasError">
   @if (showHeaderRow) {
     <div class="field_card_header">
       <span class="fch_title" [innerHTML]="label"></span>
-      <span class="fch_tag">{{ required ? 'Mandatory' : 'Optional' }}</span>
+      @if (required) {
+        <span class="fch_required" aria-hidden="true">*</span>
+        <span class="sr-only">(required)</span>
+      }
       @if (tooltip) {
         <!-- P2-3201: pinnable. Field guidance moved out of the inline grey box carries links and
              several paragraphs, so it must survive the pointer leaving; Escape / outside click closes it. -->
@@ -15,26 +24,14 @@
           prTooltipStyleClass="sgi-dac-tooltip"
           aria-label="More information">
           <!-- P2-3339: inline SVG, not an icon-font ligature. The ligature name used to paint as
-               literal text and overflow this 18px button onto the Mandatory badge. -->
+               literal text and overflow this 18px button onto the label. -->
           <app-pr-info-icon />
         </button>
-      }
-      @if (!tooltip) {
-        <span class="fch_info_wrap">
-        <i class="material-icons-round fch_info" aria-label="Field color legend">info</i>
-        <div class="fch_legend">
-          <div class="legend_row"><span class="dot dot-blue"></span> Optional (empty)</div>
-          <div class="legend_row"><span class="dot dot-orange"></span> Mandatory (empty)</div>
-          <div class="legend_row"><span class="dot dot-green"></span> Filled / valid</div>
-          <div class="legend_row"><span class="dot dot-red"></span> Over limit / invalid</div>
-        </div>
-        </span>
       }
     </div>
   }
   @if (showDescriptionBlock) {
     <div class="field_card_desc" [style]="descInlineStyles">
-      <span class="desc_chip">Description</span>
       <div class="desc_text" [innerHTML]="description"></div>
     </div>
   }

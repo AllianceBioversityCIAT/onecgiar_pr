@@ -12,10 +12,11 @@ import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon
 import { ConfirmationKPComponent } from './components/confirmation-kp/confirmation-kp.component';
 import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
+import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
 
 @NgModule({
   declarations: [RdGeneralInformationComponent, ChangeResultTypeModalComponent, ConfirmationKPComponent, SaveConfirmationModalComponent],
-  imports: [
+  imports: [SectionBottomBarComponent,
     CommonModule,
     RdGeneralInformationRoutingModule,
     RdAnnualUpdatingComponent,

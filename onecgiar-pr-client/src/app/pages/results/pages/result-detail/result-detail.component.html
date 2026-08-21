@@ -1,44 +1,19 @@
+<!-- Two columns: the sections sidebar and the scrolling content, per the approved mockup
+     ("PRMS Reporting.dc.html", `pageOpen`). The sections used to be nested inside the dark app
+     sidebar; they now live in their own white 240px rail, which is why this page owns a row
+     layout instead of being a single full-width column. -->
 <div class="rd_layout">
+  <app-result-sections-sidebar />
+
   <div class="rd_content">
-    <!-- Explicit way back to the results table. The sidebar's "Results Center" row navigates here
-         too, but a user several sections deep should not have to hunt through the nav to get out.
-         The fully-resolved path is used (rather than `/result`) so the link does not depend on the
-         redirect chain. -->
-    <div class="mx-auto mb-[12px] w-[95%]">
-      <a
-        routerLink="/result/results-outlet/results-list"
-        class="inline-flex items-center gap-[6px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] hover:underline"
-        title="Back to all results"
-        data-testid="result-detail-back-link">
-        <i class="material-icons-round text-[16px] leading-none" aria-hidden="true">arrow_back</i>
-        Back to results
-      </a>
-    </div>
+    <!-- Title, way back, result-level actions and the identity strip (code · category · level ·
+         funding · status). Replaces the docked RESULT METADATA card — its six fields moved behind
+         the ⓘ next to the code. -->
+    <app-result-header />
 
     <div class="phase_switcher_container">
       <app-phase-switcher></app-phase-switcher>
     </div>
-
-    <!-- RESULT METADATA docked next to "Phases:" — its home when it is not popped out. The floating
-         card at the bottom of this template renders the SAME component, so the six fields exist in
-         the markup once. -->
-    @if (!metadataPanelSE.floating()) {
-      <div class="mx-auto mb-[12px] w-[95%] rounded-xl border border-[var(--pr-color-accents-2)] bg-white px-[12px] py-[10px]">
-        <div class="mb-[8px] flex items-center justify-between gap-[8px]">
-          <p class="m-0 text-[9px] font-bold uppercase tracking-[1px] text-[var(--pr-color-primary-300)]">Result metadata</p>
-          <button
-            type="button"
-            class="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-md text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)] hover:text-[var(--pr-color-primary-300)]"
-            (click)="metadataPanelSE.open()"
-            aria-label="Pop out result metadata into a floating card"
-            title="Pop out result metadata"
-            data-testid="result-detail-metadata-popout">
-            <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">open_in_new</i>
-          </button>
-        </div>
-        <app-result-metadata-list />
-      </div>
-    }
 
     <div class="section_container">
       <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>

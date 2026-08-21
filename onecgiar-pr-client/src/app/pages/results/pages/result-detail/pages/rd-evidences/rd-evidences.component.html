@@ -102,7 +102,7 @@
   <div appFeedbackValidation labelText="Empty, repeated or invalid link" [isComplete]="!this.validateButtonDisabled"></div>
 </div>
 
-<app-save-button class="position_sticky" [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()"> </app-save-button>
+<app-section-bottom-bar [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()" />
 
 <!-- P2-2935: evidence creation modal -->
 <app-pr-dialog

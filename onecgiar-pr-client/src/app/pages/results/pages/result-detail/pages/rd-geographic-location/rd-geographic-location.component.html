@@ -53,7 +53,7 @@
     }
   }
 
-  <app-save-button class="position_sticky" (clickSave)="onSaveSection()" *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
+  <app-section-bottom-bar (clickSave)="onSaveSection()" *ngIf="!this.api.dataControlSE.isKnowledgeProduct" />
 
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
 </div>

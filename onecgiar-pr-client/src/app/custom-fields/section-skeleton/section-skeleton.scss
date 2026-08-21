@@ -52,28 +52,9 @@
     }
   }
 
-  // ── Neutralise the state colours while the values are unknown ────────────────────────────
-  // `FieldCardComponent.computedState` derives `pending` (orange "Mandatory, empty") from
-  // `hasValue === false`, so an un-hydrated section paints every mandatory field orange — the
-  // exact "my data is gone" false alarm being reported. Green would be just as much of a lie.
-  // The header (label + Mandatory/Optional tag) stays readable so the user sees WHICH fields
-  // are coming; only the colour verdict is withheld.
-  .field_card {
-    &.fc-optional,
-    &.fc-pending,
-    &.fc-done,
-    &.fc-error {
-      border-color: var(--pr-color-accents-2);
-
-      .field_card_header {
-        background-color: var(--pr-color-accents-1);
-      }
-
-      .fch_tag {
-        color: var(--pr-color-accents-5);
-      }
-    }
-  }
+  // The state colours this used to neutralise are gone: a field no longer paints a verdict
+  // (orange "mandatory, empty" / green "filled") while the values are still unknown, so there is
+  // nothing left to withhold. See styles/field-card.scss.
 }
 
 // Own keyframes: `.pr-skeleton` animates `transform` on a child pseudo-element, but the mask

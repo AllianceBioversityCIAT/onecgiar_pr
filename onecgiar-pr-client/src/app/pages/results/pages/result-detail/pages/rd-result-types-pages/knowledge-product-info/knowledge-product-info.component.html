@@ -198,6 +198,6 @@
     <div class="text-secondary-400">Not Available</div>
   </ng-template>
 </div>
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()" *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
+<app-section-bottom-bar (clickSave)="onSaveSection()" *ngIf="this.api.dataControlSE.isKnowledgeProduct" />
 
 <app-sync-button (clickSave)="onSyncSection()" *ngIf="knowledgeProductBody.type != 'Journal Article' || this.rolesSE.isAdmin"></app-sync-button>

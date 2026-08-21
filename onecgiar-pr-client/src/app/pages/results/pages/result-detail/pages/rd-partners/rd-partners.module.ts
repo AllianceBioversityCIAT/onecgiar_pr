@@ -9,10 +9,11 @@ import { NormalSelectorComponent } from './components/normal-selector/normal-sel
 import { KnowledgeProductSelectorComponent } from './components/knowledge-product-selector/knowledge-product-selector.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { FormsModule } from '@angular/forms';
+import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
 
 @NgModule({
   declarations: [RdPartnersComponent, InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent],
-  imports: [
+  imports: [SectionBottomBarComponent,
     CommonModule,
     RdPartnersRoutingModule,
     CustomFieldsModule,

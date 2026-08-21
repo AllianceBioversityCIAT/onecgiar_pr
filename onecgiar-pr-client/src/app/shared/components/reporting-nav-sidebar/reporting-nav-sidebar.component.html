@@ -331,119 +331,12 @@
                   </ul>
                 }
               </li>
-            } @else if (section.path === 'result') {
-              <li hlmSidebarMenuItem>
-                @if (!inResultDetail()) {
-                  <a
-                    hlmSidebarMenuButton
-                    [routerLink]="sectionRootLink(section)"
-                    routerLinkActive
-                    #rlaResult="routerLinkActive"
-                    [isActive]="rlaResult.isActive"
-                    [tooltip]="section.prName ?? ''">
-                    <ng-icon [name]="iconFor(section)" />
-                    <span>{{ section.prName }}</span>
-                  </a>
-                } @else {
-                  <!-- Inside a result the row is SPLIT into two hit targets, the standard tree
-                       pattern: the label keeps the destination it has everywhere else (the results
-                       table), and the chevron owns expand/collapse. Folding both into one button
-                       made the row's behaviour depend on hidden state — the section list
-                       auto-expands on entry, so the very first click already meant something
-                       different from the second.
-                       The native `title` is suppressed on the icon rail: `hlmSidebarMenuButton`
-                       enables its own Brn tooltip exactly there, and the two fired together. -->
-                  <a
-                    hlmSidebarMenuButton
-                    [routerLink]="sectionRootLink(section)"
-                    [isActive]="true"
-                    tooltip="Back to all results"
-                    [attr.aria-label]="'Back to ' + section.prName"
-                    [attr.title]="isCollapsed() ? null : 'Back to all results'">
-                    <ng-icon [name]="iconFor(section)" />
-                    <span>{{ section.prName }}</span>
-                  </a>
-                  @if (!isCollapsed()) {
-                    <!-- `hlmSidebarMenuAction` is the right-edge affordance slot of a menu item:
-                         absolutely placed against the item, and auto-hidden on the icon rail. -->
-                    <button
-                      hlmSidebarMenuAction
-                      type="button"
-                      (click)="toggleResultCenter()"
-                      [attr.aria-expanded]="resultCenterExpanded()"
-                      aria-controls="pr-nav-result-sections"
-                      aria-label="Toggle result sections">
-                      <ng-icon
-                        name="lucideChevronDown"
-                        class="text-[16px] transition-transform duration-200"
-                        [class.rotate-180]="resultCenterExpanded()" />
-                    </button>
-                  }
-
-                  <!-- Sections render like any other sidebar nav children (dark, with icons +
-                       green-check), same as My Admin / Admin module. -->
-                  @if (!isCollapsed() && resultCenterExpanded()) {
-                    <ul hlmSidebarMenuSub id="pr-nav-result-sections">
-                      @for (sec of resultSections(); track sec.path) {
-                        <li hlmSidebarMenuSubItem>
-                          <a
-                            hlmSidebarMenuSubButton
-                            [routerLink]="sectionLink(sec)"
-                            [queryParams]="sectionQueryParams()"
-                            routerLinkActive
-                            #rlaSec="routerLinkActive"
-                            [isActive]="rlaSec.isActive">
-                            <ng-icon [name]="sectionIcon(sec.path)" />
-                            <span class="truncate">{{ sec.prName }}</span>
-                            @if (sec.underConstruction === true) {
-                              <img class="ms-auto h-3.5 w-3.5 shrink-0" src="assets/work-in-progress.png" alt="" />
-                            } @else {
-                              <i
-                                class="material-icons-round ms-auto shrink-0 text-[15px]"
-                                [ngClass]="sec.validation ? 'text-[var(--pr-color-green-500)]' : 'text-white/25'">check_circle</i>
-                            }
-                          </a>
-                        </li>
-                      }
-                    </ul>
-
-                    @if (showAiReview || showSubmit || showUnsubmit) {
-                      <div class="mx-2 mt-1.5 flex flex-col gap-1.5">
-                        @if (showAiReview) {
-                          <button
-                            type="button"
-                            class="flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-[var(--pr-color-primary-300)] to-[var(--pr-color-primary-500)] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:brightness-110"
-                            [class.pointer-events-none]="aiReviewDisabled"
-                            [class.opacity-50]="aiReviewDisabled"
-                            (click)="onAiReview()">
-                            <img src="assets/icons/stars.png" alt="" class="h-4 w-4" />
-                            {{ aiReviewSE.aiReviewButtonState === 'loading' ? 'Loading...' : aiReviewSE.aiReviewButtonState === 'completed' ? 'Ready!' : 'AI Review' }}
-                          </button>
-                        }
-                        @if (showSubmit) {
-                          <button
-                            type="button"
-                            class="rounded-lg bg-[var(--pr-color-primary-500)] px-3 py-1.5 text-[12px] font-semibold text-white transition hover:brightness-110"
-                            [class.pointer-events-none]="submitDisabled"
-                            [class.opacity-50]="submitDisabled"
-                            (click)="openSubmit()">
-                            Submit result
-                          </button>
-                        }
-                        @if (showUnsubmit) {
-                          <button
-                            type="button"
-                            class="rounded-lg border border-white/25 px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-white/10"
-                            (click)="openUnsubmit()">
-                            Unsubmit result
-                          </button>
-                        }
-                      </div>
-                    }
-                  }
-                }
-              </li>
             } @else {
+              <!-- No special case for `result` any more: the open result's sections, its progress
+                   and its AI review / Submit / Unsubmit actions moved OUT of this dark tree into
+                   the white 240px rail on the result-detail page itself
+                   (`app-result-sections-sidebar`), per the approved mockup. The row is now a plain
+                   link to the results table like any other. -->
               <li hlmSidebarMenuItem>
                 <a
                   hlmSidebarMenuButton

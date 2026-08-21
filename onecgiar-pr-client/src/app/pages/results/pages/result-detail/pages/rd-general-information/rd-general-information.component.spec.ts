@@ -316,8 +316,9 @@ describe('RdGeneralInformationComponent', () => {
       const card = impactAreaCard();
       expect(card).toBeTruthy();
       expect(card.querySelector('.fch_title').textContent).toContain('Which component of the Impact Area?');
-      // The legacy red asterisk is gone: requiredness now reads as the card's pill.
-      expect(card.querySelector('.fch_tag').textContent.trim()).toBe('Mandatory');
+      // Requiredness reads as the red asterisk next to the label — the Mandatory/Optional pill
+      // was dropped when the field card lost its status chrome.
+      expect(card.querySelector('.fch_required').textContent.trim()).toBe('*');
     });
 
     /**

@@ -19,6 +19,8 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { ResultMetadataListComponent } from '../../../../shared/components/result-metadata/result-metadata-list.component';
 import { ResultMetadataWindowComponent } from '../../../../shared/components/result-metadata/result-metadata-window.component';
+import { ResultSectionsSidebarComponent } from './components/result-sections-sidebar/result-sections-sidebar.component';
+import { ResultHeaderComponent } from './components/result-header/result-header.component';
 
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent],
@@ -37,7 +39,9 @@ import { ResultMetadataWindowComponent } from '../../../../shared/components/res
     PageHeaderComponent,
     ClipboardModule,
     ResultMetadataListComponent,
-    ResultMetadataWindowComponent
+    ResultMetadataWindowComponent,
+    ResultSectionsSidebarComponent,
+    ResultHeaderComponent
   ]
 })
 export class ResultDetailModule {}
