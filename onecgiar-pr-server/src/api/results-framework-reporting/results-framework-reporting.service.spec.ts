@@ -24,6 +24,7 @@ import { CreateFrameworkResultEntityService } from './application/commands/creat
 import { LinkFrameworkResultTocService } from './application/commands/create-result-from-framework/link-framework-result-toc.service';
 import { FrameworkResultTocIndicatorsService } from './application/commands/create-result-from-framework/framework-result-toc-indicators.service';
 import { ApplyFrameworkResultAssociationsService } from './application/commands/create-result-from-framework/apply-framework-result-associations.service';
+import { ResultTaggedNotificationService } from '../notification/services/result-tagged-notification.service';
 import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
@@ -143,6 +144,10 @@ const mockContributionToIndicatorResultsRepository = {
   find: jest.fn(),
 };
 
+const mockResultTaggedNotificationService = {
+  notifyTaggedCenters: jest.fn().mockResolvedValue(undefined),
+  notifyTaggedBilateralProjects: jest.fn().mockResolvedValue(undefined),
+};
 const mockResultsByInstitutionsService = {
   handleContributingCenters: jest.fn(),
   savePartnersInstitutionsByResultV2: jest.fn(),
@@ -234,6 +239,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ContributionToIndicatorResultsRepository,
           useValue: mockContributionToIndicatorResultsRepository,
+        },
+        {
+          provide: ResultTaggedNotificationService,
+          useValue: mockResultTaggedNotificationService,
         },
         {
           provide: ResultsByInstitutionsService,
