@@ -1547,7 +1547,9 @@ describe('ResultReviewDrawerComponent', () => {
       const emitSpy = jest.spyOn(component.decisionMade, 'emit');
       component.resultToReview.set({ id: '5' } as any);
       component.confirmApprove();
-      expect(apiMock.resultsSE.PATCH_BilateralReviewDecision).toHaveBeenCalledWith('5', { decision: 'APPROVE', justification: 'Approved' });
+      // P2-3157 (commit acb251c66) stopped sending a hardcoded justification: the key is now
+      // omitted entirely when the reviewer left the comment box empty.
+      expect(apiMock.resultsSE.PATCH_BilateralReviewDecision).toHaveBeenCalledWith('5', { decision: 'APPROVE' });
       expect(emitSpy).toHaveBeenCalled();
       expect(component.visible()).toBe(false);
       expect(component.isSaving()).toBe(false);

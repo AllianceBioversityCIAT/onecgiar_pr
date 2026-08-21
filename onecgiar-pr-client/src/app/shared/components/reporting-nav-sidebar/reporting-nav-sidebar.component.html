@@ -1,5 +1,5 @@
 <hlm-sidebar collapsible="icon">
-  <!-- Header 64px — CURRENT :45-50. pad 0 16px. PR mark 32×32, PRMS 16/600, Reporting 11 muted. -->
+  <!-- Header 64px, pad 0 16px. PR mark 32×32, PRMS 16/600, Reporting 11 muted. -->
   <div hlmSidebarHeader class="gap-0 px-[16px] py-0">
     <div
       class="flex h-[64px] items-center gap-[10px]"
@@ -24,8 +24,9 @@
           </div>
         }
       </div>
-      <!-- No collapse control here: CURRENT's sidebar header is mark + PRMS/Reporting only
-           (SIDEBAR-SPEC §1) and the topbar already owns the toggle. Keeping both put two
+      <!-- No collapse control here: the approved header is the 32×32 brand mark plus the
+           PRMS / Reporting titles and nothing else — the collapse toggle belongs to the topbar
+           alone. Keeping both put two
            identical buttons 60px apart — and this one was a Helm `ghost`, whose light
            `--muted` hover painted a white pill on the dark sidebar. -->
 
@@ -67,13 +68,15 @@
 
   <div hlmSidebarContent>
     <!-- ════════════════════════════════════════════════════════════════════
-         SCIENCE PROGRAMS — top level, per the approved reference.
-         Spec: docs/reporting-redesign/SIDEBAR-SPEC.md §2 (values read from
-         docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html).
+         SCIENCE PROGRAMS — top level, above the platform links and separated by a
+         divider. That placement is the approved structure and the main change from
+         the old shape, where programmes were nested inside "Results planned in your
+         2026 ToC". Programme codes sit beside every name in mono, and CGIAR centres
+         form their own labelled block with a diamond marker.
          Sizes are arbitrary px, never rem utilities: html is 12px, so text-sm
-         would be 10.5px (UI-RULES §1.3).
+         would be 10.5px.
          ════════════════════════════════════════════════════════════════════ -->
-    <!-- COLLAPSED RAIL — 32×32 programme + centre buttons (SIDEBAR-SPEC.md §2 "Collapsed rail").
+    <!-- COLLAPSED RAIL — 32×32 programme + centre buttons, 8px radius, 8×8 marker centred.
          Without this the icon rail loses the programme band entirely, so a user who collapses the
          sidebar can no longer switch programme at all. -->
     @if (isCollapsed() && !homeSE.isLoadingSPLists()) {
@@ -115,7 +118,7 @@
           @for (group of programGroups(); track group.key) {
             @if (group.items.length) {
               @if (group.key === 'mine') {
-                <!-- MY SCIENCE PROGRAMS — 44px cards, gap 6px (CURRENT) -->
+                <!-- MY SCIENCE PROGRAMS — 44px cards, gap 6px, per the design -->
                 <div class="pr-nav-section-label">{{ group.label }}</div>
                 <div class="flex flex-col gap-[6px]">
                   @for (sp of group.items; track sp.initiativeId) {
@@ -260,7 +263,7 @@
       }
       <div hlmSidebarGroupContent>
         <!--
-          Flat Platform (CURRENT): Results Center · Innovation Packages · QA · Bilateral · My Admin.
+          Flat Platform, in the approved order: Results Center · Innovation Packages · QA · Bilateral · My Admin.
           No Emerging (band CTA). No second Results Center from RFR. No nested RFR group.
         -->
         <ul hlmSidebarMenu class="pr-nav-platform-menu">
@@ -406,7 +409,7 @@
   <!-- No footer. The RESULT METADATA card that used to live here moved into the result-detail
        content, next to "Phases:", where it can also be popped out as a floating card
        (`shared/components/result-metadata/`). Rendering it in both places would show the same six
-       fields twice. Account lives in the TOPBAR (PROGRAM-SHELL-SPEC.md §2), so nothing else is
+       fields twice. The account chip lives in the TOPBAR, not in the sidebar, so nothing else is
        left for a footer slot. -->
 
   <button type="button" hlmSidebarRail aria-label="Toggle sidebar"></button>
