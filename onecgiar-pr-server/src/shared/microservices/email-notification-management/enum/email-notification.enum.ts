@@ -7,4 +7,9 @@ export enum EmailTemplate {
   STATUS_UPDATE = 'email_template_user_status_update',
   IP_EXPERTS_SUPPORT = 'email_template_ip_experts_support',
   FULL_METADATA_EXPORT = 'email_template_full_metadata_export',
+  /**
+   * P2-3166 AC5. Lookup-only, like STATUS_UPDATE and IP_EXPERTS_SUPPORT: the row is fetched from
+   * `template` and rendered with handlebars by `WebhookAlertService`, not through `buildEmailData`.
+   */
+  WEBHOOK_DELIVERY_FAILED = 'email_template_webhook_delivery_failed',
 }

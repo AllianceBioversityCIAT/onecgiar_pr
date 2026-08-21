@@ -113,6 +113,8 @@ import {
   ReviewActionEnum,
 } from './result-review-history/entities/result-review-history.entity';
 import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
+import { WebhookDeliveryRepository } from './webhook/webhook-delivery.repository';
+import { WebhookRecipientType } from './webhook/entities/webhook-endpoint.entity';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
 import { isEmpty } from '../../shared/utils/object.utils';
@@ -220,6 +222,11 @@ export class ResultsService {
     private readonly _shareResultRequestRepository?: ShareResultRequestRepository,
     @Optional()
     private readonly _resultReviewHistoryRepository?: ResultReviewHistoryRepository,
+    // @Optional() on purpose: this keeps every existing spec that constructs ResultsService without
+    // it compiling, instead of adding one more provider to dozens of test modules (the P2-3214
+    // lesson). The one caller null-checks it.
+    @Optional()
+    private readonly _webhookDeliveryRepository?: WebhookDeliveryRepository,
   ) {}
 
   /**
@@ -2727,6 +2734,81 @@ export class ResultsService {
     }
   }
 
+  /**
+   * P2-3166 AC1/AC3 — queue an outbound webhook for a final review decision.
+   *
+   * Only enqueues. The payload is built and POSTed by `WebhookDispatchCron`, which is why this needs
+   * nothing but a repository: `BilateralModule` already imports `ResultsModule`, so reaching for the
+   * payload builder here would close a dependency cycle. See
+   * `docs/specs/bilateral/webhook-external-platforms/design.md` §2.3.
+   *
+   * Non-blocking and never throws: the decision is committed by the time we get here, so a delivery
+   * that cannot even be queued must not turn a successful review into a 500.
+   */
+  private async enqueueBilateralWebhook(
+    resultId: number,
+    decision: ReviewDecisionEnum,
+  ): Promise<void> {
+    try {
+      if (!this._webhookDeliveryRepository) {
+        this._logger.warn(
+          `WebhookDeliveryRepository unavailable; skipping webhook enqueue for result ${resultId}`,
+        );
+        return;
+      }
+
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId },
+        select: ['id', 'external_platform_id'],
+      });
+
+      // The predicate is `external_platform_id`, NOT `source`. `SourceEnum.Bilateral` has the literal
+      // value 'API', which means "is W3/bilateral" and not "arrived through the external API" — a
+      // centre creating a result in the PRMS UI, an AI draft promotion, and anything under SGP-02 all
+      // carry 'API' with no API key and therefore no platform to notify. See the four null cases on
+      // `result.entity.ts`.
+      const platformId = Number(result?.external_platform_id);
+      if (!Number.isFinite(platformId) || platformId <= 0) {
+        // OQ-1: if product decides centre-authored results are also notified, the CENTER branch goes
+        // here, resolving the recipient through `getLeadCenterCode`. `webhook_endpoint` already
+        // carries the discriminator, so that is rows and a branch — no migration.
+        this._logger.log(
+          `Result ${resultId} has no originating external platform; no webhook queued`,
+        );
+        return;
+      }
+
+      const endpoint = await this._webhookDeliveryRepository.findActiveEndpoint(
+        WebhookRecipientType.PLATFORM,
+        platformId,
+      );
+
+      if (!endpoint) {
+        // Not an error. A platform that pushes results without registering a callback endpoint is a
+        // supported configuration.
+        this._logger.log(
+          `No active webhook endpoint for platform ${platformId}; no webhook queued for result ${resultId}`,
+        );
+        return;
+      }
+
+      const delivery = await this._webhookDeliveryRepository.enqueue(
+        resultId,
+        endpoint.id,
+        decision,
+      );
+
+      this._logger.log(
+        `Queued webhook delivery ${delivery.id} for result ${resultId} (${decision})`,
+      );
+    } catch (error) {
+      this._logger.error(
+        `Failed to queue webhook delivery for result ${resultId}`,
+        error as Error,
+      );
+    }
+  }
+
   private async emitResultCreatedNotification(
     result: Result,
     initiativeId: number,
@@ -3710,6 +3792,13 @@ export class ResultsService {
         parsedResultId,
         reviewDecisionDto.decision,
         user,
+      );
+
+      // P2-3166 AC1: queue the outbound webhook. Same posture, and for a stronger reason — this one
+      // ends in a third party's endpoint. Only the enqueue happens here; the POST is the cron's job.
+      await this.enqueueBilateralWebhook(
+        parsedResultId,
+        reviewDecisionDto.decision,
       );
 
       return {
