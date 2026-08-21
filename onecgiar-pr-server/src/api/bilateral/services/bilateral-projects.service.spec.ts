@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { BilateralProjectsService } from './bilateral-projects.service';
 import { ClarisaProject } from '../../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { YearRepository } from '../../results/years/year.repository';
 
 const CURRENT_YEAR = 2026;
@@ -11,11 +12,13 @@ describe('BilateralProjectsService', () => {
   let service: BilateralProjectsService;
   let projectRepo: { find: jest.Mock };
   let centerRepo: { findOne: jest.Mock };
+  let initiativeRepo: { find: jest.Mock };
   let yearRepo: { findOne: jest.Mock };
 
   beforeEach(async () => {
     projectRepo = { find: jest.fn().mockResolvedValue([]) };
     centerRepo = { findOne: jest.fn().mockResolvedValue(null) };
+    initiativeRepo = { find: jest.fn().mockResolvedValue([]) };
     yearRepo = {
       findOne: jest
         .fn()
@@ -27,6 +30,10 @@ describe('BilateralProjectsService', () => {
         BilateralProjectsService,
         { provide: getRepositoryToken(ClarisaProject), useValue: projectRepo },
         { provide: getRepositoryToken(ClarisaCenter), useValue: centerRepo },
+        {
+          provide: getRepositoryToken(ClarisaInitiative),
+          useValue: initiativeRepo,
+        },
         { provide: YearRepository, useValue: yearRepo },
       ],
     }).compile();
@@ -206,5 +213,106 @@ describe('BilateralProjectsService', () => {
     const result = await service.getProjectsByCenter(5);
 
     expect(result.projects.map((p) => p.id)).toEqual([5]);
+  });
+
+  // CLARISA fills only `smo_code` on the mapping's nested global_unit_object, so
+  // program_name / program_short_name are null for every row and the selector
+  // rendered "SP06 — SP06". The name comes from `clarisa_initiatives.official_code`,
+  // the same join the platform already uses for these codes.
+  describe('science program names resolved from clarisa_initiatives', () => {
+    const projectWithSps = (codes: string[]) => ({
+      id: 100,
+      isActive: true,
+      phase: CURRENT_YEAR,
+      obj_organization: null,
+      obj_project_mappings: codes.map((code, i) => ({
+        programId: i + 1,
+        programCode: code,
+        allocation: '100.00',
+        programName: null,
+        programShortName: null,
+      })),
+    });
+
+    beforeEach(() => {
+      centerRepo.findOne.mockResolvedValue({
+        code: 'CENTER-99',
+        institutionId: 5,
+      });
+    });
+
+    it('labels the program with the catalogue name instead of the code', async () => {
+      projectRepo.find.mockResolvedValueOnce([projectWithSps(['SP06'])]);
+      initiativeRepo.find.mockResolvedValueOnce([
+        {
+          id: 272,
+          official_code: 'SP06',
+          name: 'Sustainable Farming',
+          short_name: 'Sustainable Farming',
+          active: true,
+        },
+      ]);
+
+      const result = await service.getProjectsByCenter(5);
+
+      const sp = result.projects[0].sciencePrograms[0];
+      expect(sp.spName).toBe('Sustainable Farming');
+      expect(sp.spShortName).toBe('Sustainable Farming');
+      expect(sp.spName).not.toBe('SP06');
+      expect(sp.programCode).toBe('SP06');
+    });
+
+    it('looks the codes up once, deduplicated, for the whole page', async () => {
+      projectRepo.find.mockResolvedValueOnce([
+        projectWithSps(['SP06', 'SP09', 'SP06']),
+      ]);
+
+      await service.getProjectsByCenter(5);
+
+      expect(initiativeRepo.find).toHaveBeenCalledTimes(1);
+      const where = initiativeRepo.find.mock.calls[0][0].where;
+      expect(where.official_code._value.sort()).toEqual(['SP06', 'SP09']);
+    });
+
+    it('keeps showing the code when the catalogue has no matching row', async () => {
+      projectRepo.find.mockResolvedValueOnce([projectWithSps(['SP99'])]);
+      initiativeRepo.find.mockResolvedValueOnce([]);
+
+      const result = await service.getProjectsByCenter(5);
+
+      expect(result.projects[0].sciencePrograms[0].spName).toBe('SP99');
+    });
+
+    it('prefers the active row when a code is duplicated in the catalogue', async () => {
+      projectRepo.find.mockResolvedValueOnce([projectWithSps(['SP06'])]);
+      initiativeRepo.find.mockResolvedValueOnce([
+        {
+          id: 10,
+          official_code: 'SP06',
+          name: 'Retired name',
+          short_name: 'Retired',
+          active: false,
+        },
+        {
+          id: 272,
+          official_code: 'SP06',
+          name: 'Current name',
+          short_name: 'Current',
+          active: true,
+        },
+      ]);
+
+      const result = await service.getProjectsByCenter(5);
+
+      expect(result.projects[0].sciencePrograms[0].spName).toBe('Current name');
+    });
+
+    it('does not query the catalogue when no project has a program code', async () => {
+      projectRepo.find.mockResolvedValueOnce([projectWithSps([])]);
+
+      await service.getProjectsByCenter(5);
+
+      expect(initiativeRepo.find).not.toHaveBeenCalled();
+    });
   });
 });

@@ -25,7 +25,7 @@
             >
               <img class="sps-option-icon" [src]="spIconSrc(sp.programCode)" width="24" height="24" alt="" />
               <span class="sps-option-code">{{ sp.programCode }}</span>
-              <span class="sps-option-name">{{ sp.spShortName }} — {{ sp.spName }}</span>
+              <span class="sps-option-name">{{ sp.spName }}</span>
               @if (sp.allocation) {
                 <span class="sps-option-pct">{{ formatAllocation(sp.allocation) }}%</span>
               }

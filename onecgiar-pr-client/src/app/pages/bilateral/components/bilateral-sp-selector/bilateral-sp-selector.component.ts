@@ -21,12 +21,16 @@ export class BilateralSpSelectorComponent {
     this.availableSps().filter(s => s.programId !== this.creationService.selectedPrimarySp()?.programId)
   );
 
+  // Code + full name, matching the dropdown rows. `spShortName` is deliberately not
+  // shown here: it duplicates the name in this control, and the secondary chips below
+  // are the one place a short label still earns its keep (they sit in a grid with no
+  // truncation, so a long name would break the row).
   selectedPrimaryLabel = computed(() => {
     const sp = this.creationService.selectedPrimarySp();
     if (!sp) return 'Select primary SP';
     const spData = this.availableSps().find(s => s.programId === sp.programId);
     const pct = spData?.allocation ? ` (${this.formatAllocation(spData.allocation)}%)` : '';
-    return `${sp.programCode} — ${spData?.spShortName ?? ''}${pct}`;
+    return `${sp.programCode} — ${spData?.spName ?? ''}${pct}`;
   });
 
   selectedPrimaryIcon = computed(() => {

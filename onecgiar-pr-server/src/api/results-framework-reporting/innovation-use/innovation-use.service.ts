@@ -94,11 +94,27 @@ export class InnovationUseService {
         discontinued_options,
       } = innovationUseDto;
 
+      // `innovation_use_level_id` carries the use LEVEL (0-9), not the catalogue row
+      // id — the pooled client fills it from `response.level`. Callers that hand over
+      // an id instead land one row off, or on nothing at all for the top level, where
+      // the missing row used to surface as `null.id`. See P2-3359.
       const use_levels =
         await this._clarisaInnovationUseLevelRepository.findOne({
           where: { level: innovation_use_level_id },
           select: ['id'],
         });
+
+      if (!use_levels) {
+        this.logger.error(
+          `No innovation use level found for level ${innovation_use_level_id} (result ${resultId})`,
+        );
+        throw {
+          response: {},
+          message: `Invalid innovation use level: ${innovation_use_level_id}. Expected a use level between 0 and 9.`,
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
       const innovation_use_level = use_levels.id;
 
       if (is_discontinued !== undefined) {
