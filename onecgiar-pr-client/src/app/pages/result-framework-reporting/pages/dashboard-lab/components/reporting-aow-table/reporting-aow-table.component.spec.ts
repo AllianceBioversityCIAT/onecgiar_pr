@@ -324,7 +324,12 @@ describe('ReportingAowTableComponent', () => {
     });
 
     it('hides AoW cards left with no matching rows instead of showing dead cards', async () => {
-      await build([group([row({ indicator_description: 'alpha' })])], { search: 'nothing-matches' });
+      // `filtersActive` is the HOST's answer — Section/Type/Category never reach this component, so
+      // it cannot be inferred from `search` alone (P2-3405).
+      await build([group([row({ indicator_description: 'alpha' })])], {
+        search: 'nothing-matches',
+        filtersActive: true
+      });
       expect(component.visibleGroups().length).toBe(0);
       expect(text()).toContain('No indicators match your filters');
     });
@@ -679,6 +684,235 @@ describe('ReportingAowTableComponent', () => {
       host.detectChanges();
       expect(openCards()).toBe(0);
       expect(label()).toBe('Expand all');
+    });
+  });
+
+  describe('empty states tell the truth (P2-3405)', () => {
+    it('does NOT claim an AoW has nothing planned when a host filter emptied it', async () => {
+      // The regression: Category/Type/Section are applied by the host, so a card it emptied used to
+      // arrive looking like an AoW with no plan at all — and got told so.
+      await build([group([], { count: 0 })], { filtersActive: true });
+      expect(text()).toContain('No indicators match your filters');
+      expect(text()).not.toContain('no planned indicators yet');
+    });
+
+    it('offers Clear filters only while something is filtering', async () => {
+      // One fixture, input flipped — TestBed cannot be reconfigured once instantiated.
+      await build([group([], { count: 0 })], { filtersActive: true });
+      expect((fixture.nativeElement as HTMLElement).querySelector('.pr-clear-filters')).toBeTruthy();
+
+      fixture.componentRef.setInput('filtersActive', false);
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.pr-clear-filters')).toBeNull();
+    });
+
+    it('says the area of work has nothing planned when nothing is filtering', async () => {
+      await build([group([])], { filtersActive: false });
+      component.toggle('aow::AOW01', false);
+      fixture.detectChanges();
+      expect(text()).toContain('This area of work has no planned indicators yet');
+    });
+
+    it('emits clearFilters when the recovery button is pressed', async () => {
+      await build([group([], { count: 0 })], { filtersActive: true });
+      const spy = jest.fn();
+      component.clearFilters.subscribe(spy);
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.pr-clear-filters')!.click();
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  describe('row overflow menu is wired (P2-3405)', () => {
+    const openFirstRow = async () => {
+      await build([group([row()])]);
+      component.toggle('aow::AOW01', false);
+      fixture.detectChanges();
+    };
+
+    it('opens a menu instead of doing nothing, and does not open the row', async () => {
+      await openFirstRow();
+      const opened = jest.fn();
+      component.openRow.subscribe(opened);
+      const el = fixture.nativeElement as HTMLElement;
+      el.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!.click();
+      fixture.detectChanges();
+      expect(el.querySelector('.pr-row-menu')).toBeTruthy();
+      expect(opened).not.toHaveBeenCalled();
+    });
+
+    it('routes View reported results to the same output as the Achieved cell', async () => {
+      await openFirstRow();
+      const spy = jest.fn();
+      component.openAchieved.subscribe(spy);
+      const el = fixture.nativeElement as HTMLElement;
+      el.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!.click();
+      fixture.detectChanges();
+      const items = Array.from(el.querySelectorAll<HTMLButtonElement>('.pr-row-menu_item'));
+      items.find(b => b.textContent?.includes('View reported results'))!.click();
+      expect(spy).toHaveBeenCalled();
+      fixture.detectChanges();
+      // Acting closes the menu.
+      expect(el.querySelector('.pr-row-menu')).toBeNull();
+    });
+
+    it('routes Target details to the same output as the Target cell', async () => {
+      await openFirstRow();
+      const spy = jest.fn();
+      component.openTarget.subscribe(spy);
+      const el = fixture.nativeElement as HTMLElement;
+      el.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!.click();
+      fixture.detectChanges();
+      Array.from(el.querySelectorAll<HTMLButtonElement>('.pr-row-menu_item'))
+        .find(b => b.textContent?.includes('Target details'))!
+        .click();
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('shows Copy indicator code as visible-but-disabled, since no code exists in the payload', async () => {
+      await openFirstRow();
+      const el = fixture.nativeElement as HTMLElement;
+      el.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!.click();
+      fixture.detectChanges();
+      const copy = Array.from(el.querySelectorAll<HTMLButtonElement>('.pr-row-menu_item')).find(b =>
+        b.textContent?.includes('Copy indicator code')
+      )!;
+      expect(copy.disabled).toBe(true);
+      expect(copy.textContent).toContain('Coming soon');
+    });
+
+    it('closes on Escape', async () => {
+      await openFirstRow();
+      const el = fixture.nativeElement as HTMLElement;
+      el.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')!.click();
+      fixture.detectChanges();
+      expect(el.querySelector('.pr-row-menu')).toBeTruthy();
+      component.onEscape();
+      fixture.detectChanges();
+      expect(el.querySelector('.pr-row-menu')).toBeNull();
+    });
+  });
+
+  describe('card info popover (P2-3405)', () => {
+    it('is a button that opens a popover, not a hover that repeats the name', async () => {
+      await build([group([row()])]);
+      const el = fixture.nativeElement as HTMLElement;
+      const trigger = el.querySelector<HTMLButtonElement>('button[aria-label="About this group"]');
+      expect(trigger).toBeTruthy();
+      expect(el.querySelector('.pr-info-pop')).toBeNull();
+      trigger!.click();
+      fixture.detectChanges();
+      expect(el.querySelector('.pr-info-pop')).toBeTruthy();
+    });
+
+    it('marks the description Coming soon rather than inventing prose', async () => {
+      await build([group([row()])]);
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('button[aria-label="About this group"]')!
+        .click();
+      fixture.detectChanges();
+      const pop = (fixture.nativeElement as HTMLElement).querySelector('.pr-info-pop')!;
+      expect(pop.textContent).toContain('No description available yet');
+      expect(pop.textContent).toContain('Coming soon');
+    });
+
+    it('does not expand the card it belongs to', async () => {
+      await build([group([row()])]);
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('button[aria-label="About this group"]')!
+        .click();
+      fixture.detectChanges();
+      expect(component.isOpen('aow::AOW01', false)).toBe(false);
+    });
+
+    it('reports the KPI split in the meta footer from loaded data only', async () => {
+      const g = group([row({ indicator_id: 1, __tier: 'output' }), row({ indicator_id: 2, __tier: 'outcome' })]);
+      await build([g]);
+      expect(component.infoMeta(g)).toBe('2 KPIs · 1 output · 1 outcome');
+    });
+
+    it('closes on Escape', async () => {
+      await build([group([row()])]);
+      const el = fixture.nativeElement as HTMLElement;
+      el.querySelector<HTMLButtonElement>('button[aria-label="About this group"]')!.click();
+      fixture.detectChanges();
+      component.onEscape();
+      fixture.detectChanges();
+      expect(el.querySelector('.pr-info-pop')).toBeNull();
+    });
+  });
+
+  describe('All indicators table (P2-3405)', () => {
+    const flat = async () =>
+      build(
+        [
+          group([
+            row({ indicator_id: 1, target_value_sum: '9', actual_achieved_value_sum: 0, center_acronym: 'CIAT' }),
+            row({
+              indicator_id: 2,
+              target_value_sum: '100',
+              actual_achieved_value_sum: undefined,
+              center_acronym: undefined,
+              __aowCode: undefined,
+              result_type_name: undefined
+            })
+          ])
+        ],
+        { viewMode: 'flat' }
+      );
+
+    it('renders a real column header, not the grouped card row', async () => {
+      await flat();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.pr-flat-head')).toBeTruthy();
+      const heads = Array.from(el.querySelectorAll('.pr-flat-head .pr-flat-cell')).map(h => h.textContent?.trim());
+      expect(heads.join('|')).toContain('Indicator');
+      expect(heads.join('|')).toContain('Achieved');
+      expect(heads.join('|')).toContain('Status');
+    });
+
+    it('sorts Target numerically, not as the API strings it sends', async () => {
+      await flat();
+      // '9' vs '100' — a lexicographic sort puts '100' first and is the bug this guards.
+      expect(component.flatTableRows().map(r => r.__sortTarget)).toEqual([9, 100]);
+    });
+
+    it('groups "nothing reported" apart from a reported zero', async () => {
+      await flat();
+      const keys = component.flatTableRows().map(r => r.__sortAchieved);
+      expect(keys[0]).toBe(0);
+      expect(keys[1]).toBe(Number.NEGATIVE_INFINITY);
+    });
+
+    it('ranks status so the column sorts by progress, not alphabetically', async () => {
+      await build([group([row({ progress_percentage: 100 }), row({ indicator_id: 2, progress_percentage: 0 })])], {
+        viewMode: 'flat'
+      });
+      expect(component.flatTableRows().map(r => r.__sortStatus)).toEqual([2, 0]);
+    });
+
+    it('falls back to an em dash for a missing centre or category', async () => {
+      await flat();
+      const second = component.flatTableRows()[1];
+      expect(second.__centerLabel).toBe('—');
+      expect(second.__typeLabel).toBe('—');
+    });
+
+    it('renders no Parent column, because the payload has no parent field', async () => {
+      await flat();
+      const heads = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.pr-flat-head .pr-flat-cell'))
+        .map(h => h.textContent?.trim() ?? '')
+        .join('|');
+      expect(heads).not.toContain('Parent');
+    });
+
+    it('keeps a fixed fg/bg pair per status and never mixes them', async () => {
+      await flat();
+      expect(component.statusPillClass('achieved')).toBe(
+        'bg-[var(--pr-indicator-achieved-bg)] text-[var(--pr-indicator-achieved-fg)]'
+      );
+      expect(component.statusPillClass('not-started')).toBe(
+        'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)]'
+      );
     });
   });
 });

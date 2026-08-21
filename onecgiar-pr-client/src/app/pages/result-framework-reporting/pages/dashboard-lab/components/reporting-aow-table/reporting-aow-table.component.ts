@@ -1,8 +1,16 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, input, linkedSignal, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, effect, input, linkedSignal, output, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo } from '@ng-icons/lucide';
+import { lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideX } from '@ng-icons/lucide';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
+import {
+  PrTableComponent,
+  PrSortableColumnDirective,
+  PrSortIconComponent,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective
+} from '../../../../../../shared/components/pr-table';
 
 /** One indicator row, as `dashboard-lab.indicatorsByAow()` already produces it. */
 export interface ReportingIndicator {
@@ -28,9 +36,13 @@ export interface ReportingIndicator {
  * Top-level card on the Reporting tab.
  *
  * ⚠️ Intermediate Outcomes and 2030 Outcomes are SIBLINGS of AoWs (same chrome level), not
- * HLO-level children. The design reference nests them under each AoW — that is a known bug the
- * owner rejected; PRMS real data (and the previous entity-aow sidebar) treats them as program-level
- * buckets next to the Areas of Work list.
+ * HLO-level children.
+ *
+ * The rest of this note used to say the design nested them under each AoW and that the owner had
+ * rejected it. Re-checked against the LIVE design on 2026-08-21 (P2-3405): `repCards` is a flat list
+ * and its `a.hasTag` branch renders exactly these sibling cards, so code and design AGREE. Kept as a
+ * warning only so nobody reads a stale note and "fixes" this by nesting them.
+ * See docs/DESIGN-DEVIATIONS.md §10.
  */
 export type ReportingGroupKind = 'aow' | 'intermediate' | '2030';
 
@@ -45,16 +57,35 @@ export interface ReportingAowGroup {
 /** A row's workflow state, as far as the data allows. See `statusOf`. */
 export type RowStatus = 'not-started' | 'in-progress' | 'achieved' | 'overachieved';
 
+/**
+ * A flat-table row: the indicator plus the PRE-NORMALISED sort keys the table sorts on.
+ *
+ * `app-pr-table` sorts resolved values with `<` / `>` and has no comparator hook, so sorting the
+ * raw fields would compare `target_value_sum` as the STRING the API sends ("9" > "100") and would
+ * scatter the em-dash rows. The keys below are computed once per row instead: numbers for the two
+ * figures, a rank for the status, `-Infinity` for "nothing reported" so those rows group at one end
+ * of the order rather than masquerading as zero.
+ */
+export interface ReportingFlatRow extends ReportingIndicator {
+  __sortTarget: number;
+  __sortAchieved: number;
+  __sortStatus: number;
+  __statusKey: RowStatus;
+  __statusText: string;
+  __typeLabel: string;
+  __centerLabel: string;
+}
+
 /** Collapsible group under a band (or bare under Intermediate / 2030). */
 interface HloGroup {
   key: string;
-  /** Display title — CURRENT shows the full ToC name only (no HLO + code chrome). */
+  /** Display title — the design shows the full ToC name only (no HLO + code chrome). */
   name: string;
   rows: ReportingIndicator[];
 }
 
 /**
- * CURRENT band inside an AoW card (`a.bands` in PRMS-Shell.dc.html ~3642):
+ * A band inside an AoW card, in the order the approved design gives them:
  * "HIGH LEVEL OUTPUTS · N KPIs" then group rows; then "OUTCOMES · N KPIs".
  * Intermediate / 2030 cards use a single band with `hasEyebrow: false`.
  */
@@ -68,11 +99,14 @@ interface IndicatorBand {
 /**
  * Reporting tab — the AoW → HLO → indicator table.
  *
- * Layout is the approved reference verbatim: `docs/reporting-redesign/PROGRAM-SHELL-SPEC.md` §5,
- * read from `docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html` (+ uploads PNGs).
+ * Layout is the approved design, three levels of grouping: the AoW header on the card surface with
+ * a strong bottom border, the HLO header on the subtle surface with its eyebrow, name and
+ * right-aligned count, then the rows. The first level carries typographic weight and the second
+ * carries fill — they must never compete on the same variable — and there are no vertical spine
+ * lines anywhere in the tree.
  *
  * ⚠️ Sizes are absolute px on purpose. `html` is 12px in this app, so a rem-based Tailwind type
- * utility renders 25% small — `text-sm` would be 10.5px, not 14px (UI-RULES §1.3).
+ * utility renders 25% small — `text-sm` would be 10.5px, not 14px.
  *
  * This component is PRESENTATION ONLY. It owns no fetching and no service: the parent passes the
  * groups `indicatorsByAow()` already computes, and every action leaves through an output. That keeps
@@ -81,11 +115,21 @@ interface IndicatorBand {
 @Component({
   selector: 'app-reporting-aow-table',
   standalone: true,
-  imports: [NgIcon, NgTemplateOutlet, PrTooltipDirectiveModule],
+  imports: [
+    NgIcon,
+    NgTemplateOutlet,
+    PrTooltipDirectiveModule,
+    PrTableComponent,
+    PrSortableColumnDirective,
+    PrSortIconComponent,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective
+  ],
   templateUrl: './reporting-aow-table.component.html',
   styleUrls: ['./reporting-aow-table.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [provideIcons({ lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo })]
+  providers: [provideIcons({ lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideX })]
 })
 export class ReportingAowTableComponent {
   readonly groups = input.required<ReportingAowGroup[]>();
@@ -93,6 +137,18 @@ export class ReportingAowTableComponent {
   readonly search = input<string>('');
   /** `'all'` or one of the RowStatus values. */
   readonly statusFilter = input<string>('all');
+  /**
+   * Whether ANY toolbar control is narrowing the list right now — search, Section, Type, Category
+   * or Status.
+   *
+   * ⚠️ This cannot be derived here. Only `search` and `statusFilter` reach this component; the
+   * Section / Type / Category filters are applied by the host while it builds `groups`, so a card
+   * emptied by Category arrives looking exactly like an Area of Work that has no planned indicators
+   * at all. Inferring from the two inputs we do have is what made the empty state claim "this area
+   * of work has no planned indicators yet" about a card that has plenty (P2-3405). The host owns the
+   * answer and passes it down.
+   */
+  readonly filtersActive = input<boolean>(false);
   /**
    * `grouped` = AoW (or bucket) cards with HLO/sub-group rows.
    * `flat` = one list of every visible indicator, no card chrome.
@@ -129,7 +185,11 @@ export class ReportingAowTableComponent {
   readonly reportRow = output<ReportingIndicator>();
   readonly openTarget = output<ReportingIndicator>();
   readonly openAchieved = output<ReportingIndicator>();
-  readonly openRowMenu = output<{ row: ReportingIndicator; event: MouseEvent }>();
+  /**
+   * Emitted by the empty state's `Clear filters` control. The host owns all five filter signals, so
+   * resetting them is its job — this component only asks.
+   */
+  readonly clearFilters = output<void>();
   /**
    * Announces whether EVERY visible top-level card is open right now — overrides included, not just
    * the level default. The toolbar label is written from this, so it always describes what the next
@@ -228,8 +288,8 @@ export class ReportingAowTableComponent {
 
   /**
    * Nothing to celebrate in the Achieved cell — either no figure arrived at all, or the figure is
-   * a zero. Drives the muted colour and the reference's `achievedTip`
-   * ("Nothing reported yet for this indicator", `PRMS Reporting.dc.html` :4067).
+   * a zero. Drives the muted colour and the design's empty-state tip,
+   * "Nothing reported yet for this indicator".
    */
   achievedIsEmpty(row: ReportingIndicator): boolean {
     return !this.hasAchievedValue(row) || Number(row?.actual_achieved_value_sum) === 0;
@@ -240,8 +300,7 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * The secondary line under the title = the INDICATOR NAME (`row.kpiName` in the reference,
-   * `PRMS Reporting.dc.html` :1306).
+   * The secondary line under the title = the INDICATOR NAME (the design's `kpiName` on a row).
    *
    * An earlier pass used the category ("Knowledge product") on the belief that the API carries no
    * short name. It does: `/api/results-framework-reporting/toc-results` sends BOTH `type_name` (the
@@ -263,7 +322,7 @@ export class ReportingAowTableComponent {
 
   /**
    * "Show more" only when the title actually overflows two lines (~110 chars at 15px/600).
-   * Short titles must never show a useless control (CURRENT row.showMore).
+   * Short titles must never show a useless control.
    */
   needsShowMore(row: ReportingIndicator): boolean {
     const t = (row?.indicator_description ?? '').trim();
@@ -272,7 +331,7 @@ export class ReportingAowTableComponent {
 
   // ── Grouping ──────────────────────────────────────────────────────────────
   /**
-   * CURRENT organisation inside a top-level card (PRMS-Shell.dc.html `a.bands` ~3642):
+   * Organisation inside a top-level card, as the approved design lays it out:
    *
    * - **AoW** → two bands when data exists:
    *     HIGH LEVEL OUTPUTS · N KPIs  → collapsible ToC groups (name only)
@@ -343,7 +402,7 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Cluster indicators by ToC title. Display name is the full descriptive title (CURRENT `g.name`).
+   * Cluster indicators by ToC title. Display name is the full descriptive title, as the design shows it.
    * Leading codes like `HL04.AOW1.I01` are stripped when present so the row reads as a sentence.
    */
   private clusterByTitle(rows: ReportingIndicator[], keyPrefix: string): HloGroup[] {
@@ -404,16 +463,17 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Chip colours from CURRENT: Intermediate indigo soft, 2030 teal soft.
-   * AoW keeps the brand-soft violet chip.
+   * Chip colours from the design: Intermediate indigo soft, 2030 green soft. AoW keeps the
+   * brand-soft violet chip. Tokens only — see the --pr-chip-* block in styles/colors.scss for why
+   * the 2030 pair is not --pr-status-approved-*.
    */
   headerChipClass(group: ReportingAowGroup): string {
     const kind = group.kind ?? 'aow';
     if (kind === 'intermediate') {
-      return 'bg-[#E0E7FF] text-[#3730A3]';
+      return 'bg-[var(--pr-chip-intermediate-bg)] text-[var(--pr-chip-intermediate-fg)]';
     }
     if (kind === '2030') {
-      return 'bg-[#D1FAE5] text-[#0F766E]';
+      return 'bg-[var(--pr-chip-2030-bg)] text-[var(--pr-chip-2030-fg)]';
     }
     return 'bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-400)]';
   }
@@ -436,8 +496,8 @@ export class ReportingAowTableComponent {
   /**
    * The AoW header ratio — `3 of 8 · 38%` in the reference.
    *
-   * `done` counts KPIs with SOMETHING REPORTED, not KPIs that reached 100%. Verified against the
-   * designer's rendered reference (uploads/pasted-1785766366426-0.png): 3/8 = 37.5% ≈ the 38% shown.
+   * `done` counts KPIs with SOMETHING REPORTED, not KPIs that reached 100%. That is the only
+   * reading under which the design's own worked example adds up: 3 of 8 = 37.5%, shown as 38%.
    * Counting completions instead produced "0 of 30 · 0%" on real data — technically true and
    * completely useless, since almost nothing is ever at 100% mid-cycle.
    *
@@ -456,7 +516,7 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Default disclosure, read from the reference's seed state (`PRMS Reporting.dc.html` :3265):
+   * Default disclosure, matching the design's own seed state:
    *
    * ```js
    * expandedAows: {},                       // every card starts COLLAPSED (68px header only)
@@ -479,14 +539,12 @@ export class ReportingAowTableComponent {
   }
 
   /**
-   * Top-level cards with something to show. With no search/status filter, every card the parent
-   * built is kept (including empty AoWs). Once a filter is active, empty cards drop out so the
-   * list does not fill with dead headers.
+   * Top-level cards with something to show. With NOTHING filtering, every card the parent built is
+   * kept (including empty AoWs). Once any of the five toolbar controls is narrowing the list, empty
+   * cards drop out so it does not fill with dead headers.
    */
   readonly visibleGroups = computed(() => {
-    const q = this.search().trim();
-    const status = this.statusFilter();
-    if (!q && status === 'all') return this.groups();
+    if (!this.filtersActive()) return this.groups();
     return this.groups().filter(g => g.loading || this.visibleRows(g).length > 0);
   });
 
@@ -541,5 +599,146 @@ export class ReportingAowTableComponent {
   emitAndStop<T>(emitter: { emit: (v: T) => void }, value: T, ev: Event): void {
     ev.stopPropagation();
     emitter.emit(value);
+  }
+
+  // ── All-indicators table ──────────────────────────────────────────────────
+  private static readonly STATUS_RANK: Record<RowStatus, number> = {
+    'not-started': 0,
+    'in-progress': 1,
+    achieved: 2,
+    overachieved: 3
+  };
+
+  /** Numeric sort key for a figure. `-Infinity` = nothing reported, so those rows group together. */
+  private sortNumber(value: string | number | null | undefined): number {
+    if (value === null || value === undefined || (value as unknown) === '') return Number.NEGATIVE_INFINITY;
+    const n = typeof value === 'number' ? value : parseFloat(String(value));
+    return Number.isFinite(n) ? n : Number.NEGATIVE_INFINITY;
+  }
+
+  /**
+   * The rows the `All indicators` table renders, decorated with sort keys.
+   *
+   * Built from `flatRows()` so BOTH views answer to exactly the same filtering — the flat list is a
+   * different presentation of the same set, never a different query.
+   */
+  readonly flatTableRows = computed<ReportingFlatRow[]>(() =>
+    this.flatRows().map(row => {
+      const status = this.statusOf(row);
+      return {
+        ...row,
+        __sortTarget: this.sortNumber(row.target_value_sum),
+        __sortAchieved: this.sortNumber(row.actual_achieved_value_sum),
+        __sortStatus: ReportingAowTableComponent.STATUS_RANK[status],
+        __statusKey: status,
+        __statusText: this.statusLabel(row),
+        // The `Type` column is the CATEGORY (`result_type_name`), which is what the Category filter
+        // offers. The indicator NAME (`type_name`) stays on the title block's meta line, exactly as
+        // in the grouped view — the two are different fields and the design shows both.
+        __typeLabel: row.result_type_name?.trim() || '—',
+        __centerLabel: row.center_acronym?.trim() || '—'
+      };
+    })
+  );
+
+  /** Fixed fg/bg pair for an indicator's progress pill. Never recombined across states (rule 9). */
+  statusPillClass(status: RowStatus): string {
+    switch (status) {
+      case 'achieved':
+        return 'bg-[var(--pr-indicator-achieved-bg)] text-[var(--pr-indicator-achieved-fg)]';
+      case 'overachieved':
+        return 'bg-[var(--pr-indicator-overachieved-bg)] text-[var(--pr-indicator-overachieved-fg)]';
+      case 'in-progress':
+        return 'bg-[var(--pr-status-in-progress-bg)] text-[var(--pr-status-in-progress-fg)]';
+      default:
+        return 'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)]';
+    }
+  }
+
+  // ── Row overflow menu ─────────────────────────────────────────────────────
+  /**
+   * Which row's `⋯` menu is open, by row key. Exactly one at a time (hard UI rule 2: never a menu
+   * on top of a menu).
+   *
+   * The menu used to be an `openRowMenu` output the host never bound, so the button was inert — it
+   * looked like a control and did nothing (P2-3405). It is handled here instead, and its two live
+   * items reuse the outputs the Target and Achieved cells already emit, so the menu opens no
+   * surface of its own and there is no second code path to keep in step.
+   */
+  private readonly openMenuKey = signal<string | null>(null);
+
+  rowKey(row: ReportingIndicator): string {
+    return `${row.indicator_id}::${row.center_id ?? ''}::${row.__aowCode ?? ''}`;
+  }
+
+  isRowMenuOpen(row: ReportingIndicator): boolean {
+    return this.openMenuKey() === this.rowKey(row);
+  }
+
+  toggleRowMenu(row: ReportingIndicator, ev: Event): void {
+    ev.stopPropagation();
+    const key = this.rowKey(row);
+    this.openInfoKey.set(null);
+    this.openMenuKey.update(current => (current === key ? null : key));
+  }
+
+  /** Run a menu item's action and close the menu, without letting the click open the row. */
+  runFromMenu<T>(emitter: { emit: (v: T) => void }, value: T, ev: Event): void {
+    ev.stopPropagation();
+    this.openMenuKey.set(null);
+    emitter.emit(value);
+  }
+
+  // ── Card info popover ─────────────────────────────────────────────────────
+  /**
+   * Which card's ⓘ popover is open, by group code.
+   *
+   * The ⓘ was a hover-only `prTooltip` whose content was `group.aow.name` — the string printed
+   * immediately to its left, so the affordance promised information and delivered a repeat. The
+   * design specifies a click-to-open popover with a title, a body and a meta footer.
+   */
+  private readonly openInfoKey = signal<string | null>(null);
+
+  isInfoOpen(group: ReportingAowGroup): boolean {
+    return this.openInfoKey() === group.aow.code;
+  }
+
+  toggleInfo(group: ReportingAowGroup, ev: Event): void {
+    // The card header is itself a disclosure button, so this must not also expand the card.
+    ev.stopPropagation();
+    const key = group.aow.code;
+    this.openMenuKey.set(null);
+    this.openInfoKey.update(current => (current === key ? null : key));
+  }
+
+  /**
+   * Footer line of the info popover. Everything here is derived from data already loaded — the KPI
+   * total, and for a real Area of Work the output/outcome split. The DESCRIPTION is the part the
+   * payload does not carry; the template marks that single field `Coming soon` rather than
+   * inventing prose (and specifically rather than reusing another programme's blurb).
+   */
+  infoMeta(group: ReportingAowGroup): string {
+    const total = (group.indicators ?? []).length;
+    if (this.isBucket(group)) return this.countLabel(total);
+    const outputs = (group.indicators ?? []).filter(r => r.__tier !== 'outcome').length;
+    return `${this.countLabel(total)} · ${outputs} output${outputs === 1 ? '' : 's'} · ${total - outputs} outcome${
+      total - outputs === 1 ? '' : 's'
+    }`;
+  }
+
+  // ── Dismissal (hard UI rule 4: Escape closes) ─────────────────────────────
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeOverlays();
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.closeOverlays();
+  }
+
+  private closeOverlays(): void {
+    if (this.openMenuKey() !== null) this.openMenuKey.set(null);
+    if (this.openInfoKey() !== null) this.openInfoKey.set(null);
   }
 }
