@@ -1,26 +1,47 @@
 @if (ctx.centerAcronym()) {
   <div class="sticky top-0 z-20 flex-none bg-[var(--pr-surface-band)]">
     <div class="relative flex h-[88px] flex-col justify-center gap-[6px] px-[32px]">
-      <div class="flex items-center gap-[7px]">
-        <span class="h-[8px] w-[8px] shrink-0 rounded-full bg-[var(--pr-color-primary-300)]"></span>
-        <span
-          class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
-          CGIAR Center
-        </span>
-      </div>
+      @if (pageTitle(); as title) {
+        <nav class="min-w-0" aria-label="Breadcrumb">
+          <ol class="m-0 flex min-w-0 list-none items-center gap-[6px] p-0 text-[12px] leading-none">
+            <li class="shrink-0 font-medium text-[var(--pr-text-subtle)]">CGIAR Center</li>
+            <li class="shrink-0 text-[var(--pr-text-subtle)]" aria-hidden="true">&gt;</li>
+            <li
+              class="min-w-0 truncate font-semibold text-[var(--pr-text-secondary)]"
+              aria-current="page">
+              {{ centerBreadcrumbLabel() }}
+            </li>
+          </ol>
+        </nav>
 
-      <div class="min-w-0 pr-[220px]">
-        <h1
-          class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
-          {{ ctx.centerAcronym() }}
-        </h1>
+        <div class="min-w-0 pr-[220px]">
+          <h1
+            class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
+            {{ title }}
+          </h1>
+        </div>
+      } @else {
+        <div class="flex items-center gap-[7px]">
+          <span class="h-[8px] w-[8px] shrink-0 rounded-full bg-[var(--pr-color-primary-300)]"></span>
+          <span
+            class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+            CGIAR Center
+          </span>
+        </div>
 
-        @if (ctx.centerName()) {
-          <p class="m-0 min-w-0 truncate text-[13px] font-normal text-[var(--pr-text-secondary)]">
-            {{ ctx.centerName() }}
-          </p>
-        }
-      </div>
+        <div class="min-w-0 pr-[220px]">
+          <h1
+            class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
+            {{ ctx.centerAcronym() }}
+          </h1>
+
+          @if (ctx.centerName()) {
+            <p class="m-0 min-w-0 truncate text-[13px] font-normal text-[var(--pr-text-secondary)]">
+              {{ ctx.centerName() }}
+            </p>
+          }
+        </div>
+      }
 
       @if (activeTab()) {
         <a

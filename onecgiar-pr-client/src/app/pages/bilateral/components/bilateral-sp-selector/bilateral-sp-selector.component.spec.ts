@@ -78,14 +78,31 @@ describe('BilateralSpSelectorComponent', () => {
 
   it('builds the primary label with the rounded allocation and the icon', () => {
     creationService.selectedProject.set({
-      sciencePrograms: [{ programId: 1, spShortName: 'Short', allocation: '49.6' }]
+      sciencePrograms: [
+        { programId: 1, spName: 'Sustainable Farming', spShortName: 'Short', allocation: '49.6' }
+      ]
     } as any);
     creationService.selectedPrimarySp.set({ programId: 1, programCode: 'SP01', allocation: '49.6' });
-    expect(component.selectedPrimaryLabel()).toBe('SP01 — Short (50%)');
+    expect(component.selectedPrimaryLabel()).toBe('SP01 — Sustainable Farming (50%)');
     expect(component.selectedPrimaryIcon()).toContain('SP01.png');
   });
 
-  it('omits the allocation and the short name when they are missing', () => {
+  // The label carries the full name only. It used to read `spShortName`, which — once
+  // the names started resolving from clarisa_initiatives — duplicated the name here.
+  it('labels with the name and never the short name', () => {
+    creationService.selectedProject.set({
+      sciencePrograms: [
+        { programId: 1, spName: 'Sustainable Farming', spShortName: 'Short', allocation: '50' }
+      ]
+    } as any);
+    creationService.selectedPrimarySp.set({ programId: 1, programCode: 'SP01', allocation: '50' });
+
+    const label = component.selectedPrimaryLabel();
+    expect(label).toContain('Sustainable Farming');
+    expect(label).not.toContain('Short');
+  });
+
+  it('omits the allocation and the name when they are missing', () => {
     creationService.selectedProject.set({ sciencePrograms: [{ programId: 1 }] } as any);
     creationService.selectedPrimarySp.set({ programId: 1, programCode: 'SP01', allocation: '' });
     expect(component.selectedPrimaryLabel()).toBe('SP01 — ');

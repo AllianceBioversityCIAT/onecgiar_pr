@@ -4154,8 +4154,12 @@ export class BilateralService {
         isDuplicateResult: false,
       });
     } catch (err) {
-      this.logger.warn(
-        `populateTypeSpecificFromExtractedMds: skipped for result ${result.id} (type ${result.result_type_id}) — ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+      // Deliberately non-fatal (see the doc comment above), but logged at error level:
+      // a swallowed warning here is how P2-3359 stayed invisible — the result was
+      // created and the type-specific section silently stayed empty.
+      this.logger.error(
+        `populateTypeSpecificFromExtractedMds: type-specific data NOT stored for result ${result.id} (type ${result.result_type_id}) — ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+        err instanceof Error ? err.stack : undefined,
       );
     }
   }
