@@ -184,6 +184,8 @@
   --pr-surface-app: #f7f7f9; // content background — NEUTRAL, not tinted
   --pr-surface-card: #ffffff;
   --pr-surface-subtle: #f7f7f9; // HLO / outcome group headers
+  // Hover for a --pr-surface-subtle band (the Reporting tab's HLO sub-group header).
+  --pr-surface-subtle-hover: #efeef3;
 
   // ── Borders. Content-area boundaries are NEUTRAL (rule 7); violet only for selected state.
   --pr-border: #e3e3e8;
@@ -225,11 +227,39 @@
   --pr-status-approved-fg: #047857;
   --pr-status-approved-bg: #d1fae5;
 
+  // ── Programme-level bucket chips (Reporting tab card headers).
+  // These qualify a card's KIND — "Intermediate", "2030" — and are deliberately NOT the status
+  // tokens above. The 2030 pair reads green, and #d1fae5 is literally --pr-status-approved-bg, so
+  // reaching for that token would make a 2030 chip mean "approved" (rule 9: never recombine a
+  // status pair, never invent a sixth status colour). Distinct tokens keep the two vocabularies
+  // apart even though one pair happens to share a hue.
+  --pr-chip-intermediate-fg: #3730a3;
+  --pr-chip-intermediate-bg: #e0e7ff;
+  --pr-chip-2030-fg: #0f766e;
+  --pr-chip-2030-bg: #d1fae5;
+
+  // ── Indicator progress pills (Reporting tab, All-indicators table).
+  // A DIFFERENT vocabulary from --pr-status-* above, which describes a RESULT's workflow
+  // (not started → in progress → submitted → in QA → approved). An indicator instead reports
+  // progress against its target, and its two extra states have no workflow equivalent:
+  //   not-started / in-progress → reuse the --pr-status-* pair INTACT (same word, same meaning)
+  //   achieved / overachieved   → these two, because "approved" is not what a met target means
+  // Pairs are fixed: never mix one's fg with another's bg (rule 9).
+  --pr-indicator-achieved-fg: #047857;
+  --pr-indicator-achieved-bg: #d1fae5;
+  --pr-indicator-overachieved-fg: #5733c4;
+  --pr-indicator-overachieved-bg: #ede9fe;
+
   // ── Charts — violet, 4 steps. Status colours are NOT for charts.
   --pr-chart-1: #4a2bb8;
   --pr-chart-2: #6b46e5;
   --pr-chart-3: #9270f0;
   --pr-chart-4: #c4a0f7;
+  // Bilateral series — pairs with --pr-chart-2 for own results on the Overview tab.
+  // NON-TEXT USE ONLY: 3.52:1 against the --pr-border-divider track, which clears the
+  // WCAG 1.4.11 (3:1) floor for graphics. This exact hex failed AA as a sidebar
+  // FOREGROUND (see --pr-sidebar-fg-subtle above) — never use it for text.
+  --pr-chart-2-muted: #8b7cc4;
 
   // ── Elevation — only these three exist (rule 10: max two levels per screen).
   --pr-shadow-1: 0 1px 2px rgb(25 21 36 / 0.06);

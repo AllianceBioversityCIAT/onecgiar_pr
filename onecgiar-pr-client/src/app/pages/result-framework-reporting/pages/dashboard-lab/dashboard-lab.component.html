@@ -1165,9 +1165,9 @@
           [statusSegments]="overviewStatusSegments()"
           [aowProgress]="overviewAowProgress()"
           [xcutProgress]="overviewXcutProgress()"
-          [attention]="overviewAttention()"
           [categories]="overviewCategories()"
-          [paceSeries]="overviewPaceSeries()" />
+          [bilateralCategories]="overviewBilateralCategories()"
+          [bilateralRoles]="overviewBilateralRoles()" />
       </article>
       }
 
@@ -1246,6 +1246,8 @@
                 [expandAllNonce]="reportingExpandNonce()"
                 [scopeKey]="selected()?.initiativeCode || ''"
                 [canReport]="entityAowService.canReportResults()"
+                [filtersActive]="reportingFiltersActive()"
+                (clearFilters)="clearReportingFilters()"
                 (openRow)="onReportingRowOpen($event)"
                 (reportRow)="onReportingRowReport($event)"
                 (openTarget)="onReportingOpenTarget($event)"
@@ -1552,6 +1554,7 @@
     [aowCode]="activeAowCode() || ''"
     [accent]="accentTheme().solid"
     [initialTab]="manageTab()"
+    [canReport]="entityAowService.canReportResults()"
     (widthChange)="managePanelWidth.set($event)"
     (closed)="closeManage()" />
 }

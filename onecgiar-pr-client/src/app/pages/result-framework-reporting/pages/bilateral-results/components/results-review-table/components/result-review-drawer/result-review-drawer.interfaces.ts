@@ -16,6 +16,14 @@ export interface ResultToReview {
   indicator: string;
   submission_date: string;
   lead_center?: string;
+  /**
+   * Science-Program role on this bilateral result. The backend already sends both
+   * (`results.service.ts` maps them from `initiative_role_id` / `_name`); they were simply
+   * never declared here. ⚠️ The wire sends the id as a STRING (`'1'` = primary submitter,
+   * `'2'` = contributor) — compare with `String(...)`, never `=== 1`.
+   */
+  initiative_role_id?: string | number;
+  initiative_role_name?: string;
 }
 
 export interface GroupedResult {
