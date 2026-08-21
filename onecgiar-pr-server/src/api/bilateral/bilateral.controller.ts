@@ -25,6 +25,8 @@ import { RootResultsDto } from './dto/create-bilateral.dto';
 import { ListResultsQueryDto } from './dto/list-results-query.dto';
 import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
 import { BilateralClarisaEndpoint } from './decorators/bilateral-clarisa-endpoint.decorator';
+import { ExternalPlatform } from './decorators/external-platform.decorator';
+import { ClarisaApiKeyValidationMis } from './interfaces/clarisa-api-key-validation.interface';
 
 @Controller()
 @ApiTags('Bilaterals')
@@ -51,8 +53,10 @@ export class BilateralController {
       }),
     )
     body: RootResultsDto,
+    // P2-3166: the calling system, as CLARISA authenticated it from the API key.
+    @ExternalPlatform() platform?: ClarisaApiKeyValidationMis,
   ) {
-    return this.bilateralService.create(body);
+    return this.bilateralService.create(body, platform);
   }
 
   @Get()

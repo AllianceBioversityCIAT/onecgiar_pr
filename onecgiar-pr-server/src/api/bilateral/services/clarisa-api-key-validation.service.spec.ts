@@ -40,7 +40,14 @@ describe('ClarisaApiKeyValidationService', () => {
       '203.0.113.42',
     );
 
-    expect(isValid).toBe(true);
+    // P2-3166: the resolved identity is the payload, not a boolean — that `mis` is what lets a
+    // webhook find its way back to the platform that sent the result.
+    expect(isValid).toEqual({
+      valid: true,
+      mis: { id: 12, name: 'Reporting Tool', acronym: 'PRMS' },
+      environment: 'PROD',
+      scopes: ['bilateral:read'],
+    });
     expect(post).toHaveBeenCalledWith(
       'https://clarisa.example/api/auth/validate-api-key',
       {
@@ -57,7 +64,7 @@ describe('ClarisaApiKeyValidationService', () => {
     expect(post.mock.calls[0][2]).not.toHaveProperty('auth');
   });
 
-  it('should return false when CLARISA responds with valid false', async () => {
+  it('should return null when CLARISA responds with valid false', async () => {
     const httpService = {
       post: jest.fn().mockReturnValue(
         of({
@@ -72,10 +79,10 @@ describe('ClarisaApiKeyValidationService', () => {
     const service = createService(httpService);
     await expect(
       service.validate('bad-key', '/api/bilateral/create'),
-    ).resolves.toBe(false);
+    ).resolves.toBeNull();
   });
 
-  it('should return false when CLARISA responds with HTTP 401', async () => {
+  it('should return null when CLARISA responds with HTTP 401', async () => {
     const axiosError = new AxiosError(
       'Unauthorized',
       '401',
@@ -97,10 +104,10 @@ describe('ClarisaApiKeyValidationService', () => {
     const service = createService(httpService);
     await expect(
       service.validate('bad-key', '/api/bilateral/results'),
-    ).resolves.toBe(false);
+    ).resolves.toBeNull();
   });
 
-  it('should return false and log when CLARISA is unreachable', async () => {
+  it('should return null and log when CLARISA is unreachable', async () => {
     const warnSpy = jest
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
@@ -112,9 +119,9 @@ describe('ClarisaApiKeyValidationService', () => {
     } as unknown as HttpService;
 
     const service = createService(httpService);
-    await expect(service.validate('some-key', '/api/bilateral')).resolves.toBe(
-      false,
-    );
+    await expect(
+      service.validate('some-key', '/api/bilateral'),
+    ).resolves.toBeNull();
     expect(warnSpy).toHaveBeenCalled();
   });
 });

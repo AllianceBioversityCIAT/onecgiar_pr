@@ -548,6 +548,39 @@ export class Result {
   })
   external_submitted_comment: string;
 
+  // P2-3166. `source` above says *how* a result arrived ('Result' | 'API'); these say *from whom*,
+  // which is what routing a webhook back needs. Naming follows the same convention
+  // `clarisa_projects` already uses for externally-sourced rows (external_source,
+  // external_project_id, external_code).
+  //
+  // Populated from the CLARISA API-key validation (`mis`), NOT from the request body's `tenant`:
+  // the former is authenticated against the key, the latter is declared by the caller.
+  // Null for every result created through the UI, and for API results predating this column.
+
+  @Column({
+    name: 'external_platform_id',
+    nullable: true,
+    type: 'int',
+  })
+  external_platform_id: number | null;
+
+  @Column({
+    name: 'external_platform_code',
+    nullable: true,
+    type: 'varchar',
+    length: 50,
+  })
+  external_platform_code: string | null;
+
+  /** The upstream's own `idempotencyKey` for the payload that carried this result. */
+  @Column({
+    name: 'external_reference',
+    nullable: true,
+    type: 'varchar',
+    length: 191,
+  })
+  external_reference: string | null;
+
   @Column({
     name: 'reviewed_by',
     nullable: true,

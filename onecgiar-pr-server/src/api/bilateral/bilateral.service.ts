@@ -95,6 +95,8 @@ import { PathwayService } from '../ipsr-framework/pathway/pathway.service';
 import { ResultType } from '../results/result_types/entities/result_type.entity';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { AssessedDuringExpertWorkshop } from '../ipsr/assessed-during-expert-workshop/entities/assessed-during-expert-workshop.entity';
+import { ClarisaApiKeyValidationMis } from './interfaces/clarisa-api-key-validation.interface';
+import { ExternalPlatformIdentity } from './interfaces/external-platform-identity.interface';
 
 /** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
 const INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID = 5;
@@ -244,8 +246,16 @@ export class BilateralService {
     BilateralResultTypeHandler
   >;
 
-  async create(rootResultsDto: RootResultsDto) {
+  async create(
+    rootResultsDto: RootResultsDto,
+    platform?: ClarisaApiKeyValidationMis,
+  ) {
     const incomingResults = this.unwrapIncomingResults(rootResultsDto);
+
+    const externalIdentity = this.buildExternalIdentity(
+      rootResultsDto,
+      platform,
+    );
 
     if (!incomingResults.length) {
       throw new BadRequestException(
@@ -344,6 +354,7 @@ export class BilateralService {
               submittedUserId,
               version,
               year,
+              externalIdentity,
             });
             const newResultHeader = resultHeader;
             const resultId = resultHeader.id;
@@ -3818,12 +3829,14 @@ export class BilateralService {
     submittedUserId,
     version,
     year,
+    externalIdentity,
   }: {
     bilateralDto: CreateBilateralDto;
     userId: number;
     submittedUserId: number;
     version: any;
     year: any;
+    externalIdentity?: ExternalPlatformIdentity;
   }): Promise<Result> {
     const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
     if (handler?.initializeResultHeader) {
@@ -3835,6 +3848,12 @@ export class BilateralService {
         year,
       });
       if (custom?.resultHeader) {
+        // The type handler builds its own header (knowledge products do), so the identity is
+        // applied here rather than duplicated inside every handler.
+        await this.applyExternalIdentity(
+          custom.resultHeader.id,
+          externalIdentity,
+        );
         return this._resultRepository.findOne({
           where: { id: custom.resultHeader.id },
         });
@@ -3842,6 +3861,7 @@ export class BilateralService {
     }
 
     const saved = await this._resultRepository.save({
+      ...(externalIdentity ?? {}),
       created_by: userId,
       version_id: version.id,
       title: bilateralDto.title,
@@ -3864,6 +3884,47 @@ export class BilateralService {
     return this._resultRepository.findOne({
       where: { id: saved.id },
     });
+  }
+
+  /**
+   * P2-3166. Which external platform this request came from.
+   *
+   * `platform` is resolved by CLARISA from the API key, so it is authenticated. The body's
+   * `tenant` field carries a similar-looking string but is declared by the caller, so it is
+   * deliberately NOT used here — routing a webhook on a self-declared value would let a caller
+   * point our callbacks anywhere.
+   *
+   * `idempotencyKey` lives on the envelope rather than per result, so several results arriving in
+   * one request share the same reference. That is the upstream's contract, not our choice.
+   */
+  private buildExternalIdentity(
+    rootResultsDto: RootResultsDto,
+    platform?: ClarisaApiKeyValidationMis,
+  ): ExternalPlatformIdentity {
+    return {
+      external_platform_id: platform?.id ?? null,
+      external_platform_code: platform?.acronym ?? null,
+      external_reference: rootResultsDto?.idempotencyKey ?? null,
+    };
+  }
+
+  /**
+   * P2-3166. Only writes when there is something to write, so a result created without an
+   * authenticated platform (or before this shipped) keeps its nulls instead of being stamped with
+   * empty strings.
+   */
+  private async applyExternalIdentity(
+    resultId: number,
+    identity?: ExternalPlatformIdentity,
+  ): Promise<void> {
+    if (!identity) return;
+    const hasAnything =
+      identity.external_platform_id != null ||
+      identity.external_platform_code != null ||
+      identity.external_reference != null;
+    if (!hasAnything) return;
+
+    await this._resultRepository.update(resultId, identity);
   }
 
   private async runResultTypeHandlers(context: {

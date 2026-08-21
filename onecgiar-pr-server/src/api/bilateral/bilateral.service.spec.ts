@@ -12,6 +12,7 @@ describe('BilateralService (unit)', () => {
     const resultRepository = {
       findOne: jest.fn(),
       save: jest.fn(async (x) => x),
+      update: jest.fn(),
     };
     const handlersError = {} as any;
     const versioningService = {} as any;
@@ -534,6 +535,86 @@ describe('BilateralService (unit)', () => {
     await expect(
       service.handleLeadCenter(1, {} as any, 1),
     ).resolves.toBeUndefined();
+  });
+
+  // P2-3166. `result.source` says a result arrived through the API but never says from whom,
+  // which is what routing a webhook back needs. These two helpers are the whole of that logic;
+  // `create()` itself is a ~20-collaborator transaction and is covered end-to-end elsewhere.
+  describe('external platform identity (P2-3166)', () => {
+    const mis = { id: 12, name: 'Reporting Tool', acronym: 'PRMS' };
+
+    describe('buildExternalIdentity', () => {
+      it('takes the platform from the authenticated key, never from the body tenant', () => {
+        const { service } = makeService();
+
+        const identity = (service as any).buildExternalIdentity(
+          { idempotencyKey: 'b4e66fb305296fe4be52', tenant: 'spoofed.tenant' },
+          mis,
+        );
+
+        expect(identity).toEqual({
+          external_platform_id: 12,
+          external_platform_code: 'PRMS',
+          external_reference: 'b4e66fb305296fe4be52',
+        });
+        // The body's `tenant` is caller-declared; trusting it would let a caller aim our
+        // callbacks at any platform it names.
+        expect(JSON.stringify(identity)).not.toContain('spoofed.tenant');
+      });
+
+      it('yields nulls when no platform was authenticated', () => {
+        const { service } = makeService();
+
+        expect(
+          (service as any).buildExternalIdentity({ tenant: 'whatever' }),
+        ).toEqual({
+          external_platform_id: null,
+          external_platform_code: null,
+          external_reference: null,
+        });
+      });
+
+      it('keeps the platform even when the upstream sent no idempotency key', () => {
+        const { service } = makeService();
+
+        expect((service as any).buildExternalIdentity({}, mis)).toEqual({
+          external_platform_id: 12,
+          external_platform_code: 'PRMS',
+          external_reference: null,
+        });
+      });
+    });
+
+    describe('applyExternalIdentity', () => {
+      it('stamps the identity on a header built by a type handler', async () => {
+        const { service, stubs } = makeService();
+
+        await (service as any).applyExternalIdentity(99, {
+          external_platform_id: 12,
+          external_platform_code: 'PRMS',
+          external_reference: 'abc',
+        });
+
+        expect(stubs.resultRepository.update).toHaveBeenCalledWith(99, {
+          external_platform_id: 12,
+          external_platform_code: 'PRMS',
+          external_reference: 'abc',
+        });
+      });
+
+      it('leaves the row alone when there is nothing to record', async () => {
+        const { service, stubs } = makeService();
+
+        await (service as any).applyExternalIdentity(99, {
+          external_platform_id: null,
+          external_platform_code: null,
+          external_reference: null,
+        });
+        await (service as any).applyExternalIdentity(99, undefined);
+
+        expect(stubs.resultRepository.update).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('populateTypeSpecificFromExtractedMds', () => {
