@@ -5,6 +5,7 @@ import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa
 import { ClarisaProject } from '../../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 import { W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE } from '../constants/w3-center-alias.constants';
 import { YearRepository } from '../../results/years/year.repository';
+import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 
 @Injectable()
 export class BilateralProjectsService {
@@ -15,8 +16,62 @@ export class BilateralProjectsService {
     private readonly projectRepo: Repository<ClarisaProject>,
     @InjectRepository(ClarisaCenter)
     private readonly centerRepo: Repository<ClarisaCenter>,
+    @InjectRepository(ClarisaInitiative)
+    private readonly initiativeRepo: Repository<ClarisaInitiative>,
     private readonly yearRepository: YearRepository,
   ) {}
+
+  /**
+   * Science Program display names, keyed by SMO code.
+   *
+   * CLARISA's `projects` payload nests a `global_unit_object` per mapping, but only
+   * fills its `smo_code` — `name` and `short_name` arrive null, so
+   * `clarisa_project_mappings.program_name` / `program_short_name` are null for
+   * every row and the selector rendered "SP06 — SP06".
+   *
+   * The name is resolved from `clarisa_initiatives` instead, matching
+   * `official_code` against that same SMO code. That is the join the rest of the
+   * platform already relies on for these codes (see
+   * `ContributionToIndicatorsRepository.findAllOutcomesByInitiativeCode`, and the
+   * `SPs-Icons/{code}.png` assets). Reading it at request time rather than copying
+   * it into the mappings table keeps `clarisa_initiatives` the single source of
+   * truth — snapshotting a field CLARISA does not fill is what produced the nulls
+   * in the first place.
+   */
+  private async resolveScienceProgramNames(
+    programCodes: string[],
+  ): Promise<Map<string, ClarisaInitiative>> {
+    if (!programCodes.length) return new Map();
+
+    const initiatives = await this.initiativeRepo.find({
+      where: { official_code: In(programCodes) },
+    });
+
+    const byCode = new Map<string, ClarisaInitiative>();
+    for (const initiative of initiatives) {
+      const existing = byCode.get(initiative.official_code);
+      // `official_code` carries no uniqueness guarantee. Prefer an active row, and
+      // break any remaining tie on the lowest id, so the label is deterministic
+      // instead of depending on row order.
+      if (
+        !existing ||
+        (initiative.active && !existing.active) ||
+        (initiative.active === existing.active && initiative.id < existing.id)
+      ) {
+        byCode.set(initiative.official_code, initiative);
+      }
+    }
+
+    if (byCode.size < programCodes.length) {
+      const missing = programCodes.filter((code) => !byCode.has(code));
+      this.logger.warn(
+        `No clarisa_initiatives row for science program code(s): ${missing.join(', ')} — ` +
+          `those will fall back to showing the code as their name`,
+      );
+    }
+
+    return byCode;
+  }
 
   async getProjectsByCenter(centerId: number | string) {
     let center = null;
@@ -128,6 +183,16 @@ export class BilateralProjectsService {
       );
     }
 
+    const programCodes = [
+      ...new Set(
+        currentPhaseProjects
+          .flatMap((p) => p.obj_project_mappings ?? [])
+          .map((m) => m.programCode)
+          .filter((code): code is string => !!code),
+      ),
+    ];
+    const spByCode = await this.resolveScienceProgramNames(programCodes);
+
     const mapped = currentPhaseProjects.map((project) => ({
       id: project.id,
       shortName: project.shortName,
@@ -141,13 +206,28 @@ export class BilateralProjectsService {
             acronym: project.obj_organization.acronym,
           }
         : null,
-      sciencePrograms: (project.obj_project_mappings ?? []).map((mapping) => ({
-        programId: mapping.programId,
-        programCode: mapping.programCode,
-        allocation: mapping.allocation,
-        spName: mapping.programName ?? mapping.programCode ?? '',
-        spShortName: mapping.programShortName ?? mapping.programCode ?? '',
-      })),
+      sciencePrograms: (project.obj_project_mappings ?? []).map((mapping) => {
+        const initiative = mapping.programCode
+          ? spByCode.get(mapping.programCode)
+          : undefined;
+        return {
+          programId: mapping.programId,
+          programCode: mapping.programCode,
+          allocation: mapping.allocation,
+          // Catalogue first, then whatever the sync stored, then the code itself —
+          // so a code with no catalogue row renders exactly as it does today.
+          spName:
+            initiative?.name ??
+            mapping.programName ??
+            mapping.programCode ??
+            '',
+          spShortName:
+            initiative?.short_name ??
+            mapping.programShortName ??
+            mapping.programCode ??
+            '',
+        };
+      }),
     }));
 
     return { projects: mapped };
