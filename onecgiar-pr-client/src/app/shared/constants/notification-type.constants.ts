@@ -16,7 +16,9 @@ export enum NotificationType {
   RESULT_QUALITY_ASSESSED = 'Result QAed',
   ANNOUNCEMENT = 'Announcement',
   BILATERAL_RESULT_APPROVED = 'Bilateral Result Approved',
-  BILATERAL_RESULT_REJECTED = 'Bilateral Result Rejected'
+  BILATERAL_RESULT_REJECTED = 'Bilateral Result Rejected',
+  RESULT_CENTER_TAGGED = 'Result Center Tagged',
+  RESULT_BILATERAL_PROJECT_TAGGED = 'Result Bilateral Project Tagged'
 }
 
 /**
@@ -139,6 +141,18 @@ export function getResultNotificationTextParts(notification: any): NotificationT
         emphasizePrefix: true
       };
 
+    // P2-3214 AC3. Unlike every other type, the variable half of this sentence names the tagged
+    // centre or project — which cannot be derived from the result (a result carries several
+    // centres, and a recipient may belong to more than one). The server composes it at emit time
+    // and ships it on `notification.text`; we only supply the lead-in.
+    case NotificationType.RESULT_CENTER_TAGGED:
+    case NotificationType.RESULT_BILATERAL_PROJECT_TAGGED:
+      return {
+        prefix: 'The result',
+        suffix: notification?.text?.trim() || null,
+        emphasizePrefix: false
+      };
+
     default:
       // Deliberately neutral. The previous default claimed every unknown type had been "successfully
       // Quality Assessed", which mislabels any type added later.
@@ -158,4 +172,10 @@ export function buildResultNotificationText(notification: any): string {
 export function isBilateralReviewNotification(notification: any): boolean {
   const type = resolveNotificationType(notification);
   return type === NotificationType.BILATERAL_RESULT_APPROVED || type === NotificationType.BILATERAL_RESULT_REJECTED;
+}
+
+/** True when the notification reports the recipient's centre or bilateral project being tagged. */
+export function isResultTaggedNotification(notification: any): boolean {
+  const type = resolveNotificationType(notification);
+  return type === NotificationType.RESULT_CENTER_TAGGED || type === NotificationType.RESULT_BILATERAL_PROJECT_TAGGED;
 }

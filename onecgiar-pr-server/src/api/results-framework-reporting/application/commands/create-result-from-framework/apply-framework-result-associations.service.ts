@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { CreateResultsFrameworkResultDto } from '../../../dto/create-results-framework.dto';
 import { TokenDto } from '../../../../../shared/globalInterfaces/token.dto';
 import { ShareResultRequestService } from '../../../../results/share-result-request/share-result-request.service';
@@ -6,13 +6,19 @@ import { CreateTocShareResult } from '../../../../results/share-result-request/d
 import { ResultsByProjectsService } from '../../../../results/results_by_projects/results_by_projects.service';
 import { ResultsByInstitutionsService } from '../../../../results/results_by_institutions/results_by_institutions.service';
 import { objectHasOwn } from '../../../../../shared/utils/object.utils';
+import { ResultTaggedNotificationService } from '../../../../notification/services/result-tagged-notification.service';
 
 @Injectable()
 export class ApplyFrameworkResultAssociationsService {
+  private readonly logger = new Logger(
+    ApplyFrameworkResultAssociationsService.name,
+  );
+
   constructor(
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _resultsByProjectsService: ResultsByProjectsService,
     private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
+    private readonly _resultTaggedNotificationService: ResultTaggedNotificationService,
   ) {}
 
   async execute(
@@ -72,15 +78,43 @@ export class ApplyFrameworkResultAssociationsService {
       return;
     }
 
+    // P2-3214 AC2: only the ids that were actually inserted get notified. Centres go through
+    // `handleContributingCenters` instead — the partners save below is what links them, and it
+    // already knows which ones are new.
+    const newlyLinked: number[] = [];
+
     for (const project of payload.bilateral_project) {
       const projectIdNum = Number(project?.project_id);
       if (Number.isFinite(projectIdNum) && projectIdNum > 0) {
-        await this._resultsByProjectsService.linkBilateralProjectToResult(
-          createdResultId,
-          projectIdNum,
-          user.id,
-        );
+        const linked =
+          await this._resultsByProjectsService.linkBilateralProjectToResult(
+            createdResultId,
+            projectIdNum,
+            user.id,
+          );
+        if (linked?.status === HttpStatus.CREATED) {
+          newlyLinked.push(projectIdNum);
+        }
       }
+    }
+
+    if (!newlyLinked.length) return;
+
+    // Non-fatal: the links are already persisted, so a notification failure must not fail the
+    // result creation.
+    try {
+      await this._resultTaggedNotificationService.notifyTaggedBilateralProjects(
+        createdResultId,
+        user.id,
+        newlyLinked,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit tagged-project notifications for result ${createdResultId}: ${
+          error instanceof Error ? error.message : JSON.stringify(error)
+        }`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
   }
 
