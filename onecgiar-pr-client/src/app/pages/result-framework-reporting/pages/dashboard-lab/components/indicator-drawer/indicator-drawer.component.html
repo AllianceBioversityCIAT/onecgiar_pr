@@ -66,13 +66,46 @@
   <div class="custom_scroll flex-1 overflow-y-auto px-6 py-5">
     @switch (tab()) {
       @case ('report') {
+        <!-- What is already reported here, visible WHILE the form is being filled: recognising a
+             duplicate after creating it is too late. Compact on purpose — the form is the job. -->
+        @if (loadingExisting()) {
+          <div class="mb-4 h-[38px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+        } @else if (existing()?.length) {
+          <div class="mb-4 rounded-xl border border-[rgba(30,32,47,0.08)] bg-[var(--pr-color-accents-1)] p-3">
+            <p class="m-0 flex items-center gap-1.5 text-[12px] font-semibold text-[var(--pr-color-secondary-400)]">
+              <span class="material-icons-round text-[15px] text-[var(--pr-color-accents-5)]">fact_check</span>
+              {{ existing()!.length }} result{{ existing()!.length === 1 ? '' : 's' }} already reported against this indicator
+            </p>
+            <ul class="m-0 mt-2 list-none space-y-1 p-0">
+              @for (r of existing()!; track $index) {
+                <li class="truncate text-[12px] text-[var(--pr-color-accents-6)]">
+                  @if (r?.result_code) {
+                    <span class="font-mono text-[11.5px] text-[var(--pr-color-accents-5)]">{{ r.result_code }}</span>
+                  }
+                  {{ r?.result_title || r?.title || 'Untitled result' }}
+                </li>
+              }
+            </ul>
+            <button
+              type="button"
+              (click)="setTab('info')"
+              class="mt-2 appearance-none border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-300)] underline">
+              See them in detail
+            </button>
+          </div>
+        } @else {
+          <p class="m-0 mb-4 text-[12px] text-[var(--pr-color-accents-5)]">Nothing has been reported against this indicator yet.</p>
+        }
+
         <app-lab-report-form
           [tocNode]="tocNode()"
           [indicator]="indicator()"
           [initiativeId]="initiativeId()"
           [programCode]="programCode()"
           [columns]="columns()"
+          [canReport]="canReport()"
           (dirtyChange)="onDirtyChange($event)"
+          (cancelled)="requestClose()"
           (created)="close()" />
       }
 

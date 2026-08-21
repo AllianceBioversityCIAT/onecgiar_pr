@@ -1,202 +1,338 @@
-<!-- Fields mirror aow-hlo-create-modal; only the container and the data source differ. -->
-<form class="grid items-start gap-x-6 gap-y-5" [style.gridTemplateColumns]="columns() === 2 ? '1fr 1fr' : '1fr'" (ngSubmit)="createResult()">
-  <!-- indicator category: only asked when the ToC node does not fix it -->
-  @if (resultTypes().length && !indicator()?.result_type_id) {
-    <div>
-      <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">
-        Indicator category <span class="text-[var(--pr-color-red-300)]">*</span>
-      </p>
-      <app-pr-select
-        [options]="resultTypes()"
-        optionLabel="name"
-        optionValue="id"
-        placeholder="Select a category"
-        [editable]="true"
-        [required]="true"
-        [ngModel]="createResultBody().result_type_id"
-        [ngModelOptions]="{ standalone: true }"
-        (selectOptionEvent)="patch('result_type_id', $event?.id ?? null)"
-        name="resultType" />
-    </div>
-  } @else {
-    <div class="flex items-center gap-2">
-      <span class="text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Indicator category:</span>
-      <span class="rounded-lg border border-[rgba(30,32,47,0.12)] px-2.5 py-1 text-[12.5px] text-[var(--pr-color-accents-6)]">
-        {{ emergingCategory()?.name || indicator()?.result_type_name || indicator()?.type_name || 'Not provided' }}
-      </span>
-    </div>
-  }
+<!-- Layout follows the Claude Design "Report result" panel: one section heading, full-width fields
+     stacked with generous spacing, every multi-value field showing its selection as removable
+     chips underneath, and a sticky footer that counts down what is still missing. -->
+<form class="flex flex-col gap-[22px]" (ngSubmit)="createResult()">
+  <h3 class="m-0 text-[19px] font-bold leading-tight text-[var(--pr-color-secondary-400)]">The result</h3>
 
-  <!-- knowledge products come from a repository handle -->
+  <!-- indicator category: a picker only when the ToC node does not fix it -->
+  <div>
+    <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+      Indicator category @if (needsCategoryChoice()) { <span class="text-[var(--pr-color-red-300)]">*</span> }
+    </p>
+    @if (needsCategoryChoice()) {
+      @if (categoryUnavailable()) {
+        <!-- No level → no option list will ever arrive. Say so instead of showing an empty control. -->
+        <p class="m-0 text-[13px] leading-relaxed text-[var(--pr-color-orange-500)]">
+          The indicator category cannot be determined for this indicator. Please report it from the Area of Work view or contact support.
+        </p>
+      } @else {
+        <app-pr-select
+          [options]="resultTypes()"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="Select a category"
+          [editable]="true"
+          [required]="true"
+          [ngModel]="createResultBody().result_type_id"
+          [ngModelOptions]="{ standalone: true }"
+          (selectOptionEvent)="onCategoryChange($event?.id ?? null)"
+          name="resultType" />
+      }
+    } @else {
+      <!-- Fixed by the indicator. Rendered as a filled, non-editable control so the column of
+           fields keeps one silhouette instead of collapsing into a chip. -->
+      <div
+        class="flex h-[46px] items-center rounded-[10px] border border-[rgba(30,32,47,0.14)] bg-[var(--pr-color-accents-1)] px-3.5 text-[14px] text-[var(--pr-color-secondary-400)]">
+        {{ emergingCategory()?.name || indicator()?.result_type_name || indicator()?.type_name || 'Not provided' }}
+      </div>
+    }
+  </div>
+
+  <!-- knowledge products come from a repository. Two entry modes, as the design specifies;
+       browsing has no endpoint yet (P2-3231), so it sits in place and disabled. -->
   @if (currentResultIsKnowledgeProduct()) {
-    <div class="col-span-full">
-      <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+    <div>
+      <div class="mb-3 inline-flex rounded-[10px] bg-[var(--pr-color-accents-1)] p-1" role="tablist" aria-label="How to add the knowledge product">
+        <button
+          type="button"
+          role="tab"
+          disabled
+          aria-disabled="true"
+          title="Browsing your repository knowledge products is not available yet"
+          class="inline-flex cursor-not-allowed items-center gap-2 rounded-[8px] border-0 bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-color-accents-5)] opacity-60">
+          Browse CGSpace
+          <span class="rounded-full bg-[rgba(30,32,47,0.08)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Coming soon</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="kpEntryMode() === 'manual'"
+          (click)="kpEntryMode.set('manual')"
+          class="rounded-[8px] border-0 bg-white px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-color-primary-300)] shadow-sm">
+          Manual entry
+        </button>
+      </div>
+
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
         Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span>
       </p>
       <div class="flex items-start gap-2">
         <div class="min-w-0 flex-1">
+          <!-- `isStatic` is what keeps a field editable: `editable` is declared on pr-input but never
+               read, and RolesService.readOnly defaults to true. -->
           <app-pr-input
             [ngModel]="createResultBody().handler"
             [ngModelOptions]="{ standalone: true }"
             (ngModelChange)="patch('handler', $event)"
-            placeholder="Handle..."
-            [editable]="true"
+            placeholder="Paste the repository link…"
+            [isStatic]="true"
+            [disabled]="creatingResult()"
             name="handler" />
         </div>
         <button
           type="button"
           (click)="validateHandle()"
-          [disabled]="validatingHandler()"
-          class="mt-1 inline-flex shrink-0 appearance-none items-center gap-1.5 rounded-lg border-0 bg-[var(--pr-color-primary-300)] px-4 py-2.5 text-[12.5px] font-semibold text-white disabled:opacity-50">
+          [disabled]="validatingHandler() || creatingResult()"
+          class="mt-1 inline-flex h-[46px] shrink-0 appearance-none items-center gap-1.5 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 text-[13.5px] font-semibold text-white disabled:opacity-50">
           {{ validatingHandler() ? 'Syncing…' : 'Sync' }}
-          <span class="material-icons-round text-[15px]">sync</span>
+          <span class="material-icons-round text-[16px]" [class.animate-spin]="validatingHandler()">sync</span>
         </button>
       </div>
       @if (mqapUrlError().status) {
-        <p class="m-0 mt-1.5 text-[12px] text-[var(--pr-color-red-300)]">{{ mqapUrlError().message }}</p>
+        <!-- The server's own message can carry links; rendering it as text would swallow them. -->
+        <p class="error__link m-0 mt-1.5 text-[12.5px] text-[var(--pr-color-red-300)]" [innerHTML]="mqapUrlError().message"></p>
       }
     </div>
   }
 
-  <!-- title -->
-  <div class="col-span-full">
-    <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">{{ titleLabel() }}</p>
-    <app-pr-textarea
+  <!-- result title. For a knowledge product it is filled by the sync and stays locked: `disabled`
+       is the lever that does that — `readOnly` is inert while `isStatic` is on. -->
+  <div>
+    <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+      {{ titleLabel() }} <span class="text-[var(--pr-color-red-300)]">*</span>
+      <span class="material-icons-round text-[15px] text-[var(--pr-color-accents-4)]" [title]="titleHint()">info</span>
+    </p>
+    <app-pr-input
       [ngModel]="createResultBody().result_name"
       [ngModelOptions]="{ standalone: true }"
       (ngModelChange)="patch('result_name', $event)"
       [maxWords]="30"
-      [readOnly]="currentResultIsKnowledgeProduct()"
-      placeholder="Result title..."
-      name="resultName"
-      [isStatic]="true" />
+      [disabled]="creatingResult() || currentResultIsKnowledgeProduct()"
+      [autogenerate]="currentResultIsKnowledgeProduct()"
+      [placeholder]="currentResultIsKnowledgeProduct() ? 'Retrieved from the repository…' : ''"
+      [isStatic]="true"
+      name="resultName" />
   </div>
 
   <!-- contribution to the indicator target -->
-  <div class="col-span-full">
-    <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contribution to indicator target</p>
-    <div
-      class="mb-2 rounded-lg border-l-[3px] border-[var(--pr-color-primary-300)] bg-[var(--pr-color-accents-1)] p-3 text-[12px] leading-relaxed text-[var(--pr-color-accents-6)]">
-      Indicate the numerical value your result contributes toward the {{ indicator()?.target_date || 'current' }} target of this indicator.
-      <span class="mt-1.5 block">
-        <b class="text-[var(--pr-color-secondary-400)]">Example:</b> if the target is 200 people trained and your result evidences 90, enter
-        <b>90</b>.
+  <div>
+    <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+      Contribution to indicator target <span class="text-[var(--pr-color-red-300)]">*</span>
+      <span
+        class="material-icons-round text-[15px] text-[var(--pr-color-accents-4)]"
+        title="The numerical value this result contributes toward the indicator target. If the target is 200 people trained and your result evidences 90, enter 90.">
+        info
       </span>
-    </div>
-    <div class="max-w-[300px]">
+    </p>
+    <div class="max-w-[230px]">
       <app-pr-input
         type="number"
-        placeholder="e.g. 90"
+        placeholder="0"
         [ngModel]="createResultBody().contribution_to_indicator_target"
         [ngModelOptions]="{ standalone: true }"
         (ngModelChange)="patch('contribution_to_indicator_target', $event)"
-        [editable]="true"
+        [isStatic]="true"
+        [disabled]="creatingResult()"
         name="contribution" />
     </div>
   </div>
 
-  <!-- progressive narrative -->
-  <div class="col-span-full">
-    <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Progress narrative</p>
-    <app-pr-textarea
-      [ngModel]="createResultBody().toc_progressive_narrative"
-      [ngModelOptions]="{ standalone: true }"
-      (ngModelChange)="patch('toc_progressive_narrative', $event)"
-      placeholder="How does this result move the indicator forward?"
-      name="narrative"
-      [isStatic]="true" />
-  </div>
-
-  <!-- contributing CGIAR Centers: ToC first, "Other(s)" opens the rest -->
+  <!-- CGIAR Centers. `optionValue` is the identity key pr-multi-select compares on: without it
+       every option matches every value and each click deselects index 0 instead of adding. -->
   <div>
-    <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing CGIAR Centers</p>
-    <p class="m-0 mb-2 text-[12px] leading-relaxed text-[var(--pr-color-accents-5)]">
-      {{ tocCenters().length ? contributingCentersInfoNote : noCentersNote }}
-    </p>
+    <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">CGIAR Centers</p>
     <app-pr-multi-select
       [options]="dropdown1Options()"
       optionLabel="name"
+      optionValue="code"
       [ngModel]="contributingCenters()"
       [ngModelOptions]="{ standalone: true }"
       (ngModelChange)="onContributingCentersChange($event)"
-      placeholder="Select Centers"
+      placeholder="Add another center…"
       name="centers"
       [isStatic]="true" />
 
+    @if (contributingCenters().length) {
+      <div class="mt-2.5 flex flex-wrap gap-2">
+        @for (center of contributingCenters(); track center.code) {
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+            {{ centerChipLabel(center) }}
+            <button
+              type="button"
+              (click)="removeCenter(center)"
+              [attr.aria-label]="'Remove ' + centerChipLabel(center)"
+              class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)]">
+              <span class="material-icons-round text-[17px] leading-none">close</span>
+            </button>
+          </span>
+        }
+      </div>
+    }
+
     @if (showOtherCenters()) {
-      <div class="mt-2.5">
+      <div class="mt-3">
         <app-pr-multi-select
           [options]="otherCentersList()"
           optionLabel="name"
-          [ngModel]="otherCentersSelected()"
+          optionValue="code"
+              [ngModel]="otherCentersSelected()"
           [ngModelOptions]="{ standalone: true }"
           (ngModelChange)="onOtherCentersChange($event)"
           placeholder="Other CGIAR Centers"
           name="otherCenters"
           [isStatic]="true" />
+
+        @if (otherCentersSelected().length) {
+          <div class="mt-2.5 flex flex-wrap gap-2">
+            @for (center of otherCentersSelected(); track center.code) {
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+                {{ centerChipLabel(center) }}
+                <button
+                  type="button"
+                  (click)="removeOtherCenter(center)"
+                  [attr.aria-label]="'Remove ' + centerChipLabel(center)"
+                  class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)]">
+                  <span class="material-icons-round text-[17px] leading-none">close</span>
+                </button>
+              </span>
+            }
+          </div>
+        }
       </div>
     }
   </div>
 
-  <!-- contributing Science Programs: same split -->
+  <!-- Science Programs -->
   <div>
-    <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing Science Programs/Accelerators</p>
-    <p class="m-0 mb-2 text-[12px] leading-relaxed text-[var(--pr-color-accents-5)]">
-      {{ tocSciencePrograms().length ? contributingScienceInfoNote : noScienceProgramsNote }}
-    </p>
+    <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Science Programs</p>
     <app-pr-multi-select
       [options]="dropdown1ScienceOptions()"
       optionLabel="official_code"
+      optionValue="id"
+      placeholder="Add another programme…"
       [ngModel]="selectedScience()"
       [ngModelOptions]="{ standalone: true }"
-      (ngModelChange)="onScienceChange($event)"
-      placeholder="Select Science Programs"
+      (ngModelChange)="onScienceChange($event ?? [])"
       name="science"
       [isStatic]="true" />
 
+    @if (selectedScience().length) {
+      <div class="mt-2.5 flex flex-wrap gap-2">
+        @for (sp of selectedScience(); track sp.id) {
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+            {{ scienceChipLabel(sp) }}
+            <button
+              type="button"
+              (click)="removeScience(sp)"
+              [attr.aria-label]="'Remove ' + scienceChipLabel(sp)"
+              class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)]">
+              <span class="material-icons-round text-[17px] leading-none">close</span>
+            </button>
+          </span>
+        }
+      </div>
+    }
+
     @if (showOtherScience()) {
-      <div class="mt-2.5">
+      <div class="mt-3">
         <app-pr-multi-select
           [options]="otherScienceList()"
           optionLabel="official_code"
+          optionValue="id"
+          placeholder="Other Science Programs"
           [ngModel]="otherScienceSelected()"
           [ngModelOptions]="{ standalone: true }"
-          (ngModelChange)="onOtherScienceChange($event)"
-          placeholder="Other Science Programs"
+          (ngModelChange)="onOtherScienceChange($event ?? [])"
           name="otherScience"
           [isStatic]="true" />
+
+        @if (otherScienceSelected().length) {
+          <div class="mt-2.5 flex flex-wrap gap-2">
+            @for (sp of otherScienceSelected(); track sp.id) {
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+                {{ scienceChipLabel(sp) }}
+                <button
+                  type="button"
+                  (click)="removeOtherScience(sp)"
+                  [attr.aria-label]="'Remove ' + scienceChipLabel(sp)"
+                  class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)]">
+                  <span class="material-icons-round text-[17px] leading-none">close</span>
+                </button>
+              </span>
+            }
+          </div>
+        }
       </div>
     }
   </div>
 
-  <!-- W3 / bilateral projects of this program -->
+  <!-- W3 and bilateral projects -->
   @if (bilateralProjects().length) {
     <div>
-      <p class="m-0 mb-1.5 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing W3/bilateral projects</p>
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">W3 and bilateral projects</p>
       <app-pr-multi-select
         [options]="bilateralProjects()"
         optionLabel="project_name"
+        optionValue="project_id"
+        placeholder="Select projects"
         [ngModel]="selectedBilateral()"
         [ngModelOptions]="{ standalone: true }"
         (ngModelChange)="selectedBilateral.set($event ?? [])"
-        placeholder="Select projects"
         name="bilateral"
         [isStatic]="true" />
+
+      @if (selectedBilateral().length) {
+        <div class="mt-2.5 flex flex-wrap gap-2">
+          @for (project of selectedBilateral(); track $index) {
+            <span class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--pr-color-accents-1)] py-1.5 pl-3.5 pr-1.5 text-[13px] text-[var(--pr-color-secondary-400)]">
+              <span class="truncate">{{ project?.project_name }}</span>
+              <button
+                type="button"
+                (click)="removeBilateral(project)"
+                aria-label="Remove project"
+                class="inline-flex size-[22px] shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--pr-color-accents-5)] transition-colors hover:bg-[rgba(30,32,47,0.08)] hover:text-[var(--pr-color-secondary-400)]">
+                <span class="material-icons-round text-[17px] leading-none">close</span>
+              </button>
+            </span>
+          }
+        </div>
+      }
     </div>
   }
 
-  <!-- sticky so it stays reachable however long the form gets -->
-  <div class="sticky bottom-0 col-span-full -mx-1 mt-1 bg-gradient-to-t from-white via-white to-transparent px-1 pb-1 pt-4">
-    <button
-      type="submit"
-      hlmBtn
-      variant="brand"
-      [disabled]="!canSave() || creatingResult()"
-      class="w-full justify-center gap-2 py-3.5 text-[14px] disabled:pointer-events-none disabled:opacity-40 disabled:cursor-wait">
-      {{ creatingResult() ? 'Creating…' : 'Save and continue' }}
-      <span class="material-icons-round text-[17px]" [class.animate-spin]="creatingResult()">{{
-        creatingResult() ? 'progress_activity' : 'arrow_forward'
-      }}</span>
-    </button>
+  <!-- sticky footer: what is still missing on the left, the two actions on the right -->
+  <div class="sticky bottom-0 -mx-6 mt-2 flex items-center justify-between gap-4 border-t border-[rgba(30,32,47,0.1)] bg-white px-6 py-3.5">
+    @if (missingFields().length) {
+      <span class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)]" [title]="missingFields().join(' · ')">
+        <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-orange-500)]"></span>
+        <span class="underline decoration-dotted underline-offset-4">
+          {{ missingFields().length }} field{{ missingFields().length === 1 ? '' : 's' }} left before you can create
+        </span>
+      </span>
+    } @else {
+      <span class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)]">
+        <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-green-500)]"></span> Ready to create
+      </span>
+    }
+
+    <div class="flex shrink-0 items-center gap-2.5">
+      <button
+        type="button"
+        (click)="cancelled.emit()"
+        class="appearance-none rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-5 py-2.5 text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]">
+        Cancel
+      </button>
+      @if (canReport()) {
+        <button
+          type="submit"
+          [disabled]="!canSave() || creatingResult()"
+          class="inline-flex appearance-none items-center gap-2 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 py-2.5 text-[13.5px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8]">
+          {{ creatingResult() ? 'Creating…' : 'Create and continue' }}
+          @if (creatingResult()) {
+            <span class="material-icons-round animate-spin text-[16px]">progress_activity</span>
+          }
+        </button>
+      }
+    </div>
   </div>
 </form>
