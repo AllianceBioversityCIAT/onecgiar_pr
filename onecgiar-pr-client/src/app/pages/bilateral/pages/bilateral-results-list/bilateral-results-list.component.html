@@ -207,7 +207,12 @@
           </ng-template>
 
           <ng-template prTableBody let-result>
-            <tr class="rc-row" (click)="openResult(result)" tabindex="0" (keydown.enter)="openResult(result)">
+            <tr
+              class="rc-row"
+              [class.rc-row--focused]="isFocused(result)"
+              (click)="openResult(result)"
+              tabindex="0"
+              (keydown.enter)="openResult(result)">
               @for (column of cols; track column.key) {
                 <td [class]="'rc-td rc-td--' + column.attr" [style.width]="column.width">
                   @if (column.attr === 'source') {
@@ -241,6 +246,18 @@
                   } @else if (column.attr === 'status_id') {
                     <span class="rc-cell-link rc-status-wrap">
                       <span [class]="statusClass(result.status_id)">{{ result.status_name }}</span>
+
+                      <!-- P2-3157 AC4: read back the Science Program's rejection justification -->
+                      @if (isRejected(result)) {
+                        <button
+                          type="button"
+                          class="brl_justification_trigger"
+                          title="View rejection justification"
+                          aria-label="View rejection justification"
+                          (click)="$event.stopPropagation(); openJustification(result)">
+                          <i class="material-icons-round">warning_amber</i>
+                        </button>
+                      }
                     </span>
                   } @else if (column.attr === 'created_date') {
                     <span class="rc-cell-link rc-date">{{ result.created_date | date: 'dd MMM yyyy' }}</span>
@@ -317,3 +334,36 @@
 
   </div>
 </div>
+
+<!-- P2-3157 AC4: rejection justification -->
+<app-pr-dialog
+  [(visible)]="justificationVisible"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  styleClass="brl_justification_modal"
+  (onHide)="closeJustification()">
+  <div class="brl_justification_body">
+    <h2 class="brl_justification_title">Rejection justification — {{ justificationResultCode() }}</h2>
+
+    @if (justificationLoading()) {
+      <p class="brl_justification_state">Loading the review history…</p>
+    } @else if (justificationError()) {
+      <p class="brl_justification_state brl_justification_state--error">
+        The review history could not be loaded. Please try again.
+      </p>
+    } @else if (rejectionEntry(); as entry) {
+      <p class="brl_justification_meta">
+        Rejected by {{ reviewerName(entry) }} on {{ entry.created_at | date: 'dd MMM yyyy' }}
+      </p>
+      <p class="brl_justification_comment">{{ entry.comment || 'No justification was recorded.' }}</p>
+    } @else {
+      <p class="brl_justification_state">No rejection justification was recorded for this result.</p>
+    }
+  </div>
+
+  <div class="brl_justification_actions">
+    <button type="button" class="brl_justification_close" (click)="closeJustification()">Close</button>
+  </div>
+</app-pr-dialog>

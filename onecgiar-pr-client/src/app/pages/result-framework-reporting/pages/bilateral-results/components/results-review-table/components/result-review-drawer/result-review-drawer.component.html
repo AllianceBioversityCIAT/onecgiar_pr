@@ -461,6 +461,14 @@
 
     <h2 class="modal-title approve">APPROVE RESULT – {{ resultToReview()?.result_code }}</h2>
     <p class="modal-message">Status will be changed to "Approved", and result will be submitted.</p>
+    <div class="modal-field">
+      <label class="modal-label" for="approveComment">Comment (optional)</label>
+      <textarea
+        [(ngModel)]="approveComment"
+        id="approveComment"
+        [rows]="3"
+        placeholder="Add any note the reporting center should see..."></textarea>
+    </div>
   </div>
 
   <div class="modal-actions">

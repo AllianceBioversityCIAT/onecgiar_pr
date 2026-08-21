@@ -48,6 +48,9 @@ describe('ResultsController', () => {
       .mockResolvedValue({ status: 200, response: [] }),
     versioningResultsById: jest.fn().mockResolvedValue(undefined),
     getCenters: jest.fn().mockResolvedValue({ statusCode: 200, response: [] }),
+    getBilateralReviewHistory: jest
+      .fn()
+      .mockResolvedValue({ statusCode: 200, response: [] }),
     findAllByRoleFiltered: jest
       .fn()
       .mockResolvedValue({ status: 200, response: { items: [] } }),
@@ -256,6 +259,12 @@ describe('ResultsController', () => {
   it('getCentersByResultId delegates', async () => {
     await controller.getCentersByResultId(14);
     expect(mockService.getCenters).toHaveBeenCalledWith(14);
+  });
+
+  // P2-3157 AC4
+  it('getBilateralReviewHistory delegates', async () => {
+    await controller.getBilateralReviewHistory(77);
+    expect(mockService.getBilateralReviewHistory).toHaveBeenCalledWith(77);
   });
 
   it('getScienceProgramProgress parses numeric version', async () => {

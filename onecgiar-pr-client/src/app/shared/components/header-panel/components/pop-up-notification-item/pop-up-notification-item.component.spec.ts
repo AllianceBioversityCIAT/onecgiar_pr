@@ -1,14 +1,33 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
 
 import { PopUpNotificationItemComponent } from './pop-up-notification-item.component';
+import { BilateralApiService } from '../../../../services/api/bilateral-api.service';
+import { ResultsApiService } from '../../../../services/api/results-api.service';
+import { NotificationType } from '../../../../constants/notification-type.constants';
 
 describe('PopUpNotificationItemComponent', () => {
   let component: PopUpNotificationItemComponent;
   let fixture: ComponentFixture<PopUpNotificationItemComponent>;
+  let router: { navigate: jest.Mock; navigateByUrl: jest.Mock };
+  let bilateralApi: { GET_centersByResultId: jest.Mock };
+  let resultsApi: { PATCH_readNotification: jest.Mock };
 
   beforeEach(async () => {
+    router = { navigate: jest.fn(), navigateByUrl: jest.fn() };
+    bilateralApi = {
+      GET_centersByResultId: jest.fn().mockReturnValue(of({ response: [] }))
+    };
+    resultsApi = { PATCH_readNotification: jest.fn().mockReturnValue(of({})) };
+
     await TestBed.configureTestingModule({
-      imports: [PopUpNotificationItemComponent]
+      imports: [PopUpNotificationItemComponent],
+      providers: [
+        { provide: Router, useValue: router },
+        { provide: BilateralApiService, useValue: bilateralApi },
+        { provide: ResultsApiService, useValue: resultsApi }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(PopUpNotificationItemComponent);
@@ -133,6 +152,111 @@ describe('PopUpNotificationItemComponent', () => {
       expect(result).toBe(
         'result/results-outlet/results-notifications/requests/received?phase=v3&init=shared1&search=Bob Williams from OI004 has requested inclusion of SI004 as a contributor to result R006 - Non-Map Result'
       );
+    });
+  });
+
+  // P2-3157 AC3 + AC5
+  describe('onNotificationClick', () => {
+    const bilateralNotification = (overrides: any = {}) => ({
+      notification_id: 55,
+      result_id: 77,
+      read: false,
+      obj_notification_type: { type: NotificationType.BILATERAL_RESULT_REJECTED },
+      obj_result: {
+        result_code: 'R100',
+        title: 'Rejected result',
+        obj_version: { id: 'v1' },
+        obj_result_by_initiatives: [{ obj_initiative: { id: 'init1', official_code: 'SP5' } }]
+      },
+      ...overrides
+    });
+
+    const clickEvent = () => ({ preventDefault: jest.fn() }) as unknown as MouseEvent;
+
+    it('leaves a non-bilateral notification on its plain anchor navigation', () => {
+      const emitted = jest.fn();
+      component.itemSelected.subscribe(emitted);
+      component.notification = {
+        notification_id: 1,
+        obj_notification_type: { type: NotificationType.RESULT_SUBMITTED },
+        obj_result: { result_code: 'R1', title: 'T', obj_version: { id: 'v1' }, obj_result_by_initiatives: [] }
+      };
+
+      const event = clickEvent();
+      component.onNotificationClick(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(resultsApi.PATCH_readNotification).not.toHaveBeenCalled();
+      expect(emitted).toHaveBeenCalled();
+    });
+
+    it('routes a bilateral review notification to the lead centre dashboard with the result in focus', () => {
+      bilateralApi.GET_centersByResultId.mockReturnValue(
+        of({ response: [{ code: '3', acronym: 'CIAT', is_leading_result: 1 }] })
+      );
+      component.notification = bilateralNotification();
+
+      const event = clickEvent();
+      component.onNotificationClick(event);
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(bilateralApi.GET_centersByResultId).toHaveBeenCalledWith(77);
+      expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'CIAT', 'home'], {
+        queryParams: { result: 'R100' }
+      });
+    });
+
+    it('marks the notification as read on click (AC5)', () => {
+      component.notification = bilateralNotification();
+
+      component.onNotificationClick(clickEvent());
+
+      expect(resultsApi.PATCH_readNotification).toHaveBeenCalledWith(55);
+      expect(component.notification.read).toBe(true);
+    });
+
+    it('does not re-mark an already read notification', () => {
+      component.notification = bilateralNotification({ read: true });
+
+      component.onNotificationClick(clickEvent());
+
+      expect(resultsApi.PATCH_readNotification).not.toHaveBeenCalled();
+    });
+
+    it('prefers the lead centre over a contributing one', () => {
+      bilateralApi.GET_centersByResultId.mockReturnValue(
+        of({
+          response: [
+            { code: '9', acronym: 'IRRI', is_leading_result: 0 },
+            { code: '3', acronym: 'CIAT', is_leading_result: 1 }
+          ]
+        })
+      );
+      component.notification = bilateralNotification();
+
+      component.onNotificationClick(clickEvent());
+
+      expect(router.navigate).toHaveBeenCalledWith(['/bilateral', 'CIAT', 'home'], expect.anything());
+    });
+
+    it('falls back to the notifications list when no centre can be resolved', () => {
+      bilateralApi.GET_centersByResultId.mockReturnValue(of({ response: [] }));
+      component.notification = bilateralNotification();
+
+      component.onNotificationClick(clickEvent());
+
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(router.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('results-notifications/updates'));
+    });
+
+    it('falls back to the notifications list when the centre lookup fails', () => {
+      bilateralApi.GET_centersByResultId.mockReturnValue(throwError(() => new Error('boom')));
+      component.notification = bilateralNotification();
+
+      component.onNotificationClick(clickEvent());
+
+      expect(router.navigateByUrl).toHaveBeenCalledWith(expect.stringContaining('results-notifications/updates'));
     });
   });
 });

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { In } from 'typeorm';
 import { BilateralProjectsService } from './bilateral-projects.service';
 import { BilateralService } from '../bilateral.service';
@@ -29,6 +34,11 @@ import { ClarisaCentersRepository } from '../../../clarisa/clarisa-centers/clari
 import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { ResultCreationMethod } from '../../../shared/constants/result-creation-method.enum';
 import { ResultsKnowledgeProductsService } from '../../results/results-knowledge-products/results-knowledge-products.service';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import {
+  ResultReviewHistory,
+  ReviewActionEnum,
+} from '../../results/result-review-history/entities/result-review-history.entity';
 
 @Injectable()
 export class BilateralCenterService {
@@ -51,6 +61,7 @@ export class BilateralCenterService {
     private readonly resultsByProjectsRepository: ResultsByProjectsRepository,
     private readonly resultsByProjectsService: ResultsByProjectsService,
     private readonly resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
+    private readonly roleByUserRepository: RoleByUserRepository,
   ) {}
 
   async getProjects(centerId: number) {
@@ -616,6 +627,128 @@ export class BilateralCenterService {
           is_active: true,
         },
         { is_lead: true, last_updated_by: user.id },
+      );
+    }
+  }
+
+  /**
+   * P2-3157 — hands a centre-authored bilateral result over to the Science Program for review.
+   *
+   * Without this transition the review loop is unreachable from the PRMS centre UI: `create-header`
+   * leaves the result in Editing (or Draft, for AI-assisted ones) and `reviewBilateralResult`
+   * refuses anything that is not PENDING_REVIEW.
+   *
+   * The owner-initiative guard matters beyond correctness: the notification read paths
+   * (`getAllNotifications` / `getPopUpNotifications`) require an active `initiative_role_id = 1`
+   * row, and `_updateTocMapping` dereferences it on approval. Letting a result through without one
+   * would produce an invisible notification and a 500 on approve.
+   */
+  async submitForReview(user: TokenDto, resultId: number) {
+    const parsedResultId = Number(resultId);
+    if (
+      !parsedResultId ||
+      !Number.isFinite(parsedResultId) ||
+      parsedResultId <= 0
+    ) {
+      throw new BadRequestException(
+        'The resultId parameter must be a valid positive number.',
+      );
+    }
+
+    const result = await this.resultRepository.findOne({
+      where: {
+        id: parsedResultId,
+        source: SourceEnum.Bilateral,
+        is_active: true,
+      },
+    });
+
+    if (!result) {
+      throw new BadRequestException('Bilateral result not found');
+    }
+
+    const submittableStatuses = [
+      ResultStatusData.Editing.value,
+      ResultStatusData.Draft.value,
+    ];
+    const currentStatusId = Number(result.status_id);
+    if (!submittableStatuses.includes(currentStatusId)) {
+      throw new BadRequestException(
+        `Only a result in Editing or Draft can be submitted for review (status_id: ${result.status_id})`,
+      );
+    }
+
+    await this.assertCenterPermission(user, parsedResultId);
+
+    const owner =
+      await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
+        parsedResultId,
+      );
+    if (!owner?.id) {
+      throw new BadRequestException(
+        'The result has no Science Program assigned. Select a Science Program before submitting for review.',
+      );
+    }
+
+    await this.resultRepository.manager.transaction(async (manager) => {
+      await manager.update(
+        Result,
+        { id: parsedResultId },
+        {
+          status_id: ResultStatusData.PendingReview.value,
+          last_updated_by: user.id,
+        },
+      );
+
+      // The action enum has no dedicated SUBMIT value and the column enum is narrow, so the
+      // transition is recorded as UPDATE — the same value the review-update flows already write.
+      const reviewHistory = manager.create(ResultReviewHistory, {
+        result_id: parsedResultId,
+        action: ReviewActionEnum.UPDATE,
+        comment: 'Submitted for review by the reporting center',
+        created_by: user.id,
+      });
+      await manager.save(ResultReviewHistory, reviewHistory);
+    });
+
+    return {
+      response: {
+        resultId: parsedResultId,
+        status: ResultStatusData.PendingReview.value,
+      },
+      message: 'Result submitted for review successfully',
+    };
+  }
+
+  /** The caller must hold the Center User role on the result's lead centre. */
+  private async assertCenterPermission(
+    user: TokenDto,
+    resultId: number,
+  ): Promise<void> {
+    const centers =
+      await this.resultsCenterRepository.getAllResultsCenterByResultId(
+        resultId,
+      );
+
+    const leadCenter = (centers ?? []).find(
+      (center) => Number(center?.is_leading_result) === 1,
+    );
+
+    if (!leadCenter?.code) {
+      throw new BadRequestException(
+        'The result has no lead center assigned. Select a lead center before submitting for review.',
+      );
+    }
+
+    const isAllowed =
+      await this.roleByUserRepository.validationCenterPermissions(
+        user.id,
+        String(leadCenter.code),
+      );
+
+    if (!isAllowed) {
+      throw new ForbiddenException(
+        'You do not have permission to submit results for this center.',
       );
     }
   }

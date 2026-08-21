@@ -164,6 +164,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   isEditingTitle = signal<boolean>(false);
 
   rejectJustification: string = '';
+  /** P2-3157: optional reviewer comment attached to an approval (UX Finding 5.3.5). */
+  approveComment: string = '';
   saveChangesJustification: string = '';
   saveChangesType: 'toc' | 'dataStandard' | null = null;
   evidenceLinkInput: string = '';
@@ -1563,13 +1565,18 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     const result = this.resultToReview();
     if (!result) return;
     this.isSaving.set(true);
+    // P2-3157 / UX Finding 5.3.5: the approval comment is optional and comes from the reviewer.
+    // It used to be the hardcoded literal 'Approved', which polluted the review history that the
+    // centre now reads back.
+    const comment = this.approveComment.trim();
     const body = {
       decision: 'APPROVE' as const,
-      justification: 'Approved'
+      ...(comment ? { justification: comment } : {})
     };
     this.api.resultsSE.PATCH_BilateralReviewDecision(result.id, body).subscribe({
       next: () => {
         this.showConfirmApproveDialog.set(false);
+        this.approveComment = '';
         this.isSaving.set(false);
         this.decisionMade.emit();
         this.closeDrawer();
@@ -1583,6 +1590,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   cancelApprove(): void {
     this.showConfirmApproveDialog.set(false);
+    this.approveComment = '';
   }
 
   onReject(): void {

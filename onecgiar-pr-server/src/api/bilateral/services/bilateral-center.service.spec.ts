@@ -19,6 +19,8 @@ import { ResultsByProjectsService } from '../../results/results_by_projects/resu
 import { ResultsKnowledgeProductsService } from '../../results/results-knowledge-products/results-knowledge-products.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { SourceEnum } from '../../results/entities/result.entity';
+import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -69,6 +71,16 @@ describe('BilateralCenterService', () => {
               result_code: 8852,
               version_id: 1,
             }),
+            // P2-3157: submitForReview wraps its writes in a transaction.
+            manager: {
+              transaction: jest.fn(async (cb: any) =>
+                cb({
+                  update: jest.fn().mockResolvedValue({}),
+                  create: jest.fn((_entity, payload) => payload),
+                  save: jest.fn().mockResolvedValue({}),
+                }),
+              ),
+            },
           },
         },
         {
@@ -133,6 +145,15 @@ describe('BilateralCenterService', () => {
             getAllResultsCenterByResultIdAndCenterId: jest
               .fn()
               .mockResolvedValue(undefined),
+            getAllResultsCenterByResultId: jest
+              .fn()
+              .mockResolvedValue([{ code: 'CIAT', is_leading_result: 1 }]),
+          },
+        },
+        {
+          provide: RoleByUserRepository,
+          useValue: {
+            validationCenterPermissions: jest.fn().mockResolvedValue(1),
           },
         },
         {
@@ -435,6 +456,118 @@ describe('BilateralCenterService', () => {
       expect(resultsByProjectsRepository.update).toHaveBeenCalled();
       expect((result.response as any).deactivatedProjects).toEqual([3]);
       expect(result.message).toBe('Contributors saved successfully');
+    });
+  });
+
+  // P2-3157 — the transition that makes the Science Program review loop reachable.
+  describe('submitForReview', () => {
+    const user: TokenDto = {
+      id: 42,
+      email: 'center@cgiar.org',
+      first_name: 'Center',
+      last_name: 'User',
+    };
+
+    const editingResult = {
+      id: 77,
+      source: SourceEnum.Bilateral,
+      is_active: true,
+      status_id: ResultStatusData.Editing.value,
+    };
+
+    it('moves an Editing result to PENDING_REVIEW', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+
+      const result = await service.submitForReview(user, 77);
+
+      expect((result.response as any).status).toBe(
+        ResultStatusData.PendingReview.value,
+      );
+      expect(resultRepository.manager.transaction).toHaveBeenCalled();
+    });
+
+    it('accepts an AI Draft result too', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...editingResult,
+        status_id: ResultStatusData.Draft.value,
+      });
+
+      const result = await service.submitForReview(user, 77);
+
+      expect((result.response as any).status).toBe(
+        ResultStatusData.PendingReview.value,
+      );
+    });
+
+    it('rejects a result that is already under review', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue({
+        ...editingResult,
+        status_id: ResultStatusData.PendingReview.value,
+      });
+
+      await expect(service.submitForReview(user, 77)).rejects.toThrow(
+        /Editing or Draft/,
+      );
+    });
+
+    it('rejects an unknown bilateral result', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.submitForReview(user, 77)).rejects.toThrow(
+        'Bilateral result not found',
+      );
+    });
+
+    it('rejects an invalid resultId', async () => {
+      await expect(service.submitForReview(user, 0 as any)).rejects.toThrow(
+        /valid positive number/,
+      );
+    });
+
+    it('refuses a user without the Center User role on the lead centre', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const roleByUserRepository =
+        module.get<RoleByUserRepository>(RoleByUserRepository);
+      (
+        roleByUserRepository.validationCenterPermissions as jest.Mock
+      ).mockResolvedValue(0);
+
+      await expect(service.submitForReview(user, 77)).rejects.toThrow(
+        /do not have permission/,
+      );
+    });
+
+    it('refuses a result with no lead centre', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const resultsCenterRepository = module.get<ResultsCenterRepository>(
+        ResultsCenterRepository,
+      );
+      (
+        resultsCenterRepository.getAllResultsCenterByResultId as jest.Mock
+      ).mockResolvedValue([{ code: 'CIAT', is_leading_result: 0 }]);
+
+      await expect(service.submitForReview(user, 77)).rejects.toThrow(
+        /no lead center/,
+      );
+    });
+
+    /**
+     * The owner-initiative row is what makes the resulting notification visible in the bell and what
+     * `_updateTocMapping` dereferences on approval, so a draft without one must not get through.
+     */
+    it('refuses a result with no Science Program assigned', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const resultByInitiativesRepository =
+        module.get<ResultByInitiativesRepository>(
+          ResultByInitiativesRepository,
+        );
+      (
+        resultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+      ).mockResolvedValue(null);
+
+      await expect(service.submitForReview(user, 77)).rejects.toThrow(
+        /no Science Program assigned/,
+      );
     });
   });
 });

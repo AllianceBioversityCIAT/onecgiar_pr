@@ -50,6 +50,20 @@ export class BilateralCenterController {
     return this.bilateralCenterService.createResultHeader(user, dto);
   }
 
+  @Patch('submit-for-review/:resultId')
+  @ApiOperation({
+    summary:
+      'Submit a centre-authored bilateral result for Science Program review',
+    description:
+      'Moves a bilateral result from Editing or Draft to PENDING_REVIEW so the Science Program can approve or reject it. Requires a lead center the caller belongs to and an assigned Science Program.',
+  })
+  async submitForReview(
+    @UserToken() user: TokenDto,
+    @Param('resultId') resultId: number,
+  ) {
+    return this.bilateralCenterService.submitForReview(user, resultId);
+  }
+
   @Get('initiative/:resultId')
   @ApiOperation({
     summary: 'Get owner initiative ID for a bilateral result',

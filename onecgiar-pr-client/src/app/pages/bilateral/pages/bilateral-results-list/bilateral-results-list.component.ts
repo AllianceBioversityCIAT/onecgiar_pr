@@ -12,12 +12,13 @@ import {
   ViewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest, filter, take, map, distinctUntilChanged } from 'rxjs';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
+import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { RolesService } from '../../../../shared/services/global/roles.service';
@@ -94,6 +95,7 @@ function defaultColumnVisibility(): Record<string, boolean> {
   imports: [
     DatePipe,
     BilateralPageHeaderComponent,
+    PrDialogComponent,
     PrTableComponent,
     PrSortIconComponent,
     PrSortableColumnDirective,
@@ -110,6 +112,7 @@ export class BilateralResultsListComponent implements OnInit {
   private readonly bilateralApiService = inject(BilateralApiService);
   private readonly phasesService = inject(PhasesService);
   private readonly router = inject(Router);
+  private readonly activatedRoute = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly rolesService = inject(RolesService);
   private readonly resultsApiService = inject(ResultsApiService);
@@ -132,6 +135,19 @@ export class BilateralResultsListComponent implements OnInit {
   // Actions
   readonly confirmingDeleteId = signal<number | null>(null);
   readonly deletingId = signal<number | null>(null);
+
+  /**
+   * P2-3157 AC3 — result code deep-linked from an approval/rejection notification (`?result=`).
+   * The matching row is highlighted and scrolled into view.
+   */
+  readonly focusedResultCode = signal<string | null>(null);
+
+  /** P2-3157 AC4 — rejection justification dialog. */
+  readonly justificationVisible = signal(false);
+  readonly justificationLoading = signal(false);
+  readonly justificationError = signal(false);
+  readonly justificationResultCode = signal<string>('');
+  readonly justificationEntries = signal<ReviewHistoryEntry[]>([]);
 
   /** Full catalog for the Columns picker. */
   readonly allColumns = BILATERAL_COLUMNS;
@@ -221,6 +237,10 @@ export class BilateralResultsListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // P2-3157 AC3: `?result=<code>` arrives from an approval/rejection notification.
+    const focused = this.activatedRoute.snapshot.queryParamMap.get('result');
+    if (focused) this.focusedResultCode.set(focused);
+
     const p25Only = (phases: Phases[]) => phases.filter(p => p.obj_portfolio?.acronym === 'P25');
 
     const reportingPhases = p25Only(this.phasesService.phases.reporting);
@@ -421,6 +441,70 @@ export class BilateralResultsListComponent implements OnInit {
   statusClass(statusId: number): string {
     return `status_tag status_${statusId ?? ''}`;
   }
+
+  /** P2-3157 AC4 — Rejected (7) is the only status carrying a justification worth reading back. */
+  isRejected(result: BilateralCenterResult): boolean {
+    return Number(result?.status_id) === REJECTED_STATUS_ID;
+  }
+
+  /** P2-3157 AC3 — the row deep-linked from the notification. */
+  isFocused(result: BilateralCenterResult): boolean {
+    const focused = this.focusedResultCode();
+    return !!focused && String(result?.result_code) === focused;
+  }
+
+  /**
+   * P2-3157 AC4 — opens the review trail for a rejected result. The Science Program's justification
+   * is the `comment` of the most recent REJECTED entry.
+   */
+  openJustification(result: BilateralCenterResult): void {
+    this.justificationResultCode.set(String(result?.result_code ?? ''));
+    this.justificationEntries.set([]);
+    this.justificationError.set(false);
+    this.justificationLoading.set(true);
+    this.justificationVisible.set(true);
+
+    this.bilateralApiService.GET_bilateralReviewHistory(result.id).subscribe({
+      next: ({ response }) => {
+        this.justificationEntries.set(response ?? []);
+        this.justificationLoading.set(false);
+      },
+      error: () => {
+        this.justificationError.set(true);
+        this.justificationLoading.set(false);
+      },
+    });
+  }
+
+  closeJustification(): void {
+    this.justificationVisible.set(false);
+    this.justificationEntries.set([]);
+  }
+
+  /** Most recent rejection entry, which is what the centre needs to act on. */
+  readonly rejectionEntry = computed(() =>
+    this.justificationEntries().find(entry => entry?.action === 'REJECTED' || entry?.action === 'REJECT'),
+  );
+
+  reviewerName(entry: ReviewHistoryEntry): string {
+    return `${entry?.first_name ?? ''} ${entry?.last_name ?? ''}`.trim() || entry?.email || 'the Science Program';
+  }
+}
+
+/** `result_status.result_status_id` for Rejected — see shared/constants/result-status.enum.ts on the server. */
+const REJECTED_STATUS_ID = 7;
+
+/** One row of `result_review_history`, as returned by GET /api/results/bilateral/:id/review-history. */
+export interface ReviewHistoryEntry {
+  id: number;
+  result_id: number;
+  action: string;
+  comment: string | null;
+  created_at: string;
+  created_by: number;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
 }
 
 function normalise(text: string): string {

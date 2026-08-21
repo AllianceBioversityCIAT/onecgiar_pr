@@ -1505,7 +1505,8 @@ export class ResultsApiService {
     return this.bilateralApiSE.GET_BilateralResultDetail(resultId);
   }
 
-  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification: string }) {
+  /** `justification` is mandatory on REJECT and an optional reviewer comment on APPROVE (P2-3157). */
+  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification?: string }) {
     return this.bilateralApiSE.PATCH_BilateralReviewDecision(resultId, body);
   }
 }
