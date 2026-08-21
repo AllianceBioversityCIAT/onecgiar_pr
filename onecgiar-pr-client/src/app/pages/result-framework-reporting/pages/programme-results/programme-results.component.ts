@@ -341,10 +341,17 @@ function formatDate(value: string): string {
         background: var(--pr-text-subtle);
       }
 
+      /* width:100%, never max-content. Under max-content sizing a minmax(240px,2fr) track
+         resolves its fr against the widest cell rather than a share of the row, so one long
+         title blew the grid to 5678px inside a 1276px shell (Result 2357px, Section 1650px,
+         Category 1179px) and pushed every column after Status out of view, while the ellipsis
+         never fired. With width:100% the fr tracks share the real row width, titles ellipsize,
+         and the row min-width (sum of per-column minimums, see minWidth()) is what turns on the
+         shell's horizontal scroll once the columns no longer fit. Same contract results-list
+         gets from table-layout:fixed + min-width:1100px + width:100%. */
       :host ::ng-deep .pgr-table .pr-table {
         display: block;
-        width: max-content;
-        min-width: 100%;
+        width: 100%;
         border-collapse: separate;
         border-spacing: 0;
       }
