@@ -9,18 +9,16 @@
       <ng-icon name="lucidePanelLeft" class="text-[20px]" />
     </button>
 
-    <!-- Centered search -->
-    <div class="pr-topbar-search">
+    <!--
+      Centered search — a BUTTON that opens the global palette, per the design
+      (PRMS-Reporting.dc.html:232, `onClick="{{ openPalette }}"`). It is deliberately no longer a
+      text field: see `openSearchPalette()` for why.
+    -->
+    <button #searchTrigger type="button" class="pr-topbar-search" aria-label="Search" (click)="openSearchPalette()">
       <ng-icon name="lucideSearch" class="pr-topbar-search__icon" />
-      <input
-        type="search"
-        class="pr-topbar-search__input"
-        placeholder="Search"
-        aria-label="Search results"
-        [value]="searchQuery()"
-        (input)="onSearchInput($any($event.target).value)"
-        (keydown.enter)="onSearchSubmit()" />
-    </div>
+      <span class="pr-topbar-search__placeholder">Search</span>
+      <kbd class="pr-topbar-search__kbd" aria-hidden="true">{{ shortcutHint }}</kbd>
+    </button>
 
     <!-- Right cluster: notifications + user (phase deferred) -->
     <div class="pr-topbar-right">
@@ -162,4 +160,8 @@
       </button>
     </div>
   </ng-template>
+
+  <!-- The palette itself: mounted here so the trigger and the overlay share one component, which
+       is what makes CDK's focus restore land back on the button above. -->
+  <app-global-search-palette />
 }

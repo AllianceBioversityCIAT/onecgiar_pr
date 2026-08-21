@@ -64,9 +64,19 @@
   border-radius: 8px;
   background: #ffffff;
   transition: border-color 150ms ease;
+  // It opens a search panel, so it keeps the text caret the design specifies
+  // (PRMS-Reporting.dc.html:232 `cursor:text`) rather than a pointer.
+  cursor: text;
+  text-align: left;
 
-  &:focus-within {
+  &:hover {
+    border-color: var(--pr-border-strong, #d5d5dc);
+  }
+
+  &:focus-visible {
+    outline: none;
     border-color: var(--pr-color-primary-300, #6b46e5);
+    box-shadow: var(--pr-focus-ring);
   }
 
   &__icon {
@@ -75,19 +85,30 @@
     font-size: 18px;
   }
 
-  &__input {
+  &__placeholder {
     flex: 1;
     min-width: 0;
-    border: none;
-    outline: none;
-    background: transparent;
+    text-align: left;
     font-size: 14px;
     font-weight: 400;
-    color: var(--pr-text-heading, #191524);
+    color: var(--pr-text-subtle, #9691a8);
+  }
 
-    &::placeholder {
-      color: var(--pr-text-subtle, #9691a8);
-    }
+  &__kbd {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px solid var(--pr-border, #e3e3e8);
+    border-radius: 4px;
+    background: var(--pr-surface-subtle, #f7f7f9);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--pr-text-secondary, #5d5872);
+    pointer-events: none;
+    user-select: none;
   }
 }
 
