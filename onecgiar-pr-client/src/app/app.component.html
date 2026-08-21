@@ -4,8 +4,9 @@
 
 @if (!this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
   <!-- App chrome: Spartan sidebar is the only primary nav (top header removed). -->
-  <!-- Widths come from the approved reference (GAP-ANALYSIS-2026-08-11 §1 S10/S11): 260px expanded,
-       64px collapsed. Both MUST be px, never rem: `html` is 12px in this app, so the previous
+  <!-- Approved sidebar widths: 260px expanded, 64px collapsed. They replaced an earlier 280px /
+       ~40px pair, where the rail crammed the icons against the edge and clipped the brand mark.
+       Both MUST be px, never rem: `html` is 12px in this app, so the previous
        `3.5rem` resolved to 42px and squashed the 32px rail buttons against the sidebar edge. -->
   <div hlmSidebarWrapper sidebarWidth="260px" sidebarWidthIcon="64px" class="min-h-svh items-stretch">
     @if (!this.api.dataControlSE.show_qa_full_screen && !this.api.dataControlSE.focusMode()) {
@@ -32,7 +33,7 @@
             </div>
           </div>
         }
-        <!-- CURRENT topbar: toggle · search · notif · user (phase later) -->
+        <!-- Topbar: toggle · search · notif · user (phase later) -->
         @if (!this.api.dataControlSE.show_qa_full_screen && !this.api.dataControlSE.focusMode()) {
           <app-shell-topbar />
         }

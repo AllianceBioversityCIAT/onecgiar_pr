@@ -54,6 +54,9 @@ export class ResultsApiService {
     if (searchParams) {
       if (searchParams.limit) queryParams.push(`limit=${searchParams.limit}`);
       if (searchParams.page) queryParams.push(`page=${searchParams.page}`);
+      // Encoded: titles carry spaces, ampersands and percent signs, any of which would otherwise
+      // truncate or corrupt the query string.
+      if (searchParams.title) queryParams.push(`title=${encodeURIComponent(searchParams.title)}`);
       if (searchParams.status_id) queryParams.push(`status_id=${searchParams.status_id}`);
       if (searchParams.portfolio_id) queryParams.push(`portfolio_id=${searchParams.portfolio_id}`);
       if (searchParams.result_type_id) queryParams.push(`result_type_id=${searchParams.result_type_id}`);

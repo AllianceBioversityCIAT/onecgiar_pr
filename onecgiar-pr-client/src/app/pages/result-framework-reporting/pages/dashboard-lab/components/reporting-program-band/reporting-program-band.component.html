@@ -158,6 +158,24 @@
       queryParamsHandling="preserve">
       Reporting
     </a>
+    <a
+      class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+      [class]="
+        activeTab() === 'results'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'results' ? 'page' : null"
+      [routerLink]="resultsPath()"
+      queryParamsHandling="preserve">
+      Results
+    </a>
+    <!-- ⚠️ The design's FOURTH tab, `Drafts` (PRMS-Reporting.dc.html:420 / :443), sits inside an
+         `sc-if` on `centerMode` — it is a CENTER-view tab, not a programme-view one, so it is
+         deliberately absent here. This is not a missed tab; do not "fix" it.
+         One strip serves both shapes: the design duplicates the tabs for its `bandCollapsed`
+         variant (:439-443), this nav is shared by the expanded and condensed band, so a tab added
+         here appears in both. -->
 
     @if (bandCollapsed() && canReport()) {
       <!-- The 36px CTA of the identity block is clipped away with it, so the collapsed bar carries

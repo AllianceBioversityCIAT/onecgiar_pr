@@ -67,8 +67,8 @@ export class ReportingProgramBandComponent {
 
   readonly cycleYear = input<string | number | null>(null);
   readonly cyclePhase = input<string>('');
-  /** Which tab is active. Overview and Reporting are separate routes, not local state. */
-  readonly activeTab = input<'overview' | 'reporting'>('reporting');
+  /** Which tab is active. Overview, Reporting and Results are separate routes, not local state. */
+  readonly activeTab = input<'overview' | 'reporting' | 'results'>('reporting');
   readonly programDotColor = input<string>('var(--pr-color-primary-300)');
 
   readonly search = input<string>('');
@@ -128,6 +128,15 @@ export class ReportingProgramBandComponent {
    */
   readonly reportingPath = computed(() => `/result-framework-reporting/entity-details/${this.programCode()}`);
   readonly overviewPath = computed(() => `${this.reportingPath()}/overview`);
+  /**
+   * Third tab (design `tabResults`, PRMS-Reporting.dc.html:418 / :441) — the programme's reported
+   * results. Same shape as the other two: a real route under the programme, not local state.
+   *
+   * ⚠️ The design draws a FOURTH tab, `Drafts` (`tabResults`'s neighbour at :420 / :443), inside
+   * `<sc-if value="{{ centerMode }}">`. It belongs to the CENTER view, not the programme view, so
+   * it is deliberately NOT rendered here — this is not a missing tab, do not "fix" it.
+   */
+  readonly resultsPath = computed(() => `${this.reportingPath()}/results`);
   /**
    * Kept, unreferenced: the `/emerging` route still exists (nothing is deleted here) but the CTA no
    * longer navigates to it — it opens the legacy modal in place, which is where reporting an

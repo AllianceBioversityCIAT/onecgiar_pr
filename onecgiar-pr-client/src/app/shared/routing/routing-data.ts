@@ -580,6 +580,18 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
     loadComponent: loadDashboardLab
   },
   {
+    // Results tab of the programme shell — the reported results of THIS programme, sibling of
+    // `overview` and of the 2-segment reporting route. Own component (not `loadDashboardLab`):
+    // this surface reads results, it does not drive the ToC reporting tables.
+    prName: 'Program results',
+    path: 'entity-details/:entityId/results',
+    data: { sidebar: { width: 300 }, rfrView: 'results' },
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/programme-results/programme-results.component').then(
+        m => m.ProgrammeResultsComponent
+      )
+  },
+  {
     // THE programme page. Serves the redesigned shell (band + Overview/Reporting tabs +
     // the CURRENT reporting table) at the path that was always the programme's address and
     // that people have saved as links. The legacy `EntityDetailsComponent` (Insights bento)

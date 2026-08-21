@@ -78,3 +78,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Grok Build local agents / rules / project config (do not upload)
 .grok/
+
+# Local snapshots of the live Claude Design file, for session-start diffing (see CLAUDE.md)
+.design-snapshots/

@@ -1,18 +1,18 @@
 import { A11yModule } from '@angular/cdk/a11y';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideBell, lucidePanelLeft, lucideSearch } from '@ng-icons/lucide';
 import { HlmSidebarService } from '@spartan/sidebar';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
-import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { environment } from '../../../../environments/environment';
 import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
 import { PopUpNotificationItemComponent } from '../header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
+import { GlobalSearchPaletteComponent } from '../global-search-palette/global-search-palette.component';
 
 /**
  * CURRENT shell topbar (PRMS-Shell.dc.html header):
@@ -22,22 +22,35 @@ import { PopUpNotificationItemComponent } from '../header-panel/components/pop-u
 @Component({
   selector: 'app-shell-topbar',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, OverlayModule, A11yModule, NgIcon, PopUpNotificationItemComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    OverlayModule,
+    A11yModule,
+    NgIcon,
+    PopUpNotificationItemComponent,
+    GlobalSearchPaletteComponent
+  ],
   providers: [provideIcons({ lucidePanelLeft, lucideSearch, lucideBell })],
   templateUrl: './shell-topbar.component.html',
   styleUrls: ['./shell-topbar.component.scss']
 })
-export class ShellTopbarComponent implements OnInit {
+export class ShellTopbarComponent {
   readonly api = inject(ApiService);
   readonly dataControlSE = inject(DataControlService);
   readonly router = inject(Router);
   readonly resultsNotificationsSE = inject(ResultsNotificationsService);
-  readonly resultsListFilterSE = inject(ResultsListFilterService);
   private readonly sidebarSE = inject(HlmSidebarService);
 
+  private readonly palette = viewChild(GlobalSearchPaletteComponent);
+  private readonly searchTrigger = viewChild<ElementRef<HTMLButtonElement>>('searchTrigger');
+
   inLocal = (environment as any)?.inLocal;
-  searchQuery = signal('');
   userMenuOpen = signal(false);
+
+  /** Shown on the trigger. Mac reports `macOS`/`MacIntel`; everything else gets Ctrl. */
+  readonly shortcutHint = /mac/i.test(navigator?.platform ?? navigator?.userAgent ?? '') ? '⌘K' : 'Ctrl K';
   notificationsOpen = signal(false);
 
   readonly userMenuPositions: ConnectedPosition[] = [
@@ -46,11 +59,6 @@ export class ShellTopbarComponent implements OnInit {
   readonly notificationsPositions: ConnectedPosition[] = [
     { originX: 'end', overlayX: 'end', originY: 'bottom', overlayY: 'top', offsetY: 8 }
   ];
-
-  ngOnInit(): void {
-    // Keep search field in sync when already on Results Center.
-    this.searchQuery.set(this.resultsListFilterSE.text_to_search() || '');
-  }
 
   get unreadNotifications() {
     return this.resultsNotificationsSE.updatesPopUpData ?? [];
@@ -111,18 +119,43 @@ export class ShellTopbarComponent implements OnInit {
     return false;
   }
 
-  onSearchSubmit(): void {
-    const q = this.searchQuery().trim();
-    this.resultsListFilterSE.text_to_search.set(q);
-    void this.router.navigate(['/result/results-outlet/results-list']);
+  /**
+   * The Search control is a palette TRIGGER, not a filter field (the design binds it to
+   * `openPalette`). It no longer writes `ResultsListFilterService.text_to_search`: two search
+   * models in one topbar is how this gets confusing, and the palette's rows navigate straight to a
+   * result, which is what the old box was used for. The Results Center keeps its own search box.
+   */
+  openSearchPalette(): void {
+    this.palette()?.openPalette();
   }
 
-  onSearchInput(value: string): void {
-    this.searchQuery.set(value);
-    // Live update when already on the list page
-    if (this.router.url.includes('results-list')) {
-      this.resultsListFilterSE.text_to_search.set(value);
+  /**
+   * `Cmd/Ctrl+K` — the conventional palette shortcut. `Cmd/Ctrl+B` is already the Spartan sidebar
+   * toggle (`hlm-sidebar.service.ts:47`), and `/` is unsafe here: PRMS users type slashes into
+   * result titles and ToC statements all day. `preventDefault` is required or the browser's own
+   * Ctrl/Cmd+K (address-bar search) wins and the shortcut looks flaky.
+   */
+  @HostListener('document:keydown', ['$event'])
+  onGlobalKeydown(event: KeyboardEvent): void {
+    if (event.key?.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
+
+    const target = event.target as HTMLElement | null;
+    const tag = target?.tagName?.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+      // One exception: the palette's own input, so the shortcut still toggles it closed.
+      if (!this.palette()?.open()) return;
     }
+
+    event.preventDefault();
+
+    // Focus the trigger BEFORE opening, so CDK Dialog's `restoreFocus` has somewhere sensible to
+    // return to. Opened straight from the shortcut, the previously-focused element is `<body>`, and
+    // closing would drop the keyboard user at the top of the document with no place in the page.
+    if (!this.palette()?.open()) {
+      this.searchTrigger()?.nativeElement?.focus();
+    }
+
+    this.palette()?.toggle();
   }
 
   goToNotifications(): void {

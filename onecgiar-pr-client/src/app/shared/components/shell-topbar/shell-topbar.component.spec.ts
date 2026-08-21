@@ -66,11 +66,16 @@ describe('ShellTopbarComponent', () => {
     sidebarMock = { toggleSidebar: jest.fn(), state: signal('expanded'), isMobile: signal(false) };
   });
 
-  it('creates and syncs the search box with the list filter', async () => {
+  it('creates, and no longer syncs anything with the Results Center list filter', async () => {
     filterMock.text_to_search.set('cassava');
     await build();
     expect(component).toBeTruthy();
-    expect(component.searchQuery()).toBe('cassava');
+    // The Search control is a palette trigger now, not a filter field: it must not read or write
+    // `text_to_search`. Two search models in one topbar is the thing this change removed.
+    expect(filterMock.text_to_search()).toBe('cassava');
+    expect((component as any).searchQuery).toBeUndefined();
+    expect((component as any).onSearchInput).toBeUndefined();
+    expect((component as any).onSearchSubmit).toBeUndefined();
   });
 
   // ------------------------------------------------------------------ user menu
@@ -148,24 +153,97 @@ describe('ShellTopbarComponent', () => {
     expect(component.notificationBadgeLength()).toBe('2');
   });
 
-  it('search submit pushes the query and navigates to the list', async () => {
-    await build();
-    component.searchQuery.set('  maize  ');
-    component.onSearchSubmit();
-    expect(filterMock.text_to_search()).toBe('maize');
-    expect(routerMock.navigate).toHaveBeenCalledWith(['/result/results-outlet/results-list']);
-  });
+  describe('search palette trigger', () => {
+    it('openSearchPalette opens the palette and does not navigate', async () => {
+      await build();
+      const palette = { openPalette: jest.fn(), toggle: jest.fn(), open: jest.fn().mockReturnValue(false) };
+      (component as any).palette = () => palette;
 
-  it('search input updates the filter live only while on the list page', async () => {
-    routerMock.url = '/result-framework-reporting/home';
-    await build();
-    component.onSearchInput('abc');
-    expect(component.searchQuery()).toBe('abc');
-    expect(filterMock.text_to_search()).toBe('');
+      component.openSearchPalette();
 
-    routerMock.url = '/result/results-outlet/results-list';
-    component.onSearchInput('def');
-    expect(filterMock.text_to_search()).toBe('def');
+      expect(palette.openPalette).toHaveBeenCalledTimes(1);
+      expect(routerMock.navigate).not.toHaveBeenCalled();
+      expect(filterMock.text_to_search()).toBe('');
+    });
+
+    it('Cmd/Ctrl+K toggles the palette and preventDefaults so the browser does not win', async () => {
+      await build();
+      const palette = { openPalette: jest.fn(), toggle: jest.fn(), open: jest.fn().mockReturnValue(false) };
+      (component as any).palette = () => palette;
+
+      const event: any = { key: 'k', metaKey: true, ctrlKey: false, target: document.body, preventDefault: jest.fn() };
+      component.onGlobalKeydown(event);
+
+      expect(palette.toggle).toHaveBeenCalledTimes(1);
+      expect(event.preventDefault).toHaveBeenCalled();
+    });
+
+    it('focuses the trigger before OPENING, so CDK has somewhere to restore focus to', async () => {
+      await build();
+      const palette = { openPalette: jest.fn(), toggle: jest.fn(), open: jest.fn().mockReturnValue(false) };
+      const focus = jest.fn();
+      (component as any).palette = () => palette;
+      (component as any).searchTrigger = () => ({ nativeElement: { focus } });
+
+      component.onGlobalKeydown({ key: 'k', metaKey: true, ctrlKey: false, target: document.body, preventDefault: jest.fn() } as any);
+
+      // Without this the shortcut opens from `<body>`, and closing drops the keyboard user at the
+      // top of the document instead of back on the Search control.
+      expect(focus).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT re-focus the trigger when the shortcut is closing an open palette', async () => {
+      await build();
+      const palette = { openPalette: jest.fn(), toggle: jest.fn(), open: jest.fn().mockReturnValue(true) };
+      const focus = jest.fn();
+      (component as any).palette = () => palette;
+      (component as any).searchTrigger = () => ({ nativeElement: { focus } });
+
+      component.onGlobalKeydown({ key: 'k', metaKey: true, ctrlKey: false, target: document.body, preventDefault: jest.fn() } as any);
+
+      expect(focus).not.toHaveBeenCalled();
+      expect(palette.toggle).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores the shortcut while the user is typing in a field', async () => {
+      await build();
+      const palette = { openPalette: jest.fn(), toggle: jest.fn(), open: jest.fn().mockReturnValue(false) };
+      (component as any).palette = () => palette;
+
+      const input = document.createElement('input');
+      const event: any = { key: 'k', metaKey: false, ctrlKey: true, target: input, preventDefault: jest.fn() };
+      component.onGlobalKeydown(event);
+
+      expect(palette.toggle).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('still toggles closed from the palette own input', async () => {
+      await build();
+      const palette = { openPalette: jest.fn(), toggle: jest.fn(), open: jest.fn().mockReturnValue(true) };
+      (component as any).palette = () => palette;
+
+      const input = document.createElement('input');
+      const event: any = { key: 'K', metaKey: true, ctrlKey: false, target: input, preventDefault: jest.fn() };
+      component.onGlobalKeydown(event);
+
+      expect(palette.toggle).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves other key combinations alone', async () => {
+      await build();
+      const palette = { openPalette: jest.fn(), toggle: jest.fn(), open: jest.fn().mockReturnValue(false) };
+      (component as any).palette = () => palette;
+
+      for (const event of [
+        { key: 'b', metaKey: true, ctrlKey: false },
+        { key: 'k', metaKey: false, ctrlKey: false }
+      ] as any[]) {
+        component.onGlobalKeydown({ ...event, target: document.body, preventDefault: jest.fn() });
+      }
+
+      expect(palette.toggle).not.toHaveBeenCalled();
+    });
   });
 
   it('goToNotifications navigates to the requests tab', async () => {
