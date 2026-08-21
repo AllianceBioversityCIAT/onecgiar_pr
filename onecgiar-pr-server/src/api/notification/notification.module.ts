@@ -10,6 +10,12 @@ import { ShareResultRequestModule } from '../results/share-result-request/share-
 import { VersioningModule } from '../versioning/versioning.module';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ResultTaggedNotificationService } from './services/result-tagged-notification.service';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { Result } from '../results/entities/result.entity';
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
 
 @Module({
   controllers: [NotificationController],
@@ -21,8 +27,18 @@ import { ResultByInitiativesRepository } from '../results/results_by_inititiativ
     UserRepository,
     HandlersError,
     ResultByInitiativesRepository,
+    ResultTaggedNotificationService,
+    RoleByUserRepository,
   ],
-  exports: [NotificationService],
-  imports: [SocketManagementModule, ShareResultRequestModule, VersioningModule],
+  exports: [NotificationService, ResultTaggedNotificationService],
+  imports: [
+    SocketManagementModule,
+    ShareResultRequestModule,
+    VersioningModule,
+    // Entity-level registration on purpose: importing the owning feature modules
+    // (results, clarisa) from here would risk a cycle back into the services that
+    // emit these notifications.
+    TypeOrmModule.forFeature([Result, ClarisaCenter, ClarisaProject]),
+  ],
 })
 export class NotificationModule {}

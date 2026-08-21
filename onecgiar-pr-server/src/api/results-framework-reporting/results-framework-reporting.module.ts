@@ -32,6 +32,7 @@ import { GetExistingResultContributorsToIndicatorsHandler } from './application/
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
 import { TocResultsModule } from '../../toc/toc-results/toc-results.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { TocResultsModule } from '../../toc/toc-results/toc-results.module';
     ResultScalingStudyUrlsModule,
     ResultInnovSectionModule,
     ResultsByInstitutionsModule,
+    NotificationModule,
     GeographicLocationModule,
     GeoScopeRoleModule,
   ],

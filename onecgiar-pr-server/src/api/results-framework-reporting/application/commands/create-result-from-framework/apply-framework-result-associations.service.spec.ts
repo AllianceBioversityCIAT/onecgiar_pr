@@ -4,6 +4,7 @@ import { ShareResultRequestService } from '../../../../results/share-result-requ
 import { ResultsByProjectsService } from '../../../../results/results_by_projects/results_by_projects.service';
 import { ResultsByInstitutionsService } from '../../../../results/results_by_institutions/results_by_institutions.service';
 import { ApplyFrameworkResultAssociationsService } from './apply-framework-result-associations.service';
+import { ResultTaggedNotificationService } from '../../../../notification/services/result-tagged-notification.service';
 
 describe('ApplyFrameworkResultAssociationsService', () => {
   let service: ApplyFrameworkResultAssociationsService;
@@ -17,6 +18,9 @@ describe('ApplyFrameworkResultAssociationsService', () => {
   const mockResultsByInstitutionsService = {
     handleContributingCenters: jest.fn(),
     savePartnersInstitutionsByResultV2: jest.fn(),
+  };
+  const mockResultTaggedNotificationService = {
+    notifyTaggedBilateralProjects: jest.fn().mockResolvedValue(undefined),
   };
 
   const user = { id: 10 } as TokenDto;
@@ -34,6 +38,10 @@ describe('ApplyFrameworkResultAssociationsService', () => {
         {
           provide: ResultsByProjectsService,
           useValue: mockResultsByProjectsService,
+        },
+        {
+          provide: ResultTaggedNotificationService,
+          useValue: mockResultTaggedNotificationService,
         },
         {
           provide: ResultsByInstitutionsService,

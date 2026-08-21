@@ -31,12 +31,22 @@ export class NotificationService {
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
   ) {}
 
+  /**
+   * @param renderedText Pre-composed message **suffix** (everything after the result identity),
+   *   persisted on `notification.text`. Only needed by types whose copy cannot be derived from
+   *   the result alone — P2-3214's tagged centre / bilateral project, where one result carries
+   *   several centres and a recipient may belong to more than one, so the read path has no way
+   *   to tell which link the row is about. Storing only the suffix keeps it usable by the client,
+   *   which composes `[prefix, identity, suffix]` on its own. Every other type leaves it
+   *   undefined and keeps building its copy at read time.
+   */
   async emitResultNotification(
     notificationLevel: NotificationLevelEnum,
     notificationType: NotificationTypeEnum,
     userIds: number[],
     emmiterUser: number,
     resultId: number,
+    renderedText?: string,
   ) {
     try {
       const notificationLevelData =
@@ -70,6 +80,7 @@ export class NotificationService {
         result_id: resultId,
         notification_level: notificationLevelData.notifications_level_id,
         notification_type: notificationTypeData.notifications_type_id,
+        ...(renderedText ? { text: renderedText } : {}),
       }));
 
       if (notificationsToPersist.length) {
@@ -117,6 +128,7 @@ export class NotificationService {
         emitterName,
         resultData?.obj_result?.title,
         this.resolveOwnerProgramCode(resultData),
+        renderedText,
       );
 
       const notification: NotificationDto = {
@@ -273,6 +285,9 @@ export class NotificationService {
             notificationType,
             notification.obj_result?.result_code,
             emitterName,
+            notification.obj_result?.title,
+            undefined,
+            notification.text,
           ),
           emitterId: notification.emitter_user ?? null,
           emitterName,
@@ -678,6 +693,7 @@ export class NotificationService {
     userName?: string,
     resultTitle?: string,
     programCode?: string,
+    storedText?: string,
   ): string {
     const codeText = resultCode ? `result ${resultCode}` : 'the result';
     switch (notificationType) {
@@ -705,6 +721,20 @@ export class NotificationService {
           resultTitle,
           programCode,
         );
+      case NotificationTypeEnum.RESULT_CENTER_TAGGED:
+      case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED: {
+        // `notification.text` holds only the part that varies — everything after the result
+        // identity — because the client composes `[prefix, identity, suffix]` itself
+        // (`buildResultNotificationText`) and storing the whole sentence would repeat the
+        // code and title. Rows with no text (written by hand, or before this shipped) fall
+        // through to the generic line rather than rendering half a sentence.
+        const suffix = storedText?.trim();
+        if (!suffix) return `There is a new update on ${codeText}`;
+        const identity = [resultCode, resultTitle].filter(Boolean).join(' - ');
+        return identity
+          ? `The result ${identity} ${suffix}`
+          : `The result ${suffix}`;
+      }
       default:
         return `There is a new update on ${codeText}`;
     }

@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { DataSource, In, IsNull, Not } from 'typeorm';
 import { CreateResultsByInstitutionDto } from './dto/create-results_by_institution.dto';
 import { ResultByIntitutionsRepository } from './result_by_intitutions.repository';
@@ -28,9 +28,12 @@ import { ResultsByProjectsService } from '../results_by_projects/results_by_proj
 import { SavePartnersV2Dto } from './dto/save-partners-v2.dto';
 import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
 import { throwServiceError } from '../../../shared/utils/service-error.util';
+import { ResultTaggedNotificationService } from '../../notification/services/result-tagged-notification.service';
 
 @Injectable()
 export class ResultsByInstitutionsService {
+  private readonly _logger = new Logger(ResultsByInstitutionsService.name);
+
   constructor(
     private readonly _dataSource: DataSource,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
@@ -46,6 +49,7 @@ export class ResultsByInstitutionsService {
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _resultsByProjectsService: ResultsByProjectsService,
     private readonly _resultsBilateralRepository: ResultsByProjectsRepository,
+    private readonly _resultTaggedNotificationService: ResultTaggedNotificationService,
   ) {}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
@@ -480,6 +484,17 @@ export class ResultsByInstitutionsService {
             );
           }
 
+          // `syncBilateralProjects` returns a union (success payload | error envelope), so the
+          // success-only field is read through a narrow cast rather than widening its contract.
+          const newlyLinkedProjectIds =
+            (syncResult?.response as { newly_linked?: Array<number | string> })
+              ?.newly_linked ?? [];
+          await this.notifyNewlyTaggedProjects(
+            data.result_id,
+            user.id,
+            newlyLinkedProjectIds,
+          );
+
           const activeProjects = await this._resultsBilateralRepository.find({
             where: { result_id: data.result_id, is_active: true },
           });
@@ -673,6 +688,11 @@ export class ResultsByInstitutionsService {
       );
 
       const resultCenterArray: ResultsCenter[] = [];
+      // P2-3214: the codes that take the `else` branch below are precisely the centres that were
+      // not linked to this result before, which is the signal the tagged-centre notification needs.
+      // Collecting them here is what makes re-saving the partners section silent instead of
+      // re-notifying everyone.
+      const newlyLinkedCenterCodes: string[] = [];
 
       for (const center of contributing_center) {
         const exists =
@@ -699,17 +719,76 @@ export class ResultsByInstitutionsService {
           const newResultCenter = new ResultsCenter();
           Object.assign(newResultCenter, resultCenterData);
           resultCenterArray.push(newResultCenter);
+          newlyLinkedCenterCodes.push(center.code);
         }
       }
 
       if (resultCenterArray.length) {
         await this._resultsCenterRepository.save(resultCenterArray);
       }
+
+      await this.notifyNewlyTaggedCenters(
+        data.result_id,
+        user.id,
+        newlyLinkedCenterCodes,
+      );
     } else {
       await this._resultsCenterRepository.updateCenter(
         data.result_id,
         [],
         user.id,
+      );
+    }
+  }
+
+  /**
+   * P2-3214 AC2. Same non-fatal posture as the centre emitter below.
+   */
+  private async notifyNewlyTaggedProjects(
+    resultId: number,
+    userId: number,
+    projectIds: Array<number | string>,
+  ): Promise<void> {
+    if (!projectIds?.length) return;
+    try {
+      await this._resultTaggedNotificationService.notifyTaggedBilateralProjects(
+        resultId,
+        userId,
+        projectIds,
+      );
+    } catch (error) {
+      this._logger.error(
+        `Failed to emit tagged-project notifications for result ${resultId}: ${
+          error instanceof Error ? error.message : JSON.stringify(error)
+        }`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+  }
+
+  /**
+   * P2-3214 AC1. Deliberately non-fatal: the centres are already persisted by the time this runs,
+   * so a notification failure must not roll back or fail the partners save — the same posture
+   * `emitBilateralReviewNotification` takes for P2-3157.
+   */
+  private async notifyNewlyTaggedCenters(
+    resultId: number,
+    userId: number,
+    centerCodes: string[],
+  ): Promise<void> {
+    if (!centerCodes.length) return;
+    try {
+      await this._resultTaggedNotificationService.notifyTaggedCenters(
+        resultId,
+        userId,
+        centerCodes,
+      );
+    } catch (error) {
+      this._logger.error(
+        `Failed to emit tagged-centre notifications for result ${resultId}: ${
+          error instanceof Error ? error.message : JSON.stringify(error)
+        }`,
+        error instanceof Error ? error.stack : undefined,
       );
     }
   }
