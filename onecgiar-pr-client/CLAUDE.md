@@ -412,6 +412,48 @@ The interceptor triggers green-checks refresh for Result Detail routes and IPSR 
 - Tests under `cypress/e2e/**/*.cy.ts` (spec pattern `cypress/e2e/**/*.{js,jsx,ts,tsx}`).
 - Cypress is the place to assert **full user flows** — submission, QA review, phase switching, share request.
 
+### 🛑 Verifying in a REAL browser — two traps that cost a whole session (2026-08-21)
+
+Both of these produce a **convincing false negative**: the feature looks broken when it is not. Read
+this before concluding that anything fails in the browser.
+
+**1. Automating this app needs TWO localStorage keys, not one.**
+
+`RolesService` resolves identity from `localStorage.getItem('user').id` — `updateUserData` returns
+early on `if (!localStorageUser?.id)` and never requests roles or initiatives. Inject only `token`
+and you get `isAdmin: false`, `readOnly: true`, `myInitiativesList: []`, and **every
+permission-gated control silently missing**. It reads exactly like a broken permission check.
+
+```js
+// the user object can be rebuilt from the JWT payload: {id, email, first_name, last_name}
+await page.evaluate(({t, u}) => {
+  localStorage.setItem('token', t);
+  localStorage.setItem('user', JSON.stringify(u));   // ← without this, the session is half-built
+}, { t: token, u: user });
+```
+
+With both keys the same session reports `isAdmin: true`, `readOnly: false` and renders the actions.
+
+**2. Never trust a dev server you did not start.**
+
+A long-running `ng serve` can keep serving a **stale bundle** while the files on disk are already
+new. Verified case: the browser was running `onReportingRowReport(row) { this.openLegacyReportModal(row); }`
+while disk had the rewritten body — the change looked completely un-applied.
+
+Before concluding anything, confirm what the browser is actually executing:
+
+```js
+window.ng.getComponent(document.querySelector('app-dashboard-lab')).someMethod.toString()
+```
+
+If it does not match disk, start your **own** server on a free port (`npm start -- --port 4500`) and
+verify there. **Do not kill or restart a server someone else is using** — check the owner first with
+`lsof -tiTCP:4200 -sTCP:LISTEN` and `lsof -a -p <pid> -d cwd`.
+
+**Bonus:** `window.ng.getComponent(el)` is the fastest way to read live signals/state
+(`canReportResults()`, `contributingCenters()`, …) without wiring up UI interactions — invaluable for
+custom controls like `pr-multi-select` that open on `:focus-within` and resist a plain `click()`.
+
 ### Component tests (Cypress CT) — the way to validate `custom-fields/`
 
 `custom-fields/` is **excluded from Jest coverage** and its components render through a real
@@ -475,6 +517,7 @@ npm run test:ct            # runs all src/**/*.cy.ts headless — expect "All sp
 | **Dark mode** | Not supported — `color-scheme: light` is pinned on `:root`; the `:root.dark` block was removed. The dark sidebar is a token family, not dark mode. |
 | **Real-time** | Pusher + sockets are hints; reconcile via API before mutating state. |
 | **Coverage** | Client thresholds: 50/60/60/60. Don't lower them. |
+| **Browser verification** | Inject `token` **and** `user` in localStorage, and confirm the served bundle is not stale — see §9 "Verifying in a REAL browser". Both traps look like broken features. |
 | **Commit** | `<emoji> <type>(<scope>) [ticket]: <description>`. |
 
 ### Commit examples

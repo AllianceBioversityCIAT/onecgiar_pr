@@ -1,5 +1,10 @@
 ## Context
 
+> ⚠️ **STALE PREMISE (noted 2026-08-21, P2-3406).** Item 1 below names `entity-details/` as the
+> Overview surface. That page is **retired and unrouted** (`shared/routing/routing-data.ts:597`);
+> the live Overview tab is `dashboard-lab/components/program-overview/`. Re-target this change
+> before implementing it, or it will rebuild dead code.
+
 The Science Program result-reporting flow spans three existing surfaces, all under `onecgiar-pr-client/src/app/pages/`:
 
 1. **Overview** (`result-framework-reporting/pages/entity-details/`) — `EntityDetailsComponent` (standalone, OnPush) fetches AoW units, indicator-category summaries and dashboard data via `EntityAowService`, then renders Insights charts plus the two parallel card columns.
