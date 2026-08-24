@@ -241,6 +241,32 @@ describe('BilateralResultCreatorComponent', () => {
     expect(creationService.createResult).toHaveBeenCalledWith(3, 2, undefined);
   });
 
+  describe('Type-specific section visibility (P2-3387)', () => {
+    it.each([
+      ['Other Outcome', 4],
+      ['Other Output', 8]
+    ])('should hide the type-specific section for %s', (_label, typeId) => {
+      component.resultTypeId.set(typeId);
+      expect(component.hasTypeSpecificSection()).toBe(false);
+    });
+
+    it.each([
+      ['Policy Change', 1],
+      ['Innovation Use', 2],
+      ['Capacity Sharing', 5],
+      ['Knowledge Product', 6],
+      ['Innovation Development', 7]
+    ])('should keep the type-specific section for %s', (_label, typeId) => {
+      component.resultTypeId.set(typeId);
+      expect(component.hasTypeSpecificSection()).toBe(true);
+    });
+
+    it('should keep the section before a type is chosen, so nothing disappears mid-wizard', () => {
+      component.resultTypeId.set(null);
+      expect(component.hasTypeSpecificSection()).toBe(true);
+    });
+  });
+
   describe('Knowledge Product via CGSpace handle', () => {
     beforeEach(() => {
       component.resultLevelId.set(4);

@@ -89,6 +89,18 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   /** Knowledge Product (result_type_id 6) is created purely from a repository handle (CGSpace, MELSpace, or WorldFish DSpace). */
   readonly isKnowledgeProductType = computed(() => this.resultTypeId() === 6);
 
+  /**
+   * P2-3387: Other Output (8) and Other Outcome (4) have no type-specific fields, and the story is
+   * explicit that for them *no additional section appears* — not even an empty one. So the accordion
+   * is skipped from the outside instead of emptying the section: `section-type-specific` keeps its
+   * "no type-specific fields required" state as the fallback for a type nobody mapped (id 9 is in its
+   * NO_TYPE_SPECIFIC set and has no label either, so it would read "Unknown" — out of scope here).
+   */
+  readonly hasTypeSpecificSection = computed(() => {
+    const typeId = this.resultTypeId();
+    return typeId !== 4 && typeId !== 8;
+  });
+
   // Mirrors report-result-form.component.ts's GET_mqapValidation() regex — keep both in sync.
   private readonly KP_HANDLE_REGEX =
     /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;

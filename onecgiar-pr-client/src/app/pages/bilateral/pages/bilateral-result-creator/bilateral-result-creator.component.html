@@ -221,17 +221,19 @@
         <app-section-evidence></app-section-evidence>
       </app-bilateral-accordion>
 
-      <app-bilateral-accordion
-        sectionName="type-specific"
-        sectionLabel="Type-Specific Details"
-        sectionIcon="category"
-        [totalFields]="getSectionTotal('type-specific')"
-        [filledFields]="getSectionFilled('type-specific')"
-        [mdsStatus]="getSectionMdsStatus('type-specific')"
-        [resultId]="resultId()"
-        [(openSectionName)]="openSectionName">
-        <app-section-type-specific></app-section-type-specific>
-      </app-bilateral-accordion>
+      @if (hasTypeSpecificSection()) {
+        <app-bilateral-accordion
+          sectionName="type-specific"
+          sectionLabel="Type-Specific Details"
+          sectionIcon="category"
+          [totalFields]="getSectionTotal('type-specific')"
+          [filledFields]="getSectionFilled('type-specific')"
+          [mdsStatus]="getSectionMdsStatus('type-specific')"
+          [resultId]="resultId()"
+          [(openSectionName)]="openSectionName">
+          <app-section-type-specific></app-section-type-specific>
+        </app-bilateral-accordion>
+      }
     </div>
   }
 </div>
