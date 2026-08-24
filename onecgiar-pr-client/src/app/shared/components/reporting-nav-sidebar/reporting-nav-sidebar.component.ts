@@ -8,6 +8,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideLayoutDashboard,
+  lucideLayoutGrid,
   lucideFileText,
   lucidePackage,
   lucideShieldCheck,
@@ -85,6 +86,7 @@ interface IconFlyout {
   providers: [
     provideIcons({
       lucideLayoutDashboard,
+  lucideLayoutGrid,
       lucideFileText,
       lucidePackage,
       lucideShieldCheck,
@@ -148,6 +150,7 @@ export class ReportingNavSidebarComponent {
   /** Lucide icon per top-level section (matches the section `path`). */
   private readonly sectionIcons: Record<string, string> = {
     'result-framework-reporting': 'lucideLayoutDashboard',
+    'portfolio-overview': 'lucideLayoutGrid',
     result: 'lucideFileText',
     ipsr: 'lucidePackage',
     'quality-assurance': 'lucideShieldCheck',
@@ -200,6 +203,7 @@ export class ReportingNavSidebarComponent {
    * `result-framework-reporting` is omitted: programme entry is My science programs above.
    */
   private static readonly PLATFORM_ORDER = [
+    'portfolio-overview',
     'result',
     'ipsr',
     'quality-assurance',
@@ -215,13 +219,14 @@ export class ReportingNavSidebarComponent {
         o.path !== 'result-framework-reporting' &&
         o.path !== 'outcome-indicator-module'
     );
-    const withAdmin =
-      this.rolesSE?.isAdmin
-        ? (() => {
-            const admin = extraRoutingApp.find(o => o.path === 'admin-module' && !o.prHide);
-            return admin ? [...primary, admin] : primary;
-          })()
-        : primary;
+    // Admin-only entries live in `extraRoutingApp`. Portfolio overview leads the list (the design
+    // places it above Results Center); Admin module closes it.
+    const withAdmin = this.rolesSE?.isAdmin
+      ? (() => {
+          const pick = (path: string) => extraRoutingApp.find(o => o.path === path && !o.prHide);
+          return [pick('portfolio-overview'), ...primary, pick('admin-module')].filter((o): o is PrRoute => !!o);
+        })()
+      : primary;
 
     const rank = (path: string) => {
       const i = ReportingNavSidebarComponent.PLATFORM_ORDER.indexOf(path as (typeof ReportingNavSidebarComponent.PLATFORM_ORDER)[number]);

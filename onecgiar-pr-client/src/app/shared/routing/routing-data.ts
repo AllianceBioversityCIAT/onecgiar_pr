@@ -137,6 +137,18 @@ export const routingApp: PrRoute[] = [
 
 export const extraRoutingApp: PrRoute[] = [
   {
+    // Admin only, per the live design, which wraps the whole screen (and its sidebar entry) in
+    // `<sc-if value="{{ isAdmin }}">`. Guarded, not merely hidden — hiding a nav item is never
+    // enough (client CLAUDE.md §7, AC-3).
+    prName: 'Portfolio overview',
+    onlyTest: false,
+    canActivate: [CheckAdminGuard],
+    prHide: false,
+    path: 'portfolio-overview',
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/portfolio-overview/portfolio-overview.component').then(m => m.PortfolioOverviewComponent)
+  },
+  {
     prName: 'Admin module',
     onlyTest: false,
     canActivate: [CheckAdminGuard],
