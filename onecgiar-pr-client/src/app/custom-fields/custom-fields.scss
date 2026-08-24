@@ -8,12 +8,16 @@
   margin-bottom: 5px;
 }
 
+// Label de campo. El mockup lo define como 14px/600 en `--pr-text`, con 6px hasta el control.
+// `h4` aporta el 14px pero pesa 500, así que el peso se fija aquí en vez de mover la escala
+// tipográfica entera (h4 lo usan también encabezados que no son labels).
 .pr_label {
   margin-top: 20px;
-  margin-bottom: 7px;
-  color: var(--pr-color-black);
+  margin-bottom: 6px;
+  color: var(--pr-text);
   text-align: left;
   @include fonts.pr-typography('h4');
+  font-weight: 600;
 }
 
 .pr_description.readOnly {
@@ -339,19 +343,44 @@ input::placeholder,
    Lightweight tooltip (Spartan migration — replaces PrimeNG pTooltip).
    Rendered on <body> by PrTooltipDirective; positioned inline.
 ------------------------------------------------------------------ */
+// El `info-pop` del mockup: superficie BLANCA con regla de 1px, radio 12 y la sombra estándar.
+// Antes era `--pr-color-primary-800` con texto blanco a 11px — un globo morado oscuro, del
+// diseño anterior. Dos razones para cambiarlo, no una:
+//  · el mockup no define NINGÚN tooltip oscuro: sus popovers de guía son blancos
+//    (`PRMS-Reporting.dc.html`, `class="info-pop"`), y para etiquetas de una línea usa el
+//    `title` nativo del navegador;
+//  · la regla 7 del client ("el violeta es navegación y acciones; las superficies de contenido
+//    son neutras") lo prohíbe: un tooltip es contenido.
+// 13px en vez de 11: estos tooltips llevan párrafos y listas, no una palabra.
 .pr-tooltip {
   position: absolute;
   z-index: 100000;
   max-width: 240px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background-color: var(--pr-color-primary-800);
-  color: var(--pr-color-white);
-  font-size: 11px;
-  line-height: 1.35;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--pr-border);
+  background-color: var(--pr-surface-card);
+  color: var(--pr-text);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.55;
+  text-wrap: pretty;
   pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--pr-shadow-2);
   animation: pr-tooltip-fade 0.12s ease-in;
+
+  // Los enlaces dentro del popover: `#5733c4` subrayado, como en el mockup.
+  a {
+    color: var(--pr-color-primary-400);
+    text-decoration: underline;
+  }
+
+  // Los subtítulos que trae el contenido ("Example topics", "Collective global targets").
+  b,
+  strong {
+    font-weight: 600;
+    color: var(--pr-text);
+  }
 }
 
 /* P2-3201: a pinned tooltip must accept the pointer, otherwise its links and its scrollbar are
@@ -371,7 +400,10 @@ input::placeholder,
   padding: 0;
   border: 0;
   border-radius: 50%;
-  color: var(--pr-color-primary-400);
+  // Neutro en reposo (#6b6580) y violeta al hover (#6b46e5), sin pastilla de fondo — el mockup
+  // lo trata como una ayuda discreta junto al label. En violeta permanente competía con el
+  // propio label y salpicaba de color un formulario que el diseño quiere neutro.
+  color: var(--pr-text-muted);
   background: transparent;
   cursor: help;
   font-size: 16px;
@@ -382,8 +414,8 @@ input::placeholder,
   }
 
   &:hover {
-    color: var(--pr-color-primary-600);
-    background: var(--pr-color-primary-50);
+    color: var(--pr-color-primary-300);
+    background: transparent;
   }
 
   &:focus-visible {
@@ -393,12 +425,13 @@ input::placeholder,
 }
 
 /* Impact Area guidance contains the same contextual helper text used by W1/W2. */
+// Guía de campo: el mockup le da 380px y scroll propio cuando el texto es largo.
+// El color del enlace ya no se redefine aquí — era blanco porque el fondo era oscuro.
 .pr-tooltip.sgi-dac-tooltip {
   max-width: 380px;
   max-height: min(70vh, 520px);
   overflow-y: auto;
-  padding: 10px 12px;
-  line-height: 1.45;
+  padding: 14px;
 
   ul {
     margin: 6px 0 0;
@@ -408,11 +441,6 @@ input::placeholder,
   li + li {
     margin-top: 6px;
   }
-
-  a {
-    color: var(--pr-color-white);
-    text-decoration: underline;
-  }
 }
 
 /* Policy-type guidance is intentionally long, so keep it readable without taking over the form. */
@@ -420,8 +448,7 @@ input::placeholder,
   max-width: 520px;
   max-height: min(70vh, 520px);
   overflow-y: auto;
-  padding: 10px 12px;
-  line-height: 1.45;
+  padding: 14px;
 
   ul {
     margin: 6px 0 0;

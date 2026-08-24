@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  Output,
+  computed,
+  effect,
+  inject,
+  signal
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -7,6 +19,7 @@ import { SaveButtonService } from '../../../../../../custom-fields/save-button/s
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { ResultSectionsService } from '../result-sections-sidebar/result-sections.service';
+import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
 
 /**
  * Bottom bar of a result-detail section: section-to-section navigation, the position in the
@@ -24,16 +37,18 @@ import { ResultSectionsService } from '../result-sections-sidebar/result-section
 @Component({
   selector: 'app-section-bottom-bar',
   templateUrl: './section-bottom-bar.component.html',
-  // `sticky` MUST live on the HOST, not on a div inside it. A sticky element can only travel
-  // within its own parent's box, and the host wraps the bar exactly — so with the class on the
-  // inner div the travel range was zero and the bar never left its natural position at the end of
-  // the form. On the host, the parent is the section container and the bar rides the whole page.
-  host: { class: 'sticky bottom-0 z-[6] block' },
+  // The bar no longer sticks to anything: it is teleported into the layout's slot (see
+  // `SectionBottomBarSlotService`), where it is a plain flex sibling of the scroll container and
+  // therefore already sits on the floor of the content column, at its full width. `sticky
+  // bottom-0` here used to be the only way to keep it on screen while the whole document
+  // scrolled, and it came at the cost of the bar inheriting its ancestor's 885px width.
+  // `z-[6]` stays: the floating "Links to results" helpers still overlap this strip.
+  host: { class: 'z-[6] block w-full flex-none' },
   standalone: true,
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SectionBottomBarComponent {
+export class SectionBottomBarComponent implements OnDestroy {
   /** Lets a read-only user still save (same escape hatch `app-save-button` has). */
   @Input() editable = false;
   /** Consumer-side veto — a section that knows its own form is not saveable yet. */
@@ -46,6 +61,8 @@ export class SectionBottomBarComponent {
   readonly rolesSE = inject(RolesService);
   private readonly sectionsSE = inject(ResultSectionsService);
   private readonly router = inject(Router);
+  private readonly slotSE = inject(SectionBottomBarSlotService);
+  private readonly hostRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Open/closed state of the pending-fields popover. */
   readonly pendingOpen = signal(false);
@@ -77,6 +94,27 @@ export class SectionBottomBarComponent {
 
   get canSave(): boolean {
     return !this.rolesSE.readOnly || this.editable;
+  }
+
+  /**
+   * Move the host node into the layout's slot, as an effect rather than a one-shot hook: the
+   * slot is published by a component that may mount in the same change-detection pass, so
+   * reacting to the signal covers both orderings. Does nothing while there is no slot — IPSR
+   * and the result creator render sections outside the result-detail layout, and there the bar
+   * has to stay exactly where it was declared.
+   */
+  private readonly teleport = effect(() => {
+    this.slotSE.slot()?.appendChild(this.hostRef.nativeElement);
+  });
+
+  /**
+   * Angular removes a node through its CURRENT parent, so the teleported host is cleaned up on
+   * its own. This only guards the case where the slot outlives the bar (switching from one
+   * section to another): the outgoing bar is detached before the incoming one appends itself, so
+   * the two never stack during the route transition.
+   */
+  ngOnDestroy(): void {
+    this.hostRef.nativeElement.remove();
   }
 
   goPrevious(): void {

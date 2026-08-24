@@ -1,35 +1,102 @@
 // Two-column shell: the white sections rail (app-result-sections-sidebar, 240px) + the content.
 //
-// The page itself is the scroll container. Making `.rd_content` scroll internally was tried and
-// reverted: the `height: 100%` chain dies at `app-results` (a routed host with no height), so
-// `.rd_content` just grew to its content height — and because it had `overflow-y: auto` it became
-// the sticky containment block for its children WITHOUT ever scrolling, which pinned the bottom
-// bar off-screen. Both the rail and the bar stick to the viewport instead, which needs no height
-// chain at all.
+// Geometry copied from the approved mockup ("PRMS Reporting.dc.html", the `pageOpen` block):
+//
+//   <div style="flex:1;min-height:0;background:#F7F7F9;display:flex">      <- viewport-tall row
+//     <aside style="flex:none;width:240px;…;overflow-y:auto">…</aside>     <- own scroll
+//     <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+//       <div id="pg-scroll" style="flex:1;min-height:0;overflow-y:auto">…  <- own scroll
+//       …bottom bar, OUTSIDE the scroll
+//
+// The page is a fixed-height row and each rail scrolls on its own; the document never scrolls.
+// That is what makes the rail's right-hand rule run edge to edge and lets the bottom bar sit on
+// the floor of the viewport instead of riding the document.
+//
+// WHY `position: absolute` AND NOT A HEIGHT CHAIN.
+// The obvious `height: 100%` up the chain does not work here, and this page already paid for
+// that lesson once (the first attempt was reverted). The chain is:
+//
+//   main.flex.flex-col.min-h-svh  →  div.flex-1.min-h-0  →  app-results  →  app-result-detail
+//
+// `min-height` does NOT make a height definite once the content exceeds it: `main` resolves to
+// `max(100svh, content)`, so on a long form the leftover `flex-1` has to share is 0 and the slot
+// simply takes its content height. A `height: 100%` hung off it then resolves to the content
+// height, `overflow-y: auto` never scrolls, and — because an overflow container IS the sticky
+// containment block — the bottom bar gets pinned off-screen. That is exactly the failure the
+// revert described.
+//
+// Pinning the page instead breaks the loop: absolutely positioned content is out of flow, so
+// `main` falls back to its `min-h-svh`, the slot's leftover becomes a real `100svh - header`,
+// and `inset: 0` fills it. No height chain, no JS measuring the header — which matters because
+// the header is not a constant (the test-environment banner is optional and wraps on narrow
+// viewports). The containing block is the `relative` slot in app.component.html; without that
+// `relative` this would resolve against `main` (already relative via `hlmSidebarInset`) and
+// cover the header.
 :host {
-  display: block;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .rd_layout {
   display: flex;
-  align-items: flex-start;
+  // `stretch`, not `flex-start`: the sections rail has to reach the floor of the row or its
+  // right-hand rule stops in mid-air (measured at 477px of an 842px column before this).
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  // Nothing may escape the row: both rails own their scrolling from here down.
+  overflow: hidden;
 }
 
 .rd_content {
   flex: 1;
   min-width: 0;
-  padding: 25px 0;
-  box-sizing: border-box;
+  // Column so the scroller takes the free height and the bottom bar can sit under it.
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 
+// The scrolling half of the content column — the mockup's `#pg-scroll`. Everything that used to
+// ride the document scroll (header, phase switcher, the section itself) lives in here now.
+.rd_scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  // 32/40 — el padding exacto que el mockup le da a la columna de contenido.
+  padding: 32px 40px;
+
+  // El contenedor blanco. Dos correcciones contra el mockup, ambas de alcance local porque
+  // `.section_container` es una clase GLOBAL que usan otras pantallas:
+  //  · superficie: el mockup no usa sombras — `#ffffff` + regla de 1px `#e3e3e8` + radio 12.
+  //  · ancho: ocupa la columna entera en vez de centrar un 95%. El aire ya lo pone el padding
+  //    de `.rd_scroll`, y así el borde gris queda paralelo a la regla del riel y a los extremos
+  //    de la barra inferior — que es lo que alinea la pantalla de arriba abajo.
   .section_container {
-    width: 95% !important;
-    margin: 0 auto;
+    width: 100% !important;
+    margin: 0;
     position: relative;
+    border: 1px solid var(--pr-border);
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  // El mockup da 24px de padding a la card. `.detail_container` (global) traía `0 80px 100px`:
+  // 80px laterales heredados del layout de una sola columna, y 100px abajo reservados para el
+  // botón flotante de guardar, que ya no existe — la barra vive fuera del scroll. Entre esos
+  // 80 y el 95% centrado, el primer campo arrancaba a 107px del borde de la columna; el mockup
+  // lo pone a 64. IPSR y el result creator conservan los suyos: esto no sale de esta página.
+  ::ng-deep .detail_container {
+    padding: 24px;
   }
 }
 
 .phase_switcher_container {
-  margin-left: auto;
-  margin-right: auto;
-  width: 95% !important;
+  margin-left: 0;
+  margin-right: 0;
+  width: 100% !important;
 }

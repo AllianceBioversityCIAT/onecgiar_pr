@@ -1,90 +1,100 @@
-<!-- The sticky positioning lives on the host (see the component decorator). This element only
-     paints the bar: full-width white strip with a top rule, so the form scrolls under it. -->
-<div
-  class="mt-[24px] flex flex-wrap items-center justify-between gap-[16px] border-t border-[var(--pr-border)] bg-white px-[20px] py-[14px]"
-  data-testid="section-bottom-bar">
-  <div class="flex items-center gap-[12px]">
-    <!-- Back reads one step quieter than Next: moving forward is the expected action. -->
-    <button
-      type="button"
-      class="inline-flex h-[38px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text-secondary)] transition-colors enabled:hover:border-[var(--pr-color-primary-200)] enabled:hover:bg-[var(--pr-color-primary-50)] disabled:cursor-not-allowed disabled:opacity-45"
-      [disabled]="!hasPrevious()"
-      (click)="goPrevious()"
-      data-testid="section-bottom-bar-back">
-      <span aria-hidden="true">&#8592;</span> Back
-    </button>
-
-    <button
-      type="button"
-      class="inline-flex h-[38px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] transition-colors enabled:hover:border-[var(--pr-color-primary-200)] enabled:hover:bg-[var(--pr-color-primary-50)] disabled:cursor-not-allowed disabled:opacity-45"
-      [disabled]="!hasNext()"
-      (click)="goNext()"
-      data-testid="section-bottom-bar-next">
-      Next <span aria-hidden="true">&#8594;</span>
-    </button>
-
-    @if (showPosition()) {
-      <span class="h-[20px] w-px bg-[var(--pr-border)]" aria-hidden="true"></span>
-      <span class="text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="section-bottom-bar-position">
-        Section {{ position() }} of {{ total() }}
-      </span>
-    }
-  </div>
-
-  <div class="flex items-center gap-[12px]">
-    @if (isComplete()) {
-      <span
-        class="inline-flex items-center gap-[6px] text-[14px] font-medium text-[var(--pr-status-approved-fg)]"
-        data-testid="section-bottom-bar-complete">
-        <i class="material-icons-round text-[18px]" aria-hidden="true">check</i>
-        Section complete
-      </span>
-    } @else {
-      <!-- Clickable counterpart of "Section complete": it names what is missing instead of only
-           saying that something is. Same list the floating "N alerts" chip used to show. -->
-      <div class="relative">
-        <button
-          type="button"
-          class="inline-flex items-center gap-[6px] text-[14px] font-medium text-[var(--pr-color-orange-700)] hover:underline"
-          [attr.aria-expanded]="pendingOpen()"
-          aria-controls="sbb-pending-list"
-          (click)="togglePending()"
-          data-testid="section-bottom-bar-pending">
-          <i class="material-icons-round text-[18px]" aria-hidden="true">error_outline</i>
-          {{ missingFields().length }} field{{ missingFields().length === 1 ? '' : 's' }} missing
-        </button>
-
-        @if (pendingOpen()) {
-          <div
-            class="absolute bottom-[calc(100%+10px)] right-0 z-30 max-h-[320px] w-[300px] overflow-y-auto rounded-[12px] border border-[var(--pr-border)] bg-white px-[14px] py-[12px] shadow-[0_8px_24px_rgba(var(--pr-color-secondary-rgb),0.14)]"
-            id="sbb-pending-list"
-            role="dialog"
-            aria-label="Fields still missing">
-            <div class="mb-[8px] flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-muted)]">
-              <span>Still missing</span>
-              <button type="button" class="flex text-[var(--pr-text-muted)]" (click)="closePending()" aria-label="Close">
-                <i class="material-icons-round text-[16px]" aria-hidden="true">close</i>
-              </button>
-            </div>
-            <ul class="m-0 flex list-disc flex-col gap-[6px] pl-[18px]">
-              <li class="text-[13px] leading-[1.45] text-[var(--pr-text)]" *ngFor="let field of missingFields(); trackBy: trackByField">
-                {{ field }}
-              </li>
-            </ul>
-          </div>
-        }
-      </div>
-    }
-
-    @if (canSave) {
+<!-- Two boxes on purpose. The OUTER one is the strip: white, full width of the content column,
+     with a top rule that runs from edge to edge — that rule is what separates the bar from the
+     scrolling form above it, and it only reads as a floor if it spans the whole column.
+     The INNER one carries the controls at the column's own 40px padding, the same one
+     `.rd_scroll` uses, so Back and Save line up with the card's left and right edges.
+     No margin-top: the bar is no longer the last thing inside the form, it is the column's floor. -->
+<div class="w-full border-t border-[var(--pr-border)] bg-white" data-testid="section-bottom-bar">
+  <div class="flex flex-wrap items-center justify-between gap-[16px] px-[40px] py-[14px]">
+    <div class="flex items-center gap-[12px]">
+      <!-- Secondary button, straight off the mockup: 1px #e3e3e8 rule, white fill, #2b2838 ink,
+           weight 500, and a NEUTRAL hover (#f7f7f9 / #d5d5dc) — not the violet tint this used to
+           have. The mockup spends violet on the one primary action of a group and nothing else. -->
       <button
         type="button"
-        class="h-[38px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-semibold text-[var(--pr-text)] transition-colors enabled:hover:border-[var(--pr-color-primary-200)] enabled:hover:bg-[var(--pr-color-primary-50)] disabled:cursor-not-allowed disabled:opacity-45"
-        [disabled]="saveButtonSE.isSaving() || disabled"
-        (click)="onClickSave()"
-        data-testid="section-bottom-bar-save">
-        {{ saveButtonSE.isSaving() ? 'Saving…' : text }}
+        class="inline-flex h-[38px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
+        [disabled]="!hasPrevious()"
+        (click)="goPrevious()"
+        data-testid="section-bottom-bar-back">
+        <span aria-hidden="true">&#8592;</span> Back
       </button>
-    }
+
+      <!-- The one primary action of the strip, using the mockup's primary pair verbatim:
+           #6b46e5 → #5733c4 on hover, white ink, weight 600, no rule, and `opacity: .35` when
+           disabled — the exact treatment its blocked "Submit result" button gets. -->
+      <button
+        type="button"
+        class="inline-flex h-[38px] items-center gap-[6px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[16px] text-[14px] font-semibold text-white transition-colors enabled:hover:bg-[var(--pr-color-primary-400)] disabled:cursor-not-allowed disabled:opacity-[0.35]"
+        [disabled]="!hasNext()"
+        (click)="goNext()"
+        data-testid="section-bottom-bar-next">
+        Next <span aria-hidden="true">&#8594;</span>
+      </button>
+
+      @if (showPosition()) {
+        <span class="h-[20px] w-px bg-[var(--pr-border)]" aria-hidden="true"></span>
+        <span class="text-[14px] font-normal text-[var(--pr-text-secondary)]" data-testid="section-bottom-bar-position">
+          Section {{ position() }} of {{ total() }}
+        </span>
+      }
+    </div>
+
+    <div class="flex items-center gap-[12px]">
+      @if (isComplete()) {
+        <span
+          class="inline-flex items-center gap-[6px] text-[14px] font-medium text-[var(--pr-status-approved-fg)]"
+          data-testid="section-bottom-bar-complete">
+          <i class="material-icons-round text-[18px]" aria-hidden="true">check</i>
+          Section complete
+        </span>
+      } @else {
+        <!-- Clickable counterpart of "Section complete": it names what is missing instead of only
+           saying that something is. Same list the floating "N alerts" chip used to show. -->
+        <div class="relative">
+          <button
+            type="button"
+            class="inline-flex items-center gap-[6px] text-[14px] font-medium text-[var(--pr-color-orange-700)] hover:underline"
+            [attr.aria-expanded]="pendingOpen()"
+            aria-controls="sbb-pending-list"
+            (click)="togglePending()"
+            data-testid="section-bottom-bar-pending">
+            <i class="material-icons-round text-[18px]" aria-hidden="true">error_outline</i>
+            {{ missingFields().length }} field{{ missingFields().length === 1 ? '' : 's' }} missing
+          </button>
+
+          @if (pendingOpen()) {
+            <div
+              class="absolute bottom-[calc(100%+10px)] right-0 z-30 max-h-[320px] w-[300px] overflow-y-auto rounded-[12px] border border-[var(--pr-border)] bg-white px-[14px] py-[12px] shadow-[var(--pr-shadow-2)]"
+              id="sbb-pending-list"
+              role="dialog"
+              aria-label="Fields still missing">
+              <div
+                class="mb-[8px] flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-muted)]">
+                <span>Still missing</span>
+                <button type="button" class="flex text-[var(--pr-text-muted)]" (click)="closePending()" aria-label="Close">
+                  <i class="material-icons-round text-[16px]" aria-hidden="true">close</i>
+                </button>
+              </div>
+              <ul class="m-0 flex list-disc flex-col gap-[6px] pl-[18px]">
+                <li class="text-[13px] leading-[1.45] text-[var(--pr-text)]" *ngFor="let field of missingFields(); trackBy: trackByField">
+                  {{ field }}
+                </li>
+              </ul>
+            </div>
+          }
+        </div>
+      }
+
+      @if (canSave) {
+        <button
+          type="button"
+          class="h-[38px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[16px] text-[14px] font-medium text-[var(--pr-text)] transition-colors enabled:hover:border-[var(--pr-border-strong)] enabled:hover:bg-[var(--pr-surface-app)] disabled:cursor-not-allowed disabled:opacity-45"
+          [disabled]="saveButtonSE.isSaving() || disabled"
+          (click)="onClickSave()"
+          data-testid="section-bottom-bar-save">
+          {{ saveButtonSE.isSaving() ? 'Saving…' : text }}
+        </button>
+      }
+    </div>
   </div>
 </div>

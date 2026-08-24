@@ -1,69 +1,113 @@
 @if (this.preventFieldRender()) {
   <!-- No [hasError]: a radio group has no word/char limit and no format to break, so `fc-error` is
        unreachable here by design — not an omission. -->
-  <app-field-card [label]="this.label" [description]="this.description" [tooltip]="this.tooltip" [required]="this.required" [hasValue]="hasValue">
+  <app-field-card
+    [label]="this.label"
+    [description]="this.description"
+    [tooltip]="this.tooltip"
+    [required]="this.required"
+    [hasValue]="hasValue"
+    [layout]="variant === 'segmented' ? 'row' : 'stack'">
     <div class="pr-field" [ngClass]="{ mandatory: this.required, complete: value !== null && value !== undefined }">
-    <div
-      class="radioButtonList"
-      [ngClass]="{ verticalAlignment: this.verticalAlignment, 'block-field': (readOnly || disabled || this.rolesSE.readOnly) && !isStatic }"
-      [hidden]="hideOptions">
-      <!-- P2-3350: `[name]` alone is swallowed by NgModel's own `name` input and never reaches the
+      @if (variant === 'segmented') {
+        <!-- Segmented track (mockup: 372x36 rail, #eeeef1, 3px padding, 2px gap; segments 30px tall,
+           radius 6, 14px/500, digit in JetBrains Mono 600). The selected one lifts to white with
+           the level-1 shadow — the standard way a segmented control shows position.
+           `role="radiogroup"` + real radio semantics are kept: visually it is a track, but for a
+           screen reader and for the keyboard it is still one group of mutually exclusive options. -->
+        <div
+          class="flex h-[36px] w-[372px] max-w-full items-center gap-[2px] rounded-[8px] bg-[var(--pr-border-divider)] p-[3px]"
+          role="radiogroup"
+          [attr.aria-label]="label"
+          [hidden]="hideOptions">
+          @for (option of options; track option[optionValue]) {
+            @let parts = segmentParts(option);
+            <button
+              type="button"
+              role="radio"
+              class="flex h-[30px] flex-1 items-center justify-center gap-[5px] rounded-[6px] border-0 text-[14px] font-medium transition-colors"
+              [class]="
+                value === option[optionValue]
+                  ? 'bg-white text-[var(--pr-text)] shadow-[var(--pr-shadow-1)]'
+                  : 'bg-transparent text-[var(--pr-text-secondary)] enabled:hover:bg-white/50'
+              "
+              [attr.aria-checked]="value === option[optionValue]"
+              [disabled]="segmentsDisabled"
+              [class.cursor-not-allowed]="segmentsDisabled"
+              [class.cursor-pointer]="!segmentsDisabled"
+              (click)="onSelect(option[optionValue]); onValueChange(option[optionValue])">
+              @if (parts.digit !== null) {
+                <span class="font-mono font-semibold">{{ parts.digit }}</span>
+              }
+              {{ parts.text }}
+            </button>
+          }
+        </div>
+      } @else {
+        <div
+          class="radioButtonList"
+          [ngClass]="{ verticalAlignment: this.verticalAlignment, 'block-field': (readOnly || disabled || this.rolesSE.readOnly) && !isStatic }"
+          [hidden]="hideOptions">
+          <!-- P2-3350: `[name]` alone is swallowed by NgModel's own `name` input and never reaches the
            DOM, so the radios were never natively grouped (breaking arrow-key navigation). `[attr.name]`
            puts the attribute back; `[name]` stays for NgModel's form registration. -->
-      <div *ngFor="let option of this.options; let i = index">
-        <div class="radioButton">
-          <input
-            type="radio"
-            class="pr-native-radio"
-            (click)="onSelect(option[optionValue])"
-            (ngModelChange)="onValueChange($event)"
-            [id]="groupName + '_' + i"
-            [name]="groupName"
-            [attr.name]="groupName"
-            [value]="option[optionValue]"
-            [(ngModel)]="value"
-            [disabled]="(readOnly || disabled || this.rolesSE.readOnly) && !isStatic" />
-          <!-- P2-3342 / P2-3350 (same defect, reported twice): the id must carry `groupName`, not just the
+          <div *ngFor="let option of this.options; let i = index">
+            <div class="radioButton">
+              <input
+                type="radio"
+                class="pr-native-radio"
+                (click)="onSelect(option[optionValue])"
+                (ngModelChange)="onValueChange($event)"
+                [id]="groupName + '_' + i"
+                [name]="groupName"
+                [attr.name]="groupName"
+                [value]="option[optionValue]"
+                [(ngModel)]="value"
+                [disabled]="(readOnly || disabled || this.rolesSE.readOnly) && !isStatic" />
+              <!-- P2-3342 / P2-3350 (same defect, reported twice): the id must carry `groupName`, not just the
                option index. With several radio groups on one screen (the five Impact Area scores, or Capacity
                Sharing's three questions) every instance emitted the same `radio_0/1/2` ids, and `label[for]`
                resolves to the FIRST match in the document — so clicking the text of an option in the Poverty
                group selected that option in the Gender group instead. `name` was already made per-instance for
                the same reason; the id/for pair was left behind. -->
-          <label [for]="groupName + '_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
-        </div>
+              <label [for]="groupName + '_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
+            </div>
 
-        <div
-          *ngIf="textInputWhenSelectedLabels?.includes(option[optionLabel]) && value === option[optionValue]"
-          style="margin-top: 18px; max-width: 300px">
-          <app-pr-input
-            [label]="textInputLabelOverrides?.[option[optionLabel]] ?? textInputLabel"
-            [placeholder]="textInputPlaceholderOverrides?.[option[optionLabel]] ?? textInputPlaceholder"
-            variant="xs"
-            [(ngModel)]="option.answer_text"
-            [required]="textInputRequiredWhenSelectedLabels?.includes(option[optionLabel])"
-            [disabled]="(readOnly || this.rolesSE.readOnly) && !isStatic">
-          </app-pr-input>
-        </div>
+            <div
+              *ngIf="textInputWhenSelectedLabels?.includes(option[optionLabel]) && value === option[optionValue]"
+              style="margin-top: 18px; max-width: 300px">
+              <app-pr-input
+                [label]="textInputLabelOverrides?.[option[optionLabel]] ?? textInputLabel"
+                [placeholder]="textInputPlaceholderOverrides?.[option[optionLabel]] ?? textInputPlaceholder"
+                variant="xs"
+                [(ngModel)]="option.answer_text"
+                [required]="textInputRequiredWhenSelectedLabels?.includes(option[optionLabel])"
+                [disabled]="(readOnly || this.rolesSE.readOnly) && !isStatic">
+              </app-pr-input>
+            </div>
 
-        <ng-container *ngIf="option?.subOptions?.length && value === option[optionValue]">
-          <p class="radioButton__subLabel" *ngIf="option?.subOptions?.length">{{ this.subLabel }}</p>
-          <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]" class="checkboxList">
-            <app-pr-checkbox
-              [label]="checkbox[this.checkboxConfig.optionLabel]"
-              [(ngModel)]="checkbox[this.checkboxConfig.optionValue]"
-              (ngModelChange)="checkbox.answer_text && setAnswerTextToNull(checkbox)"
-              [readOnly]="this.value !== option[this.optionValue] || ((readOnly || disabled || this.rolesSE.readOnly) && !isStatic)">
-            </app-pr-checkbox>
-            <app-pr-input
-              placeholder=""
-              *ngIf="checkbox?.question_text == 'Other'"
-              variant="xs"
-              [(ngModel)]="checkbox[this.checkboxConfig.optionTextValue]"
-              [disabled]="!checkbox[this.checkboxConfig.optionValue] || ((readOnly || disabled || this.rolesSE.readOnly) && !isStatic)"></app-pr-input>
+            <ng-container *ngIf="option?.subOptions?.length && value === option[optionValue]">
+              <p class="radioButton__subLabel" *ngIf="option?.subOptions?.length">{{ this.subLabel }}</p>
+              <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]" class="checkboxList">
+                <app-pr-checkbox
+                  [label]="checkbox[this.checkboxConfig.optionLabel]"
+                  [(ngModel)]="checkbox[this.checkboxConfig.optionValue]"
+                  (ngModelChange)="checkbox.answer_text && setAnswerTextToNull(checkbox)"
+                  [readOnly]="this.value !== option[this.optionValue] || ((readOnly || disabled || this.rolesSE.readOnly) && !isStatic)">
+                </app-pr-checkbox>
+                <app-pr-input
+                  placeholder=""
+                  *ngIf="checkbox?.question_text == 'Other'"
+                  variant="xs"
+                  [(ngModel)]="checkbox[this.checkboxConfig.optionTextValue]"
+                  [disabled]="
+                    !checkbox[this.checkboxConfig.optionValue] || ((readOnly || disabled || this.rolesSE.readOnly) && !isStatic)
+                  "></app-pr-input>
+              </div>
+            </ng-container>
           </div>
-        </ng-container>
-      </div>
-    </div>
+        </div>
+      }
     </div>
   </app-field-card>
 }

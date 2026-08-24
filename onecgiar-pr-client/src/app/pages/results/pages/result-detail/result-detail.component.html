@@ -6,38 +6,42 @@
   <app-result-sections-sidebar />
 
   <div class="rd_content">
-    <!-- Title, way back, result-level actions and the identity strip (code · category · level ·
-         funding · status). Replaces the docked RESULT METADATA card — its six fields moved behind
-         the ⓘ next to the code. -->
-    <app-result-header />
+    <!-- The scrolling half of the column (the mockup's `#pg-scroll`). The header and the phase
+         switcher scroll WITH the form, exactly as they do in the mockup — only the sections rail
+         and the bottom bar stay put. -->
+    <div class="rd_scroll pr-light-scroll">
+      <!-- Title, way back, result-level actions and the identity strip (code · category · level ·
+           funding · status). Replaces the docked RESULT METADATA card — its six fields moved behind
+           the ⓘ next to the code. -->
+      <app-result-header />
 
-    <div class="phase_switcher_container">
-      <app-phase-switcher></app-phase-switcher>
-    </div>
-
-    <div class="section_container">
-      <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
-
-      <!-- The result code → id conversion (GET_resultIdToCode) gates the outlet above. Without this
-           placeholder the freshly created result lands on an empty page — the "nothing is loading"
-           gap reported after hitting Create. -->
-      <div
-        *ngIf="!this.currentResultSE.resultIdIsconverted"
-        class="flex flex-col gap-4 py-2"
-        role="status"
-        aria-live="polite"
-        aria-busy="true"
-        data-testid="result-detail-loading">
-        <span class="sr-only">Loading result...</span>
-        <div class="pr-skeleton" style="width: 40%; height: 24px"></div>
-        <div class="pr-skeleton" style="width: 100%; height: 14px"></div>
-        <div class="pr-skeleton" style="width: 85%; height: 14px"></div>
-        <div class="pr-skeleton" style="width: 100%; height: 180px"></div>
-        <div class="pr-skeleton" style="width: 60%; height: 14px"></div>
-        <div class="pr-skeleton" style="width: 100%; height: 120px"></div>
+      <div class="phase_switcher_container">
+        <app-phase-switcher></app-phase-switcher>
       </div>
 
-      <!-- The dark "Loading section..." veil used to live here. It was driven by the boolean
+      <div class="section_container">
+        <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
+
+        <!-- The result code → id conversion (GET_resultIdToCode) gates the outlet above. Without this
+           placeholder the freshly created result lands on an empty page — the "nothing is loading"
+           gap reported after hitting Create. -->
+        <div
+          *ngIf="!this.currentResultSE.resultIdIsconverted"
+          class="flex flex-col gap-4 py-2"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          data-testid="result-detail-loading">
+          <span class="sr-only">Loading result...</span>
+          <div class="pr-skeleton" style="width: 40%; height: 24px"></div>
+          <div class="pr-skeleton" style="width: 100%; height: 14px"></div>
+          <div class="pr-skeleton" style="width: 85%; height: 14px"></div>
+          <div class="pr-skeleton" style="width: 100%; height: 180px"></div>
+          <div class="pr-skeleton" style="width: 60%; height: 14px"></div>
+          <div class="pr-skeleton" style="width: 100%; height: 120px"></div>
+        </div>
+
+        <!-- The dark "Loading section..." veil used to live here. It was driven by the boolean
            `saveButtonSE.isGettingSection()`, so on a multi-GET section it cleared when the FIRST
            response landed while the rest of the form was still empty, and three sections load from
            an `effect()` with no request in flight at first paint, so it never showed for them at
@@ -45,7 +49,14 @@
            fills the body, and its `inert` + `pointer-events: none` keep the interaction lock the
            veil provided. `SaveButtonService.isGettingSection` and `isGettingSectionPipe()` stay —
            IPSR still renders the veil from them. -->
+      </div>
     </div>
+
+    <!-- Floor of the content column. Each section declares its own bottom bar (only it knows its
+         save handler and disabled rules) and the bar teleports its host node in here, so it ends
+         up OUTSIDE the scroll and at the column's full width — the mockup's layout. Empty when a
+         section renders no bar, and then it collapses to nothing. -->
+    <div class="rd_bar_slot" #bottomBarSlot></div>
   </div>
 </div>
 

@@ -8,6 +8,44 @@
 //
 // The class name `.field_card` is unchanged on purpose: `[appSectionSkeleton]` masks by it.
 // `.fc-error` is the one state that survives — an over-limit field must still be visible.
+// Variante de FILA (`layout="row"`): label a la izquierda, control a la derecha, separadas por
+// una regla de 1px — el patrón que el mockup usa para una lista de campos homogéneos
+// (`PRMS-Reporting.dc.html`, las cinco filas de Impact Area scores: `min-height:44px`, `gap:16px`,
+// nombre en 13px/500, y la pista de 372px pegada a la derecha).
+//
+// Grid, no flex: así una descripción —si el campo llega a tener— cae bajo el label en la MISMA
+// columna en vez de convertirse en un tercer item que empuja el control fuera de sitio.
+.field_card.fc-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 16px;
+  min-height: 44px;
+  padding: 4px 0;
+  border-top: 1px solid var(--pr-border);
+
+  .field_card_header {
+    margin-bottom: 0;
+    // 13px/500: en una lista de cinco filas el 14/600 del modo apilado compite con el título de
+    // la sección y hace que cada fila se lea como un encabezado propio.
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .field_card_desc {
+    grid-column: 1;
+    margin-top: 4px;
+  }
+
+  // El control proyectado toma la segunda columna y conserva su ancho propio.
+  > .pr-field {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+}
+
 .field_card {
   margin: 20px 0; // vertical separation from siblings
 
@@ -26,10 +64,13 @@
     }
 
     // The asterisk is the ONLY required-marker now. Same convention `app-pr-field-header` has
-    // used all along (`.required::after { content: '*' }`), so the two label styles agree.
+    // used all along (`.required::after { content: '*' }`), so the two label styles agree —
+    // including the colour: both are `--pr-field-required-fg` (#b42318, the mockup's value).
+    // It used to be `--pr-color-red-300`, which is the ERROR red: a field that is merely
+    // required rendered in the same colour as a field that is wrong.
     .fch_required {
       flex-shrink: 0;
-      color: var(--pr-color-red-300);
+      color: var(--pr-field-required-fg);
       font-weight: 600;
     }
 

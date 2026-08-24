@@ -201,6 +201,17 @@
   --pr-text-secondary: #5d5872;
   --pr-text-muted: #6b6580;
   --pr-text-subtle: #9691a8;
+  // Ink of a DISABLED control. The mockup's blocked buttons ("AI review" while sections are
+  // incomplete) are this violet-tinted grey, one step lighter than --pr-text-subtle. Deliberately
+  // low contrast: it is a state, not content, so it is never used for text the user must read.
+  --pr-text-disabled: #cfc9de;
+
+  // Marcador de campo OBLIGATORIO (el asterisco), tomado del mockup. Es semántico a propósito y
+  // NO un paso de la escala `red-*`: #b42318 no está en esa rampa, y meterlo ahí ya salió mal una
+  // vez —se declaró un segundo `--pr-color-red-500` sobre el que ya existía (#9d061d), que
+  // consumen el hover de "Log out" y los errores del panel de IA—. Distinto del rojo de error
+  // (`--pr-color-red-300`) a propósito: un campo que falta no es un campo equivocado.
+  --pr-field-required-fg: #b42318;
 
   // ── Sidebar (on-dark). Foregrounds verified against --pr-sidebar-bg:
   // #e9e4fa 12.1601:1 · #c4b5fd 8.6:1 · #a79bd4 6.2:1 — all clear AA.

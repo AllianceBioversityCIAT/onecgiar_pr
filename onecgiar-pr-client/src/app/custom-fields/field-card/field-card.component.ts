@@ -32,6 +32,15 @@ export class FieldCardComponent {
    * `lead-contact-person-field`) do not need touching for a purely visual change.
    */
   @Input() hasValue = false;
+  /**
+   * `row` pone el label a la IZQUIERDA y el control a la DERECHA en una sola línea, con una regla
+   * de 1px arriba — la forma en que el mockup presenta una lista de campos homogéneos y cortos
+   * (los cinco Impact Area scores: mismo tipo de respuesta, cinco veces). Apilar label sobre
+   * control ahí gasta el doble de alto vertical y rompe la lectura en columna de las respuestas.
+   *
+   * `stack` (por defecto) es el resto de los formularios y no cambia.
+   */
+  @Input() layout: 'stack' | 'row' = 'stack';
 
   /** A label is what makes a field addressable — blank/whitespace does not count as one. */
   get hasLabel(): boolean {

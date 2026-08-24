@@ -134,6 +134,24 @@ pointer-events: none;
 }
 
 /* width */
+/* `.light-scroll` del mockup: barra discreta de 8px sin pista, para paneles que scrollean
+   por su cuenta dentro de la página (los dos rieles de result-detail). Distinta a
+   `.custom_scroll`, que es violeta sobre pista tintada y pesa demasiado para un panel
+   que scrollea permanentemente. */
+.pr-light-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.pr-light-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pr-light-scroll::-webkit-scrollbar-thumb {
+  background: var(--pr-border-strong);
+  border-radius: 999px;
+}
+
 .custom_scroll::-webkit-scrollbar {
 width: 7px;
 height: 5px;

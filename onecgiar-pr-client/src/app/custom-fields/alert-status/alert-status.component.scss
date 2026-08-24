@@ -49,12 +49,46 @@
   }
 
   // --- Severity variants ---
+  // `info` is NOT a severity: it is the explanatory note the mockup puts above a group of fields,
+  // and there it is a quiet grey box — no tinted card, no solid badge. It was the loudest thing on
+  // a form page (blue fill, blue rule, 38px solid badge) while saying the least. The mockup's
+  // recipe: gap 10, padding 14, radius 8, #f7f7f9, 16px outline glyph, 13px/1.55 secondary text.
+  // The other three keep their colour — there the tint IS the message.
   &.info {
-    background-color: var(--pr-color-blue-50);
-    border-color: var(--pr-color-blue-200);
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+    margin: 0 0 20px;
+    border-radius: 8px;
+    border-color: transparent;
+    background-color: var(--pr-surface-app);
 
     .alert_badge {
-      background-color: var(--pr-color-blue-500);
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      border-radius: 0;
+      background-color: transparent;
+
+      i {
+        font-size: 16px;
+        color: var(--pr-text-muted);
+      }
+    }
+
+    .alert_text {
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.55;
+      color: var(--pr-text-secondary);
+      text-wrap: pretty;
+
+      // El título va en negrita dentro del propio innerHTML (`<b>…:</b>`).
+      ::ng-deep b,
+      ::ng-deep strong {
+        font-weight: 600;
+        color: var(--pr-text);
+      }
     }
   }
 

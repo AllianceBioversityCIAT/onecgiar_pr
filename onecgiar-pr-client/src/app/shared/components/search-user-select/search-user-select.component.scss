@@ -13,8 +13,10 @@
   @include fonts.pr-typography('body-1');
 }
 
+// Mismo marcador, mismo rojo que el resto de los campos (#b42318). Estaba en `red-200`, un
+// tercer rojo para la misma idea.
 .required {
-  color: var(--pr-color-red-200);
+  color: var(--pr-field-required-fg);
   margin-left: 2px;
 }
 

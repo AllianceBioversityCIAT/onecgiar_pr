@@ -15,8 +15,13 @@ import { Directive } from '@angular/core';
   selector: '[hlmInput]',
   host: {
     'data-slot': 'input',
+    // Geometría del mockup en px EXPLÍCITOS: 40 de alto, radio 8, 12 de padding, texto 14.
+    // Las utilidades rem de Tailwind no sirven aquí — `html` es 12px en esta app, así que el
+    // `h-9 rounded-md px-2.5 md:text-sm` anterior resolvía a 27px / 4.5px / 7.5px / 10.5px:
+    // un control un tercio más pequeño de lo diseñado, en TODOS los formularios.
+    // Sin `shadow-xs`: el mockup separa los inputs con la regla de 1px, nunca con sombra.
     class:
-      'border-input focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] file:h-7 file:text-sm file:font-medium focus-visible:ring-3 md:text-sm file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50'
+      'border-input focus-visible:border-ring focus-visible:ring-ring/50 h-[40px] rounded-[8px] border bg-white px-[12px] py-[8px] text-[14px] font-normal leading-[1.5] transition-[color,box-shadow] file:h-7 file:text-[13px] file:font-medium focus-visible:ring-3 file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50'
   }
 })
 export class HlmInput {}

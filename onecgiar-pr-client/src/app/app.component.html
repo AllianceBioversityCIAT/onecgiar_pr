@@ -20,14 +20,16 @@
             <span class="test-env-banner__badge">TEST ENVIRONMENT</span>
             <div class="test-env-banner__main">
               <strong>New look &amp; feel preview.</strong>
-              Explore and get familiar with the new design. Keep in mind this environment is still evolving
-              and will keep changing to improve the user experience.
+              Explore and get familiar with the new design. Keep in mind this environment is still evolving and will keep changing to improve the user
+              experience.
             </div>
             <div class="test-env-banner__actions">
-              <span>Need to test something different? Use the
+              <span
+                >Need to test something different? Use the
                 <a [href]="testEnvironmentBanner.legacyUrl" target="_blank" rel="noopener">previous design</a>.
               </span>
-              <span>Comments or improvement ideas?
+              <span
+                >Comments or improvement ideas?
                 <a [href]="'mailto:' + testEnvironmentBanner.supportEmail">PRMSTechSupport&#64;cgiar.org</a>
               </span>
             </div>
@@ -38,7 +40,12 @@
           <app-shell-topbar />
         }
       </div>
-      <div class="min-h-0 min-w-0 flex-1">
+      <!-- `relative` makes this slot the containing block for a page that wants to fill the
+           viewport instead of growing the document (result-detail's two-rail layout pins itself
+           with `position: absolute; inset: 0`). Without it that page would resolve against
+           `main` — which `hlmSidebarInset` already makes `relative` — and cover the header.
+           No-op for every page that still scrolls the document. -->
+      <div class="relative min-h-0 min-w-0 flex-1">
         <router-outlet></router-outlet>
       </div>
     </main>

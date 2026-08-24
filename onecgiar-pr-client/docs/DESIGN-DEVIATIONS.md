@@ -176,3 +176,25 @@ the code disagree on tab count, that is an open item to raise with the owner —
   reported results", which is a different and possibly false statement. Added 2026-08-21 (P2-3405).
 - We also keep **two** empty states where the design has one: a filtered one (with `Clear filters`)
   and a genuinely-empty one. With no filter active the design's single sentence would be false.
+
+## 12. Result Detail: the info alert stays a component, and only its `info` variant went grey
+
+- **Design says:** the explanatory note above a field group is a quiet grey box — `gap:10; padding:14;
+  radius:8; background:#f7f7f9`, 16px outline glyph, 13px/1.55 secondary text
+  (`PRMS-Reporting.dc.html:2250-2252`).
+- **We do:** exactly that, but **only for `status="info"`** on `app-alert-status`. Its `success`,
+  `warning` and `error` variants keep their tinted card and solid badge.
+- **Why:** the design only ever shows the informational case, so it says nothing about severity. On
+  those three the tint *is* the message — flattening them to grey would strip the only signal a
+  blocking warning has. `info` is not a severity: it is prose, and it was the loudest element on a
+  form page while saying the least. Added 2026-08-24.
+
+## 13. Result Detail: the kebab keeps `Copy link`, which the design does not show
+
+- **Design says:** the header's row menu holds `Change result type` and `Delete result`
+  (`PRMS-Reporting.dc.html:2107-2108`).
+- **We do:** `Change result type` and `Copy link`. No `Delete result`.
+- **Why:** `Copy link` is shipped behaviour (P2-3396, commit `b3181e828`) and removing a working
+  action to match a mockup would be a regression. `Delete result` is not built — it is a feature,
+  not a styling gap, so it is not silently added here. The item *styling* does follow the design
+  (36px rows, no icons, `#f5f3ff` hover). Added 2026-08-24.

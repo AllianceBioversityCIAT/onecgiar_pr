@@ -30,6 +30,15 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() disabled: boolean = false;
   @Input() isStatic: boolean = false;
   @Input() verticalAlignment: boolean = false;
+  /**
+   * `segmented` paints the options as one shared track instead of a list of radios — the shape the
+   * mockup uses for the Impact Area scores, where the three options are a short ordered scale
+   * (0 / 1 / 2) and the answer reads better as a position than as a list.
+   *
+   * It is a VARIANT, not a replacement: the plain list is still right for Capacity Sharing's
+   * questions and anything whose options are full sentences or carry sub-inputs.
+   */
+  @Input() variant: 'list' | 'segmented' = 'list';
   @Input() fieldRef: string | number;
   @Input() textInputWhenSelectedLabels: string[] = [];
   @Input() textInputPlaceholder: string = 'Why?';
@@ -110,6 +119,22 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   });
 
   currentVal = null;
+
+  /**
+   * Splits `(0) Not Targeted` into its digit and its wording so the track can set the number in
+   * mono, as the mockup does. `full_name` is built as `(${id - 1}) ${title}` by
+   * `GET_allGenderTag`, so the shape is guaranteed for the scores — but any option that does not
+   * match just renders whole, which keeps the variant safe for other option sets.
+   */
+  segmentParts(option: any): { digit: string | null; text: string } {
+    const raw = String(option?.[this.optionLabel] ?? '');
+    const match = /^\((\d+)\)\s*(.*)$/.exec(raw);
+    return match ? { digit: match[1], text: match[2] } : { digit: null, text: raw };
+  }
+
+  get segmentsDisabled(): boolean {
+    return (this.readOnly || this.disabled || this.rolesSE.readOnly) && !this.isStatic;
+  }
 
   onSelect(clickedValue: any) {
     this.selectOptionEvent.emit();

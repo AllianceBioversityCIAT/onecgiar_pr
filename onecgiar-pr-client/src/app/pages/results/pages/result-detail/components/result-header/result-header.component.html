@@ -1,14 +1,16 @@
-<header class="mx-auto mb-[16px] flex w-[95%] flex-col gap-[8px]" data-testid="result-header">
+<header class="mb-[16px] flex w-full flex-col gap-[8px]" data-testid="result-header">
   <!-- Explicit way back to the results table. The sidebar's "Results Center" row navigates here
        too, but a user several sections deep should not have to hunt through the nav to get out.
        The fully-resolved path is used (rather than `/result`) so the link does not depend on the
        redirect chain. -->
   <a
     routerLink="/result/results-outlet/results-list"
-    class="inline-flex w-fit items-center gap-[5px] text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:underline"
+    class="inline-flex h-[20px] w-fit items-center gap-[5px] text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:opacity-80"
     title="Back to all results"
     data-testid="result-detail-back-link">
-    <i class="material-icons-round text-[16px] leading-none" aria-hidden="true">arrow_back</i>
+    <!-- Chevron at 14px, per the mockup. It used to be `arrow_back` at 16px: a tailed arrow reads
+         heavier than the rest of the chrome and made the link compete with the title above it. -->
+    <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">chevron_left</i>
     Back to results
   </a>
 
@@ -16,7 +18,7 @@
     <!-- Clamped to two lines: result titles run long and a five-line heading pushes the form below
          the fold. The full text stays reachable in the Title field of General information. -->
     <h1
-      class="m-0 line-clamp-2 min-w-0 flex-1 text-[26px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]"
+      class="m-0 line-clamp-2 min-w-0 flex-1 text-pretty text-[26px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]"
       [title]="title"
       data-testid="result-header-title">
       {{ title }}
@@ -27,25 +29,26 @@
         <div class="relative" data-testid="result-header-pdf">
           <button
             type="button"
-            class="flex h-[36px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[12px] text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+            class="flex h-[36px] items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-white px-[12px] text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-surface-app)]"
             (click)="pdfSE.toggle()"
             [attr.aria-expanded]="pdfSE.menuOpen()"
             aria-label="PDF options menu">
-            <i class="pi pi-file-pdf text-[14px]" aria-hidden="true"></i>
+            <!-- No leading icon: the mockup's button is the word plus a chevron. The document
+                 glyph doubled up on a label that already says PDF. -->
             PDF
-            <i class="pi pi-angle-down text-[12px]" aria-hidden="true"></i>
+            <i class="material-icons-round text-[14px] text-[var(--pr-text-secondary)]" aria-hidden="true">expand_more</i>
           </button>
 
           @if (pdfSE.menuOpen()) {
             <div
-              class="absolute right-0 top-[42px] z-30 w-[220px] rounded-[12px] border border-[var(--pr-border)] bg-white p-[6px] shadow-[0_8px_24px_rgba(var(--pr-color-secondary-rgb),0.14)]"
+              class="absolute right-0 top-[42px] z-30 w-[220px] rounded-[12px] border border-[var(--pr-border)] bg-white p-[6px] shadow-[var(--pr-shadow-2)]"
               role="menu">
               <button
                 type="button"
                 class="flex h-[36px] w-full items-center gap-[8px] rounded-[8px] px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]"
                 role="menuitem"
                 (click)="pdfSE.view()">
-                <i class="pi pi-file-pdf text-[14px]" aria-hidden="true"></i>
+                <i class="material-icons-round text-[16px]" aria-hidden="true">picture_as_pdf</i>
                 View PDF
               </button>
               <button
@@ -53,7 +56,7 @@
                 class="flex h-[36px] w-full items-center gap-[8px] rounded-[8px] px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]"
                 role="menuitem"
                 (click)="pdfSE.copy()">
-                <i class="pi pi-copy text-[14px]" aria-hidden="true"></i>
+                <i class="material-icons-round text-[16px]" aria-hidden="true">content_copy</i>
                 Copy link
               </button>
             </div>
@@ -64,36 +67,34 @@
       <div class="relative" data-testid="result-header-actions-wrap">
         <button
           type="button"
-          class="flex h-[36px] w-[36px] items-center justify-center rounded-[8px] border border-[var(--pr-border)] bg-white transition-colors hover:bg-[var(--pr-color-primary-50)]"
+          class="flex h-[36px] w-[36px] items-center justify-center rounded-[8px] border border-[var(--pr-border)] bg-white transition-colors hover:bg-[var(--pr-surface-app)]"
           (click)="toggleActions()"
           [attr.aria-expanded]="actionsOpen()"
           aria-label="More actions"
           data-testid="result-header-actions">
-          <i class="material-icons-round text-[18px] text-[var(--pr-text-secondary)]" aria-hidden="true">more_vert</i>
+          <i class="material-icons-round text-[18px] text-[var(--pr-text-secondary)]" aria-hidden="true">more_horiz</i>
         </button>
 
         @if (actionsOpen()) {
           <div
-            class="absolute right-0 top-[42px] z-30 w-[220px] rounded-[12px] border border-[var(--pr-border)] bg-white p-[6px] shadow-[0_8px_24px_rgba(var(--pr-color-secondary-rgb),0.14)]"
+            class="absolute right-0 top-[42px] z-30 w-[220px] rounded-[12px] border border-[var(--pr-border)] bg-white p-[6px] shadow-[var(--pr-shadow-2)]"
             role="menu">
             @if (canChangeResultType) {
               <button
                 type="button"
-                class="flex h-[36px] w-full items-center gap-[8px] rounded-[8px] px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]"
+                class="flex h-[36px] w-full items-center rounded-[8px] px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]"
                 role="menuitem"
                 (click)="openChangeResultType()"
                 data-testid="result-header-change-type">
-                <i class="material-icons-round text-[16px]" aria-hidden="true">move_up</i>
                 Change result type
               </button>
             }
             <button
               type="button"
-              class="flex h-[36px] w-full items-center gap-[8px] rounded-[8px] px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]"
+              class="flex h-[36px] w-full items-center rounded-[8px] px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-primary-50)]"
               role="menuitem"
               (click)="copyLink()"
               data-testid="result-header-copy-link">
-              <i class="material-icons-round text-[16px]" aria-hidden="true">link</i>
               Copy link
             </button>
           </div>
@@ -114,12 +115,12 @@
         [attr.aria-expanded]="metaOpen()"
         aria-label="Record details"
         data-testid="result-header-meta-toggle">
-        <i class="material-icons-round text-[14px]" aria-hidden="true">info</i>
+        <i class="material-icons-round text-[14px]" aria-hidden="true">info_outline</i>
       </button>
 
       @if (metaOpen()) {
         <div
-          class="absolute left-0 top-[26px] z-20 w-[340px] rounded-[12px] border border-[var(--pr-border)] bg-white p-[14px] shadow-[0_8px_24px_rgba(var(--pr-color-secondary-rgb),0.14)]"
+          class="absolute left-0 top-[26px] z-20 w-[340px] rounded-[12px] border border-[var(--pr-border)] bg-white p-[14px] shadow-[var(--pr-shadow-2)]"
           role="dialog"
           aria-label="Result metadata"
           data-testid="result-header-meta-popover">

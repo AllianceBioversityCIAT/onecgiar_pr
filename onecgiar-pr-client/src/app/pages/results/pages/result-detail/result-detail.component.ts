@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit, OnDestroy, effect, inject, NgZone } from '@angular/core';
+import { Component, DoCheck, ElementRef, OnInit, OnDestroy, ViewChild, effect, inject, NgZone } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -8,6 +8,7 @@ import { ShareRequestModalService } from './components/share-request-modal/share
 import { CurrentResultService } from '../../../../shared/services/current-result.service';
 import { environment } from '../../../../../environments/environment';
 import { PdfExportService } from '../../../../shared/services/pdf-export.service';
+import { SectionBottomBarSlotService } from './components/section-bottom-bar/section-bottom-bar-slot.service';
 
 @Component({
   selector: 'app-result-detail',
@@ -18,6 +19,10 @@ import { PdfExportService } from '../../../../shared/services/pdf-export.service
 export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
   private readonly pdfSE = inject(PdfExportService);
   private readonly ngZone = inject(NgZone);
+  private readonly bottomBarSlotSE = inject(SectionBottomBarSlotService);
+
+  /** Floor of the content column; each section's bottom bar teleports its host node in here. */
+  @ViewChild('bottomBarSlot', { static: true }) bottomBarSlot!: ElementRef<HTMLElement>;
 
   constructor(
     public currentResultSE: CurrentResultService,
@@ -38,11 +43,18 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
   closeInfo = false;
 
   ngOnInit(): void {
+    // Published here, NOT in ngAfterViewInit: Angular runs a child's `ngAfterViewInit` before its
+    // parent's, so a section mounting in the same pass would look for the slot and find nothing.
+    // `static: true` on the query is what makes the element already available this early.
+    this.bottomBarSlotSE.slot.set(this.bottomBarSlot.nativeElement);
     this.getData();
   }
 
   ngOnDestroy(): void {
     this.pdfSE.disable();
+    // The slot dies with this view; leaving a detached node published would send the next
+    // section's bar into a DOM fragment nobody renders.
+    this.bottomBarSlotSE.slot.set(null);
   }
 
   private getPdfLink(): string {

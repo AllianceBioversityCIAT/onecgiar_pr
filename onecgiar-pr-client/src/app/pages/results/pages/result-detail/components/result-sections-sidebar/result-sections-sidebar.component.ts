@@ -5,7 +5,9 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { ResultSectionsService } from './result-sections.service';
 
 /** Shared geometry of a section row — only the colours differ between active and idle. */
-const ROW_BASE = 'flex h-[44px] items-center gap-[10px] rounded-[8px] px-[10px] text-[14px] no-underline transition-colors';
+// `shrink-0` reproduce el `flex:none` del mockup: el riel ahora tiene altura fija, así que sin
+// esto una lista larga de secciones aplasta las filas por debajo de sus 44px en vez de scrollear.
+const ROW_BASE = 'flex h-[44px] shrink-0 items-center gap-[10px] rounded-[8px] px-[10px] text-[14px] no-underline transition-colors';
 
 /**
  * The result detail's second sidebar: section list, completion progress and the result-level
@@ -27,7 +29,7 @@ export class ResultSectionsSidebarComponent {
   private readonly fieldsManagerSE = inject(FieldsManagerService);
 
   readonly activeRowClass = `${ROW_BASE} bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]`;
-  readonly idleRowClass = `${ROW_BASE} font-medium text-[var(--pr-text)] hover:bg-[var(--pr-color-accents-1)]`;
+  readonly idleRowClass = `${ROW_BASE} font-medium text-[var(--pr-text)] hover:bg-[var(--pr-surface-subtle-hover)]`;
 
   /**
    * Skeleton row count while the portfolio resolves. P25 shows fewer sections than P22, so the

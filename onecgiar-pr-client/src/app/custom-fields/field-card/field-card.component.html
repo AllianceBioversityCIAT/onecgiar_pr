@@ -4,7 +4,7 @@
      pill, no colour legend — the state a user needs is now told once per section by the bottom
      bar, not repeated on every field.
      `.field_card` is kept as the root class name: `[appSectionSkeleton]` targets it. -->
-<div [class.field_card]="!isBare" [class.fc-error]="!isBare && hasError">
+<div [class.field_card]="!isBare" [class.fc-row]="!isBare && layout === 'row'" [class.fc-error]="!isBare && hasError">
   @if (showHeaderRow) {
     <div class="field_card_header">
       <span class="fch_title" [innerHTML]="label"></span>

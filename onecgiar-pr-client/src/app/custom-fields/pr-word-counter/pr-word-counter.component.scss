@@ -1,12 +1,16 @@
 @use '../../../styles/fonts.scss' as fonts;
 
+// El mockup lo define como 12px/400 pegado al borde derecho del campo. Estaba en `body-3`
+// (10px) y en --pr-color-secondary-100: a ese tamaño el contador dejaba de ser legible justo
+// cuando más importa, que es al acercarse al límite.
 .word_counter {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 5px;
-  color: var(--pr-color-secondary-100);
-  @include fonts.pr-typography('body-3');
+  color: var(--pr-text-secondary);
+  @include fonts.pr-typography('body-2');
+  font-size: 12px;
 
   .limitBreaker {
     font-weight: 700;

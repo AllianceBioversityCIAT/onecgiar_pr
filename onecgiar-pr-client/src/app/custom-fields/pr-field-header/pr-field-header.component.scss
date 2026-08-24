@@ -1,6 +1,8 @@
 .required::after {
   content: '*';
-  color: var(--pr-color-red-100);
+  // `--pr-field-required-fg` = #b42318 (mockup). Era --pr-color-red-100 (#fc7c7c), un rosa que a
+  // 14px casi no se veía — justo lo contrario de lo que un marcador de obligatorio debe hacer.
+  color: var(--pr-field-required-fg);
   margin-left: 2px;
 }
 
