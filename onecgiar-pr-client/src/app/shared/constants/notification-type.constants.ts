@@ -18,7 +18,9 @@ export enum NotificationType {
   BILATERAL_RESULT_APPROVED = 'Bilateral Result Approved',
   BILATERAL_RESULT_REJECTED = 'Bilateral Result Rejected',
   RESULT_CENTER_TAGGED = 'Result Center Tagged',
-  RESULT_BILATERAL_PROJECT_TAGGED = 'Result Bilateral Project Tagged'
+  RESULT_BILATERAL_PROJECT_TAGGED = 'Result Bilateral Project Tagged',
+  RESULT_CONTRIBUTION_ACCEPTED = 'Result Contribution Accepted',
+  RESULT_CONTRIBUTION_DECLINED = 'Result Contribution Declined'
 }
 
 /**
@@ -147,6 +149,9 @@ export function getResultNotificationTextParts(notification: any): NotificationT
     // and ships it on `notification.text`; we only supply the lead-in.
     case NotificationType.RESULT_CENTER_TAGGED:
     case NotificationType.RESULT_BILATERAL_PROJECT_TAGGED:
+    // P2-3188 shares the split: the server stores which Science Program decided, we supply the lead-in.
+    case NotificationType.RESULT_CONTRIBUTION_ACCEPTED:
+    case NotificationType.RESULT_CONTRIBUTION_DECLINED:
       return {
         prefix: 'The result',
         suffix: notification?.text?.trim() || null,
@@ -172,6 +177,12 @@ export function buildResultNotificationText(notification: any): string {
 export function isBilateralReviewNotification(notification: any): boolean {
   const type = resolveNotificationType(notification);
   return type === NotificationType.BILATERAL_RESULT_APPROVED || type === NotificationType.BILATERAL_RESULT_REJECTED;
+}
+
+/** True when the notification reports an SP contributor's decision on a contribution (P2-3188). */
+export function isContributionDecisionNotification(notification: any): boolean {
+  const type = resolveNotificationType(notification);
+  return type === NotificationType.RESULT_CONTRIBUTION_ACCEPTED || type === NotificationType.RESULT_CONTRIBUTION_DECLINED;
 }
 
 /** True when the notification reports the recipient's centre or bilateral project being tagged. */

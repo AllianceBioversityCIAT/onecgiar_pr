@@ -16,6 +16,8 @@ import { UserNotificationSettingRepository } from '../../user-notification-setti
 import { VersioningService } from '../../versioning/versioning.service';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { SocketManagementService } from '../../../shared/microservices/socket-management/socket-management.service';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
+import { NotificationService } from '../../notification/notification.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 describe('ShareResultRequestService', () => {
@@ -46,6 +48,16 @@ describe('ShareResultRequestService', () => {
           useValue: mockShareResultRequestRepository,
         },
         { provide: ResultRepository, useValue: {} },
+        // P2-3188 additions. Both are only exercised by the contribution-decision emission, which
+        // these suites do not reach — but the constructor needs them resolvable.
+        {
+          provide: ResultsCenterRepository,
+          useValue: { getAllResultsCenterByResultId: jest.fn() },
+        },
+        {
+          provide: NotificationService,
+          useValue: { emitResultNotification: jest.fn() },
+        },
         { provide: ResultByInitiativesRepository, useValue: {} },
         {
           provide: ResultsTocResultRepository,

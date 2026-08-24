@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { NotificationController } from './notification.controller';
 import { NotificationLevelRepository } from './repositories/notification-level.respository';
@@ -33,7 +33,8 @@ import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-pr
   exports: [NotificationService, ResultTaggedNotificationService],
   imports: [
     SocketManagementModule,
-    ShareResultRequestModule,
+    // P2-3188: forwardRef on both sides — see the note in share-result-request.module.ts.
+    forwardRef(() => ShareResultRequestModule),
     VersioningModule,
     // Entity-level registration on purpose: importing the owning feature modules
     // (results, clarisa) from here would risk a cycle back into the services that
