@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 
@@ -10,6 +11,7 @@ import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { BilateralResultsService } from '../bilateral-results/bilateral-results.service';
+import { PrToastService } from '../../../../shared/components/pr-toast';
 import { ReportingProgramBandComponent } from '../dashboard-lab/components/reporting-program-band/reporting-program-band.component';
 import { PrTableComponent } from '../../../../shared/components/pr-table';
 
@@ -111,7 +113,23 @@ describe('ProgrammeResultsComponent', () => {
       providers: [
         { provide: ApiService, useValue: apiMock },
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ entityId: 'SP01' })) } },
-        { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true), navigateByUrl: jest.fn().mockResolvedValue(true) } },
+        {
+          provide: Router,
+          useValue: {
+            navigate: jest.fn().mockResolvedValue(true),
+            navigateByUrl: jest.fn().mockResolvedValue(true),
+            // Minimal stand-in for the real router pair used by `resultLink()`: keep the commands
+            // and query params intact so the spec can assert the DESTINATION, not the encoding.
+            createUrlTree: jest.fn((commands: unknown[], extras: { queryParams?: Record<string, unknown> }) => ({ commands, extras })),
+            serializeUrl: jest.fn((tree: { commands: unknown[]; extras: { queryParams?: Record<string, unknown> } }) => {
+              const path = tree.commands.join('/').replace(/\/{2,}/g, '/');
+              const query = new URLSearchParams(
+                Object.entries(tree.extras?.queryParams ?? {}).map(([key, value]) => [key, String(value)])
+              ).toString();
+              return query ? `${path}?${query}` : path;
+            })
+          }
+        },
         {
           provide: DataControlService,
           useValue: { reportingCurrentPhase: { phaseYear: 2026, portfolioAcronym: 'P26' } }
@@ -400,27 +418,105 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.cellText(component.data.rows()[0], 'section')).toBe('');
   });
 
-  it('ships View indicator and Copy link visible but DISABLED (P2-3395 / P2-3396)', () => {
+  it('ships View indicator DISABLED and the other three live (P2-3395; P2-3396 closed 2026-08-24)', () => {
     component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
     fixture.detectChanges();
 
     const items = fixture.debugElement.queryAll(By.css('[role="menu"] [role="menuitem"]'));
     const labels = items.map(item => ((item.nativeElement as HTMLElement).textContent ?? '').replace(/\s+/g, ' ').trim());
-    expect(labels).toEqual(['Open result', 'View indicator Coming soon', 'Download PDF', 'Copy link Coming soon']);
+    expect(labels).toEqual(['Open result', 'View indicator Coming soon', 'Download PDF', 'Copy link']);
 
+    // View indicator is the ONLY one left tagged — it still has no payload to open.
     const viewIndicator = items[1].nativeElement as HTMLButtonElement;
-    const copyLink = items[3].nativeElement as HTMLButtonElement;
-    for (const disabledItem of [viewIndicator, copyLink]) {
-      expect(disabledItem.disabled).toBe(true);
-      expect(disabledItem.getAttribute('aria-disabled')).toBe('true');
-      expect(disabledItem.className).toContain('cursor-not-allowed');
-      expect(disabledItem.getAttribute('title')).toBeTruthy();
-      expect(disabledItem.textContent).toContain('Coming soon');
-    }
+    expect(viewIndicator.disabled).toBe(true);
+    expect(viewIndicator.getAttribute('aria-disabled')).toBe('true');
+    expect(viewIndicator.className).toContain('cursor-not-allowed');
+    expect(viewIndicator.getAttribute('title')).toBeTruthy();
+    expect(viewIndicator.textContent).toContain('Coming soon');
 
-    // The two live ones are not disabled.
+    // The three live ones are not disabled and carry no tag.
     expect((items[0].nativeElement as HTMLButtonElement).disabled).toBe(false);
     expect((items[2].nativeElement as HTMLAnchorElement).getAttribute('target')).toBe('_blank');
+    const copyLink = items[3].nativeElement as HTMLButtonElement;
+    expect(copyLink.disabled).toBe(false);
+    expect(copyLink.className).not.toContain('cursor-not-allowed');
+    expect(copyLink.textContent).not.toContain('Coming soon');
+  });
+
+  it('keeps every menu label on ONE line — the label wrapped and pushed the pill out of the popup', () => {
+    component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
+    fixture.detectChanges();
+
+    const items = fixture.debugElement.queryAll(By.css('[role="menu"] [role="menuitem"]'));
+    expect(items.length).toBe(4);
+    for (const item of items) {
+      expect((item.nativeElement as HTMLElement).className).toContain('whitespace-nowrap');
+    }
+
+    // The popup has to be wide enough to hold "View indicator" next to its pill.
+    const popup = fixture.debugElement.query(By.css('[role="menu"]')).nativeElement as HTMLElement;
+    expect(popup.className).toContain('w-[248px]');
+  });
+
+  it('copies the ABSOLUTE url of the same destination "Open result" opens (P2-3396)', () => {
+    const clipboard = TestBed.inject(Clipboard);
+    const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
+    const toastSpy = jest.spyOn(TestBed.inject(PrToastService), 'add');
+
+    const row = component.data.rows()[0];
+    component.toggleRowMenu(row, new MouseEvent('click'));
+    component.copyLink(row);
+
+    // Same commands + query params as the row click — asserted against resultRoute(), not a literal.
+    const { commands, queryParams } = component.resultRoute(row);
+    expect(router.createUrlTree).toHaveBeenCalledWith(commands, { queryParams });
+
+    const copied = copySpy.mock.calls[0][0];
+    expect(copied).toBe(`${window.location.origin}/result/result-detail/${row.code}/general-information?phase=${row.versionId}`);
+    expect(copied.startsWith(window.location.origin)).toBe(true);
+
+    // Keyed to the only toast host the app shell mounts unconditionally.
+    expect(toastSpy).toHaveBeenCalledWith({ key: 'globalUserNotification', severity: 'success', summary: 'Result link copied' });
+    // And the menu closes, like every other action in it.
+    expect(component.isMenuOpen(row)).toBe(false);
+  });
+
+  it('copies the review-drawer deep link for a bilateral still in review', () => {
+    const clipboard = TestBed.inject(Clipboard);
+    const copySpy = jest.spyOn(clipboard, 'copy').mockReturnValue(true);
+
+    const row = { ...component.data.rows()[0], origin: 'W3/Bilaterals', statusName: 'Submitted', submitterCode: 'SP01' };
+    expect(component.usesBilateralReviewFlow(row)).toBe(true);
+
+    component.copyLink(row);
+
+    const copied = copySpy.mock.calls[0][0];
+    expect(copied).toContain('/result-framework-reporting/entity-details/SP01/results-review');
+    expect(copied).toContain(String(row.code));
+  });
+
+  it('lifts the open row ABOVE the sticky actions cells below it', () => {
+    // Every td.pgr-actions is sticky at the same z-index, so without this the rows underneath paint
+    // their opaque background over the menu and their ⋯ shows through it.
+    const [first, second] = component.data.rows();
+    component.toggleRowMenu(first, new MouseEvent('click'));
+    fixture.detectChanges();
+
+    const cells = fixture.debugElement.queryAll(By.css('td.pgr-actions'));
+    const openCell = cells.find(cell => (cell.nativeElement as HTMLElement).querySelector('[role="menu"]'));
+    expect(openCell).toBeTruthy();
+    expect((openCell!.nativeElement as HTMLElement).classList).toContain('pgr-actions--open');
+
+    // ...and only that one.
+    expect(cells.filter(cell => (cell.nativeElement as HTMLElement).classList.contains('pgr-actions--open')).length).toBe(1);
+
+    // Closing it puts the row back on the shared level.
+    component.toggleRowMenu(second, new MouseEvent('click'));
+    fixture.detectChanges();
+    const stillOpen = fixture.debugElement
+      .queryAll(By.css('td.pgr-actions.pgr-actions--open'))
+      .map(cell => (cell.nativeElement as HTMLElement).querySelector('[role="menu"]') !== null);
+    expect(stillOpen).toEqual([true]);
   });
 
   it('only ever opens one row menu at a time and closes it on Escape', () => {

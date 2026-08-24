@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -28,6 +29,7 @@ import {
   REVIEW_RESULT_ID_QUERY_PARAM,
   REVIEW_RESULT_QUERY_PARAM
 } from '../bilateral-results/bilateral-results.service';
+import { PrToastService } from '../../../../shared/components/pr-toast';
 import { ProgrammeResultRow, ProgrammeResultsService } from './services/programme-results.service';
 import { ProgrammeResultsFilterChip, ProgrammeResultsFilterService, buildStatusCounts } from './services/programme-results-filter.service';
 
@@ -468,6 +470,14 @@ function formatDate(value: string): string {
         justify-content: flex-end;
         background: inherit;
       }
+
+      /* Every actions cell is sticky at the SAME z-index, so among equals the DOM order decides and
+         the rows BELOW paint their own opaque 'background: inherit' over an open row menu — the
+         menu's own 'z-30' cannot help, it only ranks inside its own cell's stacking context. The
+         open row has to out-rank its siblings at the CELL level. */
+      :host ::ng-deep .pgr-table .pr-table tbody td.pgr-actions.pgr-actions--open {
+        z-index: 10;
+      }
     `
   ]
 })
@@ -477,6 +487,8 @@ export class ProgrammeResultsComponent {
   private readonly dataControlSE = inject(DataControlService);
   private readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly bilateralSE = inject(BilateralResultsService);
+  private readonly clipboard = inject(Clipboard);
+  private readonly toastSE = inject(PrToastService);
 
   readonly data = inject(ProgrammeResultsService);
   readonly filter = inject(ProgrammeResultsFilterService);
@@ -793,6 +805,34 @@ export class ProgrammeResultsComponent {
    */
   pdfHref(row: ProgrammeResultRow): string {
     return `/reports/result-details/${row?.code}?phase=${row?.versionId}`;
+  }
+
+  /**
+   * "Copy link" — the ABSOLUTE url of the destination `openResult()` navigates to, so what the
+   * recipient opens is exactly what the menu's first item opens: Result Detail with its `?phase=`,
+   * or the programme's review drawer deep-link for a bilateral still in review.
+   *
+   * Decided by Yeck on 2026-08-24, closing the product question P2-3396 left open: the sibling
+   * "Download PDF" already hands out the report url, so copying that one here would duplicate it
+   * and never give anyone the result page itself. Built through the router (not string concat like
+   * `pdfHref`) because the review branch carries two query params that must be encoded.
+   */
+  resultLink(row: ProgrammeResultRow): string {
+    const { commands, queryParams } = this.resultRoute(row);
+    const path = this.router.serializeUrl(this.router.createUrlTree(commands, { queryParams }));
+    return `${window.location.origin}${path}`;
+  }
+
+  /**
+   * Clipboard + toast, then close the menu. The toast is keyed `globalUserNotification` because
+   * that is the ONLY `<app-pr-toast>` host mounted unconditionally by the app shell
+   * (`app.component.html:83`) — a host filters by key, so any other key would push a toast this
+   * page can never render.
+   */
+  copyLink(row: ProgrammeResultRow): void {
+    this.clipboard.copy(this.resultLink(row));
+    this.toastSE.add({ key: 'globalUserNotification', severity: 'success', summary: 'Result link copied' });
+    this.closeRowMenu();
   }
 
   // ── Cells ───────────────────────────────────────────────────────────────────────────────

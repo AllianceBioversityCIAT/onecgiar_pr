@@ -404,7 +404,7 @@
 
               <!-- 12 · ACTIONS — sticky right, `background: inherit` so the row / hover colour
                    follows it and scrolled cells never bleed through. -->
-              <td class="pgr-td pgr-actions">
+              <td class="pgr-td pgr-actions" [class.pgr-actions--open]="isMenuOpen(row)">
                 <button
                   type="button"
                   class="flex size-[32px] items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-secondary)] transition-colors hover:bg-[#f3f2f7]"
@@ -418,13 +418,13 @@
                 @if (isMenuOpen(row)) {
                   <div
                     role="menu"
-                    class="pgr-pop pgr-pop--menu absolute right-0 top-[36px] z-30 w-[200px] cursor-default rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[6px] shadow-[0_8px_24px_rgba(25,21,36,0.10)]"
+                    class="pgr-pop pgr-pop--menu absolute right-0 top-[36px] z-30 w-[248px] cursor-default rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[6px] shadow-[0_8px_24px_rgba(25,21,36,0.10)]"
                     (click)="$event.stopPropagation()">
                     <!-- 1 · Open result — the same handler as the row click. -->
                     <button
                       type="button"
                       role="menuitem"
-                      class="flex h-[36px] w-full items-center rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
                       (click)="openResult(row)">
                       Open result
                     </button>
@@ -438,7 +438,7 @@
                       disabled
                       aria-disabled="true"
                       title="Opening the indicator behind a result is not available yet — the results feed does not include it."
-                      class="flex h-[36px] w-full cursor-not-allowed items-center justify-between gap-[6px] rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] opacity-50">
+                      class="flex h-[36px] w-full cursor-not-allowed items-center justify-between gap-[6px] whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] opacity-50">
                       View indicator
                       <ng-container [ngTemplateOutlet]="comingSoon"></ng-container>
                     </button>
@@ -446,7 +446,7 @@
                     <!-- 3 · Download PDF — the anchor the app already uses in two other places. -->
                     <a
                       role="menuitem"
-                      class="flex h-[36px] w-full items-center rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)]"
                       [href]="pdfHref(row)"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -454,18 +454,15 @@
                       Download PDF
                     </a>
 
-                    <!-- 4 · Copy link. P2-3396 — visible, disabled, tagged: the mockup gives it no
-                         handler and WHICH link it copies (result detail or PDF report) is still an
-                         open product decision. -->
+                    <!-- 4 · Copy link — copies the ABSOLUTE url of the same destination "Open result"
+                         opens. P2-3396 closed on 2026-08-24: "Download PDF" above already hands out
+                         the report url, so this one gives out the result page itself. -->
                     <button
                       type="button"
                       role="menuitem"
-                      disabled
-                      aria-disabled="true"
-                      title="Copying a link is not available yet — which link it should copy is still being decided."
-                      class="flex h-[36px] w-full cursor-not-allowed items-center justify-between gap-[6px] rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] opacity-50">
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                      (click)="copyLink(row)">
                       Copy link
-                      <ng-container [ngTemplateOutlet]="comingSoon"></ng-container>
                     </button>
                   </div>
                 }
