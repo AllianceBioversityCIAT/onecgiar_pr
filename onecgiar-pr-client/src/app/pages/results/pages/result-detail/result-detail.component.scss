@@ -85,6 +85,46 @@
     box-shadow: none;
   }
 
+  // Encabezado de la card (número + nombre de la sección). El padding de 24px lo pone
+  // `.detail_container`, que es hermano de este bloque, así que aquí se replica en los lados
+  // para que el número quede alineado con el primer label del formulario.
+  .rd_section_head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 24px 0;
+  }
+
+  .rd_section_num {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--pr-color-primary-100);
+    color: var(--pr-color-primary-400);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .rd_section_title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--pr-text-heading);
+  }
+
+  .rd_section_done {
+    flex: none;
+    font-size: 16px;
+    color: var(--pr-status-approved-fg);
+  }
+
   // El mockup da 24px de padding a la card. `.detail_container` (global) traía `0 80px 100px`:
   // 80px laterales heredados del layout de una sola columna, y 100px abajo reservados para el
   // botón flotante de guardar, que ya no existe — la barra vive fuera del scroll. Entre esos

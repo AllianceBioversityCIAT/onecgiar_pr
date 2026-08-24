@@ -12,9 +12,7 @@ import {
   signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NavigationEnd, Router } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { filter, map, startWith } from 'rxjs/operators';
+import { Router } from '@angular/router';
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
@@ -59,7 +57,7 @@ export class SectionBottomBarComponent implements OnDestroy {
   readonly saveButtonSE = inject(SaveButtonService);
   readonly dataControlSE = inject(DataControlService);
   readonly rolesSE = inject(RolesService);
-  private readonly sectionsSE = inject(ResultSectionsService);
+  readonly sectionsSE = inject(ResultSectionsService);
   private readonly router = inject(Router);
   private readonly slotSE = inject(SectionBottomBarSlotService);
   private readonly hostRef = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -67,24 +65,15 @@ export class SectionBottomBarComponent implements OnDestroy {
   /** Open/closed state of the pending-fields popover. */
   readonly pendingOpen = signal(false);
 
-  private readonly currentPath = toSignal(
-    this.router.events.pipe(
-      filter(e => e instanceof NavigationEnd),
-      startWith(null),
-      map(() => this.pathFromUrl())
-    ),
-    { initialValue: this.pathFromUrl() }
-  );
+  // La posición vive en `ResultSectionsService`: el encabezado de la card muestra el MISMO
+  // número, y dos contadores independientes se desincronizan en cuanto la lista de secciones
+  // se filtra distinto (portafolio, tipo de resultado).
+  private readonly currentIndex = this.sectionsSE.currentIndex;
 
-  private readonly currentIndex = computed(() => {
-    const path = this.currentPath();
-    return this.sectionsSE.sections().findIndex(s => s.path === path);
-  });
-
-  readonly total = computed(() => this.sectionsSE.sections().length);
+  readonly total = this.sectionsSE.navigableCount;
   /** 1-based position, or 0 when the current route is not one of the listed sections. */
-  readonly position = computed(() => this.currentIndex() + 1);
-  readonly showPosition = computed(() => this.currentIndex() >= 0 && this.total() > 0);
+  readonly position = this.sectionsSE.currentPosition;
+  readonly showPosition = this.sectionsSE.hasCurrentSection;
 
   readonly hasPrevious = computed(() => this.currentIndex() > 0);
   readonly hasNext = computed(() => this.currentIndex() >= 0 && this.currentIndex() < this.total() - 1);
@@ -151,10 +140,5 @@ export class SectionBottomBarComponent implements OnDestroy {
     const target = this.sectionsSE.sections()[index];
     if (!target) return;
     this.router.navigate([this.sectionsSE.sectionLink(target)], { queryParams: this.sectionsSE.sectionQueryParams() });
-  }
-
-  /** Last path segment, without the query string. */
-  private pathFromUrl(): string {
-    return this.router.url.split('?')[0].split('/').filter(Boolean).pop() ?? '';
   }
 }

@@ -11,6 +11,8 @@ import { ResultMetadataPanelService } from '../../../../../../shared/components/
 interface MetaRow {
   label: string;
   value: string;
+  /** Sin dato disponible todavía: la fila se muestra con la etiqueta `Coming soon`. */
+  pending?: boolean;
 }
 
 /** Palette per `status_id`, from the status token pairs in `styles/colors.scss`. */
@@ -85,17 +87,32 @@ export class ResultHeaderComponent {
     return STATUS_TOKENS[String(this.dataControlSE.currentResult?.status_id)]?.bg ?? 'var(--pr-status-not-started-bg)';
   }
 
-  /** The six fields the docked RESULT METADATA card used to show, unchanged. */
+  /**
+   * Las filas que el mockup pone en este popover: Center, Phase, Portfolio, Origin, Created by.
+   *
+   * Ya NO repite Status / Level / Category / Funding: los cuatro están a la vista en la tira de
+   * identidad, a un centímetro del ⓘ, y el mockup los saca de aquí justamente por eso. Code
+   * tampoco, que es el texto al que este botón está pegado.
+   *
+   * Tres de las cinco no tienen dato en `GET /api/results/get/:id` y van marcadas `pending`:
+   *  · Center — el payload trae la Science Program (`initiative_*`), que es otra cosa;
+   *  · Origin — no existe ningún campo equivalente;
+   *  · Created by — sólo llega `created_by` como id numérico, sin forma de resolver el nombre.
+   * Se muestran igual, con la etiqueta `Coming soon`, porque esconderlas dejaría el popover
+   * mintiendo por omisión sobre lo que la pantalla va a ofrecer.
+   */
   get metaRows(): MetaRow[] {
     const result = this.dataControlSE.currentResult;
-    const initiativeName = result?.initiative_name ? ` · ${result.initiative_name}` : '';
+    const phase = result?.phase_name ?? '';
+    const portfolio = result?.portfolio ?? '';
     return [
-      { label: 'Code', value: this.code },
-      { label: 'Status', value: result?.status_name ?? '' },
-      { label: 'Level', value: result?.result_level_name ?? '' },
-      { label: 'Category', value: result?.result_type_name ?? '' },
-      { label: 'Submitter', value: `${result?.initiative_official_code ?? ''}${initiativeName}` },
-      { label: 'Funding', value: result?.source_name ?? '' }
+      { label: 'Center', value: '', pending: true },
+      { label: 'Phase', value: [phase, portfolio].filter(Boolean).join(' - ') },
+      // El acrónimo, que es el dato real. El mockup escribe el nombre largo ("CGIAR Portfolio
+      // 2025-2030") y el payload no lo trae: inventar la cadena sería escribir contenido.
+      { label: 'Portfolio', value: portfolio },
+      { label: 'Origin', value: '', pending: true },
+      { label: 'Created by', value: '', pending: true }
     ];
   }
 
@@ -106,9 +123,7 @@ export class ResultHeaderComponent {
    * button carried.
    */
   get canChangeResultType(): boolean {
-    return (
-      !this.rolesSE.readOnly && !!this.dataControlSE.currentResult?.is_phase_open && this.currentSection() === 'general-information'
-    );
+    return !this.rolesSE.readOnly && !!this.dataControlSE.currentResult?.is_phase_open && this.currentSection() === 'general-information';
   }
 
   /** Last path segment of the current route, without the query string. */

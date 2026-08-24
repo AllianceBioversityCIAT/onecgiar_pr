@@ -99,6 +99,11 @@ está excluido de Jest, su gate son los Cypress CT.
   con el handle en JetBrains Mono). No se implementó porque el dato no está: `GET /api/results/:id`
   no devuelve handle ni nada de CGSpace, y la interfaz `Result` solo tiene un `handler` que es
   otra cosa. Hace falta confirmar de dónde sale antes de construirlo.
+- **El popover del ⓘ tiene 3 filas en `Coming soon`** → P2-3458 (asignado a Ángel). `Center`,
+  `Origin` y `Created by` no llegan en `GET /api/results/get/:id` — `created_by` sólo viene como
+  id numérico, sin forma de resolver el nombre. `Portfolio` muestra el acrónimo (`P25`): el
+  mockup escribe el nombre largo y el payload no lo trae, así que inventarlo sería redactar
+  contenido. Verificado leyendo `currentResult` en vivo (49 claves) el 24-ago-2026.
 - **Falta `sectionName`** en la tira de identidad, entre el nivel y el funding (el mockup lo pone
   bajo `pg.showSectionName`).
 - Cards individuales por sección, como el mockup — sin ticket todavía.

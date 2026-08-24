@@ -127,7 +127,17 @@
           @for (row of metaRows; track row.label) {
             <div class="flex h-[32px] items-center gap-[12px] border-b border-[var(--pr-border-divider)] last:border-b-0">
               <span class="w-[120px] flex-none text-[13px] font-normal text-[var(--pr-text-muted)]">{{ row.label }}</span>
-              <span class="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--pr-text)]" [title]="row.value">{{ row.value }}</span>
+              @if (row.pending) {
+                <!-- Visible pero sin dato: la fila existe en el diseño y el payload todavía no la
+                     sirve. Se marca en vez de ocultarla, para que se vea que está prevista. -->
+                <span
+                  class="flex-none rounded-full bg-[var(--pr-surface-app)] px-[8px] py-[2px] text-[11px] font-medium text-[var(--pr-text-muted)]"
+                  data-testid="result-header-meta-pending"
+                  >Coming soon</span
+                >
+              } @else {
+                <span class="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--pr-text)]" [title]="row.value">{{ row.value }}</span>
+              }
             </div>
           }
 

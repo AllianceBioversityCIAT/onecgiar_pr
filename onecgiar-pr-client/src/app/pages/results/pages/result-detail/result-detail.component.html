@@ -20,6 +20,24 @@
       </div>
 
       <div class="section_container">
+        <!-- Encabezado de la card: pastilla con el NÚMERO de la sección + su nombre, y el check
+             verde cuando está completa (mockup: 24px `#ede9fe`/`#5733c4` 13px/600, h2 16px/700
+             con tracking -.01em). Vive aquí, en el layout, y no en cada una de las 11 secciones:
+             el número y el nombre salen de `ResultSectionsService`, que ya es dueño de la lista
+             filtrada por portafolio y tipo de resultado, así que se mantiene solo.
+             Oculto en rutas que no son una sección listada, donde no habría número que mostrar. -->
+        @if (sectionsSE.hasCurrentSection()) {
+          <div class="rd_section_head" data-testid="result-section-heading">
+            <span class="rd_section_num" aria-hidden="true">{{ sectionsSE.currentPosition() }}</span>
+            <h2 class="rd_section_title">{{ sectionsSE.currentSectionName() }}</h2>
+            @if (sectionsSE.currentSectionIsDone()) {
+              <i class="material-icons-round rd_section_done" role="img" aria-label="Section complete" data-testid="result-section-complete"
+                >check_circle</i
+              >
+            }
+          </div>
+        }
+
         <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
 
         <!-- The result code → id conversion (GET_resultIdToCode) gates the outlet above. Without this

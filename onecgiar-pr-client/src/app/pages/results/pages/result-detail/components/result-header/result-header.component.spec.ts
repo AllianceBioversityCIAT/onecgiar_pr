@@ -53,6 +53,8 @@ describe('ResultHeaderComponent', () => {
         source_name: 'W3/Bilaterals',
         initiative_official_code: 'SP04',
         initiative_name: 'Multifunctional Landscapes',
+        phase_name: 'Reporting 2026',
+        portfolio: 'P25',
         is_phase_open: 1
       },
       changeResultTypeModal: false
@@ -139,11 +141,27 @@ describe('ResultHeaderComponent', () => {
       expect(q('[data-testid="result-header-meta-popover"]')).toBeTruthy();
     });
 
-    it('lists the same six fields the docked card used to show', async () => {
+    it('lists the five fields the design puts in this popover', async () => {
       await build();
 
-      expect(component.metaRows.map(r => r.label)).toEqual(['Code', 'Status', 'Level', 'Category', 'Submitter', 'Funding']);
-      expect(component.metaRows.find(r => r.label === 'Submitter').value).toBe('SP04 · Multifunctional Landscapes');
+      // Ya no repite Status / Level / Category / Funding: los cuatro están en la tira de
+      // identidad, a un centímetro de este botón.
+      expect(component.metaRows.map(r => r.label)).toEqual(['Center', 'Phase', 'Portfolio', 'Origin', 'Created by']);
+      expect(component.metaRows.find(r => r.label === 'Phase').value).toBe('Reporting 2026 - P25');
+      expect(component.metaRows.find(r => r.label === 'Portfolio').value).toBe('P25');
+    });
+
+    it('marks as Coming soon the rows the payload cannot fill yet', async () => {
+      await build();
+
+      // Center, Origin y Created by no llegan en `GET /api/results/get/:id` — Created by sólo
+      // llega como id numérico. Se muestran marcadas en vez de ocultarse.
+      expect(component.metaRows.filter(r => r.pending).map(r => r.label)).toEqual(['Center', 'Origin', 'Created by']);
+
+      q('[data-testid="result-header-meta-toggle"]').click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="result-header-meta-pending"]').length).toBe(3);
     });
 
     it('pops the metadata out into the floating card', async () => {

@@ -12,6 +12,8 @@ describe('SectionBottomBarComponent', () => {
   let component: SectionBottomBarComponent;
   let router: Router;
   let sectionsMock: any;
+  /** Url que el caso en curso simula; el mock del servicio deriva la posición de aquí. */
+  let currentUrl = '/result/result-detail/1234/partners?phase=7';
   let saveMock: any;
   let dataControlMock: any;
   let rolesMock: any;
@@ -26,6 +28,8 @@ describe('SectionBottomBarComponent', () => {
   const q = (sel: string) => html().querySelector(sel) as HTMLElement;
 
   const build = async (url = '/result/result-detail/1234/partners?phase=7') => {
+    currentUrl = url;
+    buildSectionsMock();
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [SectionBottomBarComponent],
@@ -47,12 +51,29 @@ describe('SectionBottomBarComponent', () => {
     fixture.detectChanges();
   };
 
-  beforeEach(() => {
+  /**
+   * `ResultSectionsService` es el dueño de "qué sección está abierta": el componente ya no lo
+   * calcula desde el Router, lo lee de ahí, así que el mock tiene que publicarlo. Se deriva de la
+   * misma url que fija cada `build(...)`, de modo que los casos siguen expresando lo mismo
+   * (sección 2 de 3, una ruta fuera de la lista, los extremos).
+   */
+  const buildSectionsMock = () => {
+    const path = currentUrl.split('?')[0].split('/').filter(Boolean).pop() ?? '';
+    const index = SECTIONS.findIndex(sec => sec.path === path);
     sectionsMock = {
       sections: signal(SECTIONS),
+      currentIndex: signal(index),
+      navigableCount: signal(SECTIONS.length),
+      currentPosition: signal(index + 1),
+      hasCurrentSection: signal(index >= 0),
       sectionLink: (s: any) => `/result/result-detail/1234/${s.path}`,
       sectionQueryParams: () => ({ phase: 7 })
     };
+  };
+
+  beforeEach(() => {
+    currentUrl = '/result/result-detail/1234/partners?phase=7';
+    buildSectionsMock();
     saveMock = { isSaving: signal(false) };
     dataControlMock = { fieldFeedbackList: signal<string[]>([]) };
     rolesMock = { readOnly: false };

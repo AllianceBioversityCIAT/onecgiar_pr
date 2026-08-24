@@ -1,4 +1,7 @@
 import { Injectable, computed, inject } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map, startWith } from 'rxjs/operators';
 import { PrRoute, resultDetailRouting } from '../../../../../../shared/routing/routing-data';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
@@ -33,6 +36,7 @@ export class ResultSectionsService {
   private readonly api = inject(ApiService);
   private readonly submissionModalSE = inject(SubmissionModalService);
   private readonly unsubmitModalSE = inject(UnsubmitModalService);
+  private readonly router = inject(Router);
 
   /** True until the portfolio resolves — the sidebar renders its skeleton meanwhile. */
   readonly isLoading = computed(() => !this.fieldsManagerSE.portfolioAcronym());
@@ -91,6 +95,44 @@ export class ResultSectionsService {
   sectionQueryParams(): { phase?: number | string } {
     const version = this.dataControlSE.currentResult?.version_id;
     return version != null ? { phase: version } : {};
+  }
+
+  // --- Which section is open. Lives here, not in a host, because BOTH the card heading and the
+  // bottom bar need the same number: two independent counters would drift the moment the section
+  // list is filtered differently (portfolio, result type). ---
+
+  /** Last path segment of the current URL, without the query string. */
+  private readonly currentPath = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      startWith(null),
+      map(() => this.pathFromUrl())
+    ),
+    { initialValue: this.pathFromUrl() }
+  );
+
+  /** Index of the open section, or -1 when the route is not one of the listed sections. */
+  readonly currentIndex = computed(() => {
+    const path = this.currentPath();
+    return this.sections().findIndex(s => s.path === path);
+  });
+
+  /**
+   * Cuántas secciones se pueden recorrer. Distinto de `totalCount`, que excluye las
+   * under-construction porque nunca reciben green check: para "Section N of M" sí cuentan,
+   * porque el usuario puede navegar a ellas.
+   */
+  readonly navigableCount = computed(() => this.sections().length);
+  /** 1-based, for display. 0 when the route is not a listed section. */
+  readonly currentPosition = computed(() => this.currentIndex() + 1);
+  readonly currentSection = computed<RdSection | null>(() => this.sections()[this.currentIndex()] ?? null);
+  readonly currentSectionName = computed(() => this.currentSection()?.prName ?? '');
+  readonly currentSectionIsDone = computed(() => !!this.currentSection()?.validation);
+  /** False on a route outside the list (result creator sub-routes, unknown paths). */
+  readonly hasCurrentSection = computed(() => this.currentIndex() >= 0 && this.navigableCount() > 0);
+
+  private pathFromUrl(): string {
+    return this.router.url.split('?')[0].split('/').filter(Boolean).pop() ?? '';
   }
 
   // --- Result-level actions. Gating mirrors the previous panel-menu / nav-sidebar rules. ---

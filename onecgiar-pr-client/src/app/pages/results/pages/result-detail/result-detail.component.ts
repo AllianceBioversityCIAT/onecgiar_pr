@@ -9,6 +9,7 @@ import { CurrentResultService } from '../../../../shared/services/current-result
 import { environment } from '../../../../../environments/environment';
 import { PdfExportService } from '../../../../shared/services/pdf-export.service';
 import { SectionBottomBarSlotService } from './components/section-bottom-bar/section-bottom-bar-slot.service';
+import { ResultSectionsService } from './components/result-sections-sidebar/result-sections.service';
 
 @Component({
   selector: 'app-result-detail',
@@ -20,6 +21,8 @@ export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
   private readonly pdfSE = inject(PdfExportService);
   private readonly ngZone = inject(NgZone);
   private readonly bottomBarSlotSE = inject(SectionBottomBarSlotService);
+  /** Público: el template lee de aquí el número y el nombre de la sección abierta. */
+  readonly sectionsSE = inject(ResultSectionsService);
 
   /** Floor of the content column; each section's bottom bar teleports its host node in here. */
   @ViewChild('bottomBarSlot', { static: true }) bottomBarSlot!: ElementRef<HTMLElement>;
