@@ -285,7 +285,9 @@ input::placeholder,
   cursor: pointer;
   display: inline-grid;
   place-content: center;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 
   &:disabled {
     cursor: default;
@@ -355,8 +357,11 @@ input::placeholder,
 .pr-tooltip {
   position: absolute;
   z-index: 100000;
-  max-width: 240px;
-  padding: 10px 12px;
+  // 340px es el ancho que el diseño da al popover de un CAMPO, y sin scroll: su texto es corto.
+  // Los 240px anteriores venían del globo de una línea. `min()` evita que se salga en móvil.
+  width: 340px;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 14px;
   border-radius: 12px;
   border: 1px solid var(--pr-border);
   background-color: var(--pr-surface-card);
@@ -367,7 +372,8 @@ input::placeholder,
   text-wrap: pretty;
   pointer-events: none;
   box-shadow: var(--pr-shadow-2);
-  animation: pr-tooltip-fade 0.12s ease-in;
+  // `prmsPop` del diseño: entra 4px desde arriba, .16s ease-out. Antes sólo hacía fade.
+  animation: pr-tooltip-pop 0.16s ease-out;
 
   // Los enlaces dentro del popover: `#5733c4` subrayado, como en el mockup.
   a {
@@ -427,11 +433,28 @@ input::placeholder,
 /* Impact Area guidance contains the same contextual helper text used by W1/W2. */
 // Guía de campo: el mockup le da 380px y scroll propio cuando el texto es largo.
 // El color del enlace ya no se redefine aquí — era blanco porque el fondo era oscuro.
+// Guía de sección: 420px y 320px de alto con scroll propio, los valores del diseño para el
+// popover que abre el ⓘ del encabezado de scores y el de cada fila. El scroll usa la misma barra
+// discreta que el resto de los paneles (`.pr-light-scroll`, thumb de 8px en `--pr-border-strong`).
 .pr-tooltip.sgi-dac-tooltip {
-  max-width: 380px;
-  max-height: min(70vh, 520px);
+  width: 420px;
+  max-width: min(420px, calc(100vw - 32px));
+  max-height: 320px;
   overflow-y: auto;
   padding: 14px;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--pr-border-strong);
+    border-radius: 999px;
+  }
 
   ul {
     margin: 6px 0 0;
@@ -445,7 +468,8 @@ input::placeholder,
 
 /* Policy-type guidance is intentionally long, so keep it readable without taking over the form. */
 .pr-tooltip.tsf-policy-guidance-tooltip {
-  max-width: 520px;
+  width: 520px;
+  max-width: min(520px, calc(100vw - 32px));
   max-height: min(70vh, 520px);
   overflow-y: auto;
   padding: 14px;
@@ -460,11 +484,13 @@ input::placeholder,
   }
 }
 
-@keyframes pr-tooltip-fade {
+@keyframes pr-tooltip-pop {
   from {
     opacity: 0;
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
+    transform: none;
   }
 }
