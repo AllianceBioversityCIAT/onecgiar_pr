@@ -25,6 +25,7 @@ import { AiModule } from './ai/ai.module';
 import { GeographicLocationModule } from './results-framework-reporting/geographic-location/geographic-location.module';
 import { IpsrFrameworkModule } from './ipsr-framework/ipsr-framework.module';
 import { IpsrFrameworkRoutes } from './ipsr-framework/ipsr-framework.routes';
+import { FeedbackModule } from './feedback/feedback.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -118,5 +119,9 @@ export const ModulesRoutes: Routes = [
     path: 'ipsr-framework',
     module: IpsrFrameworkModule,
     children: IpsrFrameworkRoutes,
+  },
+  {
+    path: 'feedback',
+    module: FeedbackModule,
   },
 ];
