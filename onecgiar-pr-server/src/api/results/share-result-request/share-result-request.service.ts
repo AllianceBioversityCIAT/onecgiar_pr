@@ -4,12 +4,19 @@ import {
   Inject,
   Injectable,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ShareResultRequestRepository } from './share-result-request.repository';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ShareResultRequest } from './entities/share-result-request.entity';
+import { NotificationService } from '../../notification/notification.service';
+import {
+  NotificationLevelEnum,
+  NotificationTypeEnum,
+} from '../../notification/enum/notification.enum';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { ResultRepository } from '../result.repository';
 import { ResultsByInititiative } from '../results_by_inititiatives/entities/results_by_inititiative.entity';
 import { ResultByInitiativesRepository } from '../results_by_inititiatives/resultByInitiatives.repository';
@@ -44,6 +51,19 @@ import { NotificationDto } from '../../../shared/microservices/socket-management
 export class ShareResultRequestService {
   private readonly _logger = new Logger(ShareResultRequestService.name);
 
+  /**
+   * P2-3188 — `request_status_id` → notification type. Only the two terminal decisions are here;
+   * `1` (pending) and anything added later map to undefined and emit nothing, which is safer than
+   * a default that would label an unknown status as one of these two.
+   */
+  private static readonly CONTRIBUTION_DECISION_TYPES: Record<
+    number,
+    NotificationTypeEnum
+  > = {
+    2: NotificationTypeEnum.RESULT_CONTRIBUTION_ACCEPTED,
+    3: NotificationTypeEnum.RESULT_CONTRIBUTION_DECLINED,
+  };
+
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
@@ -64,6 +84,14 @@ export class ShareResultRequestService {
     private readonly _userRepository: UserRepository,
     @Inject(forwardRef(() => SocketManagementService))
     private readonly _socketManagementService: SocketManagementService,
+    // P2-3188. `ResultsCenterRepository` resolves the lead centre; `NotificationService` comes in
+    // behind a forwardRef because `NotificationModule` imports this module for one method
+    // (`getReceivedResultRequestPopUp`). @Optional() keeps every existing spec that builds this
+    // service without it compiling — the one caller null-checks it.
+    private readonly _resultsCenterRepository: ResultsCenterRepository,
+    @Optional()
+    @Inject(forwardRef(() => NotificationService))
+    private readonly _notificationService?: NotificationService,
   ) {}
 
   async resultRequest(
@@ -1020,6 +1048,14 @@ export class ShareResultRequestService {
         createShareResultsRequestDto,
       );
 
+      // P2-3188: tell the reporting centre what the SP contributor decided. Last thing in the
+      // flow and non-blocking on purpose — the decision is already persisted.
+      await this.emitContributionDecisionNotification(
+        findShare,
+        request_status_id,
+        user,
+      );
+
       return {
         response: 'requestData',
         message: 'The requests have been updated successfully',
@@ -1029,6 +1065,134 @@ export class ShareResultRequestService {
       this._logger.error('Error updating share result request', error);
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * P2-3188 — notify the reporting centre when a Science Program contributor accepts or declines a
+   * contribution.
+   *
+   * Recipients are the users of the result's **lead centre**, not of the owning initiative. The
+   * `share_result_request` rows are initiative-scoped (`owner_initiative_id` /
+   * `requester_initiative_id`) and the story asks for the centre, so the centre is derived from
+   * `results_center`. A user belongs to a centre through `role_by_user.center_id` with
+   * `role = CENTER_USER`, which is exactly what `getUserIdsByCenter` already queries.
+   *
+   * Never throws: accepting or declining must not fail because a notification could not be sent.
+   */
+  private async emitContributionDecisionNotification(
+    findShare: any,
+    requestStatusId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    try {
+      const notificationType =
+        ShareResultRequestService.CONTRIBUTION_DECISION_TYPES[requestStatusId];
+
+      // Only the two terminal decisions notify. Anything else (a request still pending, or a
+      // status added later) is deliberately silent rather than sending a misleading message.
+      if (!notificationType) {
+        return;
+      }
+
+      if (!this._notificationService) {
+        this._logger.warn(
+          `NotificationService unavailable; skipping contribution decision notification for result ${findShare?.result_id}`,
+        );
+        return;
+      }
+
+      const resultId = Number(findShare?.result_id);
+      if (!Number.isFinite(resultId) || resultId <= 0) {
+        return;
+      }
+
+      const leadCenterCode = await this.resolveLeadCenterCode(resultId);
+      if (!leadCenterCode) {
+        // A result with no lead centre has nobody to tell. Normal for initiative-only results.
+        this._logger.log(
+          `Result ${resultId} has no lead centre; no contribution decision notification sent`,
+        );
+        return;
+      }
+
+      const recipientIds =
+        await this._roleByUserRepository.getUserIdsByCenter(leadCenterCode);
+
+      const recipients = recipientIds.filter((id) => id !== user.id);
+      if (!recipients.length) {
+        this._logger.log(
+          `No centre users to notify for result ${resultId} (centre ${leadCenterCode})`,
+        );
+        return;
+      }
+
+      const suffix = await this.buildContributionDecisionSuffix(
+        findShare,
+        requestStatusId,
+      );
+
+      await this._notificationService.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        notificationType,
+        recipients,
+        user.id,
+        resultId,
+        suffix,
+      );
+    } catch (error) {
+      this._logger.error(
+        `Failed to emit contribution decision notification for result ${findShare?.result_id}`,
+        error as Error,
+      );
+    }
+  }
+
+  /** CLARISA code of the result's lead centre, or null when none is flagged. */
+  private async resolveLeadCenterCode(
+    resultId: number,
+  ): Promise<string | null> {
+    const centers =
+      await this._resultsCenterRepository.getAllResultsCenterByResultId(
+        resultId,
+      );
+
+    const leadCenter = (centers ?? []).find(
+      (center: any) => Number(center?.is_leading_result) === 1,
+    );
+
+    return leadCenter?.code ? String(leadCenter.code) : null;
+  }
+
+  /**
+   * The half of the sentence that cannot be derived when the notification is read: which Science
+   * Program decided, and what it decided. Stored on `notification.text`; the client supplies the
+   * `"The result <code> - <title>"` lead-in. Same split as P2-3214.
+   */
+  private async buildContributionDecisionSuffix(
+    findShare: any,
+    requestStatusId: number,
+  ): Promise<string> {
+    const verb = requestStatusId === 2 ? 'accepted' : 'declined';
+
+    let programCode: string | null = null;
+    const sharedInitiativeId = Number(findShare?.shared_inititiative_id);
+
+    if (Number.isFinite(sharedInitiativeId) && sharedInitiativeId > 0) {
+      try {
+        const initiative = await this._clarisaInitiativeRepository.findOne({
+          where: { id: sharedInitiativeId },
+        });
+        programCode = initiative?.official_code ?? null;
+      } catch (error) {
+        this._logger.warn(
+          `Could not resolve the deciding Science Program for initiative ${sharedInitiativeId}`,
+          error as Error,
+        );
+      }
+    }
+
+    const by = programCode ? ` by ${programCode}` : '';
+    return `contribution was ${verb}${by}. Click to see the result.`;
   }
 
   private createInvalidShareRequestResponse() {

@@ -9,6 +9,7 @@ import {
   getNotificationActionVerb,
   getResultNotificationTextParts,
   isBilateralReviewNotification,
+  isContributionDecisionNotification,
   isResultTaggedNotification
 } from '../../../../constants/notification-type.constants';
 
@@ -43,6 +44,14 @@ export class PopUpNotificationItemComponent {
   /** True for the P2-3214 tagged types, which route straight to the result. */
   isResultTagged(notification): boolean {
     return isResultTaggedNotification(notification);
+  }
+
+  /**
+   * True for the P2-3188 contribution decision types, which route to the result as well — what the
+   * centre wants to see is the result the SP accepted or declined, not a filtered list.
+   */
+  isContributionDecision(notification): boolean {
+    return isContributionDecisionNotification(notification);
   }
 
   /**
@@ -82,8 +91,8 @@ export class PopUpNotificationItemComponent {
   onNotificationClick(event: MouseEvent): void {
     const notification = this.notification;
 
-    // P2-3214 AC4 + AC5.
-    if (this.isResultTagged(notification)) {
+    // P2-3214 AC4 + AC5, and P2-3188 which shares the same destination.
+    if (this.isResultTagged(notification) || this.isContributionDecision(notification)) {
       const url = this.resultDetailUrl(notification);
       if (!url) {
         this.itemSelected.emit();

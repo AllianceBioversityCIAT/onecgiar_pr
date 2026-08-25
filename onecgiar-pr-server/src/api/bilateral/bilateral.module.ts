@@ -68,6 +68,9 @@ import { BilateralAiTextMiningService } from '../bilateral-ai/services/bilateral
 import { BilateralAiProcessingQueueModule } from '../../shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.module';
 import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.module';
 import { AdUsersModule } from '../ad_users/ad_users.module';
+import { WebhookOutboxModule } from '../results/webhook/webhook-outbox.module';
+import { BilateralWebhookController } from './bilateral-webhook.controller';
+import { BilateralWebhookService } from './services/bilateral-webhook.service';
 
 @Module({
   imports: [
@@ -118,8 +121,12 @@ import { AdUsersModule } from '../ad_users/ad_users.module';
     BilateralAiProcessingQueueModule,
     RoleByUserModule,
     AdUsersModule,
+    // P2-3166: the endpoint repository, for registering a platform's callback destination. Safe to
+    // import — that module has no service dependencies, so it cannot close a cycle back into here.
+    WebhookOutboxModule,
   ],
   controllers: [
+    BilateralWebhookController,
     BilateralCenterController,
     BilateralController,
     BilateralAiController,
@@ -145,6 +152,7 @@ import { AdUsersModule } from '../ad_users/ad_users.module';
     BilateralAiService,
     BilateralAiFileStorageService,
     BilateralAiTextMiningService,
+    BilateralWebhookService,
   ],
   // P2-3166: the webhook dispatcher builds its payload from `BilateralService.findOne`, reusing the
   // enrichment path that already serves `GET /api/bilateral/results` instead of writing a second

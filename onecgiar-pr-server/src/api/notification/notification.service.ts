@@ -722,7 +722,11 @@ export class NotificationService {
           programCode,
         );
       case NotificationTypeEnum.RESULT_CENTER_TAGGED:
-      case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED: {
+      case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED:
+      // P2-3188 joins the same shape: the varying half is which Science Program decided, which
+      // cannot be derived when the notification is read.
+      case NotificationTypeEnum.RESULT_CONTRIBUTION_ACCEPTED:
+      case NotificationTypeEnum.RESULT_CONTRIBUTION_DECLINED: {
         // `notification.text` holds only the part that varies — everything after the result
         // identity — because the client composes `[prefix, identity, suffix]` itself
         // (`buildResultNotificationText`) and storing the whole sentence would repeat the

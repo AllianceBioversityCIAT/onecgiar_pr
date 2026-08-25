@@ -28,6 +28,8 @@ import { UserNotificationSettingRepository } from '../../user-notification-setti
 import { VersioningModule } from '../../versioning/versioning.module';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { SocketManagementModule } from '../../../shared/microservices/socket-management/socket-management.module';
+import { NotificationModule } from '../../notification/notification.module';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 
 @Module({
   controllers: [ShareResultRequestController],
@@ -54,6 +56,8 @@ import { SocketManagementModule } from '../../../shared/microservices/socket-man
     UserNotificationSettingRepository,
     GlobalParameterRepository,
     UserRepository,
+    // P2-3188: resolves the result's lead centre, whose users are the recipients.
+    ResultsCenterRepository,
   ],
   exports: [ShareResultRequestRepository, ShareResultRequestService],
   imports: [
@@ -61,6 +65,13 @@ import { SocketManagementModule } from '../../../shared/microservices/socket-man
     ResultsTocResultsModule,
     forwardRef(() => VersioningModule),
     SocketManagementModule,
+    // P2-3188. Genuinely circular: NotificationModule imports this module for one method
+    // (`getReceivedResultRequestPopUp`), and this service now needs to emit. Note that the emit
+    // path itself is independent — `emitResultNotification` only touches the notification
+    // repositories and the socket, never ShareResultRequestService — so the clean fix is to extract
+    // it into a leaf module. That refactor is deliberately deferred: P2-3157 and P2-3214 depend on
+    // that exact code path and are both in UAT. Tracked separately.
+    forwardRef(() => NotificationModule),
   ],
 })
 export class ShareResultRequestModule {}
