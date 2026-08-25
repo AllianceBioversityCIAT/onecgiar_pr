@@ -632,6 +632,14 @@ describe('FieldsManagerService', () => {
       expect(fields['[innovation-dev-info]-short_title'].placeholder).toBe('Innovation short name goes here...');
     });
 
+    it('P2-3358: serves the single linked/bundled question, not the innovation-specific wording', () => {
+      const fields = service.fields();
+      expect(fields['[innovation-use-form]-has-innovation-link'].label).toBe(
+        'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?'
+      );
+      expect(fields['[innovation-use-form]-has-innovation-link'].label).not.toContain('Is this innovation');
+    });
+
     it('should have innovation-use-form fields with required true', () => {
       const fields = service.fields();
       expect(fields['[innovation-use-form]-has-innovation-link'].required).toBe(true);

@@ -189,7 +189,7 @@ export class FieldsManagerService {
             </ul>`
       },
       '[innovation-use-form]-has-innovation-link': {
-        label: 'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?',
+        label: 'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?',
         hide: this.isP22(),
         required: true
       },
