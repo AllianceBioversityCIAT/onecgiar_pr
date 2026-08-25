@@ -252,11 +252,6 @@ export class BilateralService {
   ) {
     const incomingResults = this.unwrapIncomingResults(rootResultsDto);
 
-    const externalIdentity = this.buildExternalIdentity(
-      rootResultsDto,
-      platform,
-    );
-
     if (!incomingResults.length) {
       throw new BadRequestException(
         'At least one result payload is required in either "results" or "result".',
@@ -347,6 +342,13 @@ export class BilateralService {
                 version.id,
               );
             }
+
+            // Built per result, not per request: `external_reference` is this result's own id in
+            // the calling platform, so it cannot be hoisted out of the loop.
+            const externalIdentity = this.buildExternalIdentity(
+              bilateralDto,
+              platform,
+            );
 
             const resultHeader = await this.initializeResultHeader({
               bilateralDto,
@@ -482,6 +484,9 @@ export class BilateralService {
             createdResults.push({
               id: resultId,
               result_code: newResultHeader.result_code,
+              // Echoed so the caller can pair `result_code` with its own record in a batch
+              // response without holding on to request order.
+              external_reference: externalIdentity.external_reference,
               is_duplicate_kp: false,
               ...kpExtra,
             });
@@ -3894,17 +3899,22 @@ export class BilateralService {
    * deliberately NOT used here — routing a webhook on a self-declared value would let a caller
    * point our callbacks anywhere.
    *
-   * `idempotencyKey` lives on the envelope rather than per result, so several results arriving in
-   * one request share the same reference. That is the upstream's contract, not our choice.
+   * `external_reference` is the platform's **own** identifier for this result — per result, taken
+   * verbatim from the payload. It is deliberately not the envelope's `idempotencyKey`: that is a
+   * composed deduplication key (`{tenant}:{type}:{op}:{uniqueId}`) the producer never chose, so it
+   * cannot be matched against anything on their side without parsing.
+   *
+   * Blank is normalised to `null`. A result created in the PRMS UI has no external system behind
+   * it, and `null` says that; an empty string would claim an id exists and is empty.
    */
   private buildExternalIdentity(
-    rootResultsDto: RootResultsDto,
+    bilateralDto: CreateBilateralDto,
     platform?: ClarisaApiKeyValidationMis,
   ): ExternalPlatformIdentity {
     return {
       external_platform_id: platform?.id ?? null,
       external_platform_code: platform?.acronym ?? null,
-      external_reference: rootResultsDto?.idempotencyKey ?? null,
+      external_reference: bilateralDto?.external_reference?.trim() || null,
     };
   }
 

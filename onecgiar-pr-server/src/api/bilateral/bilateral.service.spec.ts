@@ -548,18 +548,54 @@ describe('BilateralService (unit)', () => {
         const { service } = makeService();
 
         const identity = (service as any).buildExternalIdentity(
-          { idempotencyKey: 'b4e66fb305296fe4be52', tenant: 'spoofed.tenant' },
+          { external_reference: 'STAR-9f2c-4471', tenant: 'spoofed.tenant' },
           mis,
         );
 
         expect(identity).toEqual({
           external_platform_id: 12,
           external_platform_code: 'PRMS',
-          external_reference: 'b4e66fb305296fe4be52',
+          external_reference: 'STAR-9f2c-4471',
         });
         // The body's `tenant` is caller-declared; trusting it would let a caller aim our
         // callbacks at any platform it names.
         expect(JSON.stringify(identity)).not.toContain('spoofed.tenant');
+      });
+
+      // The reference is the platform's own id for *this* result, so it has to come off the
+      // result payload. Reading it from the envelope would give every result in a batch the same
+      // value and make the callback unmatchable — which is what it used to do.
+      it('reads the reference from the result, not from the envelope idempotencyKey', () => {
+        const { service } = makeService();
+
+        const identity = (service as any).buildExternalIdentity(
+          { external_reference: 'STAR-9f2c-4471' },
+          mis,
+        );
+        expect(identity.external_reference).toBe('STAR-9f2c-4471');
+
+        // An envelope key must not leak in when the result carries no reference of its own.
+        const noRef = (service as any).buildExternalIdentity(
+          { idempotencyKey: 'prms:kp:ingest:abc' } as any,
+          mis,
+        );
+        expect(noRef.external_reference).toBeNull();
+      });
+
+      it('keeps the reference null when it is absent or blank, never an empty string', () => {
+        const { service } = makeService();
+
+        for (const value of [undefined, '', '   ']) {
+          const identity = (service as any).buildExternalIdentity(
+            { external_reference: value },
+            mis,
+          );
+          // Null means "this result has no id in an external system" — a bilateral created in the
+          // PRMS UI. An empty string would claim one exists and is blank.
+          expect(identity.external_reference).toBeNull();
+          // The platform is still recorded: no reference does not mean no origin.
+          expect(identity.external_platform_id).toBe(12);
+        }
       });
 
       it('yields nulls when no platform was authenticated', () => {

@@ -168,6 +168,11 @@ export class WebhookDispatchService {
 
     return {
       result_id: Number(delivery.result_id),
+      // The recipient's own id for this result, promoted out of `data` so matching a callback to
+      // their record never depends on walking the enriched document. Null when the result was not
+      // reported through an external platform.
+      external_reference:
+        (data as { external_reference?: string })?.external_reference ?? null,
       decision: delivery.decision,
       decided_at: new Date().toISOString(),
       // Omitted entirely when there is none — never an empty string. That is the contract P2-3157

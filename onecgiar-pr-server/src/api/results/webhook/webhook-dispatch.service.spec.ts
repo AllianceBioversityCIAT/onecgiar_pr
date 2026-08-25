@@ -204,6 +204,34 @@ describe('WebhookDispatchService', () => {
       expect(payload.decision).toBe('REJECT');
     });
 
+    // The whole point of the field: STAR receives this callback and has to know which of its own
+    // records it is about, without walking the enriched document or parsing a composed key.
+    it('promotes the recipient own external_reference to the top level', async () => {
+      (bilateralService.findOne as jest.Mock).mockResolvedValue({
+        response: {
+          id: 555,
+          title: 'A bilateral result',
+          external_reference: 'STAR-9f2c-4471',
+        },
+      });
+
+      await service.dispatchDue();
+
+      const [, body] = (httpService.post as jest.Mock).mock.calls[0];
+      expect(JSON.parse(body).external_reference).toBe('STAR-9f2c-4471');
+    });
+
+    // A bilateral created in the PRMS UI has no external system behind it. Null says that; an
+    // absent key would make the recipient guess whether we simply forgot to send it.
+    it('sends external_reference as null when the result has none', async () => {
+      await service.dispatchDue();
+
+      const [, body] = (httpService.post as jest.Mock).mock.calls[0];
+      const payload = JSON.parse(body);
+      expect('external_reference' in payload).toBe(true);
+      expect(payload.external_reference).toBeNull();
+    });
+
     it('carries the rejection justification, trimmed', async () => {
       await service.dispatchDue();
 

@@ -68,7 +68,10 @@ Baseline citations:
 - The in-app channel to centres — that is P2-3157, already delivered.
 - Email to centres on rejection. `bilateral-spec.md` Appendix B commits to it, BR1 of P2-3157
   forbids it; P2-3157 resolved that in favour of BR1 and this spec does not revisit it.
-- Changing the `/create` request contract to accept a per-result external id (see §4, ING-2).
+- ~~Changing the `/create` request contract to accept a per-result external id.~~ **Reversed 2026-08-25.**
+  Delivered as an optional additive field — see §4, ING-2. The original rejection assumed it would break
+  existing producers; an optional field does not, and the alternative (reusing the composed
+  `idempotencyKey`) gave platforms a value they could not match against their own records.
 
 ## 4. Requirements
 
@@ -82,7 +85,7 @@ Baseline citations:
 | **WH-4** | A delivery that fails (timeout, 5xx, network) is retried a bounded number of times with exponential backoff, and is never lost in the process. | AC4 |
 | **WH-5** | When retries are exhausted the delivery is marked terminally failed and the PRMS technical team is alerted exactly once, with enough context to investigate. | AC5 |
 | **ING-1** | On ingestion through `POST /api/bilateral/create`, the authenticated calling system (`mis.id`, `mis.acronym`) and the envelope's `idempotencyKey` are persisted on the result. **Done in Phase 1.** | AC3 (enabler) |
-| **ING-2** | The `/create` request contract is unchanged. Platforms correlate our callback using the `idempotencyKey` they already send. | AC-4 |
+| **ING-2** | `POST /api/bilateral/create` accepts an **optional** per-result `external_reference` in `data`: the platform's own id for that result (consecutive, UUID, any string, max 191). Stored verbatim in `result.external_reference` and returned verbatim at the top level of the decision webhook and in the ingest response, so a platform maps our callback onto its record without parsing. **Additive and optional by design** — a bilateral created in the PRMS UI has no external system behind it and stores `null`. Supersedes the earlier reading, where the column held the envelope's composed `idempotencyKey`: that key is per payload and the producer never chooses it, so it could not be matched on their side. | AC-4 |
 
 ### Non-functional
 

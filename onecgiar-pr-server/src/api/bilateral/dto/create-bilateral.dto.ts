@@ -16,6 +16,7 @@ import {
   IsDefined,
   IsInt,
   Min,
+  MaxLength,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -1071,6 +1072,29 @@ export class LeadContactPersonDto {
 /* -------------------------------------------------------------------------- */
 
 export class CreateBilateralDto {
+  /**
+   * P2-3166 — the reporting platform's own identifier for this result: a consecutive number, a
+   * UUID, or any string their system already uses.
+   *
+   * **Optional on purpose and it must stay that way.** A bilateral result created inside the PRMS
+   * UI has no external system behind it, so there is nothing to store; `null` is the honest value.
+   * Requiring it would break every producer that has no such id.
+   *
+   * Stored verbatim in `result.external_reference` and returned verbatim on the decision webhook,
+   * so a platform can map our callback onto its own record without parsing anything. It is
+   * deliberately **not** the envelope's `idempotencyKey`, which is a composed deduplication key.
+   */
+  @ApiPropertyOptional({
+    description:
+      "The reporting platform's own identifier for this result (consecutive, UUID, or any string). Returned verbatim on the decision webhook so you can map it back to your record.",
+    example: 'KP-2026-00412',
+    maxLength: 191,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(191)
+  external_reference?: string;
+
   @ApiProperty({
     description: 'Result type identifier for the bilateral',
     example: 6,
