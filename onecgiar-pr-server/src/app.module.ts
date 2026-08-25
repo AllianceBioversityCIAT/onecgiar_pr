@@ -39,6 +39,7 @@ import { VersioningModule } from './api/versioning/versioning.module';
 import { GlobalNarrativesModule } from './api/global-narratives/global-narratives.module';
 import { DeleteRecoverDataModule } from './api/delete-recover-data/delete-recover-data.module';
 import { GlobalParameterModule } from './api/global-parameter/global-parameter.module';
+import { FeedbackModule } from './api/feedback/feedback.module';
 import { SharePointModule } from './shared/services/share-point/share-point.module';
 import { NotificationModule } from './api/notification/notification.module';
 import { UserNotificationSettingsModule } from './api/user-notification-settings/user-notification-settings.module';
@@ -96,6 +97,7 @@ import { GlobalUtilsModule } from './shared/utils/global-utils.module';
     GlobalNarrativesModule,
     DeleteRecoverDataModule,
     GlobalParameterModule,
+    FeedbackModule,
     SharePointModule,
     UserNotificationSettingsModule,
     EmailNotificationManagementModule,

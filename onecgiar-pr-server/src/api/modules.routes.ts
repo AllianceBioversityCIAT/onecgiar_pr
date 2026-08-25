@@ -26,6 +26,7 @@ import { InnovationUseModule } from './results-framework-reporting/innovation-us
 import { AiModule } from './ai/ai.module';
 import { IpsrFrameworkModule } from './ipsr-framework/ipsr-framework.module';
 import { IpsrFrameworkRoutes } from './ipsr-framework/ipsr-framework.routes';
+import { FeedbackModule } from './feedback/feedback.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -127,5 +128,9 @@ export const ModulesRoutes: Routes = [
     path: 'ipsr-framework',
     module: IpsrFrameworkModule,
     children: IpsrFrameworkRoutes,
+  },
+  {
+    path: 'feedback',
+    module: FeedbackModule,
   },
 ];
