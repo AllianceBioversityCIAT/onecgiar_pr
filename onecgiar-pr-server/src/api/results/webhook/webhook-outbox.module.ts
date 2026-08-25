@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { WebhookDelivery } from './entities/webhook-delivery.entity';
 import { WebhookEndpoint } from './entities/webhook-endpoint.entity';
 import { WebhookDeliveryRepository } from './webhook-delivery.repository';
+import { WebhookEndpointRepository } from './webhook-endpoint.repository';
 
 /**
  * The write side of the P2-3166 outbox, and nothing else.
@@ -16,7 +17,7 @@ import { WebhookDeliveryRepository } from './webhook-delivery.repository';
  */
 @Module({
   imports: [TypeOrmModule.forFeature([WebhookEndpoint, WebhookDelivery])],
-  providers: [WebhookDeliveryRepository],
-  exports: [WebhookDeliveryRepository],
+  providers: [WebhookDeliveryRepository, WebhookEndpointRepository],
+  exports: [WebhookDeliveryRepository, WebhookEndpointRepository],
 })
 export class WebhookOutboxModule {}
