@@ -1,4 +1,8 @@
-<app-bilateral-page-header pageTitle="Report New Bilateral Result" />
+<app-bilateral-page-header
+  [pageTitle]="headerTitle()"
+  [resultCode]="creationService.resultCode()"
+  [resultTypeName]="creationService.resultTypeName()"
+  [isW3Bilateral]="creationService.isW3Bilateral()" />
 
 <div class="bilateral-creator" [class.bilateral-creator--with-aside]="!isCreating() && resultId()">
   @if (isCreating()) {

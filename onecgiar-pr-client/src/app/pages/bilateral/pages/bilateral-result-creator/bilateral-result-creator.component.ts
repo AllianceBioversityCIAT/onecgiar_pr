@@ -104,6 +104,16 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * local signal made this condition a no-op exactly where it had to work. It is also the same source
    * `section-type-specific` reads, so the two can no longer disagree.
    */
+  /**
+   * P2-3352: the header must show the result title. It was hardcoded to "Report New Bilateral
+   * Result", which is right for the wizard and wrong for the editor — where the user is looking at a
+   * result that already has a name. Falls back to the wizard copy while the title is still loading.
+   */
+  readonly headerTitle = computed(() => {
+    if (this.isCreating()) return 'Report New Bilateral Result';
+    return this.creationService.resultTitle() || 'Report New Bilateral Result';
+  });
+
   readonly hasTypeSpecificSection = computed(() => {
     const typeId = this.creationService.resultTypeId();
     return typeId !== 4 && typeId !== 8;

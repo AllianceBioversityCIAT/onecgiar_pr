@@ -52,6 +52,11 @@ describe('BilateralResultCreatorComponent', () => {
       resultLevelId: signal(null) as any,
       resultTypeId: signal(null) as any,
       currentResultId: signal(null) as any,
+      // P2-3352: the header now reads the result identity from here.
+      resultCode: signal(null) as any,
+      resultTypeName: signal(null) as any,
+      isW3Bilateral: signal(false) as any,
+      resultTitle: signal('') as any,
       createResult: jest.fn().mockReturnValue(of({ response: { id: 42 } })),
       submitResult: jest.fn().mockReturnValue(of({})),
       selectProject: jest.fn(),
@@ -239,6 +244,26 @@ describe('BilateralResultCreatorComponent', () => {
     creationService.selectedPrimarySp.set({ programId: 100 });
     component.onNext();
     expect(creationService.createResult).toHaveBeenCalledWith(3, 2, undefined);
+  });
+
+  describe('header title (P2-3352)', () => {
+    it('uses the wizard copy while creating', () => {
+      component.isCreating.set(true);
+      creationService.resultTitle.set('An existing result');
+      expect(component.headerTitle()).toBe('Report New Bilateral Result');
+    });
+
+    it('uses the result title in the editor', () => {
+      component.isCreating.set(false);
+      creationService.resultTitle.set('An existing result');
+      expect(component.headerTitle()).toBe('An existing result');
+    });
+
+    it('falls back to the wizard copy while the title is still loading', () => {
+      component.isCreating.set(false);
+      creationService.resultTitle.set('');
+      expect(component.headerTitle()).toBe('Report New Bilateral Result');
+    });
   });
 
   describe('Type-specific section visibility (P2-3387)', () => {

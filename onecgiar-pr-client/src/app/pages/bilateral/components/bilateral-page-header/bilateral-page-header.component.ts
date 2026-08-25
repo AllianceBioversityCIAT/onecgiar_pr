@@ -25,6 +25,23 @@ export class BilateralPageHeaderComponent {
    */
   readonly pageTitle = input<string | null>(null);
 
+  /**
+   * P2-3352: identity of the result being edited — code, type and funding tag. Passed in rather than
+   * read from BilateralCreationService so this header stays usable by the three tabbed pages, which
+   * have no result loaded. All three are optional; the strip renders only for the ones present.
+   *
+   * The status badge the story also asks for is NOT here: the bilateral result-detail response
+   * (CommonFieldsDto) carries no status field, so the editor cannot know it. Blocked on backend —
+   * see P2-3437.
+   */
+  readonly resultCode = input<string | number | null>(null);
+  readonly resultTypeName = input<string | null>(null);
+  readonly isW3Bilateral = input(false);
+
+  readonly hasIdentityStrip = computed(
+    () => this.resultCode() != null || !!this.resultTypeName() || this.isW3Bilateral(),
+  );
+
   /** `[Full Center Name] (INITIALS)`, the trailing breadcrumb segment required by AC1. */
   readonly centerBreadcrumbLabel = computed(() => {
     const name = this.ctx.centerName();
