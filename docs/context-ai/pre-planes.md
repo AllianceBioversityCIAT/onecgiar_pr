@@ -48,7 +48,7 @@ Las actividades que son `QA - Enhancement` (tipo subtarea) no admiten hijos → 
 | `P2-3321` Other Output (crear) | `P2-3451` | **sin trabajo de dev — espera QA** |
 | `P2-3371` Policy Change (crear) | `P2-3450` | front |
 | `P2-3373` Other Outcome (crear) | `P2-3449` | front |
-| `P2-3336` AoW Scoping Rules | `P2-3457` | front, pendiente confirmar si el flag existe |
+| `P2-3336` AoW Scoping Rules | `P2-3457` | **resuelto** — el flag existe (`is_aow`) y las 3 reglas ya estaban hechas |
 | `P2-3254` · `P2-3358` · `P2-3262` | comentario en el ticket | front |
 
 **Backend → `P2-3437`** (índice, Juanda) y **`P2-3443`** (el DTO de contributors, Juanda).

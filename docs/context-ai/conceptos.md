@@ -110,3 +110,37 @@ Innovation Package vive en `pages/ipsr/`, con módulo y routing propios, y **no 
 la bottom bar, la barra se queda donde fue declarada — señal de que IPSR nunca entró al layout nuevo.
 
 Es prioridad 4 en el Excel. Ver `decisiones-y-contradicciones.md` § 4 y `P2-3427`.
+
+----------
+
+## AoW ↔ Intermediate Outcome: `wp_id` es un FK de UNA columna
+
+Lo que decide todas las reglas de scoping de `P2-3336`, y lo que hay que saber antes de
+prometerle a nadie una relación muchos-a-muchos que no existe.
+
+`toc_results.wp_id` apunta a **un** work package (Area of Work). Un IO pertenece a **una** AoW
+o a **ninguna** — no hay tabla puente. De ahí sale todo:
+
+- `wp_id IS NULL` → el nodo es del Science Program entero, y el server lo devuelve **bajo todas
+  las AoW** del programa a propósito. El predicado está en
+  `onecgiar-pr-server/.../repositories/aow-bilateral.repository.ts` (~línea 442):
+  `AND (wp.toc_id IS NOT NULL OR tr.wp_id IS NULL)`, con el comentario que lo dice explícito.
+- `(wp.toc_id IS NOT NULL) AS is_aow` (línea 400) es el flag que el client usa: **`false` = compartido**.
+  El client no re-deriva la regla, solo lee el flag — y un flag **ausente** lo trata como exclusivo,
+  para no cambiar el comportamiento previo al despliegue del campo.
+- El mismo conjunto sale por su propio endpoint con `intermediateOnly` → `AND tr.wp_id IS NULL`.
+  Verificado en prtest (25-ago): en SP05 los IO 7208 y 7258 vuelven `is_aow: false` en las seis AoW
+  y son exactamente los dos que devuelve el endpoint de intermediate-outcomes.
+
+⚠️ **`programId` del endpoint de intermediate-outcomes es el CÓDIGO del programa (`SP05`), no el
+`initiativeId` numérico.** Con un número devuelve `tocResults: []` y `total: 0` — parece base de
+datos vacía y no lo es. Perdí varias consultas ahí. Los códigos salen de
+`api/results-framework-reporting/get/science-programs/progress`.
+
+⚠️ En ese endpoint `is_aow` viene `false` en **todas** las filas, porque el SQL emite `NULL`
+literal cuando no hay `areaAcronym` y `groupTocRows` lo pasa por `Boolean()`. Es coherente
+(son justo los no exclusivos), pero no es un flag calculado ahí: no lo uses como tal.
+
+⚠️ **Los Outputs traen el mismo `is_aow` y NO tienen split.** La historia solo habla de IOs, así
+que se dejó así. Si alguien pide la misma distinción para Outputs, es petición nueva.
+
