@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 
 import { TypeCapacitySharingComponent } from './type-capacity-sharing.component';
@@ -160,6 +160,27 @@ describe('TypeCapacitySharingComponent', () => {
   // Submit button disabled — it is gated on overallStatus() === 'complete'. AC1 lists "Number of
   // people trained" as one mandatory field, and the on-screen hint sends users to "Unknown" when the
   // gender split is unavailable, so the group is what has to be satisfied.
+  // P2-3355 pattern, applied here: registering the checklist only on success left the section with an
+  // empty field list, which renders as "0/0 fields" — read as "nothing required here" rather than as
+  // incomplete. A successful load can only ever read 0/3 .. 3/3, never 0/0, so 0/0 was the tell.
+  describe('when the fetch fails', () => {
+    it('still publishes the three unfilled MDS items, so the section stays incomplete', () => {
+      bilateralApi.GET_capacityDevelopment.mockReturnValue(throwError(() => new Error('500')));
+      build();
+      fixture.detectChanges();   // build() only creates the component; ngOnInit runs here
+      const items = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(items).toHaveLength(3);
+      expect(items.every((i: any) => i.filled === false)).toBe(true);
+    });
+
+    it('leaves the body empty rather than half-hydrated', () => {
+      bilateralApi.GET_capacityDevelopment.mockReturnValue(throwError(() => new Error('500')));
+      build();
+      fixture.detectChanges();
+      expect(component.body).toEqual({});
+    });
+  });
+
   describe('updateMds', () => {
     it('counts nothing while every field is empty', () => {
       build();

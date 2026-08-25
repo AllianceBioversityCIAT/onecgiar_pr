@@ -70,17 +70,28 @@ export class TypeCapacitySharingComponent implements OnInit {
   private loadData(): void {
     const resultId = this.creationService.currentResultId();
     if (!resultId) return;
-    this.bilateralApi.GET_capacityDevelopment(resultId).subscribe(({ response }) => {
-      this.body = { ...(response || {}) };
-      // MySQL returns tinyint values (0/1) from this legacy endpoint. The radio
-      // options use booleans, so normalize them before binding to the control.
-      if ('is_attending_for_organization' in this.body) {
-        this.body.is_attending_for_organization = this.normalizeAttendanceValue(
-          this.body.is_attending_for_organization,
-        );
-      }
-      this.hydrateTermCascade();
-      this.updateMds();
+    // P2-3355 pattern: the checklist is published on EVERY outcome, including failure. Registering it
+    // only on success left the section with an empty field list — the "0/0 fields" QA reported for
+    // Knowledge Product, which reads as "nothing required here" instead of as incomplete. A
+    // successful load can only ever read 0/3 .. 3/3; never 0/0. So a failed fetch publishes three
+    // unfilled items and the section stays honestly incomplete.
+    this.bilateralApi.GET_capacityDevelopment(resultId).subscribe({
+      next: ({ response }) => {
+        this.body = { ...(response || {}) };
+        // MySQL returns tinyint values (0/1) from this legacy endpoint. The radio
+        // options use booleans, so normalize them before binding to the control.
+        if ('is_attending_for_organization' in this.body) {
+          this.body.is_attending_for_organization = this.normalizeAttendanceValue(
+            this.body.is_attending_for_organization,
+          );
+        }
+        this.hydrateTermCascade();
+        this.updateMds();
+      },
+      error: () => {
+        this.body = {};
+        this.updateMds();
+      },
     });
     this.bilateralApi.GET_capdevsDeliveryMethod().subscribe(({ response }) => {
       this.deliveryMethods = response || [];
