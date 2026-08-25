@@ -86,23 +86,30 @@
               </app-pr-input>
             </div>
 
+            <!-- P2-3291: the sub-options used to be free-floating rows at `margin-left: 20px`, which put a
+             checkbox to the LEFT of the radio label it depends on — business could not tell they derived
+             from "Yes". The wrapper indents past that label and carries the vertical rule that marks where
+             the group starts and ends. The conditions are unchanged: this block already rendered only for
+             the selected option, so the ticket's conditional logic was never the missing part. -->
             <ng-container *ngIf="option?.subOptions?.length && value === option[optionValue]">
-              <p class="radioButton__subLabel" *ngIf="option?.subOptions?.length">{{ this.subLabel }}</p>
-              <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]" class="checkboxList">
-                <app-pr-checkbox
-                  [label]="checkbox[this.checkboxConfig.optionLabel]"
-                  [(ngModel)]="checkbox[this.checkboxConfig.optionValue]"
-                  (ngModelChange)="checkbox.answer_text && setAnswerTextToNull(checkbox)"
-                  [readOnly]="this.value !== option[this.optionValue] || ((readOnly || disabled || this.rolesSE.readOnly) && !isStatic)">
-                </app-pr-checkbox>
-                <app-pr-input
-                  placeholder=""
-                  *ngIf="checkbox?.question_text == 'Other'"
-                  variant="xs"
-                  [(ngModel)]="checkbox[this.checkboxConfig.optionTextValue]"
-                  [disabled]="
-                    !checkbox[this.checkboxConfig.optionValue] || ((readOnly || disabled || this.rolesSE.readOnly) && !isStatic)
-                  "></app-pr-input>
+              <div class="radioButton__subGroup">
+                <p class="radioButton__subLabel">{{ this.subLabel }}</p>
+                <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]" class="checkboxList">
+                  <app-pr-checkbox
+                    [label]="checkbox[this.checkboxConfig.optionLabel]"
+                    [(ngModel)]="checkbox[this.checkboxConfig.optionValue]"
+                    (ngModelChange)="checkbox.answer_text && setAnswerTextToNull(checkbox)"
+                    [readOnly]="this.value !== option[this.optionValue] || ((readOnly || disabled || this.rolesSE.readOnly) && !isStatic)">
+                  </app-pr-checkbox>
+                  <app-pr-input
+                    placeholder=""
+                    *ngIf="checkbox?.question_text == 'Other'"
+                    variant="xs"
+                    [(ngModel)]="checkbox[this.checkboxConfig.optionTextValue]"
+                    [disabled]="
+                      !checkbox[this.checkboxConfig.optionValue] || ((readOnly || disabled || this.rolesSE.readOnly) && !isStatic)
+                    "></app-pr-input>
+                </div>
               </div>
             </ng-container>
           </div>
