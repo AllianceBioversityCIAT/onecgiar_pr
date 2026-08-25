@@ -170,6 +170,37 @@ export class BilateralApiService {
     return this.http.get<any>(`${this.resultsApiBaseUrl}results-knowledge-products/get/result/${resultId}`);
   }
 
+  /**
+   * P2-3384: the MELIA answers are the only part of the Knowledge Product section a researcher
+   * edits — the rest of the payload is metadata mirrored from the repository and is never sent.
+   */
+  PATCH_knowledgeProductMelia(resultId: number | string, body: Record<string, unknown>) {
+    return this.http
+      .patch<any>(`${this.resultsApiBaseUrl}results-knowledge-products/upsert/${resultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  /** Re-reads the repository record; the section reloads from the response. */
+  PATCH_resyncKnowledgeProduct(resultId: number | string) {
+    return this.http.patch<any>(`${this.resultsApiBaseUrl}results-knowledge-products/resync/${resultId}`, null);
+  }
+
+  /** MELIA studies declared in the result's OST section 6.3 — portfolios before 2025-2030. */
+  GET_ostMeliaStudies(resultId: number | string) {
+    return this.http.get<any>(`${this.resultsApiBaseUrl}melia-studies/get/all/result/${resultId}`);
+  }
+
+  /** MELIA studies of the science program's Theory of Change — the 2025-2030 portfolio. */
+  GET_tocMeliaStudies(programId: number | string) {
+    return this.http.get<{ response: Array<{ melia_id: string; title: string; official_code: string }> }>(
+      `${environment.apiBaseUrl}v2/api/results/melia-studies/get/all/toc/${programId}`
+    );
+  }
+
+  GET_clarisaMeliaStudyTypes() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/melia-study-type/get/all`);
+  }
+
   // ── Bilateral AI endpoints ──────────────────────────────────────────
 
   POST_bilateralAiJob(formData: FormData) {

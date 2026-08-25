@@ -11,29 +11,29 @@ already calls returns the MELIA payload today.
 
 ## 2. Build the bilateral section
 
-- [ ] 2.1 In `type-knowledge-product.component.ts`, load the section through the same endpoint, map it with the shared mapper, and hold the MELIA answers in a save DTO. Keep publishing the checklist on failure (`P2-3355`).
-- [ ] 2.2 Load the MELIA lists: the CLARISA MELIA types always; the Theory of Change studies for the 2025-2030 portfolio using the result's program id; the OST studies otherwise.
-- [ ] 2.3 Clear the dependent MELIA values when the first question turns No, and when the second question changes branch, so a discarded selection is never saved.
-- [ ] 2.4 Re-point `setSectionFields` at the MELIA fields of the answered branch and drop the `handle` item.
-- [ ] 2.5 Save through the section's autosave service with the MELIA-only payload.
-- [ ] 2.6 Sync action with its confirmation, gated on not-a-Journal-Article or an admin user.
+- [x] 2.1 In `type-knowledge-product.component.ts`, load the section through the same endpoint, map it with the shared mapper, and hold the MELIA answers in a save DTO. Keep publishing the checklist on failure (`P2-3355`).
+- [x] 2.2 Load the MELIA lists: the CLARISA MELIA types always; the Theory of Change studies for the 2025-2030 portfolio using the result's program id; the OST studies otherwise.
+- [x] 2.3 Clear the dependent MELIA values when the first question turns No, and when the second question changes branch, so a discarded selection is never saved.
+- [x] 2.4 Re-point `setSectionFields` at the MELIA fields of the answered branch and drop the `handle` item.
+- [x] 2.5 Save through the section's autosave service with the MELIA-only payload.
+- [x] 2.6 Sync action with its confirmation, gated on not-a-Journal-Article or an admin user.
 
 ## 3. Template
 
-- [ ] 3.1 The alerts: one per warning, then the two fixed ones carrying the source name.
-- [ ] 3.2 The MELIA block with its conditional tree and the portfolio-dependent labels.
-- [ ] 3.3 The read-only rows, including the WoS and Unpaywall variants behind their presence conditions, the Altmetric link with its `Not Available` fallback, and the two inline Journal Article messages.
-- [ ] 3.4 The FAIR radials, one per dimension, total score excluded.
+- [x] 3.1 The alerts: one per warning, then the two fixed ones carrying the source name.
+- [x] 3.2 The MELIA block with its conditional tree and the portfolio-dependent labels.
+- [x] 3.3 The read-only rows, including the WoS and Unpaywall variants behind their presence conditions, the Altmetric link with its `Not Available` fallback, and the two inline Journal Article messages.
+- [x] 3.4 The FAIR radials, one per dimension, total score excluded.
 
 ## 4. Tests
 
-- [ ] 4.1 Component spec for the conditional tree, the clearing behaviour, the checklist per branch, the failed load, the save payload, and the Sync confirmation path.
-- [ ] 4.2 Mutation-check the assertions that matter: they must fail when the behaviour is reverted.
+- [x] 4.1 Component spec for the conditional tree, the clearing behaviour, the checklist per branch, the failed load, the save payload, and the Sync confirmation path.
+- [x] 4.2 Mutation-checked: reverting the checklist to the `handle` item fails 6 cases, dropping the clearing fails 1, and slipping `handle` into the save payload fails 4. Restoring each returns 42/42.
 
 ## 5. Verification
 
-- [ ] 5.1 The W1/W2 spec suite green after the extraction — proof the shared mapper changed nothing.
-- [ ] 5.2 `npx jest pages/bilateral` green.
-- [ ] 5.3 `npm run lint` clean on the files touched.
-- [ ] 5.4 `ng build` clean — the only gate that catches a broken template or an orphan brace.
+- [x] 5.1 W1/W2 suite green after the extraction with no edit to its spec: 27 cases, plus 21 new ones on the mapper itself.
+- [x] 5.2 `npx jest src/app/pages/bilateral` → 25 suites / 632 tests passed.
+- [x] 5.3 `npm run lint` clean on the files touched. Three pre-existing `no-console` errors live in `custom-fields/pr-multi-select/repro-p2-3308.spec.ts`, unrelated work in progress, left untouched.
+- [x] 5.4 `npm run build` clean — only the pre-existing bundle-budget and CommonJS warnings.
 - [ ] 5.5 Browser check on a bilateral Knowledge Product result with a synced handle.
