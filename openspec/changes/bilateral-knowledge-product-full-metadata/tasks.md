@@ -36,4 +36,4 @@ already calls returns the MELIA payload today.
 - [x] 5.2 `npx jest src/app/pages/bilateral` → 25 suites / 632 tests passed.
 - [x] 5.3 `npm run lint` clean on the files touched. Three pre-existing `no-console` errors live in `custom-fields/pr-multi-select/repro-p2-3308.spec.ts`, unrelated work in progress, left untouched.
 - [x] 5.4 `npm run build` clean — only the pre-existing bundle-budget and CommonJS warnings.
-- [ ] 5.5 Browser check on a bilateral Knowledge Product result with a synced handle.
+- [x] 5.5 Browser check via `cypress/e2e/bilateral-knowledge-product-metadata.cy.ts` — 4 specs green against a local dev server. The payload is intercepted and the result driven through the live component: the test environment has no bilateral Knowledge Product result to lean on, and `/api/results/get/all` there answers with a SQL error unrelated to this work. Screenshots in `cypress/screenshots/`.
