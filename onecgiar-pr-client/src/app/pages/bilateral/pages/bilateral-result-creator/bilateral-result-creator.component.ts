@@ -95,9 +95,17 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * is skipped from the outside instead of emptying the section: `section-type-specific` keeps its
    * "no type-specific fields required" state as the fallback for a type nobody mapped (id 9 is in its
    * NO_TYPE_SPECIFIC set and has no label either, so it would read "Unknown" — out of scope here).
+   *
+   * ⚠️ Reads `creationService.resultTypeId`, NOT the local `resultTypeId` signal, and that is the
+   * whole point. The local one is only ever written by `onTypeSelected` — the creation wizard. On the
+   * editor path (`ngOnInit` -> `creationService.loadResult`, which sets the service signal at
+   * bilateral-creation.service.ts:115) it stays null, and `null !== 4 && null !== 8` is true, so the
+   * accordion rendered for EVERY type. The sections only exist on the editor path, so reading the
+   * local signal made this condition a no-op exactly where it had to work. It is also the same source
+   * `section-type-specific` reads, so the two can no longer disagree.
    */
   readonly hasTypeSpecificSection = computed(() => {
-    const typeId = this.resultTypeId();
+    const typeId = this.creationService.resultTypeId();
     return typeId !== 4 && typeId !== 8;
   });
 
