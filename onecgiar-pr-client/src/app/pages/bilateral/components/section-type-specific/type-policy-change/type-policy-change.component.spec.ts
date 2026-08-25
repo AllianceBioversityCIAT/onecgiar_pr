@@ -180,7 +180,6 @@ describe('TypePolicyChangeComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'policy-type', label: 'Policy type', filled: false },
         { key: 'policy-stage', label: 'Stage', filled: false },
-        { key: 'related-to', label: 'Related to', filled: false },
         {
           key: 'policy-institutions',
           label: 'Whose policy is this? (Implementing organizations)',
@@ -189,18 +188,19 @@ describe('TypePolicyChangeComponent', () => {
       ]);
     });
 
-    it('uses the dynamic question text as the related-to label once loaded', () => {
+    // P2-3388: replaced the old "dynamic label" case, which only existed to assert the related-to
+    // ITEM. The story moves that question to full metadata, so it must not be tracked at all — and
+    // this guards the rule, not just today's shape: an optional field added back to this list
+    // silently disables Submit, which is how P2-3348 happened.
+    it('never tracks the related-to answer, even when it is answered', () => {
       build();
       component.body = {};
       component.questions = { question_text: 'Custom question?' };
       component.relatedTo = 2;
       component.updateMds();
-      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith(
-        'type-specific',
-        expect.arrayContaining([
-          { key: 'related-to', label: 'Custom question?', filled: true },
-        ]),
-      );
+      const items = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(items).toHaveLength(3);
+      expect(items.map((i: any) => i.key)).toEqual(['policy-type', 'policy-stage', 'policy-institutions']);
     });
 
     it('counts a fully answered form as filled', () => {
@@ -212,7 +212,6 @@ describe('TypePolicyChangeComponent', () => {
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('type-specific', [
         { key: 'policy-type', label: 'Policy type', filled: true },
         { key: 'policy-stage', label: 'Stage', filled: true },
-        { key: 'related-to', label: 'Q', filled: true },
         {
           key: 'policy-institutions',
           label: 'Whose policy is this? (Implementing organizations)',

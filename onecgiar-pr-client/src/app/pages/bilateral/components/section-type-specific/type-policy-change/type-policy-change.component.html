@@ -34,19 +34,6 @@
     (ngModelChange)="onFieldChange()">
   </app-pr-select>
 
-  @if (questions?.optionsWithAnswers?.length) {
-    <app-pr-select
-      [options]="questions.optionsWithAnswers"
-      [label]="questions.question_text"
-      optionLabel="question_text"
-      optionValue="result_question_id"
-      placeholder="Select an answer"
-      [required]="true"
-      [(ngModel)]="relatedTo"
-      (ngModelChange)="onRelatedToChange(relatedTo)">
-    </app-pr-select>
-  }
-
   <app-pr-multi-select
     [options]="institutionsService.institutionsList"
     label="Whose policy is this? (Implementing organizations)"
@@ -72,28 +59,50 @@
     </button>
   </div>
 
-  @if (showAllFields() && body.policy_type_id == 1) {
+  @if (showAllFields()) {
     <div class="flex flex-col gap-[18px]">
-      <app-pr-input
-        label="USD amount"
-        type="currency"
-        placeholder="0"
-        [required]="false"
-        [(ngModel)]="body.amount"
-        (ngModelChange)="onFieldChange()">
-      </app-pr-input>
+      <!--
+        The policy change question is full metadata per the story, and it sits INSIDE the toggle but
+        OUTSIDE the policy-type gate below. That gate is correct — it is AC6, and W1/W2 does the same
+        with *ngIf in policy-change-info.component.html:22 and :33 — but it only covers USD amount and
+        Status. Nesting the question under it would hide it for policy types 2 and 3, and those are
+        exactly the users who today press the button and see nothing happen.
+      -->
+      @if (questions?.optionsWithAnswers?.length) {
+        <app-pr-select
+          [options]="questions.optionsWithAnswers"
+          [label]="questions.question_text"
+          optionLabel="question_text"
+          optionValue="result_question_id"
+          placeholder="Select an answer"
+          [required]="false"
+          [(ngModel)]="relatedTo"
+          (ngModelChange)="onRelatedToChange(relatedTo)">
+        </app-pr-select>
+      }
 
-      <app-pr-select
-        [options]="statusOptions"
-        label="Status"
-        optionLabel="name"
-        optionValue="id"
-        placeholder="Select status"
-        [required]="false"
-        [expandSpaceOnOpen]="true"
-        [(ngModel)]="body.status_amount"
-        (ngModelChange)="onFieldChange()">
-      </app-pr-select>
+      @if (body.policy_type_id == 1) {
+        <app-pr-input
+          label="USD amount"
+          type="currency"
+          placeholder="0"
+          [required]="false"
+          [(ngModel)]="body.amount"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-input>
+
+        <app-pr-select
+          [options]="statusOptions"
+          label="Status"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="Select status"
+          [required]="false"
+          [expandSpaceOnOpen]="true"
+          [(ngModel)]="body.status_amount"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-select>
+      }
     </div>
   }
 </div>

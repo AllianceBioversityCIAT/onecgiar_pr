@@ -106,15 +106,15 @@ export class TypePolicyChangeComponent implements OnInit {
     });
   }
 
+  // P2-3382/P2-3388: the MDS list is exactly the three fields the story names — policy type, stage,
+  // implementing organizations. The policy change question used to be a fourth item here while the
+  // story places it in full metadata, so the section could not go green until the user answered a
+  // question the spec calls optional. Submit is gated on overallStatus() === 'complete', so that
+  // silently disabled the button. Same failure mode as P2-3348 and as Capacity Sharing.
   updateMds(): void {
     this.mdsTracker.setSectionFields('type-specific', [
       { key: 'policy-type', label: 'Policy type', filled: !!this.body.policy_type_id },
       { key: 'policy-stage', label: 'Stage', filled: !!this.body.policy_stage_id },
-      {
-        key: 'related-to',
-        label: this.questions?.question_text || 'Related to',
-        filled: this.relatedTo != null,
-      },
       {
         key: 'policy-institutions',
         label: 'Whose policy is this? (Implementing organizations)',
