@@ -153,6 +153,12 @@ export class TypeCapacitySharingComponent implements OnInit {
   }
 
   updateMds(): void {
+    // P2-3382: the MDS list is exactly the three fields the story names — people trained, length of
+    // training, delivery method. "Attending on behalf of an organization" was a fourth item here
+    // while the story places it in full metadata, so the section could not go green until the user
+    // answered a question the spec calls optional. Same failure mode P2-3348 fixed below, and the
+    // reason it matters is the same: Submit is gated on overallStatus() === 'complete'.
+    //
     // P2-3348: the checklist used to track Female/Male/Non-binary as three separate items even though
     // all four counts render as OPTIONAL — and since Submit is gated on overallStatus() === 'complete',
     // fields the UI marks optional silently held the button disabled. "Unknown" was neither required
@@ -173,11 +179,6 @@ export class TypeCapacitySharingComponent implements OnInit {
       },
       { key: 'delivery-method', label: 'Delivery method', filled: !!this.body.capdev_delivery_method_id },
       { key: 'length-of-training', label: 'Length of training', filled: this.body.capdev_term_id != null },
-      {
-        key: 'attendance',
-        label: 'Attendance on behalf of an organization',
-        filled: this.body.is_attending_for_organization != null,
-      },
     ]);
   }
 }

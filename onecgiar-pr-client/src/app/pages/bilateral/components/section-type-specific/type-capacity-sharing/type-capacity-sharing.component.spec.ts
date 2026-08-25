@@ -150,6 +150,11 @@ describe('TypeCapacitySharingComponent', () => {
     });
   });
 
+  // P2-3382: the checklist is exactly the three fields the story names — people trained, length of
+  // training, delivery method. "Attending on behalf of an organization" used to be a fourth item
+  // while the story places it in full metadata, so the section could not go green until the user
+  // answered a question the spec calls optional. It is deliberately absent from these expectations.
+  //
   // P2-3346/P2-3348: the four participant counts render as OPTIONAL, so tracking three of them
   // individually (and ignoring "Unknown" entirely) both contradicted the labels and could hold the
   // Submit button disabled — it is gated on overallStatus() === 'complete'. AC1 lists "Number of
@@ -164,11 +169,10 @@ describe('TypeCapacitySharingComponent', () => {
         { key: 'people-trained', label: 'Number of people trained', filled: false },
         { key: 'delivery-method', label: 'Delivery method', filled: false },
         { key: 'length-of-training', label: 'Length of training', filled: false },
-        { key: 'attendance', label: 'Attendance on behalf of an organization', filled: false },
       ]);
     });
 
-    it('counts zero counts and a false attendance answer as filled', () => {
+    it('counts a zero participant count as filled, and ignores the attendance answer', () => {
       build();
       component.body = {
         female_using: 0,
@@ -183,7 +187,6 @@ describe('TypeCapacitySharingComponent', () => {
         { key: 'people-trained', label: 'Number of people trained', filled: true },
         { key: 'delivery-method', label: 'Delivery method', filled: false },
         { key: 'length-of-training', label: 'Length of training', filled: true },
-        { key: 'attendance', label: 'Attendance on behalf of an organization', filled: true },
       ]);
     });
 
@@ -196,6 +199,17 @@ describe('TypeCapacitySharingComponent', () => {
         'type-specific',
         expect.arrayContaining([{ key: 'people-trained', label: 'Number of people trained', filled: true }])
       );
+    });
+
+    // P2-3382: guards the rule itself, not just the current shape — an optional field added back to
+    // this list silently disables Submit, which is how P2-3348 happened.
+    it('never tracks the attendance answer, even when it is answered', () => {
+      build();
+      component.body = { is_attending_for_organization: true, institutions: [{ institutions_id: 1 }] };
+      component.updateMds();
+      const items = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(items).toHaveLength(3);
+      expect(items.map((i: any) => i.key)).toEqual(['people-trained', 'delivery-method', 'length-of-training']);
     });
 
     it('counts a fully answered form as filled', () => {
@@ -213,7 +227,6 @@ describe('TypeCapacitySharingComponent', () => {
         { key: 'people-trained', label: 'Number of people trained', filled: true },
         { key: 'delivery-method', label: 'Delivery method', filled: true },
         { key: 'length-of-training', label: 'Length of training', filled: true },
-        { key: 'attendance', label: 'Attendance on behalf of an organization', filled: true },
       ]);
     });
   });
