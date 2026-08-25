@@ -39,5 +39,17 @@ export const ReportingDesignYear = {
    * field optional — matching `validation_general_information_P25`, which gates the green check
    * on the same year.
    */
-  LeadContactPersonMandatory: 2026
+  LeadContactPersonMandatory: 2026,
+
+  /**
+   * SIDS form reduction for Innovation Development (epic P2-3243) ships in the 2026 cycle: the
+   * "Demand of anticipated innovation user" section (P2-3263) and the Megatrends question (P2-3264)
+   * stop being shown. Results in the 2025 phase (and earlier) keep both, with their stored answers —
+   * the epic's governing rule is that previous phases must render exactly as they did.
+   *
+   * Gated on the reporting phase YEAR, not on the portfolio: `isP25()` answers "which portfolio",
+   * and the two are not interchangeable — the test environment holds 2025-phase results inside the
+   * P25 portfolio, which a portfolio gate would strip the section from.
+   */
+  InnovationDevFormReduction: 2026
 } as const;

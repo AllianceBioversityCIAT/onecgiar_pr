@@ -28,6 +28,16 @@ export class FieldsManagerService {
     return typeof year === 'number' && year >= ReportingDesignYear.ContributorsPartnersRedesign;
   });
   /**
+   * True when the open result's reporting phase is 2026+ → the Innovation Development form drops the
+   * "Demand of anticipated innovation user" section (P2-3263) and the Megatrends question (P2-3264),
+   * per epic P2-3243. 2025 and earlier keep both, showing whatever was answered.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isInnovationDevFormReduced2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof year === 'number' && year >= ReportingDesignYear.InnovationDevFormReduction;
+  });
+  /**
    * True when the open result's reporting phase is 2026+ → new Geographic location
    * "location of benefit" wording (P2-3036 AC9) for P25 Innovation results. 2025 keeps the legacy wording.
    * Threshold is centralized in {@link ReportingDesignYear}.

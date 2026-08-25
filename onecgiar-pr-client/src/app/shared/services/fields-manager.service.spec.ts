@@ -88,6 +88,47 @@ describe('FieldsManagerService', () => {
    * this one is gated on BOTH the portfolio and the phase year — P22 keeps it optional at any year,
    * and P25 results from the closed 2025 cycle keep it optional too.
    */
+  /**
+   * P2-3263 / P2-3264 (epic P2-3243). The Innovation Development form drops the "Demand of anticipated
+   * innovation user" section and the Megatrends question from 2026 on. The gate is the reporting phase
+   * YEAR, not the portfolio: `isP25()` answers "which portfolio", and the test environment holds
+   * 2025-phase results inside the P25 portfolio, which a portfolio gate would strip the section from.
+   */
+  describe('isInnovationDevFormReduced2026', () => {
+    it('is true for a 2026-phase result, so both blocks are dropped', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);
+      expect(service.isInnovationDevFormReduced2026()).toBe(true);
+    });
+
+    it('is false for a 2025-phase result, which keeps both blocks', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 } as any);
+      expect(service.isInnovationDevFormReduced2026()).toBe(false);
+    });
+
+    it('is false for a 2025-phase result even inside the P25 portfolio — the case a portfolio gate would break', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 } as any);
+      expect(service.isP25()).toBe(true);
+      expect(service.isInnovationDevFormReduced2026()).toBe(false);
+    });
+
+    it('is true for a 2026-phase P22 result — the reduction follows the phase, not the portfolio', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P22', phase_year: 2026 } as any);
+      expect(service.isInnovationDevFormReduced2026()).toBe(true);
+    });
+
+    it('falls back to the open reporting phase when the result carries no year', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+      expect(service.isInnovationDevFormReduced2026()).toBe(true);
+    });
+
+    it('is false when neither the result nor the open phase carries a year', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = undefined as any;
+      expect(service.isInnovationDevFormReduced2026()).toBe(false);
+    });
+  });
+
   describe('isLeadContactPersonMandatory2026', () => {
     it('is true for a P25 result from the 2026 phase on', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);

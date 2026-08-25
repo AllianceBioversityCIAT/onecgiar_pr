@@ -30,6 +30,7 @@ import { AddButtonComponent } from '../../../../../../../custom-fields/add-butto
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
+import { PrCheckboxComponent } from '../../../../../../../custom-fields/pr-checkbox/pr-checkbox.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
 import { signal } from '@angular/core';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
@@ -334,11 +335,21 @@ describe('InnovationDevInfoComponent', () => {
     };
 
     mockInnovationDevInfoUtilsService = {
-      mapRadioButtonBooleans: jest.fn()
+      mapRadioButtonBooleans: jest.fn(),
+      // Needed only by the render cases below: the Megatrends template calls it on every change
+      // detection pass, so a suite that renders the real template cannot leave it out.
+      isMegatrendsComplete: jest.fn(() => false),
+      mapBoolean: jest.fn()
     };
 
     const mockFieldsManagerService = {
-      isP25: jest.fn(() => false)
+      isP25: jest.fn(() => false),
+      // P2-3263 / P2-3264: the template gates two blocks on this. Default false = the pre-2026 form,
+      // which is what the rest of this suite assumes.
+      isInnovationDevFormReduced2026: jest.fn(() => false),
+      // `pr-input` / `pr-radio-button` resolve their label and required flag through this when a
+      // `fieldRef` is set. An empty map is enough: no field in this section uses one.
+      fields: jest.fn(() => ({}))
     } as any;
 
     const mockDataControlService = {
@@ -370,7 +381,10 @@ describe('InnovationDevInfoComponent', () => {
         PrFieldValidationsComponent,
         DetailSectionTitleComponent,
         AddButtonComponent,
-        MegatrendsComponent
+        MegatrendsComponent,
+        // `anticipated-innovation-user` binds ngModel to it, so rendering the pre-2026 form without
+        // it throws NG01203 before any assertion runs.
+        PrCheckboxComponent
       ],
       imports: [HttpClientTestingModule, FormsModule, TermPipe],
       providers: [
@@ -913,6 +927,39 @@ describe('InnovationDevInfoComponent', () => {
 
       await component.onSaveSection();
       expect(component.savingSection).toBeFalsy();
+    });
+  });
+
+  /**
+   * P2-3263 (the "Demand of anticipated innovation user" section) and P2-3264 (the Megatrends question),
+   * epic P2-3243. Both are dropped from the 2026 form and both must survive untouched on earlier phases,
+   * which is the epic's governing rule.
+   */
+  describe('2026 form reduction (P2-3263 / P2-3264)', () => {
+    const render = (reduced: boolean) => {
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(reduced as any);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    it('renders both blocks on a pre-2026 phase', () => {
+      const el = render(false);
+      expect(el.querySelector('app-anticipated-innovation-user')).toBeTruthy();
+      expect(el.querySelector('app-megatrends')).toBeTruthy();
+    });
+
+    it('renders neither block from the 2026 phase on', () => {
+      const el = render(true);
+      expect(el.querySelector('app-anticipated-innovation-user')).toBeNull();
+      expect(el.querySelector('app-megatrends')).toBeNull();
+    });
+
+    it('drops only those two blocks — the rest of the form stays', () => {
+      const el = render(true);
+      expect(el.querySelector('app-innovation-team-diversity')).toBeTruthy();
+      expect(el.querySelector('app-gesi-innovation-assessment')).toBeTruthy();
+      expect(el.querySelector('app-scale-impact-analysis')).toBeTruthy();
+      expect(el.querySelector('app-intellectual-property-rights')).toBeTruthy();
     });
   });
 });
