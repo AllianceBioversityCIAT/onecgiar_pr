@@ -40,7 +40,7 @@ Las actividades que son `QA - Enhancement` (tipo subtarea) no admiten hijos → 
 | `P2-3370` Geographic Location | `P2-3439` | front |
 | `P2-3375` Evidence | `P2-3440` | front |
 | `P2-3382` Capacity Sharing | `P2-3444` | front |
-| `P2-3384` Knowledge Product | `P2-3447` | front |
+| `P2-3384` Knowledge Product | `P2-3447` | **hecho** — mapper compartido + sección completa; falta un KP bilateral en prtest para QA |
 | `P2-3387` Other Output / Outcome | `P2-3446` | front |
 | `P2-3388` Policy Change | `P2-3445` | front |
 | `P2-3328` / `P2-3329` / `P2-3330` / `P2-3332` (QA bilateral) | `P2-3453` / `P2-3454` / `P2-3455` / `P2-3456` | front |

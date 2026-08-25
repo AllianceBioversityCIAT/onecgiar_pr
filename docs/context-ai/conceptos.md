@@ -144,3 +144,29 @@ literal cuando no hay `areaAcronym` y `groupTocRows` lo pasa por `Boolean()`. Es
 ⚠️ **Los Outputs traen el mismo `is_aow` y NO tienen split.** La historia solo habla de IOs, así
 que se dejó así. Si alguien pide la misma distinción para Outputs, es petición nueva.
 
+----------
+
+## Knowledge Product bilateral: el mapeo vive fuera de los dos componentes
+
+`P2-3384` pedía que la sección bilateral se comportara igual que la de W1/W2. Montar el componente
+de W1/W2 dentro del formulario bilateral **no** funciona: es `standalone: false`, lee
+`dataControlSE.currentResultSignal()` (que bilateral nunca llena, así que `isP25()` daría `false`
+y ofrecería la lista MELIA equivocada), y guarda por `resultsSE` en vez del autosave bilateral.
+
+Lo que sí se comparte es lo que tiene las reglas dentro: leer el registro del repositorio y
+convertirlo en lo que se muestra. Vive en
+`.../knowledge-product-info/model/knowledge-product-metadata.mapper.ts` — puro, sin imports de
+Angular. **Si tocas reglas de metadatos de KP, se tocan ahí y valen para los dos flujos.**
+
+⚠️ `GET_tocMeliaStudies` va por **v2** (`v2/api/results/melia-studies/get/all/toc/{programId}`);
+el resto de endpoints MELIA van por `api/results/`. Fácil de equivocar.
+
+⚠️ **`bilateral-creation.service.ts:87` ya sincroniza `api.resultsSE.currentResultId`** cuando se
+abre un resultado bilateral, así que los endpoints de W1/W2 resolverían solos desde bilateral. Se
+decidió NO depender de eso: el resto del módulo pasa el id explícito y un global mutable es una
+trampa esperando. Pero conviene saberlo antes de "arreglar" algo que ya funciona por ese lado.
+
+⚠️ **No hay ningún resultado bilateral de Knowledge Product en prtest**, y `/api/results/get/all`
+allí responde con `QueryFailedError` (error de sintaxis SQL, preexistente y ajeno). Verificar esta
+sección a mano exige crear uno primero.
+
