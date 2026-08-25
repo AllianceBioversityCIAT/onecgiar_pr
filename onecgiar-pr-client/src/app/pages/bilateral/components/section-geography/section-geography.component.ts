@@ -68,7 +68,17 @@ export class SectionGeographyComponent {
     { name: 'This is yet to be determined', id: GeoScopeEnum.DETERMINED }
   ];
 
+  /**
+   * P2-3370: the story says the extra selector offers the same options as the primary one *except*
+   * "This is yet to be determined" — so Global belongs here. W1/W2 agrees: it reuses
+   * `app-geoscope-management` with `[hideTobeDetermined]="true"`
+   * (rd-geographic-location.component.html:50), whose default option list starts at Global.
+   *
+   * `onExtraScopeChange` already handled GLOBAL before it was offered, clearing regions and
+   * countries — global impact has no sub-area to name.
+   */
   extraGeoscopeOptions = [
+    { name: 'Global', id: GeoScopeEnum.GLOBAL },
     { name: 'Regional', id: GeoScopeEnum.REGIONAL },
     { name: 'Country', id: GeoScopeEnum.COUNTRY },
     { name: 'Sub-national', id: GeoScopeEnum.SUB_NATIONAL }
