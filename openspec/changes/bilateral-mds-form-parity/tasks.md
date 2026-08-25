@@ -38,18 +38,48 @@
       CGSpace permanent-link replacement · SharePoint/OneDrive/Drive/Dropbox blocked · impact-area and
       result-type checkboxes per item · 50-word description · Principal-without-evidence warning ·
       newest-first ordering.
-- [ ] 3.3 Tests for the cap, the cloud-storage block and the ordering at minimum — those three are
+- [x] 3.3 Tests for the cap, the cloud-storage block and the ordering at minimum — those three are
       rules a user hits immediately.
-- [ ] 3.4 Do **not** replace it with `rd-evidences` / `evidence-item`. Record the divergence.
-- [ ] 3.5 Related and NOT fixed here: a result promoted from an AI draft arrives with Evidence empty
+- [x] 3.4 Do **not** replace it with `rd-evidences` / `evidence-item`. Record the divergence.
+- [x] 3.5 (noted on P2-3440, not fixed) Related and NOT fixed here: a result promoted from an AI draft arrives with Evidence empty
       even though this section has a mandatory MDS item (`bilateral-ai.service.ts:250-263` computes
       `formalEvidence` only to validate it and never writes). Belongs to P2-3418.
 
 ## 4. Close-out
 
-- [ ] 4.1 Each ticket: technical detail in its `[FRONT] Pre-plan / Context` subtask, a plain-language
+- [x] 4.1 Each ticket: technical detail in its `[FRONT] Pre-plan / Context` subtask, a plain-language
       comment on the activity, assign to María Camila Giraldo, transition to To Be Reviewed.
-- [ ] 4.2 Every unspecified behaviour met on the way gets a note on its ticket naming what is missing
+- [x] 4.2 Every unspecified behaviour met on the way gets a note on its ticket naming what is missing
       and what answer would unblock it — never code invented to fill the gap.
-- [ ] 4.3 Do not mark anything Ready For UAT until the change is confirmed on the test environment.
+- [x] 4.3 Do not mark anything Ready For UAT until the change is confirmed on the test environment.
       Pushing is not deploying; the build number next to PRMS in the sidebar is the discriminator.
+
+
+----------
+
+## Closed out 2026-08-25
+
+Delivered: P2-3370 (extra geographic scope aligned with W1/W2) · P2-3375 (per-evidence tags, the
+Principal warning, the 50-word description) · P2-3352 identity half (header title, code, type, funding
+tag).
+
+Not delivered, each with a note on its ticket rather than a guess in the code:
+
+| Item | Why |
+|---|---|
+| P2-3352 status badge + read-only rules | The bilateral detail response carries no status. P2-3437 item 6, Juan David |
+| P2-3368 External partners | `SaveBilateralContributorsDto` has nowhere to store them. P2-3437 item 1, Juan David |
+| P2-3384 Knowledge Product MELIA | Unblocked but large: the MELIA conditional tree, ~21 read-only rows, FAIR radials and a Sync confirmation. Needs a sizing conversation, not a guess |
+| The missing error branch in three type components | None of their stories specifies it |
+| Impact-area sub-score mandatoriness (P2-3366) | Making them mandatory changes what "optional metadata" means — a product call |
+| P2-3262 evidence tooltips | Copy is complete; *where* the tooltips attach is not specified |
+| P2-3336 AoW scoping | Needs confirmation of whether the payload marks an IO as shared across AoWs |
+
+Two findings worth carrying forward beyond these tickets:
+
+- **An audit's shelf life on a shared branch is short.** P2-3358 turned out to be already implemented —
+  it arrived through a rebase onto another developer's merge, mid-session. Re-checking before building
+  is what stopped a second, conflicting implementation of the same wording.
+- **A browser mutation check must wait for the dev-server rebuild, and needs a canary.** Without one the
+  mutation is never exercised and the check passes silently. That happened once here and once on
+  P2-3387, where a green suite hid a fix that did nothing.
