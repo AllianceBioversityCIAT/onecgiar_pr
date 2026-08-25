@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -122,6 +122,26 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
   impactAreaSubScores = signal<Record<string, ScoreOption[]>>({});
   selectedDacLevels = signal<Record<string, number>>({});
   isLoadingDac = signal(true);
+
+  /**
+   * P2-3366: "N hidden fields have values and will be saved." The story requires the message and the
+   * count; it does not define what counts as a field, so the rule is the literal one a user would
+   * apply to what is on screen behind the toggle — per impact area, the score is one field and the
+   * sub-score selection is another. Stated here because it is a judgement call, not a spec.
+   *
+   * Only meaningful while the block is collapsed: once it is open the fields are not hidden.
+   */
+  readonly hiddenFieldsWithValues = computed(() => {
+    const levels = this.selectedDacLevels();
+    const subScores = this.selectedSubScores();
+    return this.dacAreas.reduce((count, area) => {
+      const hasLevel = levels[area.key] != null;
+      const hasSubScores = (subScores[area.key] ?? []).length > 0;
+      return count + (hasLevel ? 1 : 0) + (hasSubScores ? 1 : 0);
+    }, 0);
+  });
+
+  readonly showHiddenFieldsNote = computed(() => !this.showAllFields() && this.hiddenFieldsWithValues() > 0);
 
   constructor() {
     this.autoSaveService.registerField('title', 'text');
