@@ -21,13 +21,20 @@ function driveTo(typeId: number) {
     const host = win.document.querySelector('app-bilateral-result-creator');
     expect(host, 'the creator component is mounted').to.exist;
     const cmp = win.ng.getComponent(host);
-    // The five sections live in the EDITOR branch of the template — `@if (!isCreating() && resultId())`
-    // at bilateral-result-creator.component.html:118 — NOT in the creation wizard. Setting
-    // isCreating(true) renders the wizard instead, where no section exists for any type, and every
-    // "section is absent" assertion passes vacuously. That is exactly what happened on the first run.
+    // The sections live in the EDITOR branch — `@if (!isCreating() && resultId())` at
+    // bilateral-result-creator.component.html:118 — NOT in the creation wizard. Setting
+    // isCreating(true) renders the wizard, where no section exists for any type, and every
+    // "section is absent" assertion passes vacuously.
     cmp.isCreating.set(false);
     cmp.resultId.set(9999);
-    cmp.resultTypeId.set(typeId);
+    // ⚠️ The type MUST be driven through the SERVICE. Both `hasTypeSpecificSection` here and
+    // `section-type-specific` read `creationService.resultTypeId`; the component's local
+    // `resultTypeId` is only written by the creation wizard and stays null on the editor path.
+    // An earlier version of this spec set the local signal, so it asserted the computed against
+    // the very signal it was fed — and passed while the feature did nothing in the real editor.
+    cmp.creationService.resultTypeId.set(typeId);
+    cmp.creationService.currentResultId.set(9999);
+    cmp.resultTypeId.set(null);
     win.ng.applyChanges?.(cmp);
   });
 }
@@ -69,6 +76,9 @@ describe('P2-3387 · bilateral type-specific section', () => {
     driveTo(TYPE.policyChange);
     sections().should('have.length', 5);
     cy.contains('Type-Specific Details').should('exist');
+    // Guard: "Unknown" is section-type-specific's fallback label when it cannot see the type. It is
+    // what exposed that the type was never reaching the component through the signal being driven.
+    cy.contains('Type-Specific Details').closest('app-bilateral-accordion').should('not.contain.text', 'Unknown');
     cy.screenshot('p2-3387-policy-change-5-accordions', { capture: 'fullPage' });
   });
 

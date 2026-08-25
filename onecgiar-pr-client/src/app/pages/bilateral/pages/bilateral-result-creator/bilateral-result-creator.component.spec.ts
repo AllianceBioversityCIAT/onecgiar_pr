@@ -242,11 +242,16 @@ describe('BilateralResultCreatorComponent', () => {
   });
 
   describe('Type-specific section visibility (P2-3387)', () => {
+    // The type MUST come from BilateralCreationService, not from the component's local
+    // `resultTypeId` signal. The local one is written only by onTypeSelected (the creation wizard);
+    // on the editor path — the only path where these sections exist — ngOnInit calls
+    // creationService.loadResult and the local signal stays null. Reading it made the condition a
+    // no-op exactly where it had to work.
     it.each([
       ['Other Outcome', 4],
       ['Other Output', 8]
-    ])('should hide the type-specific section for %s', (_label, typeId) => {
-      component.resultTypeId.set(typeId);
+    ])('hides the type-specific section for %s', (_label, typeId) => {
+      creationService.resultTypeId.set(typeId);
       expect(component.hasTypeSpecificSection()).toBe(false);
     });
 
@@ -256,13 +261,25 @@ describe('BilateralResultCreatorComponent', () => {
       ['Capacity Sharing', 5],
       ['Knowledge Product', 6],
       ['Innovation Development', 7]
-    ])('should keep the type-specific section for %s', (_label, typeId) => {
-      component.resultTypeId.set(typeId);
+    ])('keeps the type-specific section for %s', (_label, typeId) => {
+      creationService.resultTypeId.set(typeId);
       expect(component.hasTypeSpecificSection()).toBe(true);
     });
 
-    it('should keep the section before a type is chosen, so nothing disappears mid-wizard', () => {
-      component.resultTypeId.set(null);
+    it('keeps the section before a type is chosen, so nothing disappears mid-wizard', () => {
+      creationService.resultTypeId.set(null);
+      expect(component.hasTypeSpecificSection()).toBe(true);
+    });
+
+    // Regression guard for the actual defect: this is what a green suite looked like while the
+    // feature did nothing on the editor path.
+    it('ignores the local resultTypeId signal — the editor never sets it', () => {
+      creationService.resultTypeId.set(8);
+      component.resultTypeId.set(1);
+      expect(component.hasTypeSpecificSection()).toBe(false);
+
+      creationService.resultTypeId.set(1);
+      component.resultTypeId.set(8);
       expect(component.hasTypeSpecificSection()).toBe(true);
     });
   });

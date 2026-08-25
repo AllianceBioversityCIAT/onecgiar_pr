@@ -70,17 +70,28 @@ export class TypeCapacitySharingComponent implements OnInit {
   private loadData(): void {
     const resultId = this.creationService.currentResultId();
     if (!resultId) return;
-    this.bilateralApi.GET_capacityDevelopment(resultId).subscribe(({ response }) => {
-      this.body = { ...(response || {}) };
-      // MySQL returns tinyint values (0/1) from this legacy endpoint. The radio
-      // options use booleans, so normalize them before binding to the control.
-      if ('is_attending_for_organization' in this.body) {
-        this.body.is_attending_for_organization = this.normalizeAttendanceValue(
-          this.body.is_attending_for_organization,
-        );
-      }
-      this.hydrateTermCascade();
-      this.updateMds();
+    // P2-3355 pattern: the checklist is published on EVERY outcome, including failure. Registering it
+    // only on success left the section with an empty field list — the "0/0 fields" QA reported for
+    // Knowledge Product, which reads as "nothing required here" instead of as incomplete. A
+    // successful load can only ever read 0/3 .. 3/3; never 0/0. So a failed fetch publishes three
+    // unfilled items and the section stays honestly incomplete.
+    this.bilateralApi.GET_capacityDevelopment(resultId).subscribe({
+      next: ({ response }) => {
+        this.body = { ...(response || {}) };
+        // MySQL returns tinyint values (0/1) from this legacy endpoint. The radio
+        // options use booleans, so normalize them before binding to the control.
+        if ('is_attending_for_organization' in this.body) {
+          this.body.is_attending_for_organization = this.normalizeAttendanceValue(
+            this.body.is_attending_for_organization,
+          );
+        }
+        this.hydrateTermCascade();
+        this.updateMds();
+      },
+      error: () => {
+        this.body = {};
+        this.updateMds();
+      },
     });
     this.bilateralApi.GET_capdevsDeliveryMethod().subscribe(({ response }) => {
       this.deliveryMethods = response || [];
@@ -153,6 +164,12 @@ export class TypeCapacitySharingComponent implements OnInit {
   }
 
   updateMds(): void {
+    // P2-3382: the MDS list is exactly the three fields the story names — people trained, length of
+    // training, delivery method. "Attending on behalf of an organization" was a fourth item here
+    // while the story places it in full metadata, so the section could not go green until the user
+    // answered a question the spec calls optional. Same failure mode P2-3348 fixed below, and the
+    // reason it matters is the same: Submit is gated on overallStatus() === 'complete'.
+    //
     // P2-3348: the checklist used to track Female/Male/Non-binary as three separate items even though
     // all four counts render as OPTIONAL — and since Submit is gated on overallStatus() === 'complete',
     // fields the UI marks optional silently held the button disabled. "Unknown" was neither required
@@ -173,11 +190,6 @@ export class TypeCapacitySharingComponent implements OnInit {
       },
       { key: 'delivery-method', label: 'Delivery method', filled: !!this.body.capdev_delivery_method_id },
       { key: 'length-of-training', label: 'Length of training', filled: this.body.capdev_term_id != null },
-      {
-        key: 'attendance',
-        label: 'Attendance on behalf of an organization',
-        filled: this.body.is_attending_for_organization != null,
-      },
     ]);
   }
 }
