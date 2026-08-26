@@ -861,4 +861,115 @@ describe('BilateralService (unit)', () => {
       expect(saved).toEqual([]);
     });
   });
+
+  /**
+   * The lead contact person used to be written by an `update()` a few lines AFTER
+   * `initializeResultHeader` had already re-read the row, so the later
+   * `save({ ...newResultHeader, ... })` spread the stale nulls back over it and wiped both
+   * columns. Verified live: results 8911-8914 were created with a contact in the payload and
+   * came back with `lead_contact_person: null`.
+   *
+   * The invariant that makes the clobber impossible is that the header entity itself carries
+   * the contact — then any later spread-save re-writes the same values harmlessly.
+   */
+  describe('lead contact person', () => {
+    const dtoWith = (contact: any) =>
+      ({
+        title: 'T',
+        description: 'D',
+        result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        result_level_id: 4,
+        lead_contact_person: contact,
+      }) as any;
+
+    const initHeader = async (service: any, dto: any) =>
+      service.initializeResultHeader({
+        bilateralDto: dto,
+        userId: 1,
+        submittedUserId: 2,
+        version: { id: 36 },
+        year: { year: 2026 },
+      });
+
+    it('writes the contact as part of the header, not afterwards', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultRepository.save.mockImplementation(async (x: any) => ({
+        ...x,
+        id: 11382,
+      }));
+      stubs.resultRepository.findOne.mockImplementation(async () => ({
+        id: 11382,
+      }));
+      stubs.adUserService.resolveOrCreateContact.mockResolvedValue({
+        id: 77,
+        display_name: 'Nicoleta Trifa',
+      });
+
+      await initHeader(
+        service,
+        dtoWith({ name: 'n.trifa@cgiar.org', email: 'n.trifa@cgiar.org' }),
+      );
+
+      const saved = stubs.resultRepository.save.mock.calls[0][0];
+      expect(saved.lead_contact_person_id).toBe(77);
+      // The directory's own name, not the payload's — producers routinely send the email there.
+      expect(saved.lead_contact_person).toBe('Nicoleta Trifa');
+    });
+
+    it('keeps the payload name as free text when the directory has no match', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultRepository.save.mockImplementation(async (x: any) => ({
+        ...x,
+        id: 1,
+      }));
+      stubs.resultRepository.findOne.mockResolvedValue({ id: 1 });
+      stubs.adUserService.resolveOrCreateContact.mockResolvedValue(null);
+
+      await initHeader(
+        service,
+        dtoWith({ name: 'Arouna Dissa', email: 'a.dissa@ier.ml' }),
+      );
+
+      const saved = stubs.resultRepository.save.mock.calls[0][0];
+      expect(saved.lead_contact_person).toBe('Arouna Dissa');
+      expect(saved.lead_contact_person_id).toBeNull();
+    });
+
+    it('never invents a directory row from the payload', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultRepository.save.mockImplementation(async (x: any) => ({
+        ...x,
+        id: 1,
+      }));
+      stubs.resultRepository.findOne.mockResolvedValue({ id: 1 });
+      stubs.adUserService.resolveOrCreateContact.mockResolvedValue(null);
+
+      await initHeader(
+        service,
+        dtoWith({ name: 'Arouna Dissa', email: 'a.dissa@ier.ml' }),
+      );
+
+      // A fabricated row would be indistinguishable from a real person in the reporting
+      // tool's contact picker: searchUsers is cache-first and filters only by is_active.
+      expect(stubs.adUserService.resolveOrCreateContact).toHaveBeenCalledWith(
+        'a.dissa@ier.ml',
+      );
+    });
+
+    it('leaves both columns out when no contact is sent', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultRepository.save.mockImplementation(async (x: any) => ({
+        ...x,
+        id: 1,
+      }));
+      stubs.resultRepository.findOne.mockResolvedValue({ id: 1 });
+
+      await initHeader(service, dtoWith(undefined));
+
+      const saved = stubs.resultRepository.save.mock.calls[0][0];
+      expect(saved.lead_contact_person).toBeUndefined();
+      expect(saved.lead_contact_person_id).toBeUndefined();
+      expect(stubs.adUserService.resolveOrCreateContact).not.toHaveBeenCalled();
+    });
+  });
 });

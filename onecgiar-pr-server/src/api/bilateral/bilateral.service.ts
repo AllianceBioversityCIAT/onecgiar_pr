@@ -368,20 +368,6 @@ export class BilateralService {
               userId,
             );
 
-            if (bilateralDto.lead_contact_person?.email) {
-              const adUser = await this._adUserService.resolveOrCreateContact(
-                bilateralDto.lead_contact_person.email,
-                {
-                  mail: bilateralDto.lead_contact_person.email,
-                  displayName: bilateralDto.lead_contact_person.name,
-                },
-              );
-              await this._resultRepository.update(resultId, {
-                lead_contact_person: bilateralDto.lead_contact_person.name,
-                lead_contact_person_id: adUser?.id ?? null,
-              });
-            }
-
             const isKpType =
               bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
 
@@ -3829,6 +3815,42 @@ export class BilateralService {
     }
   }
 
+  /**
+   * Columns for the lead contact person.
+   *
+   * The email is matched against the directory. A match contributes both the FK and the
+   * directory's own `display_name`, which is better data than the payload's `name` — producers
+   * routinely send the email in that field. No match keeps the payload name as free text with a
+   * null FK: every reader of the FK is null-guarded and notifications do not use it, so a
+   * contact who legitimately sits outside CGIAR AD (a consultant, partner staff) is stored
+   * rather than refused.
+   *
+   * Deliberately does NOT invent a directory row from the payload. `AdUserService.searchUsers`
+   * is cache-first and `searchLocalUsers` filters only by `is_active`, so a row created here
+   * would be indistinguishable from a real person in the reporting tool's contact picker.
+   *
+   * Returns null when nothing was sent, so the caller can spread it without introducing the
+   * columns at all — writing an explicit null here is what used to clear a stored contact.
+   */
+  private async resolveLeadContactColumns(
+    bilateralDto: CreateBilateralDto,
+  ): Promise<{
+    lead_contact_person: string;
+    lead_contact_person_id: number | null;
+  } | null> {
+    const contact = bilateralDto.lead_contact_person;
+    if (!contact?.email) return null;
+
+    const adUser = await this._adUserService.resolveOrCreateContact(
+      contact.email,
+    );
+
+    return {
+      lead_contact_person: adUser?.display_name?.trim() || contact.name,
+      lead_contact_person_id: adUser?.id ?? null,
+    };
+  }
+
   private async initializeResultHeader({
     bilateralDto,
     userId,
@@ -3844,6 +3866,11 @@ export class BilateralService {
     year: any;
     externalIdentity?: ExternalPlatformIdentity;
   }): Promise<Result> {
+    // Resolved up front so BOTH branches below persist it before their closing `findOne`.
+    // That ordering is the whole point: the returned entity must already carry the contact, or
+    // the later `save({ ...newResultHeader })` in `create` spreads stale nulls back over it.
+    const leadContact = await this.resolveLeadContactColumns(bilateralDto);
+
     const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
     if (handler?.initializeResultHeader) {
       const custom = await handler.initializeResultHeader({
@@ -3860,6 +3887,12 @@ export class BilateralService {
           custom.resultHeader.id,
           externalIdentity,
         );
+        if (leadContact) {
+          await this._resultRepository.update(
+            custom.resultHeader.id,
+            leadContact,
+          );
+        }
         return this._resultRepository.findOne({
           where: { id: custom.resultHeader.id },
         });
@@ -3885,6 +3918,7 @@ export class BilateralService {
       }),
       source: SourceEnum.Bilateral,
       status_id: ResultStatusData.PendingReview.value,
+      ...(leadContact ?? {}),
     });
 
     return this._resultRepository.findOne({

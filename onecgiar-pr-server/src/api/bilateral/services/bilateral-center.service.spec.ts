@@ -428,7 +428,9 @@ describe('BilateralCenterService', () => {
       );
       jest
         .spyOn(resultsCenterRepository, 'find')
-        .mockResolvedValue([{ center_id: 'LEAD', is_leading_result: true }] as any);
+        .mockResolvedValue([
+          { center_id: 'LEAD', is_leading_result: true },
+        ] as any);
 
       await service.saveContributors(10, { contributing_center: [] }, user);
 
@@ -455,7 +457,9 @@ describe('BilateralCenterService', () => {
         .mockResolvedValue([{ institutionId: 501, code: 'LEAD' }] as any);
       jest
         .spyOn(resultsCenterRepository, 'find')
-        .mockResolvedValue([{ center_id: 'LEAD', is_leading_result: true }] as any);
+        .mockResolvedValue([
+          { center_id: 'LEAD', is_leading_result: true },
+        ] as any);
 
       await service.saveContributors(
         10,

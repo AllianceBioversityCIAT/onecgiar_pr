@@ -135,22 +135,37 @@ describe('SectionGeneralInfoComponent', () => {
       ]);
     });
 
-    it('only counts the lead contact once it is matched against the directory', () => {
-      creation.resultLeadContact.set('Jane Doe');
+    /**
+     * A name counts on its own, with or without a directory match. Results reported through the
+     * W3/Bilateral API can legitimately name someone outside CGIAR AD, and requiring the match
+     * left those results with an MDS field their centre user had no way to complete.
+     */
+    it('counts a name-only lead contact, and keeps counting it once matched', () => {
+      creation.resultLeadContact.set('Arouna Dissa');
+      build();
+      fixture.detectChanges();
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
+        { key: 'title', label: 'Title', filled: false },
+        { key: 'description', label: 'Description', filled: false },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: true }
+      ]);
+
+      creation.resultLeadContactData.set({ display_name: 'Arouna Dissa', mail: 'a.dissa@ier.ml', title: '' });
+      fixture.detectChanges();
+      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
+        { key: 'title', label: 'Title', filled: false },
+        { key: 'description', label: 'Description', filled: false },
+        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: true }
+      ]);
+    });
+
+    it('does not count an absent lead contact', () => {
       build();
       fixture.detectChanges();
       expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
         { key: 'title', label: 'Title', filled: false },
         { key: 'description', label: 'Description', filled: false },
         { key: 'lead_contact_person', label: 'Lead Contact Person', filled: false }
-      ]);
-
-      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
-      fixture.detectChanges();
-      expect(mdsTracker.setSectionFields).toHaveBeenLastCalledWith('general-info', [
-        { key: 'title', label: 'Title', filled: false },
-        { key: 'description', label: 'Description', filled: false },
-        { key: 'lead_contact_person', label: 'Lead Contact Person', filled: true }
       ]);
     });
   });

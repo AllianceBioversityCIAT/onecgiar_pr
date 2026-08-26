@@ -124,9 +124,20 @@ describe('LeadContactPersonFieldComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('only considers the field filled when a directory user is selected', () => {
+  /**
+   * A name is enough, matched or not. The W3/Bilateral API stores a name as free text when the
+   * directory has no match — those contacts are real people outside CGIAR AD, and demanding a
+   * match left the field permanently incomplete for them.
+   */
+  it('considers the field filled by a name, with or without a directory match', () => {
     component.body = { lead_contact_person: null, lead_contact_person_data: null };
     expect(component.hasSelectedContact).toBe(false);
+
+    component.body = { lead_contact_person: '   ', lead_contact_person_data: null };
+    expect(component.hasSelectedContact).toBe(false);
+
+    component.body = { lead_contact_person: 'Arouna Dissa', lead_contact_person_data: null };
+    expect(component.hasSelectedContact).toBe(true);
 
     component.body = { lead_contact_person: 'John Doe', lead_contact_person_data: mockJohnDoe };
     expect(component.hasSelectedContact).toBe(true);
@@ -331,6 +342,32 @@ describe('LeadContactPersonFieldComponent', () => {
 
         expect(mockUserSearchService.hasValidContact).toBe(true);
         expect(mockUserSearchService.showContactError).toBe(false);
+      });
+
+      /**
+       * The name-only branch of `ngOnChanges` leaves `selectedUser` null, so before this guard
+       * the very first click away from the field accused the user of input the API had supplied.
+       */
+      it('does not flag a name hydrated from the result', () => {
+        component.body = { lead_contact_person: 'Arouna Dissa', lead_contact_person_data: null };
+        component.ngOnChanges({ body: {} as any });
+        expect(mockUserSearchService.searchQuery).toBe('Arouna Dissa');
+
+        component.onContactBlur();
+
+        expect(mockUserSearchService.hasValidContact).toBe(true);
+        expect(mockUserSearchService.showContactError).toBe(false);
+      });
+
+      it('flags it again once the user edits the hydrated name', () => {
+        component.body = { lead_contact_person: 'Arouna Dissa', lead_contact_person_data: null };
+        component.ngOnChanges({ body: {} as any });
+
+        component.onSearchInput('Arouna Diss');
+        component.onContactBlur();
+
+        expect(mockUserSearchService.hasValidContact).toBe(false);
+        expect(mockUserSearchService.showContactError).toBe(true);
       });
 
       it('should not mark contact as invalid when user is selected', () => {

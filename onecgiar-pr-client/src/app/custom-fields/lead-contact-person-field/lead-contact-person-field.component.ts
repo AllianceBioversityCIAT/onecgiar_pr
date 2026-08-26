@@ -20,6 +20,8 @@ export class LeadContactPersonFieldComponent implements OnChanges {
   /** P2-3201: render the field guidance as an ⓘ tooltip instead of the inline grey description box. */
   @Input() guidanceAsTooltip = false;
   isContactLocked: boolean = false;
+  /** True while the input still holds a name loaded from the result rather than typed. */
+  private queryCameFromHydration = false;
 
   private readonly fieldsManager = inject(FieldsManagerService);
 
@@ -27,9 +29,16 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     return this.fieldsManager.fields()['[general-info]-lead_contact_person'] ?? {};
   }
 
-  /** A mandatory contact is complete only after a directory user is selected. */
+  /**
+   * A contact counts as complete once there is a name, with or without a directory match.
+   *
+   * Requiring the match would leave results reported through the W3/Bilateral API showing an
+   * incomplete field their centre user cannot fix: those producers legitimately name people
+   * outside CGIAR AD (consultants, partner staff). The directory link is enrichment — nothing
+   * notifies through it and every reader of the FK is null-guarded.
+   */
   get hasSelectedContact(): boolean {
-    return !!this.body?.lead_contact_person?.trim() && !!this.body?.lead_contact_person_data;
+    return !!this.body?.lead_contact_person?.trim();
   }
 
   searchResults: User[] = [];
@@ -95,6 +104,7 @@ export class LeadContactPersonFieldComponent implements OnChanges {
         this.userSearchService.searchQuery = this.body.lead_contact_person;
         this.isContactLocked = true;
         this.userSearchService.hasValidContact = true;
+        this.queryCameFromHydration = true;
       } else if (this.body.lead_contact_person) {
         if (this.userSearchService.selectedUser && this.userSearchService.selectedUser.display_name === this.body.lead_contact_person) {
           this.isContactLocked = true;
@@ -102,11 +112,13 @@ export class LeadContactPersonFieldComponent implements OnChanges {
         } else {
           this.userSearchService.searchQuery = this.body.lead_contact_person;
           this.isContactLocked = false;
+          this.queryCameFromHydration = true;
         }
       } else {
         this.userSearchService.selectedUser = null;
         this.userSearchService.searchQuery = '';
         this.isContactLocked = false;
+        this.queryCameFromHydration = false;
       }
     }
   }
@@ -144,6 +156,7 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     this.userSearchService.searchQuery = query;
     this.userSearchService.selectedUser = null;
     this.userSearchService.showContactError = false;
+    this.queryCameFromHydration = false;
     if (this.body) {
       this.body.lead_contact_person = null;
       this.body.lead_contact_person_data = null;
@@ -182,12 +195,19 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     this.userSearchService.hasValidContact = true;
     this.userSearchService.showContactError = false;
     this.isContactLocked = false;
+    this.queryCameFromHydration = false;
 
     this.body.lead_contact_person = null;
     this.body.lead_contact_person_data = null;
   }
 
   onContactBlur(): void {
+    // Only what the user typed can be "not found". A name hydrated from the result — the
+    // free-text fallback the API stores when the directory has no match — is valid data, and
+    // flagging it made the first click away from the field accuse the user of someone else's
+    // input.
+    if (this.queryCameFromHydration) return;
+
     if (!this.isContactLocked && this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = true;
