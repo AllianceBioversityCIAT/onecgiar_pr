@@ -1,6 +1,6 @@
 # dashboard-lab
 
-**Verified:** 2026-08-26 · branch qa-development-2026 · 3194c6134
+**Verified:** 2026-08-26 · branch qa-development-2026 · 617f54f91
 
 ## Qué es
 El shell de un Science Program. Un solo componente que sirve varias vistas según `rfrView`, y que es
