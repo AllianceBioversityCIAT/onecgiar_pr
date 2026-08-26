@@ -34,7 +34,7 @@ import {
   StatusSegment as OverviewStatusSegment,
   AowProgressRow as OverviewAowProgressRow,
   CategoryBar as OverviewCategoryBar,
-  BilateralRoleRow as OverviewBilateralRoleRow
+  OverviewCenterBar
 } from './components/program-overview/program-overview.component';
 import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
@@ -968,26 +968,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.bilateralRows().filter(r => String(r.initiative_role_id ?? '') === BILATERAL_PRIMARY_ROLE_ID)
   );
 
-  /**
-   * Tagged / Primary / Contributor counts. Contributor is everything that is NOT primary, and its
-   * label comes from the payload's own `initiative_role_name`, so a third role would surface under
-   * its real name instead of being silently absorbed.
-   */
-  readonly overviewBilateralRoles = computed<OverviewBilateralRoleRow[]>(() => {
+  /** Centers with reported W3/bilateral results, ranked descending by count with alphabetical tie-breaking. */
+  readonly overviewBilateralCenters = computed<OverviewCenterBar[]>(() => {
     const rows = this.bilateralRows();
     if (!rows.length) return [];
-    const primary = this.bilateralPrimaryRows().length;
-    const contributors = rows.filter(r => String(r.initiative_role_id ?? '') !== BILATERAL_PRIMARY_ROLE_ID);
-    const contributorLabel = contributors.find(r => r.initiative_role_name)?.initiative_role_name?.trim();
-    return [
-      { key: 'tagged', label: 'Results where this program is tagged', count: rows.length },
-      { key: 'primary', label: 'Where this program is the primary science program', count: primary },
-      {
-        key: 'contributor',
-        label: contributorLabel ? `Where this program is a ${contributorLabel.toLowerCase()}` : 'Where this program is a contributor',
-        count: contributors.length
-      }
-    ];
+    const byCenter = new Map<string, number>();
+    for (const row of rows) {
+      const center = row.lead_center?.trim() || 'Not specified';
+      byCenter.set(center, (byCenter.get(center) ?? 0) + 1);
+    }
+    return [...byCenter.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   });
 
   /** Bilateral results by category, primary-role only — matches the card's subtitle. */

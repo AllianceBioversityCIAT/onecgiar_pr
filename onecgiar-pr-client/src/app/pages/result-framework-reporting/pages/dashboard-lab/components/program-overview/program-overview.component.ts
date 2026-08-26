@@ -23,14 +23,8 @@ export interface CategoryBar {
   count: number;
 }
 
-/**
- * One role row of the Bilateral-contributions card. `label` comes from the API's own
- * `initiative_role_name` wherever possible, so a role we have not seen yet shows its real
- * name instead of being absorbed into "Contributor".
- */
-export interface BilateralRoleRow {
-  key: string;
-  label: string;
+export interface OverviewCenterBar {
+  name: string;
   count: number;
 }
 
@@ -42,7 +36,7 @@ export interface BilateralRoleRow {
  *   About this program                    12
  *   Results by indicator category          6  +  Bilateral results by indicator category  6
  *   Reporting status                      12
- *   Bilateral contributions                6  +  Progress by area of work                 6
+ *   Centers with reported W3/bilateral results 6  + Progress by area of work                  6
  *
  * Reporting pace (P2-3298), Needs attention (P2-3300) and Impact so far (P2-3299) were removed
  * on end-user request — do not reinstate them without a new ticket.
@@ -73,8 +67,8 @@ export class ProgramOverviewComponent {
   readonly categories = input<CategoryBar[]>([]);
   /** W3/Bilateral results by category, primary-role only (P2-3302). */
   readonly bilateralCategories = input<CategoryBar[]>([]);
-  /** Tagged / primary / contributor counts for W3/Bilateral results (P2-3302). */
-  readonly bilateralRoles = input<BilateralRoleRow[]>([]);
+  /** Centers with reported W3/bilateral results. */
+  readonly bilateralCenters = input<OverviewCenterBar[]>([]);
 
   readonly description = computed(() => {
     const explicit = this.programDescription()?.trim();
@@ -91,6 +85,11 @@ export class ProgramOverviewComponent {
   });
 
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
+
+  readonly bilateralCentersMax = computed(() => {
+    const rows = this.bilateralCenters();
+    return rows.length ? Math.max(...rows.map(r => r.count)) : 0;
+  });
 
   segmentWidth(segment: StatusSegment): number {
     const total = this.statusTotal();
@@ -127,5 +126,10 @@ export class ProgramOverviewComponent {
 
   bilateralCategoryWidth(bar: CategoryBar): number {
     return (bar.count / this.bilateralCategoriesMax()) * 100;
+  }
+
+  centerWidth(bar: OverviewCenterBar): number {
+    const max = this.bilateralCentersMax();
+    return max ? (bar.count / max) * 100 : 0;
   }
 }
