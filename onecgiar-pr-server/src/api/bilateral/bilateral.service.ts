@@ -16,6 +16,7 @@ import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
+import { CENTER_ALIAS_TO_CLARISA_CENTER_CODE } from './constants/w3-center-alias.constants';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
@@ -3994,10 +3995,62 @@ export class BilateralService {
     'BIOVERSITY ALLIANCE',
   ]);
 
+  /** Upper-cased, whitespace collapsed — the shape the centre alias table is keyed in. */
+  private normalizeCenterAliasKey(value?: string): string | null {
+    if (!value) return null;
+    const key = value.trim().replace(/\s+/g, ' ').toUpperCase();
+    return key.length ? key : null;
+  }
+
+  /**
+   * Resolves a centre straight from the alias table, bypassing institution matching.
+   *
+   * Only the two Alliance-descended centres are listed there, and only because their
+   * institution names cannot tell them apart — see
+   * `CENTER_ALIAS_TO_CLARISA_CENTER_CODE`. Everything else returns null and goes through
+   * the normal path.
+   */
+  private async resolveAliasedCenter(
+    name?: string,
+    acronym?: string,
+  ): Promise<ClarisaCenter | null> {
+    for (const value of [acronym, name]) {
+      const key = this.normalizeCenterAliasKey(value);
+      if (!key) continue;
+
+      const code = CENTER_ALIAS_TO_CLARISA_CENTER_CODE[key];
+      if (!code) continue;
+
+      const center = await this._clarisaCenters.findOne({
+        where: { code },
+      });
+      if (!center) {
+        // The alias table names a code CLARISA does not have. Falling through to the
+        // normal path would resolve it to the wrong centre silently, which is the very
+        // thing this table exists to prevent.
+        this.logger.error(
+          `Centre alias "${value}" maps to ${code}, which is not in clarisa_center. Not resolving it.`,
+        );
+        return null;
+      }
+
+      this.logger.debug(`Resolved centre alias "${value}" to ${code}`);
+      return center;
+    }
+
+    return null;
+  }
+
   /**
    * Normalizes institution name/acronym values.
    * Maps known aliases (ABC, CIAT-BIOVERSITY, CIAT (Alliance), Bioversity (Alliance))
    * to the full institution name for matching in Clarisa.
+   *
+   * Institutions only — centres go through `resolveAliasedCenter`. Collapsing both
+   * Alliance spellings onto one institution is acceptable for a contributing *partner*,
+   * where the Alliance is one organisation; it is wrong for a *centre*, where CLARISA
+   * deliberately separates CENTER-02 and CENTER-03 and the 2026 mapping is done per
+   * centre.
    */
   private normalizeInstitutionValue(
     value: string | undefined,
@@ -4025,7 +4078,18 @@ export class BilateralService {
       return;
     }
 
-    // Normalize ABC to CIAT
+    // Alliance-descended centres resolve from the alias table before anything else: both
+    // of their institution names contain "Bioversity", so institution matching cannot
+    // tell CENTER-02 from CENTER-03.
+    const aliasedCenter = await this.resolveAliasedCenter(
+      leadCenter.name,
+      leadCenter.acronym,
+    );
+    if (aliasedCenter) {
+      await this.persistLeadCenter(resultId, aliasedCenter, userId);
+      return;
+    }
+
     const normalizedName = this.normalizeInstitutionValue(leadCenter.name);
     const normalizedAcronym = this.normalizeInstitutionValue(
       leadCenter.acronym,
@@ -4102,11 +4166,20 @@ export class BilateralService {
       return;
     }
 
+    await this.persistLeadCenter(resultId, selectedCenter, userId);
+  }
+
+  /** Flags a centre as the result's lead, whether the row already exists or not. */
+  private async persistLeadCenter(
+    resultId: number,
+    center: ClarisaCenter,
+    userId: number,
+  ): Promise<void> {
     try {
       const existing =
         await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
           resultId,
-          selectedCenter.code,
+          center.code,
         );
       if (existing) {
         await this._resultRepository.query(
@@ -4114,13 +4187,13 @@ export class BilateralService {
           [userId, existing.id],
         );
         this.logger.debug(
-          `Updated existing lead center flags (center=${selectedCenter.code}, result=${resultId})`,
+          `Updated existing lead center flags (center=${center.code}, result=${resultId})`,
         );
         return;
       }
       await this._resultsCenterRepository.save({
         result_id: resultId,
-        center_id: selectedCenter.code,
+        center_id: center.code,
         is_primary: true,
         is_leading_result: true,
         from_cgspace: false,
@@ -4128,11 +4201,11 @@ export class BilateralService {
         created_by: userId,
       });
       this.logger.log(
-        `Lead center stored for result ${resultId}: center_id=${selectedCenter.code}`,
+        `Lead center stored for result ${resultId}: center_id=${center.code}`,
       );
     } catch (err) {
       this.logger.error(
-        `Failed to save lead center for result ${resultId}: ${selectedCenter.code}`,
+        `Failed to save lead center for result ${resultId}: ${center.code}`,
         err instanceof Error ? err.stack : JSON.stringify(err),
       );
     }
@@ -4289,9 +4362,27 @@ export class BilateralService {
   ) {
     if (!Array.isArray(centers) || !centers.length) return;
 
+    // Resolved once: an Alliance centre sent as the lead has to be recognised as the same
+    // centre here too, whichever spelling each field uses.
+    const aliasedLeadCenter = leadCenter
+      ? await this.resolveAliasedCenter(leadCenter.name, leadCenter.acronym)
+      : null;
+
     for (const centerInput of centers) {
       if (!centerInput) continue;
-      // Normalize ABC to CIAT
+
+      // Same reason as in handleLeadCenter: institution matching cannot separate
+      // CENTER-02 from CENTER-03, so the alias table decides before the fuzzy search.
+      const aliasedCenter = await this.resolveAliasedCenter(
+        centerInput.name,
+        centerInput.acronym,
+      );
+      if (aliasedCenter) {
+        if (aliasedLeadCenter?.code === aliasedCenter.code) continue;
+        await this.persistContributingCenter(resultId, aliasedCenter, userId);
+        continue;
+      }
+
       const normalizedName = this.normalizeInstitutionValue(centerInput.name);
       const normalizedAcronym = this.normalizeInstitutionValue(
         centerInput.acronym,
@@ -4365,29 +4456,38 @@ export class BilateralService {
       }
       if (!selectedCenter) continue;
 
-      const existing =
-        await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
-          resultId,
-          selectedCenter.code,
-        );
-      if (existing) continue;
+      await this.persistContributingCenter(resultId, selectedCenter, userId);
+    }
+  }
 
-      try {
-        await this._resultsCenterRepository.save({
-          result_id: resultId,
-          center_id: selectedCenter.code,
-          is_primary: false,
-          is_leading_result: false,
-          from_cgspace: false,
-          is_active: true,
-          created_by: userId,
-        });
-      } catch (err) {
-        this.logger.error(
-          `Failed to save contributing center ${selectedCenter.code} for result ${resultId}`,
-          err instanceof Error ? err.stack : JSON.stringify(err),
-        );
-      }
+  /** Adds a centre as a contributor, leaving an existing row alone. */
+  private async persistContributingCenter(
+    resultId: number,
+    center: ClarisaCenter,
+    userId: number,
+  ): Promise<void> {
+    const existing =
+      await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
+        resultId,
+        center.code,
+      );
+    if (existing) return;
+
+    try {
+      await this._resultsCenterRepository.save({
+        result_id: resultId,
+        center_id: center.code,
+        is_primary: false,
+        is_leading_result: false,
+        from_cgspace: false,
+        is_active: true,
+        created_by: userId,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to save contributing center ${center.code} for result ${resultId}`,
+        err instanceof Error ? err.stack : JSON.stringify(err),
+      );
     }
   }
 
