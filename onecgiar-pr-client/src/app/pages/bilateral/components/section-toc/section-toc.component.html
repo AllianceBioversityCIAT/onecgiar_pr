@@ -18,7 +18,7 @@
       <label class="st-label">Why is this result being reported? <span class="text-(--pr-color-red-300)">*</span></label>
       <textarea class="st-textarea" rows="3" [ngModel]="whyReported()"
         placeholder="Explain why this unplanned result is being reported (max 30 words)…"
-        (input)="whyReported.set($any($event.target).value)"></textarea>
+        (input)="onWhyReportedInput($any($event.target).value)"></textarea>
     </div>
   }
 
