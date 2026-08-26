@@ -211,14 +211,22 @@ export class SectionGeographyComponent {
     this.queueGeographySave();
   }
 
+  /**
+   * The extra-scope flags live on this signal as `has_regions` / `has_countries` — the same keys
+   * the GET hydrates, the template reads and `buildGeographyPayload` maps onto the wire names
+   * `has_extra_regions` / `has_extra_countries`. Writing the wire names here instead created a
+   * second, unread copy of the flags: the payload kept saying `has_extra_countries: false`, and the
+   * server wipes the extra countries whenever that flag is false and the extra scope is not
+   * Country (`result-countries.service.ts` handleCountries) — i.e. every Sub-national extra scope.
+   */
   onExtraScopeChange(scopeValue: any): void {
     const scopeId = Number(scopeValue);
     if (scopeId === GeoScopeEnum.GLOBAL || scopeId === GeoScopeEnum.DETERMINED) {
       this.extraGeographicLocationBody.update(b => ({
         ...b,
         geo_scope_id: scopeId,
-        has_extra_countries: false,
-        has_extra_regions: false,
+        has_countries: false,
+        has_regions: false,
         regions: [],
         countries: []
       }));
@@ -226,16 +234,16 @@ export class SectionGeographyComponent {
       this.extraGeographicLocationBody.update(b => ({
         ...b,
         geo_scope_id: scopeId,
-        has_extra_regions: true,
-        has_extra_countries: false,
+        has_regions: true,
+        has_countries: false,
         countries: []
       }));
     } else if (scopeId === GeoScopeEnum.COUNTRY || scopeId === GeoScopeEnum.SUB_NATIONAL) {
       this.extraGeographicLocationBody.update(b => ({
         ...b,
         geo_scope_id: scopeId,
-        has_extra_countries: true,
-        has_extra_regions: false,
+        has_countries: true,
+        has_regions: false,
         regions: []
       }));
     } else {
