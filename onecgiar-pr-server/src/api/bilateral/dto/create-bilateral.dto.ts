@@ -21,6 +21,7 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { IsNotCloudStorageLink } from '../../../shared/validators/is-not-cloud-storage-link.validator';
 
 /* -------------------------------------------------------------------------- */
 /*                               SUB-OBJECTS                                   */
@@ -885,10 +886,16 @@ export class InstitutionDto {
 
 export class EvidenceDto {
   @ApiProperty({
-    description: 'URL linking to supporting evidence for the bilateral',
+    description:
+      'Publicly accessible URL linking to supporting evidence for the bilateral. Must include the http(s) scheme. Links to file storage platforms (SharePoint, OneDrive, Google Drive, Dropbox) are not accepted — PRMS stores the link and never copies the document, so a link behind tenant permissions cannot be rendered or reviewed.',
     example: 'https://doi.org/10.1234/abcd.2025.01',
   })
-  @IsUrl()
+  // `require_protocol` matters more than it looks: with the default options
+  // class-validator reads a bare file name as a URL, because `.pdf` passes its TLD
+  // check. `result-28808-Document-202607042143-8310.pdf` was accepted and stored as an
+  // evidence link on that basis.
+  @IsUrl({ require_protocol: true })
+  @IsNotCloudStorageLink()
   @IsNotEmpty()
   link: string;
 
