@@ -427,6 +427,12 @@ export class BilateralResultsListComponent implements OnInit {
     });
   }
 
+  /**
+   * Navigates by `result_code` + phase, which is what the detail endpoint resolves when a phase is
+   * present — and what the user sees in the URL. ⚠️ The code is NOT the internal `result.id` (5804
+   * of 9667 results on prtest differ), so nothing downstream may treat this route parameter as an
+   * id: only the detail response can publish that. See `BilateralCreationService.loadResult`.
+   */
   openResult(result: BilateralCenterResult): void {
     this.router.navigate(
       ['/bilateral', this.ctx.centerAcronym(), 'result', result.result_code],
