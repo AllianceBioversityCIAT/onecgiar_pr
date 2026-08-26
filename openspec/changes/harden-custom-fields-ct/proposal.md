@@ -33,5 +33,5 @@ Out of scope (explicitly): wiring CT into CI, rewriting the 3 stale `cypress/e2e
 - **Commands:** `npm run test:ct` (Cypress 14.5.1, headless, `src/**/*.cy.ts`). Local-only — CT is not part of the Jenkins pipeline (verified against build #63: `Startup → Test → Linting → Frontend Build → Deploy`), so this change does not alter CI timing or the deploy gate.
 - **Known constraint:** `RolesService.readOnly` defaults to `true` and hides the interactive control; mounts must pass `editable: true`.
 - **Stack:** Angular 21 + Spartan + Tailwind (preflight enabled); PrimeNG is fully removed on this branch, which is precisely why `master` is a *behavioural* reference and not a code reference.
-- **SDD baseline:** component rules and the "never raw native controls" mandate come from `docs/system-design/design.md`; the CT-as-the-validation-layer decision for `custom-fields/` is stated in `onecgiar-pr-client/CLAUDE.md` §9.
+- **SDD baseline:** component rules and the "never raw native controls" mandate come from `docs/ux-ui/design.md`; the CT-as-the-validation-layer decision for `custom-fields/` is stated in `onecgiar-pr-client/CLAUDE.md` §9.
 - **Jira:** no ticket exists for this work — it originates from a direct user request on the `performance-refactor` branch. A ticket should be opened if the defect report needs to be triaged by the team.

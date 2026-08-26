@@ -27,5 +27,5 @@ Scope note: **frontend-only**. No backend change. No dedicated Jira ticket — i
 - **Code:** `onecgiar-pr-client/src/app/custom-fields/pr-textarea/pr-textarea.component.ts` (+ `.html`) only. `.scss` untouched.
 - **Consumers:** 26 templates / 68 usages — untouched (contract preserved). Heaviest surfaces: Result Detail General Information, Evidences, Innovation Dev/Use narratives, IPSR steps.
 - **Dependencies:** no new deps. Still Angular 19 + PrimeNG 19 (`pTextarea`).
-- **SDD baseline:** aligns with `docs/system-design/design.md` (custom field patterns) and `src/CLAUDE.md` §14 / §21 (signals-first component shape). No `docs/prd.md` acceptance-criteria change.
+- **SDD baseline:** aligns with `docs/ux-ui/design.md` (custom field patterns) and `src/CLAUDE.md` §14 / §21 (signals-first component shape). No `docs/prd.md` acceptance-criteria change.
 - **Tests / gates:** Cypress CT `pr-textarea.cy.ts` must stay green (`npm run test:ct`), `npm run build:dev` must pass, and the component's Jest spec must stay green. QA documented in `onecgiar-pr-client/docs/refactor-signals-qa.md`.

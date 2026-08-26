@@ -25,4 +25,4 @@ In the 2026 Contributors & Partners section (P2-2998), the "Contributing CGIAR C
   - Selection handlers `getIndicatorsList()` (HLO/Outcome select) and `mapTocResultsIndicatorId()` (KPI Statement select).
 - **Consumer (read-only, no change expected):** `rd-contributors-and-partners.component.ts` `referenceCenters` / `preselectCentersEffect`, fed by `rdPartnersSE.tocReferenceCenterInstitutionIds`.
 - **Backend:** none.
-- **SDD baseline:** UI behavior per `docs/system-design/design.md` (Contributors & Partners section); no data-model change vs `docs/detailed-design/detailed-design.md`.
+- **SDD baseline:** UI behavior per `docs/ux-ui/design.md` (Contributors & Partners section); no data-model change vs `docs/trd/trd.md`.

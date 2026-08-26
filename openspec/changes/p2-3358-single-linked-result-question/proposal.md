@@ -37,4 +37,4 @@ Business (Nicoleta Trifa, CGIAR System Organization, 3–17 Aug 2026) confirmed 
 
 **Verification that code inspection cannot settle:** the PDF and Excel exports. The sentence does not exist anywhere in the server code, so both must be generated from a 2026 result and read.
 
-**SDD baseline:** `docs/system-design/design.md` (UI copy and section layout), `docs/detailed-design/detailed-design.md` (client state and the Contributors & Partners module). No module spec under `docs/specs/` currently covers this question.
+**SDD baseline:** `docs/ux-ui/design.md` (UI copy and section layout), `docs/trd/trd.md` (client state and the Contributors & Partners module). No module spec under `docs/specs/` currently covers this question.

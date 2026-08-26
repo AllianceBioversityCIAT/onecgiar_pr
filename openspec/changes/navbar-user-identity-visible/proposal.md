@@ -27,6 +27,6 @@ The logged-in user's identity (name and email) is currently hidden behind the av
 - **Component:** `onecgiar-pr-client/src/app/shared/components/header-panel/header-panel.component.{html,scss,ts}`.
 - **Child component (unchanged):** `app-navigation-bar` (sections nav) — untouched.
 - **Data sources (read-only):** `authSE.localStorageUser` (`user_name`, `email`), `getUserInitials()`, `getInitiativeSeparatedByPortfolio()`, `rolesSE.isAdmin`, notifications state — all already present in the component.
-- **SDD baseline:** UI/UX decisions to be reflected in `docs/system-design/design.md` (§ navigation / header) once accepted.
+- **SDD baseline:** UI/UX decisions to be reflected in `docs/ux-ui/design.md` (§ navigation / header) once accepted.
 - **No API, no server, no DB, no migration impact.**
 - **Tests:** update `header-panel.component.spec.ts`; keep client coverage thresholds (50/60/60/60).

@@ -114,8 +114,8 @@ document shape (`elastic.interface.ts:13-23`) carries **no programme code and no
 draw the design's result row. The server exposes only admin ingest/reset on that index, no query
 endpoint (`elastic.controller.ts:16-43`).
 
-**SDD baseline:** aligns with `docs/system-design/design.md` (shell/topbar navigation, consistent
-search UX) and `docs/detailed-design/detailed-design.md` (standalone components, signals, OnPush).
+**SDD baseline:** aligns with `docs/ux-ui/design.md` (shell/topbar navigation, consistent
+search UX) and `docs/trd/trd.md` (standalone components, signals, OnPush).
 No module spec exists under `docs/specs/` for the shell.
 
 **QA:** the disabled `INDICATORS` group is deliberate and must not be reported as a bug. The

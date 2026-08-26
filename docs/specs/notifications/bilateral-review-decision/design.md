@@ -1,7 +1,7 @@
 # Module Spec — Bilateral Review Decision Notifications — Design
 
 > Cites `requirements.md` in this folder. Baseline: `docs/prd.md` AC-8,
-> `docs/detailed-design/detailed-design.md` W4.
+> `docs/trd/trd.md` W4.
 
 ## 1. Summary
 

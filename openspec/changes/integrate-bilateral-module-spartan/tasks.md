@@ -32,7 +32,7 @@
 - [x] 4.1 Audit bilateral screens in browser; apply violet/chrome brand tokens via Tailwind (creator shell, section-zero dashboard, accordion, selects context)
 - [x] 4.2 Restyle RFR-home center cards to match redesigned home
 - [x] 4.3 /impeccable-style polish: hierarchy, spacing, focus/empty/loading states
-- [x] 4.4 Document brand design line in `docs/system-design/design.md` if absent
+- [x] 4.4 Document brand design line in `docs/ux-ui/design.md` if absent
 
 ## 5. Verification
 

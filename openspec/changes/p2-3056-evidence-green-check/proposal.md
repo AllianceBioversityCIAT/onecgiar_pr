@@ -38,4 +38,4 @@ In the Evidence section the green check turns valid as soon as **any** single pi
 - **No backend changes**: server green-check (`onecgiar-pr-server/.../results-validation-module.repository.ts`, `evidenceValidation()`) already enforces these rules in SQL (markers `tag_level_id = 3`; readiness for result_type 7, level ≠ 0). Server is read-only for this change.
 - No API contract changes, no migrations.
 - Verification must confirm whether the user-visible side-menu check is driven by the backend green-check, the client `isComplete`, or both, so the fix lands where the user actually sees the bug.
-- SDD baseline: behavior fits `docs/system-design/design.md` (Evidence section) and `docs/detailed-design/detailed-design.md` (results validation). Related changes: `p2-2981-evidence-labels-frontend` (other evidence labels, no overlap), spec `evidence-alert-messaging` (alert names).
+- SDD baseline: behavior fits `docs/ux-ui/design.md` (Evidence section) and `docs/trd/trd.md` (results validation). Related changes: `p2-2981-evidence-labels-frontend` (other evidence labels, no overlap), spec `evidence-alert-messaging` (alert names).

@@ -120,7 +120,7 @@ Server coverage MUST stay above the thresholds in `package.json` (branches 5%, f
 After the feature is live:
 
 - [ ] Move spec status to `shipped`.
-- [ ] Promote any new cross-cutting decision into `docs/system-design/design.md` (§12) or `docs/detailed-design/detailed-design.md` (§11).
+- [ ] Promote any new cross-cutting decision into `docs/ux-ui/design.md` (§12) or `docs/trd/trd.md` (§11).
 - [ ] File follow-up tasks for any deferred work captured in the `design.md` "Open Gaps & Follow-ups".
 - [ ] Update `docs/prd.md` Open Questions (`OQ-#`) if the spec resolved any.
 
@@ -143,5 +143,5 @@ State the **exact** steps to undo this change if production needs it.
 Every approved `task.md` MUST link to:
 
 - `docs/specs/<module>/requirements.md` and `design.md` in the same folder.
-- `docs/prd.md`, `docs/system-design/design.md`, `docs/detailed-design/detailed-design.md`.
+- `docs/prd.md`, `docs/ux-ui/design.md`, `docs/trd/trd.md`.
 - Any authoritative module doc whose contract is touched (e.g., `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`).

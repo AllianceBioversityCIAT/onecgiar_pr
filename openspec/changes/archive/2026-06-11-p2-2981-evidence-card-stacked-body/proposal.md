@@ -24,4 +24,4 @@ P2-2981. In the flat evidence card (P2-2935 design), the card body lays link, im
 
 - `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.component.scss` (`.ev_card_body` and children)
 - Possibly `rd-evidences.component.html` if grouping nodes are needed (prefer CSS-only).
-- Jira: P2-2981. SDD baseline: UI layout per `docs/system-design/design.md` (evidence card pattern, P2-2935).
+- Jira: P2-2981. SDD baseline: UI layout per `docs/ux-ui/design.md` (evidence card pattern, P2-2935).

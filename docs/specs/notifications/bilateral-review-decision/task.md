@@ -149,6 +149,6 @@ legacy strings byte-for-byte, so the four removed switches provably still produc
 ## Required cross-references
 
 - `requirements.md` and `design.md` in this folder
-- `docs/prd.md` AC-8; `docs/detailed-design/detailed-design.md` W4
+- `docs/prd.md` AC-8; `docs/trd/trd.md` W4
 - `docs/specs/auth/center-user/task.md` AUTH-T-8 / T-11
 - `docs/specs/bilateral-ai-workflow/bilateral-spec.md` D28, UX Findings 5.3.1 / 5.3.5

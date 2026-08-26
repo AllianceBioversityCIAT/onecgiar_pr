@@ -1328,8 +1328,8 @@ Note: W3/Bilateral results follow Draft (8) → Editing (1) → Pending Review (
 | Bilateral payload contract | `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` |
 | Bilateral replication guide | `docs/bilateral-module/` |
 | PRD | `docs/prd.md` |
-| System design | `docs/system-design/design.md` |
-| Detailed design | `docs/detailed-design/detailed-design.md` |
+| System design | `docs/ux-ui/design.md` |
+| Detailed design | `docs/trd/trd.md` |
 | UX research report | `docs/prms-ux-research-report.md` |
 | Result status enum | `onecgiar-pr-server/src/shared/constants/result-status.enum.ts` |
 | Result type enum | `onecgiar-pr-server/src/shared/constants/result-type.enum.ts` |

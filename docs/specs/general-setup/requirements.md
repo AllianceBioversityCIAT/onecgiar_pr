@@ -32,8 +32,8 @@
 Two or three short paragraphs:
 
 - What gap or goal motivates this spec.
-- Which user flows from `docs/system-design/design.md` it touches.
-- Which entities / API surfaces from `docs/detailed-design/detailed-design.md` it touches.
+- Which user flows from `docs/ux-ui/design.md` it touches.
+- Which entities / API surfaces from `docs/trd/trd.md` it touches.
 
 Reference the PRD link: `docs/prd.md` (specific goal `G#`, story `US-*`, acceptance criterion `AC-#`).
 
@@ -110,7 +110,7 @@ Address only the dimensions this spec affects. Use measurable targets — no "fa
 | **Security** | e.g., MUST be JWT-gated; SHOULD be role-gated (`admin`). No secrets in logs. |
 | **Privacy** | e.g., no PII in error responses or telemetry. |
 | **Backwards compatibility** | e.g., MUST be additive on bilateral payload (`AC-4`); no field removals without `v2` rollout. |
-| **Accessibility** | e.g., new UI MUST meet WCAG 2.1 AA per `docs/system-design/design.md` §10. |
+| **Accessibility** | e.g., new UI MUST meet WCAG 2.1 AA per `docs/ux-ui/design.md` §10. |
 | **Internationalization** | e.g., all new strings MUST go through `src/app/internationalization/`. |
 | **Observability** | e.g., MUST log start/finish + outcome of background jobs; no token / secret leakage. |
 
@@ -177,6 +177,6 @@ Reserved for cross-spec coordination, migration order, or rollout flags. Keep co
 Every approved `requirements.md` MUST link to:
 
 - `docs/prd.md` (cite specific `G`, `US-*`, `AC-*` ids).
-- `docs/system-design/design.md` (cite specific screens / flows).
-- `docs/detailed-design/detailed-design.md` (cite specific modules / entities / endpoints).
+- `docs/ux-ui/design.md` (cite specific screens / flows).
+- `docs/trd/trd.md` (cite specific modules / entities / endpoints).
 - Module-specific authoritative docs where they exist (e.g., `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` for bilateral specs).
