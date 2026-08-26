@@ -40,11 +40,21 @@ describe('CPMultipleWPsComponent', () => {
   const contentEl = () => fixture.nativeElement.querySelector('[data-testid="wps-content"]');
 
   beforeEach(async () => {
+    const currentResultSignal = signal({ id: 100, result_id: 100, result_level_id: 2 });
     const apiMock = {
       dataControlSE: {
         currentNotification: null,
         currentResult: { id: 100 },
-        currentResultSignal: signal({ id: 100, result_id: 100, result_level_id: 2 })
+        get currentResultSignal() {
+          return currentResultSignal;
+        },
+        set currentResultSignal(val: any) {
+          if (typeof val === 'function') {
+            currentResultSignal.set(val());
+          } else {
+            currentResultSignal.set(val);
+          }
+        }
       },
       tocApiSE: {
         GET_tocLevelsByconfig: jest.fn().mockReturnValue(of({ response: [] }))
@@ -110,5 +120,38 @@ describe('CPMultipleWPsComponent', () => {
 
     expect(component.activeTabIndex).toBe(1);
     expect(contentEl()).toBeTruthy();
+  });
+
+  describe('dynamicTabTitle', () => {
+    it('renders "Outcome N~X" when currentResult is an Outcome (result_level_id: 3)', () => {
+      const apiMock = TestBed.inject(ApiService);
+      apiMock.dataControlSE.currentResultSignal = signal({ id: 100, result_id: 100, result_level_id: 3 });
+      fixture.detectChanges();
+
+      const titles = Array.from(fixture.nativeElement.querySelectorAll('.tab-title')).map((el: any) => el.textContent.trim());
+      expect(titles).toEqual(['Outcome N~1', 'Outcome N~2']);
+    });
+
+    it('renders "HLO N~X" when currentResult is an Output (result_level_id: 4)', () => {
+      const apiMock = TestBed.inject(ApiService);
+      apiMock.dataControlSE.currentResultSignal = signal({ id: 100, result_id: 100, result_level_id: 4 });
+      fixture.detectChanges();
+
+      const titles = Array.from(fixture.nativeElement.querySelectorAll('.tab-title')).map((el: any) => el.textContent.trim());
+      expect(titles).toEqual(['HLO N~1', 'HLO N~2']);
+    });
+
+    it('falls back to input resultLevelId when currentResultSignal has no level (resultLevelId: 2 -> Outcome, resultLevelId: 1 -> HLO)', () => {
+      const apiMock = TestBed.inject(ApiService);
+      apiMock.dataControlSE.currentResultSignal = signal({ id: 100, result_id: 100 });
+
+      component.resultLevelId = 2;
+      fixture.detectChanges();
+      expect(component.dynamicTabTitle()).toBe('Outcome');
+
+      component.resultLevelId = 1;
+      fixture.detectChanges();
+      expect(component.dynamicTabTitle()).toBe('HLO');
+    });
   });
 });
