@@ -146,6 +146,21 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
     }
   }
 
+  onSelectSegment(optionVal: any) {
+    if (this.segmentsDisabled) return;
+
+    if (this.value === optionVal && optionVal !== null) {
+      this.value = null;
+      this.currentVal = null;
+    } else {
+      this.value = optionVal;
+      this.currentVal = optionVal;
+    }
+    this.onTouch();
+    this.onValueChange(this.value);
+    this.selectOptionEvent.emit();
+  }
+
   onValueChange(newValue: any) {
     // Update current value for next comparison
     this.currentVal = newValue;

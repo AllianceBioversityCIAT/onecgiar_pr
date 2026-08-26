@@ -4,6 +4,7 @@ import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/f
 
 import { PrRadioButtonComponent } from './pr-radio-button.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { RolesService } from '../../shared/services/global/roles.service';
 
 /**
  * The sub-option rows bind `[(ngModel)]` to `<app-pr-checkbox>` and `<app-pr-input>`. Under
@@ -106,6 +107,8 @@ describe('RadioButtonComponent', () => {
       schemas: [CUSTOM_ELEMENTS_SCHEMA]
     }).compileComponents();
 
+    TestBed.inject(RolesService).readOnly = false;
+
     fixture = TestBed.createComponent(PrRadioButtonComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -186,6 +189,106 @@ describe('RadioButtonComponent', () => {
       const group = renderGroup(['Short-term', 'Long-term']);
       expect(subGroupOf(group)).toBeNull();
       expect(group.nativeElement.querySelectorAll('.checkboxList')).toHaveLength(0);
+    });
+  });
+
+  describe('variant="segmented"', () => {
+    const renderSegmentedGroup = (
+      initialValue: any = null,
+      disabled = false,
+      readOnly = false
+    ): ComponentFixture<PrRadioButtonComponent> => {
+      const f = TestBed.createComponent(PrRadioButtonComponent);
+      const c = f.componentInstance;
+      c.variant = 'segmented';
+      c.options = [
+        { id: 1, full_name: '(0) Not Targeted' },
+        { id: 2, full_name: '(1) Significant' },
+        { id: 3, full_name: '(2) Principal' }
+      ];
+      c.optionLabel = 'full_name';
+      c.optionValue = 'id';
+      c.disabled = disabled;
+      c.readOnly = readOnly;
+      c.writeValue(initialValue);
+      f.detectChanges();
+      return f;
+    };
+
+    it('selects an unselected score segment when clicked (RES-R-SCORE-1 Scenario 1)', () => {
+      const f = renderSegmentedGroup(null);
+      const c = f.componentInstance;
+      const onChangeSpy = jest.fn();
+      const onTouchSpy = jest.fn();
+      const selectOptionSpy = jest.spyOn(c.selectOptionEvent, 'emit');
+      c.registerOnChange(onChangeSpy);
+      c.registerOnTouched(onTouchSpy);
+
+      const buttons = f.nativeElement.querySelectorAll('button[role="radio"]');
+      expect(buttons).toHaveLength(3);
+
+      buttons[0].click();
+      f.detectChanges();
+
+      expect(c.value).toBe(1);
+      expect(onChangeSpy).toHaveBeenCalledWith(1);
+      expect(onTouchSpy).toHaveBeenCalled();
+      expect(selectOptionSpy).toHaveBeenCalled();
+      expect(buttons[0].getAttribute('aria-checked')).toBe('true');
+      expect(buttons[0].classList.contains('bg-white')).toBe(true);
+    });
+
+    it('deselects the currently selected segment on re-click (RES-R-SCORE-1 Scenario 2)', () => {
+      const f = renderSegmentedGroup(1);
+      const c = f.componentInstance;
+      const onChangeSpy = jest.fn();
+      const selectOptionSpy = jest.spyOn(c.selectOptionEvent, 'emit');
+      c.registerOnChange(onChangeSpy);
+
+      const buttons = f.nativeElement.querySelectorAll('button[role="radio"]');
+      expect(buttons[0].getAttribute('aria-checked')).toBe('true');
+
+      buttons[0].click();
+      f.detectChanges();
+
+      expect(c.value).toBeNull();
+      expect(onChangeSpy).toHaveBeenCalledWith(null);
+      expect(selectOptionSpy).toHaveBeenCalled();
+      expect(buttons[0].getAttribute('aria-checked')).toBe('false');
+      expect(buttons[0].classList.contains('bg-transparent')).toBe(true);
+    });
+
+    it('switches selection when clicking another segment (RES-R-SCORE-1 Scenario 3)', () => {
+      const f = renderSegmentedGroup(1);
+      const c = f.componentInstance;
+      const onChangeSpy = jest.fn();
+      c.registerOnChange(onChangeSpy);
+
+      const buttons = f.nativeElement.querySelectorAll('button[role="radio"]');
+      buttons[2].click();
+      f.detectChanges();
+
+      expect(c.value).toBe(3);
+      expect(onChangeSpy).toHaveBeenCalledWith(3);
+      expect(buttons[0].getAttribute('aria-checked')).toBe('false');
+      expect(buttons[2].getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('does not modify value when disabled or readOnly', () => {
+      const fDisabled = renderSegmentedGroup(null, true, false);
+      const cDisabled = fDisabled.componentInstance;
+      const buttonsDisabled = fDisabled.nativeElement.querySelectorAll('button[role="radio"]');
+      expect(buttonsDisabled[0].disabled).toBe(true);
+      buttonsDisabled[0].click();
+      fDisabled.detectChanges();
+      expect(cDisabled.value).toBeNull();
+
+      const fReadOnly = renderSegmentedGroup(null, false, true);
+      const cReadOnly = fReadOnly.componentInstance;
+      const buttonsReadOnly = fReadOnly.nativeElement.querySelectorAll('button[role="radio"]');
+      buttonsReadOnly[0].click();
+      fReadOnly.detectChanges();
+      expect(cReadOnly.value).toBeNull();
     });
   });
 });
