@@ -489,10 +489,15 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     const useBilateralFlow = result?.source_name == 'W3/Bilaterals' && !this.isW3BilateralsAvisa(result);
 
     if (useBilateralFlow) {
+      // P2-3229. "Update result" used to be hidden outright for bilaterals; it is now offered on
+      // an approved result from a previous phase, to users of its lead centre. AVISA (SGP-02)
+      // never reaches here — `useBilateralFlow` excludes it, so those keep the W1/W2 rule.
+      const canUpdateBilateral = this.api.canUpdateBilateral(result, this.api.dataControlSE.reportingCurrentPhase);
+
       this.itemsWithDelete[0].visible = false;
-      this.itemsWithDelete[1].visible = false;
+      this.itemsWithDelete[1].visible = canUpdateBilateral;
       this.items[0].visible = false;
-      this.items[1].visible = false;
+      this.items[1].visible = canUpdateBilateral;
 
       this.itemsWithDelete[2].visible = true;
       this.itemsWithDelete[2].label = result?.status_name == 'Pending Review' ? 'Review result' : 'See result';

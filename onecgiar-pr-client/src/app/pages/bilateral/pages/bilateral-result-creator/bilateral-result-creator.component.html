@@ -5,6 +5,13 @@
   [isW3Bilateral]="creationService.isW3Bilateral()"
   [statusId]="creationService.resultStatusId()" />
 
+<!-- P2-3229 AC5. The phases this result exists in, so a versioned result can be navigated
+     between years. The component builds its links from the current route, so here they stay
+     inside the bilateral module. Only rendered once there is a result to have phases. -->
+@if (!isCreating() && resultId()) {
+  <app-phase-switcher></app-phase-switcher>
+}
+
 <div class="bilateral-creator" [class.bilateral-creator--with-aside]="!isCreating() && resultId()">
   @if (isCreating()) {
     <div [class.bcr-step--locked]="isAiProcessing()">

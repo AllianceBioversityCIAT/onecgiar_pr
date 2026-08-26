@@ -27,6 +27,24 @@ export class ResultRepository
   extends BaseRepository<Result>
   implements LogicalDelete<Result>
 {
+  /**
+   * SQL for `replicate()` — carries one result forward into a new phase.
+   *
+   * `source`, `creation_method`, `external_submitter`, `external_platform_id`,
+   * `external_platform_code` and `external_reference` are part of the copy on purpose: a
+   * phase change continues the *same* result, so it keeps where it came from.
+   *
+   * They were missing until 2026-08-26, and the consequences were silent. Webhook dispatch
+   * decides by `external_platform_id` (`results.service.ts`, `enqueueBilateralWebhook`), so
+   * a copy without it logs "no webhook queued" and returns — the Science Program's decision
+   * on the new version never reaches the platform that reported it. And without `source` the
+   * copy stops reading as W3/bilateral in the reporting tool and in the `/list` sync, while
+   * `external_reference` is the id the reporting platform correlates by.
+   *
+   * `status_id` is deliberately NOT one of them: the copy always starts at 1 (Editing) and
+   * any flow that needs another status sets it afterwards on the new row. This query is
+   * shared with the W1/W2 phase change, so changing it here would move everyone.
+   */
   createQueries(
     config: ReplicableConfigInterface<Result>,
   ): ConfigCustomQueryInterface {
@@ -62,6 +80,12 @@ export class ResultRepository
         r2.geographic_scope_id,
         r2.lead_contact_person,
         r2.result_code,
+        r2.source,
+        r2.creation_method,
+        r2.external_submitter,
+        r2.external_platform_id,
+        r2.external_platform_code,
+        r2.external_reference,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -95,6 +119,12 @@ export class ResultRepository
         nutrition_tag_level_id,
         environmental_biodiversity_tag_level_id,
         poverty_tag_level_id,
+        source,
+        creation_method,
+        external_submitter,
+        external_platform_id,
+        external_platform_code,
+        external_reference,
         is_replicated
         ) select
         r2.description,
@@ -128,6 +158,12 @@ export class ResultRepository
         r2.nutrition_tag_level_id,
         r2.environmental_biodiversity_tag_level_id,
         r2.poverty_tag_level_id,
+        r2.source,
+        r2.creation_method,
+        r2.external_submitter,
+        r2.external_platform_id,
+        r2.external_platform_code,
+        r2.external_reference,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
