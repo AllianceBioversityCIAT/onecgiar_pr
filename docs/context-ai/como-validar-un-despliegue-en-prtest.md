@@ -30,8 +30,14 @@ que se puede leer sin navegador:
 curl -s https://prtest.ciat.cgiar.org/main.js | grep -oE 'APP_VERSION = "[0-9]+"'
 ```
 
-**Es un contador escrito a mano. Súbelo en uno en cada entrega que QA vaya a verificar.** Si no lo
-subes, el sello miente: el 26-ago llevaba semanas en `10`, y doce commits después seguía diciendo
+**Es un contador escrito a mano. Súbelo en uno en cada entrega que QA vaya a verificar** — y hazlo
+**en el ÚLTIMO commit de la entrega, nunca en el primero**. Si alguien pushea después del bump, el
+número deja de identificar un contenido: quedan dos builds distintos que dicen lo mismo. El 26-ago
+pasó en las dos direcciones el mismo día — primero nadie lo subía en semanas, luego se subió cinco
+minutos antes de que entrara otro fix, y hubo que verificar el sello **y** un marcador del código
+para saber cuál había aterrizado.
+
+Si no lo subes, el sello miente: el 26-ago llevaba semanas en `10`, y doce commits después seguía diciendo
 `10` — no había forma de distinguir *"está roto"* de *"todavía no está desplegado"*. Ese es
 exactamente el ciclo que se perdió en **P2-3245**.
 
