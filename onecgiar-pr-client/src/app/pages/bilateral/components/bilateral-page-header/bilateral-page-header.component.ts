@@ -26,20 +26,39 @@ export class BilateralPageHeaderComponent {
   readonly pageTitle = input<string | null>(null);
 
   /**
-   * P2-3352: identity of the result being edited — code, type and funding tag. Passed in rather than
-   * read from BilateralCreationService so this header stays usable by the three tabbed pages, which
-   * have no result loaded. All three are optional; the strip renders only for the ones present.
+   * P2-3352: identity of the result being edited — code, type, funding tag and status. Passed in
+   * rather than read from BilateralCreationService so this header stays usable by the three tabbed
+   * pages, which have no result loaded. All are optional; the strip renders only what is present.
    *
-   * The status badge the story also asks for is NOT here: the bilateral result-detail response
-   * (CommonFieldsDto) carries no status field, so the editor cannot know it. Blocked on backend —
-   * see P2-3437.
+   * ⚠️ This used to say the status badge was blocked on the backend (P2-3437). That was wrong: the
+   * detail payload has always carried `status_id` (result.repository.ts:2904 selects it and
+   * results.service.ts returns `commonFields` unfiltered) — the client was the one dropping it.
    */
   readonly resultCode = input<string | number | null>(null);
   readonly resultTypeName = input<string | null>(null);
   readonly isW3Bilateral = input(false);
+  /** `result.status_id`. Only the four the story lists render a badge; anything else is ignored. */
+  readonly statusId = input<number | null>(null);
+
+  /**
+   * The four statuses a bilateral result can be in per P2-3352, keyed by `ResultStatusData`
+   * (onecgiar-pr-server/src/shared/constants/result-status.enum.ts). Colours match the chips the
+   * bilateral results list already uses for the same ids, so a result reads the same in both places.
+   */
+  private static readonly STATUS_BADGES: Record<number, { label: string; classes: string }> = {
+    1: { label: 'Editing', classes: 'bg-[#F3F4F6] text-[#6B7280]' },
+    5: { label: 'Pending review', classes: 'bg-[#FEF3C7] text-[#B45309]' },
+    6: { label: 'Approved', classes: 'bg-[#D1FAE5] text-[#047857]' },
+    7: { label: 'Rejected', classes: 'bg-[#FEE2E2] text-[#B91C1C]' },
+  };
+
+  readonly statusBadge = computed(() => {
+    const id = this.statusId();
+    return id == null ? null : (BilateralPageHeaderComponent.STATUS_BADGES[Number(id)] ?? null);
+  });
 
   readonly hasIdentityStrip = computed(
-    () => this.resultCode() != null || !!this.resultTypeName() || this.isW3Bilateral(),
+    () => this.resultCode() != null || !!this.resultTypeName() || this.isW3Bilateral() || !!this.statusBadge(),
   );
 
   /** `[Full Center Name] (INITIALS)`, the trailing breadcrumb segment required by AC1. */

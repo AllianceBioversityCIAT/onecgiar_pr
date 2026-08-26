@@ -35,6 +35,14 @@
                 W3/Bilateral
               </span>
             }
+            @if (statusBadge(); as badge) {
+              <span
+                class="flex items-center rounded-full px-[9px] py-[3px] text-[12px] font-medium leading-none"
+                [class]="badge.classes"
+                data-testid="bilateral-status-badge">
+                {{ badge.label }}
+              </span>
+            }
           </div>
         }
       } @else {

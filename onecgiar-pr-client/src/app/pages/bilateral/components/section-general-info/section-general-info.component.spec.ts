@@ -238,6 +238,46 @@ describe('SectionGeneralInfoComponent', () => {
       ]);
     });
 
+    /**
+     * Regression lock. The constructor effect runs on mount before the hydration effects have copied
+     * the loaded contact in, so it used to PATCH `lead_contact_person: null` over the stored one
+     * every time the editor was opened — and, before the id fix, onto a foreign row.
+     */
+    it('saves nothing on mount, with or without a loaded lead contact', () => {
+      build();
+      fixture.detectChanges();
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+
+      creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
+      fixture.detectChanges();
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+
+      // The MDS tracker, which never writes to the server, still runs.
+      expect(mdsTracker.setSectionFields).toHaveBeenCalled();
+    });
+
+    it('saves again when the user restores the contact the result was loaded with', () => {
+      const jane = { display_name: 'Jane Doe', mail: 'jane@x.org', title: '' };
+      creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set(jane);
+      build();
+      fixture.detectChanges();
+      autoSave.updateFieldsBatch.mockClear();
+
+      const body = component.leadContactBody();
+      body.lead_contact_person = 'John Roe';
+      body.lead_contact_person_data = { display_name: 'John Roe', mail: 'john@x.org', title: '' };
+      expect(autoSave.updateFieldsBatch).toHaveBeenCalledTimes(1);
+
+      body.lead_contact_person = 'Jane Doe';
+      body.lead_contact_person_data = { ...jane };
+      expect(autoSave.updateFieldsBatch).toHaveBeenLastCalledWith({
+        lead_contact_person: 'Jane Doe',
+        lead_contact_person_data: { display_name: 'Jane Doe', mail: 'jane@x.org', title: '' }
+      });
+    });
+
     it('does not commit while only the name has been set (matches selectUser()/clearContact() ordering)', () => {
       build();
       fixture.detectChanges();

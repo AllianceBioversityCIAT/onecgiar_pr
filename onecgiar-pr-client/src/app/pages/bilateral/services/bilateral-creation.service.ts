@@ -20,9 +20,20 @@ export class BilateralCreationService {
   selectedPrimarySp = signal<{ programId: number; programCode: string; allocation: string; name?: string; shortName?: string } | null>(null);
   selectedSecondarySps = signal<{ programId: number; programCode: string; allocation: string }[]>([]);
 
+  /**
+   * Internal DB `result.id` of the result being edited — the ONLY id every write endpoint accepts.
+   * ⚠️ Never holds a `result_code`: see `loadResult`.
+   */
   currentResultId = signal<number | null>(null);
   isLoadingProjects = signal(false);
   isLoadingResult = signal(false);
+  /**
+   * True when the last `loadResult` call failed. Needed because the editor sections only mount once
+   * `currentResultId` is published: on a failed GET the id stays null and `isLoadingResult` flips
+   * back to false, so without this flag the page renders neither the skeleton nor the sections and
+   * the user is left staring at an empty editor with no way out.
+   */
+  loadFailed = signal(false);
   isAiGenerated = signal(false);
   /** Human-facing result identifier (`result_code`), distinct from the internal `id`. */
   resultCode = signal<string | number | null>(null);
@@ -32,6 +43,11 @@ export class BilateralCreationService {
   resultTypeName = signal<string | null>(null);
   /** Reporting phase year the result belongs to. */
   reportingYear = signal<number | null>(null);
+  /**
+   * P2-3352: `result.status_id` as returned by the detail endpoint — Editing (1), Pending review (5),
+   * Approved (6) or Rejected (7) for a bilateral result. Drives the header status badge.
+   */
+  resultStatusId = signal<number | null>(null);
   resultTitle = signal('');
   resultDescription = signal('');
   resultLeadContact = signal('');
@@ -66,6 +82,7 @@ export class BilateralCreationService {
     this.isW3Bilateral.set(false);
     this.resultTypeName.set(null);
     this.reportingYear.set(null);
+    this.resultStatusId.set(null);
     this.resultTitle.set('');
     this.resultDescription.set('');
     this.resultLeadContact.set('');
@@ -82,19 +99,34 @@ export class BilateralCreationService {
     this.resultContributingProjects.set([]);
   }
 
-  loadResult(resultId: number, versionId?: number): void {
-    this.currentResultId.set(resultId);
-    this.api.resultsSE.currentResultId = resultId;
+  /**
+   * `resultIdOrCode` is the route parameter, and what it means depends on `versionId`: the detail
+   * endpoint resolves by `result_code` + `version_id` when a phase is given and by `id` only when it
+   * is not (results.service.ts:3378-3388).
+   *
+   * ⚠️ `currentResultId` must therefore NOT be seeded with it. Every write endpoint — starting with
+   * `PATCH api/results/bilateral/general-info/:resultId` (results.service.ts:5006) — looks the row up
+   * by the internal `id`, so an autosave dispatched before this GET resolved used to PATCH a
+   * DIFFERENT result: on prtest 5804 of 9667 results have `id !== result_code` (e.g. the 2026 row
+   * id 11012 carries code 5093, and `/result/5093?phase=36` would have written into row 5093).
+   * The id is published only once the response carries it; until then it stays null and the editor
+   * sections — and with them the autosave — do not mount.
+   */
+  loadResult(resultIdOrCode: number, versionId?: number): void {
+    this.currentResultId.set(null);
+    this.api.resultsSE.currentResultId = null;
     this.isLoadingResult.set(true);
+    this.loadFailed.set(false);
     this.clearEditorState();
-    this.bilateralApi.GET_BilateralResultDetail(resultId, versionId).subscribe({
+    this.bilateralApi.GET_BilateralResultDetail(resultIdOrCode, versionId).subscribe({
       next: ({ response }) => {
         if (response?.commonFields) {
           const cf = response.commonFields;
-          // When looked up by result_code, the internal id may differ — sync it.
-          if (cf.id && cf.id !== this.currentResultId()) {
-            this.currentResultId.set(cf.id);
-            this.api.resultsSE.currentResultId = cf.id;
+          // Without a phase the route param already was the internal id; with one, only `cf.id` is.
+          const internalId = Number(cf.id ?? (versionId ? NaN : resultIdOrCode));
+          if (Number.isFinite(internalId) && internalId > 0) {
+            this.currentResultId.set(internalId);
+            this.api.resultsSE.currentResultId = internalId;
           }
           // `is_ai_generated` comes from a SQL CASE literal and can arrive as the string '0',
           // which `!!` treats as truthy — compare numerically instead.
@@ -107,6 +139,9 @@ export class BilateralCreationService {
           this.reportingYear.set(
             cf.reporting_year != null ? Number(cf.reporting_year) : null,
           );
+          // P2-3352: the payload has carried `status_id` all along (result.repository.ts:2904 selects
+          // it and results.service.ts returns commonFields unfiltered) — the client simply never read it.
+          this.resultStatusId.set(cf.status_id != null ? Number(cf.status_id) : null);
           this.resultTitle.set(cf.result_title ?? '');
           this.resultDescription.set(cf.result_description ?? '');
           this.resultLeadContact.set(cf.lead_contact_person ?? '');
@@ -201,7 +236,10 @@ export class BilateralCreationService {
 
         this.isLoadingResult.set(false);
       },
-      error: () => { this.isLoadingResult.set(false); }
+      error: () => {
+        this.isLoadingResult.set(false);
+        this.loadFailed.set(true);
+      }
     });
   }
 

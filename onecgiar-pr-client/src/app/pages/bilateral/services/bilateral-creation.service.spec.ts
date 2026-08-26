@@ -187,6 +187,53 @@ describe('BilateralCreationService', () => {
       } as any);
     }
 
+    /**
+     * Regression lock. With a phase the route parameter is a `result_code`, and the write endpoints
+     * resolve by the internal `id` — so publishing the parameter as `currentResultId`, even for the
+     * few milliseconds the GET takes, pointed every autosave at a foreign row.
+     */
+    it('never publishes the route parameter as the result id while the detail is loading', () => {
+      const seen: (number | null)[] = [];
+      mockBilateralApi.GET_BilateralResultDetail.mockReturnValue({
+        subscribe: ({ next }: any) => {
+          seen.push(service.currentResultId());
+          next({ response: { commonFields: { id: 11012, result_code: 5093 } } });
+        },
+      } as any);
+
+      service.loadResult(5093, 36);
+
+      expect(seen).toEqual([null]);
+      expect(service.currentResultId()).toBe(11012);
+      expect(mockApiService.resultsSE!.currentResultId).toBe(11012);
+    });
+
+    it('leaves the result id unset when the phase lookup returns no internal id', () => {
+      respondWith({ commonFields: { result_code: 5093 } });
+
+      service.loadResult(5093, 36);
+
+      expect(service.currentResultId()).toBeNull();
+    });
+
+    it('falls back to the route parameter as the id only when no phase was given', () => {
+      respondWith({ commonFields: { result_code: 11012 } });
+
+      service.loadResult(11012);
+
+      expect(service.currentResultId()).toBe(11012);
+    });
+
+    it('maps status_id for the header badge and clears it between results (P2-3352)', () => {
+      respondWith({ commonFields: { id: 11012, status_id: '5' } });
+      service.loadResult(11012);
+      expect(service.resultStatusId()).toBe(5);
+
+      respondWith({ commonFields: { id: 11013 } });
+      service.loadResult(11013);
+      expect(service.resultStatusId()).toBeNull();
+    });
+
     it('maps every common field, the DAC levels and the impact-area sub scores', () => {
       respondWith({
         commonFields: {

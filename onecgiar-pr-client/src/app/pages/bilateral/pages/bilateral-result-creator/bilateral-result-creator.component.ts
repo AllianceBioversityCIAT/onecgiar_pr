@@ -21,6 +21,7 @@ import { SectionEvidenceComponent } from '../../components/section-evidence/sect
 import { SectionTypeSpecificComponent } from '../../components/section-type-specific/section-type-specific.component';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
 import { BilateralProgressAsideComponent } from '../../components/bilateral-progress-aside/bilateral-progress-aside.component';
+import { FormSkeletonComponent } from '../../components/form-skeleton/form-skeleton.component';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 
 const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
@@ -53,7 +54,8 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     SectionEvidenceComponent,
     SectionTypeSpecificComponent,
     BilateralProgressAsideComponent,
-    BilateralPageHeaderComponent
+    BilateralPageHeaderComponent,
+    FormSkeletonComponent
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
@@ -145,15 +147,37 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   sectionStatuses = this.mdsTracker.sectionStatus;
 
   constructor() {
-    // When loadResult resolves and updates currentResultId to the internal DB id,
-    // sync it to the component signal and wire up autosave.
+    /**
+     * Binds autosave to the result being edited. Both guards are load-bearing:
+     *
+     * ⚠️ `currentResultId()` is null until `loadResult` publishes the internal DB id from the
+     * response (bilateral-creation.service.ts). It used to be seeded synchronously with the route
+     * parameter — a `result_code` on any deep link carrying a phase — so this effect handed the
+     * autosave service a foreign id and the first mount-time PATCH landed on somebody else's row.
+     *
+     * `isLoadingResult()` keeps the binding (and the sections it mounts) out of the window where a
+     * previous result's state is still on screen.
+     */
     effect(() => {
       const id = this.creationService.currentResultId();
-      if (id && !this.isCreating()) {
+      if (id && !this.isCreating() && !this.creationService.isLoadingResult()) {
         this.resultId.set(id);
         this.autoSaveService.setResultId(id);
       }
     });
+  }
+
+  /** Arguments of the last `loadResult` call, so the error state can retry the exact same request. */
+  private lastLoadRequest: { resultCode: number; versionId?: number } | null = null;
+
+  /** Retry button of the "could not load" state (see `creationService.loadFailed`). */
+  retryLoadResult(): void {
+    const request = this.lastLoadRequest;
+    if (!request) return;
+    this.resultId.set(null);
+    this.autoSaveService.reset();
+    this.mdsTracker.reset();
+    this.creationService.loadResult(request.resultCode, request.versionId);
   }
 
   ngOnInit(): void {
@@ -163,9 +187,12 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         const resultCode = Number(id);
         const versionId = Number(this.route.snapshot.queryParams['phase']) || undefined;
         this.isCreating.set(false);
-        // Drop pending writes from a previous result before binding the new id.
+        // Drop pending writes from a previous result before binding the new id, and drop the id
+        // itself: it must not survive into the next result while its detail is still loading.
+        this.resultId.set(null);
         this.autoSaveService.reset();
         this.mdsTracker.reset();
+        this.lastLoadRequest = { resultCode, versionId };
         this.creationService.loadResult(resultCode, versionId);
       } else {
         // Fresh create: reset wizard but preserve a project pre-selected from the home panel.

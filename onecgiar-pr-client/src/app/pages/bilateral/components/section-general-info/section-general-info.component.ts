@@ -115,6 +115,11 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
    */
   leadContactBody = signal<LeadContactBody>(this.makeLeadContactBody(null, null));
 
+  /** False until the hydration effect below has copied the loaded contact in. See `updateGeneralInfoMdsFields`. */
+  private leadContactHydrated = false;
+  /** Key of the lead contact last handed to autosave (or hydrated from the server). */
+  private lastSyncedContactKey: string | null = null;
+
   showAllFields = signal(this.loadShowAllFromStorage());
 
   dacAreas = DAC_AREAS;
@@ -171,6 +176,10 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
     effect(() => {
       const lc = this.creationService.resultLeadContact();
       const lcData = this.creationService.resultLeadContactData();
+      // Record what the server holds before publishing it, so the re-run this triggers has nothing
+      // to save and the editor opens without writing anything.
+      this.lastSyncedContactKey = this.leadContactKey(lc || null, lcData ?? null);
+      this.leadContactHydrated = true;
       this.leadContactBody.set(this.makeLeadContactBody(lc || null, lcData));
     });
 
@@ -236,10 +245,32 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
       { key: 'lead_contact_person', label: 'Lead Contact Person', filled: leadContactFilled },
     ]);
 
+    // ⚠️ MDS tracking above always runs; the autosave below must not.
+    //
+    // The effect that calls this runs once on mount, BEFORE the hydration effect has copied the
+    // loaded contact into `leadContactBody`, so saving unconditionally PATCHed
+    // `lead_contact_person: null` over the stored one every time the editor was opened — the
+    // endpoint reads null as "clear it" (results.service.ts:5044-5056). Two guards: nothing is sent
+    // until hydration has happened, and nothing is sent for a value already in sync with the server.
+    if (!this.leadContactHydrated) return;
+
+    const contactKey = this.leadContactKey(body.lead_contact_person, body.lead_contact_person_data);
+    if (contactKey === this.lastSyncedContactKey) return;
+    this.lastSyncedContactKey = contactKey;
+
     this.autoSaveService.updateFieldsBatch({
       lead_contact_person: body.lead_contact_person,
       lead_contact_person_data: body.lead_contact_person_data,
     });
+  }
+
+  /**
+   * Identity of a lead contact for change detection. Tracks what was last *sent* (not what was
+   * loaded), so re-selecting the originally loaded person after changing it still saves.
+   */
+  private leadContactKey(name: string | null, data: User | null): string {
+    const contact = data as unknown as Record<string, unknown> | null;
+    return `${name ?? ''}|${(contact?.['mail'] as string) ?? ''}|${(contact?.['id'] as string | number) ?? ''}`;
   }
 
   isPlaceholderTitle(title: string): boolean {

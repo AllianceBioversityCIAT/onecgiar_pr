@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralResultCreatorComponent } from './bilateral-result-creator.component';
@@ -35,6 +35,7 @@ class MockBilateralAiService {
 
 describe('BilateralResultCreatorComponent', () => {
   let component: BilateralResultCreatorComponent;
+  let fixture: any;
   let creationService: any;
   let mdsTracker: any;
   let autoSaveService: any;
@@ -56,7 +57,27 @@ describe('BilateralResultCreatorComponent', () => {
       resultCode: signal(null) as any,
       resultTypeName: signal(null) as any,
       isW3Bilateral: signal(false) as any,
+      // P2-3352: status badge in the header.
+      resultStatusId: signal(null) as any,
       resultTitle: signal('') as any,
+      isLoadingResult: signal(false) as any,
+      // Signals the editor sections read once they mount.
+      resultDescription: signal('') as any,
+      resultLeadContact: signal('') as any,
+      resultLeadContactData: signal(null) as any,
+      resultDacLevels: signal({}) as any,
+      resultDacSubScores: signal({}) as any,
+      resultInitiativeId: signal(null) as any,
+      resultLeadCenterId: signal(null) as any,
+      resultContributingCenterIds: signal([]) as any,
+      resultProjectId: signal(null) as any,
+      resultContributingProjectIds: signal([]) as any,
+      resultContributingProjects: signal([]) as any,
+      reportingYear: signal(null) as any,
+      isAiGenerated: signal(false) as any,
+      selectedSecondarySps: signal([]) as any,
+      setDacSubScores: jest.fn(),
+      getProjects: jest.fn(),
       createResult: jest.fn().mockReturnValue(of({ response: { id: 42 } })),
       submitResult: jest.fn().mockReturnValue(of({})),
       selectProject: jest.fn(),
@@ -70,6 +91,8 @@ describe('BilateralResultCreatorComponent', () => {
       overallPercentage: signal(0),
       overallStatus: signal('empty'),
       invalidFields: signal([]),
+      setSectionFields: jest.fn(),
+      registerSection: jest.fn(),
       reset: jest.fn(),
     };
 
@@ -80,6 +103,14 @@ describe('BilateralResultCreatorComponent', () => {
       setResultId: jest.fn(),
       registerField: jest.fn(),
       updateField: jest.fn(),
+      updateFieldsBatch: jest.fn(),
+      notifyBlur: jest.fn(),
+      schedulePayload: jest.fn(),
+      runImmediate: jest.fn(),
+      saveTocMapping: jest.fn(),
+      saveContributors: jest.fn(),
+      loadTocState: jest.fn().mockResolvedValue({}),
+      manualSave$: new Subject<void>(),
       flush: jest.fn().mockResolvedValue(undefined),
       reset: jest.fn(),
     };
@@ -125,7 +156,7 @@ describe('BilateralResultCreatorComponent', () => {
       })
       .compileComponents();
 
-    const fixture = TestBed.createComponent(BilateralResultCreatorComponent);
+    fixture = TestBed.createComponent(BilateralResultCreatorComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
@@ -143,6 +174,30 @@ describe('BilateralResultCreatorComponent', () => {
 
     expect(autoSaveService.flush).not.toHaveBeenCalled();
     expect(autoSaveService.reset).toHaveBeenCalled();
+  });
+
+  /**
+   * Regression lock: the autosave service must never be handed an id while the detail request is in
+   * flight. It used to receive the route parameter — a `result_code` on any phased deep link — and
+   * the first mount-time PATCH then landed on a different result's row.
+   */
+  it('binds autosave only once the detail has finished loading', () => {
+    autoSaveService.setResultId.mockClear();
+
+    component.isCreating.set(false);
+    creationService.isLoadingResult.set(true);
+    creationService.currentResultId.set(11012);
+    // Effects only — rendering the sections would need the whole section-level service graph.
+    TestBed.flushEffects();
+
+    expect(autoSaveService.setResultId).not.toHaveBeenCalled();
+    expect(component.resultId()).toBeNull();
+
+    creationService.isLoadingResult.set(false);
+    TestBed.flushEffects();
+
+    expect(autoSaveService.setResultId).toHaveBeenCalledWith(11012);
+    expect(component.resultId()).toBe(11012);
   });
 
   it('should start in creating mode by default', () => {
