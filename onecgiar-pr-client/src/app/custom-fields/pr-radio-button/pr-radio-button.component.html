@@ -35,7 +35,7 @@
               [disabled]="segmentsDisabled"
               [class.cursor-not-allowed]="segmentsDisabled"
               [class.cursor-pointer]="!segmentsDisabled"
-              (click)="onSelect(option[optionValue]); onValueChange(option[optionValue])">
+              (click)="onSegmentSelect(option[optionValue])">
               @if (parts.digit !== null) {
                 <span class="font-mono font-semibold">{{ parts.digit }}</span>
               }
