@@ -53,6 +53,7 @@ describe('ResultsListComponent', () => {
   beforeEach(async () => {
     mockApiService = {
       shouldShowUpdate: jest.fn(),
+      canUpdateBilateral: jest.fn().mockReturnValue(false),
       updateResultsList: jest.fn(),
       buildResultsListSearchParams: jest.fn(() => undefined),
       resultsSE: {
@@ -611,6 +612,9 @@ describe('ResultsListComponent', () => {
   });
 
   describe('onPressAction() - W3/Bilaterals flow', () => {
+    // P2-3229. "Update result" is no longer hidden outright: `canUpdateBilateral` decides.
+    // A Pending Review result is not approved, so it stays hidden — which is why this case
+    // still asserts `false` and did not need loosening.
     it('should hide map/update and show review with Pending Review status for W3/Bilaterals', () => {
       const result = {
         id: '1',
@@ -658,7 +662,55 @@ describe('ResultsListComponent', () => {
       expect(component.itemsWithDelete[2].label).toBe('See result');
       expect(component.itemsWithDelete[2].icon).toBe('pi pi-eye');
     });
+
+    it('offers "Update result" on an approved bilateral when the rule allows it', () => {
+      const result = {
+        id: '1',
+        title: 'Test',
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        status_name: 'Approved',
+        acronym: 'P25',
+        phase_year: 2023,
+        lead_center: 'CIAT (Alliance)',
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+      mockApiService.canUpdateBilateral.mockReturnValue(true);
+
+      component.onPressAction(result);
+
+      expect(mockApiService.canUpdateBilateral).toHaveBeenCalledWith(result, {
+        phaseYear: 2024,
+        portfolioAcronym: 'P25'
+      });
+      expect(component.items[1].visible).toBe(true);
+      expect(component.itemsWithDelete[1].visible).toBe(true);
+      // Map to TOC stays hidden for bilaterals — only the update action changed.
+      expect(component.items[0].visible).toBe(false);
+    });
+
+    it('keeps "Update result" hidden when the rule refuses', () => {
+      const result = {
+        id: '1',
+        title: 'Test',
+        source_name: 'W3/Bilaterals',
+        status_name: 'Approved',
+        acronym: 'P25',
+        phase_year: 2023,
+        lead_center: 'IITA',
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+      mockApiService.canUpdateBilateral.mockReturnValue(false);
+
+      component.onPressAction(result);
+
+      expect(component.items[1].visible).toBe(false);
+      expect(component.itemsWithDelete[1].visible).toBe(false);
+    });
   });
+
 
   describe('onPressAction() - admin delete tooltip', () => {
     it('should disable delete for admin when status is QAed', () => {

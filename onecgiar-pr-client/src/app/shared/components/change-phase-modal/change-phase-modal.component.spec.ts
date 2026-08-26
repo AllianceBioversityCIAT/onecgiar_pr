@@ -26,7 +26,9 @@ describe('ChangePhaseModalComponent', () => {
         reportingCurrentPhase: { phaseName: 'Reporting Phase 1' }
       },
       resultsSE: {
-        PATCH_versioningProcessV2: jest.fn()
+        PATCH_versioningProcessV2: jest.fn(),
+        PATCH_versioningProcess: jest.fn(),
+        GET_phaseReportingInitiatives: jest.fn(() => of({ response: { science_programs: [] } }))
       },
       alertsFe: {
         show: jest.fn()
@@ -205,6 +207,119 @@ describe('ChangePhaseModalComponent', () => {
 
         expect(component.requesting).toBeFalsy();
       });
+    });
+  });
+
+  /**
+   * P2-3229. A bilateral result is confirmed, not configured. These specs pin the three things
+   * that differ from the W1/W2 flow: nothing is editable, no entityId is sent (the server derives
+   * the programme), and the redirect lands in the centre's own module.
+   */
+  describe('bilateral branch (P2-3229)', () => {
+    const bilateralResult = {
+      id: '456',
+      result_code: 'RES-900',
+      source_name: 'W3/Bilaterals',
+      lead_center: 'CIAT (Alliance)',
+      initiative_entity_map: [
+        { isLabel: true, entityName: 'Science Programs' },
+        { isLabel: false, entityId: 12, entityName: 'SP12 - Sustainable Farming' }
+      ]
+    };
+
+    /**
+     * The fixture from the outer setup already rendered the W1/W2 result and stays attached to the
+     * same ApplicationRef, so `detectChanges()` re-checks it too and trips NG0100 once
+     * `currentResult` is swapped. Rendering the new state needs a fixture built after the swap.
+     */
+    const renderFresh = () => {
+      fixture.destroy();
+      fixture = TestBed.createComponent(ChangePhaseModalComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    };
+
+    beforeEach(() => {
+      mockApiService.dataControlSE.currentResult = { ...bilateralResult };
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseName: 'Reporting Phase 1', portfolioAcronym: 'P25' };
+    });
+
+    it('should recognise a bilateral result and read its lead center and Science Program', () => {
+      expect(component.isBilateral).toBe(true);
+      expect(component.leadCenterAcronym).toBe('CIAT (Alliance)');
+      expect(component.scienceProgram).toBe('SP12 - Sustainable Farming');
+    });
+
+    it('should not treat a W1/W2 result as bilateral', () => {
+      mockApiService.dataControlSE.currentResult = { id: '1', source_name: 'W1/W2' };
+
+      expect(component.isBilateral).toBe(false);
+    });
+
+    it('should fall back to the submitter when the entity map carries no named entity', () => {
+      mockApiService.dataControlSE.currentResult = { ...bilateralResult, initiative_entity_map: [], submitter: 'SP07' };
+
+      expect(component.scienceProgram).toBe('SP07');
+    });
+
+    it('should render the read-only summary and NO submitter selector', () => {
+      renderFresh();
+      const html = fixture.nativeElement.textContent;
+
+      expect(html).toContain('Lead center:');
+      expect(html).toContain('CIAT (Alliance)');
+      expect(html).toContain('Science Program:');
+      expect(html).toContain('SP12 - Sustainable Farming');
+      // The P25 selector belongs to W1/W2 — there is nothing for the user to pick here.
+      expect(fixture.nativeElement.querySelector('app-pr-select')).toBeNull();
+    });
+
+    it('should still render the submitter selector for a P25 W1/W2 result', () => {
+      mockApiService.dataControlSE.currentResult = {
+        id: '1',
+        source_name: 'W1/W2',
+        initiative_entity_map: bilateralResult.initiative_entity_map
+      };
+      renderFresh();
+
+      expect(fixture.nativeElement.querySelector('app-pr-select')).not.toBeNull();
+    });
+
+    it('should call PATCH_versioningProcess without an entityId, not the V2 endpoint', () => {
+      mockApiService.resultsSE.PATCH_versioningProcess.mockReturnValue(of({ response: { result_code: 'RES-900', version_id: 36 } }));
+      component.selectedInitiative = { id: 'should-be-ignored' };
+
+      component.accept();
+
+      expect(mockApiService.resultsSE.PATCH_versioningProcess).toHaveBeenCalledWith('456');
+      expect(mockApiService.resultsSE.PATCH_versioningProcessV2).not.toHaveBeenCalled();
+    });
+
+    it('should navigate to the bilateral editor with the lead center acronym', () => {
+      mockApiService.resultsSE.PATCH_versioningProcess.mockReturnValue(of({ response: { result_code: 'RES-900', version_id: 36 } }));
+
+      component.accept();
+
+      // The acronym goes through as a router segment so Angular encodes it — passing a
+      // pre-encoded string here would double-encode the space and the parentheses.
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/bilateral', 'CIAT (Alliance)', 'result', 'RES-900'], {
+        queryParams: { phase: 36 }
+      });
+    });
+
+    it('should surface a server rejection instead of navigating', () => {
+      mockApiService.resultsSE.PATCH_versioningProcess.mockReturnValue(throwError(() => ({ status: 403, error: { message: 'Not your centre' } })));
+
+      component.accept();
+
+      expect(mockApiService.alertsFe.show).toHaveBeenCalledWith({
+        id: 'noti',
+        title: 'Error',
+        description: 'Not your centre',
+        status: 'error'
+      });
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+      expect(component.requesting).toBeFalsy();
     });
   });
 

@@ -47,6 +47,7 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ActorTypeRepository } from '../results/result-actors/repositories/actors-type.repository';
 import { BilateralVersioningService } from './services/bilateral-versioning.service';
+import { BilateralVersioningRulesModule } from './versioning-rules/bilateral-versioning-rules.module';
 import { PathwayModule } from '../ipsr-framework/pathway/pathway.module';
 import { ClarisaApiKeyValidationService } from './services/clarisa-api-key-validation.service';
 import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
@@ -88,6 +89,7 @@ import { BilateralWebhookService } from './services/bilateral-webhook.service';
     ]),
     ResultsModule,
     VersioningModule,
+    BilateralVersioningRulesModule,
     UserModule,
     ClarisaRegionsModule,
     YearsModule,

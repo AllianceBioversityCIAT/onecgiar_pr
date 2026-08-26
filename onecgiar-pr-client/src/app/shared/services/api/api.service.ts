@@ -245,6 +245,36 @@ export class ApiService {
     return this.isUserIncludedInAnyInitiative(result) && isPastPhase;
   }
 
+  /**
+   * Whether to offer "Update result" on a W3/Bilateral row (P2-3229).
+   *
+   * Deliberately not `shouldShowUpdate`: that one measures membership through
+   * `initiative_entity_map`, and for bilaterals the story asks for the **centre** that owns the
+   * result — only the lead centre may carry one into a new phase. It also adds the status
+   * check, which the W1/W2 rule does not have.
+   *
+   * This is UX. The same rules are enforced server-side in `versionProcessV2`; a hidden menu
+   * item is not authorisation.
+   */
+  canUpdateBilateral(result: CurrentResult, currentPhase: { phaseYear: number }): boolean {
+    if (!this.isPastReportingPhase(result, currentPhase)) return false;
+    if (result?.status_name !== 'Approved') return false;
+
+    // ⚠️ `lead_center` in the results list is the ACRONYM (`ci2.acronym` in the list SQL), not
+    // the CLARISA code. `rolesSE.validateCenterAccess` compares against `center_id`, which is
+    // the code — passing an acronym there matches nothing and the action would simply never
+    // appear. The roles payload carries `center_acronym` alongside `center_id`, so the
+    // comparison is made on the acronym here.
+    const leadCenterAcronym = (result as any)?.lead_center;
+    if (!leadCenterAcronym) return false;
+
+    if (this.rolesSE.isAdmin) return true;
+
+    return (this.rolesSE.getMyCenters() ?? []).some(
+      (center: any) => center?.center_acronym === leadCenterAcronym
+    );
+  }
+
   isPastReportingPhase(result: CurrentResult, currentPhase: { phaseYear: number }): boolean {
     const phaseYear = currentPhase?.phaseYear;
     return typeof result?.phase_year === 'number' && typeof phaseYear === 'number' && result.phase_year < phaseYear;

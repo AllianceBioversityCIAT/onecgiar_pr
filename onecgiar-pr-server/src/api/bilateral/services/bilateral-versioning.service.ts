@@ -4,17 +4,14 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
-import { VersionRepository } from '../../versioning/versioning.repository';
+import { BilateralVersioningRulesService } from '../versioning-rules/bilateral-versioning-rules.service';
 import { VersioningService } from '../../versioning/versioning.service';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
-import { Result, SourceEnum } from '../../results/entities/result.entity';
+import { Result } from '../../results/entities/result.entity';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
-import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
-import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ClarisaApiKeyValidationMis } from '../interfaces/clarisa-api-key-validation.interface';
 import { VersionResultDto } from '../dto/version-result.dto';
@@ -46,7 +43,7 @@ export class BilateralVersioningService {
 
   constructor(
     private readonly _resultRepository: ResultRepository,
-    private readonly _versionRepository: VersionRepository,
+    private readonly _rules: BilateralVersioningRulesService,
     private readonly _versioningService: VersioningService,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _userRepository: UserRepository,
@@ -61,25 +58,22 @@ export class BilateralVersioningService {
       throw new BadRequestException('result_code is required.');
     }
 
-    const activePhase = await this.getActiveReportingPhase();
+    const activePhase = await this._rules.getActiveReportingPhase();
 
-    // A result is carried forward once. If a version already sits in the open phase there is
-    // nothing to decide, and replicating again would put a rival row in the same phase.
-    const existing = await this.findInPhase(resultCode, activePhase.id);
-    if (existing) {
-      throw new ConflictException(
-        `Result ${resultCode} already has a version in the current phase (result id ${existing.id}). It cannot be carried forward twice.`,
-      );
-    }
+    // Existence, phase, already-carried-forward, bilateral, not a KP, approved — the rules
+    // shared with the reporting tool's own versioning path so both refuse the same things.
+    const source = await this._rules.resolveVersionableResult(
+      resultCode,
+      activePhase.id,
+    );
 
-    const source = await this.findVersionableResult(resultCode, activePhase.id);
-
-    this.assertIsBilateral(source, resultCode);
-    this.assertNotKnowledgeProduct(source, resultCode);
-    this.assertApproved(source, resultCode);
+    // The one check that is ours alone: on the API side the caller is a platform, not a user.
     await this.assertCallerMayVersion(source, resultCode, platform);
 
-    const entityId = await this.resolveTargetEntityId(source, resultCode);
+    const entityId = await this._rules.resolveTargetEntityId(
+      source,
+      resultCode,
+    );
     const user = await this.getSystemUserToken();
 
     this.logger.log(
@@ -88,7 +82,7 @@ export class BilateralVersioningService {
 
     await this._versioningService.versionProcessV2(source.id, entityId, user);
 
-    const created = await this.findInPhase(resultCode, activePhase.id);
+    const created = await this._rules.findInPhase(resultCode, activePhase.id);
     if (!created) {
       // versionProcessV2 reports its own failures by throwing; reaching here means it
       // returned without leaving a row, which we must not report as a success.
@@ -114,98 +108,6 @@ export class BilateralVersioningService {
         status_id: ResultStatusData.Draft.value,
       },
     };
-  }
-
-  /**
-   * The one open reporting phase. There is never more than one: the uniqueness is a data
-   * rule, not something this code enforces, so `findOne` reflecting it is deliberate.
-   */
-  private async getActiveReportingPhase() {
-    const phase = await this._versionRepository.findOne({
-      where: {
-        app_module_id: AppModuleIdEnum.REPORTING,
-        is_active: true,
-        status: true,
-      },
-    });
-
-    if (!phase) {
-      throw new ConflictException(
-        'There is no open reporting phase, so no result can be carried forward right now.',
-      );
-    }
-
-    return phase;
-  }
-
-  /** The most recent active version of this code that is NOT in the current phase. */
-  private async findVersionableResult(
-    resultCode: string,
-    activePhaseId: number,
-  ): Promise<Result> {
-    const candidates = await this._resultRepository.find({
-      where: { result_code: resultCode as any, is_active: true },
-      order: { version_id: 'DESC' },
-    });
-
-    if (!candidates.length) {
-      throw new NotFoundException(
-        `No active result found for result_code ${resultCode}.`,
-      );
-    }
-
-    const previous = candidates.find(
-      (candidate) => Number(candidate.version_id) !== Number(activePhaseId),
-    );
-
-    if (!previous) {
-      throw new ConflictException(
-        `Result ${resultCode} only exists in the current phase, so there is nothing to carry forward.`,
-      );
-    }
-
-    return previous;
-  }
-
-  private async findInPhase(resultCode: string, phaseId: number) {
-    const rows = await this._resultRepository.find({
-      where: { result_code: resultCode as any, is_active: true },
-    });
-    return rows.find((row) => Number(row.version_id) === Number(phaseId));
-  }
-
-  private assertIsBilateral(source: Result, resultCode: string) {
-    if (source.source !== SourceEnum.Bilateral) {
-      throw new BadRequestException(
-        `Result ${resultCode} is not a W3/Bilateral result, so it cannot be carried forward through this endpoint.`,
-      );
-    }
-  }
-
-  /**
-   * Knowledge Products are excluded, and this is not an oversight to be lifted for the API:
-   * `VersioningService` refuses them for every caller because their metadata is owned by
-   * CGSpace, not by PRMS. Rejecting here gives a message that names the result rather than
-   * letting the caller hit the generic conflict deeper in.
-   */
-  private assertNotKnowledgeProduct(source: Result, resultCode: string) {
-    if (Number(source.result_type_id) === ResultTypeEnum.KNOWLEDGE_PRODUCT) {
-      throw new ConflictException(
-        `Result ${resultCode} is a Knowledge Product. Knowledge Products cannot be carried into a new phase; report the new knowledge product with its own CGSpace handle instead.`,
-      );
-    }
-  }
-
-  /**
-   * Only for `source = API`. A result reported inside the tool follows the reporting tool's
-   * own rules for what may be carried forward, and those are not ours to restate here.
-   */
-  private assertApproved(source: Result, resultCode: string) {
-    if (Number(source.status_id) !== ResultStatusData.Approved.value) {
-      throw new ConflictException(
-        `Result ${resultCode} is not approved (status_id ${source.status_id}). Only an approved result from a previous phase can be carried forward.`,
-      );
-    }
   }
 
   /**
@@ -267,33 +169,6 @@ export class BilateralVersioningService {
         `Result ${resultCode} belongs to centre ${leadCenterCode}, which is outside the scope of ${platform.acronym ?? platform.id}.`,
       );
     }
-  }
-
-  /**
-   * The programme the result moves into: its own role-1 initiative. Deriving it is what lets
-   * the caller send a result code and nothing else — and it is the case `versionProcessV2`
-   * treats as `isP25SelfEntity`, skipping the initiative/entity map lookup.
-   */
-  private async resolveTargetEntityId(
-    source: Result,
-    resultCode: string,
-  ): Promise<number> {
-    const withInitiatives = await this._resultRepository.findOne({
-      where: { id: source.id },
-      relations: { obj_result_by_initiatives: true },
-    });
-
-    const main = withInitiatives?.obj_result_by_initiatives?.find(
-      (rbi: any) => Number(rbi.initiative_role_id) === 1 && rbi.is_active,
-    );
-
-    if (!main?.initiative_id) {
-      throw new ConflictException(
-        `Result ${resultCode} has no primary Science Program (role 1), which is required to carry it into a new phase.`,
-      );
-    }
-
-    return Number(main.initiative_id);
   }
 
   /** Same fallback identity `create` uses: the API has no JWT session to draw a user from. */
