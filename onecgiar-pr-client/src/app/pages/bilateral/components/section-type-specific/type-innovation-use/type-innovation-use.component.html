@@ -12,6 +12,8 @@
     (ngModelChange)="onFieldChange()">
   </app-pr-radio-button>
 
+  <!-- P2-3428 AC4 / P2-3331 AC1: the "to be determined" gate. When the use is still to be determined no
+       actor is requested and its absence must not hold the section back. Same rule as the W1/W2 form. -->
   @if (body.innov_use_to_be_determined === false) {
     <div>
       <app-pr-field-header label="Actors" description="Describe the actors involved in innovation use" [required]="true"></app-pr-field-header>
@@ -75,9 +77,38 @@
     </div>
   }
 
+  <!-- P2-3428 MDS field 2 / AC12: this block used to live inside the full-metadata toggle as an optional
+       field. It is MDS now, so it sits above the toggle and must NOT be repeated inside it. -->
+  <div>
+    <app-pr-field-header
+      label="Other quantitative measures of innovation use"
+      description="E.g. # of hectares."
+      [required]="true">
+    </app-pr-field-header>
+
+    @for (measure of visibleMeasures; track $index) {
+      <div class="mb-3 flex items-start gap-2 rounded-md border border-[#E0E0E0] p-3">
+        <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+          <app-pr-input label="Unit of measure" placeholder="e.g. # of projects" [required]="true" [(ngModel)]="measure.unit_of_measure" (ngModelChange)="onFieldChange()"></app-pr-input>
+          <app-pr-input label="Quantity" type="number" placeholder="0" [required]="true" [(ngModel)]="measure.quantity" (ngModelChange)="onFieldChange()"></app-pr-input>
+        </div>
+        <button type="button" class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteMeasure(measure)" aria-label="Remove measure">
+          <i class="material-icons-round">delete</i>
+        </button>
+      </div>
+    }
+
+    @if (!visibleMeasures.length) {
+      <app-no-data-text title="Other quantitative measures not added"></app-no-data-text>
+    }
+
+    <app-add-button name="Add other" (clickEvent)="addMeasure()"></app-add-button>
+  </div>
+
   <app-pr-field-header
     label="How would you assess the current use level of the innovation?"
-    description="Use the slider to select the appropriate use level.">
+    description="Use the slider to select the appropriate use level."
+    [required]="true">
   </app-pr-field-header>
 
   <div class="tsf-readiness">
@@ -88,21 +119,45 @@
       optionValue="id"
       [options]="innovationControlListSE.useLevelsList"
       [(ngModel)]="body.innovation_use_level_id"
-      (ngModelChange)="onFieldChange()">
+      (ngModelChange)="onUseLevelChange()">
     </app-pr-range-level>
   </div>
 
+  <!-- P2-3428 MDS field 4 / AC8 — VISIBLE PERO DESHABILITADO con el tag `Coming soon` (regla de la casa,
+       mismo patrón que `result-ai-item.component.html`). El campo se pinta donde la historia lo pide,
+       pero NO se puede escribir: `investment_bilateral_usd` no tiene columna en el servidor y el endpoint
+       legacy lo descarta en silencio, así que un valor escrito aquí desaparecería al recargar sin aviso.
+       Por eso tampoco lleva asterisco de obligatorio ni viaja en el payload. Habilitarlo exige repuntar a
+       `PATCH /v2/api/innovation-use/...` (monto POR PROYECTO) — ver la trampa en CLAUDE.md. -->
+  <div class="flex items-start gap-2">
+    <!-- `globalDisabled` is the project's visual-disable class (opacity + pointer-events: none); it is a
+         static class and not an `[ngClass]` because this standalone component does not import CommonModule. -->
+    <div class="globalDisabled min-w-0 flex-1">
+      <app-pr-input
+        label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
+        type="currency"
+        placeholder="Write some..."
+        [required]="false"
+        [disabled]="true"
+        [(ngModel)]="body.investment_bilateral_usd">
+      </app-pr-input>
+    </div>
+    <span
+      class="mt-[6px] shrink-0 rounded-full bg-[var(--pr-surface-app)] px-[8px] py-[2px] text-[11px] font-medium text-[var(--pr-text-muted)]"
+      data-testid="use-investment-coming-soon"
+      >Coming soon</span
+    >
+  </div>
+
   <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
-    <app-alert-status
-      class="flex-1"
-      status="info"
-      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
-    </app-alert-status>
+    <app-alert-status class="flex-1" status="info" [description]="mdsInfoNote"></app-alert-status>
     <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
-      {{ showAllFields() ? 'Hide full metadata' : 'Full metadata' }}
+      {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
     </button>
   </div>
 
+  <!-- Everything below the toggle is STRICTLY OPTIONAL (P2-3428 AC11) and counts for nothing in the MDS
+       tracker or the green check (AC14/AC16). Order mirrors the W1/W2 pooled-funding form. -->
   @if (showAllFields()) {
     <div class="flex flex-col gap-[18px]">
       <div>
@@ -172,40 +227,114 @@
         <app-add-button name="Add another organization" (clickEvent)="addOrganization()"></app-add-button>
       </div>
 
-      <div>
-        <app-pr-field-header
-          label="Other quantitative measures of innovation use"
-          description="E.g. # of hectares."
-          [required]="false">
-        </app-pr-field-header>
+      <!-- P2-3428 AC13 / P2-3294: hidden from use level 6 upwards. -->
+      @if (showScalingStudies) {
+        <div class="flex flex-col gap-3">
+          <app-pr-radio-button
+            label="Have any studies been conducted to inform the innovation scaling strategy design (e.g. willingness to pay, ex-ante impact study, policy integration, cost-benefit analysis, market sizing, scaling partner network, etc.).?"
+            [options]="[
+              { value: true, label: 'Yes' },
+              { value: false, label: 'No' }
+            ]"
+            optionLabel="label"
+            optionValue="value"
+            [required]="false"
+            [(ngModel)]="body.has_scaling_studies"
+            (ngModelChange)="onFieldChange()">
+          </app-pr-radio-button>
 
-        @for (measure of visibleMeasures; track $index) {
-          <div class="mb-3 flex items-start gap-2 rounded-md border border-[#E0E0E0] p-3">
-            <div class="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
-              <app-pr-input label="Unit of measure" placeholder="e.g. # of projects" [required]="false" [(ngModel)]="measure.unit_of_measure" (ngModelChange)="onFieldChange()"></app-pr-input>
-              <app-pr-input label="Quantity" type="number" placeholder="0" [required]="false" [(ngModel)]="measure.quantity" (ngModelChange)="onFieldChange()"></app-pr-input>
+          @if (body.has_scaling_studies === true) {
+            <div>
+              <app-pr-field-header label="Provide URL to those studies" [required]="false"></app-pr-field-header>
+
+              @for (study of body.scaling_studies_urls; track $index) {
+                <div class="mb-3 flex items-start gap-2">
+                  <div class="min-w-0 flex-1">
+                    <app-pr-input
+                      type="link"
+                      placeholder="Add link"
+                      [required]="false"
+                      [(ngModel)]="body.scaling_studies_urls[$index]"
+                      (ngModelChange)="onFieldChange()">
+                    </app-pr-input>
+                  </div>
+                  <button type="button" class="shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteStudyLink($index)" aria-label="Remove study link">
+                    <i class="material-icons-round">delete</i>
+                  </button>
+                </div>
+              }
+
+              @if (!body.scaling_studies_urls?.length) {
+                <app-no-data-text title="No study link added"></app-no-data-text>
+              }
+
+              <app-add-button name="Add another study link" (clickEvent)="addStudyLink()"></app-add-button>
             </div>
-            <button type="button" class="mt-6 shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteMeasure(measure)" aria-label="Remove measure">
-              <i class="material-icons-round">delete</i>
-            </button>
-          </div>
-        }
+          }
+        </div>
+      }
 
-        @if (!visibleMeasures.length) {
-          <app-no-data-text title="Other quantitative measures not added"></app-no-data-text>
-        }
+      @if (showUseLevelExplanation) {
+        <app-pr-textarea
+          label="Provide a brief explanation of how the provided evidence/documentation justifies the chosen innovation use level"
+          [required]="false"
+          [maxWords]="50"
+          placeholder="Provide a brief explanation here..."
+          [(ngModel)]="body.readiness_level_explanation"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-textarea>
+      }
 
-        <app-add-button name="Add other" (clickEvent)="addMeasure()"></app-add-button>
-      </div>
+      <!-- 2030 Use Projection. Only the "yet to be determined" answer is built: the projection's own fields
+           are being redefined by P2-3295 (still Open), and P2-3428 says to coordinate with the PO rather
+           than guess them. Reported on the ticket. -->
+      <app-pr-radio-button
+        label="Targeted innovation use by the end of 2030"
+        [options]="[{ value: true, label: 'This is yet to be determined' }]"
+        optionLabel="label"
+        optionValue="value"
+        [required]="false"
+        [(ngModel)]="body.innov_use_2030_to_be_determined"
+        (ngModelChange)="onFieldChange()">
+      </app-pr-radio-button>
 
+      <!-- P2-3424 — optional, not MDS, does not move the green check. 2026 phase onwards only. -->
+      @if (showInnovationLinkQuestion) {
+        <div class="flex flex-col gap-3">
+          <app-pr-radio-button
+            label="Are you reporting the use of an innovation that has already been reported and quality assessed?"
+            [options]="[
+              { value: true, label: 'Yes' },
+              { value: false, label: 'No' }
+            ]"
+            optionLabel="label"
+            optionValue="value"
+            [required]="false"
+            [(ngModel)]="body.has_innovation_link"
+            (ngModelChange)="onInnovationLinkChange()">
+          </app-pr-radio-button>
+
+          @if (body.has_innovation_link === true) {
+            <app-pr-select
+              label="Please select a result"
+              placeholder="Search an Innovation Development result"
+              [options]="qaInnovationDevelopmentResults"
+              optionLabel="title"
+              optionValue="id"
+              [required]="false"
+              [(ngModel)]="body.linked_result_id"
+              (ngModelChange)="onFieldChange()">
+            </app-pr-select>
+          }
+        </div>
+      }
+
+      <!-- The W3/bilateral row moved up to the MDS area (AC12). These two stay read-only until the data is
+           available — the PO decision noted in P2-3428 under MDS field 4 is still pending. -->
       <div class="flex flex-col gap-2">
         <span class="tsf-label">Investment (USD)</span>
         <div class="tsf-readonly-row">
           <span class="tsf-readonly-label">CGIAR Programs / Initiatives</span>
-          <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
-        </div>
-        <div class="tsf-readonly-row">
-          <span class="tsf-readonly-label">Bilateral Projects</span>
           <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
         </div>
         <div class="tsf-readonly-row">

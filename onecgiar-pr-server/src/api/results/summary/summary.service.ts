@@ -96,6 +96,10 @@ export class SummaryService {
       const innUseExists = await this._resultsInnovationsUseRepository.findOne({
         where: { results_id: resultId },
       });
+      // P2-3424 — captured BEFORE the overwrite: it is what tells a genuine
+      // "Yes → No" retraction apart from a payload that simply never answered.
+      const previousHasInnovationLink = innUseExists?.has_innovation_link;
+      let innUseRow: ResultsInnovationsUse;
       if (innUseExists) {
         innUseExists.innov_use_to_be_determined =
           innov_use_to_be_determined ?? null;
@@ -103,7 +107,9 @@ export class SummaryService {
         innUseExists.last_updated_by = user.id;
         // Reactivate rather than insert: the row owns this result's unique slot.
         innUseExists.is_active = true;
-        await this._resultsInnovationsUseRepository.save(innUseExists);
+        this.applyOptionalInnovationUseFields(innUseExists, innovationUseDto);
+        innUseRow =
+          await this._resultsInnovationsUseRepository.save(innUseExists);
       } else {
         const newInnUse = new ResultsInnovationsUse();
         // Persist FK via writable @Column (obj_result stub alone is not enough).
@@ -115,9 +121,11 @@ export class SummaryService {
         newInnUse.innov_use_to_be_determined =
           innov_use_to_be_determined ?? null;
         newInnUse.innovation_use_level_id = innovation_use_level_id ?? null;
+        this.applyOptionalInnovationUseFields(newInnUse, innovationUseDto);
 
         try {
-          await this._resultsInnovationsUseRepository.save(newInnUse);
+          innUseRow =
+            await this._resultsInnovationsUseRepository.save(newInnUse);
         } catch (saveError: any) {
           // Concurrent request won the race for this result's unique slot.
           if (saveError?.driverError?.code !== 'ER_DUP_ENTRY') throw saveError;
@@ -131,9 +139,23 @@ export class SummaryService {
           raced.innovation_use_level_id = innovation_use_level_id ?? null;
           raced.last_updated_by = user.id;
           raced.is_active = true;
-          await this._resultsInnovationsUseRepository.save(raced);
+          this.applyOptionalInnovationUseFields(raced, innovationUseDto);
+          innUseRow = await this._resultsInnovationsUseRepository.save(raced);
         }
       }
+
+      await this.saveInnovationUseScalingStudyUrls(
+        innUseRow?.result_innovation_use_id,
+        innovationUseDto,
+        user.id,
+      );
+
+      await this.saveInnovationUseLinkedResults(
+        resultId,
+        innovationUseDto,
+        previousHasInnovationLink,
+        user.id,
+      );
 
       await this._resultRepository.update(resultId, {
         last_updated_by: user.id,
@@ -147,6 +169,127 @@ export class SummaryService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  /**
+   * P2-3424 — tinyint / text columns that already exist on `results_innovations_use` but were being
+   * dropped because the DTO never declared them. Written ONLY when the caller sent the key: the same
+   * endpoint serves the legacy W1/W2 Innovation Use section and the W3/bilateral one, and a payload that
+   * omits a field must leave the stored value exactly as it was.
+   */
+  private applyOptionalInnovationUseFields(
+    entity: ResultsInnovationsUse,
+    dto: InnovationUseDto,
+  ): void {
+    if (dto.has_scaling_studies !== undefined) {
+      entity.has_scaling_studies = this.toNullableBoolean(
+        dto.has_scaling_studies,
+      );
+    }
+    if (dto.innov_use_2030_to_be_determined !== undefined) {
+      entity.innov_use_2030_to_be_determined = this.toNullableBoolean(
+        dto.innov_use_2030_to_be_determined,
+      );
+    }
+    if (dto.readiness_level_explanation !== undefined) {
+      entity.readiness_level_explanation =
+        dto.readiness_level_explanation ?? null;
+    }
+    if (dto.has_innovation_link !== undefined) {
+      entity.has_innovation_link = this.toNullableBoolean(
+        dto.has_innovation_link,
+      );
+    }
+  }
+
+  /** `null` stays `null` (question not answered); anything else collapses to a real boolean. */
+  private toNullableBoolean(value: unknown): boolean | null {
+    return value === null || value === undefined ? null : Boolean(value);
+  }
+
+  /**
+   * P2-3424 — study links live in `result_scaling_study_urls` keyed by `result_innov_use_id`, the same
+   * table the Innovation Development branch of this service already writes through `result_innov_dev_id`.
+   * That key belongs exclusively to this section, so a full replace is safe here.
+   *
+   * The sync only runs when the payload actually says something about the studies: a save that omits
+   * `scaling_studies_urls` must not wipe the stored links (that is how "Yes" + an untouched autosave
+   * would have erased them).
+   */
+  private async saveInnovationUseScalingStudyUrls(
+    resultInnovationUseId: number | undefined,
+    dto: InnovationUseDto,
+    userId: number,
+  ): Promise<void> {
+    if (!resultInnovationUseId) return;
+
+    const hasScalingAnswer = this.toNullableBoolean(dto.has_scaling_studies);
+    const shouldSync =
+      dto.scaling_studies_urls !== undefined || hasScalingAnswer === false;
+    if (!shouldSync) return;
+
+    const urls =
+      hasScalingAnswer === false
+        ? []
+        : (dto.scaling_studies_urls ?? [])
+            .map((url) => String(url ?? '').trim())
+            .filter((url) => url !== '');
+
+    const scalingStudyUrlRepository = this._dataSource.getRepository(
+      ResultScalingStudyUrl,
+    );
+    await scalingStudyUrlRepository.update(
+      { result_innov_use_id: resultInnovationUseId },
+      { is_active: false, last_updated_by: userId },
+    );
+
+    if (!urls.length) return;
+
+    await scalingStudyUrlRepository.save(
+      urls.map((url) => ({
+        result_innov_use_id: resultInnovationUseId,
+        study_url: url,
+        is_active: true,
+        created_by: userId,
+        last_updated_by: userId,
+      })),
+    );
+  }
+
+  /**
+   * P2-3424 — `linked_result` is SHARED: the P22 "Links to results" section writes rows for the same
+   * `origin_result_id`, so this endpoint must never wipe it opportunistically. Two narrow cases only:
+   *  - the payload answers "Yes" and carries a selection → that selection becomes the stored set;
+   *  - the payload answers "No" AND the stored answer was "Yes" → the retraction clears the links.
+   * A payload that leaves the question unanswered (`null`) or omits it altogether touches nothing.
+   */
+  private async saveInnovationUseLinkedResults(
+    resultId: number,
+    dto: InnovationUseDto,
+    previousHasInnovationLink: unknown,
+    userId: number,
+  ): Promise<void> {
+    if (dto.has_innovation_link === undefined) return;
+
+    const linkAnswer = this.toNullableBoolean(dto.has_innovation_link);
+
+    if (linkAnswer === true) {
+      if (dto.linked_results === undefined) return;
+      await this._resultsInnovationsUseRepository.replaceLinkedResultsByOrigin(
+        resultId,
+        dto.linked_results,
+        userId,
+      );
+      return;
+    }
+
+    if (linkAnswer === false && Boolean(previousHasInnovationLink)) {
+      await this._resultsInnovationsUseRepository.replaceLinkedResultsByOrigin(
+        resultId,
+        [],
+        userId,
+      );
     }
   }
 
@@ -168,10 +311,35 @@ export class SummaryService {
       const innUseExists = await this._resultsInnovationsUseRepository.findOne({
         where: { results_id: resultId, is_active: true },
       });
+      // P2-3424 — read side of the fields this endpoint now persists. Purely additive: every key that
+      // was already in the response keeps its exact shape.
+      const scaling_studies_urls = innUseExists?.result_innovation_use_id
+        ? (
+            await this._dataSource.getRepository(ResultScalingStudyUrl).find({
+              where: {
+                result_innov_use_id: innUseExists.result_innovation_use_id,
+                is_active: true,
+              },
+            })
+          ).map((u) => u.study_url)
+        : [];
+      const linked_results =
+        await this._resultsInnovationsUseRepository.getLinkedResultsByOrigin(
+          resultId,
+        );
+
       const innovatonUse = {
         innov_use_to_be_determined:
           innUseExists?.innov_use_to_be_determined ?? null,
         innovation_use_level_id: innUseExists?.innovation_use_level_id ?? null,
+        has_scaling_studies: innUseExists?.has_scaling_studies ?? null,
+        scaling_studies_urls,
+        innov_use_2030_to_be_determined:
+          innUseExists?.innov_use_2030_to_be_determined ?? null,
+        readiness_level_explanation:
+          innUseExists?.readiness_level_explanation ?? null,
+        has_innovation_link: innUseExists?.has_innovation_link ?? null,
+        linked_results,
         actors: actorsData,
         measures: await this._resultIpMeasureRepository.find({
           where: { result_id: resultId, is_active: true },

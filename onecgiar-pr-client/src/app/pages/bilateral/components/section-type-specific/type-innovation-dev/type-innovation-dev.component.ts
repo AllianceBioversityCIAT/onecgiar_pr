@@ -2,7 +2,7 @@ import { Component, inject, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BilateralApiService } from '../../../../../shared/services/api/bilateral-api.service';
 import { BilateralCreationService } from '../../../services/bilateral-creation.service';
-import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-tracker.service';
+import { BilateralMdsTrackerService, MdsFieldItem } from '../../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 import { BilateralExpandableStateService } from '../../../services/bilateral-expandable-state.service';
 import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
@@ -49,14 +49,14 @@ const REFERENCE_MATERIALS_DESC = `Provide reference material(s) that describe th
 
 const HAS_SCALING_STUDIES_OPTIONS = [
   { value: true, label: 'Yes' },
-  { value: false, label: 'No' },
+  { value: false, label: 'No' }
 ];
 
 @Component({
   selector: 'app-type-innovation-dev',
   imports: [FormsModule, CustomFieldsModule],
   templateUrl: './type-innovation-dev.component.html',
-  styleUrl: './type-innovation-dev.component.scss',
+  styleUrl: './type-innovation-dev.component.scss'
 })
 export class TypeInnovationDevComponent implements OnInit {
   private readonly bilateralApi = inject(BilateralApiService);
@@ -143,13 +143,14 @@ export class TypeInnovationDevComponent implements OnInit {
     this.autoSave.schedulePayload('typeSpecific', this.buildPayload(), {
       debounceMs,
       statusKey: 'type-specific',
-      executor: (resultId, body) => this.bilateralApi.PATCH_innovationDev(resultId, body),
+      executor: (resultId, body) => this.bilateralApi.PATCH_innovationDev(resultId, body)
     });
   }
 
   private buildPayload(): Record<string, unknown> {
     const payload: Record<string, unknown> = {
       short_title: this.body.short_title ?? null,
+      innovation_characterization_id: this.body.innovation_characterization_id ?? null,
       innovation_nature_id: this.body.innovation_nature_id ?? null,
       innovation_developers: this.body.innovation_developers ?? null,
       innovation_readiness_level_id: this.body.innovation_readiness_level_id ?? null,
@@ -159,7 +160,7 @@ export class TypeInnovationDevComponent implements OnInit {
       evidences_justification: this.body.evidences_justification ?? null,
       reference_materials: this.body.reference_materials ?? [],
       has_scaling_studies: this.body.has_scaling_studies ?? null,
-      scaling_studies_urls: this.body.scaling_studies_urls ?? [],
+      scaling_studies_urls: this.body.scaling_studies_urls ?? []
     };
     // Omit null PK so the server can AUTO_INCREMENT on first create.
     if (this.body.result_innovation_dev_id != null) {
@@ -168,36 +169,47 @@ export class TypeInnovationDevComponent implements OnInit {
     return payload;
   }
 
+  /**
+   * P2-3391 AC9/AC10: the green check is the three MDS fields the story names — typology, innovation
+   * developer, readiness level — and nothing else. Short title moved to full metadata (AC8: strictly
+   * optional), so it can no longer hold the section back.
+   *
+   * P2-3340 still applies though: the 10-word ceiling on the short title is only painted red by
+   * `pr-input`, so it is reported here as an INVALID item — but only while it is actually over the
+   * limit. Listing it unconditionally would add a permanently unfilled slot and the section could
+   * never reach 100%, which is exactly what AC9 forbids. Over the limit the item is `filled: true`,
+   * so it keeps the percentage at 100 and blocks Submit through `invalidFields` with a reason.
+   */
   updateMds(): void {
-    const shortTitleWords = this.wordCounter.counter(this.body.short_title);
-    const shortTitleOverLimit = shortTitleWords > SHORT_TITLE_MAX_WORDS;
-
-    this.mdsTracker.setSectionFields('type-specific', [
-      {
-        key: 'short-title',
-        label: 'Short title',
-        // Still "filled" when over the limit — it IS answered, just not acceptably. See MdsFieldItem.
-        filled: !!this.body.short_title,
-        invalid: shortTitleOverLimit,
-        invalidReason: shortTitleOverLimit
-          ? `${shortTitleWords} words; the maximum is ${SHORT_TITLE_MAX_WORDS}`
-          : undefined,
-      },
+    const fields: MdsFieldItem[] = [
       {
         key: 'nature',
         label: 'Innovation typology (nature)',
-        filled: this.body.innovation_nature_id != null,
+        filled: this.body.innovation_nature_id != null
       },
       {
         key: 'developers',
         label: 'Innovation developer',
-        filled: !!this.body.innovation_developers?.trim(),
+        filled: !!this.body.innovation_developers?.trim()
       },
       {
         key: 'readiness',
         label: 'Readiness level',
-        filled: this.body.innovation_readiness_level_id != null,
-      },
-    ]);
+        filled: this.body.innovation_readiness_level_id != null
+      }
+    ];
+
+    const shortTitleWords = this.wordCounter.counter(this.body.short_title);
+    if (shortTitleWords > SHORT_TITLE_MAX_WORDS) {
+      fields.push({
+        key: 'short-title',
+        label: 'Short title',
+        filled: true,
+        invalid: true,
+        invalidReason: `${shortTitleWords} words; the maximum is ${SHORT_TITLE_MAX_WORDS}`
+      });
+    }
+
+    this.mdsTracker.setSectionFields('type-specific', fields);
   }
 }
