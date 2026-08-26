@@ -1,6 +1,6 @@
 # dashboard-lab
 
-**Verified:** 2026-08-21 · branch performance-refactor · eed5bb706
+**Verified:** 2026-08-26 · branch qa-development-2026 · 3194c6134
 
 ## Qué es
 El shell de un Science Program. Un solo componente que sirve varias vistas según `rfrView`, y que es
@@ -57,3 +57,12 @@ de TS): trátalo como host, no como pantalla.
 ## Pendiente / Coming soon
 - Métrica de la barra de progreso de AoW: decisión de producto abierta en P2-3405 (ver P2-2276 y
   P2-3296). No cambiar el código hasta que respondan.
+
+## Trampa nueva (2026-08-26)
+- ⚠️ **Dos convenciones opuestas para `is_aow` ausente.** `indicatorsByAow()`'s `fromTier` (~línea
+  1418) trata un `is_aow` faltante como cross-cutting (`!== true`), mientras que
+  `entity-aow/services/entity-aow.service.ts` (líneas ~44, 49) trata un `is_aow` faltante/false como
+  exclusivo de ese AoW (`=== false`, fijado por su propio spec). Hoy el backend siempre normaliza
+  `is_aow` a un booleano real (`Boolean(row.is_aow)` en `aow-bilateral.repository.ts:525`), así que
+  ambas conviven sin conflicto — pero si el backend alguna vez omite el campo, divergirán. No
+  "armonices" un lado sin revisar ambos specs primero (ver `docs/specs/results/intermediate-outcome-aow-visibility/target-tooltip/` `RES-DD-2`).

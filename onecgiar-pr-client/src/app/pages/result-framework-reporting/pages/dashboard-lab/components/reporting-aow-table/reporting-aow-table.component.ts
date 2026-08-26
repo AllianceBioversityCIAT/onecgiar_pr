@@ -30,6 +30,12 @@ export interface ReportingIndicator {
   __aowCode?: string;
   /** Display name of the source AoW — used when Intermediate Outcomes is a top-level sibling. */
   __aowName?: string;
+  /**
+   * True when this row's underlying ToC outcome node is cross-cutting (not scoped to a single AoW) —
+   * stamped by `dashboard-lab.indicatorsByAow()`'s `fromTier` for `__tier === 'outcome'` rows only,
+   * from the backend's group-level `is_aow` field (RES-R-3, RES-DD-2).
+   */
+  __isIntermediateCrosscut?: boolean;
 }
 
 /**
@@ -297,6 +303,27 @@ export class ReportingAowTableComponent {
 
   achievedTooltip(row: ReportingIndicator): string {
     return this.achievedIsEmpty(row) ? 'Nothing reported yet for this indicator' : '';
+  }
+
+  /**
+   * Copy for the Target-cell tooltip shown on Intermediate Outcome rows only — those rows are
+   * program-wide, never scoped to a single AoW, and the Target figure gives no hint of that
+   * without this (RES-R-1, RES-R-2, RES-AC-1, RES-AC-2).
+   */
+  readonly intermediateTargetTooltip = 'This target is not exclusive to that AoW.';
+
+  /** True when the row's card is the Intermediate Outcomes bucket (`group.kind === 'intermediate'`). */
+  isIntermediateRow(bucketKind: string): boolean {
+    return bucketKind === 'intermediate';
+  }
+
+  /**
+   * True when an `aow` card's Outcomes-band row is a cross-cutting Intermediate Outcome that also
+   * appears in the Intermediate Outcomes card (RES-R-3, RES-DD-2). Driven by the `__isIntermediateCrosscut`
+   * stamp `dashboard-lab.indicatorsByAow()` adds from the backend's `is_aow` field.
+   */
+  isCrossCuttingIntermediate(row: ReportingIndicator): boolean {
+    return !!row?.__isIntermediateCrosscut;
   }
 
   /**
