@@ -224,6 +224,23 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   private readonly centersReady = signal(false);
   private readonly projectsReady = signal(false);
 
+  /**
+   * True once the stored centres and projects are actually on screen.
+   *
+   * ⚠️ Until this flips, `contributing_center` and `contributing_bilateral_projects` MUST NOT
+   * travel. Both arrays are built by filtering the selection against the loaded catalogues
+   * (`availableCenters` / `availableProjects`), so before the catalogues arrive — or after a failed
+   * GET, which still sets `projectsReady` — they filter down to `[]`. An explicit `[]` is not
+   * "no change" to the server: `syncContributingCenters` runs `upDateAllInactive`, which
+   * deactivates EVERY `results_center` row of the result WITHOUT excluding `is_leading_result`,
+   * and `syncBilateralProjects` drops the lead project the same way.
+   *
+   * The result is unrecoverable from the UI: the lead centre is read-only here, and
+   * `assertCenterPermission` then refuses the submit forever with "The result has no lead center
+   * assigned". Same invariant `partnersHydrated` already enforces for the partner keys.
+   */
+  readonly contributorsHydrated = signal(false);
+
   private readonly hydrateWhenReady = effect(() => {
     const loading = this.creationService.isLoadingResult();
     const centersReady = this.centersReady();
@@ -238,6 +255,7 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     untracked(() => {
       this.hydrateLeadAndSelection();
       this.loadExternalPartnersState();
+      this.contributorsHydrated.set(true);
     });
   });
 
@@ -330,8 +348,8 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   }
 
   private buildContributorsPayload(): {
-    contributing_center: { institution_id: number }[];
-    contributing_bilateral_projects: { project_id: number; is_lead?: boolean }[];
+    contributing_center?: { institution_id: number }[];
+    contributing_bilateral_projects?: { project_id: number; is_lead?: boolean }[];
     institutions?: { institutions_id: number }[];
     no_external_partners?: boolean;
     is_lead_by_partner?: boolean;
@@ -357,15 +375,20 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       .filter(Boolean) as { project_id: number; is_lead?: boolean }[];
 
     const payload: {
-      contributing_center: { institution_id: number }[];
-      contributing_bilateral_projects: { project_id: number; is_lead?: boolean }[];
+      contributing_center?: { institution_id: number }[];
+      contributing_bilateral_projects?: { project_id: number; is_lead?: boolean }[];
       institutions?: { institutions_id: number }[];
       no_external_partners?: boolean;
       is_lead_by_partner?: boolean;
-    } = {
-      contributing_center: selectedCenters,
-      contributing_bilateral_projects: selectedProjects,
-    };
+    } = {};
+
+    // See `contributorsHydrated`: omitting the keys is the only safe default. The server treats a
+    // missing key as "leave untouched" (`dto.contributing_center !== undefined`) but an empty array
+    // as "deactivate everything, lead row included".
+    if (this.contributorsHydrated()) {
+      payload.contributing_center = selectedCenters;
+      payload.contributing_bilateral_projects = selectedProjects;
+    }
 
     // P2-3443. The partner keys only travel once the stored block is on screen — see
     // `partnersHydrated`. `institutions` is sent even when the box is ticked so the server has an

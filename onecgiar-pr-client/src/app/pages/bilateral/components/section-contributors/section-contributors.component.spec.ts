@@ -532,6 +532,7 @@ describe('SectionContributorsComponent', () => {
 
     it('handles a null id list for centers', () => {
       build();
+      component.contributorsHydrated.set(true);
       component.onCentersChange(null as any);
       expect(component.selectedCenterInstitutionIds()).toEqual([]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({ contributing_center: [], contributing_bilateral_projects: [] });
@@ -539,6 +540,7 @@ describe('SectionContributorsComponent', () => {
 
     it('skips ids that are not part of the available centers', () => {
       build();
+      component.contributorsHydrated.set(true);
       component.availableCenters.set([center(5)] as any);
       component.onCentersChange([5, 404]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({
@@ -549,6 +551,7 @@ describe('SectionContributorsComponent', () => {
 
     it('re-injects the read-only lead project when it is missing', () => {
       build();
+      component.contributorsHydrated.set(true);
       component.availableProjects.set([
         { id: 1, shortName: 'P1', fullName: 'Project 1' },
         { id: 2, shortName: 'P2', fullName: 'Project 2' }
@@ -568,6 +571,7 @@ describe('SectionContributorsComponent', () => {
 
     it('handles a null id list for projects', () => {
       build();
+      component.contributorsHydrated.set(true);
       component.onProjectsChange(null as any);
       expect(component.selectedProjectIds()).toEqual([]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({ contributing_bilateral_projects: [], contributing_center: [] });
@@ -575,6 +579,7 @@ describe('SectionContributorsComponent', () => {
 
     it('skips ids that are not part of the available projects', () => {
       build();
+      component.contributorsHydrated.set(true);
       component.availableProjects.set([{ id: 1, shortName: 'P1', fullName: 'Project 1' }]);
       component.onProjectsChange([1, 99]);
       expect(autoSave.saveContributors).toHaveBeenCalledWith({
@@ -847,7 +852,7 @@ describe('SectionContributorsComponent', () => {
       expect(payload.is_lead_by_partner).toBeUndefined();
     });
 
-    it('sends the selected partners once hydrated, alongside the centers and projects', () => {
+    it('sends the selected partners once hydrated, and still withholds the centre keys', () => {
       build();
       component.partnersHydrated.set(true);
       component.onPartnersModelChange([{ institutions_id: 100 }, { institutions_id: 200 }]);
@@ -856,7 +861,9 @@ describe('SectionContributorsComponent', () => {
       expect(payload.institutions).toEqual([{ institutions_id: 100 }, { institutions_id: 200 }]);
       expect(payload.no_external_partners).toBe(false);
       expect(payload.is_lead_by_partner).toBe(false);
-      expect(payload.contributing_center).toEqual([]);
+      // The two hydration flags are independent: partners being on screen says nothing about the
+      // centre and project catalogues having loaded. Sending `[]` here is what wiped the lead centre.
+      expect(payload.contributing_center).toBeUndefined();
     });
 
     it('sends an explicit empty set plus the flag when the "no partners" box is ticked', () => {
@@ -1198,6 +1205,54 @@ describe('SectionContributorsComponent', () => {
         component.formatResultLabel({ result_code: 'PO-1', name: 'Policy result', result_type_name: 'Policy Change', title: 'A title', acronym: 'SP01', phase_year: 2026 })
       ).toBe('(SP01 - 2026) PO-1 - Policy result (Policy Change) - A title');
       expect(component.formatResultLabel({ title: 'Just a title' })).toBe('Just a title');
+    });
+  });
+
+  /**
+   * The lead centre is read-only in this section, so once the server deactivates its row the user
+   * has NO control to put it back, and `assertCenterPermission` refuses the submit forever with
+   * "The result has no lead center assigned". The client is the only place this can be prevented
+   * cheaply: an omitted key means "leave untouched", an empty array means "deactivate everything".
+   */
+  describe('withholding the centre and project keys until the catalogues are on screen', () => {
+    it('omits both keys while the catalogues have not hydrated', () => {
+      build();
+      component.selectedCenterInstitutionIds.set([1]);
+      component.onCentersChange();
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toBeUndefined();
+      expect(payload.contributing_bilateral_projects).toBeUndefined();
+    });
+
+    it('never sends an empty array, which is what deactivated the lead row', () => {
+      build();
+      component.onProjectsChange();
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).not.toEqual([]);
+      expect(payload.contributing_bilateral_projects).not.toEqual([]);
+    });
+
+    it('sends both keys once hydrated', () => {
+      build();
+      component.contributorsHydrated.set(true);
+      component.onCentersChange();
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.contributing_center).toBeDefined();
+      expect(payload.contributing_bilateral_projects).toBeDefined();
+    });
+
+    it('keeps the two hydration flags independent', () => {
+      build();
+      component.partnersHydrated.set(true);
+      component.contributorsHydrated.set(false);
+      component.onPartnersModelChange([{ institutions_id: 7 }]);
+
+      const payload = autoSave.saveContributors.mock.calls.at(-1)[0];
+      expect(payload.institutions).toEqual([{ institutions_id: 7 }]);
+      expect(payload.contributing_center).toBeUndefined();
     });
   });
 });
