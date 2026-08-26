@@ -784,3 +784,70 @@ describe('SectionTocComponent', () => {
     });
   });
 });
+
+// P2-3142: the ToC question wording is shared with the classic result detail
+// (rd-contributors-and-partners.component.ts -> tocQuestionLabel). It is rendered from the real
+// template here (no overrideTemplate) so a silent divergence between both modules fails the suite.
+describe('SectionTocComponent template — ToC question wording (P2-3142)', () => {
+  const TOC_QUESTION_LABEL = 'Can this result be mapped to a ToC KPI?';
+
+  let fixture: ComponentFixture<SectionTocComponent>;
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+
+    await TestBed.configureTestingModule({
+      imports: [SectionTocComponent],
+      providers: [
+        {
+          provide: BilateralCreationService,
+          useValue: {
+            currentResultId: signal(123),
+            resultLevelId: signal(3),
+            resultTypeId: signal(1),
+            resultInitiativeId: signal(42),
+            selectedPrimarySp: signal({ programId: 456, programCode: 'SP01', allocation: '40' }),
+          },
+        },
+        {
+          provide: BilateralAutoSaveService,
+          useValue: {
+            updateFieldsBatch: jest.fn(),
+            saveTocMapping: jest.fn(),
+            loadTocState: jest.fn().mockResolvedValue({
+              planned_result: null,
+              toc_level_id: null,
+              toc_result_id: null,
+              indicator_id: null,
+              contributing_indicator: null,
+              toc_progressive_narrative: null,
+            }),
+          },
+        },
+        { provide: BilateralMdsTrackerService, useValue: { updateSection: jest.fn(), setSectionFields: jest.fn() } },
+        {
+          provide: ApiService,
+          useValue: {
+            dataControlSE: { myInitiativesList: [{ official_code: 'SP01', id: 42 }] },
+            tocApiSE: {
+              GET_AllTocLevels: jest.fn().mockReturnValue(of({ response: [] })),
+              GET_tocLevelsByconfig: jest.fn().mockReturnValue(of({ response: [] })),
+            },
+          },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SectionTocComponent);
+    fixture.detectChanges();
+  });
+
+  it('renders the shared ToC question label', () => {
+    const label: HTMLElement | null = fixture.nativeElement.querySelector('.st-label');
+    expect(label?.textContent?.trim()).toBe(TOC_QUESTION_LABEL);
+  });
+
+  it('no longer renders the pre-P2-3142 wording', () => {
+    expect(fixture.nativeElement.textContent).not.toContain('planned TOC KPI or indicator');
+  });
+});

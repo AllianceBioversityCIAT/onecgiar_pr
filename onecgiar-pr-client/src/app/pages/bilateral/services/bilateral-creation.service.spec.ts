@@ -1,11 +1,17 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
-import { BilateralCreationService } from './bilateral-creation.service';
+import { BilateralCreationService, BILATERAL_STATUS } from './bilateral-creation.service';
 import { ApiService } from '../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
+import { environment } from '../../../../environments/environment';
 
 describe('BilateralCreationService', () => {
   let service: BilateralCreationService;
+  let httpMock: HttpTestingController;
+
+  const submitUrl = (id: number) => `${environment.apiBaseUrl}api/bilateral/center/submit-for-review/${id}`;
   let mockBilateralApi: jest.Mocked<Pick<
     BilateralApiService,
     'GET_bilateralProjects' | 'GET_BilateralResultDetail' | 'POST_createBilateralHeader' | 'PATCH_BilateralReviewDecision'
@@ -33,12 +39,19 @@ describe('BilateralCreationService', () => {
     TestBed.configureTestingModule({
       providers: [
         BilateralCreationService,
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: ApiService, useValue: mockApiService },
         { provide: BilateralApiService, useValue: mockBilateralApi },
       ],
     });
 
     service = TestBed.inject(BilateralCreationService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
   });
 
   it('should be created', () => {
@@ -141,11 +154,79 @@ describe('BilateralCreationService', () => {
     });
   });
 
-  it('should submit a result via PATCH_BilateralReviewDecision', () => {
-    service.submitResult(123).subscribe();
-    expect(mockBilateralApi.PATCH_BilateralReviewDecision).toHaveBeenCalledWith(123, {
-      decision: 'APPROVE',
-      justification: 'Submitted by Center User',
+  describe('submitResult (P2-3152)', () => {
+    it("calls the centre's submit-for-review endpoint", () => {
+      service.submitResult(123).subscribe();
+
+      const req = httpMock.expectOne(submitUrl(123));
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({});
+      req.flush({ response: { resultId: 123, status: 5 } });
+    });
+
+    it('moves the local status to Pending review so the header badge follows', () => {
+      service.resultStatusId.set(BILATERAL_STATUS.Editing);
+
+      service.submitResult(123).subscribe();
+      httpMock.expectOne(submitUrl(123)).flush({ response: { resultId: 123, status: 5 } });
+
+      expect(service.resultStatusId()).toBe(BILATERAL_STATUS.PendingReview);
+    });
+
+    it('leaves the status untouched when the submit fails', () => {
+      service.resultStatusId.set(BILATERAL_STATUS.Editing);
+
+      service.submitResult(123).subscribe({ error: () => undefined });
+      httpMock
+        .expectOne(submitUrl(123))
+        .flush({ message: 'nope' }, { status: 400, statusText: 'Bad Request' });
+
+      expect(service.resultStatusId()).toBe(BILATERAL_STATUS.Editing);
+    });
+
+    // 🛑 Test-candado: this used to hit the REVIEWER's approve endpoint, which 409s on an Editing
+    // result and would have self-approved the result had it ever succeeded. Never send the Center
+    // User's Submit down the review-decision path again.
+    it('never calls the reviewer review-decision endpoint', () => {
+      service.submitResult(123).subscribe();
+      httpMock.expectOne(submitUrl(123)).flush({});
+
+      expect(mockBilateralApi.PATCH_BilateralReviewDecision).not.toHaveBeenCalled();
+      httpMock.expectNone(`${environment.apiBaseUrl}api/results/bilateral/123/review-decision`);
+    });
+  });
+
+  describe('isEditableByCenterUser (P2-3152 AC3)', () => {
+    it('is editable while the status is unknown, Editing or Draft', () => {
+      expect(service.isEditableByCenterUser()).toBe(true);
+
+      service.resultStatusId.set(BILATERAL_STATUS.Editing);
+      expect(service.isEditableByCenterUser()).toBe(true);
+
+      service.resultStatusId.set(BILATERAL_STATUS.Draft);
+      expect(service.isEditableByCenterUser()).toBe(true);
+    });
+
+    it('is read-only once the result left Editing', () => {
+      for (const status of [BILATERAL_STATUS.PendingReview, BILATERAL_STATUS.Approved, BILATERAL_STATUS.Rejected]) {
+        service.resultStatusId.set(status);
+        expect(service.isEditableByCenterUser()).toBe(false);
+      }
+    });
+
+    it('flips to read-only right after a successful submit', () => {
+      service.resultStatusId.set(BILATERAL_STATUS.Editing);
+
+      service.submitResult(123).subscribe();
+      httpMock.expectOne(submitUrl(123)).flush({});
+
+      expect(service.isEditableByCenterUser()).toBe(false);
+    });
+
+    // Draft is 8; 4 is Discontinued. Getting this wrong would leave discontinued results editable.
+    it('does not treat status 4 (Discontinued) as a draft', () => {
+      service.resultStatusId.set(4);
+      expect(service.isEditableByCenterUser()).toBe(false);
     });
   });
 

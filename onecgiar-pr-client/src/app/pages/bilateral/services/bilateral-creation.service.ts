@@ -1,5 +1,7 @@
-import { Injectable, signal, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Injectable, signal, inject, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, tap } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 import { ApiService } from '../../../shared/services/api/api.service';
 import { BilateralApiService } from '../../../shared/services/api/bilateral-api.service';
 import { BilateralProject } from './bilateral-creation.interfaces';
@@ -9,10 +11,32 @@ const LS_PROJECT_KEY = 'bp_project';
 const LS_SP_KEY = 'bp_primary_sp';
 const LS_SECONDARY_SP_KEY = 'bp_secondary_sps';
 
+/**
+ * `result.status_id` values a bilateral result can hold, mirroring the server's `ResultStatusData`
+ * (`onecgiar-pr-server/src/shared/constants/result-status.enum.ts`). Declared locally because the
+ * client has no shared catalogue for them and `GET /api/results/result-status/all` is a runtime
+ * lookup, not a compile-time one.
+ */
+export const BILATERAL_STATUS = {
+  Editing: 1,
+  PendingReview: 5,
+  Approved: 6,
+  Rejected: 7,
+  /** ⚠️ 8, not 4 — 4 is Discontinued. Same numbering as the server's `ResultStatusData`. */
+  Draft: 8
+} as const;
+
 @Injectable({ providedIn: 'root' })
 export class BilateralCreationService {
   private readonly api = inject(ApiService);
   private readonly bilateralApi = inject(BilateralApiService);
+  /**
+   * P2-3152 — used only by `submitResult`. The rest of the module goes through `BilateralApiService`
+   * and this call belongs there too, as `PATCH_submitForReview(resultId)`; it lives here because the
+   * shared API service was owned by another change when this fix landed. Move it and drop the
+   * `HttpClient` injection as soon as that file is free.
+   */
+  private readonly http = inject(HttpClient);
 
   projects = signal<BilateralProject[]>([]);
   /** Always start empty — do not hydrate from localStorage (avoids stale create wizard). */
@@ -303,12 +327,36 @@ export class BilateralCreationService {
     return this.bilateralApi.POST_createBilateralHeader(body);
   }
 
+  /**
+   * P2-3152 AC2 — a Center User sends the result to the primary Science Program: status 1 (Editing)
+   * or 8 (Draft) → 5 (Pending review), plus a `result_review_history` row, all in one transaction
+   * server-side (`bilateral-center.service.ts:885 submitForReview`).
+   *
+   * ⚠️ This used to call `PATCH_BilateralReviewDecision(id, { decision: 'APPROVE' })` — the
+   * REVIEWER's endpoint. That path refuses anything not already in Pending review
+   * (`results.service.ts:3713` throws 409), so the Center's Submit button could only ever fail; and
+   * had it succeeded it would have jumped the result straight to Approved (6), letting the author
+   * approve their own result and skipping the Science Program entirely.
+   */
   submitResult(resultId: number): Observable<any> {
-    return this.bilateralApi.PATCH_BilateralReviewDecision(resultId, {
-      decision: 'APPROVE',
-      justification: 'Submitted by Center User'
-    });
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/bilateral/center/submit-for-review/${resultId}`, {})
+      .pipe(
+        // The header badge and the editable gate both read `resultStatusId`, so flip it here instead
+        // of making every caller re-fetch the result just to learn what it already knows.
+        tap(() => this.resultStatusId.set(BILATERAL_STATUS.PendingReview))
+      );
   }
+
+  /**
+   * P2-3152 AC3 — a result stops being editable by its Center User the moment it leaves Editing.
+   * A null status means "not loaded yet"; the editor must not lock the form on an unknown status,
+   * so it is treated as editable and the server stays the real gate.
+   */
+  readonly isEditableByCenterUser = computed(() => {
+    const status = this.resultStatusId();
+    return status == null || status === BILATERAL_STATUS.Editing || status === BILATERAL_STATUS.Draft;
+  });
 
   /** Wipe old bp_* keys left by previous singleton/localStorage wizard persistence. */
   private clearLegacyWizardStorage(): void {
