@@ -38,17 +38,28 @@
 
     @if (availableSecondarySps().length > 0 && creationService.selectedPrimarySp()) {
       <div class="sps-section">
-        <label class="sps-label">Contributing Science Programs</label>
+        <!-- Visible but disabled, with the house `Coming soon` tag: nothing picked here is ever
+             sent. `createResult` posts only the PRIMARY programme, no DTO carries the secondary
+             ones, and the section's own control is disabled for the same reason. Leaving the chips
+             clickable made the tool promise a choice it then threw away, and the old help text
+             promised a second chance in the form that does not exist either. Re-enable together
+             with `contributing_science_programs` in SaveBilateralContributorsDto. -->
+        <label class="sps-label">
+          Contributing Science Programs
+          <span class="sps-coming-soon">Coming soon</span>
+        </label>
         <p class="sps-help">
           <i class="material-icons-round sps-help-icon">info</i>
-          Select any contributing Science Programs below. You can also add or change them later in the form.
+          Contributing Science Programs cannot be recorded yet. The primary Science Program above is
+          saved with the result.
         </p>
         <div class="sps-chip-grid">
           @for (sp of availableSecondarySps(); track sp.programId) {
             <button
-              class="sps-chip"
-              [class.sps-chip--selected]="isSecondarySelected(sp.programId)"
-              (click)="toggleSecondary(sp.programId, sp.programCode, sp.allocation ?? '')"
+              class="sps-chip sps-chip--disabled"
+              disabled
+              aria-disabled="true"
+              title="Recording contributing Science Programs is not available yet"
               type="button"
             >
               <img class="sps-chip-sp-icon" [src]="spIconSrc(sp.programCode)" width="20" height="20" alt="" />

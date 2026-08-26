@@ -311,7 +311,11 @@
 
           <span class="flex-1"></span>
 
-          <!-- Ratio must stay on one line — fixed 62px was wrapping "0 of 137". -->
+          <!-- Ratio must stay on one line — a fixed 62px width was wrapping "0 of 137". `min-w`
+               instead of `w`: it reserves the column so the bars line up across rows, but still
+               grows for a longer ratio rather than wrapping. Without it the bar's left edge moved
+               between 1155 and 1171px depending on how long the text was, giving seven stacked
+               rows a ragged edge. -->
           <span class="flex shrink-0 items-center gap-[12px]">
             <span class="h-[8px] w-[120px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
               <span
@@ -319,11 +323,11 @@
                 [style.width.%]="ratio.percent"></span>
             </span>
             <span
-              class="pr-figure-sm shrink-0 whitespace-nowrap text-right text-[14px] font-semibold tabular-nums text-[var(--pr-text-heading)]">
+              class="pr-figure-sm min-w-[76px] shrink-0 whitespace-nowrap text-right text-[14px] font-semibold tabular-nums text-[var(--pr-text-heading)]">
               {{ ratio.done }} of {{ ratio.total }}
             </span>
             <span
-              class="shrink-0 whitespace-nowrap text-right text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+              class="min-w-[44px] shrink-0 whitespace-nowrap text-right text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
               {{ ratio.percent }}%
             </span>
           </span>

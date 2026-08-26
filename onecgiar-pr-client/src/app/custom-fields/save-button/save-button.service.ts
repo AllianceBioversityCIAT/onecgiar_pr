@@ -1,6 +1,6 @@
 import { Injectable, Injector, WritableSignal, inject, signal } from '@angular/core';
 import { NavigationCancel, NavigationEnd, NavigationError, Router } from '@angular/router';
-import { tap, catchError, throwError, pipe, filter, take, defer, finalize, Subscription, MonoTypeOperatorFunction } from 'rxjs';
+import { tap, catchError, throwError, pipe, filter, take, defer, finalize, timeout, Subscription, MonoTypeOperatorFunction } from 'rxjs';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
 
 @Injectable({
@@ -22,6 +22,19 @@ export class SaveButtonService {
    * (e.g. the caller stays on the same page) the button is released anyway.
    */
   private static readonly CREATING_HOLD_TIMEOUT_MS = 15000;
+
+  /**
+   * Ceiling for a save request.
+   *
+   * ⚠️ There is no HTTP timeout anywhere in the client's interceptors, and these pipes only clear
+   * the spinner on `next` or on `error`. A request that the server accepts and then never answers
+   * — exactly what a backend stall produces — left the button reading "Saving…", disabled, for
+   * ever: no error, no recovery, and the only way out was reloading and losing the work.
+   *
+   * `timeout` turns that silence into a `TimeoutError`, which the existing `catchError` below
+   * already handles: spinner released, error toast shown, the user can retry.
+   */
+  private static readonly SAVE_TIMEOUT_MS = 60000;
   private creatingNavSub: Subscription | null = null;
   private creatingHoldId: any = null;
 
@@ -116,6 +129,7 @@ export class SaveButtonService {
   isSavingPipe<T = any>(): MonoTypeOperatorFunction<T> {
     this.showSaveSpinner();
     return pipe(
+      timeout({ each: SaveButtonService.SAVE_TIMEOUT_MS }),
       tap(resp => {
         this.hideSaveSpinner();
         this.customizedAlertsFeSE.show({ id: 'save-button', title: 'Section saved successfully', description: '', status: 'success', closeIn: 500 });
@@ -139,6 +153,7 @@ export class SaveButtonService {
     const decrip = `Redirecting to the ` + nextPrevious + ` step`;
     this.showSaveSpinner();
     return pipe(
+      timeout({ each: SaveButtonService.SAVE_TIMEOUT_MS }),
       tap(resp => {
         this.hideSaveSpinner();
         this.customizedAlertsFeSE.show({

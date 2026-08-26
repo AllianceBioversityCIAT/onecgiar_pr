@@ -195,6 +195,30 @@
     background: var(--pr-color-primary-50);
     border-color: var(--pr-color-primary-300);
   }
+
+  // Nothing chosen here is persisted yet — see the note in the template.
+  &--disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+
+    &:hover {
+      background: var(--pr-surface-card);
+      border-color: var(--pr-border);
+    }
+  }
+}
+
+// Same wording and shape as the other `Coming soon` tags in the revamp.
+.sps-coming-soon {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pr-surface-app);
+  color: var(--pr-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .sps-chip-icon {

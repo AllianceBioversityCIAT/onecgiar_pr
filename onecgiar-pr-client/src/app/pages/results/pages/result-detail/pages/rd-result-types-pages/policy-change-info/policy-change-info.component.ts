@@ -11,6 +11,9 @@ import { InstitutionsService } from '../../../../../../../shared/services/global
   standalone: false
 })
 export class PolicyChangeInfoComponent implements OnInit {
+  /** CLARISA policy type "Program, budget or investment" — the only one that carries a USD amount. */
+  private static readonly POLICY_TYPE_WITH_AMOUNT = 1;
+
   innovationUseInfoBody = new InnovationUseInfoBody();
   policyChangeQuestions = new PolicyChangeQuestions();
   cantidad: string = '';
@@ -72,6 +75,24 @@ export class PolicyChangeInfoComponent implements OnInit {
     });
   }
 
+  /**
+   * P2-3371 (AC05 / main flow step 4): "USD amount" and "Status" are rendered only for the
+   * CLARISA policy type "Program, budget or investment" (id 1) — see the two `*ngIf` in the
+   * template. Switching to any other type hid the pair but left the values on the body, and
+   * `onSaveSection` PATCHed them anyway: the result ended up storing a USD amount against a
+   * legal instrument, invisible to the user and impossible to clear from the form. Worse, going
+   * back to type 1 made the phantom figure reappear as if the user had typed it.
+   *
+   * Called from the template on every policy-type change (so the form state is honest) AND from
+   * `onSaveSection` (so simply opening and saving a result that already carries the stale pair
+   * cleans it).
+   */
+  clearAmountWhenNotApplicable() {
+    if (this.innovationUseInfoBody.policy_type_id == PolicyChangeInfoComponent.POLICY_TYPE_WITH_AMOUNT) return;
+    this.innovationUseInfoBody.amount = null;
+    this.innovationUseInfoBody.status_amount = null;
+  }
+
   policyTypeDescriptions() {
     return `<strong>Policy type guidance</strong> <ul>
     <li><strong>Policy or strategy:</strong> Policies are written and formally approved decisions on, or commitments to, a particular course of action by an institution or organization (including but not limited to governments, NGOs, private sector). Strategies are high-level plans outlining how a particular course of action will be carried out. These documents show the intent of an organization or entity. Examples are country growth strategies, country agricultural policies, organization strategic plans or road maps. These documents set the goalposts but then require other instruments for implementation.</li>
@@ -81,6 +102,7 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
 
   onSaveSection() {
+    this.clearAmountWhenNotApplicable();
     const body = {
       ...this.innovationUseInfoBody,
       ...this.policyChangeQuestions

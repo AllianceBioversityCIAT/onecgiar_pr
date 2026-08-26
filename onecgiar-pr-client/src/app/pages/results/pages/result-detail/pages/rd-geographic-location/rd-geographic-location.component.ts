@@ -8,6 +8,7 @@ import { CustomizedAlertsFeService } from '../../../../../../shared/services/cus
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ExtraGeographicLocationBody } from './models/extraGeographicLocationBody';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { CustomField } from '../../../../../../shared/interfaces/customField.interface';
 
 @Component({
   selector: 'app-rd-geographic-location',
@@ -62,6 +63,29 @@ export class RdGeographicLocationComponent {
    * real string. Falls back to the legacy hard-coded header that the template used before P2-3201.
    */
   readonly geographicFocusHeader = computed<string>(() => this.geographicFocusLabel() ?? 'What is the main geographic focus of the Output?');
+
+  /**
+   * P2-3371: FieldsManagerService hides `[geoscope-management]-has_extra_geo_scope` for P22 and for
+   * every non-innovation result (`hide: isP22() || !isAnInnovation()`), but the section registered
+   * its `appFeedbackValidation` twin unconditionally. On a P22 result with a non-global focus the
+   * bottom bar therefore reported "1 field missing - Are there any regions that you wish to specify
+   * for this Output?", naming a question that is nowhere on the page, so the counter could never
+   * reach zero (reproduced on result 5453, phase 30). Read only inside the `@if` that already
+   * guarantees the section GET has landed, so `fields()` is safe to evaluate here.
+   */
+  readonly extraGeoScopeField = computed<CustomField | undefined>(() => this.fieldsManagerSE.fields()?.['[geoscope-management]-has_extra_geo_scope']);
+
+  /** TRUE only while the "other geographic areas" question is actually rendered. */
+  readonly showExtraGeoScopeQuestion = computed<boolean>(() => {
+    const field = this.extraGeoScopeField();
+    return !!field && !field.hide;
+  });
+
+  /**
+   * Header for that question in the completeness list. Taken from FieldsManagerService so the list
+   * names the question with the same words the user reads, instead of a second hard-coded wording.
+   */
+  readonly extraGeoScopeHeader = computed<string>(() => this.extraGeoScopeField()?.label ?? '');
   geographic_focus = [
     {
       name: 'Global',

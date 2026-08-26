@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BilateralSpSelectorComponent } from './bilateral-sp-selector.component';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -208,6 +210,33 @@ describe('BilateralSpSelectorComponent', () => {
       creationService.selectedPrimarySp.set({ programId: 8, programCode: 'SP08', allocation: '100' });
       mount();
       expect(creationService.selectPrimarySp).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * The secondary programme chips are rendered but nothing chosen in them is ever persisted:
+   * `createResult` posts only the primary programme, and no DTO carries the secondary ones. They
+   * are disabled with a `Coming soon` tag rather than removed, so the design still shows what is
+   * coming — and the old help text promising "you can also add or change them later in the form"
+   * is gone, because the section's own control is disabled for the very same reason.
+   *
+   * `toggleSecondary` is deliberately left in place: it is the wiring to re-enable, not dead code.
+   */
+  describe('contributing Science Programs are not recordable yet (audit 26-Aug)', () => {
+    it('renders every secondary chip disabled', () => {
+      const template = readFileSync(join(__dirname, 'bilateral-sp-selector.component.html'), 'utf8');
+      const chipBlock = template.slice(template.indexOf('sps-chip-grid'));
+
+      expect(chipBlock).toContain('sps-chip--disabled');
+      expect(chipBlock).toContain('disabled');
+      expect(chipBlock).not.toContain('(click)="toggleSecondary(');
+    });
+
+    it('tags the block as Coming soon and drops the promise of editing it later', () => {
+      const template = readFileSync(join(__dirname, 'bilateral-sp-selector.component.html'), 'utf8');
+
+      expect(template).toContain('Coming soon');
+      expect(template).not.toContain('add or change them later in the form');
     });
   });
 });

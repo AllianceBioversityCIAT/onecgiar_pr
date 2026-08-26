@@ -1,12 +1,12 @@
-const { defineConfig } = require('cypress')
+const { defineConfig } = require('cypress');
 
 // Try to import Cypress environment configuration.
 // The keys read here MUST match cypress.env.js.example (guestEmail / guestPassword / userToken).
-let cypressEnvironment
+let cypressEnvironment;
 try {
-  cypressEnvironment = require('./cypress.env')
+  cypressEnvironment = require('./cypress.env');
 } catch (error) {
-  console.warn('⚠️  cypress.env.js not found. Using empty credentials.')
+  console.warn('⚠️  cypress.env.js not found. Using empty credentials.');
   cypressEnvironment = {
     environment: {
       cypress: {
@@ -15,20 +15,78 @@ try {
         userToken: ''
       }
     }
-  }
+  };
 }
 
-const cypressEnv = (cypressEnvironment && cypressEnvironment.environment && cypressEnvironment.environment.cypress) || {}
+const cypressEnv = (cypressEnvironment && cypressEnvironment.environment && cypressEnvironment.environment.cypress) || {};
+
+/**
+ * Memory budget for the browser renderer, in MB.
+ * PRMS mounts a heavy PrimeNG DOM; without a cap the V8 heap of the renderer grows until the
+ * OS starts swapping and the whole machine stalls. Override with CYPRESS_RENDERER_HEAP_MB.
+ */
+const RENDERER_HEAP_MB = Number(process.env.CYPRESS_RENDERER_HEAP_MB || 2048);
+
+/**
+ * Chromium flags that actually move the needle on RAM. Deliberately NOT included:
+ *   --memory-pressure-off  → disables GC under pressure, i.e. the exact opposite of what we want
+ *   --disable-gpu          → on macOS software compositing costs more RAM than the GPU path
+ */
+const chromiumMemoryFlags = [
+  `--js-flags=--max-old-space-size=${RENDERER_HEAP_MB}`,
+  '--renderer-process-limit=1',
+  '--disable-dev-shm-usage',
+  '--disable-extensions',
+  '--disable-component-extensions-with-background-pages',
+  '--disable-background-networking',
+  '--disable-backgrounding-occluded-windows',
+  '--disable-breakpad',
+  '--no-default-browser-check',
+  '--no-first-run'
+];
 
 module.exports = defineConfig({
   projectId: 'snnzit',
+
+  /**
+   * Cypress' own mitigation for renderer growth: it forces a GC between tests and restarts the
+   * renderer when it detects pressure. This is THE flag for "Cypress eats all my RAM".
+   */
+  experimentalMemoryManagement: true,
+
+  /**
+   * How many tests keep their per-command DOM snapshots alive. The default (50) is what makes
+   * `cypress open` climb into the gigabytes on a DOM this size — it is only useful for time
+   * travel in the runner UI, and 5 tests back is plenty. `setupNodeEvents` drops it to 0 in
+   * `cypress run`, where nobody ever looks at those snapshots.
+   */
+  numTestsKeptInMemory: 5,
+
+  /**
+   * Video recording off by default: it pins an extra encoder process plus frame buffers for the
+   * whole run, and `cypress/videos/` was empty — nobody was consuming the output. Turn it on
+   * for a specific run with `CYPRESS_VIDEO=true`.
+   */
+  video: false,
+  videoCompression: false,
+
   e2e: {
     baseUrl: 'http://localhost:4200',
     specPattern: 'cypress/e2e/**/*.{js,jsx,ts,tsx}',
     supportFile: 'cypress/support/e2e.ts',
-    setupNodeEvents(on, config) {
-      // implement node event listeners here
-    },
+
+    /**
+     * Third parties the shell boots on EVERY page load — and an e2e run boots the app once per
+     * test (61 of them). Two of these are session recorders: Hotjar and Clarity buffer DOM
+     * mutations in memory for the life of the page, which is pure waste inside a test. Pusher and
+     * the socket server hold open connections whose failures cypress/support/e2e.ts already has to
+     * swallow as noise. None of them is ever asserted on.
+     *
+     * Google Fonts and cdnjs are deliberately NOT blocked: icon glyph widths affect layout, and
+     * specs click on icons.
+     */
+    blockHosts: ['*.hotjar.com', '*.hotjar.io', '*.clarity.ms', '*.pusher.com', '*.pusherapp.com', 'sockets.prms.cgiar.org', 'cdn.lordicon.com'],
+    setupNodeEvents
   },
   component: {
     devServer: {
@@ -47,7 +105,9 @@ module.exports = defineConfig({
           buildOptions: {
             main: 'src/main.ts',
             polyfills: ['src/polyfills.ts'],
-            tsConfig: 'tsconfig.app.json',
+            // Deliberately NOT tsconfig.app.json — see tsconfig.ct.json for why (it would pull the
+            // whole AppModule into the CT program: 2601 files instead of 965).
+            tsConfig: 'tsconfig.ct.json',
             inlineStyleLanguage: 'scss',
             outputPath: 'dist/cypress-ct',
             assets: [],
@@ -61,7 +121,19 @@ module.exports = defineConfig({
               'src/styles/transitions.scss',
               'src/app/custom-fields/custom-fields.scss'
             ],
-            scripts: []
+            scripts: [],
+            // ---- memory ----
+            // Source maps for the whole app graph are the single biggest allocation in the
+            // webpack dev-server process, and a component test never steps through them.
+            sourceMap: false,
+            // No point paying for named/vendor chunk bookkeeping in a throwaway CT bundle.
+            namedChunks: false,
+            // vendorChunk stays at its default (true): one shared chunk for node_modules is cheaper
+            // than duplicating them into every spec entry.
+            buildOptimizer: false,
+            optimization: false,
+            extractLicenses: false,
+            progress: false
           }
         }
       }
@@ -70,11 +142,11 @@ module.exports = defineConfig({
     // collide with the e2e specs living under cypress/e2e/**.
     specPattern: 'src/**/*.cy.ts',
     supportFile: 'cypress/support/component.ts',
-    indexHtmlFile: 'cypress/support/component-index.html'
+    indexHtmlFile: 'cypress/support/component-index.html',
+    setupNodeEvents
   },
   viewportWidth: 1280,
   viewportHeight: 720,
-  video: true,
   screenshotOnRunFailure: true,
   defaultCommandTimeout: 10000,
   requestTimeout: 10000,
@@ -94,3 +166,29 @@ module.exports = defineConfig({
     hasToken: !!cypressEnv.userToken
   }
 });
+
+/**
+ * Shared by both testing types. Runs in Cypress' Node process, so it is the only place where
+ * the real run mode (`config.isTextTerminal`) is known.
+ */
+function setupNodeEvents(on, config) {
+  const isHeadlessRun = config.isTextTerminal;
+
+  if (isHeadlessRun) {
+    // Nothing reads command snapshots in a headless run — keeping zero of them removes the
+    // per-command DOM copies, which is where the renderer memory actually goes.
+    config.numTestsKeptInMemory = 0;
+    // The file watcher keeps every spec + its module graph resident for the whole run.
+    config.watchForFileChanges = false;
+    config.video = process.env.CYPRESS_VIDEO === 'true';
+  }
+
+  on('before:browser:launch', (browser = {}, launchOptions) => {
+    if (browser.family === 'chromium' && browser.name !== 'electron') {
+      launchOptions.args.push(...chromiumMemoryFlags);
+    }
+    return launchOptions;
+  });
+
+  return config;
+}

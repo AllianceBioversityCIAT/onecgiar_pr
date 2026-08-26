@@ -1,6 +1,6 @@
 # lab-report-form
 
-**Verified:** 2026-08-21 · branch performance-refactor · eed5bb706
+**Verified:** 2026-08-26 · branch performance-refactor · 75d56f2cd
 
 ## Qué es
 El formulario de creación de resultado que vive **dentro del aside** (`indicator-drawer`). Copia
@@ -70,8 +70,14 @@ muestra su selección como chips con `×` debajo del control**. Footer sticky co
   mentir sobre el estado.
 
 ## Pendiente / Coming soon
-- Pestaña **`Browse CGSpace`**: visible y deshabilitada con tag `Coming soon`. No hay endpoint de
-  búsqueda — el server solo expone `mqap?handle=` (valida UNO) y `find/by-handle`. Ya especificado
-  en **P2-3231** (épica **P2-3230**), levantado por Ángel. **No abrir ticket nuevo.**
+- Pestaña **`Browse CGSpace`**: ⚠️ **OCULTA desde P2-3479**, no deshabilitada. Negocio (Nicoleta,
+  vía Cami) pidió retirarla mientras los P/A prueban, porque una pestaña muerta se lee como función
+  rota. Se oculta **el conmutador entero** (`@if (kpBrowseEnabled)`), no solo el botón: un tablist
+  con una sola pestaña es peor que ninguno. Manual entry se queda, deja de presentarse como opción.
+  Para devolverla: `kpBrowseEnabled = true` en el `.ts` y vuelven las dos pestañas.
+  🛑 **Es la excepción a la convención del repo** de dejar lo no construido visible-deshabilitado
+  con tag `Coming soon`. No la generalices a otros controles sin preguntar.
+  Sigue sin haber endpoint de búsqueda — el server solo expone `mqap?handle=` (valida UNO) y
+  `find/by-handle`. Ya especificado en **P2-3231** (épica **P2-3230**). **No abrir ticket nuevo.**
 - `fundingSource` existe pero solo vale `'w1w2'`: es el hueco para las secciones bilaterales
   (P2-3352 / P2-3341 / P2-3353). No añadir `Contribution %` ni `Primary contributing SP` aquí.

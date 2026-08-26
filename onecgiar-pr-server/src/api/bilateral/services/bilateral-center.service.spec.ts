@@ -412,6 +412,64 @@ describe('BilateralCenterService', () => {
       last_name: 'User',
     };
 
+    /*
+     * The lead centre must survive a sync that does not mention it. `updateCenter` deactivates
+     * every row of the result when handed an empty list, without excluding `is_leading_result`,
+     * and the form offers no way to pick the lead centre again — so losing it bricks the submit
+     * with "The result has no lead center assigned".
+     */
+    it('keeps the lead centre active even when the payload lists no centres at all', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        source: SourceEnum.Bilateral,
+      } as any);
+      const resultsCenterRepository = module.get<ResultsCenterRepository>(
+        ResultsCenterRepository,
+      );
+      jest
+        .spyOn(resultsCenterRepository, 'find')
+        .mockResolvedValue([{ center_id: 'LEAD', is_leading_result: true }] as any);
+
+      await service.saveContributors(10, { contributing_center: [] }, user);
+
+      expect(resultsCenterRepository.updateCenter).toHaveBeenCalledWith(
+        10,
+        ['LEAD'],
+        42,
+      );
+    });
+
+    it('does not duplicate the lead centre when the payload already includes it', async () => {
+      jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
+        id: 10,
+        source: SourceEnum.Bilateral,
+      } as any);
+      const clarisaCentersRepository = module.get<ClarisaCentersRepository>(
+        ClarisaCentersRepository,
+      );
+      const resultsCenterRepository = module.get<ResultsCenterRepository>(
+        ResultsCenterRepository,
+      );
+      jest
+        .spyOn(clarisaCentersRepository, 'find')
+        .mockResolvedValue([{ institutionId: 501, code: 'LEAD' }] as any);
+      jest
+        .spyOn(resultsCenterRepository, 'find')
+        .mockResolvedValue([{ center_id: 'LEAD', is_leading_result: true }] as any);
+
+      await service.saveContributors(
+        10,
+        { contributing_center: [{ institution_id: 501 }] },
+        user,
+      );
+
+      expect(resultsCenterRepository.updateCenter).toHaveBeenCalledWith(
+        10,
+        ['LEAD'],
+        42,
+      );
+    });
+
     it('should sync-replace centers via updateCenter', async () => {
       jest.spyOn(resultRepository, 'findOne').mockResolvedValue({
         id: 10,

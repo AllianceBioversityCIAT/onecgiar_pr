@@ -78,6 +78,12 @@
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
+            },
+            "e2e": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": false,
+              "namedChunks": false
             }
           },
           "defaultConfiguration": "production"
@@ -90,6 +96,9 @@
             },
             "development": {
               "buildTarget": "onecgiar-pr-client:build:development"
+            },
+            "e2e": {
+              "buildTarget": "onecgiar-pr-client:build:e2e"
             }
           },
           "defaultConfiguration": "development"

@@ -256,6 +256,30 @@ describe('RdEvidencesComponent', () => {
       expect(spyHideSaveSpinner).toHaveBeenCalled();
       expect(spyPOST_evidences).toHaveBeenCalled();
     });
+
+    // P2-3373: a failed save used to leave `isSaving` latched on. Because
+    // `isEvidenceUploading()` reads that flag, every file evidence whose link had not
+    // resolved kept the "uploading" skeleton instead of its link for the rest of the
+    // page's life, and the rethrow from `isSavingPipe` surfaced as an unhandled error.
+    it('should release the in-flight flag when POST_evidences fails', async () => {
+      mockApiService.resultsSE.POST_evidences = () => throwError(() => new Error('save failed'));
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+
+      await component.onSaveSection();
+
+      expect(component.isSaving).toBe(false);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    });
+
+    it('should not keep a file evidence stuck on the uploading skeleton after a failed save', async () => {
+      mockApiService.resultsSE.POST_evidences = () => throwError(() => new Error('save failed'));
+      const stuck: any = { is_sharepoint: true, file: { name: 'report.pdf' }, link: undefined };
+      component.evidencesBody.evidences = [stuck];
+
+      await component.onSaveSection();
+
+      expect(component.isEvidenceUploading(stuck)).toBe(false);
+    });
   });
 
   describe('addEvidence', () => {
