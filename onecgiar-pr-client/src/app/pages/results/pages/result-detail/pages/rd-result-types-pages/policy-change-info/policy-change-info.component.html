@@ -11,7 +11,8 @@
       optionLabel="name"
       optionValue="id"
       placeholder="Select policy type"
-      [(ngModel)]="innovationUseInfoBody.policy_type_id">
+      [(ngModel)]="innovationUseInfoBody.policy_type_id"
+      (ngModelChange)="clearAmountWhenNotApplicable()">
     </app-pr-select>
 
     <app-pr-input
@@ -35,7 +36,7 @@
       description="Select Status"
       optionLabel="name"
       optionValue="id"
-      placeholder="Select stage"
+      placeholder="Select status"
       [required]="false"
       [(ngModel)]="innovationUseInfoBody.status_amount">
     </app-pr-select>
