@@ -1,8 +1,8 @@
-# PRMS — Detailed Design (Technical Blueprint)
+# PRMS — Technical Requirements Document (TRD)
 
-> **Status:** Living document. Authoritative technical blueprint for PRMS. Module-level technical specs live under `docs/specs/<module>/design.md`.
+> **Status:** Living document. Authoritative technical blueprint (TRD) for PRMS. Formerly `docs/detailed-design/detailed-design.md` (migrated 2026-08-26). Module-level technical specs live under `docs/specs/<module>/design.md`.
 >
-> Companion docs: `docs/prd.md` (product), `docs/system-design/design.md` (UX).
+> Companion docs: `docs/prd.md` (product), `docs/ux-ui/design.md` (UX).
 
 This document captures **how PRMS is built and operated** — modules, data, APIs, workflows, security, testing, and constraints. It is grounded in the current code under `onecgiar-pr-server/src/` and `onecgiar-pr-client/src/`.
 
@@ -56,6 +56,89 @@ NestJS app (Lambda or container)
         ├── Sockets/Pusher ──► real-time client
         └── Cron (schedule) ─► CLARISA sync, recurring jobs
 ```
+
+---
+
+## 1A. Architecture Overview & Decisions
+
+> Added 2026-08-26 by `/akili-constitution` (software-architect Decision Spine). Existing section numbers below are unchanged so external references (`TRD §8`, `W1..W8`) stay valid.
+
+### C4 Level 1 — System Context
+
+```
+                 ┌──────────────────────────────────────────────┐
+  Submitter ───▶ │                                              │ ◀─── QA reviewer
+  PMU lead  ───▶ │          PRMS (Reporting Tool)               │ ◀─── Platform admin
+                 │  Angular SPA + NestJS API + MySQL            │
+  Bilateral /    │                                              │
+  platform  ◀─── │                                              │
+  consumers      └───┬──────┬──────┬──────┬──────┬──────┬───────┘
+                     │      │      │      │      │      │
+                  CLARISA  ToC   Cognito  CGSpace S3/    RabbitMQ / Pusher /
+                  (read)  (read) + AD     + MQAP  SharePoint  Email svc / DynamoDB
+```
+
+**Legend:** boxes = software systems; arrows = primary data direction (▶ into PRMS = writes/queries by people, ◀ = PRMS publishes); external systems below the box are integrations owned outside this repo (see §7).
+
+### C4 Level 2 — Containers
+
+| Container | Technology | Responsibility | Talks to |
+|---|---|---|---|
+| **Web SPA** | Angular 21 + PrimeNG, served by Nginx | Result creation/editing, QA review, portfolio reports, admin | API over HTTPS with the custom `auth` header |
+| **API** | NestJS 11 (one deployable: Lambda handler *or* Node 20 container) | All domain modules (§2), JWT middleware, ClarISA/ToC proxies, RMQ producer/consumer, cron | MySQL, DynamoDB, S3/SharePoint, Cognito, AD (LDAP), RabbitMQ, external HTTP services |
+| **Database** | MySQL (TypeORM migrations) | System of record: results, versioning/phases, partners, evidence, review history | API only |
+| **Message broker** | RabbitMQ | Async reporting-metadata export | API (producer + consumer) |
+| **Log store** | DynamoDB | Operational logs | API |
+
+**Legend:** one row = one deployable/runtime unit; "Talks to" = synchronous dependency unless stated async.
+
+### Architecture style & tier decision
+
+- **Style:** **Modular monolith** — a single NestJS deployable organised module-per-feature (`src/api/<feature>/` with the module/controller/service trio), layered controller → service → repository/TypeORM, with `shared/` for cross-cutting handlers. Frontend mirrors this as a page-module-per-domain Angular app with service + signals state.
+- **Tier: LITE** (see ADR-001). Escalation triggers evaluated against the PRD: no independent scaling of hot paths (phase-driven load is bursty but uniform), one team owning both deployables, single availability target, no regulatory isolation between modules. **"Innovation/IPSR later" is a revisit condition, not a trigger.**
+- **Consequence for `docs/infrastructure.md`:** one API runtime (Lambda or container), one MySQL, one broker; no service mesh, no polyglot persistence.
+
+### ADR index
+
+| ADR | Decision | Status |
+|---|---|---|
+| ADR-001 | LITE tier: modular monolith on serverless/container compute | Accepted (2026-08-26, records existing reality) |
+| ADR-002 | MySQL + TypeORM migrations as the only schema path | Accepted (existing) |
+| ADR-003 | Custom `auth` JWT header instead of `Authorization: Bearer` | Accepted (existing, compatibility-driven) |
+| ADR-004 | Bilateral / platform-report payloads are additive-only without a version bump | Accepted (existing) |
+| ADR-005 | Frontend state = services + Angular signals; no NgRx until cross-feature shared state grows | Accepted, revisit condition recorded in §11 |
+| ADR-006 | RabbitMQ (not SQS/SNS) as async backbone | Accepted (existing, migration cost not justified by a scenario) |
+
+**ADR-001 — LITE tier, modular monolith.**
+*Issue:* how much architecture does PRMS's load and organisation justify? *Decision:* one NestJS deployable + one MySQL + one broker. *Alternatives:* microservices per result type; CQRS/event sourcing for the review history. *Argument:* every quality scenario in §1B is satisfiable inside one deployable with tactics (caching, throttling, migrations, JWT middleware); team size < deployable count would invert ownership. *Implications:* new features add modules, never services; a future escalation must cite a scenario whose measure the monolith cannot meet.
+
+**ADR-003 — custom `auth` header.**
+*Issue:* standard bearer auth vs. existing clients/proxies. *Decision:* keep `auth: <JWT>`. *Alternatives:* migrate to `Authorization: Bearer` with dual support. *Argument:* every downstream consumer and reverse proxy already depends on the header; migration risk > benefit until a bilateral consumer requests it. *Implications:* documented in `onecgiar-pr-client/CLAUDE.md`; Reviewer FAILs any `Authorization: Bearer` usage.
+
+(ADR-002, 004, 005, 006 are recorded in §3, §4, §6 and §11 respectively; this index is their locator.)
+
+---
+
+## 1B. Quality Attribute Scenarios (Non-Functional Requirements)
+
+Six-part scenarios (source · stimulus · artifact · environment · response · **measure**). Measures are test candidates for `/akili-test` non-functional checks. Stimuli derive from `docs/prd.md` goals only.
+
+| ID | Attribute | Source → Stimulus | Artifact / Environment | Response | **Measure** | Tactics |
+|---|---|---|---|---|---|---|
+| QAS-1 | **Security** | Unauthenticated client → calls any `/api/*` (non-public) route | API, normal ops | Reject before controller | 100 % of protected routes return 401; public surfaces limited to `/api/platform-report/*`, `/api/bilateral/*` | JWT middleware (authenticate actors), route allow-list, Helmet, secrets redaction (`.cursorrules`) |
+| QAS-2 | **Security** | Submitter → edits a result of another initiative | API, normal ops | Authorisation check by role + initiative | 0 cross-initiative writes succeed in the permission test suite | Role/initiative guards (authorize actors), audit in `result-review-history` |
+| QAS-3 | **Performance** | Submitter → saves a result-detail section | API + MySQL, reporting-deadline peak | Persist and return | p95 ≤ 2 s for section save; p95 ≤ 3 s for result-detail load | Lazy-loaded page modules, targeted TypeORM queries, CLARISA cache tables |
+| QAS-4 | **Performance** | Cold Lambda → first request after idle | API (Lambda path) | Serve request | Cold start ≤ 5 s; bundle size within `serverless-plugin-optimize` limits | Warmup, bundle optimisation (reduce overhead) |
+| QAS-5 | **Scalability** | Reporting deadline → 10× normal concurrent users | API + MySQL | Degrade gracefully | Error rate < 1 %; throttled requests return 429 not 5xx | Lambda horizontal scale, `ThrottlerModule`, read caching |
+| QAS-6 | **Availability** | CLARISA/ToC outage → catalog read | API, degraded external | Serve from cache | Result editing keeps working for cached catalogs; sync failure logged, no user-facing 5xx | Cache tables, scheduled sync, fail-soft |
+| QAS-7 | **Availability** | Broker unavailable → reporting-metadata export | RMQ consumer | Retry, no data loss | 0 lost messages; ACK only on success; job outcome logged | ACK-on-success, retry/backoff, idempotent consumers |
+| QAS-8 | **Modifiability** | Team → adds a new result type or section | Server module + client page module | Add without touching unrelated modules | New type = new module folder + migration + page module; 0 edits to other typologies' services (verified in review diff) | Module-per-feature encapsulation, typed DTOs, `ResultTypeEnum` |
+| QAS-9 | **Modifiability / Compatibility** | Bilateral consumer → reads `/api/bilateral/*` after a release | Payload contract | Backward compatible | 100 % of existing fields unchanged; additions only; change-log entry in `bilateral-result-summaries.en.md` | Contract doc as gate (ADR-004), payload tests that assert shape |
+| QAS-10 | **Observability** | Operator → investigates a failed export or auth error | CloudWatch + DynamoDB logs | Locate cause without secrets | Every background job logs start/finish/outcome; 0 tokens/URLs/PII in logs (grep gate) | Structured logging, redaction rule |
+| QAS-11 | **Testability** | CI → runs on every PR | Server + client | Enforced gates | Coverage ≥ 5/20/35/40 (server), ≥ 50/60/60/60 (client); `migration:check:ci` green | Jest thresholds, migration guard, SonarCloud |
+| QAS-12 | **Cost** | Finance → monthly AWS bill | Lambda/RDS/DynamoDB | Stay within LITE tier | No new always-on compute without ADR | LITE tier (ADR-001) |
+
+Attributes marked **not architecturally significant here:** *portability* (single cloud by assumption, §11), *usability* (owned by `docs/ux-ui/design.md`), *dark mode/i18n* (deferred, design §11/§13).
 
 ---
 
@@ -503,14 +586,14 @@ onecgiar-pr-client/src/app/
 - Sunset path for legacy `api/` once `v2/` reaches parity (OQ-4 in `docs/prd.md`).
 - First-class observability (Sentry / OTel / structured logs) — not yet adopted system-wide.
 - Formal client-side state library — current pattern is service+signals; consider NgRx / NgRx SignalStore only if cross-feature shared state grows beyond manageable.
-- Dark mode (deferred — see `docs/system-design/design.md` §11).
+- Dark mode (deferred — see `docs/ux-ui/design.md` §11).
 
 ---
 
 ## Related documents
 
 - `docs/prd.md` — Product requirements driving this design.
-- `docs/system-design/design.md` — UX system blueprint.
+- `docs/ux-ui/design.md` — UX system blueprint.
 - `docs/specs/general-setup/design.md` — Template that module-level `design.md` files MUST follow.
 - `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` — Authoritative payload contract for bilateral.
 - `onecgiar-pr-client/CLAUDE.md` — Frontend API conventions and commit format.

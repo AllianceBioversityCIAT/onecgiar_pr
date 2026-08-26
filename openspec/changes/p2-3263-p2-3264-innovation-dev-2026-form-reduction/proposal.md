@@ -39,4 +39,4 @@ The pre-plan published on both tickets suggested `isP25()`. That is the wrong ga
 
 **Phase scope:** satisfied by construction and verified in the browser on both a 2026 and a 2025 result.
 
-**SDD baseline:** `docs/system-design/design.md` (form layout, phase-gated UI).
+**SDD baseline:** `docs/ux-ui/design.md` (form layout, phase-gated UI).

@@ -37,8 +37,8 @@ Root cause is a reactivity gap, not a data gap: `selectedTocNode` is a `computed
 - Server, APIs, DTOs, entities, migrations: untouched. `outcome_statement` already ships in `GET /v2/toc/result/{id}/initiative/{id}/level/{n}` (backend enrichment `df27cc55a`).
 
 **SDD baseline:**
-- `docs/detailed-design/detailed-design.md` — frontend state management (Angular signals, `computed()` dependency tracking).
-- `docs/system-design/design.md` — Contributors & Partners ToC detail screen, read-only field behaviour.
+- `docs/trd/trd.md` — frontend state management (Angular signals, `computed()` dependency tracking).
+- `docs/ux-ui/design.md` — Contributors & Partners ToC detail screen, read-only field behaviour.
 - Sibling changes for context: `openspec/changes/p2-3063-hlo-outcome-statement/` (introduces the field), `openspec/changes/p2-2998-centers-from-toc-split/` (introduces `selectionVersion`).
 
 **Test gate:**

@@ -1,7 +1,7 @@
 # Module Spec — Webhook Notifications to External Platforms — Design
 
 > Cites `requirements.md` in this folder. Baseline: `docs/prd.md` AC-4 / AC-8 / AC-9,
-> `docs/detailed-design/detailed-design.md` W4 / W6.
+> `docs/trd/trd.md` W4 / W6.
 
 ## 1. Summary
 

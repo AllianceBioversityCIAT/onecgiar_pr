@@ -34,5 +34,5 @@ This is a **frontend-only**, copy-only change. No backend work is required.
 - File: `src/app/pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.component.ts` — `validateCheckBoxes()` (the `tags` array labels + the per-tag alert template string).
 - Test: `rd-evidences.component.spec.ts` — `validateCheckBoxes` describe block.
 - No backend, API, entity, DTO, or migration changes. No change to the `*_tag_level` / `*_related` data contract from `GET_evidences()`.
-- SDD baseline: UI copy governed by `docs/system-design/design.md` (alerts use the shared `app-alert-status` component); no requirement-level change to `docs/prd.md` or `docs/detailed-design/detailed-design.md`.
+- SDD baseline: UI copy governed by `docs/ux-ui/design.md` (alerts use the shared `app-alert-status` component); no requirement-level change to `docs/prd.md` or `docs/trd/trd.md`.
 - Jira: **P2-3005** (Enhancement under epic P2-2338 "Enhancements 2026").

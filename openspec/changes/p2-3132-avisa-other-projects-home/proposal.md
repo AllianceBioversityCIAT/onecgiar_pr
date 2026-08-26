@@ -24,4 +24,4 @@ AVISA (Science Program `SGP-02`) is categorized like any other Science Program o
   - `result-framework-reporting-home.component.html` (+ scss)
   - `entity-details.component.ts` — include `otherProjectsList` in SGP-02 name fallback
 - No backend, API, or migration changes.
-- SDD baseline: `docs/system-design/design.md` (Result Framework home IA).
+- SDD baseline: `docs/ux-ui/design.md` (Result Framework home IA).

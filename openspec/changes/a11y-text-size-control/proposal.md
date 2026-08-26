@@ -33,5 +33,5 @@ Part of the `front-redesign-fields` shell/navbar redesign effort (no dedicated P
 - **Dependencies:** uses existing `@angular/cdk` (`OverlayModule` already in use; adds `A11yModule` for `cdkTrapFocus`). No new packages.
 - **Stack:** Angular 21 + Tailwind v4 + Spartan, zoneless.
 - **Browser support:** relies on CSS `zoom` (all current engines incl. Firefox 126+); acceptable for this internal enterprise app.
-- **SDD baseline:** aligns with `docs/system-design/design.md` §10 (a11y — visible focus rings via `--pr-color-primary-300`, never remove outlines) and the "no dark mode / light only" stance (unaffected). No backend or API contract impact.
+- **SDD baseline:** aligns with `docs/ux-ui/design.md` §10 (a11y — visible focus rings via `--pr-color-primary-300`, never remove outlines) and the "no dark mode / light only" stance (unaffected). No backend or API contract impact.
 - **No backend changes.**

@@ -60,6 +60,6 @@
 
 - [ ] 7.1 Run `npm start` against the prtest backend and exercise both paths with real data (e.g. SP12): entry → decision → stepper (emerging) and entry → indicator table (planned); verify the category-lock fix and search-before-create end-to-end in the browser.
 - [ ] 7.2 Keep Jest + Cypress-CT green; coverage ≥ 50/60/60/60 (`npm run test`, `npm run test:ct`).
-- [ ] 7.3 Promote the new stepper/decision pattern to `docs/system-design/design.md` §12 Design Decisions; note the reporting-flow rebuild in `docs/detailed-design/detailed-design.md`.
+- [ ] 7.3 Promote the new stepper/decision pattern to `docs/ux-ui/design.md` §12 Design Decisions; note the reporting-flow rebuild in `docs/trd/trd.md`.
 - [ ] 7.4 File the backend hand-off (category/typology descriptions + examples, scoped similar-results endpoint, recommended-category hint, status enum) and the separately-observed backend defects (fail-open gate, null-crash in `getProgress`, client-only gates) to the backend owner with evidence.
 - [ ] 7.5 Assign the P2 ticket and align commit messages to the PRMS convention before the PR.
