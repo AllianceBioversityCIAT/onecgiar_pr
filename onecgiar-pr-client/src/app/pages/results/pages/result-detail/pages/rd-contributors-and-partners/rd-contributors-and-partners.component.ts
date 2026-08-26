@@ -143,6 +143,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   // and auto-activate the "Other(s)" dropdown with ALL centers (mirrors hasReferenceScience for Science Programs).
   hasReferenceCenters = computed(() => this.rdPartnersSE.tocReferenceCenterInstitutionIds().length > 0);
   noCentersNote = 'No CGIAR Centers related to the established HLO/Outcomes were found';
+  noLeadCentersNote = 'Please select at least one contributing center to choose a lead center';
 
   // "Other(s) CGIAR Centers" is a special item at the END of the first dropdown's list (per Excel), not an outside
   // checkbox. Selecting it toggles the second dropdown; it is never persisted as a real center.
@@ -198,6 +199,10 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     // when "Other(s)" is deselected, clear whatever was picked in the Other(s) dropdown
     if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
     // OTHER_CENTERS_CODE isn't in the CLARISA list, so it doesn't affect lead-center options.
+    this.rdPartnersSE.setPossibleLeadCenters(true);
+  }
+
+  onOtherCenterSelect(_event?: any) {
     this.rdPartnersSE.setPossibleLeadCenters(true);
   }
 
