@@ -143,7 +143,12 @@ describe('PrMultiSelectComponent — CONTRACT (34 consumers)', () => {
         template: TEMPLATE,
         componentProperties: props({ required: false, value: [] })
       },
-      controlSelector: '.custom_select a.field'
+      controlSelector: '.custom_select a.field',
+      // This field renders an `app-pr-field-header`, not a `.pr-field` root: it shows the red
+      // asterisk but contributes nothing to the DOM scan behind the submission alert (documented
+      // in src/CLAUDE.md §21.5). Asserting the mandatory/complete contract here would invent a
+      // requirement it never had. The asterisk it DOES own is asserted separately below.
+      rootSelector: null
     });
   });
 
