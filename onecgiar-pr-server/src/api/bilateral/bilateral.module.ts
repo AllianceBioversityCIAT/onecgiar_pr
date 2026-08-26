@@ -45,6 +45,8 @@ import { ResultsCapacityDevelopmentsRepository } from '../results/summary/reposi
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
 import { NoopBilateralHandler } from './handlers/noop.handler';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ActorTypeRepository } from '../results/result-actors/repositories/actors-type.repository';
+import { BilateralVersioningService } from './services/bilateral-versioning.service';
 import { PathwayModule } from '../ipsr-framework/pathway/pathway.module';
 import { ClarisaApiKeyValidationService } from './services/clarisa-api-key-validation.service';
 import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
@@ -149,6 +151,8 @@ import { BilateralWebhookService } from './services/bilateral-webhook.service';
     ResultsCapacityDevelopmentsRepository,
     ResultsPolicyChangesRepository,
     NonPooledProjectBudgetRepository,
+    ActorTypeRepository,
+    BilateralVersioningService,
     BilateralAiService,
     BilateralAiFileStorageService,
     BilateralAiTextMiningService,
