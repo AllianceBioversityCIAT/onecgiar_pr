@@ -1,6 +1,7 @@
 /// <reference types="cypress" />
 
 import {
+  BOTTOM_BAR,
   SAVE_ENDPOINTS,
   describeWithToken,
   findEditableResultUrl,
@@ -163,7 +164,7 @@ describeWithToken('Result Detail — Contributors & partners', () => {
     });
 
     // --- save -----------------------------------------------------------------------------------
-    cy.get('app-save-button app-pr-button').click({ force: true });
+    cy.get(BOTTOM_BAR.save).click();
     cy.wait('@saveContributors', { timeout: 90000 }).its('response.statusCode').should('be.oneOf', [200, 201]);
 
     // --- reload and verify persistence -----------------------------------------------------------

@@ -48,15 +48,16 @@ describeWithToken('Results List E2E Tests', () => {
     cy.get('#resultListTable thead tr th').should('have.length.at.least', DEFAULT_COLUMNS.length);
   });
 
-  it('renders the trailing action column header, which is empty by design', () => {
+  it('renders the trailing action column header, which is empty by design', function () {
     cy.get('#resultListTable', { timeout: 60000 }).should('be.visible');
 
     // `<th id="action">` only exists while the platform is open, and it never carries a label.
     cy.get('#resultListTable thead').then($head => {
       const action = $head.find('th#action');
       if (!action.length) {
-        cy.log('ℹ️ Platform is closed — the action column is not rendered.');
-        return;
+        // Platform closed: the column under test does not exist, so there is nothing to assert.
+        // Reported as pending — `cy.log()` + `return` used to report it as a pass.
+        this.skip();
       }
       expect(action.text().trim(), 'action header text').to.equal('');
     });

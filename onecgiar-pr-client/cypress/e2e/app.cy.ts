@@ -27,13 +27,14 @@ describe('App E2E', () => {
     cy.contains('Continue as an external user').should('be.visible');
   });
 
-  it('should show the environment indicator outside production', () => {
+  it('should show the environment indicator outside production', function () {
     cy.get('body').then($body => {
-      if ($body.text().includes('Testing environment')) {
-        cy.contains('Testing environment').should('be.visible');
-      } else {
-        cy.log('ℹ️ Environment label not rendered for this build.');
+      if (!$body.text().includes('Testing environment')) {
+        // A production build renders no indicator: nothing to assert, so the test is pending
+        // instead of silently green.
+        this.skip();
       }
+      cy.contains('Testing environment').should('be.visible');
     });
   });
 });
