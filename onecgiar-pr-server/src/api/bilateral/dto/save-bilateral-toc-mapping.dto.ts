@@ -59,6 +59,19 @@ class BilateralResultTocBlockDto {
   @IsOptional()
   planned_result?: boolean;
 
+  /**
+   * Justification the reporter gives when `planned_result` is false ("Why is this result being
+   * reported?"). Unplanned results have no ToC node to hang the text on, so the server reads it
+   * from this top level — see `_handleUnplannedSpecialCase` in results-toc-results.service.ts.
+   */
+  @ApiPropertyOptional({
+    description:
+      'Justification for reporting an unplanned result. Only read when planned_result is false.',
+  })
+  @IsString()
+  @IsOptional()
+  toc_progressive_narrative?: string;
+
   @ApiPropertyOptional({ type: () => [BilateralTocResultItemDto] })
   @IsOptional()
   result_toc_results?: BilateralTocResultItemDto[];

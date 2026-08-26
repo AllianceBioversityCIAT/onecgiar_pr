@@ -7,8 +7,11 @@ import { BilateralCreationService } from '../../services/bilateral-creation.serv
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
+import { InstitutionsService } from '../../../../shared/services/global/institutions.service';
+import { InnovationUseResultsService } from '../../../../shared/services/global/innovation-use-results.service';
 import { SectionTocComponent } from '../section-toc/section-toc.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 
 interface CenterOption {
   institutionId: number;
@@ -37,7 +40,10 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly mdsTracker = inject(BilateralMdsTrackerService);
   readonly autoSave = inject(BilateralAutoSaveService);
   readonly centersService = inject(CentersService);
+  readonly institutionsService = inject(InstitutionsService);
+  readonly innovationUseResultsSE = inject(InnovationUseResultsService);
   readonly api = inject(ApiService);
+  readonly bilateralApi = inject(BilateralApiService);
 
   private centersSubscription?: Subscription;
 
@@ -85,6 +91,133 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly disabledCenterOptions = computed(() => this.availableCentersComputed().filter(c => c.disabled));
   readonly disabledProjectOptions = computed(() => this.availableProjectsComputed().filter(p => p.disabled));
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // P2-3368 · Contributing science programs (optional, multi)
+  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Options come from the project's own science programs, minus the primary one (the story excludes
+   * SP01 because it is already shown as "Primary contributing science program").
+   *
+   * ⚠️ `BilateralCreationService.selectedProject().sciencePrograms` is set to `[]` when an EXISTING
+   * result is loaded (`bilateral-creation.service.ts:170`) — only the creation wizard fills it. So on
+   * a saved result this list is empty and the dropdown is not rendered at all; the chips below it
+   * remain the read-only view of whatever was chosen at creation time. Do not "fix" that by rendering
+   * an empty dropdown: a control with nothing in it reads as a bug to the user.
+   */
+  readonly availableSecondarySpOptions = computed(() => {
+    const primaryId = this.creationService.selectedPrimarySp()?.programId;
+    const sps = (this.creationService.selectedProject()?.sciencePrograms ?? []) as any[];
+    return sps
+      .filter(sp => sp?.programId != null && sp.programId !== primaryId)
+      .map(sp => ({
+        programId: Number(sp.programId),
+        programCode: sp.programCode,
+        allocation: sp.allocation ?? '',
+        full_name: `${sp.programCode}${sp.spName || sp.spShortName ? ' - ' + (sp.spName || sp.spShortName) : ''}`
+      }));
+  });
+
+  readonly selectedSecondarySpIds = computed(() => this.creationService.selectedSecondarySps().map(sp => Number(sp.programId)));
+
+  /**
+   * 🛑 HOUSE RULE — a control whose value cannot be stored ships VISIBLE BUT DISABLED with a
+   * `Coming soon` tag, and never tells the user it will be saved.
+   *
+   * Three controls are in that state here: **Contributing science programs**, the
+   * **linked/bundled question** and the **results dropdown** it unlocks. None of them has a field
+   * on `SaveBilateralContributorsDto` nor a home in the bilateral detail payload, so answering
+   * them wrote to a component signal and nothing else — the answer was gone on the next reload.
+   * Same markup as `result-ai-item.component.html` (`globalDisabled` + the tag span).
+   *
+   * The flag is a named member rather than a literal in the template because the spec overrides
+   * the template: an inline `[ngClass]="{ globalDisabled: true }"` would be untestable. Flip it to
+   * `false` — and put the fields back into `hiddenFieldsWithValues()` — the day the DTO accepts
+   * them.
+   */
+  readonly unpersistedFieldsComingSoon: boolean = true;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // P2-3368 · External partners (mandatory: at least one partner OR the "no partners" checkbox)
+  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Same catalogue W1/W2 uses for External partners (`InstitutionsService`), read through the SIGNAL
+   * view on purpose — the plain array is not a reactive dependency and any `computed()` over it
+   * caches an empty list forever (P2-3335).
+   */
+  readonly availablePartners = this.institutionsService.institutionsWithoutCentersPartners;
+
+  selectedPartnerInstitutionIds = signal<number[]>([]);
+  noExternalPartners = signal(false);
+
+  /**
+   * P2-3443. Until the stored partner block has come back from the server the PATCH must NOT carry
+   * the partner keys: `saveContributors` is fired by every centre/project change too, and sending
+   * an empty `institutions` before hydration would wipe the partners the user saved last session.
+   * Omitting the keys is what tells the server "leave this block alone".
+   */
+  readonly partnersHydrated = signal(false);
+  private partnersLoadedForResultId: number | null = null;
+
+  /**
+   * The read failed and there is NO automatic second chance: `hydrateWhenReady` only re-runs when
+   * one of the signals it tracks changes, and after the initial load none of them does. Without a
+   * visible error the section became a black hole — the user picked partners, the block went green
+   * and Submit unlocked, while every PATCH silently dropped `institutions`. So the failure is shown
+   * with a Retry, and `updateContributorsMds()` keeps `external-partners` unfilled meanwhile.
+   */
+  readonly partnersLoadFailed = signal(false);
+
+  /** AC5/AC7: the field is satisfied by EITHER at least one partner OR the explicit "none" declaration. */
+  readonly externalPartnersSatisfied = computed(() => this.noExternalPartners() || this.selectedPartnerInstitutionIds().length > 0);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // P2-3368 · Full metadata toggle + linked/bundled question
+  // ─────────────────────────────────────────────────────────────────────────
+  showAllFields = signal(this.loadShowAllFromStorage());
+
+  /**
+   * P2-3358 wording: ONE question for every typology. Kept verbatim in sync with
+   * `rd-contributors-and-partners.component.ts:234` (W1/W2) and with
+   * `FieldsManagerService.fields()['[innovation-use-form]-has-innovation-link']`.
+   */
+  readonly linkedResultQuestionLabel =
+    'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?';
+
+  readonly yesNoOptions = [
+    { value: true, label: 'Yes' },
+    { value: false, label: 'No' }
+  ];
+
+  hasLinkedResult = signal<boolean | null>(null);
+  selectedLinkedResultIds = signal<(number | string)[]>([]);
+
+  /**
+   * AC13's message ("N hidden field(s) has values and will be saved.") is a PROMISE, and the only
+   * field behind the toggle is the linked/bundled question — which is `Coming soon` precisely
+   * because nothing persists it (see `unpersistedFieldsComingSoon`). Counting it made the screen
+   * promise a save that never happened: the user answered, read the note, reloaded, and the answer
+   * was gone.
+   *
+   * So the count is 0 while every hidden field is Coming soon, and the note never renders. This
+   * stays a `computed` — not a constant — because it is the template's contract: add the term back
+   * here, one per field, as soon as a hidden field actually reaches the server.
+   */
+  readonly hiddenFieldsWithValues = computed(() => {
+    if (this.unpersistedFieldsComingSoon) return 0;
+    return this.hasLinkedResult() !== null || this.selectedLinkedResultIds().length > 0 ? 1 : 0;
+  });
+
+  readonly showHiddenFieldsNote = computed(() => !this.showAllFields() && this.hiddenFieldsWithValues() > 0);
+
+  /**
+   * The three Block-2 gates are named computeds rather than inline template expressions so the spec
+   * can assert the SAME expression the template renders. The suite overrides the template (see
+   * `section-contributors.component.spec.ts`), so an inline `@if` would be untested.
+   */
+  readonly showLinkedResultQuestion = computed(() => this.showAllFields());
+  readonly showLinkedResultsDropdown = computed(() => this.showLinkedResultQuestion() && this.hasLinkedResult() === true);
+  readonly fullMetadataButtonLabel = computed(() => (this.showAllFields() ? 'Hide full metadata' : 'Complete full metadata'));
+
   readonlyLeadCenterInstitutionId: number | null = null;
   readonlyLeadProjectId: number | null = null;
 
@@ -100,8 +233,12 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
     this.creationService.resultContributingProjectIds();
     this.creationService.resultLeadCenterId();
     this.creationService.selectedProject();
+    this.creationService.currentResultId();
     if (loading || !centersReady || !projectsReady) return;
-    untracked(() => this.hydrateLeadAndSelection());
+    untracked(() => {
+      this.hydrateLeadAndSelection();
+      this.loadExternalPartnersState();
+    });
   });
 
   ngOnInit(): void {
@@ -195,6 +332,9 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   private buildContributorsPayload(): {
     contributing_center: { institution_id: number }[];
     contributing_bilateral_projects: { project_id: number; is_lead?: boolean }[];
+    institutions?: { institutions_id: number }[];
+    no_external_partners?: boolean;
+    is_lead_by_partner?: boolean;
   } {
     const selectedCenters = this.selectedCenterInstitutionIds()
       .map(id => {
@@ -216,10 +356,33 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
       })
       .filter(Boolean) as { project_id: number; is_lead?: boolean }[];
 
-    return {
+    const payload: {
+      contributing_center: { institution_id: number }[];
+      contributing_bilateral_projects: { project_id: number; is_lead?: boolean }[];
+      institutions?: { institutions_id: number }[];
+      no_external_partners?: boolean;
+      is_lead_by_partner?: boolean;
+    } = {
       contributing_center: selectedCenters,
       contributing_bilateral_projects: selectedProjects,
     };
+
+    // P2-3443. The partner keys only travel once the stored block is on screen — see
+    // `partnersHydrated`. `institutions` is sent even when the box is ticked so the server has an
+    // explicit empty set to reconcile against.
+    if (this.partnersHydrated()) {
+      payload.institutions = this.noExternalPartners()
+        ? []
+        : this.selectedPartnerInstitutionIds().map(id => ({ institutions_id: Number(id) }));
+      payload.no_external_partners = this.noExternalPartners();
+      // A bilateral result is always led by its lead centre — the section has no "led by a partner"
+      // control and the lead centre is read-only above. Sent explicitly because the shared
+      // `validation_partners_*` MySQL functions treat a NULL `is_lead_by_partner` as "not answered"
+      // and never turn the section green.
+      payload.is_lead_by_partner = false;
+    }
+
+    return payload;
   }
 
   private persistContributors(): void {
@@ -252,9 +415,196 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
           label: 'Lead project',
           filled: this.readonlyLeadProjectId != null,
         },
+        // P2-3443: restored. It was held out of the tracker only because the answer was not
+        // persisted — a reload turned it back to incomplete and Submit stayed blocked with no way
+        // out. Now that the partners and the "no external partners" flag round-trip, the mandatory
+        // affordance the user sees (red asterisk + inline hint) matches what gates Submit again.
+        {
+          key: 'external-partners',
+          label: 'External partners',
+          // 🛑 INVARIANT: a field is never reported as satisfied while the payload is throwing its
+          // keys away. `buildContributorsPayload()` omits `institutions`, `no_external_partners`
+          // and `is_lead_by_partner` until `partnersHydrated()` is true (and a failed read leaves
+          // it false forever), so a selection made in that window reaches no server. Reporting it
+          // `filled` turned the green tick and the Submit gate into a lie — the user chose
+          // partners, the section went green, and nothing was ever written.
+          filled: this.partnersHydrated() && this.externalPartnersSatisfied(),
+        },
       ],
       PARTNERS_MDS_GROUP
     );
+  }
+
+  // ───────────────────────── P2-3368 · contributing science programs ─────────────────────────
+
+  onSecondarySpsModelChange(selected: any[]): void {
+    const ids = (selected ?? []).map(item => (typeof item === 'object' && item !== null ? Number(item.programId) : Number(item)));
+    const options = this.availableSecondarySpOptions();
+    const next = ids
+      .map(id => options.find(o => o.programId === id))
+      .filter(Boolean)
+      .map(o => ({ programId: o!.programId, programCode: o!.programCode, allocation: o!.allocation }));
+    // ⚠️ UNREACHABLE from the UI while `unpersistedFieldsComingSoon` is true: the multi-select is
+    // rendered disabled with a `Coming soon` tag precisely because nothing persists this —
+    // SaveBilateralContributorsDto has no field for it and the selection lives in
+    // BilateralCreationService only. Kept so the wiring is one flag away from working.
+    this.creationService.selectedSecondarySps.set(next);
+  }
+
+  // ───────────────────────── P2-3368 · external partners ─────────────────────────
+
+  onPartnersModelChange(selected: any[]): void {
+    const ids = (selected ?? []).map(item => (typeof item === 'object' && item !== null ? Number(item.institutions_id) : Number(item)));
+    this.selectedPartnerInstitutionIds.set(ids);
+    this.persistExternalPartners();
+  }
+
+  /**
+   * Edge case in the story: checking the box hides the dropdown and satisfies the field; unchecking it
+   * puts the field straight back into the unsatisfied state when no partner is selected. Selections are
+   * cleared on check so a hidden list can never be submitted behind the user's back — same rule W1/W2
+   * applies in `rd-contributors-and-partners.component.ts:401`.
+   */
+  onNoExternalPartnersChange(): void {
+    if (this.noExternalPartners()) {
+      this.selectedPartnerInstitutionIds.set([]);
+    }
+    this.persistExternalPartners();
+  }
+
+  removePartner(id: number): void {
+    this.selectedPartnerInstitutionIds.set(this.selectedPartnerInstitutionIds().filter(i => i !== id));
+    this.persistExternalPartners();
+  }
+
+  getPartnerDisplayName(id: number): string {
+    const partner = (this.availablePartners() ?? []).find((p: any) => Number(p.institutions_id) === Number(id));
+    if (!partner) return String(id);
+    return partner.institutions_acronym || partner.institutions_name || String(id);
+  }
+
+  /**
+   * P2-3443. Goes through the very same PATCH the centres and projects use — the server now accepts
+   * `institutions`, `no_external_partners` and `is_lead_by_partner` on
+   * `SaveBilateralContributorsDto` and writes them to `results_by_institution` + the two `result`
+   * flags, exactly like the pool-funding partners form does.
+   */
+  private persistExternalPartners(): void {
+    this.autoSave.saveContributors(this.buildContributorsPayload());
+    this.updateContributorsMds();
+  }
+
+  /**
+   * P2-3443 — one-shot read of the stored partner block for an existing result.
+   *
+   * It re-reads the bilateral detail endpoint instead of taking the values from
+   * `BilateralCreationService`: that service does not keep `contributingInstitutions` nor the two
+   * flags, and this section is the only consumer of them. Guarded by `partnersLoadedForResultId`
+   * so the hydrate effect — which re-runs on several signals — cannot loop on the network.
+   */
+  private loadExternalPartnersState(): void {
+    const resultId = this.creationService.currentResultId();
+    if (!resultId) return;
+    if (this.partnersLoadedForResultId === resultId) return;
+    this.partnersLoadedForResultId = resultId;
+
+    this.partnersLoadFailed.set(false);
+    this.bilateralApi.GET_BilateralResultDetail(resultId).subscribe({
+      next: ({ response }) => {
+        const ids = (response?.contributingInstitutions ?? [])
+          .map((inst: any) => Number(inst?.institutions_id))
+          .filter((id: number) => Number.isFinite(id) && id > 0);
+        this.selectedPartnerInstitutionIds.set(Array.from(new Set<number>(ids)));
+        // `no_applicable_partner` is a MySQL tinyint and can arrive as the string '0', which `!!`
+        // reads as true — compare numerically (same trap as `is_ai_generated`).
+        this.noExternalPartners.set(ids.length === 0 && Number(response?.commonFields?.no_applicable_partner) === 1);
+        this.partnersHydrated.set(true);
+        this.updateContributorsMds();
+      },
+      error: () => {
+        // Leave the block unhydrated: a failed read must not let an empty selection overwrite
+        // stored partners on the next centre/project change. Clearing the guard is what lets
+        // `retryLoadExternalPartners()` fire the GET again — the hydrate effect will not.
+        this.partnersLoadedForResultId = null;
+        this.partnersLoadFailed.set(true);
+        // Re-publish so `external-partners` drops back to unfilled: the section must not stay
+        // green on a selection whose keys the next PATCH will discard.
+        this.updateContributorsMds();
+      }
+    });
+  }
+
+  /** Manual second chance for a failed partner read — the hydrate effect never re-fires by itself. */
+  retryLoadExternalPartners(): void {
+    this.partnersLoadFailed.set(false);
+    this.loadExternalPartnersState();
+  }
+
+  // ───────────────────────── P2-3368 · full metadata toggle ─────────────────────────
+
+  toggleShowAll(): void {
+    this.showAllFields.update(v => !v);
+    this.saveShowAllToStorage();
+  }
+
+  /**
+   * AC12: answering "No" collapses the results dropdown AND clears whatever was already picked.
+   * Disabled on screen — see `unpersistedFieldsComingSoon`.
+   */
+  onHasLinkedResultChange(value: boolean | null): void {
+    this.hasLinkedResult.set(value);
+    if (value !== true) {
+      this.selectedLinkedResultIds.set([]);
+    }
+    // ⚠️ UNREACHABLE from the UI while `unpersistedFieldsComingSoon` is true: the question is
+    // rendered disabled with a `Coming soon` tag because the answer and the linked results it
+    // unlocks have no field on SaveBilateralContributorsDto and no home in the detail payload.
+    // Kept so the clearing rule (AC12) is one flag away from working.
+  }
+
+  onLinkedResultsModelChange(selected: any[]): void {
+    const ids = (selected ?? []).map(item => (typeof item === 'object' && item !== null ? item.id : item));
+    this.selectedLinkedResultIds.set(ids);
+  }
+
+  /** Same label shape W1/W2 shows in its linked-results dropdown (`rd-contributors-and-partners.component.ts:551`). */
+  formatResultLabel(option: any): string {
+    if (option?.result_code && option?.name) {
+      let phaseInfo = '';
+      if (option?.acronym && option?.phase_year) {
+        phaseInfo = `(${option.acronym} - ${option.phase_year}) `;
+      } else if (option?.acronym) {
+        phaseInfo = `(${option.acronym}) `;
+      } else if (option?.phase_year) {
+        phaseInfo = `(${option.phase_year}) `;
+      }
+      const resultType = option?.result_type_name || option?.resultTypeName || option?.type_name || '';
+      const resultTypeInfo = resultType ? ` (${resultType})` : '';
+      const title = option?.title ? ` - ${option.title}` : '';
+      return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
+    }
+    return option?.title || option?.name || '';
+  }
+
+  private showAllStorageKey(): string {
+    const rid = this.creationService.currentResultId();
+    return rid ? `bp_extra_${rid}_contributors` : 'bp_extra_0_contributors';
+  }
+
+  private loadShowAllFromStorage(): boolean {
+    try {
+      return localStorage.getItem(this.showAllStorageKey()) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  private saveShowAllToStorage(): void {
+    try {
+      localStorage.setItem(this.showAllStorageKey(), String(this.showAllFields()));
+    } catch {
+      /* ignore */
+    }
   }
 
   onCentersModelChange(selected: any[]): void {
