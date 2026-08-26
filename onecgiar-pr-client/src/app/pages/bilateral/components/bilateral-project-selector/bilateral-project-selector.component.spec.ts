@@ -21,6 +21,7 @@ describe('BilateralProjectSelectorComponent', () => {
 
     ctxService = {
       centerId: signal('CENTER-01'),
+      centerInstitutionId: signal(49),
       centerAcronym: signal('C01'),
       centerName: signal('Center One'),
     };
@@ -42,8 +43,24 @@ describe('BilateralProjectSelectorComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should call getProjects with first center on init', () => {
-    expect(creationService.getProjects).toHaveBeenCalledWith('CENTER-01');
+  it('asks for the projects of the current centre on init', () => {
+    expect(creationService.getProjects).toHaveBeenCalledWith(49);
+  });
+
+  // ⚠️ Regression lock. The endpoint keys off the numeric CLARISA institution id. Passing the
+  // centre CODE returns 200 with `{ projects: [] }` — no error anywhere, the dropdown just renders
+  // empty, and with the Reporting Project field being mandatory NO bilateral result can be created
+  // at all. Verified on prtest: `centerId=CIP` → [], `centerId=49` → 1 project.
+  it('never passes the centre code — that silently returns an empty list', () => {
+    expect(creationService.getProjects).not.toHaveBeenCalledWith('CENTER-01');
+    expect(typeof creationService.getProjects.mock.calls[0][0]).toBe('number');
+  });
+
+  it('does not ask for projects until the institution id is known', () => {
+    creationService.getProjects.mockClear();
+    ctxService.centerInstitutionId.set(null);
+    fixture.detectChanges();
+    expect(creationService.getProjects).not.toHaveBeenCalled();
   });
 
   it('should emit on project select', () => {
