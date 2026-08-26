@@ -4,7 +4,7 @@ import {
   StatusSegment,
   AowProgressRow,
   CategoryBar,
-  BilateralRoleRow
+  OverviewCenterBar
 } from './program-overview.component';
 
 describe('ProgramOverviewComponent', () => {
@@ -39,10 +39,10 @@ describe('ProgramOverviewComponent', () => {
     { name: 'Innovation development', count: 30 }
   ];
 
-  const bilateralRoles: BilateralRoleRow[] = [
-    { key: 'tagged', label: 'Results where this program is tagged', count: 142 },
-    { key: 'primary', label: 'Where this program is the primary science program', count: 134 },
-    { key: 'contributor', label: 'Where this program is a contributor', count: 8 }
+  const centers: OverviewCenterBar[] = [
+    { name: 'CIAT', count: 45 },
+    { name: 'IRRI', count: 32 },
+    { name: 'CIMMYT', count: 4 }
   ];
 
   beforeEach(async () => {
@@ -54,7 +54,7 @@ describe('ProgramOverviewComponent', () => {
     fixture.componentRef.setInput('aowProgress', aows);
     fixture.componentRef.setInput('categories', categories);
     fixture.componentRef.setInput('bilateralCategories', bilateralCategories);
-    fixture.componentRef.setInput('bilateralRoles', bilateralRoles);
+    fixture.componentRef.setInput('bilateralCenters', centers);
     fixture.detectChanges();
   });
 
@@ -67,10 +67,11 @@ describe('ProgramOverviewComponent', () => {
 
     expect(headings).toEqual([
       'About this program',
-      'Results by indicator category',
-      'Bilateral results by indicator category',
+      // P2-3481: the titles name the funding type, so a user can tell the two blocks apart.
+      'W1/W2 results by indicator category',
+      'W3/Bilateral results by indicator category',
       'Reporting status',
-      'Bilateral contributions',
+      'Centers with reported W3/bilateral results',
       'Progress by area of work'
     ]);
   });
@@ -122,7 +123,7 @@ describe('ProgramOverviewComponent', () => {
       // Every bar row, singular or plural — the aria-label suffix varies with the count.
       const rows = fixture.nativeElement.querySelectorAll('button[aria-label]');
       expect(categories.length).toBe(8);
-      expect(rows.length).toBe(categories.length + bilateralCategories.length);
+      expect(rows.length).toBe(categories.length + bilateralCategories.length + centers.length);
     });
 
     it('returns 0 instead of NaN for an all-zero series', () => {
@@ -159,24 +160,65 @@ describe('ProgramOverviewComponent', () => {
       expect(component.bilateralCategoryWidth(bilateralCategories[1])).toBeCloseTo((30 / 70) * 100);
     });
 
-    it('renders the three counts P2-3302 asks for', () => {
-      const text = fixture.nativeElement.textContent as string;
-      expect(text).toContain('Results where this program is tagged');
-      expect(text).toContain('142');
-      expect(text).toContain('134');
-      expect(text).toContain('8');
-    });
-
     it('shows an empty state when no bilateral results are linked', () => {
       fixture.componentRef.setInput('bilateralCategories', []);
-      fixture.componentRef.setInput('bilateralRoles', []);
       fixture.detectChanges();
       expect(fixture.nativeElement.textContent).toContain('No bilateral results are linked to this program yet.');
     });
   });
 
+  describe('centers with reported W3/bilateral results', () => {
+    it('calculates center bar width relative to the maximum center count', () => {
+      expect(component.bilateralCentersMax()).toBe(45);
+      expect(component.centerWidth(centers[0])).toBe(100);
+      expect(component.centerWidth(centers[1])).toBeCloseTo((32 / 45) * 100);
+      expect(component.centerWidth(centers[2])).toBeCloseTo((4 / 45) * 100);
+    });
+
+    it('renders center acronyms, counts, and width styling in the DOM', () => {
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('CIAT');
+      expect(text).toContain('45');
+      expect(text).toContain('IRRI');
+      expect(text).toContain('32');
+      expect(text).toContain('CIMMYT');
+      expect(text).toContain('4');
+
+      const ciatButton = fixture.nativeElement.querySelector('button[aria-label="CIAT: 45 results"]');
+      expect(ciatButton).toBeTruthy();
+      const ciatBar = ciatButton.querySelector('.bg-\\[var\\(--pr-chart-2\\)\\]');
+      expect(ciatBar.style.width).toBe('100%');
+    });
+
+    it('says "1 result", not "1 results", for a single-result center', () => {
+      fixture.componentRef.setInput('bilateralCenters', [{ name: 'CIP', count: 1 }]);
+      fixture.detectChanges();
+      const row = fixture.nativeElement.querySelector('button[aria-label="CIP: 1 result"]');
+      expect(row).toBeTruthy();
+    });
+
+    it('shows an empty state when no centers have reported bilateral results', () => {
+      fixture.componentRef.setInput('bilateralCenters', []);
+      fixture.detectChanges();
+      expect(component.bilateralCentersMax()).toBe(0);
+      expect(component.centerWidth({ name: 'CIAT', count: 0 })).toBe(0);
+      expect(fixture.nativeElement.textContent).toContain(
+        'No centers have reported bilateral results for this program yet.'
+      );
+    });
+
+    it('does not render legacy bilateral role counts or review stub', () => {
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).not.toContain('Results where this program is tagged');
+      expect(text).not.toContain('Where this program is the primary science program');
+      expect(text).not.toContain('Where this program is a contributor');
+      expect(text).not.toContain('Of those where this program is primary');
+      expect(text).not.toContain('A breakdown by review status is not shown yet.');
+    });
+  });
+
   describe('controls with no authorising ticket', () => {
-    it('ships the category rows visible but disabled, tagged Coming soon', () => {
+    it('ships the category and center rows visible but disabled', () => {
       const rows: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button[aria-label]'));
       expect(rows.length).toBeGreaterThan(0);
       expect(rows.every(row => row.disabled)).toBe(true);
@@ -187,12 +229,7 @@ describe('ProgramOverviewComponent', () => {
       const tags = Array.from(fixture.nativeElement.querySelectorAll('span')).filter(
         (s: any) => s.textContent.trim() === 'Coming soon'
       );
-      expect(tags.length).toBe(3);
-    });
-
-    it('does not invent the primary-subset status breakdown', () => {
-      expect(fixture.nativeElement.textContent).toContain('Of those where this program is primary');
-      expect(fixture.nativeElement.textContent).toContain('A breakdown by review status is not shown yet.');
+      expect(tags.length).toBe(2);
     });
   });
 

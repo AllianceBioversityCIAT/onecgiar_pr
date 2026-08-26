@@ -314,10 +314,14 @@ describe('BilateralResultCreatorComponent', () => {
       expect(component.headerTitle()).toBe('An existing result');
     });
 
-    it('falls back to the wizard copy while the title is still loading', () => {
+    it('falls back to a neutral label while the title is still loading, never to the wizard copy', () => {
       component.isCreating.set(false);
       creationService.resultTitle.set('');
-      expect(component.headerTitle()).toBe('Report New Bilateral Result');
+
+      // The load can also fail outright, in which case this label is what the user keeps seeing.
+      // "Report New Bilateral Result" would claim they are creating a result while editing one.
+      expect(component.headerTitle()).toBe('Bilateral result');
+      expect(component.headerTitle()).not.toContain('New');
     });
   });
 

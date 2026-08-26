@@ -300,7 +300,8 @@
   padding: 12px 14px;
   border: 1.5px solid #CFD8DC;
   border-radius: 8px;
-  font-family: 'Poppins', sans-serif;
+  // Was bare 'Poppins' — that skips Manrope entirely instead of falling back to it.
+  font-family: 'Manrope', 'Poppins', sans-serif;
   font-size: 12px;
   color: var(--pr-color-secondary-400);
   resize: vertical;
@@ -332,7 +333,8 @@
   padding: 8px 12px;
   border: 1.5px solid #CFD8DC;
   border-radius: 8px;
-  font-family: 'Poppins', sans-serif;
+  // Was bare 'Poppins' — that skips Manrope entirely instead of falling back to it.
+  font-family: 'Manrope', 'Poppins', sans-serif;
   font-size: 12px;
   color: var(--pr-color-secondary-400);
   outline: none;

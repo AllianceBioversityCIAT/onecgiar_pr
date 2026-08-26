@@ -90,7 +90,6 @@ describe('PolicyChangeInfoComponent', () => {
     });
   });
 
-
   describe('changeAnswerBoolean()', () => {
     it('should set answer_boolean to true for the selected value', () => {
       const valueToSelect = 'someValue';
@@ -187,6 +186,52 @@ describe('PolicyChangeInfoComponent', () => {
 
       expect(spyPATCH_policyChanges).toHaveBeenCalled();
       expect(spyGetSectionInformation).toHaveBeenCalled();
+    });
+  });
+
+  describe('clearAmountWhenNotApplicable() — P2-3371 AC05', () => {
+    it('keeps the USD amount and its status while the policy type is "Program, budget or investment"', () => {
+      component.innovationUseInfoBody.policy_type_id = 1;
+      component.innovationUseInfoBody.amount = 250000;
+      component.innovationUseInfoBody.status_amount = 1;
+
+      component.clearAmountWhenNotApplicable();
+
+      expect(component.innovationUseInfoBody.amount).toBe(250000);
+      expect(component.innovationUseInfoBody.status_amount).toBe(1);
+    });
+
+    it('drops the USD amount and its status as soon as another policy type is chosen', () => {
+      component.innovationUseInfoBody.policy_type_id = 2;
+      component.innovationUseInfoBody.amount = 250000;
+      component.innovationUseInfoBody.status_amount = 1;
+
+      component.clearAmountWhenNotApplicable();
+
+      expect(component.innovationUseInfoBody.amount).toBeNull();
+      expect(component.innovationUseInfoBody.status_amount).toBeNull();
+    });
+
+    it('does not send an amount that the form no longer shows (the two fields are hidden for policy types other than 1)', () => {
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_policyChanges');
+      component.innovationUseInfoBody.policy_type_id = 3;
+      component.innovationUseInfoBody.amount = 250000;
+      component.innovationUseInfoBody.status_amount = 2;
+
+      component.onSaveSection();
+
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ amount: null, status_amount: null }));
+    });
+
+    it('still sends the amount when the policy type does show the field', () => {
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_policyChanges');
+      component.innovationUseInfoBody.policy_type_id = 1;
+      component.innovationUseInfoBody.amount = 250000;
+      component.innovationUseInfoBody.status_amount = 1;
+
+      component.onSaveSection();
+
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ amount: 250000, status_amount: 1 }));
     });
   });
 

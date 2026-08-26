@@ -13,11 +13,14 @@
     "test:coverage:html": "jest --coverage --coverageReporters=text-summary --coverageReporters=cobertura --coverageReporters=lcov",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
+    "start:e2e": "ng serve --configuration e2e",
     "tunnel": "ng serve --allowed-hosts true --host 0.0.0.0",
-    "cypress:open": "cypress open",
-    "cypress:run": "cypress run",
+    "cypress:open": "cypress open --e2e",
+    "cypress:run": "ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--max-old-space-size=2048 cypress run --e2e",
     "cypress:component": "cypress open --component",
-    "test:ct": "cypress run --component"
+    "test:ct": "ELECTRON_EXTRA_LAUNCH_ARGS=--js-flags=--max-old-space-size=2048 cypress run --component",
+    "test:ct:batch": "node scripts/run-ct-batched.js",
+    "cypress:run:video": "CYPRESS_VIDEO=true npm run cypress:run"
   },
   "private": true,
   "dependencies": {
