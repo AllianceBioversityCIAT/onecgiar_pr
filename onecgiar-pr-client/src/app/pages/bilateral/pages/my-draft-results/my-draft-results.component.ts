@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HlmButton } from '@spartan/button';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
 import { BilateralContextService } from '../../services/bilateral-context.service';
@@ -12,13 +13,36 @@ import { DraftEvidenceListComponent } from '../bilateral-ai-draft-detail/compone
 
 @Component({
   selector: 'app-my-draft-results',
-  imports: [CommonModule, RouterModule, HlmButton, PrDialogComponent, BilateralPageHeaderComponent, DraftResultCardComponent, DraftEvidenceListComponent],
+  imports: [
+    CommonModule,
+    RouterModule,
+    HlmButton,
+    PrDialogComponent,
+    BilateralPageHeaderComponent,
+    DraftResultCardComponent,
+    DraftEvidenceListComponent,
+    PrTooltipDirectiveModule,
+  ],
   templateUrl: './my-draft-results.component.html',
   styleUrl: './my-draft-results.component.scss',
 })
 export class MyDraftResultsComponent implements OnInit, OnDestroy {
   readonly bilateralAiService = inject(BilateralAiService);
   readonly ctx = inject(BilateralContextService);
+
+  /**
+   * P2-3316: plain-language notes for the three card actions. End users could not tell
+   * Review / Promote / Delete apart from the labels alone, so each one states what happens
+   * to the draft after the click. Wording matches the real behaviour, not the button name:
+   * Review only opens the read-only preview aside, Promote creates the actual result and
+   * navigates to it, Delete removes the draft for good.
+   */
+  readonly reviewTooltip =
+    'Preview everything the AI extracted from your files, next to the source evidence it used. Nothing is saved or created — the draft stays in this list.';
+  readonly promoteTooltip =
+    'Turn this draft into a real bilateral result. You will be asked to confirm first; after that the draft leaves this list and the new result opens for you to complete.';
+  readonly deleteTooltip =
+    'Delete this draft and everything the AI extracted from it. You will be asked to confirm first, and it cannot be undone.';
 
   promoteTarget = signal<BilateralAiDraft | null>(null);
   discardTarget = signal<BilateralAiDraft | null>(null);

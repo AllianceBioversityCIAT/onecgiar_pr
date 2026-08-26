@@ -67,15 +67,34 @@
             <span class="mdr-date">{{ formatDate(draft.created_date) }}</span>
 
             <div class="mdr-actions">
-              <button type="button" class="mdr-btn mdr-btn--review" (click)="onReview(draft)">
+              <button
+                type="button"
+                class="mdr-btn mdr-btn--review"
+                [prTooltip]="reviewTooltip"
+                prTooltipPosition="top"
+                (click)="onReview(draft)"
+              >
                 <i class="material-icons-round">visibility</i>
                 Review
               </button>
-              <button type="button" class="mdr-btn mdr-btn--promote" (click)="onPromoteClick(draft)">
+              <button
+                type="button"
+                class="mdr-btn mdr-btn--promote"
+                [prTooltip]="promoteTooltip"
+                prTooltipPosition="top"
+                (click)="onPromoteClick(draft)"
+              >
                 <i class="material-icons-round">arrow_upward</i>
                 Promote
               </button>
-              <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscardClick(draft)">
+              <button
+                type="button"
+                class="mdr-btn mdr-btn--discard"
+                aria-label="Delete draft"
+                [prTooltip]="deleteTooltip"
+                prTooltipPosition="top"
+                (click)="onDiscardClick(draft)"
+              >
                 <i class="material-icons-round">delete_outline</i>
               </button>
             </div>
