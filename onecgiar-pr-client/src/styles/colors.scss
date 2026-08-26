@@ -238,6 +238,24 @@
   --pr-status-approved-fg: #047857;
   --pr-status-approved-bg: #d1fae5;
 
+  // ── Feedback (danger / warning) — P2-3481 groundwork, mockup 26-Aug.
+  // The mockup names a full danger family that this file never had, so components in the revamp
+  // hard-coded the hexes instead (#b91c1c and #fef2f2 appear raw across bilateral). Declared here
+  // so those raw values have somewhere to go. NOT the same as --pr-color-red-300 (#d00416), which
+  // is the legacy PRMS red and stays where it is — mixing the two is how a "required field" marker
+  // ends up looking like an error banner.
+  --pr-danger: #b91c1c; // mockup --danger
+  --pr-danger-bg: #fef2f2; // mockup --danger-bg
+  --pr-danger-soft: #fee2e2; // mockup --danger-soft
+  // --pr-field-required-fg (#b42318) is already the mockup's --danger-strong. Not duplicated.
+  --pr-warning-strong: #92400e; // mockup --warning-strong, darker than --pr-status-in-progress-fg
+
+  // ── Two surface steps the mockup uses and this file lacked. Both sit between --pr-surface-card
+  // (#ffffff) and --pr-surface-app (#f7f7f9); without them the revamp reached for Material's
+  // #fafafa / #eceff1, which is why three foreign palettes leaked in.
+  --pr-surface-raised-soft: #fafafb; // mockup --surface-2
+  --pr-surface-sunken: #f3f2f7; // mockup --surface-5
+
   // ── Programme-level bucket chips (Reporting tab card headers).
   // These qualify a card's KIND — "Intermediate", "2030" — and are deliberately NOT the status
   // tokens above. The 2030 pair reads green, and #d1fae5 is literally --pr-status-approved-bg, so
