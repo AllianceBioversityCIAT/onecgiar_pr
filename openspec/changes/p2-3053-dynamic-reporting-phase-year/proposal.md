@@ -33,4 +33,4 @@ The active reporting phase already resolves correctly to 2026 elsewhere via `Dat
 - **No backend changes.** Year source is the already-loaded `reportingCurrentPhase.phaseYear`.
 - No API contract changes, no migrations.
 - **Explicitly NOT touched:** `outcome-indicator-home.component.html` "2022-2024" (intentional P25 baseline); `indicator-details` "2024" / `achieved_in_2024` (backend field, tagged as separate scope).
-- SDD baseline: fits `docs/system-design/design.md` (Result Framework reporting views). Related ticket: parent P2-3012.
+- SDD baseline: fits `docs/ux-ui/design.md` (Result Framework reporting views). Related ticket: parent P2-3012.

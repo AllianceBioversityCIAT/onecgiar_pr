@@ -21,5 +21,5 @@ This change is **frontend-only**. No backend work is required.
 
 - **Code (frontend, 1 file):** `onecgiar-pr-client/src/app/custom-fields/lead-contact-person-field/lead-contact-person-field.component.scss` — add `isolation: isolate` to `.contact-select-wrapper`.
 - **Related component (unchanged):** `onecgiar-pr-client/src/app/custom-fields/save-button/save-button.component.scss` — the fixed feedback widget at `z-index: 5` whose layering must win.
-- **SDD baseline:** touches client UI layering; consistent with `docs/system-design/design.md` (component layering / overlays). No API, DTO, or `docs/detailed-design/detailed-design.md` data-model impact.
+- **SDD baseline:** touches client UI layering; consistent with `docs/ux-ui/design.md` (component layering / overlays). No API, DTO, or `docs/trd/trd.md` data-model impact.
 - **APIs / dependencies / backend:** none.

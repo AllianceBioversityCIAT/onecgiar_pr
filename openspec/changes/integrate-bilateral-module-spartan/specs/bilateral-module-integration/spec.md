@@ -61,8 +61,8 @@ Bilateral module surfaces SHALL use the brand design line: violet accent (`#6b6d
 - **THEN** accents, headers, buttons, focus states and badges use the brand tokens and no legacy PrimeNG-look styling remains
 
 ### Requirement: Brand rules documented in system design baseline
-`docs/system-design/design.md` SHALL document the current brand design line (violet accent ramp, chrome gradient usage, Tailwind-first styling rule, icon set) so future modules can cite it.
+`docs/ux-ui/design.md` SHALL document the current brand design line (violet accent ramp, chrome gradient usage, Tailwind-first styling rule, icon set) so future modules can cite it.
 
 #### Scenario: Rules present
-- **WHEN** a developer consults `docs/system-design/design.md` for visual rules
+- **WHEN** a developer consults `docs/ux-ui/design.md` for visual rules
 - **THEN** the violet/chrome brand line and Tailwind-first rule are explicitly stated (added under Design Decisions if previously absent)

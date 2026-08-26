@@ -166,7 +166,7 @@ Each step is independently verifiable. **Step 0 is not optional** — nothing af
 5. **Button recipe.** Fix `hover:bg-primary/80` (D4) and add the `brand` / `brandSoft` cva variants (§3.3). *Verify:* recompute white-on-hover ≥ 4.5:1.
 6. **Bulk repoints.** Apply the two D2 patterns. *Verify:* hit counts match the pre-run grep exactly; re-running changes nothing.
 7. **Individual edits.** The `header-panel` gradients, `#5457b0` ×2, `header-panel.component.html:370-371`, and `mds-progress-ring.component.spec.ts:30,36`. *Verify:* the old-brand grep (`#6b6dc4|#6461bc|#5569dd|#5457b0`) reaches 0 in scope, with the out-of-scope exclusions listed rather than silently passing.
-8. **Docs.** Correct `CLAUDE.md` §1 and the 22 `reportingTheme.ts` references; reference `UI-RULES.md` from `CLAUDE.md` and `AGENTS.md`; update `docs/system-design/design.md` §5 and §12.
+8. **Docs.** Correct `CLAUDE.md` §1 and the 22 `reportingTheme.ts` references; reference `UI-RULES.md` from `CLAUDE.md` and `AGENTS.md`; update `docs/ux-ui/design.md` §5 and §12.
 9. **Full gate.** `lint` + `test:coverage` + `test:ct` green; capture the "after" screenshots and diff against Step 0.
 10. **Remove `:root.dark`** (D7), in its own commit, only once Step 9 is clean.
 

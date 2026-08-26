@@ -63,8 +63,8 @@ The field only exists in the `P2-2928-TOC-Improvements` epic (introduced by P2-3
 - Precedent: `P2-2928-TOC-Improvements-statement-fix` (P2-3202) followed this exact path and is already merged into the epic.
 
 **SDD baseline**
-- `docs/system-design/design.md` — read-only field presentation and labelling in the result form.
-- `docs/detailed-design/detailed-design.md` — frontend state and ToC integration for Contributors & Partners.
+- `docs/ux-ui/design.md` — read-only field presentation and labelling in the result form.
+- `docs/trd/trd.md` — frontend state and ToC integration for Contributors & Partners.
 - Related delivered work: P2-3063 (introduced the field), P2-3036 AC7 (grouped Unit of measurement + Target beneath it).
 
 **Consistency note**

@@ -1,8 +1,8 @@
-# PRMS — System Design (UI/UX Blueprint)
+# PRMS — UX/UI Design (UI/UX System Blueprint)
 
-> **Status:** Living document. Authoritative UI/UX system blueprint for PRMS. Module-level UX specs live under `docs/specs/<module>/design.md`.
+> **Status:** Living document. Authoritative UI/UX system blueprint for PRMS. Formerly `docs/system-design/design.md` (migrated 2026-08-26). Module-level UX specs live under `docs/specs/<module>/design.md`.
 >
-> Companion docs: `docs/prd.md` (product), `docs/detailed-design/detailed-design.md` (technical).
+> Companion docs: `docs/prd.md` (product), `docs/trd/trd.md` (technical).
 
 This document defines **how PRMS looks, feels, and behaves** as a system — not the technical implementation. It is grounded in what currently exists in `onecgiar-pr-client/src/`: the PrimeNG-on-`reportingTheme` setup, the SCSS token system in `src/styles/`, and the established page module pattern under `src/app/pages/`.
 
@@ -422,7 +422,7 @@ The redesign (branches `front-redesign-fields` / `performance-refactor`) establi
 ## Related documents
 
 - `docs/prd.md` — Product requirements driving the UX.
-- `docs/detailed-design/detailed-design.md` — Technical blueprint behind the UI.
+- `docs/trd/trd.md` — Technical blueprint behind the UI.
 - `docs/specs/general-setup/design.md` — Template that module-level `design.md` files MUST follow.
 - `onecgiar-pr-client/CLAUDE.md` — Frontend operating instructions and API conventions.
 - `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` — Headless UX (payload shape) for bilateral consumers.

@@ -5,8 +5,8 @@ This is the **package-level guide** for the PRMS backend. It complements the roo
 > **Always read the root guide first.** Module-level work MUST follow the SDD methodology:
 >
 > - [`../docs/prd.md`](../docs/prd.md) — product baseline (personas, goals, acceptance criteria `AC-1..AC-9`).
-> - [`../docs/system-design/design.md`](../docs/system-design/design.md) — UX system (informs payload labels, validation messages, notification copy).
-> - [`../docs/detailed-design/detailed-design.md`](../docs/detailed-design/detailed-design.md) — technical blueprint this guide operationalizes.
+> - [`../docs/ux-ui/design.md`](../docs/ux-ui/design.md) — UX system (informs payload labels, validation messages, notification copy).
+> - [`../docs/trd/trd.md`](../docs/trd/trd.md) — technical blueprint this guide operationalizes.
 > - [`../docs/specs/general-setup/`](../docs/specs/general-setup/) — templates `/sdd-specify` MUST follow.
 > - [`docs/bilateral-result-summaries.en.md`](./docs/bilateral-result-summaries.en.md) — authoritative payload contract for `/api/bilateral/*`.
 >
@@ -383,13 +383,13 @@ When working on a server-side feature or fix:
 
 0. **Open the in-tree map.** [`src/CLAUDE.md`](./src/CLAUDE.md) describes the folder where you're about to work, the base classes you should extend, and the naming conventions you MUST preserve.
 1. **Confirm the spec.** Find or open `../docs/specs/<module>/requirements.md`, `design.md`, `task.md`. If missing, run `/sdd-specify` first — module templates live in `../docs/specs/general-setup/`.
-2. **Cite the baseline.** Reference the relevant `G#`, `US-*`, `AC-*` ids from `../docs/prd.md`, and the workflow id (`W1..W8`) and module section from `../docs/detailed-design/detailed-design.md`.
+2. **Cite the baseline.** Reference the relevant `G#`, `US-*`, `AC-*` ids from `../docs/prd.md`, and the workflow id (`W1..W8`) and module section from `../docs/trd/trd.md`.
 3. **Implement.** Follow this guide's conventions (routing, JWT, DTO, validation, response envelope).
 4. **Migrate.** Add a migration if you touched entities; verify `migration:check` locally.
 5. **Test.** Unit + integration + payload-shape tests where relevant. Keep coverage above the thresholds.
 6. **Update docs.**
    - If `/api/bilateral/*` or `/api/platform-report/*` changed: add a change-log row in [`docs/bilateral-result-summaries.en.md`](./docs/bilateral-result-summaries.en.md).
-   - If module shape changed at the project level: refresh `../docs/detailed-design/detailed-design.md`.
+   - If module shape changed at the project level: refresh `../docs/trd/trd.md`.
 7. **Commit.** Use the project commit format.
 8. **Roll out.** Follow the rollout & verification checklist in the module's `task.md`.
 

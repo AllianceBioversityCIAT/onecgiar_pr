@@ -24,4 +24,4 @@ Jira ticket: **P2-3036**.
 
 - `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component.html` — remove one `@if (!isCP2026())` wrapper.
 - No backend, no API, no service changes. `isCP2026()` stays in use for the other redesign deltas.
-- SDD baseline: UI behavior of the P25 Contributors & Partners section (`docs/system-design/design.md`). Module spec capability touched: `contributors-phase-gating` (introduced by the archived P2-3036 phase-year-gating change).
+- SDD baseline: UI behavior of the P25 Contributors & Partners section (`docs/ux-ui/design.md`). Module spec capability touched: `contributors-phase-gating` (introduced by the archived P2-3036 phase-year-gating change).

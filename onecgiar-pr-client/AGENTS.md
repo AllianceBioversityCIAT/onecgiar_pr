@@ -14,8 +14,8 @@ Legacy note: `CLAUDE.md` is the Claude-specific mirror. This file is standalone 
 Frontend work must follow the SDD methodology:
 
 - `../docs/prd.md`: product baseline, personas, goals, `AC-1..AC-9`.
-- `../docs/system-design/design.md`: UI/UX system blueprint, tokens, components, flows, accessibility. This is the canonical reference for visual or interaction decisions.
-- `../docs/detailed-design/detailed-design.md`: technical blueprint, frontend module layout, API surfaces, integrations.
+- `../docs/ux-ui/design.md`: UI/UX system blueprint, tokens, components, flows, accessibility. This is the canonical reference for visual or interaction decisions.
+- `../docs/trd/trd.md`: technical blueprint, frontend module layout, API surfaces, integrations.
 - `../docs/specs/general-setup/`: templates for module specs.
 
 ## Project Overview
@@ -141,7 +141,7 @@ Prefer this layout for new features. Cross-cutting primitives go to `shared/`.
 
 ## Theming And Design System
 
-Authoritative reference: `../docs/system-design/design.md`.
+Authoritative reference: `../docs/ux-ui/design.md`.
 
 - SCSS tokens live in `src/styles/colors.scss` and `src/styles/fonts.scss`.
 - Custom variables and classes use `--pr-` and `.pr-` prefixes.
@@ -222,12 +222,12 @@ When working on a frontend feature or fix:
 1. Open `src/AGENTS.md` before editing under `src/`.
 2. Confirm the spec under `../docs/specs/<module>/`.
 3. If the spec is missing, create or request it using the templates in `../docs/specs/general-setup/`.
-4. Cite relevant `G#`, `US-*`, and `AC-*` IDs from `../docs/prd.md` and screen/flow/component rules from `../docs/system-design/design.md`.
+4. Cite relevant `G#`, `US-*`, and `AC-*` IDs from `../docs/prd.md` and screen/flow/component rules from `../docs/ux-ui/design.md`.
 5. Implement using routing, interceptor, service, shared-component, token, and i18n conventions.
 6. Test with Jest and Cypress where applicable.
 7. Verify UI changes in the browser; a passing build is not enough.
-8. Update `../docs/system-design/design.md` when establishing a reusable UX pattern.
-9. Update `../docs/detailed-design/detailed-design.md` when adding a client surface or integration.
+8. Update `../docs/ux-ui/design.md` when establishing a reusable UX pattern.
+9. Update `../docs/trd/trd.md` when adding a client surface or integration.
 10. Commit only when explicitly asked, using project commit format.
 
 ## Quick Reference Paths
