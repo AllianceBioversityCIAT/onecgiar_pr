@@ -326,13 +326,13 @@ GET_resultById(id: number) {
 ## SDD Workflow Inside `src/`
 
 1. Confirm the spec at `../../docs/specs/<module>/`.
-2. Cite `G#`, `US-*`, `AC-*` from `../../docs/prd.md` and screen/flow/component rules from `../../docs/system-design/design.md`.
+2. Cite `G#`, `US-*`, `AC-*` from `../../docs/prd.md` and screen/flow/component rules from `../../docs/ux-ui/design.md`.
 3. Implement using existing folder, route, service, interceptor, guard, and theme patterns.
 4. Update interfaces if API contracts changed.
 5. Add or update co-located tests.
 6. Do not lower coverage.
 7. Verify UI changes in browser.
-8. Promote reusable UX patterns to `../../docs/system-design/design.md`.
+8. Promote reusable UX patterns to `../../docs/ux-ui/design.md`.
 9. Commit only when explicitly asked.
 
 ## Quick Reference Paths

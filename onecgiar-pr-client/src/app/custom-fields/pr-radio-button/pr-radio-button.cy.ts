@@ -126,4 +126,78 @@ describe('PrRadioButtonComponent (CT)', () => {
       });
     });
   });
+
+  describe('variant="segmented"', () => {
+    const SEGMENTED_OPTIONS = [
+      { id: 1, full_name: '(0) Not Targeted' },
+      { id: 2, full_name: '(1) Significant' },
+      { id: 3, full_name: '(2) Principal' }
+    ];
+
+    const SEGMENTED_BUTTON = 'button[role="radio"]';
+
+    const SEGMENTED_TEMPLATE = `
+      <app-pr-radio-button
+        label="Impact Area Score"
+        variant="segmented"
+        [options]="options"
+        optionValue="id"
+        optionLabel="full_name"
+        [disabled]="disabled"
+        [isStatic]="isStatic"
+        (selectOptionEvent)="onSelect()"
+        [(ngModel)]="model">
+      </app-pr-radio-button>`;
+
+    const mountSegmented = (model: number | null, disabled = false, isStatic = true) => {
+      const onSelect = cy.stub().as('select');
+      return mountCF(SEGMENTED_TEMPLATE, {
+        componentProperties: { options: SEGMENTED_OPTIONS, model, disabled, isStatic, onSelect }
+      });
+    };
+
+    it('renders segmented buttons with digits and text', () => {
+      mountSegmented(null);
+      cy.get(SEGMENTED_BUTTON).should('have.length', 3);
+      cy.get(SEGMENTED_BUTTON).eq(0).should('contain.text', '0').and('contain.text', 'Not Targeted');
+      cy.get(SEGMENTED_BUTTON).eq(1).should('contain.text', '1').and('contain.text', 'Significant');
+      cy.get(SEGMENTED_BUTTON).eq(2).should('contain.text', '2').and('contain.text', 'Principal');
+    });
+
+    it('clicking an unselected segment button updates bound model, adds active styles, and emits', () => {
+      mountSegmented(null).then(w => {
+        cy.get(SEGMENTED_BUTTON).eq(0).click();
+        cy.wrap(null).then(() => expect((w.component as any).model).to.equal(1));
+        cy.get(SEGMENTED_BUTTON).eq(0).should('have.attr', 'aria-checked', 'true').and('have.class', 'bg-white');
+        cy.get('@select').should('have.been.called');
+      });
+    });
+
+    it('re-clicking selected segment clears model to null', () => {
+      mountSegmented(1).then(w => {
+        cy.get(SEGMENTED_BUTTON).eq(0).click();
+        cy.wrap(null).then(() => expect((w.component as any).model).to.equal(null));
+        cy.get(SEGMENTED_BUTTON).eq(0).should('have.attr', 'aria-checked', 'false');
+      });
+    });
+
+    it('switching to another segment updates model', () => {
+      mountSegmented(1).then(w => {
+        cy.get(SEGMENTED_BUTTON).eq(2).click();
+        cy.wrap(null).then(() => expect((w.component as any).model).to.equal(3));
+        cy.get(SEGMENTED_BUTTON).eq(2).should('have.attr', 'aria-checked', 'true');
+        cy.get(SEGMENTED_BUTTON).eq(0).should('have.attr', 'aria-checked', 'false');
+      });
+    });
+
+    it('does not modify model, emit, or apply active styles when disabled', () => {
+      mountSegmented(null, true, false).then(w => {
+        cy.get(SEGMENTED_BUTTON).should('have.length', 3).and('be.disabled');
+        cy.get(SEGMENTED_BUTTON).eq(0).click({ force: true });
+        cy.wrap(null).then(() => expect((w.component as any).model).to.be.null);
+        cy.get('@select').should('not.have.been.called');
+        cy.get(SEGMENTED_BUTTON).eq(0).should('have.attr', 'aria-checked', 'false');
+      });
+    });
+  });
 });

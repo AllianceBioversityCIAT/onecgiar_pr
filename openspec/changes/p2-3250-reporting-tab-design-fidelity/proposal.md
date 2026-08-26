@@ -17,7 +17,7 @@ they are handed back to the user as Jira work (see *Out of scope*).
 Jira: **P2-3250** (`General Enhancements`, child of epic **P2-3172** `Reporting Tool - Revamp`) — the
 same parent that already holds the two accepted Reporting-tab tweaks P2-3251 and P2-3252.
 
-Baseline: `docs/system-design/design.md` (screens, tokens, components), `docs/prd.md`.
+Baseline: `docs/ux-ui/design.md` (screens, tokens, components), `docs/prd.md`.
 Client rules: `onecgiar-pr-client/CLAUDE.md` §5 (Tailwind-first, no hardcoded hex, no rem type
 utilities), `onecgiar-pr-client/docs/DESIGN-DEVIATIONS.md`.
 

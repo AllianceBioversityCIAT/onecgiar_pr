@@ -78,7 +78,7 @@
 - [ ] 10.1 Correct `CLAUDE.md` §1: the stack is **Angular 21.2 + Tailwind 4 + Spartan**, not "Angular 19 + PrimeNG 19". An agent reading the current text will generate PrimeNG into a codebase that deliberately removed it
 - [ ] 10.2 Remove the 22 stale references to `src/app/theme/reportingTheme.ts` across `CLAUDE.md`, `src/CLAUDE.md` and `AGENTS.md` — the file and its directory were deleted in `50710ea38`. This includes the now-obsolete rule "update SCSS first and mirror it in the TS theme"
 - [ ] 10.3 Reference `docs/reporting-redesign/UI-RULES.md` from `CLAUDE.md` and `AGENTS.md` as the authority for redesign surfaces
-- [ ] 10.4 Update `docs/system-design/design.md` §5 (Theming / tokens) and §12 (Design Decisions) to match the new token layer
+- [ ] 10.4 Update `docs/ux-ui/design.md` §5 (Theming / tokens) and §12 (Design Decisions) to match the new token layer
 - [ ] 10.5 Record in `docs/reporting-redesign/MIGRATION-CONTEXT.md` which decisions were taken for the design's open questions
 
 ## 11. Gate

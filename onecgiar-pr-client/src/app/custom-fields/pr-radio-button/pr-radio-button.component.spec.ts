@@ -199,18 +199,15 @@ describe('RadioButtonComponent', () => {
    * `aria-checked="false"` on all fifteen buttons, "0 of 5 impact areas scored", and no request.
    */
   describe('segmented variant writes the value on click', () => {
-    /**
-     * The Impact Area shape: `full_name` is `(${id - 1}) ${title}`, which is what the track splits
-     * into a mono digit + wording. Values are passed in so a group can be built with `0` as a real,
-     * selectable answer.
-     */
-    const renderSegmented = (values: any[] = [1, 2, 3], preloaded: any = null): ComponentFixture<PrRadioButtonComponent> => {
+    const renderSegmented = (values: any[] = [1, 2, 3], preloaded: any = null, disabled = false, readOnly = false): ComponentFixture<PrRadioButtonComponent> => {
       const f = TestBed.createComponent(PrRadioButtonComponent);
       const c = f.componentInstance;
       c.variant = 'segmented';
       c.options = values.map((id, i) => ({ id, full_name: `(${i}) Score ${i}` }));
       c.optionLabel = 'full_name';
       c.optionValue = 'id';
+      c.disabled = disabled;
+      c.readOnly = readOnly;
       // Seeded BEFORE the first pass: writing it between two change-detection runs trips NG0100 on
       // `hasValue`, which says nothing about the component.
       if (preloaded !== null) c.writeValue(preloaded);
@@ -240,7 +237,6 @@ describe('RadioButtonComponent', () => {
       expect(group.componentInstance.value).toBe(2);
       expect(group.componentInstance.hasValue).toBe(true);
       expect(checkedFlags(group)).toEqual(['false', 'true', 'false']);
-      // The form is told: this is what makes the section complete and the PATCH fire.
       expect(emitted).toEqual([2]);
     });
 
@@ -259,11 +255,6 @@ describe('RadioButtonComponent', () => {
       expect(emitted).toEqual([1, 3]);
     });
 
-    /**
-     * ⚠️ The regression to guard forever: on a `0 / 1 / 2` scale, `0` is a legitimate score
-     * ("Not targeted"). Any falsy test in the write path leaves the lowest score as the one answer
-     * that cannot be given — i.e. Gender and Climate broken exactly where most results sit.
-     */
     it('treats 0 as a real answer, not as empty', () => {
       const group = renderSegmented([0, 1, 2]);
       const emitted: any[] = [];
@@ -276,7 +267,6 @@ describe('RadioButtonComponent', () => {
       expect(group.componentInstance.hasValue).toBe(true);
       expect(checkedFlags(group)).toEqual(['true', 'false', 'false']);
       expect(emitted).toEqual([0]);
-      // The class the mandatory-field scan reads must agree with `hasValue`.
       expect(group.nativeElement.querySelector('.pr-field').classList).toContain('complete');
     });
 
@@ -381,17 +371,20 @@ describe('RadioButtonComponent', () => {
 
       expect(spy).toHaveBeenCalledTimes(1);
     });
+
+    it('does not modify value when disabled or readOnly', () => {
+      const groupDisabled = renderSegmented([1, 2, 3], null, true, false);
+      segmentsOf(groupDisabled)[0].click();
+      groupDisabled.detectChanges();
+      expect(groupDisabled.componentInstance.value).toBeFalsy();
+
+      const groupReadOnly = renderSegmented([1, 2, 3], null, false, true);
+      segmentsOf(groupReadOnly)[0].click();
+      groupReadOnly.detectChanges();
+      expect(groupReadOnly.componentInstance.value).toBeFalsy();
+    });
   });
 
-  /**
-   * Non-regression: the segmented fix must not reach the list variant, whose write path is the
-   * `[(ngModel)]` on the native radio and is untouched by it.
-   *
-   * These cases assert the VALUE contract and the rendered shape, not `input.checked`: under jsdom
-   * the radio's checkedness is reverted between the capture and the bubble phase of the very same
-   * click, so asserting it would pin an artifact of the test environment rather than the component.
-   * Real-browser coverage of the list variant lives in `pr-radio-button.cy.ts`.
-   */
   describe('list variant is unchanged', () => {
     const radiosOf = (f: ComponentFixture<PrRadioButtonComponent>): HTMLInputElement[] =>
       Array.from(f.nativeElement.querySelectorAll('input.pr-native-radio'));
@@ -416,21 +409,14 @@ describe('RadioButtonComponent', () => {
       expect(emitted).toEqual([2]);
     });
 
-    /**
-     * The list's `(click)` still routes to the bare `onSelect`, which ONLY deselects — the selection
-     * itself comes from `[(ngModel)]`. `onSegmentSelect` must not have leaked into this path, and
-     * `onSelect` must not have grown a select branch of its own.
-     */
     it('keeps `onSelect` deselect-only: it clears the current answer and never sets one', () => {
       const group = renderGroup(['Yes', 'No']);
       const c = group.componentInstance;
 
-      // A different option: the click handler alone writes nothing (ngModel does that).
       c.writeValue(1);
       c.onSelect(2);
       expect(c.value).toBe(1);
 
-      // The selected one: cleared, as it has been since LFUB-567.
       c.onSelect(1);
       expect(c.value).toBeNull();
     });

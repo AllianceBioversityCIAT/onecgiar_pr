@@ -842,10 +842,10 @@ P22 already enforces Lead Center/Partner via `app-pr-select [required]`. P25 use
 When you sit down to edit anything in this tree:
 
 1. Confirm the spec at `../../docs/specs/<module>/` (`requirements.md`, `design.md`, `task.md`). If missing, run `/sdd-specify` first — templates live in `../../docs/specs/general-setup/`.
-2. Cite `G#`, `US-*`, `AC-*` from `../../docs/prd.md` and the screen / flow / component rule from `../../docs/system-design/design.md`.
+2. Cite `G#`, `US-*`, `AC-*` from `../../docs/prd.md` and the screen / flow / component rule from `../../docs/ux-ui/design.md`.
 3. Implement using the folder patterns in §3 / §8 / §9 / §10 / §14, the service shape in §21, and the interceptor / guard / theme rules in §6–7 / §13 / §19.
 4. Update typed interfaces under `app/shared/interfaces/` if API contracts changed.
 5. Tests co-located. Don't lower coverage (client thresholds 50/60/60/60).
 6. **Verify in the browser.** UI changes are not "done" because the build passes — run `npm start` and exercise the flow.
-7. If you introduced a new UX pattern that should be reused, promote it to `../../docs/system-design/design.md` (§12 Design Decisions).
+7. If you introduced a new UX pattern that should be reused, promote it to `../../docs/ux-ui/design.md` (§12 Design Decisions).
 8. Commit using the project's `<emoji> <type>(<scope>) [ticket]: <description>` convention.

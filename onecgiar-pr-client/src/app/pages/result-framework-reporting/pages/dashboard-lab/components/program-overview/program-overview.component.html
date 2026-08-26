@@ -1,7 +1,7 @@
 <!--
   Overview — approved live design (`.design-snapshots/PRMS-Reporting.dc.html`, `showOverview`).
   12-col · gap 16px · pad 32px · cards white / 1px --pr-border / radius 12 / pad 20
-  Order: About 12 · OwnCats 6 + BilCats 6 · Status 12 · BilContrib 6 + AoW 6
+  Order: About 12 · OwnCats 6 + BilCats 6 · Status 12 · BilCenters 6 + AoW 6
   Reporting pace / Needs attention / Impact so far were REMOVED (P2-3298 / P2-3300 / P2-3299).
   ⚠️ html is 12px — only arbitrary px values.
 -->
@@ -151,42 +151,45 @@
     }
   </section>
 
-  <!-- 5 · Bilateral contributions · span 6 — the three counts P2-3302 names verbatim. -->
+  <!-- 5 · Centers with reported W3/bilateral results · span 6 -->
   <section
     class="col-span-6 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
-    <h2 class="m-0 mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
-      Bilateral contributions
-    </h2>
+    <div class="flex items-center gap-[8px]">
+      <h2 class="m-0 mb-[6px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+        Centers with reported W3/bilateral results
+      </h2>
+    </div>
+    <span class="mb-[16px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+      Centers reporting W3 and bilateral results for this program
+    </span>
 
-    @if (bilateralRoles().length) {
+    @if (bilateralCenters().length) {
       <div class="flex flex-col">
-        @for (row of bilateralRoles(); track row.key) {
-          <div
-            class="flex min-h-[48px] items-center gap-[10px] border-t border-[var(--pr-border-divider)] px-[6px] py-[8px] first:border-t-0">
-            <span class="min-w-0 flex-1 text-[14px] font-normal text-[var(--pr-text)]">{{ row.label }}</span>
-            <span class="pr-figure flex-none text-[16px] font-semibold text-[var(--pr-text-heading)]">{{ row.count }}</span>
-          </div>
+        @for (bar of bilateralCenters(); track bar.name) {
+          <button
+            type="button"
+            disabled
+            class="flex min-h-[36px] cursor-default items-center gap-[12px] rounded-[8px] border-none bg-transparent px-[6px] text-left"
+            [attr.aria-label]="bar.name + ': ' + bar.count + (bar.count === 1 ? ' result' : ' results')">
+            <span class="min-w-0 max-w-[180px] flex-auto truncate text-[13px] font-normal text-[var(--pr-text)]" [title]="bar.name">
+              {{ bar.name }}
+            </span>
+            <span
+              class="h-[8px] min-w-[64px] flex-auto overflow-hidden rounded-full bg-[var(--pr-border-divider)]"
+              aria-hidden="true">
+              <span class="block h-[8px] rounded-full bg-[var(--pr-chart-2)]" [style.width.%]="centerWidth(bar)"></span>
+            </span>
+            <span class="pr-figure-sm min-w-[32px] flex-none text-right text-[14px] font-semibold text-[var(--pr-text-heading)]">
+              {{ bar.count }}
+            </span>
+          </button>
         }
       </div>
     } @else {
       <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">
-        No bilateral results are linked to this program yet.
+        No centers have reported bilateral results for this program yet.
       </p>
     }
-
-    <!-- The design's "Of those where this program is primary" status breakdown. NO ticket asks
-         for it — P2-3302 names four figures and a review-state histogram is not one of them —
-         and Reporting status above already shows a status legend on this same tab. Shown but
-         inert so the screen matches the design and nothing is silently dropped. -->
-    <div class="mt-[16px] flex flex-col border-t border-[var(--pr-border-divider)] pt-[16px]">
-      <div class="flex items-center gap-[8px]">
-        <span class="text-[13px] font-normal text-[var(--pr-text-muted)]">Of those where this program is primary</span>
-        <ng-container [ngTemplateOutlet]="comingSoon" />
-      </div>
-      <p class="m-0 pt-[8px] text-[14px] font-normal text-[var(--pr-text-secondary)]">
-        A breakdown by review status is not shown yet.
-      </p>
-    </div>
   </section>
 
   <!-- 6 · Progress by area of work · span 6 (+ xcut footer) -->

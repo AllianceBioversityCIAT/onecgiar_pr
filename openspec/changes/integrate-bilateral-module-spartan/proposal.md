@@ -2,7 +2,7 @@
 
 > **Scope type:** full-stack merge, **frontend-only implementation work**. Server files arrive already implemented by Juanda's branch (merge-only, conflict resolution preserves both sides — no new backend logic is authored here).
 > **Jira:** Epic [P2-2965](https://cgiarmel.atlassian.net/browse/P2-2965) (Bilateral AI-driven evidence quality assessment module).
-> **Baseline:** `docs/prd.md`, `docs/system-design/design.md` (UI/UX), `docs/detailed-design/detailed-design.md`, `docs/specs/bilateral-ai-workflow/` (Juanda's spec, arrives with the merge).
+> **Baseline:** `docs/prd.md`, `docs/ux-ui/design.md` (UI/UX), `docs/trd/trd.md`, `docs/specs/bilateral-ai-workflow/` (Juanda's spec, arrives with the merge).
 
 ## Why
 
@@ -24,7 +24,7 @@ Juanda developed the bilateral result-creation module (branch `origin/001-AI-Dri
   - Remove `primeng/*` imports and any dead PrimeNG module wiring.
 - **Angular 21 compatibility pass**: template-bound async booleans → signals (known Ng21+Spartan CD gotcha), standalone/NgModule wiring, control-flow consistency.
 - **Brand/UI alignment**: restyle the bilateral module surfaces to the new design line — violet accent `#6b6dc4` (`brand-*` tokens), navy-carbon chrome gradient `#1e202f → #1f2235`, Poppins, material-icons-round, **new styles in Tailwind only** (no new custom SCSS classes).
-- **Document the brand rules** in `docs/system-design/design.md` if the violet/chrome design line is not yet captured there (it currently describes the pre-redesign token set).
+- **Document the brand rules** in `docs/ux-ui/design.md` if the violet/chrome design line is not yet captured there (it currently describes the pre-redesign token set).
 - **Verification**: production build green, Jest suite green (including Juanda's specs), module exercised in the browser end-to-end.
 
 ## Capabilities
@@ -39,5 +39,5 @@ Juanda developed the bilateral result-creation module (branch `origin/001-AI-Dri
 
 - **Client:** new `src/app/pages/bilateral/` (~90 files), conflict-touched admin/user-management, RFR home, header-panel, routing tables; deletion of `primeng-custom-styles.scss` upheld.
 - **Server:** ~53 files arrive from Juanda's branch via merge (bilateral endpoints, clarisa mappings, center-user role). No new server logic authored; deploy of those endpoints remains Juanda's side.
-- **Docs:** `docs/specs/bilateral-ai-workflow/` arrives with merge; `docs/system-design/design.md` gains the current brand design-line rules if absent.
+- **Docs:** `docs/specs/bilateral-ai-workflow/` arrives with merge; `docs/ux-ui/design.md` gains the current brand design-line rules if absent.
 - **Risk:** RFR home and user-management are heavily diverged — resolution must preserve our redesign AND his features; mitigated by post-merge build/test/browser gates and adversarial review.

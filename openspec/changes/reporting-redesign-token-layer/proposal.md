@@ -53,7 +53,7 @@ None. The 8 existing specs under `openspec/specs/` (`alert-display-behavior`, `a
 
 ## Impact
 
-**SDD baseline.** `docs/system-design/design.md` is the standing UI/UX authority, but for redesign surfaces `docs/reporting-redesign/UI-RULES.md` supersedes it (stated in that file's preamble); `design.md` §5 (Theming/tokens) and §12 (Design Decisions) must be updated to match once this phase merges. `docs/prd.md` and `docs/detailed-design/detailed-design.md` are unaffected — no product scope or technical architecture changes. No module spec under `docs/specs/` is affected.
+**SDD baseline.** `docs/ux-ui/design.md` is the standing UI/UX authority, but for redesign surfaces `docs/reporting-redesign/UI-RULES.md` supersedes it (stated in that file's preamble); `design.md` §5 (Theming/tokens) and §12 (Design Decisions) must be updated to match once this phase merges. `docs/prd.md` and `docs/trd/trd.md` are unaffected — no product scope or technical architecture changes. No module spec under `docs/specs/` is affected.
 
 **Files changed.**
 

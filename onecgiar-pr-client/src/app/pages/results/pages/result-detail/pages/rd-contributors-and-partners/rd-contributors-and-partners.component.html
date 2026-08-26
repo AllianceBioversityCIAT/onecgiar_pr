@@ -38,7 +38,7 @@
   <app-pr-yes-or-not
     data-testid="cp-field-result_toc_result.planned_result"
     [label]="tocQuestionLabel()"
-    [required]="!isAvisaInitiative()"
+    [required]="!isAvisaInitiative() && !isCP2026()"
     [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
     (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)"
     [readOnly]="isAvisaInitiative()">
@@ -363,7 +363,7 @@
     @for (contributor of this.rdPartnersSE.partnersBody?.contributors_result_toc_result; track contributor.initiative_id) {
       <app-pr-yes-or-not
         [label]="getContributorDescription(contributor)"
-        [required]="!!contributor?.result_toc_results?.length"
+        [required]="!isCP2026() && !!contributor?.result_toc_results?.length"
         [(ngModel)]="contributor.planned_result"
         (selectOptionEvent)="onPlannedResultChange(contributor)"
         [readOnly]="true"

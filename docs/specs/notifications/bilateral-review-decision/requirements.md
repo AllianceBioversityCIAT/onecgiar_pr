@@ -22,8 +22,8 @@ outside the system why a result came back.
 
 Baseline citations:
 - `docs/prd.md:190` — **AC-8 Observability and notifications**.
-- `docs/detailed-design/detailed-design.md:254` — **W4 Notifications**.
-- `docs/detailed-design/detailed-design.md:240` — "Every transition writes `result-review-history`
+- `docs/trd/trd.md:254` — **W4 Notifications**.
+- `docs/trd/trd.md:240` — "Every transition writes `result-review-history`
   and may emit notifications via `NotificationModule`."
 - `docs/specs/bilateral-ai-workflow/bilateral-spec.md:1169` — **UX Finding 5.3.1**, "No review
   history visible to submitters".
@@ -150,7 +150,7 @@ Baseline citations:
 - **OQ-2** — `ReviewActionEnum` declares `APPROVE='APPROVED'` / `REJECT='REJECTED'` / `UPDATE='UPDATE'`,
   but migration `1768572302006` created the column as `enum('APPROVE','REJECT')`. Needs a
   `SHOW CREATE TABLE result_review_history` per environment to confirm `'UPDATE'` is accepted.
-- **OQ-3** — AC4 asks for a "modal"; `docs/system-design/design.md:181-185` reserves modals for
+- **OQ-3** — AC4 asks for a "modal"; `docs/ux-ui/design.md:181-185` reserves modals for
   confirm/destroy/error and names "review comments" as a right-rail case (`:167`). Modal was chosen
   for literal AC compliance — flagged as a deliberate deviation.
 - **OQ-4** — In-app is a **third** channel next to D28's webhook and Appendix B's email. Recorded
@@ -159,7 +159,7 @@ Baseline citations:
 ## Required cross-references
 
 - `docs/prd.md` — AC-8
-- `docs/detailed-design/detailed-design.md` — W4, §240
-- `docs/system-design/design.md` — §6 drawers/modals, DD-10
+- `docs/trd/trd.md` — W4, §240
+- `docs/ux-ui/design.md` — §6 drawers/modals, DD-10
 - `docs/specs/auth/center-user/` — role model this depends on
 - `docs/specs/bilateral-ai-workflow/bilateral-spec.md` — D28, UX Findings 5.3.1 / 5.3.5

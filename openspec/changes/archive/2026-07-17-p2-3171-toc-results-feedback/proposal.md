@@ -31,5 +31,5 @@ No breaking changes. No API/DTO changes. No logic changes (AC3/AC5 are copy-only
   - `src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component.ts` (AC4, `tocQuestionInfoNote` CP2026 branch, line ~114).
   - `.../rd-contributors-and-partners/components/multiple-wps/multiple-wps.component.ts` (AC6, `completnessStatusValidation`, lines ~176–182).
 - **No server changes**, no migrations, no API contract changes. `toc_progressive_narrative` continues to be posted (empty) by the create-result modal.
-- **SDD baseline:** relates to `docs/system-design/design.md` (reporting UI copy) and the Contributors & Partners behavior established by P2-3036. Ticket: **P2-3171**.
+- **SDD baseline:** relates to `docs/ux-ui/design.md` (reporting UI copy) and the Contributors & Partners behavior established by P2-3036. Ticket: **P2-3171**.
 - **Out of scope (follow-up):** AC3, AC5 — pending Santi/Nicoleta clarification.
