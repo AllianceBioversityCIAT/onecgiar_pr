@@ -111,6 +111,16 @@ export class CapDevInfoComponent implements OnInit {
     this.capDevInfoRoutingBody.institutions = [];
   }
 
+  /**
+   * P2-3241. Feeds the hidden `appFeedbackValidation` reporter next to the organizations
+   * multi-select, which is what puts "Select organizations" in the bottom bar's missing-fields
+   * list. Mirrors the server's `COUNT(rbi.id) > 0` branch in `validation_capacity_dev_P25`:
+   * an organization is only demanded once the attendance question is answered "Yes".
+   */
+  get hasSelectedOrganizations(): boolean {
+    return (this.capDevInfoRoutingBody?.institutions?.length ?? 0) > 0;
+  }
+
   validate_capdev_term_id() {
     this.capDevInfoRoutingBody.capdev_term_id = this.capdev_term_id_2 ? this.capdev_term_id_2 : this.capdev_term_id_1;
   }
