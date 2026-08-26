@@ -67,8 +67,9 @@ describe('ProgramOverviewComponent', () => {
 
     expect(headings).toEqual([
       'About this program',
-      'Results by indicator category',
-      'Bilateral results by indicator category',
+      // P2-3481: the titles name the funding type, so a user can tell the two blocks apart.
+      'W1/W2 results by indicator category',
+      'W3/Bilateral results by indicator category',
       'Reporting status',
       'Bilateral contributions',
       'Progress by area of work'
