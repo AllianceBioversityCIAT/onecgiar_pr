@@ -62,13 +62,8 @@ describe('REPRO P2-3308 — multi-select acumula selecciones', () => {
 
   it('clic P1 → P2 → P3 deja los tres marcados', () => {
     clickOption('P1');
-    console.log('tras P1 → modelo:', codes(), '| checkboxes:', checked());
-
     clickOption('P2');
-    console.log('tras P2 → modelo:', codes(), '| checkboxes:', checked());
-
     clickOption('P3');
-    console.log('tras P3 → modelo:', codes(), '| checkboxes:', checked());
 
     expect(codes().sort()).toEqual(['P1', 'P2', 'P3']);
     expect(checked().sort()).toEqual(['P1', 'P2', 'P3']);
