@@ -1,6 +1,6 @@
 # pr-radio-button
 
-**Verified:** 2026-08-25 · branch performance-refactor · bc25304fb
+**Verified:** 2026-08-26 · branch performance-refactor · 75d56f2cd
 
 ## Qué es
 
@@ -35,6 +35,15 @@ El grupo de radios de toda la app. Dos formas en un solo componente: la **lista*
   Destapado el 25-ago-2026 probando en navegador los resultados 8906–8909 (P25, fase 2026), no por
   los tests. Hoy el clic entra por **`onSegmentSelect()`** (`:161-167`), que es quien asigna `value`.
   Todo botón nuevo que se añada a esta variante debe pasar por ahí.
+- ⚠️ **Read-only en la variante `segmented` era INDISTINGUIBLE del bug de P2-3477.** Los botones
+  deshabilitados quedaban con el mismo fondo, el mismo color y `opacity: 1`: la única pista era el
+  cursor, que no sale en una captura ni existe en táctil. Es decir, un formulario bloqueado se veía
+  exactamente igual que uno roto — que es justo cómo el defecto original llegó a QA descrito como
+  "los botones están inactivos". Hoy el track lleva `.segmented-track--readonly` (opacidad 0.6 +
+  `not-allowed`) y `aria-disabled`, ambos derivados de `segmentsDisabled` (`:135-137`), así que
+  `isStatic` los desactiva igual que al `[disabled]`. **La opacidad va en el track, no en los
+  segmentos**: el score elegido tiene que seguir legible (AC9), y atenuar solo los no elegidos se
+  leería como "estos no están disponibles, ese sí se puede tocar".
 - ⚠️ **Nunca uses una prueba de "falsy" en el camino de escritura de esta variante:** `0` es una
   respuesta legítima en una escala ordenada, y un `if (!value)` dejaría la puntuación más baja como la
   única imposible de dar. (En los Impact Area scores el `optionValue` es `id` 1-3 y el dígito visible

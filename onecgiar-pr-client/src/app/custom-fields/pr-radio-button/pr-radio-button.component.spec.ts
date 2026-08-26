@@ -302,6 +302,75 @@ describe('RadioButtonComponent', () => {
       expect(checkedFlags(group)).toEqual(['false', 'false', 'false']);
     });
 
+    /**
+     * P2-3477 AC9: read-only must be told apart from the defect this ticket reported. Both states
+     * paint fifteen buttons that do nothing when clicked, so `[disabled]` alone is not enough —
+     * with no visual difference a reporter cannot know whether the form is locked or broken, which
+     * is exactly how the original bug reached QA. The track therefore carries a state class and
+     * `aria-disabled`, and the chosen score stays painted underneath.
+     */
+    describe('read-only is visibly distinguishable (P2-3477 AC9)', () => {
+      const trackOf = (f: ComponentFixture<PrRadioButtonComponent>): HTMLElement => f.nativeElement.querySelector('[role="radiogroup"]');
+
+      /**
+       * Locked BEFORE the first pass, like `preloaded`: flipping `readOnly` between two
+       * change-detection runs trips NG0100 on the buttons' own `[disabled]`, which is an artefact
+       * of the test and says nothing about the component.
+       */
+      const renderLocked = (setup: (c: PrRadioButtonComponent) => void): ComponentFixture<PrRadioButtonComponent> => {
+        const f = TestBed.createComponent(PrRadioButtonComponent);
+        const c = f.componentInstance;
+        c.variant = 'segmented';
+        c.options = [1, 2, 3].map((id, i) => ({ id, full_name: `(${i}) Score ${i}` }));
+        c.optionLabel = 'full_name';
+        c.optionValue = 'id';
+        c.writeValue(2);
+        setup(c);
+        f.detectChanges();
+        return f;
+      };
+
+      it('marks neither the track nor the group while the field is editable', () => {
+        const group = renderSegmented([1, 2, 3], 2);
+
+        expect(trackOf(group).classList).not.toContain('segmented-track--readonly');
+        expect(trackOf(group).getAttribute('aria-disabled')).toBeNull();
+        expect(segmentsOf(group).every(b => b.disabled)).toBe(false);
+      });
+
+      it('marks the track read-only and keeps the selected score visible', () => {
+        const group = renderLocked(c => (c.readOnly = true));
+
+        expect(trackOf(group).classList).toContain('segmented-track--readonly');
+        expect(trackOf(group).getAttribute('aria-disabled')).toBe('true');
+        expect(segmentsOf(group).every(b => b.disabled)).toBe(true);
+        // The answer must survive the lock: read-only hides the controls, never the data.
+        expect(checkedFlags(group)).toEqual(['false', 'true', 'false']);
+      });
+
+      it('marks it read-only through the global role too, not only the local input', () => {
+        // The `beforeEach` fixture is attached to the same ApplicationRef and reads the same
+        // singleton, so flipping the role under it makes the tick raise NG0100 on IT rather than on
+        // the fixture under test. This block never uses it.
+        fixture.destroy();
+        TestBed.inject(RolesService).readOnly = true;
+        const group = renderLocked(() => undefined);
+
+        expect(trackOf(group).classList).toContain('segmented-track--readonly');
+        expect(trackOf(group).getAttribute('aria-disabled')).toBe('true');
+      });
+
+      it('leaves a static (non-editable-by-design) render untouched, as `segmentsDisabled` already does', () => {
+        const group = renderLocked(c => {
+          c.readOnly = true;
+          c.isStatic = true;
+        });
+
+        expect(trackOf(group).classList).not.toContain('segmented-track--readonly');
+        expect(trackOf(group).getAttribute('aria-disabled')).toBeNull();
+      });
+    });
+
     it('emits selectOptionEvent so consumers can run their own side effects', () => {
       const group = renderSegmented();
       const spy = jest.fn();

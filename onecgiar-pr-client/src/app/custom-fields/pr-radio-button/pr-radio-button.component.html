@@ -19,6 +19,8 @@
           class="flex h-[36px] w-[372px] max-w-full items-center gap-[2px] rounded-[8px] bg-[var(--pr-border-divider)] p-[3px]"
           role="radiogroup"
           [attr.aria-label]="label"
+          [class.segmented-track--readonly]="segmentsDisabled"
+          [attr.aria-disabled]="segmentsDisabled ? 'true' : null"
           [hidden]="hideOptions">
           @for (option of options; track option[optionValue]) {
             @let parts = segmentParts(option);
