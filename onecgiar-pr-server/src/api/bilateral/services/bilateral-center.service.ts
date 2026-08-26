@@ -13,6 +13,7 @@ import { SaveBilateralTocMappingDto } from '../dto/save-bilateral-toc-mapping.dt
 import {
   BilateralProjectDto,
   InstitutionDto,
+  PartnerInstitutionDto,
   SaveBilateralContributorsDto,
 } from '../dto/save-bilateral-contributors.dto';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
@@ -39,6 +40,10 @@ import {
   ResultReviewHistory,
   ReviewActionEnum,
 } from '../../results/result-review-history/entities/result-review-history.entity';
+import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
+import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
+import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
+import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 
 @Injectable()
 export class BilateralCenterService {
@@ -62,6 +67,8 @@ export class BilateralCenterService {
     private readonly resultsByProjectsService: ResultsByProjectsService,
     private readonly resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
     private readonly roleByUserRepository: RoleByUserRepository,
+    private readonly resultByIntitutionsRepository: ResultByIntitutionsRepository,
+    private readonly resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
   ) {}
 
   async getProjects(centerId: number) {
@@ -416,12 +423,18 @@ export class BilateralCenterService {
       savedProjects: Array<Record<string, unknown>>;
       failedProjects: Array<Record<string, unknown>>;
       deactivatedProjects: number[];
+      savedPartners: Array<Record<string, unknown>>;
+      failedPartners: Array<Record<string, unknown>>;
+      deactivatedPartners: number[];
     } = {
       savedCenters: [],
       failedCenters: [],
       savedProjects: [],
       failedProjects: [],
       deactivatedProjects: [],
+      savedPartners: [],
+      failedPartners: [],
+      deactivatedPartners: [],
     };
 
     try {
@@ -454,13 +467,28 @@ export class BilateralCenterService {
         );
       }
 
+      // P2-3443. Any of the three keys is enough to touch the partner block: the "no external
+      // partners" declaration arrives on its own (the dropdown is hidden when it is ticked), and
+      // `is_lead_by_partner` is a plain flag on `result`.
+      if (
+        dto.institutions !== undefined ||
+        dto.no_external_partners !== undefined ||
+        dto.is_lead_by_partner !== undefined
+      ) {
+        await this.syncExternalPartners(resultId, dto, user, result);
+      }
+
+      const failedCount =
+        result.failedCenters.length +
+        result.failedProjects.length +
+        result.failedPartners.length;
+
       return {
         response: { resultId, ...result },
         message:
-          result.failedCenters.length === 0 &&
-          result.failedProjects.length === 0
+          failedCount === 0
             ? 'Contributors saved successfully'
-            : `Contributors saved with ${result.failedCenters.length} failed centers and ${result.failedProjects.length} failed projects`,
+            : `Contributors saved with ${result.failedCenters.length} failed centers, ${result.failedProjects.length} failed projects and ${result.failedPartners.length} failed partners`,
       };
     } catch (error) {
       return {
@@ -472,6 +500,217 @@ export class BilateralCenterService {
         status: 500,
       };
     }
+  }
+
+  /**
+   * P2-3443 — persists the External partners block of the bilateral Contributors section.
+   *
+   * Deliberately mirrors what pool funding does in
+   * `ResultsByInstitutionsService.savePartnersInstitutionsByResultV2`
+   * (`api/results/results_by_institutions/results_by_institutions.service.ts:392-462`) so both
+   * forms leave the same rows behind and the shared `validation_partners_*` MySQL functions see
+   * one single data model:
+   *
+   * - the two flags live on `result` (`no_applicable_partner`, `is_lead_by_partner`), NOT on a
+   *   bilateral-only table — that is why this ticket needs no migration;
+   * - partners are `results_by_institution` rows whose `institution_roles_id` is resolved exactly
+   *   as pool funding resolves it: `KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS` (8) when the result
+   *   has a `results_knowledge_product` row, `PARTNER` (2) otherwise. Both ids are what the
+   *   validation function counts (`institution_roles_id IN (2,8)`), so picking the wrong one hides
+   *   the partners from the green check rather than failing loudly;
+   * - ticking "no external partners" deactivates every stored partner instead of leaving orphans.
+   *
+   * NOT mirrored on purpose: partner delivery types and budgets. P2-3368 (AC6) puts partner-type /
+   * nature attributes out of scope for bilateral results, so there is no UI feeding them.
+   */
+  private async syncExternalPartners(
+    resultId: number,
+    dto: SaveBilateralContributorsDto,
+    user: TokenDto,
+    result: {
+      savedPartners: Array<Record<string, unknown>>;
+      failedPartners: Array<Record<string, unknown>>;
+      deactivatedPartners: number[];
+    },
+  ): Promise<void> {
+    const flagsToUpdate: {
+      no_applicable_partner?: boolean;
+      is_lead_by_partner?: boolean;
+    } = {};
+    if (dto.no_external_partners !== undefined) {
+      flagsToUpdate.no_applicable_partner = !!dto.no_external_partners;
+    }
+    if (dto.is_lead_by_partner !== undefined) {
+      flagsToUpdate.is_lead_by_partner = !!dto.is_lead_by_partner;
+    }
+    if (Object.keys(flagsToUpdate).length > 0) {
+      await this.resultRepository.update(resultId, flagsToUpdate);
+    }
+
+    const knowledgeProduct =
+      await this.resultsKnowledgeProductsRepository.findOne({
+        where: { results_id: resultId },
+      });
+    const institutionRoleId = knowledgeProduct
+      ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
+      : InstitutionRoleEnum.PARTNER;
+
+    const existingPartners = await this.resultByIntitutionsRepository.find({
+      where: {
+        result_id: resultId,
+        institution_roles_id: institutionRoleId,
+      },
+    });
+    const activePartners = existingPartners.filter((p) => p.is_active);
+
+    if (dto.no_external_partners === true) {
+      await this.deactivatePartners(activePartners, user, result);
+      return;
+    }
+
+    if (dto.institutions === undefined) {
+      return;
+    }
+
+    const requestedIds = await this.resolvePartnerInstitutionIds(
+      dto.institutions,
+      result,
+    );
+
+    const toDeactivate = activePartners.filter(
+      (p) => !requestedIds.includes(Number(p.institutions_id)),
+    );
+    await this.deactivatePartners(toDeactivate, user, result);
+
+    const leadingByInstitutionId = this.mapLeadingPartnerFlags(
+      dto.institutions,
+    );
+
+    const byInstitutionId = new Map<number, ResultsByInstitution>();
+    for (const partner of existingPartners) {
+      const key = Number(partner.institutions_id);
+      if (!byInstitutionId.has(key)) {
+        byInstitutionId.set(key, partner);
+      }
+    }
+
+    for (const institutionId of requestedIds) {
+      const isLeadingResult =
+        leadingByInstitutionId.get(institutionId) ?? false;
+      const existing = byInstitutionId.get(institutionId);
+      if (existing) {
+        await this.resultByIntitutionsRepository.update(
+          { id: existing.id },
+          {
+            is_active: true,
+            is_leading_result: isLeadingResult,
+            last_updated_by: user.id,
+          },
+        );
+      } else {
+        await this.resultByIntitutionsRepository.save({
+          result_id: resultId,
+          institutions_id: institutionId,
+          institution_roles_id: institutionRoleId,
+          is_active: true,
+          is_predicted: false,
+          is_leading_result: isLeadingResult,
+          from_toc: false,
+          created_by: user.id,
+          last_updated_by: user.id,
+        });
+      }
+      result.savedPartners.push({ institutions_id: institutionId });
+    }
+  }
+
+  /**
+   * P2-3443 — `PartnerInstitutionDto.is_leading_result` is honoured, exactly as pool funding honours
+   * it in `ResultsByInstitutionsService.handleInstitutions`
+   * (`api/results/results_by_institutions/results_by_institutions.service.ts:1079,1094`).
+   *
+   * ⚠️ It is not cosmetic: the shared green-check functions read
+   * `WHEN institutions_count_leading <> 1 AND lead_by_partner = 1 THEN FALSE`
+   * (`src/migrations/1762866499786-updatepartnersContributors.ts:157`), so writing every partner as
+   * `false` would leave a result with `is_lead_by_partner = true` permanently unable to go green.
+   *
+   * Duplicate `institutions_id` entries collapse first-occurrence-wins, matching how
+   * `resolvePartnerInstitutionIds` de-duplicates the ids themselves.
+   */
+  private mapLeadingPartnerFlags(
+    institutions: PartnerInstitutionDto[],
+  ): Map<number, boolean> {
+    const flags = new Map<number, boolean>();
+    for (const institution of institutions ?? []) {
+      const id = Number(institution?.institutions_id);
+      if (!Number.isFinite(id) || id <= 0 || flags.has(id)) continue;
+      flags.set(id, !!institution?.is_leading_result);
+    }
+    return flags;
+  }
+
+  /**
+   * CLARISA ids arriving from a client are never trusted (module rule): an institution that is not
+   * in the cached catalogue is reported back on `failedPartners` instead of being written as a
+   * dangling FK.
+   */
+  private async resolvePartnerInstitutionIds(
+    institutions: PartnerInstitutionDto[],
+    result: { failedPartners: Array<Record<string, unknown>> },
+  ): Promise<number[]> {
+    const incomingIds: number[] = [];
+    for (const institution of institutions) {
+      const id = Number(institution?.institutions_id);
+      if (!Number.isFinite(id) || id <= 0) {
+        result.failedPartners.push({
+          institutions_id: institution?.institutions_id,
+          reason: 'No institutions_id provided',
+        });
+        continue;
+      }
+      if (!incomingIds.includes(id)) {
+        incomingIds.push(id);
+      }
+    }
+
+    if (incomingIds.length === 0) {
+      return [];
+    }
+
+    const knownInstitutions = await this.clarisaInstitutionsRepository.find({
+      where: { id: In(incomingIds) },
+      select: ['id'],
+    });
+    const knownIds = new Set(knownInstitutions.map((i) => Number(i.id)));
+
+    const resolved: number[] = [];
+    for (const id of incomingIds) {
+      if (!knownIds.has(id)) {
+        result.failedPartners.push({
+          institutions_id: id,
+          reason: 'Institution not found in CLARISA',
+        });
+        continue;
+      }
+      resolved.push(id);
+    }
+    return resolved;
+  }
+
+  private async deactivatePartners(
+    partners: ResultsByInstitution[],
+    user: TokenDto,
+    result: { deactivatedPartners: number[] },
+  ): Promise<void> {
+    if (!partners.length) {
+      return;
+    }
+    const ids = partners.map((p) => p.id);
+    await this.resultByIntitutionsRepository.update(
+      { id: In(ids) },
+      { is_active: false, last_updated_by: user.id },
+    );
+    result.deactivatedPartners.push(...ids.map((id) => Number(id)));
   }
 
   private async syncContributingCenters(

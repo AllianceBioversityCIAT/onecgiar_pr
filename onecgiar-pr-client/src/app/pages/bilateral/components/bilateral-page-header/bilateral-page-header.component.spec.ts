@@ -65,6 +65,83 @@ describe('BilateralPageHeaderComponent', () => {
   // P2-3100 AC1: the creation screen needs a one-line breadcrumb
   // `CGIAR Center > [Full Center Name] (INITIALS)` with the page title directly below.
   // The three tabbed pages share this component and must be untouched by it.
+  // P2-3352: the header must identify the result — code, type, funding tag and status. The status
+  // badge was long believed blocked on the backend (P2-3437); it never was — the detail response has
+  // always carried `status_id` and the client was dropping it.
+  describe('result identity strip (P2-3352)', () => {
+    const withTitle = () => {
+      // The whole header is gated on `@if (ctx.centerAcronym())`, so without a centre nothing renders
+      // and every textContent assertion passes against an empty string.
+      ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
+      fixture.componentRef.setInput('pageTitle', 'A bilateral result');
+      fixture.detectChanges();
+    };
+
+    it('renders nothing when no identity is provided', () => {
+      withTitle();
+      expect(component.hasIdentityStrip()).toBe(false);
+      expect(fixture.nativeElement.textContent).not.toContain('W3/Bilateral');
+    });
+
+    it('renders the code, the type and the funding tag', () => {
+      fixture.componentRef.setInput('resultCode', 8682);
+      fixture.componentRef.setInput('resultTypeName', 'Policy Change');
+      fixture.componentRef.setInput('isW3Bilateral', true);
+      withTitle();
+      expect(component.hasIdentityStrip()).toBe(true);
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('8682');
+      expect(text).toContain('Policy Change');
+      expect(text).toContain('W3/Bilateral');
+    });
+
+    it('shows the strip when only one piece is known', () => {
+      fixture.componentRef.setInput('resultCode', 1234);
+      withTitle();
+      expect(component.hasIdentityStrip()).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('1234');
+      expect(fixture.nativeElement.textContent).not.toContain('W3/Bilateral');
+    });
+
+    it.each([
+      [1, 'Editing'],
+      [5, 'Pending review'],
+      [6, 'Approved'],
+      [7, 'Rejected'],
+    ])('renders the %i status as the "%s" badge', (statusId, label) => {
+      fixture.componentRef.setInput('statusId', statusId);
+      withTitle();
+      const badge = fixture.debugElement.query(By.css('[data-testid="bilateral-status-badge"]'));
+      expect(badge.nativeElement.textContent.trim()).toBe(label);
+    });
+
+    it('renders no badge for a status outside the four the story lists, and none for null', () => {
+      fixture.componentRef.setInput('statusId', 3);
+      withTitle();
+      expect(fixture.debugElement.query(By.css('[data-testid="bilateral-status-badge"]'))).toBeNull();
+
+      fixture.componentRef.setInput('statusId', null);
+      fixture.detectChanges();
+      expect(fixture.debugElement.query(By.css('[data-testid="bilateral-status-badge"]'))).toBeNull();
+    });
+
+    it('shows the strip when the status is the only thing known', () => {
+      fixture.componentRef.setInput('statusId', 6);
+      withTitle();
+      expect(component.hasIdentityStrip()).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('Approved');
+    });
+
+    it('does not render the strip on the tabbed variant, which has no result', () => {
+      ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');
+      fixture.componentRef.setInput('activeTab', 'results');
+      fixture.componentRef.setInput('resultCode', 8682);
+      fixture.detectChanges();
+      // hasIdentityStrip is true, but the strip lives in the pageTitle branch only.
+      expect(fixture.nativeElement.textContent).not.toContain('8682');
+    });
+  });
+
   describe('page-title variant (P2-3100 AC1)', () => {
     beforeEach(() => {
       ctx.setCenter('ABC', 'Alliance of Bioversity International and CIAT');

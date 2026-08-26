@@ -62,6 +62,43 @@ describe('SectionGeographyComponent', () => {
   });
 
   // ── loading ──────────────────────────────────────────────────────────
+  // P2-3370: the section must behave as W1/W2 does. These pin the three rules the audit found
+  // diverging, each verified against the W1/W2 side rather than against the story text alone.
+  describe('extra geographic scope (P2-3370)', () => {
+    it('offers the same scopes as the primary selector except "to be determined"', () => {
+      build();
+      const ids = component.extraGeoscopeOptions.map(o => o.id);
+      // W1/W2 reuses app-geoscope-management with [hideTobeDetermined]="true", whose default list
+      // starts at Global — so Global belongs here and 50 does not.
+      expect(ids).toEqual([
+        GeoScopeEnum.GLOBAL,
+        GeoScopeEnum.REGIONAL,
+        GeoScopeEnum.COUNTRY,
+        GeoScopeEnum.SUB_NATIONAL,
+      ]);
+      expect(ids).not.toContain(GeoScopeEnum.DETERMINED);
+    });
+
+    it('clears regions and countries when Global is chosen as the extra scope', () => {
+      build();
+      component.onExtraScopeChange(GeoScopeEnum.GLOBAL);
+      const b = component.extraGeographicLocationBody();
+      expect(b.geo_scope_id).toBe(GeoScopeEnum.GLOBAL);
+      expect(b.has_regions).toBe(false);
+      expect(b.has_countries).toBe(false);
+      expect(b.regions).toEqual([]);
+      expect(b.countries).toEqual([]);
+    });
+
+    it('auto-selects regions when Regional is chosen as the extra scope', () => {
+      build();
+      component.onExtraScopeChange(GeoScopeEnum.REGIONAL);
+      const b = component.extraGeographicLocationBody();
+      expect(b.has_regions).toBe(true);
+      expect(b.has_countries).toBe(false);
+    });
+  });
+
   describe('loadGeographicData', () => {
     it('does nothing without a result id', () => {
       creation.currentResultId.set(null);
@@ -191,6 +228,23 @@ describe('SectionGeographyComponent', () => {
       );
     });
 
+    // Data-loss guard: the flags the payload sends must be the ones onExtraScopeChange writes.
+    // The server wipes the extra countries when has_extra_countries is false and the extra scope
+    // is not Country (result-countries.service.ts handleCountries), so a Sub-national extra scope
+    // saved with the flag stuck at false silently deletes the countries the user just picked.
+    it('sends has_extra_countries true with the countries for a sub-national extra scope', () => {
+      build();
+      component.setHasExtraScope(true);
+      component.onExtraScopeChange(GeoScopeEnum.SUB_NATIONAL);
+      component.onExtraCountriesChange([{ id: 40, sub_national: [{ id: 1 }] }]);
+
+      const payload = autoSave.schedulePayload.mock.calls.at(-1)[1];
+      expect(payload.extra_geo_scope_id).toBe(GeoScopeEnum.SUB_NATIONAL);
+      expect(payload.has_extra_countries).toBe(true);
+      expect(payload.has_extra_regions).toBe(false);
+      expect(payload.extra_countries).toEqual([{ id: 40, sub_national: [{ id: 1 }] }]);
+    });
+
     it('reflects the error status via scopeStatus', () => {
       autoSave.fieldStatus.set({ geography: 'error' });
       build();
@@ -289,7 +343,7 @@ describe('SectionGeographyComponent', () => {
       component.extraGeographicLocationBody.update(b => ({ ...b, countries: [{ id: 2 }] }));
       component.onExtraScopeChange(GeoScopeEnum.REGIONAL);
       const body = component.extraGeographicLocationBody();
-      expect(body.has_extra_regions).toBe(true);
+      expect(body.has_regions).toBe(true);
       expect(body.countries).toEqual([]);
     });
 
@@ -297,7 +351,7 @@ describe('SectionGeographyComponent', () => {
       build();
       component.extraGeographicLocationBody.update(b => ({ ...b, regions: [{ id: 1 }] }));
       component.onExtraScopeChange(GeoScopeEnum.COUNTRY);
-      expect(component.extraGeographicLocationBody().has_extra_countries).toBe(true);
+      expect(component.extraGeographicLocationBody().has_countries).toBe(true);
       expect(component.extraGeographicLocationBody().regions).toEqual([]);
       component.onExtraScopeChange(GeoScopeEnum.SUB_NATIONAL);
       expect(component.extraGeographicLocationBody().geo_scope_id).toBe(GeoScopeEnum.SUB_NATIONAL);

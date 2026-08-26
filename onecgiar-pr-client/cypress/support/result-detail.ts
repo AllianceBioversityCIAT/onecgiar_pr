@@ -18,9 +18,19 @@
  *    collide as `radio_0`, `radio_1`, … across groups. `<n>` comes from instantiation order, so it is
  *    NOT stable across runs: keep anchoring by text or by a component-scoped `cy.get`, which is stable
  *    either way — do not start relying on the ids.
- *  - `app-save-button`'s clickable node is a wrapping `<div>`, not a `<button>` — click
- *    `app-save-button app-pr-button`. While saving it renders `Saving`; the missing-field panel is
- *    `.fields-feedback-list`, collapsed to a `.counter` (`n alerts`) until `.back_icon` is clicked.
+ *  - The save control is `app-section-bottom-bar` (P2-3435 replaced the floating `app-save-button`
+ *    on every Result Detail section). It is a NATIVE `<button [disabled]>`, so `should('be.disabled')`
+ *    works and a click on it is inert without `force`. While saving it reads `Saving…` (U+2026, not
+ *    three dots). Address it — and the rest of the bar — through the `data-testid` hooks exported
+ *    below, never through the component name: anchoring to `app-save-button` is exactly what left
+ *    this suite broken and unnoticed for two days.
+ *  - The bar TELEPORTS itself into the result-detail layout's slot
+ *    (`SectionBottomBarSlotService`), so it is NOT a descendant of the section container. Query it
+ *    from the document root, never `.within()` the section.
+ *  - Missing mandatory fields are named, not counted: `[data-testid="section-bottom-bar-pending"]`
+ *    reads `N fields missing` and opens `#sbb-pending-list`, whose `li` rows are BARE field names
+ *    (no "is missing" suffix — that was the old panel). With nothing missing the button is replaced
+ *    by `[data-testid="section-bottom-bar-complete"]` ("Section complete").
  */
 
 /** True when a JWT is configured (cypress.env.js > userToken). */
@@ -43,6 +53,36 @@ export const SECTION_ENDPOINTS = {
 
 /** Alert rendered by SaveButtonService.isSavingPipe() on success. */
 export const SAVE_SUCCESS_TITLE = 'Section saved successfully';
+
+/** …and on failure. Both land in `#save-button .title`. */
+export const SAVE_ERROR_TITLE = 'There was an error saving the section';
+
+/**
+ * `app-section-bottom-bar`'s test hooks. One place to change them, so the next rename costs one
+ * line instead of three specs.
+ */
+export const BOTTOM_BAR = {
+  root: '[data-testid="section-bottom-bar"]',
+  save: '[data-testid="section-bottom-bar-save"]',
+  back: '[data-testid="section-bottom-bar-back"]',
+  next: '[data-testid="section-bottom-bar-next"]',
+  position: '[data-testid="section-bottom-bar-position"]',
+  pending: '[data-testid="section-bottom-bar-pending"]',
+  pendingList: '#sbb-pending-list',
+  pendingItems: '#sbb-pending-list li',
+  complete: '[data-testid="section-bottom-bar-complete"]'
+} as const;
+
+/** Label the save button shows while `SaveButtonService.isSaving()` — note the ellipsis CHARACTER. */
+export const SAVING_LABEL = 'Saving\u2026';
+
+/** Opens the pending-fields popover if it is not open yet (the button toggles). */
+export function openPendingList(): void {
+  cy.get('body').then($body => {
+    if (!$body.find(BOTTOM_BAR.pendingList).length) cy.get(BOTTOM_BAR.pending).click();
+  });
+  cy.get(BOTTOM_BAR.pendingList).should('be.visible');
+}
 
 const RESULTS_LIST_URL = '/result/results-outlet/results-list';
 const COLUMN_STORAGE_KEY = 'pr.resultsCenter.visibleColumns';
@@ -83,7 +123,7 @@ function tryCandidate(candidates: string[], index: number): Cypress.Chainable<st
 
   return cy.get('body').then($body => {
     const editable =
-      $body.find('app-save-button app-pr-button').length > 0 &&
+      $body.find(BOTTOM_BAR.save).length > 0 &&
       $body.find('app-rd-general-information app-pr-input .input_container input:not([disabled])').length > 0;
 
     if (editable) {
@@ -133,7 +173,7 @@ export function waitForGeneralInformation(): void {
     .should('be.visible')
     // The mandatory title is always populated once the payload landed — a good hydration signal.
     .and('not.have.value', '');
-  cy.get('app-save-button app-pr-button', { timeout: 60000 }).should('exist');
+  cy.get(BOTTOM_BAR.save, { timeout: 60000 }).should('exist');
 }
 
 /** Opens Contributors & partners and waits until the section payload is rendered. */
@@ -148,7 +188,7 @@ export function waitForContributorsPartners(): void {
   cy.wait('@contributorsSection', { timeout: 90000 });
   cy.get('app-rd-contributors-and-partners', { timeout: 60000 }).should('exist');
   cy.get('app-rd-contributors-and-partners .custom_select a.field', { timeout: 60000 }).should('exist');
-  cy.get('app-save-button app-pr-button', { timeout: 60000 }).should('exist');
+  cy.get(BOTTOM_BAR.save, { timeout: 60000 }).should('exist');
 }
 
 // ---------------------------------------------------------------------------
@@ -170,12 +210,15 @@ export function openDropdown(scope: string): void {
  * the field is typed into with `force` (a closed panel is `transform`-hidden, not removed).
  */
 export function searchInDropdown(scope: string, text: string): void {
+  const searchBox = `${scope} .custom_select .options .search_input_container input`;
+
   cy.get(scope).find('.custom_select a.field').first().focus();
-  cy.get(scope)
-    .find('.custom_select .options .search_input_container input')
-    .first()
-    .clear({ force: true })
-    .type(text, { delay: 0, force: true, parseSpecialCharSequences: false });
+  // NOT chained off `clear()`: this section re-renders on every catalog callback, and when that
+  // lands between the two commands Cypress fails with "the subject is no longer attached to the
+  // DOM" — a flake that only shows up when a previous spec has already warmed/changed the record.
+  // Re-querying the box for each command lets Cypress retry against the live node.
+  cy.get(searchBox).first().clear({ force: true });
+  cy.get(searchBox).first().type(text, { delay: 0, force: true, parseSpecialCharSequences: false });
 }
 
 /** Reads the `(n)` selection counter a multiselect renders in `.selected_container .pr_description`. */
@@ -184,8 +227,8 @@ export function readSelectedCount(text: string): number {
   return match ? Number(match[1]) : NaN;
 }
 
-/** Reads the `n alerts` number out of `.fields-feedback-list .counter`. */
-export function readAlertCount(text: string): number {
+/** Reads the `N` out of the bottom bar's `N fields missing` label. */
+export function readMissingCount(text: string): number {
   const match = /(\d+)/.exec(text || '');
   return match ? Number(match[1]) : 0;
 }

@@ -68,16 +68,6 @@
     (ngModelChange)="onFieldChange()">
   </app-pr-radio-button>
 
-  <app-pr-radio-button
-    label="Were the trainees attending on behalf of an organization?"
-    [options]="attendanceOptions"
-    optionLabel="name"
-    optionValue="id"
-    [required]="true"
-    [(ngModel)]="body.is_attending_for_organization"
-    (ngModelChange)="onAttendanceChange()">
-  </app-pr-radio-button>
-
   <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
     <app-alert-status
       class="flex-1"
@@ -85,12 +75,22 @@
       description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
     </app-alert-status>
     <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
-      {{ showAllFields() ? 'Hide full metadata' : 'Full metadata' }}
+      {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
     </button>
   </div>
 
   @if (showAllFields()) {
     <div class="flex flex-col gap-[18px]">
+      <app-pr-radio-button
+        label="Were the trainees attending on behalf of an organization?"
+        [options]="attendanceOptions"
+        optionLabel="name"
+        optionValue="id"
+        [required]="false"
+        [(ngModel)]="body.is_attending_for_organization"
+        (ngModelChange)="onAttendanceChange()">
+      </app-pr-radio-button>
+
       @if (capdevTermId1 === 4 || capdevTermId1 === 1 || capdevTermId1 === 2) {
         <app-pr-radio-button
           [options]="capdevsSubTerms"

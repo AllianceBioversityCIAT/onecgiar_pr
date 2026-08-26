@@ -49,6 +49,7 @@ describe('ResultSectionsSidebarComponent', () => {
       showSubmit: true,
       submitDisabled: false,
       showUnsubmit: false,
+      unsubmitDisabled: false,
       incompleteTooltip: '',
       showQaAssessedNotice: false,
       showInQaNotice: false,
@@ -150,6 +151,19 @@ describe('ResultSectionsSidebarComponent', () => {
     expect(html().querySelector('[data-testid="result-sections-submit"]')).toBeFalsy();
     (html().querySelector('[data-testid="result-sections-unsubmit"]') as HTMLButtonElement).click();
     expect(sectionsMock.openUnsubmit).toHaveBeenCalled();
+  });
+
+  // P2-3434: a result under QA must not offer a clickable Unsubmit right above the QA notice.
+  it('disables Unsubmit when the result is locked in QA', async () => {
+    sectionsMock.showSubmit = false;
+    sectionsMock.showUnsubmit = true;
+    sectionsMock.unsubmitDisabled = true;
+    sectionsMock.showInQaNotice = true;
+    await build();
+
+    const button = html().querySelector('[data-testid="result-sections-unsubmit"]') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(html().textContent).toContain('This result is part of a QA process and cannot be un-submitted for editing.');
   });
 
   it('renders the QA notices when the service exposes them', async () => {

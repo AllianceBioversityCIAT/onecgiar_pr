@@ -438,8 +438,10 @@ describe('RdContributorsAndPartnersComponent', () => {
     });
   });
 
-  // ----- P2-3201 (point 4): linked / bundled question, 2026 only -----
-  describe('P2-3201 — linked/bundled question wording', () => {
+  // ----- P2-3358: one single linked / bundled question for every result typology -----
+  describe('P2-3358 — linked/bundled question wording', () => {
+    const SINGLE_QUESTION =
+      'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?';
     const asPhase = (isCP2026: boolean) => {
       (component as any).fieldsManagerSE = { isContributorsPartners2026: () => isCP2026, isP25: () => true };
     };
@@ -447,46 +449,42 @@ describe('RdContributorsAndPartnersComponent', () => {
       mockApiService.dataControlSE.currentResultSignal = signal({ result_type_id });
     };
 
-    it('asks the Policy change variant for a Policy change result (result_type_id 1)', () => {
+    it('asks the single question for a Policy change result — its own variant is retired', () => {
       asPhase(true);
-      asResultType(1);
+      asResultType(1); // Policy change
 
-      expect(component.isPolicyChangeResult()).toBe(true);
-      expect(component.linkedResultQuestionLabel()).toBe(
-        'Have other reported results contributed to this policy change? Such as knowledge product, capacity sharing for development, innovation development, innovation use?'
-      );
+      expect(component.linkedResultQuestionLabel).toBe(SINGLE_QUESTION);
+      expect(component.linkedResultQuestionLabel).not.toContain('contributed to this policy change');
     });
 
-    it('asks the innovation-worded question for every other result type', () => {
+    it('asks the same single question for every other component-rendered result type', () => {
       asPhase(true);
-      asResultType(5); // Capacity sharing for development
 
-      expect(component.isPolicyChangeResult()).toBe(false);
-      expect(component.linkedResultQuestionLabel()).toBe(
-        'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?'
-      );
+      [3, 4, 5, 6, 8, 9].forEach(resultTypeId => {
+        asResultType(resultTypeId);
+        expect(component.linkedResultQuestionLabel).toBe(SINGLE_QUESTION);
+      });
     });
 
-    it('shows the header in 2026 for a non-Policy-change result', () => {
+    it('no longer opens the sentence with "Is this innovation"', () => {
+      asPhase(true);
+      asResultType(5);
+
+      expect(component.linkedResultQuestionLabel).not.toContain('Is this innovation');
+      expect(component.linkedResultQuestionLabel.startsWith('Is this result')).toBe(true);
+    });
+
+    it('exposes no per-typology branching for this question any more', () => {
+      expect((component as any).isPolicyChangeResult).toBeUndefined();
+      expect((component as any).POLICY_CHANGE_RESULT_TYPE_ID).toBeUndefined();
+    });
+
+    it('renders no header above the question — not even for a 2026 result', () => {
       asPhase(true);
       asResultType(2); // Innovation use
 
-      expect(component.showLinkedResultHeader()).toBe(true);
-      expect(component.linkedResultHeaderLabel).toBe('Is this result linked to, or (for innovations) bundled with, another reported result?');
-    });
-
-    it('never shows the header for Policy change, even in 2026', () => {
-      asPhase(true);
-      asResultType(1);
-
-      expect(component.showLinkedResultHeader()).toBe(false);
-    });
-
-    it('does not show the header before 2026 — earlier phases keep their current layout', () => {
-      asPhase(false);
-      asResultType(2);
-
-      expect(component.showLinkedResultHeader()).toBe(false);
+      expect((component as any).linkedResultHeaderLabel).toBeUndefined();
+      expect((component as any).showLinkedResultHeader).toBeUndefined();
     });
   });
 

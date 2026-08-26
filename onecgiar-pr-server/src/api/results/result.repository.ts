@@ -2945,6 +2945,12 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.nutrition_tag_level_id,
         r.environmental_biodiversity_tag_level_id,
         r.poverty_tag_level_id,
+        -- P2-3443: the External partners block of the bilateral Contributors section is stored as
+        -- results_by_institution rows (returned by the detail GET as contributingInstitutions)
+        -- plus these two flags on result. Without them the client cannot tell "no partners
+        -- declared" apart from "not answered yet", and the checkbox comes back unticked on reload.
+        r.no_applicable_partner,
+        r.is_lead_by_partner,
         v.phase_year AS reporting_year
       FROM result r
       JOIN result_type rt

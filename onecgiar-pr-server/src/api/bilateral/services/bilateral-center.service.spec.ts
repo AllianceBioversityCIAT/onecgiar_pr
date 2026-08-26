@@ -21,6 +21,9 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { SourceEnum } from '../../results/entities/result.entity';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
+import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
+import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
+import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 
 describe('BilateralCenterService', () => {
   let service: BilateralCenterService;
@@ -132,6 +135,7 @@ describe('BilateralCenterService', () => {
           provide: ClarisaInstitutionsRepository,
           useValue: {
             findOne: jest.fn(),
+            find: jest.fn().mockResolvedValue([]),
           },
         },
         {
@@ -178,6 +182,21 @@ describe('BilateralCenterService', () => {
           provide: ResultsKnowledgeProductsService,
           useValue: {
             populateKPFromCGSpace: jest.fn().mockResolvedValue({}),
+          },
+        },
+        // P2-3443 — external partners live in `results_by_institution`, same table pool funding uses.
+        {
+          provide: ResultByIntitutionsRepository,
+          useValue: {
+            find: jest.fn().mockResolvedValue([]),
+            save: jest.fn().mockResolvedValue({}),
+            update: jest.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: ResultsKnowledgeProductsRepository,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue(null),
           },
         },
       ],
@@ -474,6 +493,226 @@ describe('BilateralCenterService', () => {
       expect(resultsByProjectsRepository.update).toHaveBeenCalled();
       expect((result.response as any).deactivatedProjects).toEqual([3]);
       expect(result.message).toBe('Contributors saved successfully');
+    });
+
+    // P2-3443 — the External partners block. Everything here mirrors what pool funding writes in
+    // `ResultsByInstitutionsService.savePartnersInstitutionsByResultV2`, on purpose: same table,
+    // same role ids, same two flags on `result`. Diverging would hide bilateral partners from the
+    // shared `validation_partners_*` MySQL functions instead of failing loudly.
+    describe('external partners (P2-3443)', () => {
+      const bilateral = { id: 10, source: SourceEnum.Bilateral } as any;
+      let partnersRepository: any;
+      let kpRepository: any;
+      let clarisaInstitutions: any;
+
+      beforeEach(() => {
+        jest.spyOn(resultRepository, 'findOne').mockResolvedValue(bilateral);
+        partnersRepository = module.get<ResultByIntitutionsRepository>(
+          ResultByIntitutionsRepository,
+        );
+        kpRepository = module.get<ResultsKnowledgeProductsRepository>(
+          ResultsKnowledgeProductsRepository,
+        );
+        clarisaInstitutions = module.get<ClarisaInstitutionsRepository>(
+          ClarisaInstitutionsRepository,
+        );
+        clarisaInstitutions.find.mockImplementation(async (options: any) => {
+          const ids = options?.where?.id?._value ?? [];
+          return ids.map((id: number) => ({ id }));
+        });
+      });
+
+      it('leaves the partner block untouched when none of its keys are sent', async () => {
+        await service.saveContributors(10, { contributing_center: [] }, user);
+
+        expect(partnersRepository.save).not.toHaveBeenCalled();
+        expect(partnersRepository.update).not.toHaveBeenCalled();
+        expect(resultRepository.update).not.toHaveBeenCalled();
+      });
+
+      it('creates a partner row with the PARTNER role for a non knowledge-product result', async () => {
+        const result = await service.saveContributors(
+          10,
+          {
+            institutions: [{ institutions_id: 3178 }],
+            no_external_partners: false,
+          },
+          user,
+        );
+
+        expect(partnersRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result_id: 10,
+            institutions_id: 3178,
+            institution_roles_id: InstitutionRoleEnum.PARTNER,
+            is_active: true,
+            created_by: 42,
+          }),
+        );
+        expect((result.response as any).savedPartners).toEqual([
+          { institutions_id: 3178 },
+        ]);
+        expect(result.message).toBe('Contributors saved successfully');
+      });
+
+      // Pool funding files partners of a knowledge product under role 8, not 2. Using 2 here would
+      // make them invisible to the KP partners GET, which filters by role.
+      it('uses the knowledge-product contributor role when the result has a KP row', async () => {
+        kpRepository.findOne.mockResolvedValue({
+          result_knowledge_product_id: 5,
+        });
+
+        await service.saveContributors(
+          10,
+          { institutions: [{ institutions_id: 3178 }] },
+          user,
+        );
+
+        expect(partnersRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            institution_roles_id:
+              InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS,
+          }),
+        );
+      });
+
+      it('writes the two flags on the result row, not on a bilateral-only table', async () => {
+        await service.saveContributors(
+          10,
+          {
+            institutions: [],
+            no_external_partners: true,
+            is_lead_by_partner: false,
+          },
+          user,
+        );
+
+        expect(resultRepository.update).toHaveBeenCalledWith(10, {
+          no_applicable_partner: true,
+          is_lead_by_partner: false,
+        });
+      });
+
+      it('deactivates every stored partner when "no external partners" is ticked', async () => {
+        partnersRepository.find.mockResolvedValue([
+          { id: 1, institutions_id: 100, is_active: true },
+          { id: 2, institutions_id: 200, is_active: true },
+        ]);
+
+        const result = await service.saveContributors(
+          10,
+          { no_external_partners: true },
+          user,
+        );
+
+        expect(partnersRepository.update).toHaveBeenCalledWith(
+          expect.anything(),
+          { is_active: false, last_updated_by: 42 },
+        );
+        expect((result.response as any).deactivatedPartners).toEqual([1, 2]);
+        expect(partnersRepository.save).not.toHaveBeenCalled();
+      });
+
+      // The green check reads `institutions_count_leading <> 1 AND lead_by_partner = 1 THEN FALSE`
+      // (migration 1762866499786), so hardcoding `false` here would make the Contributors section
+      // impossible to complete whenever the result is led by a partner.
+      it('honours is_leading_result on insert and on reactivation', async () => {
+        await service.saveContributors(
+          10,
+          {
+            is_lead_by_partner: true,
+            institutions: [
+              { institutions_id: 100, is_leading_result: true },
+              { institutions_id: 200 },
+            ],
+          },
+          user,
+        );
+
+        expect(partnersRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            institutions_id: 100,
+            is_leading_result: true,
+          }),
+        );
+        expect(partnersRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            institutions_id: 200,
+            is_leading_result: false,
+          }),
+        );
+
+        partnersRepository.save.mockClear();
+        partnersRepository.find.mockResolvedValue([
+          { id: 7, institutions_id: 100, is_active: false },
+        ]);
+
+        await service.saveContributors(
+          10,
+          {
+            is_lead_by_partner: true,
+            institutions: [{ institutions_id: 100, is_leading_result: true }],
+          },
+          user,
+        );
+
+        expect(partnersRepository.update).toHaveBeenCalledWith(
+          { id: 7 },
+          expect.objectContaining({ is_leading_result: true }),
+        );
+      });
+
+      it('reactivates an existing row instead of inserting a duplicate', async () => {
+        partnersRepository.find.mockResolvedValue([
+          { id: 7, institutions_id: 100, is_active: false },
+        ]);
+
+        await service.saveContributors(
+          10,
+          { institutions: [{ institutions_id: 100 }] },
+          user,
+        );
+
+        expect(partnersRepository.save).not.toHaveBeenCalled();
+        expect(partnersRepository.update).toHaveBeenCalledWith(
+          { id: 7 },
+          expect.objectContaining({ is_active: true, last_updated_by: 42 }),
+        );
+      });
+
+      it('deactivates the partners the user removed from the list', async () => {
+        partnersRepository.find.mockResolvedValue([
+          { id: 1, institutions_id: 100, is_active: true },
+          { id: 2, institutions_id: 200, is_active: true },
+        ]);
+
+        const result = await service.saveContributors(
+          10,
+          { institutions: [{ institutions_id: 100 }] },
+          user,
+        );
+
+        expect((result.response as any).deactivatedPartners).toEqual([2]);
+      });
+
+      it('reports an institution that is not in CLARISA instead of writing a dangling id', async () => {
+        clarisaInstitutions.find.mockResolvedValue([]);
+
+        const result = await service.saveContributors(
+          10,
+          { institutions: [{ institutions_id: 999999 }] },
+          user,
+        );
+
+        expect(partnersRepository.save).not.toHaveBeenCalled();
+        expect((result.response as any).failedPartners).toEqual([
+          {
+            institutions_id: 999999,
+            reason: 'Institution not found in CLARISA',
+          },
+        ]);
+        expect(result.message).toContain('1 failed partners');
+      });
     });
   });
 

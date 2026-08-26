@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { signal } from '@angular/core';
 
@@ -9,6 +10,10 @@ import { BilateralMdsTrackerService } from '../../../services/bilateral-mds-trac
 import { BilateralAutoSaveService } from '../../../services/bilateral-auto-save.service';
 import { BilateralExpandableStateService } from '../../../services/bilateral-expandable-state.service';
 import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
+
+const MDS_NOTE =
+  'The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. ' +
+  'If you need to complete the full metadata for this section, click the button on the right.';
 
 describe('TypeInnovationDevComponent', () => {
   let fixture: ComponentFixture<TypeInnovationDevComponent>;
@@ -26,27 +31,30 @@ describe('TypeInnovationDevComponent', () => {
     return component;
   };
 
-  beforeEach(async () => {
+  const makeMocks = () => {
     mdsTracker = { setSectionFields: jest.fn() };
     autoSave = {
       fieldStatus: signal<Record<string, string>>({}),
-      schedulePayload: jest.fn(),
+      schedulePayload: jest.fn()
     };
     creation = { currentResultId: signal<number | null>(123) };
     expandableState = {
       getShowAllFields: jest.fn().mockReturnValue(false),
-      setShowAllFields: jest.fn(),
+      setShowAllFields: jest.fn()
     };
     innovationControlListSE = {
       typeList: [{ code: 12, name: 'Variety/breed' }],
-      readinessLevelsList: [{ id: 17, name: 'Level 6' }],
+      characteristicsList: [{ id: 1, name: 'Technological' }],
+      readinessLevelsList: [{ id: 17, name: 'Level 6' }]
     };
     bilateralApi = {
       GET_innovationDev: jest.fn().mockReturnValue(of({ response: {} })),
-      PATCH_innovationDev: jest.fn().mockReturnValue(of({})),
+      PATCH_innovationDev: jest.fn().mockReturnValue(of({}))
     };
+  };
 
-    await TestBed.configureTestingModule({
+  const configure = () =>
+    TestBed.configureTestingModule({
       imports: [TypeInnovationDevComponent],
       providers: [
         { provide: BilateralApiService, useValue: bilateralApi },
@@ -54,11 +62,13 @@ describe('TypeInnovationDevComponent', () => {
         { provide: BilateralMdsTrackerService, useValue: mdsTracker },
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralExpandableStateService, useValue: expandableState },
-        { provide: InnovationControlListService, useValue: innovationControlListSE },
-      ],
-    })
-      .overrideTemplate(TypeInnovationDevComponent, '<div></div>')
-      .compileComponents();
+        { provide: InnovationControlListService, useValue: innovationControlListSE }
+      ]
+    });
+
+  beforeEach(async () => {
+    makeMocks();
+    await configure().overrideTemplate(TypeInnovationDevComponent, '<div></div>').compileComponents();
   });
 
   it('should create', () => {
@@ -68,46 +78,16 @@ describe('TypeInnovationDevComponent', () => {
   describe('loadData', () => {
     it('loads the body and updates the MDS tracker', () => {
       bilateralApi.GET_innovationDev.mockReturnValue(
-        of({ response: { short_title: 'T', innovation_nature_id: 3, innovation_developers: 'D', innovation_readiness_level_id: 5 } }),
+        of({ response: { short_title: 'T', innovation_nature_id: 3, innovation_developers: 'D', innovation_readiness_level_id: 5 } })
       );
       build();
       fixture.detectChanges();
       expect(component.body.short_title).toBe('T');
       expect(mdsTracker.setSectionFields).toHaveBeenCalledWith('type-specific', [
-        { key: 'short-title', label: 'Short title', filled: true, invalid: false, invalidReason: undefined },
         { key: 'nature', label: 'Innovation typology (nature)', filled: true },
         { key: 'developers', label: 'Innovation developer', filled: true },
-        { key: 'readiness', label: 'Readiness level', filled: true },
+        { key: 'readiness', label: 'Readiness level', filled: true }
       ]);
-    });
-
-    // P2-3340: `maxWords` only ever coloured the counter, so a 12-word short title saved unchanged.
-    // The field stays "filled" — it IS answered — and is flagged invalid so Submit can refuse and say why.
-    it('flags an over-limit short title as invalid without unfilling it', () => {
-      bilateralApi.GET_innovationDev.mockReturnValue(
-        of({ response: { short_title: 'one two three four five six seven eight nine ten eleven twelve' } }),
-      );
-      build();
-      fixture.detectChanges();
-
-      const shortTitle = mdsTracker.setSectionFields.mock.calls.at(-1)[1][0];
-      expect(shortTitle).toEqual({
-        key: 'short-title',
-        label: 'Short title',
-        filled: true,
-        invalid: true,
-        invalidReason: '12 words; the maximum is 10',
-      });
-    });
-
-    it('accepts exactly the maximum — the ceiling is inclusive', () => {
-      bilateralApi.GET_innovationDev.mockReturnValue(
-        of({ response: { short_title: 'one two three four five six seven eight nine ten' } }),
-      );
-      build();
-      fixture.detectChanges();
-
-      expect(mdsTracker.setSectionFields.mock.calls.at(-1)[1][0].invalid).toBe(false);
     });
 
     it('restores the show-all-fields toggle from the expandable state service', () => {
@@ -140,11 +120,15 @@ describe('TypeInnovationDevComponent', () => {
     });
   });
 
+  // P2-3391 AC9/AC10 — the green check is exactly the three MDS fields the story names.
   describe('updateMds', () => {
-    it('does not track any of the new Full Metadata fields', () => {
+    const trackedKeys = () => mdsTracker.setSectionFields.mock.calls.at(-1)[1].map((f: any) => f.key);
+
+    it('tracks only the three MDS fields, never the full metadata ones', () => {
       build();
       component.body = {
         short_title: 'T',
+        innovation_characterization_id: 1,
         innovation_nature_id: 12,
         innovation_developers: 'D',
         innovation_readiness_level_id: 17,
@@ -152,11 +136,61 @@ describe('TypeInnovationDevComponent', () => {
         number_of_varieties: 3,
         innovation_collaborators: 'Someone',
         evidences_justification: 'Because...',
-        has_scaling_studies: true,
+        has_scaling_studies: true
       };
       component.updateMds();
-      const [, fields] = mdsTracker.setSectionFields.mock.calls[mdsTracker.setSectionFields.mock.calls.length - 1];
-      expect(fields.map((f: any) => f.key)).toEqual(['short-title', 'nature', 'developers', 'readiness']);
+      expect(trackedKeys()).toEqual(['nature', 'developers', 'readiness']);
+    });
+
+    it('reaches 100% on the three MDS fields alone, with no short title at all', () => {
+      build();
+      component.body = { innovation_nature_id: 12, innovation_developers: 'D', innovation_readiness_level_id: 17 };
+      component.updateMds();
+      const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(fields.every((f: any) => f.filled)).toBe(true);
+    });
+
+    it.each([
+      ['nature', { innovation_developers: 'D', innovation_readiness_level_id: 17 }],
+      ['developers', { innovation_nature_id: 12, innovation_readiness_level_id: 17 }],
+      ['readiness', { innovation_nature_id: 12, innovation_developers: 'D' }]
+    ])('leaves %s unfilled when it is missing, so the section cannot go green', (key, body) => {
+      build();
+      component.body = body;
+      component.updateMds();
+      const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(fields.find((f: any) => f.key === key).filled).toBe(false);
+    });
+
+    it('treats a whitespace-only innovation developer as unfilled', () => {
+      build();
+      component.body = { innovation_developers: '   ' };
+      component.updateMds();
+      const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(fields.find((f: any) => f.key === 'developers').filled).toBe(false);
+    });
+
+    // P2-3340 still holds even though the short title moved to full metadata: it is reported only
+    // while it breaks the ceiling, as `filled: true`, so Submit refuses without ever blocking AC9.
+    it('flags an over-limit short title as invalid without adding an unfilled slot', () => {
+      build();
+      component.body = { short_title: 'one two three four five six seven eight nine ten eleven twelve' };
+      component.updateMds();
+      const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(fields.at(-1)).toEqual({
+        key: 'short-title',
+        label: 'Short title',
+        filled: true,
+        invalid: true,
+        invalidReason: '12 words; the maximum is 10'
+      });
+    });
+
+    it('accepts exactly the maximum — the ceiling is inclusive — and tracks nothing for it', () => {
+      build();
+      component.body = { short_title: 'one two three four five six seven eight nine ten' };
+      component.updateMds();
+      expect(trackedKeys()).toEqual(['nature', 'developers', 'readiness']);
     });
   });
 
@@ -226,10 +260,11 @@ describe('TypeInnovationDevComponent', () => {
   });
 
   describe('save flow', () => {
-    it('onFieldChange sends every Fase-1 field in the payload', () => {
+    it('onFieldChange sends every MDS and full metadata field in the payload', () => {
       build();
       component.body = {
         short_title: 'T',
+        innovation_characterization_id: 2,
         innovation_nature_id: 12,
         innovation_developers: 'D',
         innovation_readiness_level_id: 17,
@@ -239,13 +274,14 @@ describe('TypeInnovationDevComponent', () => {
         evidences_justification: 'Because...',
         reference_materials: [{ link: 'https://x.org' }],
         has_scaling_studies: true,
-        scaling_studies_urls: ['https://y.org'],
+        scaling_studies_urls: ['https://y.org']
       };
       component.onFieldChange();
       expect(autoSave.schedulePayload).toHaveBeenCalledWith(
         'typeSpecific',
         {
           short_title: 'T',
+          innovation_characterization_id: 2,
           innovation_nature_id: 12,
           innovation_developers: 'D',
           innovation_readiness_level_id: 17,
@@ -255,9 +291,9 @@ describe('TypeInnovationDevComponent', () => {
           evidences_justification: 'Because...',
           reference_materials: [{ link: 'https://x.org' }],
           has_scaling_studies: true,
-          scaling_studies_urls: ['https://y.org'],
+          scaling_studies_urls: ['https://y.org']
         },
-        expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' }),
+        expect.objectContaining({ debounceMs: 800, statusKey: 'type-specific' })
       );
     });
 
@@ -278,11 +314,7 @@ describe('TypeInnovationDevComponent', () => {
       build();
       component.body = {};
       component.onSave();
-      expect(autoSave.schedulePayload).toHaveBeenCalledWith(
-        'typeSpecific',
-        expect.anything(),
-        expect.objectContaining({ debounceMs: 0 }),
-      );
+      expect(autoSave.schedulePayload).toHaveBeenCalledWith('typeSpecific', expect.anything(), expect.objectContaining({ debounceMs: 0 }));
     });
 
     it('tracks the saving state from fieldStatus', () => {
@@ -301,6 +333,138 @@ describe('TypeInnovationDevComponent', () => {
       expect(expandableState.setShowAllFields).toHaveBeenCalledWith(123, 'type-specific', true);
       component.toggleShowAll();
       expect(expandableState.setShowAllFields).toHaveBeenLastCalledWith(123, 'type-specific', false);
+    });
+  });
+
+  // ── P2-3391 / P2-3327 — rendered template ───────────────────────────────────────────────────────
+  // These run against the real template on purpose: the note copy, the button label and the
+  // required/optional split are the acceptance criteria themselves, not an implementation detail.
+  describe('rendered template', () => {
+    // `app-pr-input`/`app-pr-select`/`app-pr-textarea` declare their inputs as signals while
+    // `app-pr-radio-button` still uses plain `@Input()`s, so read both shapes.
+    const read = (value: any) => (typeof value === 'function' ? value() : value);
+    const fieldsOf = (selector: string) =>
+      fixture.debugElement.queryAll(By.css(selector)).map(d => ({
+        label: read(d.componentInstance.label),
+        required: read(d.componentInstance.required)
+      }));
+    const allFields = () => [
+      ...fieldsOf('app-pr-input'),
+      ...fieldsOf('app-pr-select'),
+      ...fieldsOf('app-pr-textarea'),
+      ...fieldsOf('app-pr-radio-button')
+    ];
+    const labels = () => allFields().map(f => f.label);
+    const toggleButton = (): HTMLButtonElement => fixture.nativeElement.querySelector('.tsf-fields > div:first-child button');
+    const render = () => {
+      build();
+      fixture.detectChanges();
+    };
+
+    beforeEach(async () => {
+      TestBed.resetTestingModule();
+      makeMocks();
+      await configure().compileComponents();
+    });
+
+    it('shows the MDS note with the exact wording the story requires', () => {
+      render();
+      const alert = fixture.debugElement.query(By.css('app-alert-status'));
+      expect(read(alert.componentInstance.description)).toBe(MDS_NOTE);
+      expect(read(alert.componentInstance.status)).toBe('info');
+    });
+
+    it('puts the note and the button in the first row of the section, button to the right', () => {
+      render();
+      const row: HTMLElement = fixture.nativeElement.querySelector('.tsf-fields').firstElementChild;
+      expect(row.className).toContain('justify-between');
+      expect(row.querySelector('app-alert-status')).toBeTruthy();
+      const children = Array.from(row.children).map(c => c.tagName.toLowerCase());
+      expect(children).toEqual(['app-alert-status', 'button']);
+    });
+
+    it('labels the button "Complete full metadata" while collapsed and "Hide full metadata" once expanded', () => {
+      render();
+      expect(toggleButton().textContent.trim()).toBe('Complete full metadata');
+      toggleButton().click();
+      fixture.detectChanges();
+      expect(toggleButton().textContent.trim()).toBe('Hide full metadata');
+    });
+
+    it('shows the three MDS fields without expanding anything, and marks all three required', () => {
+      render();
+      expect(labels()).toEqual(['Which of the below typologies best fits the nature of the innovation?', 'Innovation Developer']);
+      expect(allFields().every(f => f.required)).toBe(true);
+      // The readiness level is an `app-pr-range-level`, headed by its own field header.
+      expect(fixture.debugElement.query(By.css('app-pr-range-level'))).toBeTruthy();
+      const headers = fixture.debugElement.queryAll(By.css('app-pr-field-header')).map(d => read(d.componentInstance.label));
+      expect(headers).toContain('How would you assess the current readiness of this innovation?');
+    });
+
+    it('reveals the full metadata fields on click and hides them again, in the pooled-funding order', () => {
+      render();
+      const collapsed = labels();
+
+      toggleButton().click();
+      fixture.detectChanges();
+      const expanded = labels();
+
+      expect(expanded.length).toBeGreaterThan(collapsed.length);
+      expect(expanded).toEqual(
+        expect.arrayContaining([
+          'Short title',
+          'What would be the best way to characterize this innovation?',
+          'Innovation collaborators',
+          'Please provide a brief explanation that explains how the provided evidence (inputted in the Evidence section) justifies the chosen innovation readiness level'
+        ])
+      );
+      expect(expanded.indexOf('Short title')).toBeLessThan(expanded.indexOf('What would be the best way to characterize this innovation?'));
+
+      toggleButton().click();
+      fixture.detectChanges();
+      expect(labels()).toEqual(collapsed);
+    });
+
+    it('keeps every revealed full metadata field strictly optional', () => {
+      render();
+      const mdsLabels = labels();
+
+      toggleButton().click();
+      fixture.detectChanges();
+
+      const revealed = allFields().filter(f => !mdsLabels.includes(f.label));
+      expect(revealed.length).toBeGreaterThan(0);
+      expect(revealed.filter(f => f.required)).toEqual([]);
+    });
+
+    it('keeps the scaling studies question optional too, once the readiness gate opens', () => {
+      render();
+      component.body = { innovation_readiness_level_id: 17 };
+      toggleButton().click();
+      fixture.detectChanges();
+
+      const scaling = allFields().find(f => typeof f.label === 'string' && f.label.startsWith('Have any studies been conducted'));
+      expect(scaling).toBeDefined();
+      expect(scaling.required).toBe(false);
+    });
+
+    it('preserves the values typed in full metadata when the block is collapsed', () => {
+      render();
+      toggleButton().click();
+      fixture.detectChanges();
+
+      component.body.innovation_collaborators = 'Ada Lovelace (ada@x.org)';
+      component.body.short_title = 'Drought tolerant beans';
+      toggleButton().click();
+      fixture.detectChanges();
+
+      expect(component.body.innovation_collaborators).toBe('Ada Lovelace (ada@x.org)');
+      expect(component.body.short_title).toBe('Drought tolerant beans');
+      // ...and they still travel in the payload while hidden.
+      component.onSave();
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect(payload.innovation_collaborators).toBe('Ada Lovelace (ada@x.org)');
+      expect(payload.short_title).toBe('Drought tolerant beans');
     });
   });
 });

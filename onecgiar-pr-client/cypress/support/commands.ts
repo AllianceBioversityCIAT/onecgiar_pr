@@ -98,6 +98,23 @@ Cypress.Commands.add('loginByToken', (visitUrl = '/') => {
   cy.visit(visitUrl);
 });
 
+/**
+ * The ONE selector helper for everything outside `src/app/custom-fields/**`.
+ *
+ * Page-level markup is addressed by `data-testid` and nothing else: tag names
+ * (`app-save-button`) and utility classes are refactor fodder — the suite silently rotted for two
+ * days when P2-3435 renamed `app-save-button` to `app-section-bottom-bar`, because every spec was
+ * anchored to a component name. A `data-testid` is a contract; a tag name is an implementation
+ * detail.
+ *
+ * The custom-fields are the documented exception: their internals (`a.field`, `.options .option`,
+ * `.pr-field.complete`, `input.pr-native-radio`) are the component's public behaviour and are
+ * described in `cypress/support/result-detail.ts`.
+ */
+Cypress.Commands.add('testid', (id: string, options?: Partial<Cypress.Loggable & Cypress.Timeoutable & Cypress.Withinable & Cypress.Shadow>) =>
+  cy.get(`[data-testid="${id}"]`, options)
+);
+
 // Custom command for login with role support (real UI flow)
 Cypress.Commands.add('login', (role?: string, email?: string, password?: string) => {
   // Default to guest role if not specified
@@ -170,6 +187,11 @@ declare global {
       login(role?: string, email?: string, password?: string): Chainable<void>;
       loginByToken(visitUrl?: string): Chainable<void>;
       hasCredentials(role?: string): boolean;
+      /** `cy.get('[data-testid="<id>"]')` — the only page-level selector this suite is allowed to use. */
+      testid(
+        id: string,
+        options?: Partial<Cypress.Loggable & Cypress.Timeoutable & Cypress.Withinable & Cypress.Shadow>
+      ): Chainable<JQuery<HTMLElement>>;
     }
   }
 }

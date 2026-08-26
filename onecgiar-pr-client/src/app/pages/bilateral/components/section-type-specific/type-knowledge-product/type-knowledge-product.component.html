@@ -17,33 +17,241 @@
       </div>
     </div>
   } @else {
+    <!-- Server-generated warnings first: they say what is missing in the repository record, so they
+         belong above the questions the user is about to answer. -->
+    @for (warning of body.warnings; track warning) {
+      <app-alert-status [description]="warning"></app-alert-status>
+    }
+    <app-alert-status
+      description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in {{ sourceName }}. Before the end of the reporting period, metadata will be automatically refreshed on this page."></app-alert-status>
+    <app-alert-status
+      description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in {{ sourceName }}. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record."></app-alert-status>
+
+    <!-- ── MELIA: the only editable block in this section ───────────────────────────────── -->
+    <app-pr-yes-or-not
+      label="Is this knowledge product a MELIA Product?"
+      [required]="true"
+      [(ngModel)]="melia.isMeliaProduct"
+      (ngModelChange)="onMeliaProductChange()">
+    </app-pr-yes-or-not>
+
+    @if (melia.isMeliaProduct === true) {
+      <div class="kp-melia-nested">
+        <app-pr-yes-or-not
+          [label]="plannedQuestionLabel()"
+          [required]="true"
+          [(ngModel)]="melia.ostSubmitted"
+          (ngModelChange)="onOstSubmittedChange()">
+        </app-pr-yes-or-not>
+
+        @if (melia.ostSubmitted === false) {
+          <app-pr-select
+            label="Select MELIA type"
+            placeholder="Select MELIA type"
+            [options]="meliaTypes"
+            optionLabel="name"
+            optionValue="id"
+            [required]="true"
+            [(ngModel)]="melia.clarisaMeliaTypeId"
+            (ngModelChange)="onFieldChange()">
+          </app-pr-select>
+        }
+
+        @if (melia.ostSubmitted === true) {
+          @if (showTocMeliaSelect()) {
+            <app-pr-select
+              label="Select the MELIA study from the drop-down (this drop-down is synced with your TOC)"
+              placeholder="Select the MELIA study from the drop-down (this drop-down is synced with your TOC)"
+              [options]="tocMeliaStudies"
+              optionLabel="title"
+              optionValue="melia_id"
+              [required]="true"
+              [(ngModel)]="melia.tocMeliaStudyId"
+              (ngModelChange)="onFieldChange()">
+            </app-pr-select>
+          } @else {
+            <app-pr-select
+              label="Select MELIA from those included in OST Section 6.3"
+              placeholder="Select MELIA from those included in OST Section 6.3"
+              [options]="ostMeliaStudies"
+              optionLabel="melia_study_title"
+              optionValue="melia_id"
+              [required]="true"
+              [(ngModel)]="melia.ostMeliaId"
+              (ngModelChange)="onFieldChange()">
+            </app-pr-select>
+          }
+        }
+      </div>
+    }
+
+    <!-- ── Repository metadata: read-only, never part of the save payload ───────────────── -->
     <div class="tsf-readonly-row">
       <span class="tsf-readonly-label">Handle</span>
-      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.handle">{{ body.handle || 'Not available' }}</span>
+      @if (body.handle) {
+        <a class="tsf-readonly-value kp-link" [href]="body.handle" target="_blank" rel="noopener">{{ body.handle }}</a>
+      } @else {
+        <span class="tsf-readonly-value tsf-empty-value">Not available</span>
+      }
     </div>
     <div class="tsf-readonly-row">
-      <span class="tsf-readonly-label">Title</span>
-      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.title">{{ body.title || 'Not available' }}</span>
+      <span class="tsf-readonly-label">Date online ({{ sourceName }})</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.onlineYearCG">{{ body.onlineYearCG || 'Not available' }}</span>
     </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Issue date ({{ sourceName }})</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.yearCG">{{ body.yearCG || 'Not available' }}</span>
+    </div>
+    @if (body.year_WOS) {
+      <div class="tsf-readonly-row">
+        <span class="tsf-readonly-label">Issue date (WoS)</span>
+        <span class="tsf-readonly-value">{{ body.year_WOS }}</span>
+      </div>
+    }
     <div class="tsf-readonly-row">
       <span class="tsf-readonly-label">Authors</span>
-      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.authors">{{ body.authors || 'Not available' }}</span>
+      @if (body.authors?.length) {
+        <span class="tsf-readonly-value kp-chips">
+          @for (author of body.authors; track author) {
+            <span class="kp-chip">{{ author }}</span>
+          }
+        </span>
+      } @else {
+        <span class="tsf-readonly-value tsf-empty-value">Not available</span>
+      }
     </div>
     <div class="tsf-readonly-row">
-      <span class="tsf-readonly-label">Type</span>
+      <span class="tsf-readonly-label">Knowledge product type</span>
       <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.type">{{ body.type || 'Not available' }}</span>
     </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Peer reviewed ({{ sourceName }})</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.is_peer_reviewed_CG">{{ body.is_peer_reviewed_CG || 'Not available' }}</span>
+    </div>
+    @if (body.is_peer_reviewed_WOS !== undefined) {
+      <div class="tsf-readonly-row">
+        <span class="tsf-readonly-label">Peer reviewed (WoS)</span>
+        <span class="tsf-readonly-value">{{ body.is_peer_reviewed_WOS }}</span>
+      </div>
+    }
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Web of Science Core Collection (former ISI) ({{ sourceName }})</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.is_isi_CG">{{ body.is_isi_CG || 'Not available' }}</span>
+    </div>
+    @if (body.isJournalArticle && (!body.is_isi_CG || body.is_isi_CG === 'Not provided')) {
+      <app-alert-status
+        status="info"
+        inlineStyles="width: 100%"
+        description="Please update the ISI Status field in CGSpace before proceeding with the Quality Assurance process."></app-alert-status>
+    }
+    @if (body.is_isi_WOS !== undefined) {
+      <div class="tsf-readonly-row">
+        <span class="tsf-readonly-label">Web of Science Core Collection (former ISI) (WoS)</span>
+        <span class="tsf-readonly-value">{{ body.is_isi_WOS }}</span>
+      </div>
+    }
     <div class="tsf-readonly-row">
       <span class="tsf-readonly-label">DOI</span>
       <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.doi">{{ body.doi || 'Not available' }}</span>
     </div>
     <div class="tsf-readonly-row">
-      <span class="tsf-readonly-label">Peer Reviewed</span>
-      <span class="tsf-readonly-value">{{ body.is_peer_reviewed ? 'Yes' : 'No' }}</span>
+      <span class="tsf-readonly-label">Accessibility ({{ sourceName }})</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.accessibility_CG">{{ body.accessibility_CG || 'Not available' }}</span>
+    </div>
+    @if (body.isJournalArticle && (!body.accessibility_CG || body.accessibility_CG === 'Not provided')) {
+      <app-alert-status
+        status="info"
+        inlineStyles="width: 100%"
+        description="Please update the Open Access field in CGSpace before proceeding with the Quality Assurance process."></app-alert-status>
+    }
+    @if (body.accessibility_WOS) {
+      <div class="tsf-readonly-row">
+        <span class="tsf-readonly-label">Accessibility (Unpaywall)</span>
+        <span class="tsf-readonly-value">{{ body.accessibility_WOS }}</span>
+      </div>
+    }
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">License</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.licence">{{ body.licence || 'Not available' }}</span>
     </div>
     <div class="tsf-readonly-row">
-      <span class="tsf-readonly-label">Accessibility</span>
-      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.accesibility">{{ body.accesibility || 'Not available' }}</span>
+      <span class="tsf-readonly-label">Keywords</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.keywords">{{ body.keywords || 'Not available' }}</span>
+    </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">AGROVOC Keywords</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.agrovoc_keywords">{{ body.agrovoc_keywords || 'Not available' }}</span>
+    </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Commodity</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.commodity">{{ body.commodity || 'Not available' }}</span>
+    </div>
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Investors/Sponsors</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.investors">{{ body.investors || 'Not available' }}</span>
+    </div>
+
+    <app-pr-field-header
+      label="Altmetric Attention Score"
+      description="<i>The Altmetric Attention Score might vary over time. Before the end of the reporting period, this information will be automatically refreshed on this page to reflect the latest score.</i>"
+      [required]="false"></app-pr-field-header>
+    @if (body.altmetric_details_url) {
+      <a class="kp-altmetric" [href]="body.altmetric_details_url" target="_blank" rel="noopener">
+        <img class="kp-altmetric__image" [src]="body.altmetric_img_url" alt="Altmetric attention score" />
+      </a>
+    } @else {
+      <div class="tsf-empty-value">Not Available</div>
+    }
+
+    <div class="tsf-readonly-row">
+      <span class="tsf-readonly-label">Reference to other knowledge products</span>
+      <span class="tsf-readonly-value" [class.tsf-empty-value]="!body.references">{{ body.references || 'Not available' }}</span>
+    </div>
+
+    <app-pr-field-header label="FAIR score for this knowledge product" [description]="fairGuideline" [required]="false"></app-pr-field-header>
+    <div class="kp-fair-group">
+      @for (indicator of fairData; track indicator.key) {
+        <div class="kp-fair-item">
+          <circle-progress
+            [percent]="indicator.value.score * 100"
+            [subtitle]="indicator.key"
+            subtitleFontSize="30"
+            [radius]="50"
+            [outerStrokeWidth]="7"
+            [innerStrokeWidth]="7"
+            [outerStrokeColor]="calculateBorderColor(indicator.value.score)"
+            innerStrokeColor="var(--pr-color-accents-1)"
+            [space]="$any(-7)"
+            [animation]="true"
+            [animationDuration]="300">
+          </circle-progress>
+          <div class="kp-fair-texts">
+            @for (subIndicator of indicator.value.indicators ?? []; track subIndicator.name) {
+              <div class="kp-fair-indicator">
+                <i class="material-icons-round" [class.check]="subIndicator.score" [class.incomplete]="!subIndicator.score">{{
+                  subIndicator.score ? 'check' : 'cancel'
+                }}</i>
+                <span>{{ subIndicator.name }} - {{ subIndicator.description }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
     </div>
   }
 </div>
+
+@if (!loading() && !loadFailed()) {
+  <div class="tsf-actions">
+    <button class="tsf-save-btn" type="button" [disabled]="saving()" (click)="onSave()">
+      <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
+      {{ saving() ? 'Saving...' : 'Save' }}
+    </button>
+    @if (canSync()) {
+      <button class="tsf-sync-btn" type="button" (click)="onSync()">
+        <i class="material-icons-round">sync</i>
+        Sync with {{ sourceName }}
+      </button>
+    }
+  </div>
+}

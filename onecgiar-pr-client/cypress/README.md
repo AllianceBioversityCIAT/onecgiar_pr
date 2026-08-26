@@ -132,13 +132,15 @@ cypress/
 │   ├── login-simplified.cy.ts     # Formulario de login + sign-in real
 │   ├── results-list.cy.ts         # Results Center: columnas RC_COLUMNS y filas
 │   └── result-detail/
-│       ├── general-information.cy.ts        # input + textarea + radios + yes/no, guardar, recargar
+│       ├── general-information.cy.ts        # input + textarea + score segmentado, guardar, recargar
 │       ├── contributors-and-partners.cy.ts  # selects y multiselects (chips, contador, búsqueda)
-│       └── save-validation.cy.ts            # panel de campos obligatorios faltantes
+│       ├── save-validation.cy.ts            # campos obligatorios faltantes en la barra inferior
+│       ├── save-contract.cy.ts              # el PAYLOAD del PATCH lleva lo que la pantalla muestra
+│       └── save-failures.cy.ts              # 500 / 409 / caída de red / doble click (PATCH stubbeado)
 ├── fixtures/
 ├── support/
-│   ├── commands.ts        # cy.loginByToken, cy.login, cy.hasCredentials
-│   ├── e2e.ts             # Configuración global E2E (uncaught:exception)
+│   ├── commands.ts        # cy.loginByToken, cy.login, cy.hasCredentials, cy.testid
+│   ├── e2e.ts             # Configuración global E2E (uncaught:exception ACOTADO)
 │   ├── result-detail.ts   # Helpers de Result Detail + contrato DOM de custom-fields
 │   ├── component.ts       # Runner de component testing (mount)
 │   ├── ct-utils.ts
@@ -177,10 +179,17 @@ documenta y encapsula lo esencial:
   `cy.contains('.radioButton', 'Yes').find('input.pr-native-radio')`.
 - **`app-pr-yes-or-not`**: `cy.contains('.field_container .choice', 'Yes').click()`; el estado
   seleccionado es `.choice.yes` / `.choice.no`. `FieldsManagerService` puede ocultarlo por portfolio.
-- **`app-save-button`**: el nodo clickeable es un `<div>`, no un `<button>` →
-  `cy.get('app-save-button app-pr-button')`. Muestra `Saving` mientras `saveButtonSE.isSaving()`.
-  El panel de faltantes es `.fields-feedback-list`, colapsado en `.counter` (`n alerts`) y expandido
-  con `.back_icon` en `.items .item` (`<strong>Campo</strong> is missing`).
+- **`app-section-bottom-bar`** (reemplazó a `app-save-button` en Result Detail, P2-3435): botón
+  **nativo** con `[disabled]`, así que `should('be.disabled')` funciona y un click sin `force` es
+  inerte. Mientras guarda muestra `Saving…` (con el carácter `…`, no tres puntos). Se direcciona
+  por sus `data-testid` — exportados como `BOTTOM_BAR` en `cypress/support/result-detail.ts`:
+  `section-bottom-bar-save`, `-back`, `-next`, `-position`, `-pending`, `-complete` y la lista
+  `#sbb-pending-list li`.
+  - Los faltantes se **nombran**, no se cuentan: `-pending` dice `N fields missing` y abre
+    `#sbb-pending-list`, cuyos `li` son **etiquetas peladas** (ya no `<strong>Campo</strong> is missing`).
+    Con todo completo el botón desaparece y en su lugar está `-complete` ("Section complete").
+  - La barra se **teletransporta** al slot del layout (`SectionBottomBarSlotService`): NO cuelga de
+    la sección, así que hay que consultarla desde la raíz del documento, nunca con `.within()`.
 
 Los specs de Result Detail **nunca** hardcodean un id de resultado: `findEditableResultUrl()` abre
 el Results Center, toma la primera fila que apunta a `/result/result-detail/` y verifica que sea
@@ -203,6 +212,23 @@ editable (hasta 5 candidatas) antes de usarla.
 5. **Dejar el dato como estaba** — los specs corren contra el backend compartido de testing; las
    ediciones se escriben como toggles reversibles y las selecciones se restauran.
 6. **Manejar la ausencia de secretos** — usar `describeWithToken` para que el suite siga en verde.
+7. **`data-testid` es el ÚNICO selector fuera de `custom-fields/`** — usar `cy.testid('...')`. Los
+   nombres de componente son detalle de implementación: la suite estuvo rota dos días sin que nadie
+   lo notara porque todo colgaba de `app-save-button`, y P2-3435 lo renombró. Si al escribir un spec
+   falta el hook, se **añade a la plantilla en el mismo cambio**.
+8. **Nada de falsos verdes** — si falta la precondición (el control no se renderiza en ese
+   portafolio, la plataforma está cerrada), `this.skip()` para que salga **pendiente**. Un
+   `cy.log()` + `return` reporta un test en verde que no aseveró nada.
+9. **Aseverar el payload, no sólo el código HTTP** — un `200` sólo dice que el backend aceptó algo.
+   Que el campo viaje se comprueba sobre `interception.request.body` (ver `save-contract.cy.ts`).
+
+### Qué se traga (y qué NO) `cypress/support/e2e.ts`
+
+El `uncaught:exception` ya **no** devuelve `false` para todo. Sólo silencia (a) el ruido conocido
+(Pusher/sockets/`ResizeObserver`/`NG0100`) y (b) cualquier error dentro de la **ventana de arranque**
+(10 s desde cada carga de página, ajustable con `Cypress.env('bootGraceMs')`). Un error lanzado
+después — por ejemplo dentro de un guardado — **rompe el test**, que es justamente para lo que está
+la suite.
 
 ## 🔍 Debugging
 

@@ -1,4 +1,9 @@
-<app-bilateral-page-header pageTitle="Report New Bilateral Result" />
+<app-bilateral-page-header
+  [pageTitle]="headerTitle()"
+  [resultCode]="creationService.resultCode()"
+  [resultTypeName]="creationService.resultTypeName()"
+  [isW3Bilateral]="creationService.isW3Bilateral()"
+  [statusId]="creationService.resultStatusId()" />
 
 <div class="bilateral-creator" [class.bilateral-creator--with-aside]="!isCreating() && resultId()">
   @if (isCreating()) {
@@ -112,6 +117,31 @@
           </button>
         </div>
       }
+    </div>
+  }
+
+  <!-- The sections mount only once loadResult publishes the internal result id, so the editor needs
+       a placeholder for that window instead of a blank page. -->
+  @if (!isCreating() && !resultId() && creationService.isLoadingResult()) {
+    <div class="px-[32px] py-[24px]" aria-busy="true">
+      <app-form-skeleton [rows]="3" [hasLabel]="true" [hasExtra]="true" [extraRows]="4" />
+    </div>
+  }
+
+  <!-- Error twin of the skeleton above: the sections never mount without the internal id, so a
+       failed detail request would otherwise leave the editor blank and silent. -->
+  @if (!isCreating() && !resultId() && !creationService.isLoadingResult() && creationService.loadFailed()) {
+    <div class="px-[32px] py-[24px]">
+      <div
+        role="alert"
+        class="flex flex-col items-center gap-[12px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[24px] py-[32px] text-center">
+        <i class="material-icons-round text-[32px] text-[var(--pr-text-subtle)]">error_outline</i>
+        <p class="m-0 text-[15px] font-semibold text-[var(--pr-text-heading)]">We couldn't load this result</p>
+        <p class="m-0 text-[14px] text-[var(--pr-text-subtle)]">
+          Check the result code and your connection, then try again.
+        </p>
+        <button class="bcr-create-btn" type="button" (click)="retryLoadResult()">Try again</button>
+      </div>
     </div>
   }
 

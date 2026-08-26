@@ -227,7 +227,14 @@ export class SectionTocComponent implements OnInit {
       this.contributionValue.set(state.contributing_indicator);
     }
     if (state.toc_progressive_narrative !== null) {
-      this.narrative.set(state.toc_progressive_narrative);
+      // One column backs both textareas, exactly as the non-bilateral form does
+      // (rd-contributors-and-partners.component.html:80): the ToC pathway explanation when the
+      // result is planned, the "why is this being reported" justification when it is not.
+      if (state.planned_result === false) {
+        this.whyReported.set(state.toc_progressive_narrative);
+      } else {
+        this.narrative.set(state.toc_progressive_narrative);
+      }
     }
   }
 
@@ -242,7 +249,8 @@ export class SectionTocComponent implements OnInit {
         toc_result_id: this.selectedTocResultId() ?? undefined,
         indicator_id: this.selectedIndicatorId() ?? undefined,
         contributing_indicator: this.contributionValue() ?? undefined,
-        toc_progressive_narrative: this.narrative() || undefined,
+        toc_progressive_narrative:
+          (this.isPlanned() === false ? this.whyReported() : this.narrative()) || undefined,
       });
     }, 1000);
   }
@@ -365,6 +373,14 @@ export class SectionTocComponent implements OnInit {
     this.narrative.set(value);
     if (this._narrativeTimer) clearTimeout(this._narrativeTimer);
     this._narrativeTimer = setTimeout(() => this.saveTocDebounced(), 1500);
+  }
+
+  private _whyReportedTimer: ReturnType<typeof setTimeout> | null = null;
+
+  onWhyReportedInput(value: string): void {
+    this.whyReported.set(value);
+    if (this._whyReportedTimer) clearTimeout(this._whyReportedTimer);
+    this._whyReportedTimer = setTimeout(() => this.saveTocDebounced(), 1500);
   }
 
   getDisplayLabel(item: any): string {

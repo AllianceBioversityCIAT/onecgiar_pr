@@ -48,6 +48,73 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   saveStatus = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   readonly maxItems = 6;
+  readonly maxDescriptionWords = 50;
+
+  /**
+   * P2-3375: the per-evidence tags, ported from W1/W2 (rd-evidences.component.ts:29-42) with the same
+   * field names and labels, because the endpoint is shared.
+   *
+   * ⚠️ The Climate row binds `youth_related`. That is the existing W1/W2 binding and the column the
+   * API expects — its own comment says so. Not a typo to tidy.
+   */
+  readonly impactAreaTags: { field: keyof BilateralEvidenceItem; label: string }[] = [
+    { field: 'gender_related', label: 'Gender equality, youth and social inclusion' },
+    { field: 'youth_related', label: 'Climate adaptation and mitigation' },
+    { field: 'nutrition_related', label: 'Nutrition, health and food security' },
+    { field: 'environmental_biodiversity_related', label: 'Environmental health and biodiversity' },
+    { field: 'poverty_related', label: 'Poverty reduction, livelihoods and jobs' }
+  ];
+
+  readonly resultTypeTags: { field: keyof BilateralEvidenceItem; label: string }[] = [
+    { field: 'innovation_readiness_related', label: 'Innovation Development' },
+    { field: 'innovation_use_related', label: 'Innovation Use' },
+    { field: 'policy_change_related', label: 'Policy Change' },
+    { field: 'capacity_sharing_related', label: 'Capacity Sharing for Development' },
+    { field: 'knowledge_product_metadata_related', label: 'Knowledge Product' },
+    { field: 'other_output_related', label: 'Other Output' },
+    { field: 'other_outcome_related', label: 'Other Outcome' }
+  ];
+
+  countWords(text: string | undefined | null): number {
+    return (text ?? '').trim().split(/\s+/).filter(Boolean).length;
+  }
+
+  get draftDescriptionWords(): number {
+    return this.countWords(this.draftItem().description);
+  }
+
+  toggleDraftTag(field: keyof BilateralEvidenceItem): void {
+    this.draftItem.update(d => ({ ...d, [field]: !d[field] }));
+  }
+
+  /**
+   * P2-3375: an impact area scored Principal must have at least one evidence tagged for it. Ported
+   * from W1/W2 (rd-evidences.component.ts:277-305): the tag level arrives as a STRING and Principal
+   * is level '3' — the catalogue id, not the score. `2 - Principal` is the label; 3 is its id.
+   *
+   * Returns the uncovered tag names so the template can list them. Empty means covered.
+   */
+  /** Same sentence W1/W2 uses (rd-evidences.component.ts:291), one line per uncovered tag. */
+  get principalWarningHtml(): string {
+    const items = this.principalTagsWithoutEvidence
+      .map(tag => `<li>A principal contribution score (2) has been recorded for ${tag} tag. Please provide evidence to support this claim.</li>`)
+      .join('');
+    return items ? `<ul>${items}</ul>` : '';
+  }
+
+  get principalTagsWithoutEvidence(): string[] {
+    const body = this.evidenceBody();
+    const levels: { label: string; level: unknown; field: keyof BilateralEvidenceItem }[] = [
+      { label: 'Gender equality, youth and social inclusion', level: body?.gender_tag_level, field: 'gender_related' },
+      { label: 'Climate adaptation and mitigation', level: body?.climate_change_tag_level, field: 'youth_related' },
+      { label: 'Nutrition, health and food security', level: body?.nutrition_tag_level, field: 'nutrition_related' },
+      { label: 'Environmental health and biodiversity', level: body?.environmental_biodiversity_tag_level, field: 'environmental_biodiversity_related' },
+      { label: 'Poverty reduction, livelihoods and jobs', level: body?.poverty_tag_level, field: 'poverty_related' }
+    ];
+    const covered = (field: keyof BilateralEvidenceItem) => this.evidences.some(e => e[field]);
+    return levels.filter(({ level, field }) => String(level) === '3' && !covered(field)).map(({ label }) => label);
+  }
+
 
   get evidences(): BilateralEvidenceItem[] {
     return this.evidenceBody().evidences ?? [];
@@ -213,8 +280,16 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   }
 
   onDraftDescriptionInput(event: Event): void {
-    const value = (event.target as HTMLTextAreaElement).value;
-    this.draftItem.update(d => ({ ...d, description: value }));
+    const el = event.target as HTMLTextAreaElement;
+    // P2-3375: the story caps the description at 50 WORDS. The control had maxlength="500", a
+    // character cap, which neither enforces nor communicates the real rule. Extra words are refused
+    // rather than truncated mid-word, and the value is pushed back so the textarea cannot drift from
+    // the model.
+    if (this.countWords(el.value) > this.maxDescriptionWords) {
+      el.value = this.draftItem().description ?? '';
+      return;
+    }
+    this.draftItem.update(d => ({ ...d, description: el.value }));
   }
 
   // ── File Handling ───────────────────────────────────────────────────

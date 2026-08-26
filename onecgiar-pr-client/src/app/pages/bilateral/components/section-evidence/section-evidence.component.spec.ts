@@ -82,6 +82,98 @@ describe('SectionEvidenceComponent', () => {
   });
 
   // ── getters ──────────────────────────────────────────────────────────
+  // P2-3375: ported from W1/W2 (rd-evidences.component.ts:277-305) with the same field names, because
+  // this section posts to the same endpoint. Note two things the port had to preserve exactly:
+  // Principal is tag level '3' (the catalogue id, not the score 2 in its label), and the Climate row
+  // binds `youth_related`.
+  describe('per-evidence tags and the Principal warning (P2-3375)', () => {
+    it('lists a Principal impact area that has no evidence tagged for it', () => {
+      build();
+      component.evidenceBody.set({ evidences: [{ link: 'https://a.com' }], gender_tag_level: '3' } as any);
+      expect(component.principalTagsWithoutEvidence).toEqual(['Gender equality, youth and social inclusion']);
+      expect(component.principalWarningHtml).toContain('A principal contribution score (2) has been recorded');
+    });
+
+    it('says nothing once an evidence carries that tag', () => {
+      build();
+      component.evidenceBody.set({
+        evidences: [{ link: 'https://a.com', gender_related: true }],
+        gender_tag_level: '3',
+      } as any);
+      expect(component.principalTagsWithoutEvidence).toEqual([]);
+      expect(component.principalWarningHtml).toBe('');
+    });
+
+    it('ignores impact areas that are not Principal', () => {
+      build();
+      component.evidenceBody.set({ evidences: [{ link: 'https://a.com' }], gender_tag_level: '2' } as any);
+      expect(component.principalTagsWithoutEvidence).toEqual([]);
+    });
+
+    it('reads the Climate tag from youth_related, as W1/W2 does', () => {
+      build();
+      component.evidenceBody.set({ evidences: [{ link: 'https://a.com' }], climate_change_tag_level: '3' } as any);
+      expect(component.principalTagsWithoutEvidence).toEqual(['Climate adaptation and mitigation']);
+
+      component.evidenceBody.update((b: any) => ({ ...b, evidences: [{ link: 'https://a.com', youth_related: true }] }));
+      expect(component.principalTagsWithoutEvidence).toEqual([]);
+    });
+
+    it('lists every uncovered Principal area, not just the first', () => {
+      build();
+      component.evidenceBody.set({
+        evidences: [{ link: 'https://a.com' }],
+        gender_tag_level: '3',
+        poverty_tag_level: '3',
+      } as any);
+      expect(component.principalTagsWithoutEvidence).toHaveLength(2);
+    });
+
+    it('offers five impact areas and seven result types', () => {
+      build();
+      expect(component.impactAreaTags).toHaveLength(5);
+      expect(component.resultTypeTags).toHaveLength(7);
+      expect(component.impactAreaTags.map(t => t.field)).toContain('youth_related');
+    });
+
+    it('toggles a tag on the draft item', () => {
+      build();
+      component.toggleDraftTag('policy_change_related');
+      expect(component.draftItem().policy_change_related).toBe(true);
+      component.toggleDraftTag('policy_change_related');
+      expect(component.draftItem().policy_change_related).toBe(false);
+    });
+  });
+
+  describe('description word limit (P2-3375)', () => {
+    const type = (value: string) => component.onDraftDescriptionInput({ target: { value } } as any);
+
+    it('counts words, not characters', () => {
+      build();
+      expect(component.countWords('one two three')).toBe(3);
+      expect(component.countWords('   spaced   out  ')).toBe(2);
+      expect(component.countWords('')).toBe(0);
+      expect(component.countWords(undefined)).toBe(0);
+    });
+
+    it('accepts exactly fifty words', () => {
+      build();
+      const fifty = Array.from({ length: 50 }, (_, i) => `w${i}`).join(' ');
+      type(fifty);
+      expect(component.draftDescriptionWords).toBe(50);
+      expect(component.draftItem().description).toBe(fifty);
+    });
+
+    it('refuses the fifty-first word and keeps what was already there', () => {
+      build();
+      const fifty = Array.from({ length: 50 }, (_, i) => `w${i}`).join(' ');
+      type(fifty);
+      type(fifty + ' overflow');
+      expect(component.draftItem().description).toBe(fifty);
+      expect(component.draftDescriptionWords).toBe(50);
+    });
+  });
+
   describe('getters', () => {
     it('defaults evidences to an empty array', () => {
       build();

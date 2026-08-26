@@ -20,6 +20,31 @@
             {{ title }}
           </h1>
         </div>
+
+        @if (hasIdentityStrip()) {
+          <div class="flex min-w-0 flex-wrap items-center gap-[8px] pr-[220px]">
+            @if (resultCode() != null) {
+              <span class="font-mono text-[12px] font-medium text-[var(--pr-text-secondary)]">{{ resultCode() }}</span>
+            }
+            @if (resultTypeName(); as typeName) {
+              <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">{{ typeName }}</span>
+            }
+            @if (isW3Bilateral()) {
+              <span
+                class="flex items-center rounded-full bg-[#EDE9FE] px-[9px] py-[3px] text-[12px] font-medium leading-none text-[#5733C4]">
+                W3/Bilateral
+              </span>
+            }
+            @if (statusBadge(); as badge) {
+              <span
+                class="flex items-center rounded-full px-[9px] py-[3px] text-[12px] font-medium leading-none"
+                [class]="badge.classes"
+                data-testid="bilateral-status-badge">
+                {{ badge.label }}
+              </span>
+            }
+          </div>
+        }
       } @else {
         <div class="flex items-center gap-[7px]">
           <span class="h-[8px] w-[8px] shrink-0 rounded-full bg-[var(--pr-color-primary-300)]"></span>

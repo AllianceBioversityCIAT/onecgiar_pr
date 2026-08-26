@@ -1,14 +1,21 @@
 <div class="tsf-fields">
-  <app-pr-input
-    label="Short title"
-    placeholder="Enter short title"
-    [maxWords]="shortTitleMaxWords"
-    [required]="true"
-    [tooltip]="shortTitleDesc"
-    [(ngModel)]="body.short_title"
-    (ngModelChange)="onFieldChange()">
-  </app-pr-input>
+  <!--
+    P2-3391 AC1 / P2-3327 AC2: the MDS note and the toggle sit at the TOP of the section, the note to
+    the left of the button. Capacity Sharing and Policy Change render the same row after their MDS
+    fields; the story is explicit about "at the top" for this section, so this one leads with it.
+  -->
+  <div class="flex items-center justify-between gap-3 border-b border-[#ECEFF1] pb-3">
+    <app-alert-status
+      class="flex-1"
+      status="info"
+      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
+    </app-alert-status>
+    <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
+      {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
+    </button>
+  </div>
 
+  <!-- MDS block — exactly the three fields the story names, all required for bilateral. -->
   <app-pr-select
     [options]="innovationControlListSE.typeList"
     label="Which of the below typologies best fits the nature of the innovation?"
@@ -33,7 +40,9 @@
 
   <app-pr-field-header
     label="How would you assess the current readiness of this innovation?"
-    [tooltip]="'Use the slider to select the appropriate readiness level. Readiness levels range from 1 (basic research) to 9 (proven in operational environment).'">
+    [tooltip]="
+      'Use the slider to select the appropriate readiness level. Readiness levels range from 1 (basic research) to 9 (proven in operational environment).'
+    ">
   </app-pr-field-header>
 
   <div class="tsf-readiness">
@@ -48,19 +57,36 @@
     </app-pr-range-level>
   </div>
 
-  <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
-    <app-alert-status
-      class="flex-1"
-      status="info"
-      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
-    </app-alert-status>
-    <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
-      {{ showAllFields() ? 'Hide full metadata' : 'Full metadata' }}
-    </button>
-  </div>
-
+  <!--
+    Full metadata — every field here is optional for bilateral (P2-3391 AC8) and none of them feeds
+    the green check (AC9). Order mirrors the pooled-funding form
+    (results/.../innovation-dev-info.component.html): short title, characterization, variety block,
+    collaborators, evidence justification, scaling studies, investment, reference materials.
+  -->
   @if (showAllFields()) {
     <div class="flex flex-col gap-[18px]">
+      <app-pr-input
+        label="Short title"
+        placeholder="Enter short title"
+        [maxWords]="shortTitleMaxWords"
+        [required]="false"
+        [tooltip]="shortTitleDesc"
+        [(ngModel)]="body.short_title"
+        (ngModelChange)="onFieldChange()">
+      </app-pr-input>
+
+      <app-pr-select
+        [options]="innovationControlListSE.characteristicsList"
+        label="What would be the best way to characterize this innovation?"
+        optionLabel="extraInformation"
+        optionValue="id"
+        placeholder="Select innovation characteristics"
+        [extraInformation]="true"
+        [required]="false"
+        [(ngModel)]="body.innovation_characterization_id"
+        (ngModelChange)="onFieldChange()">
+      </app-pr-select>
+
       @if (isVarietyType) {
         <app-pr-yes-or-not
           label="Are you profiling a new or improved variety or breed?"
@@ -99,34 +125,6 @@
         (ngModelChange)="onFieldChange()">
       </app-pr-textarea>
 
-      <div>
-        <app-pr-field-header
-          label="Innovation reference materials"
-          [tooltip]="referenceMaterialsDesc"
-          [required]="false"
-          [useColon]="false">
-        </app-pr-field-header>
-
-        @for (material of body.reference_materials; track $index) {
-          <div class="flex items-center gap-2">
-            <div class="w-5 shrink-0 text-center text-xs text-[#90A4AE]">{{ $index + 1 }}</div>
-            <div class="min-w-0 flex-1">
-              <app-pr-input placeholder="Add link" type="link" [required]="true" [(ngModel)]="body.reference_materials[$index].link" (ngModelChange)="onFieldChange()">
-              </app-pr-input>
-            </div>
-            <button type="button" class="shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteReferenceMaterial($index)" aria-label="Delete reference material link">
-              <i class="material-icons-round">delete</i>
-            </button>
-          </div>
-        }
-
-        @if (!body.reference_materials?.length) {
-          <app-no-data-text title="No link to reference material added"></app-no-data-text>
-        }
-
-        <app-add-button name="Add another link to reference material" (clickEvent)="addReferenceMaterial()"></app-add-button>
-      </div>
-
       @if (isReadyForScalingStudies) {
         <app-pr-radio-button
           [options]="hasScalingStudiesOptions"
@@ -146,10 +144,19 @@
               <div class="flex items-center gap-2">
                 <div class="w-5 shrink-0 text-center text-xs text-[#90A4AE]">{{ $index + 1 }}</div>
                 <div class="min-w-0 flex-1">
-                  <app-pr-input placeholder="Add link" type="link" [required]="true" [(ngModel)]="body.scaling_studies_urls[$index]" (ngModelChange)="onFieldChange()">
+                  <app-pr-input
+                    placeholder="Add link"
+                    type="link"
+                    [required]="false"
+                    [(ngModel)]="body.scaling_studies_urls[$index]"
+                    (ngModelChange)="onFieldChange()">
                   </app-pr-input>
                 </div>
-                <button type="button" class="shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]" (click)="deleteScalingStudyUrl($index)" aria-label="Delete study link">
+                <button
+                  type="button"
+                  class="shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]"
+                  (click)="deleteScalingStudyUrl($index)"
+                  aria-label="Delete study link">
                   <i class="material-icons-round">delete</i>
                 </button>
               </div>
@@ -178,6 +185,39 @@
           <span class="tsf-readonly-label">Partner Institutions</span>
           <span class="tsf-readonly-value tsf-empty-value">Not available yet</span>
         </div>
+      </div>
+
+      <div>
+        <app-pr-field-header label="Innovation reference materials" [tooltip]="referenceMaterialsDesc" [required]="false" [useColon]="false">
+        </app-pr-field-header>
+
+        @for (material of body.reference_materials; track $index) {
+          <div class="flex items-center gap-2">
+            <div class="w-5 shrink-0 text-center text-xs text-[#90A4AE]">{{ $index + 1 }}</div>
+            <div class="min-w-0 flex-1">
+              <app-pr-input
+                placeholder="Add link"
+                type="link"
+                [required]="false"
+                [(ngModel)]="body.reference_materials[$index].link"
+                (ngModelChange)="onFieldChange()">
+              </app-pr-input>
+            </div>
+            <button
+              type="button"
+              class="shrink-0 text-[#90A4AE] hover:text-[var(--pr-color-red-300)]"
+              (click)="deleteReferenceMaterial($index)"
+              aria-label="Delete reference material link">
+              <i class="material-icons-round">delete</i>
+            </button>
+          </div>
+        }
+
+        @if (!body.reference_materials?.length) {
+          <app-no-data-text title="No link to reference material added"></app-no-data-text>
+        }
+
+        <app-add-button name="Add another link to reference material" (clickEvent)="addReferenceMaterial()"></app-add-button>
       </div>
     </div>
   }

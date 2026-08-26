@@ -8,7 +8,10 @@ import { BilateralCreationService } from '../../services/bilateral-creation.serv
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { CentersService } from '../../../../shared/services/global/centers.service';
+import { InstitutionsService } from '../../../../shared/services/global/institutions.service';
+import { InnovationUseResultsService } from '../../../../shared/services/global/innovation-use-results.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 
 const center = (institutionId: number, code = `C${institutionId}`, acronym: string | undefined = `A${institutionId}`) => ({
   institutionId,
@@ -23,7 +26,10 @@ describe('SectionContributorsComponent', () => {
   let creation: any;
   let autoSave: any;
   let centersService: any;
+  let institutionsService: any;
+  let innovationUseResults: any;
   let api: any;
+  let bilateralApi: any;
 
   const build = () => {
     fixture = TestBed.createComponent(SectionContributorsComponent);
@@ -39,6 +45,9 @@ describe('SectionContributorsComponent', () => {
       resultContributingCenterIds: signal<number[]>([]),
       resultContributingProjectIds: signal<number[]>([]),
       resultContributingProjects: signal<any[]>([]),
+      selectedSecondarySps: signal<any[]>([]),
+      currentResultId: signal<number | null>(4242),
+      resultLevelId: signal<number | null>(null),
       isLoadingResult: signal(false)
     };
 
@@ -53,10 +62,24 @@ describe('SectionContributorsComponent', () => {
       getData: jest.fn().mockResolvedValue([])
     };
 
+    institutionsService = {
+      institutionsWithoutCentersPartners: signal<any[]>([
+        { institutions_id: 100, institutions_acronym: 'FAO', institutions_name: 'Food and Agriculture Organization' },
+        { institutions_id: 200, institutions_acronym: '', institutions_name: 'Ministry of Agriculture' }
+      ])
+    };
+
+    innovationUseResults = { resultsList: [] as any[] };
+
     api = {
       resultsSE: {
         GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
       }
+    };
+
+    // P2-3443: the partner block is read back from the bilateral detail endpoint.
+    bilateralApi = {
+      GET_BilateralResultDetail: jest.fn().mockReturnValue(of({ response: { commonFields: {}, contributingInstitutions: [] } }))
     };
 
     await TestBed.configureTestingModule({
@@ -66,7 +89,10 @@ describe('SectionContributorsComponent', () => {
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralMdsTrackerService, useValue: { setSectionFields: jest.fn() } },
         { provide: CentersService, useValue: centersService },
-        { provide: ApiService, useValue: api }
+        { provide: InstitutionsService, useValue: institutionsService },
+        { provide: InnovationUseResultsService, useValue: innovationUseResults },
+        { provide: ApiService, useValue: api },
+        { provide: BilateralApiService, useValue: bilateralApi }
       ]
     })
       .overrideTemplate(SectionContributorsComponent, '<div></div>')
@@ -204,10 +230,12 @@ describe('SectionContributorsComponent', () => {
       build();
       fixture.detectChanges();
       component.onCentersChange([404]);
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_center: [{ institution_id: 5 }],
-        contributing_bilateral_projects: []
-      });
+      expect(autoSave.saveContributors).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contributing_center: [{ institution_id: 5 }],
+          contributing_bilateral_projects: []
+        })
+      );
     });
 
     it('does not persist a lead center that is missing from the cached list', () => {
@@ -327,10 +355,12 @@ describe('SectionContributorsComponent', () => {
       build();
       fixture.detectChanges();
       component.onCentersChange([404]);
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_center: [{ institution_id: 5 }],
-        contributing_bilateral_projects: []
-      });
+      expect(autoSave.saveContributors).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contributing_center: [{ institution_id: 5 }],
+          contributing_bilateral_projects: []
+        })
+      );
     });
   });
 
@@ -411,10 +441,12 @@ describe('SectionContributorsComponent', () => {
       creation.selectedProject.set({ id: 1 });
       fixture.detectChanges();
       component.onProjectsChange([987]);
-      expect(autoSave.saveContributors).toHaveBeenCalledWith({
-        contributing_bilateral_projects: [{ project_id: 1, is_lead: true }],
-        contributing_center: []
-      });
+      expect(autoSave.saveContributors).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contributing_bilateral_projects: [{ project_id: 1, is_lead: true }],
+          contributing_center: []
+        })
+      );
     });
   });
 
@@ -663,7 +695,7 @@ describe('SectionContributorsComponent', () => {
       const [section, items, group] = tracker.setSectionFields.mock.calls.at(-1);
       expect(section).toBe('contributors');
       expect(group).toBe('partners');
-      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project']);
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project', 'external-partners']);
     });
 
     it('leaves the lead pair unfilled when the result has no lead center or project yet', () => {
@@ -676,6 +708,496 @@ describe('SectionContributorsComponent', () => {
 
       const items = tracker.setSectionFields.mock.calls.at(-1)[1];
       expect(items.every((i: any) => i.filled === false)).toBe(true);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────
+  // P2-3368 — Minimum data + Full metadata
+  // ────────────────────────────────────────────────────────────────────
+
+  describe('P2-3368 · external partners (mandatory, two ways to satisfy it)', () => {
+    it('is unsatisfied when there is no partner and the "no partners" box is unchecked (AC5)', () => {
+      build();
+      expect(component.selectedPartnerInstitutionIds()).toEqual([]);
+      expect(component.noExternalPartners()).toBe(false);
+      expect(component.externalPartnersSatisfied()).toBe(false);
+    });
+
+    it('is satisfied by selecting at least one partner', () => {
+      build();
+      component.onPartnersModelChange([{ institutions_id: 100 }]);
+      expect(component.selectedPartnerInstitutionIds()).toEqual([100]);
+      expect(component.externalPartnersSatisfied()).toBe(true);
+    });
+
+    it('accepts plain ids as well as option objects from the multi-select', () => {
+      build();
+      component.onPartnersModelChange([100, '200'] as any);
+      expect(component.selectedPartnerInstitutionIds()).toEqual([100, 200]);
+    });
+
+    it('is satisfied by ticking "This result has no external partners" (AC7)', () => {
+      build();
+      component.noExternalPartners.set(true);
+      component.onNoExternalPartnersChange();
+      expect(component.externalPartnersSatisfied()).toBe(true);
+    });
+
+    it('clears any selected partner when the "no partners" box is ticked', () => {
+      build();
+      component.onPartnersModelChange([{ institutions_id: 100 }]);
+      component.noExternalPartners.set(true);
+      component.onNoExternalPartnersChange();
+      expect(component.selectedPartnerInstitutionIds()).toEqual([]);
+    });
+
+    it('falls back to unsatisfied when the box is unticked again with no partner (edge case in the story)', () => {
+      build();
+      component.noExternalPartners.set(true);
+      component.onNoExternalPartnersChange();
+      component.noExternalPartners.set(false);
+      component.onNoExternalPartnersChange();
+      expect(component.externalPartnersSatisfied()).toBe(false);
+    });
+
+    it('removes a single partner and re-evaluates the requirement', () => {
+      build();
+      component.onPartnersModelChange([{ institutions_id: 100 }, { institutions_id: 200 }]);
+      component.removePartner(100);
+      expect(component.selectedPartnerInstitutionIds()).toEqual([200]);
+      component.removePartner(200);
+      expect(component.externalPartnersSatisfied()).toBe(false);
+    });
+
+    it('labels a partner by acronym, falling back to its name and then to the raw id', () => {
+      build();
+      expect(component.getPartnerDisplayName(100)).toBe('FAO');
+      expect(component.getPartnerDisplayName(200)).toBe('Ministry of Agriculture');
+      expect(component.getPartnerDisplayName(999)).toBe('999');
+    });
+
+    it('keeps demanding the field on screen: empty is invalid, a partner or the checkbox satisfies it', () => {
+      build();
+      expect(component.externalPartnersSatisfied()).toBe(false);
+
+      component.noExternalPartners.set(true);
+      component.onNoExternalPartnersChange();
+      expect(component.externalPartnersSatisfied()).toBe(true);
+
+      component.noExternalPartners.set(false);
+      component.onNoExternalPartnersChange();
+      component.onPartnersModelChange([{ institutions_id: 100 }]);
+      expect(component.externalPartnersSatisfied()).toBe(true);
+    });
+
+    // P2-3443 reversed the earlier decision: the item was held out of the tracker ONLY because the
+    // answer was not persisted (a reload made it unfilled again and Submit stayed blocked with no
+    // way out). Now that it round-trips, the mandatory affordance on screen and the Submit gate
+    // agree again. If persistence ever breaks, take the item out again — do not loosen the UI.
+    it('publishes external-partners to the MDS tracker now that the answer is persisted (P2-3443)', () => {
+      build();
+      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+
+      // Hydrated: only then does `buildContributorsPayload()` carry the partner keys, and only
+      // then may the item be reported as filled — see the invariant in `updateContributorsMds`.
+      component.partnersHydrated.set(true);
+      component.noExternalPartners.set(true);
+      component.onNoExternalPartnersChange();
+
+      const [section, items, group] = tracker.setSectionFields.mock.calls.at(-1);
+      expect(section).toBe('contributors');
+      expect(group).toBe('partners');
+      expect(items.map((i: any) => i.key)).toEqual(['lead-center', 'lead-project', 'external-partners']);
+      expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(true);
+    });
+
+    it('reports external-partners as unfilled while nothing is selected and the box is unticked', () => {
+      build();
+      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+
+      component.updateContributorsMds();
+
+      const items = tracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(false);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────
+  // P2-3443 — external partners actually reach the server and come back
+  // ────────────────────────────────────────────────────────────────────
+
+  describe('P2-3443 · persisting the external partners block', () => {
+    const lastPayload = () => autoSave.saveContributors.mock.calls.at(-1)[0];
+
+    // The hydrate effect only runs once centers AND projects are ready, so the cached centers list
+    // has to be primed before the component is built or nothing fires.
+    const buildWithCenters = () => {
+      centersService.centersList = [center(1)];
+      build();
+      fixture.detectChanges();
+    };
+
+    it('does not touch the partner keys before the stored block has been read back', () => {
+      build();
+      component.onPartnersModelChange([{ institutions_id: 100 }]);
+
+      const payload = lastPayload();
+      expect(payload.institutions).toBeUndefined();
+      expect(payload.no_external_partners).toBeUndefined();
+      expect(payload.is_lead_by_partner).toBeUndefined();
+    });
+
+    it('sends the selected partners once hydrated, alongside the centers and projects', () => {
+      build();
+      component.partnersHydrated.set(true);
+      component.onPartnersModelChange([{ institutions_id: 100 }, { institutions_id: 200 }]);
+
+      const payload = lastPayload();
+      expect(payload.institutions).toEqual([{ institutions_id: 100 }, { institutions_id: 200 }]);
+      expect(payload.no_external_partners).toBe(false);
+      expect(payload.is_lead_by_partner).toBe(false);
+      expect(payload.contributing_center).toEqual([]);
+    });
+
+    it('sends an explicit empty set plus the flag when the "no partners" box is ticked', () => {
+      build();
+      component.partnersHydrated.set(true);
+      component.onPartnersModelChange([{ institutions_id: 100 }]);
+      component.noExternalPartners.set(true);
+      component.onNoExternalPartnersChange();
+
+      const payload = lastPayload();
+      expect(payload.institutions).toEqual([]);
+      expect(payload.no_external_partners).toBe(true);
+    });
+
+    it('persists a removal', () => {
+      build();
+      component.partnersHydrated.set(true);
+      component.onPartnersModelChange([{ institutions_id: 100 }, { institutions_id: 200 }]);
+      component.removePartner(100);
+
+      expect(lastPayload().institutions).toEqual([{ institutions_id: 200 }]);
+    });
+
+    it('hydrates the stored partners from the bilateral detail payload', () => {
+      creation.currentResultId.set(4242);
+      bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+        of({
+          response: {
+            commonFields: { no_applicable_partner: 0 },
+            contributingInstitutions: [{ institutions_id: 100 }, { institutions_id: '200' }, { institutions_id: 100 }]
+          }
+        })
+      );
+      buildWithCenters();
+
+      expect(bilateralApi.GET_BilateralResultDetail).toHaveBeenCalledWith(4242);
+      expect(component.selectedPartnerInstitutionIds()).toEqual([100, 200]);
+      expect(component.noExternalPartners()).toBe(false);
+      expect(component.partnersHydrated()).toBe(true);
+    });
+
+    it('re-ticks the "no partners" box when that is what was stored', () => {
+      creation.currentResultId.set(4242);
+      bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+        of({ response: { commonFields: { no_applicable_partner: 1 }, contributingInstitutions: [] } })
+      );
+      buildWithCenters();
+
+      expect(component.noExternalPartners()).toBe(true);
+      expect(component.externalPartnersSatisfied()).toBe(true);
+    });
+
+    // The flag is a MySQL tinyint and can arrive as the string '0', which `!!` reads as true.
+    it('does not tick the box when the stored flag arrives as the string "0"', () => {
+      creation.currentResultId.set(4242);
+      bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+        of({ response: { commonFields: { no_applicable_partner: '0' }, contributingInstitutions: [] } })
+      );
+      buildWithCenters();
+
+      expect(component.noExternalPartners()).toBe(false);
+    });
+
+    it('reads the detail endpoint once per result, not once per effect run', () => {
+      creation.currentResultId.set(4242);
+      buildWithCenters();
+      creation.resultContributingCenterIds.set([1]);
+      fixture.detectChanges();
+      creation.resultContributingCenterIds.set([1, 2]);
+      fixture.detectChanges();
+
+      expect(bilateralApi.GET_BilateralResultDetail).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays unhydrated when the read fails, so a later save cannot wipe the stored partners', () => {
+      creation.currentResultId.set(4242);
+      bilateralApi.GET_BilateralResultDetail.mockReturnValue(throwError(() => new Error('boom')));
+      buildWithCenters();
+
+      expect(component.partnersHydrated()).toBe(false);
+      component.onPartnersModelChange([{ institutions_id: 100 }]);
+      expect(lastPayload().institutions).toBeUndefined();
+    });
+
+    it('does not call the detail endpoint when there is no result yet', () => {
+      creation.currentResultId.set(null);
+      buildWithCenters();
+
+      expect(bilateralApi.GET_BilateralResultDetail).not.toHaveBeenCalled();
+    });
+
+    // ── the failed read must be VISIBLE, never silent ──────────────────────────────────────
+    // 🛑 THE INVARIANT: a field is never reported as satisfied while the payload is discarding its
+    // keys. Before this, a failed GET left the section reporting `external-partners` as filled off
+    // an in-memory selection that every PATCH threw away — green tick, Submit unlocked, nothing
+    // written. The hydrate effect never re-runs on its own, so there is no self-healing either.
+    describe('when the stored partner block cannot be read', () => {
+      const buildWithFailedRead = () => {
+        creation.currentResultId.set(4242);
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(throwError(() => new Error('boom')));
+        buildWithCenters();
+      };
+
+      it('drops no partner key into the payload AND leaves the MDS entry unfilled', () => {
+        buildWithFailedRead();
+        const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+
+        expect(component.partnersHydrated()).toBe(false);
+
+        component.onPartnersModelChange([{ institutions_id: 100 }]);
+
+        const payload = lastPayload();
+        expect(payload.institutions).toBeUndefined();
+        expect(payload.no_external_partners).toBeUndefined();
+        expect(payload.is_lead_by_partner).toBeUndefined();
+
+        // ...and the very same selection must NOT satisfy the tracker entry.
+        const items = tracker.setSectionFields.mock.calls.at(-1)[1];
+        expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(false);
+      });
+
+      it('keeps the entry unfilled even when the "no partners" box is ticked', () => {
+        buildWithFailedRead();
+        const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+
+        component.noExternalPartners.set(true);
+        component.onNoExternalPartnersChange();
+
+        expect(component.externalPartnersSatisfied()).toBe(true); // the answer is given...
+        const items = tracker.setSectionFields.mock.calls.at(-1)[1];
+        expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(false); // ...but unsaveable
+      });
+
+      it('raises the error flag the block renders, and publishes the unfilled entry on failure', () => {
+        buildWithFailedRead();
+        const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+
+        expect(component.partnersLoadFailed()).toBe(true);
+        const items = tracker.setSectionFields.mock.calls.at(-1)[1];
+        expect(items.find((i: any) => i.key === 'external-partners').filled).toBe(false);
+      });
+
+      it('retries on demand and clears the error once the read succeeds', () => {
+        buildWithFailedRead();
+        expect(bilateralApi.GET_BilateralResultDetail).toHaveBeenCalledTimes(1);
+
+        bilateralApi.GET_BilateralResultDetail.mockReturnValue(
+          of({ response: { commonFields: { no_applicable_partner: 0 }, contributingInstitutions: [{ institutions_id: 100 }] } })
+        );
+        component.retryLoadExternalPartners();
+
+        expect(bilateralApi.GET_BilateralResultDetail).toHaveBeenCalledTimes(2);
+        expect(component.partnersLoadFailed()).toBe(false);
+        expect(component.partnersHydrated()).toBe(true);
+        expect(component.selectedPartnerInstitutionIds()).toEqual([100]);
+
+        component.onPartnersModelChange([{ institutions_id: 100 }]);
+        expect(lastPayload().institutions).toEqual([{ institutions_id: 100 }]);
+      });
+
+      it('re-raises the error when the retry fails again', () => {
+        buildWithFailedRead();
+        component.retryLoadExternalPartners();
+
+        expect(bilateralApi.GET_BilateralResultDetail).toHaveBeenCalledTimes(2);
+        expect(component.partnersLoadFailed()).toBe(true);
+        expect(component.partnersHydrated()).toBe(false);
+      });
+    });
+  });
+
+  describe('P2-3368 · read-only lead center and primary science program (AC1)', () => {
+    it('never lets the researcher drop the lead center from the contributing list', () => {
+      build();
+      component.readonlyLeadCenterInstitutionId = 5;
+      component.selectedCenterInstitutionIds.set([5, 9]);
+
+      component.removeCenter(5);
+      expect(component.selectedCenterInstitutionIds()).toEqual([5, 9]);
+
+      // and it is re-added even if the dropdown hands back a list without it
+      component.onCentersChange([9]);
+      expect(component.selectedCenterInstitutionIds()).toEqual([5, 9]);
+      expect(component.isLeadCenter(5)).toBe(true);
+    });
+
+    it('exposes the primary science program as derived read-only data, with no setter', () => {
+      creation.selectedPrimarySp.set({ programId: 1, programCode: 'SP01', allocation: '100', name: 'Breeding for Tomorrow' });
+      creation.selectedProject.set({ id: 1, sciencePrograms: [] });
+      build();
+
+      expect(component.primarySpData()).toEqual(
+        expect.objectContaining({ programCode: 'SP01', name: 'Breeding for Tomorrow' })
+      );
+      // primarySpData is a computed over the service — the section offers no way to write it back.
+      expect((component as any).primarySpData.set).toBeUndefined();
+    });
+
+    it('excludes the primary science program from the contributing science programs options', () => {
+      creation.selectedPrimarySp.set({ programId: 1, programCode: 'SP01', allocation: '100' });
+      creation.selectedProject.set({
+        id: 1,
+        sciencePrograms: [
+          { programId: 1, programCode: 'SP01', spName: 'Breeding for Tomorrow' },
+          { programId: 2, programCode: 'SP02', spName: 'Multifunctional Landscapes' }
+        ]
+      });
+      build();
+
+      expect(component.availableSecondarySpOptions().map(o => o.programCode)).toEqual(['SP02']);
+      expect(component.availableSecondarySpOptions()[0].full_name).toBe('SP02 - Multifunctional Landscapes');
+    });
+  });
+
+  describe('P2-3368 · Full metadata toggle (AC8/AC9) and the linked/bundled question', () => {
+    beforeEach(() => localStorage.clear());
+
+    it('starts collapsed and flips on toggle', () => {
+      build();
+      expect(component.showAllFields()).toBe(false);
+      component.toggleShowAll();
+      expect(component.showAllFields()).toBe(true);
+      component.toggleShowAll();
+      expect(component.showAllFields()).toBe(false);
+    });
+
+    it('remembers the expanded state per result', () => {
+      build();
+      component.toggleShowAll();
+      expect(localStorage.getItem('bp_extra_4242_contributors')).toBe('true');
+    });
+
+    // The suite overrides the template, so the toggle is asserted through the gates the template
+    // renders (`showLinkedResultQuestion` / `showLinkedResultsDropdown` / `fullMetadataButtonLabel`).
+    it('reveals the linked/bundled question only while the block is expanded (AC8/AC9)', () => {
+      build();
+      expect(component.showLinkedResultQuestion()).toBe(false);
+      expect(component.fullMetadataButtonLabel()).toBe('Complete full metadata');
+
+      component.toggleShowAll();
+      expect(component.showLinkedResultQuestion()).toBe(true);
+      expect(component.fullMetadataButtonLabel()).toBe('Hide full metadata');
+
+      component.toggleShowAll();
+      expect(component.showLinkedResultQuestion()).toBe(false);
+      expect(component.fullMetadataButtonLabel()).toBe('Complete full metadata');
+    });
+
+    it('uses the single P2-3358 sentence for every typology', () => {
+      build();
+      expect(component.linkedResultQuestionLabel).toBe(
+        'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?'
+      );
+    });
+
+    it('shows the results dropdown only on Yes, and never while the block is collapsed (AC11)', () => {
+      build();
+      component.onHasLinkedResultChange(true);
+      expect(component.showLinkedResultsDropdown()).toBe(false); // still collapsed
+
+      component.toggleShowAll();
+      expect(component.showLinkedResultsDropdown()).toBe(true);
+
+      component.onHasLinkedResultChange(false);
+      expect(component.showLinkedResultsDropdown()).toBe(false);
+    });
+
+    it('keeps the question unanswered by default (AC10)', () => {
+      build();
+      expect(component.hasLinkedResult()).toBeNull();
+      expect(component.selectedLinkedResultIds()).toEqual([]);
+    });
+
+    // ── the linked/bundled block is Coming soon ────────────────────────────────────────────
+    // 🛑 HOUSE RULE: a control whose value cannot be stored ships visible-but-DISABLED with the
+    // tag, and the screen never claims it will be saved. The answer has no field on
+    // SaveBilateralContributorsDto and no home in the detail payload — it only ever reached a
+    // component signal. AC13's note used to count it, so the user read "1 hidden field has values
+    // and will be saved.", reloaded, and found it empty. These tests hold that shut.
+    describe('linked/bundled question · Coming soon', () => {
+      it('flags the unpersisted controls so the template disables them and shows the tag', () => {
+        build();
+        expect(component.unpersistedFieldsComingSoon).toBe(true);
+      });
+
+      it('never promises a save: the hidden-field counter stays at zero and the note never shows', () => {
+        build();
+        expect(component.hiddenFieldsWithValues()).toBe(0);
+        expect(component.showHiddenFieldsNote()).toBe(false);
+
+        // Even with the signals populated (only reachable from code while the control is disabled)
+        // there is nothing to announce, because nothing of this leaves the browser.
+        component.onHasLinkedResultChange(true);
+        component.onLinkedResultsModelChange([{ id: 11 }]);
+        expect(component.hiddenFieldsWithValues()).toBe(0);
+        expect(component.showHiddenFieldsNote()).toBe(false);
+
+        component.toggleShowAll();
+        expect(component.showHiddenFieldsNote()).toBe(false);
+      });
+
+      it('sends nothing of the answer to the server', () => {
+        build();
+        autoSave.saveContributors.mockClear();
+
+        component.onHasLinkedResultChange(true);
+        component.onLinkedResultsModelChange([{ id: 11 }, { id: 12 }]);
+
+        expect(autoSave.saveContributors).not.toHaveBeenCalled();
+      });
+
+      // Kept green so the wiring is one flag away from working the day the DTO accepts the field.
+      it('still clears the selected results when the answer flips back to No (AC12)', () => {
+        build();
+        component.onHasLinkedResultChange(true);
+        component.onLinkedResultsModelChange([{ id: 11 }, { id: 12 }]);
+        expect(component.selectedLinkedResultIds()).toEqual([11, 12]);
+
+        component.onHasLinkedResultChange(false);
+        expect(component.selectedLinkedResultIds()).toEqual([]);
+      });
+    });
+
+    // Same house rule, same reason: nothing persists the contributing science programs either.
+    it('sends nothing of the contributing science programs to the server', () => {
+      creation.selectedProject.set({ id: 1, sciencePrograms: [{ programId: 7, programCode: 'SP07' }] });
+      build();
+      autoSave.saveContributors.mockClear();
+
+      component.onSecondarySpsModelChange([{ programId: 7 }]);
+
+      expect(creation.selectedSecondarySps()).toEqual([{ programId: 7, programCode: 'SP07', allocation: '' }]);
+      expect(autoSave.saveContributors).not.toHaveBeenCalled();
+    });
+
+    it('formats a linked result as code + name + type + title', () => {
+      build();
+      expect(
+        component.formatResultLabel({ result_code: 'PO-1', name: 'Policy result', result_type_name: 'Policy Change', title: 'A title', acronym: 'SP01', phase_year: 2026 })
+      ).toBe('(SP01 - 2026) PO-1 - Policy result (Policy Change) - A title');
+      expect(component.formatResultLabel({ title: 'Just a title' })).toBe('Just a title');
     });
   });
 });

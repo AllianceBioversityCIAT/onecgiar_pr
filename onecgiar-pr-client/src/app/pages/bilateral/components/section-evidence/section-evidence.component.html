@@ -4,6 +4,10 @@
     description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
   </app-alert-status>
 
+  @if (principalTagsWithoutEvidence.length) {
+    <app-alert-status status="warning" [description]="principalWarningHtml"></app-alert-status>
+  }
+
   @if (isLoading()) {
     <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="true" [extraRows]="3" />
   } @else {
@@ -155,8 +159,43 @@
               (input)="onDraftDescriptionInput($event)"
               placeholder="e.g. page number, slide number, table number"
               rows="3"
-              maxlength="500"
             ></textarea>
+            <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">
+              Max {{ maxDescriptionWords }} words:
+              <span class="font-mono font-medium">{{ draftDescriptionWords }}</span> / {{ maxDescriptionWords }}
+            </span>
+          </div>
+
+          <div class="sev-draft-field">
+            <label class="sev-draft-label">Which impact areas does this evidence support?</label>
+            <div class="flex flex-wrap gap-x-[18px] gap-y-[8px]">
+              @for (tag of impactAreaTags; track tag.field) {
+                <label class="flex cursor-pointer items-center gap-[7px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                  <input
+                    type="checkbox"
+                    class="size-[15px] cursor-pointer accent-[var(--pr-color-primary-300)]"
+                    [checked]="!!draftItem()[tag.field]"
+                    (change)="toggleDraftTag(tag.field)" />
+                  {{ tag.label }}
+                </label>
+              }
+            </div>
+          </div>
+
+          <div class="sev-draft-field">
+            <label class="sev-draft-label">Which result types does this evidence support?</label>
+            <div class="flex flex-wrap gap-x-[18px] gap-y-[8px]">
+              @for (tag of resultTypeTags; track tag.field) {
+                <label class="flex cursor-pointer items-center gap-[7px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                  <input
+                    type="checkbox"
+                    class="size-[15px] cursor-pointer accent-[var(--pr-color-primary-300)]"
+                    [checked]="!!draftItem()[tag.field]"
+                    (change)="toggleDraftTag(tag.field)" />
+                  {{ tag.label }}
+                </label>
+              }
+            </div>
           </div>
         </div>
 

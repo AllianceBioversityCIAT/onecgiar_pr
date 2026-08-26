@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { PrToastService } from '../../../../shared/components/pr-toast/pr-toast.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { BilateralResultCreatorComponent } from './bilateral-result-creator.component';
@@ -35,6 +35,7 @@ class MockBilateralAiService {
 
 describe('BilateralResultCreatorComponent', () => {
   let component: BilateralResultCreatorComponent;
+  let fixture: any;
   let creationService: any;
   let mdsTracker: any;
   let autoSaveService: any;
@@ -52,6 +53,31 @@ describe('BilateralResultCreatorComponent', () => {
       resultLevelId: signal(null) as any,
       resultTypeId: signal(null) as any,
       currentResultId: signal(null) as any,
+      // P2-3352: the header now reads the result identity from here.
+      resultCode: signal(null) as any,
+      resultTypeName: signal(null) as any,
+      isW3Bilateral: signal(false) as any,
+      // P2-3352: status badge in the header.
+      resultStatusId: signal(null) as any,
+      resultTitle: signal('') as any,
+      isLoadingResult: signal(false) as any,
+      // Signals the editor sections read once they mount.
+      resultDescription: signal('') as any,
+      resultLeadContact: signal('') as any,
+      resultLeadContactData: signal(null) as any,
+      resultDacLevels: signal({}) as any,
+      resultDacSubScores: signal({}) as any,
+      resultInitiativeId: signal(null) as any,
+      resultLeadCenterId: signal(null) as any,
+      resultContributingCenterIds: signal([]) as any,
+      resultProjectId: signal(null) as any,
+      resultContributingProjectIds: signal([]) as any,
+      resultContributingProjects: signal([]) as any,
+      reportingYear: signal(null) as any,
+      isAiGenerated: signal(false) as any,
+      selectedSecondarySps: signal([]) as any,
+      setDacSubScores: jest.fn(),
+      getProjects: jest.fn(),
       createResult: jest.fn().mockReturnValue(of({ response: { id: 42 } })),
       submitResult: jest.fn().mockReturnValue(of({})),
       selectProject: jest.fn(),
@@ -65,6 +91,8 @@ describe('BilateralResultCreatorComponent', () => {
       overallPercentage: signal(0),
       overallStatus: signal('empty'),
       invalidFields: signal([]),
+      setSectionFields: jest.fn(),
+      registerSection: jest.fn(),
       reset: jest.fn(),
     };
 
@@ -75,6 +103,14 @@ describe('BilateralResultCreatorComponent', () => {
       setResultId: jest.fn(),
       registerField: jest.fn(),
       updateField: jest.fn(),
+      updateFieldsBatch: jest.fn(),
+      notifyBlur: jest.fn(),
+      schedulePayload: jest.fn(),
+      runImmediate: jest.fn(),
+      saveTocMapping: jest.fn(),
+      saveContributors: jest.fn(),
+      loadTocState: jest.fn().mockResolvedValue({}),
+      manualSave$: new Subject<void>(),
       flush: jest.fn().mockResolvedValue(undefined),
       reset: jest.fn(),
     };
@@ -120,7 +156,7 @@ describe('BilateralResultCreatorComponent', () => {
       })
       .compileComponents();
 
-    const fixture = TestBed.createComponent(BilateralResultCreatorComponent);
+    fixture = TestBed.createComponent(BilateralResultCreatorComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
@@ -138,6 +174,30 @@ describe('BilateralResultCreatorComponent', () => {
 
     expect(autoSaveService.flush).not.toHaveBeenCalled();
     expect(autoSaveService.reset).toHaveBeenCalled();
+  });
+
+  /**
+   * Regression lock: the autosave service must never be handed an id while the detail request is in
+   * flight. It used to receive the route parameter — a `result_code` on any phased deep link — and
+   * the first mount-time PATCH then landed on a different result's row.
+   */
+  it('binds autosave only once the detail has finished loading', () => {
+    autoSaveService.setResultId.mockClear();
+
+    component.isCreating.set(false);
+    creationService.isLoadingResult.set(true);
+    creationService.currentResultId.set(11012);
+    // Effects only — rendering the sections would need the whole section-level service graph.
+    TestBed.flushEffects();
+
+    expect(autoSaveService.setResultId).not.toHaveBeenCalled();
+    expect(component.resultId()).toBeNull();
+
+    creationService.isLoadingResult.set(false);
+    TestBed.flushEffects();
+
+    expect(autoSaveService.setResultId).toHaveBeenCalledWith(11012);
+    expect(component.resultId()).toBe(11012);
   });
 
   it('should start in creating mode by default', () => {
@@ -241,12 +301,37 @@ describe('BilateralResultCreatorComponent', () => {
     expect(creationService.createResult).toHaveBeenCalledWith(3, 2, undefined);
   });
 
+  describe('header title (P2-3352)', () => {
+    it('uses the wizard copy while creating', () => {
+      component.isCreating.set(true);
+      creationService.resultTitle.set('An existing result');
+      expect(component.headerTitle()).toBe('Report New Bilateral Result');
+    });
+
+    it('uses the result title in the editor', () => {
+      component.isCreating.set(false);
+      creationService.resultTitle.set('An existing result');
+      expect(component.headerTitle()).toBe('An existing result');
+    });
+
+    it('falls back to the wizard copy while the title is still loading', () => {
+      component.isCreating.set(false);
+      creationService.resultTitle.set('');
+      expect(component.headerTitle()).toBe('Report New Bilateral Result');
+    });
+  });
+
   describe('Type-specific section visibility (P2-3387)', () => {
+    // The type MUST come from BilateralCreationService, not from the component's local
+    // `resultTypeId` signal. The local one is written only by onTypeSelected (the creation wizard);
+    // on the editor path — the only path where these sections exist — ngOnInit calls
+    // creationService.loadResult and the local signal stays null. Reading it made the condition a
+    // no-op exactly where it had to work.
     it.each([
       ['Other Outcome', 4],
       ['Other Output', 8]
-    ])('should hide the type-specific section for %s', (_label, typeId) => {
-      component.resultTypeId.set(typeId);
+    ])('hides the type-specific section for %s', (_label, typeId) => {
+      creationService.resultTypeId.set(typeId);
       expect(component.hasTypeSpecificSection()).toBe(false);
     });
 
@@ -256,13 +341,25 @@ describe('BilateralResultCreatorComponent', () => {
       ['Capacity Sharing', 5],
       ['Knowledge Product', 6],
       ['Innovation Development', 7]
-    ])('should keep the type-specific section for %s', (_label, typeId) => {
-      component.resultTypeId.set(typeId);
+    ])('keeps the type-specific section for %s', (_label, typeId) => {
+      creationService.resultTypeId.set(typeId);
       expect(component.hasTypeSpecificSection()).toBe(true);
     });
 
-    it('should keep the section before a type is chosen, so nothing disappears mid-wizard', () => {
-      component.resultTypeId.set(null);
+    it('keeps the section before a type is chosen, so nothing disappears mid-wizard', () => {
+      creationService.resultTypeId.set(null);
+      expect(component.hasTypeSpecificSection()).toBe(true);
+    });
+
+    // Regression guard for the actual defect: this is what a green suite looked like while the
+    // feature did nothing on the editor path.
+    it('ignores the local resultTypeId signal — the editor never sets it', () => {
+      creationService.resultTypeId.set(8);
+      component.resultTypeId.set(1);
+      expect(component.hasTypeSpecificSection()).toBe(false);
+
+      creationService.resultTypeId.set(1);
+      component.resultTypeId.set(8);
       expect(component.hasTypeSpecificSection()).toBe(true);
     });
   });

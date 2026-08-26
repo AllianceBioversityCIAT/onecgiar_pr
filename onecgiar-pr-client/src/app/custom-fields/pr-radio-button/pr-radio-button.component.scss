@@ -9,13 +9,27 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+}
 
-    &__subLabel {
-      margin: 0;
-      margin-left: 25px;
-      @include fonts.pr-typography('body-2');
-      color: var(--text-color-secondary);
-    }
+// P2-3291. The conditional sub-options of an option are drawn as a contained group so they read as
+// derived from the answer that revealed them, which is the whole of Nicoleta Trifa's feedback.
+// 28px clears the radio label's optical start (16px control + 8px gap), so the checkboxes begin AFTER
+// the text they depend on rather than under the control. The rule uses --pr-border-strong, not the
+// lighter --pr-border-divider used for row separators: at #eeeef1 on a white card the line is
+// invisible in practice, which is worse than no rule at all — it claims a job it does not do.
+.radioButton__subGroup {
+  margin-top: 8px;
+  margin-left: 28px;
+  padding-left: 16px;
+  border-left: 1px solid var(--pr-border-strong);
+
+  // This rule used to live nested inside `.radioButton`, but the <p> is a SIBLING of that element, so
+  // the selector never matched and the note rendered with browser-default margins and no typography.
+  .radioButton__subLabel {
+    margin: 0 0 4px;
+    @include fonts.pr-typography('body-2');
+    color: var(--text-color-secondary);
   }
 }
 
@@ -23,8 +37,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: 20px;
-  padding: 5px;
+  padding: 5px 0;
 }
 
 .verticalAlignment {

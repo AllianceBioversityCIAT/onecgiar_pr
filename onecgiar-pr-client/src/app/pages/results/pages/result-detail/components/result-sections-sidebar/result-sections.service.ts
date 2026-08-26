@@ -152,18 +152,42 @@ export class ResultSectionsService {
     return 'AI review';
   }
 
-  get showSubmit(): boolean {
+  /**
+   * Role/membership gate the legacy `panel-menu.component.html` (lines 65-69) wrapped around BOTH
+   * Submit and Unsubmit: a plain `Member` of the result's initiative — or anyone who does not
+   * belong to it at all — cannot submit nor un-submit; a platform admin always can.
+   *
+   * ⚠️ P2-3434: the revamp kept this on Submit but dropped it on Unsubmit, regressing P2-328.
+   * It lives here, once, so the two buttons can never drift apart again.
+   */
+  private get canChangeSubmission(): boolean {
     const list = this.dataControlSE.myInitiativesList ?? [];
-    return this.dataControlSE.currentResult?.status_id == 1 && (this.validateMember(list) !== 6 || this.rolesSE.isAdmin);
+    return this.validateMember(list) !== 6 || this.rolesSE.isAdmin;
+  }
+
+  /** True while the result is locked by a running QA process. Drives both the lock and its notice. */
+  private get lockedByQa(): boolean {
+    return !!(this.dataControlSE.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa);
+  }
+
+  get showSubmit(): boolean {
+    return this.dataControlSE.currentResult?.status_id == 1 && this.canChangeSubmission;
   }
 
   get submitDisabled(): boolean {
-    const r = this.dataControlSE.currentResult;
-    return !this.greenChecksSE.submit || !!(r?.inQA && this.api.globalVariablesSE.get?.in_qa);
+    return !this.greenChecksSE.submit || this.lockedByQa;
   }
 
   get showUnsubmit(): boolean {
-    return this.dataControlSE.currentResult?.status_id == 3;
+    return this.dataControlSE.currentResult?.status_id == 3 && this.canChangeSubmission;
+  }
+
+  /**
+   * ⚠️ P2-3434 / P2-383: a result inside a QA process cannot be un-submitted, and the client is
+   * the ONLY place that enforces it — `submissions.service.ts` never looks at `inQA`.
+   */
+  get unsubmitDisabled(): boolean {
+    return this.lockedByQa;
   }
 
   /** Only the "sections still missing" case gets a tooltip — the QA lock has its own notice below. */
@@ -177,7 +201,7 @@ export class ResultSectionsService {
   }
 
   get showInQaNotice(): boolean {
-    return !!(this.dataControlSE.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa);
+    return this.lockedByQa;
   }
 
   runAiReview(): void {
@@ -189,7 +213,7 @@ export class ResultSectionsService {
   }
 
   openUnsubmit(): void {
-    this.unsubmitModalSE.showModal = true;
+    if (!this.unsubmitDisabled) this.unsubmitModalSE.showModal = true;
   }
 
   private validateMember(myInitiativesList: any[]): number {

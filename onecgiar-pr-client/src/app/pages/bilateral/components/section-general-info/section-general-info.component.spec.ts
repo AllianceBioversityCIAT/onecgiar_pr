@@ -238,6 +238,46 @@ describe('SectionGeneralInfoComponent', () => {
       ]);
     });
 
+    /**
+     * Regression lock. The constructor effect runs on mount before the hydration effects have copied
+     * the loaded contact in, so it used to PATCH `lead_contact_person: null` over the stored one
+     * every time the editor was opened — and, before the id fix, onto a foreign row.
+     */
+    it('saves nothing on mount, with or without a loaded lead contact', () => {
+      build();
+      fixture.detectChanges();
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+
+      creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set({ display_name: 'Jane Doe', mail: 'jane@x.org', title: '' });
+      fixture.detectChanges();
+      expect(autoSave.updateFieldsBatch).not.toHaveBeenCalled();
+
+      // The MDS tracker, which never writes to the server, still runs.
+      expect(mdsTracker.setSectionFields).toHaveBeenCalled();
+    });
+
+    it('saves again when the user restores the contact the result was loaded with', () => {
+      const jane = { display_name: 'Jane Doe', mail: 'jane@x.org', title: '' };
+      creation.resultLeadContact.set('Jane Doe');
+      creation.resultLeadContactData.set(jane);
+      build();
+      fixture.detectChanges();
+      autoSave.updateFieldsBatch.mockClear();
+
+      const body = component.leadContactBody();
+      body.lead_contact_person = 'John Roe';
+      body.lead_contact_person_data = { display_name: 'John Roe', mail: 'john@x.org', title: '' };
+      expect(autoSave.updateFieldsBatch).toHaveBeenCalledTimes(1);
+
+      body.lead_contact_person = 'Jane Doe';
+      body.lead_contact_person_data = { ...jane };
+      expect(autoSave.updateFieldsBatch).toHaveBeenLastCalledWith({
+        lead_contact_person: 'Jane Doe',
+        lead_contact_person_data: { display_name: 'Jane Doe', mail: 'jane@x.org', title: '' }
+      });
+    });
+
     it('does not commit while only the name has been set (matches selectUser()/clearContact() ordering)', () => {
       build();
       fixture.detectChanges();
@@ -431,6 +471,49 @@ describe('SectionGeneralInfoComponent', () => {
   });
 
   // ── show-all toggle ──────────────────────────────────────────────────
+  // P2-3366: the story requires the message "N hidden fields have values and will be saved." and the
+  // count. It does not define what a field is, so the rule is the literal one applied to what is on
+  // screen behind the toggle: per impact area, the score is one field and the sub-score selection is
+  // another. These cases pin that rule down so it cannot drift silently.
+  describe('hidden fields note (P2-3366)', () => {
+    // The keys are the DAC_AREAS keys: gender, climate_change, nutrition,
+    // environmental_biodiversity, poverty. A wrong key silently counts zero, which is how the first
+    // version of the case below read 1 instead of 3.
+    it('counts nothing when no impact area has been answered', () => {
+      build();
+      component.selectedDacLevels.set({});
+      component.selectedSubScores.set({});
+      expect(component.hiddenFieldsWithValues()).toBe(0);
+      expect(component.showHiddenFieldsNote()).toBe(false);
+    });
+
+    it('counts one per answered score and one per sub-score selection', () => {
+      build();
+      component.selectedDacLevels.set({ gender: 2, climate_change: 3 });
+      component.selectedSubScores.set({ climate_change: [7, 8] });
+      // two scores + one sub-score selection
+      expect(component.hiddenFieldsWithValues()).toBe(3);
+    });
+
+    it('shows the note only while the block is collapsed', () => {
+      build();
+      component.selectedDacLevels.set({ gender: 1 });
+      component.showAllFields.set(false);
+      expect(component.showHiddenFieldsNote()).toBe(true);
+
+      component.showAllFields.set(true);
+      expect(component.showHiddenFieldsNote()).toBe(false);
+    });
+
+    it('does not show the note when collapsed with nothing answered', () => {
+      build();
+      component.selectedDacLevels.set({});
+      component.selectedSubScores.set({});
+      component.showAllFields.set(false);
+      expect(component.showHiddenFieldsNote()).toBe(false);
+    });
+  });
+
   describe('show-all toggle', () => {
     it('persists the toggle under a result-scoped key', () => {
       build();

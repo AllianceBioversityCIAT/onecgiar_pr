@@ -304,6 +304,35 @@ describe('BilateralAutoSaveService', () => {
       expect(body.result_toc_result.planned_result).toBe(false);
     });
 
+    // Data-loss guard: the server reads the unplanned justification from the top level and skips
+    // any result_toc_results entry without a toc_result_id, so the array must not be sent here.
+    it('sends the unplanned justification at the top level and without the node array', () => {
+      service.setResultId(3);
+      service.saveTocMapping({
+        planned_result: false,
+        toc_progressive_narrative: 'Funded outside the approved ToC',
+      });
+
+      expect(mockBilateralApi.PATCH_tocMapping).toHaveBeenCalledWith(3, {
+        result_toc_result: {
+          planned_result: false,
+          toc_progressive_narrative: 'Funded outside the approved ToC',
+        },
+      });
+    });
+
+    it('still nests the narrative under the node when an unplanned result maps to one', () => {
+      service.setResultId(3);
+      service.saveTocMapping({
+        planned_result: false,
+        toc_result_id: 55,
+        toc_progressive_narrative: 'nested',
+      });
+
+      const body = mockBilateralApi.PATCH_tocMapping.mock.calls[0][1] as any;
+      expect(body.result_toc_result.result_toc_results[0].toc_progressive_narrative).toBe('nested');
+    });
+
     it('reverts the saved badge to idle', () => {
       jest.useFakeTimers();
       service.setResultId(3);

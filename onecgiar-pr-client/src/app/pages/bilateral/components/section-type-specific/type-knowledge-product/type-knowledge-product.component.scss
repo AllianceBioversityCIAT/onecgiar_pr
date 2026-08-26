@@ -47,3 +47,93 @@
     color: #607D8B;
   }
 }
+
+// ── P2-3384: MELIA block, repository metadata and the FAIR score ──────────────────────────
+
+// The dependent questions are indented so the tree the story describes reads as a tree.
+.kp-melia-nested {
+  padding-left: 32px;
+  border-left: 2px solid var(--pr-color-accents-1);
+  margin-left: 6px;
+}
+
+.kp-link {
+  color: var(--pr-color-blue-300);
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.kp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kp-chip {
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: var(--pr-color-accents-1);
+  font-size: 12px;
+}
+
+.kp-altmetric__image {
+  max-width: 100%;
+  height: auto;
+}
+
+.kp-fair-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.kp-fair-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 260px;
+  flex: 1 1 260px;
+}
+
+.kp-fair-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kp-fair-indicator {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+
+  i {
+    font-size: 16px;
+
+    &.check {
+      color: var(--pr-color-green-300);
+    }
+
+    &.incomplete {
+      color: var(--pr-color-red-300);
+    }
+  }
+}
+
+.tsf-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1.5px solid var(--pr-color-blue-300);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pr-color-blue-300);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--pr-color-accents-1);
+  }
+}

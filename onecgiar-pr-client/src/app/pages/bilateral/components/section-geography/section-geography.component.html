@@ -160,7 +160,7 @@
       <div class="sg-card__body">
         <div class="sg-field">
           <app-pr-radio-button
-            label="Are there any extra regions or countries that you wish to specify?"
+            label="Are there any regions that you wish to specify for this Output?"
             [options]="yesNoOptions"
             optionLabel="name"
             optionValue="id"
@@ -176,7 +176,7 @@
         @if (extraGeographicLocationBody().has_extra_geo_scope) {
           <app-pr-select
             class="block w-full max-w-[480px]"
-            label="Extra Geographic Scope"
+            label="What is the geographic scope where there may be potential impact in other geographic areas?"
             [required]="true"
             [options]="extraGeoscopeOptions"
             [ngModel]="extraGeographicLocationBody().geo_scope_id"

@@ -126,6 +126,8 @@ describe('SummaryService', () => {
     mockResultsInnovationsUseRepository = {
       findOne: jest.fn(),
       save: jest.fn(),
+      getLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
+      replaceLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
     };
     mockResultsByProjectsRepository = {
       find: jest.fn(),
@@ -374,6 +376,170 @@ describe('SummaryService', () => {
         );
       });
     });
+
+    // P2-3424 — these keys were already being POSTed by both Innovation Use forms and silently dropped
+    // (no DTO entry, no ValidationPipe on the controller). They all had storage waiting for them.
+    describe('fields that were being discarded (P2-3424)', () => {
+      const arrange = (existing: any = null) => {
+        mockResultRepository.findOne.mockResolvedValueOnce({ id: 5 });
+        mockInnoDevService.saveAnticipatedInnoUser.mockResolvedValueOnce({});
+        mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(
+          existing,
+        );
+        mockResultsInnovationsUseRepository.save.mockResolvedValueOnce(
+          existing ?? { result_innovation_use_id: 11, results_id: 5 },
+        );
+      };
+
+      it('persists the columns that exist on results_innovations_use', async () => {
+        arrange();
+
+        await service.saveInnovationUse(
+          {
+            has_scaling_studies: true,
+            innov_use_2030_to_be_determined: false,
+            readiness_level_explanation: 'Because the evidence says so.',
+            has_innovation_link: true,
+            linked_results: [77],
+          } as any,
+          5,
+          user,
+        );
+
+        expect(mockResultsInnovationsUseRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            has_scaling_studies: true,
+            innov_use_2030_to_be_determined: false,
+            readiness_level_explanation: 'Because the evidence says so.',
+            has_innovation_link: true,
+          }),
+        );
+      });
+
+      // The legacy W1/W2 caller does not send every key. An absent key must leave the stored value alone.
+      it('leaves a field untouched when the payload does not carry its key', async () => {
+        const existing = {
+          result_innovation_use_id: 1,
+          results_id: 5,
+          has_scaling_studies: true,
+          readiness_level_explanation: 'kept',
+        } as any;
+        arrange(existing);
+
+        await service.saveInnovationUse({} as any, 5, user);
+
+        expect(mockResultsInnovationsUseRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            has_scaling_studies: true,
+            readiness_level_explanation: 'kept',
+          }),
+        );
+      });
+
+      it('replaces the study links, keyed by the innovation-use row', async () => {
+        arrange();
+
+        await service.saveInnovationUse(
+          {
+            has_scaling_studies: true,
+            scaling_studies_urls: ['https://example.org/study', '  ', ''],
+          } as any,
+          5,
+          user,
+        );
+
+        expect(mockScalingStudyUrlRepository.update).toHaveBeenCalledWith(
+          { result_innov_use_id: 11 },
+          expect.objectContaining({ is_active: false }),
+        );
+        expect(mockScalingStudyUrlRepository.save).toHaveBeenCalledWith([
+          expect.objectContaining({
+            result_innov_use_id: 11,
+            study_url: 'https://example.org/study',
+            is_active: true,
+          }),
+        ]);
+      });
+
+      it('does not wipe the study links when the payload says nothing about them', async () => {
+        arrange();
+
+        await service.saveInnovationUse(
+          { innovation_use_level_id: 4 } as any,
+          5,
+          user,
+        );
+
+        expect(mockScalingStudyUrlRepository.update).not.toHaveBeenCalled();
+        expect(mockScalingStudyUrlRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('stores the selection when the innovation-link question is answered Yes', async () => {
+        arrange();
+
+        await service.saveInnovationUse(
+          { has_innovation_link: true, linked_results: [77] } as any,
+          5,
+          user,
+        );
+
+        expect(
+          mockResultsInnovationsUseRepository.replaceLinkedResultsByOrigin,
+        ).toHaveBeenCalledWith(5, [77], user.id);
+      });
+
+      it('clears the links when a stored Yes is retracted to No', async () => {
+        arrange({
+          result_innovation_use_id: 1,
+          results_id: 5,
+          has_innovation_link: 1,
+        } as any);
+
+        await service.saveInnovationUse(
+          { has_innovation_link: false, linked_results: [] } as any,
+          5,
+          user,
+        );
+
+        expect(
+          mockResultsInnovationsUseRepository.replaceLinkedResultsByOrigin,
+        ).toHaveBeenCalledWith(5, [], user.id);
+      });
+
+      // `linked_result` is shared with the P22 "Links to results" section: a No that was never a Yes
+      // must not touch it, or that section's data disappears on the first autosave here.
+      it('never touches linked_result when the question was never answered Yes', async () => {
+        arrange({
+          result_innovation_use_id: 1,
+          results_id: 5,
+          has_innovation_link: null,
+        } as any);
+
+        await service.saveInnovationUse(
+          { has_innovation_link: false, linked_results: [] } as any,
+          5,
+          user,
+        );
+
+        expect(
+          mockResultsInnovationsUseRepository.replaceLinkedResultsByOrigin,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('never touches linked_result when the payload omits the question', async () => {
+        arrange();
+
+        await service.saveInnovationUse(
+          { linked_results: [77] } as any,
+          5,
+          user,
+        );
+
+        expect(
+          mockResultsInnovationsUseRepository.replaceLinkedResultsByOrigin,
+        ).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('getInnovationUse', () => {
@@ -430,6 +596,53 @@ describe('SummaryService', () => {
 
       expect(response.innov_use_to_be_determined).toBeNull();
       expect(response.innovation_use_level_id).toBeNull();
+    });
+
+    // P2-3424 — additive: the keys that were already in the response keep their exact shape.
+    it('returns the fields the endpoint now persists', async () => {
+      mockResultActorRepository.find.mockResolvedValueOnce([]);
+      mockResultIpMeasureRepository.find.mockResolvedValueOnce([]);
+      mockResultByIntitutionsTypeRepository.find.mockResolvedValueOnce([]);
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce({
+        result_innovation_use_id: 11,
+        has_scaling_studies: 1,
+        innov_use_2030_to_be_determined: 0,
+        readiness_level_explanation: 'Because the evidence says so.',
+        has_innovation_link: 1,
+      });
+      mockScalingStudyUrlRepository.find.mockResolvedValueOnce([
+        { study_url: 'https://example.org/study' },
+      ]);
+      mockResultsInnovationsUseRepository.getLinkedResultsByOrigin.mockResolvedValueOnce(
+        [77],
+      );
+
+      const res = await service.getInnovationUse(15);
+      const response: any = res.response as any;
+
+      expect(response.has_scaling_studies).toBe(1);
+      expect(response.scaling_studies_urls).toEqual([
+        'https://example.org/study',
+      ]);
+      expect(response.innov_use_2030_to_be_determined).toBe(0);
+      expect(response.readiness_level_explanation).toBe(
+        'Because the evidence says so.',
+      );
+      expect(response.has_innovation_link).toBe(1);
+      expect(response.linked_results).toEqual([77]);
+    });
+
+    it('answers with empty study links when no innovation-use row exists yet', async () => {
+      mockResultActorRepository.find.mockResolvedValueOnce([]);
+      mockResultIpMeasureRepository.find.mockResolvedValueOnce([]);
+      mockResultByIntitutionsTypeRepository.find.mockResolvedValueOnce([]);
+      mockResultsInnovationsUseRepository.findOne.mockResolvedValueOnce(null);
+
+      const res = await service.getInnovationUse(15);
+      const response: any = res.response as any;
+
+      expect(response.scaling_studies_urls).toEqual([]);
+      expect(mockScalingStudyUrlRepository.find).not.toHaveBeenCalled();
     });
   });
 

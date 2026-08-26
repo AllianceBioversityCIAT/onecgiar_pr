@@ -146,6 +146,26 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
     }
   }
 
+  /**
+   * The click handler of the `segmented` variant. It exists because that variant paints `<button>`s,
+   * and a button has no `[(ngModel)]` to write the value the way the list's `<input type="radio">`
+   * does — so nothing was writing it: clicking a score left `value` at `null` ("0 of 5 impact areas
+   * scored", section never green, nothing sent to the server). `onSelect` alone can't be it: it only
+   * ever DEselects.
+   *
+   * Deselection on re-click is kept, deliberately, so both variants behave the same.
+   *
+   * ⚠️ Never test the clicked value for truthiness here: `0` is a legitimate answer on an ordered
+   * scale, and a falsy check would make the lowest score the one option that cannot be chosen.
+   */
+  onSegmentSelect(clickedValue: any) {
+    const wasSelected = this.value === clickedValue;
+    // Emits `selectOptionEvent` and, when re-clicking the selected option, clears it.
+    this.onSelect(clickedValue);
+    if (!wasSelected) this.value = clickedValue;
+    this.onValueChange(this.value);
+  }
+
   onValueChange(newValue: any) {
     // Update current value for next comparison
     this.currentVal = newValue;

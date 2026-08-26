@@ -74,6 +74,36 @@ describe('ResultSectionsService', () => {
       expect(sections.some(s => s.portfolioAcronym === 'P22')).toBe(false);
     });
 
+    // The mirror of the case above. Both guards in `sections` (result-sections.service.ts:66-67)
+    // are symmetric, but the default fixture only ever exercises the P25 one, so a broken
+    // `isP22() && portfolioAcronym === 'P25'` guard used to slip through: a P22 result would
+    // have shown the P25-only "Contributors & partners" section on top of its own "Partners &
+    // Contributors", i.e. the same section twice with different forms.
+    it('drops the P25 sections when the open result is P22', () => {
+      fieldsManager = { portfolioAcronym: signal('P22'), isP25: signal(false), isP22: signal(true) };
+      dataControl.currentResultSignal = signal({ portfolio: 'P22' });
+      build();
+      const sections = service.sections();
+
+      expect(sections.length).toBeGreaterThan(0);
+      expect(sections.some(s => s.path === '**')).toBe(false);
+      expect(sections.some(s => s.portfolioAcronym === 'P25')).toBe(false);
+      // …and its own portfolio's sections are still there, so the guard filtered, not emptied.
+      expect(sections.some(s => s.portfolioAcronym === 'P22')).toBe(true);
+    });
+
+    // Portfolio-neutral sections (no `portfolioAcronym`) must survive both guards — otherwise a
+    // stricter filter would leave a portfolio with no General information at all.
+    it('keeps the portfolio-neutral sections on both portfolios', () => {
+      build();
+      expect(service.sections().some(s => s.path === 'general-information')).toBe(true);
+
+      TestBed.resetTestingModule();
+      fieldsManager = { portfolioAcronym: signal('P22'), isP25: signal(false), isP22: signal(true) };
+      build();
+      expect(service.sections().some(s => s.path === 'general-information')).toBe(true);
+    });
+
     it('attaches the green-check validation to the matching section', () => {
       build();
       const target = service.sections()[0];
@@ -200,6 +230,66 @@ describe('ResultSectionsService', () => {
 
       expect(service.showSubmit).toBe(false);
       expect(service.showUnsubmit).toBe(true);
+      expect(service.unsubmitDisabled).toBe(false);
+    });
+
+    // --- P2-3434: the two rules the revamp dropped from Unsubmit (regressions of P2-328 / P2-383). ---
+
+    it('hides Unsubmit from a plain member of the initiative', () => {
+      dataControl.currentResult.status_id = 3;
+      dataControl.myInitiativesList = [{ initiative_id: 9, role: 'Member' }];
+      build();
+
+      expect(service.showUnsubmit).toBe(false);
+    });
+
+    it('hides Unsubmit from a user who does not belong to the result initiative', () => {
+      dataControl.currentResult.status_id = 3;
+      dataControl.myInitiativesList = [{ initiative_id: 42, role: 'Leader' }];
+      build();
+
+      expect(service.showUnsubmit).toBe(false);
+    });
+
+    it('shows Unsubmit to an admin even when not a member', () => {
+      dataControl.currentResult.status_id = 3;
+      dataControl.myInitiativesList = [];
+      roles.isAdmin = true;
+      build();
+
+      expect(service.showUnsubmit).toBe(true);
+    });
+
+    it('locks Unsubmit while the result is inside a QA process, and shows the notice', () => {
+      dataControl.currentResult.status_id = 3;
+      dataControl.currentResult.inQA = true;
+      api.globalVariablesSE.get.in_qa = true;
+      build();
+
+      expect(service.showUnsubmit).toBe(true);
+      expect(service.unsubmitDisabled).toBe(true);
+      expect(service.showInQaNotice).toBe(true);
+    });
+
+    // The contradiction the ticket reported: an active button printed right above the notice
+    // saying the action is impossible. Enabled button and QA notice must never coexist.
+    it('never renders an enabled Unsubmit next to the QA notice', () => {
+      dataControl.currentResult.status_id = 3;
+      dataControl.currentResult.inQA = true;
+      api.globalVariablesSE.get.in_qa = true;
+      build();
+
+      expect(service.showUnsubmit && !service.unsubmitDisabled && service.showInQaNotice).toBe(false);
+    });
+
+    it('keeps Unsubmit usable when the result carries inQA but no QA round is running', () => {
+      dataControl.currentResult.status_id = 3;
+      dataControl.currentResult.inQA = true;
+      api.globalVariablesSE.get.in_qa = false;
+      build();
+
+      expect(service.unsubmitDisabled).toBe(false);
+      expect(service.showInQaNotice).toBe(false);
     });
 
     it('explains that a quality assessed result (status 2) cannot be un-submitted', () => {
@@ -233,11 +323,17 @@ describe('ResultSectionsService', () => {
       expect(submissionModal.showModal).toBe(false);
     });
 
-    it('opens the unsubmit modal', () => {
+    it('opens the unsubmit modal only when Unsubmit is enabled', () => {
+      dataControl.currentResult.status_id = 3;
       build();
       service.openUnsubmit();
-
       expect(unsubmitModal.showModal).toBe(true);
+
+      unsubmitModal.showModal = false;
+      dataControl.currentResult.inQA = true;
+      api.globalVariablesSE.get.in_qa = true;
+      service.openUnsubmit();
+      expect(unsubmitModal.showModal).toBe(false);
     });
 
     it('labels the AI review button from its state', () => {

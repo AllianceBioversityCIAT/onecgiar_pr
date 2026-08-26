@@ -615,6 +615,82 @@ describe('SectionTocComponent', () => {
     jest.useRealTimers();
   });
 
+  // ── why is this result being reported (unplanned justification) ────
+  // P2 data-loss guard: this textarea is mandatory and gates Submit, so it MUST reach the server.
+  // It rides on the same `toc_progressive_narrative` column the non-bilateral form reuses
+  // (rd-contributors-and-partners.component.html:80) — there is no separate column for it.
+  describe('whyReported (unplanned justification)', () => {
+    it('debounces the justification and persists it with planned_result false', () => {
+      jest.useFakeTimers();
+      component.isPlanned.set(false);
+      component.onWhyReportedInput('first');
+      component.onWhyReportedInput('Funded outside the approved ToC');
+      expect(component.whyReported()).toBe('Funded outside the approved ToC');
+      expect(autoSave.saveTocMapping).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(1500);
+      jest.advanceTimersByTime(1000);
+
+      expect(autoSave.saveTocMapping).toHaveBeenCalledTimes(1);
+      expect(autoSave.saveTocMapping).toHaveBeenCalledWith(
+        expect.objectContaining({
+          planned_result: false,
+          toc_progressive_narrative: 'Funded outside the approved ToC',
+        }),
+      );
+      jest.useRealTimers();
+    });
+
+    it('never sends the justification in place of the planned pathway narrative', () => {
+      jest.useFakeTimers();
+      component.isPlanned.set(true);
+      component.narrative.set('Pathway story');
+      component.whyReported.set('leftover justification');
+      component.onLevelChange(3);
+      jest.advanceTimersByTime(1000);
+
+      expect(autoSave.saveTocMapping).toHaveBeenCalledWith(
+        expect.objectContaining({
+          planned_result: true,
+          toc_progressive_narrative: 'Pathway story',
+        }),
+      );
+      jest.useRealTimers();
+    });
+
+    it('hydrates the justification, not the pathway narrative, for a saved unplanned result', async () => {
+      autoSave.loadTocState.mockResolvedValue({
+        planned_result: false,
+        toc_level_id: null,
+        toc_result_id: null,
+        indicator_id: null,
+        contributing_indicator: null,
+        toc_progressive_narrative: 'Because the donor asked for it',
+      });
+      fixture.detectChanges();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(component.isPlanned()).toBe(false);
+      expect(component.whyReported()).toBe('Because the donor asked for it');
+      expect(component.narrative()).toBe('');
+    });
+
+    it('reports the justification to the MDS tracker only once it has text', () => {
+      const tracker = TestBed.inject(BilateralMdsTrackerService) as any;
+      component.isPlanned.set(false);
+      component.whyReported.set('');
+      fixture.detectChanges();
+      const emptyItems = tracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(emptyItems.find((i: any) => i.key === 'toc-why-reported').filled).toBe(false);
+
+      component.whyReported.set('A reason');
+      fixture.detectChanges();
+      const filledItems = tracker.setSectionFields.mock.calls.at(-1)[1];
+      expect(filledItems.find((i: any) => i.key === 'toc-why-reported').filled).toBe(true);
+    });
+  });
+
   // ── display labels ─────────────────────────────────────────────────
   describe('getDisplayLabel', () => {
     it('prefers extraInformation', () => {

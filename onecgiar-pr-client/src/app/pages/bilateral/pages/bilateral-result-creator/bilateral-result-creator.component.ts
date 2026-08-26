@@ -21,6 +21,7 @@ import { SectionEvidenceComponent } from '../../components/section-evidence/sect
 import { SectionTypeSpecificComponent } from '../../components/section-type-specific/section-type-specific.component';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
 import { BilateralProgressAsideComponent } from '../../components/bilateral-progress-aside/bilateral-progress-aside.component';
+import { FormSkeletonComponent } from '../../components/form-skeleton/form-skeleton.component';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 
 const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
@@ -53,7 +54,8 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     SectionEvidenceComponent,
     SectionTypeSpecificComponent,
     BilateralProgressAsideComponent,
-    BilateralPageHeaderComponent
+    BilateralPageHeaderComponent,
+    FormSkeletonComponent
   ],
   templateUrl: './bilateral-result-creator.component.html',
   styleUrl: './bilateral-result-creator.component.scss',
@@ -95,9 +97,27 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
    * is skipped from the outside instead of emptying the section: `section-type-specific` keeps its
    * "no type-specific fields required" state as the fallback for a type nobody mapped (id 9 is in its
    * NO_TYPE_SPECIFIC set and has no label either, so it would read "Unknown" — out of scope here).
+   *
+   * ⚠️ Reads `creationService.resultTypeId`, NOT the local `resultTypeId` signal, and that is the
+   * whole point. The local one is only ever written by `onTypeSelected` — the creation wizard. On the
+   * editor path (`ngOnInit` -> `creationService.loadResult`, which sets the service signal at
+   * bilateral-creation.service.ts:115) it stays null, and `null !== 4 && null !== 8` is true, so the
+   * accordion rendered for EVERY type. The sections only exist on the editor path, so reading the
+   * local signal made this condition a no-op exactly where it had to work. It is also the same source
+   * `section-type-specific` reads, so the two can no longer disagree.
    */
+  /**
+   * P2-3352: the header must show the result title. It was hardcoded to "Report New Bilateral
+   * Result", which is right for the wizard and wrong for the editor — where the user is looking at a
+   * result that already has a name. Falls back to the wizard copy while the title is still loading.
+   */
+  readonly headerTitle = computed(() => {
+    if (this.isCreating()) return 'Report New Bilateral Result';
+    return this.creationService.resultTitle() || 'Report New Bilateral Result';
+  });
+
   readonly hasTypeSpecificSection = computed(() => {
-    const typeId = this.resultTypeId();
+    const typeId = this.creationService.resultTypeId();
     return typeId !== 4 && typeId !== 8;
   });
 
@@ -127,15 +147,37 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   sectionStatuses = this.mdsTracker.sectionStatus;
 
   constructor() {
-    // When loadResult resolves and updates currentResultId to the internal DB id,
-    // sync it to the component signal and wire up autosave.
+    /**
+     * Binds autosave to the result being edited. Both guards are load-bearing:
+     *
+     * ⚠️ `currentResultId()` is null until `loadResult` publishes the internal DB id from the
+     * response (bilateral-creation.service.ts). It used to be seeded synchronously with the route
+     * parameter — a `result_code` on any deep link carrying a phase — so this effect handed the
+     * autosave service a foreign id and the first mount-time PATCH landed on somebody else's row.
+     *
+     * `isLoadingResult()` keeps the binding (and the sections it mounts) out of the window where a
+     * previous result's state is still on screen.
+     */
     effect(() => {
       const id = this.creationService.currentResultId();
-      if (id && !this.isCreating()) {
+      if (id && !this.isCreating() && !this.creationService.isLoadingResult()) {
         this.resultId.set(id);
         this.autoSaveService.setResultId(id);
       }
     });
+  }
+
+  /** Arguments of the last `loadResult` call, so the error state can retry the exact same request. */
+  private lastLoadRequest: { resultCode: number; versionId?: number } | null = null;
+
+  /** Retry button of the "could not load" state (see `creationService.loadFailed`). */
+  retryLoadResult(): void {
+    const request = this.lastLoadRequest;
+    if (!request) return;
+    this.resultId.set(null);
+    this.autoSaveService.reset();
+    this.mdsTracker.reset();
+    this.creationService.loadResult(request.resultCode, request.versionId);
   }
 
   ngOnInit(): void {
@@ -145,9 +187,12 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         const resultCode = Number(id);
         const versionId = Number(this.route.snapshot.queryParams['phase']) || undefined;
         this.isCreating.set(false);
-        // Drop pending writes from a previous result before binding the new id.
+        // Drop pending writes from a previous result before binding the new id, and drop the id
+        // itself: it must not survive into the next result while its detail is still loading.
+        this.resultId.set(null);
         this.autoSaveService.reset();
         this.mdsTracker.reset();
+        this.lastLoadRequest = { resultCode, versionId };
         this.creationService.loadResult(resultCode, versionId);
       } else {
         // Fresh create: reset wizard but preserve a project pre-selected from the home panel.

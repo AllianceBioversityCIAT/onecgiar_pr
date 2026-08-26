@@ -393,9 +393,29 @@ export class BilateralAutoSaveService {
         ? Number(tocData.contributing_indicator)
         : undefined;
 
+    const plannedResult = tocData.planned_result ?? true;
+
+    // Unplanned results have no ToC node to hang the justification on. The server reads it from
+    // the top level of `result_toc_result` (`_handleUnplannedSpecialCase` in
+    // results-toc-results.service.ts) and skips any `result_toc_results` entry that carries no
+    // `toc_result_id`, so sending the array here would silently discard the text.
+    if (plannedResult === false && !tocResultId) {
+      this.schedulePayload(
+        'tocMapping',
+        {
+          result_toc_result: {
+            planned_result: false,
+            toc_progressive_narrative: tocData.toc_progressive_narrative ?? null,
+          },
+        },
+        { debounceMs: 0, statusKey: 'toc_mapping' },
+      );
+      return;
+    }
+
     const body: Record<string, unknown> = {
       result_toc_result: {
-        planned_result: tocData.planned_result ?? true,
+        planned_result: plannedResult,
         result_toc_results: [
           {
             toc_level_id: tocLevelId,
