@@ -101,4 +101,4 @@ Not applicable — this change adds test files only. No production code, no depl
 ## Open Questions
 
 1. **What exactly failed in the multi-select?** The user reported defects but has not yet given the screen and the expected behaviour. Priority-1 contracts start from the measured usage above; his concrete case should be added as the first test the moment he describes it.
-2. **Should intentional Spartan-era behaviour changes be back-documented** into `docs/system-design/design.md` once identified? Recommended, but not part of this change.
+2. **Should intentional Spartan-era behaviour changes be back-documented** into `docs/ux-ui/design.md` once identified? Recommended, but not part of this change.

@@ -14,8 +14,8 @@ This is the **package-level guide** for the PRMS Angular client. It complements 
 > **Always read the root guide first.** Frontend work MUST follow the SDD methodology:
 >
 > - [`../docs/prd.md`](../docs/prd.md) — product baseline (personas, goals, `AC-1..AC-9`).
-> - [`../docs/system-design/design.md`](../docs/system-design/design.md) — **UI/UX system blueprint** (tokens, components, flows, a11y). The canonical reference for any visual or interaction decision.
-> - [`../docs/detailed-design/detailed-design.md`](../docs/detailed-design/detailed-design.md) — technical blueprint (frontend module layout, API surfaces, integrations).
+> - [`../docs/ux-ui/design.md`](../docs/ux-ui/design.md) — **UI/UX system blueprint** (tokens, components, flows, a11y). The canonical reference for any visual or interaction decision.
+> - [`../docs/trd/trd.md`](../docs/trd/trd.md) — technical blueprint (frontend module layout, API surfaces, integrations).
 > - [`../docs/specs/general-setup/`](../docs/specs/general-setup/) — templates `/sdd-specify` MUST follow.
 >
 > **Source-tree navigation lives in [`src/CLAUDE.md`](./src/CLAUDE.md).** This file covers package-level concerns (auth header, build/test, conventions); `src/CLAUDE.md` is the in-tree guide with folder-by-folder navigation, the route tables, the service / component / theme patterns, and the anti-patterns to avoid.
@@ -206,7 +206,7 @@ Always prefer this layout for new features. Cross-cutting primitives go to `shar
 
 ## 5. Theming, tokens, and design system
 
-Authoritative reference: [`../docs/system-design/design.md`](../docs/system-design/design.md).
+Authoritative reference: [`../docs/ux-ui/design.md`](../docs/ux-ui/design.md).
 
 ### Source of truth
 
@@ -261,7 +261,7 @@ What this means when working here:
 
 ### A11y, responsive, i18n
 
-- A11y expectations: [`../docs/system-design/design.md` §10](../docs/system-design/design.md). Focus states use `--pr-color-primary-300`. Don't kill outlines.
+- A11y expectations: [`../docs/ux-ui/design.md` §10](../docs/ux-ui/design.md). Focus states use `--pr-color-primary-300`. Don't kill outlines.
 - Breakpoints: desktop-first; tablet must work. Use `<feature>.responsive.scss` for feature-level responsive overrides (see `result-creator.responsive.scss`).
 - **All user-facing strings MUST go through `src/app/internationalization/`.** No hard-coded English in templates.
 
@@ -548,13 +548,13 @@ When working on a frontend feature or fix:
 
 0. **Open the in-tree map.** [`src/CLAUDE.md`](./src/CLAUDE.md) describes the folder where you're about to work, the route tables to update, the services to extend, and the conventions you MUST preserve.
 1. **Confirm the spec.** Find or open `../docs/specs/<module>/requirements.md`, `design.md`, `task.md`. If missing, run `/sdd-specify` first — templates live in `../docs/specs/general-setup/`.
-2. **Cite the baseline.** Reference `G#`, `US-*`, `AC-*` from `../docs/prd.md`; cite the screen/flow id and component rules from `../docs/system-design/design.md`.
+2. **Cite the baseline.** Reference `G#`, `US-*`, `AC-*` from `../docs/prd.md`; cite the screen/flow id and component rules from `../docs/ux-ui/design.md`.
 3. **Implement.** Follow this guide: routing, interceptor, services, shared components, tokens, i18n.
 4. **Test.** Unit (Jest) + Cypress where applicable. Keep coverage above 50/60/60/60.
 5. **Verify in the browser.** Run `npm start`, sign in, exercise the happy path AND edge cases. UI changes are not "done" because the build passes.
 6. **Update docs.**
-   - If the change establishes a new UX pattern: promote it into `../docs/system-design/design.md` (§12 Design Decisions).
-   - If the change adds a new client surface or integration: update `../docs/detailed-design/detailed-design.md` accordingly.
+   - If the change establishes a new UX pattern: promote it into `../docs/ux-ui/design.md` (§12 Design Decisions).
+   - If the change adds a new client surface or integration: update `../docs/trd/trd.md` accordingly.
 7. **Commit.** Use the project commit format.
 
 ---

@@ -17,7 +17,13 @@ export class CPMultipleWPsComponent implements OnChanges {
   @Input() initiativeId: number | null;
   @Input() isContributor?: boolean = false;
   @Input() isNotifications?: boolean = false;
-  @Input() resultLevelId: number | string;
+  private readonly _resultLevelId = signal<number | string | null | undefined>(null);
+  @Input() set resultLevelId(value: number | string) {
+    this._resultLevelId.set(value);
+  }
+  get resultLevelId(): number | string {
+    return this._resultLevelId();
+  }
   @Input() isIpsr: boolean = false;
   // P2-3245 / P2-3275: signal-backed input. `onActiveTab()` toggles this flag `false -> setTimeout -> true`
   // to force the content block to remount; as a plain field the second assignment happened outside any
@@ -175,10 +181,15 @@ export class CPMultipleWPsComponent implements OnChanges {
     });
   }
 
+  isOutput = computed(() => {
+    const levelId =
+      this.api.dataControlSE?.currentResultSignal?.()?.result_level_id ??
+      (this.resultLevelId !== undefined && this.resultLevelId !== null ? Number(this.resultLevelId) : null);
+    return levelId === 4 || this.resultLevelId === 1 || this.resultLevelId === '1';
+  });
+
   dynamicTabTitle = computed(() => {
-    if (this.api.dataControlSE?.currentResultSignal().result_level_id) return 'HLO';
-    if (this.api.dataControlSE?.currentResultSignal().result_level_id) return 'Outcome';
-    return ``;
+    return this.isOutput() ? 'HLO' : 'Outcome';
   });
 
   getGridTemplateColumns() {
@@ -186,7 +197,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   completnessStatusValidation(tab) {
-    const baseComplete = this.resultLevelId === 1 ? tab.toc_result_id !== null : tab.toc_level_id !== null && tab.toc_result_id !== null;
+    const baseComplete = this.isOutput() ? tab.toc_result_id !== null : tab.toc_level_id !== null && tab.toc_result_id !== null;
 
     // P2-3171 (AC6): in 2026, when a KPI indicator is selected the "contribution to target" field is mandatory
     // (see multiple-wps-content.component.html), so the tab must not be marked complete (green) while it is empty.
@@ -237,7 +248,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   onDeleteTab(tab: TocTab, tabNumber = 0) {
-    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
+    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.isOutput() ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
 
     this.customizedAlertsFeSE.show(
       {

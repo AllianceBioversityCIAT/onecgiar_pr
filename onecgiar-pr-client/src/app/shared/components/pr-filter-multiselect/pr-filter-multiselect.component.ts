@@ -64,16 +64,34 @@ export class PrFilterMultiselectComponent implements ControlValueAccessor {
     return this.optionValue ? option?.[this.optionValue] : option;
   }
 
+  /**
+   * Value equality for the model.
+   *
+   * ⚠️ P2-3307 / P2-3308: this used to be `item === v`. When the consumer does not pass
+   * `optionValue` the model holds whole option objects, so identity comparison only matched
+   * when the preselected entries were the *same instances* as the ones in `options`. A caller
+   * that preloads its selection from a different response (a copy, not the same object) got
+   * every entry rendered as unselected, and clicking it pushed a duplicate instead of removing it.
+   * The PrimeNG `<p-multiselect>` this component replaced (migration `8fea5077b`) compared with
+   * `ObjectUtils.equals`; that behaviour was lost and is restored here as a shallow compare.
+   */
+  private sameValue(a: any, b: any): boolean {
+    if (a === b) return true;
+    if (a == null || b == null || typeof a !== 'object' || typeof b !== 'object') return false;
+    const keys = Object.keys(a);
+    return keys.length === Object.keys(b).length && keys.every(k => a[k] === b[k]);
+  }
+
   isSelected(option: any): boolean {
     const v = this.valueOf(option);
-    return (this.value || []).some(item => item === v);
+    return (this.value || []).some(item => this.sameValue(item, v));
   }
 
   toggle(option: any): void {
     if (this.disabled) return;
     const v = this.valueOf(option);
     const arr = [...(this.value || [])];
-    const idx = arr.findIndex(item => item === v);
+    const idx = arr.findIndex(item => this.sameValue(item, v));
     if (idx >= 0) arr.splice(idx, 1);
     else arr.push(v);
     this.value = arr;

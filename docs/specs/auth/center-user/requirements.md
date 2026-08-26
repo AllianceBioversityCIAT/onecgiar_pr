@@ -16,7 +16,7 @@ Epic P2-3096 introduces a **Center User** role so CGIAR Center staff can report 
 
 This refines project goals **G2** (structured reporting) and **G4** (role-based access). It implements **AC-3** (backend MUST enforce roles; frontend gates are cosmetic only) from `docs/prd.md`.
 
-References: `docs/detailed-design/detailed-design.md` (Identity: User, Role, RoleByUser), `docs/system-design/design.md` (admin user management, RFR home).
+References: `docs/trd/trd.md` (Identity: User, Role, RoleByUser), `docs/ux-ui/design.md` (admin user management, RFR home).
 
 ---
 

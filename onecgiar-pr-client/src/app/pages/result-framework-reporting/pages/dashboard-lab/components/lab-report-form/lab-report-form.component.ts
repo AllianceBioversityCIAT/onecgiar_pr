@@ -106,6 +106,18 @@ export class LabReportFormComponent {
   /** `browse` is rendered but disabled until P2-3231 ships a repository search. */
   readonly kpEntryMode = signal<KpEntryMode>('manual');
 
+  /**
+   * P2-3479 — the `Browse CGSpace` tab is hidden, not just disabled.
+   *
+   * The house rule is to leave an unbuilt control visible-but-disabled with a `Coming soon` tag,
+   * exactly where the design puts it. Business overrode that for this one: P/As start testing now
+   * and a dead tab in the Knowledge Product flow reads as a broken feature to them.
+   *
+   * The whole mode switcher goes with it — a tablist holding a single tab is worse than no tablist.
+   * Flip this back to `true` when browsing lands (P2-3231, epic P2-3230) and both tabs return.
+   */
+  readonly kpBrowseEnabled = false;
+
   /** The level the category options belong to. Never chosen by the user. */
   readonly resultLevelId = computed(() => this.indicator()?.result_level_id ?? this.tocNode()?.result_level_id ?? this.emergingCategory()?.levelId ?? null);
 

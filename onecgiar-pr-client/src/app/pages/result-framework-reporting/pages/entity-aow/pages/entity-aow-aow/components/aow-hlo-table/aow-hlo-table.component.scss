@@ -62,9 +62,15 @@ p {
   align-items: center;
 }
 
+// The three row actions are stacked, so `max-content` gave each a different width (74 / 70 / 77px)
+// and the column ended up with a ragged right edge. A shared minimum lines them up; `max-content`
+// stays as the floor so a longer label still fits on one line.
+// They also carried `pr-body-3` (10px) — that step exists for the notification badge counter, not
+// for controls. The mockup sizes buttons at 13-14px; `pr-body-1` is the 14px step.
 .tab-content_actions_button {
-  min-width: max-content;
-  padding: 4px 6px;
+  min-width: 100%;
+  padding: 6px 10px;
+  justify-content: center;
 }
 
 .tab-content_empty {

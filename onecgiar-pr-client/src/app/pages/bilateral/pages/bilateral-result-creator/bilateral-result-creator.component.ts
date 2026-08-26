@@ -111,11 +111,15 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   /**
    * P2-3352: the header must show the result title. It was hardcoded to "Report New Bilateral
    * Result", which is right for the wizard and wrong for the editor — where the user is looking at a
-   * result that already has a name. Falls back to the wizard copy while the title is still loading.
+   * result that already has a name.
+   *
+   * ⚠️ The fallback is NOT the wizard copy. While the title is loading — and permanently when the
+   * load fails — falling back to "Report New Bilateral Result" told the user they were creating a
+   * result when they were editing one. A neutral label is honest in both states.
    */
   readonly headerTitle = computed(() => {
     if (this.isCreating()) return 'Report New Bilateral Result';
-    return this.creationService.resultTitle() || 'Report New Bilateral Result';
+    return this.creationService.resultTitle() || 'Bilateral result';
   });
 
   readonly hasTypeSpecificSection = computed(() => {

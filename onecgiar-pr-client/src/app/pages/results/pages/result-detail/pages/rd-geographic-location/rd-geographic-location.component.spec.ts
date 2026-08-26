@@ -228,4 +228,47 @@ describe('RdGeographicLocationComponent', () => {
     });
   });
 
+  // ----- P2-3371: the "other geographic areas" question and its completeness entry -----
+  describe('P2-3371 — extra geo scope question is only tracked while it is on screen', () => {
+    const withField = (field: any) => {
+      (component as any).fieldsManagerSE = { fields: () => ({ '[geoscope-management]-has_extra_geo_scope': field }) };
+    };
+
+    it('does not register the question for a P22 result, where FieldsManagerService hides it', () => {
+      withField({
+        label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',
+        hide: true
+      });
+
+      expect(component.showExtraGeoScopeQuestion()).toBe(false);
+    });
+
+    it('registers the question when it is rendered (P25 innovation)', () => {
+      withField({
+        label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',
+        hide: false
+      });
+
+      expect(component.showExtraGeoScopeQuestion()).toBe(true);
+    });
+
+    it('names the completeness entry with the wording the user actually reads, not a second hard-coded one', () => {
+      withField({
+        label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',
+        hide: false
+      });
+
+      expect(component.extraGeoScopeHeader()).toBe(
+        'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?'
+      );
+      expect(component.extraGeoScopeHeader()).not.toContain('for this Output');
+    });
+
+    it('survives a fields map that has no entry for the question', () => {
+      (component as any).fieldsManagerSE = { fields: () => ({}) };
+
+      expect(component.showExtraGeoScopeQuestion()).toBe(false);
+      expect(component.extraGeoScopeHeader()).toBe('');
+    });
+  });
 });

@@ -1,0 +1,20 @@
+{
+  // TypeScript program for Cypress COMPONENT testing.
+  //
+  // It exists for one reason: `tsconfig.app.json` declares `files: ["src/main.ts", "src/polyfills.ts"]`,
+  // and Cypress' Angular handler generates its CT tsconfig by EXTENDING whatever `buildOptions.tsConfig`
+  // points at — overriding `include`, but never `files`. So `main.ts` stayed in the program, dragging
+  // `AppModule` and with it the whole application: 2601 files type-checked (846 from src/, plus
+  // chart.js, pdfjs-dist, @mlc-ai/web-llm, exceljs) for a suite that only mounts custom-fields.
+  // Measured with `tsc --listFiles`: 2601 files before, 965 after — and that is only the TS side;
+  // the Angular webpack plugin also compiles every template of those files with strictTemplates.
+  //
+  // Same compiler options as tsconfig.app.json, minus `files`.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "outDir": "./out-tsc/ct",
+    "types": ["node", "jest", "cypress"]
+  },
+  "include": ["src/**/*.cy.ts", "src/**/*.d.ts", "cypress/support/component.ts", "cypress/support/ct-utils.ts"]
+}

@@ -40,8 +40,8 @@ Baseline citations:
 - `docs/prd.md:195` — **AC-9 Security and secrets**: "Tokens, **webhooks**, API keys, and credentials
   MUST NEVER be logged, printed, or echoed". This is why AC5 of the ticket cannot be implemented
   literally — see §5.
-- `docs/detailed-design/detailed-design.md:254` — **W4 Notifications**.
-- `docs/detailed-design/detailed-design.md:265` — **W6 Bilateral / platform-report enrichment**:
+- `docs/trd/trd.md:254` — **W4 Notifications**.
+- `docs/trd/trd.md:265` — **W6 Bilateral / platform-report enrichment**:
   "enriched `data` document … centralized in `bilateral.service.ts` (`enrichBilateralResultResponse`)".
   The webhook payload reuses exactly this.
 - `docs/specs/bilateral-ai-workflow/bilateral-spec.md:610` — **D28**, webhook-per-Centre as a

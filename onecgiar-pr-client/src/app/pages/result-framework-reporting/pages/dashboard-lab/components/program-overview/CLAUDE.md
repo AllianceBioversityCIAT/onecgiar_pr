@@ -1,6 +1,6 @@
 # program-overview
 
-**Verified:** 2026-08-21 · branch performance-refactor · eed5bb706
+**Verified:** 2026-08-26 · branch performance-refactor · 75d56f2cd
 
 **What this owns:** the **Overview** tab of the programme shell — the six cards under
 `entity-details/:entityId/overview`. Purely presentational: every figure arrives as a signal input.
@@ -52,6 +52,10 @@ Every input is a `computed()` on the parent (`dashboard-lab.component.ts`):
   (P2-3408). Wire `(click)` and drop the chip when that lands.
 - `--pr-chart-2-muted` (`#8b7cc4`) is the bilateral fill and is **non-text-only**: 3.52:1 on the
   track clears WCAG 1.4.11, but the same hex failed AA as a sidebar foreground.
+- The two category cards are titled **"W1/W2 results by indicator category"** and **"W3/Bilateral
+  results by indicator category"** (P2-3481). The funding type is part of the title on purpose: the
+  two cards are otherwise identical and users could not tell which was which. The spec asserts the
+  six headings in order, so renaming one means editing that assertion deliberately.
 - The three cards removed by P2-3298 / P2-3299 / P2-3300 (Reporting pace, Needs attention, Impact so
   far) are gone with their geometry. `reportingPhases` in the parent is now written-but-never-read
   and is flagged there for removal.

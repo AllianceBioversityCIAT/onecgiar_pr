@@ -53,4 +53,4 @@ This change does two things:
   - **P2-2974 (`@defer` + section cache):** needs re-proof of 100+ cases (data staleness / cache invalidation) — defer.
   - **P2-2975 (event coalescing global + full signals migration):** blast radius is the entire app — Phase 2 only, goes last after every other fix is validated.
 - **Backend:** none. The green-check completeness query is backend-owned and unchanged; this change only memoizes the client-side string used to render it.
-- **Baseline refs:** UI rules per `docs/system-design/design.md`; technical layout per `docs/detailed-design/detailed-design.md`. Jira: **P2-2967** (sub-tickets P2-2969, P2-2970, P2-2971, P2-2972).
+- **Baseline refs:** UI rules per `docs/ux-ui/design.md`; technical layout per `docs/trd/trd.md`. Jira: **P2-2967** (sub-tickets P2-2969, P2-2970, P2-2971, P2-2972).

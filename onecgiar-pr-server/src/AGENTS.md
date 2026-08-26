@@ -368,7 +368,7 @@ If changing response shape:
 ## SDD Workflow Inside `src/`
 
 1. Confirm the spec at `../../docs/specs/<module>/`.
-2. Cite `G#`, `US-*`, `AC-*` from `../../docs/prd.md` and relevant `W1..W8` workflow/module sections from `../../docs/detailed-design/detailed-design.md`.
+2. Cite `G#`, `US-*`, `AC-*` from `../../docs/prd.md` and relevant `W1..W8` workflow/module sections from `../../docs/trd/trd.md`.
 3. Implement using the standard module shape or existing shared primitive.
 4. Add a migration if entities changed.
 5. Add or update co-located tests.

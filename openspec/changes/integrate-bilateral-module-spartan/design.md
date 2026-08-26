@@ -13,7 +13,7 @@
 2. Zero `primeng` imports/tags anywhere after migration; module compiles under Angular 21 strict build.
 3. Bilateral module fully functional in the browser (creator flow, selects, accordion, auto-save paths reachable).
 4. Bilateral UI matches the brand line (violet accent + navy-carbon chrome, Tailwind-only new styles).
-5. `docs/system-design/design.md` documents the brand design line if missing.
+5. `docs/ux-ui/design.md` documents the brand design line if missing.
 
 **Non-Goals:**
 - No new backend logic; server files arrive merge-only. Backend deploy remains Juanda's.
@@ -54,7 +54,7 @@
 - Tokens: violet accent `#6b6dc4→#6461bc` (use `brand-*` Tailwind tokens / `--pr-color-primary-*`), chrome gradient `#1e202f→#1f2235` for headers/dark surfaces, Poppins, `material-icons-round`.
 - **New styles: Tailwind utilities only** — no new custom SCSS classes (regla de memoria). Existing SCSS Juanda wrote may stay if functional, but visual retouches land as Tailwind.
 - Run `/impeccable` guidance over the module's key screens (creator shell, section zero dashboard, accordion sections) for hierarchy/spacing/states.
-- If `docs/system-design/design.md` lacks the violet/chrome design line, add a "Design Decisions" entry documenting: brand palette, gradient usage rules, Tailwind-first rule, icon set, dark-chrome table headers.
+- If `docs/ux-ui/design.md` lacks the violet/chrome design line, add a "Design Decisions" entry documenting: brand palette, gradient usage rules, Tailwind-first rule, icon set, dark-chrome table headers.
 
 ### D6 — Verification gates (in order)
 1. `ng build` (production) green.

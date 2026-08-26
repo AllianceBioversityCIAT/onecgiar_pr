@@ -320,8 +320,10 @@
   align-items: center;
   gap: 6px;
   padding: 10px 20px;
-  background: linear-gradient(135deg, #047857, #059669);
-  color: #FFFFFF;
+  // Flat + tokens: the mockup uses no button gradients, and #047857 is --pr-status-approved-fg.
+  // #059669 was a stray Tailwind green with no token behind it.
+  background: var(--pr-status-approved-fg);
+  color: var(--pr-surface-card);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -445,17 +447,17 @@
 }
 
 .mdr-btn--promote.mdr-btn--wide {
-  background: linear-gradient(135deg, #047857 0%, #059669 100%);
-  color: #FFFFFF;
+  background: var(--pr-status-approved-fg);
+  color: var(--pr-surface-card);
   border-color: transparent;
-  box-shadow: 0 2px 10px rgba(5, 150, 105, 0.30);
+  box-shadow: var(--pr-shadow-1);
   font-weight: 700;
 
   i { font-size: 17px; }
 
   &:hover {
-    background: linear-gradient(135deg, #065F46 0%, #047857 100%);
-    box-shadow: 0 4px 16px rgba(5, 150, 105, 0.40);
+    background: #065f46;
+    box-shadow: var(--pr-shadow-2);
     transform: translateY(-1px);
   }
 

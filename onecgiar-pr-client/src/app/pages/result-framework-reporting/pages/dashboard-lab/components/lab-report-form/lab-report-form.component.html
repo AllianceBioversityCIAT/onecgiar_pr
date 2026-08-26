@@ -38,30 +38,34 @@
     }
   </div>
 
-  <!-- knowledge products come from a repository. Two entry modes, as the design specifies;
-       browsing has no endpoint yet (P2-3231), so it sits in place and disabled. -->
+  <!-- Knowledge products come from a repository. The design specifies two entry modes, but
+       browsing has no endpoint yet (P2-3231) and business asked to hide it rather than show it
+       disabled while P/As are testing (P2-3479) — so the whole switcher is gated behind
+       `kpBrowseEnabled`. Manual entry stays, it is simply no longer presented as a choice. -->
   @if (currentResultIsKnowledgeProduct()) {
     <div>
-      <div class="mb-3 inline-flex rounded-[10px] bg-[var(--pr-color-accents-1)] p-1" role="tablist" aria-label="How to add the knowledge product">
-        <button
-          type="button"
-          role="tab"
-          disabled
-          aria-disabled="true"
-          title="Browsing your repository knowledge products is not available yet"
-          class="inline-flex cursor-not-allowed items-center gap-2 rounded-[8px] border-0 bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-color-accents-5)] opacity-60">
-          Browse CGSpace
-          <span class="rounded-full bg-[rgba(30,32,47,0.08)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Coming soon</span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          [attr.aria-selected]="kpEntryMode() === 'manual'"
-          (click)="kpEntryMode.set('manual')"
-          class="rounded-[8px] border-0 bg-white px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-color-primary-300)] shadow-sm">
-          Manual entry
-        </button>
-      </div>
+      @if (kpBrowseEnabled) {
+        <div class="mb-3 inline-flex rounded-[10px] bg-[var(--pr-color-accents-1)] p-1" role="tablist" aria-label="How to add the knowledge product">
+          <button
+            type="button"
+            role="tab"
+            disabled
+            aria-disabled="true"
+            title="Browsing your repository knowledge products is not available yet"
+            class="inline-flex cursor-not-allowed items-center gap-2 rounded-[8px] border-0 bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-color-accents-5)] opacity-60">
+            Browse CGSpace
+            <span class="rounded-full bg-[rgba(30,32,47,0.08)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Coming soon</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [attr.aria-selected]="kpEntryMode() === 'manual'"
+            (click)="kpEntryMode.set('manual')"
+            class="rounded-[8px] border-0 bg-white px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-color-primary-300)] shadow-sm">
+            Manual entry
+          </button>
+        </div>
+      }
 
       <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
         Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span>
@@ -137,10 +141,10 @@
     </div>
   </div>
 
-  <!-- CGIAR Centers. `optionValue` is the identity key pr-multi-select compares on: without it
+  <!-- Contributing CGIAR Centers. `optionValue` is the identity key pr-multi-select compares on: without it
        every option matches every value and each click deselects index 0 instead of adding. -->
   <div>
-    <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">CGIAR Centers</p>
+    <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing CGIAR Centers</p>
     <app-pr-multi-select
       [options]="dropdown1Options()"
       optionLabel="name"
@@ -202,9 +206,9 @@
     }
   </div>
 
-  <!-- Science Programs -->
+  <!-- Contributing Science Programs -->
   <div>
-    <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Science Programs</p>
+    <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing Science Programs</p>
     <app-pr-multi-select
       [options]="dropdown1ScienceOptions()"
       optionLabel="official_code"
@@ -266,10 +270,10 @@
     }
   </div>
 
-  <!-- W3 and bilateral projects -->
+  <!-- Contributing W3 and bilateral projects -->
   @if (bilateralProjects().length) {
     <div>
-      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">W3 and bilateral projects</p>
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing W3 and bilateral projects</p>
       <app-pr-multi-select
         [options]="bilateralProjects()"
         optionLabel="project_name"

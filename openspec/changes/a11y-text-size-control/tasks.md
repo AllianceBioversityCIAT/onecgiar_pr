@@ -34,4 +34,4 @@
 ## 6. Housekeeping
 
 - [ ] 6.1 Assign the P2 Jira ticket for this shell/accessibility work and reference it in the commit (`<emoji> feat(header-panel) P2-XXXX: …`).
-- [x] 6.2 Promote the text-size / navbar-label pattern into `docs/system-design/design.md`: added §10 a11y row (User text-size control), **DD-11** (whole-app scaling via root `zoom`), and **OG-9** (deferred px→rem baseline). Archive with `/opsx:archive` once the P2 ticket (6.1) lands in the commit.
+- [x] 6.2 Promote the text-size / navbar-label pattern into `docs/ux-ui/design.md`: added §10 a11y row (User text-size control), **DD-11** (whole-app scaling via root `zoom`), and **OG-9** (deferred px→rem baseline). Archive with `/opsx:archive` once the P2 ticket (6.1) lands in the commit.

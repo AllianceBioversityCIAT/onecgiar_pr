@@ -3,7 +3,11 @@
 
   <!-- ! Submitter: shown in ALL reporting phases. Removed in the 2026 redesign (P2-3036 Level 2) but restored by business decision (Nicoleta / Santi) — it must not be phase-gated. changePrimaryInit is still set in the service, so save is unaffected. -->
   @if (this.rdPartnersSE.getConsumed()) {
+    <!-- data-testid="cp-field-<payload path>": the E2E save-contract spec reads the path out of the
+         hook and asserts the field travels in the PATCH body. See
+         cypress/e2e/result-detail/save-contract.cy.ts. -->
     <app-pr-select
+      data-testid="cp-field-changePrimaryInit"
       class="segment_title_margin"
       [options]="this.rdPartnersSE.partnersBody.contributing_and_primary_initiative"
       label="Submitter"
@@ -32,8 +36,9 @@
   }
 
   <app-pr-yes-or-not
+    data-testid="cp-field-result_toc_result.planned_result"
     [label]="tocQuestionLabel()"
-    [required]="!isAvisaInitiative()"
+    [required]="!isAvisaInitiative() && !isCP2026()"
     [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
     (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)"
     [readOnly]="isAvisaInitiative()">
@@ -79,6 +84,7 @@
     }
     @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result && !this.hideWhyReportedField()) {
       <app-pr-textarea
+        data-testid="cp-field-result_toc_result.toc_progressive_narrative"
         placeholder="Enter reason"
         label="Why is the result being reported?"
         type="text"
@@ -96,6 +102,7 @@
       <app-alert-status [description]="contributingCentersInfoNote"></app-alert-status>
 
       <app-pr-multi-select
+        data-testid="cp-field-contributing_center"
         [options]="dropdown1Options()"
         label="Contributing CGIAR Centers"
         selectedLabel="Center(s) selected"
@@ -118,6 +125,7 @@
   } @else {
     <!-- P2-3190: signal-backed catalogue so this list repaints when CLARISA resolves after the view is built. -->
     <app-pr-multi-select
+      data-testid="cp-field-contributing_center~flat"
       [options]="this.centersSE.centers()"
       label="Contributing CGIAR Centers"
       selectedLabel="Center(s) selected"
@@ -160,7 +168,8 @@
       optionValue="code"
       [required]="false"
       [(ngModel)]="this.rdPartnersSE.otherCentersSelected"
-      placeholder="Select other center(s)">
+      placeholder="Select other center(s)"
+      (selectOptionEvent)="onOtherCenterSelect($event)">
     </app-pr-multi-select>
 
     <div class="medal_selector selected_container">
@@ -180,6 +189,7 @@
 
   <div style="position: relative">
     <app-pr-multi-select
+      data-testid="cp-field-bilateral_projects"
       [options]="this.rdPartnersSE.clarisaProjectsList"
       [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
       [required]="false"
@@ -353,7 +363,7 @@
     @for (contributor of this.rdPartnersSE.partnersBody?.contributors_result_toc_result; track contributor.initiative_id) {
       <app-pr-yes-or-not
         [label]="getContributorDescription(contributor)"
-        [required]="!!contributor?.result_toc_results?.length"
+        [required]="!isCP2026() && !!contributor?.result_toc_results?.length"
         [(ngModel)]="contributor.planned_result"
         (selectOptionEvent)="onPlannedResultChange(contributor)"
         [readOnly]="true"
@@ -400,6 +410,7 @@
 
   <!-- Lead partner/center start -->
   <app-pr-yes-or-not
+    data-testid="cp-field-is_lead_by_partner"
     label="Is this result being led by an external partner?"
     [required]="true"
     [(ngModel)]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
@@ -421,6 +432,14 @@
   </div>
   <ng-template #selectLeadCenter>
     @if (!this.rdPartnersSE.updatingLeadData) {
+      <!-- Legitimate empty state: no contributing center picked yet. Without this the generic
+           "There are no items available for this list" reads like a dead end on a required field. -->
+      @if (!this.rdPartnersSE.possibleLeadCenters?.length) {
+        <div class="pr-message">
+          <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+          <p>{{ noLeadCentersNote }}</p>
+        </div>
+      }
       <app-pr-select
         label="Lead center"
         [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
@@ -439,6 +458,7 @@
   @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7 || isCP2026()) {
     @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7) {
       <app-pr-radio-button
+        data-testid="cp-field-has_innovation_link"
         fieldRef="[innovation-use-form]-has-innovation-link"
         [options]="[
           { value: true, label: 'Yes' },
@@ -452,6 +472,7 @@
       <!-- P2-3112 / P2-3358: non-innovation types (this branch only renders in 2026) get their label from the
            component. No fieldRef, so the explicit label wins. Same sentence as the branch above. -->
       <app-pr-radio-button
+        data-testid="cp-field-has_innovation_link~generic"
         [label]="linkedResultQuestionLabel"
         [required]="true"
         [options]="[
@@ -466,6 +487,7 @@
 
     @if (this.rdPartnersSE.partnersBody.has_innovation_link && this.fieldsManagerSE.isP25()) {
       <app-pr-multi-select
+        data-testid="cp-field-linked_results"
         [options]="this.innovationUseResultsSE.resultsList"
         [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
         optionLabel="title"

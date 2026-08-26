@@ -38,4 +38,4 @@ What is left is exactly what business asked for and nothing more: **the six chec
 
 **Phase scope:** the epic's governing rule (2026 onwards, previous phases unchanged) is satisfied by construction. The questionnaire is versioned — `innovationTeamDiversityV2()` filters `version: 'P25'` — but this change alters no data at all, only how already-rendered sub-options are laid out. A 2025 result reading the P22 questionnaire gets the same improved grouping of its own options, which is presentation, not content.
 
-**SDD baseline:** `docs/system-design/design.md` (form layout and component behaviour). The Claude Design mockup was re-read on 2026-08-25 and does not cover this legacy questionnaire — it contains no radio groups — so the existing app tokens are the reference, not the mockup.
+**SDD baseline:** `docs/ux-ui/design.md` (form layout and component behaviour). The Claude Design mockup was re-read on 2026-08-25 and does not cover this legacy questionnaire — it contains no radio groups — so the existing app tokens are the reference, not the mockup.

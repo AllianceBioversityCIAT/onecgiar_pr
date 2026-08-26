@@ -166,8 +166,16 @@ export class RdEvidencesComponent implements OnInit {
     await this.loadAllFiles();
     this.saveButtonSE.hideSaveSpinner();
 
-    this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe(resp => {
-      this.getSectionInformation();
+    this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe({
+      next: () => this.getSectionInformation(),
+      // P2-3373: `isSaving` is only cleared by `getSectionInformation()`, which never runs when
+      // the POST fails — the flag latched on and `isEvidenceUploading()` kept every file evidence
+      // showing the "uploading" skeleton instead of its link until the page was reloaded.
+      // The error toast is already raised by `isSavingPipe`; handling the error here also stops
+      // its rethrow surfacing as an unhandled "Uncaught [object Object]".
+      error: () => {
+        this.isSaving = false;
+      }
     });
   }
 

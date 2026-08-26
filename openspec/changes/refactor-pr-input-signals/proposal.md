@@ -27,5 +27,5 @@ Scope note: **frontend-only**. No backend change. No Jira ticket dedicated to th
 - **Code:** `onecgiar-pr-client/src/app/custom-fields/pr-input/pr-input.component.ts` (+ `.html`) only. `.scss` untouched.
 - **Consumers:** 49 templates / 184 usages — untouched (contract preserved). Regression surface is broad, so verification is by real-screen smoke test, not just the trivial `should create` spec.
 - **Dependencies:** no new deps. Still Angular 19 + PrimeNG 19 (`pInputText`, `p-inputNumber`, `p-message`).
-- **SDD baseline:** aligns with `docs/system-design/design.md` (custom field patterns) and `src/CLAUDE.md` §14 / §21 (signals-first service/component shape). No `docs/prd.md` acceptance-criteria change.
+- **SDD baseline:** aligns with `docs/ux-ui/design.md` (custom field patterns) and `src/CLAUDE.md` §14 / §21 (signals-first service/component shape). No `docs/prd.md` acceptance-criteria change.
 - **Tests:** existing Jest spec is `should create` only; keep it green and consider adding targeted specs for value/CVA and FieldsManager overrides.

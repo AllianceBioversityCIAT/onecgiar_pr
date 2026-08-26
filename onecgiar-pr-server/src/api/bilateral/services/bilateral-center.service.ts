@@ -776,13 +776,32 @@ export class BilateralCenterService {
     });
     const leadingCodes = leadingRows.map((row) => row.center_id);
 
+    /*
+     * The lead centre is never optional and the form has no control to re-pick it, so it must
+     * survive this sync no matter what the client sent.
+     *
+     * `updateCenter` runs `upDateAllInactive` when it receives an empty list — `set is_active = 0
+     * where result_id = ?`, with no exclusion for `is_leading_result`. A client that posts
+     * `contributing_center: []` (which happened whenever the centre catalogue had not loaded yet)
+     * therefore deactivated the lead row, and `assertCenterPermission` then refused every submit
+     * with "The result has no lead center assigned" — unrecoverable from the UI.
+     *
+     * Folding the leading codes into the list keeps that row active and lets the loop below
+     * re-assert `is_leading_result` on it. The client-side guard is the real fix; this is the
+     * backstop, because no payload should be able to leave a result without a lead centre.
+     */
+    const codesToKeep = [
+      ...centerCodes,
+      ...leadingCodes.filter((code) => !centerCodes.includes(code)),
+    ];
+
     await this.resultsCenterRepository.updateCenter(
       resultId,
-      centerCodes,
+      codesToKeep,
       user.id,
     );
 
-    for (const centerCode of centerCodes) {
+    for (const centerCode of codesToKeep) {
       const existing =
         await this.resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
           resultId,

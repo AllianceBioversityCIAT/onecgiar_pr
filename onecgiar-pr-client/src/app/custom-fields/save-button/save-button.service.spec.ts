@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick, flush } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Subject, throwError, of } from 'rxjs';
 
@@ -90,5 +90,45 @@ describe('SaveButtonService', () => {
 
       expect(flag()).toBe(false);
     });
+  });
+
+  /**
+   * A save request the server accepts and never answers used to leave the button reading
+   * "Saving…", disabled, for ever — no error, no way back except reloading and losing the work.
+   * There is no HTTP timeout in the interceptors, so the ceiling lives here.
+   */
+  describe('a save that never gets answered', () => {
+    it('gives up after the ceiling instead of spinning for ever', fakeAsync(() => {
+      const neverAnswers = new Subject<any>();
+      let errored = false;
+
+      neverAnswers.pipe(service.isSavingPipe()).subscribe({ error: () => (errored = true) });
+      expect(service.isSaving()).toBe(true);
+
+      tick(59_000);
+      expect(errored).toBe(false);
+      expect(service.isSaving()).toBe(true);
+
+      tick(2_000);
+      expect(errored).toBe(true);
+      expect(service.isSaving()).toBe(false);
+
+      neverAnswers.complete();
+      flush();
+    }));
+
+    it('does not fire before the ceiling — a slow but answered save is untouched', fakeAsync(() => {
+      const slow = new Subject<any>();
+      let errored = false;
+
+      slow.pipe(service.isSavingPipe()).subscribe({ next: () => {}, error: () => (errored = true) });
+
+      tick(30_000);
+      expect(errored).toBe(false);
+      expect(service.isSaving()).toBe(true);
+
+      slow.complete();
+      flush();
+    }));
   });
 });

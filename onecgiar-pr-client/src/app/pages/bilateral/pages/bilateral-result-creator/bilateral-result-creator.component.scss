@@ -160,18 +160,20 @@
   margin: 36px 0;
 }
 
+// Flat, not a gradient: the approved mockup has exactly ONE gradient in the whole file and it is
+// the sidebar's scroll fade — no button uses one. The extra `letter-spacing` went with it, for the
+// same reason.
 .bcr-create-btn {
   width: 100%;
   padding: 14px 24px;
-  background: linear-gradient(135deg, var(--pr-color-primary-300) 0%, var(--pr-color-primary-400) 100%);
-  color: #FFFFFF;
+  background: var(--pr-color-primary-300);
+  color: var(--pr-surface-card);
   border: none;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  letter-spacing: 0.3px;
   transition: transform 100ms ease, box-shadow 150ms ease, opacity 150ms ease;
   box-shadow: 0 2px 8px rgba(var(--pr-color-primary-rgb), 0.18);
 
@@ -408,4 +410,12 @@
 @keyframes bcr-save-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(-360deg); }
+}
+
+// `bcr-create-btn` is full-width because it closes a form that spans the page. Inside the error
+// card that made a 930px-wide button in a 980px card. This keeps the styling, drops the stretch.
+.bcr-create-btn--inline {
+  width: auto;
+  align-self: center;
+  padding: 10px 20px;
 }

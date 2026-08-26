@@ -59,5 +59,5 @@ This change rebuilds the flow front-end as a guided, low-cognitive-load, subtly 
 
 ## SDD baseline & references
 
-- Product: `docs/prd.md` (reporting personas, `AC-*`). UI/UX: `docs/system-design/design.md` (tokens, flows, a11y — new stepper pattern to be promoted to §12 Design Decisions). Technical: `docs/detailed-design/detailed-design.md` (result-framework-reporting module).
+- Product: `docs/prd.md` (reporting personas, `AC-*`). UI/UX: `docs/ux-ui/design.md` (tokens, flows, a11y — new stepper pattern to be promoted to §12 Design Decisions). Technical: `docs/trd/trd.md` (result-framework-reporting module).
 - Jira: **P2 ticket pending** — this rides the `front-redesign-fields` redesign branch, which has no P2 id yet. To be assigned before implementation lands (confirm with Yeck).

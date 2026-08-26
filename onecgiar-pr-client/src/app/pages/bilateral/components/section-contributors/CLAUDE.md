@@ -1,6 +1,6 @@
 # section-contributors
 
-**Verified:** 2026-08-26 · branch performance-refactor · 038dcd77b
+**Verified:** 2026-08-26 · branch performance-refactor · 75d56f2cd
 
 ## Qué es
 Sección 2 del formulario bilateral (W3/Bilateral): a quién se atribuye el resultado — centro líder,
@@ -8,51 +8,50 @@ centros CGIAR contribuyentes, proyectos W3/bilaterales, programas científicos, 
 —detrás del toggle Full Metadata— la pregunta de resultado enlazado/agrupado. Historia: **P2-3368**.
 
 ## Contrato
-- **Estado propio** (signals del componente): `selectedCenterInstitutionIds`, `selectedProjectIds`,
-  `selectedPartnerInstitutionIds`, `noExternalPartners`, `partnersHydrated`, `hasLinkedResult`,
-  `selectedLinkedResultIds`, `showAllFields`.
-- **Estado ajeno (fuente de verdad):** `BilateralCreationService` — `selectedProject()`,
-  `selectedPrimarySp()`, `selectedSecondarySps()`, `resultLeadCenterId()`,
-  `resultContributingCenterIds()`, `resultContributingProjectIds()`, `currentResultId()`.
-- **Persistencia:** `BilateralAutoSaveService.saveContributors({ contributing_center,
-  contributing_bilateral_projects, institutions, no_external_partners, is_lead_by_partner })` →
-  `PATCH /api/bilateral/center/contributors/:id`. Las tres últimas son **P2-3443** y sólo viajan
-  cuando `partnersHydrated()` es `true`.
+- **Estado ajeno (fuente de verdad):** `BilateralCreationService` — el resultado cargado
+  (`resultLeadCenterId()`, `resultContributingCenterIds/ProjectIds()`, `currentResultId()`). Las
+  signals propias del componente son selección de UI y se leen del `.ts`.
+- **Persistencia:** `BilateralAutoSaveService.saveContributors(...)` →
+  `PATCH /api/bilateral/center/contributors/:id`. 🛑 **Cada clave del payload va condicionada a su
+  flag de hidratación** — ver la primera trampa; enviar una clave de más borra datos.
 - **Hidratación de socios (P2-3443):** `loadExternalPartnersState()` lee **una vez por resultado**
   `GET /api/results/bilateral/:id` (`BilateralApiService.GET_BilateralResultDetail`) y toma
   `contributingInstitutions[].institutions_id` + `commonFields.no_applicable_partner`.
   `BilateralCreationService` no guarda nada de eso; por eso se relee aquí y no se lee de él.
-- **Catálogos:** `CentersService` (centros), `ApiService.resultsSE.GET_ClarisaProjects()` (proyectos),
-  `InstitutionsService.institutionsWithoutCentersPartners()` (socios externos, **signal**),
-  `InnovationUseResultsService.resultsList` (resultados enlazables).
+- **Catálogos:** `CentersService`, `GET_ClarisaProjects()`, `institutionsWithoutCentersPartners()`
+  (**signal**), `InnovationUseResultsService.resultsList`. Que carguen tarde es el origen de la
+  primera trampa.
 - **Progreso / Submit:** `BilateralMdsTrackerService.setSectionFields('contributors', […],
   'partners')` con tres ítems: `lead-center`, `lead-project`, `external-partners`. Este último va
   `filled: partnersHydrated() && externalPartnersSatisfied()` — ver la invariante abajo.
-- **Coming soon:** `unpersistedFieldsComingSoon` (constante `true`) apaga en el template los tres
-  controles que no se pueden guardar. El template lo lee por nombre porque el spec sobreescribe el
-  template.
-- **Gates del template expuestos como computeds** (`showLinkedResultQuestion`,
-  `showLinkedResultsDropdown`, `fullMetadataButtonLabel`): el spec sobreescribe el template, así que
-  un `@if` inline quedaría sin test. Si añades un gate nuevo, nómbralo igual.
+- **Coming soon:** `unpersistedFieldsComingSoon` (constante `true`) apaga los tres controles que no
+  se pueden guardar.
+- **Gates del template expuestos como computeds**: el spec sobreescribe el template, así que un
+  `@if` inline quedaría sin test. Si añades un gate nuevo, exponlo igual.
 
 ## Dónde se usa
 - `src/app/pages/bilateral/pages/bilateral-result-creator/bilateral-result-creator.component.html:201`
   — dentro del acordeón de secciones del formulario bilateral.
 - Renderiza a su vez `<app-section-toc>` (`../section-toc/`), que es quien pinta la pregunta
-  **"Can this result be mapped to a planned TOC KPI or indicator?"**.
+  **"Can this result be mapped to a ToC KPI?"** (P2-3142 — misma frase que el clásico, ver trampas).
 
-## Trampas (⚠️ = ya rompió algo, o va a romper)
+## Trampas
 
-- ✅ **P2-3443 resuelto para socios externos** (26-ago-2026). `SaveBilateralContributorsDto` ya
-  acepta `institutions` (la clave es `institutions_id`, **no** `institution_id` — ese es el de
-  centros y resuelve a `clarisa_center.code`), `no_external_partners` y `is_lead_by_partner`;
-  `BilateralCenterService.syncExternalPartners()` los escribe en `results_by_institution` + las dos
-  columnas de `result`, **espejando** `ResultsByInstitutionsService.savePartnersInstitutionsByResultV2`
-  (pool funding). Sin migración: las columnas ya existían.
-- ⚠️ **El rol de socio se resuelve como en pool funding:**
-  `KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS` (8) si el resultado tiene fila en
-  `results_knowledge_product`, `PARTNER` (2) si no. Elegirlo mal **no revienta**: esconde los socios
-  del GET de partners y del green check, que cuenta `institution_roles_id IN (2,8)`.
+- ⚠️ **`contributing_center` / `contributing_bilateral_projects` no viajan hasta que
+  `contributorsHydrated()` es `true`** (flag **independiente** de `partnersHydrated`). Se filtran
+  contra los catálogos, así que antes de que carguen —o tras un GET fallido, que igual pone
+  `projectsReady` en `true`— quedan en `[]`. Y `[]` no es "sin cambios": `updateCenter` corre
+  `upDateAllInactive` **sin excluir `is_leading_result`**, y `syncBilateralProjects` tira el
+  proyecto líder. Sin centro líder, `assertCenterPermission` rechaza el submit para siempre y **el
+  usuario no puede arreglarlo** (el líder es read-only aquí). Clave omitida = "no tocar".
+  Backstop: `syncContributingCenters` une los `leadingCodes` antes de `updateCenter`.
+ (⚠️ = ya rompió algo, o va a romper)
+
+- ✅ **P2-3443 resuelto para socios externos** (26-ago-2026). Ojo con la clave: es `institutions_id`,
+  **no** `institution_id` — ese es el de centros y resuelve a `clarisa_center.code`.
+  `syncExternalPartners()` espeja `savePartnersInstitutionsByResultV2` (pool funding). Sin migración.
+- ⚠️ **Rol de socio como en pool funding:** `8` si hay fila en `results_knowledge_product`, `2` si
+  no. Elegirlo mal **no revienta**: esconde los socios del GET y del green check (`IN (2,8)`).
 - 🛑 **INVARIANTE: nada se reporta como satisfecho mientras el payload descarta sus claves.**
   `external-partners` sólo va `filled: true` si `partnersHydrated()`. Antes, si el GET de detalle
   fallaba, el usuario elegía socios, la sección se ponía verde, Submit se desbloqueaba y **cada
@@ -62,22 +61,18 @@ centros CGIAR contribuyentes, proyectos W3/bilaterales, programas científicos, 
   una de sus señales, y tras la carga inicial ninguna cambia. Por eso el fallo se muestra:
   `partnersLoadFailed()` pinta un `app-alert-status status="error"` con el botón
   **Retry loading partners** → `retryLoadExternalPartners()`, que es el ÚNICO camino de vuelta.
-- ⚠️ **Las claves de socios no viajan antes de hidratar.** `saveContributors` se dispara también con
-  cada cambio de centro/proyecto; un PATCH con `institutions: []` antes de que llegue el GET
-  **borraría los socios guardados**. Por eso `buildContributorsPayload()` omite las tres claves
-  mientras `partnersHydrated()` sea `false`, y el `error` del GET deja el flag en `false` a propósito.
+- ⚠️ Mismo mecanismo para los socios: `saveContributors` se dispara con cada cambio de
+  centro/proyecto, así que un `institutions: []` prematuro **borraría los socios guardados**. El
+  `error` del GET deja `partnersHydrated` en `false` a propósito.
 - 🛑 **`is_lead_by_partner` se manda SIEMPRE en `false`, y es una decisión.** La sección no tiene
   control de "lo lidera un socio" y el centro líder es de solo lectura, así que el valor es
   derivable. Se manda explícito porque la validación trata `NULL` como "sin contestar" y nunca
   pondría la sección en verde. Si bilateral admite lead partner algún día, este es el punto a tocar.
-- 🛑 **`external-partners` SÍ se publica al tracker desde P2-3443** — se revirtió la decisión del
-  25-ago. Se había sacado sólo porque el dato no se guardaba: al recargar volvía a contar como
-  incompleto y **Submit quedaba bloqueado sin salida**. Ahora que va y vuelve, el asterisco rojo de
-  pantalla y el gate de Submit vuelven a decir lo mismo. Lo fija el test `publishes external-partners
-  to the MDS tracker now that the answer is persisted (P2-3443)`. **Si la persistencia se rompe, saca
-  el ítem otra vez — no aflojes la UI.** Centros y proyectos siguen fuera por otro motivo (P2-3348:
-  se renderizan `[required]="false"`, y trackear un campo que la UI llama Optional bloquea Submit
-  sin explicación).
+- 🛑 **`external-partners` SÍ se publica al tracker desde P2-3443** (se revirtió la decisión del
+  25-ago: se había sacado porque el dato no se guardaba y Submit quedaba bloqueado sin salida).
+  **Si la persistencia se rompe, saca el ítem otra vez — no aflojes la UI.** Centros y proyectos
+  siguen fuera por otro motivo (P2-3348: van `[required]="false"`, y trackear un campo que la UI
+  llama Optional bloquea Submit sin explicación).
 - 🛑 **Sigue sin persistirse** (fuera del alcance de P2-3443, que sólo pidió socios + los dos flags):
   los **contributing science programs** y la respuesta **enlazado/agrupado** con sus `linked_results`.
   Desde 26-ago van **visibles pero DESHABILITADOS con tag `Coming soon`** (regla de la casa; mismo
@@ -95,6 +90,15 @@ centros CGIAR contribuyentes, proyectos W3/bilaterales, programas científicos, 
 - **Socios: leer el catálogo por la SIGNAL, nunca por el array plano.**
   `institutionsWithoutCentersPartners()` es signal; `institutionsWithoutCentersListPartners` es un
   array normal y un `computed()` encima cachea la lista vacía para siempre (P2-3335).
+- ⚠️ **La pregunta de ToC está duplicada en dos sitios y NO comparten gate.** Aquí la pinta
+  `../section-toc/section-toc.component.html:3` de forma incondicional; en el clásico la pinta
+  `rd-contributors-and-partners.component.ts:105` **detrás de `isCP2026()`** (`phase_year >= 2026`),
+  con una redacción distinta para 2025. En bilateral no hay gate porque el listado sólo ofrece fases
+  del portafolio P25 (`bilateral-results-list.component.ts:244`) y ese portafolio **incluye 2025**:
+  abrir un resultado de fase 2025 en el creador bilateral mostraría la frase de 2026. Nadie ha pedido
+  la variante 2025 para bilateral, así que **no se inventa**; si aparece, el gate correcto es
+  `BilateralCreationService.reportingYear()` contra un umbral de año de fase — nunca `isP25()` — como
+  ya hace `../section-type-specific/type-innovation-use/type-innovation-use.component.ts:47`.
 - **La frase de enlazado/agrupado está duplicada en tres sitios** (aquí en
   `linkedResultQuestionLabel`, en `rd-contributors-and-partners.component.ts:234`, y en
   `FieldsManagerService.fields()['[innovation-use-form]-has-innovation-link']`). P2-3358 las unificó
@@ -111,6 +115,5 @@ centros CGIAR contribuyentes, proyectos W3/bilaterales, programas científicos, 
 | Green check de partners en bilateral | La función MySQL exige un delivery type por socio y bilateral no los captura (AC6). | Producto + BACK |
 
 ## Tests
-`section-contributors.component.spec.ts` — 100 casos, Jest. El template se sobreescribe con
-`<div></div>`: **no hay assertions de DOM**, todo se prueba por signals/computeds. Correr con
-`npx jest src/app/pages/bilateral/components/section-contributors/section-contributors.component.spec.ts`.
+`section-contributors.component.spec.ts` — 104 casos. El template se sobreescribe con
+`<div></div>`: **no hay assertions de DOM**, todo va por signals/computeds.

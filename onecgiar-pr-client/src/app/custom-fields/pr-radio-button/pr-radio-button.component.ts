@@ -159,10 +159,12 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
    * scale, and a falsy check would make the lowest score the one option that cannot be chosen.
    */
   onSegmentSelect(clickedValue: any) {
+    if (this.segmentsDisabled) return;
     const wasSelected = this.value === clickedValue;
     // Emits `selectOptionEvent` and, when re-clicking the selected option, clears it.
     this.onSelect(clickedValue);
     if (!wasSelected) this.value = clickedValue;
+    this.onTouch();
     this.onValueChange(this.value);
   }
 

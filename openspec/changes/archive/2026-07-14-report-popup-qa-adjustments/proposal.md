@@ -35,5 +35,5 @@ _None._
 - **Server (⚠️ flagged, read-only for the AI — hand-off unless the user authorizes):**
   - `onecgiar-pr-server/src/api/results-framework-reporting/results-framework-reporting.service.ts` (expose HLO partners in the AoW toc-results payload)
   - Reuses existing `TocResultsRepository.getTocPartnersByResultIds` — no migration required.
-- **SDD baseline:** behavior aligns `docs/system-design/design.md` form patterns (alert + field parity with `rd-contributors-and-partners`); no PRD scope change — this implements existing ACs of P2-2998/P2-3114.
+- **SDD baseline:** behavior aligns `docs/ux-ui/design.md` form patterns (alert + field parity with `rd-contributors-and-partners`); no PRD scope change — this implements existing ACs of P2-2998/P2-3114.
 - **No breaking changes.** Payload addition is additive; UI changes are contained to the popup.
