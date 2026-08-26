@@ -709,4 +709,156 @@ describe('BilateralService (unit)', () => {
       },
     );
   });
+  // CLARISA splits the Alliance into CENTER-03 "CIAT (Alliance)" (Regional Hub) and
+  // CENTER-02 "Bioversity (Alliance)" (Headquarter), and the 2026 mapping is done per
+  // centre. Resolution used to get this wrong in both directions, verified against the
+  // live index on 2026-08-26: every Alliance spelling — the canonical "CIAT (Alliance)"
+  // included — collapsed onto the Headquarter institution, while the plain acronyms fell
+  // through to a `LIKE '%BIOVERSITY%'` that matches BOTH institutions (both names contain
+  // "Bioversity") and then took whichever row the database returned first. A payload
+  // sending "BIOVERSITY" was stored as CENTER-03, CIAT.
+  describe('Alliance centre resolution', () => {
+    const centerFor = (code: string) => ({ code, institutionId: 0 });
+
+    const makeCenterService = () => {
+      const saved: any[] = [];
+      const { service } = makeService({
+        _clarisaCenters: {
+          findOne: jest.fn(async ({ where }: any) => centerFor(where.code)),
+          // Nothing should reach institution-based matching in these cases.
+          find: jest.fn(async () => []),
+        },
+        _clarisaInstitutionsRepository: { find: jest.fn(async () => []) },
+        _resultsCenterRepository: {
+          getAllResultsCenterByResultIdAndCenterId: jest.fn(async () => null),
+          save: jest.fn(async (row: any) => {
+            saved.push(row);
+            return row;
+          }),
+        },
+      });
+      return { service, saved };
+    };
+
+    it.each([
+      ['BIOVERSITY', 'CENTER-02'],
+      ['Bioversity (Alliance)', 'CENTER-02'],
+      ['bioversity alliance', 'CENTER-02'],
+      ['Bioversity International', 'CENTER-02'],
+      ['CIAT', 'CENTER-03'],
+      ['CIAT (Alliance)', 'CENTER-03'],
+      ['ciat   (alliance)', 'CENTER-03'],
+      // Pre-split spellings stay where their data already is.
+      ['ABC', 'CENTER-02'],
+      ['CIAT-BIOVERSITY', 'CENTER-02'],
+    ])('lead_center acronym %s resolves to %s', async (acronym, code) => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleLeadCenter(1, { acronym }, 9);
+
+      expect(saved).toEqual([
+        expect.objectContaining({
+          center_id: code,
+          is_leading_result: true,
+          is_primary: true,
+        }),
+      ]);
+    });
+
+    it('reads the alias from the name field too', async () => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleLeadCenter(1, { name: 'Bioversity (Alliance)' }, 9);
+
+      expect(saved[0]).toEqual(
+        expect.objectContaining({ center_id: 'CENTER-02' }),
+      );
+    });
+
+    it('keeps the two Alliance centres apart', async () => {
+      const ciat = makeCenterService();
+      const bioversity = makeCenterService();
+
+      await ciat.service.handleLeadCenter(1, { acronym: 'CIAT (Alliance)' }, 9);
+      await bioversity.service.handleLeadCenter(
+        2,
+        { acronym: 'Bioversity (Alliance)' },
+        9,
+      );
+
+      expect(ciat.saved[0].center_id).toBe('CENTER-03');
+      expect(bioversity.saved[0].center_id).toBe('CENTER-02');
+      expect(ciat.saved[0].center_id).not.toBe(bioversity.saved[0].center_id);
+    });
+
+    it('leaves a non-Alliance acronym to the normal institution path', async () => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleLeadCenter(1, { acronym: 'IITA' }, 9);
+
+      // No alias entry, and the stubs match no institution, so nothing is stored —
+      // proving the alias table did not claim it.
+      expect(saved).toEqual([]);
+    });
+
+    it('stores an Alliance contributing centre under its own code', async () => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleContributingCenters(
+        1,
+        [{ acronym: 'Bioversity (Alliance)' }],
+        9,
+        { acronym: 'IITA' },
+      );
+
+      expect(saved).toEqual([
+        expect.objectContaining({
+          center_id: 'CENTER-02',
+          is_leading_result: false,
+          is_primary: false,
+        }),
+      ]);
+    });
+
+    it('does not repeat the lead centre as a contributor, whichever spelling each field uses', async () => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleContributingCenters(
+        1,
+        [{ acronym: 'BIOVERSITY' }],
+        9,
+        { acronym: 'Bioversity (Alliance)' },
+      );
+
+      expect(saved).toEqual([]);
+    });
+
+    it('keeps a sibling Alliance centre when the other one leads', async () => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleContributingCenters(
+        1,
+        [{ acronym: 'CIAT (Alliance)' }],
+        9,
+        { acronym: 'Bioversity (Alliance)' },
+      );
+
+      expect(saved).toEqual([
+        expect.objectContaining({ center_id: 'CENTER-03' }),
+      ]);
+    });
+
+    it('refuses to resolve when the alias names a code CLARISA does not have', async () => {
+      const { service, saved } = makeCenterService();
+      (service as any)._clarisaCenters.findOne = jest.fn(async () => null);
+
+      await service.handleLeadCenter(
+        1,
+        { acronym: 'Bioversity (Alliance)' },
+        9,
+      );
+
+      expect(saved).toEqual([]);
+    });
+  });
 });
