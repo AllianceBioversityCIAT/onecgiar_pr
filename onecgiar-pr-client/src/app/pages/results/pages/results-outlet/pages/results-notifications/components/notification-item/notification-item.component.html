@@ -103,7 +103,7 @@
               <app-pr-button
                 [text]="buttonTextConfirm"
                 colorType="success"
-                (click)="notification?.is_map_to_toc ? acceptOrReject(true) : mapAndAccept(notification)"
+                (click)="onAcceptContribution()"
                 [rotating]="this.requestingAccept"
                 [disabled]="invalidateRequest()"
                 [icon]="this.requestingAccept ? 'loop' : ''"

@@ -311,4 +311,57 @@ describe('RdContributorsAndPartnersService', () => {
       expect(service.clarisaProjectsList.map(p => p.project_id)).toEqual(['1', '2']);
     });
   });
+
+  /**
+   * The Lead center list is a REQUIRED field fed by BOTH center dropdowns. Before the fix it was rebuilt only
+   * when `contributing_center` existed, so a center picked in the 2026 "Other(s)" dropdown never reached it and
+   * the select showed "There are no items available for this list" until a Save draft reloaded the section.
+   */
+  describe('setPossibleLeadCenters — "Other(s)" centers feed the Lead center list live', () => {
+    it('rebuilds from otherCentersSelected when the ToC brought no contributing centers', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [{ code: 'C2' }] as any;
+
+      service.setPossibleLeadCenters(false, false);
+
+      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(['C2']);
+    });
+
+    it('rebuilds even when contributing_center has not been hydrated yet (undefined)', () => {
+      service.partnersBody.contributing_center = undefined as any;
+      service.otherCentersSelected = [{ code: 'C1' }] as any;
+
+      service.setPossibleLeadCenters(false, false);
+
+      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(['C1']);
+    });
+
+    it('merges both dropdowns', () => {
+      service.partnersBody.contributing_center = [{ code: 'C1' }] as any;
+      service.otherCentersSelected = [{ code: 'C2' }] as any;
+
+      service.setPossibleLeadCenters(false, false);
+
+      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(['C1', 'C2']);
+    });
+
+    it('stays empty when nothing is selected — the legitimate empty state', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [];
+
+      service.setPossibleLeadCenters(false, false);
+
+      expect(service.possibleLeadCenters).toEqual([]);
+    });
+
+    it('auto-assigns the lead when the only eligible center comes from the "Other(s)" dropdown', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [{ code: 'C2' }] as any;
+      service.leadCenterCode = null;
+
+      service.setPossibleLeadCenters(false, true);
+
+      expect(service.leadCenterCode).toBe('C2');
+    });
+  });
 });

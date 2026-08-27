@@ -31,6 +31,48 @@ export class ResultQuestionsService {
   /** Upper bound on label length before stripping; avoids unbounded work on hostile input. */
   private static readonly BILATERAL_LABEL_MAX_CHARS = 16_384;
 
+  /**
+   * P25 "Responsible innovation and scaling" (parent question 77) is served to the client as four
+   * fixed slots `q1`…`q4`, each one wired to a different component in the Innovation Development
+   * form. Resolving those slots by ARRAY POSITION is unsafe: `find()` carries no `ORDER BY`, so the
+   * order is whatever MySQL returns, and the moment a child row is added, removed or reordered every
+   * slot after the gap shifts and the client renders the wrong question under the wrong component —
+   * for every P25 result, phase 2025 ones included.
+   *
+   * The slots are therefore pinned to `result_question_id`. A missing row leaves its own slot
+   * `undefined` and moves nothing else. Ids verified against prtest on 26 Aug 2026
+   * (`GET /v2/api/results/questions/innovation-development/{10000,11000}`): 78, 79, 136, 137.
+   *
+   * A child of 77 that is not listed here is not exposed — adding a fifth question is a code change
+   * here, on purpose, so that no row silently takes another question's slot.
+   */
+  private static readonly RESPONSIBLE_INNOVATION_SCALING_P25_SLOTS: ReadonlyArray<
+    readonly [slot: 'q1' | 'q2' | 'q3' | 'q4', questionId: number]
+  > = [
+    ['q1', 78],
+    ['q2', 79],
+    ['q3', 136],
+    ['q4', 137],
+  ];
+
+  /** Pins `q1`…`q4` to `result_question_id` so a removed question cannot shift the other slots. */
+  private assignQuestionSlotsById(
+    questions: any[],
+    slots: ReadonlyArray<readonly [string, number]>,
+  ): Record<string, any> {
+    const byId = new Map<number, any>();
+    for (const q of questions ?? []) {
+      const id = Number(q?.result_question_id);
+      if (Number.isFinite(id)) byId.set(id, q);
+    }
+
+    const out: Record<string, any> = {};
+    for (const [slot, questionId] of slots) {
+      out[slot] = byId.get(questionId);
+    }
+    return out;
+  }
+
   constructor(
     private readonly _handlerError: HandlersError,
     private readonly _resultQuestionRepository: ResultQuestionsRepository,
@@ -376,10 +418,10 @@ export class ResultQuestionsService {
 
           return {
             ...topLevelQuestion,
-            q1: questionsWithOptions[0],
-            q2: questionsWithOptions[1],
-            q3: questionsWithOptions[2],
-            q4: questionsWithOptions[3],
+            ...this.assignQuestionSlotsById(
+              questionsWithOptions,
+              ResultQuestionsService.RESPONSIBLE_INNOVATION_SCALING_P25_SLOTS,
+            ),
           };
         }),
       );
