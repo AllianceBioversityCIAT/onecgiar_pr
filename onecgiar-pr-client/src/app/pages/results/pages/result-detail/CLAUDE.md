@@ -1,6 +1,6 @@
 # result-detail
 
-**Verified:** 2026-08-24 · branch performance-refactor · b3181e828
+**Verified:** 2026-08-27 · branch performance-refactor · dab9ea9dc
 
 ## Qué es
 
@@ -25,6 +25,9 @@ scrollea en esta ruta.
 - `.rd_scroll` es el scroll del contenido (el `#pg-scroll` del mockup). Header del resultado y
   phase switcher van **dentro**: scrollean con el formulario, igual que en el mockup.
 - `.rd_bar_slot` es el piso de la columna, hermano del scroll. Ahí aterriza la bottom bar.
+- **Section heading ⓘ (P2-3262):** `.rd_section_head` draws ONE info trigger when the open section
+  publishes HTML into `DataControlService.currentResultSectionGuidance` (the publisher must clear it
+  on destroy). `.rd_section_title` is `flex: 0 1 auto` so the ⓘ sits by the name, not at the far right.
 
 ## Dónde se usa
 

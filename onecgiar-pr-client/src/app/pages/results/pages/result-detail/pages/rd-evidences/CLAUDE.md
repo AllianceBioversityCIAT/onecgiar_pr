@@ -1,6 +1,6 @@
 # rd-evidences
 
-**Verified:** 2026-08-27 · branch performance-refactor · c2976269f
+**Verified:** 2026-08-27 · branch performance-refactor · dab9ea9dc
 
 ## Qué es
 Sección 4 (última) del detalle de resultado: la lista de evidencias (links o ficheros subidos a
@@ -21,6 +21,14 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
   aquí, se disparan allí. No los dupliques.
 - Hijo: `evidence-item/` — el formulario de una evidencia; se usa embebido (`[embedded]="true"`)
   dentro del modal de creación/edición, nunca suelto.
+- **P2-3262 — guidance behind ONE ⓘ, Policy change only.** `policyChangeGuidanceAsTooltip()` gates it;
+  when true the grey `app-alert-status` is not rendered and `policyChangeEvidenceGuidance()`
+  (Part 1 = `alertStatus()` + Part 2 = the policy block) is published into
+  `DataControlService.currentResultSectionGuidance`, which the result-detail shell paints next to the
+  section name. An `effect` on `currentResultSignal` republishes it (the result lands after this
+  section mounts, and changes again on a phase switch); `ngOnDestroy` clears it. The stage-specific
+  paragraph needs `policy_stage_id`, which lives in another section, so this one calls
+  `GET_policyChanges()` — once per result, only when the gate is true.
 
 ## Dónde se usa
 - `src/app/shared/routing/routing-data.ts:411` — ruta `evidences`, sin `portfolioAcronym`, así que
@@ -28,6 +36,15 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
 - `rd-evidences.component.html:110` — `app-section-bottom-bar` con `(clickSave)="onSaveSection()"`.
 
 ## Trampas (⚠️ = ya rompió algo)
+- ⚠️ **P2-3262 is gated on the PHASE YEAR, never on the portfolio.** It reuses
+  `FieldsManagerService.isReportingFormGuidance2026()` (threshold
+  `ReportingDesignYear.ReportingFormGuidanceRedesign`), the same gate P2-3201 used to move field
+  guidance into ⓘ tooltips. `isP25()` answers "which portfolio" and is NOT a substitute: prtest holds
+  2025-phase results inside P25, and a portfolio gate would rewrite their form.
+- ⚠️ **CLARISA policy stage ids are hardcoded** in `POLICY_STAGE_NUMBER_BY_ID` (6/7/8 → stages 1/2/3,
+  verified live 27-Aug-2026). Deliberate: injecting `PolicyControlListService` here would fire two
+  CLARISA GETs for EVERY result type, since this section renders for all of them. If CLARISA ever
+  renumbers the stages, the tooltip silently falls back to listing both stage requirements.
 - ⚠️ **`POST_createUploadSession` resuelve con el SOBRE, no con la URL.** El servidor devuelve
   `{ response: uploadUrl, message, status }` (`share-point.service.ts`, `ReturnResponseUtil.format`),
   así que hay que desestructurar `{ response: uploadUrl }`. Sin eso el PUT recibe un objeto
@@ -57,6 +74,9 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
 - Tope de 6 evidencias: el botón `Add evidence` se oculta al llegar, no se deshabilita.
 
 ## Pendiente
+- **P2-3262 leaves one case unspecified:** the ticket never says what the tooltip should show BEFORE
+  a stage is picked (the stage lives in the Policy change information section). Both stage
+  requirements are listed then, so the guidance is never empty. Flagged, not invented.
 - Sin timeout HTTP en el cliente: si el backend acepta el POST y nunca responde, el botón se queda
   en "Saving…" para siempre. Es transversal a todas las secciones, vive en
   `custom-fields/save-button/save-button.service.ts`, no aquí. Reportado desde P2-3373.

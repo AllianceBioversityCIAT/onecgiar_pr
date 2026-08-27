@@ -81,6 +81,8 @@ describe('ResultDetailComponent', () => {
       currentResult: 'currentResult',
       currentResultSignal: signal({}),
       currentResultSectionName: signal(''),
+      // P2-3262: the section heading reads this to decide whether to draw its ⓘ.
+      currentResultSectionGuidance: signal(''),
       greenChecksString: () => '{}'
     }
 
