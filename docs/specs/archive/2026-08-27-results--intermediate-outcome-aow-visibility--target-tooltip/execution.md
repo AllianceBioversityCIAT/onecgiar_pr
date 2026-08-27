@@ -127,4 +127,23 @@ Per `RES-T-2`'s Definition of Done, the `RES-DD-2` matching-mechanism assumption
 
 **Attempts consumed: 1 of 3** (the two delegations were one task's completion sequence, not two rework attempts against a Reviewer FAIL).
 
-**Remaining before `[x]`:** commit (user has not yet been asked to approve one), `CLAUDE.md` `Verified:` re-stamp with the real post-commit hash, and the user's manual browser check (`RES-TEST-4`).
+**Committed 2026-08-26:**
+- `617f54f91` — `🔧 fix(reporting-aow-table, dashboard-lab) [SPEC:results/intermediate-outcome-aow-visibility/target-tooltip]: Add "not exclusive to that AoW" tooltip on Intermediate Outcome Target cells` (RES-T-1 + RES-T-2 combined — files overlap enough between the two tasks that a clean split was impractical; both are the same spec and both already Reviewer-PASSed, so a single commit was the Leader's call per `tasks.md` §6 Rollout).
+- `618d7743c` — `📝 docs(dashboard-lab, reporting-aow-table) [SPEC:...]: Re-stamp Verified line with the actual commit hash` (the CLAUDE.md self-reference chicken-and-egg problem — stamped with the parent commit's real hash in a tiny same-day follow-up, since the hash can't be known before the commit exists).
+- Also added the Reviewer's suggested ADVISORY note to `dashboard-lab/CLAUDE.md` (the `is_aow`-missing convention divergence vs. `entity-aow.service.ts`) in the same commit as the code.
+
+**Remaining before `[x]` on either task:** the user's manual browser check (`RES-TEST-2` for `RES-T-1`, `RES-TEST-4` for `RES-T-2`) — both code-complete, Reviewer-PASSed, and committed.
+
+## 6. Manual Browser Verification — 2026-08-27
+
+User performed both required manual checks against their own dev server:
+
+- **`RES-TEST-2` (`RES-T-1`):** confirmed correct — the "not exclusive to that AoW" tooltip shows on hover for Intermediate Outcomes card Target cells; does NOT leak onto AoW-card Target cells; the existing `achievedTooltip` on the Achieved cell one column over is unaffected (no copy-paste regression). None of the DoD's disqualifying inputs were observed.
+- **`RES-TEST-4` (`RES-T-2`):** confirmed correct — on `SP02`'s Reporting tab, AoW-card Outcomes-band rows for cross-cutting indicators show the Target tooltip; HLO/output-tier rows do not. As anticipated in §4's residual note, no genuinely AoW-exclusive (`is_aow: true`) live program was available to spot-check the negative case for that specific branch — not blocking, tracked as an open gap below.
+
+**Both `RES-T-1` and `RES-T-2` marked `[x]` in `tasks.md`.** Spec `target-tooltip` is now complete.
+
+**Carried-forward open items (not blocking, tracked for follow-up):**
+- Spot-check the `is_aow: true` (genuinely AoW-exclusive) branch live once a program with such data becomes available — the code path is covered by a synthetic/mocked unit test (per §4) but has never been observed against real data.
+- App-wide keyboard reachability for `PrTooltipDirective` (Pivot Record, §"Correction applied") — filed as a candidate follow-up spec, not started.
+- Extending the tooltip to the `flat` ("All indicators") table, if requested later (`design.md` §13 Open Gaps).

@@ -6,7 +6,7 @@
 |---|---|
 | **Parent spec path** | `docs/specs/results/intermediate-outcome-aow-visibility/` |
 | **Date created** | 2026-08-26 |
-| **Last updated** | 2026-08-26 |
+| **Last updated** | 2026-08-27 |
 | **Spec-family status** | open |
 | **Source proposal** | User request in chat (no Jira ticket referenced) — Reporting tab, `entity-details/SP02?tocView=aows` |
 
@@ -14,7 +14,7 @@
 
 | # | Spec Path | Depends on | Parallel-safe | Status |
 |---|---|---|---|---|
-| 1 | `results/intermediate-outcome-aow-visibility/target-tooltip` | none | yes | pending |
+| 1 | `results/intermediate-outcome-aow-visibility/target-tooltip` | none | yes | done |
 | 2 | `results/intermediate-outcome-aow-visibility/aow-selector` | none | yes | pending |
 
 Both children fix a single underlying fact: in this codebase, **Intermediate Outcomes are a program-level bucket, not nested per Area of Work** (`dashboard-lab.component.ts` `reportingGroups()`, comment at line ~1462 — "the design reference nests Intermediate/2030 under each AoW as HLO-level children — that is a known bug the owner rejected"). Every Intermediate Outcome target is therefore inherently cross-cutting. The two children make that fact visible (tooltip) and actionable (AoW selector at creation) — they touch disjoint files and can ship independently, in either order.
@@ -30,3 +30,4 @@ Both children fix a single underlying fact: in this codebase, **Intermediate Out
 | Date | Change | Approved by |
 |---|---|---|
 | 2026-08-26 | Family created from chat proposal | santiago.sanchez@cgiar.org |
+| 2026-08-27 | `target-tooltip` archived (both tasks complete, manually verified) — `Status` flipped `pending` → `done` | santiago.sanchez@cgiar.org |
