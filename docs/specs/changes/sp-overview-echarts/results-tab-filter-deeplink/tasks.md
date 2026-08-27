@@ -5,7 +5,7 @@
 - **Module / feature:** `programme-results` — URL ↔ filter bridge + center filter (client only)
 - **Linked spec:** `requirements.md` (RFD-R-1..3) + `design.md` (RFD-DD-1..5)
 - **Owner / driver:** j.cadavid@cgiar.org
-- **Status:** in-progress (RFD-T-2 done 2026-08-27)
+- **Status:** done — RFD-T-2 + RFD-T-1 PASS (2026-08-27); rollout §6 pending
 - **Depth:** Lite · **Budget:** 2 tasks / ~150 LOC / 1 review round (design.md §1)
 - **Family:** `../family.md` row #1 · `Parallel-safe: yes` · may run in a worktree concurrently with #2
 
@@ -32,11 +32,11 @@
 - **Estimate:** S (~90 LOC incl. spec)
 - **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] Spec cases (a)–(f) from design §10 green: hydration 3-param, unknown value, no params, mirror on change (`replaceUrl:true`, `merge`), clear-all nulls, param change via subject.
-  - [ ] **Anti-loop evidence:** after emitting params through the stub, `router.navigate` call count is `0`. **FAIL input:** remove the equality guard in the mirror effect → count becomes ≥1 → red. **Disqualifier:** a spec that never emits params through the subject (only `snapshot`) cannot exercise the loop and is not evidence for this clause.
-  - [ ] `merge`/`replaceUrl` asserted on the **actual `navigate` args** (not on a wrapper). **FAIL input:** drop `replaceUrl` → assertion fails.
-  - [ ] Full client suite: `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean. **Disqualifier:** a green run via `--testPathPattern` narrowing is not evidence — full suite only.
-  - [ ] `git diff --stat` shows no `package.json` / `package-lock.json` (RFD-AC-4). **FAIL input:** any dependency edit.
+  - [x] Spec cases (a)–(f) from design §10 green: hydration 3-param, unknown value, no params, mirror on change (`replaceUrl:true`, `merge`), clear-all nulls, param change via subject.
+  - [x] **Anti-loop evidence:** after emitting params through the stub, `router.navigate` call count is `0`. **FAIL input:** remove the equality guard in the mirror effect → count becomes ≥1 → red. **Disqualifier:** a spec that never emits params through the subject (only `snapshot`) cannot exercise the loop and is not evidence for this clause.
+  - [x] `merge`/`replaceUrl` asserted on the **actual `navigate` args** (not on a wrapper). **FAIL input:** drop `replaceUrl` → assertion fails.
+  - [x] Full client suite: `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean. **Disqualifier:** a green run via `--testPathPattern` narrowing is not evidence — full suite only.
+  - [x] `git diff --stat` shows no `package.json` / `package-lock.json` (RFD-AC-4). **FAIL input:** any dependency edit.
 
 ### `RFD-T-2` — Center filter dimension (service, options, toolbar select, chip)
 
