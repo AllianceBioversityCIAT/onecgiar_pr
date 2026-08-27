@@ -68,6 +68,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       loadFilteredBilateralProjects: jest.fn(),
       loadClarisaProjects: jest.fn(),
       resetState: jest.fn(),
+      setPossibleLeadCenters: jest.fn(),
       contributingInitiativeNew: [],
       leadPartnerId: null,
       leadCenterCode: null,
@@ -205,6 +206,21 @@ describe('RdContributorsAndPartnersComponent', () => {
       mockRdPartnersSE.leadCenterCode = 'C1';
       component.deleteContributingCenter(0, false);
       expect(mockRdPartnersSE.leadCenterCode).toBeNull();
+    });
+  });
+
+  /**
+   * The "Other(s)" dropdown is the ONLY way to add a center when the ToC brought none (P2-2998 AC4).
+   * Without this wiring the required "Lead center" select stayed empty until a Save draft reloaded the section.
+   */
+  describe('onOtherCenterSelect', () => {
+    it('recomputes the lead-center options as soon as an "Other(s)" center is picked', () => {
+      component.onOtherCenterSelect({});
+      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true);
+    });
+
+    it('offers a useful hint for the legitimate empty state instead of a bare "no items available"', () => {
+      expect(component.noLeadCentersNote).toContain('Select a contributing CGIAR Center first');
     });
   });
 

@@ -201,6 +201,17 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     this.rdPartnersSE.setPossibleLeadCenters(true);
   }
 
+  // The Other(s) dropdown feeds `otherCentersSelected`, which is lead-eligible too. Without recomputing here the
+  // "Lead center" list (a REQUIRED field) stayed empty until a Save draft reloaded the section — and when the ToC
+  // brings no centers this dropdown is the ONLY way to add one, so the form looked like a dead end.
+  // Parity with `onContributingCenterSelect` / `deleteOtherCenter`, which already recompute.
+  onOtherCenterSelect(_event: any) {
+    this.rdPartnersSE.setPossibleLeadCenters(true);
+  }
+
+  // Shown instead of the generic "no items available" when nothing is lead-eligible yet.
+  noLeadCentersNote = 'Select a contributing CGIAR Center first — only centers already added in this section can be chosen as the result lead.';
+
   deleteOtherCenter(index: number) {
     // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
     // Parity with deleteScience: reassign a NEW array (not splice) so the multi-select ngModel refreshes and the chip stays removed.
