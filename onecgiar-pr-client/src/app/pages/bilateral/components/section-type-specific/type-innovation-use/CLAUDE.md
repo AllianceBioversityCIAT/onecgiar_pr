@@ -1,6 +1,6 @@
 # type-innovation-use (bilateral)
 
-**Verified:** 2026-08-26 · branch performance-refactor · 038dcd77b (+WIP: inversión `Coming soon`)
+**Verified:** 2026-08-27 · branch performance-refactor · 6407a50fa (+WIP sin commitear: gate de scaling studies P2-3294)
 
 ## Qué es
 Sección 5 del creador de resultados W3/Bilateral cuando el tipo es **Innovation Use**. Muestra los 4 campos
@@ -90,9 +90,19 @@ Development QA'd), P2-3331 (gemelo de verificación de QA).
   "Sí" con tres URLs se seguía guardando detrás de un control que el usuario ya no puede ver ni corregir.
   Mismo motivo por el que `onInnovationLinkChange()` borra el resultado enlazado. Solo limpia cuando el
   nivel **llega a 6 o más**: con el nivel sin elegir no se ocultó nada, así que no se toca nada.
-- El gate de la pregunta de scaling studies aquí es `nivel < 6` (P2-3428 AC13 / P2-3294). **W1/W2 hoy usa
-  `>= 5` sin techo** (`shared/components/innovation-use-form/innovation-use-form.component.html:334`)
-  porque P2-3294 sigue Open. Divergencia deliberada y reportada en el ticket — no "alinear" a ciegas.
+- El gate de la pregunta de scaling studies aquí es `nivel < 6` (P2-3428 AC13 / P2-3294, **confirmado por el
+  PO Ángel Jarrín el 26-ago-2026**). **W1/W2 ya aplica el mismo techo** desde P2-3294
+  (`shared/components/innovation-use-form/innovation-use-form.component.html:338`), pero allí el rango
+  queda `>= 5 && < 6` y el techo va detrás de un gate de fase 2026 (`isScalingStudiesQuestionHiddenByLevel()`).
+  ⚠️ **Aquí NO hay gate de fase** — el techo aplica en cualquier fase, porque bilateral solo existe de 2026
+  en adelante. Divergencia deliberada: no "alinear" a ciegas ni añadir el gate de año sin pedirlo.
+- ⚠️ **`showScalingStudies` NO tiene guarda `level >= 0` — a propósito.** `useLevelNumber` devuelve `-1`
+  cuando todavía no se eligió nivel, y `-1 < 6` es `true` en JS: sin nivel elegido, la pregunta se
+  **muestra**, igual que en los niveles 0-5. Antes del 26-ago-2026 el getter tenía `level >= 0 && level < 6`,
+  lo que la ocultaba mientras no hubiera nivel — un defecto real (la pregunta debía verse por defecto y
+  esconderse solo al llegar a 6), corregido al auditar P2-3428 contra la confirmación del PO. Ver
+  `type-innovation-use.component.ts` — el comentario sobre el getter explica por qué no se reintroduce la
+  guarda. Candado: test `shows the scaling studies question while no use level is picked yet`.
 - Los tests usan `overrideTemplate`, así que el HTML no se compila en Jest. El texto de la nota MDS vive en
   la constante `MDS_INFO_NOTE` justamente para poder afirmarlo palabra por palabra sin renderizar.
 - Las medidas cuantitativas solo cuentan para el MDS con **unidad Y cantidad** (AC6); una unidad suelta no

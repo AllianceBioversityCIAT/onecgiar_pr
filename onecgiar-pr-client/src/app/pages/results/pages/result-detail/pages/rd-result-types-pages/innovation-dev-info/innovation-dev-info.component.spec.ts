@@ -807,6 +807,82 @@ describe('InnovationDevInfoComponent', () => {
     });
   });
 
+  describe('showScalingStudiesQuestion() — P2-3265', () => {
+    // Real CLARISA response shape (fetched from prtest 26-Aug-2026): ids start at 11 and are
+    // unrelated to `level`, which is the field the gate must read (Ángel Jarrín, Jira P2-3359 note
+    // on P2-3265). Using this exact shape proves the gate isn't reading the id or the array index.
+    const readinessLevelsCatalogue = [
+      { id: 11, level: '0', name: 'Idea' },
+      { id: 12, level: '1', name: 'Basic Research' },
+      { id: 13, level: '2', name: 'Formulation' },
+      { id: 14, level: '3', name: 'Proof of Concept' },
+      { id: 15, level: '4', name: 'Controlled Testing' },
+      { id: 16, level: '5', name: 'Model/Early Prototype' },
+      { id: 17, level: '6', name: 'Semi-Controlled Testing' },
+      { id: 18, level: '7', name: 'Prototype' },
+      { id: 19, level: '8', name: 'Uncontrolled Testing' },
+      { id: 20, level: '9', name: 'Proven Innovation' }
+    ];
+
+    const setLevel = (levelNumber: number) => {
+      component.innovationControlListSE.readinessLevelsList = readinessLevelsCatalogue as any;
+      component.innovationDevInfoBody.innovation_readiness_level_id = readinessLevelsCatalogue.find(
+        l => l.level === String(levelNumber)
+      )!.id;
+    };
+
+    describe('2026 phase onward (isInnovationDevFormReduced2026 = true) — question removed entirely', () => {
+      beforeEach(() => {
+        jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+      });
+
+      // Ticket's own table: "< 6: Not applicable (question was not shown at these levels)" +
+      // "= 6 [confirmed >= 6 by the PO]: Remove". The union covers every level 0-9 — there is no
+      // level at which the 2026 form should newly show this question.
+      it.each([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])('hides the question at level %i', level => {
+        setLevel(level);
+        expect(component.showScalingStudiesQuestion()).toBe(false);
+      });
+    });
+
+    describe('phase 2025 and earlier (isInnovationDevFormReduced2026 = false) — must render exactly as before', () => {
+      beforeEach(() => {
+        jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(false as any);
+      });
+
+      it('still shows the question at level 7, unaffected by the 2026 flip', () => {
+        setLevel(7);
+        expect(component.showScalingStudiesQuestion()).toBe(true);
+      });
+
+      it('still hides the question at level 3, matching pre-existing behavior', () => {
+        setLevel(3);
+        expect(component.showScalingStudiesQuestion()).toBe(false);
+      });
+    });
+
+    it('hides the question when no readiness level has been selected yet', () => {
+      component.innovationControlListSE.readinessLevelsList = readinessLevelsCatalogue as any;
+      component.innovationDevInfoBody.innovation_readiness_level_id = null as any;
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+      expect(component.showScalingStudiesQuestion()).toBe(false);
+    });
+
+    it('the section saves successfully with the question hidden and unanswered (green check is never blocked)', async () => {
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(false as any);
+      setLevel(7); // hidden under the 2026 rule (question removed for every level)
+      component.innovationDevInfoBody.has_scaling_studies = null as any;
+      expect(component.showScalingStudiesQuestion()).toBe(false);
+
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev');
+      await component.onSaveSection();
+
+      expect(patchSpy).toHaveBeenCalled();
+      expect(component.savingSection).toBeFalsy();
+    });
+  });
+
   describe('onSaveSection P25 PATCH error', () => {
     it('should handle PATCH_innovationDevP25 error gracefully', async () => {
       jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);

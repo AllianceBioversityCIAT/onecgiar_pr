@@ -630,10 +630,26 @@ describe('TypeInnovationUseComponent', () => {
       expect(component.showScalingStudies).toBe(false);
     });
 
-    it('hides the scaling studies question while no use level is picked', () => {
+    // Confirmed by the PO (Ángel Jarrín, 26-ago-2026): the question hides only once the level reaches 6 —
+    // an unanswered level is not "6 or higher", so it must stay visible, exactly like levels 0-5.
+    it('shows the scaling studies question while no use level is picked yet', () => {
       build();
       fixture.detectChanges();
       component.body = {};
+      expect(component.showScalingStudies).toBe(true);
+    });
+
+    it('shows the scaling studies question at level 5 and hides it at level 6 and level 9', () => {
+      build();
+      fixture.detectChanges();
+      // id '6' -> level 5 per the mock catalog above.
+      component.body = { innovation_use_level_id: '6' };
+      expect(component.showScalingStudies).toBe(true);
+      // id '7' -> level 6 per the mock catalog above.
+      component.body = { innovation_use_level_id: '7' };
+      expect(component.showScalingStudies).toBe(false);
+      innovationControlListSE.useLevelsList = [...innovationControlListSE.useLevelsList, { id: '10', level: 9, name: 'Level 9' }];
+      component.body = { innovation_use_level_id: '10' };
       expect(component.showScalingStudies).toBe(false);
     });
 

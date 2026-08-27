@@ -354,4 +354,34 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return Number.isFinite(levelNumber) ? levelNumber : -1;
   }
 
+  /**
+   * P2-3294: the 2026 phase drops the "Have any studies been conducted to inform the innovation
+   * scaling strategy design (...)" question (and its follow-up link list) once the Innovation Use
+   * Level reaches 6+. Confirmed by Angel Jarrín (PO), 26-Aug-2026. Phases <= 2025 keep the
+   * question exactly as it behaved before this ticket, regardless of level.
+   *
+   * Gated on `phase_year`, never on `isP25()`/portfolio — per the epic P2-3243 rule (reporting/
+   * CLAUDE.md rule 9): prtest holds 2025-phase results inside the P25 portfolio, and a portfolio
+   * gate would strip the question from those too. Mirrors the `phase_year >= <2026 threshold>`
+   * pattern used by `FieldsManagerService`'s other 2026 gates (e.g. `isContributorsPartners2026`),
+   * kept local here rather than added to the shared `ReportingDesignYear` enum/service because
+   * this ticket's file scope is `innovation-use-form/**` only.
+   *
+   * Fails OPEN (returns false, i.e. "don't hide") when `phase_year` or the resolved use level
+   * aren't available yet — an in-flight load, or a host (like IPSR step-n1) that never wires up
+   * `innovation_use_level_id`/`phase_year` — must never hide a question by mistake; it just keeps
+   * whatever the pre-existing `getUseLevelIndex() >= 5` gate already decided.
+   */
+  private static readonly SCALING_STUDIES_QUESTION_HIDE_YEAR = 2026;
+
+  isScalingStudiesQuestionHiddenByLevel(): boolean {
+    const phaseYear = this.api?.dataControlSE?.currentResultSignal?.()?.phase_year ?? this.api?.dataControlSE?.reportingCurrentPhase?.phaseYear;
+    if (typeof phaseYear !== 'number' || phaseYear < InnovationUseFormComponent.SCALING_STUDIES_QUESTION_HIDE_YEAR) {
+      return false;
+    }
+    const level = this.getUseLevelIndex();
+    if (level < 0) return false;
+    return level >= 6;
+  }
+
 }

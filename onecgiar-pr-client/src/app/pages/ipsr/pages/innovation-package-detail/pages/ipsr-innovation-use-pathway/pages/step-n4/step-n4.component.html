@@ -19,7 +19,7 @@
 
 <app-step-n4-reference-material-links [body]="this.ipsrStep4Body"></app-step-n4-reference-material-links>
 
-@if (this.api.fieldsManagerSE.isP25()) {
+@if (this.api.fieldsManagerSE.isP25() && !isScalingStudiesQuestionHiddenByLevel()) {
   <app-pr-radio-button
     fieldRef="[innovation-use-form]-has-studies-links"
     [options]="[
