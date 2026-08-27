@@ -2,14 +2,16 @@
      stacked with generous spacing, every multi-value field showing its selection as removable
      chips underneath, and a sticky footer that counts down what is still missing. -->
 <form class="flex flex-col gap-[22px]" (ngSubmit)="createResult()">
-  <h3 class="m-0 text-[19px] font-bold leading-tight text-[var(--pr-color-secondary-400)]">The result</h3>
+  @if (!currentResultIsKnowledgeProduct()) {
+    <h3 class="m-0 text-[19px] font-bold leading-tight text-[var(--pr-color-secondary-400)]">The result</h3>
+  }
 
   <!-- indicator category: a picker only when the ToC node does not fix it -->
-  <div>
-    <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
-      Indicator category @if (needsCategoryChoice()) { <span class="text-[var(--pr-color-red-300)]">*</span> }
-    </p>
-    @if (needsCategoryChoice()) {
+  @if (needsCategoryChoice()) {
+    <div>
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+        Indicator category <span class="text-[var(--pr-color-red-300)]">*</span>
+      </p>
       @if (categoryUnavailable()) {
         <!-- No level → no option list will ever arrive. Say so instead of showing an empty control. -->
         <p class="m-0 text-[13px] leading-relaxed text-[var(--pr-color-orange-500)]">
@@ -28,80 +30,138 @@
           (selectOptionEvent)="onCategoryChange($event?.id ?? null)"
           name="resultType" />
       }
-    } @else {
-      <!-- Fixed by the indicator. Rendered as a filled, non-editable control so the column of
-           fields keeps one silhouette instead of collapsing into a chip. -->
+    </div>
+  } @else if (!currentResultIsKnowledgeProduct()) {
+    <!-- Fixed by the indicator -->
+    <div>
+      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Indicator category</p>
       <div
         class="flex h-[46px] items-center rounded-[10px] border border-[rgba(30,32,47,0.14)] bg-[var(--pr-color-accents-1)] px-3.5 text-[14px] text-[var(--pr-color-secondary-400)]">
         {{ emergingCategory()?.name || indicator()?.result_type_name || indicator()?.type_name || 'Not provided' }}
       </div>
-    }
-  </div>
+    </div>
+  }
 
   <!-- Knowledge products come from a repository. The design specifies two entry modes, but
        browsing has no endpoint yet (P2-3231) and business asked to hide it rather than show it
        disabled while P/As are testing (P2-3479) — so the whole switcher is gated behind
        `kpBrowseEnabled`. Manual entry stays, it is simply no longer presented as a choice. -->
   @if (currentResultIsKnowledgeProduct()) {
-    <div>
+    <div class="mb-2">
       @if (kpBrowseEnabled) {
-        <div class="mb-3 inline-flex rounded-[10px] bg-[var(--pr-color-accents-1)] p-1" role="tablist" aria-label="How to add the knowledge product">
+        <div class="mb-4 flex w-full rounded-xl bg-gray-100 p-1" role="tablist" aria-label="How to add the knowledge product">
           <button
             type="button"
             role="tab"
-            disabled
-            aria-disabled="true"
-            title="Browsing your repository knowledge products is not available yet"
-            class="inline-flex cursor-not-allowed items-center gap-2 rounded-[8px] border-0 bg-transparent px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-color-accents-5)] opacity-60">
+            [attr.aria-selected]="kpEntryMode() === 'browse'"
+            (click)="kpEntryMode.set('browse')"
+            class="flex-1 rounded-lg border-0 py-2 text-sm font-semibold transition-all cursor-pointer"
+            [ngClass]="kpEntryMode() === 'browse' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
             Browse CGSpace
-            <span class="rounded-full bg-[rgba(30,32,47,0.08)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Coming soon</span>
           </button>
           <button
             type="button"
             role="tab"
             [attr.aria-selected]="kpEntryMode() === 'manual'"
             (click)="kpEntryMode.set('manual')"
-            class="rounded-[8px] border-0 bg-white px-3.5 py-2 text-[13px] font-semibold text-[var(--pr-color-primary-300)] shadow-sm">
+            class="flex-1 rounded-lg border-0 py-2 text-sm font-semibold transition-all cursor-pointer"
+            [ngClass]="kpEntryMode() === 'manual' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
             Manual entry
           </button>
         </div>
       }
 
-      <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
-        Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span>
-      </p>
-      <div class="flex items-start gap-2">
-        <div class="min-w-0 flex-1">
-          <!-- `isStatic` is what keeps a field editable: `editable` is declared on pr-input but never
-               read, and RolesService.readOnly defaults to true. -->
-          <app-pr-input
-            [ngModel]="createResultBody().handler"
-            [ngModelOptions]="{ standalone: true }"
-            (ngModelChange)="patch('handler', $event)"
-            placeholder="Paste the repository link…"
-            [isStatic]="true"
-            [disabled]="creatingResult()"
-            name="handler" />
-        </div>
-        <button
-          type="button"
-          (click)="validateHandle()"
-          [disabled]="validatingHandler() || creatingResult()"
-          class="mt-1 inline-flex h-[46px] shrink-0 appearance-none items-center gap-1.5 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 text-[13.5px] font-semibold text-white disabled:opacity-50">
-          {{ validatingHandler() ? 'Syncing…' : 'Sync' }}
-          <span class="material-icons-round text-[16px]" [class.animate-spin]="validatingHandler()">sync</span>
-        </button>
+      <!-- Browse panel: mounted and kept with [hidden] per R-21 -->
+      <div [hidden]="kpEntryMode() !== 'browse'">
+        @if (createResultBody().handler) {
+          <!-- Selected KP item banner -->
+          <div class="mb-4 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/90 to-emerald-50/40 p-4 flex flex-col gap-3 shadow-xs">
+            <div class="flex items-center justify-between gap-3">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <i class="pi pi-check text-[10px]"></i>
+                Selected from CGSpace
+              </span>
+              <button
+                type="button"
+                (click)="clearSelectedKpItem()"
+                class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 transition-colors cursor-pointer bg-transparent border-0 p-0">
+                <span class="material-icons-round text-[15px]">swap_horiz</span>
+                Change item
+              </button>
+            </div>
+
+            <div>
+              @if (validatingHandler()) {
+                <div class="flex items-center gap-2 py-1 text-sm font-semibold text-emerald-800">
+                  <i class="pi pi-spin pi-spinner text-emerald-600"></i>
+                  <span>Retrieving metadata from CGSpace…</span>
+                </div>
+              } @else {
+                <h4 class="m-0 text-sm font-bold text-gray-900 leading-snug">
+                  {{ createResultBody().result_name }}
+                </h4>
+              }
+              <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span class="font-mono text-xs text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-200 shadow-2xs">
+                  {{ createResultBody().handler }}
+                </span>
+                @if (mqapJson()?.metadata?.[0]?.source) {
+                  <span class="text-gray-400">·</span>
+                  <span class="text-gray-500 text-[11.5px]">{{ mqapJson()?.metadata?.[0]?.source }}</span>
+                }
+              </div>
+            </div>
+          </div>
+        } @else {
+          <app-kp-cgspace-browse
+            [busy]="validatingHandler() || creatingResult()"
+            [phaseYear]="phaseYear()"
+            [isAdmin]="isAdmin()"
+            (itemSelected)="onCgspaceItemSelected($event)"
+            (switchToManual)="kpEntryMode.set('manual')">
+          </app-kp-cgspace-browse>
+        }
       </div>
-      @if (mqapUrlError().status) {
-        <!-- The server's own message can carry links; rendering it as text would swallow them. -->
-        <p class="error__link m-0 mt-1.5 text-[12.5px] text-[var(--pr-color-red-300)]" [innerHTML]="mqapUrlError().message"></p>
-      }
+
+      <!-- Manual entry panel -->
+      <div [hidden]="kpEntryMode() !== 'manual'">
+        <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+          Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span>
+        </p>
+        <div class="flex items-start gap-2">
+          <div class="min-w-0 flex-1">
+            <!-- `isStatic` is what keeps a field editable: `editable` is declared on pr-input but never
+                 read, and RolesService.readOnly defaults to true. -->
+            <app-pr-input
+              [ngModel]="createResultBody().handler"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="patch('handler', $event); handleSource.set('manual')"
+              placeholder="Paste the repository link…"
+              [isStatic]="true"
+              [disabled]="creatingResult()"
+              name="handler" />
+          </div>
+          <button
+            type="button"
+            (click)="validateHandle()"
+            [disabled]="validatingHandler() || creatingResult()"
+            class="mt-1 inline-flex h-[46px] shrink-0 appearance-none items-center gap-1.5 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 text-[13.5px] font-semibold text-white disabled:opacity-50 cursor-pointer">
+            {{ validatingHandler() ? 'Syncing…' : 'Sync' }}
+            <span class="material-icons-round text-[16px]" [class.animate-spin]="validatingHandler()">sync</span>
+          </button>
+        </div>
+        @if (mqapUrlError().status) {
+          <!-- The server's own message can carry links; rendering it as text would swallow them. -->
+          <p class="error__link m-0 mt-1.5 text-[12.5px] text-[var(--pr-color-red-300)]" [innerHTML]="mqapUrlError().message"></p>
+        }
+      </div>
     </div>
   }
 
-  <!-- result title. For a knowledge product it is filled by the sync and stays locked: `disabled`
-       is the lever that does that — `readOnly` is inert while `isStatic` is on. -->
-  <div>
+  @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
+    <!-- result title. For a knowledge product it is filled by the sync and stays locked: `disabled`
+         is the lever that does that — `readOnly` is inert while `isStatic` is on. -->
+    <div>
     <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
       {{ titleLabel() }} <span class="text-[var(--pr-color-red-300)]">*</span>
       <span class="material-icons-round text-[15px] text-[var(--pr-color-accents-4)]" [title]="titleHint()">info</span>
@@ -272,7 +332,7 @@
 
   <!-- Contributing W3 and bilateral projects -->
   @if (bilateralProjects().length) {
-    <div>
+    <div class="bilateral-projects-field">
       <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">Contributing W3 and bilateral projects</p>
       <app-pr-multi-select
         [options]="bilateralProjects()"
@@ -304,8 +364,11 @@
     </div>
   }
 
-  <!-- sticky footer: what is still missing on the left, the two actions on the right -->
-  <div class="sticky bottom-0 -mx-6 mt-2 flex items-center justify-between gap-4 border-t border-[rgba(30,32,47,0.1)] bg-white px-6 py-3.5">
+  <!-- Spacer so the last field can scroll fully above the sticky footer -->
+  <div class="h-6 shrink-0"></div>
+
+  <!-- sticky footer: anchored to bottom: 0 with NO space below it -->
+  <div class="sticky bottom-0 -mx-6 flex items-center justify-between gap-4 border-t border-[rgba(30,32,47,0.1)] bg-white px-6 py-3.5 z-30 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
     @if (missingFields().length) {
       <span class="flex items-center gap-2 text-[13px] text-[var(--pr-color-accents-6)]" [title]="missingFields().join(' · ')">
         <span class="size-[7px] shrink-0 rounded-full bg-[var(--pr-color-orange-500)]"></span>
@@ -323,14 +386,14 @@
       <button
         type="button"
         (click)="cancelled.emit()"
-        class="appearance-none rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-5 py-2.5 text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)]">
+        class="appearance-none rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-5 py-2.5 text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)] cursor-pointer">
         Cancel
       </button>
       @if (canReport()) {
         <button
           type="submit"
           [disabled]="!canSave() || creatingResult()"
-          class="inline-flex appearance-none items-center gap-2 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 py-2.5 text-[13.5px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8]">
+          class="inline-flex appearance-none items-center gap-2 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 py-2.5 text-[13.5px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8] cursor-pointer">
           {{ creatingResult() ? 'Creating…' : 'Create and continue' }}
           @if (creatingResult()) {
             <span class="material-icons-round animate-spin text-[16px]">progress_activity</span>
@@ -339,4 +402,15 @@
       }
     </div>
   </div>
+} @else {
+  <!-- In browse mode before selection: clean Cancel button pinned to bottom -->
+  <div class="sticky bottom-0 -mx-6 mt-4 flex items-center justify-end border-t border-[rgba(30,32,47,0.08)] bg-white px-6 py-3 z-30 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+    <button
+      type="button"
+      (click)="cancelled.emit()"
+      class="appearance-none rounded-[10px] border border-[rgba(30,32,47,0.16)] bg-white px-5 py-2 text-[13px] font-semibold text-[var(--pr-color-secondary-400)] hover:bg-[var(--pr-color-accents-1)] cursor-pointer">
+      Cancel
+    </button>
+  </div>
+}
 </form>

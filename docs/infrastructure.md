@@ -98,7 +98,7 @@ The local stack is **disposable**: agents may freely start, seed, and reset it t
 | **Lambda-shaped local run** | `npm run lambda:test` (serverless offline) when a change touches the Lambda handler or bundling. |
 | **Health check** | Backend: `GET http://localhost:3000/api` opens Swagger (200 = up). Frontend: http://localhost:4200 renders the login page. |
 | **URLs / ports** | Backend `3000` (Swagger at `/api`) · Frontend `4200` · Nginx image `8080` · MySQL `3306` (per env) |
-| **Env templates** | Backend `.env` keys listed in `README.md` → *Environment*; client config in `onecgiar-pr-client/src/environments/environment.ts`; Cypress env example at `onecgiar-pr-client/cypress.env.js.example`. |
+| **Env templates** | Backend `.env` keys listed in `README.md` → *Environment*; includes `CGSPACE_DISCOVERY_URL` (default `https://cgspace.cgiar.org/server/api`); client config in `onecgiar-pr-client/src/environments/environment.ts`; Cypress env example at `onecgiar-pr-client/cypress.env.js.example`. |
 
 **Agent-lean verification commands** (failure-only output; failures still print complete and verbatim):
 

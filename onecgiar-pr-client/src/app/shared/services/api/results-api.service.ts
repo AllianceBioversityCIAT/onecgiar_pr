@@ -394,6 +394,17 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/mqap?handle=${handle}`);
   }
 
+  GET_cgspaceSearch(params: any): Observable<any> {
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/cgspace/search`, { params });
+  }
+
+  GET_cgspaceFacet(name: string, prefix?: string, size?: number): Observable<any> {
+    const params: any = {};
+    if (prefix) params.prefix = prefix;
+    if (size) params.size = size;
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/cgspace/facets/${name}`, { params });
+  }
+
   GET_resultknowledgeProducts() {
     return this.http
       .get<any>(`${this.apiBaseUrl}results-knowledge-products/get/result/${this.currentResultId}`)

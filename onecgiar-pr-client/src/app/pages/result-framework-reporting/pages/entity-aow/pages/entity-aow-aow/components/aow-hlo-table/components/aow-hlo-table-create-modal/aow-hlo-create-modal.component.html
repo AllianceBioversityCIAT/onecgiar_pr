@@ -5,7 +5,7 @@
   [showHeader]="false">
   <div class="report-result-header">
     <span class="font-bold whitespace-nowrap">Report result</span>
-    <i class="material-icons-round" style="font-size: 20px; cursor: pointer" (click)="entityAowService.onCloseReportResultModal()">close</i>
+    <i class="material-icons-round" style="font-size: 20px; cursor: pointer" (click)="onCloseModal()">close</i>
   </div>
 
   <div class="report-result-content">
@@ -61,30 +61,103 @@
         }
 
         @if (currentResultIsKnowledgeProduct()) {
-          <div>
-            <div class="mqap_sync_title">
-              <app-pr-input
-                [isStatic]="true"
-                placeholder="Handle..."
-                label="Repository link/handle"
-                type="text"
-                labelDescInlineStyles="margin-top: 0 !important"
-                [(ngModel)]="createResultBody().handler"
-                [disabled]="creatingResult()">
-              </app-pr-input>
-
-              <div (click)="GET_mqapValidation()" class="sync_button" [ngClass]="{ globalDisabled: validatingHandler() || creatingResult() }">
-                <app-pr-button padding="small" [verticalMargin]="0" text="Sync" icon="sync" [rotating]="validatingHandler()"></app-pr-button>
-              </div>
+          <div [brnTabs]="kpEntryMode()" (brnTabsChange)="kpEntryMode.set($any($event))" class="w-full mb-4">
+            <div brnTabsList class="flex w-full rounded-xl bg-gray-100 p-1 mb-4">
+              <button
+                brnTabsTrigger="browse"
+                type="button"
+                class="flex-1 rounded-lg py-2 text-sm font-semibold text-center transition-all cursor-pointer border-0"
+                [ngClass]="kpEntryMode() === 'browse' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
+                Browse CGSpace
+              </button>
+              <button
+                brnTabsTrigger="manual"
+                type="button"
+                class="flex-1 rounded-lg py-2 text-sm font-semibold text-center transition-all cursor-pointer border-0"
+                [ngClass]="kpEntryMode() === 'manual' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
+                Manual entry
+              </button>
             </div>
-            @if (mqapUrlError().status) {
-              <div class="error__link" [innerHTML]="mqapUrlError().message"></div>
-            }
+
+            <!-- Browse panel: mounted and kept with [hidden] per R-21 -->
+            <div [hidden]="kpEntryMode() !== 'browse'">
+              @if (createResultBody().handler) {
+                <div class="mb-4 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/90 to-emerald-50/40 p-4 flex flex-col gap-3 shadow-xs">
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      <i class="pi pi-check text-[10px]"></i>
+                      Selected from CGSpace
+                    </span>
+                    <button
+                      type="button"
+                      (click)="clearSelectedKpItem()"
+                      class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 transition-colors cursor-pointer bg-transparent border-0 p-0">
+                      <span class="material-icons-round text-[15px]">swap_horiz</span>
+                      Change item
+                    </button>
+                  </div>
+
+                  <div>
+                    @if (validatingHandler()) {
+                      <div class="flex items-center gap-2 py-1 text-sm font-semibold text-emerald-800">
+                        <i class="pi pi-spin pi-spinner text-emerald-600"></i>
+                        <span>Retrieving metadata from CGSpace…</span>
+                      </div>
+                    } @else {
+                      <h4 class="m-0 text-sm font-bold text-gray-900 leading-snug">
+                        {{ createResultBody().result_name }}
+                      </h4>
+                    }
+                    <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span class="font-mono text-xs text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-200 shadow-2xs">
+                        {{ createResultBody().handler }}
+                      </span>
+                      @if (mqapJson()?.metadata?.[0]?.source) {
+                        <span class="text-gray-400">·</span>
+                        <span class="text-gray-500 text-[11.5px]">{{ mqapJson()?.metadata?.[0]?.source }}</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              } @else {
+                <app-kp-cgspace-browse
+                  [busy]="validatingHandler() || creatingResult()"
+                  [phaseYear]="phaseYear()"
+                  [isAdmin]="isAdmin()"
+                  (itemSelected)="onCgspaceItemSelected($event)"
+                  (switchToManual)="kpEntryMode.set('manual')">
+                </app-kp-cgspace-browse>
+              }
+            </div>
+
+            <!-- Manual entry panel -->
+            <div [hidden]="kpEntryMode() !== 'manual'">
+              <div class="mqap_sync_title">
+                <app-pr-input
+                  [isStatic]="true"
+                  placeholder="Handle..."
+                  label="Repository link/handle"
+                  type="text"
+                  labelDescInlineStyles="margin-top: 0 !important"
+                  [(ngModel)]="createResultBody().handler"
+                  (ngModelChange)="handleSource.set('manual')"
+                  [disabled]="creatingResult()">
+                </app-pr-input>
+
+                <div (click)="GET_mqapValidation()" class="sync_button" [ngClass]="{ globalDisabled: validatingHandler() || creatingResult() }">
+                  <app-pr-button padding="small" [verticalMargin]="0" text="Sync" icon="sync" [rotating]="validatingHandler()"></app-pr-button>
+                </div>
+              </div>
+              @if (mqapUrlError().status) {
+                <div class="error__link" [innerHTML]="mqapUrlError().message"></div>
+              }
+            </div>
           </div>
         }
 
-        <app-pr-input
-          [isStatic]="true"
+        @if (!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || createResultBody().handler) {
+          <app-pr-input
+            [isStatic]="true"
           [placeholder]="currentResultIsKnowledgeProduct() ? 'Knowledge product title...' : 'Input title...'"
           [label]="getTitleInputLabel()"
           type="text"
@@ -322,6 +395,7 @@
             </button>
           </div>
         }
+      }
       </div>
     </div>
 

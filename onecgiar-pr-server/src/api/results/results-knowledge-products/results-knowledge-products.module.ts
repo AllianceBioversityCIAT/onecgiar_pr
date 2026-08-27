@@ -10,6 +10,8 @@ import {
 } from '../../../shared/handlers/error.utils';
 import { HttpModule } from '@nestjs/axios';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
+import { CgspaceDiscoveryService } from './cgspace-discovery/cgspace-discovery.service';
+import { CgspaceDiscoveryMapper } from './cgspace-discovery/cgspace-discovery.mapper';
 import { ResultsKnowledgeProductAltmetricRepository } from './repositories/results-knowledge-product-altmetrics.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './repositories/results-knowledge-product-authors.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from './repositories/results-knowledge-product-institution.repository';
@@ -124,6 +126,8 @@ import { ResultDeletionAuditModule } from '../result-deletion-audit/result-delet
     GlobalParameterRepository,
     InitiativeEntityMapRepository,
     AoWBilateralRepository,
+    CgspaceDiscoveryService,
+    CgspaceDiscoveryMapper,
   ],
   exports: [
     ResultsKnowledgeProductsService,

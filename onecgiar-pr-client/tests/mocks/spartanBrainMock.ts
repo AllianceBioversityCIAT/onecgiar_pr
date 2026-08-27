@@ -216,3 +216,105 @@ export class BrnFieldControl {
 export function provideBrnLabelable(_type: unknown): any {
   return { provide: 'BrnLabelable', useValue: _type };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// Tabs primitives (@spartan-ng/brain/tabs) — added for segmented and browse tabs.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+export type BrnTabsOrientation = 'horizontal' | 'vertical';
+export type BrnTabsDirection = 'ltr' | 'rtl';
+export type BrnActivationMode = 'automatic' | 'manual';
+
+@Directive({ selector: '[brnTabs]', standalone: true })
+export class BrnTabs {
+  @Input('brnTabs') activeTab: string | undefined;
+  @Input() orientation: 'horizontal' | 'vertical' = 'horizontal';
+  @Output() readonly brnTabsChange = new EventEmitter<string>();
+  @Output() readonly tabActivated = new EventEmitter<string>();
+
+  /** Mirrors the real brain: activates a tab and emits both outputs. */
+  setActiveTab(key: string): void {
+    if (this.activeTab === key) return;
+    this.activeTab = key;
+    this.brnTabsChange.emit(key);
+    this.tabActivated.emit(key);
+  }
+}
+
+@Directive({
+  selector: '[brnTabsList]',
+  standalone: true,
+  host: {
+    role: 'tablist',
+    '[attr.aria-orientation]': 'orientation'
+  }
+})
+export class BrnTabsList {
+  @Input() orientation: 'horizontal' | 'vertical' = 'horizontal';
+}
+
+@Directive({
+  selector: 'button[brnTabsTrigger],[brnTabsTrigger]',
+  standalone: true,
+  host: {
+    role: 'tab',
+    '[attr.aria-selected]': 'selected',
+    '[attr.aria-controls]': 'triggerFor',
+    '[attr.data-state]': "selected ? 'active' : 'inactive'",
+    '[attr.tabindex]': "selected ? '0' : '-1'",
+    '[attr.disabled]': "disabled ? '' : null",
+    '[disabled]': 'disabled',
+    '(click)': 'activate()'
+  }
+})
+export class BrnTabsTrigger {
+  private readonly _parent = inject(BrnTabs, { optional: true });
+  @Input('brnTabsTrigger') triggerFor: string = '';
+  @Input() disabled: boolean = false;
+  get selected(): boolean {
+    return this._parent ? this._parent.activeTab === this.triggerFor : false;
+  }
+  activate(): void {
+    if (this.disabled) return;
+    this._parent?.setActiveTab(this.triggerFor);
+  }
+}
+
+@Directive({
+  selector: '[brnTabsContent]',
+  standalone: true,
+  host: {
+    role: 'tabpanel',
+    '[attr.tabindex]': '0',
+    '[attr.aria-labelledby]': 'contentFor',
+    '[hidden]': '!selected'
+  }
+})
+export class BrnTabsContent {
+  private readonly _parent = inject(BrnTabs, { optional: true });
+  @Input('brnTabsContent') contentFor: string = '';
+  get selected(): boolean {
+    return this._parent ? this._parent.activeTab === this.contentFor : true;
+  }
+}
+
+@Directive({ selector: 'ng-template[brnTabsContentLazy]', standalone: true })
+export class BrnTabsContentLazy {}
+
+export abstract class BrnTabsPaginatedList {}
+
+export const BrnTabsImports = [
+  BrnTabs,
+  BrnTabsList,
+  BrnTabsTrigger,
+  BrnTabsContent,
+  BrnTabsContentLazy
+] as const;
+
+export {
+  BrnTabs as BrnTabsDirective,
+  BrnTabsList as BrnTabsListDirective,
+  BrnTabsTrigger as BrnTabsTriggerDirective,
+  BrnTabsContent as BrnTabsContentDirective
+};
+

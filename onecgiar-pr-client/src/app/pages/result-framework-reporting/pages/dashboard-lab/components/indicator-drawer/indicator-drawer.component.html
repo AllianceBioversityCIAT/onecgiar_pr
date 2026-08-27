@@ -1,5 +1,9 @@
-<!-- No scrim on purpose: the panel is part of the layout, not a modal. The list
-     beside it stays scrollable and clickable while the form is open. -->
+<!-- Backdrop scrim (modal overlay) -->
+<div
+  class="pr-drawer__scrim fixed inset-0 z-[140] bg-[rgba(15,23,42,0.35)] backdrop-blur-[1px] transition-opacity"
+  (click)="requestClose()"
+  aria-hidden="true"></div>
+
 <aside
   class="pr-drawer fixed inset-y-0 right-0 z-[141] flex flex-col border-l border-[rgba(30,32,47,0.1)] bg-white shadow-[-18px_0_44px_rgba(30,32,47,0.14)]"
   [style.width.px]="width()"
@@ -15,55 +19,67 @@
     aria-orientation="vertical"
     aria-label="Resize panel"></div>
   <!-- ---------- context: what you are about to report against ---------- -->
-  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] px-6 pb-4 pt-5">
-    <div class="flex items-start gap-3">
-      <div class="min-w-0 flex-1">
-        <p class="m-0 text-[11.5px] font-medium text-[var(--pr-color-accents-5)]">
-          {{ programCode() }} <span class="text-[var(--pr-color-accents-3)]">/</span> {{ aowCode() }}
-        </p>
-        @if (groupTitle()) {
-          <p class="m-0 mt-0.5 truncate text-[12.5px] font-bold" [style.color]="accent()">{{ groupTitle() }}</p>
-        }
-      </div>
-      <button
-        type="button"
-        (click)="requestClose()"
-        aria-label="Close"
-        class="inline-flex size-8 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)] hover:text-[var(--pr-color-secondary-400)]">
-        <span class="material-icons-round text-[19px]">close</span>
-      </button>
+  <!-- Top bar: Drawer title & Close button -->
+  <div class="flex shrink-0 items-center justify-between border-b border-[rgba(30,32,47,0.08)] px-6 py-3.5 bg-white">
+    <div class="flex items-center gap-2">
+      <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">{{ tab() === 'report' ? 'edit_note' : 'info' }}</span>
+      <h3 class="m-0 text-[15px] font-bold text-gray-900">
+        {{ tab() === 'report' ? 'Report result' : 'Indicator information' }}
+      </h3>
     </div>
+    <button
+      type="button"
+      (click)="requestClose()"
+      aria-label="Close"
+      class="inline-flex size-8 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 cursor-pointer">
+      <span class="material-icons-round text-[20px]">close</span>
+    </button>
+  </div>
 
-    <h2 class="m-0 mt-2.5 text-[15px] font-bold leading-snug text-[var(--pr-color-secondary-400)]">{{ indicator()?.indicator_description }}</h2>
-
-    <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
-      <span class="rounded-full bg-[#6b46e51f] px-2 py-0.5 text-[11.5px] font-semibold text-[var(--pr-color-primary-400)]">
-        {{ indicator()?.type_name || 'Not provided' }}
+  <!-- Context header: Indicator details -->
+  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] px-6 py-4 bg-white">
+    <div class="flex items-center gap-2 mb-2 flex-wrap">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[13px] font-bold bg-[#6461bc]/10 text-[var(--pr-color-primary-300)] tracking-wide">
+        <span class="material-icons-round text-[15px]">folder</span>
+        {{ programCode() }}
       </span>
-      @if (indicator()?.center_acronym) {
-        <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">
-          {{ indicator()?.center_acronym }}
+      @if (groupTitle() || aowCode()) {
+        <span class="text-[13.5px] font-semibold text-gray-700">
+          {{ groupTitle() || aowCode() }}
         </span>
       }
-      <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">
-        Target: <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ indicator()?.target_value_sum ?? 0 }}</b>
-      </span>
+    </div>
+
+    <h2 class="m-0 text-[15.5px] font-bold leading-snug text-gray-900 tracking-tight">{{ indicator()?.indicator_description }}</h2>
+
+    <div class="mt-3.5 flex flex-wrap items-center gap-2 pt-2.5 border-t border-gray-100">
+      @if (indicator()?.type_name) {
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[13px]">
+          <span class="font-medium text-gray-500">Indicator type:</span>
+          <span class="font-bold text-gray-900">{{ indicator()?.type_name }}</span>
+        </div>
+      }
       @if (indicator()?.unit_messurament) {
-        <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">
-          {{ indicator()?.unit_messurament }}
-        </span>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[13px]">
+          <span class="font-medium text-gray-500">Unit:</span>
+          <span class="font-bold text-gray-900">{{ indicator()?.unit_messurament }}</span>
+        </div>
+      }
+      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50/70 border border-violet-200 text-[13px]">
+        <span class="font-medium text-violet-700">2026 Target:</span>
+        <span class="font-bold text-[var(--pr-color-primary-300)] tabular-nums">{{ indicator()?.target_value_sum ?? 0 }}</span>
+      </div>
+      @if (indicator()?.center_acronym) {
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[13px]">
+          <span class="font-medium text-gray-500">Center:</span>
+          <span class="font-bold text-gray-900">{{ indicator()?.center_acronym }}</span>
+        </div>
       }
     </div>
   </header>
 
-  <!-- ---------- mode heading: which drawer this is (no tabs — the card button decides) ---------- -->
-  <div class="flex shrink-0 items-center gap-1.5 border-b border-[rgba(30,32,47,0.08)] bg-[var(--pr-color-accents-1)] px-6 py-2.5 text-[12.5px] font-semibold text-[var(--pr-color-primary-400)]">
-    <span class="material-icons-round text-[16px]">{{ tab() === 'report' ? 'edit_note' : 'info' }}</span>
-    {{ tab() === 'report' ? 'Report result' : 'Information' }}
-  </div>
-
   <!-- ---------- panel ---------- -->
-  <div class="custom_scroll flex-1 overflow-y-auto px-6 py-5">
+  <div class="custom_scroll flex-1 overflow-y-auto px-6 pt-5 pb-0">
     @switch (tab()) {
       @case ('report') {
         <!-- What is already reported here, visible WHILE the form is being filled: recognising a

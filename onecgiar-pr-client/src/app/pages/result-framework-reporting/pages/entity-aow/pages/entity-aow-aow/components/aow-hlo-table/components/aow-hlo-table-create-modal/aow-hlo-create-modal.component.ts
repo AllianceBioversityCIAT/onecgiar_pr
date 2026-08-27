@@ -11,6 +11,8 @@ import { Router } from '@angular/router';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { CentersService } from '../../../../../../../../../../shared/services/global/centers.service';
 import { filterOutAvisaInitiatives } from '../../../../../../../../../../shared/utils/avisa-initiative.util';
+import { BrnTabsImports } from '@spartan-ng/brain/tabs';
+import { KpCgspaceBrowseComponent, CgspaceItemDto } from './components/kp-cgspace-browse/kp-cgspace-browse.component';
 
 interface CreateResultBody {
   handler: string;
@@ -29,6 +31,8 @@ interface CreateResultBody {
     PrFilterMultiselectModule,
     FormsModule,
     HlmButton,
+    BrnTabsImports,
+    KpCgspaceBrowseComponent
   ],
   templateUrl: './aow-hlo-create-modal.component.html',
   styleUrl: './aow-hlo-create-modal.component.scss',
@@ -58,6 +62,12 @@ export class AowHloCreateModalComponent implements OnInit {
     message: ''
   });
   resultTypes = signal<any[]>([]);
+  kpEntryMode = signal<'browse' | 'manual'>('browse');
+  handleSource = signal<'browse' | 'manual'>('manual');
+
+  phaseYear = computed(() => this.api.dataControlSE?.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
+  isAdmin = computed(() => !!this.api.rolesSE?.isAdmin);
+
   currentResultIsKnowledgeProduct = computed(() => {
     return (
       this.entityAowService.currentResultToReport()?.indicators?.[0]?.type_name === 'Number of knowledge products' ||
@@ -302,12 +312,15 @@ export class AowHloCreateModalComponent implements OnInit {
           result_name: resp.response.title
         });
         this.validatingHandler.set(false);
-        this.api.alertsFe.show({
-          id: 'reportResultSuccess',
-          title: 'Metadata successfully retrieved',
-          description: 'Title: ' + this.createResultBody().result_name,
-          status: 'success'
-        });
+        if (this.handleSource() === 'manual') {
+          this.api.alertsFe.show({
+            id: 'reportResultSuccess',
+            title: 'Metadata successfully retrieved',
+            description: 'Title: ' + this.createResultBody().result_name,
+            status: 'success',
+            closeIn: 1500
+          });
+        }
       },
       error: err => {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
@@ -317,6 +330,12 @@ export class AowHloCreateModalComponent implements OnInit {
     });
   }
 
+  clearSelectedKpItem(): void {
+    this.createResultBody.update(b => ({ ...b, handler: '', result_name: '' }));
+    this.mqapJson.set(null);
+    this.mqapUrlError.set({ status: false, message: '' });
+  }
+
   navigateToResult(item: any) {
     const url = this.router.serializeUrl(
       this.router.createUrlTree([`/result/result-detail/${item.result_code}/general-information`], {
@@ -324,6 +343,60 @@ export class AowHloCreateModalComponent implements OnInit {
       })
     );
     window.open(url, '_blank');
+  }
+
+  onCgspaceItemSelected(item: CgspaceItemDto): void {
+    const url = item.itemUrl || item.handleUrl || item.handle;
+    this.validatingHandler.set(true);
+    this.handleSource.set('browse');
+    this.mqapUrlError.set({ status: false, message: '' });
+
+    this.api.resultsSE.GET_mqapValidation(url).subscribe({
+      next: resp => {
+        this.mqapJson.set(resp.response);
+        this.createResultBody.set({
+          ...this.createResultBody(),
+          handler: url,
+          result_name: resp.response?.title ?? ''
+        });
+        this.validatingHandler.set(false);
+      },
+      error: err => {
+        this.validatingHandler.set(false);
+        this.api.alertsFe.show({
+          id: 'reportResultError',
+          title: 'Error!',
+          description: err?.error?.message || 'Could not retrieve metadata for this item',
+          status: 'error'
+        });
+      }
+    });
+  }
+
+  cleanModal(): void {
+    this.kpEntryMode.set('browse');
+    this.handleSource.set('manual');
+    this.createResultBody.set({
+      handler: '',
+      result_name: '',
+      toc_progressive_narrative: '',
+      result_type_id: null,
+      contribution_to_indicator_target: null
+    });
+    this.mqapJson.set(null);
+    this.mqapUrlError.set({
+      status: false,
+      message: ''
+    });
+    this.validatingHandler.set(false);
+    this.creatingResult.set(false);
+    this.otherCentersSelected.set([]);
+    this.otherScienceSelected.set([]);
+  }
+
+  onCloseModal(): void {
+    this.cleanModal();
+    this.entityAowService.onCloseReportResultModal();
   }
 
   createResult() {
@@ -369,7 +442,7 @@ export class AowHloCreateModalComponent implements OnInit {
     this.api.resultsSE.POST_createResult(body).subscribe({
       next: resp => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-        this.entityAowService.onCloseReportResultModal();
+        this.onCloseModal();
         this.creatingResult.set(false);
         this.router.navigate([`/result/result-detail/${resp?.response?.result?.result_code}/general-information`], {
           queryParams: { phase: resp?.response?.result?.version_id }

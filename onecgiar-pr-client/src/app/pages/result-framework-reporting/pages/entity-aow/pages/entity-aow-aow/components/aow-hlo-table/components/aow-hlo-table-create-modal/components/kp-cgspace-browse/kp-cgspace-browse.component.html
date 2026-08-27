@@ -1,0 +1,223 @@
+<div class="flex flex-col gap-4 w-full">
+  <!-- Search bar & Filters container -->
+  <div class="flex flex-col gap-3">
+    <!-- Free text search input -->
+    <div class="relative w-full">
+      <input
+        type="text"
+        class="w-full pl-9 pr-10 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-300)] focus:border-[var(--pr-color-primary-300)] text-gray-900 placeholder-gray-400"
+        placeholder="Search CGSpace by title, author, or DOI..."
+        [value]="query()"
+        (input)="onQueryInput($event)"
+        (keydown.enter)="$event.preventDefault(); onEnter()"
+        aria-label="Search CGSpace" />
+      <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+      @if (status() === 'loading') {
+        <i class="pi pi-spin pi-spinner absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+      } @else if (canSearch()) {
+        <button
+          type="button"
+          (click)="retrySearch()"
+          title="Refresh search"
+          aria-label="Refresh search"
+          class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[var(--pr-color-primary-300)] bg-transparent border-0 p-1 cursor-pointer transition-colors">
+          <i class="pi pi-refresh text-xs"></i>
+        </button>
+      }
+    </div>
+
+    <!-- Filters row -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Type Filter -->
+      <div class="w-44 min-w-[160px] kp-filter-type">
+        <app-pr-select
+          [options]="typeOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Filter by type"
+          [showClear]="true"
+          optionsInlineStyles="min-width: 260px;"
+          [ngModel]="selectedType()"
+          (selectOptionEvent)="onTypeSelect($event)">
+        </app-pr-select>
+      </div>
+
+      <!-- Center Filter -->
+      <div class="w-56 min-w-[190px] kp-filter-center">
+        <app-pr-select
+          [options]="centerOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Filter by center"
+          [showClear]="true"
+          optionsInlineStyles="min-width: 440px; max-width: 520px;"
+          [ngModel]="selectedCenter()"
+          (selectOptionEvent)="onCenterSelect($event)">
+        </app-pr-select>
+      </div>
+
+      <!-- Year Filter: Locked chip for non-admin, editable select for admin -->
+      @if (!isAdmin()) {
+        <div
+          class="flex items-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-md text-xs font-medium border border-gray-200"
+          aria-disabled="true">
+          <span>Year: {{ phaseYear() }}</span>
+          <span class="text-gray-500 text-[11px]">(reporting cycle)</span>
+        </div>
+      } @else {
+        <div class="w-36 min-w-[130px]">
+          <app-pr-select
+            [options]="adminYearOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Filter by year"
+            [showClear]="true"
+            [ngModel]="selectedYear()"
+            (selectOptionEvent)="onYearSelect($event)">
+          </app-pr-select>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Content area for various states -->
+  <div class="mt-2 min-h-[160px]">
+    <!-- Loading State -->
+    @if (status() === 'loading') {
+      <div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-500" data-test="cgspace-loading">
+        <i class="pi pi-spin pi-spinner text-3xl text-[var(--pr-color-primary-300)]"></i>
+        <p class="text-sm font-medium">Searching CGSpace...</p>
+      </div>
+    }
+
+    <!-- Idle State -->
+    @if (status() === 'idle') {
+      <div class="flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-idle">
+        <i class="pi pi-search text-2xl text-gray-400 mb-2"></i>
+        @if (query().trim().length > 0 && query().trim().length < 3 && !hasActiveFilter()) {
+          <p class="text-sm text-gray-600 font-medium">Please enter at least 3 characters to search CGSpace.</p>
+        } @else {
+          <p class="text-sm text-gray-600 font-medium">Search CGSpace by title, author, or DOI to find a Knowledge Product.</p>
+          <p class="text-xs text-gray-400 mt-1">Type at least 3 characters or select a filter above.</p>
+        }
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (status() === 'empty') {
+      <div class="flex flex-col items-center justify-center py-10 px-4 text-center border border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-empty">
+        <i class="pi pi-inbox text-3xl text-gray-400 mb-2"></i>
+        <p class="text-sm text-gray-700">No items found in CGSpace for this search. Try different terms or use <button type="button" data-test="switch-to-manual-empty" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.</p>
+      </div>
+    }
+
+    <!-- Error State -->
+    @if (status() === 'error') {
+      <div class="flex flex-col items-center justify-center py-8 px-6 text-center border border-red-200 rounded-xl bg-red-50/60 shadow-xs" data-test="cgspace-error">
+        <div class="size-11 rounded-full bg-red-100 flex items-center justify-center text-red-600 mb-2.5">
+          <i class="pi pi-exclamation-triangle text-xl"></i>
+        </div>
+        <h4 class="m-0 text-sm font-bold text-red-900">CGSpace search is temporarily unavailable</h4>
+        <p class="m-0 mt-1 text-xs text-gray-600 max-w-md leading-relaxed">
+          CGSpace search is temporarily unavailable — use <button type="button" data-test="switch-to-manual-error" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.
+        </p>
+
+        <div class="mt-4 flex items-center gap-3">
+          <button
+            type="button"
+            data-test="cgspace-retry-btn"
+            class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[var(--pr-color-primary-300)] hover:bg-[var(--pr-color-primary-400)] rounded-lg transition-all cursor-pointer shadow-xs border-0"
+            (click)="retrySearch()">
+            <i class="pi pi-refresh text-[12px]"></i>
+            <span>Try again</span>
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Results State -->
+    @if (status() === 'results') {
+      <div class="flex flex-col gap-3">
+        <!-- Live region result counter -->
+        <div aria-live="polite" class="text-xs text-gray-500 font-medium">
+          Showing {{ items().length }} of {{ total() }} items from CGSpace
+        </div>
+
+        <!-- Cards list -->
+        <div class="flex flex-col gap-3">
+          @for (item of items(); track item.uuid || item.handle || $index) {
+            <div class="border border-gray-200 rounded-xl p-4 bg-white hover:border-gray-300 shadow-sm transition-all flex flex-col gap-2">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <!-- Title -->
+                  <h4 class="text-sm font-semibold text-gray-900 leading-snug">
+                    {{ item.title }}
+                  </h4>
+
+                  <!-- Meta line: type · year · authors · affiliation -->
+                  <div class="text-xs text-gray-500 mt-1">
+                    {{ formatMeta(item) }}
+                  </div>
+
+                  <!-- Country chips (up to 3) -->
+                  @if (item.countries && item.countries.length > 0) {
+                    <div class="flex flex-wrap gap-1.5 mt-2">
+                      @for (country of item.countries.slice(0, 3); track country) {
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                          {{ country }}
+                        </span>
+                      }
+                    </div>
+                  }
+
+                  <!-- Monospace handle -->
+                  <div class="mt-2 text-xs font-mono text-gray-500">
+                    {{ item.handle }}
+                  </div>
+                </div>
+
+                <!-- Right actions: Use this item button & View details link -->
+                <div class="flex-shrink-0 flex flex-col items-end gap-2">
+                  <button
+                    type="button"
+                    class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[var(--pr-color-primary-300)] hover:bg-[var(--pr-color-primary-400)] rounded-lg disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm border-0 min-w-[100px]"
+                    [disabled]="busy()"
+                    [attr.aria-label]="'Use this item: ' + item.title"
+                    (click)="onSelect(item)">
+                    @if (busy() && selectingItem() === (item.uuid || item.handle)) {
+                      <i class="pi pi-spin pi-spinner text-[13px]"></i>
+                      <span>Selecting…</span>
+                    } @else {
+                      <span>Use this item</span>
+                    }
+                  </button>
+
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 text-xs text-[var(--pr-color-primary-300)] hover:underline font-medium cursor-pointer bg-transparent border-0 p-0"
+                    (click)="openItemDetails(item)">
+                    View details
+                    <i class="pi pi-external-link text-[10px]"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Load More Button -->
+        @if (items().length < total()) {
+          <div class="flex justify-center mt-3 mb-2">
+            <button
+              type="button"
+              class="px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none cursor-pointer disabled:opacity-50"
+              [disabled]="loadingMore()"
+              (click)="loadMore()">
+              {{ loadingMore() ? 'Loading...' : 'Load more' }}
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
