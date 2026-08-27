@@ -389,7 +389,7 @@ describe('CapDevInfoComponent — mandatory fields mirror validation_capacity_de
     return cards.find(card => card.querySelector('.fch_title')?.textContent.trim() === title);
   };
 
-  /** The radio group that offers the given option labels (the sub-term group carries no title). */
+  /** The radio group that offers the given option labels — matched by options, not by title. */
   const radioGroupWithOptions = (...optionLabels: string[]): HTMLElement => {
     const groups: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('app-pr-radio-button'));
     return groups.find(group => {
@@ -508,6 +508,36 @@ describe('CapDevInfoComponent — mandatory fields mirror validation_capacity_de
     const subGroup = radioGroupWithOptions('Long-term', 'Short-term');
     expect(subGroup).toBeTruthy();
     expect(subGroup.querySelector('.pr-field').classList).not.toContain('mandatory');
+  });
+
+  /**
+   * P2-3385: the sub-question used to pass no `label`, which made `field-card`'s `isBare` getter true
+   * and skipped the `field_card` class entirely — the options were drawn loose outside the container
+   * that frames every sibling question. The label is the fix, so the label is what this asserts.
+   */
+  it('the sub-question renders INSIDE a field card, titled "Degree"', async () => {
+    await renderWith({ capdev_term_id: 4, institutions: [], is_attending_for_organization: null });
+
+    // `pr-radio-button` renders the card, so the card sits INSIDE the group, not around it.
+    const card = cardWithTitle('Degree');
+    expect(card).toBeTruthy();
+    expect(card.closest('app-pr-radio-button')).toBe(radioGroupWithOptions('Long-term', 'Short-term'));
+    // `.field_card` is the container `isBare` used to suppress — this is the assertion that fails
+    // if the label is ever dropped again.
+    expect(card.querySelector('.field_card')).toBeTruthy();
+  });
+
+  /**
+   * The guard that matters: framing a control is presentation. If giving it a label ever flipped
+   * `required`, `validation_capacity_dev_P25` would start demanding a value the parent group already
+   * satisfies via `validate_capdev_term_id()`, and the section could never be completed.
+   */
+  it('framing the sub-question did NOT make it mandatory', async () => {
+    await renderWith({ capdev_term_id: 4, institutions: [], is_attending_for_organization: null });
+
+    const card = cardWithTitle('Degree');
+    expect(card.querySelector('.fch_required')).toBeNull();
+    expect(card.querySelector('.pr-field').classList).not.toContain('mandatory');
   });
 
   it('"Delivery Method" is mandatory — `valid_text(rcd.capdev_delivery_method_id)`', async () => {

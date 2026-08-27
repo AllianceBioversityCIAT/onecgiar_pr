@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-25 · branch performance-refactor · c813fd719
+**Verified:** 2026-08-26 · branch performance-refactor · 038dcd77b
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -40,6 +40,16 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   comportamiento para las siete tipologías que sirve (decisión D1 del change
   `openspec/changes/p2-3358-single-linked-result-question/design.md`).
 
+- ⚠️ **"Lead center" se alimenta de LOS DOS desplegables de centros, no solo del primero.**
+  `setPossibleLeadCenters` (`service.ts:537`) filtra el catálogo CLARISA por
+  `partnersBody.contributing_center` **∪** `otherCentersSelected`. El segundo desplegable
+  ("Other(s) Contributing CGIAR Centers", `html:157`) no llamaba a ese recálculo, así que la lista
+  del campo **obligatorio** "Lead center" salía vacía ("There are no items available for this list")
+  hasta que un Save draft recargaba la sección. Y cuando la ToC no trae centros (P2-2998 AC4) el
+  primer desplegable **ni se pinta**, así que ése era el único camino → callejón sin salida.
+  Arreglado con `onOtherCenterSelect` (`component.ts:208`) + guarda ampliada en el servicio.
+  🛑 Si añades un tercer origen de centros, engánchalo también a `setPossibleLeadCenters(true)`.
+
 - La pregunta **no aparece en el PDF**. El "View PDF" pega contra
   `GET /api/platform-report/result/:id`, que devuelve un JSON con una URL de S3; el PDF real
   no contiene ninguna variante de la frase (verificado con `pdftotext` el 25-ago-2026). El texto
@@ -55,6 +65,13 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
 
 ## Tests
 Tres suites: `*.component.spec.ts` (50 casos), `*.service.spec.ts` y `*.zoneless.spec.ts`.
+Además, E2E: `cypress/e2e/result-detail/contributors-and-partners.cy.ts`, `save-validation.cy.ts`
+y `save-contract.cy.ts`.
+⚠️ Los controles del template llevan `data-testid="cp-field-<ruta en el payload>"` (por ejemplo
+`cp-field-result_toc_result.planned_result`). **No son decoración:** `save-contract.cy.ts` lee la
+ruta del hook y comprueba que el campo viaje en el body del PATCH. El sufijo tras `~`
+(`cp-field-contributing_center~flat`) solo distingue dos controles que alimentan la MISMA clave.
+Si añades un control obligatorio sin su hook, queda fuera de esa comprobación.
 La zoneless existe porque esta pantalla ya se rompió con el patrón hide/re-show por timer.
 ⚠️ Esta carpeta está **excluida de `collectCoverageFrom`** (`package.json`): los tests corren, pero
 no cuentan para el umbral. No te fíes del porcentaje global para saber si esto está cubierto.

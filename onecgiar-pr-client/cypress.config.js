@@ -92,6 +92,12 @@ module.exports = defineConfig({
     devServer: {
       framework: 'angular',
       bundler: 'webpack',
+      /**
+       * The CT dev-server binds 8080 by default, so two agents running component tests on the
+       * same checkout crash each other with EADDRINUSE — the config file itself throws and no
+       * test runs. Override per session with CT_DEV_SERVER_PORT.
+       */
+      port: Number(process.env.CT_DEV_SERVER_PORT || 8080),
       // This app builds with the esbuild `@angular/build:application` builder, but
       // Cypress' Angular preset drives the legacy webpack `browser` builder. Reading
       // the real build target as-is crashes (e.g. `outputPath` is an object, `browser`

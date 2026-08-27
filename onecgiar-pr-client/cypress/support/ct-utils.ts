@@ -131,9 +131,22 @@ export function sharedFieldContracts(opts: {
   optional?: FieldCase;
   /** Selector of the interactive control that must disappear while read-only. */
   controlSelector: string;
-  /** Root element carrying the mandatory/complete contract. Defaults to `.pr-field`. */
-  rootSelector?: string;
+  /**
+   * Root element carrying the mandatory/complete contract. Defaults to `.pr-field`.
+   *
+   * Pass `null` for a field that does NOT participate in that DOM contract at all. Only
+   * `pr-select` (and `appFeedbackValidation`) render a `.pr-field` root with `mandatory` /
+   * `complete` on it — `pr-multi-select`, `pr-yes-or-not`, `pr-checkbox` and `pr-range-level`
+   * render an `app-pr-field-header` instead, so they show a red asterisk while contributing
+   * nothing to `someMandatoryFieldIncompleteResultDetail`'s DOM scan. This is documented
+   * behaviour (see src/CLAUDE.md §21.5), not a defect. Asserting the mandatory contract on those
+   * fields fabricates a requirement they never had, which is why the three tests are skipped
+   * rather than failed — and why the requiredness marker they DO own is asserted in their own
+   * spec instead.
+   */
+  rootSelector?: string | null;
 }) {
+  const participatesInDomScan = opts.rootSelector !== null;
   const root = opts.rootSelector ?? '.pr-field';
 
   it('[contract] hides the interactive control when read-only (the app default)', () => {
@@ -149,7 +162,7 @@ export function sharedFieldContracts(opts: {
     cy.get(opts.controlSelector).should('exist');
   });
 
-  it('[contract] marks a required field as mandatory-but-incomplete while empty', () => {
+  (participatesInDomScan ? it : it.skip)('[contract] marks a required field as mandatory-but-incomplete while empty', () => {
     mountCF(opts.emptyRequired.template, {
       componentProperties: opts.emptyRequired.componentProperties,
       editable: true
@@ -157,7 +170,7 @@ export function sharedFieldContracts(opts: {
     cy.get(`${root}.mandatory`).should('exist').and('not.have.class', 'complete');
   });
 
-  it('[contract] marks a required field complete once it holds a value', () => {
+  (participatesInDomScan ? it : it.skip)('[contract] marks a required field complete once it holds a value', () => {
     mountCF(opts.filledRequired.template, {
       componentProperties: opts.filledRequired.componentProperties,
       editable: true
@@ -167,7 +180,7 @@ export function sharedFieldContracts(opts: {
 
   if (opts.optional) {
     const optional = opts.optional;
-    it('[contract] does not mark an optional field as mandatory', () => {
+    (participatesInDomScan ? it : it.skip)('[contract] does not mark an optional field as mandatory', () => {
       mountCF(optional.template, { componentProperties: optional.componentProperties, editable: true });
       cy.get(`${root}.mandatory`).should('not.exist');
     });
