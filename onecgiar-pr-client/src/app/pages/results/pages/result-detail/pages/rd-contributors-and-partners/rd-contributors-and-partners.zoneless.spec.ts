@@ -169,9 +169,13 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
     { code: 'CCC', name: 'ILRI', full_name: 'International Livestock Research Institute', acronym: 'ILRI', institutionId: 33 }
   ];
 
-  /** The "Other(s)" multi-select — the one that auto-activates when the ToC brought no reference centers. */
-  const otherCentersSelectEl = () =>
-    fixture.nativeElement.querySelector('app-pr-multi-select[label="Other(s) Contributing CGIAR Centers"]');
+  /** The "Other(s)" multi-select — the one that auto-activates when the ToC brought no reference centers.
+   *  Selects via the `data-testid="toc-other-centers"` hook (RB-S1): once `label` becomes a property
+   *  binding it no longer reflects as a queryable DOM attribute, so `[label="…"]` never matches. */
+  const otherCentersSelectEl = () => fixture.nativeElement.querySelector('[data-testid="toc-other-centers"]');
+  /** Science equivalent of `otherCentersSelectEl` — the auto-activated dropdown that carries
+   *  `data-testid="toc-other-science"` (OTV-R-2 / OTV-AC-2 / OTV-AC-7 Science half). */
+  const otherScienceSelectEl = () => fixture.nativeElement.querySelector('[data-testid="toc-other-science"]');
   const emptyStateText = () => otherCentersSelectEl()?.querySelector('.no_info')?.textContent?.trim() ?? null;
   const renderedOptionLabels = () =>
     Array.from(otherCentersSelectEl()?.querySelectorAll('.option .label') ?? []).map((el: any) => el.textContent.trim());
@@ -255,6 +259,93 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
 
     expect(emptyStateText()).toBeNull();
     expect(renderedOptionLabels()).toEqual(CATALOG.map(c => c.full_name));
+  });
+
+  /** OTV-AC-7 regression guard: the empty-ToC relabel (OTV-R-1) must not touch the genuine opt-in case —
+   *  when the ToC DID find centers and the user picks the "Other(s)" sentinel from the primary dropdown,
+   *  the second dropdown must still read "Other(s) Contributing CGIAR Centers", unchanged from today. */
+  it('keeps the "Other(s)" label when the ToC found centers and the user opts into the sentinel (OTV-AC-7)', async () => {
+    centersMock.centersList = CATALOG;
+    centersMock.centers.set(CATALOG);
+    centersMock.loadedCenters.next(true);
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([11]);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.hasReferenceCenters()).toBe(true);
+
+    // User opts in: selects the "Other(s)" sentinel from the primary (ToC-found) dropdown.
+    rdPartnersSE.partnersBody.contributing_center = [
+      { code: fixture.componentInstance.OTHER_CENTERS_CODE, name: 'Other(s) CGIAR Centers' } as any
+    ];
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const otherCentersEl = otherCentersSelectEl();
+    expect(otherCentersEl).toBeTruthy();
+    // `.pr_label` renders the label text with a trailing colon (`useColon`) appended by app-pr-field-header.
+    expect(otherCentersEl?.querySelector('.pr_label')?.textContent?.trim()).toBe('Other(s) Contributing CGIAR Centers:');
+  });
+
+  /** OTV-R-1 / OTV-AC-1: the actual bug being fixed — the empty-ToC Centers dropdown must resolve to the
+   *  component's own primary label, NOT the stale "Other(s) Contributing CGIAR Centers" text. Asserting on
+   *  the resolved `.pr_label` text (not just element presence) is what makes this catch a reverted/backwards
+   *  `[label]` ternary — see `requirements.md` §7.1 row 1 and the RED evidence below. */
+  it('resolves the empty-ToC Centers label to "Contributing CGIAR Centers", not "Other(s)…" (OTV-R-1, OTV-AC-1)', () => {
+    const labelText = otherCentersSelectEl()?.querySelector('.pr_label')?.textContent?.trim();
+    expect(labelText).toBe('Contributing CGIAR Centers:');
+    expect(labelText).not.toContain('Other(s)');
+  });
+
+  /** OTV-R-2 / OTV-AC-2: Science half of the same defect — `data-testid="toc-other-science"` was previously
+   *  asserted nowhere in this suite. */
+  it('resolves the empty-ToC Science label to "Contributing Science Program/Accelerator", not "Other(s)…" (OTV-R-2, OTV-AC-2)', () => {
+    const labelText = otherScienceSelectEl()?.querySelector('.pr_label')?.textContent?.trim();
+    expect(labelText).toBe('Contributing Science Program/Accelerator:');
+    expect(labelText).not.toContain('Other(s)');
+  });
+
+  /** requirements.md §7.1 row 3 (duplicate/stacked field label, the exact defect Judgment Day round 1 found):
+   *  the empty-ToC `@else` branches removed their own redundant `app-pr-field-header` (design.md §6.2) so the
+   *  dropdown's own internal header is the ONLY place either label renders. `app-pr-multi-select` always nests
+   *  its OWN internal `app-pr-field-header` (design.md §10) — so "no header at all" would be the wrong shape;
+   *  the correct check is "no header OUTSIDE the testid'd element carries the same label text". */
+  it('does not duplicate the Centers/Science label outside the testid\'d dropdown in the empty-ToC state (§7.1 row 3)', () => {
+    const allHeaders: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('app-pr-field-header'));
+    const centersEl = otherCentersSelectEl();
+    const scienceEl = otherScienceSelectEl();
+
+    const outsideHeaders = allHeaders.filter(h => !centersEl?.contains(h) && !scienceEl?.contains(h));
+    const duplicateCenters = outsideHeaders.filter(h => h.textContent?.includes('Contributing CGIAR Centers'));
+    const duplicateScience = outsideHeaders.filter(h => h.textContent?.includes('Contributing Science Program'));
+
+    expect(duplicateCenters.length).toBe(0);
+    expect(duplicateScience.length).toBe(0);
+  });
+
+  /** OTV-AC-7 Science half — mirrors the Centers opt-in test above: when the ToC DID find Science Programs and
+   *  the user picks the "Other(s)" sentinel from the primary dropdown, the second dropdown must still read
+   *  "Other(s) Science Program(s)", unchanged from today. Closes the gap the Reviewer found (zero Science
+   *  coverage of OTV-AC-7). */
+  it('keeps the "Other(s)" label when the ToC found Science Programs and the user opts into the sentinel (OTV-AC-7 Science)', async () => {
+    const SP_CATALOG = [{ id: 501, official_code: 'SP1', short_name: 'Science Program 1', full_name: 'Science Program 1' }];
+    fixture.componentInstance.allScienceProgramsList.set(SP_CATALOG as any);
+    rdPartnersSE.tocReferenceSynergyInitiativeIds.set([501]);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.hasReferenceScience()).toBe(true);
+
+    // User opts in: selects the "Other(s)" sentinel from the primary (ToC-found) Science dropdown.
+    rdPartnersSE.scienceSelected = [
+      { id: fixture.componentInstance.OTHER_SP_CODE, official_code: 'Other(s)', short_name: 'Science Program(s)' } as any
+    ];
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const otherScienceEl = otherScienceSelectEl();
+    expect(otherScienceEl).toBeTruthy();
+    expect(otherScienceEl?.querySelector('.pr_label')?.textContent?.trim()).toBe('Other(s) Science Program(s):');
   });
 
   it('rebuilds the ToC-derived dropdown too when the catalogue arrives after the ToC ids', async () => {

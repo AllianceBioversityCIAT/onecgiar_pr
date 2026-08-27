@@ -210,8 +210,9 @@
               (selectOptionEvent)="onContributingCenterSelect($event)">
             </app-pr-multi-select>
           } @else {
-            <!-- P2-2998 AC4: ToC returned no centers → show note; the Other(s) dropdown below auto-activates with ALL centers. -->
-            <app-pr-field-header label="Contributing CGIAR Centers" [required]="false"></app-pr-field-header>
+            <!-- P2-2998 AC4: ToC returned no centers → show note; the Other(s) dropdown below auto-activates with ALL centers.
+                 P2-3499: the redundant field-header is removed here — the dropdown below now carries its own
+                 (conditional) label, so this would otherwise duplicate it. -->
             <div class="pr-message">
               <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
               <p>{{ noCentersNote }}</p>
@@ -235,7 +236,8 @@
           @if (showOtherCenters() || !hasReferenceCenters()) {
             <app-pr-multi-select
               [options]="otherCentersList()"
-              label="Other(s) Contributing CGIAR Centers"
+              [label]="hasReferenceCenters() ? 'Other(s) Contributing CGIAR Centers' : 'Contributing CGIAR Centers'"
+              data-testid="toc-other-centers"
               selectedLabel="Center(s) selected"
               optionLabel="full_name"
               optionValue="code"
@@ -310,11 +312,14 @@
           }
 
           @if (showOtherScience() || !hasReferenceScience()) {
-            <app-pr-field-header
-              label="Other(s) Science Program(s)/Accelerator(s)"
-              [required]="false"
-              [labelDescInlineStyles]="'margin-top: 10px !important'">
-            </app-pr-field-header>
+            @if (hasReferenceScience()) {
+              <app-pr-field-header
+                label="Other(s) Science Program(s)/Accelerator(s)"
+                data-testid="toc-other-science-header"
+                [required]="false"
+                [labelDescInlineStyles]="'margin-top: 10px !important'">
+              </app-pr-field-header>
+            }
 
             <app-pr-filter-multiselect
               [options]="otherScienceList()"

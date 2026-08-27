@@ -130,10 +130,14 @@
 
     <!-- P2-3066 (2026): "Other(s)" External Partners dropdown — appears when "Other" is picked or (AC4) when the ToC had none. -->
     @if (isCP2026() && !dataControlSE.isKnowledgeProduct && showOtherPartners) {
-      <div appFeedbackValidation [labelText]="'Other(s) External Partners'" [isComplete]="true"></div>
+      <div
+        appFeedbackValidation
+        [labelText]="hasReferencePartners() ? 'Other(s) External Partners' : 'External partners'"
+        [isComplete]="true"></div>
       <app-pr-multi-select
         [options]="otherPartnersList()"
-        label="Other(s) External Partners"
+        [label]="hasReferencePartners() ? 'Other(s) External Partners' : 'External partners'"
+        data-testid="toc-other-partners"
         [required]="false"
         selectedOptionLabel="institutions_name"
         optionLabel="full_name"

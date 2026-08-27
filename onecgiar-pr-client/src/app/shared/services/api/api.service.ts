@@ -86,12 +86,10 @@ export class ApiService {
         const [GET_allRolesByUser, GET_initiativesByUser, GET_initiativesByUserByPortfolio] = resp;
         this.rolesSE.applyRolesResponse(GET_allRolesByUser?.response);
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-        this.dataControlSE.myInitiativesListReportingByPortfolio = GET_initiativesByUserByPortfolio?.response?.reporting?.sort(
-          (a, b) => a.initiative_id - b.initiative_id
-        );
-        this.dataControlSE.myInitiativesListIPSRByPortfolio = GET_initiativesByUserByPortfolio?.response?.ipsr?.sort(
-          (a, b) => a.initiative_id - b.initiative_id
-        );
+        this.dataControlSE.myInitiativesListReportingByPortfolio =
+          GET_initiativesByUserByPortfolio?.response?.reporting?.sort((a, b) => a.initiative_id - b.initiative_id) ?? [];
+        this.dataControlSE.myInitiativesListIPSRByPortfolio =
+          GET_initiativesByUserByPortfolio?.response?.ipsr?.sort((a, b) => a.initiative_id - b.initiative_id) ?? [];
         this.dataControlSE.myInitiativesLoaded = true;
         this.qaSE.$qaFirstInitObserver?.next();
         this.dataControlSE.myInitiativesList.forEach(myInit => {
@@ -99,13 +97,18 @@ export class ApiService {
           myInit.name = myInit.official_code;
           myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
         });
+        this.dataControlSE.myInitiativesListIPSRByPortfolio.forEach(myInit => {
+          myInit.role = GET_allRolesByUser?.response?.initiative?.find(initRole => initRole?.initiative_id == myInit?.initiative_id)?.description;
+          myInit.name = myInit.official_code;
+          myInit.official_code_short_name = myInit.official_code + ' ' + myInit.short_name;
+        });
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
-        this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesList);
+        this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesListIPSRByPortfolio);
         callback();
       },
       error: err => {
         this.resultsListFilterSE.updateMyInitiatives(this.dataControlSE.myInitiativesList);
-        this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesList);
+        this.ipsrListFilterService.updateMyInitiatives(this.dataControlSE.myInitiativesListIPSRByPortfolio);
         this.dataControlSE.myInitiativesLoaded = true;
         console.error(err);
       }
