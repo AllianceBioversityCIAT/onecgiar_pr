@@ -17,7 +17,7 @@
 | # | Spec Path | Depends on | Parallel-safe | Status |
 |---|---|---|---|---|
 | 1 | `changes/sp-overview-echarts/results-tab-filter-deeplink` | none | yes | pending |
-| 2 | `changes/sp-overview-echarts/viz-chart-echarts` | none | yes | pending |
+| 2 | `changes/sp-overview-echarts/viz-chart-echarts` | none | yes | done |
 | 3 | `changes/sp-overview-echarts/overview-widgets` | `changes/sp-overview-echarts/results-tab-filter-deeplink`, `changes/sp-overview-echarts/viz-chart-echarts` | no | pending |
 
 **Column semantics** — per `docs/specs/general-setup/family.md`. `Parallel-safe: yes` on #1 and #2 because they touch disjoint files (`programme-results/**` vs `shared/components/pr-viz-chart/**` + `package.json`); #3 edits `dashboard-lab` + `program-overview` and consumes both siblings.
