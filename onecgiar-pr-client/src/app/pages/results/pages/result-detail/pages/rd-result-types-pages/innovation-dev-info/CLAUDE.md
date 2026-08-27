@@ -1,6 +1,6 @@
 # innovation-dev-info
 
-**Verified:** 2026-08-27 · branch JuanGuzman-io/goldeye · 3194c6134
+**Verified:** 2026-08-27 · branch JuanGuzman-io/goldeye · a3b02520b (merge de performance-refactor)
 
 ## Qué es
 Sección "Innovation Development" del detalle de resultado. Mezcla **dos fuentes distintas** que se
@@ -54,6 +54,38 @@ del lado de la base, dentro de la función `validation_innovation_dev_P25` — s
 hay que cambiarlo en los dos sitios.
 
 ## Trampas (⚠️ = ya rompió algo o va a romper)
+- 🛑 **`showScalingStudiesQuestion()` (P2-3265) — off-by-one, nunca uses `id` ni el índice del
+  array.** El catálogo `readinessLevelsList` (endpoint `clarisa/innovation-readiness-levels/get/all`)
+  trae `id` autoincremental (arranca en 11, verificado en prtest 26-ago-2026) y un campo `level`
+  string ('0'..'9') que es el número real de nivel — hay que comparar contra `level`, nunca contra
+  `id` ni contra `getReadinessLevelIndex()` (advertencia explícita de Ángel Jarrín en Jira P2-3265,
+  ya causó el incidente P2-3359). Regla final (releída literal de la tabla "Conditional Logic" del
+  ticket + confirmada contra el código pre-existente el 26-ago-2026): fase ≥2026
+  (`isInnovationDevFormReduced2026()`, el mismo umbral 2026 que P2-3263/P2-3264, epic P2-3243) → la
+  pregunta **desaparece en TODOS los niveles (0-9)**, no solo en 6-9 — la fila "< 6: Not applicable
+  (question was not shown at these levels)" de la tabla describe el `>= 6` que ya tenía este archivo
+  ANTES del ticket, no pide mostrarla ahí ahora. Fase ≤2025 → sin cambios, visible solo desde nivel 6
+  (comportamiento previo, exigido por la regla de retrocompatibilidad del épico). ⚠️ Un primer pase
+  de este gate mostraba la pregunta en niveles 1-5 en fase 2026 — era una regresión que inventaba una
+  pregunta donde nunca existió, corregida el mismo día tras releer la tabla del ticket. Gatea tanto
+  el `app-pr-radio-button` (`fieldRef="[innovation-use-form]-has-studies-links"`) como el
+  `app-studies-link` que depende de `has_scaling_studies`.
+- ⚠️ **Dato huérfano en 2026, sin migrar (por diseño):** `has_scaling_studies` /
+  `scaling_studies_urls` no se limpian ni se migran — la sección solo deja de renderizar el control
+  vía `*ngIf`; el campo sigue en `InnovationDevInfoBody`, se sigue mandando en el PATCH
+  (`{ ...innovationDevInfoBody, ...innovationDevelopmentQuestions }`, sin filtrar campos) y, si un
+  resultado ya lo tenía respondido antes de pasar a fase 2026, ese valor viejo se queda en la fila tal
+  cual — no verificado si el backend lo vuelve a persistir en cada guardado o si solo lo ignora en
+  lectura. Consistente con la instrucción del PO ("Remove nunca significa borrar el dato... no data
+  migration") pero implica que el AC de green check ("must no longer contribute to the green check
+  score") depende enteramente de la función SQL server-side, no de este archivo.
+- ⚠️ **El fieldRef `[innovation-use-form]-has-studies-links` es compartido por 4 superficies**
+  (IPSR Step 1, IPSR Step 4, esta sección, Innovation Use) vía `fields-manager.service.ts` — su
+  config de `required`/`label` **no se tocó** en P2-3265 (fuera de scope, otros agentes trabajan
+  IPSR/Innovation Use en paralelo sobre el mismo fieldRef). El green check server-side
+  (`validate_sections_mapped_batch` / `validation_innovation_dev_P25`) tampoco se tocó — es
+  backend, fuera del scope de esta carpeta; el AC del ticket sobre "no debe contribuir al green
+  check" queda pendiente de verificar del lado servidor.
 - 🛑 **`isP25()` NO es la fase, es el PORTAFOLIO** (`fields-manager.service.ts:19`). Para "2026 en
   adelante" el gate correcto es un umbral de `ReportingDesignYear` sobre `phase_year` — prtest tiene
   resultados de **fase 2025 dentro del portafolio P25**, así que un gate de portafolio les quitaría la

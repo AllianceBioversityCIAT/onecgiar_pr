@@ -1,6 +1,6 @@
 # Decisiones tomadas y contradicciones abiertas
 
-**Verified:** 2026-08-24 · branch `performance-refactor` · `4a0e39f2b` · preguntas publicadas en Jira
+**Verified:** 2026-08-25 · branch `performance-refactor` · `bc25304fb` · **Ángel respondió el 25-ago**
 
 Lo que se decidió sin esperar a nadie, y lo que **necesita respuesta humana**. Ángel volvió el
 martes 25; Cami y Santi prueban el 25-26. Nada de esto se resuelve inventando.
@@ -162,3 +162,78 @@ tipos pasan por ahí, así que un arreglo beneficia a los cinco. Se arranca por 
 
 El punto 5 de la orden de trabajo cita "las épicas 3419, 3442 y 3416". **`P2-3442` no existe o no
 es visible** con mis permisos. Probablemente un typo; queda anotado para que no se ignore en silencio.
+
+----------
+
+## ✅ Respondido por Ángel el 25-ago-2026 — esto cierra tres preguntas y abre un frente
+
+### El criterio del 26 incluye **submit**, no solo crear *(P2-3415, 09:37)*
+
+> *"The criterion for 26 August is the full path: the result must be **submitted**, not just created
+> and saved. Harden validation completeness and the state transitions accordingly."*
+> *"For 26 August, concentrate the Pool Funding effort on one thing: a result can be created end to
+> end, from start to submit. That is the commitment."*
+
+**Consecuencia:** el guion de prueba no termina en "guardé y recargué". Todo lo que impida llegar a
+**Submit** —una sección que no se pone verde, una transición de estado que no ocurre— es trabajo de
+hoy. Lo demás, no.
+
+### El camino de IA de Pool Funding queda FUERA del 26 *(P2-3415, 09:37)*
+
+> *"The AI-assisted path stays out of the 26-August script. We will verify and implement that flow
+> afterwards, as its own piece of work — including P2-3433."*
+
+**Cierra la pregunta 3 de este documento** para el lado Pool Funding. `P2-3433` se confirma en
+alcance, pero **después**. Ya está marcado *Coming soon* (commit `d7636b02e`).
+
+### El camino de IA de **bilateral** SÍ entra, y es prioritario *(P2-3418, 09:45)*
+
+> *"It is important that we focus on validating and fixing the **AI-assisted creation flow for
+> Bilateral results** as part of the current effort. The Pool Funding AI flow will be reviewed
+> separately and addressed at a later stage."*
+
+⚠️ **Pero la épica sigue sin historias hijas** — Ángel reconoce que no le dio tiempo y dice que las
+creará. **Consecuencia práctica:** se arreglan defectos concretos y verificables del flujo que ya
+existe (`bilateral-ai-upload` → draft → promote); **no se inventa alcance**. Lo que haría falta y
+nadie pidió se reporta, no se construye — regla 6 del `CLAUDE.md`.
+
+### Lo que Ángel devolvió como pregunta nuestra *(P2-3415)*
+
+> *"Policy Change (P2-3371) and Other Outcome (P2-3373) still have no owner, and the two To Be
+> Improved ones (P2-3247, blocked by the backend 500 in P2-3258, and P2-3241) need to move for the
+> session to be meaningful. **Please flag if any of these will not be ready in time.**"*
+
+O sea: no contestó quién es el dueño de `P2-3371` y `P2-3373` — pidió que avisemos si no van a
+llegar. Se toman como nuestros de facto.
+
+## 🛑 Lo que el épico P2-3243 sigue esperando — nadie contestó
+
+Las seis auditorías del 25-ago (11:19-11:32) **no tienen respuesta**. `P2-3265`, `P2-3272`,
+`P2-3292`, `P2-3294`, `P2-3295` siguen bloqueados por el requisito, y `P2-3262` espera **una sola**
+pregunta. `P2-3290` puede empezar pero depende de `P2-3467` (backend, Juan David).
+
+⚠️ **Diagnóstico del 25-ago por la tarde:** las preguntas estaban bien hechas y verificadas, pero
+**escritas para desarrolladores**, y quien tiene la respuesta no lee código. Se republicaron en
+lenguaje llano con **el ejemplo de las dos salidas** (*"si se hace A el usuario ve esto; si se hace
+B ve esto otro"*). Regla nueva: `CLAUDE.md` § regla 10 y
+`~/Desktop/.claude-rules/core/requisitos-ciat.md` § "Cómo se ESCRIBE la pregunta".
+
+## Contradicciones nuevas encontradas al desarrollar (25-ago)
+
+| Dónde | Qué | Estado |
+|---|---|---|
+| `P2-3391` | Pide "Innovation Developer" como **multi-select de instituciones**; el campo que existe guarda **texto libre** y es compartido con pooled funding. Cambiarlo es campo nuevo de servidor | Se dejó como texto obligatorio. **Pregunta pendiente** |
+| `P2-3391` | Su "How to test" pide que la pregunta de scaling studies **NO** se muestre desde readiness 6; hoy **sí** se muestra. Es justo lo que discute `P2-3265`, que sigue bloqueado | No se tocó. El propio ticket manda coordinar con la PO |
+| `P2-3391` vs los 3 siblings | Los dos tickets dicen que la nota va **arriba**; Capacity Sharing, Policy Change e Innovation Use la pintan **debajo** de los campos MDS | Se siguió el ticket. Divergencia visible entre secciones |
+| `P2-3241` | El ticket asumía divergencia por portafolio. **No la hay:** la validación P22 es idéntica a la P25 → el cambio **no lleva gate**. Gatearlo habría dejado el otro portafolio atascado | Resuelto, verificado en código |
+
+----------
+
+## Verificación en navegador del 25-ago
+
+Recorrido completo de los cuatro tipos de Pool Funding en navegador. Encontró **el defecto que
+impedía enviar cualquier resultado** (ya arreglado), un segundo bloqueante de servidor que sigue
+abierto en Knowledge Product, que `P2-3258` ya no reproduce, y cinco cosas que harán que QA
+reporte falsos positivos.
+
+→ **[`verificacion-navegador-25-ago.md`](verificacion-navegador-25-ago.md)**

@@ -246,7 +246,17 @@ describe('LeadContactPersonFieldComponent', () => {
         expect(component.isSearching).toBe(false);
       });
 
-      it('should handle search errors gracefully', () => {
+      /**
+       * P2-3260 (bugfix/lead-contact-person-search, LCP-R-1/LCP-R-2, AC-3): a request error is now
+       * caught INSIDE the switchMap and resolved as an empty-result `next` emission — the same
+       * path a genuine zero-match search takes — instead of an `error` notification that used to
+       * kill the outer `searchSubject` subscription for the rest of the component's life.
+       * `showResults` therefore becomes `true` (matching zero-match rendering, per AC-3), not
+       * `false`; the "no results" empty state is still what's shown, but the pipeline stays alive
+       * for the next search. See `lead-contact-person-field.cy.ts` for the multi-search regression
+       * proof this behavior actually fixes.
+       */
+      it('should handle search errors gracefully, matching zero-match rendering, without killing the pipeline', () => {
         const errorMessage = 'Test error';
         jest.spyOn(component.resultsApiService, 'GET_adUsersSearch').mockReturnValue(throwError(errorMessage));
 
@@ -255,7 +265,7 @@ describe('LeadContactPersonFieldComponent', () => {
         jest.advanceTimersByTime(500);
 
         expect(component.searchResults).toEqual([]);
-        expect(component.showResults).toBe(false);
+        expect(component.showResults).toBe(true);
         expect(component.isSearching).toBe(false);
         expect(component.userSearchService.hasValidContact).toBe(false);
       });

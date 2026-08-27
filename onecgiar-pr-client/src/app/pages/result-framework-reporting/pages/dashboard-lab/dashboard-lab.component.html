@@ -216,8 +216,7 @@
 <!-- ==================== DETAIL (right panel) — bento dashboard (Tailwind) ==================== -->
 <!-- Focus mode trims the panel gutters so the indicator table gets the full width. -->
 <section
-  class="box-border transition-[margin] duration-300 motion-reduce:transition-none"
-  [style.marginRight.px]="managed() ? managePanelWidth() : 0"
+  class="box-border"
   [class]="
     viewMode() === 'aow'
       ? (panelView() === 'full'

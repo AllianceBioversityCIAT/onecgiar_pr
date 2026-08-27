@@ -48,9 +48,9 @@ const INNOVATION_LINK_MIN_PHASE_YEAR = 2026;
 
 /**
  * P2-3294 / P2-3428 AC13: the scaling-strategy-studies question disappears from use level 6 upwards.
- * The W1/W2 form still shows it from level 5 up with no ceiling
- * (`innovation-use-form.component.html:334`) because P2-3294 is still Open there; this section
- * implements the ceiling the story spells out. See CLAUDE.md — divergence reported on the ticket.
+ * The W1/W2 form now applies the same ceiling (`innovation-use-form.component.html:338`), but there it
+ * sits behind a 2026 phase gate so earlier phases keep the old behaviour. This section has no phase gate
+ * on purpose: bilateral only exists from 2026 onwards. See CLAUDE.md.
  */
 const SCALING_STUDIES_MAX_USE_LEVEL = 6;
 
@@ -103,15 +103,22 @@ export class TypeInnovationUseComponent implements OnInit {
   get useLevelNumber(): number {
     const selectedId = this.body.innovation_use_level_id;
     if (selectedId === null || selectedId === undefined) return -1;
-    const selected = (this.innovationControlListSE.useLevelsList ?? []).find((lvl: any) => String(lvl?.id) === String(selectedId));
+    // `useLevelsList` is declared as `[]` in the shared service, so TS infers `never[]`; cast locally
+    // rather than retyping the service, which other forms consume.
+    const selected = ((this.innovationControlListSE.useLevelsList ?? []) as any[]).find(lvl => String(lvl?.id) === String(selectedId));
     const level = Number(selected?.level);
     return Number.isFinite(level) ? level : -1;
   }
 
-  /** P2-3294 / P2-3428 AC13 — shown while the use level is below 6, hidden from 6 upwards. */
+  /**
+   * P2-3294 / P2-3428 AC13 — shown while the use level is below 6, hidden from 6 upwards. `useLevelNumber`
+   * is `-1` when nothing has been picked yet, and `-1 < 6` is `true`: an unanswered level is NOT "6 or
+   * higher", so the question stays visible until the user actually picks a level of 6 or more. There is no
+   * separate `level >= 0` guard here on purpose — adding one would hide the question by default and only
+   * reveal it once level 0-5 is chosen, which is not what AC13 says.
+   */
   get showScalingStudies(): boolean {
-    const level = this.useLevelNumber;
-    return level >= 0 && level < SCALING_STUDIES_MAX_USE_LEVEL;
+    return this.useLevelNumber < SCALING_STUDIES_MAX_USE_LEVEL;
   }
 
   /** Mirrors the W1/W2 gate for the use-level justification textarea. */

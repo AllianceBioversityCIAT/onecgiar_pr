@@ -20,6 +20,7 @@ provider:
     DB_USER_PASS: ${env:DB_USER_PASS}
     JWT_SKEY: ${env:JWT_SKEY}
     JWT_EXPIRES: ${env:JWT_EXPIRES}
+    CGSPACE_DISCOVERY_URL: ${env:CGSPACE_DISCOVERY_URL}
 
 functions:
  main: 

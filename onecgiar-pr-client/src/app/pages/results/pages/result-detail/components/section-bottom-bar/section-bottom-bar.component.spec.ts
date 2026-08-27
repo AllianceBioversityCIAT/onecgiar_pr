@@ -6,6 +6,7 @@ import { ResultSectionsService } from '../result-sections-sidebar/result-section
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
+import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
 
 describe('SectionBottomBarComponent', () => {
   let fixture: ComponentFixture<SectionBottomBarComponent>;
@@ -226,6 +227,14 @@ describe('SectionBottomBarComponent', () => {
 
       expect(component.canSave).toBe(true);
       expect(q('[data-testid="section-bottom-bar-save"]')).toBeTruthy();
+    });
+
+    it('provides the syncSlot element for teleporting the sync button', async () => {
+      await build();
+      TestBed.flushEffects();
+      const slotSE = TestBed.inject(SectionBottomBarSlotService);
+      expect(slotSE.syncSlot()).toBeTruthy();
+      expect(slotSE.syncSlot()?.classList.contains('sbb-sync-slot')).toBe(true);
     });
   });
 });

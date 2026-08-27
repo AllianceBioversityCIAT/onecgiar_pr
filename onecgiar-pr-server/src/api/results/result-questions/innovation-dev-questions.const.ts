@@ -30,12 +30,13 @@ export const GESI_STAGE_QUESTION_TEXT =
 export const RISK_STAGE_QUESTION_TEXT =
   'What is the current stage of negative impact/risk assessment for this innovation?';
 
-/** P2-3467 — questions served up to the 2025 phase only. Their answers are retained. */
-export const RETIRED_SCALING_QUESTION_TEXTS = [
-  'Which concrete actions have been taken to understand and improve Gender Equality and Social Inclusivity (GESI) in developing this innovation?',
-  'What concrete actions have been taken to understand and/or limit potential unintended negative consequences or impacts if the innovation is used at scale?',
-  'What partners, policies, and financial mechanisms are in place to ensure the benefits of the innovation are sustained and equitably shared?',
-];
+/*
+ * P2-3467 — questions 78 (GESI), 79 (risk) and 137 (partners, policies and financial
+ * mechanisms) are served up to the 2025 phase only. They need no marker here: the
+ * slot table in `responsibleInnovationAndScalingV2` pins q1..q4 by id, so a question
+ * that owns no slot for the phase is simply not served. Their rows and every stored
+ * answer stay in the database untouched.
+ */
 
 /**
  * Normalises a question text for comparison: trims, collapses runs of whitespace
@@ -47,22 +48,12 @@ export function normalizeQuestionText(text: string | null | undefined): string {
 
 const GESI_STAGE_KEY = normalizeQuestionText(GESI_STAGE_QUESTION_TEXT);
 const RISK_STAGE_KEY = normalizeQuestionText(RISK_STAGE_QUESTION_TEXT);
-const RETIRED_KEYS = new Set(
-  RETIRED_SCALING_QUESTION_TEXTS.map(normalizeQuestionText),
-);
-
 export function isGesiStageQuestion(text: string | null | undefined): boolean {
   return normalizeQuestionText(text) === GESI_STAGE_KEY;
 }
 
 export function isRiskStageQuestion(text: string | null | undefined): boolean {
   return normalizeQuestionText(text) === RISK_STAGE_KEY;
-}
-
-export function isRetiredScalingQuestion(
-  text: string | null | undefined,
-): boolean {
-  return RETIRED_KEYS.has(normalizeQuestionText(text));
 }
 
 /** True when the result's phase must be served the reduced 2026 form. */

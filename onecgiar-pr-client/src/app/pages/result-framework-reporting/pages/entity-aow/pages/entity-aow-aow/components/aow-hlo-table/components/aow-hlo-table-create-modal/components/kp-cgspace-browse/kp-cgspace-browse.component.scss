@@ -1,0 +1,155 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep {
+  .kp-filter-center {
+    .custom_select .field .options {
+      min-width: 440px !important;
+      max-width: 520px !important;
+      width: max-content !important;
+    }
+  }
+
+  .kp-filter-type {
+    .custom_select .field .options {
+      min-width: 260px !important;
+      max-width: 340px !important;
+      width: max-content !important;
+    }
+  }
+
+  .custom_select {
+    width: 100%;
+
+    .field {
+      border: 1px solid #e5e7eb !important;
+      border-radius: 8px !important;
+      background-color: #ffffff !important;
+      height: 38px !important;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+      padding: 0 12px !important;
+      display: flex !important;
+      align-items: center !important;
+      transition: all 0.15s ease-in-out !important;
+
+      &:hover {
+        border-color: #d1d5db !important;
+      }
+
+      &:focus,
+      &:focus-within {
+        border-color: var(--pr-color-primary-300) !important;
+        box-shadow: 0 0 0 1px var(--pr-color-primary-300) !important;
+      }
+
+      .text {
+        font-size: 13px !important;
+        color: #374151 !important;
+        font-weight: 500 !important;
+        line-height: 36px !important;
+      }
+
+      .select_placeholder {
+        color: #6b7280 !important;
+        font-weight: 400 !important;
+      }
+
+      .icon_container {
+        display: none !important;
+      }
+
+      .icon_dropdown {
+        color: #9ca3af !important;
+        font-size: 11px !important;
+        right: 12px !important;
+        position: absolute !important;
+      }
+
+      .pr-select-clear {
+        right: 32px !important;
+        font-size: 16px !important;
+        color: #9ca3af !important;
+
+        &:hover {
+          color: #ef4444 !important;
+        }
+      }
+
+      .options {
+        top: calc(100% + 4px) !important;
+        bottom: auto !important;
+        left: 0 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08) !important;
+        border: 1px solid #e5e7eb !important;
+        padding: 6px !important;
+        background-color: #ffffff !important;
+        z-index: 50 !important;
+
+        .search_input_container {
+          padding: 4px 4px 8px 4px !important;
+
+          input {
+            border-radius: 6px !important;
+            font-size: 13px !important;
+            height: 34px !important;
+            border: 1px solid #e5e7eb !important;
+            padding-left: 32px !important;
+
+            &:focus {
+              border-color: var(--pr-color-primary-300) !important;
+              outline: none !important;
+            }
+          }
+
+          .search_icon {
+            left: 14px !important;
+            font-size: 16px !important;
+            color: #9ca3af !important;
+          }
+        }
+
+        .virtual_scroll {
+          overflow-x: hidden !important;
+          height: 220px !important;
+
+          .option {
+            height: 36px !important;
+            padding: 0 12px !important;
+            border-radius: 6px !important;
+            display: flex !important;
+            align-items: center !important;
+            transition: background-color 0.15s ease !important;
+
+            &:hover {
+              background-color: #f3f4f6 !important;
+            }
+
+            &.selected {
+              background-color: #ede9fe !important;
+              color: var(--pr-color-primary-300) !important;
+              font-weight: 600 !important;
+            }
+
+            .label {
+              font-size: 13px !important;
+              color: #374151 !important;
+              white-space: nowrap !important;
+              overflow: hidden !important;
+              text-overflow: ellipsis !important;
+              line-height: 36px !important;
+            }
+          }
+
+          .no-options-text {
+            color: #6b7280 !important;
+            font-size: 13px !important;
+            padding-top: 40px !important;
+            font-weight: 400 !important;
+          }
+        }
+      }
+    }
+  }
+}

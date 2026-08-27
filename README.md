@@ -159,7 +159,7 @@ cd onecgiar-pr-client && npm ci && cd ..
 
 Both apps read from environment variables. Common keys:
 
-- **Backend** (`onecgiar-pr-server/.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER_NAME`, `DB_USER_PASS`, `JWT_SKEY`, `JWT_EXPIRES`, plus RabbitMQ, AWS, Cognito, AD, CLARISA, MQAP, SharePoint vars.
+- **Backend** (`onecgiar-pr-server/.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER_NAME`, `DB_USER_PASS`, `JWT_SKEY`, `JWT_EXPIRES`, `CGSPACE_DISCOVERY_URL` (CGSpace DSpace 7 REST base — **required**, no in-code fallback; set to `https://cgspace.cgiar.org/server/api`; when unset the KP *Browse CGSpace* tab degrades to an error state and Manual entry still works), plus RabbitMQ, AWS, Cognito, AD, CLARISA, MQAP, SharePoint vars.
 - **Frontend** (`onecgiar-pr-client/src/environments/environment.ts`): `apiBaseUrl`, Cognito + Pusher keys, etc.
 
 Secrets live in environment variables, AWS Secrets Manager, or GitHub Secrets. **Never commit `.env` files or paste tokens / webhook URLs into logs or commits** — see [Security](#security).

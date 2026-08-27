@@ -42,9 +42,15 @@
   <br />
 
   <!-- Stays optional on purpose: `validate_capdev_term_id()` falls back to `capdev_term_id_1`, so the
-       server's `valid_text(capdev_term_id)` is already satisfied by the group above. -->
+       server's `valid_text(capdev_term_id)` is already satisfied by the group above.
+       P2-3385: `label` is what makes this render inside a card. Without it `field-card`'s `isBare`
+       getter is true and the whole `field_card` class is skipped, so PhD / Master used to be drawn
+       loose outside the container that frames every sibling question. `[required]` MUST stay false:
+       framing a control is presentation, and flipping it here would make the section impossible to
+       complete. "Degree" is the term the rest of the app already uses for this value. -->
   <app-pr-radio-button
     *ngIf="this.capdev_term_id_1 == 4 || this.capdev_term_id_1 == 1 || this.capdev_term_id_1 == 2"
+    label="Degree"
     [options]="this.capdevsSubTerms"
     optionLabel="name"
     optionValue="capdev_term_id"

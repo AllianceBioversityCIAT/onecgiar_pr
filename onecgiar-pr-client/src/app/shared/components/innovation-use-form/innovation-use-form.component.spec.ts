@@ -34,6 +34,10 @@ describe('InnovationUseFormComponent', () => {
       },
       rolesSE: {
         readOnly: false
+      },
+      dataControlSE: {
+        currentResultSignal: jest.fn().mockReturnValue({}),
+        reportingCurrentPhase: { phaseYear: null }
       }
     };
 
@@ -735,6 +739,65 @@ describe('InnovationUseFormComponent', () => {
       component.body.innovation_use_level_id = 1;
 
       expect(component.getUseLevelIndex()).toBe(-1);
+    });
+  });
+
+  // P2-3294: "Have any studies been conducted to inform the innovation scaling strategy design
+  // (...)" hides from the 2026 phase on once the Innovation Use Level reaches 6+ (confirmed by
+  // Angel Jarrín, 26-Aug-2026). Earlier phases (<= 2025) keep showing it regardless of level.
+  describe('isScalingStudiesQuestionHiddenByLevel', () => {
+    beforeEach(() => {
+      innovationControlListServiceMock.useLevelsList = [
+        { id: 5, level: 5 },
+        { id: 6, level: 6 },
+        { id: 7, level: 7 },
+        { id: 8, level: 8 },
+        { id: 9, level: 9 }
+      ];
+    });
+
+    it('keeps the question visible at level 5 in a 2026 phase', () => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+      component.body.innovation_use_level_id = 5;
+
+      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
+    });
+
+    it.each([6, 7, 8, 9])('hides the question at level %i in a 2026 phase', level => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+      component.body.innovation_use_level_id = level;
+
+      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(true);
+    });
+
+    it('always keeps the question visible in a 2025 phase, even at level 9', () => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2025 });
+      component.body.innovation_use_level_id = 9;
+
+      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
+    });
+
+    it('keeps the question visible (fails open) when no level has been chosen yet, even in a 2026 phase', () => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+      component.body.innovation_use_level_id = null;
+
+      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
+    });
+
+    it('keeps the question visible (fails open) when phase_year is not available', () => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({});
+      apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: null };
+      component.body.innovation_use_level_id = 9;
+
+      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
+    });
+
+    it('falls back to reportingCurrentPhase.phaseYear when currentResultSignal has no phase_year', () => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({});
+      apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: 2026 };
+      component.body.innovation_use_level_id = 7;
+
+      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(true);
     });
   });
 });

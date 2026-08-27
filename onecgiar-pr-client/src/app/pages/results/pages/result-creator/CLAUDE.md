@@ -1,6 +1,6 @@
 # result-creator
 
-**Verified:** 2026-08-25 · branch performance-refactor · 62c64c85d
+**Verified:** 2026-08-25 · branch performance-refactor · bc25304fb
 
 ## Qué es
 La pantalla de **Report new result** del flujo Pool Funding (W1/W2): elegir nivel, escribir el
@@ -48,6 +48,19 @@ lee un documento y propone resultados candidatos — hoy solo los propone (ver T
 - **`AIAssistantResult` está declarada dos veces** en
   `shared/interfaces/AIAssistantResult.ts` (líneas 1 y 39). TypeScript las fusiona, así que compila,
   pero la segunda añade `result_id` y omite campos de la primera. Lee las dos antes de fiarte.
+
+- ⚠️ **El párrafo de guía de Knowledge Product está TRIPLICADO, palabra por palabra, en tres
+  pantallas** — y por eso divergió: `result-creator.component.ts:43` y
+  `components/report-result-form/report-result-form.component.ts:53` decían **2025** mientras
+  `rd-general-information/components/change-result-type-modal/change-result-type-modal.component.ts:41`
+  se había quedado en **2023**. Los tres son ahora `computed()` que derivan el año de
+  `dataControlSE.reportingCurrentPhase.phaseYear` / `previousReportingPhase.phaseYear`, pero **siguen
+  siendo tres copias**: si tocas la frase, tócala en las tres. (Deuda: no se unificaron a propósito —
+  atraviesa tres pantallas y no era el alcance.)
+- ⚠️ **`reportingCurrentPhase` es un objeto PLANO, no un signal.** Cualquier `computed()` que lea su
+  `phaseYear` tiene que leer antes `dataControlSE.reportingPhaseVersion()` (contador que
+  `getCurrentPhases()` incrementa), o bajo zoneless se queda cacheado con el valor del primer paint.
+  El fallback al año de calendario evita que la frase pinte `null` en ese primer frame.
 
 ## Pendiente / Coming soon
 - **Crear un resultado desde el asistente de IA** → `P2-3433` (abierto, sin respuesta desde el

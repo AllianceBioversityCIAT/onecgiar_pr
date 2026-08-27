@@ -1,4 +1,4 @@
-import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal, OnDestroy, NgZone, inject } from '@angular/core';
+import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal, computed, OnDestroy, NgZone, inject } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 import { Router } from '@angular/router';
@@ -38,11 +38,26 @@ export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
   private readonly titleSearchDebounceMs = 500;
   mqapJson: {};
   validating = false;
-  kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
+  /**
+   * Years used by the knowledge-product guidance. `reportingCurrentPhase` / `previousReportingPhase` are PLAIN
+   * objects, so the computed depends on `reportingPhaseVersion()` — bumped by `getCurrentPhases()` — to re-render
+   * once the phases land. The calendar-year fallback keeps the sentence from ever painting "null" on first frame.
+   */
+  readonly kpGuidanceYears = computed(() => {
+    this.api.dataControlSE.reportingPhaseVersion?.();
+    const current = Number(this.api.dataControlSE.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
+    const previous = Number(this.api.dataControlSE.previousReportingPhase?.phaseYear ?? current - 1);
+    return { current, previous, next: current + 1 };
+  });
+
+  readonly kpAlertDescription = computed(() => {
+    const { current, previous, next } = this.kpGuidanceYears();
+    return `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
 The PRMS Reporting Tool will automatically retrieve all metadata entered into <strong>one of these repositories</strong>. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
-The handle will be verified, and only knowledge products from <strong>2025</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>2025</strong> but issued in <strong>2026</strong> will be accepted for the <strong>2025</strong> reporting phase.<br><br>
-Articles published online in <strong>2024</strong> but issued in <strong>2025</strong> will not be accepted and will need to be reported in the correct reporting period. Handles already reported will also not be accepted.<br><br>
+The handle will be verified, and only knowledge products from <strong>${current}</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>${current}</strong> but issued in <strong>${next}</strong> will be accepted for the <strong>${current}</strong> reporting phase.<br><br>
+Articles published online in <strong>${previous}</strong> but issued in <strong>${current}</strong> will not be accepted and will need to be reported in the correct reporting period. Handles already reported will also not be accepted.<br><br>
 If you need support to modify any of the harvested metadata from <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong>, contact your Center's knowledge manager.`;
+  });
   allInitiatives = [];
   availableInitiativesSig = signal<any[]>([]);
   allPhases = [];

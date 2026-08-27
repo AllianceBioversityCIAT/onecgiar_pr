@@ -168,9 +168,14 @@
     description="<strong>Example:</strong> We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence. ">
   </app-pr-textarea>
 
+  <!-- P2-3265: readiness-level gate for "Have any studies been conducted to inform the innovation
+       scaling strategy design...". showScalingStudiesQuestion() reads the catalogue's `level` field
+       (never the id or array index, see P2-3359). From the 2026 phase onward the question is dropped
+       entirely, for every readiness level; phases <= 2025 keep rendering exactly as before (visible
+       only from level 6 up). -->
   @if (this.fieldsManagerSE.isP25()) {
     <app-pr-radio-button
-      *ngIf="getReadinessLevelIndex() >= 6"
+      *ngIf="showScalingStudiesQuestion()"
       fieldRef="[innovation-use-form]-has-studies-links"
       [options]="[
         { value: true, label: 'Yes' },
@@ -181,7 +186,7 @@
       optionValue="value">
     </app-pr-radio-button>
     <app-studies-link
-      *ngIf="innovationDevInfoBody.has_scaling_studies && getReadinessLevelIndex() >= 6"
+      *ngIf="innovationDevInfoBody.has_scaling_studies && showScalingStudiesQuestion()"
       [body]="innovationDevInfoBody"></app-studies-link>
   }
 

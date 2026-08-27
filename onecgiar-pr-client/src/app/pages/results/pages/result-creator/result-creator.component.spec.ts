@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ResultCreatorComponent } from './result-creator.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -63,7 +64,10 @@ describe('ResultCreatorComponent', () => {
         myInitiativesList: myInitiativesList,
         myInitiativesListText: jest.fn(() => ''),
         validateBody: jest.fn(),
-        getCurrentPhases: jest.fn(() => of({}))
+        getCurrentPhases: jest.fn(() => of({})),
+        reportingPhaseVersion: signal(0),
+        reportingCurrentPhase: { phaseYear: 2026 },
+        previousReportingPhase: { phaseYear: 2025 }
       },
       resultsSE: {
         GET_AllInitiatives: () => of({ response: myInitiativesList }),
@@ -497,6 +501,38 @@ describe('ResultCreatorComponent', () => {
       expect(component.validating).toBe(false);
       expect(component.mqapUrlError.status).toBeTruthy();
       expect(component.mqapUrlError.message).toBe('Please enter a valid handle.');
+    });
+  });
+
+  /** The guidance no longer hardcodes 2025/2026/2024 — every year comes from the active reporting phase. */
+  describe('kpAlertDescription — reporting-phase years', () => {
+    it('uses the active phase year, the next year and the previous phase year', () => {
+      const text = component.kpAlertDescription();
+
+      expect(text).toContain('only knowledge products from 2026 onwards will be accepted');
+      expect(text).toContain('published online in 2026 but issued in 2027');
+      expect(text).toContain('accepted for the 2026 reporting phase');
+      expect(text).toContain('published online in 2025 but issued in 2026 will not be accepted');
+    });
+
+    it('re-renders when the phases resolve after the first paint', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2027;
+      mockApiService.dataControlSE.previousReportingPhase.phaseYear = 2026;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(1);
+
+      expect(component.kpAlertDescription()).toContain('only knowledge products from 2027 onwards will be accepted');
+    });
+
+    it('never paints "null" while the phases have not loaded yet', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = null;
+      mockApiService.dataControlSE.previousReportingPhase.phaseYear = null;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(2);
+
+      const text = component.kpAlertDescription();
+
+      expect(text).not.toContain('null');
+      expect(text).not.toContain('NaN');
+      expect(text).toContain(`from ${new Date().getFullYear()} onwards`);
     });
   });
 });

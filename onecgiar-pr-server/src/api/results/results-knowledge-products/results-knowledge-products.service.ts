@@ -16,6 +16,7 @@ import { Result } from '../entities/result.entity';
 import { ResultRepository } from '../result.repository';
 import { Version } from '../../versioning/entities/version.entity';
 import { ResultsKnowledgeProduct } from './entities/results-knowledge-product.entity';
+import { ResultsKnowledgeProductInstitution } from './entities/results-knowledge-product-institution.entity';
 import { ResultsKnowledgeProductMapper } from './results-knowledge-products.mapper';
 import { ResultsKnowledgeProductsRepository } from './repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductAltmetricRepository } from './repositories/results-knowledge-product-altmetrics.repository';
@@ -206,6 +207,10 @@ export class ResultsKnowledgeProductsService {
         newMetadata,
         confidenceThreshold,
         true,
+      );
+      await this.validateAndSanitizePredictedInstitutions(
+        updatedKnowledgeProduct.result_knowledge_product_institution_array ??
+          [],
       );
 
       //keywords
@@ -962,6 +967,10 @@ export class ResultsKnowledgeProductsService {
           confidenceThreshold,
         );
 
+      await this.validateAndSanitizePredictedInstitutions(
+        newKnowledgeProduct.result_knowledge_product_institution_array ?? [],
+      );
+
       // * Updating relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
         newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
@@ -1184,6 +1193,10 @@ export class ResultsKnowledgeProductsService {
           confidenceThreshold,
         );
 
+      await this.validateAndSanitizePredictedInstitutions(
+        newKnowledgeProduct.result_knowledge_product_institution_array ?? [],
+      );
+
       // Save all relations
       await this._resultsKnowledgeProductAltmetricRepository.save(
         newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
@@ -1312,6 +1325,49 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
+  private async validateAndSanitizePredictedInstitutions(
+    institutions: ResultsKnowledgeProductInstitution[],
+  ): Promise<void> {
+    if (!institutions?.length) {
+      return;
+    }
+
+    const predictedIds = institutions
+      .map((inst) => inst.predicted_institution_id)
+      .filter(
+        (id): id is number =>
+          id !== null && id !== undefined && !Number.isNaN(Number(id)),
+      );
+
+    if (!predictedIds.length) {
+      return;
+    }
+
+    const validClarisaInstitutions =
+      await this._clarisaInstitutionRepository.find({
+        where: { id: In(predictedIds) },
+        select: ['id'],
+      });
+
+    const validIdSet = new Set(validClarisaInstitutions.map((c) => c.id));
+
+    for (const inst of institutions) {
+      if (
+        inst.predicted_institution_id &&
+        !validIdSet.has(Number(inst.predicted_institution_id))
+      ) {
+        this._logger.warn(
+          `Predicted institution ID ${inst.predicted_institution_id} for "${inst.intitution_name}" does not exist in clarisa_institutions. Setting to null to avoid FK constraint violation.`,
+        );
+        inst.predicted_institution_id = null;
+        if (inst.result_by_institution_object) {
+          inst.result_by_institution_object.institutions_id = null;
+          inst.result_by_institution_object.is_predicted = false;
+        }
+      }
+    }
+  }
+
   async separateCentersFromCgspacePartners(
     knowledgeProduct: ResultsKnowledgeProduct,
     upsert = false,
@@ -1338,13 +1394,14 @@ export class ResultsKnowledgeProductsService {
           cgi.predicted_institution_id && !cgi.predicted_institution_object,
       )
       .map((cgi) => cgi.predicted_institution_id);
-    const possibleCgInstitutions =
-      await this._clarisaInstitutionRepository.find({
-        where: {
-          id: In(possibleCgInstitutionIds),
-        },
-        relations: { clarisa_center: true },
-      });
+    const possibleCgInstitutions = possibleCgInstitutionIds.length
+      ? await this._clarisaInstitutionRepository.find({
+          where: {
+            id: In(possibleCgInstitutionIds),
+          },
+          relations: { clarisa_center: true },
+        })
+      : [];
 
     knowledgeProduct.result_knowledge_product_institution_array = (
       knowledgeProduct.result_knowledge_product_institution_array ?? []
@@ -1367,7 +1424,7 @@ export class ResultsKnowledgeProductsService {
       if (
         cgi.is_active &&
         cgi.confidant > 97 &&
-        cgi.predicted_institution_object.clarisa_center
+        cgi.predicted_institution_object?.clarisa_center
       ) {
         cgi.is_active = false;
         cgi.last_updated_by = knowledgeProduct.last_updated_by;
@@ -1382,10 +1439,10 @@ export class ResultsKnowledgeProductsService {
         if (
           !sectionTwoCenters.find(
             (stc) =>
-              stc.clarisa_center_object.institutionId ==
+              stc.clarisa_center_object?.institutionId ==
               cgi.predicted_institution_id,
           ) &&
-          cgi.predicted_institution_object.clarisa_center
+          cgi.predicted_institution_object?.clarisa_center
         ) {
           const newSectionTwoCenter: ResultsCenter = new ResultsCenter();
           newSectionTwoCenter.center_id =
@@ -1409,8 +1466,10 @@ export class ResultsKnowledgeProductsService {
       sectionTwoCenters.forEach((stc) => {
         const updatedCenter = updatedCgInstitutions.find(
           (cgi) =>
+            cgi.predicted_institution_id &&
+            stc.clarisa_center_object &&
             cgi.predicted_institution_id ==
-            stc.clarisa_center_object.institutionId,
+              stc.clarisa_center_object.institutionId,
         );
 
         stc.from_cgspace = !!updatedCenter;

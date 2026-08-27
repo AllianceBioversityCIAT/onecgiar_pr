@@ -762,3 +762,42 @@
     }
   }
 }
+
+// P2-3437 #5: source counter + the guard shown when the user goes over the
+// server's 6-source limit (files + the additional-context text).
+.aiu-file-list-sources {
+  color: #4A5568;
+  background: #EDF2F7;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.aiu-text-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #718096;
+}
+
+.aiu-limit-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #FED7D7;
+  background: #FFF5F5;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #C53030;
+
+  i {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+}

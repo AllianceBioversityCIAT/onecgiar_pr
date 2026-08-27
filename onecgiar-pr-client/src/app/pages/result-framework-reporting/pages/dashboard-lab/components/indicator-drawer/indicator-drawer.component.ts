@@ -58,9 +58,20 @@ export class IndicatorDrawerComponent {
    * something instead of just stretching the fields. Defaults above the threshold
    * so the report form opens two-column ("readable at a glance") without dragging.
    */
-  readonly width = signal(740);
+  readonly width = signal(initialDrawerWidth());
   readonly TWO_COLUMN_AT = 720;
   readonly columns = computed<1 | 2>(() => (this.width() >= this.TWO_COLUMN_AT ? 2 : 1));
+
+  /**
+   * Context header (deliverable + chips) collapsed state. On small screens the block
+   * eats most of the viewport before the form starts, so it opens collapsed there;
+   * the toggle keeps it one tap away on every size.
+   */
+  readonly contextCollapsed = signal(typeof window !== 'undefined' && window.innerWidth < 768);
+
+  toggleContext(): void {
+    this.contextCollapsed.update(v => !v);
+  }
 
   /** Unsaved work in the form; closing or switching indicator must warn first. */
   readonly formDirty = signal(false);
@@ -74,7 +85,9 @@ export class IndicatorDrawerComponent {
     const move = (e: MouseEvent) => {
       if (!this.dragging) return;
       // Dragged from the left edge: the further left, the wider the panel.
-      const next = Math.min(Math.max(window.innerWidth - e.clientX, 380), Math.min(1100, window.innerWidth - 320));
+      // Clamp to the viewport so the drag can never push the panel off-screen on small windows.
+      const maxW = Math.min(1100, Math.max(window.innerWidth - 320, 340), window.innerWidth);
+      const next = Math.min(Math.max(window.innerWidth - e.clientX, Math.min(380, window.innerWidth)), maxW);
       this.width.set(next);
       this.widthChange.emit(next);
     };
@@ -181,4 +194,18 @@ export class IndicatorDrawerComponent {
       }
     });
   }
+}
+
+/**
+ * Responsive default width for the drawer (@akili-spec responsive follow-up, 2026-08-27):
+ * - < 768px viewport: full-bleed sheet (the fixed 740px used to overflow phones);
+ * - desktop: 740px baseline, scaling with very wide screens up to 1100px so the
+ *   panel does not look like a sliver on 4K monitors, and never covering the list
+ *   entirely (viewport - 320px guard).
+ */
+export function initialDrawerWidth(): number {
+  if (typeof window === 'undefined') return 740;
+  const vw = window.innerWidth;
+  if (vw < 768) return vw;
+  return Math.min(Math.max(740, Math.round(vw * 0.38)), 1100, Math.max(vw - 320, 340));
 }

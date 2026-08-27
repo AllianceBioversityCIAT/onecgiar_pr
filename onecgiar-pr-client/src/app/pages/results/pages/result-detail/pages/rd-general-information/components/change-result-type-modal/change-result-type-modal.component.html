@@ -48,7 +48,7 @@
       </div>
 
       <div *ngIf="selectedResultType && selectedResultType?.id === 6">
-        <app-alert-status [description]="alertStatusDescKnowledgeProduct"></app-alert-status>
+        <app-alert-status [description]="alertStatusDescKnowledgeProduct()"></app-alert-status>
 
         <div [ngClass]="{ mqap_sync_title: selectedResultType?.id === 6 }">
           <app-pr-input [isStatic]="true" placeholder="Handle..." label="CGSpace link" type="text" [(ngModel)]="cgSpaceHandle"> </app-pr-input>

@@ -4,7 +4,6 @@ import { ResultQuestionsRepository } from './repository/result-questions.reposit
 import { ResultAnswerRepository } from './repository/result-answers.repository';
 import {
   isGesiStageQuestion,
-  isRetiredScalingQuestion,
   isReducedInnovationDevForm,
   isRiskStageQuestion,
 } from './innovation-dev-questions.const';
@@ -36,6 +35,48 @@ export type InnovationDevCleanQuestionnaire = {
 export class ResultQuestionsService {
   /** Upper bound on label length before stripping; avoids unbounded work on hostile input. */
   private static readonly BILATERAL_LABEL_MAX_CHARS = 16_384;
+
+  /**
+   * P25 "Responsible innovation and scaling" (parent question 77) is served to the client as four
+   * fixed slots `q1`…`q4`, each one wired to a different component in the Innovation Development
+   * form. Resolving those slots by ARRAY POSITION is unsafe: `find()` carries no `ORDER BY`, so the
+   * order is whatever MySQL returns, and the moment a child row is added, removed or reordered every
+   * slot after the gap shifts and the client renders the wrong question under the wrong component —
+   * for every P25 result, phase 2025 ones included.
+   *
+   * The slots are therefore pinned to `result_question_id`. A missing row leaves its own slot
+   * `undefined` and moves nothing else. Ids verified against prtest on 26 Aug 2026
+   * (`GET /v2/api/results/questions/innovation-development/{10000,11000}`): 78, 79, 136, 137.
+   *
+   * A child of 77 that is not listed here is not exposed — adding a fifth question is a code change
+   * here, on purpose, so that no row silently takes another question's slot.
+   */
+  private static readonly RESPONSIBLE_INNOVATION_SCALING_P25_SLOTS: ReadonlyArray<
+    readonly [slot: 'q1' | 'q2' | 'q3' | 'q4', questionId: number]
+  > = [
+    ['q1', 78],
+    ['q2', 79],
+    ['q3', 136],
+    ['q4', 137],
+  ];
+
+  /** Pins `q1`…`q4` to `result_question_id` so a removed question cannot shift the other slots. */
+  private assignQuestionSlotsById(
+    questions: any[],
+    slots: ReadonlyArray<readonly [string, number]>,
+  ): Record<string, any> {
+    const byId = new Map<number, any>();
+    for (const q of questions ?? []) {
+      const id = Number(q?.result_question_id);
+      if (Number.isFinite(id)) byId.set(id, q);
+    }
+
+    const out: Record<string, any> = {};
+    for (const [slot, questionId] of slots) {
+      out[slot] = byId.get(questionId);
+    }
+    return out;
+  }
 
   constructor(
     private readonly _handlerError: HandlersError,
@@ -358,9 +399,16 @@ export class ResultQuestionsService {
             },
           });
 
-          const childQuestions = this.selectScalingQuestionsForPhase(
+          const slots = this.resolveScalingSlotsForPhase(
             allChildQuestions,
             phaseYear,
+          );
+
+          // Only the questions that own a slot are worth walking: the rest would
+          // cost an options query each and then be dropped by assignQuestionSlotsById.
+          const slotIds = new Set(slots.map(([, id]) => id));
+          const childQuestions = (allChildQuestions ?? []).filter((q) =>
+            slotIds.has(Number(q.result_question_id)),
           );
 
           const questionsWithOptions = await Promise.all(
@@ -389,10 +437,10 @@ export class ResultQuestionsService {
 
           return {
             ...topLevelQuestion,
-            q1: questionsWithOptions[0],
-            q2: questionsWithOptions[1],
-            q3: questionsWithOptions[2],
-            q4: questionsWithOptions[3],
+            ...this.assignQuestionSlotsById(
+              questionsWithOptions,
+              this.resolveScalingSlotsForPhase(allChildQuestions, phaseYear),
+            ),
           };
         }),
       );
@@ -411,9 +459,12 @@ export class ResultQuestionsService {
    * `results.module.ts`) and into the bilateral consumer.
    */
   private async getResultPhaseYear(resultId: number): Promise<number | null> {
-    const rows: { phase_year: number | null }[] =
-      await this._resultQuestionRepository.query(
-        `
+    // A failure here must not take the whole questionnaire down: a null year falls
+    // back to the pre-2026 form, which is the safe default for a read path.
+    try {
+      const rows: { phase_year: number | null }[] =
+        await this._resultQuestionRepository.query(
+          `
           SELECT v.phase_year AS phase_year
           FROM \`result\` r
             INNER JOIN version v ON v.id = r.version_id
@@ -421,46 +472,51 @@ export class ResultQuestionsService {
             AND r.is_active = TRUE
           LIMIT 1;
         `,
-        [resultId],
-      );
+          [resultId],
+        );
 
-    const phaseYear = rows?.[0]?.phase_year;
+      const phaseYear = rows?.[0]?.phase_year;
 
-    return phaseYear == null ? null : Number(phaseYear);
+      return phaseYear == null ? null : Number(phaseYear);
+    } catch {
+      return null;
+    }
   }
 
   /**
-   * Picks the "Responsible innovation and scaling" questions the result's phase
-   * must be served (P2-3467).
+   * Slot table for the result's phase (P2-3467).
    *
-   * From 2026 the three open-text questions are replaced by the two stage ones,
-   * which are surfaced first so the form reads GESI → risk → assumptions.
-   * Earlier phases keep the exact set and order they get today — the two new
-   * questions are simply filtered out.
+   * Up to the 2025 phase the group is 78 / 79 / 136 / 137, pinned by id. From 2026
+   * the GESI and risk open-text questions are retired and the two stage questions
+   * take q1 and q2; "partners, policies and financial mechanisms" (137) has no
+   * replacement, so q4 is left empty.
+   *
+   * The stage questions are matched by TEXT because their ids come from the
+   * AUTO_INCREMENT of the migration that inserts them and differ across
+   * environments. A question that cannot be found yields a slot id of NaN, which
+   * `assignQuestionSlotsById` simply resolves to `undefined` — the section renders
+   * without it rather than serving the wrong question.
    */
-  private selectScalingQuestionsForPhase<T extends { question_text: string }>(
-    childQuestions: T[],
+  private resolveScalingSlotsForPhase(
+    childQuestions: any[],
     phaseYear: number | null,
-  ): T[] {
-    const isStageQuestion = (q: T) =>
-      isGesiStageQuestion(q.question_text) ||
-      isRiskStageQuestion(q.question_text);
-
+  ): ReadonlyArray<readonly [string, number]> {
     if (!isReducedInnovationDevForm(phaseYear)) {
-      return childQuestions.filter((q) => !isStageQuestion(q));
+      return ResultQuestionsService.RESPONSIBLE_INNOVATION_SCALING_P25_SLOTS;
     }
 
-    const gesiStage = childQuestions.filter((q) =>
-      isGesiStageQuestion(q.question_text),
-    );
-    const riskStage = childQuestions.filter((q) =>
-      isRiskStageQuestion(q.question_text),
-    );
-    const kept = childQuestions.filter(
-      (q) => !isStageQuestion(q) && !isRetiredScalingQuestion(q.question_text),
-    );
+    const idOfQuestion = (matches: (text: string) => boolean) => {
+      const found = (childQuestions ?? []).find((q) =>
+        matches(q?.question_text),
+      );
+      return found ? Number(found.result_question_id) : Number.NaN;
+    };
 
-    return [...gesiStage, ...riskStage, ...kept];
+    return [
+      ['q1', idOfQuestion(isGesiStageQuestion)],
+      ['q2', idOfQuestion(isRiskStageQuestion)],
+      ['q3', 136],
+    ];
   }
 
   async intellectualPropertyRights(resultId: number) {

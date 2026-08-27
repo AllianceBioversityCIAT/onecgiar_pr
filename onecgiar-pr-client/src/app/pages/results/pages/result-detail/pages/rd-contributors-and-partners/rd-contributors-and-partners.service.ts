@@ -539,11 +539,15 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       this.updatingLeadData = true;
     }
 
-    if (this.partnersBody.contributing_center?.length > -1) {
+    // The "Other(s)" dropdown (2026 split) feeds `otherCentersSelected`, which is ALSO lead-eligible below.
+    // Gating only on `contributing_center` skipped the rebuild whenever the section had no ToC centers
+    // (P2-2998 AC4: dropdown 1 is not even rendered), so the Lead center list stayed empty until a save
+    // reloaded the section. `?.some` keeps the filter safe when the GET has not hydrated the array yet.
+    if (this.partnersBody.contributing_center?.length > -1 || this.otherCentersSelected?.length > 0) {
       //('center has changes');
       this.possibleLeadCenters = this.centersSE.centersList.filter(center => {
         // P2-2998 (2026): an "Other(s)" center (in otherCentersSelected) is also lead-eligible.
-        return this.partnersBody.contributing_center.some(c => c?.code === center.code) || this.otherCentersSelected?.some(c => c?.code === center.code);
+        return this.partnersBody.contributing_center?.some(c => c?.code === center.code) || this.otherCentersSelected?.some(c => c?.code === center.code);
       });
 
       this.possibleLeadCenters = this.possibleLeadCenters.map(center => {

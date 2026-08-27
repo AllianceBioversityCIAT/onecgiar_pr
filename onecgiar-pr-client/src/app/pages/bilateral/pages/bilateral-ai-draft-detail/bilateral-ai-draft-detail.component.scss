@@ -58,6 +58,14 @@
 
   i { font-size: 16px; }
 
+  // P2-3437: the promote/discard buttons are locked while a promote is in
+  // flight so the draft cannot be promoted twice.
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
   &--promote {
     background: linear-gradient(135deg, #047857, #059669);
     color: #FFFFFF;

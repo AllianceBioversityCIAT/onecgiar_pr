@@ -49,7 +49,9 @@ describe('FeedbackService', () => {
 
     expect(res.status).toBe(HttpStatus.CREATED);
     expect(res.response.issueKey).toBe('P2-9001');
-    expect(res.response.issueUrl).toBe('https://jira.example.com/browse/P2-9001');
+    expect(res.response.issueUrl).toBe(
+      'https://jira.example.com/browse/P2-9001',
+    );
 
     const [url, payload, config] = mockHttp.post.mock.calls[0];
     expect(url).toBe('https://jira.example.com/rest/api/3/issue');
@@ -90,13 +92,13 @@ describe('FeedbackService', () => {
   });
 
   it.each([
-    [{ ...validDto, type: 'other' as any }, "type"],
+    [{ ...validDto, type: 'other' as any }, 'type'],
     [{ ...validDto, title: '   ' }, 'title'],
     [{ ...validDto, description: '' }, 'description'],
   ])('rejects invalid payload (%#) without calling Jira', async (dto) => {
-    await expect(service.createFeedback(dto as any, user)).rejects.toBeInstanceOf(
-      HttpException,
-    );
+    await expect(
+      service.createFeedback(dto as any, user),
+    ).rejects.toBeInstanceOf(HttpException);
     expect(mockHttp.post).not.toHaveBeenCalled();
   });
 

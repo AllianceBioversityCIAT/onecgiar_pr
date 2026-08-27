@@ -24,4 +24,7 @@ import { Injectable, signal } from '@angular/core';
 export class SectionBottomBarSlotService {
   /** Set by the layout while result-detail is mounted; null everywhere else. */
   readonly slot = signal<HTMLElement | null>(null);
+
+  /** Slot inside the bottom bar for the knowledge product sync button. */
+  readonly syncSlot = signal<HTMLElement | null>(null);
 }
