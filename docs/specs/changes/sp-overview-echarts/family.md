@@ -6,7 +6,7 @@
 |---|---|
 | **Parent spec path** | `docs/specs/changes/sp-overview-echarts/` |
 | **Date created** | 2026-08-27 |
-| **Last updated** | 2026-08-27 |
+| **Last updated** | 2026-08-27 (rows #1 and #2 done) |
 | **Spec-family status** | open |
 | **Source proposal** | `./proposal.md` (approved 2026-08-27 by j.cadavid@cgiar.org, 3-chunk split) · follow-on of OpenSpec `p2-3298-3303-overview-breakdown-charts` · unblocks P2-3408 |
 
@@ -16,7 +16,7 @@
 
 | # | Spec Path | Depends on | Parallel-safe | Status |
 |---|---|---|---|---|
-| 1 | `changes/sp-overview-echarts/results-tab-filter-deeplink` | none | yes | pending |
+| 1 | `changes/sp-overview-echarts/results-tab-filter-deeplink` | none | yes | done |
 | 2 | `changes/sp-overview-echarts/viz-chart-echarts` | none | yes | done |
 | 3 | `changes/sp-overview-echarts/overview-widgets` | `changes/sp-overview-echarts/results-tab-filter-deeplink`, `changes/sp-overview-echarts/viz-chart-echarts` | no | pending |
 
