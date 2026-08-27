@@ -1,5 +1,17 @@
-import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+
+/**
+ * Typed navigation intent for the Results tab (`OVW-R-5` emission contract). Only the defined
+ * keys are present — the parent maps each one through `PROGRAMME_RESULTS_QUERY_PARAM_MAP`
+ * (`programme-results-query-params.ts`) rather than this component or its consumer inventing
+ * URL param names.
+ */
+export interface OverviewLink {
+  status?: string;
+  category?: string;
+  origin?: string;
+  center?: string;
+}
 
 /** One segment of the Reporting-status meter. `fg` doubles as the legend dot colour. */
 export interface StatusSegment {
@@ -8,6 +20,10 @@ export interface StatusSegment {
   count: number;
   bg: string;
   fg: string;
+  /** Real `status_name` from the wire (or the catalogue fallback) — never the slot `label`. */
+  statusName: string;
+  /** `{status: statusName}` when `count > 0`, else `null` (non-navigable). */
+  link: OverviewLink | null;
 }
 
 export interface AowProgressRow {
@@ -21,11 +37,13 @@ export interface AowProgressRow {
 export interface CategoryBar {
   name: string;
   count: number;
+  link: OverviewLink | null;
 }
 
 export interface OverviewCenterBar {
   name: string;
   count: number;
+  link: OverviewLink | null;
 }
 
 /**
@@ -49,7 +67,7 @@ export interface OverviewCenterBar {
 @Component({
   selector: 'app-program-overview',
   standalone: true,
-  imports: [NgTemplateOutlet],
+  imports: [],
   templateUrl: './program-overview.component.html',
   styleUrls: ['./program-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -70,13 +88,24 @@ export class ProgramOverviewComponent {
   /** Centers with reported W3/bilateral results. */
   readonly bilateralCenters = input<OverviewCenterBar[]>([]);
 
+  /**
+   * Typed navigation intent (`OVW-R-5`). Rows, status meter segments and legend items call
+   * `emitLink()` on activation; the parent (`dashboard-lab`) performs the actual navigation.
+   */
+  readonly openResults = output<OverviewLink>();
+
+  /** `null` (no destination — `Other`/`Not specified`/zero-count) is swallowed, never emitted. */
+  emitLink(link: OverviewLink | null): void {
+    if (link) this.openResults.emit(link);
+  }
+
   readonly description = computed(() => {
     const explicit = this.programDescription()?.trim();
     if (explicit) return explicit;
     const name = this.programName()?.trim() || 'This program';
     return (
-      `${name} modernizes CGIAR and national breeding programmes so that farmers get climate-resilient, ` +
-      `market-preferred varieties faster. The programme connects market intelligence, breeding pipelines, ` +
+      `${name} modernizes CGIAR and national breeding programs so that farmers get climate-resilient, ` +
+      `market-preferred varieties faster. The program connects market intelligence, breeding pipelines, ` +
       `trait discovery, genetic innovation and seed systems into one delivery chain, and works with national ` +
       `agricultural research systems and private seed partners across South Asia, sub-Saharan Africa and ` +
       `Latin America. Reporting covers products delivered to partners, the outcomes those products enable, ` +

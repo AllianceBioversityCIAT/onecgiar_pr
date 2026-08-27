@@ -94,7 +94,7 @@
   </header>
 
   <!-- ---------- panel ---------- -->
-  <div class="custom_scroll flex-1 overflow-y-auto px-6 pt-5 pb-0">
+  <div class="custom_scroll flex-1 overflow-y-auto px-6 pt-5 pb-0 flex flex-col">
     @switch (tab()) {
       @case ('report') {
         <!-- What is already reported here, visible WHILE the form is being filled: recognising a
@@ -129,6 +129,7 @@
         }
 
         <app-lab-report-form
+          class="flex flex-col flex-1 min-h-0"
           [tocNode]="tocNode()"
           [indicator]="indicator()"
           [initiativeId]="initiativeId()"

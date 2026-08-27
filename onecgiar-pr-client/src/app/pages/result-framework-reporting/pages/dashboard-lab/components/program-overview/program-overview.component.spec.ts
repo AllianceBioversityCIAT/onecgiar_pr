@@ -1,10 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import {
   ProgramOverviewComponent,
   StatusSegment,
   AowProgressRow,
   CategoryBar,
-  OverviewCenterBar
+  OverviewCenterBar,
+  OverviewLink
 } from './program-overview.component';
 
 describe('ProgramOverviewComponent', () => {
@@ -12,9 +15,9 @@ describe('ProgramOverviewComponent', () => {
   let component: ProgramOverviewComponent;
 
   const segments: StatusSegment[] = [
-    { key: 'in-progress', label: 'In progress', count: 6, bg: '#fef3c7', fg: '#b45309' },
-    { key: 'submitted', label: 'Submitted', count: 1, bg: '#dbeafe', fg: '#1d4ed8' },
-    { key: 'approved', label: 'Approved', count: 0, bg: '#d1fae5', fg: '#047857' }
+    { key: 'in-progress', label: 'In progress', count: 6, bg: '#fef3c7', fg: '#b45309', statusName: 'Editing', link: { status: 'Editing' } },
+    { key: 'submitted', label: 'Submitted', count: 1, bg: '#dbeafe', fg: '#1d4ed8', statusName: 'Submitted', link: { status: 'Submitted' } },
+    { key: 'approved', label: 'Approved', count: 0, bg: '#d1fae5', fg: '#047857', statusName: 'Approved', link: null }
   ];
 
   const aows: AowProgressRow[] = [
@@ -24,25 +27,29 @@ describe('ProgramOverviewComponent', () => {
 
   /** Mirrors the real prtest shape for SP02: 8 own categories, uncapped. */
   const categories: CategoryBar[] = [
-    { name: 'Innovation development', count: 15 },
-    { name: 'Other output', count: 10 },
-    { name: 'Capacity sharing for development', count: 6 },
-    { name: 'Innovation use', count: 6 },
-    { name: 'Knowledge product', count: 6 },
-    { name: 'Policy change', count: 5 },
-    { name: 'Other outcome', count: 1 },
-    { name: 'Innovation Packages', count: 1 }
+    { name: 'Innovation development', count: 15, link: { category: 'Innovation development' } },
+    { name: 'Other output', count: 10, link: { category: 'Other output' } },
+    { name: 'Capacity sharing for development', count: 6, link: { category: 'Capacity sharing for development' } },
+    { name: 'Innovation use', count: 6, link: { category: 'Innovation use' } },
+    { name: 'Knowledge product', count: 6, link: { category: 'Knowledge product' } },
+    { name: 'Policy change', count: 5, link: { category: 'Policy change' } },
+    { name: 'Other outcome', count: 1, link: { category: 'Other outcome' } },
+    { name: 'Innovation Packages', count: 1, link: { category: 'Innovation Packages' } }
   ];
 
   const bilateralCategories: CategoryBar[] = [
-    { name: 'Capacity sharing for development', count: 70 },
-    { name: 'Innovation development', count: 30 }
+    { name: 'Capacity sharing for development', count: 70, link: { origin: 'W3/Bilaterals', category: 'Capacity sharing for development' } },
+    { name: 'Innovation development', count: 30, link: { origin: 'W3/Bilaterals', category: 'Innovation development' } }
   ];
 
+  /** CIAT/IRRI/CIMMYT keep their original indices (0-2) — several tests below index into this
+   * array directly. IITA and the synthetic `Not specified` row are appended, never inserted. */
   const centers: OverviewCenterBar[] = [
-    { name: 'CIAT', count: 45 },
-    { name: 'IRRI', count: 32 },
-    { name: 'CIMMYT', count: 4 }
+    { name: 'CIAT', count: 45, link: { origin: 'W3/Bilaterals', center: 'CIAT' } },
+    { name: 'IRRI', count: 32, link: { origin: 'W3/Bilaterals', center: 'IRRI' } },
+    { name: 'CIMMYT', count: 4, link: { origin: 'W3/Bilaterals', center: 'CIMMYT' } },
+    { name: 'IITA', count: 12, link: { origin: 'W3/Bilaterals', center: 'IITA' } },
+    { name: 'Not specified', count: 3, link: null }
   ];
 
   beforeEach(async () => {
@@ -83,6 +90,7 @@ describe('ProgramOverviewComponent', () => {
     expect(text).not.toContain('Needs attention');
     expect(text).not.toContain('Impact so far');
     expect(text).not.toContain('Countries reached');
+    // T-3 replaces the DOM bars with app-pr-viz-chart hosts; until then there is still no SVG.
     expect(fixture.nativeElement.querySelectorAll('svg').length).toBe(0);
   });
 
@@ -118,16 +126,26 @@ describe('ProgramOverviewComponent', () => {
       expect(component.categoryWidth(categories[6])).toBeCloseTo((1 / 15) * 100);
     });
 
-    /** The old vertical chart capped at 4 columns, which hid half of SP02's categories. */
-    it('renders every category, with no four-item cap', () => {
-      // Every bar row, singular or plural — the aria-label suffix varies with the count.
-      const rows = fixture.nativeElement.querySelectorAll('button[aria-label]');
+    /**
+     * The old vertical chart capped at 4 columns, which hid half of SP02's categories — still
+     * true. Rewritten for `OVW-T-2`: rows are real buttons now, so this also pins the count of
+     * navigable `button[aria-label]` controls to "every row with a link" plus the meter segments
+     * that got a link (the synthetic `Not specified` center and zero-count segments do not).
+     */
+    it('renders every category with no four-item cap, using a navigable button per linked row', () => {
       expect(categories.length).toBe(8);
-      expect(rows.length).toBe(categories.length + bilateralCategories.length + centers.length);
+
+      const buttons = fixture.nativeElement.querySelectorAll('button[aria-label]');
+      const linkedRows = [...categories, ...bilateralCategories, ...centers].filter(r => r.link !== null).length;
+      const linkedSegments = segments.filter(s => s.count > 0 && s.link !== null).length;
+      expect(buttons.length).toBe(linkedRows + linkedSegments);
     });
 
     it('returns 0 instead of NaN for an all-zero series', () => {
-      const zeroes: CategoryBar[] = [{ name: 'A', count: 0 }, { name: 'B', count: 0 }];
+      const zeroes: CategoryBar[] = [
+        { name: 'A', count: 0, link: null },
+        { name: 'B', count: 0, link: null }
+      ];
       fixture.componentRef.setInput('categories', zeroes);
       fixture.detectChanges();
       expect(component.categoryWidth(zeroes[0])).toBe(0);
@@ -191,7 +209,9 @@ describe('ProgramOverviewComponent', () => {
     });
 
     it('says "1 result", not "1 results", for a single-result center', () => {
-      fixture.componentRef.setInput('bilateralCenters', [{ name: 'CIP', count: 1 }]);
+      fixture.componentRef.setInput('bilateralCenters', [
+        { name: 'CIP', count: 1, link: { origin: 'W3/Bilaterals', center: 'CIP' } }
+      ]);
       fixture.detectChanges();
       const row = fixture.nativeElement.querySelector('button[aria-label="CIP: 1 result"]');
       expect(row).toBeTruthy();
@@ -201,7 +221,7 @@ describe('ProgramOverviewComponent', () => {
       fixture.componentRef.setInput('bilateralCenters', []);
       fixture.detectChanges();
       expect(component.bilateralCentersMax()).toBe(0);
-      expect(component.centerWidth({ name: 'CIAT', count: 0 })).toBe(0);
+      expect(component.centerWidth({ name: 'CIAT', count: 0, link: null })).toBe(0);
       expect(fixture.nativeElement.textContent).toContain(
         'No centers have reported bilateral results for this program yet.'
       );
@@ -217,19 +237,74 @@ describe('ProgramOverviewComponent', () => {
     });
   });
 
-  describe('controls with no authorising ticket', () => {
-    it('ships the category and center rows visible but disabled', () => {
-      const rows: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button[aria-label]'));
-      expect(rows.length).toBeGreaterThan(0);
-      expect(rows.every(row => row.disabled)).toBe(true);
+  describe('row navigability (OVW-R-1 / OVW-DD-1 / OVW-DD-3)', () => {
+    /**
+     * Renamed from "ships the category and center rows visible but disabled" and inverted:
+     * P2-3408 landed, so every row with a destination is now a real, enabled button — only the
+     * synthetic `Not specified` center (no single filter value, `OVW-DD-3`) stays disabled.
+     * FAIL input: re-adding `disabled` unconditionally on the row button turns this red.
+     */
+    it('renders linked rows as enabled buttons and keeps Not specified disabled', () => {
+      const rows: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button.min-h-\\[36px\\]'));
+      expect(rows.length).toBe(categories.length + bilateralCategories.length + centers.length);
+
+      const linkedRows = rows.filter(row => row.getAttribute('aria-label'));
+      expect(linkedRows.length).toBeGreaterThan(0);
+      expect(linkedRows.every(row => !row.disabled)).toBe(true);
+
+      const disabledRows = rows.filter(row => row.disabled);
+      expect(disabledRows.length).toBe(1);
+      expect(disabledRows[0].textContent).toContain('Not specified');
     });
 
-    /** One tag per section, never per row — repeating it would drown the data it annotates. */
-    it('announces Coming soon once per affected section', () => {
+    /**
+     * Renamed from "announces Coming soon once per affected section": the chip is gone now that
+     * rows navigate. FAIL input: re-adding the chip turns this red (count `2`, not `0`).
+     */
+    it('renders zero "Coming soon" chips now that rows are navigable', () => {
       const tags = Array.from(fixture.nativeElement.querySelectorAll('span')).filter(
         (s: any) => s.textContent.trim() === 'Coming soon'
       );
-      expect(tags.length).toBe(2);
+      expect(tags.length).toBe(0);
+    });
+
+    it('emits the row link when a linked row is clicked', () => {
+      const emitted: OverviewLink[] = [];
+      const sub = component.openResults.subscribe(link => emitted.push(link));
+
+      const iitaButton: HTMLButtonElement = fixture.nativeElement.querySelector('button[aria-label^="IITA"]');
+      expect(iitaButton).toBeTruthy();
+      iitaButton.click();
+
+      expect(emitted).toEqual([{ origin: 'W3/Bilaterals', center: 'IITA' }]);
+      sub.unsubscribe();
+    });
+
+    it('emits nothing when the disabled Not specified row is activated', () => {
+      const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+      // A native `disabled` button never dispatches a click at all — this proves the DOM side.
+      const disabledButton: HTMLButtonElement = fixture.nativeElement.querySelector('button[disabled]');
+      expect(disabledButton.textContent).toContain('Not specified');
+      disabledButton.click();
+      expect(emitSpy).not.toHaveBeenCalled();
+
+      // This proves the guard itself, independent of the browser's disabled-click suppression.
+      component.emitLink(null);
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    /**
+     * `Router` is `providedIn: 'root'` in Angular 21, so `TestBed.inject(Router, null)` resolves
+     * a real instance even with zero configured providers — DI absence can't prove this boundary.
+     * A static source check can: the component must never `inject(Router)` or call `.navigate(`
+     * itself (`OVW-R-5` — the parent performs navigation, this component only emits).
+     */
+    it('never injects Router or calls navigate from inside the component (OVW-R-5)', () => {
+      const source = readFileSync(join(__dirname, 'program-overview.component.ts'), 'utf8');
+      expect(source).not.toMatch(/inject\s*\(\s*Router\s*\)/);
+      expect(source).not.toMatch(/\.navigate\(/);
+      expect(component).toBeTruthy();
     });
   });
 
@@ -240,9 +315,9 @@ describe('ProgramOverviewComponent', () => {
       expect(component.showsSegmentCount(segments[2])).toBe(false);
 
       fixture.componentRef.setInput('statusSegments', [
-        { key: 'a', label: 'A', count: 38, bg: '', fg: '' },
-        { key: 'b', label: 'B', count: 1, bg: '', fg: '' },
-        { key: 'c', label: 'C', count: 1, bg: '', fg: '' }
+        { key: 'a', label: 'A', count: 38, bg: '', fg: '', statusName: 'A', link: { status: 'A' } },
+        { key: 'b', label: 'B', count: 1, bg: '', fg: '', statusName: 'B', link: { status: 'B' } },
+        { key: 'c', label: 'C', count: 1, bg: '', fg: '', statusName: 'C', link: { status: 'C' } }
       ] satisfies StatusSegment[]);
       fixture.detectChanges();
 
@@ -250,6 +325,8 @@ describe('ProgramOverviewComponent', () => {
       expect(narrow.map(s => component.showsSegmentCount(s))).toEqual([false, false]);
       // Exactly one number inside the meter — the two slivers must not stack their labels.
       // Scoped to the 44px meter: the breakdown bars print counts in the same figure style.
+      // The count span stays a direct child of the 44px div even when the slice is a button —
+      // the button is an absolutely-positioned full-slice overlay, not a wrapper (OVW-T-2).
       const printed = fixture.nativeElement.querySelectorAll('div.h-\\[44px\\] > span.pr-figure-sm');
       expect(printed.length).toBe(1);
     });
@@ -258,6 +335,24 @@ describe('ProgramOverviewComponent', () => {
       // Scoped to the 8px legend dot: the breakdown bars are rounded-full too.
       const legend = fixture.nativeElement.querySelectorAll('span.h-\\[8px\\].w-\\[8px\\].rounded-full');
       expect(legend.length).toBe(segments.length);
+    });
+
+    it('renders a meter slice as a button only when it carries a link', () => {
+      const linkedSlice = fixture.nativeElement.querySelector('div.h-\\[44px\\] > button');
+      expect(linkedSlice).toBeTruthy();
+      expect(linkedSlice.getAttribute('aria-label')).toBe('Editing: 6');
+    });
+
+    it('renders a legend item as a button only when it carries a link, and a plain span otherwise', () => {
+      fixture.componentRef.setInput('statusSegments', [
+        { key: 'zero', label: 'Zero', count: 0, bg: '', fg: '', statusName: 'Zero', link: null },
+        { key: 'linked', label: 'Linked', count: 4, bg: '', fg: '', statusName: 'Linked', link: { status: 'Linked' } }
+      ] satisfies StatusSegment[]);
+      fixture.detectChanges();
+
+      const legendButtons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
+      expect(legendButtons.some(b => b.textContent?.includes('Linked'))).toBe(true);
+      expect(legendButtons.some(b => b.textContent?.includes('Zero'))).toBe(false);
     });
   });
 });

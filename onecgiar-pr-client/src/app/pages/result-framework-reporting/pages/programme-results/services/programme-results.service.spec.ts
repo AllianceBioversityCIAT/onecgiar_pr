@@ -135,7 +135,7 @@ describe('ProgrammeResultsService', () => {
 
       expect(GET_AllResultsWithUseRole).not.toHaveBeenCalled();
       expect(service.rows()).toEqual([]);
-      expect(service.error()).toBe('Programme "SP99" was not found.');
+      expect(service.error()).toBe('Program "SP99" was not found.');
       expect(service.loading()).toBe(false);
     });
 
@@ -143,7 +143,7 @@ describe('ProgrammeResultsService', () => {
       service.load('   ');
 
       expect(GET_ScienceProgramsProgress).not.toHaveBeenCalled();
-      expect(service.error()).toBe('No programme code was provided.');
+      expect(service.error()).toBe('No program code was provided.');
     });
 
     it('errors when there is no logged-in user id', () => {
@@ -165,7 +165,7 @@ describe('ProgrammeResultsService', () => {
 
       expect(service.rows()).toEqual([]);
       expect(service.loading()).toBe(false);
-      expect(service.error()).toBe('The results of this programme could not be loaded.');
+      expect(service.error()).toBe('The results of this program could not be loaded.');
     });
 
     it('tolerates a response with no items or meta', () => {
@@ -246,10 +246,11 @@ describe('ProgrammeResultsService', () => {
       GET_AllResultsWithUseRole.mockReturnValue(
         of(
           resultsResponse([
-            rawResult({ status_name: 'Submitted', result_type: 'Innovation development', source_name: 'W3/Bilaterals' }),
-            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2' }),
-            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2' }),
-            rawResult({ status_name: null, result_type: '', source_name: undefined })
+            rawResult({ status_name: 'Submitted', result_type: 'Innovation development', source_name: 'W3/Bilaterals', lead_center: 'IITA' }),
+            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2', lead_center: 'IWMI' }),
+            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2', lead_center: 'IWMI' }),
+            rawResult({ status_name: null, result_type: '', source_name: undefined, lead_center: '' }),
+            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2', lead_center: null })
           ])
         )
       );
@@ -268,8 +269,12 @@ describe('ProgrammeResultsService', () => {
       expect(service.originOptions()).toEqual(['W1/W2', 'W3/Bilaterals']);
     });
 
+    it('derives sorted, de-duplicated center options, dropping empty-string and null centers', () => {
+      expect(service.centerOptions()).toEqual(['IITA', 'IWMI']);
+    });
+
     it('never offers an empty option', () => {
-      const all = [...service.statusOptions(), ...service.categoryOptions(), ...service.originOptions()];
+      const all = [...service.statusOptions(), ...service.categoryOptions(), ...service.originOptions(), ...service.centerOptions()];
       expect(all.every(option => option.length > 0)).toBe(true);
     });
 
@@ -279,6 +284,7 @@ describe('ProgrammeResultsService', () => {
       expect(service.statusOptions()).toEqual([]);
       expect(service.categoryOptions()).toEqual([]);
       expect(service.originOptions()).toEqual([]);
+      expect(service.centerOptions()).toEqual([]);
       expect(service.rows()).toEqual([]);
       expect(service.initiativeId()).toBeNull();
     });

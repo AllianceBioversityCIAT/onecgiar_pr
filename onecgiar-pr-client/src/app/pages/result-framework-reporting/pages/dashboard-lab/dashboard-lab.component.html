@@ -1166,7 +1166,8 @@
           [xcutProgress]="overviewXcutProgress()"
           [categories]="overviewCategories()"
           [bilateralCategories]="overviewBilateralCategories()"
-          [bilateralCenters]="overviewBilateralCenters()" />
+          [bilateralCenters]="overviewBilateralCenters()"
+          (openResults)="onOverviewLink($event)" />
       </article>
       }
 

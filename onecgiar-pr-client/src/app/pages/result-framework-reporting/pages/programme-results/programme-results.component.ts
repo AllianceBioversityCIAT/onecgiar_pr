@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { FormsModule } from '@angular/forms';
@@ -32,6 +32,7 @@ import {
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import { ProgrammeResultRow, ProgrammeResultsService } from './services/programme-results.service';
 import { ProgrammeResultsFilterChip, ProgrammeResultsFilterService, buildStatusCounts } from './services/programme-results-filter.service';
+import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
 
 /**
  * Router commands + query params for one result. Same shape as
@@ -501,6 +502,13 @@ export class ProgrammeResultsComponent {
   /** Programme official code from the route (`entity-details/:entityId/results`). */
   readonly programmeCode = toSignal(this.route.paramMap.pipe(map(params => params.get('entityId') ?? '')), { initialValue: '' });
 
+  /**
+   * The route's query params, as a signal — the read side of the URL ↔ filter bridge
+   * (RFD-DD-1..5). `initialValue` mirrors the design's exact wording so the first hydrate run
+   * (before the observable has emitted) still sees the real params instead of an empty map.
+   */
+  readonly queryParams = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
+
   // ── Toolbar / popover state ─────────────────────────────────────────────────────────────
   readonly columnsOpen = signal(false);
   /** Which row's kebab menu is open — one at a time (design: `r.menuOpen` is per row). */
@@ -565,6 +573,7 @@ export class ProgrammeResultsComponent {
   readonly statusSelectOptions = computed(() => this.data.statusOptions().map(value => ({ value, label: value })));
   readonly categorySelectOptions = computed(() => this.data.categoryOptions().map(value => ({ value, label: value })));
   readonly originSelectOptions = computed(() => this.data.originOptions().map(value => ({ value, label: value })));
+  readonly centerSelectOptions = computed(() => this.data.centerOptions().map(value => ({ value, label: value })));
 
   /**
    * Section options, grouped "Areas of work" / "Programme-level" exactly like
@@ -579,7 +588,7 @@ export class ProgrammeResultsComponent {
     return [
       { label: 'Areas of work', items: codes.map(code => ({ value: code, label: code })) },
       {
-        label: 'Programme-level',
+        label: 'Program-level',
         items: [
           { value: INTERMEDIATE_OUTCOMES_CODE, label: 'Intermediate outcomes' },
           { value: OUTCOMES_2030_CODE, label: '2030 outcomes' }
@@ -623,6 +632,64 @@ export class ProgrammeResultsComponent {
     // Controlled input + 300ms debounce: the signal stays the single source of truth for both the
     // row list and the chip, but every keystroke does not re-filter 476 rows.
     this.searchInput.pipe(debounceTime(300), takeUntilDestroyed()).subscribe(value => this.filter.searchText.set(value));
+
+    // ── URL → filters (RFD-R-1) ─────────────────────────────────────────────────────────────
+    // Runs on init and on every param change (Back/Forward, external navigation while on the
+    // tab). Writes each signal ONLY when its value actually differs from the param — that
+    // equality guard is one half of what stops this from fighting the mirror effect below
+    // (RFD-DD-5). Predicates are pure and case-insensitive (`normalize()` in the filter
+    // service), so an unknown value is applied as-is and simply matches nothing.
+    //
+    // The comparison/write happens inside `untracked`: this effect's only dependency must be
+    // `this.queryParams()`. Reading the filter signals OUTSIDE `untracked` would make the
+    // effect re-run whenever a dropdown sets one of them (e.g. `onCenterChange`) — at which
+    // point the still-unchanged (still-null) URL param would win and stomp the value straight
+    // back, reopening the exact hydrate ↔ mirror loop the equality guard exists to close.
+    effect(() => {
+      const params = this.queryParams();
+
+      untracked(() => {
+        const status = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.status);
+        const category = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category);
+        const origin = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin);
+        const center = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center);
+
+        if (status !== this.filter.selectedStatus()) this.filter.selectedStatus.set(status);
+        if (category !== this.filter.selectedCategory()) this.filter.selectedCategory.set(category);
+        if (origin !== this.filter.selectedOrigin()) this.filter.selectedOrigin.set(origin);
+        if (center !== this.filter.selectedCenter()) this.filter.selectedCenter.set(center);
+      });
+    });
+
+    // ── Filters → URL (RFD-R-2) ─────────────────────────────────────────────────────────────
+    // The second half of the anti-loop guard: read the four filter signals (tracked), then
+    // diff them against the route's OWN last-known snapshot inside `untracked` so reading the
+    // snapshot never becomes a dependency. Hydrating the same value the URL already carries
+    // recomputes an identical `next` and skips `navigate` entirely — that is what breaks the
+    // hydrate ↔ mirror cycle, not a `pending*` flag (RFD-DD-5).
+    effect(() => {
+      const status = this.filter.selectedStatus();
+      const category = this.filter.selectedCategory();
+      const origin = this.filter.selectedOrigin();
+      const center = this.filter.selectedCenter();
+
+      untracked(() => {
+        const current = this.route.snapshot.queryParamMap;
+        const next: Record<string, string | null> = {
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.status]: status,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.category]: category,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: origin,
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.center]: center
+        };
+        const changed = Object.entries(next).some(([key, value]) => (current.get(key) ?? null) !== (value ?? null));
+        if (!changed) return;
+
+        // `merge` preserves `phase`/`reviewResult`/`reviewResultId`; `replaceUrl` keeps a filter
+        // tweak from becoming a Back-button trap (RFD-DD-4) — same stance as dashboard-lab's
+        // mirror effect (`dashboard-lab.component.ts`).
+        this.router.navigate([], { relativeTo: this.route, queryParams: next, queryParamsHandling: 'merge', replaceUrl: true });
+      });
+    });
   }
 
   // ── Search ──────────────────────────────────────────────────────────────────────────────
@@ -662,6 +729,10 @@ export class ProgrammeResultsComponent {
 
   onOriginChange(value: unknown): void {
     this.filter.selectedOrigin.set(this.toFilterValue(value));
+  }
+
+  onCenterChange(value: unknown): void {
+    this.filter.selectedCenter.set(this.toFilterValue(value));
   }
 
   // ── Status counters ─────────────────────────────────────────────────────────────────────
@@ -889,7 +960,7 @@ export class ProgrammeResultsComponent {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${this.programmeCode() || 'programme'}-results.csv`;
+    link.download = `${this.programmeCode() || 'program'}-results.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }

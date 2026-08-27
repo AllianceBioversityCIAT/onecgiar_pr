@@ -2,8 +2,8 @@ import { Component, Input } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Clipboard } from '@angular/cdk/clipboard';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { of } from 'rxjs';
+import { ActivatedRoute, ParamMap, Router, convertToParamMap } from '@angular/router';
+import { BehaviorSubject, of } from 'rxjs';
 
 import { PGR_COLUMN_STORAGE_KEY, ProgrammeResultsComponent } from './programme-results.component';
 import { ProgrammeResultsFilterService } from './services/programme-results-filter.service';
@@ -86,11 +86,28 @@ describe('ProgrammeResultsComponent', () => {
   let component: ProgrammeResultsComponent;
   let router: Router;
   let getAllResults: jest.Mock;
+  /**
+   * The two halves a real `ActivatedRoute` keeps in sync: the observable `toSignal()` reads and
+   * the `snapshot` the mirror effect diffs against. `pushQueryParams` is the only way a test
+   * changes either — it always updates both, exactly like the router would.
+   */
+  let queryParamMapSubject: BehaviorSubject<ParamMap>;
+  let routeSnapshotQueryParamMap: ParamMap;
 
-  function setup(items: Record<string, unknown>[] = RAW_ITEMS): void {
+  function pushQueryParams(params: Record<string, string>): void {
+    const map = convertToParamMap(params);
+    routeSnapshotQueryParamMap = map;
+    queryParamMapSubject.next(map);
+  }
+
+  function setup(items: Record<string, unknown>[] = RAW_ITEMS, initialQueryParams: Record<string, string> = {}): void {
     localStorage.clear();
 
     getAllResults = jest.fn(() => of({ response: { items, meta: { total: String(items.length) } } }));
+
+    const initialMap = convertToParamMap(initialQueryParams);
+    routeSnapshotQueryParamMap = initialMap;
+    queryParamMapSubject = new BehaviorSubject<ParamMap>(initialMap);
 
     const apiMock = {
       authSE: { localStorageUser: { id: 2 } },
@@ -112,7 +129,18 @@ describe('ProgrammeResultsComponent', () => {
       imports: [ProgrammeResultsComponent],
       providers: [
         { provide: ApiService, useValue: apiMock },
-        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ entityId: 'SP01' })) } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: of(convertToParamMap({ entityId: 'SP01' })),
+            queryParamMap: queryParamMapSubject,
+            snapshot: {
+              get queryParamMap() {
+                return routeSnapshotQueryParamMap;
+              }
+            }
+          }
+        },
         {
           provide: Router,
           useValue: {
@@ -214,12 +242,21 @@ describe('ProgrammeResultsComponent', () => {
 
     component.onOriginChange('W3/Bilaterals');
     expect(component.filteredRows().map(row => row.code)).toEqual(['5003']);
+    component.onOriginChange('all');
+
+    component.onCenterChange('IITA');
+    expect(component.filteredRows().map(row => row.code)).toEqual(['5002']);
+
+    component.onCenterChange('all');
+    expect(filterService().selectedCenter()).toBeNull();
+    expect(component.filteredRows().length).toBe(3);
   });
 
   it('offers only option values that exist in the loaded rows', () => {
     expect(component.statusSelectOptions().map(option => option.value)).toEqual(['Editing', 'Submitted']);
     expect(component.originSelectOptions().map(option => option.value)).toEqual(['W1/W2', 'W3/Bilaterals']);
     expect(component.categorySelectOptions().every(option => !!option.value)).toBe(true);
+    expect(component.centerSelectOptions().map(option => option.value)).toEqual(['CIAT', 'IITA', 'ILRI']);
   });
 
   // ── chips ─────────────────────────────────────────────────────────────────────────────────
@@ -240,18 +277,28 @@ describe('ProgrammeResultsComponent', () => {
     expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: Submitted']);
   }));
 
+  it('renders a Center chip when the center filter is set', () => {
+    component.onCenterChange('IITA');
+    fixture.detectChanges();
+
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Center: IITA']);
+    expect(text()).toContain('Center: IITA');
+  });
+
   it('Clear all resets every dimension including the undebounced search box', fakeAsync(() => {
     component.onSearchInput('maize');
     tick(300);
     component.onStatusChange('Editing');
     component.onCategoryChange('Policy change');
     component.onOriginChange('W1/W2');
+    component.onCenterChange('IITA');
 
     component.clearAll();
     tick(300);
 
     expect(component.searchDraft()).toBe('');
     expect(filterService().hasActiveFilters()).toBe(false);
+    expect(filterService().selectedCenter()).toBeNull();
     expect(component.filteredRows().length).toBe(3);
   }));
 
@@ -279,6 +326,98 @@ describe('ProgrammeResultsComponent', () => {
       { statusId: 1, statusName: 'Editing', count: 1 },
       { statusId: 3, statusName: 'Submitted', count: 1 }
     ]);
+  });
+
+  it('recomputes status pill counts over the center-filtered rows', () => {
+    setup([
+      { ...RAW_ITEMS[0], id: 1, result_code: '1', status_id: '1', status_name: 'Editing', lead_center: 'IITA' },
+      { ...RAW_ITEMS[0], id: 2, result_code: '2', status_id: '3', status_name: 'Submitted', lead_center: 'IITA' },
+      { ...RAW_ITEMS[0], id: 3, result_code: '3', status_id: '1', status_name: 'Editing', lead_center: 'IWMI' },
+      { ...RAW_ITEMS[0], id: 4, result_code: '4', status_id: '3', status_name: 'Submitted', lead_center: 'IWMI' }
+    ]);
+
+    component.onCenterChange('IITA');
+    expect(component.filteredRows().map(row => row.code)).toEqual(['1', '2']);
+    expect(component.statusCounts()).toEqual([
+      { statusId: 1, statusName: 'Editing', count: 1 },
+      { statusId: 3, statusName: 'Submitted', count: 1 }
+    ]);
+  });
+
+  // ── URL ↔ filter bridge (RFD-R-1 / RFD-R-2) ──────────────────────────────────────────────
+  it('(a) hydrates several params into filter state and chips, without rewriting the URL', () => {
+    setup(RAW_ITEMS, { category: 'Policy change', status: 'Submitted', center: 'IITA' });
+
+    expect(filterService().state()).toEqual(
+      expect.objectContaining({ selectedStatus: 'Submitted', selectedCategory: 'Policy change', selectedCenter: 'IITA' })
+    );
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: Submitted', 'Category: Policy change', 'Center: IITA']);
+    // Same result as picking the three values manually — matches the one row that has all three.
+    expect(component.filteredRows().map(row => row.code)).toEqual(['5002']);
+    expect(dataRows().length).toBe(1);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('(b) a value matching no row shows its chip and the filtered-empty state, without throwing', () => {
+    expect(() => setup(RAW_ITEMS, { status: 'Foo' })).not.toThrow();
+
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: Foo']);
+    expect(component.isFilteredEmpty()).toBe(true);
+    expect(text()).toContain('No results match these filters.');
+  });
+
+  it('(c) no query params leaves the filters untouched and never rewrites the URL', () => {
+    setup(RAW_ITEMS, {});
+
+    expect(filterService().activeChips().length).toBe(0);
+    expect(filterService().hasActiveFilters()).toBe(false);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('(d) a dropdown change mirrors into the URL with merge + replaceUrl', () => {
+    setup(RAW_ITEMS, {});
+    (router.navigate as jest.Mock).mockClear();
+
+    component.onCategoryChange('Policy change');
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    const [commands, extras] = (router.navigate as jest.Mock).mock.calls[0];
+    expect(commands).toEqual([]);
+    expect(extras.queryParamsHandling).toBe('merge');
+    expect(extras.replaceUrl).toBe(true);
+    expect(extras.queryParams).toEqual({ status: null, category: 'Policy change', origin: null, center: null });
+  });
+
+  it('(e) Clear all mirrors all four params back to null', () => {
+    setup(RAW_ITEMS, { category: 'Policy change', status: 'Submitted', center: 'IITA' });
+    (router.navigate as jest.Mock).mockClear();
+
+    component.clearAll();
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
+    expect(extras.queryParams).toEqual({ status: null, category: null, origin: null, center: null });
+  });
+
+  it('(f) a param pushed through the route updates state and does NOT trigger a mirror navigate (anti-loop)', () => {
+    setup(RAW_ITEMS, {});
+    (router.navigate as jest.Mock).mockClear();
+
+    pushQueryParams({ status: 'Submitted' });
+    fixture.detectChanges();
+
+    expect(filterService().selectedStatus()).toBe('Submitted');
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('(g) matches a mixed-case param value case-insensitively and renders the raw value in the chip', () => {
+    setup(RAW_ITEMS, { status: 'submitted' });
+
+    expect(component.filteredRows().map(row => row.code)).toEqual(['5002', '5003']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: submitted']);
+    expect(text()).toContain('Status: submitted');
   });
 
   it('maps status ids to the fixed --pr-status-* token PAIRS, never a recombination', () => {
@@ -395,7 +534,7 @@ describe('ProgrammeResultsComponent', () => {
     expect(wrapper.className).toContain('cursor-not-allowed');
     expect(wrapper.getAttribute('title')).toContain('not available yet');
     // Enabling it later is one flag: the grouped options are already built.
-    expect(component.sectionOptions().map(group => group.label)).toEqual(['Areas of work', 'Programme-level']);
+    expect(component.sectionOptions().map(group => group.label)).toEqual(['Areas of work', 'Program-level']);
     expect(component.sectionOptions()[1].items.map(item => item.value)).toEqual(['intermediate-outcomes', '2030-outcomes']);
     // The tag sits beside the trigger, in the filter row, where the design puts the control.
     expect((wrapper.parentElement as HTMLElement).textContent).toContain('Coming soon');
@@ -654,7 +793,7 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.hasRows()).toBe(false);
     expect(component.isNothingYet()).toBe(true);
     expect(component.isFilteredEmpty()).toBe(false);
-    expect(text()).toContain('No results reported in this programme yet.');
+    expect(text()).toContain('No results reported in this program yet.');
     expect(text()).toContain('0 results');
 
     const goToReporting = fixture.debugElement

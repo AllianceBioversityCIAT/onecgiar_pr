@@ -6,17 +6,6 @@
   ⚠️ html is 12px — only arbitrary px values.
 -->
 
-<!-- The "Coming soon" tag. Same markup and wording as the Results tab, so QA and the Jira
-     tickets describe the same thing across the whole programme shell. Announced ONCE per
-     section, never per row: repeating it on every category row would drown the data it
-     annotates (the lesson the Results tab already paid for). -->
-<ng-template #comingSoon>
-  <span
-    class="inline-flex h-[16px] flex-none items-center rounded-full bg-[var(--pr-color-primary-50)] px-[6px] text-[10px] font-semibold uppercase leading-none tracking-[0.06em] text-[var(--pr-color-primary-400)]">
-    Coming soon
-  </span>
-</ng-template>
-
 <div class="grid grid-cols-12 content-start gap-[16px] p-[32px]">
   <!-- 1 · About this program · span 12 -->
   <section class="col-span-12 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
@@ -36,9 +25,6 @@
       <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
         W1/W2 results by indicator category
       </h2>
-      <!-- The design makes each row a link. There is nowhere to send it yet: the Results tab
-           cannot receive a category in its address, so the rows stay disabled. -->
-      <ng-container [ngTemplateOutlet]="comingSoon" />
     </div>
 
     @if (categories().length) {
@@ -46,9 +32,10 @@
         @for (bar of categories(); track bar.name) {
           <button
             type="button"
-            disabled
-            class="flex min-h-[36px] cursor-default items-center gap-[12px] rounded-[8px] border-none bg-transparent px-[6px] text-left"
-            [attr.aria-label]="bar.name + ': ' + bar.count + (bar.count === 1 ? ' result' : ' results')">
+            [disabled]="!bar.link"
+            (click)="emitLink(bar.link)"
+            class="flex min-h-[36px] cursor-pointer items-center gap-[12px] rounded-[8px] border-none bg-transparent px-[6px] text-left transition-colors hover:bg-[var(--pr-color-primary-50)] disabled:cursor-default disabled:hover:bg-transparent"
+            [attr.aria-label]="bar.link ? bar.name + ': ' + bar.count + (bar.count === 1 ? ' result' : ' results') : null">
             <span class="min-w-0 max-w-[180px] flex-auto truncate text-[13px] font-normal text-[var(--pr-text)]" [title]="bar.name">
               {{ bar.name }}
             </span>
@@ -76,7 +63,6 @@
       <h2 class="m-0 mb-[6px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
         W3/Bilateral results by indicator category
       </h2>
-      <ng-container [ngTemplateOutlet]="comingSoon" />
     </div>
     <span class="mb-[16px] text-[13px] font-normal text-[var(--pr-text-muted)]">
       Bilateral results where this program is the primary contributor
@@ -87,9 +73,10 @@
         @for (bar of bilateralCategories(); track bar.name) {
           <button
             type="button"
-            disabled
-            class="flex min-h-[36px] cursor-default items-center gap-[12px] rounded-[8px] border-none bg-transparent px-[6px] text-left"
-            [attr.aria-label]="bar.name + ': ' + bar.count + (bar.count === 1 ? ' bilateral result' : ' bilateral results')">
+            [disabled]="!bar.link"
+            (click)="emitLink(bar.link)"
+            class="flex min-h-[36px] cursor-pointer items-center gap-[12px] rounded-[8px] border-none bg-transparent px-[6px] text-left transition-colors hover:bg-[var(--pr-color-primary-50)] disabled:cursor-default disabled:hover:bg-transparent"
+            [attr.aria-label]="bar.link ? bar.name + ': ' + bar.count + (bar.count === 1 ? ' bilateral result' : ' bilateral results') : null">
             <span class="min-w-0 max-w-[180px] flex-auto truncate text-[13px] font-normal text-[var(--pr-text)]" [title]="bar.name">
               {{ bar.name }}
             </span>
@@ -123,10 +110,19 @@
         @for (segment of statusSegments(); track segment.key) {
           @if (segment.count > 0) {
             <div
-              class="flex h-[44px] items-center justify-center overflow-hidden"
+              class="relative flex h-[44px] items-center justify-center overflow-hidden"
               [style.width.%]="segmentWidth(segment)"
               [style.background]="segment.bg"
               [title]="segment.label + ': ' + segment.count">
+              @if (segment.link) {
+                <!-- Full-slice hit target: keeps the count span a direct child of this div (the
+                     44px figure) while making the whole slice a real, keyboard-native button. -->
+                <button
+                  type="button"
+                  class="absolute inset-0 h-full w-full cursor-pointer border-0 bg-transparent p-0 transition-[filter] hover:brightness-95"
+                  [attr.aria-label]="segment.statusName + ': ' + segment.count"
+                  (click)="emitLink(segment.link)"></button>
+              }
               <!-- Reference prints the count only in segments wider than 8% — narrow neighbours
                    would otherwise overlap their numbers ("1 1" stacked). -->
               @if (showsSegmentCount(segment)) {
@@ -139,11 +135,22 @@
 
       <div class="flex flex-wrap gap-x-[20px] gap-y-[8px]">
         @for (segment of statusSegments(); track segment.key) {
-          <div class="flex items-center gap-[8px]">
-            <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
-            <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
-            <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ segment.count }}</span>
-          </div>
+          @if (segment.link) {
+            <button
+              type="button"
+              class="flex cursor-pointer items-center gap-[8px] border-0 bg-transparent p-0 transition-colors hover:opacity-80"
+              (click)="emitLink(segment.link)">
+              <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
+              <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
+              <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ segment.count }}</span>
+            </button>
+          } @else {
+            <span class="flex items-center gap-[8px]">
+              <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
+              <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
+              <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ segment.count }}</span>
+            </span>
+          }
         }
       </div>
     } @else {
@@ -168,9 +175,10 @@
         @for (bar of bilateralCenters(); track bar.name) {
           <button
             type="button"
-            disabled
-            class="flex min-h-[36px] cursor-default items-center gap-[12px] rounded-[8px] border-none bg-transparent px-[6px] text-left"
-            [attr.aria-label]="bar.name + ': ' + bar.count + (bar.count === 1 ? ' result' : ' results')">
+            [disabled]="!bar.link"
+            (click)="emitLink(bar.link)"
+            class="flex min-h-[36px] cursor-pointer items-center gap-[12px] rounded-[8px] border-none bg-transparent px-[6px] text-left transition-colors hover:bg-[var(--pr-color-primary-50)] disabled:cursor-default disabled:hover:bg-transparent"
+            [attr.aria-label]="bar.link ? bar.name + ': ' + bar.count + (bar.count === 1 ? ' result' : ' results') : null">
             <span class="min-w-0 max-w-[180px] flex-auto truncate text-[13px] font-normal text-[var(--pr-text)]" [title]="bar.name">
               {{ bar.name }}
             </span>
