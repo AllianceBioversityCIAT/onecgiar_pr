@@ -55,6 +55,8 @@ No route change. Navigation target: `/result-framework-reporting/entity-details/
 ### 6.2 Card grid (new `<h2>` order — asserted deliberately)
 1 About this program (12) · 2 W1/W2 results by indicator category (6) · 3 W3/Bilateral results by indicator category (6) · **4 W1/W2 results by category and status (6)** · **5 W3/Bilateral results by center and category (6)** · 6 Reporting status (12, donut + meter + legend) · 7 Centers with reported W3/bilateral results (6) · 8 Progress by area of work (6).
 
+> **Amendment (2026-08-27, `quick/overview-card-order`, user-approved):** order re-sequenced post-execution for data-storytelling — 1 About (12) · 2 W1/W2 categories (6) · 3 W1/W2 category × status (6) · 4 Reporting status (12) · 5 W3/Bilateral categories (6) · 6 Centers (6) · 7 W3/Bilateral center × category (**12**, full width) · 8 Progress by AoW (**12**). P2-3303 ("prominent, under About") still holds; the two center views are adjacent; the 7-column bilateral heatmap gains full width. The spec assertion was edited deliberately in the same commit.
+
 ### 6.3 Design system usage
 - Tokens via `resolveChartTokens()` (heatmap ramp: `chart-4 → chart-1`, light→dark; bilateral heatmap uses the same ramp — the muted series token is a bar fill, not a sequential ramp) and `resolveStatusTokens()` (donut sectors = each slot's `fg`, matching the legend dots; `discontinued` reuses `notStarted` as the slot does). Documented exception to VCE-DD-3's fence in `program-overview.charts.ts` header.
 - Heatmap: `visualMap` continuous, `calculable:false`, bottom-right; cell labels shown when ≤ 6 columns; tooltip "<row> × <col>: N" (+ "not navigable" note on `Other`/`Not specified`).

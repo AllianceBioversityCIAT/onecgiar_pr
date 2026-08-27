@@ -147,15 +147,18 @@ describe('ProgramOverviewComponent', () => {
   it('renders the eight Overview cards in the approved design order', () => {
     const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
 
+    // Order amended by quick/overview-card-order (user-approved 2026-08-27): narrative flow
+    // context → own results + pipeline → status headline → bilateral volume + contributors →
+    // their cross → plan progress. P2-3303 still holds: W1/W2 categories directly under About.
     expect(headings).toEqual([
       'About this program',
       // P2-3481: the titles name the funding type, so a user can tell the two blocks apart.
       'W1/W2 results by indicator category',
-      'W3/Bilateral results by indicator category',
       'W1/W2 results by category and status',
-      'W3/Bilateral results by center and category',
       'Reporting status',
+      'W3/Bilateral results by indicator category',
       'Centers with reported W3/bilateral results',
+      'W3/Bilateral results by center and category',
       'Progress by area of work'
     ]);
   });
