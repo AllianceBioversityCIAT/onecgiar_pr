@@ -5,7 +5,7 @@
   aria-hidden="true"></div>
 
 <aside
-  class="pr-drawer fixed inset-y-0 right-0 z-[141] flex flex-col border-l border-[rgba(30,32,47,0.1)] bg-white shadow-[-18px_0_44px_rgba(30,32,47,0.14)]"
+  class="pr-drawer fixed inset-y-0 right-0 z-[141] flex max-w-[100vw] flex-col border-l border-[rgba(30,32,47,0.1)] bg-white shadow-[-18px_0_44px_rgba(30,32,47,0.14)]"
   [style.width.px]="width()"
   role="complementary"
   aria-label="Manage indicator"
@@ -37,7 +37,7 @@
   </div>
 
   <!-- Context header: Indicator details -->
-  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] px-6 py-4 bg-white">
+  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] px-6 py-3 bg-white">
     <div class="flex items-center gap-2 mb-2 flex-wrap">
       <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[13px] font-bold bg-[#6461bc]/10 text-[var(--pr-color-primary-300)] tracking-wide">
         <span class="material-icons-round text-[15px]">folder</span>
@@ -48,9 +48,22 @@
           {{ groupTitle() || aowCode() }}
         </span>
       }
+      <button
+        type="button"
+        (click)="toggleContext()"
+        [attr.aria-expanded]="!contextCollapsed()"
+        aria-controls="drawer-context-details"
+        [attr.aria-label]="contextCollapsed() ? 'Show indicator details' : 'Hide indicator details'"
+        class="ml-auto inline-flex size-7 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 cursor-pointer">
+        <span class="material-icons-round text-[18px]">{{ contextCollapsed() ? 'expand_more' : 'expand_less' }}</span>
+      </button>
     </div>
 
-    <h2 class="m-0 text-[15.5px] font-bold leading-snug text-gray-900 tracking-tight">{{ indicator()?.indicator_description }}</h2>
+    @if (contextCollapsed()) {
+      <p class="m-0 truncate text-[12.5px] font-semibold text-gray-700">{{ indicator()?.indicator_description }}</p>
+    } @else {
+      <div id="drawer-context-details">
+        <h2 class="m-0 text-[15.5px] font-bold leading-snug text-gray-900 tracking-tight">{{ indicator()?.indicator_description }}</h2>
 
     <div class="mt-3.5 flex flex-wrap items-center gap-2 pt-2.5 border-t border-gray-100">
       @if (indicator()?.type_name) {
@@ -76,6 +89,8 @@
         </div>
       }
     </div>
+      </div>
+    }
   </header>
 
   <!-- ---------- panel ---------- -->
@@ -218,7 +233,7 @@
   </div>
 
   @if (confirmingExit()) {
-    <div class="absolute inset-0 z-[5] flex items-center justify-center bg-[rgba(255,255,255,0.86)] p-6">
+    <div class="absolute inset-0 z-[60] flex items-center justify-center bg-[rgba(255,255,255,0.86)] p-6">
       <div class="w-full max-w-[340px] rounded-2xl border border-[rgba(30,32,47,0.1)] bg-white p-5 shadow-[0_20px_50px_rgba(30,32,47,0.22)]">
         <span class="inline-flex size-10 items-center justify-center rounded-xl bg-[#fff4e5]">
           <span class="material-icons-round text-[20px] text-[#b45309]">warning_amber</span>
