@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChangeResultTypeModalComponent } from './change-result-type-modal.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -32,7 +33,9 @@ describe('ChangeResultTypeModalComponent', () => {
         GET_mqapValidation: () => of({response:mockGET_mqapValidationResponse}),
       },
       dataControlSE: {
-        changeResultTypeModal: false
+        changeResultTypeModal: false,
+        reportingPhaseVersion: signal(0),
+        reportingCurrentPhase: { phaseYear: 2026 }
       },
       alertsFe: {
         show: jest.fn()
@@ -583,6 +586,37 @@ describe('ChangeResultTypeModalComponent', () => {
         description: 'Validation Error',
         status: 'error',
       });
+    });
+  });
+
+  /**
+   * This copy of the knowledge-product guidance had been left at a hardcoded 2023 — three phases stale —
+   * while the two copies in the result-creator flow said 2025. It now follows the active reporting phase.
+   */
+  describe('alertStatusDescKnowledgeProduct — reporting-phase year', () => {
+    it('uses the active phase year instead of the stale 2023', () => {
+      const text = component.alertStatusDescKnowledgeProduct();
+
+      expect(text).toContain('only knowledge products from 2026 will be accepted');
+      expect(text).not.toContain('2023');
+    });
+
+    it('re-renders when the phases resolve after the first paint', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2027;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(1);
+
+      expect(component.alertStatusDescKnowledgeProduct()).toContain('only knowledge products from 2027 will be accepted');
+    });
+
+    it('never paints "null" while the phases have not loaded yet', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = null;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(2);
+
+      const text = component.alertStatusDescKnowledgeProduct();
+
+      expect(text).not.toContain('null');
+      expect(text).not.toContain('NaN');
+      expect(text).toContain(`from ${new Date().getFullYear()} will be accepted`);
     });
   });
 });

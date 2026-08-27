@@ -22,7 +22,11 @@
 
   <!-- P2-3201: from 2026 the guidance leaves the grey "Description" box and becomes an ⓘ tooltip
        next to the label. Earlier phases keep the inline box (empty tooltip → no trigger rendered). -->
+  <!-- data-testid="gi-field-<payload key>": the E2E save-contract spec reads the key out of the
+       hook and asserts the field travels in the PATCH body. Adding a control here without its hook
+       simply leaves it unguarded — see cypress/e2e/result-detail/save-contract.cy.ts. -->
   <app-pr-input
+    data-testid="gi-field-result_name"
     fieldRef="[general-info]-title"
     [customLabel]="'Title of Result'"
     type="text"
@@ -34,6 +38,7 @@
   </app-pr-input>
 
   <app-pr-textarea
+    data-testid="gi-field-result_description"
     fieldRef="[general-info]-description"
     [showDescriptionLabel]="!guidanceAsTooltip()"
     [tooltip]="guidanceTooltip('[general-info]-description')"
@@ -121,6 +126,7 @@
     }
     <div class="radio_grid">
       <app-pr-radio-button
+        data-testid="gi-field-gender_tag_id"
         [options]="this.scoreSE.genderTagScoreList"
         variant="segmented"
         optionLabel="full_name"
@@ -149,6 +155,7 @@
           "></ng-container>
       } @else {
         <app-pr-radio-button
+          data-testid="gi-field-gender_impact_area_id"
           [options]="this.getImpactAreasScoresComponents.genderTagScoreList()"
           optionLabel="name"
           optionValue="id"
@@ -167,6 +174,7 @@
     }
     <div class="radio_grid" id="climate_change_tag">
       <app-pr-radio-button
+        data-testid="gi-field-climate_change_tag_id"
         [options]="this.scoreSE.genderTagScoreList"
         variant="segmented"
         optionLabel="full_name"
@@ -195,6 +203,7 @@
           "></ng-container>
       } @else {
         <app-pr-radio-button
+          data-testid="gi-field-climate_impact_area_id"
           [options]="this.getImpactAreasScoresComponents.climateTagScoreList()"
           optionLabel="name"
           optionValue="id"
@@ -213,6 +222,7 @@
     }
     <div class="radio_grid">
       <app-pr-radio-button
+        data-testid="gi-field-nutrition_tag_level_id"
         [options]="this.scoreSE.genderTagScoreList"
         variant="segmented"
         optionLabel="full_name"
@@ -241,6 +251,7 @@
           "></ng-container>
       } @else {
         <app-pr-radio-button
+          data-testid="gi-field-nutrition_impact_area_id"
           [options]="this.getImpactAreasScoresComponents.nutritionTagScoreList()"
           optionLabel="name"
           optionValue="id"
@@ -259,6 +270,7 @@
     }
     <div class="radio_grid">
       <app-pr-radio-button
+        data-testid="gi-field-environmental_biodiversity_tag_level_id"
         [options]="this.scoreSE.genderTagScoreList"
         variant="segmented"
         optionLabel="full_name"
@@ -291,6 +303,7 @@
           "></ng-container>
       } @else {
         <app-pr-radio-button
+          data-testid="gi-field-environmental_biodiversity_impact_area_id"
           [options]="this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList()"
           optionLabel="name"
           optionValue="id"
@@ -309,6 +322,7 @@
     }
     <div class="radio_grid">
       <app-pr-radio-button
+        data-testid="gi-field-poverty_tag_level_id"
         [options]="this.scoreSE.genderTagScoreList"
         variant="segmented"
         optionLabel="full_name"
@@ -337,6 +351,7 @@
           "></ng-container>
       } @else {
         <app-pr-radio-button
+          data-testid="gi-field-poverty_impact_area_id"
           [options]="this.getImpactAreasScoresComponents.povertyTagScoreList()"
           optionLabel="name"
           optionValue="id"
@@ -354,12 +369,14 @@
   </span>
 
   <app-pr-yes-or-not
+    data-testid="gi-field-is_krs"
     fieldRef="[general-info]-is_krs"
     label="yes"
     [(ngModel)]="this.generalInfoBody.is_krs"
     (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 
   <app-pr-input
+    data-testid="gi-field-krs_url"
     *ngIf="this.generalInfoBody.is_krs"
     placeholder="e.g. https://www.cgiar.org/example"
     description="Link to Key Result Story. It is also possible to select “no” and then later update this to “yes” if the result is later selected as a key result story."
