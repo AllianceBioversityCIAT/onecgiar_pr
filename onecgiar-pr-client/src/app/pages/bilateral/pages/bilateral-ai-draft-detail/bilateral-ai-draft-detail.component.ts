@@ -55,6 +55,11 @@ export class BilateralAiDraftDetailComponent implements OnInit {
   }
 
   onPromoteConfirm(): void {
+    // The promote request rewrites the underlying result and flips the draft to
+    // discarded; a second click while the first is in flight replays the whole
+    // population step (duplicate partners/geo rows) and then 404s because the
+    // draft is already gone. One click, one promote.
+    if (this.bilateralAiService.isPromoting()) return;
     if (this.draft) {
       this.bilateralAiService.promoteDraft(this.draft.id);
     }
@@ -70,6 +75,7 @@ export class BilateralAiDraftDetailComponent implements OnInit {
   }
 
   onDiscardConfirm(): void {
+    if (this.bilateralAiService.isPromoting()) return;
     if (this.draft) {
       this.bilateralAiService.discardDraft(this.draft.id);
     }

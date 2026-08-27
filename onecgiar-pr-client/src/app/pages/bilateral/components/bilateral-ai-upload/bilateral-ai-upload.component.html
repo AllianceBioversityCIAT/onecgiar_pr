@@ -18,11 +18,10 @@
     </div>
 
     <div class="aiu-limits">
-      <span class="aiu-limit-tag">Up to {{ MAX_FILES }} files</span>
-      <span class="aiu-limit-tag">PDF, DOC, DOCX, TXT</span>
-      <span class="aiu-limit-tag">MP3, WAV, M4A, OGG</span>
-      <span class="aiu-limit-tag">Max 50 MB / file (documents)</span>
-      <span class="aiu-limit-tag">Max 100 MB / file (audio)</span>
+      <span class="aiu-limit-tag">Up to {{ MAX_SOURCES }} sources (the context text counts as one)</span>
+      <span class="aiu-limit-tag">PDF, DOCX, TXT, XLS, XLSX, PPTX</span>
+      <span class="aiu-limit-tag">MP3, WAV, M4A, OGG, FLAC, WEBM</span>
+      <span class="aiu-limit-tag">Max {{ MAX_FILE_SIZE_LABEL }} / file</span>
     </div>
 
     <div class="aiu-dropzone"
@@ -81,6 +80,7 @@
       <div class="aiu-file-list">
         <h4 class="aiu-file-list-title">
           Selected Files ({{ fileList().length }})
+          <span class="aiu-file-list-sources">{{ sourceCount() }} / {{ MAX_SOURCES }} sources</span>
           <span class="aiu-file-list-docs">{{ documentCount() }} doc{{ documentCount() !== 1 ? 's' : '' }}</span>
           @if (audioCount()) {
             <span class="aiu-file-list-audio">{{ audioCount() }} audio</span>
@@ -135,9 +135,21 @@
         placeholder="Provide any additional context about the results you want to extract (optional)"
         [ngModel]="contextText()"
         (ngModelChange)="contextText.set($event)"
+        [attr.maxlength]="MAX_TEXT_LENGTH"
         rows="3"
       ></textarea>
+      <span class="aiu-text-hint">This text counts as one of your {{ MAX_SOURCES }} sources.</span>
     </div>
+
+    @if (tooManySources()) {
+      <div class="aiu-limit-warning" role="alert">
+        <i class="material-icons-round">error_outline</i>
+        <span>
+          You have {{ sourceCount() }} sources and only {{ MAX_SOURCES }} are allowed. Remove a file
+          or clear the additional context before submitting.
+        </span>
+      </div>
+    }
 
     <div class="aiu-actions">
       <button

@@ -17,9 +17,20 @@ interface UploadFileEntry {
 
 const DOCUMENT_EXTENSIONS = ['.pdf', '.docx', '.txt', '.xls', '.xlsx', '.pptx'];
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.ogg', '.webm', '.flac'];
-const MAX_DOCUMENT_SIZE = 50 * 1024 * 1024;
-const MAX_AUDIO_SIZE = 100 * 1024 * 1024;
-const MAX_FILES = 6;
+
+/**
+ * P2-3437 #5 - these MUST mirror the server, which is the only authority.
+ * See onecgiar-pr-server/src/api/bilateral-ai/services/bilateral-ai-file-storage.service.ts:
+ *   :19  maxFileSize = 25_000_000  -> every source, document or audio alike
+ *   :20  maxSources  = 6           -> counted at :28 as files + (text ? 1 : 0)
+ *   :59  text length > 50_000      -> rejected
+ * The screen used to advertise 50 MB / 100 MB and 6 files "not counting text",
+ * which invited uploads the server was always going to reject with a 400.
+ */
+const MAX_FILE_SIZE = 25_000_000;
+const MAX_FILE_SIZE_LABEL = '25 MB';
+const MAX_SOURCES = 6;
+const MAX_TEXT_LENGTH = 50_000;
 
 @Component({
   selector: 'app-bilateral-ai-upload',
@@ -53,7 +64,9 @@ export class BilateralAiUploadComponent implements OnDestroy {
   audioDuration = signal(0);
   private audioElement: HTMLAudioElement | null = null;
 
-  readonly MAX_FILES = MAX_FILES;
+  readonly MAX_SOURCES = MAX_SOURCES;
+  readonly MAX_FILE_SIZE_LABEL = MAX_FILE_SIZE_LABEL;
+  readonly MAX_TEXT_LENGTH = MAX_TEXT_LENGTH;
   readonly acceptedDocumentTypes = DOCUMENT_EXTENSIONS.join(',');
   readonly acceptedAudioTypes = AUDIO_EXTENSIONS.join(',');
 
@@ -65,8 +78,21 @@ export class BilateralAiUploadComponent implements OnDestroy {
   fileList = computed(() => this.files());
   documentCount = computed(() => this.files().filter(f => f.type === 'document').length);
   audioCount = computed(() => this.files().filter(f => f.type === 'audio').length);
-  canAddMore = computed(() => this.files().length < MAX_FILES);
-  canSubmit = computed(() => (this.documentCount() > 0 || this.audioCount() > 0 || this.contextText().trim().length > 0) && !this.isUploading());
+
+  /** The typed context counts as one source on the server, so it counts here too. */
+  hasTextSource = computed(() => this.contextText().trim().length > 0);
+  sourceCount = computed(() => this.files().length + (this.hasTextSource() ? 1 : 0));
+  canAddMore = computed(() => this.sourceCount() < MAX_SOURCES);
+  tooManySources = computed(() => this.sourceCount() > MAX_SOURCES);
+  textTooLong = computed(() => this.contextText().trim().length > MAX_TEXT_LENGTH);
+
+  canSubmit = computed(
+    () =>
+      this.sourceCount() > 0 &&
+      !this.tooManySources() &&
+      !this.textTooLong() &&
+      !this.isUploading(),
+  );
 
   ngOnDestroy(): void {
     this.stopRecording();
@@ -139,14 +165,16 @@ export class BilateralAiUploadComponent implements OnDestroy {
   }
 
   private addFile(file: File, type: 'document' | 'audio'): void {
-    const currentCount = this.files().length;
-    if (currentCount >= MAX_FILES) {
-      this.messageService.add({ severity: 'warn', summary: 'Limit reached', detail: `Maximum ${MAX_FILES} files allowed.` });
+    if (this.sourceCount() >= MAX_SOURCES) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Limit reached',
+        detail: `A maximum of ${MAX_SOURCES} sources is allowed. The additional context text counts as one source.`,
+      });
       return;
     }
 
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-    const maxSize = type === 'document' ? MAX_DOCUMENT_SIZE : MAX_AUDIO_SIZE;
 
     if (type === 'document' && !DOCUMENT_EXTENSIONS.includes(ext)) {
       this.messageService.add({ severity: 'error', summary: 'Invalid format', detail: `${file.name} is not a supported document format.` });
@@ -156,9 +184,12 @@ export class BilateralAiUploadComponent implements OnDestroy {
       this.messageService.add({ severity: 'error', summary: 'Invalid format', detail: `${file.name} is not a supported audio format.` });
       return;
     }
-    if (file.size > maxSize) {
-      const sizeLabel = type === 'document' ? '50 MB' : '100 MB';
-      this.messageService.add({ severity: 'error', summary: 'File too large', detail: `${file.name} exceeds the ${sizeLabel} limit.` });
+    if (file.size > MAX_FILE_SIZE) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'File too large',
+        detail: `${file.name} exceeds the ${MAX_FILE_SIZE_LABEL} limit.`,
+      });
       return;
     }
 
@@ -350,9 +381,9 @@ export class BilateralAiUploadComponent implements OnDestroy {
       const detail = err.error?.message ?? 'Check file format and try again.';
       this.messageService.add({ severity: 'error', summary: 'Invalid request', detail });
     } else if (status === 413) {
-      this.messageService.add({ severity: 'error', summary: 'File too large', detail: 'Maximum combined size exceeded.' });
+      this.messageService.add({ severity: 'error', summary: 'File too large', detail: 'Each source must be no larger than 25 MB.' });
     } else if (status === 415) {
-      this.messageService.add({ severity: 'error', summary: 'Unsupported format', detail: 'Accepted documents: PDF, DOCX, TXT, XLS, XLSX, PPTX. Audio: MP3, WAV, M4A, OGG.' });
+      this.messageService.add({ severity: 'error', summary: 'Unsupported format', detail: 'Accepted documents: PDF, DOCX, TXT, XLS, XLSX, PPTX. Audio: MP3, WAV, M4A, OGG, FLAC, WEBM.' });
     } else if (status === 503) {
       this.messageService.add({ severity: 'error', summary: 'Service unavailable', detail: 'AI service temporarily unavailable. Please try again later.' });
     } else {

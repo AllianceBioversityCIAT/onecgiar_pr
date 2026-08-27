@@ -18,11 +18,21 @@
         Back to Drafts
       </a>
       <div class="badd-actions">
-        <button type="button" class="badd-btn badd-btn--promote" (click)="onPromoteClick()">
+        <button
+          type="button"
+          class="badd-btn badd-btn--promote"
+          [disabled]="bilateralAiService.isPromoting()"
+          (click)="onPromoteClick()"
+        >
           <i class="material-icons-round">arrow_upward</i>
-          Promote to Result
+          {{ bilateralAiService.isPromoting() ? 'Promoting…' : 'Promote to Result' }}
         </button>
-        <button type="button" class="badd-btn badd-btn--discard" (click)="onDiscardClick()">
+        <button
+          type="button"
+          class="badd-btn badd-btn--discard"
+          [disabled]="bilateralAiService.isPromoting()"
+          (click)="onDiscardClick()"
+        >
           <i class="material-icons-round">delete_outline</i>
           Discard
         </button>
@@ -66,7 +76,14 @@
   </div>
   <div pr-dialog-footer class="pr-dialog-footer">
     <button type="button" class="badd-btn badd-btn--secondary" (click)="onPromoteCancel()">Cancel</button>
-    <button type="button" class="badd-btn badd-btn--promote" (click)="onPromoteConfirm()">Promote</button>
+    <button
+      type="button"
+      class="badd-btn badd-btn--promote"
+      [disabled]="bilateralAiService.isPromoting()"
+      (click)="onPromoteConfirm()"
+    >
+      Promote
+    </button>
   </div>
 </app-pr-dialog>
 
