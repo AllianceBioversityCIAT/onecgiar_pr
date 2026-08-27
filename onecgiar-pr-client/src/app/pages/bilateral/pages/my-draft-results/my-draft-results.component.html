@@ -19,8 +19,11 @@
           <div class="mdr-card-main">
             <div class="mdr-card-header">
               <h3 class="mdr-card-title">{{ getDraftTitle(draft) }}</h3>
-              @if (getDraftType(draft)) {
-                <span class="mdr-card-type">{{ getDraftType(draft) }}</span>
+              @if (getDraftIndicator(draft)) {
+                <span class="mdr-card-type">{{ getDraftIndicator(draft) }}</span>
+              }
+              @if (getDraftLevel(draft); as level) {
+                <span class="mdr-card-level">{{ level }}</span>
               }
             </div>
 
@@ -39,6 +42,15 @@
                   <span class="mdr-meta-value">{{ draft.job.program_code }}</span>
                 </span>
               }
+              @if (getSessionLabel(draft); as session) {
+                <span class="mdr-meta-item">
+                  <i class="material-icons-round">smart_toy</i>
+                  <span class="mdr-meta-label">AI session</span>
+                  <span class="mdr-meta-value mdr-meta-session" [prTooltip]="getSessionTooltip(draft)" prTooltipPosition="top">
+                    {{ session }}
+                  </span>
+                </span>
+              }
             </div>
 
             @if (draft.mapping_warnings?.length) {
@@ -54,15 +66,7 @@
           </div>
 
           <div class="mdr-card-side">
-            <div class="mdr-completeness">
-              <div class="mdr-pct-circle">
-                <svg viewBox="0 0 36 36" class="mdr-pct-svg">
-                  <path class="mdr-pct-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  <path class="mdr-pct-fill" stroke-dasharray="50, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                </svg>
-                <span class="mdr-pct-text">Draft</span>
-              </div>
-            </div>
+            <span [class]="getDraftStatusClass(draft)">{{ getDraftStatus(draft) }}</span>
 
             <span class="mdr-date">{{ formatDate(draft.created_date) }}</span>
 
@@ -196,7 +200,7 @@
         <div class="pr-dialog-meta-item">
           <span class="pr-dialog-meta-label">Type</span>
           <span class="pr-dialog-meta-value">
-            @if (getDraftType(target)) { {{ getDraftType(target) }} } @else { — }
+            @if (getDraftIndicator(target)) { {{ getDraftIndicator(target) }} } @else { — }
           </span>
         </div>
         <div class="pr-dialog-meta-item">

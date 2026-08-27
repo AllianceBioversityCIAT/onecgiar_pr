@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-27 · branch performance-refactor · b9b46642b
+**Verified:** 2026-08-27 · branch performance-refactor · dab9ea9dc
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -50,12 +50,13 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   Arreglado con `onOtherCenterSelect` (`component.ts:208`) + guarda ampliada en el servicio.
   🛑 Si añades un tercer origen de centros, engánchalo también a `setPossibleLeadCenters(true)`.
 
-- ⚠️ **El texto de ayuda de 2026 NO es el que cita P2-3142.** Ese ticket pedía terminar en *"No-mapped
-  results will be shared with the Program team…"*, pero el texto vigente habla de financiación del P/A y
-  de Reflect & Adapt — alguien lo reemplazó **después** de escribirse el ticket. El 27-ago-2026 solo se
-  aplicó la parte inequívoca y aislada que P2-3142 pide (quitar "indicator" de *"contribution to the
-  indicator target"*); **la segunda mitad se dejó intacta a propósito**, porque pisarla revertiría el
-  requisito más nuevo. Anotado en P2-3142. No lo "termines" sin confirmar cuál de los dos textos manda.
+- ⚠️ **The 2026 help text under the ToC question is owned by P2-3142 — do not "restore" the old one.**
+  A newer P/A-funding + "Reflect & Adapt" paragraph had replaced the wording the ticket asks for. The PO
+  (Ángel) was asked which one wins and answered **"A" — the ticket's wording** (P2-3142 comment,
+  27 Aug 2026), so the Reflect & Adapt paragraph was overwritten on purpose. The live 2026 string is the
+  ticket's literal text (`component.ts:116`); the only intentional deviations are `ToC` instead of the
+  ticket's `TOC` (matches the question label right above it) and dropping the ticket's stray trailing `'`.
+  The pre-2026 branch (`:117`) is a different string and must stay untouched.
 
 - La pregunta **no aparece en el PDF**. El "View PDF" pega contra
   `GET /api/platform-report/result/:id`, que devuelve un JSON con una URL de S3; el PDF real

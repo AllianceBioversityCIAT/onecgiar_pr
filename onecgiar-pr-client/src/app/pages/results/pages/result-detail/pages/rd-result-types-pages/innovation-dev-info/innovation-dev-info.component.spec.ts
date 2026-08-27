@@ -1069,4 +1069,80 @@ describe('InnovationDevInfoComponent', () => {
       expect(el.querySelector('app-assumptions-examination')).toBeTruthy();
     });
   });
+  /**
+   * P2-3290 / P2-3467 — the restore loop against the 2026 payload.
+   *
+   * From the 2026 phase `responsibleInnovationAndScalingV2` returns only q1..q3: "partners, policies
+   * and financial mechanisms" has no replacement, so the `q4` KEY IS ABSENT, and the two stage
+   * questions are matched by text, so an unmatched one leaves its slot `undefined` too.
+   * `getSectionInformationp25()` walks q1..q4 in order and every remaining group after them, so an
+   * empty slot used to throw halfway and silently skip team diversity, IP rights and Megatrends —
+   * saved answers rendered as blank radios. The real utils service is wired in on purpose here: a
+   * fully mocked one can never fail, which is what let the gap through.
+   */
+  describe('2026 payload with an empty scaling slot (P2-3290 / P2-3467)', () => {
+    const optionsOf = (id: string, answered: boolean) => ({
+      options: [{ result_question_id: id, answer_boolean: answered, question_text: '', saved: false }]
+    });
+
+    const questions2026 = () => ({
+      responsible_innovation_and_scaling: {
+        // q4 is deliberately absent — that is what the server sends from 2026 on.
+        q1: optionsOf('201', true),
+        q2: optionsOf('301', true),
+        q3: optionsOf('136', true)
+      },
+      innovation_team_diversity: optionsOf('112', true),
+      intellectual_property_rights: {
+        q1: optionsOf('27', true),
+        q2: optionsOf('28', true),
+        q3: optionsOf('29', true),
+        q4: optionsOf('30', true)
+      },
+      megatrends: optionsOf('140', true)
+    });
+
+    let payload: any;
+
+    beforeEach(() => {
+      payload = questions2026();
+      const realUtils = new InnovationDevInfoUtilsService();
+      mockInnovationDevInfoUtilsService.mapRadioButtonBooleans = jest.fn(body => realUtils.mapRadioButtonBooleans(body));
+      mockApiService.resultsSE.GET_questionsInnovationDevelopmentP25 = () => of({ response: payload });
+    });
+
+    // NOTE: a bare `expect(...).not.toThrow()` is worthless here — the restore runs inside the
+    // subscriber, and RxJS reports a throw there asynchronously instead of rethrowing. What proves
+    // the loop survived is that the calls PAST the empty slot were made.
+    it('walks every slot, the absent q4 included, instead of stopping at it', () => {
+      component.getSectionInformationp25();
+
+      const walked = mockInnovationDevInfoUtilsService.mapRadioButtonBooleans.mock.calls;
+      expect(walked).toHaveLength(10);
+      expect(walked[3][0]).toBeUndefined();
+      expect(walked[9][0]).toBe(payload.megatrends);
+    });
+
+    it('still restores every group that comes after the empty slot', () => {
+      component.getSectionInformationp25();
+
+      expect(payload.innovation_team_diversity.radioButtonValue).toBe('112');
+      expect(payload.intellectual_property_rights.q4.radioButtonValue).toBe('30');
+      expect(payload.megatrends.radioButtonValue).toBe('140');
+    });
+
+    it('restores the two stage questions on the q1 / q2 slots they now occupy', () => {
+      component.getSectionInformationp25();
+
+      expect(payload.responsible_innovation_and_scaling.q1.radioButtonValue).toBe('201');
+      expect(payload.responsible_innovation_and_scaling.q2.radioButtonValue).toBe('301');
+    });
+
+    it('survives a stage question the server could not match by text either', () => {
+      delete payload.responsible_innovation_and_scaling.q1;
+
+      expect(() => component.getSectionInformationp25()).not.toThrow();
+      expect(payload.megatrends.radioButtonValue).toBe('140');
+    });
+  });
 });

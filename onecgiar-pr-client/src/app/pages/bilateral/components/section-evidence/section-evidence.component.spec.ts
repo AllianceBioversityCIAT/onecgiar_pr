@@ -37,7 +37,10 @@ describe('SectionEvidenceComponent', () => {
     api = {
       resultsSE: {
         apiBaseUrl: 'http://api/',
-        POST_createUploadSession: jest.fn().mockResolvedValue('http://upload/'),
+        // P2-3220: the server wraps it — `ReturnResponseUtil.format({ response: uploadUrl })`.
+        // Mocking the bare string used to hide that the component never destructured `response`,
+        // so the PUT was sent a stringified object and every SharePoint upload failed.
+        POST_createUploadSession: jest.fn().mockResolvedValue({ response: 'http://upload/' }),
         PUT_loadFileInUploadSession: jest.fn().mockResolvedValue({
           webUrl: 'http://sp/file',
           id: 'doc-1',
@@ -533,13 +536,33 @@ describe('SectionEvidenceComponent', () => {
       expect(evidence.sp_folder_path).toBe('/folder');
     });
 
-    it('tolerates a failing upload', async () => {
+    /**
+     * P2-3220 requires an explicit error when the file could not be stored — the previous version
+     * of this test asserted the opposite (upload fails, save reports success, nobody is told).
+     * The save still goes ahead because the file also travels in the multipart body, but the
+     * section must not claim it saved cleanly.
+     */
+    it('reports an error when the SharePoint upload fails instead of saving silently', async () => {
       api.resultsSE.POST_createUploadSession.mockRejectedValue(new Error('nope'));
       build();
       const evidence: any = { id: 1, file: makeFile('a.pdf') };
       component.evidenceBody.update(b => ({ ...b, evidences: [evidence] }));
       await component.saveSection();
       expect(evidence.link).toBeUndefined();
+      expect(component.saveStatus()).toBe('error');
+    });
+
+    /**
+     * The lock on the envelope shape. If someone drops the `{ response: … }` destructuring again,
+     * the PUT receives an object instead of a URL and this fails.
+     */
+    it('sends the PUT to the upload URL taken out of the response envelope', async () => {
+      build();
+      const evidence: any = { id: 1, file: makeFile('a.pdf') };
+      component.evidenceBody.update(b => ({ ...b, evidences: [evidence] }));
+      await component.saveSection();
+      expect(api.resultsSE.PUT_loadFileInUploadSession).toHaveBeenCalledWith(expect.any(File), 'http://upload/');
+      expect(component.saveStatus()).not.toBe('error');
     });
 
     it('tolerates an upload response without metadata', async () => {

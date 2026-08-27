@@ -1,25 +1,34 @@
-<app-pr-field-header
-  [label]="question?.question_text"
-  [description]="question?.question_description"
-  [useColon]="false"></app-pr-field-header>
+<!--
+  P2-3290 / P2-3467. The server matches these two questions BY TEXT, not by id, and documents that a
+  question it cannot match leaves the slot `undefined` so the section "renders without it rather than
+  serving the wrong question" (`result-questions.service.ts`, `resolveScalingSlotsForPhase`). The
+  guard below is what honours that contract: without it an unmatched slot throws on
+  `question['radioButtonValue']` and takes the whole Innovation Development form down.
+-->
+@if (question) {
+  <app-pr-field-header
+    [label]="question?.question_text"
+    [description]="question?.question_description"
+    [useColon]="false"></app-pr-field-header>
 
-<app-pr-radio-button
-  (selectOptionEvent)="handleSelectionChange()"
-  [verticalAlignment]="true"
-  [options]="question?.options"
-  optionLabel="question_text"
-  optionValue="result_question_id"
-  [(ngModel)]="question['radioButtonValue']">
-</app-pr-radio-button>
+  <app-pr-radio-button
+    (selectOptionEvent)="handleSelectionChange()"
+    [verticalAlignment]="true"
+    [options]="question?.options"
+    optionLabel="question_text"
+    optionValue="result_question_id"
+    [(ngModel)]="question['radioButtonValue']">
+  </app-pr-radio-button>
 
-<div *ngIf="isNotApplicableSelected" style="margin-top: 18px; max-width: 300px;">
-  <app-pr-input
-    placeholder="Why?"
-    variant="xs"
-    [required]="true"
-    [maxWords]="maxReasonWords"
-    [(ngModel)]="selectedOption.answer_text">
-  </app-pr-input>
-</div>
+  <div *ngIf="isNotApplicableSelected" style="margin-top: 18px; max-width: 300px;">
+    <app-pr-input
+      placeholder="Why?"
+      variant="xs"
+      [required]="true"
+      [maxWords]="maxReasonWords"
+      [(ngModel)]="selectedOption.answer_text">
+    </app-pr-input>
+  </div>
 
-<div appFeedbackValidation [labelText]="question?.question_text" [isComplete]="isComplete"></div>
+  <div appFeedbackValidation [labelText]="question?.question_text" [isComplete]="isComplete"></div>
+}
