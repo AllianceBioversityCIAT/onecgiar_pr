@@ -1,5 +1,5 @@
 import { CHART_TOKEN_NAMES, STATUS_TOKEN_NAMES, resolveChartTokens, resolveStatusTokens } from '../../../../../../shared/utils/chart-tokens.util';
-import { heatmapOption, heatmapTable, cellLinkFromClick, donutOption, donutTable, sectorLinkFromClick } from './program-overview.charts';
+import { heatmapOption, heatmapTable, cellLinkFromClick, donutOption, donutTable, sectorLinkFromClick, abbreviateAxisLabel } from './program-overview.charts';
 import { HeatmapModel, StatusSegment } from './program-overview.component';
 
 describe('program-overview.charts (OVW-T-3)', () => {
@@ -202,5 +202,33 @@ describe('program-overview.charts donut (OVW-T-4)', () => {
       expect(sectorLinkFromClick({}, segments)).toBeNull();
       expect(sectorLinkFromClick({ name: 'Unknown' }, segments)).toBeNull();
     });
+  });
+});
+
+describe('program-overview.charts axis abbreviations (quick/heatmap-axis-abbreviations)', () => {
+  it('abbreviates known long labels at display level and passes unknown labels through', () => {
+    expect(abbreviateAxisLabel('Capacity sharing for development')).toBe('Cap-Dev');
+    expect(abbreviateAxisLabel('Quality Assessed')).toBe('QAed');
+    expect(abbreviateAxisLabel('Editing')).toBe('Editing');
+    expect(abbreviateAxisLabel('IITA')).toBe('IITA');
+  });
+
+  it('wires the abbreviation formatter and interval 0 on the x-axis WITHOUT touching model data', () => {
+    const model: HeatmapModel = {
+      caption: 'c',
+      rows: ['IITA'],
+      cols: ['Capacity sharing for development', 'Policy change'],
+      cells: [
+        { r: 0, c: 0, value: 1, link: { origin: 'W3/Bilaterals', center: 'IITA', category: 'Capacity sharing for development' } },
+        { r: 0, c: 1, value: 2, link: null }
+      ]
+    };
+    const option = heatmapOption(model, ['a', 'b']) as { xAxis: { data: string[]; axisLabel: { interval: number; formatter: (v: string) => string } } };
+
+    // Display layer abbreviates…
+    expect(option.xAxis.axisLabel.interval).toBe(0);
+    expect(option.xAxis.axisLabel.formatter('Capacity sharing for development')).toBe('Cap-Dev');
+    // …but the axis DATA (what tooltips, tables and links read from) keeps the full names.
+    expect(option.xAxis.data).toEqual(['Capacity sharing for development', 'Policy change']);
   });
 });

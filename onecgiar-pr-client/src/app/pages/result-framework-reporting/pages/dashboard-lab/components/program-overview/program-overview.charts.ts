@@ -23,6 +23,27 @@ import type { HeatmapModel, OverviewLink, StatusSegment } from './program-overvi
  * `yAxis.inverse` puts the first row on top WITHOUT reordering `yAxis.data`, so `yAxis.data` stays
  * `=== model.rows` and the series data stays the raw `[c, r, value]` triples — no index remapping.
  */
+/**
+ * Display-only abbreviations for heatmap COLUMN labels (quick/heatmap-axis-abbreviations).
+ * Keys are the exact strings the matrices emit (result-type names, summary status columns);
+ * anything unmapped renders as-is. Status short forms reuse the platform's existing
+ * vocabulary (STATUS_LABEL uses "QAed") rather than inventing a new one.
+ */
+export const AXIS_LABEL_ABBREVIATIONS: Record<string, string> = {
+  'Capacity sharing for development': 'Cap-Dev',
+  'Knowledge product': 'KP',
+  'Innovation development': 'Inno-Dev',
+  'Innovation use': 'Inno-Use',
+  'Policy change': 'PC',
+  'Other output': 'Other-Out',
+  'Other outcome': 'Other-Onc',
+  'Quality Assessed': 'QAed'
+};
+
+export function abbreviateAxisLabel(value: string): string {
+  return AXIS_LABEL_ABBREVIATIONS[value] ?? value;
+}
+
 export function heatmapOption(model: HeatmapModel, ramp: string[]): EChartsOption {
   const { rows, cols, cells } = model;
   const data = cells.map(cell => [cell.c, cell.r, cell.value]);
@@ -42,7 +63,17 @@ export function heatmapOption(model: HeatmapModel, ramp: string[]): EChartsOptio
       }
     },
     grid: { left: 96, right: 24, top: 16, bottom: 56, containLabel: true },
-    xAxis: { type: 'category', data: cols, splitArea: { show: true } },
+    // interval: 0 forces a label on EVERY column — without it ECharts silently hides
+    // overlapping labels (observed live: only "Editing"/"Other" survived). Long names are
+    // abbreviated at DISPLAY level only (AXIS_LABEL_ABBREVIATIONS); model.cols keeps the
+    // full names, so the cell tooltip, the sr-only table, and the navigation links are
+    // untouched. Short labels are also what keeps the axis legible at narrow card widths.
+    xAxis: {
+      type: 'category',
+      data: cols,
+      splitArea: { show: true },
+      axisLabel: { interval: 0, formatter: abbreviateAxisLabel }
+    },
     yAxis: { type: 'category', data: rows, inverse: true, splitArea: { show: true } },
     visualMap: {
       type: 'continuous',
