@@ -72,7 +72,9 @@ export function heatmapOption(model: HeatmapModel, ramp: string[]): EChartsOptio
       type: 'category',
       data: cols,
       splitArea: { show: true },
-      axisLabel: { interval: 0, formatter: abbreviateAxisLabel }
+      // Beyond ~5 columns even abbreviated labels collide in a half-width card — rotate
+      // them so every label stays legible at 1024px. 4 columns (the status heatmap) stay flat.
+      axisLabel: { interval: 0, formatter: abbreviateAxisLabel, rotate: cols.length > 5 ? 35 : 0 }
     },
     yAxis: { type: 'category', data: rows, inverse: true, splitArea: { show: true } },
     visualMap: {
@@ -89,7 +91,9 @@ export function heatmapOption(model: HeatmapModel, ramp: string[]): EChartsOptio
       {
         type: 'heatmap',
         data,
-        label: { show: cols.length <= 6 }
+        // Always show cell values — 1-2 digit counts fit even on the 7-column bilateral
+        // heatmap now that column labels are abbreviated/rotated (user request, same quick).
+        label: { show: true }
       }
     ]
   } as EChartsOption;

@@ -45,13 +45,13 @@ describe('program-overview.charts (OVW-T-3)', () => {
       expect(visualMap.inRange.color.every(c => !c.startsWith('#'))).toBe(true);
     });
 
-    it('shows cell labels only when there are 6 or fewer columns', () => {
+    it('always shows cell values, even beyond 6 columns (quick/heatmap-axis-abbreviations)', () => {
       const withinLimit = heatmapOption(model, []);
       expect((withinLimit.series as { label: { show: boolean } }[])[0].label.show).toBe(true);
 
-      const tooWide: HeatmapModel = { ...model, cols: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] };
-      const beyondLimit = heatmapOption(tooWide, []);
-      expect((beyondLimit.series as { label: { show: boolean } }[])[0].label.show).toBe(false);
+      const wide: HeatmapModel = { ...model, cols: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] };
+      const beyondLimit = heatmapOption(wide, []);
+      expect((beyondLimit.series as { label: { show: boolean } }[])[0].label.show).toBe(true);
     });
 
     it('tooltip formatter reports "<row> × <col>: N" and flags a non-navigable cell', () => {
@@ -230,5 +230,15 @@ describe('program-overview.charts axis abbreviations (quick/heatmap-axis-abbrevi
     expect(option.xAxis.axisLabel.formatter('Capacity sharing for development')).toBe('Cap-Dev');
     // …but the axis DATA (what tooltips, tables and links read from) keeps the full names.
     expect(option.xAxis.data).toEqual(['Capacity sharing for development', 'Policy change']);
+  });
+
+  it('rotates crowded axes (>5 columns) and keeps small axes flat', () => {
+    const cols = (n: number) => Array.from({ length: n }, (_, i) => `Col ${i}`);
+    const modelOf = (n: number): HeatmapModel => ({ caption: 'c', rows: ['R'], cols: cols(n), cells: [] });
+    const rotateOf = (n: number) =>
+      (heatmapOption(modelOf(n), []) as { xAxis: { axisLabel: { rotate: number } } }).xAxis.axisLabel.rotate;
+
+    expect(rotateOf(4)).toBe(0);
+    expect(rotateOf(7)).toBe(35);
   });
 });
