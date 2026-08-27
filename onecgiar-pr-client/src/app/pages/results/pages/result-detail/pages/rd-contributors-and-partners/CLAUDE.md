@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-26 · branch performance-refactor · 038dcd77b
+**Verified:** 2026-08-27 · branch performance-refactor · b9b46642b
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -49,6 +49,13 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   primer desplegable **ni se pinta**, así que ése era el único camino → callejón sin salida.
   Arreglado con `onOtherCenterSelect` (`component.ts:208`) + guarda ampliada en el servicio.
   🛑 Si añades un tercer origen de centros, engánchalo también a `setPossibleLeadCenters(true)`.
+
+- ⚠️ **El texto de ayuda de 2026 NO es el que cita P2-3142.** Ese ticket pedía terminar en *"No-mapped
+  results will be shared with the Program team…"*, pero el texto vigente habla de financiación del P/A y
+  de Reflect & Adapt — alguien lo reemplazó **después** de escribirse el ticket. El 27-ago-2026 solo se
+  aplicó la parte inequívoca y aislada que P2-3142 pide (quitar "indicator" de *"contribution to the
+  indicator target"*); **la segunda mitad se dejó intacta a propósito**, porque pisarla revertiría el
+  requisito más nuevo. Anotado en P2-3142. No lo "termines" sin confirmar cuál de los dos textos manda.
 
 - La pregunta **no aparece en el PDF**. El "View PDF" pega contra
   `GET /api/platform-report/result/:id`, que devuelve un JSON con una URL de S3; el PDF real
