@@ -1,6 +1,6 @@
 # rd-evidences
 
-**Verified:** 2026-08-26 · branch performance-refactor · cb0b954af
+**Verified:** 2026-08-27 · branch performance-refactor · c2976269f
 
 ## Qué es
 Sección 4 (última) del detalle de resultado: la lista de evidencias (links o ficheros subidos a
@@ -28,6 +28,16 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
 - `rd-evidences.component.html:110` — `app-section-bottom-bar` con `(clickSave)="onSaveSection()"`.
 
 ## Trampas (⚠️ = ya rompió algo)
+- ⚠️ **`POST_createUploadSession` resuelve con el SOBRE, no con la URL.** El servidor devuelve
+  `{ response: uploadUrl, message, status }` (`share-point.service.ts`, `ReturnResponseUtil.format`),
+  así que hay que desestructurar `{ response: uploadUrl }`. Sin eso el PUT recibe un objeto
+  convertido a string y **la subida falla siempre**. Le pasó al gemelo bilateral
+  (`section-evidence.component.ts`) y estuvo invisible porque su spec mockeaba la cadena pelada.
+  Corregido el 27-ago-2026 (P2-3220), con test que lo bloquea.
+- ⚠️ **`loadAllFiles()` NO se traga los errores: devuelve los nombres de los ficheros que fallaron**
+  (P2-3220). `onSaveSection` los convierte en una alerta explícita. La sección **sí** se guarda igual
+  —el fichero también viaja en el multipart de `POST_evidences`— pero una evidencia sin `link` ni
+  `sp_*` no está en SharePoint, y el usuario tiene que saberlo. No devolver a un `catch` mudo.
 - ⚠️ **`isSaving` es un latch.** Sólo lo baja `getSectionInformation()`, que únicamente corre si el
   POST fue bien. Si el POST falla, el flag se queda en `true` y `isEvidenceUploading()` deja
   cualquier evidencia de fichero sin link mostrando el skeleton de "subiendo" hasta que se recargue

@@ -359,7 +359,7 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     this.saveStatus.set('saving');
     this.isSaving.set(true);
 
-    await this.uploadPendingFiles();
+    const failedUploads = await this.uploadPendingFiles();
 
     const resultId = this.creationService.currentResultId();
     if (!resultId) {
@@ -391,9 +391,10 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
         this.bilateralApi.POST_evidences(resultId, formData).pipe(
           tap({
             next: () => {
-              this.saveStatus.set('saved');
+              // P2-3220: a save whose files did not reach SharePoint is not a clean save.
+              this.saveStatus.set(failedUploads > 0 ? 'error' : 'saved');
               this.isSaving.set(false);
-              setTimeout(() => this.saveStatus.set('idle'), 2500);
+              if (failedUploads === 0) setTimeout(() => this.saveStatus.set('idle'), 2500);
               this.loadEvidences();
               resolve();
             },
@@ -408,27 +409,44 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
     });
   }
 
-  private async uploadPendingFiles(): Promise<void> {
+  /**
+   * P2-3220: uploads every pending file to SharePoint and returns how many failed.
+   *
+   * ⚠️ Two bugs lived here. `POST_createUploadSession` resolves with the whole envelope
+   * (`{ response: uploadUrl, message, status }` — see the server's `ReturnResponseUtil.format`
+   * in `share-point.service.ts`), and this method used to assign that object straight to
+   * `uploadUrl`, so the PUT was sent to a stringified object instead of the upload URL and
+   * ALWAYS failed. The empty `catch` then swallowed it, so the evidence was saved with no
+   * `link` and no `sp_*` metadata and nobody was told. The file itself still reached the
+   * backend through the multipart body in `performSave`, so nothing was lost — but the
+   * evidence was never linked to SharePoint, which is the whole point of P2-3218.
+   */
+  private async uploadPendingFiles(): Promise<number> {
     const resultId = this.creationService.currentResultId();
-    if (!resultId) return;
+    if (!resultId) return 0;
 
+    let failed = 0;
     for (const evidence of this.evidences) {
       if (!evidence.file || evidence.link) continue;
       try {
-        const uploadUrl = await this.api.resultsSE.POST_createUploadSession({
-            resultId,
-            fileName: evidence.file.name,
-            count: 0
-          });
+        const { response: uploadUrl } = await this.api.resultsSE.POST_createUploadSession({
+          resultId,
+          fileName: evidence.file.name,
+          count: 0
+        });
         const response = await this.api.resultsSE.PUT_loadFileInUploadSession(evidence.file, uploadUrl);
         evidence.link = response?.webUrl;
         evidence.sp_document_id = response?.id;
         evidence.sp_file_name = response?.name;
         evidence.sp_folder_path = response?.parentReference?.path?.split('root:').pop();
-      } catch {
-        // file upload failed — evidence stays without link
+      } catch (error) {
+        // P2-3220: never fail silently. The save still goes ahead — the file travels in the
+        // multipart body too — but the user must know the file was not stored in SharePoint.
+        failed++;
+        console.error('[section-evidence] SharePoint upload failed for', evidence.file?.name, error);
       }
     }
+    return failed;
   }
 
   // ── Confirm draft (add to local list, then persist) ─────────────────

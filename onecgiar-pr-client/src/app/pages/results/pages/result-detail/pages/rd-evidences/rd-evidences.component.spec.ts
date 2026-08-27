@@ -230,15 +230,29 @@ describe('RdEvidencesComponent', () => {
       expect(spyEndLoadFile).toHaveBeenCalled();
     });
 
-    it('should handle errors in loadAllFiles', async () => {
+    /**
+     * P2-3220: a failed upload must be REPORTABLE, not just logged. This used to assert the exact
+     * console.error argument, which broke the moment the message got a prefix and told us nothing
+     * about behaviour. Now it asserts what the caller can act on: the list of files that failed.
+     */
+    it('returns the names of the files whose upload failed, so the caller can warn the user', async () => {
       const mockEvidences = [{ file: new File([], 'file1.pdf') }, { file: new File([], 'file2.pdf') }, { file: undefined }];
       component.evidencesBody.evidences = mockEvidences;
       jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession').mockRejectedValue('Error from POST_createUploadSession');
-      const consoleSpy = jest.spyOn(console, 'error');
 
-      await component.loadAllFiles();
+      const failed = await component.loadAllFiles();
 
-      expect(consoleSpy).toHaveBeenCalledWith('Error from POST_createUploadSession');
+      expect(failed).toEqual(['file1.pdf', 'file2.pdf']);
+    });
+
+    it('returns an empty list when every upload succeeds', async () => {
+      component.evidencesBody.evidences = [{ file: new File([], 'ok.pdf') }] as any;
+      jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession').mockResolvedValue({ response: 'http://upload/' } as any);
+      jest.spyOn(mockApiService.resultsSE, 'PUT_loadFileInUploadSession').mockResolvedValue({ webUrl: 'http://sp/f', id: 'd1', name: 'ok.pdf' } as any);
+
+      const failed = await component.loadAllFiles();
+
+      expect(failed).toEqual([]);
     });
   });
 
