@@ -47,7 +47,7 @@
   - [x] Guard counts equal baseline; both contract strings found verbatim. **FAIL input:** renaming one `.licence` field access drops the count below baseline.
   - [x] Full jest suite green (same disqualifier as T-1).
   - [x] HITL diff review completed at the execute-phase pause; outcome recorded.
-  - [ ] Commit per convention, e.g. `🎨 style(client-copy): Standardize British to American English across user-facing text`.
+  - [x] Commit per convention — `a32779ef2` `🎨 style(client) [SPEC:changes/american-english-copy]: Standardize rendered copy to American English (program, license, center)`.
 
 ## 4. Dependency graph
 
