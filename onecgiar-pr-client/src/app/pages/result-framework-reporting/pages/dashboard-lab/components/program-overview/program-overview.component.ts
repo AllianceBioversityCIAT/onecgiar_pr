@@ -1,4 +1,3 @@
-import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 
 /**
@@ -68,7 +67,7 @@ export interface OverviewCenterBar {
 @Component({
   selector: 'app-program-overview',
   standalone: true,
-  imports: [NgTemplateOutlet],
+  imports: [],
   templateUrl: './program-overview.component.html',
   styleUrls: ['./program-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -90,11 +89,15 @@ export class ProgramOverviewComponent {
   readonly bilateralCenters = input<OverviewCenterBar[]>([]);
 
   /**
-   * Typed navigation intent (`OVW-R-5`). Declared here (OVW-T-1) so the parent's `(openResults)`
-   * binding compiles under `strictTemplates`; no template wiring or `.emit()` call yet — those
-   * land with the real `<button>`/segment/cell markup in OVW-T-2.
+   * Typed navigation intent (`OVW-R-5`). Rows, status meter segments and legend items call
+   * `emitLink()` on activation; the parent (`dashboard-lab`) performs the actual navigation.
    */
   readonly openResults = output<OverviewLink>();
+
+  /** `null` (no destination — `Other`/`Not specified`/zero-count) is swallowed, never emitted. */
+  emitLink(link: OverviewLink | null): void {
+    if (link) this.openResults.emit(link);
+  }
 
   readonly description = computed(() => {
     const explicit = this.programDescription()?.trim();

@@ -5,7 +5,7 @@
 - **Module / feature:** `dashboard-lab` + `program-overview` — navigable overview, 2 heatmaps, status donut (client only)
 - **Linked spec:** `requirements.md` (OVW-R-1..6) + `design.md` (OVW-DD-1..8)
 - **Owner / driver:** j.cadavid@cgiar.org
-- **Status:** in-progress (OVW-T-1 done 2026-08-27)
+- **Status:** in-progress (OVW-T-1, OVW-T-2 done 2026-08-27)
 - **Depth:** Standard · **Budget:** 4 tasks / ~600 LOC / 1–2 review rounds (design.md §1)
 - **Family:** `../family.md` row #3 · depends on #1 and #2 (both `done`) · `Parallel-safe: no`
 
@@ -50,10 +50,10 @@
 - **Estimate:** M (~150 LOC incl. spec)
 - **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] All five rewritten assertions present with their new expected values (diff shows the rewrite, not a deletion). **FAIL input:** re-adding a `disabled` attribute unconditionally → "linked rows enabled" red; re-adding the chip → count `0` red.
-  - [ ] Emission spec: clicking the IITA row emits `{origin:'W3/Bilaterals', center:'IITA'}`; clicking `Not specified` (disabled) emits nothing. **FAIL input:** emitting on disabled → red.
-  - [ ] Presence caveat recorded: `button` presence + `aria-label` prove markup, not that the click reaches the Results tab — that is OVW-AC-3 manual.
-  - [ ] Full suite + lint green (same disqualifier).
+  - [x] All five rewritten assertions present with their new expected values (diff shows the rewrite, not a deletion). **FAIL input:** re-adding a `disabled` attribute unconditionally → "linked rows enabled" red; re-adding the chip → count `0` red.
+  - [x] Emission spec: clicking the IITA row emits `{origin:'W3/Bilaterals', center:'IITA'}`; clicking `Not specified` (disabled) emits nothing. **FAIL input:** emitting on disabled → red.
+  - [x] Presence caveat recorded: `button` presence + `aria-label` prove markup, not that the click reaches the Results tab — that is OVW-AC-3 manual.
+  - [x] Full suite + lint green (same disqualifier).
 
 ### `OVW-T-3` — Two heatmap cards (matrices in parent, charts in child)
 
