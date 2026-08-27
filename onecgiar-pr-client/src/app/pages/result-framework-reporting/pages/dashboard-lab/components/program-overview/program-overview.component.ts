@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { PrVizChartComponent, EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
-import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
-import { heatmapOption, heatmapTable, cellLinkFromClick } from './program-overview.charts';
+import { resolveChartTokens, resolveStatusTokens } from '../../../../../../shared/utils/chart-tokens.util';
+import { heatmapOption, heatmapTable, cellLinkFromClick, donutOption, donutTable, sectorLinkFromClick } from './program-overview.charts';
 import type { ECElementEvent } from 'echarts/core';
 
 /**
@@ -168,6 +168,22 @@ export class ProgramOverviewComponent {
     const model = this.bilateralHeatmap();
     if (!model) return;
     this.emitLink(cellLinkFromClick(event, model));
+  }
+
+  /**
+   * Status tokens, resolved once per render pass (`OVW-R-4`/`OVW-DD-5`) — the donut's documented
+   * exception to the "status colours are not chart colours" fence. jsdom resolves every entry to
+   * `''`; real browsers resolve the `--pr-status-*-fg/bg` pairs.
+   */
+  private readonly statusTokens = computed(() => resolveStatusTokens());
+
+  readonly donutOption = computed<EChartsOption>(() => donutOption(this.statusSegments(), this.statusTokens()));
+
+  readonly donutTable = computed<VizChartTableModel>(() => donutTable(this.statusSegments()));
+
+  /** Resolves the clicked sector back to its `OverviewLink` and emits (or swallows a `null`). */
+  onDonutClick(event: ECElementEvent): void {
+    this.emitLink(sectorLinkFromClick(event, this.statusSegments()));
   }
 
   readonly description = computed(() => {

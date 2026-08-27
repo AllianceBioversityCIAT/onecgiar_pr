@@ -170,15 +170,14 @@ describe('ProgramOverviewComponent', () => {
   });
 
   /**
-   * Rewritten from "there is still no SVG" (`OVW-T-3`, tasks.md DoD): the two new heatmap cards
-   * each mount a real `app-pr-viz-chart` host, always paired with a non-null `tableModel` (the
-   * wrapper clears the chart otherwise — `OVW-R-2`/`OVW-R-3` a11y pairing).
-   * T-4 adds the Reporting-status donut and bumps this count to 3 — that is a deliberate edit
-   * here, not a silent one.
+   * Rewritten from "there is still no SVG" (`OVW-T-3`, tasks.md DoD): the two heatmap cards plus
+   * the Reporting-status donut (`OVW-T-4`) each mount a real `app-pr-viz-chart` host, always
+   * paired with a non-null `tableModel` (the wrapper clears the chart otherwise — `OVW-R-2`/
+   * `OVW-R-3`/`OVW-R-4` a11y pairing).
    */
-  it('renders 2 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
+  it('renders 3 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
     const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-    expect(hosts.length).toBe(2);
+    expect(hosts.length).toBe(3);
     hosts.forEach(host => {
       expect(host.componentInstance.tableModel()).toBeTruthy();
       expect(host.componentInstance.options()).toBeTruthy();
@@ -445,6 +444,26 @@ describe('ProgramOverviewComponent', () => {
     });
   });
 
+  /**
+   * Forward pointer owed from `OVW-T-3`'s review (requirements §12 maps `OVW-R-6` to T-3 AND
+   * T-4): the `app-pr-viz-chart` host for the W1/W2 heatmap sat inside `@if
+   * (w12Heatmap()?.rows?.length)`, so while loading (rows === []) the `@else` empty-state
+   * rendered instead of the `[loading]` skeleton — the binding was unreachable. Fixed by also
+   * rendering the host while `w12HeatmapLoading()` is true.
+   */
+  it('renders the W1/W2 heatmap loading skeleton instead of the empty state while loading (OVW-R-6)', () => {
+    fixture.componentRef.setInput('w12Heatmap', null);
+    fixture.componentRef.setInput('w12HeatmapLoading', true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('No W1/W2 results reported yet.');
+
+    const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
+    const w12Host = hosts.find(host => host.componentInstance.chartTitle() === 'W1/W2 results by category and status');
+    expect(w12Host).toBeTruthy();
+    expect(w12Host?.componentInstance.loading()).toBe(true);
+  });
+
   describe('status meter', () => {
     it('only prints the count inside segments wider than 8% of the bar', () => {
       // 6/7 is wide; 1/7 (14%) is still wide; a 1-in-40 sliver is not.
@@ -490,6 +509,41 @@ describe('ProgramOverviewComponent', () => {
       const legendButtons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
       expect(legendButtons.some(b => b.textContent?.includes('Linked'))).toBe(true);
       expect(legendButtons.some(b => b.textContent?.includes('Zero'))).toBe(false);
+    });
+  });
+
+  describe('status donut (OVW-R-4 / OVW-T-4)', () => {
+    /** FAIL input: dropping the meter or its `div.h-[44px]` structure turns this red. */
+    it('adds the donut beside the meter WITHOUT replacing or reflowing it (OVW-R-4 BUT NOT clause)', () => {
+      const meter = fixture.nativeElement.querySelector('div.h-\\[44px\\]');
+      expect(meter).toBeTruthy();
+      const legendDots = fixture.nativeElement.querySelectorAll('span.h-\\[8px\\].w-\\[8px\\].rounded-full');
+      expect(legendDots.length).toBe(segments.length);
+
+      const donutHost = fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).find(
+        host => host.componentInstance.chartTitle() === 'Reporting status'
+      );
+      expect(donutHost).toBeTruthy();
+      expect(donutHost?.componentInstance.tableModel()).toBeTruthy();
+    });
+
+    it('emits the segment link when a linked sector is activated', () => {
+      const emitted: OverviewLink[] = [];
+      const sub = component.openResults.subscribe(link => emitted.push(link));
+
+      component.onDonutClick({ name: 'Submitted' } as unknown as ECElementEvent);
+
+      expect(emitted).toEqual([{ status: 'Submitted' }]);
+      sub.unsubscribe();
+    });
+
+    /** FAIL input: resolving a zero-count sector's name to a synthesized link turns this red. */
+    it('emits nothing when a zero-count sector is activated', () => {
+      const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+      component.onDonutClick({ name: 'Approved' } as unknown as ECElementEvent);
+
+      expect(emitSpy).not.toHaveBeenCalled();
     });
   });
 });

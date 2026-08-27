@@ -1,6 +1,6 @@
-import { CHART_TOKEN_NAMES, resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
-import { heatmapOption, heatmapTable, cellLinkFromClick } from './program-overview.charts';
-import { HeatmapModel } from './program-overview.component';
+import { CHART_TOKEN_NAMES, STATUS_TOKEN_NAMES, resolveChartTokens, resolveStatusTokens } from '../../../../../../shared/utils/chart-tokens.util';
+import { heatmapOption, heatmapTable, cellLinkFromClick, donutOption, donutTable, sectorLinkFromClick } from './program-overview.charts';
+import { HeatmapModel, StatusSegment } from './program-overview.component';
 
 describe('program-overview.charts (OVW-T-3)', () => {
   const model: HeatmapModel = {
@@ -112,6 +112,95 @@ describe('program-overview.charts (OVW-T-3)', () => {
       expect(cellLinkFromClick({}, model)).toBeNull();
       expect(cellLinkFromClick({ data: 'not-an-array' }, model)).toBeNull();
       expect(cellLinkFromClick({ data: [99, 99, 1] }, model)).toBeNull();
+    });
+  });
+});
+
+describe('program-overview.charts donut (OVW-T-4)', () => {
+  const segments: StatusSegment[] = [
+    { key: 'not-started', label: 'Not started', count: 0, bg: '', fg: '', statusName: 'Not started', link: null },
+    { key: 'in-progress', label: 'In progress', count: 6, bg: '', fg: '', statusName: 'Editing', link: { status: 'Editing' } },
+    { key: 'submitted', label: 'Submitted', count: 1, bg: '', fg: '', statusName: 'Submitted', link: { status: 'Submitted' } },
+    { key: 'in-qa', label: 'In QA', count: 0, bg: '', fg: '', statusName: 'In QA', link: null },
+    { key: 'approved', label: 'Approved', count: 0, bg: '', fg: '', statusName: 'Approved', link: null }
+  ];
+
+  describe('donutOption', () => {
+    it('emits one sector per non-zero segment, omitting zero-count segments from the pie', () => {
+      const tokens = resolveStatusTokens();
+      const option = donutOption(segments, tokens);
+      const series = (option.series as { data: unknown[] }[])[0];
+      expect(series.data.length).toBe(2);
+    });
+
+    it('colors sectors from STATUS_TOKEN_NAMES only — never CHART_TOKEN_NAMES (the ramp)', () => {
+      const requested: string[] = [];
+      jest.spyOn(window, 'getComputedStyle').mockReturnValue({
+        getPropertyValue: jest.fn().mockImplementation((name: string) => {
+          requested.push(name);
+          return '';
+        })
+      } as unknown as CSSStyleDeclaration);
+
+      const tokens = resolveStatusTokens();
+      donutOption(segments, tokens);
+
+      expect(requested.length).toBeGreaterThan(0);
+      expect(requested.every(name => (STATUS_TOKEN_NAMES as readonly string[]).includes(name))).toBe(true);
+      expect(requested.some(name => (CHART_TOKEN_NAMES as readonly string[]).includes(name))).toBe(false);
+
+      jest.restoreAllMocks();
+    });
+
+    it('uses radius [62%, 88%], hides sector labels and the legend, and centers the total in the title', () => {
+      const tokens = resolveStatusTokens();
+      const option = donutOption(segments, tokens);
+      const series = (option.series as { radius: string[]; label: { show: boolean } }[])[0];
+      expect(series.radius).toEqual(['62%', '88%']);
+      expect(series.label.show).toBe(false);
+      expect((option.legend as { show: boolean }).show).toBe(false);
+      expect((option.title as { text: string; subtext: string }).text).toBe('7');
+      expect((option.title as { text: string; subtext: string }).subtext).toBe('results');
+    });
+
+    it('reuses the notStarted token pair for the discontinued slot (OVW-DD-5)', () => {
+      const discontinued: StatusSegment[] = [
+        { key: 'discontinued', label: 'Discontinued', count: 2, bg: '', fg: '', statusName: 'Discontinued', link: { status: 'Discontinued' } }
+      ];
+      const tokens = resolveStatusTokens();
+      const option = donutOption(discontinued, tokens);
+      const series = (option.series as { data: { itemStyle: { color: string } }[] }[])[0];
+      expect(series.data[0].itemStyle.color).toBe(tokens.notStarted.fg);
+    });
+  });
+
+  describe('donutTable', () => {
+    it('includes ALL segments as rows, zero-count included', () => {
+      const table = donutTable(segments);
+      expect(table.caption).toBe('Reporting status');
+      expect(table.headers).toEqual(['Status', 'Results']);
+      expect(table.rows).toEqual([
+        ['Not started', 0],
+        ['In progress', 6],
+        ['Submitted', 1],
+        ['In QA', 0],
+        ['Approved', 0]
+      ]);
+    });
+  });
+
+  describe('sectorLinkFromClick', () => {
+    it('resolves a click on a navigable sector to its stored link, by sector name', () => {
+      expect(sectorLinkFromClick({ name: 'Submitted' }, segments)).toEqual({ status: 'Submitted' });
+    });
+
+    it('resolves a zero-count sector (link: null) to null — no synthesized link', () => {
+      expect(sectorLinkFromClick({ name: 'Not started' }, segments)).toBeNull();
+    });
+
+    it('resolves an event with no matching name to null instead of throwing', () => {
+      expect(sectorLinkFromClick({}, segments)).toBeNull();
+      expect(sectorLinkFromClick({ name: 'Unknown' }, segments)).toBeNull();
     });
   });
 });

@@ -5,7 +5,7 @@
 - **Module / feature:** `dashboard-lab` + `program-overview` — navigable overview, 2 heatmaps, status donut (client only)
 - **Linked spec:** `requirements.md` (OVW-R-1..6) + `design.md` (OVW-DD-1..8)
 - **Owner / driver:** j.cadavid@cgiar.org
-- **Status:** in-progress (OVW-T-1..T-3 done 2026-08-27)
+- **Status:** done — all 4 tasks PASS (2026-08-27); OVW-AC-3 manual HITL pending; rollout §6 pending
 - **Depth:** Standard · **Budget:** 4 tasks / ~600 LOC / 1–2 review rounds (design.md §1)
 - **Family:** `../family.md` row #3 · depends on #1 and #2 (both `done`) · `Parallel-safe: no`
 
@@ -86,9 +86,9 @@
 - **Estimate:** S (~90 LOC incl. spec)
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
 - **Definition of done:**
-  - [ ] Builder spec: `donutOption` series data length = segments with count > 0 (zero-count sectors omitted from the pie but kept in the table), colors requested from `STATUS_TOKEN_NAMES` only. **FAIL input:** coloring from `CHART_TOKEN_NAMES.ramp` → red.
-  - [ ] DOM spec: existing meter/legend assertions (`div.h-[44px] > span.pr-figure-sm` = 1; legend dots = segments) still green unchanged; `app-pr-viz-chart` hosts = 3. **FAIL input:** removing the meter → red.
-  - [ ] Full suite + lint green; hex grep → 0.
+  - [x] Builder spec: `donutOption` series data length = segments with count > 0 (zero-count sectors omitted from the pie but kept in the table), colors requested from `STATUS_TOKEN_NAMES` only. **FAIL input:** coloring from `CHART_TOKEN_NAMES.ramp` → red.
+  - [x] DOM spec: existing meter/legend assertions (`div.h-[44px] > span.pr-figure-sm` = 1; legend dots = segments) still green unchanged; `app-pr-viz-chart` hosts = 3. **FAIL input:** removing the meter → red.
+  - [x] Full suite + lint green; hex grep → 0 new hits.
 
 ## 4. Dependency graph
 

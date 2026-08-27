@@ -110,7 +110,7 @@
       W1/W2 results by category and status
     </h2>
 
-    @if (w12Heatmap()?.rows?.length) {
+    @if (w12Heatmap()?.rows?.length || w12HeatmapLoading()) {
       <app-pr-viz-chart
         [options]="w12HeatmapOption()"
         [tableModel]="w12HeatmapTable()"
@@ -156,52 +156,66 @@
     <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
 
     @if (statusTotal() > 0) {
-      <div class="flex h-[44px] overflow-hidden rounded-[8px]">
-        @for (segment of statusSegments(); track segment.key) {
-          @if (segment.count > 0) {
-            <div
-              class="relative flex h-[44px] items-center justify-center overflow-hidden"
-              [style.width.%]="segmentWidth(segment)"
-              [style.background]="segment.bg"
-              [title]="segment.label + ': ' + segment.count">
+      <div class="flex items-center gap-[24px]">
+        <!-- Donut (OVW-R-4/OVW-DD-5) — beside the meter, never replacing or reflowing it. -->
+        <div class="w-[160px] shrink-0">
+          <app-pr-viz-chart
+            [options]="donutOption()"
+            [tableModel]="donutTable()"
+            chartTitle="Reporting status"
+            height="160px"
+            (chartClick)="onDonutClick($event)" />
+        </div>
+
+        <div class="flex min-w-0 flex-1 flex-col gap-[16px]">
+          <div class="flex h-[44px] overflow-hidden rounded-[8px]">
+            @for (segment of statusSegments(); track segment.key) {
+              @if (segment.count > 0) {
+                <div
+                  class="relative flex h-[44px] items-center justify-center overflow-hidden"
+                  [style.width.%]="segmentWidth(segment)"
+                  [style.background]="segment.bg"
+                  [title]="segment.label + ': ' + segment.count">
+                  @if (segment.link) {
+                    <!-- Full-slice hit target: keeps the count span a direct child of this div (the
+                         44px figure) while making the whole slice a real, keyboard-native button. -->
+                    <button
+                      type="button"
+                      class="absolute inset-0 h-full w-full cursor-pointer border-0 bg-transparent p-0 transition-[filter] hover:brightness-95"
+                      [attr.aria-label]="segment.statusName + ': ' + segment.count"
+                      (click)="emitLink(segment.link)"></button>
+                  }
+                  <!-- Reference prints the count only in segments wider than 8% — narrow neighbours
+                       would otherwise overlap their numbers ("1 1" stacked). -->
+                  @if (showsSegmentCount(segment)) {
+                    <span class="pr-figure-sm text-[14px] font-semibold" [style.color]="segment.fg">{{ segment.count }}</span>
+                  }
+                </div>
+              }
+            }
+          </div>
+
+          <div class="flex flex-wrap gap-x-[20px] gap-y-[8px]">
+            @for (segment of statusSegments(); track segment.key) {
               @if (segment.link) {
-                <!-- Full-slice hit target: keeps the count span a direct child of this div (the
-                     44px figure) while making the whole slice a real, keyboard-native button. -->
                 <button
                   type="button"
-                  class="absolute inset-0 h-full w-full cursor-pointer border-0 bg-transparent p-0 transition-[filter] hover:brightness-95"
-                  [attr.aria-label]="segment.statusName + ': ' + segment.count"
-                  (click)="emitLink(segment.link)"></button>
+                  class="flex cursor-pointer items-center gap-[8px] border-0 bg-transparent p-0 transition-colors hover:opacity-80"
+                  (click)="emitLink(segment.link)">
+                  <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
+                  <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
+                  <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ segment.count }}</span>
+                </button>
+              } @else {
+                <span class="flex items-center gap-[8px]">
+                  <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
+                  <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
+                  <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ segment.count }}</span>
+                </span>
               }
-              <!-- Reference prints the count only in segments wider than 8% — narrow neighbours
-                   would otherwise overlap their numbers ("1 1" stacked). -->
-              @if (showsSegmentCount(segment)) {
-                <span class="pr-figure-sm text-[14px] font-semibold" [style.color]="segment.fg">{{ segment.count }}</span>
-              }
-            </div>
-          }
-        }
-      </div>
-
-      <div class="flex flex-wrap gap-x-[20px] gap-y-[8px]">
-        @for (segment of statusSegments(); track segment.key) {
-          @if (segment.link) {
-            <button
-              type="button"
-              class="flex cursor-pointer items-center gap-[8px] border-0 bg-transparent p-0 transition-colors hover:opacity-80"
-              (click)="emitLink(segment.link)">
-              <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
-              <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
-              <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ segment.count }}</span>
-            </button>
-          } @else {
-            <span class="flex items-center gap-[8px]">
-              <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
-              <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
-              <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ segment.count }}</span>
-            </span>
-          }
-        }
+            }
+          </div>
+        </div>
       </div>
     } @else {
       <p class="m-0 text-[14px] text-[var(--pr-text-secondary)]">No results reported for this program yet.</p>

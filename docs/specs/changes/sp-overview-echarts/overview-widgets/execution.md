@@ -76,3 +76,33 @@
 - **Requirements covered:** OVW-R-2 (Cell click BUT Other · AND IT MUST omit all-zero + empty state · A11y pairing AND visual map) · OVW-R-3 (Cell click BUT Not specified · AND subtitle · Many centers top-8 AND sort) · OVW-R-6 partial (recorded gap, forward pointer).
 - **Runtime note:** two spawns died on expired auth before writing anything (tree verified clean both times); third spawn completed. No attempt consumed.
 - **Gate:** continue → **auto-approved (pre-approved mode)**.
+
+## Task `OVW-T-4` — Status donut in the Reporting status card
+
+- **Status:** PASS · **Date:** 2026-08-27 · **Attempts:** 1
+- **Implementer:** `akili-implementer` (sonnet) · effort `medium` · skills `angular-developer` + `ui-ux-pro-max`
+- **Reviewer:** `akili-reviewer` (opus) · lens checklist
+
+### Attempt 1
+- **Files (5, all `program-overview/`):** `charts.ts` (+102: `donutOption`/`donutTable`/`sectorLinkFromClick` + `DONUT_SLOT_TOKEN`, fence exception documented in the header), `charts.spec.ts` (+95), `component.{ts,html,spec.ts}` — +323/−62.
+- **Changes:** donut (`radius ['62%','88%']`, labels/legend off, center title = total) in a `w-[160px]` column beside the meter; meter/legend markup line-for-line identical; sectors colored from `resolveStatusTokens()` keyed by slot (`discontinued`→`notStarted`); click resolves by sector name to `segment.link` → `emitLink`. **Forward pointer from T-3 delivered:** W1/W2 card condition now `@if (rows.length || w12HeatmapLoading())` — the loading skeleton is reachable, with a spec case (loading + empty model → empty-state absent, host `loading()===true`). Hosts assertion 2→3.
+- **Verification (Implementer, full suite):** jest **481/481 suites, 6802 tests** (+12); lint clean; `ng build` OK (pre-existing warnings only); hex grep 0 new hits; `dashboard-lab.*`/package diffs empty.
+- **Reviewer verdict:** `STATUS: PASS` — "Every DoD line of OVW-T-4 and every clause of OVW-R-4 is met: sectors colored from `resolveStatusTokens()` pairs keyed by slot (never the chart ramp), pie config matches design §6.3 exactly, meter/legend assertions untouched, hosts 2→3, and the W1/W2 loading forward pointer owed from T-3 is delivered with a new spec case." Reviewer cross-checked the slot-key set against the parent (all six match; the `?? 'notStarted'` fallback cannot silently fire).
+- **ADVISORY (recorded, not tasked):** the `discontinued`-mapping assertion is tautological under jsdom (`''`==='' ) — strengthen with sentinel token fixtures; the loading case asserts the binding, not the rendered overlay; `statusTokens` computed comment overstates its refresh cadence (same wording as T-3's `heatmapRamp` — correct both together); **pending item at archive:** `chart-tokens.util.ts` fence comments ("NEVER"/"must NOT") now have one approved exception — append "one documented exception: the Overview status donut (OVW-DD-5)".
+- **Requirements covered:** OVW-R-4 (all clauses: THEN via link · AND IT MUST status token pairs/fence exception · BUT NOT replace/reflow) · OVW-R-6 (loading reachability delivered for W1/W2; bilateral skip recorded per design §13; reduced motion wrapper-owned).
+- **Gate:** spec complete → summary below.
+
+---
+
+## Summary
+
+- **All 4 tasks PASS:** T-1 (2 attempts — test-coverage rework), T-2 (1), T-3 (1, + 2 runtime-failed spawns on expired auth, no attempt consumed), T-4 (1). **Budget:** 4 tasks / ~600 LOC / 1–2 review rounds → actual 4 tasks / ~1,320 changed lines (≈500 src + ≈820 spec/test) / 1 rework round total. Tasks and review rounds within budget; LOC above the estimate, driven by test code (the five deliberate assertion rewrites plus ~30 new cases) — production code landed near the ~300 estimate. Recorded, not a tripwire stop: the overage is test evidence the spec itself demanded at clause granularity.
+- **Requirements:** OVW-R-1..R-5 fully covered with behavioral tests; OVW-R-6 delivered for W1/W2 loading + reduced motion (wrapper), bilateral loading skipped per design §13 escape hatch (recorded).
+- **Verification final:** jest 481/481 suites, 6802 tests; lint clean; `ng build` clean; grep singular-origin 0; hex 0 new.
+- **Pending (not automatable):** **OVW-AC-3 manual HITL/T6 on SP02** — visual (heatmaps/donut tokens, tooltips, visual map legibility at 240px, layout 1280/1024px) + 6 click paths (category row, status segment, donut sector, one cell per heatmap, center row) landing on the Results tab with matching chips.
+- **Pending at archive (spec branch):** `../family.md` row #3 → done + family complete (done in this run — spec-scoped exemption); `program-overview/CLAUDE.md` invariant rewrite; `chart-tokens.util.ts` fence-comment exception note; `docs/ux-ui/design.md §8` registration (from sibling #2).
+
+## Constitution Impact: OVW-T-3 / OVW-T-4
+- **Module reshaped:** `program-overview` gained a chart-builder module (`program-overview.charts.ts`) and now hosts `app-pr-viz-chart`; its `CLAUDE.md` invariants ("do not upgrade to a chart", disabled rows, "Coming soon" chips, stale `bilateralRoles` row) are now false — child guide rewrite needed at archive.
+- **Shared surface:** `chart-tokens.util.ts` doc fence needs the OVW-DD-5 exception note (pending item — shared file, default branch).
+- **CodeGraph re-index pending** (new file + reshaped component surfaces).

@@ -1,15 +1,19 @@
 // @akili-spec changes/sp-overview-echarts/overview-widgets
 //
 // Pure builders — no DOM, no signals, no injection. `program-overview.component.ts` supplies the
-// `HeatmapModel` (computed in the parent, `dashboard-lab.component.ts`) and a resolved token ramp;
-// these functions only shape that data into an `EChartsOption` / `VizChartTableModel`, and resolve
-// a `chartClick` event back to the `OverviewLink` stored on the clicked cell.
+// `HeatmapModel` / `StatusSegment[]` (computed in the parent, `dashboard-lab.component.ts`) and a
+// resolved token set; these functions only shape that data into an `EChartsOption` /
+// `VizChartTableModel`, and resolve a `chartClick` event back to the `OverviewLink` stored on the
+// clicked cell/sector.
 //
-// Documented exception to `VCE-DD-3`'s "status colours are not chart colours" fence: NONE here —
-// the heatmaps use `resolveChartTokens().ramp` only, never `resolveStatusTokens()`. The donut in
-// `OVW-T-4` is the widget that takes the fence exception; this file does not.
+// Documented exception to `VCE-DD-3`'s "status colours are not chart colours" fence: `donutOption`
+// below (`OVW-R-4`/`OVW-DD-5`) is the ONE place in this file that colors series data from
+// `resolveStatusTokens()` — the widget IS status-keyed, so its sectors must match the legend dots
+// on the Reporting-status meter beside it. `heatmapOption` above stays on `resolveChartTokens().ramp`
+// only, never `resolveStatusTokens()`.
 import type { EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
-import type { HeatmapModel, OverviewLink } from './program-overview.component';
+import type { ResolvedStatusTokens } from '../../../../../../shared/utils/chart-tokens.util';
+import type { HeatmapModel, OverviewLink, StatusSegment } from './program-overview.component';
 
 /**
  * Builds the `app-pr-viz-chart` `options` for a `HeatmapModel`. `ramp` is the light→dark color
@@ -83,4 +87,88 @@ export function cellLinkFromClick(event: { data?: unknown }, model: HeatmapModel
   if (!point || point.length < 2) return null;
   const [c, r] = point;
   return model.cells.find(cell => cell.r === r && cell.c === c)?.link ?? null;
+}
+
+/**
+ * Maps a `StatusSegment.key` slot to its `ResolvedStatusTokens` property (`OVW-DD-5`).
+ * `discontinued` has no dedicated status token pair, so it reuses `notStarted` — the same
+ * substitution the parent's `OVERVIEW_DISCONTINUED_SLOT` already makes for `bg`/`fg`
+ * (`dashboard-lab.component.ts`), kept consistent here so the sector matches the legend dot.
+ */
+const DONUT_SLOT_TOKEN: Record<string, keyof ResolvedStatusTokens> = {
+  'not-started': 'notStarted',
+  'in-progress': 'inProgress',
+  submitted: 'submitted',
+  'in-qa': 'inQa',
+  approved: 'approved',
+  discontinued: 'notStarted'
+};
+
+/**
+ * Builds the `app-pr-viz-chart` `options` for the Reporting-status donut (`OVW-R-4`). Only
+ * `count > 0` segments become sectors (zero-count segments still appear in `donutTable` below,
+ * per `OVW-T-4` DoD). Sector color is each slot's status `fg` from the caller-resolved
+ * `statusTokens` — the documented `VCE-DD-3` fence exception (see file header) — never
+ * `resolveChartTokens().ramp`. No sector labels, no legend (the card already renders one beside
+ * the donut); the center `title` prints the total.
+ */
+export function donutOption(segments: StatusSegment[], statusTokens: ResolvedStatusTokens): EChartsOption {
+  const total = segments.reduce((sum, segment) => sum + segment.count, 0);
+  const data = segments
+    .filter(segment => segment.count > 0)
+    .map(segment => ({
+      name: segment.label,
+      value: segment.count,
+      itemStyle: { color: statusTokens[DONUT_SLOT_TOKEN[segment.key] ?? 'notStarted'].fg }
+    }));
+
+  return {
+    title: {
+      text: String(total),
+      subtext: 'results',
+      left: 'center',
+      top: 'center',
+      textStyle: { fontSize: 20, fontWeight: 700 },
+      subtextStyle: { fontSize: 12 }
+    },
+    tooltip: { trigger: 'item' },
+    legend: { show: false },
+    series: [
+      {
+        type: 'pie',
+        radius: ['62%', '88%'],
+        avoidLabelOverlap: false,
+        label: { show: false },
+        labelLine: { show: false },
+        data
+      }
+    ]
+  } as EChartsOption;
+}
+
+/**
+ * Visually-hidden `<table>` pairing for the donut — caption + status/count rows. Unlike
+ * `donutOption`'s sector data, this includes EVERY segment (zero-count included), so the
+ * accessible table stays complete even where the visual sector is omitted.
+ */
+export function donutTable(segments: StatusSegment[]): VizChartTableModel {
+  return {
+    caption: 'Reporting status',
+    headers: ['Status', 'Results'],
+    rows: segments.map(segment => [segment.label, segment.count])
+  };
+}
+
+/**
+ * Resolves a donut `chartClick` event back to the `OverviewLink` stored on the clicked sector.
+ * Pie click events carry the sector's `name` (set to `segment.label` by `donutOption` above) at
+ * the top level of the event payload (`CallbackDataParams.name`) — matched back to the segment by
+ * label, never by index (segments with `count === 0` are absent from the pie's `data` array, so
+ * an index-based lookup would misalign). No match, or a zero-count segment's `link: null`
+ * (set by the parent, `OVW-DD-3`), resolves to `null` — swallowed by `emitLink`, never emitted.
+ */
+export function sectorLinkFromClick(event: { name?: string }, segments: StatusSegment[]): OverviewLink | null {
+  const name = event?.name;
+  if (!name) return null;
+  return segments.find(segment => segment.label === name)?.link ?? null;
 }
