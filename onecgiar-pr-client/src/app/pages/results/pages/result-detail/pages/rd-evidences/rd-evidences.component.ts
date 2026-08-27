@@ -128,8 +128,10 @@ export class RdEvidencesComponent implements OnInit {
     evidenceIterator.percentage = 100;
   }
 
-  async loadAllFiles() {
+  /** P2-3220: returns the names of the files whose SharePoint upload failed (empty when all went up). */
+  async loadAllFiles(): Promise<string[]> {
     const { evidences } = this.evidencesBody;
+    const failed: string[] = [];
     let count = 0;
     for (const evidenceIterator of evidences) {
       if (evidenceIterator.file) count++;
@@ -155,16 +157,32 @@ export class RdEvidencesComponent implements OnInit {
         evidenceIterator.sp_file_name = response?.name;
         evidenceIterator.sp_folder_path = response?.parentReference?.path.split('root:').pop();
       } catch (error) {
-        console.error(error);
+        // P2-3220: never fail silently. The section is saved either way (the file also travels in
+        // the multipart body of `POST_evidences`), but an evidence with no `link` and no `sp_*`
+        // metadata is not stored in SharePoint, and the user has to be told rather than left
+        // believing the upload worked.
+        failed.push(evidenceIterator?.file?.name ?? 'file');
+        console.error('[rd-evidences] SharePoint upload failed for', evidenceIterator?.file?.name, error);
       }
     }
+    return failed;
   }
 
   async onSaveSection() {
     this.isSaving = true;
     this.saveButtonSE.showSaveSpinner();
-    await this.loadAllFiles();
+    const failedUploads = await this.loadAllFiles();
     this.saveButtonSE.hideSaveSpinner();
+
+    // P2-3220: tell the user explicitly which files did not reach SharePoint.
+    if (failedUploads.length) {
+      this.api.alertsFe.show({
+        id: 'evidence-upload-failed',
+        title: `${failedUploads.length} file(s) could not be stored: ${failedUploads.join(', ')}`,
+        description: 'The evidence was saved, but those files are not in SharePoint. Please re-attach them and save again.',
+        status: 'error'
+      });
+    }
 
     this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe({
       next: () => this.getSectionInformation(),
