@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { FieldsManagerService } from '../../shared/services/fields-manager.service';
-import { debounceTime, distinctUntilChanged, Subject, switchMap, EMPTY } from 'rxjs';
+import { debounceTime, distinctUntilChanged, Subject, switchMap, EMPTY, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 import { User, UserSearchResponse } from '../../pages/results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 import { UserSearchService } from '../../pages/results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
@@ -62,7 +63,7 @@ export class LeadContactPersonFieldComponent implements OnChanges {
           if (trimmedQuery.length >= 4) {
             this.isSearching = true;
             this.showResults = false;
-            return this.resultsApiService.GET_adUsersSearch(trimmedQuery);
+            return this.resultsApiService.GET_adUsersSearch(trimmedQuery).pipe(catchError(() => of({ response: [] })));
           } else {
             this.searchResults = [];
             this.showResults = false;
