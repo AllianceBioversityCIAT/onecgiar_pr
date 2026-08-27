@@ -169,36 +169,82 @@ describe('InnovationPackageListComponent', () => {
   });
 
   it('should return the joined text of initsSelectedJoinText', () => {
-    const myInitiativesList = [{ selected: true }, { selected: false }];
+    const myInitiativesListIPSRByPortfolio = [{ selected: true }, { selected: false }];
     const options = [{ selected: true }, { selected: false }];
-    const expectedJoinText = JSON.stringify([...myInitiativesList, ...options]);
-    component.api.dataControlSE.myInitiativesList = myInitiativesList;
+    const expectedJoinText = JSON.stringify([...myInitiativesListIPSRByPortfolio, ...options]);
+    component.api.dataControlSE.myInitiativesListIPSRByPortfolio = myInitiativesListIPSRByPortfolio;
     component.ipsrListFilterSE.filters = { general: [{}, { options }] };
 
     expect(component.initsSelectedJoinText).toEqual(expectedJoinText);
   });
 
   it('should return true for everyDeselected when all items are deselected', () => {
-    component.api.dataControlSE.myInitiativesList = [{ selected: false }, { selected: false }];
+    component.api.dataControlSE.myInitiativesListIPSRByPortfolio = [{ selected: false }, { selected: false }];
 
     expect(component.everyDeselected).toBe(true);
   });
 
   it('should set selected property to false for all items on deselectInits', () => {
-    const myInitiativesList = [{ selected: true }, { selected: true }];
+    const myInitiativesListIPSRByPortfolio = [{ selected: true }, { selected: true }];
 
-    component.api.dataControlSE.myInitiativesList = myInitiativesList;
+    component.api.dataControlSE.myInitiativesListIPSRByPortfolio = myInitiativesListIPSRByPortfolio;
     component.deselectInits();
 
-    expect(component.api.dataControlSE.myInitiativesList).toEqual([{ selected: false }, { selected: false }]);
+    expect(component.api.dataControlSE.myInitiativesListIPSRByPortfolio).toEqual([{ selected: false }, { selected: false }]);
   });
 
   it('should set selected property to true for all items on ngOnDestroy', () => {
-    const myInitiativesList = [{ selected: false }, { selected: false }];
+    const myInitiativesListIPSRByPortfolio = [{ selected: false }, { selected: false }];
 
-    component.api.dataControlSE.myInitiativesList = myInitiativesList;
+    component.api.dataControlSE.myInitiativesListIPSRByPortfolio = myInitiativesListIPSRByPortfolio;
     component.ngOnDestroy();
 
-    expect(component.api.dataControlSE.myInitiativesList).toEqual([{ selected: true }, { selected: true }]);
+    expect(component.api.dataControlSE.myInitiativesListIPSRByPortfolio).toEqual([{ selected: true }, { selected: true }]);
+  });
+
+  describe('scoped-list regression (IPF-T-2)', () => {
+    // The flat list has an extra INI-* entry the scoped (Science-Program) list does not carry.
+    const flatOnlyEntry = { selected: true, code: 'INI-flat-only' };
+    let flatMyInitiativesList: any[];
+    let scopedMyInitiativesListIPSRByPortfolio: any[];
+
+    beforeEach(() => {
+      flatMyInitiativesList = [flatOnlyEntry, { selected: true, code: 'SP-shared' }];
+      scopedMyInitiativesListIPSRByPortfolio = [{ selected: true, code: 'SP-shared' }];
+
+      component.api.dataControlSE.myInitiativesList = flatMyInitiativesList;
+      component.api.dataControlSE.myInitiativesListIPSRByPortfolio = scopedMyInitiativesListIPSRByPortfolio;
+    });
+
+    it('initsSelectedJoinText does not include the flat-only entry', () => {
+      component.ipsrListFilterSE.filters = { general: [{}, { options: [] }] };
+
+      expect(component.initsSelectedJoinText).not.toContain('INI-flat-only');
+      expect(component.initsSelectedJoinText).toEqual(JSON.stringify([...scopedMyInitiativesListIPSRByPortfolio, ...[]]));
+    });
+
+    it('everyDeselected reads only the scoped list', () => {
+      // Scoped list fully deselected while the flat list still has a selected entry.
+      scopedMyInitiativesListIPSRByPortfolio.forEach(item => (item.selected = false));
+
+      expect(component.everyDeselected).toBe(true);
+      expect(flatMyInitiativesList[0].selected).toBe(true);
+    });
+
+    it('deselectInits() only mutates the scoped list, leaving the flat list untouched', () => {
+      component.deselectInits();
+
+      expect(scopedMyInitiativesListIPSRByPortfolio).toEqual([{ selected: false, code: 'SP-shared' }]);
+      expect(flatMyInitiativesList).toEqual([flatOnlyEntry, { selected: true, code: 'SP-shared' }]);
+    });
+
+    it('ngOnDestroy() only mutates the scoped list, leaving the flat list untouched', () => {
+      scopedMyInitiativesListIPSRByPortfolio.forEach(item => (item.selected = false));
+
+      component.ngOnDestroy();
+
+      expect(scopedMyInitiativesListIPSRByPortfolio).toEqual([{ selected: true, code: 'SP-shared' }]);
+      expect(flatMyInitiativesList).toEqual([flatOnlyEntry, { selected: true, code: 'SP-shared' }]);
+    });
   });
 });
