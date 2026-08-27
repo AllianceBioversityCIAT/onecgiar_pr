@@ -135,7 +135,7 @@ describe('ProgrammeResultsService', () => {
 
       expect(GET_AllResultsWithUseRole).not.toHaveBeenCalled();
       expect(service.rows()).toEqual([]);
-      expect(service.error()).toBe('Programme "SP99" was not found.');
+      expect(service.error()).toBe('Program "SP99" was not found.');
       expect(service.loading()).toBe(false);
     });
 
@@ -143,7 +143,7 @@ describe('ProgrammeResultsService', () => {
       service.load('   ');
 
       expect(GET_ScienceProgramsProgress).not.toHaveBeenCalled();
-      expect(service.error()).toBe('No programme code was provided.');
+      expect(service.error()).toBe('No program code was provided.');
     });
 
     it('errors when there is no logged-in user id', () => {
@@ -165,7 +165,7 @@ describe('ProgrammeResultsService', () => {
 
       expect(service.rows()).toEqual([]);
       expect(service.loading()).toBe(false);
-      expect(service.error()).toBe('The results of this programme could not be loaded.');
+      expect(service.error()).toBe('The results of this program could not be loaded.');
     });
 
     it('tolerates a response with no items or meta', () => {

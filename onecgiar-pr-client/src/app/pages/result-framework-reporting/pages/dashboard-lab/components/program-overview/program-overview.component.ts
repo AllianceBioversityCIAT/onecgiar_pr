@@ -75,8 +75,8 @@ export class ProgramOverviewComponent {
     if (explicit) return explicit;
     const name = this.programName()?.trim() || 'This program';
     return (
-      `${name} modernizes CGIAR and national breeding programmes so that farmers get climate-resilient, ` +
-      `market-preferred varieties faster. The programme connects market intelligence, breeding pipelines, ` +
+      `${name} modernizes CGIAR and national breeding programs so that farmers get climate-resilient, ` +
+      `market-preferred varieties faster. The program connects market intelligence, breeding pipelines, ` +
       `trait discovery, genetic innovation and seed systems into one delivery chain, and works with national ` +
       `agricultural research systems and private seed partners across South Asia, sub-Saharan Africa and ` +
       `Latin America. Reporting covers products delivered to partners, the outcomes those products enable, ` +

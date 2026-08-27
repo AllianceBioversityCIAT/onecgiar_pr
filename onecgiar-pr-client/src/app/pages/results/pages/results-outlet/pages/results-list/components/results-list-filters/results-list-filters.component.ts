@@ -213,7 +213,7 @@ const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   s7_kp_handle: 'Knowledge Product — CGSpace handle URL',
   s7_kp_knowledge_product_type: 'Knowledge Product — type',
   s7_kp_authors: 'Knowledge Product — authors',
-  s7_kp_licence: 'Knowledge Product — licence',
+  s7_kp_licence: 'Knowledge Product — license',
   s7_kp_agrovocs: 'Knowledge Product — Agrovoc keywords',
   s7_kp_keywords: 'Knowledge Product — keywords',
   s7_kp_comodity: 'Knowledge Product — commodity',

@@ -395,7 +395,7 @@ describe('ProgrammeResultsComponent', () => {
     expect(wrapper.className).toContain('cursor-not-allowed');
     expect(wrapper.getAttribute('title')).toContain('not available yet');
     // Enabling it later is one flag: the grouped options are already built.
-    expect(component.sectionOptions().map(group => group.label)).toEqual(['Areas of work', 'Programme-level']);
+    expect(component.sectionOptions().map(group => group.label)).toEqual(['Areas of work', 'Program-level']);
     expect(component.sectionOptions()[1].items.map(item => item.value)).toEqual(['intermediate-outcomes', '2030-outcomes']);
     // The tag sits beside the trigger, in the filter row, where the design puts the control.
     expect((wrapper.parentElement as HTMLElement).textContent).toContain('Coming soon');
@@ -654,7 +654,7 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.hasRows()).toBe(false);
     expect(component.isNothingYet()).toBe(true);
     expect(component.isFilteredEmpty()).toBe(false);
-    expect(text()).toContain('No results reported in this programme yet.');
+    expect(text()).toContain('No results reported in this program yet.');
     expect(text()).toContain('0 results');
 
     const goToReporting = fixture.debugElement

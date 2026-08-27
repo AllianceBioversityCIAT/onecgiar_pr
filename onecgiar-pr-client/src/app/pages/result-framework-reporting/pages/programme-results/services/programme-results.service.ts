@@ -192,7 +192,7 @@ export class ProgrammeResultsService {
 
     if (!code) {
       this.reset();
-      this.error.set('No programme code was provided.');
+      this.error.set('No program code was provided.');
       return;
     }
 
@@ -230,7 +230,7 @@ export class ProgrammeResultsService {
             this.totalReported.set(0);
             this.isPartial.set(false);
             this.loading.set(false);
-            if (!this.error()) this.error.set(`Programme "${code}" was not found.`);
+            if (!this.error()) this.error.set(`Program "${code}" was not found.`);
             return;
           }
 
@@ -248,7 +248,7 @@ export class ProgrammeResultsService {
           this.totalReported.set(0);
           this.isPartial.set(false);
           this.loading.set(false);
-          this.error.set('The results of this programme could not be loaded.');
+          this.error.set('The results of this program could not be loaded.');
         }
       });
   }
@@ -277,7 +277,7 @@ export class ProgrammeResultsService {
         const match = programmes.find(programme => text(programme?.initiativeCode).toUpperCase() === wanted);
         const id = num(match?.initiativeId);
 
-        if (id === null) this.error.set(`Programme "${code}" was not found.`);
+        if (id === null) this.error.set(`Program "${code}" was not found.`);
         return of(id);
       })
     );

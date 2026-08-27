@@ -183,7 +183,7 @@ export class FieldsManagerService {
             <li>Try to develop a short name that facilitates clear communication about the innovation.</li>
             <li>Avoid abbreviations or (technical) jargon.</li>
             <li>If not essential, avoid making reference to specific countries or regions (this is captured through geotagging).</li>
-            <li>Avoid the use of CGIAR centre,Program or organization names in the short title.</li>
+            <li>Avoid the use of CGIAR center, Program or organization names in the short title.</li>
             <li>Varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>
             <li>The specific number of new or improved lines/ varieties can be specified elsewhere.</li>
             </ul>`

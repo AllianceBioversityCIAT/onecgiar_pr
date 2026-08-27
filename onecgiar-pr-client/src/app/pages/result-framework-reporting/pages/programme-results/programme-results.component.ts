@@ -579,7 +579,7 @@ export class ProgrammeResultsComponent {
     return [
       { label: 'Areas of work', items: codes.map(code => ({ value: code, label: code })) },
       {
-        label: 'Programme-level',
+        label: 'Program-level',
         items: [
           { value: INTERMEDIATE_OUTCOMES_CODE, label: 'Intermediate outcomes' },
           { value: OUTCOMES_2030_CODE, label: '2030 outcomes' }
@@ -889,7 +889,7 @@ export class ProgrammeResultsComponent {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${this.programmeCode() || 'programme'}-results.csv`;
+    link.download = `${this.programmeCode() || 'program'}-results.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }

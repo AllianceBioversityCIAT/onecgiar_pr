@@ -53,7 +53,7 @@ describe('ReportingProgramBandComponent', () => {
 
       const heading = root().querySelector('h2') as HTMLElement;
       expect(heading).toBeTruthy();
-      expect(heading.textContent?.trim()).toBe("Report results linked to the programme's 2026 ToC");
+      expect(heading.textContent?.trim()).toBe("Report results linked to the program's 2026 ToC");
     });
 
     it('follows the cycle instead of hardcoding a year', async () => {
@@ -61,14 +61,14 @@ describe('ReportingProgramBandComponent', () => {
       fixture.componentRef.setInput('cycleYear', '2027');
       fixture.detectChanges();
 
-      expect(root().querySelector('h2')?.textContent).toContain("programme's 2027 ToC");
+      expect(root().querySelector('h2')?.textContent).toContain("program's 2027 ToC");
       expect(text()).not.toContain('2026 ToC');
     });
 
     it('drops the year rather than leaving a gap when no cycle is loaded', async () => {
       await build({ showToolbar: true, cycleYear: null });
 
-      expect(component.reportingHeading()).toBe("Report results linked to the programme's ToC");
+      expect(component.reportingHeading()).toBe("Report results linked to the program's ToC");
     });
 
     it('is absent on Overview, where there is no toolbar', async () => {
