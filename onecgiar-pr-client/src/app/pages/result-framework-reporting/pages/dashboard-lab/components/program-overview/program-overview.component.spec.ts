@@ -1,14 +1,57 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import type { ECElementEvent } from 'echarts/core';
 import {
   ProgramOverviewComponent,
   StatusSegment,
   AowProgressRow,
   CategoryBar,
   OverviewCenterBar,
-  OverviewLink
+  OverviewLink,
+  HeatmapModel
 } from './program-overview.component';
+
+// `PrVizChartComponent` (imported by `ProgramOverviewComponent`) pulls in real echarts, which
+// jsdom cannot render. Mocked exactly as `pr-viz-chart.component.spec.ts` does — this suite tests
+// `program-overview`'s wiring (option/tableModel binding, click → link), not echarts itself.
+const mockChartInstance = {
+  setOption: jest.fn(),
+  resize: jest.fn(),
+  clear: jest.fn(),
+  dispose: jest.fn(),
+  isDisposed: jest.fn(() => false),
+  on: jest.fn()
+};
+
+jest.mock('echarts/core', () => ({
+  use: jest.fn(),
+  init: jest.fn(() => mockChartInstance)
+}));
+
+jest.mock('echarts/charts', () => ({
+  BarChart: class BarChart {},
+  PieChart: class PieChart {},
+  HeatmapChart: class HeatmapChart {}
+}));
+
+jest.mock('echarts/components', () => ({
+  TitleComponent: class TitleComponent {},
+  TooltipComponent: class TooltipComponent {},
+  GridComponent: class GridComponent {},
+  DatasetComponent: class DatasetComponent {},
+  LegendComponent: class LegendComponent {},
+  VisualMapComponent: class VisualMapComponent {}
+}));
+
+jest.mock('echarts/renderers', () => ({
+  SVGRenderer: class SVGRenderer {}
+}));
+
+jest.mock('echarts/features', () => ({
+  UniversalTransition: class UniversalTransition {}
+}));
 
 describe('ProgramOverviewComponent', () => {
   let fixture: ComponentFixture<ProgramOverviewComponent>;
@@ -52,6 +95,35 @@ describe('ProgramOverviewComponent', () => {
     { name: 'Not specified', count: 3, link: null }
   ];
 
+  /** W1/W2 category × status matrix (`OVW-R-2`) — one row, `Other` non-navigable. */
+  const w12Heatmap: HeatmapModel = {
+    rows: ['Knowledge product'],
+    cols: ['Editing', 'Quality Assessed', 'Submitted', 'Other'],
+    cells: [
+      { r: 0, c: 0, value: 3, link: { category: 'Knowledge product', status: 'Editing' } },
+      { r: 0, c: 1, value: 1, link: { category: 'Knowledge product', status: 'Quality Assessed' } },
+      { r: 0, c: 2, value: 2, link: { category: 'Knowledge product', status: 'Submitted' } },
+      { r: 0, c: 3, value: 4, link: null }
+    ],
+    caption: 'W1/W2 results by category and status'
+  };
+
+  /** W3/Bilateral center × category matrix (`OVW-R-3`). */
+  const bilateralHeatmap: HeatmapModel = {
+    rows: ['IITA'],
+    cols: ['Capacity sharing for development'],
+    cells: [
+      {
+        r: 0,
+        c: 0,
+        value: 5,
+        link: { origin: 'W3/Bilaterals', center: 'IITA', category: 'Capacity sharing for development' }
+      }
+    ],
+    caption: 'W3/Bilateral results by center and category',
+    subtitle: 'Bilateral results in review (Submitted · In QA · Approved)'
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [ProgramOverviewComponent] }).compileComponents();
     fixture = TestBed.createComponent(ProgramOverviewComponent);
@@ -62,14 +134,17 @@ describe('ProgramOverviewComponent', () => {
     fixture.componentRef.setInput('categories', categories);
     fixture.componentRef.setInput('bilateralCategories', bilateralCategories);
     fixture.componentRef.setInput('bilateralCenters', centers);
+    fixture.componentRef.setInput('w12Heatmap', w12Heatmap);
+    fixture.componentRef.setInput('bilateralHeatmap', bilateralHeatmap);
     fixture.detectChanges();
   });
 
   /**
    * Guards the card ORDER, which is the whole point of P2-3303 ("prominent … under about this
    * program"). Any reordering has to be a deliberate edit here, never an accident.
+   * Extended by `OVW-T-3` (design §6.2) with the two new heatmap cards (4 and 5).
    */
-  it('renders the six Overview cards in the approved design order', () => {
+  it('renders the eight Overview cards in the approved design order', () => {
     const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
 
     expect(headings).toEqual([
@@ -77,6 +152,8 @@ describe('ProgramOverviewComponent', () => {
       // P2-3481: the titles name the funding type, so a user can tell the two blocks apart.
       'W1/W2 results by indicator category',
       'W3/Bilateral results by indicator category',
+      'W1/W2 results by category and status',
+      'W3/Bilateral results by center and category',
       'Reporting status',
       'Centers with reported W3/bilateral results',
       'Progress by area of work'
@@ -90,8 +167,27 @@ describe('ProgramOverviewComponent', () => {
     expect(text).not.toContain('Needs attention');
     expect(text).not.toContain('Impact so far');
     expect(text).not.toContain('Countries reached');
-    // T-3 replaces the DOM bars with app-pr-viz-chart hosts; until then there is still no SVG.
-    expect(fixture.nativeElement.querySelectorAll('svg').length).toBe(0);
+  });
+
+  /**
+   * Rewritten from "there is still no SVG" (`OVW-T-3`, tasks.md DoD): the two new heatmap cards
+   * each mount a real `app-pr-viz-chart` host, always paired with a non-null `tableModel` (the
+   * wrapper clears the chart otherwise — `OVW-R-2`/`OVW-R-3` a11y pairing).
+   * T-4 adds the Reporting-status donut and bumps this count to 3 — that is a deliberate edit
+   * here, not a silent one.
+   */
+  it('renders 2 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
+    const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
+    expect(hosts.length).toBe(2);
+    hosts.forEach(host => {
+      expect(host.componentInstance.tableModel()).toBeTruthy();
+      expect(host.componentInstance.options()).toBeTruthy();
+    });
+  });
+
+  it('shows the bilateral heatmap subtitle disclosing the review-status filter (OVW-R-3)', () => {
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Bilateral results in review (Submitted · In QA · Approved)');
   });
 
   it('uses the programme name in the fallback description', () => {
@@ -305,6 +401,47 @@ describe('ProgramOverviewComponent', () => {
       expect(source).not.toMatch(/inject\s*\(\s*Router\s*\)/);
       expect(source).not.toMatch(/\.navigate\(/);
       expect(component).toBeTruthy();
+    });
+  });
+
+  describe('heatmap cell navigability (OVW-R-2 / OVW-R-3 / OVW-DD-3)', () => {
+    it('emits the stored link when a navigable W1/W2 heatmap cell is activated', () => {
+      const emitted: OverviewLink[] = [];
+      const sub = component.openResults.subscribe(link => emitted.push(link));
+
+      component.onW12HeatmapClick({ data: [0, 0, 3] } as unknown as ECElementEvent);
+
+      expect(emitted).toEqual([{ category: 'Knowledge product', status: 'Editing' }]);
+      sub.unsubscribe();
+    });
+
+    /** FAIL input: mapping the Other column to `{status:'Other'}` instead of `null` turns this red. */
+    it('emits nothing when the Other-column W1/W2 heatmap cell (link: null) is activated', () => {
+      const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+      component.onW12HeatmapClick({ data: [3, 0, 4] } as unknown as ECElementEvent);
+
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    it('emits the stored link (origin+center+category) when a navigable bilateral heatmap cell is activated', () => {
+      const emitted: OverviewLink[] = [];
+      const sub = component.openResults.subscribe(link => emitted.push(link));
+
+      component.onBilateralHeatmapClick({ data: [0, 0, 5] } as unknown as ECElementEvent);
+
+      expect(emitted).toEqual([{ origin: 'W3/Bilaterals', center: 'IITA', category: 'Capacity sharing for development' }]);
+      sub.unsubscribe();
+    });
+
+    it('emits nothing when no heatmap model is bound (null input)', () => {
+      fixture.componentRef.setInput('w12Heatmap', null);
+      fixture.detectChanges();
+      const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+      component.onW12HeatmapClick({ data: [0, 0, 3] } as unknown as ECElementEvent);
+
+      expect(emitSpy).not.toHaveBeenCalled();
     });
   });
 

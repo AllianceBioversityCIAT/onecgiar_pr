@@ -14,6 +14,45 @@ import { SPProgress, Status } from '../../../../shared/interfaces/SP-progress.in
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
 import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 
+// `DashboardLabComponent` imports `ProgramOverviewComponent`, which (since `OVW-T-3`) imports the
+// real `PrVizChartComponent` → real `echarts/core` — an ESM package Jest cannot parse without a
+// transform. Mocked exactly as `pr-viz-chart.component.spec.ts` does; nothing below ever renders
+// the template (it's overridden to `''`), so these mocks only need to satisfy module resolution.
+jest.mock('echarts/core', () => ({
+  use: jest.fn(),
+  init: jest.fn(() => ({
+    setOption: jest.fn(),
+    resize: jest.fn(),
+    clear: jest.fn(),
+    dispose: jest.fn(),
+    isDisposed: jest.fn(() => false),
+    on: jest.fn()
+  }))
+}));
+
+jest.mock('echarts/charts', () => ({
+  BarChart: class BarChart {},
+  PieChart: class PieChart {},
+  HeatmapChart: class HeatmapChart {}
+}));
+
+jest.mock('echarts/components', () => ({
+  TitleComponent: class TitleComponent {},
+  TooltipComponent: class TooltipComponent {},
+  GridComponent: class GridComponent {},
+  DatasetComponent: class DatasetComponent {},
+  LegendComponent: class LegendComponent {},
+  VisualMapComponent: class VisualMapComponent {}
+}));
+
+jest.mock('echarts/renderers', () => ({
+  SVGRenderer: class SVGRenderer {}
+}));
+
+jest.mock('echarts/features', () => ({
+  UniversalTransition: class UniversalTransition {}
+}));
+
 /**
  * FIRST spec file for `DashboardLabComponent` (~2.2k LOC host component — per its own CLAUDE.md,
  * "trátalo como host, no como pantalla"). A full spec for the whole component is explicitly out of
@@ -341,5 +380,175 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'results'], {
       queryParams: { category: 'KP' }
     });
+  });
+});
+
+/**
+ * `OVW-T-3` — the two heatmap matrix computeds (`overviewW12Heatmap`, `overviewBilateralHeatmap`).
+ * Same established pattern as `OVW-T-1` above: template overridden to '', no `detectChanges()`,
+ * computeds called directly.
+ */
+describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => {
+  const BASE_PROGRAM: SPProgress = {
+    initiativeId: 2,
+    initiativeCode: 'SP02',
+    initiativeName: 'Science Program 02',
+    initiativeShortName: 'SP02',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P25',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: []
+  };
+
+  async function createComponent() {
+    await TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: signal([]),
+            otherSPsList: signal([BASE_PROGRAM]),
+            otherProjectsList: signal([])
+          }
+        },
+        { provide: ApiService, useValue: {} },
+        { provide: DataControlService, useValue: { focusMode: signal(false), slimNav: signal(false) } },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+        { provide: ActivatedRoute, useValue: { data: of({}), snapshot: { data: {} } } },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined } },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    })
+      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(DashboardLabComponent);
+    const component = fixture.componentInstance;
+    component.selectedId.set(BASE_PROGRAM.initiativeId);
+    return component;
+  }
+
+  it('W1/W2 heatmap: keeps the one row with a nonzero cell, maps cells to [editing,qualityAssessed,submitted,others], and makes the Other cell non-navigable', async () => {
+    const component = await createComponent();
+    component.summariesByCode.set(
+      new Map([
+        [
+          'SP02',
+          [
+            {
+              resultTypeId: 6,
+              resultTypeName: 'Knowledge product',
+              editing: 1,
+              qualityAssessed: 2,
+              submitted: 0,
+              others: 3,
+              totalResults: 6
+            },
+            {
+              resultTypeId: 7,
+              resultTypeName: 'Innovation development',
+              editing: 0,
+              qualityAssessed: 0,
+              submitted: 0,
+              others: 0,
+              totalResults: 0
+            }
+          ]
+        ]
+      ])
+    );
+
+    const heatmap = component.overviewW12Heatmap();
+
+    // Only 'Knowledge product' survives — the all-zero 'Innovation development' row is dropped.
+    expect(heatmap.rows).toEqual(['Knowledge product']);
+    expect(heatmap.cols).toEqual(['Editing', 'Quality Assessed', 'Submitted', 'Other']);
+    expect(heatmap.cells.map(c => c.value)).toEqual([1, 2, 0, 3]);
+
+    expect(heatmap.cells.find(c => c.c === 0)?.link).toEqual({ category: 'Knowledge product', status: 'Editing' });
+    expect(heatmap.cells.find(c => c.c === 1)?.link).toEqual({ category: 'Knowledge product', status: 'Quality Assessed' });
+    expect(heatmap.cells.find(c => c.c === 2)?.link).toEqual({ category: 'Knowledge product', status: 'Submitted' });
+    // FAIL input: mapping 'Other' to {status:'Other'} instead of null turns this red.
+    expect(heatmap.cells.find(c => c.c === 3)?.link).toBeNull();
+  });
+
+  it('W1/W2 heatmap: returns an empty-rows model (not null) when nothing survives the all-zero filter', async () => {
+    const component = await createComponent();
+    component.summariesByCode.set(
+      new Map([['SP02', [{ resultTypeId: 7, resultTypeName: 'Innovation development', editing: 0, qualityAssessed: 0, submitted: 0, others: 0, totalResults: 0 }]]])
+    );
+
+    const heatmap = component.overviewW12Heatmap();
+
+    expect(heatmap.rows).toEqual([]);
+    expect(heatmap.cells).toEqual([]);
+  });
+
+  it('bilateral heatmap: caps at the top 8 of 10 centers (sorted total desc, then name), sets shownOf, and keeps Not specified non-navigable', async () => {
+    const component = await createComponent();
+    // 10 groups by total (desc): C01 20 · C02 18 · Not specified 16 · C03 14 · C04 12 · C05 10 ·
+    // C06 8 · C07 6 — top 8 — then C08 4 · C09 2 fall outside the cap.
+    const groupCounts: [string, number][] = [
+      ['C01', 20],
+      ['C02', 18],
+      ['', 16], // → 'Not specified'
+      ['C03', 14],
+      ['C04', 12],
+      ['C05', 10],
+      ['C06', 8],
+      ['C07', 6],
+      ['C08', 4],
+      ['C09', 2]
+    ];
+    const rows = groupCounts.flatMap(([center, count]) =>
+      Array.from({ length: count }, () => ({
+        lead_center: center,
+        indicator_category: 'Knowledge product',
+        initiative_role_id: '1'
+      }))
+    );
+    (component as unknown as { bilateralRows: { set: (v: ResultToReview[]) => void } }).bilateralRows.set(
+      rows as unknown as ResultToReview[]
+    );
+
+    const heatmap = component.overviewBilateralHeatmap();
+
+    expect(heatmap.rows.length).toBe(8);
+    expect(heatmap.shownOf).toEqual({ shown: 8, total: 10 });
+    expect(heatmap.rows[0]).toBe('C01');
+    expect(heatmap.rows).toContain('Not specified');
+    expect(heatmap.rows).not.toContain('C08');
+    expect(heatmap.rows).not.toContain('C09');
+
+    const notSpecifiedRow = heatmap.rows.indexOf('Not specified');
+    const notSpecifiedCells = heatmap.cells.filter(c => c.r === notSpecifiedRow);
+    expect(notSpecifiedCells.every(c => c.link === null)).toBe(true);
+
+    const c01Row = heatmap.rows.indexOf('C01');
+    const c01Cell = heatmap.cells.find(c => c.r === c01Row && c.c === heatmap.cols.indexOf('Knowledge product'));
+    expect(c01Cell?.link).toEqual({ origin: 'W3/Bilaterals', center: 'C01', category: 'Knowledge product' });
+  });
+
+  it('bilateral heatmap: omits shownOf and keeps every row when there are 8 or fewer centers', async () => {
+    const component = await createComponent();
+    const rows = [
+      { lead_center: 'C01', indicator_category: 'Knowledge product', initiative_role_id: '1' },
+      { lead_center: 'C02', indicator_category: 'Innovation development', initiative_role_id: '1' }
+    ];
+    (component as unknown as { bilateralRows: { set: (v: ResultToReview[]) => void } }).bilateralRows.set(
+      rows as unknown as ResultToReview[]
+    );
+
+    const heatmap = component.overviewBilateralHeatmap();
+
+    expect(heatmap.rows.length).toBe(2);
+    expect(heatmap.shownOf).toBeUndefined();
   });
 });

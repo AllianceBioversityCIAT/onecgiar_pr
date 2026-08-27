@@ -35,7 +35,8 @@ import {
   AowProgressRow as OverviewAowProgressRow,
   CategoryBar as OverviewCategoryBar,
   OverviewCenterBar,
-  OverviewLink
+  OverviewLink,
+  HeatmapModel
 } from './components/program-overview/program-overview.component';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
 import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
@@ -166,12 +167,19 @@ interface AowProgressRow {
   total: number;
 }
 
-/** One indicator category (result type) with its reporting counts. */
+/**
+ * One indicator category (result type) with its reporting counts. `qualityAssessed`, `others` and
+ * `totalResults` were already on the wire but unused; widened for the `OVW-T-3` heatmap (`others`
+ * is the undecomposable statuses-4–8 bucket — requirements.md §2 discovery table).
+ */
 interface IndicatorCategory {
   resultTypeId: number;
   resultTypeName: string;
   editing: number;
   submitted: number;
+  qualityAssessed: number;
+  others: number;
+  totalResults: number;
 }
 
 /**
@@ -1034,6 +1042,99 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return [...byName.entries()]
       .map(([name, count]) => ({ name, count, link: { origin: BILATERAL_ORIGIN, category: name } }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  });
+
+  /** Columns of the W1/W2 heatmap (`OVW-R-2`) — `others` (statuses 4–8, undecomposable) → 'Other'. */
+  private static readonly W12_HEATMAP_COLS = ['Editing', 'Quality Assessed', 'Submitted', 'Other'] as const;
+
+  /**
+   * W1/W2 category × status heatmap (`OVW-R-2`, design §2.2 item 2). Rows are the SAME summaries
+   * and order as `overviewCategories` (outputs then outcomes, `Innovation Use(IPSR)` already
+   * excluded by `groupedSummaries`) — but unlike that bar, every status column is kept (including
+   * `qualityAssessed`, dropped from the bar on purpose — OQ-1). Rows whose four cells are all zero
+   * are omitted; the `Other` column (statuses 4–8) has no single filter value, so its cells carry
+   * `link: null` (`OVW-DD-3`).
+   */
+  readonly overviewW12Heatmap = computed<HeatmapModel>(() => {
+    const { outputs, outcomes } = this.groupedSummaries();
+    const cols = [...DashboardLabComponent.W12_HEATMAP_COLS];
+    const rows: string[] = [];
+    const cells: HeatmapModel['cells'] = [];
+
+    for (const item of [...outputs, ...outcomes]) {
+      const values = [item.editing || 0, item.qualityAssessed || 0, item.submitted || 0, item.others || 0];
+      if (!values.some(value => value > 0)) continue;
+
+      const r = rows.length;
+      rows.push(item.resultTypeName);
+      values.forEach((value, c) => {
+        cells.push({
+          r,
+          c,
+          value,
+          // 'Other' (c === 3) aggregates statuses 4–8 and cannot be expressed as one `status`.
+          link: c === 3 ? null : { category: item.resultTypeName, status: cols[c] }
+        });
+      });
+    }
+
+    return { rows, cols, cells, caption: 'W1/W2 results by category and status' };
+  });
+
+  /**
+   * W3/Bilateral center × category heatmap (`OVW-R-3`, design §2.2 item 2 / `OVW-DD-6`). Rows are
+   * `lead_center` over ALL bilateral rows — the same population as `overviewBilateralCenters`, NOT
+   * the primary-only set `overviewBilateralCategories` uses — so row totals reconcile with the
+   * center bars. Capped at the top 8 centers by total (desc, then name); `shownOf` is only set
+   * when more than 8 exist. `Not specified` rows are non-navigable (`OVW-DD-3`).
+   */
+  readonly overviewBilateralHeatmap = computed<HeatmapModel>(() => {
+    const caption = 'W3/Bilateral results by center and category';
+    const subtitle = 'Bilateral results in review (Submitted · In QA · Approved)';
+    const rows = this.bilateralRows();
+    if (!rows.length) return { rows: [], cols: [], cells: [], caption, subtitle };
+
+    const cols = [...new Set(rows.map(r => r.indicator_category?.trim()).filter((c): c is string => !!c))].sort((a, b) =>
+      a.localeCompare(b)
+    );
+
+    const byCenter = new Map<string, Map<string, number>>();
+    for (const row of rows) {
+      const category = row.indicator_category?.trim();
+      if (!category) continue;
+      const center = row.lead_center?.trim() || 'Not specified';
+      if (!byCenter.has(center)) byCenter.set(center, new Map());
+      const counts = byCenter.get(center)!;
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+
+    const centerTotals = [...byCenter.entries()]
+      .map(([name, counts]) => ({ name, counts, total: [...counts.values()].reduce((sum, v) => sum + v, 0) }))
+      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+    const total = centerTotals.length;
+    const shown = centerTotals.slice(0, 8);
+
+    const cells: HeatmapModel['cells'] = [];
+    shown.forEach((center, r) => {
+      cols.forEach((category, c) => {
+        cells.push({
+          r,
+          c,
+          value: center.counts.get(category) ?? 0,
+          link: center.name === 'Not specified' ? null : { origin: BILATERAL_ORIGIN, center: center.name, category }
+        });
+      });
+    });
+
+    return {
+      rows: shown.map(c => c.name),
+      cols,
+      cells,
+      caption,
+      subtitle,
+      shownOf: total > 8 ? { shown: shown.length, total } : undefined
+    };
   });
 
   /** Fetch the programme's bilateral rows. Overview only — the other tabs do not use them. */
