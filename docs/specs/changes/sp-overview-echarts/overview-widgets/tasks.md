@@ -5,7 +5,7 @@
 - **Module / feature:** `dashboard-lab` + `program-overview` — navigable overview, 2 heatmaps, status donut (client only)
 - **Linked spec:** `requirements.md` (OVW-R-1..6) + `design.md` (OVW-DD-1..8)
 - **Owner / driver:** j.cadavid@cgiar.org
-- **Status:** approved — ready for /akili-execute (2026-08-27)
+- **Status:** in-progress (OVW-T-1 done 2026-08-27)
 - **Depth:** Standard · **Budget:** 4 tasks / ~600 LOC / 1–2 review rounds (design.md §1)
 - **Family:** `../family.md` row #3 · depends on #1 and #2 (both `done`) · `Parallel-safe: no`
 
@@ -15,8 +15,8 @@
 - [x] `design.md` approved (Phase 2 gate 2026-08-27)
 - [x] Siblings merged: `services/programme-results-query-params.ts` present; `app-pr-viz-chart` + `chart-tokens.util` present; `echarts` installed (`npm ci` if a fresh worktree)
 - [x] No migrations, no backend
-- [ ] No other in-flight spec touching `dashboard-lab/**` (check `docs/specs/` at execution start)
-- [ ] `package.json` untouched by this spec
+- [x] No other in-flight spec touching `dashboard-lab/**` (check `docs/specs/` at execution start)
+- [x] `package.json` untouched by this spec
 
 ## 3. Task list
 
@@ -32,11 +32,11 @@
 - **Estimate:** M (~140 LOC incl. spec)
 - **Skills:** `angular-developer`, `tdd`
 - **Definition of done:**
-  - [ ] Spec: for fixture statuses `[{statusId:1,statusName:'Editing',count:3},{statusId:2,statusName:'Quality Assessed',count:0}]` segments carry `link {status:'Editing'}` and `null`. **FAIL input:** emitting the slot label (`'In progress'`) → equality red.
-  - [ ] Spec: fallback map used when `statusName` is `''`/missing → `'Pending Review'` for id 5. **FAIL input:** map entry `'Not started'` → red.
-  - [ ] Spec: bilateral links carry `origin: 'W3/Bilaterals'`; `grep -rn "W3/Bilateral'" onecgiar-pr-client/src/app/pages/result-framework-reporting/pages/dashboard-lab` → 0 hits. **FAIL input:** singular string.
-  - [ ] Spec: `onOverviewLink({origin:'W3/Bilaterals', center:'IITA'})` → `navigate` once with commands `['/result-framework-reporting/entity-details','SP02','results']` and `queryParams` exactly `{origin:'W3/Bilaterals', center:'IITA'}` (no `status`/`category` keys, no `queryParamsHandling`). **FAIL input:** adding `queryParamsHandling:'merge'` → red. **Disqualifier:** asserting `toHaveBeenCalled()` without args is not evidence.
-  - [ ] Full suite `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean. **Disqualifier:** `--testPathPattern` narrowing.
+  - [x] Spec: for fixture statuses `[{statusId:1,statusName:'Editing',count:3},{statusId:2,statusName:'Quality Assessed',count:0}]` segments carry `link {status:'Editing'}` and `null`. **FAIL input:** emitting the slot label (`'In progress'`) → equality red.
+  - [x] Spec: fallback map used when `statusName` is `''`/missing → `'Pending Review'` for id 5. **FAIL input:** map entry `'Not started'` → red.
+  - [x] Spec: bilateral links carry `origin: 'W3/Bilaterals'`; `grep -rn "W3/Bilateral'" onecgiar-pr-client/src/app/pages/result-framework-reporting/pages/dashboard-lab` → 0 hits. **FAIL input:** singular string.
+  - [x] Spec: `onOverviewLink({origin:'W3/Bilaterals', center:'IITA'})` → `navigate` once with commands `['/result-framework-reporting/entity-details','SP02','results']` and `queryParams` exactly `{origin:'W3/Bilaterals', center:'IITA'}` (no `status`/`category` keys, no `queryParamsHandling`). **FAIL input:** adding `queryParamsHandling:'merge'` → red. **Disqualifier:** asserting `toHaveBeenCalled()` without args is not evidence.
+  - [x] Full suite `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean. **Disqualifier:** `--testPathPattern` narrowing.
 
 ### `OVW-T-2` — Navigable rows/segments in `program-overview` + deliberate spec rewrite
 

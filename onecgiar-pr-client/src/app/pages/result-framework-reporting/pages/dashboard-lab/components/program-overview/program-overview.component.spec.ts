@@ -12,9 +12,9 @@ describe('ProgramOverviewComponent', () => {
   let component: ProgramOverviewComponent;
 
   const segments: StatusSegment[] = [
-    { key: 'in-progress', label: 'In progress', count: 6, bg: '#fef3c7', fg: '#b45309' },
-    { key: 'submitted', label: 'Submitted', count: 1, bg: '#dbeafe', fg: '#1d4ed8' },
-    { key: 'approved', label: 'Approved', count: 0, bg: '#d1fae5', fg: '#047857' }
+    { key: 'in-progress', label: 'In progress', count: 6, bg: '#fef3c7', fg: '#b45309', statusName: 'Editing', link: { status: 'Editing' } },
+    { key: 'submitted', label: 'Submitted', count: 1, bg: '#dbeafe', fg: '#1d4ed8', statusName: 'Submitted', link: { status: 'Submitted' } },
+    { key: 'approved', label: 'Approved', count: 0, bg: '#d1fae5', fg: '#047857', statusName: 'Approved', link: null }
   ];
 
   const aows: AowProgressRow[] = [
@@ -24,25 +24,25 @@ describe('ProgramOverviewComponent', () => {
 
   /** Mirrors the real prtest shape for SP02: 8 own categories, uncapped. */
   const categories: CategoryBar[] = [
-    { name: 'Innovation development', count: 15 },
-    { name: 'Other output', count: 10 },
-    { name: 'Capacity sharing for development', count: 6 },
-    { name: 'Innovation use', count: 6 },
-    { name: 'Knowledge product', count: 6 },
-    { name: 'Policy change', count: 5 },
-    { name: 'Other outcome', count: 1 },
-    { name: 'Innovation Packages', count: 1 }
+    { name: 'Innovation development', count: 15, link: { category: 'Innovation development' } },
+    { name: 'Other output', count: 10, link: { category: 'Other output' } },
+    { name: 'Capacity sharing for development', count: 6, link: { category: 'Capacity sharing for development' } },
+    { name: 'Innovation use', count: 6, link: { category: 'Innovation use' } },
+    { name: 'Knowledge product', count: 6, link: { category: 'Knowledge product' } },
+    { name: 'Policy change', count: 5, link: { category: 'Policy change' } },
+    { name: 'Other outcome', count: 1, link: { category: 'Other outcome' } },
+    { name: 'Innovation Packages', count: 1, link: { category: 'Innovation Packages' } }
   ];
 
   const bilateralCategories: CategoryBar[] = [
-    { name: 'Capacity sharing for development', count: 70 },
-    { name: 'Innovation development', count: 30 }
+    { name: 'Capacity sharing for development', count: 70, link: { origin: 'W3/Bilaterals', category: 'Capacity sharing for development' } },
+    { name: 'Innovation development', count: 30, link: { origin: 'W3/Bilaterals', category: 'Innovation development' } }
   ];
 
   const centers: OverviewCenterBar[] = [
-    { name: 'CIAT', count: 45 },
-    { name: 'IRRI', count: 32 },
-    { name: 'CIMMYT', count: 4 }
+    { name: 'CIAT', count: 45, link: { origin: 'W3/Bilaterals', center: 'CIAT' } },
+    { name: 'IRRI', count: 32, link: { origin: 'W3/Bilaterals', center: 'IRRI' } },
+    { name: 'CIMMYT', count: 4, link: { origin: 'W3/Bilaterals', center: 'CIMMYT' } }
   ];
 
   beforeEach(async () => {
@@ -127,7 +127,10 @@ describe('ProgramOverviewComponent', () => {
     });
 
     it('returns 0 instead of NaN for an all-zero series', () => {
-      const zeroes: CategoryBar[] = [{ name: 'A', count: 0 }, { name: 'B', count: 0 }];
+      const zeroes: CategoryBar[] = [
+        { name: 'A', count: 0, link: null },
+        { name: 'B', count: 0, link: null }
+      ];
       fixture.componentRef.setInput('categories', zeroes);
       fixture.detectChanges();
       expect(component.categoryWidth(zeroes[0])).toBe(0);
@@ -240,9 +243,9 @@ describe('ProgramOverviewComponent', () => {
       expect(component.showsSegmentCount(segments[2])).toBe(false);
 
       fixture.componentRef.setInput('statusSegments', [
-        { key: 'a', label: 'A', count: 38, bg: '', fg: '' },
-        { key: 'b', label: 'B', count: 1, bg: '', fg: '' },
-        { key: 'c', label: 'C', count: 1, bg: '', fg: '' }
+        { key: 'a', label: 'A', count: 38, bg: '', fg: '', statusName: 'A', link: { status: 'A' } },
+        { key: 'b', label: 'B', count: 1, bg: '', fg: '', statusName: 'B', link: { status: 'B' } },
+        { key: 'c', label: 'C', count: 1, bg: '', fg: '', statusName: 'C', link: { status: 'C' } }
       ] satisfies StatusSegment[]);
       fixture.detectChanges();
 

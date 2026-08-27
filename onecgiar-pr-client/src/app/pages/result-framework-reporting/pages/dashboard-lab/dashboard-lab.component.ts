@@ -34,8 +34,10 @@ import {
   StatusSegment as OverviewStatusSegment,
   AowProgressRow as OverviewAowProgressRow,
   CategoryBar as OverviewCategoryBar,
-  OverviewCenterBar
+  OverviewCenterBar,
+  OverviewLink
 } from './components/program-overview/program-overview.component';
+import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
 import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
@@ -94,8 +96,27 @@ const OVERVIEW_DISCONTINUED_SLOT = {
 };
 
 
+/**
+ * `Status.statusName → 'Editing'` etc. is the real Results-tab vocabulary and already arrives on
+ * the wire — this fallback only guards against a missing/empty field (`OVW-DD-2`). Never used to
+ * override a non-empty `statusName`.
+ */
+const OVERVIEW_STATUS_NAME_FALLBACK: Record<number, string> = {
+  1: 'Editing',
+  2: 'Quality Assessed',
+  3: 'Submitted',
+  4: 'Discontinued',
+  5: 'Pending Review',
+  6: 'Approved',
+  7: 'Rejected',
+  8: 'Draft'
+};
+
 /** Science-Program role id for "Primary submitter" on a bilateral result. The wire sends a STRING. */
 const BILATERAL_PRIMARY_ROLE_ID = '1';
+
+/** `source_name` for W3/Bilateral results — the exact, PLURAL string the Results tab filters on. */
+const BILATERAL_ORIGIN = 'W3/Bilaterals';
 
 /** "Intermediate Outcomes" → "Intermediate outcomes" (the reference uses sentence case). */
 function sentenceCaseOutcomes(name: string): string {
@@ -876,13 +897,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const statuses = this.latestVersion(this.selected())?.statuses ?? [];
     if (!statuses.length) return [];
     const countOf = (statusId: number) => statuses.find(s => s.statusId === statusId)?.count ?? 0;
-    const segments: OverviewStatusSegment[] = OVERVIEW_STATUS_SLOTS.map(slot => ({
-      key: slot.key,
-      label: slot.label,
-      count: countOf(slot.statusId),
-      bg: slot.bg,
-      fg: slot.fg
-    }));
+    // Real `status_name` from the wire, never the slot `label` — falls back to the catalogue map
+    // only when the wire omits/empties the name (`OVW-DD-2`).
+    const statusNameOf = (statusId: number) =>
+      statuses.find(s => s.statusId === statusId)?.statusName?.trim() || OVERVIEW_STATUS_NAME_FALLBACK[statusId] || '';
+    const linkOf = (statusId: number, count: number): OverviewLink | null => (count > 0 ? { status: statusNameOf(statusId) } : null);
+    const segments: OverviewStatusSegment[] = OVERVIEW_STATUS_SLOTS.map(slot => {
+      const count = countOf(slot.statusId);
+      return {
+        key: slot.key,
+        label: slot.label,
+        count,
+        bg: slot.bg,
+        fg: slot.fg,
+        statusName: statusNameOf(slot.statusId),
+        link: linkOf(slot.statusId, count)
+      };
+    });
     const discontinued = countOf(OVERVIEW_DISCONTINUED_SLOT.statusId);
     if (discontinued > 0) {
       segments.push({
@@ -890,7 +921,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         label: OVERVIEW_DISCONTINUED_SLOT.label,
         count: discontinued,
         bg: OVERVIEW_DISCONTINUED_SLOT.bg,
-        fg: OVERVIEW_DISCONTINUED_SLOT.fg
+        fg: OVERVIEW_DISCONTINUED_SLOT.fg,
+        statusName: statusNameOf(OVERVIEW_DISCONTINUED_SLOT.statusId),
+        link: linkOf(OVERVIEW_DISCONTINUED_SLOT.statusId, discontinued)
       });
     }
     return segments;
@@ -946,7 +979,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return [...outputs, ...outcomes]
       .map(c => ({ name: c.resultTypeName, count: (c.editing || 0) + (c.submitted || 0) }))
       .filter(c => c.count > 0)
-      .sort((a, b) => b.count - a.count);
+      .sort((a, b) => b.count - a.count)
+      // No `origin` here — the summary endpoint counts the program's own results across all
+      // sources (OQ-2 default). Adding `origin: 'W1/W2'` would narrow the Results tab list.
+      .map(c => ({ ...c, link: { category: c.name } }));
   });
 
   // ── W3/Bilateral figures for the Overview tab (P2-3302) ───────────────────
@@ -978,7 +1014,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       byCenter.set(center, (byCenter.get(center) ?? 0) + 1);
     }
     return [...byCenter.entries()]
-      .map(([name, count]) => ({ name, count }))
+      .map(([name, count]) => ({
+        name,
+        count,
+        // The synthetic 'Not specified' bucket has no matching Results-tab center value.
+        link: name === 'Not specified' ? null : ({ origin: BILATERAL_ORIGIN, center: name } as OverviewLink)
+      }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   });
 
@@ -991,7 +1032,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       byName.set(name, (byName.get(name) ?? 0) + 1);
     }
     return [...byName.entries()]
-      .map(([name, count]) => ({ name, count }))
+      .map(([name, count]) => ({ name, count, link: { origin: BILATERAL_ORIGIN, category: name } }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   });
 
@@ -1002,6 +1043,25 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         this.bilateralRows.set((res?.response ?? []).flatMap(g => g.results ?? [])),
       error: () => this.bilateralRows.set([])
     });
+  }
+
+  // @akili-spec changes/sp-overview-echarts/overview-widgets
+  /**
+   * `program-overview` emits a typed `OverviewLink` (`OVW-R-5`); this parent owns the actual
+   * navigation. Fresh history entry — no `queryParamsHandling: 'merge'` — because Overview → Results
+   * is real navigation, not a mirror of this page's own `aow/typ/st/q` filters (`OVW-DD-7`).
+   */
+  onOverviewLink(link: OverviewLink): void {
+    const code = this.selected()?.initiativeCode;
+    if (!code) return;
+    const queryParams: Record<string, string> = {};
+    (Object.keys(link) as (keyof OverviewLink)[]).forEach(dimension => {
+      const value = link[dimension];
+      if (value !== undefined) {
+        queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP[dimension]] = value;
+      }
+    });
+    this.router.navigate(['/result-framework-reporting/entity-details', code, 'results'], { queryParams });
   }
 
   /** % of results in a "reported" state (QAed / Submitted). */

@@ -1,5 +1,18 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+
+/**
+ * Typed navigation intent for the Results tab (`OVW-R-5` emission contract). Only the defined
+ * keys are present — the parent maps each one through `PROGRAMME_RESULTS_QUERY_PARAM_MAP`
+ * (`programme-results-query-params.ts`) rather than this component or its consumer inventing
+ * URL param names.
+ */
+export interface OverviewLink {
+  status?: string;
+  category?: string;
+  origin?: string;
+  center?: string;
+}
 
 /** One segment of the Reporting-status meter. `fg` doubles as the legend dot colour. */
 export interface StatusSegment {
@@ -8,6 +21,10 @@ export interface StatusSegment {
   count: number;
   bg: string;
   fg: string;
+  /** Real `status_name` from the wire (or the catalogue fallback) — never the slot `label`. */
+  statusName: string;
+  /** `{status: statusName}` when `count > 0`, else `null` (non-navigable). */
+  link: OverviewLink | null;
 }
 
 export interface AowProgressRow {
@@ -21,11 +38,13 @@ export interface AowProgressRow {
 export interface CategoryBar {
   name: string;
   count: number;
+  link: OverviewLink | null;
 }
 
 export interface OverviewCenterBar {
   name: string;
   count: number;
+  link: OverviewLink | null;
 }
 
 /**
@@ -69,6 +88,13 @@ export class ProgramOverviewComponent {
   readonly bilateralCategories = input<CategoryBar[]>([]);
   /** Centers with reported W3/bilateral results. */
   readonly bilateralCenters = input<OverviewCenterBar[]>([]);
+
+  /**
+   * Typed navigation intent (`OVW-R-5`). Declared here (OVW-T-1) so the parent's `(openResults)`
+   * binding compiles under `strictTemplates`; no template wiring or `.emit()` call yet — those
+   * land with the real `<button>`/segment/cell markup in OVW-T-2.
+   */
+  readonly openResults = output<OverviewLink>();
 
   readonly description = computed(() => {
     const explicit = this.programDescription()?.trim();
