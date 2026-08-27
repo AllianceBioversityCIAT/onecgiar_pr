@@ -14,7 +14,7 @@ COPY package*.json ./
 #RUN npm i
 
 COPY . .
-RUN npm i
+RUN npm ci
 
 # Build in dev mode as per team requirement
 RUN npm run build:dev
@@ -35,7 +35,7 @@ COPY package*.json ./
 #RUN npm i
 
 COPY . .
-RUN npm i
+RUN npm ci
 
 # Run tests (adjust the script if needed)
 CMD ["npm", "run", "test:coverage"]

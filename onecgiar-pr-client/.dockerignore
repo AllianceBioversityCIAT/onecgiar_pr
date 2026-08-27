@@ -7,6 +7,7 @@ coverage
 temp
 tmp
 .cache
+.angular
 .eslintcache
 *.tsbuildinfo
 
