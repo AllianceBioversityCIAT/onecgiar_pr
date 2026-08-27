@@ -10,6 +10,7 @@ import { InstitutionsService } from '../../../../../../../../../../shared/servic
 import { GreenChecksService } from '../../../../../../../../../../shared/services/global/green-checks.service';
 import { DataControlService } from '../../../../../../../../../../shared/services/data-control.service';
 import { FieldsManagerService } from '../../../../../../../../../../shared/services/fields-manager.service';
+import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
 
 /**
  * P2-3335 — the External Partners catalogue arrives after the screen is drawn.
@@ -294,5 +295,98 @@ describe('CPNormalSelectorComponent — partner role group DOM (PRS-R-1..3)', ()
       expect(container.querySelectorAll('i.material-icons-round').length).toBe(0);
       expect(container.querySelectorAll('hr, .divider').length).toBe(0);
     });
+  });
+});
+
+/**
+ * EPT-T-1 (bugfix/external-partners-toc-visibility) — the auto-activated "Other(s) External
+ * Partners" dropdown must relabel to "External partners" when it opens because the ToC found
+ * ZERO external partners (AC4 empty state), and must keep its original label when it opens
+ * because the user explicitly picked the "Other" sentinel from a non-empty ToC list.
+ *
+ * Renders the REAL `app-pr-multi-select` (via CustomFieldsModule) so the resolved `.pr_label`
+ * text is asserted on the DOM the user sees — never on a `[label="…"]` attribute selector, since
+ * a bound `[label]` does not reflect as a DOM attribute (RB-S1, reused from the sibling
+ * other-fields-toc-visibility spec).
+ */
+describe('CPNormalSelectorComponent — "Other(s) External Partners" label (EPT-T-1)', () => {
+  let fixture: ComponentFixture<CPNormalSelectorComponent>;
+  let rdPartnersMock: any;
+
+  const otherPartnersSelectEl = () => fixture.nativeElement.querySelector('[data-testid="toc-other-partners"]');
+  const otherPartnersLabelText = () => otherPartnersSelectEl()?.querySelector('.pr_label')?.textContent?.trim();
+
+  const partner = (id: number, name: string) => ({
+    institutions_id: id,
+    institutions_name: name,
+    full_name: name,
+    obj_institutions: { name, obj_institution_type_code: { name: 'NGO', id: 1 } }
+  });
+
+  const setup = (opts: { tocPartnerIds: number[]; catalogue: any[]; institutions: any[] }) => {
+    rdPartnersMock = {
+      OTHER_PARTNERS_CODE: -1,
+      toggle: 0,
+      tocReferencePartnerInstitutionIds: signal<number[]>(opts.tocPartnerIds),
+      buildOtherPartnersSentinel: () => ({ institutions_id: -1, full_name: 'Other' }),
+      partnersBody: { institutions: opts.institutions, no_applicable_partner: false },
+      otherPartnersSelected: [],
+      setPossibleLeadPartners: jest.fn(),
+      validateDeliverySelectionPartners: () => false,
+      onSelectDeliveryPartners: jest.fn(),
+      removePartner: jest.fn()
+    };
+
+    TestBed.configureTestingModule({
+      declarations: [CPNormalSelectorComponent, CountInstitutionsTypesStubPipe],
+      imports: [CommonModule, CustomFieldsModule],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: ApiService, useValue: { dataControlSE: { currentResult: { result_code: 'R-1', version_id: 1 } } } },
+        { provide: RolesService, useValue: { readOnly: false } },
+        { provide: RdContributorsAndPartnersService, useValue: rdPartnersMock },
+        {
+          provide: InstitutionsService,
+          useValue: { institutionsWithoutCentersListPartners: [], institutionsWithoutCentersPartners: signal<any[]>(opts.catalogue) }
+        },
+        { provide: GreenChecksService, useValue: {} },
+        { provide: DataControlService, useValue: { isKnowledgeProduct: false } },
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => true } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    });
+
+    fixture = TestBed.createComponent(CPNormalSelectorComponent);
+    fixture.detectChanges();
+  };
+
+  /** EPT-TEST-1a / EPT-R-1..3 / EPT-AC-1: ToC returned zero external partners — the "Other(s)"
+   *  dropdown auto-opens (AC4) and must resolve to "External partners", not the stale static text. */
+  it('resolves the empty-ToC label to "External partners", not "Other(s) External Partners" (EPT-TEST-1a)', () => {
+    setup({ tocPartnerIds: [], catalogue: [], institutions: [] });
+
+    expect(fixture.componentInstance.hasReferencePartners()).toBe(false);
+    expect(otherPartnersSelectEl()).toBeTruthy();
+    expect(otherPartnersLabelText()).toBe('External partners:');
+    expect(otherPartnersLabelText()).not.toContain('Other(s) External Partners');
+  });
+
+  /** EPT-TEST-1b / EPT-R-4 / EPT-AC-2 (regression guard): the ToC DID find partners and the user
+   *  opted into the "Other" sentinel from the primary dropdown — label must stay unchanged. */
+  it('keeps the "Other(s) External Partners" label when the user opts into the sentinel from a non-empty ToC (EPT-TEST-1b)', () => {
+    const tocPartner = partner(10, 'Partner from the ToC');
+    setup({
+      tocPartnerIds: [10],
+      catalogue: [tocPartner],
+      // A reference partner PLUS the "Other" sentinel — the extra reference entry keeps
+      // `institutionsNoSentinel` non-empty so the preselect effect does not overwrite this
+      // selection on first render (see `preselectPartnersEffect` in normal-selector.component.ts).
+      institutions: [{ ...tocPartner, from_toc: true }, { institutions_id: -1, full_name: 'Other' }]
+    });
+
+    expect(fixture.componentInstance.hasReferencePartners()).toBe(true);
+    expect(fixture.componentInstance.otherSentinelSelected).toBe(true);
+    expect(otherPartnersSelectEl()).toBeTruthy();
+    expect(otherPartnersLabelText()).toBe('Other(s) External Partners:');
   });
 });
