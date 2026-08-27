@@ -104,6 +104,17 @@
         border: 1px solid var(--pr-color-accents-2);
         transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 
+        // The check slot is ALWAYS reserved (opacity swap only) so selecting a pill never
+        // changes its width — rows stay column-aligned no matter how many roles are active.
+        &::before {
+          content: 'check';
+          font-family: 'Material Icons Round';
+          font-size: 14px;
+          line-height: 1;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
+
         // Hover feedback without layout shift (color/border only, no transform).
         &:not(.active):hover {
           border-color: var(--pr-color-primary-300);
@@ -117,12 +128,9 @@
         border-color: var(--pr-color-primary-300) !important;
         box-shadow: 0 1px 4px rgba(107, 70, 229, 0.35);
 
-        // Selection is not signalled by color alone (a11y): active pills carry a check mark.
+        // Selection is not signalled by color alone (a11y): the reserved check becomes visible.
         &::before {
-          content: 'check';
-          font-family: 'Material Icons Round';
-          font-size: 14px;
-          line-height: 1;
+          opacity: 1;
         }
       }
     }
