@@ -11,7 +11,45 @@
     padding: 10px;
     position: relative;
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
+
+    // PRS-R-2: the typology line reads as read-only metadata.
+    .type {
+      color: var(--pr-text-muted, #6b6580);
+
+      strong {
+        font-weight: 500;
+      }
+    }
+
+    // PRS-R-1: labelled role zone, separated from the typology by a hairline divider.
+    .role_group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-left: 1px solid var(--pr-color-accents-2);
+      padding-left: 15px;
+
+      .role_label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--pr-text-secondary, #5d5872);
+        white-space: nowrap;
+      }
+    }
+
+    // When the row stacks, the divider swaps to a horizontal hairline (design §2 wrap behavior).
+    @media (max-width: 900px) {
+      .role_group {
+        width: 100%;
+        border-left: 0;
+        border-top: 1px solid var(--pr-color-accents-2);
+        padding-left: 0;
+        padding-top: 10px;
+        margin-top: 8px;
+      }
+    }
 
     .deliveries_container {
       display: flex;
