@@ -405,7 +405,8 @@
                     [attr.aria-hidden]="!isOpen(hlo.key, defaultOpen)">
                     <div class="pr-collapse-inner">
                       @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
-                        <ng-container *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: false }" />
+                        <ng-container
+                          *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: false, bucketKind: group.kind }" />
                       }
                     </div>
                   </div>
@@ -435,7 +436,7 @@
 }
 
 <!-- Shared indicator row. Status mark = the concentric bullseye (18px violet target). -->
-<ng-template #indicatorRow let-row let-showAow="showAow">
+<ng-template #indicatorRow let-row let-showAow="showAow" let-bucketKind="bucketKind">
   <div
     class="pr-reporting-row"
     role="button"
@@ -494,6 +495,7 @@
       <button
         type="button"
         class="block w-full border-0 bg-transparent p-0 text-right"
+        [prTooltip]="(isIntermediateRow(bucketKind) || isCrossCuttingIntermediate(row)) ? intermediateTargetTooltip : ''"
         (click)="emitAndStop(openTarget, row, $event)">
         <span
           class="pr-figure block text-[18px] font-medium tabular-nums text-[var(--pr-text-heading)] hover:underline hover:decoration-dotted hover:underline-offset-[3px]">

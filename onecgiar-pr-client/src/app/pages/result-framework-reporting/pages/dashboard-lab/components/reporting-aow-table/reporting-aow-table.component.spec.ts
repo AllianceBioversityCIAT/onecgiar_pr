@@ -1,6 +1,8 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './reporting-aow-table.component';
+import { PrTooltipDirective } from '../../../../../../shared/directives/pr-tooltip.directive';
 
 /**
  * Stand-in for the real page: the toolbar label is rendered BEFORE the table, exactly as in
@@ -332,6 +334,68 @@ describe('ReportingAowTableComponent', () => {
       });
       expect(component.visibleGroups().length).toBe(0);
       expect(text()).toContain('No indicators match your filters');
+    });
+  });
+
+  // ── Intermediate Outcome Target tooltip (RES-R-1, RES-R-2, RES-AC-1, RES-AC-2) ─────────────
+  describe('Intermediate Outcome Target tooltip', () => {
+    it('isIntermediateRow matches only the intermediate bucket kind', async () => {
+      await build([group([row()])]);
+      expect(component.isIntermediateRow('intermediate')).toBe(true);
+      expect(component.isIntermediateRow('aow')).toBe(false);
+      expect(component.isIntermediateRow('2030-outcomes')).toBe(false);
+    });
+
+    /**
+     * The Target cell's `<button>` is the FIRST `.relative.text-right button` in a row — the
+     * Achieved cell (which already carries its own `[prTooltip]="achievedTooltip(row)"`) is the
+     * second. Reading the directive instance off the DOM, rather than checking for truthiness,
+     * is what catches a copy-paste of `achievedTooltip(row)` onto this cell instead of the new
+     * `isIntermediateRow` helper (tasks.md disqualifier).
+     */
+    const targetTooltipText = (): string => {
+      const targetButton = fixture.debugElement.query(By.css('.pr-reporting-row .relative.text-right button'));
+      return targetButton.injector.get(PrTooltipDirective).text;
+    };
+
+    it('binds the exact tooltip string on an Intermediate row Target button', async () => {
+      await build([group([row()], { kind: 'intermediate' })]);
+      openAow();
+      expect(targetTooltipText()).toBe(component.intermediateTargetTooltip);
+      expect(targetTooltipText()).toBe('This target is not exclusive to that AoW.');
+    });
+
+    it('binds an empty string on an AoW row Target button — no leak onto a non-intermediate bucket', async () => {
+      await build([group([row()], { kind: 'aow' })]);
+      openAow();
+      expect(targetTooltipText()).toBe('');
+    });
+  });
+
+  // ── RES-T-2: cross-cutting Intermediate Outcome rows inside an AoW card ────
+  describe('cross-cutting Intermediate Outcome tooltip (RES-T-2)', () => {
+    it('isCrossCuttingIntermediate reads the __isIntermediateCrosscut stamp', async () => {
+      await build([group([row()])]);
+      expect(component.isCrossCuttingIntermediate(row({ __isIntermediateCrosscut: true }))).toBe(true);
+      expect(component.isCrossCuttingIntermediate(row({ __isIntermediateCrosscut: false }))).toBe(false);
+      expect(component.isCrossCuttingIntermediate(row())).toBe(false);
+    });
+
+    const targetTooltipText = (): string => {
+      const targetButton = fixture.debugElement.query(By.css('.pr-reporting-row .relative.text-right button'));
+      return targetButton.injector.get(PrTooltipDirective).text;
+    };
+
+    it('binds the tooltip string on an AoW card Outcomes-band row that is cross-cutting', async () => {
+      await build([group([row({ __tier: 'outcome', __isIntermediateCrosscut: true })], { kind: 'aow' })]);
+      openAow();
+      expect(targetTooltipText()).toBe(component.intermediateTargetTooltip);
+    });
+
+    it('binds an empty string on an AoW card Outcomes-band row that is NOT cross-cutting (AoW-exclusive)', async () => {
+      await build([group([row({ __tier: 'outcome', __isIntermediateCrosscut: false })], { kind: 'aow' })]);
+      openAow();
+      expect(targetTooltipText()).toBe('');
     });
   });
 
