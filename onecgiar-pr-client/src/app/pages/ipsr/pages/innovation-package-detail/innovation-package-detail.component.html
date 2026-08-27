@@ -64,7 +64,7 @@
     @if (this.ipsrDataControlSE.resultInnovationId && this.fieldsManagerSE.porfolioExists()) {
       <router-outlet></router-outlet>
     }
-    <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
+    <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection()">
       <div class="info">
         <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
         <div class="text">Loading section...</div>
@@ -77,4 +77,4 @@
 <app-partners-request></app-partners-request>
 <app-ipsr-unsubmit-modal></app-ipsr-unsubmit-modal>
 <app-ipsr-submission-modal></app-ipsr-submission-modal>
-<p-toast key="copyResultLinkPdf" position="bottom-center"></p-toast>
+<app-pr-toast key="copyResultLinkPdf"></app-pr-toast>

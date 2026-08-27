@@ -1,7 +1,17 @@
 @use '../../../../../../../../../../../../../styles/fonts.scss' as fonts;
 
+// app-pr-dialog wrapper: restore the flush layout the old p-dialog had
+// ([style]padding:0) so the full-bleed title bar and absolute buttons render.
+::ng-deep app-pr-dialog .step-n4-add-bilateral-dialog {
+  position: relative;
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
 .modal_title {
-  background-color: var(--pr-color-secondary-400);
+  background-color: var(--pr-color-primary-800);
   width: 200px;
   @include fonts.pr-typography('h3');
   font-weight: 600;

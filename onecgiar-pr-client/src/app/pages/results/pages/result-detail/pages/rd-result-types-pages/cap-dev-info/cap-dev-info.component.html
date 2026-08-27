@@ -1,24 +1,29 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
   <app-alert-status description="Please fill in the following required fields for this indicator category."> </app-alert-status>
   <app-pr-field-header label="Number of people trained" [description]="peopleTrainedDesc"> </app-pr-field-header>
   <!-- In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split. -->
+  <!-- P2-3241: the four counts are `[required]="true"` because the green check does NOT come from the
+       client — it comes from the MySQL function `validation_capacity_dev_P25` (and its identical twin
+       `..._P22`), which demands female_using / male_using / non_binary_using / has_unkown_using ALL
+       NOT NULL. With them optional here the section could never turn green and nothing told the user
+       which box was still empty. Zero is a valid answer; only NULL blocks. -->
   <div class="peopleFields">
-    <app-pr-input placeholder=" Type quantity" label="Women" type="number" [required]="false" [(ngModel)]="this.capDevInfoRoutingBody.female_using">
+    <app-pr-input placeholder=" Type quantity" label="Women" type="number" [required]="true" [(ngModel)]="this.capDevInfoRoutingBody.female_using">
     </app-pr-input>
-    <app-pr-input placeholder="Type quantity" label="Men" type="number" [required]="false" [(ngModel)]="this.capDevInfoRoutingBody.male_using">
+    <app-pr-input placeholder="Type quantity" label="Men" type="number" [required]="true" [(ngModel)]="this.capDevInfoRoutingBody.male_using">
     </app-pr-input>
     <app-pr-input
       placeholder="Type quantity"
       label="Non-binary"
       type="number"
-      [required]="false"
+      [required]="true"
       [(ngModel)]="this.capDevInfoRoutingBody.non_binary_using">
     </app-pr-input>
     <app-pr-input
       placeholder="Type quantity"
       label="Unknown"
       type="number"
-      [required]="false"
+      [required]="true"
       [(ngModel)]="this.capDevInfoRoutingBody.has_unkown_using">
     </app-pr-input>
   </div>
@@ -36,8 +41,16 @@
 
   <br />
 
+  <!-- Stays optional on purpose: `validate_capdev_term_id()` falls back to `capdev_term_id_1`, so the
+       server's `valid_text(capdev_term_id)` is already satisfied by the group above.
+       P2-3385: `label` is what makes this render inside a card. Without it `field-card`'s `isBare`
+       getter is true and the whole `field_card` class is skipped, so PhD / Master used to be drawn
+       loose outside the container that frames every sibling question. `[required]` MUST stay false:
+       framing a control is presentation, and flipping it here would make the section impossible to
+       complete. "Degree" is the term the rest of the app already uses for this value. -->
   <app-pr-radio-button
     *ngIf="this.capdev_term_id_1 == 4 || this.capdev_term_id_1 == 1 || this.capdev_term_id_1 == 2"
+    label="Degree"
     [options]="this.capdevsSubTerms"
     optionLabel="name"
     optionValue="capdev_term_id"
@@ -45,6 +58,7 @@
     [(ngModel)]="this.capdev_term_id_2">
   </app-pr-radio-button>
 
+  <!-- P2-3241: required — `valid_text(rcd.capdev_delivery_method_id)` in `validation_capacity_dev_P25`. -->
   <app-pr-radio-button
     label="Delivery Method"
     [description]="deliveryMethodDescription()"
@@ -52,25 +66,28 @@
     [options]="this.deliveryMethodOptions"
     optionLabel="name"
     optionValue="capdev_delivery_method_id"
-    [required]="false">
+    [required]="true">
   </app-pr-radio-button>
   <br />
   <app-alert-status
     description="If you don't find the organization you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
   </app-alert-status>
 
+  <!-- P2-3241: `[required]` is explicit rather than left to the control's default, so the coupling with
+       `rcd.is_attending_for_organization IS NOT NULL` is readable from the template. -->
   <app-pr-radio-button
     label="Were the trainees attending on behalf of an organization?"
     optionLabel="name"
     optionValue="id"
     [options]="this.radioOptions"
+    [required]="true"
     [(ngModel)]="this.capDevInfoRoutingBody.is_attending_for_organization">
   </app-pr-radio-button>
   <br />
   <app-pr-multi-select
     *ngIf="this.capDevInfoRoutingBody.is_attending_for_organization"
     [options]="this.institutionsSE.institutionsList"
-    [required]="false"
+    [required]="true"
     selectedLabel="organization(s) selected"
     selectedOptionLabel="full_name"
     optionLabel="full_name"
@@ -78,6 +95,16 @@
     placeholder="Select organizations"
     [(ngModel)]="this.capDevInfoRoutingBody.institutions">
   </app-pr-multi-select>
+  <!-- P2-3241: `app-pr-multi-select` renders NO `.pr-field.mandatory` of its own, so an empty required
+       multi-select is invisible to `DataControlService.someMandatoryFieldIncompleteResultDetail()`.
+       This is the same hidden reporter `geoscope-management` uses. It is inside the SAME `*ngIf` as the
+       control because the server only demands an organization when the answer above is "Yes"
+       (`IF (is_attending_for_organization = TRUE) THEN … COUNT(rbi.id) > 0`). -->
+  <div
+    *ngIf="this.capDevInfoRoutingBody.is_attending_for_organization"
+    appFeedbackValidation
+    labelText="Select organizations"
+    [isComplete]="hasSelectedOrganizations"></div>
 </div>
 
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+<app-section-bottom-bar (clickSave)="onSaveSection()" />

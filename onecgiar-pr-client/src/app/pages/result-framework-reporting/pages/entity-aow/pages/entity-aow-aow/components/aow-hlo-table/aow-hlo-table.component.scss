@@ -20,6 +20,15 @@ p {
   color: var(--pr-color-secondary-200);
 }
 
+.non-exclusive-chip {
+  flex: 0 0 auto;
+  background-color: var(--pr-color-blue-50);
+  border-color: var(--pr-color-blue-200);
+  color: var(--pr-color-blue-700);
+  cursor: help;
+  white-space: nowrap;
+}
+
 .kpi-statement-cell {
   display: flex;
   flex-direction: column;
@@ -47,14 +56,21 @@ p {
 
 .tab-content_actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
+// The three row actions are stacked, so `max-content` gave each a different width (74 / 70 / 77px)
+// and the column ended up with a ragged right edge. A shared minimum lines them up; `max-content`
+// stays as the floor so a longer label still fits on one line.
+// They also carried `pr-body-3` (10px) — that step exists for the notification badge counter, not
+// for controls. The mockup sizes buttons at 13-14px; `pr-body-1` is the 14px step.
 .tab-content_actions_button {
-  min-width: max-content;
-  padding: 4px 6px;
+  min-width: 100%;
+  padding: 6px 10px;
+  justify-content: center;
 }
 
 .tab-content_empty {
@@ -91,5 +107,18 @@ p {
   .no-indicators-button {
     min-width: max-content;
     padding: 4px 20px;
+  }
+}
+
+/* Restore compact fixed-width columns + automatic horizontal scroll (pre-redesign behavior).
+   The Spartan app-pr-table renders with table-layout:auto, which ignores the defined column
+   widths and stretches each column to its content; `fixed` honors the widths and `min-width`
+   makes the wrapper's overflow-x kick in once the viewport can't fit the whole table. */
+:host ::ng-deep .pr-table {
+  table-layout: fixed;
+  min-width: 900px;
+
+  thead th {
+    white-space: normal;
   }
 }

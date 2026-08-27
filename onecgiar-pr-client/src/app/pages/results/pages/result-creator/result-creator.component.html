@@ -40,11 +40,22 @@
           (click)="this.createResultManagementService.showModal.set(true)"></app-pr-button>
       </div>
 
+      <!-- Initial load is a 4-deep serial chain (phases → roles → initiatives). Without this the
+           select renders with an empty [options] list, which reads as "no entities available". -->
+      @if (loadingInitialData()) {
+        <div class="segment_title_margin flex flex-col gap-2 py-2" role="status" aria-live="polite" aria-busy="true">
+          <span class="sr-only">Loading available entities...</span>
+          <div class="pr-skeleton" style="width: 120px; height: 12px"></div>
+          <div class="pr-skeleton" style="width: 100%; height: 38px"></div>
+        </div>
+      }
+
       <app-pr-select
+        *ngIf="!loadingInitialData()"
         class="segment_title_margin"
         [group]="true"
         groupName="name"
-        [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio"
+        [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.selectableInitiatives"
         label="Report for"
         [isStatic]="true"
         optionLabel="full_name"
@@ -68,7 +79,7 @@
       </app-pr-radio-button>
 
       <div *ngIf="this.resultLevelSE.resultBody.result_level_id">
-        <app-alert-status *ngIf="isKnowledgeProduct" [description]="this.kpAlertDescription"> </app-alert-status>
+        <app-alert-status *ngIf="isKnowledgeProduct" [description]="this.kpAlertDescription()"> </app-alert-status>
 
         <div [ngClass]="{ mqap_sync_title: isKnowledgeProduct }">
           <app-pr-input
@@ -121,6 +132,14 @@
           (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
         </app-pr-input>
 
+        <!-- Depth search + title-uniqueness check fire on every keystroke; tell the user they run. -->
+        @if (!isKnowledgeProduct && loadingDepthSearch()) {
+          <div class="flex items-center gap-2 py-2 text-[var(--pr-color-accents-5)]" role="status" aria-live="polite">
+            <span class="material-icons-round animate-spin text-[16px]">progress_activity</span>
+            <span class="pr-body-2">Searching for similar results...</span>
+          </div>
+        }
+
         <app-similar-results
           *ngIf="resultLevelSE.resultBody.result_type_id != 6 && this.resultLevelSE.resultBody.result_type_id"
           [options]="this.depthSearchList">
@@ -134,8 +153,5 @@
 <app-retrieve-modal></app-retrieve-modal>
 
 @if (this.createResultManagementService.showModal()) {
-  <app-result-ai-assistant
-    [initiatives]="
-      this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio
-    "></app-result-ai-assistant>
+  <app-result-ai-assistant [initiatives]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.selectableInitiatives"></app-result-ai-assistant>
 }

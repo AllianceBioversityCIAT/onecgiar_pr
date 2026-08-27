@@ -1,0 +1,141 @@
+<div class="bp-dashboard">
+  <div class="bp-dashboard-card bp-project-card">
+    <app-alert-status
+      status="info"
+      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
+    </app-alert-status>
+
+    <div class="bp-section-header">
+      <h3 class="bp-section-title">W3/Bilateral Project Details</h3>
+      <p class="bp-section-subtitle">Fill in the project details to report a new bilateral results in PRMS</p>
+    </div>
+
+    @if (creationService.isAiGenerated()) {
+      <span class="bp-ai-badge" title="This result was generated with AI">
+        <i class="material-icons-round bp-ai-badge-icon">auto_awesome</i>
+        AI Result
+      </span>
+    }
+
+    @if (creationService.isLoadingResult()) {
+      <div class="bp-skel-pill bp-skel-pill--sm"></div>
+    } @else if (
+      creationService.resultCode() || creationService.resultTypeName() || creationService.reportingYear() || creationService.isW3Bilateral()
+    ) {
+      <dl class="bp-result-meta">
+        @if (creationService.resultCode()) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Result code</dt>
+            <dd class="bp-meta-field-value bp-meta-field-value--code">{{ creationService.resultCode() }}</dd>
+          </div>
+        }
+        @if (creationService.resultTypeName()) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Result type</dt>
+            <dd class="bp-meta-field-value">{{ creationService.resultTypeName() }}</dd>
+          </div>
+        }
+        @if (creationService.reportingYear()) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Reporting phase</dt>
+            <dd class="bp-meta-field-value">{{ creationService.reportingYear() }}</dd>
+          </div>
+        }
+        @if (creationService.isW3Bilateral()) {
+          <div class="bp-meta-field" title="Source: API">
+            <dt class="bp-meta-field-label">Funding source</dt>
+            <dd class="bp-meta-field-value bp-meta-field-value--w3">W3 / Bilateral</dd>
+          </div>
+        }
+      </dl>
+    }
+
+    @if (creationService.isLoadingResult()) {
+      <div class="bp-skel-name"></div>
+      <div class="bp-skel-name bp-skel-name--sm"></div>
+      <div class="bp-sp-badges">
+        <div class="bp-skel-pill"></div>
+        <div class="bp-skel-pill"></div>
+        <div class="bp-skel-pill bp-skel-pill--sm"></div>
+      </div>
+    } @else if (creationService.selectedProject(); as project) {
+      <dl class="bp-project-fields">
+        <div class="bp-meta-field bp-meta-field--project">
+          <dt class="bp-meta-field-label">Project</dt>
+          <dd class="bp-meta-field-value bp-meta-field-value--project" [title]="project.fullName || project.shortName">
+            {{ project.fullName || project.shortName }}
+          </dd>
+        </div>
+        @if (project.leadCenter) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Center</dt>
+            <dd class="bp-meta-field-value" [title]="project.leadCenter.name">{{ project.leadCenter.acronym }}</dd>
+          </div>
+        }
+        @if (creationService.selectedPrimarySp(); as primarySp) {
+          <div class="bp-meta-field">
+            <dt class="bp-meta-field-label">Program</dt>
+            <dd class="bp-meta-field-value" [title]="primarySp.name">{{ primarySp.name || primarySp.shortName }}</dd>
+          </div>
+        }
+      </dl>
+
+      <dl class="bp-project-summary-fields">
+        <div class="bp-meta-field bp-meta-field--full">
+          <dt class="bp-meta-field-label">Project Summary</dt>
+          <dd class="bp-meta-field-value">{{ displayText(project.summary) }}</dd>
+        </div>
+        <div class="bp-meta-field bp-meta-field--full">
+          <dt class="bp-meta-field-label">Project Description</dt>
+          <dd class="bp-meta-field-value">{{ displayText(project.description) }}</dd>
+        </div>
+      </dl>
+
+      <div class="bp-sp-badges">
+        @for (sp of project.sciencePrograms; track sp.programId) {
+          <span class="bp-sp-badge" [class.bp-sp-badge--primary]="creationService.selectedPrimarySp()?.programId === sp.programId">
+            {{ sp.spShortName }}
+            @if (sp.allocation) {
+              <span class="bp-sp-allocation">{{ formatAlloc(sp.allocation) }}%</span>
+            }
+          </span>
+        }
+      </div>
+    } @else {
+      @if (creationService.currentResultId()) {
+        <p class="bp-empty-hint">No project linked</p>
+      } @else {
+        <p class="bp-empty-hint">Select a project to begin</p>
+      }
+    }
+  </div>
+
+  <div class="bp-dashboard-card bp-dashboard-card--actions">
+    <h3 class="bp-card-title">Actions</h3>
+    <button class="bp-action-btn" disabled type="button" aria-label="Generate Narrative - Coming soon">
+      <i class="material-icons-round">sparkles</i>
+      <span>Generate Narrative</span>
+      <span class="bp-action-status">Coming soon</span>
+    </button>
+    <button class="bp-action-btn" disabled type="button" aria-label="Download PDF - Coming soon">
+      <i class="material-icons-round">picture_as_pdf</i>
+      <span>Download PDF</span>
+      <span class="bp-action-status">Coming soon</span>
+    </button>
+    <button class="bp-action-btn" disabled type="button" aria-label="AI Review - Coming soon">
+      <i class="material-icons-round">search_check</i>
+      <span>AI Review</span>
+      <span class="bp-action-status">Coming soon</span>
+    </button>
+    <button
+      class="bp-action-btn bp-action-btn--primary bp-action-btn--submit"
+      [disabled]="overallStatus() !== 'complete' || isSubmitting()"
+      [attr.aria-busy]="isSubmitting()"
+      type="button"
+      (click)="onSubmit()">
+      <i class="material-icons-round" [class.animate-spin]="isSubmitting()">{{ isSubmitting() ? 'progress_activity' : 'send' }}</i>
+      <span>{{ isSubmitting() ? 'Submitting…' : 'Submit for Review' }}</span>
+      <span class="bp-action-status">In progress</span>
+    </button>
+  </div>
+</div>

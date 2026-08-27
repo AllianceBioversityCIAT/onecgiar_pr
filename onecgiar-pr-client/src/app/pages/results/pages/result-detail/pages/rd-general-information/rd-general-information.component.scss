@@ -1,10 +1,20 @@
+// Los cinco Impact Area scores. El mockup los presenta como UNA lista de filas contiguas
+// separadas por una regla de 1px, no como cinco tarjetas: la respuesta es la misma escala 0/1/2
+// cinco veces, y alinearlas en columna es lo que permite compararlas de un vistazo.
+//
+// `.radio_grid` era `450px 1fr` (control a la izquierda, hueco del aviso a la derecha) y
+// `.block_container` (global) aporta sombra, 20px de padding y 20px de margen superior. Las dos
+// cosas sobran ahora que el propio `app-field-card layout="row"` hace la fila y pone la regla.
+// Sólo aplica a esta página: ambas clases son globales y las usan otras pantallas.
 .radio_grid {
-  display: grid;
-  grid-template-columns: 450px 1fr;
+  display: block;
+}
 
-  @media screen and (max-width: 1200px) {
-    grid-template-columns: 1fr;
-  }
+.block_container {
+  box-shadow: none;
+  padding: 0;
+  margin-top: 0;
+  border-radius: 0;
 }
 
 .radioButtonList {
@@ -26,4 +36,23 @@
   .reporting_year {
     text-align: right;
   }
+}
+
+/* P2-3201: ⓘ trigger for the Impact Area scoring guidance that used to render as an inline box.
+   `.sgi-dac-info` (custom-fields.scss, global) already styles the button itself. */
+.impact_scores_heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+// Contador que cierra la lista de Impact Area scores. `--pr-text-secondary` de forma constante:
+// el mockup liga el color a `pg.scoreStatusColor`, cuyo valor cae en la cola inalcanzable del
+// `.dc.html` — así que no se inventa un estado de color que no se puede verificar.
+.impact_scores_status {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--pr-text-secondary);
 }

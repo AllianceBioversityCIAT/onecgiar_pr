@@ -3,7 +3,7 @@ import { CreateVersioningDto } from './dto/create-versioning.dto';
 import { UpdateVersioningDto } from './dto/update-versioning.dto';
 import { Version } from './entities/version.entity';
 import { VersionRepository } from './versioning.repository';
-import { Result } from '../results/entities/result.entity';
+import { Result, SourceEnum } from '../results/entities/result.entity';
 import { ResultRepository } from '../results/result.repository';
 import { ApplicationModules } from './entities/application-modules.entity';
 import { ApplicationModulesRepository } from './repositories/application-modules.repository';
@@ -37,7 +37,7 @@ import {
   ModuleTypeEnum,
   StatusPhaseEnum,
 } from '../../shared/constants/role-type.enum';
-import { DataSource, In } from 'typeorm';
+import { DataSource, EntityManager, In } from 'typeorm';
 import { UpdateQaResults } from './dto/update-qa.dto';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
@@ -62,7 +62,17 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
+import { Ipsr } from '../ipsr/entities/ipsr.entity';
+import { ResultRegion } from '../results/result-regions/entities/result-region.entity';
+import { ResultCountry } from '../results/result-countries/entities/result-country.entity';
+import {
+  GEO_SCOPE_REGIONAL,
+  GEO_SCOPE_WITH_COUNTRIES,
+  buildInnovationPackageTitle,
+} from '../ipsr/utils/innovation-package-title.util';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { BilateralVersioningRulesService } from '../bilateral/versioning-rules/bilateral-versioning-rules.service';
 
 /** Clarisa `clarisa_initiatives.portfolio_id` for CGIAR Programs (P25). */
 const PORTFOLIO_CGIAR_PROGRAMS_P25_ID = 3;
@@ -121,6 +131,8 @@ export class VersioningService {
     private readonly _resultAnswerRepository: ResultAnswerRepository,
     private readonly dataSource: DataSource,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository,
+    private readonly _bilateralRules: BilateralVersioningRulesService,
   ) {}
 
   /**
@@ -484,7 +496,7 @@ export class VersioningService {
       const tempDataIP = await this._ipsrRespository.replicate(manager, config);
       config.new_ipsr_id = tempDataIP[0].result_by_innovation_package_id;
       const rbip = await this._ipsrRespository.find({
-        select: ['result_by_innovation_package_id'],
+        select: ['result_by_innovation_package_id', 'result_id'],
         where: {
           result_innovation_package_id: result.id,
           ipsr_role_id: 1,
@@ -492,6 +504,13 @@ export class VersioningService {
         },
       });
       config.old_ipsr_id = rbip[0].result_by_innovation_package_id;
+
+      await this.$_refreshIpsrTitleFromCoreInnovation(
+        manager,
+        dataResult,
+        rbip[0].result_id,
+        user,
+      );
 
       await this._resultIpActionAreaOutcomeRepository.replicate(
         manager,
@@ -527,6 +546,94 @@ export class VersioningService {
       `IPSR: New result reference in phase [${phase.id}]:${phase.phase_name} is ${data.id}`,
     );
     return data;
+  }
+
+  /**
+   * The Innovation Package title embeds the title of its core innovation. When
+   * replication re-points the core innovation link to a newer version (see
+   * `IpsrRepository.createQueries`), the inherited title would keep naming the
+   * previous version of the innovation, which is what users report as "the
+   * package title did not update".
+   *
+   * The title is only rebuilt when the link actually moved, so a title edited
+   * by hand through the general information section is preserved whenever the
+   * core innovation stayed the same.
+   */
+  private async $_refreshIpsrTitleFromCoreInnovation(
+    manager: EntityManager,
+    newResult: Result,
+    previousCoreInnovationId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    const newCoreLink = await manager.getRepository(Ipsr).findOne({
+      select: { result_id: true },
+      where: {
+        result_innovation_package_id: newResult.id,
+        ipsr_role_id: 1,
+        is_active: true,
+      },
+    });
+
+    if (
+      !newCoreLink?.result_id ||
+      Number(newCoreLink.result_id) === Number(previousCoreInnovationId)
+    ) {
+      return;
+    }
+
+    const coreInnovation = await manager.getRepository(Result).findOne({
+      select: { id: true, title: true },
+      where: { id: newCoreLink.result_id },
+    });
+
+    if (!coreInnovation?.title) return;
+
+    const geoScopeId = Number(newResult.geographic_scope_id);
+
+    const regionNames =
+      geoScopeId === GEO_SCOPE_REGIONAL
+        ? (
+            await manager.getRepository(ResultRegion).find({
+              where: { result_id: newResult.id, is_active: true },
+              relations: { region_object: true },
+              order: { result_region_id: 'ASC' },
+            })
+          )
+            .map((region) => region.region_object?.name)
+            .filter((name): name is string => !!name)
+        : [];
+
+    const countryNames = GEO_SCOPE_WITH_COUNTRIES.includes(geoScopeId)
+      ? (
+          await manager.getRepository(ResultCountry).find({
+            where: { result_id: newResult.id, is_active: true },
+            relations: { country_object: true },
+            order: { result_country_id: 'ASC' },
+          })
+        )
+          .map((country) => country.country_object?.name)
+          .filter((name): name is string => !!name)
+      : [];
+
+    const title = buildInnovationPackageTitle({
+      coreInnovationTitle: coreInnovation.title,
+      geoScopeId,
+      regionNames,
+      countryNames,
+    });
+
+    if (title === newResult.title) return;
+
+    await manager.update(
+      Result,
+      { id: newResult.id },
+      { title, last_updated_by: user.id },
+    );
+    newResult.title = title;
+
+    this._logger.log(
+      `IPSR: Title of result ${newResult.id} rebuilt from core innovation ${newCoreLink.result_id} (previously ${previousCoreInnovationId}).`,
+    );
   }
 
   async $_versionManagement(
@@ -603,6 +710,19 @@ export class VersioningService {
         },
       );
       if (primaryPortfolio?.portfolio_id === PORTFOLIO_CGIAR_PROGRAMS_P25_ID) {
+        // P2-3229. A W3/Bilateral result always maps to a Science Program, which is always
+        // P25, so this branch is the only one it can reach — and asking the caller for an
+        // `entityId` would be asking it to restate something the result already says. The
+        // programme is derived from the result's own role-1 initiative and V2 runs with it,
+        // exactly as the API path does, so both entry points send the same thing.
+        if (legacy_result.source === SourceEnum.Bilateral) {
+          const entityId = await this._bilateralRules.resolveTargetEntityId(
+            legacy_result,
+            String(legacy_result.result_code ?? legacy_result.id),
+          );
+          return await this.versionProcessV2(legacy_result.id, entityId, user);
+        }
+
         throw ReturnResponseUtil.format({
           message: `Results whose primary submitter is already a P25 CGIAR Program must use phase change with entityId (V2).`,
           response: legacy_result.id,
@@ -657,6 +777,64 @@ export class VersioningService {
     }
   }
 
+  /**
+   * Gate for carrying a W3/Bilateral result forward from the reporting tool (P2-3229).
+   *
+   * Non-bilateral results fall straight through: W1/W2 keeps the rules it already had, and
+   * AVISA (`SGP-02`) results are handled by the pool-funding branch in the results list, so
+   * they never reach here as bilaterals.
+   *
+   * Eligibility comes from `BilateralVersioningRulesService`, the same leaf service the API
+   * endpoint uses. That is deliberate: AC9 requires both paths to accept and refuse the same
+   * things, and one shared implementation is the only version of that which stays true.
+   *
+   * Authorisation is what differs by caller. Here it is the JWT user's membership of the
+   * result's **lead** centre — a contributing centre is not enough. Admins pass, consistent
+   * with every other role check in the platform.
+   */
+  private async assertBilateralVersioningAllowed(
+    result: Result,
+    user: TokenDto,
+  ): Promise<void> {
+    if (result.source !== SourceEnum.Bilateral) return;
+
+    const resultCode = String(result.result_code ?? result.id);
+    const activePhase = await this._bilateralRules.getActiveReportingPhase();
+
+    // Re-resolves from the code rather than trusting the row handed in: this is where "already
+    // carried forward" and "only exists in the current phase" are caught, and both are about
+    // the set of rows for that code, not about this one.
+    await this._bilateralRules.resolveVersionableResult(
+      resultCode,
+      activePhase.id,
+    );
+
+    const leadCenterCode = await this._bilateralRules.resolveLeadCenterCode(
+      result.id,
+    );
+    if (!leadCenterCode) {
+      throw ReturnResponseUtil.format({
+        message: `Result ${resultCode} has no lead centre, so there is nobody who can carry it forward.`,
+        response: result.id,
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    const roles = await this._roleByUserRepository.getAllRolesByUser(user.id);
+    const isAdmin = (roles ?? []).some((role: any) => +role.role_id === 1);
+    const belongsToLeadCentre = (roles ?? []).some(
+      (role: any) => role.center_id === leadCenterCode,
+    );
+
+    if (!isAdmin && !belongsToLeadCentre) {
+      throw ReturnResponseUtil.format({
+        message: `Only users of centre ${leadCenterCode}, which leads result ${resultCode}, can carry it into a new phase.`,
+        response: result.id,
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+    }
+  }
+
   async versionProcessV2(result_id: number, entity_id: number, user: TokenDto) {
     const entity = await this._clarisaInitiativesRepository.findOne({
       where: { id: entity_id, active: true },
@@ -687,6 +865,14 @@ export class VersioningService {
         statusCode: HttpStatus.NOT_FOUND,
       });
     }
+
+    // P2-3229. A W3/Bilateral result carried forward from the reporting tool answers to the
+    // bilateral rules, not the pool-funding ones: it must be approved, from a previous phase,
+    // not already carried forward, and not a Knowledge Product — the same set the API path
+    // applies, from the same service, so the two cannot drift (AC9). And only a user of the
+    // result's LEAD centre may do it, which is the check the menu in the results list mirrors
+    // for UX but cannot be trusted to enforce.
+    await this.assertBilateralVersioningAllowed(legacy_result, user);
 
     const mainInitiative = legacy_result.obj_result_by_initiatives?.find(
       (rbi) => +rbi.initiative_role_id === 1,
@@ -1060,21 +1246,32 @@ export class VersioningService {
       },
     });
 
-    for (const key in res) {
-      const otherPhase = await this._resultRepository.findOne({
-        where: {
-          version_id: res[key].id,
-          is_active: true,
-        },
-      });
+    if (res.length) {
+      const ids = res.map((r) => r.id);
 
-      const otherPreviousPhase = await this._versionRepository.findOne({
-        where: {
-          previous_phase: res[key].id,
-          is_active: true,
-        },
-      });
-      res[key]['can_be_deleted'] = !otherPreviousPhase && !otherPhase;
+      const [resultsWithPhase, versionsWithPrevPhase] = await Promise.all([
+        this._resultRepository.find({
+          select: ['version_id'],
+          where: { version_id: In(ids), is_active: true },
+        }),
+        this._versionRepository.find({
+          select: ['previous_phase'],
+          where: { previous_phase: In(ids), is_active: true },
+        }),
+      ]);
+
+      const versionIdsWithResults = new Set(
+        resultsWithPhase.map((r) => r.version_id),
+      );
+      const versionIdsAsPrevious = new Set(
+        versionsWithPrevPhase.map((v) => v.previous_phase),
+      );
+
+      for (const row of res) {
+        row['can_be_deleted'] =
+          !versionIdsWithResults.has(row.id) &&
+          !versionIdsAsPrevious.has(row.id);
+      }
     }
 
     return ReturnResponseUtil.format({

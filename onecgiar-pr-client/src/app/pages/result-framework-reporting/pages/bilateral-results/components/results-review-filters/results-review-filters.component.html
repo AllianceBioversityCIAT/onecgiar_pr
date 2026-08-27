@@ -2,19 +2,19 @@
   <div class="filters">
     <div class="filters_items_container_left">
       <!-- Search -->
-      <p-iconfield>
-        <p-inputicon styleClass="pi pi-search" />
+      <span class="pr-search-box">
+        <span class="material-icons-round">search</span>
         <input
           type="text"
-          pInputText
+          hlmInput
           placeholder="Find result"
           [ngModel]="bilateralResultsService.searchText()"
           (ngModelChange)="onSearchChange($event)"
-          [style]="{ width: '350px' }" />
-      </p-iconfield>
+          style="width: 350px" />
+      </span>
 
-      <!-- Apply filters button -->
-      <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
+      <!-- Apply filters button (active-filters dot on the top-right corner) -->
+      <span class="relative inline-flex">
         <app-pr-button
           (click)="openFiltersDrawer()"
           (keydown.enter)="openFiltersDrawer()"
@@ -22,7 +22,11 @@
           [verticalMargin]="-6"
           icon="filter_alt"
           [reverse]="true" />
-      </p-overlaybadge>
+        <span
+          *ngIf="filtersCount() > 0"
+          class="absolute -top-[8px] -right-[3px] h-[9px] w-[9px] rounded-full bg-[var(--pr-color-red-300)] ring-2 ring-white"
+          aria-hidden="true"></span>
+      </span>
       <!-- Clear filters -->
       <app-pr-button
         (click)="clearAllNewFilters()"
@@ -45,7 +49,10 @@
             <span class="filter-chip-arrow">→</span>
             <div class="filter-chips-list">
               @for (chip of group.chips; track chip.label) {
-                <p-chip [label]="chip.label" [removable]="true" (onRemove)="removeFilter(chip)" styleClass="filter-chip" />
+                <span class="pr-chip filter-chip">
+                  <span>{{ chip.label }}</span>
+                  <i class="material-icons-round pr-chip-remove" (click)="removeFilter(chip)">close</i>
+                </span>
               }
             </div>
           </div>
@@ -75,53 +82,43 @@
             label="Indicator category(ies)"
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
-          <p-multiselect
+          <app-pr-filter-multiselect
             [options]="bilateralResultsService.indicatorCategoryOptions()"
             [ngModel]="tempSelectedIndicatorCategories()"
             (ngModelChange)="tempSelectedIndicatorCategories.set($event)"
             placeholder="Select indicator category(ies)"
-            [showHeader]="false"
-            [filter]="bilateralResultsService.indicatorCategoryOptions().length > 5"
-            [maxSelectedLabels]="2"
-            [style]="{ width: '100%' }" />
+            [filter]="bilateralResultsService.indicatorCategoryOptions().length > 5"></app-pr-filter-multiselect>
         </div>
         <div>
           <app-pr-field-header
             label="Status"
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
-          <p-multiselect
+          <app-pr-filter-multiselect
             [options]="bilateralResultsService.statusOptions()"
             [ngModel]="tempSelectedStatus()"
             (ngModelChange)="tempSelectedStatus.set($event)"
-            placeholder="Select status"
-            [showHeader]="false"
-            [filter]="false"
-            [maxSelectedLabels]="2"
-            [style]="{ width: '100%' }" />
+            placeholder="Select status"></app-pr-filter-multiselect>
         </div>
         <div>
           <app-pr-field-header
             label="Lead center"
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
-          <p-multiselect
+          <app-pr-filter-multiselect
             [options]="bilateralResultsService.leadCenterOptions()"
             [ngModel]="tempSelectedLeadCenters()"
             (ngModelChange)="tempSelectedLeadCenters.set($event)"
             placeholder="Select lead center(s)"
-            [showHeader]="false"
-            [filter]="bilateralResultsService.leadCenterOptions().length > 5"
-            [maxSelectedLabels]="2"
-            [style]="{ width: '100%' }" />
+            [filter]="bilateralResultsService.leadCenterOptions().length > 5"></app-pr-filter-multiselect>
         </div>
       </div>
     </div>
 
     <!-- Footer buttons -->
     <div class="drawer-footer">
-      <p-button label="Cancel" variant="outlined" [style]="{ width: '100%' }" (click)="cancelFilters()" (keydown.enter)="cancelFilters()"></p-button>
-      <p-button label="Apply filters" [style]="{ width: '100%' }" (click)="applyFilters()" (keydown.enter)="applyFilters()"></p-button>
+      <button hlmBtn variant="outline" class="w-full" (click)="cancelFilters()">Cancel</button>
+      <button hlmBtn class="w-full" (click)="applyFilters()">Apply filters</button>
     </div>
   </div>
 </div>

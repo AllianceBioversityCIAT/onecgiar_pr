@@ -1,0 +1,262 @@
+<!-- Backdrop scrim (modal overlay) -->
+<div
+  class="pr-drawer__scrim fixed inset-0 z-[140] bg-[rgba(15,23,42,0.35)] backdrop-blur-[1px] transition-opacity"
+  (click)="requestClose()"
+  aria-hidden="true"></div>
+
+<aside
+  class="pr-drawer fixed inset-y-0 right-0 z-[141] flex max-w-[100vw] flex-col border-l border-[rgba(30,32,47,0.1)] bg-white shadow-[-18px_0_44px_rgba(30,32,47,0.14)]"
+  [style.width.px]="width()"
+  role="complementary"
+  aria-label="Manage indicator"
+  (keydown.escape)="requestClose()"
+  tabindex="-1">
+  <!-- drag the left edge to widen; past a threshold the form goes two-column -->
+  <div
+    class="absolute inset-y-0 -left-1 z-[2] w-2 cursor-col-resize"
+    (mousedown)="startResize($event)"
+    role="separator"
+    aria-orientation="vertical"
+    aria-label="Resize panel"></div>
+  <!-- ---------- context: what you are about to report against ---------- -->
+  <!-- Top bar: Drawer title & Close button -->
+  <div class="flex shrink-0 items-center justify-between border-b border-[rgba(30,32,47,0.08)] px-6 py-3.5 bg-white">
+    <div class="flex items-center gap-2">
+      <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">{{ tab() === 'report' ? 'edit_note' : 'info' }}</span>
+      <h3 class="m-0 text-[15px] font-bold text-gray-900">
+        {{ tab() === 'report' ? 'Report result' : 'Indicator information' }}
+      </h3>
+    </div>
+    <button
+      type="button"
+      (click)="requestClose()"
+      aria-label="Close"
+      class="inline-flex size-8 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 cursor-pointer">
+      <span class="material-icons-round text-[20px]">close</span>
+    </button>
+  </div>
+
+  <!-- Context header: Indicator details -->
+  <header class="shrink-0 border-b border-[rgba(30,32,47,0.08)] px-6 py-3 bg-white">
+    <div class="flex items-center gap-2 mb-2 flex-wrap">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[13px] font-bold bg-[#6461bc]/10 text-[var(--pr-color-primary-300)] tracking-wide">
+        <span class="material-icons-round text-[15px]">folder</span>
+        {{ programCode() }}
+      </span>
+      @if (groupTitle() || aowCode()) {
+        <span class="text-[13.5px] font-semibold text-gray-700">
+          {{ groupTitle() || aowCode() }}
+        </span>
+      }
+      <button
+        type="button"
+        (click)="toggleContext()"
+        [attr.aria-expanded]="!contextCollapsed()"
+        aria-controls="drawer-context-details"
+        [attr.aria-label]="contextCollapsed() ? 'Show indicator details' : 'Hide indicator details'"
+        class="ml-auto inline-flex size-7 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 cursor-pointer">
+        <span class="material-icons-round text-[18px]">{{ contextCollapsed() ? 'expand_more' : 'expand_less' }}</span>
+      </button>
+    </div>
+
+    @if (contextCollapsed()) {
+      <p class="m-0 truncate text-[12.5px] font-semibold text-gray-700">{{ indicator()?.indicator_description }}</p>
+    } @else {
+      <div id="drawer-context-details">
+        <h2 class="m-0 text-[15.5px] font-bold leading-snug text-gray-900 tracking-tight">{{ indicator()?.indicator_description }}</h2>
+
+    <div class="mt-3.5 flex flex-wrap items-center gap-2 pt-2.5 border-t border-gray-100">
+      @if (indicator()?.type_name) {
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[13px]">
+          <span class="font-medium text-gray-500">Indicator type:</span>
+          <span class="font-bold text-gray-900">{{ indicator()?.type_name }}</span>
+        </div>
+      }
+      @if (indicator()?.unit_messurament) {
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[13px]">
+          <span class="font-medium text-gray-500">Unit:</span>
+          <span class="font-bold text-gray-900">{{ indicator()?.unit_messurament }}</span>
+        </div>
+      }
+      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50/70 border border-violet-200 text-[13px]">
+        <span class="font-medium text-violet-700">2026 Target:</span>
+        <span class="font-bold text-[var(--pr-color-primary-300)] tabular-nums">{{ indicator()?.target_value_sum ?? 0 }}</span>
+      </div>
+      @if (indicator()?.center_acronym) {
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[13px]">
+          <span class="font-medium text-gray-500">Center:</span>
+          <span class="font-bold text-gray-900">{{ indicator()?.center_acronym }}</span>
+        </div>
+      }
+    </div>
+      </div>
+    }
+  </header>
+
+  <!-- ---------- panel ---------- -->
+  <div class="custom_scroll flex-1 overflow-y-auto px-6 pt-5 pb-0">
+    @switch (tab()) {
+      @case ('report') {
+        <!-- What is already reported here, visible WHILE the form is being filled: recognising a
+             duplicate after creating it is too late. Compact on purpose — the form is the job. -->
+        @if (loadingExisting()) {
+          <div class="mb-4 h-[38px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+        } @else if (existing()?.length) {
+          <div class="mb-4 rounded-xl border border-[rgba(30,32,47,0.08)] bg-[var(--pr-color-accents-1)] p-3">
+            <p class="m-0 flex items-center gap-1.5 text-[12px] font-semibold text-[var(--pr-color-secondary-400)]">
+              <span class="material-icons-round text-[15px] text-[var(--pr-color-accents-5)]">fact_check</span>
+              {{ existing()!.length }} result{{ existing()!.length === 1 ? '' : 's' }} already reported against this indicator
+            </p>
+            <ul class="m-0 mt-2 list-none space-y-1 p-0">
+              @for (r of existing()!; track $index) {
+                <li class="truncate text-[12px] text-[var(--pr-color-accents-6)]">
+                  @if (r?.result_code) {
+                    <span class="font-mono text-[11.5px] text-[var(--pr-color-accents-5)]">{{ r.result_code }}</span>
+                  }
+                  {{ r?.result_title || r?.title || 'Untitled result' }}
+                </li>
+              }
+            </ul>
+            <button
+              type="button"
+              (click)="setTab('info')"
+              class="mt-2 appearance-none border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-300)] underline">
+              See them in detail
+            </button>
+          </div>
+        } @else {
+          <p class="m-0 mb-4 text-[12px] text-[var(--pr-color-accents-5)]">Nothing has been reported against this indicator yet.</p>
+        }
+
+        <app-lab-report-form
+          [tocNode]="tocNode()"
+          [indicator]="indicator()"
+          [initiativeId]="initiativeId()"
+          [programCode]="programCode()"
+          [columns]="columns()"
+          [canReport]="canReport()"
+          (dirtyChange)="onDirtyChange($event)"
+          (cancelled)="requestClose()"
+          (created)="close()" />
+      }
+
+      @case ('info') {
+        <!-- ---- Reported results ---- -->
+        <p class="m-0 mb-3 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
+          <span class="material-icons-round text-[16px]">fact_check</span> Reported results
+        </p>
+        @if (loadingExisting()) {
+          <div class="flex flex-col gap-2">
+            @for (s of [1, 2, 3]; track s) {
+              <div class="h-[62px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+            }
+          </div>
+        } @else if (existing()?.length) {
+          <p class="m-0 mb-2 text-[12px] text-[var(--pr-color-accents-5)]">
+            {{ existing()!.length }} result{{ existing()!.length === 1 ? '' : 's' }} already reported here.
+          </p>
+          <div class="flex flex-col gap-2">
+            @for (r of existing()!; track $index) {
+              <div class="rounded-xl border border-[rgba(30,32,47,0.08)] bg-white p-3.5">
+                <p class="m-0 text-[13px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]">
+                  {{ r?.result_title || r?.title || 'Untitled result' }}
+                </p>
+                <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-[var(--pr-color-accents-5)]">
+                  @if (r?.result_code) {
+                    <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 font-semibold">{{ r.result_code }}</span>
+                  }
+                  @if (r?.official_code) {
+                    <span>{{ r.official_code }}</span>
+                  }
+                  @if (r?.contributing_indicator != null) {
+                    <span>contribution <b class="text-[var(--pr-color-secondary-400)]">{{ r.contributing_indicator }}</b></span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="rounded-xl border border-dashed border-[rgba(30,32,47,0.14)] bg-white px-5 py-8 text-center">
+            <span class="material-icons-round text-[24px] text-[var(--pr-color-accents-3)]">inbox</span>
+            <p class="m-0 mt-1.5 text-[13px] text-[var(--pr-color-accents-5)]">Nothing reported against this indicator yet.</p>
+            <button
+              type="button"
+              (click)="setTab('report')"
+              class="mt-3 inline-flex appearance-none items-center gap-1.5 rounded-lg border-0 bg-[var(--pr-color-primary-300)] px-3.5 py-2 text-[12.5px] font-semibold text-white">
+              <span class="material-icons-round text-[15px]">edit_note</span> Report the first result
+            </button>
+          </div>
+        }
+
+        <!-- ---- Target ---- -->
+        <p class="m-0 mb-3 mt-7 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
+          <span class="material-icons-round text-[16px]">flag</span> Target
+        </p>
+        <div class="rounded-xl border border-[rgba(30,32,47,0.08)] bg-white p-4">
+          <div class="flex items-baseline justify-between gap-4">
+            <span class="text-[12px] text-[var(--pr-color-accents-5)]">Overall target</span>
+            <b class="text-[19px] tabular-nums text-[var(--pr-color-secondary-400)]">{{ indicator()?.target_value_sum ?? 0 | number }}</b>
+          </div>
+          <div class="mt-2 flex items-baseline justify-between gap-4 border-t border-[rgba(30,32,47,0.06)] pt-2">
+            <span class="text-[12px] text-[var(--pr-color-accents-5)]">Achieved so far</span>
+            <b class="text-[19px] tabular-nums text-[var(--pr-color-secondary-400)]">{{ indicator()?.actual_achieved_value_sum ?? 0 | number }}</b>
+          </div>
+        </div>
+
+        @if (targetsByCenter().length) {
+          <p class="m-0 mb-2 mt-5 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">Split by year and Center</p>
+          <div class="overflow-hidden rounded-xl border border-[rgba(30,32,47,0.08)]">
+            <table class="w-full border-collapse text-left">
+              <thead>
+                <tr class="bg-[var(--pr-color-accents-1)] text-[10.5px] uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
+                  <th class="px-3 py-2 font-bold">Year</th>
+                  <th class="px-3 py-2 font-bold">Center</th>
+                  <th class="px-3 py-2 text-right font-bold">Target</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of targetsByCenter(); track $index) {
+                  <tr class="border-t border-[rgba(30,32,47,0.06)]" [class]="$even ? 'bg-white' : 'bg-[#f8f9fd]'">
+                    <td class="px-3 py-2 text-[12.5px] tabular-nums text-[var(--pr-color-accents-6)]">{{ t?.year || '—' }}</td>
+                    <td class="px-3 py-2 text-[12.5px] text-[var(--pr-color-accents-6)]">{{ t?.center_acronym || t?.center_id || '—' }}</td>
+                    <td class="px-3 py-2 text-right text-[13px] font-bold tabular-nums text-[var(--pr-color-secondary-400)]">{{ t?.target_value ?? t?.value ?? '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="m-0 mt-5 text-[12.5px] text-[var(--pr-color-accents-5)]">This indicator has no per-Center split — the target is reported as a single figure.</p>
+        }
+      }
+    }
+  </div>
+
+  @if (confirmingExit()) {
+    <div class="absolute inset-0 z-[60] flex items-center justify-center bg-[rgba(255,255,255,0.86)] p-6">
+      <div class="w-full max-w-[340px] rounded-2xl border border-[rgba(30,32,47,0.1)] bg-white p-5 shadow-[0_20px_50px_rgba(30,32,47,0.22)]">
+        <span class="inline-flex size-10 items-center justify-center rounded-xl bg-[#fff4e5]">
+          <span class="material-icons-round text-[20px] text-[#b45309]">warning_amber</span>
+        </span>
+        <h3 class="m-0 mt-3 text-[15px] font-bold text-[var(--pr-color-secondary-400)]">You have unsaved changes</h3>
+        <p class="m-0 mt-1.5 text-[12.5px] leading-relaxed text-[var(--pr-color-accents-6)]">
+          Nothing you typed has been saved yet. Closing this panel discards it.
+        </p>
+        <div class="mt-4 flex flex-col gap-2">
+          <button
+            type="button"
+            (click)="cancelExit()"
+            class="w-full appearance-none rounded-xl border-0 bg-[var(--pr-color-primary-300)] px-4 py-2.5 text-[13px] font-bold text-white">
+            Keep editing
+          </button>
+          <button
+            type="button"
+            (click)="discardAndClose()"
+            class="w-full appearance-none rounded-xl border border-[rgba(30,32,47,0.12)] bg-white px-4 py-2.5 text-[13px] font-semibold text-[var(--pr-color-red-300)]">
+            Discard and close
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</aside>

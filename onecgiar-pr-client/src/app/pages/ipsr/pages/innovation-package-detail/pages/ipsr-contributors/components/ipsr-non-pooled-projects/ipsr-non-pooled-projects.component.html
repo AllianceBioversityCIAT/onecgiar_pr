@@ -11,7 +11,7 @@
                 [(ngModel)]="donor.funder">
             </app-pr-select>
         </div>
-        <div class="auto_fit_container">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
             <app-pr-input label="Grant title" [required]="true" [(ngModel)]="donor.grant_title"
                 placeholder="Grant title goes here...">
             </app-pr-input>

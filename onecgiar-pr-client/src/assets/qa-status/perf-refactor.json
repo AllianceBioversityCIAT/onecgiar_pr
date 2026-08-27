@@ -1,0 +1,184 @@
+{
+  "boardTitle": "Performance Refactor — QA Status",
+  "boardSubtitle": "Eliminating per-CD DOM scans behind slow tab switching (P2-2967 epic)",
+  "lastUpdated": "2026-06-17",
+  "globalMetrics": {
+    "summary": "DOM scans in idle: 2062/sec baseline → 0/sec after (100% reduction). Tab-switch sequence (7 clicks): 14.9s baseline → 5.9s after (2.5× faster, −60% wall-clock). Blocking time from scan loop eliminated; main-thread starvation gone (timers now fire on time). All 3933 app tests pass (123 affected by refactor); unit tests validate reactivite of 'X alerts' box (7→6 field transition <600ms intra-section).",
+    "before": {
+      "domScansPerSecIdle": 2062,
+      "tabSwitchWallClockSec": 14.9,
+      "blockingTimeMs": 1699
+    },
+    "after": {
+      "domScansPerSecIdle": 0,
+      "tabSwitchWallClockSec": 5.9,
+      "blockingTimeMs": null
+    },
+    "testsPassing": "All 3933 app tests pass (123 affected by refactor)"
+  },
+  "items": [
+    {
+      "id": "p2-2969-result-detail",
+      "ticket": "P2-2969",
+      "title": "Result Detail: Eliminate per-CD DOM scan for mandatory-field feedback",
+      "area": "result-detail.component / data-control.service",
+      "status": "listo-para-pruebas",
+      "whatChanged": "Moved DOM scan for mandatory fields from a self-sustaining setTimeout loop in ngDoCheck (running ~2000 times/sec) to a throttled (150ms), coalesced requestAnimationFrame outside Angular's zone. fieldFeedbackList is now a signal that updates only when actual changes are detected, preventing jank during tab switches.",
+      "howToTest": [
+        "Navigate to a Result (P25 type) with at least 4-5 sections",
+        "Open DevTools → Performance → emulate CPU 4×",
+        "Start trace, click through all 7 tabs in sequence (gen-info → contrib → geo → evidence → capdev → etc), stop trace",
+        "Verify: scripting time near zero during idle (no setTimeout loop); wall-clock <6sec for 7-tab sequence",
+        "Switch to a section with incomplete mandatory fields; watch the red 'X alerts' box: should show exact count (e.g. '3 alerts') and update reactively (test: mark one field complete, count drops to 2 in <1sec)",
+        "No visual jank, smooth tab switching"
+      ],
+      "affects": [
+        "Result Detail main screen",
+        "Mandatory-field validation feedback box ('X alerts')",
+        "Performance under CPU constraints or slow networks",
+        "Tab navigation experience"
+      ],
+      "risks": [
+        "The 'X alerts' feedback box stays fresh (mutation observer pattern keeps it synchronized with actual DOM state)",
+        "Trailing-edge ensures final state is captured even if CD goes idle (e.g. user stops interacting)",
+        "Signal reference-change triggers single CD tick only (no cascading)",
+        "Tab switching does not lose focus or scroll position"
+      ],
+      "metricsBefore": "2062 DOM scans/sec in reposo (CPU 1×), 345 scans/sec (CPU 4×). 7 tab switches: 4667 scans, 14.9 sec wall-clock, 1699 ms blocking time",
+      "metricsAfter": "0 DOM scans/sec in reposo. 7 tab switches: 33 scans (−99.3%), 5.9 sec wall-clock (−60%), main-thread starvation eliminated, timer drift <53ms",
+      "screenshots": [
+        "baseline-result-detail.png",
+        "after-result-detail.png"
+      ]
+    },
+    {
+      "id": "p2-2971-result-creator-report-result-form",
+      "ticket": "P2-2971",
+      "title": "Result Creator + ReportResultForm: Eliminate per-CD DOM scan for mandatory-field feedback",
+      "area": "result-creator.component + report-result-form.component / data-control.service",
+      "status": "listo-para-pruebas",
+      "whatChanged": "Same throttled-rAF-coalesced pattern applied to the Result Creator form and its child ReportResultForm. Was running synchronous scan on every CD cycle; now runs max once per 150ms, outside Angular zone, with single CD tick only if feedback list changed. Includes trailing-edge to capture final state.",
+      "howToTest": [
+        "Navigate to Result Creator (/result/result-creator)",
+        "Emulate CPU 4× in DevTools",
+        "Fill in form fields one by one, watching the red 'X alerts' box",
+        "Verify: no jank during typing; alerts box updates reactively (e.g. mark 'Result title' complete → count decrements)",
+        "Verify: DOM scan count near zero in idle (Performance trace)",
+        "Tab between different form sections; alerts box should remain accurate per section",
+        "Submit the form (no stale feedback on save)"
+      ],
+      "affects": [
+        "Result Creator form screen",
+        "Mandatory-field validation feedback ('X alerts' box)",
+        "Typing responsiveness and form interactivity",
+        "Feedback accuracy across form sections"
+      ],
+      "risks": [
+        "Form field validation timing (trailing-edge ensures final state is scanned)",
+        "Alerts box staleness if DOM changes after the throttle window closes (mitigated by trailing-edge)",
+        "Reactivite of feedback to user input (test by completing 1 field at a time)"
+      ],
+      "metricsBefore": "Scan ran synchronously on every CD (no throttle). Baseline: same root cause as Result Detail but form-specific",
+      "metricsAfter": "0 scans in idle. Form feels responsive; field completion feedback <600ms. Unit tests validate reactive signal updates",
+      "screenshots": []
+    },
+    {
+      "id": "p2-2972-ipsr-detail-creator",
+      "ticket": "P2-2972",
+      "title": "IPSR Detail + Creator: Eliminate per-CD DOM scan for mandatory-field feedback",
+      "area": "innovation-package-detail.component + innovation-package-creator.component / data-control.service",
+      "status": "listo-para-pruebas",
+      "whatChanged": "Applied the same throttle + rAF + zone-outside pattern to IPSR/Innovation Package detail and creator screens. Was running a self-sustaining setTimeout(0) loop in ngDoCheck (same as Result Detail: ~2000 scans/sec); now runs coalescied, only when DOM actually changes.",
+      "howToTest": [
+        "Navigate to an IPSR Detail page (/ipsr/detail/{id}?phase={version})",
+        "Emulate CPU 4× in DevTools",
+        "Start Performance trace, switch between IPSR's 3 main tabs (General Information → Contributors → Package Assess), stop trace",
+        "Verify: scripting/reflow time near zero; idle scan count = 0",
+        "Mark mandatory fields as complete; watch 'X alerts' box decrement reactively",
+        "Navigate to IPSR Creator (/ipsr/creator); repeat typing+field-completion test",
+        "No visual stall when navigating between tabs or filling fields"
+      ],
+      "affects": [
+        "IPSR Package Detail screen",
+        "IPSR Package Creator screen",
+        "Mandatory-field feedback box across both screens",
+        "Tab navigation in IPSR (smoother switching)"
+      ],
+      "risks": [
+        "Feedback list accuracy per IPSR section (trailing-edge + reference-change check ensures it's final)",
+        "Cross-screen state: both detail and creator use shared DataControlService.fieldFeedbackList signal (test each independently)",
+        "IPSR-specific DOM selectors (.section_container) must still match after refactor"
+      ],
+      "metricsBefore": "2000+ scans/sec in reposo (same self-sustaining setTimeout pattern as Result Detail). 7 tab switches: similar high blocking time",
+      "metricsAfter": "0 scans/sec in idle. Tab switches smooth. Unit tests pass for both IPSR Detail and Creator specs",
+      "screenshots": [
+        "after-ipsr-detail.png"
+      ]
+    },
+    {
+      "id": "p2-2970-half-panel-menu",
+      "ticket": "P2-2970 (mitad safe)",
+      "title": "Panel-Menu: Eliminate JSON.stringify per-CD call for green-checks indicator",
+      "area": "panel-menu.component.ts / data-control.service",
+      "status": "listo-para-pruebas",
+      "whatChanged": "Replaced the per-CD inline JSON.stringify(green_checks) with a memoized computed() signal in DataControlService (greenChecksString). The panel-menu getter now delegates to greenChecksString(), which recomputes only when green_checks actually changes, not on every CD cycle. green_checks is now signal-backed (transparent getter/setter for backward compat).",
+      "howToTest": [
+        "Open Result Detail or IPSR Detail",
+        "In DevTools, observe panel-menu component (left sidebar with section icons)",
+        "The green checkmarks next to section names should display correctly (same visual behavior as before)",
+        "Switch tabs and verify green checks follow section completeness: completed sections show green, incomplete show gray/empty",
+        "Performance trace: green_checks_string getter calls should be minimal (1 per actual change, not per CD)",
+        "No visual flicker or missing checkmarks"
+      ],
+      "affects": [
+        "Section-completeness indicator (green checkmarks in panel-menu)",
+        "Visual feedback of section status",
+        "Per-CD computational overhead (eliminated)"
+      ],
+      "risks": [
+        "Signal initialization: green_checks signal must be seeded correctly when data loads",
+        "Computed staleness: greenChecksString computed should reflect current green_checks state (test by completing a section, verifying checkmark updates)",
+        "Template binding (@greenChecksString() or legacy property): confirm panel-menu.html uses correct getter"
+      ],
+      "metricsBefore": "JSON.stringify(green_checks) was called on every CD cycle (hundreds of times/sec in active tabs)",
+      "metricsAfter": "greenChecksString() computed is called only when green_checks signal changes (1-2 times per section load/update, not per CD)",
+      "screenshots": []
+    },
+    {
+      "id": "p2-2973-lists-trackby",
+      "ticket": "P2-2973",
+      "title": "Lists: trackBy/track + dataKey (no row destroy/recreate)",
+      "area": "Results list · IPSR Innovation Packages list",
+      "status": "listo-para-pruebas",
+      "whatChanged": "Added dataKey to the Results list and IPSR list p-tables (PrimeNG reuses rows by key instead of rebuilding them on filter/sort/search) and stable trackBy/track on the sub-result loops. Both lists already paginate (10/50/100) and use a pure filter pipe, so no virtualization was needed; the OnPush-style 'virtualize long lists' part was scoped down to the safe trackBy/dataKey win. Note: the IPSR list filter pipe is pure:false (runs per CD) — left untouched (behaviour-risky) and flagged as a follow-up.",
+      "howToTest": [
+        "Open the Results list (/result/results-outlet/results-list).",
+        "Type in the search box: the list should filter correctly and instantly (e.g. a result code narrows to 1 row), and clearing it restores the full list.",
+        "Sort by a column (click a header) — order changes, no rows disappear or duplicate.",
+        "Change page size (10/50/100) and paginate — rows render correctly.",
+        "Click a result — it must navigate to its Result Detail (no broken selection).",
+        "Repeat the render/filter checks on the Innovation Packages list (/ipsr/list/innovation-list).",
+        "No console errors; no visual flicker when the list updates."
+      ],
+      "affects": [
+        "Results list table (filter, sort, pagination, row selection/navigation)",
+        "IPSR Innovation Packages list table",
+        "Sub-result rows rendered inside each list row"
+      ],
+      "risks": [
+        "dataKey='result_code' must be unique per row — selection/navigation must still work (verified: filter+sort+click navigates correctly)",
+        "track by subResult.id — confirm sub-results still render in the right row after filtering",
+        "Pure-pipe filtering unchanged; IPSR list pipe is still pure:false (per-CD) — separate follow-up, not in this change"
+      ],
+      "metricsBefore": "Lists re-created DOM rows on every filter/sort change (no row reuse).",
+      "metricsAfter": "Rows reused by key on filter/sort; filter 8560->1 row and back verified; click navigates to detail. 108 list unit tests pass.",
+      "screenshots": []
+    }
+  ],
+  "extraImprovements": [
+    "P2-2970 (OnPush in sections): blocked on 2969/2971/2972 validation; safe to implement after confirming scan elimination",
+    "P2-2973 (trackBy + virtualize lists): defer to next phase — trackBy is safe but virtualization has scroll-behavior risk (high blast radius for tab-switch scenario)",
+    "P2-2974 (@defer + section cache): defer to next phase — requires re-proof of 100+ cases (data staleness, cache invalidation)",
+    "P2-2975 (eventCoalescing global + signals migration): Phase 2 only — blast radius entire app; goes last after all other fixes validated"
+  ]
+}

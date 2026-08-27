@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
-import { REPORTING_EXCLUDED_INSTITUTION_IDS } from '../clarisa-reporting-exclusions.constant';
 import { ClarisaCenter } from './entities/clarisa-center.entity';
 import { ClarisaCenterDto } from './dto/clarisa-center.dto';
 import {
@@ -40,7 +39,7 @@ export class ClarisaCentersRepository extends Repository<ClarisaCenter> {
       from clarisa_center cc
       inner join clarisa_institutions ci on ci.id  = cc.institutionId
         and ci.is_active > 0
-        and cc.institutionId not in (${REPORTING_EXCLUDED_INSTITUTION_IDS.join(',')});
+        and cc.is_active > 0;
     `;
     try {
       const centers: ClarisaCenterDto[] = await this.query(queryData);

@@ -1,0 +1,276 @@
+<app-bilateral-page-header
+  [pageTitle]="headerTitle()"
+  [resultCode]="creationService.resultCode()"
+  [resultTypeName]="creationService.resultTypeName()"
+  [isW3Bilateral]="creationService.isW3Bilateral()"
+  [statusId]="creationService.resultStatusId()" />
+
+<!-- P2-3229 AC5. The phases this result exists in, so a versioned result can be navigated
+     between years. The component builds its links from the current route, so here they stay
+     inside the bilateral module. Only rendered once there is a result to have phases. -->
+@if (!isCreating() && resultId()) {
+  <app-phase-switcher></app-phase-switcher>
+}
+
+<div class="bilateral-creator" [class.bilateral-creator--with-aside]="!isCreating() && resultId()">
+  @if (isCreating()) {
+    <div [class.bcr-step--locked]="isAiProcessing()">
+      <app-bilateral-project-selector (projectSelected)="onProjectSelected($event)"></app-bilateral-project-selector>
+    </div>
+
+    @if (creationService.selectedProject()) {
+      <div id="bcr-sp-section" [class.bcr-step--locked]="isAiProcessing()">
+        <app-bilateral-sp-selector (primarySelected)="onPrimarySelected()"></app-bilateral-sp-selector>
+      </div>
+    }
+  }
+
+  @if (creationService.selectedPrimarySp() && isCreating()) {
+    <div id="bcr-reporting-way" [class.bcr-step--locked]="isAiProcessing()">
+      <app-bilateral-reporting-way-selector
+        [isLoading]="isCreatingResult()"
+        [canUseAi]="canUseAi()"
+        (waySelected)="onReportingWaySelected($event)"></app-bilateral-reporting-way-selector>
+    </div>
+  }
+
+  @if (isCreating() && selectedReportingWay() === 'ai') {
+    <div id="bcr-ai-upload" class="bcr-ai-section">
+      <app-bilateral-ai-upload></app-bilateral-ai-upload>
+    </div>
+  }
+
+  @if (isCreating() && selectedReportingWay() === 'manual') {
+    <div id="bcr-level-section">
+      <hr class="bcr-divider" />
+
+      <app-bilateral-result-level-selector
+        [resultLevelId]="resultLevelId()"
+        (levelSelected)="onLevelSelected($event)"></app-bilateral-result-level-selector>
+
+      @if (resultLevelId()) {
+        <div id="bcr-type-section" class="bcr-type-section" [class.bcr-type-section--open]="showTypeDropdown()">
+          <label class="bcr-label">Result Type <span class="bcr-required">*</span></label>
+          <div class="bcr-dropdown-anchor">
+            <div class="bcr-field" (click)="toggleTypeDropdown()" tabindex="0" role="combobox" [attr.aria-expanded]="showTypeDropdown()">
+              <span class="bcr-field-text" [class.bcr-placeholder]="!resultTypeId()">
+                {{ selectedTypeLabel() }}
+              </span>
+              <i class="material-icons-round bcr-chevron" [class.bcr-chevron--open]="showTypeDropdown()">expand_more</i>
+            </div>
+
+            @if (showTypeDropdown()) {
+              <div class="bcr-dropdown-overlay" (click)="closeTypeDropdown()"></div>
+              <div class="bcr-dropdown">
+                <div class="bcr-options">
+                  @for (type of availableResultTypes(); track type.id) {
+                    <div class="bcr-option" [class.bcr-option--selected]="resultTypeId() === type.id" (click)="onTypeSelected(type.id)">
+                      <span class="bcr-option-name">{{ type.label }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        @if (isKnowledgeProductType()) {
+          <div id="bcr-kp-handle-section" class="bcr-type-section">
+            <label class="bcr-label" for="bcr-kp-handle">Repository link/handle <span class="bcr-required">*</span></label>
+            <div class="flex items-start gap-[8px]">
+              <input
+                id="bcr-kp-handle"
+                type="text"
+                class="w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] py-[10px] text-[14px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)]"
+                placeholder="https://cgspace.cgiar.org/handle/10568/175322"
+                [value]="kpHandle()"
+                (input)="onKpHandleInput($any($event.target).value)" />
+              <button
+                type="button"
+                class="flex h-[42px] shrink-0 items-center gap-[6px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white transition-colors hover:bg-[var(--pr-color-primary-400)] disabled:cursor-wait disabled:opacity-60"
+                [disabled]="!kpHandle().trim() || validatingKpHandle()"
+                (click)="syncKpHandle()">
+                <i class="material-icons-round text-[18px]" [class.animate-spin]="validatingKpHandle()">sync</i>
+                {{ validatingKpHandle() ? 'Syncing…' : 'Sync' }}
+              </button>
+            </div>
+            <p class="mt-[6px] text-[12px] text-[var(--pr-text-subtle)]">
+              The result is created automatically from CGSpace, MELSpace, or WorldFish DSpace — title, description, and metadata are populated from this handle.
+              Click "Sync" to verify the handle and preview the title before creating the result.
+            </p>
+
+            @if (kpHandleError()) {
+              <p class="mt-[6px] text-[12px] text-[var(--pr-color-red-300)]">{{ kpHandleError() }}</p>
+            }
+
+            @if (kpSyncedTitle()) {
+              <div class="mt-[10px]">
+                <label class="bcr-label" for="bcr-kp-title-preview">Title retrieved from the repository</label>
+                <input
+                  id="bcr-kp-title-preview"
+                  type="text"
+                  disabled
+                  readonly
+                  class="w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[12px] py-[10px] text-[14px] text-[var(--pr-text-heading)] outline-none"
+                  [value]="kpSyncedTitle()" />
+              </div>
+            }
+          </div>
+        }
+
+        <div id="bcr-actions" class="bcr-actions">
+          <button class="bcr-create-btn" (click)="onNext()" [disabled]="!canCreate || isCreatingResult()" type="button">
+            {{ isCreatingResult() ? 'Creating result...' : 'Next' }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- The sections mount only once loadResult publishes the internal result id, so the editor needs
+       a placeholder for that window instead of a blank page. -->
+  @if (!isCreating() && !resultId() && creationService.isLoadingResult()) {
+    <div class="px-[32px] py-[24px]" aria-busy="true">
+      <app-form-skeleton [rows]="3" [hasLabel]="true" [hasExtra]="true" [extraRows]="4" />
+    </div>
+  }
+
+  <!-- Error twin of the skeleton above: the sections never mount without the internal id, so a
+       failed detail request would otherwise leave the editor blank and silent. -->
+  @if (!isCreating() && !resultId() && !creationService.isLoadingResult() && creationService.loadFailed()) {
+    <div class="px-[32px] py-[24px]">
+      <div
+        role="alert"
+        class="flex flex-col items-center gap-[12px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-subtle)] px-[24px] py-[32px] text-center">
+        <i class="material-icons-round text-[32px] text-[var(--pr-text-subtle)]">error_outline</i>
+        <p class="m-0 text-[15px] font-semibold text-[var(--pr-text-heading)]">We couldn't load this result</p>
+        <p class="m-0 text-[14px] text-[var(--pr-text-subtle)]">
+          Check the result code and your connection, then try again.
+        </p>
+        <button class="bcr-create-btn bcr-create-btn--inline" type="button" (click)="retryLoadResult()">Try again</button>
+      </div>
+    </div>
+  }
+
+  @if (!isCreating() && resultId()) {
+    <app-bilateral-progress-aside [(openSectionName)]="openSectionName"></app-bilateral-progress-aside>
+
+    <div class="bcr-floating-save-wrapper">
+      <div
+        class="bcr-floating-save"
+        [class.bcr-floating-save--saving]="autoSaveService.globalSaveState() === 'saving'"
+        [class.bcr-floating-save--saved]="autoSaveService.globalSaveState() === 'saved'"
+        [class.bcr-floating-save--error]="autoSaveService.globalSaveState() === 'error'">
+        <i class="material-icons-round bcr-floating-save-icon">
+          @switch (autoSaveService.globalSaveState()) {
+            @case ('saving') {
+              sync
+            }
+            @case ('saved') {
+              cloud_done
+            }
+            @case ('error') {
+              error_outline
+            }
+            @default {
+              cloud
+            }
+          }
+        </i>
+        <span class="bcr-floating-save-text">
+          @switch (autoSaveService.globalSaveState()) {
+            @case ('saving') {
+              Saving&hellip;
+            }
+            @case ('saved') {
+              All changes saved
+            }
+            @case ('error') {
+              Save failed
+            }
+            @default {
+              Ready
+            }
+          }
+        </span>
+      </div>
+      <button
+        type="button"
+        class="bcr-floating-btn-save disabled:cursor-wait disabled:opacity-60"
+        [disabled]="isManualSaving()"
+        [attr.aria-busy]="isManualSaving()"
+        (click)="triggerManualSave()">
+        <i class="material-icons-round" [class.animate-spin]="isManualSaving()">{{ isManualSaving() ? 'progress_activity' : 'save' }}</i>
+        {{ isManualSaving() ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+
+    <div id="bcr-accordions">
+      <div id="bcr-section-zero">
+        <app-section-zero-dashboard [isSubmitting]="isSubmitting()" (submitRequested)="submitResult()"></app-section-zero-dashboard>
+      </div>
+
+      <app-bilateral-accordion
+        sectionName="general-info"
+        sectionLabel="General Information"
+        sectionIcon="description"
+        [totalFields]="getSectionTotal('general-info')"
+        [filledFields]="getSectionFilled('general-info')"
+        [mdsStatus]="getSectionMdsStatus('general-info')"
+        [resultId]="resultId()"
+        [(openSectionName)]="openSectionName">
+        <app-section-general-info></app-section-general-info>
+      </app-bilateral-accordion>
+
+      <app-bilateral-accordion
+        sectionName="contributors"
+        sectionLabel="Contributors & Partners"
+        sectionIcon="people"
+        [totalFields]="getSectionTotal('contributors')"
+        [filledFields]="getSectionFilled('contributors')"
+        [mdsStatus]="getSectionMdsStatus('contributors')"
+        [resultId]="resultId()"
+        [(openSectionName)]="openSectionName">
+        <app-section-contributors></app-section-contributors>
+      </app-bilateral-accordion>
+
+      <app-bilateral-accordion
+        sectionName="geography"
+        sectionLabel="Geographic Location"
+        sectionIcon="map"
+        [totalFields]="getSectionTotal('geography')"
+        [filledFields]="getSectionFilled('geography')"
+        [mdsStatus]="getSectionMdsStatus('geography')"
+        [resultId]="resultId()"
+        [(openSectionName)]="openSectionName">
+        <app-section-geography></app-section-geography>
+      </app-bilateral-accordion>
+
+      <app-bilateral-accordion
+        sectionName="evidence"
+        sectionLabel="Evidence"
+        sectionIcon="attachment"
+        [totalFields]="getSectionTotal('evidence')"
+        [filledFields]="getSectionFilled('evidence')"
+        [mdsStatus]="getSectionMdsStatus('evidence')"
+        [resultId]="resultId()"
+        [(openSectionName)]="openSectionName">
+        <app-section-evidence></app-section-evidence>
+      </app-bilateral-accordion>
+
+      @if (hasTypeSpecificSection()) {
+        <app-bilateral-accordion
+          sectionName="type-specific"
+          sectionLabel="Type-Specific Details"
+          sectionIcon="category"
+          [totalFields]="getSectionTotal('type-specific')"
+          [filledFields]="getSectionFilled('type-specific')"
+          [mdsStatus]="getSectionMdsStatus('type-specific')"
+          [resultId]="resultId()"
+          [(openSectionName)]="openSectionName">
+          <app-section-type-specific></app-section-type-specific>
+        </app-bilateral-accordion>
+      }
+    </div>
+  }
+</div>

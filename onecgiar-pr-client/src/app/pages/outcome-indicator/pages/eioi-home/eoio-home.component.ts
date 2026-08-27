@@ -1,32 +1,41 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective,
+  PrTableLoadingDirective
+} from '../../../../shared/components/pr-table';
 import { ApiService } from '../../../../shared/services/api/api.service';
-import { ButtonModule } from 'primeng/button';
 import { CustomSpinnerModule } from '../../../../shared/components/custom-spinner/custom-spinner.module';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FilterIndicatorBySearchPipe } from '../../pipes/filter-indicator-by-search.pipe';
 import { FormsModule } from '@angular/forms';
-import { TooltipModule } from 'primeng/tooltip';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 
 @Component({
     selector: 'app-eioi-home',
     imports: [
         CommonModule,
-        TableModule,
-        ButtonModule,
+        PrTableComponent,
+        PrSortIconComponent,
+        PrSortableColumnDirective,
+        PrTableHeaderDirective,
+        PrTableBodyDirective,
+        PrTableEmptyDirective,
+        PrTableLoadingDirective,
         CustomSpinnerModule,
         RouterLink,
         FilterIndicatorBySearchPipe,
         FormsModule,
-        TooltipModule,
         CustomFieldsModule
     ],
-    providers: [MessageService],
     templateUrl: './eoio-home.component.html',
     styleUrl: './eoio-home.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -37,7 +46,7 @@ export class EoioHomeComponent implements OnDestroy, OnInit {
   outcomeIService = inject(OutcomeIndicatorService);
   activatedRoute = inject(ActivatedRoute);
   exportTablesSE = inject(ExportTablesService);
-  messageService = inject(MessageService);
+  messageService = inject(PrToastService);
 
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('End of initiative outcome indicators list');

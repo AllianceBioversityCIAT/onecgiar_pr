@@ -1,0 +1,20 @@
+<div class="custom_select pr-filter-select" [class.globalDisabled]="disabled">
+  <a class="field" tabindex="0" #trigger>
+    <div class="text pr-body-2" [ngClass]="{ select_placeholder: !hasValue }">{{ triggerLabel }}</div>
+    <div class="icon_container"></div>
+    <i class="pi pi-chevron-down icon_dropdown"></i>
+    <div class="remove_focus" (click)="removeFocus(trigger)"></div>
+    <div class="options">
+      <div class="pr-fs-list custom_scroll">
+        <div
+          class="option pr-body-2"
+          *ngFor="let option of options"
+          [class.is-active]="isSelected(option)"
+          (click)="pick(option, trigger); $event.stopPropagation()">
+          {{ labelOf(option) }}
+        </div>
+        <div class="no_info" *ngIf="!options?.length">No information found</div>
+      </div>
+    </div>
+  </a>
+</div>

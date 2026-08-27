@@ -6,17 +6,16 @@ import { KnowledgeProductInfoComponent } from './knowledge-product-info.componen
 import { CustomFieldsModule } from '../../../../../../../custom-fields/custom-fields.module';
 import { NgCircleProgressModule } from 'ng-circle-progress';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
-import { MessageModule } from 'primeng/message';
+import { SectionBottomBarComponent } from '../../../components/section-bottom-bar/section-bottom-bar.component';
 
 @NgModule({
   declarations: [KnowledgeProductInfoComponent],
-  imports: [
+  imports: [SectionBottomBarComponent,
     CommonModule,
     KnowledgeProductInfoRoutingModule,
     CustomFieldsModule,
     FeedbackValidationDirectiveModule,
     NgCircleProgressModule.forRoot(),
-    MessageModule
   ]
 })
 export class KnowledgeProductInfoModule {}

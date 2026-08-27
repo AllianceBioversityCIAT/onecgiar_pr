@@ -76,6 +76,8 @@ import { GenderTagRepository } from '../results/gender_tag_levels/genderTag.repo
 import { ElasticService } from '../../elastic/elastic.service';
 import { LogRepository } from '../../connection/dynamodb-logs/dynamodb-logs.repository';
 import { VersioningService } from '../versioning/versioning.service';
+// Same reason as in toc-results.module.ts: this module provides VersioningService directly.
+import { BilateralVersioningRulesModule } from '../bilateral/versioning-rules/bilateral-versioning-rules.module';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
 import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 import { VersionRepository } from '../versioning/versioning.repository';
@@ -199,6 +201,7 @@ import { ResultDeletionAuditModule } from '../results/result-deletion-audit/resu
   ],
   imports: [
     HttpModule,
+    BilateralVersioningRulesModule,
     PrmsTablesTypesModule,
     SharePointModule,
     ImpactAreasScoresComponentsModule,

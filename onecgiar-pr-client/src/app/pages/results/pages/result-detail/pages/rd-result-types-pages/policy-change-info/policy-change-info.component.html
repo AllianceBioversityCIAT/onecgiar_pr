@@ -1,9 +1,9 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
   <app-alert-status description="Please fill in the following required fields for this indicator category."> </app-alert-status>
 
   <app-alert-status [description]="policyTypeDescriptions()"> </app-alert-status>
 
-  <div class="auto_fit_container">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <app-pr-select
       [options]="this.policyControlListSE.policyTypesList"
       label="Policy type"
@@ -11,7 +11,8 @@
       optionLabel="name"
       optionValue="id"
       placeholder="Select policy type"
-      [(ngModel)]="innovationUseInfoBody.policy_type_id">
+      [(ngModel)]="innovationUseInfoBody.policy_type_id"
+      (ngModelChange)="clearAmountWhenNotApplicable()">
     </app-pr-select>
 
     <app-pr-input
@@ -35,7 +36,7 @@
       description="Select Status"
       optionLabel="name"
       optionValue="id"
-      placeholder="Select stage"
+      placeholder="Select status"
       [required]="false"
       [(ngModel)]="innovationUseInfoBody.status_amount">
     </app-pr-select>
@@ -84,4 +85,4 @@
     [isComplete]="this.innovationUseInfoBody.institutions?.length > 0"></div>
 </div>
 
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+<app-section-bottom-bar (clickSave)="onSaveSection()" />

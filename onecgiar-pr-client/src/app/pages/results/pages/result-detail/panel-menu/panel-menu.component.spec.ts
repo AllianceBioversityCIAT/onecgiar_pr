@@ -4,7 +4,6 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PanelMenuPipe } from './pipes/panel-menu.pipe';
 import { PrInputComponent } from '../../../../../custom-fields/pr-input/pr-input.component';
 import { PrButtonComponent } from '../../../../../custom-fields/pr-button/pr-button.component';
-import { TooltipModule } from 'primeng/tooltip';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../result-creator/services/result-level.service';
 import { ResultsApiService } from '../../../../../shared/services/api/results-api.service';
@@ -34,6 +33,9 @@ describe('PanelMenuComponent', () => {
       dataControlSE: {
         isKnowledgeProduct: false,
         green_checks: { section1: true, section2: false },
+        greenChecksString(this: any) {
+          return JSON.stringify(this.green_checks);
+        },
         currentResult: { initiative_id: 1, result_code: 'TEST001', version_id: 1, status_id: 1, inQA: false },
         myInitiativesList: [{ initiative_id: 1, role: 'Contributor' }]
       },
@@ -83,7 +85,7 @@ describe('PanelMenuComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [PanelMenuComponent, PanelMenuPipe, PrInputComponent, PrButtonComponent],
-      imports: [HttpClientTestingModule, TooltipModule, RouterTestingModule],
+      imports: [HttpClientTestingModule, RouterTestingModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ResultLevelService, useValue: mockResultLevelService },

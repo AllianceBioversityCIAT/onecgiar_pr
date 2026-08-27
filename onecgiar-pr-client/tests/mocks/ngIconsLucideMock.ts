@@ -1,0 +1,12 @@
+export const lucideChevronDown = {};
+export const lucideCheck = {};
+export const lucideEllipsis = {};
+export const lucideInfo = {};
+export const lucideChevronRight = {};
+export const lucideChevronLeft = {};
+export const lucideX = {};
+export const lucideSearch = {};
+export const lucidePlus = {};
+export const lucideMinus = {};
+export const lucideEdit = {};
+export const lucideTrash = {};

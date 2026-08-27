@@ -1,0 +1,158 @@
+import { Component, EventEmitter, forwardRef, Input, Output } from '@angular/core';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+
+/**
+ * Compact filter multiselect (PrimeNG `<p-multiselect>` replacement — 0 PrimeNG).
+ *
+ * A lightweight dropdown with native checkboxes whose trigger shows a count of the
+ * selected items (not chips). Mirrors the p-multiselect filter API used across the
+ * app: options, optionLabel, optionValue (when set the model holds values, otherwise
+ * whole objects), placeholder, filter (search box), showHeader. Two-way `ngModel`
+ * (array) + `(changed)` output for the old `(onChange)`/`(ngModelChange)` handlers.
+ *
+ * For the rich partner/chips multiselect keep using `app-pr-multi-select`.
+ */
+@Component({
+  selector: 'app-pr-filter-multiselect',
+  templateUrl: './pr-filter-multiselect.component.html',
+  styleUrls: ['./pr-filter-multiselect.component.scss'],
+  standalone: false,
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PrFilterMultiselectComponent),
+      multi: true
+    }
+  ]
+})
+export class PrFilterMultiselectComponent implements ControlValueAccessor {
+  @Input() options: any[] = [];
+  @Input() optionLabel: string;
+  /** When set, the model holds `option[optionValue]`; otherwise it holds the whole option object. */
+  @Input() optionValue: string;
+  @Input() placeholder = 'Select';
+  @Input() filter = false;
+  @Input() showHeader = true;
+  @Input() disabled = false;
+  /** Grouped options: when true, `options` is a list of groups with `optionGroupChildren` arrays. */
+  @Input() group = false;
+  @Input() optionGroupChildren: string;
+  @Input() optionGroupLabel = 'name';
+  /**
+   * Noun for the trigger when more than one option is picked ("3 sections"). When set, a single
+   * selection shows that option's own label instead of "1 …" — the reference behaviour for the
+   * reporting Section filter. Left unset the trigger keeps the historical "N selected".
+   */
+  @Input() countLabel: string;
+  @Output() changed = new EventEmitter<any[]>();
+
+  value: any[] = [];
+  searchText = '';
+
+  /** Backward-compat bridge for consumers that reset the selection via @ViewChild (`x._value = []`). */
+  get _value(): any[] {
+    return this.value;
+  }
+  set _value(v: any[]) {
+    this.value = Array.isArray(v) ? v : [];
+  }
+
+  private onChange: (v: any) => void = () => {};
+  private onTouched: () => void = () => {};
+
+  private valueOf(option: any): any {
+    return this.optionValue ? option?.[this.optionValue] : option;
+  }
+
+  /**
+   * Value equality for the model.
+   *
+   * ⚠️ P2-3307 / P2-3308: this used to be `item === v`. When the consumer does not pass
+   * `optionValue` the model holds whole option objects, so identity comparison only matched
+   * when the preselected entries were the *same instances* as the ones in `options`. A caller
+   * that preloads its selection from a different response (a copy, not the same object) got
+   * every entry rendered as unselected, and clicking it pushed a duplicate instead of removing it.
+   * The PrimeNG `<p-multiselect>` this component replaced (migration `8fea5077b`) compared with
+   * `ObjectUtils.equals`; that behaviour was lost and is restored here as a shallow compare.
+   */
+  private sameValue(a: any, b: any): boolean {
+    if (a === b) return true;
+    if (a == null || b == null || typeof a !== 'object' || typeof b !== 'object') return false;
+    const keys = Object.keys(a);
+    return keys.length === Object.keys(b).length && keys.every(k => a[k] === b[k]);
+  }
+
+  isSelected(option: any): boolean {
+    const v = this.valueOf(option);
+    return (this.value || []).some(item => this.sameValue(item, v));
+  }
+
+  toggle(option: any): void {
+    if (this.disabled) return;
+    const v = this.valueOf(option);
+    const arr = [...(this.value || [])];
+    const idx = arr.findIndex(item => this.sameValue(item, v));
+    if (idx >= 0) arr.splice(idx, 1);
+    else arr.push(v);
+    this.value = arr;
+    this.onChange(arr);
+    this.changed.emit(arr);
+  }
+
+  get filteredOptions(): any[] {
+    return this.applyFilter(this.options || []);
+  }
+
+  /** Groups with their (search-filtered) children, for grouped mode. */
+  get filteredGroups(): { label: string; children: any[] }[] {
+    const groups = this.options || [];
+    return groups
+      .map(g => ({
+        label: g?.[this.optionGroupLabel],
+        children: this.applyFilter(g?.[this.optionGroupChildren] || [])
+      }))
+      .filter(g => g.children.length);
+  }
+
+  private applyFilter(list: any[]): any[] {
+    if (!this.filter || !this.searchText) return list;
+    const q = this.searchText.toLowerCase();
+    return list.filter(o => `${this.optionLabel ? o?.[this.optionLabel] : o}`.toLowerCase().includes(q));
+  }
+
+  /** Flattens grouped options so a selected value can be resolved back to its label. */
+  private get allOptions(): any[] {
+    const opts = this.options || [];
+    return this.group ? opts.flatMap(g => g?.[this.optionGroupChildren] || []) : opts;
+  }
+
+  get triggerLabel(): string {
+    const selected = this.value || [];
+    if (!selected.length) return this.placeholder;
+    if (!this.countLabel) return `${selected.length} selected`;
+    if (selected.length === 1) {
+      const option = this.allOptions.find(o => this.valueOf(o) === selected[0]);
+      if (option) return this.optionLabel ? option[this.optionLabel] : option;
+    }
+    return `${selected.length} ${this.countLabel}`;
+  }
+
+  removeFocus(el: HTMLElement): void {
+    el?.blur();
+    this.onTouched();
+  }
+
+  // ControlValueAccessor
+  writeValue(value: any): void {
+    this.value = Array.isArray(value) ? value : [];
+  }
+  registerOnChange(fn: any): void {
+    this.onChange = fn;
+  }
+  registerOnTouched(fn: any): void {
+    this.onTouched = fn;
+  }
+  setDisabledState(isDisabled: boolean): void {
+    this.disabled = isDisabled;
+  }
+}

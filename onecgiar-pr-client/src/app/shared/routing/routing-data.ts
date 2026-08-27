@@ -55,6 +55,7 @@ export const routingApp: PrRoute[] = [
     prHide: false,
     canActivate: [CheckLoginGuard],
     path: 'init-admin-module',
+    data: { sidebar: { width: 300 } },
     loadChildren: () => import('../../pages/init-admin-section/init-admin-section.module').then(m => m.InitAdminSectionModule)
   },
   {
@@ -87,16 +88,73 @@ export const routingApp: PrRoute[] = [
     path: 'reports/ipsr-details/:id',
     loadChildren: () => import('../../pages/pdf-reports/pdf-reports.module').then(m => m.PdfReportsModule)
   },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result-framework-reporting', prHide: true }
+  {
+    // Public QA status board (no CheckLoginGuard) — see onecgiar-pr-client/docs/qa-status-board.md
+    prName: 'QA Status',
+    prHide: true,
+    path: 'qa-status',
+    loadComponent: () => import('../../pages/qa-status/qa-status.component').then(m => m.QaStatusComponent)
+  },
+  {
+    // Dev-only local storage bridge (no CheckLoginGuard so you can paste into a fresh browser).
+    // Copy/paste the whole localStorage to share a session across browsers. Blocked in prod by the component.
+    prName: 'Local storage bridge',
+    prHide: true,
+    path: 'locals',
+    loadComponent: () => import('../../pages/locals/locals.component').then(m => m.LocalsComponent)
+  },
+  {
+    // Public conceptual guide (bilingual EN/ES infographic) of the Results Framework & Reporting flow.
+    prName: 'RFR Explanation',
+    prHide: true,
+    path: 'rfr-explanation',
+    loadComponent: () => import('../../pages/rfr-explanation/rfr-explanation.component').then(m => m.RfrExplanationComponent)
+  },
+  {
+    // `prHide` was `true` while the bilateral module was being built. The approved reference lists
+    // "Bilateral Results" as the 4th PLATFORM entry (GAP-ANALYSIS-2026-08-11 §1 S1) and
+    // `PLATFORM_ORDER` in the nav sidebar already reserves its slot, so the route is now visible.
+    // The only other reader of `prHide` over `routingApp` is `NavigationBarComponent`, which renders
+    // exclusively inside `HeaderPanelComponent` — no longer mounted by any template since the Spartan
+    // sidebar replaced the old header. So nothing else changes by unhiding it.
+    prName: 'Bilateral Results',
+    underConstruction: false,
+    prHide: false,
+    canActivate: [CheckLoginGuard],
+    path: 'bilateral',
+    loadChildren: () => import('../../pages/bilateral/bilateral.module').then(m => m.BilateralModule)
+  },
+  {
+    // Session entry point. Resolves to the user's first assigned science program, or to the
+    // Results Center when they have none. See `LandingRedirectComponent`.
+    prName: '',
+    path: '**',
+    prHide: true,
+    canActivate: [CheckLoginGuard],
+    loadComponent: () => import('../../pages/landing-redirect/landing-redirect.component').then(m => m.LandingRedirectComponent)
+  }
 ];
 
 export const extraRoutingApp: PrRoute[] = [
+  {
+    // Admin only, per the live design, which wraps the whole screen (and its sidebar entry) in
+    // `<sc-if value="{{ isAdmin }}">`. Guarded, not merely hidden — hiding a nav item is never
+    // enough (client CLAUDE.md §7, AC-3).
+    prName: 'Portfolio overview',
+    onlyTest: false,
+    canActivate: [CheckAdminGuard],
+    prHide: false,
+    path: 'portfolio-overview',
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/portfolio-overview/portfolio-overview.component').then(m => m.PortfolioOverviewComponent)
+  },
   {
     prName: 'Admin module',
     onlyTest: false,
     canActivate: [CheckAdminGuard],
     prHide: false,
     path: 'admin-module',
+    data: { sidebar: { width: 300 } },
     loadChildren: () => import('../../pages/admin-section/admin-section.module').then(m => m.AdminSectionModule)
   }
 ];
@@ -110,6 +168,7 @@ export const resultRouting: PrRoute[] = [
   {
     prName: 'Result detail',
     path: 'result-detail/:id',
+    data: { sidebar: { width: 300 } },
     loadChildren: () => import('../../pages/results/pages/result-detail/result-detail.module').then(m => m.ResultDetailModule)
   },
   {
@@ -460,20 +519,99 @@ export const WhatsNewRouting: PrRoute[] = [
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
 
+const loadDashboardLab = () =>
+  import('../../pages/result-framework-reporting/pages/dashboard-lab/dashboard-lab.component').then(m => m.DashboardLabComponent);
+
 export const ResultFrameworkReportingRouting: PrRoute[] = [
   {
-    prName: 'Result Framework & Reporting',
+    // Restored to the Science Programs listing — the page this path has always served
+    // (and still serves on prtest), which is what the "Science programs" breadcrumb root
+    // points at. The widget dashboard that briefly lived here is retired; the experimental
+    // /dashboard-lab route below still reaches that component.
+    prName: 'Science programs',
     path: 'home',
+    data: { sidebar: { width: 300 } },
     loadComponent: () =>
       import('../../pages/result-framework-reporting/pages/result-framework-reporting-home/result-framework-reporting-home.component').then(
         m => m.ResultFrameworkReportingHomeComponent
       )
   },
   {
-    prName: 'Entity details',
-    path: 'entity-details/:entityId',
+    // Overview tab of the program shell. Its own route (not `home`) so the band's tabs are real
+    // navigation: sending Overview back to the retired bento was the reported bug.
+    prName: 'Program overview',
+    path: 'overview',
+    data: { sidebar: { width: 300 }, rfrView: 'overview' },
+    loadComponent: loadDashboardLab
+  },
+  {
+    prName: 'Results planned in your 2026 ToC',
+    path: 'planned-toc',
+    data: { sidebar: { width: 300 }, rfrView: 'planned' },
+    loadComponent: loadDashboardLab
+  },
+  {
+    prName: 'Report Emerging results',
+    path: 'emerging',
+    data: { sidebar: { width: 300 }, rfrView: 'emerging' },
+    loadComponent: loadDashboardLab
+  },
+  {
+    // ⚠️ RESERVED — no link in the app points here (verified 2026-08-06). Kept on purpose:
+    // this is where the per-centre dashboard from the 2026-08-04 ops meeting is meant to
+    // land. Do NOT delete it as dead code.
+    prName: 'My CGIAR Centers',
+    path: 'centers',
+    data: { sidebar: { width: 300 }, rfrView: 'centers' },
+    loadComponent: loadDashboardLab
+  },
+  {
+    prName: 'Dashboard lab (experimental)',
+    path: 'dashboard-lab',
+    onlyTest: true,
+    data: { sidebar: { width: 300 }, rfrView: 'dashboard' },
+    loadComponent: loadDashboardLab
+  },
+  {
+    // ⚠️ RESERVED — nothing links here and the component immediately redirects to the
+    // landing, so its own "Back to home" anchor is unreachable today. Kept on purpose as
+    // the entry point for the per-centre report. Do NOT delete it as dead code.
+    prName: 'Center report',
+    path: 'center/:centerCode/report',
     loadComponent: () =>
-      import('../../pages/result-framework-reporting/pages/entity-details/entity-details.component').then(m => m.EntityDetailsComponent)
+      import('../../pages/result-framework-reporting/pages/center-report-stub/center-report-stub.component').then(
+        m => m.CenterReportStubComponent
+      )
+  },
+  {
+    // Overview tab of the redesigned programme shell. Declared before the 2-segment route
+    // below purely for readability — they cannot collide (different segment counts).
+    prName: 'Program overview',
+    path: 'entity-details/:entityId/overview',
+    data: { sidebar: { width: 300 }, rfrView: 'overview' },
+    loadComponent: loadDashboardLab
+  },
+  {
+    // Results tab of the programme shell — the reported results of THIS programme, sibling of
+    // `overview` and of the 2-segment reporting route. Own component (not `loadDashboardLab`):
+    // this surface reads results, it does not drive the ToC reporting tables.
+    prName: 'Program results',
+    path: 'entity-details/:entityId/results',
+    data: { sidebar: { width: 300 }, rfrView: 'results' },
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/programme-results/programme-results.component').then(
+        m => m.ProgrammeResultsComponent
+      )
+  },
+  {
+    // THE programme page. Serves the redesigned shell (band + Overview/Reporting tabs +
+    // the CURRENT reporting table) at the path that was always the programme's address and
+    // that people have saved as links. The legacy `EntityDetailsComponent` (Insights bento)
+    // is retired and no longer routed — the file is kept in the tree.
+    prName: 'Program reporting',
+    path: 'entity-details/:entityId',
+    data: { sidebar: { width: 300 }, rfrView: 'planned' },
+    loadComponent: loadDashboardLab
   },
   {
     prName: 'Bilateral results review',
@@ -516,6 +654,62 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
           )
       }
     ]
+  },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
+];
+
+export const BilateralRouting: PrRoute[] = [
+  {
+    prName: 'Bilateral Home',
+    path: 'home',
+    prHide: true,
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-home/bilateral-home.component').then(
+        m => m.BilateralHomeComponent
+      )
+  },
+  {
+    prName: 'Bilateral Result Creator',
+    path: 'create',
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-result-creator/bilateral-result-creator.component').then(
+        m => m.BilateralResultCreatorComponent
+      )
+  },
+  {
+    prName: 'Bilateral Result Editor',
+    path: 'result/:id',
+    prHide: true,
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-result-creator/bilateral-result-creator.component').then(
+        m => m.BilateralResultCreatorComponent
+      )
+  },
+  {
+    prName: 'My Drafts',
+    path: 'drafts',
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/my-draft-results/my-draft-results.component').then(
+        m => m.MyDraftResultsComponent
+      )
+  },
+  {
+    prName: 'Draft Detail',
+    path: 'drafts/:draftId',
+    prHide: true,
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-ai-draft-detail/bilateral-ai-draft-detail.component').then(
+        m => m.BilateralAiDraftDetailComponent
+      )
+  },
+  {
+    prName: 'Results',
+    path: 'results',
+    prHide: true,
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-results-list/bilateral-results-list.component').then(
+        m => m.BilateralResultsListComponent
+      )
   },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];

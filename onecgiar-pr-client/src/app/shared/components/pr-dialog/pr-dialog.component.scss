@@ -1,0 +1,62 @@
+@use '../../../../styles/fonts' as fonts;
+
+.pr-dialog-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+
+  &--modal {
+    background-color: rgba(0, 0, 0, 0.4);
+  }
+}
+
+.pr-dialog {
+  background: var(--pr-color-white);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+}
+
+.pr-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 0.5rem;
+}
+
+.pr-dialog__title {
+  @include fonts.pr-typography('h3');
+  color: var(--pr-color-secondary-400);
+}
+
+.pr-dialog__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--pr-color-secondary-400);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease-in-out;
+
+  &:hover {
+    background-color: var(--pr-color-accents-2);
+  }
+}
+
+.pr-dialog__body {
+  padding: 1rem 1.5rem 1.5rem;
+}

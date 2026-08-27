@@ -1,43 +1,44 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+  signal,
+  ViewChild
+} from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
-import { ProgressBarModule } from 'primeng/progressbar';
 import { EntityAowCardComponent } from './components/entity-aow-card/entity-aow-card.component';
 import { EntityResultsByIndicatorCategoryCardComponent } from './components/entity-results-by-indicator-category-card/entity-results-by-indicator-category-card.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
-import { SkeletonModule } from 'primeng/skeleton';
-import { ChartModule } from 'primeng/chart';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { Chart, ChartData, ChartDataset, ChartOptions } from 'chart.js';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
-import { SplitButtonModule } from 'primeng/splitbutton';
-import { TooltipModule } from 'primeng/tooltip';
+import { Chart } from 'chart.js/auto';
+import { ChartData, ChartDataset, ChartOptions } from 'chart.js';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
-import { MenuItem } from 'primeng/api';
 import { BilateralResultsReviewComponent } from './components/bilateral-results-review/bilateral-results-review.component';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 
 @Component({
   selector: 'app-entity-details',
-  imports: [
+  imports: [PrTooltipDirectiveModule,
     CommonModule,
     FormsModule,
-    SelectModule,
     RouterModule,
-    ProgressBarModule,
     EntityAowCardComponent,
     EntityResultsByIndicatorCategoryCardComponent,
-    SkeletonModule,
-    ChartModule,
-    ButtonModule,
-    DialogModule,
-    SplitButtonModule,
-    TooltipModule,
+    PrDialogComponent,
     ResultCreatorModule,
     BilateralResultsReviewComponent
   ],
@@ -45,7 +46,7 @@ import { ResultFrameworkReportingHomeService } from '../result-framework-reporti
   styleUrl: './entity-details.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class EntityDetailsComponent implements OnInit {
+export class EntityDetailsComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
@@ -54,24 +55,33 @@ export class EntityDetailsComponent implements OnInit {
 
   cd = inject(ChangeDetectorRef);
 
+  /** Breadcrumb root: the Science Programs listing (the original target of this crumb). */
+  readonly programsListPath = '/result-framework-reporting/home';
+
+  @ViewChild('outputsCanvas') private readonly outputsCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('outcomesCanvas') private readonly outcomesCanvas?: ElementRef<HTMLCanvasElement>;
+  private outputsChart?: Chart;
+  private outcomesChart?: Chart;
+  private readonly chartsViewReady = signal(false);
+
+  constructor() {
+    // Render/refresh the Outputs and Outcomes bar charts whenever their data/options change
+    // (once the view — and therefore the <canvas> refs — is ready).
+    effect(() => {
+      const data = this.dataOutputs();
+      const options = this.chartOptionsOutputs();
+      if (!this.chartsViewReady()) return;
+      this.outputsChart = this.renderBarChart(this.outputsCanvas, this.outputsChart, data, options);
+    });
+    effect(() => {
+      const data = this.dataOutcomes();
+      const options = this.chartOptionsOutcomes();
+      if (!this.chartsViewReady()) return;
+      this.outcomesChart = this.renderBarChart(this.outcomesCanvas, this.outcomesChart, data, options);
+    });
+  }
+
   showReportModal = signal(false);
-  reportMenuItems: MenuItem[] = [
-    {
-      label: 'AI Assistant',
-      icon: 'pi pi-sparkles',
-      disabled: true
-    },
-    {
-      separator: true
-    },
-    {
-      label: 'Unplanned result',
-      icon: 'pi pi-file-plus',
-      command: () => {
-        this.showReportModal.set(true);
-      }
-    }
-  ];
 
   private readonly axisPaddingValue = 10;
 
@@ -182,6 +192,13 @@ export class EntityDetailsComponent implements OnInit {
   chartOptionsOutcomes = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutcomes()));
 
   showBilateralResultsReview = computed(() => this.entityAowService.entityId() !== 'SGP-02');
+
+  // P2-3139: AVISA (SGP-02) is a deactivated project — its results can only be viewed, not created.
+  // Hide the "Report Emerging results" pathway so no new results can be reported for it.
+  isAvisaEntity = computed(() => {
+    const entityId = this.entityAowService.entityId();
+    return entityId === 'SGP-02' || entityId === 'SGP02';
+  });
 
   groupedIndicatorSummaries = computed(() => {
     const summaries = this.entityAowService.indicatorSummaries().filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
@@ -312,8 +329,10 @@ export class EntityDetailsComponent implements OnInit {
       }
       const mySPs = this.resultFrameworkReportingHomeService.mySPsList() ?? [];
       const otherSPs = this.resultFrameworkReportingHomeService.otherSPsList() ?? [];
-      const sp = [...mySPs, ...otherSPs].find(
-        (item: { initiativeCode?: string }) => item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02'
+      const otherProjects = this.resultFrameworkReportingHomeService.otherProjectsList() ?? [];
+      const sp = [...mySPs, ...otherSPs, ...otherProjects].find(
+        (item: { initiativeId?: number; initiativeCode?: string }) =>
+          item?.initiativeId === 41 || item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02'
       );
       if (sp) {
         const raw = sp as { initiativeShortName?: string; initiativeName?: string };
@@ -338,6 +357,8 @@ export class EntityDetailsComponent implements OnInit {
   }
 
   onReportRequested(item: any) {
+    // P2-3139: never open the report/create flow for AVISA (deactivated project — view only).
+    if (this.isAvisaEntity()) return;
     this.resultLevelSE.setPendingResultType(item?.resultTypeId, item?.resultTypeName);
     this.showReportModal.set(true);
   }
@@ -345,5 +366,27 @@ export class EntityDetailsComponent implements OnInit {
   onModalClose() {
     this.showReportModal.set(false);
     this.resultLevelSE.cleanData?.();
+  }
+
+  ngAfterViewInit(): void {
+    this.chartsViewReady.set(true);
+  }
+
+  ngOnDestroy(): void {
+    this.outputsChart?.destroy();
+    this.outcomesChart?.destroy();
+  }
+
+  private renderBarChart(
+    canvasRef: ElementRef<HTMLCanvasElement> | undefined,
+    existing: Chart | undefined,
+    data: ChartData<'bar'>,
+    options: ChartOptions<'bar'>
+  ): Chart | undefined {
+    if (!isPlatformBrowser(this.platformId)) return existing;
+    const canvas = canvasRef?.nativeElement;
+    if (!canvas) return existing;
+    existing?.destroy();
+    return new Chart(canvas, { type: 'bar', data, options });
   }
 }

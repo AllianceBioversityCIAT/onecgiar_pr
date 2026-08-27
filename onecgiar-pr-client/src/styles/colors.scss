@@ -1,26 +1,46 @@
 :root {
-  // primary colors
-  --pr-color-primary-25: #eef0fc;
-  --pr-color-primary-50: #e6eafe;
-  --pr-color-primary-100: #c6cdf4;
-  --pr-color-primary-200: #8e9be8;
-  --pr-color-primary-300: #5569dd; // Main custom Color
-  --pr-color-primary-400: #273ec5;
-  --pr-color-primary-500: #1c2c8a;
-  --pr-color-primary-600: #18246d;
-  --pr-color-primary-700: #151d58;
-  --pr-color-primary-800: #101542;
-  --pr-color-primary-900: #0a0c25;
-  --pr-color-primary-950: #05071a;
+  // ── PRIMARY — PRMS violet. Approved palette: docs/reporting-redesign/UI-RULES.md §2.1.
+  // Re-valued IN PLACE: stop names and the "-300 is main" convention are preserved, so the
+  // ~736 var(--pr-color-primary-*) references and the 101 *-brand-* Tailwind utilities across
+  // ~340 files inherit the new brand with zero template edits.
+  //
+  // Why the anchor is at -300 and not -400: this stop carries three roles at once — 95 background
+  // fills (39 paired with white text), 65 border/outline declarations and 154 color: declarations,
+  // plus .open_route (fonts.scss:18-22, the app's universal inline link, 126 uses / 68 files).
+  // Contrast is direction-symmetric, so #6b46e5 discharges all of them: 5.7809:1 on white either
+  // way, and 5.2707:1 as text on -50. A lighter value here measures 3.7761 and fails AA on every
+  // primary CTA in the app. See openspec/changes/reporting-redesign-token-layer/design.md D1.
+  //
+  // NOTE — -100/-200 are light tints, NOT border or focus-ring colours. Focus indicators come from
+  // --pr-focus-ring (built on -300); content borders are neutral (--pr-border). UI-RULES rule 7.
+  --pr-color-primary-25: #faf9fe;
+  --pr-color-primary-50: #f5f3ff;
+  --pr-color-primary-100: #ede9fe;
+  --pr-color-primary-200: #ddd6fe;
+  --pr-color-primary-300: #6b46e5; // Main — primary actions, links, focus
+  --pr-color-primary-400: #5733c4; // Hover / active
+  --pr-color-primary-500: #4a2bb8;
+  --pr-color-primary-600: #3f2499;
+  --pr-color-primary-700: #33227a; // Sidebar elevated surface
+  --pr-color-primary-800: #271862; // Sidebar base surface
+  --pr-color-primary-900: #1b1145;
+  --pr-color-primary-950: #0f0926;
 
-  --pr-color-primary-rgb: 85, 105, 221;
+  // Companion triplet for rgba(var(--pr-color-primary-rgb), alpha) — ~68 consumers.
+  // Must track -300 or low-alpha tints drift away from the brand.
+  --pr-color-primary-rgb: 107, 70, 229;
 
   //   secondary
   --pr-color-secondary-50: #dde0ee;
   --pr-color-secondary-100: #9ca2c3;
   --pr-color-secondary-200: #6a73a4;
   --pr-color-secondary-300: #484f77;
-  --pr-color-secondary-400: #2a2e45; // Main custom Color
+  // -400 is INK, not a surface. Of its 292 references, 155 are `color:` (body copy, headings,
+  // labels) and only 42 were backgrounds. An earlier pass repointed it to the violet #271862 to
+  // rebrand the dark surfaces in one edit — which worked, but silently turned 155 text sites
+  // violet. The 42 surfaces now point at --pr-color-primary-800 directly, so this token can stay
+  // what its consumers overwhelmingly use it as: neutral ink. Tracks --pr-text (14.3507:1 on white).
+  --pr-color-secondary-400: #2b2838; // Main custom Color — neutral ink
   --pr-color-secondary-500: #1a1c2a;
   --pr-color-secondary-600: #16171e;
   --pr-color-secondary-700: #111218;
@@ -28,7 +48,11 @@
   --pr-color-secondary-900: #08080b;
   --pr-color-secondary-950: #050507;
 
-  --pr-color-secondary-rgb: 42, 46, 69;
+  // DELIBERATELY DECOUPLED from -400 (task 2.4 / design.md open question 2). This triplet's ~19
+  // consumers are shadows and scrims (styles.scss:305 at alpha .337, ipsr.scss:94 at alpha .745),
+  // not brand surfaces — so it tracks the shadow ink #191524, matching --pr-scrim below. Tracking
+  // -400 instead would tint every scrim saturated violet.
+  --pr-color-secondary-rgb: 25, 21, 36;
 
   // neutral
   --pr-color-neutral-100: #e8ebff;
@@ -143,4 +167,140 @@
   --pr-color-result-level-2: var(--pr-color-blue-other-1);
   --pr-color-result-level-3: var(--pr-color-red-400);
   --pr-color-result-level-4: var(--pr-color-blue-other-2);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEMANTIC TOKENS — docs/reporting-redesign/UI-RULES.md §2.2
+//
+// Components consume THESE, never a numbered ramp stop and never a raw hex.
+// Exposed to Tailwind as utilities in src/styles.scss (@theme inline) — see §2.3.
+// A separate :root block on purpose: it keeps the diff reviewable and cannot
+// accidentally orphan declarations out of the block above.
+// ─────────────────────────────────────────────────────────────────────────────
+:root {
+  // ── Surfaces
+  --pr-surface-topbar: #ffffff;
+  --pr-surface-band: #f7f4fd; // program band — the one tinted content surface
+  --pr-surface-app: #f7f7f9; // content background — NEUTRAL, not tinted
+  --pr-surface-card: #ffffff;
+  --pr-surface-subtle: #f7f7f9; // HLO / outcome group headers
+  // Hover for a --pr-surface-subtle band (the Reporting tab's HLO sub-group header).
+  --pr-surface-subtle-hover: #efeef3;
+
+  // ── Borders. Content-area boundaries are NEUTRAL (rule 7); violet only for selected state.
+  --pr-border: #e3e3e8;
+  --pr-border-strong: #d5d5dc; // AoW header bottom border
+  --pr-border-divider: #eeeef1; // row separators
+  // The ONE violet-tinted border: it closes the tinted band, so a neutral rule would read as a
+  // seam against #f7f4fd. Reference: PRMS-Shell.dc.html:315.
+  --pr-border-band: #e4e0ef;
+
+  // ── Text — violet-tinted neutral ramp
+  --pr-text-heading: #191524;
+  --pr-text: #2b2838;
+  --pr-text-secondary: #5d5872;
+  --pr-text-muted: #6b6580;
+  --pr-text-subtle: #9691a8;
+  // Ink of a DISABLED control. The mockup's blocked buttons ("AI review" while sections are
+  // incomplete) are this violet-tinted grey, one step lighter than --pr-text-subtle. Deliberately
+  // low contrast: it is a state, not content, so it is never used for text the user must read.
+  --pr-text-disabled: #cfc9de;
+
+  // Marcador de campo OBLIGATORIO (el asterisco), tomado del mockup. Es semántico a propósito y
+  // NO un paso de la escala `red-*`: #b42318 no está en esa rampa, y meterlo ahí ya salió mal una
+  // vez —se declaró un segundo `--pr-color-red-500` sobre el que ya existía (#9d061d), que
+  // consumen el hover de "Log out" y los errores del panel de IA—. Distinto del rojo de error
+  // (`--pr-color-red-300`) a propósito: un campo que falta no es un campo equivocado.
+  --pr-field-required-fg: #b42318;
+
+  // ── Sidebar (on-dark). Foregrounds verified against --pr-sidebar-bg:
+  // #e9e4fa 12.1601:1 · #c4b5fd 8.6:1 · #a79bd4 6.2:1 — all clear AA.
+  --pr-sidebar-bg: var(--pr-color-primary-800);
+  --pr-sidebar-elevated: var(--pr-color-primary-700);
+  --pr-sidebar-active: var(--pr-color-primary-300);
+  --pr-sidebar-fg: #e9e4fa;
+  --pr-sidebar-fg-muted: #a79bd4;
+  --pr-sidebar-fg-subtle: #a79bd4; // was #8b7cc4 — failed AA on both sidebar surfaces
+  --pr-sidebar-accent: #c4b5fd;
+  --pr-sidebar-border: rgb(255 255 255 / 0.1);
+  --pr-sidebar-hover: rgb(255 255 255 / 0.07);
+
+  // ── Report status — FIXED fg/bg pairs. Never recombine a fg with another bg,
+  // never invent a sixth status colour (rule 9).
+  --pr-status-not-started-fg: #4b5563; // was #6b7280 — 4.3929:1 on its own bg, under AA
+  --pr-status-not-started-bg: #f3f4f6;
+  --pr-status-in-progress-fg: #b45309;
+  --pr-status-in-progress-bg: #fef3c7;
+  --pr-status-submitted-fg: var(--pr-color-blue-700);
+  --pr-status-submitted-bg: var(--pr-color-blue-100);
+  --pr-status-in-qa-fg: #0e7490;
+  --pr-status-in-qa-bg: #cffafe;
+  --pr-status-approved-fg: #047857;
+  --pr-status-approved-bg: #d1fae5;
+
+  // ── Feedback (danger / warning) — P2-3481 groundwork, mockup 26-Aug.
+  // The mockup names a full danger family that this file never had, so components in the revamp
+  // hard-coded the hexes instead (#b91c1c and #fef2f2 appear raw across bilateral). Declared here
+  // so those raw values have somewhere to go. NOT the same as --pr-color-red-300 (#d00416), which
+  // is the legacy PRMS red and stays where it is — mixing the two is how a "required field" marker
+  // ends up looking like an error banner.
+  --pr-danger: #b91c1c; // mockup --danger
+  --pr-danger-bg: #fef2f2; // mockup --danger-bg
+  --pr-danger-soft: #fee2e2; // mockup --danger-soft
+  // --pr-field-required-fg (#b42318) is already the mockup's --danger-strong. Not duplicated.
+  --pr-warning-strong: #92400e; // mockup --warning-strong, darker than --pr-status-in-progress-fg
+
+  // ── Two surface steps the mockup uses and this file lacked. Both sit between --pr-surface-card
+  // (#ffffff) and --pr-surface-app (#f7f7f9); without them the revamp reached for Material's
+  // #fafafa / #eceff1, which is why three foreign palettes leaked in.
+  --pr-surface-raised-soft: #fafafb; // mockup --surface-2
+  --pr-surface-sunken: #f3f2f7; // mockup --surface-5
+
+  // ── Programme-level bucket chips (Reporting tab card headers).
+  // These qualify a card's KIND — "Intermediate", "2030" — and are deliberately NOT the status
+  // tokens above. The 2030 pair reads green, and #d1fae5 is literally --pr-status-approved-bg, so
+  // reaching for that token would make a 2030 chip mean "approved" (rule 9: never recombine a
+  // status pair, never invent a sixth status colour). Distinct tokens keep the two vocabularies
+  // apart even though one pair happens to share a hue.
+  --pr-chip-intermediate-fg: #3730a3;
+  --pr-chip-intermediate-bg: #e0e7ff;
+  --pr-chip-2030-fg: #0f766e;
+  --pr-chip-2030-bg: #d1fae5;
+
+  // ── Indicator progress pills (Reporting tab, All-indicators table).
+  // A DIFFERENT vocabulary from --pr-status-* above, which describes a RESULT's workflow
+  // (not started → in progress → submitted → in QA → approved). An indicator instead reports
+  // progress against its target, and its two extra states have no workflow equivalent:
+  //   not-started / in-progress → reuse the --pr-status-* pair INTACT (same word, same meaning)
+  //   achieved / overachieved   → these two, because "approved" is not what a met target means
+  // Pairs are fixed: never mix one's fg with another's bg (rule 9).
+  --pr-indicator-achieved-fg: #047857;
+  --pr-indicator-achieved-bg: #d1fae5;
+  --pr-indicator-overachieved-fg: #5733c4;
+  --pr-indicator-overachieved-bg: #ede9fe;
+
+  // ── Charts — violet, 4 steps. Status colours are NOT for charts.
+  --pr-chart-1: #4a2bb8;
+  --pr-chart-2: #6b46e5;
+  --pr-chart-3: #9270f0;
+  --pr-chart-4: #c4a0f7;
+  // Bilateral series — pairs with --pr-chart-2 for own results on the Overview tab.
+  // NON-TEXT USE ONLY: 3.52:1 against the --pr-border-divider track, which clears the
+  // WCAG 1.4.11 (3:1) floor for graphics. This exact hex failed AA as a sidebar
+  // FOREGROUND (see --pr-sidebar-fg-subtle above) — never use it for text.
+  --pr-chart-2-muted: #8b7cc4;
+
+  // ── Elevation — only these three exist (rule 10: max two levels per screen).
+  --pr-shadow-1: 0 1px 2px rgb(25 21 36 / 0.06);
+  --pr-shadow-2: 0 8px 24px rgb(25 21 36 / 0.1);
+  --pr-shadow-drawer: -12px 0 32px rgb(25 21 36 / 0.12);
+  --pr-scrim: rgb(25 21 36 / 0.32);
+
+  // ── Focus HALO (rule 4). ⚠️ This is decorative, NOT the conformant indicator on its own:
+  // at 28% alpha it composites to #d6cbf8 over white = 1.5265:1, far under the 1.4.11 3:1 floor.
+  // (An earlier comment here claimed 5.7809 — that is the -300 stop SOLID, not this halo.)
+  // Pair it with a SOLID border/outline, which is what Helm's recipe does
+  // (`focus-visible:border-ring` + `ring-ring/50`) and what the sidebar's own
+  // `outline: 2px solid var(--pr-sidebar-accent)` does.
+  --pr-focus-ring: 0 0 0 3px rgb(107 70 229 / 0.28);
 }

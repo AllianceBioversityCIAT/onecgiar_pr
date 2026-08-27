@@ -1,10 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import Hotjar from '@hotjar/browser';
 import { AuthService } from './shared/services/api/auth.service';
 import { environment } from '../environments/environment';
 import { RolesService } from './shared/services/global/roles.service';
 import { ApiService } from './shared/services/api/api.service';
 import { FooterService } from './shared/components/footer/footer.service';
+import { LayoutService, SidebarLayout } from './shared/services/layout.service';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs';
+import { ResultsNotificationsService } from './pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 // import { WebsocketService } from './sockets/websocket.service';
 
 @Component({
@@ -16,6 +20,16 @@ import { FooterService } from './shared/components/footer/footer.service';
 export class AppComponent implements OnInit {
   title = 'onecgiar-pr-client';
   isProduction = environment.production;
+  aiAssistantEnabled = environment.aiAssistant?.enabled ?? false;
+  /** Test-environment banner (new look & feel preview on performance-refactor). */
+  testEnvironmentBanner = environment.testEnvironmentBanner ?? null;
+  /** Same gate the old header used so Tawk does not load in local embeds. */
+  readonly inLocal = (environment as { inLocal?: boolean }).inLocal;
+
+  readonly layoutSE = inject(LayoutService);
+  private readonly router = inject(Router);
+  private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly resultsNotificationsSE = inject(ResultsNotificationsService);
 
   constructor(
     public AuthService: AuthService,
@@ -30,11 +44,21 @@ export class AppComponent implements OnInit {
       this.AuthService.inLogin.set(true);
     }
 
+    // Drive the dashboard layout from route data: the deepest matching route's
+    // `data.sidebar` reserves a left column so the navbar/content shift right.
+    this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
+      this.layoutSE.setSidebar(this.resolveSidebarFromRoute());
+    });
+    // Sync once on bootstrap (first load may precede the first NavigationEnd).
+    this.layoutSE.setSidebar(this.resolveSidebarFromRoute());
+
     Hotjar.init(environment.hotjarSiteId, environment.hotjarVersion);
     this.getGlobalParametersByCategory();
     this.rolesSE.validateReadOnly();
+    this.bootstrapUserSession();
 
     this.api.dataControlSE.findClassTenSeconds('pSelectP').then(resp => {
+      if (!resp) return;
       try {
         document.querySelector('.pSelectP').addEventListener('click', e => {
           this.api.dataControlSE.showPartnersRequest = true;
@@ -78,6 +102,34 @@ export class AppComponent implements OnInit {
           .catch(err => console.error('[DevSession] Paste failed:', err));
       }
     };
+  }
+
+  /** Walk to the deepest activated route, then up until a `data.sidebar` is found. */
+  /**
+   * App-wide session bootstrap. This used to live in `app-header-panel.ngOnInit`, which rendered on
+   * every authenticated page; the Spartan sidebar replaced that header and the bootstrap was lost
+   * with it, so pages that do not fetch it themselves came up without the user's roles or
+   * initiatives. Symptom on `/ipsr/list`: the "Submitter (s)" filter had no chips and the table
+   * reported "There are no results for the selected filters" while prtest listed the packages.
+   *
+   * It belongs in the shell rather than in the sidebar: the sidebar is hidden in QA full-screen and
+   * focus mode, and the data is needed regardless.
+   */
+  private bootstrapUserSession(): void {
+    if (!this.AuthService.localStorageUser) return;
+
+    this.api.updateUserData(() => {
+      this.resultsNotificationsSE.get_updates_notifications();
+      this.resultsNotificationsSE.get_updates_pop_up_notifications();
+    });
+    this.api.dataControlSE.getCurrentPhases().subscribe();
+  }
+
+  private resolveSidebarFromRoute(): SidebarLayout | null {
+    let route = this.activatedRoute;
+    while (route.firstChild) route = route.firstChild;
+    while (route && !route.snapshot.data['sidebar']) route = route.parent as ActivatedRoute;
+    return (route?.snapshot.data['sidebar'] as SidebarLayout) ?? null;
   }
 
   private getGlobalParametersByCategory() {

@@ -11,6 +11,7 @@ import { Role } from '../../role/entities/role.entity';
 import { User } from '../../user/entities/user.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ClarisaActionArea } from '../../../../clarisa/clarisa-action-areas/entities/clarisa-action-area.entity';
+import { ClarisaCenter } from '../../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 
 @Entity('role_by_user')
 export class RoleByUser {
@@ -55,6 +56,20 @@ export class RoleByUser {
     name: 'action_area_id',
   })
   obj_action_area!: ClarisaActionArea;
+
+  @Column({
+    name: 'center_id',
+    type: 'varchar',
+    length: 15,
+    nullable: true,
+  })
+  center_id!: string;
+
+  @ManyToOne(() => ClarisaCenter, (cc) => cc.code, { nullable: true })
+  @JoinColumn({
+    name: 'center_id',
+  })
+  obj_center!: ClarisaCenter;
 
   @Column({
     name: 'user',

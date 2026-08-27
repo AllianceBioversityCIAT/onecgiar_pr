@@ -1,0 +1,435 @@
+/**
+ * Reporting tab — only what Tailwind cannot express cleanly lives here (the grid template, the
+ * line clamps, the status-mark host). Everything else is a utility in the template, per the
+ * client's Tailwind-first rule.
+ *
+ * The two things taken from the approved design and kept verbatim: the ten-track row grid
+ * (status | title | gap | Target | gap | Achieved | gap | action | gap | menu, with the gap tracks
+ * keeping Target, Achieved and the action aligned down the table), and the status mark — a
+ * concentric bullseye, always brand violet, never a traffic-light ring: workflow state is carried
+ * by the action label, the tooltip and the filters, not by recolouring the mark.
+ */
+
+:host {
+  display: block;
+}
+
+/* ── Animated disclosure (AoW + HLO).
+   grid 0fr→1fr animates height without measuring content. Avoids @if mount/unmount pop. ── */
+.pr-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.is-open {
+    grid-template-rows: 1fr;
+  }
+
+  > .pr-collapse-inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Card level only. The card no longer clips (the ⓘ popover has to escape it), so the bottom
+     corners are rounded HERE — this element already has `overflow: hidden` for the animation, so a
+     radius on it clips the last row for free. Sub-group collapses must stay square: they sit in the
+     middle of a card. */
+  &.pr-collapse--card > .pr-collapse-inner {
+    border-bottom-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-collapse {
+    transition: none;
+  }
+}
+
+/* ── The row. Grid + pad are the design verbatim (spacers keep Target / Achieved / action aligned). ── */
+.pr-reporting-row {
+  display: grid;
+  /* status | title | gap | Target | gap | Achieved | gap | action | gap | menu */
+  grid-template-columns: 36px minmax(0, 1fr) 48px 100px 20px 100px 56px 110px 8px 40px;
+  align-items: center;
+  gap: 0;
+  min-height: 96px;
+  padding: 20px 24px 20px 44px;
+  border-top: 1px solid var(--pr-border-divider);
+  background: var(--pr-surface-card);
+  cursor: pointer;
+  transition: background 400ms ease;
+
+  &:hover {
+    background: var(--pr-surface-app);
+  }
+
+  // The row is a keyboard-reachable control, so it needs a real indicator. The global
+  // `outline-ring/50` rule sets only outline-COLOR — never a width — so it renders nothing.
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+}
+
+/* ── Status mark — the design's concentric bullseye (archery target), 18×18, always violet.
+   Outer ring + mid ring + filled centre. Not a half-fill circle; not a progress arc.
+   SVG is in the template; this only hosts size/color. ── */
+.pr-status-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--pr-color-primary-300);
+
+  svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+
+  // Status still drives tooltip/action; mark colour stays the brand bullseye so the mark
+  // reads as the same icon family as the reference (not a traffic-light ring).
+  &--not-started,
+  &--in-progress,
+  &--achieved,
+  &--overachieved {
+    color: var(--pr-color-primary-300);
+  }
+}
+
+/* ── Clamping. Rule 16: long text is clamped, never broken. ── */
+.pr-clamp-1,
+.pr-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pr-clamp-1 {
+  -webkit-line-clamp: 1;
+}
+
+.pr-clamp-2 {
+  -webkit-line-clamp: 2;
+}
+
+/* ── Row action. This is the `brandSoft` recipe, inlined because the row action is not an
+   hlmBtn (it must not inherit the base recipe's focus ring inside a clickable row).
+   Border is -300, not the design's #DDD6FE: on a white card that tint measures 1.39:1,
+   under the WCAG 1.4.11 3:1 floor. A deliberate, decided deviation — recorded in
+   docs/DESIGN-DEVIATIONS.md; do not "correct" it back. ── */
+.pr-row-action {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--pr-color-primary-300);
+  border-radius: 8px;
+  background: var(--pr-surface-card);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-color-primary-400);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+
+  &:hover {
+    background: var(--pr-color-primary-50);
+    border-color: var(--pr-color-primary-400);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
+/* `.pr-figure-sm` (the 13px mono figure) now lives in src/styles/fonts.scss next to `.pr-code`
+   and `.pr-figure` — the Overview tab needs the same recipe, and a second local copy would drift. */
+
+/* ── Overlays (info popover + row menu) and the empty-state recovery button.
+   These live in SCSS, not utilities, because they are absolutely-positioned boxes with a shadow
+   and an entry animation — an at-rule Tailwind cannot express cleanly (client CLAUDE.md §5). ── */
+
+@keyframes prPop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card-header ⓘ popover — 420px, per the design. Anchored under the icon, left-aligned with it. */
+.pr-info-pop {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  z-index: 30;
+  width: 420px;
+  max-width: min(420px, calc(100vw - 64px));
+  padding: 16px;
+  cursor: default;
+  text-align: left;
+  white-space: normal;
+  background: var(--pr-surface-card);
+  border: 1px solid var(--pr-border);
+  border-radius: 12px;
+  box-shadow: var(--pr-shadow-2);
+  animation: prPop 120ms ease-out;
+}
+
+/* Row overflow menu — 220px, right-aligned to the ··· button. */
+.pr-row-menu {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  /* Wider than the design's 220px: the disabled item carries a `Coming soon` badge beside its
+     label, and at 220px "Copy indicator code" wrapped onto three lines. */
+  width: 268px;
+  padding: 6px;
+  cursor: default;
+  background: var(--pr-surface-card);
+  border: 1px solid var(--pr-border);
+  border-radius: 12px;
+  box-shadow: var(--pr-shadow-2);
+  animation: prPop 120ms ease-out;
+}
+
+.pr-row-menu_item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-text);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+
+  &:hover:not(:disabled) {
+    background: var(--pr-color-primary-50);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+
+  /* Visible but inert — the control the design shows, without pretending it works. */
+  &--disabled {
+    color: var(--pr-text-subtle);
+    cursor: not-allowed;
+  }
+}
+
+.pr-row-menu_soon {
+  margin-left: auto;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--pr-surface-subtle);
+  border-radius: 6px;
+}
+
+/* Empty-state recovery. Ghost button, per the design's `Clear filters`. */
+.pr-clear-filters {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pr-color-primary-400);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+
+  &:hover {
+    background: var(--pr-color-primary-50);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 2px;
+  }
+}
+
+/* ── ALL INDICATORS table.
+   Header row and body rows are ONE grid built from the same track list — that shared definition is
+   the only thing keeping them aligned while the container scrolls horizontally (the pattern
+   `programme-results` already uses on the Results tab). Tracks are px/fr, not rem: html is 12px.
+
+   `display: grid` on <tr> keeps table SEMANTICS (th/td, scope, aria-sort from prSortableColumn)
+   while giving the sticky edges a predictable box — a real table layout cannot pin a cell.        ── */
+
+/* First and last tracks absorb the row's horizontal gutter (36+20 and 40+20) so the pinned cells
+   can sit flush at `left: 0` / `right: 0`.
+   ⚠️ With the gutter as row PADDING instead, the 20px strip beside each pinned cell stayed
+   uncovered and the scrolled-under columns showed through it — visible as stray "AO" / "A" chip
+   slivers to the left of the bullseye. Do not move the gutter back into `padding`. */
+$pr-flat-tracks: 56px minmax(300px, 1.7fr) 92px 150px 104px 96px 96px 132px 110px 60px;
+$pr-flat-gap: 24px;
+
+/* Card chrome only. The horizontal scroller is `app-pr-table`'s own `.pr-table-wrap` (which
+   `styleClass` also tags `.pr-flat-table`) — see the note in the template. `overflow: hidden` keeps
+   the scrolling content inside the 12px radius. */
+.pr-flat-scroll {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* `<table>` / `<thead>` / `<tbody>` become plain blocks so the rows can be CSS grids. They stay at
+   the container width; each row's own `min-width` is what overflows and drives `.pr-table-wrap`. */
+:host ::ng-deep .pr-flat-table {
+  table,
+  thead,
+  tbody {
+    display: block;
+    width: 100%;
+    border-collapse: collapse;
+  }
+}
+
+.pr-flat-row {
+  display: grid;
+  grid-template-columns: $pr-flat-tracks;
+  gap: $pr-flat-gap;
+  align-items: center;
+  /* Fixed tracks (896) + the title's 300 minimum + 9 gaps (216). Header and body share this value,
+     which is the only thing keeping the two grids aligned while the wrapper scrolls. */
+  min-width: 1412px;
+  padding: 0;
+}
+
+/* ⚠️ `app-pr-table` ships the DARK Results-Center table skin
+   (`[_nghost…] .pr-table thead th` → navy background, 2px violet underline, its own padding).
+   Those rules reach these cells because the projected rows render inside its view, so every cell
+   below RE-STATES background / border / padding. Dropping any of them brings the dark pills and the
+   stray cell underlines straight back — that is exactly how this table first rendered.
+   `programme-results` overrides the same skin for the same reason. */
+.pr-flat-head {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  height: 40px;
+  background: var(--pr-surface-subtle);
+  border-bottom: 1px solid var(--pr-border);
+
+  .pr-flat-cell {
+    padding: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--pr-text-secondary);
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: var(--pr-surface-subtle);
+    border: 0;
+  }
+}
+
+.pr-flat-body {
+  min-height: 96px;
+  /* Vertical only — the horizontal gutter lives in the first/last grid tracks (see above). */
+  padding: 20px 0;
+  cursor: pointer;
+  background: var(--pr-surface-card);
+  border-top: 1px solid var(--pr-border-divider);
+  transition: background 400ms ease;
+
+  &:hover {
+    background: var(--pr-surface-app);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: -2px;
+  }
+}
+
+.pr-flat-cell {
+  min-width: 0;
+  /* The grid owns the box; table cell display would fight it. */
+  display: block;
+  padding: 0;
+  text-align: left;
+  border: 0;
+}
+
+/* Body cells: same override, and transparent so the ROW's background (and its hover) shows. */
+.pr-flat-body .pr-flat-cell {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.pr-flat-num {
+  text-align: right;
+}
+
+/* Pinned edges. `background: inherit` so the row colour — and its hover — carries under the
+   sticky cell instead of a hardcoded white strip sliding over the scrolled content. */
+.pr-flat-body .pr-flat-sticky-l1,
+.pr-flat-body .pr-flat-sticky-l2,
+.pr-flat-body .pr-flat-sticky-r1,
+.pr-flat-body .pr-flat-sticky-r2,
+.pr-flat-head .pr-flat-sticky-l1,
+.pr-flat-head .pr-flat-sticky-l2,
+.pr-flat-head .pr-flat-sticky-r1,
+.pr-flat-head .pr-flat-sticky-r2 {
+  position: sticky;
+  z-index: 2;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  /* `inherit` = the row's colour, so the pinned cell carries the row and its hover instead of a
+     white strip sliding over the scrolled content. */
+  background: inherit;
+}
+
+/* Flush at the scrollport edges, so no strip of scrolled content is ever visible beside them. */
+.pr-flat-sticky-l1 {
+  left: 0;
+  justify-content: center;
+}
+
+.pr-flat-sticky-l2 {
+  left: 56px;
+  border-right: 1px solid var(--pr-border-divider);
+  padding-right: $pr-flat-gap;
+}
+
+.pr-flat-sticky-r1 {
+  right: 60px;
+  border-left: 1px solid var(--pr-border-divider);
+  padding-left: 16px;
+}
+
+.pr-flat-sticky-r2 {
+  right: 0;
+  justify-content: center;
+}
+
+/* The header row is not transparent — its pinned cells must hide the columns scrolling under them. */
+.pr-flat-head {
+  .pr-flat-sticky-l1,
+  .pr-flat-sticky-l2,
+  .pr-flat-sticky-r1,
+  .pr-flat-sticky-r2 {
+    background: var(--pr-surface-subtle);
+  }
+}

@@ -1,102 +1,497 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
 
-.page_section_header {
-  display: grid;
-  color: var(--pr-color-primary-800);
-  font-size: 14px;
-  font-weight: 600;
-  padding: 5px 30px;
-
-  align-items: center;
+/* ── Results Center page shell (CURRENT) ── */
+.rc-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  // CURRENT page shell: padding 32px (PRMS-Shell.dc.html Results Center)
+  padding: 24px 32px 40px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.title_section_header {
+.rc-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  &__actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+}
+
+/* Header buttons (same recipe as filters toolbar) */
+.rc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
   font-size: 14px;
   font-weight: 500;
-  padding: 20px 0;
-}
+  cursor: pointer;
+  background: #fff;
+  color: var(--pr-color-primary-400, #5733c4);
+  transition: background 150ms ease, border-color 150ms ease;
 
-.action_buttons {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 20px;
-  align-items: center;
+  &--soft {
+    border-color: #ddd6fe;
+    color: #5733c4;
 
-  > div:first-child {
-    app-pr-button {
-      ::ng-deep .pr_button .text {
-        white-space: nowrap;
-      }
+    &:hover {
+      background: #f5f3ff;
+    }
+  }
+
+  &--active {
+    border-color: var(--pr-color-primary-300, #6b46e5);
+    background: #f5f3ff;
+  }
+
+  &--primary {
+    border: none;
+    background: var(--pr-color-primary-300, #6b46e5);
+    color: #fff;
+    font-weight: 600;
+    padding: 0 14px;
+
+    &:hover:not(:disabled) {
+      background: var(--pr-color-primary-400, #5733c4);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   }
 }
 
-.table {
-  padding-bottom: 100px;
+/* Columns picker — CURRENT :422–437 */
+.rc-cols-wrap {
   position: relative;
+  flex: none;
+}
+
+.rc-cols-panel {
+  position: absolute;
+  right: 0;
+  top: 44px;
+  z-index: 40;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--pr-border, #e3e3e8);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+
+  &__title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pr-text-subtle, #9691a8);
+    padding: 8px 10px 6px;
+  }
+
+  &__list {
+    max-height: 320px;
+    overflow-y: auto;
+  }
+}
+
+.rc-cols-item {
+  width: 100%;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: #f5f3ff;
+  }
+
+  &__label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #2b2838;
+  }
+}
+
+.rc-cols-check {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 4px;
+  border: 1.5px solid #d5d5dc;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+
+  i {
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  &--on {
+    border-color: #6b46e5;
+    background: #6b46e5;
+  }
+}
+
+.rc-page-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--pr-text-heading, #191524);
+  line-height: 1.15;
+}
+
+.rc-page-sub {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--pr-text-secondary, #5d5872);
+}
+
+.rc-showing {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--pr-text-secondary, #5d5872);
+}
+
+.rc-footer-total {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--pr-text-secondary, #5d5872);
+}
+
+/* legacy hooks */
+.page_section_header {
+  display: none;
+}
+
+.title_section_header {
+  display: none;
+}
+
+.action_buttons {
+  display: none;
+}
+
+.table {
+  // display:block overrides Tailwind's `.table` utility (display:table), which
+  // collided with this semantic class and shrank the container to its content.
+  display: block;
+  padding-bottom: 24px;
+  position: relative;
+
+  border: 1px solid var(--pr-border, #e3e3e8);
+  border-radius: 12px;
+  background: #fff;
+  // Horizontal scroll for many columns; vertical scroll stays on the page.
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  // Restore the pre-redesign table behavior: honor the fixed column widths so the columns
+  // stay compact (collapse to their defined size) instead of auto-stretching to fit content.
+  ::ng-deep .pr-table {
+    table-layout: fixed;
+    min-width: 1100px;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+
+    thead th {
+      white-space: nowrap;
+      background: #f7f7f9 !important;
+      color: #6b6580;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      height: 40px;
+      padding: 0 12px !important;
+      border-bottom: 1px solid #e3e3e8 !important;
+      border-right: none !important;
+      border-left: none !important;
+      vertical-align: middle;
+    }
+
+    tbody tr {
+      height: 44px;
+
+      &:hover {
+        background: #fafafb;
+      }
+
+      &:last-child td {
+        border-bottom: none !important;
+      }
+    }
+
+    tbody td {
+      border-bottom: 1px solid #eeeef1 !important;
+      border-right: none !important;
+      border-left: none !important;
+      font-size: 13px;
+      padding: 6px 12px !important;
+      vertical-align: middle;
+      color: var(--pr-text, #2b2838);
+      overflow: hidden;
+    }
+  }
 
   .align-center {
     display: flex;
-    gap: 10px;
+    gap: 6px;
     align-items: center;
-    padding: 10px 10px;
+    padding: 0;
   }
 }
 
 .section_content {
-  padding: 0px 10px;
-  padding-top: 20px;
+  padding: 0;
+  padding-top: 0;
+}
+
+/* ── Cell recipes (CURRENT table) ── */
+.rc-cell-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 28px;
+  max-width: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.rc-code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #191524;
+
+  &__num {
+    min-width: 0;
+  }
+}
+
+.rc-new-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 999px;
+  background: #6b46e5;
+}
+
+.rc-title {
+  font-size: 14px;
+  font-weight: 400;
+  color: #2b2838;
+
+  &__text {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &:hover .rc-title__text {
+    color: #5733c4;
+  }
+}
+
+.rc-program {
+  gap: 6px;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 999px;
+  }
+
+  &__code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: #5d5872;
+  }
+}
+
+.rc-plain {
+  font-size: 13px;
+  font-weight: 400;
+  color: #2b2838;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rc-phase {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #5d5872;
+  white-space: nowrap;
+}
+
+.rc-funding {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #2b2838;
+  white-space: nowrap;
+}
+
+.rc-date {
+  font-size: 13px;
+  font-weight: 400;
+  color: #5d5872;
+  white-space: nowrap;
+}
+
+.rc-status-wrap {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.rc-row-menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #5d5872;
+  cursor: pointer;
+
+  &:hover {
+    background: #f3f2f7;
+  }
+
+  i {
+    font-size: 14px;
+  }
+}
+
+.rc-th-action {
+  width: 44px !important;
+}
+
+.discontinued-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--pr-color-orange-500, #f97316);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i {
+    color: white;
+    font-size: 11px;
+  }
+}
+
+/* Status chips — CURRENT palette (force inside table cells) */
+.status_tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+// Editing / Not started
+.status_tag.status_1 {
+  color: #6b7280 !important;
+  background: #f3f4f6 !important;
+}
+// Quality Assessed / In QA-ish
+.status_tag.status_2 {
+  color: #0e7490 !important;
+  background: #cffafe !important;
+}
+// Submitted
+.status_tag.status_3 {
+  color: #1d4ed8 !important;
+  background: #dbeafe !important;
+}
+// Discontinued
+.status_tag.status_4 {
+  color: #6b7280 !important;
+  background: #f3f4f6 !important;
+}
+// Pending review / In progress
+.status_tag.status_5 {
+  color: #b45309 !important;
+  background: #fef3c7 !important;
+}
+// Approved
+.status_tag.status_6 {
+  color: #047857 !important;
+  background: #d1fae5 !important;
+}
+// Rejected
+.status_tag.status_7 {
+  color: #b91c1c !important;
+  background: #fee2e2 !important;
+}
+
+.in-qa-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #0e7490;
+  background: #ecfeff;
 }
 
 .subResults {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
-
-td {
-  a {
-    display: flex;
-    align-items: center;
-    min-height: 35px;
-    color: var(--pr-color-secondary-400);
-  }
-
-  &.title {
-    a {
-      gap: 8px;
-    }
-
-    .discontinued-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background-color: var(--pr-color-orange-500, #f97316);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      padding-bottom: 2px;
-
-      i {
-        color: white;
-        font-size: 12px;
-      }
-    }
-  }
-}
-
-.truncate-multiline {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  line-clamp: 3;
-  -webkit-line-clamp: 3;
-  text-overflow: ellipsis;
-}
-
-.text-center {
-  text-align: center;
+  align-items: flex-end;
+  gap: 4px;
 }
 
 .noDataText {
@@ -104,16 +499,6 @@ td {
   padding: 50px 0px;
   @include fonts.pr-typography('h4');
   color: var(--pr-color-primary-300);
-}
-
-.new_tag {
-  background-color: var(--pr-color-primary-300);
-  margin-right: 10px;
-  padding: 2px 3px;
-  @include fonts.pr-typography('body-3');
-  border-radius: 3px;
-  color: var(--pr-color-white);
-  height: 17px;
 }
 
 .table_menu_item {
@@ -134,53 +519,73 @@ td {
   opacity: 0.5;
 }
 
-::ng-deep {
-  .p-popover:before,
-  .p-popover:after {
-    display: none;
-  }
-
-  .p-popover-content {
-    padding: 0.25rem !important;
-  }
+.pr-menu-panel {
+  position: fixed;
+  z-index: 1100;
+  transform: translateX(-100%);
+  background: var(--pr-color-white);
+  border-radius: 6px;
+  box-shadow: 0px 0px 20px rgba(var(--pr-color-black-rgb), 0.2);
+  padding: 0.25rem;
 }
 
 .disabledButtons {
   opacity: 0.5;
 }
 
+/* final status chips win over any earlier definitions */
 .status_tag {
-  padding: 2px 5px;
-  border: 1px solid;
-  text-align: center;
-  border-radius: 5px;
-  font-weight: 500;
+  display: inline-flex !important;
+  align-items: center;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 3px 9px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
   white-space: nowrap;
+  text-align: center;
 }
 
 .status_1 {
-  border-color: var(--pr-color-blue-400);
-  color: var(--pr-color-blue-400);
+  border-color: transparent !important;
+  color: #6b7280 !important;
+  background: #f3f4f6 !important;
 }
 
 .status_2 {
-  border-color: var(--pr-color-yellow-400);
-  color: var(--pr-color-yellow-400);
+  border-color: transparent !important;
+  color: #0e7490 !important;
+  background: #cffafe !important;
 }
 
 .status_3 {
-  border-color: var(--pr-color-green-600);
-  color: var(--pr-color-green-600);
+  border-color: transparent !important;
+  color: #1d4ed8 !important;
+  background: #dbeafe !important;
 }
 
 .status_4 {
-  border-color: var(--pr-color-secondary-400);
-  color: var(--pr-color-secondary-400);
+  border-color: transparent !important;
+  color: #6b7280 !important;
+  background: #f3f4f6 !important;
 }
 
 .status_5 {
-  border-color: var(--pr-color-orange-600);
-  color: var(--pr-color-orange-600);
+  border-color: transparent !important;
+  color: #b45309 !important;
+  background: #fef3c7 !important;
+}
+
+.status_6 {
+  border-color: transparent !important;
+  color: #047857 !important;
+  background: #d1fae5 !important;
+}
+
+.status_7 {
+  border-color: transparent !important;
+  color: #b91c1c !important;
+  background: #fee2e2 !important;
 }
 
 .status_6 {
@@ -191,4 +596,44 @@ td {
 .status_7 {
   border-color: var(--pr-color-red-300);
   color: var(--pr-color-red-300);
+}
+
+// ── Metadata chips ─────────────────────────────────────────────────────────
+// Turn categorical metadata columns (funding source, indicator category, center)
+// into readable pills instead of plain text, matching the dashboard-lab cards.
+.meta_chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: nowrap;
+  border: 1px solid var(--pr-color-accents-2);
+  background-color: var(--pr-color-accents-1);
+  color: var(--pr-color-accents-6);
+}
+
+// Bilateral funding source stands out from W1/W2 (amber).
+.meta_chip--bilateral {
+  border-color: var(--pr-color-orange-600);
+  background-color: var(--pr-color-orange-50);
+  color: var(--pr-color-orange-700);
+}
+
+// Indicator category labels are long — allow wrap, softer corners, violet tint.
+.meta_chip--type {
+  border-color: transparent;
+  border-radius: 8px;
+  white-space: normal;
+  background-color: rgba(107, 70, 229, 0.12);
+  color: var(--pr-color-primary-400);
+}
+
+// Marker at the result code for rows that open in the reporting framework.
+.meta_code_icon {
+  font-size: 15px;
+  color: var(--pr-color-primary-300);
+  cursor: help;
 }

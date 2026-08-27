@@ -11,8 +11,8 @@
       *ngFor="let option of options"
       [routerLink]="option.path"
       routerLinkActive="active"
-      [pTooltip]="!this.dynamicPanelService.showCompletePanel() ? option?.name : ''"
-      tooltipPosition="right">
+      [prTooltip]="!this.dynamicPanelService.showCompletePanel() ? option?.name : ''"
+      prTooltipPosition="right">
       <i class="material-icons-round">
         {{ option?.icon }}
       </i>

@@ -7,16 +7,13 @@
     (click)="complementaryInnovationService.dialogStatus = true"></app-pr-button>
 }
 
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="complementaryInnovationService.dialogStatus"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="true"
   [dismissableMask]="true"
-  [style]="{ padding: '0px', margin: '0px', width: '70vw' }"
-  [blockScroll]="true"
+  styleClass="new-complementary-innovation-dialog"
   (onHide)="complementaryInnovationService.resetAll()">
   <div style="display: flex; justify-content: center; flex-direction: column">
     <div class="modal_title">
@@ -85,13 +82,15 @@
         <div class="container">
           <div class="col{{ i }}" *ngFor="let item of columns; let i = index">
             <div *ngFor="let subItem of item" style="margin-bottom: 10px">
-              <p-checkbox
+              <input
+                type="checkbox"
+                prCheckboxValue
+                class="pr-native-check"
                 name="name"
                 [value]="subItem"
                 id="checkbox{{ subItem.complementary_innovation_functions_id }}"
-                [inputId]="subItem.complementary_innovation_functions_id"
-                [readonly]="this.api.rolesSE.readOnly"
-                [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions"></p-checkbox>
+                [disabled]="this.api.rolesSE.readOnly"
+                [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions" />
               <label for="checkbox{{ subItem.complementary_innovation_functions_id }}"> {{ subItem.name }}</label>
             </div>
           </div>
@@ -144,4 +143,4 @@
         [tooltipText]="disableSaveButton() ? 'Please complete the mandatory fields.' : ''"></app-pr-button>
     </div>
   }
-</p-dialog>
+</app-pr-dialog>

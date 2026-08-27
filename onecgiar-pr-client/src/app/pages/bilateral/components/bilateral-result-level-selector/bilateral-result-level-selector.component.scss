@@ -1,0 +1,57 @@
+.brls-container {
+  margin-bottom: 24px;
+}
+
+.brls-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #212121;
+  margin: 0 0 16px;
+}
+
+.brls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.brls-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  border: 2px solid #E0E0E0;
+  border-radius: 8px;
+  background: #FFFFFF;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 150ms ease, background 150ms ease;
+
+  // Hover is NEUTRAL, selected is BRAND. The 200->300 repoint had made both borders the same
+  // violet, so hovering previewed nothing — the card looked already selected. Rule 7 also wants
+  // resting/hover borders neutral inside content, with violet reserved for the chosen state.
+  &:hover {
+    border-color: var(--pr-border-strong);
+    background: var(--pr-surface-app);
+  }
+
+  &--selected {
+    border-color: var(--pr-color-primary-300);
+    background: var(--pr-color-primary-25);
+    box-shadow: 0 0 0 3px var(--pr-color-primary-100);
+  }
+}
+
+.brls-card-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212121;
+}
+
+.brls-card-desc {
+  font-size: 12px;
+  color: #757575;
+  text-align: center;
+  line-height: 1.4;
+}

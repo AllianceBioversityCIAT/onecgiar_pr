@@ -4,7 +4,7 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom, of, throwError } from 'rxjs';
 import { NoDataTextComponent } from '../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
 import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
@@ -89,6 +89,28 @@ describe('RdEvidencesComponent', () => {
 
     fixture = TestBed.createComponent(RdEvidencesComponent);
     component = fixture.componentInstance;
+  });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised so the empty EvidencesBody never paints as a lost form', () => {
+      expect(component.sectionLoading()).toBe(true);
+    });
+
+    it('is released once the section GET responds', () => {
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_evidences').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+      expect(component.isSaving).toBe(false);
+    });
   });
 
   describe('alertStatus', () => {
@@ -233,6 +255,30 @@ describe('RdEvidencesComponent', () => {
       expect(spy).toHaveBeenCalled();
       expect(spyHideSaveSpinner).toHaveBeenCalled();
       expect(spyPOST_evidences).toHaveBeenCalled();
+    });
+
+    // P2-3373: a failed save used to leave `isSaving` latched on. Because
+    // `isEvidenceUploading()` reads that flag, every file evidence whose link had not
+    // resolved kept the "uploading" skeleton instead of its link for the rest of the
+    // page's life, and the rethrow from `isSavingPipe` surfaced as an unhandled error.
+    it('should release the in-flight flag when POST_evidences fails', async () => {
+      mockApiService.resultsSE.POST_evidences = () => throwError(() => new Error('save failed'));
+      const reloadSpy = jest.spyOn(component, 'getSectionInformation');
+
+      await component.onSaveSection();
+
+      expect(component.isSaving).toBe(false);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    });
+
+    it('should not keep a file evidence stuck on the uploading skeleton after a failed save', async () => {
+      mockApiService.resultsSE.POST_evidences = () => throwError(() => new Error('save failed'));
+      const stuck: any = { is_sharepoint: true, file: { name: 'report.pdf' }, link: undefined };
+      component.evidencesBody.evidences = [stuck];
+
+      await component.onSaveSection();
+
+      expect(component.isEvidenceUploading(stuck)).toBe(false);
     });
   });
 

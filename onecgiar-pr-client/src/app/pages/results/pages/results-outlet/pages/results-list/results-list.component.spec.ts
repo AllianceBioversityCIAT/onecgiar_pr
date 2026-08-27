@@ -3,9 +3,6 @@ import { ResultsListComponent } from './results-list.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ResultsListFilterPipe } from './pipes/results-list-filter.pipe';
 import { ResultsToUpdateModalComponent } from './components/results-to-update-modal/results-to-update-modal.component';
-import { MenuModule } from 'primeng/menu';
-import { TableModule } from 'primeng/table';
-import { DialogModule } from 'primeng/dialog';
 import { ResultsToUpdateFilterPipe } from './components/results-to-update-modal/results-to-update-filter.pipe';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 import { ReportNewResultButtonComponent } from './components/report-new-result-button/report-new-result-button.component';
@@ -17,13 +14,27 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 import { ExportTablesService } from '../../../../../../shared/services/export-tables.service';
 import { ResultsListService } from './services/results-list.service';
 import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
-import { PopoverModule } from 'primeng/popover';
 import { ResultsListFilterService } from './services/results-list-filter.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
-import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { Component, NO_ERRORS_SCHEMA, signal } from '@angular/core';
 
 jest.useFakeTimers();
+
+/**
+ * Stub for <app-pr-table>. In Angular 21 the zone tick during jest.runAllTimers() renders the
+ * template, so the `#table` ViewChild resolves during change detection. Without a real component
+ * on that element it would resolve to the native element (no `.reset()`), crashing the effects.
+ * This stub gives the ViewChild an instance with the `reset()` method the component calls.
+ */
+@Component({
+  selector: 'app-pr-table',
+  template: '',
+  standalone: true
+})
+class PrTableStubComponent {
+  reset = jest.fn();
+}
 
 describe('ResultsListComponent', () => {
   let component: ResultsListComponent;
@@ -42,6 +53,7 @@ describe('ResultsListComponent', () => {
   beforeEach(async () => {
     mockApiService = {
       shouldShowUpdate: jest.fn(),
+      canUpdateBilateral: jest.fn().mockReturnValue(false),
       updateResultsList: jest.fn(),
       buildResultsListSearchParams: jest.fn(() => undefined),
       resultsSE: {
@@ -51,6 +63,12 @@ describe('ResultsListComponent', () => {
         GET_versioning: () => of({ response: [{ phase_year: 2023 }] }),
         GET_allRequest: () => of({}),
         GET_requestStatus: () => of({}),
+        // Methods consumed by the child <app-results-list-filters> during render (ngOnChanges/ngOnInit)
+        GET_AllInitiatives: () => of({ response: [] }),
+        GET_ClarisaPortfolios: () => of([]),
+        GET_AllCLARISACenters: () => of({ response: [] }),
+        GET_allResultStatuses: () => of({ response: [] }),
+        ipsrDataControlSE: { inIpsr: false },
         currentResultId: 1
       },
       dataControlSE: {
@@ -60,6 +78,8 @@ describe('ResultsListComponent', () => {
           phase_year: 2023
         },
         currentResultSignal: signal({}),
+        resultsListSignal: signal([]),
+        resultsListNoDataMessage: signal(''),
         myInitiativesList: [
           { id: 1, selected: false },
           { id: 2, selected: false }
@@ -99,16 +119,10 @@ describe('ResultsListComponent', () => {
       showDeletingResultSpinner: false
     };
 
-    mockResultsListFilterService = {
-      text_to_search: jest.fn(() => ''),
-      selectedPhases: jest.fn(() => []),
-      selectedSubmitters: jest.fn(() => []),
-      selectedSubmittersAdmin: jest.fn(() => []),
-      selectedIndicatorCategories: jest.fn(() => []),
-      selectedStatus: jest.fn(() => []),
-      filterCreatedByMe: jest.fn(() => false),
-      filterSubmittedByMe: jest.fn(() => false)
-    };
+    // Use a real ResultsListFilterService instance: the child <app-results-list-filters> renders
+    // during zone ticks and calls `.set()` on these signals (which jest.fn stubs don't have).
+    // Real signals default to the same empty values the previous stubs returned.
+    mockResultsListFilterService = new ResultsListFilterService();
 
     mockPhasesService = {};
 
@@ -127,7 +141,7 @@ describe('ResultsListComponent', () => {
         ReportNewResultButtonComponent,
         ChangePhaseModalComponent
       ],
-      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule, PopoverModule, ResultsListFiltersComponent],
+      imports: [HttpClientTestingModule, ResultsListFiltersComponent, PrTableStubComponent],
       schemas: [NO_ERRORS_SCHEMA],
       providers: [
         { provide: ApiService, useValue: mockApiService },
@@ -450,19 +464,40 @@ describe('ResultsListComponent', () => {
   });
 
   describe('Component Properties', () => {
-    it('should have correct column order configuration', () => {
-      expect(component.columnOrder).toEqual([
-        { title: 'Result code', attr: 'result_code', center: true, width: '90px' },
-        { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
-        { title: 'Funding Source', attr: 'source_name', center: true, width: '100px' },
-        { title: 'Center', attr: 'lead_center', center: true, width: '100px' },
-        { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
-        { title: 'Indicator category', attr: 'result_type', center: true, width: '100px' },
-        { title: 'Submitter', attr: 'submitter', center: true, width: '30px' },
-        { title: 'Status', attr: 'full_status_name_html', center: true, width: '124px' },
-        { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
-        { title: 'Created by	', attr: 'full_name', width: '120px' }
+    it('should have correct default visible column configuration', () => {
+      const attrs = component.visibleColumns().map(c => c.attr);
+      expect(attrs).toEqual([
+        'result_code',
+        'title',
+        'submitter',
+        'lead_center',
+        'phase_name',
+        'result_type',
+        'source_name',
+        'full_status_name_html',
+        'created_date'
       ]);
+      // Optional columns off by default
+      expect(component.isColumnVisible('createdBy')).toBe(false);
+      expect(component.isColumnVisible('updated')).toBe(false);
+    });
+
+    it('should toggle column visibility and keep at least one column', () => {
+      component.toggleColumn('status');
+      expect(component.isColumnVisible('status')).toBe(false);
+      component.toggleColumn('status');
+      expect(component.isColumnVisible('status')).toBe(true);
+
+      // Force every column off except code, then refuse to turn code off
+      for (const col of component.allColumns) {
+        if (col.key === 'code') continue;
+        // Ensure optional columns that start off are not flipped on; only turn off those currently on.
+        if (component.isColumnVisible(col.key)) component.toggleColumn(col.key);
+      }
+      expect(component.visibleColumns().map(c => c.key)).toEqual(['code']);
+      component.toggleColumn('code'); // attempt to turn off last
+      expect(component.isColumnVisible('code')).toBe(true);
+      expect(component.visibleColumns()).toHaveLength(1);
     });
 
     it('should initialize with correct default values', () => {
@@ -508,58 +543,23 @@ describe('ResultsListComponent', () => {
   });
 
   describe('applyDefaultSort()', () => {
-    it('should call sortSingle when available', () => {
+    it('should reset the app-pr-table so it re-asserts the default sort', () => {
       const mockTableWithSort = {
-        reset: jest.fn(),
-        sortField: '',
-        sortOrder: 1,
-        sortSingle: jest.fn(),
-        sort: jest.fn()
+        reset: jest.fn()
       };
       component.table = mockTableWithSort as any;
 
       (component as any).applyDefaultSort();
 
-      expect(mockTableWithSort.sortField).toBe('result_code');
-      expect(mockTableWithSort.sortOrder).toBe(-1);
-      expect(mockTableWithSort.sortSingle).toHaveBeenCalled();
-      expect(mockTableWithSort.sort).not.toHaveBeenCalled();
-    });
-
-    it('should call sort when sortSingle is not a function', () => {
-      const mockTableWithSort = {
-        reset: jest.fn(),
-        sortField: '',
-        sortOrder: 1,
-        sortSingle: 'not-a-function',
-        sort: jest.fn()
-      };
-      component.table = mockTableWithSort as any;
-
-      (component as any).applyDefaultSort();
-
-      expect(mockTableWithSort.sort).toHaveBeenCalledWith({ field: 'result_code', order: -1 });
+      // app-pr-table has no sortSingle/sort({field,order}); the bound [sortField]/[sortOrder]
+      // inputs define the default and reset() re-asserts it (+ page 0).
+      expect(mockTableWithSort.reset).toHaveBeenCalled();
     });
 
     it('should do nothing when table is undefined', () => {
       component.table = undefined;
 
       expect(() => (component as any).applyDefaultSort()).not.toThrow();
-    });
-
-    it('should handle table with neither sortSingle nor sort as functions', () => {
-      const mockTableNoSort = {
-        reset: jest.fn(),
-        sortField: '',
-        sortOrder: 1,
-        sortSingle: null,
-        sort: null
-      };
-      component.table = mockTableNoSort as any;
-
-      expect(() => (component as any).applyDefaultSort()).not.toThrow();
-      expect(mockTableNoSort.sortField).toBe('result_code');
-      expect(mockTableNoSort.sortOrder).toBe(-1);
     });
   });
 
@@ -612,6 +612,9 @@ describe('ResultsListComponent', () => {
   });
 
   describe('onPressAction() - W3/Bilaterals flow', () => {
+    // P2-3229. "Update result" is no longer hidden outright: `canUpdateBilateral` decides.
+    // A Pending Review result is not approved, so it stays hidden — which is why this case
+    // still asserts `false` and did not need loosening.
     it('should hide map/update and show review with Pending Review status for W3/Bilaterals', () => {
       const result = {
         id: '1',
@@ -659,7 +662,55 @@ describe('ResultsListComponent', () => {
       expect(component.itemsWithDelete[2].label).toBe('See result');
       expect(component.itemsWithDelete[2].icon).toBe('pi pi-eye');
     });
+
+    it('offers "Update result" on an approved bilateral when the rule allows it', () => {
+      const result = {
+        id: '1',
+        title: 'Test',
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        status_name: 'Approved',
+        acronym: 'P25',
+        phase_year: 2023,
+        lead_center: 'CIAT (Alliance)',
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+      mockApiService.canUpdateBilateral.mockReturnValue(true);
+
+      component.onPressAction(result);
+
+      expect(mockApiService.canUpdateBilateral).toHaveBeenCalledWith(result, {
+        phaseYear: 2024,
+        portfolioAcronym: 'P25'
+      });
+      expect(component.items[1].visible).toBe(true);
+      expect(component.itemsWithDelete[1].visible).toBe(true);
+      // Map to TOC stays hidden for bilaterals — only the update action changed.
+      expect(component.items[0].visible).toBe(false);
+    });
+
+    it('keeps "Update result" hidden when the rule refuses', () => {
+      const result = {
+        id: '1',
+        title: 'Test',
+        source_name: 'W3/Bilaterals',
+        status_name: 'Approved',
+        acronym: 'P25',
+        phase_year: 2023,
+        lead_center: 'IITA',
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+      mockApiService.canUpdateBilateral.mockReturnValue(false);
+
+      component.onPressAction(result);
+
+      expect(component.items[1].visible).toBe(false);
+      expect(component.itemsWithDelete[1].visible).toBe(false);
+    });
   });
+
 
   describe('onPressAction() - admin delete tooltip', () => {
     it('should disable delete for admin when status is QAed', () => {
@@ -1004,7 +1055,7 @@ describe('ResultsListComponent', () => {
 
   describe('onDeleteREsult() - with selected phases', () => {
     it('should refresh the list after delete using current filter params', () => {
-      mockResultsListFilterService.selectedPhases = jest.fn(() => [{ id: 1 }, { id: 2 }]);
+      mockResultsListFilterService.selectedPhases.set([{ id: 1 }, { id: 2 }]);
       mockApiService.buildResultsListSearchParams = jest.fn(() => ({ version_id: '1,2' }));
       const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
 

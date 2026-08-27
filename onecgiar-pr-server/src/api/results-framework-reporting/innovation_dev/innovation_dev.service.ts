@@ -105,6 +105,7 @@ export class InnovationDevService {
       } else {
         const newInnDev = new ResultsInnovationsDev();
         newInnDev.created_by = user.id;
+        newInnDev.results_id = +resultId;
         newInnDev.result_object = { id: +resultId } as any;
         newInnDev.last_updated_by = user.id;
         newInnDev.short_title = short_title;
@@ -115,7 +116,10 @@ export class InnovationDevService {
         newInnDev.innovation_developers = innovation_developers;
         newInnDev.evidences_justification = evidences_justification;
         newInnDev.innovation_collaborators = innovation_collaborators;
-        newInnDev.result_innovation_dev_id = result_innovation_dev_id;
+        // Do not assign null PK — breaks MySQL AUTO_INCREMENT.
+        if (result_innovation_dev_id != null) {
+          newInnDev.result_innovation_dev_id = result_innovation_dev_id;
+        }
         newInnDev.innovation_acknowledgement = innovation_acknowledgement;
         newInnDev.innovation_pdf = innovation_pdf;
         newInnDev.innovation_user_to_be_determined =

@@ -2142,6 +2142,47 @@ describe('ResultsService (unit, pure mocks)', () => {
       expect(mockShareResultRequestRepository.update).toHaveBeenCalled();
       expect(mockResultByInitiativesRepository.findOne).toHaveBeenCalled();
     });
+
+    it('should not cancel pending share requests when pending_contributing_initiatives is omitted', async () => {
+      const reviewUpdateDto: ReviewUpdateDto = {
+        commonFields: {
+          id: 100,
+          result_type_id: ResultTypeEnum.POLICY_CHANGE,
+        },
+        contributingInitiatives: {
+          accepted_contributing_initiatives: [{ id: 2 }],
+        } as ReviewUpdateDto['contributingInitiatives'],
+        updateExplanation: 'Updated accepted initiatives only',
+      };
+
+      mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+        const manager = {
+          findOne: jest.fn().mockResolvedValueOnce(mockResult),
+          update: jest.fn(),
+          create: jest.fn(),
+          save: jest.fn().mockResolvedValueOnce({ id: 1 }),
+        };
+        return callback(manager);
+      });
+
+      (
+        mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+      ).mockResolvedValueOnce(mockCommonFields);
+
+      mockShareResultRequestRepository.update.mockClear();
+      (
+        mockResultByInitiativesRepository.findOne as jest.Mock
+      ).mockResolvedValueOnce({ initiative_id: 1, is_active: true });
+
+      const res = await resultService.updateBilateralResultReview(
+        100,
+        reviewUpdateDto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(mockShareResultRequestRepository.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('findResultById', () => {

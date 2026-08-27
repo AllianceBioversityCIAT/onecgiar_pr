@@ -10,6 +10,7 @@ import {
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
+import { formatUnknownError } from '../../../shared/utils/service-error.util';
 
 @Injectable()
 export class ResultByInitiativesRepository
@@ -80,7 +81,7 @@ export class ResultByInitiativesRepository
     ResultByInitiativesRepository.name,
   );
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByInititiative, dataSource.createEntityManager());
@@ -189,8 +190,9 @@ export class ResultByInitiativesRepository
     	ci.id,
       ci.official_code,
       ci.name as initiative_name,
-      ci.short_name,
+    	ci.short_name,
       rbi.initiative_role_id,
+      rbi.from_toc,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -224,6 +226,7 @@ export class ResultByInitiativesRepository
     	null as initiative_role_id,
 	    srr.request_status_id,
       srr.share_result_request_id,
+      srr.from_toc,
     	srr.is_active
     FROM
     	share_result_request srr
@@ -279,6 +282,7 @@ export class ResultByInitiativesRepository
           null as initiative_role_id,
           srr.request_status_id,
           srr.share_result_request_id,
+          srr.from_toc,
           srr.is_active
         FROM
           share_result_request srr
@@ -314,8 +318,9 @@ export class ResultByInitiativesRepository
     	ci.id,
       ci.official_code,
       ci.name as initiative_name,
-      ci.short_name,
+    	ci.short_name,
       rbi.initiative_role_id,
+      rbi.from_toc,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -345,8 +350,9 @@ export class ResultByInitiativesRepository
     	ci.id,
       ci.official_code,
       ci.name as initiative_name,
-      ci.short_name,
+    	ci.short_name,
       rbi.initiative_role_id,
+      rbi.from_toc,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -378,8 +384,9 @@ export class ResultByInitiativesRepository
     	ci.id,
       ci.official_code,
       ci.name as initiative_name,
-      ci.short_name,
+    	ci.short_name,
       rbi.initiative_role_id,
+      rbi.from_toc,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -532,10 +539,10 @@ export class ResultByInitiativesRepository
       return [];
     }
 
-    const initiativeParameter = [
+    const initiativeParameter = new Set([
       ...(initiativeArray ?? []),
       ...(initiativeArrayPnd ?? []),
-    ];
+    ]);
 
     try {
       const inits = `
@@ -549,7 +556,7 @@ export class ResultByInitiativesRepository
       const initsResult = await this.query(inits, [resultId]);
       const currentInits = initsResult.map((e) => e.inititiative_id);
       const initsToInactive = currentInits.filter(
-        (e) => !initiativeParameter.includes(e),
+        (e) => !initiativeParameter.has(e),
       );
 
       if (!initsToInactive.length) {
@@ -602,9 +609,109 @@ export class ResultByInitiativesRepository
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
-        error: `updateResultByInitiative ${error}`,
+        error: `updateResultByInitiative ${formatUnknownError(error)}`,
         debug: true,
       });
+    }
+  }
+
+  async upsertContributorInitiatives(
+    resultId: number,
+    initiativeIds: number[],
+    fromTocByInitiativeId: Map<number, boolean>,
+    userId: number,
+  ): Promise<void> {
+    if (!resultId || !userId || !initiativeIds?.length) {
+      return;
+    }
+
+    for (const initiativeId of initiativeIds) {
+      const parsedInitiativeId = Number(initiativeId);
+      if (!Number.isFinite(parsedInitiativeId) || parsedInitiativeId <= 0) {
+        continue;
+      }
+
+      const fromToc = fromTocByInitiativeId.has(parsedInitiativeId)
+        ? !!fromTocByInitiativeId.get(parsedInitiativeId)
+        : false;
+
+      const existingRows: Array<{ id: number; is_active: number | boolean }> =
+        await this.query(
+          `
+            SELECT id, is_active
+            FROM results_by_inititiative
+            WHERE result_id = ?
+              AND inititiative_id = ?
+              AND initiative_role_id = 2
+            LIMIT 1
+          `,
+          [resultId, parsedInitiativeId],
+        );
+
+      const existing = existingRows?.[0];
+
+      if (existing?.id) {
+        await this.query(
+          `
+            UPDATE results_by_inititiative
+            SET is_active = 1,
+                from_toc = ?,
+                last_updated_by = ?,
+                last_updated_date = NOW()
+            WHERE id = ?
+          `,
+          [fromToc ? 1 : 0, userId, existing.id],
+        );
+        continue;
+      }
+
+      await this.query(
+        `
+          INSERT INTO results_by_inititiative
+            (result_id, inititiative_id, initiative_role_id, is_active, from_toc, created_by, last_updated_by, created_date, last_updated_date)
+          VALUES (?, ?, 2, 1, ?, ?, ?, NOW(), NOW())
+        `,
+        [resultId, parsedInitiativeId, fromToc ? 1 : 0, userId, userId],
+      );
+    }
+  }
+
+  async updateInitiativeFromTocFlags(
+    resultId: number,
+    fromTocByInitiativeId: Map<number, boolean> | Record<number, boolean>,
+    userId: number,
+  ): Promise<void> {
+    if (!resultId || !userId) {
+      return;
+    }
+
+    const entries =
+      fromTocByInitiativeId instanceof Map
+        ? Array.from(fromTocByInitiativeId.entries())
+        : Object.entries(fromTocByInitiativeId ?? {}).map(([id, fromToc]) => [
+            Number(id),
+            !!fromToc,
+          ]);
+
+    for (const [initiativeId, fromToc] of entries) {
+      const parsedInitiativeId = Number(initiativeId);
+      if (!Number.isFinite(parsedInitiativeId) || parsedInitiativeId <= 0) {
+        continue;
+      }
+
+      await this.query(
+        `
+          UPDATE results_by_inititiative
+          SET from_toc = ?,
+              last_updated_by = ?,
+              last_updated_date = NOW()
+          WHERE result_id = ?
+            AND inititiative_id = ?
+            AND initiative_role_id = 2
+            AND is_active > 0
+        `,
+        [fromToc ? 1 : 0, userId, resultId, parsedInitiativeId],
+      );
     }
   }
 
@@ -656,7 +763,7 @@ export class ResultByInitiativesRepository
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
-        error: `updateResultByInitiativeSubmitter ${error}`,
+        error: `updateResultByInitiativeSubmitter ${formatUnknownError(error)}`,
         debug: true,
       });
     }

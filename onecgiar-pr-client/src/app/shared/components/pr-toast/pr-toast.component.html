@@ -1,0 +1,20 @@
+@if (visible().length) {
+  <div class="pr-toast-host">
+    @for (toast of visible(); track toast.id) {
+      <div class="pr-toast pr-toast--{{ toast.severity || 'info' }}" role="alert">
+        <i class="material-icons-round pr-toast__icon">{{ iconFor(toast.severity) }}</i>
+        <div class="pr-toast__text">
+          @if (toast.summary) {
+            <div class="pr-toast__summary">{{ toast.summary }}</div>
+          }
+          @if (toast.detail) {
+            <div class="pr-toast__detail">{{ toast.detail }}</div>
+          }
+        </div>
+        <button type="button" class="pr-toast__close" aria-label="Close" (click)="remove(toast.id)">
+          <i class="material-icons-round">close</i>
+        </button>
+      </div>
+    }
+  </div>
+}

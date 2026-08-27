@@ -232,4 +232,92 @@ export class ResultsInnovationsUseRepository
 
     return linked_results;
   }
+
+  /**
+   * P2-3424 — write side of `getLinkedResultsByOrigin`.
+   *
+   * `linked_result` is shared: the P22 "Links to results" section writes rows for the very same
+   * `origin_result_id`, and legacy rows carry a `legacy_link` with a NULL `linked_results_id`. So the
+   * sync is deliberately narrow:
+   *  - rows for the submitted ids are re-activated (or inserted when they never existed),
+   *  - only rows that carry a real `linked_results_id` are de-activated, never the `legacy_link` ones.
+   *
+   * Callers decide WHEN to sync; this method never guesses. See `SummaryService.saveInnovationUse`.
+   *
+   * 🛑 DO NOT swap this for `LinkedResultsService.createForInnovationUse`
+   * (`api/results/linked-results/linked-results.service.ts:191`), which the v2 route already uses.
+   * The two agree on the non-empty case only. With an EMPTY selection the shared service runs
+   * `update({ origin_result_id, is_active: true }, { is_active: false })` (`:244-247`) — a blanket
+   * deactivation that also wipes the `legacy_link` rows (`linked_results_id IS NULL`) authored by the
+   * P22 "Links to results" section. This method spares them on purpose. Reuse becomes possible only
+   * once the shared empty-branch is narrowed the same way, and that change belongs to whoever owns
+   * the v2 route's behaviour.
+   */
+  async replaceLinkedResultsByOrigin(
+    originId: number,
+    linkedIds: (number | string)[],
+    userId: number,
+  ): Promise<number[]> {
+    const ids = Array.from(
+      new Set(
+        (linkedIds ?? [])
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id) && id > 0),
+      ),
+    );
+
+    if (!ids.length) {
+      await this.dataSource.query(
+        `UPDATE linked_result
+           SET is_active = 0, last_updated_by = ?, last_updated_date = NOW()
+         WHERE origin_result_id = ?
+           AND is_active > 0
+           AND linked_results_id IS NOT NULL;`,
+        [userId, originId],
+      );
+      return this.getLinkedResultsByOrigin(originId);
+    }
+
+    const placeholders = ids.map(() => '?').join(', ');
+
+    await this.dataSource.query(
+      `UPDATE linked_result
+         SET is_active = 1, last_updated_by = ?, last_updated_date = NOW()
+       WHERE origin_result_id = ?
+         AND linked_results_id IN (${placeholders});`,
+      [userId, originId, ...ids],
+    );
+
+    const existing = await this.dataSource.query(
+      `SELECT linked_results_id
+         FROM linked_result
+        WHERE origin_result_id = ?
+          AND linked_results_id IN (${placeholders});`,
+      [originId, ...ids],
+    );
+    const known = new Set(
+      (existing ?? []).map((row: any) => Number(row?.linked_results_id)),
+    );
+
+    for (const linkedId of ids.filter((id) => !known.has(id))) {
+      await this.dataSource.query(
+        `INSERT INTO linked_result
+           (linked_results_id, origin_result_id, is_active, created_by, last_updated_by, created_date, last_updated_date)
+         VALUES (?, ?, 1, ?, ?, NOW(), NOW());`,
+        [linkedId, originId, userId, userId],
+      );
+    }
+
+    await this.dataSource.query(
+      `UPDATE linked_result
+         SET is_active = 0, last_updated_by = ?, last_updated_date = NOW()
+       WHERE origin_result_id = ?
+         AND is_active > 0
+         AND linked_results_id IS NOT NULL
+         AND linked_results_id NOT IN (${placeholders});`,
+      [userId, originId, ...ids],
+    );
+
+    return this.getLinkedResultsByOrigin(originId);
+  }
 }

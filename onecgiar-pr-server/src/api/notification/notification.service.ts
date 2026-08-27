@@ -31,12 +31,22 @@ export class NotificationService {
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
   ) {}
 
+  /**
+   * @param renderedText Pre-composed message **suffix** (everything after the result identity),
+   *   persisted on `notification.text`. Only needed by types whose copy cannot be derived from
+   *   the result alone — P2-3214's tagged centre / bilateral project, where one result carries
+   *   several centres and a recipient may belong to more than one, so the read path has no way
+   *   to tell which link the row is about. Storing only the suffix keeps it usable by the client,
+   *   which composes `[prefix, identity, suffix]` on its own. Every other type leaves it
+   *   undefined and keeps building its copy at read time.
+   */
   async emitResultNotification(
     notificationLevel: NotificationLevelEnum,
     notificationType: NotificationTypeEnum,
     userIds: number[],
     emmiterUser: number,
     resultId: number,
+    renderedText?: string,
   ) {
     try {
       const notificationLevelData =
@@ -70,6 +80,7 @@ export class NotificationService {
         result_id: resultId,
         notification_level: notificationLevelData.notifications_level_id,
         notification_type: notificationTypeData.notifications_type_id,
+        ...(renderedText ? { text: renderedText } : {}),
       }));
 
       if (notificationsToPersist.length) {
@@ -115,6 +126,9 @@ export class NotificationService {
         notificationType,
         resultData?.obj_result?.result_code,
         emitterName,
+        resultData?.obj_result?.title,
+        this.resolveOwnerProgramCode(resultData),
+        renderedText,
       );
 
       const notification: NotificationDto = {
@@ -271,6 +285,9 @@ export class NotificationService {
             notificationType,
             notification.obj_result?.result_code,
             emitterName,
+            notification.obj_result?.title,
+            undefined,
+            notification.text,
           ),
           emitterId: notification.emitter_user ?? null,
           emitterName,
@@ -674,6 +691,9 @@ export class NotificationService {
     notificationType: NotificationTypeEnum | undefined,
     resultCode?: number,
     userName?: string,
+    resultTitle?: string,
+    programCode?: string,
+    storedText?: string,
   ): string {
     const codeText = resultCode ? `result ${resultCode}` : 'the result';
     switch (notificationType) {
@@ -685,9 +705,91 @@ export class NotificationService {
         return `The ${codeText} has been unsubmitted by ${userName ?? 'a user'}`;
       case NotificationTypeEnum.RESULT_QUALITY_ASSESED:
         return `The ${codeText} has been quality assessed by ${userName ?? 'a user'}`;
+      case NotificationTypeEnum.BILATERAL_RESULT_APPROVED:
+        return this.buildBilateralReviewDescription(
+          '✅',
+          'Approved',
+          resultCode,
+          resultTitle,
+          programCode,
+        );
+      case NotificationTypeEnum.BILATERAL_RESULT_REJECTED:
+        return this.buildBilateralReviewDescription(
+          '❌',
+          'Rejected',
+          resultCode,
+          resultTitle,
+          programCode,
+        );
+      case NotificationTypeEnum.RESULT_CENTER_TAGGED:
+      case NotificationTypeEnum.RESULT_BILATERAL_PROJECT_TAGGED:
+      // P2-3188 joins the same shape: the varying half is which Science Program decided, which
+      // cannot be derived when the notification is read.
+      case NotificationTypeEnum.RESULT_CONTRIBUTION_ACCEPTED:
+      case NotificationTypeEnum.RESULT_CONTRIBUTION_DECLINED: {
+        // `notification.text` holds only the part that varies — everything after the result
+        // identity — because the client composes `[prefix, identity, suffix]` itself
+        // (`buildResultNotificationText`) and storing the whole sentence would repeat the
+        // code and title. Rows with no text (written by hand, or before this shipped) fall
+        // through to the generic line rather than rendering half a sentence.
+        const suffix = storedText?.trim();
+        if (!suffix) return `There is a new update on ${codeText}`;
+        const identity = [resultCode, resultTitle].filter(Boolean).join(' - ');
+        return identity
+          ? `The result ${identity} ${suffix}`
+          : `The result ${suffix}`;
+      }
       default:
         return `There is a new update on ${codeText}`;
     }
+  }
+
+  /**
+   * P2-3157 AC2: standardized copy for a bilateral review decision, e.g.
+   * "✅ Your Result 1234 - Some title... has been Approved by the Science Program SP5".
+   */
+  private buildBilateralReviewDescription(
+    icon: string,
+    decisionLabel: string,
+    resultCode?: number,
+    resultTitle?: string,
+    programCode?: string,
+  ): string {
+    const identity = [resultCode, this.truncateTitle(resultTitle)]
+      .filter((part) => part !== undefined && part !== null && part !== '')
+      .join(' - ');
+    const resultText = identity ? `Your Result ${identity}` : 'Your result';
+    const programText = programCode
+      ? ` by the Science Program ${programCode}`
+      : ' by the Science Program';
+
+    return `${icon} ${resultText} has been ${decisionLabel}${programText}.`;
+  }
+
+  private truncateTitle(title?: string, maxLength = 60): string {
+    const clean = title?.trim();
+    if (!clean) return '';
+    return clean.length > maxLength
+      ? `${clean.slice(0, maxLength).trimEnd()}...`
+      : clean;
+  }
+
+  /**
+   * The owner (submitting) Science Program of the result — `initiative_role_id = 1`.
+   * The notification select only pulls that relation, so the first active entry is the owner.
+   */
+  private resolveOwnerProgramCode(
+    notification: Notification | null,
+  ): string | undefined {
+    const initiatives = notification?.obj_result?.obj_result_by_initiatives;
+    if (!Array.isArray(initiatives)) return undefined;
+
+    for (const initiative of initiatives) {
+      const officialCode = initiative?.obj_initiative?.official_code;
+      if (officialCode) return officialCode;
+    }
+
+    return undefined;
   }
 }
 

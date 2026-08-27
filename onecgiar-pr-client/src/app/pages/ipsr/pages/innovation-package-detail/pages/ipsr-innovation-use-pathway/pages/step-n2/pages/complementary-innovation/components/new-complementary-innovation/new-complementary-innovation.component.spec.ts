@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CreateComplementaryInnovationDto, NewComplementaryInnovationComponent } from './new-complementary-innovation.component';
 import { of, throwError } from 'rxjs';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { DialogModule } from 'primeng/dialog';
 import { PrFieldHeaderComponent } from '../../../../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrInputComponent } from '../../../../../../../../../../../../custom-fields/pr-input/pr-input.component';
 import { FormsModule } from '@angular/forms';
@@ -11,8 +10,6 @@ import { PrTextareaComponent } from '../../../../../../../../../../../../custom-
 import { PrFieldValidationsComponent } from '../../../../../../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { PrRadioButtonComponent } from '../../../../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
 import { YesOrNotByBooleanPipe } from '../../../../../../../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
-import { TooltipModule } from 'primeng/tooltip';
-import { RadioButtonModule } from 'primeng/radiobutton';
 
 describe('NewComplementaryInnovationComponent', () => {
   let component: NewComplementaryInnovationComponent;
@@ -31,7 +28,7 @@ describe('NewComplementaryInnovationComponent', () => {
         PrRadioButtonComponent,
         YesOrNotByBooleanPipe
       ],
-      imports: [HttpClientTestingModule, DialogModule, FormsModule, TooltipModule, RadioButtonModule]
+      imports: [HttpClientTestingModule, FormsModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(NewComplementaryInnovationComponent);

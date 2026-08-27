@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 
 @Component({
@@ -20,7 +20,7 @@ export class SettingsComponent implements OnInit {
   private readonly INIT_QUERY_PARAM = 'init';
   private readonly SETTINGS_ROUTE = 'result/results-outlet/results-notifications/settings';
 
-  constructor(public api: ApiService, public activatedRoute: ActivatedRoute, private messageService: MessageService, private router: Router) {}
+  constructor(public api: ApiService, public activatedRoute: ActivatedRoute, private messageService: PrToastService, private router: Router) {}
 
   ngOnInit() {
     const initParam = this.activatedRoute.snapshot.queryParams[this.INIT_QUERY_PARAM];

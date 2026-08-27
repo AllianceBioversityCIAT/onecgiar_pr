@@ -4,13 +4,11 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrSelectComponent } from '../../../../../../../../../../../custom-fields/pr-select/pr-select.component';
 import { PrButtonComponent } from '../../../../../../../../../../../custom-fields/pr-button/pr-button.component';
 import { PrInputComponent } from '../../../../../../../../../../../custom-fields/pr-input/pr-input.component';
-import { DialogModule } from 'primeng/dialog';
 import { LabelNamePipe } from '../../../../../../../../../../../custom-fields/pr-select/label-name.pipe';
 import { PrFieldHeaderComponent } from '../../../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrFieldValidationsComponent } from '../../../../../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { FormsModule } from '@angular/forms';
 import { YesOrNotByBooleanPipe } from '../../../../../../../../../../..//custom-fields/pipes/yes-or-not-by-boolean.pipe';
-import { TooltipModule } from 'primeng/tooltip';
 
 describe('NonPooledInfoComponent', () => {
   let component: NonPooledInfoComponent;
@@ -28,7 +26,7 @@ describe('NonPooledInfoComponent', () => {
         PrFieldValidationsComponent,
         YesOrNotByBooleanPipe
       ],
-      imports: [HttpClientTestingModule, DialogModule, FormsModule, TooltipModule]
+      imports: [HttpClientTestingModule, FormsModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(NonPooledInfoComponent);

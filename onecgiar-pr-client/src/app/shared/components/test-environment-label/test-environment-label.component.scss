@@ -2,7 +2,7 @@
   background-color: var(--pr-color-white);
   color: var(--pr-color-red-200);
   position: fixed;
-  top: 0;
+  top: 60px; // below the floating navbar (top 10 + height 56) so it doesn't cover the logo
   font-weight: 700;
   padding: 2px 10px;
   border-radius: 3px;

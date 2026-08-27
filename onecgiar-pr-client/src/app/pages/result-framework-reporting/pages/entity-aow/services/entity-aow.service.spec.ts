@@ -109,6 +109,7 @@ describe('EntityAowService', () => {
         GET_TocResultsByAowId: jest.fn().mockReturnValue(of(mockTocApiResponse)),
         GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of(mockIndicatorApiResponse)),
         GET_W3BilateralProjects: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_W3BilateralProjectsByProgram: jest.fn().mockReturnValue(of({ response: [] })),
         GET_ExistingResultsContributors: jest.fn().mockReturnValue(of({ response: { contributors: [] } })),
         GET_2030Outcomes: jest.fn().mockReturnValue(of(mockApiResponse)),
         GET_DashboardData: jest.fn().mockReturnValue(of({ response: null })),
@@ -773,6 +774,58 @@ describe('EntityAowService', () => {
     });
   });
 
+  // The server marks every ToC node it returns for an AoW with `is_aow`. `false` means the node is
+  // not linked to any Area of Work, so it is returned under every AoW of the program.
+  describe('Outcomes split by the is_aow flag', () => {
+    const own = { toc_result_id: 1, result_title: 'Own outcome', is_aow: true };
+    const shared = { toc_result_id: 2, result_title: 'Shared outcome', is_aow: false };
+
+    it('should keep only the AoW-exclusive outcomes in the exclusive list', () => {
+      service.tocResultsOutcomesByAowId.set([own, shared]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([own]);
+    });
+
+    it('should keep only the non-exclusive outcomes in the shared list', () => {
+      service.tocResultsOutcomesByAowId.set([own, shared]);
+
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([shared]);
+    });
+
+    it('should treat a missing is_aow as exclusive so the previous single-list behaviour is kept', () => {
+      const legacy = { toc_result_id: 3, result_title: 'No flag' };
+      service.tocResultsOutcomesByAowId.set([legacy]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([legacy]);
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([]);
+    });
+
+    it('should return empty lists when there are no outcomes', () => {
+      service.tocResultsOutcomesByAowId.set([]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([]);
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([]);
+    });
+
+    it('should handle an AoW whose outcomes are all non-exclusive', () => {
+      service.tocResultsOutcomesByAowId.set([shared]);
+
+      expect(service.tocResultsOutcomesExclusiveByAowId()).toEqual([]);
+      expect(service.tocResultsOutcomesNonExclusiveByAowId()).toEqual([shared]);
+    });
+
+    it('should not mutate the source signal', () => {
+      const source = [own, shared];
+      service.tocResultsOutcomesByAowId.set(source);
+
+      service.tocResultsOutcomesExclusiveByAowId();
+      service.tocResultsOutcomesNonExclusiveByAowId();
+
+      expect(service.tocResultsOutcomesByAowId()).toEqual([own, shared]);
+      expect(service.tocResultsOutcomesByAowId().length).toBe(2);
+    });
+  });
+
   describe('Additional signals', () => {
     it('should update w3BilateralProjects signal', () => {
       const mockProjects = [
@@ -836,13 +889,9 @@ describe('EntityAowService', () => {
   });
 
   describe('getW3BilateralProjects', () => {
-    const mockCurrentResult = {
-      toc_result_id: 'result-123'
-    };
-
     const mockW3BilateralProjects = [
-      { id: 1, name: 'W3 Project 1', status: 'active' },
-      { id: 2, name: 'W3 Project 2', status: 'completed' }
+      { project_id: '1', project_name: 'W3 Project 1' },
+      { project_id: '2', project_name: 'W3 Project 2' }
     ];
 
     const mockW3ApiResponse = {
@@ -850,19 +899,20 @@ describe('EntityAowService', () => {
     };
 
     beforeEach(() => {
-      service.currentResultToReport.set(mockCurrentResult);
+      // P2-3001: the dropdown loads by Science Program (entityId = SP official code), not by toc_result_id.
+      service.entityId.set('SP01');
     });
 
-    it('should call API with correct toc_result_id', () => {
-      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of(mockW3ApiResponse));
+    it('should call API with the SP official code (entityId)', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjectsByProgram').mockReturnValue(of(mockW3ApiResponse));
 
       service.getW3BilateralProjects();
 
-      expect(mockApiService.resultsSE.GET_W3BilateralProjects).toHaveBeenCalledWith('result-123');
+      expect(mockApiService.resultsSE.GET_W3BilateralProjectsByProgram).toHaveBeenCalledWith('SP01');
     });
 
     it('should update w3BilateralProjects on successful API call', () => {
-      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of(mockW3ApiResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjectsByProgram').mockReturnValue(of(mockW3ApiResponse));
 
       service.getW3BilateralProjects();
 
@@ -871,7 +921,7 @@ describe('EntityAowService', () => {
 
     it('should handle empty response', () => {
       const emptyResponse = { response: [] };
-      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of(emptyResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjectsByProgram').mockReturnValue(of(emptyResponse));
 
       service.getW3BilateralProjects();
 
@@ -880,7 +930,7 @@ describe('EntityAowService', () => {
 
     it('should handle null response', () => {
       const nullResponse = { response: null };
-      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of(nullResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjectsByProgram').mockReturnValue(of(nullResponse));
 
       service.getW3BilateralProjects();
 
@@ -889,7 +939,7 @@ describe('EntityAowService', () => {
 
     it('should handle undefined response', () => {
       const undefinedResponse = { response: undefined };
-      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of(undefinedResponse));
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjectsByProgram').mockReturnValue(of(undefinedResponse));
 
       service.getW3BilateralProjects();
 
@@ -1132,12 +1182,13 @@ describe('EntityAowService', () => {
       // Open modal and set result
       service.showReportResultModal.set(true);
       service.currentResultToReport.set(mockResult);
+      service.entityId.set('SP01'); // P2-3001: bilaterals load by Science Program
 
       // Load related data
       const mockW3Projects = [{ id: 1, name: 'Project 1' }];
       const mockContributors = [{ id: 1, name: 'Contributor 1' }];
 
-      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of({ response: mockW3Projects }));
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjectsByProgram').mockReturnValue(of({ response: mockW3Projects }));
       jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(
         of({
           response: { contributors: mockContributors }

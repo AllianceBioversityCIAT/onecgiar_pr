@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject, computed, untracked } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject, computed, untracked, signal, HostListener } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
@@ -6,7 +6,7 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { ShareRequestModalService } from '../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
-import { Table } from 'primeng/table';
+import { PrTableComponent } from '../../../../../../shared/components/pr-table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 import { ResultsListFilterService } from './services/results-list-filter.service';
 import { Router } from '@angular/router';
@@ -15,6 +15,7 @@ import {
   REVIEW_RESULT_ID_QUERY_PARAM,
   REVIEW_RESULT_QUERY_PARAM
 } from '../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
+import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 
 interface ResultRoute {
   commands: unknown[];
@@ -30,6 +31,51 @@ interface ItemMenu {
   tooltipShow?: boolean;
   disabled?: boolean;
   inlineStyle?: string;
+}
+
+/** Column catalog — matches CURRENT RC_COLUMNS (PRMS-Shell.dc.html). */
+export interface RcColumnDef {
+  key: string;
+  title: string;
+  attr: string;
+  width: string;
+  /** Default visibility when no localStorage preference exists. */
+  defaultOn: boolean;
+  class?: string;
+}
+
+const RC_COLUMN_STORAGE_KEY = 'pr.resultsCenter.visibleColumns';
+
+/** Full CURRENT column set (order = picker + table order). */
+export const RC_COLUMNS: readonly RcColumnDef[] = [
+  { key: 'code', title: 'Code', attr: 'result_code', width: '88px', defaultOn: true },
+  { key: 'title', title: 'Title', attr: 'title', width: '280px', defaultOn: true, class: 'notCenter' },
+  { key: 'program', title: 'Program', attr: 'submitter', width: '88px', defaultOn: true },
+  { key: 'center', title: 'Center', attr: 'lead_center', width: '110px', defaultOn: true },
+  { key: 'phase', title: 'Phase', attr: 'phase_name', width: '100px', defaultOn: true },
+  { key: 'category', title: 'Indicator category', attr: 'result_type', width: '140px', defaultOn: true },
+  { key: 'funding', title: 'Funding', attr: 'source_name', width: '100px', defaultOn: true },
+  { key: 'status', title: 'Status', attr: 'full_status_name_html', width: '110px', defaultOn: true },
+  { key: 'createdBy', title: 'Created by', attr: 'full_name', width: '130px', defaultOn: false },
+  { key: 'created', title: 'Created', attr: 'created_date', width: '100px', defaultOn: true },
+  { key: 'updated', title: 'Updated', attr: 'last_updated_date', width: '100px', defaultOn: false }
+];
+
+function readStoredColumnVisibility(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(RC_COLUMN_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, boolean>;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function defaultColumnVisibility(): Record<string, boolean> {
+  const map: Record<string, boolean> = {};
+  for (const col of RC_COLUMNS) map[col.key] = col.defaultOn;
+  return map;
 }
 
 @Component({
@@ -52,19 +98,64 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   gettingReport = false;
-  combine = true;
+  // P2-3322 (2026): signal-backed flag. `validateOrder()` is called from the column headers
+  // (`(click)` / `(keydown.enter)`) but writes the flag 100 ms later inside a `setTimeout`, once the
+  // table has applied `aria-sort`. The template reads it at `@let filteredResults = ... |
+  // resultsListFilter : ... : this.combine : ...`, where it decides whether phases of the same
+  // `result_code` are merged into one row or listed separately. As a plain field the delayed write
+  // notified nothing, so under zoneless change detection sorting by any column other than the code
+  // left the rows merged. The public API stays a plain boolean, so the template, the pipe and the
+  // existing specs are untouched.
+  private readonly _combine = signal<boolean>(true);
+  get combine(): boolean {
+    return this._combine();
+  }
+  set combine(value: boolean) {
+    this._combine.set(value);
+  }
 
-  columnOrder = [
-    { title: 'Result code', attr: 'result_code', center: true, width: '90px' },
-    { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
-    { title: 'Funding Source', attr: 'source_name', center: true, width: '100px' },
-    { title: 'Center', attr: 'lead_center', center: true, width: '100px' },
-    { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
-    { title: 'Indicator category', attr: 'result_type', center: true, width: '100px' },
-    { title: 'Submitter', attr: 'submitter', center: true, width: '30px' },
-    { title: 'Status', attr: 'full_status_name_html', center: true, width: '124px' },
-    { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
-    { title: 'Created by	', attr: 'full_name', width: '120px' }
+  /** Full catalog for the Columns picker (CURRENT). */
+  readonly allColumns = RC_COLUMNS;
+
+  /** Visibility map keyed by RC_COLUMNS.key — persisted. */
+  readonly columnVisibility = signal<Record<string, boolean>>({
+    ...defaultColumnVisibility(),
+    ...readStoredColumnVisibility()
+  });
+
+  columnsOpen = signal(false);
+
+  /** Table columns currently visible (CURRENT order, filtered). */
+  readonly visibleColumns = computed(() => {
+    const vis = this.columnVisibility();
+    return RC_COLUMNS.filter(c => vis[c.key] !== false).map(c => ({
+      key: c.key,
+      title: c.title,
+      attr: c.attr,
+      width: c.width,
+      class: c.class,
+      center: false
+    }));
+  });
+
+  /**
+   * @deprecated Prefer `visibleColumns()` — kept for tests that read columnOrder shape.
+   * Mirrors default-on columns only.
+   */
+  get columnOrder() {
+    return this.visibleColumns();
+  }
+
+  /** Same deterministic palette as the sidebar program dots. */
+  private readonly programDotPalette: readonly string[] = [
+    'var(--pr-chart-3)',
+    'var(--pr-color-green-500)',
+    'var(--pr-color-blue-500)',
+    'var(--pr-sidebar-accent)',
+    'var(--pr-color-yellow-300)',
+    'var(--pr-chart-4)',
+    'var(--pr-color-orange-500)',
+    'var(--pr-color-red-100)'
   ];
   items: ItemMenu[] = [
     {
@@ -133,7 +224,13 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   ];
 
-  @ViewChild('table') table: Table;
+  @ViewChild('table') table: PrTableComponent;
+  @ViewChild('filters') filters: ResultsListFiltersComponent;
+
+  // Action menu overlay state (replaces PrimeNG p-popover)
+  menuOpen = signal(false);
+  menuTop = 0;
+  menuLeft = 0;
 
   constructor(
     public resultsNotificationsSE: ResultsNotificationsService,
@@ -171,6 +268,36 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       });
     });
+  }
+
+  toggleMenu(event: Event, result?: CurrentResult) {
+    if (result) this.onPressAction(result);
+    event.stopPropagation();
+
+    if (this.menuOpen()) {
+      this.menuOpen.set(false);
+      return;
+    }
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.menuTop = rect.bottom + 6;
+    this.menuLeft = rect.right;
+    this.menuOpen.set(true);
+  }
+
+  closeMenu() {
+    this.menuOpen.set(false);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick() {
+    if (this.menuOpen()) this.menuOpen.set(false);
+    if (this.columnsOpen()) this.columnsOpen.set(false);
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll() {
+    if (this.menuOpen()) this.menuOpen.set(false);
   }
 
   validateOrder(columnAttr) {
@@ -218,14 +345,10 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   private applyDefaultSort(): void {
     if (!this.table) return;
 
-    this.table.sortField = 'result_code';
-    this.table.sortOrder = -1;
-
-    if (typeof this.table.sortSingle === 'function') {
-      this.table.sortSingle();
-    } else if (typeof this.table.sort === 'function') {
-      this.table.sort({ field: 'result_code', order: -1 });
-    }
+    // app-pr-table has no sortSingle/sort({field,order}); the bound [sortField]="result_code"
+    // + [sortOrder]="-1" inputs define the default, and reset() re-asserts that default sort
+    // (and jumps to page 0). See wrapper PrTableComponent.reset().
+    this.table.reset();
   }
 
   unSelectInits() {
@@ -238,6 +361,125 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     return code === 'SGP-02' || code === 'SGP02';
   }
 
+  /**
+   * A W3/Bilaterals result (non-AVISA, not yet Approved) does NOT open Result Detail
+   * — it routes to the reporting framework's bilateral review drawer. Mirrors the
+   * branching in navigateToResult() so the list can flag these rows at the code.
+   */
+  opensInFramework(result: CurrentResult): boolean {
+    return result?.source_name === 'W3/Bilaterals' && !this.isW3BilateralsAvisa(result) && result?.status_name !== 'Approved';
+  }
+
+  /** True when this result comes from a W3/bilateral funding source. */
+  isBilateral(result: CurrentResult): boolean {
+    return result?.source_name === 'W3/Bilaterals';
+  }
+
+  /** Program / submitter official code for the Program column. */
+  programCode(result: CurrentResult): string {
+    return String(result?.submitter ?? result?.initiative_official_code ?? '').trim();
+  }
+
+  programDotColor(code: string | null | undefined): string {
+    if (!code) return this.programDotPalette[0];
+    const digits = code.match(/\d+/)?.[0];
+    const index = digits ? Number(digits) : [...code].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 0);
+    return this.programDotPalette[index % this.programDotPalette.length];
+  }
+
+  /** CURRENT short phase: `2026 · P25` from longer phase_name / year + acronym. */
+  phaseShort(result: CurrentResult): string {
+    const year = result?.phase_year ?? result?.reported_year;
+    const portfolio = result?.acronym ?? result?.portfolio;
+    if (year && portfolio) return `${year} · ${portfolio}`;
+    const name = String(result?.phase_name ?? '').trim();
+    if (!name) return '—';
+    // "Reporting 2026 - P25" / "Reporting 2026 (Open)" → "2026 · P25" when possible
+    const yearMatch = name.match(/(20\d{2})/);
+    const portMatch = name.match(/\b(P\d{2})\b/i);
+    if (yearMatch && portMatch) return `${yearMatch[1]} · ${portMatch[1].toUpperCase()}`;
+    if (yearMatch) return yearMatch[1];
+    return name;
+  }
+
+  /** Compact funding label (CURRENT: W1/W2 · Bilateral · W3). */
+  fundingLabel(result: CurrentResult): string {
+    const raw = String(result?.source_name ?? '').trim();
+    if (!raw) return '—';
+    if (/w3\s*\/?\s*bilateral/i.test(raw) || /bilateral/i.test(raw)) return 'Bilateral';
+    return raw;
+  }
+
+  /** Recent = last 7 days (CURRENT purple code dot). */
+  isRecentResult(result: CurrentResult): boolean {
+    if (!result?.created_date) return false;
+    const t = new Date(result.created_date).getTime();
+    if (Number.isNaN(t)) return false;
+    return Date.now() - t < 7 * 24 * 60 * 60 * 1000;
+  }
+
+  statusClass(result: CurrentResult): string {
+    return `status_tag status_${result?.status_id ?? ''}`;
+  }
+
+  pdfHref(result: CurrentResult): string {
+    return `/reports/result-details/${result?.result_code}?phase=${result?.version_id}`;
+  }
+
+  isColumnVisible(key: string): boolean {
+    return this.columnVisibility()[key] !== false;
+  }
+
+  toggleColumn(key: string, event?: Event): void {
+    event?.stopPropagation();
+    // Keep at least one column visible so the table never collapses to empty.
+    const next = { ...this.columnVisibility() };
+    const turningOff = next[key] !== false;
+    if (turningOff) {
+      const remaining = RC_COLUMNS.filter(c => c.key !== key && next[c.key] !== false).length;
+      if (remaining === 0) return;
+    }
+    next[key] = !turningOff ? true : false;
+    this.columnVisibility.set(next);
+    try {
+      localStorage.setItem(RC_COLUMN_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // private mode — visibility still works for the session
+    }
+  }
+
+  toggleColumnsPanel(event?: Event): void {
+    event?.stopPropagation();
+    this.columnsOpen.update(v => !v);
+  }
+
+  closeColumnsPanel(): void {
+    if (this.columnsOpen()) this.columnsOpen.set(false);
+  }
+
+  onExportCsv(): void {
+    this.filters?.onClickFullMetadataExport();
+  }
+
+  // These three feed the toolbar's export button. They read the FILTER SERVICE, never the
+  // `filters` ViewChild: Angular checks this parent before the child, so reading child state
+  // here raised NG0100 on `disabled` / `title` every time the page loaded.
+  /** `shown` comes from the template's `@let shown` so there is one source of truth for it. */
+  exportDisabled(shown: number): boolean {
+    return shown <= 0 || !!this.resultsListFilterSE.fullMetadataExportBlockedReason() || this.exportBusy();
+  }
+
+  exportBusy(): boolean {
+    return this.resultsListFilterSE.requestingFullExport();
+  }
+
+  exportTitle(): string {
+    return (
+      this.resultsListFilterSE.fullMetadataExportBlockedReason() ||
+      'Queue a full metadata export. You will receive an email with a download link.'
+    );
+  }
+
   onPressAction(result: CurrentResult): void {
     this.retrieveModalSE.title = result?.title ?? '';
     this.api.resultsSE.currentResultId = result?.id;
@@ -247,10 +489,15 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     const useBilateralFlow = result?.source_name == 'W3/Bilaterals' && !this.isW3BilateralsAvisa(result);
 
     if (useBilateralFlow) {
+      // P2-3229. "Update result" used to be hidden outright for bilaterals; it is now offered on
+      // an approved result from a previous phase, to users of its lead centre. AVISA (SGP-02)
+      // never reaches here — `useBilateralFlow` excludes it, so those keep the W1/W2 rule.
+      const canUpdateBilateral = this.api.canUpdateBilateral(result, this.api.dataControlSE.reportingCurrentPhase);
+
       this.itemsWithDelete[0].visible = false;
-      this.itemsWithDelete[1].visible = false;
+      this.itemsWithDelete[1].visible = canUpdateBilateral;
       this.items[0].visible = false;
-      this.items[1].visible = false;
+      this.items[1].visible = canUpdateBilateral;
 
       this.itemsWithDelete[2].visible = true;
       this.itemsWithDelete[2].label = result?.status_name == 'Pending Review' ? 'Review result' : 'See result';
@@ -396,7 +643,9 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const route: ResultRoute = this.usesBilateralReviewFlow(result)
       ? {
-          commands: ['/result-framework-reporting', 'entity-details', result?.submitter, 'results-review'],
+          // Same fallback chain as programCode(): a raw `submitter` can be undefined and
+          // would build `/entity-details/undefined/results-review`.
+          commands: ['/result-framework-reporting', 'entity-details', this.programCode(result), 'results-review'],
           queryParams: { [REVIEW_RESULT_QUERY_PARAM]: result?.result_code, [REVIEW_RESULT_ID_QUERY_PARAM]: result?.id }
         }
       : {

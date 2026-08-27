@@ -1,0 +1,33 @@
+<div class="custom_select pr-filter-ms" [class.globalDisabled]="disabled">
+  <a class="field" tabindex="0" #trigger>
+    <div class="text pr-body-2" [ngClass]="{ select_placeholder: !value?.length }">{{ triggerLabel }}</div>
+    <div class="icon_container"></div>
+    <i class="pi pi-chevron-down icon_dropdown"></i>
+    <div class="remove_focus" (click)="removeFocus(trigger)"></div>
+    <div class="options">
+      <div class="search_input_container" *ngIf="filter">
+        <span class="material-icons-round search_icon">search</span>
+        <input type="text" hlmInput placeholder="Search" [(ngModel)]="searchText" style="width: 100%" />
+      </div>
+      <div class="pr-ms-list custom_scroll" *ngIf="!group; else groupedList">
+        <div class="option pr-body-2" *ngFor="let option of filteredOptions" (click)="toggle(option); $event.stopPropagation()">
+          <input type="checkbox" class="pr-native-check" [checked]="isSelected(option)" (click)="$event.preventDefault()" />
+          <div class="label">{{ optionLabel ? option[optionLabel] : option }}</div>
+        </div>
+        <div class="no_info" *ngIf="!filteredOptions?.length">No information found</div>
+      </div>
+      <ng-template #groupedList>
+        <div class="pr-ms-list custom_scroll">
+          <div *ngFor="let grp of filteredGroups" class="pr-ms-group">
+            <div class="pr-ms-group-label pr-body-2">{{ grp.label }}</div>
+            <div class="option pr-body-2" *ngFor="let option of grp.children" (click)="toggle(option); $event.stopPropagation()">
+              <input type="checkbox" class="pr-native-check" [checked]="isSelected(option)" (click)="$event.preventDefault()" />
+              <div class="label">{{ optionLabel ? option[optionLabel] : option }}</div>
+            </div>
+          </div>
+          <div class="no_info" *ngIf="!filteredGroups?.length">No information found</div>
+        </div>
+      </ng-template>
+    </div>
+  </a>
+</div>

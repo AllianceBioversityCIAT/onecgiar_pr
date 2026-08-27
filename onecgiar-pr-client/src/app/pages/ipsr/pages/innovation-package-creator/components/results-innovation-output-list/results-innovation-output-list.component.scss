@@ -111,6 +111,8 @@ tr {
 }
 
 .table {
+  // overrides Tailwind's `.table` utility (display:table) that collides with this class
+  display: block;
   position: relative;
   margin-bottom: 40px;
 
@@ -134,7 +136,7 @@ tr {
   display: flex;
 
   .view {
-    background-color: var(--pr-color-secondary-400) !important;
+    background-color: var(--pr-color-primary-800) !important;
     width: min-content !important;
   }
 

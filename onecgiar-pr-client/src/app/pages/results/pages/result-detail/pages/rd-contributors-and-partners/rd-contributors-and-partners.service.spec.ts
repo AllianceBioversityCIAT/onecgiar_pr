@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { RdContributorsAndPartnersService } from './rd-contributors-and-partners.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 
 describe('RdContributorsAndPartnersService', () => {
@@ -46,12 +47,44 @@ describe('RdContributorsAndPartnersService', () => {
         RdContributorsAndPartnersService,
         { provide: ApiService, useValue: mockApi },
         { provide: InstitutionsService, useValue: mockInstitutionsSE },
-        { provide: CentersService, useValue: mockCentersSE }
+        { provide: CentersService, useValue: mockCentersSE },
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => false } }
       ]
     });
 
     service = TestBed.inject(RdContributorsAndPartnersService);
     service.partnersBody = new ContributorsAndPartnersBody();
+  });
+
+  /**
+   * The skeleton reuses `getConsumed` rather than adding a second flag: it already means "the
+   * section GET came back", it is reset by `resetState()` (which the component calls on entry, so
+   * the root singleton does not leak across results) and it is set on BOTH next and error.
+   */
+  describe('sectionLoading (skeleton)', () => {
+    it('is raised while the section GET has not come back', () => {
+      service.resetState();
+
+      expect(service.sectionLoading()).toBe(true);
+    });
+
+    it('mirrors getConsumed — the flag the section GET already sets on both next and error', () => {
+      service.resetState();
+      expect(service.sectionLoading()).toBe(true);
+
+      service.getConsumed.set(true);
+
+      expect(service.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      service.resetState();
+      mockApi.resultsSE.GET_ContributorsPartners.mockReturnValue(throwError(() => new Error('boom')));
+
+      service.getSectionInformation();
+
+      expect(service.sectionLoading()).toBe(false);
+    });
   });
 
   describe('tryAutoAssignLeadCenter', () => {
@@ -159,6 +192,176 @@ describe('RdContributorsAndPartnersService', () => {
       service.setPossibleLeadCenters(false, true);
 
       expect(service.leadCenterCode).toBe('C1');
+    });
+  });
+
+  // P2-3115: the ToC prefill must never resurrect a deliberately-emptied, saved selection.
+  // These cover the mechanism's foundation (the hydration flag lifecycle). The effect-level guard behavior
+  // (cold-load stays empty vs. user-driven selection prefills) is exercised end-to-end in the browser.
+  describe('P2-3115 — ToC prefill resurrection guards', () => {
+    const set2026 = (value: boolean) => jest.spyOn((service as any).fieldsManagerSE, 'isContributorsPartners2026').mockReturnValue(value);
+
+    it('starts with both prefill guards false', () => {
+      expect(service.sectionHydratedFromToc()).toBe(false);
+      expect(service.tocSelectionTouched()).toBe(false);
+    });
+
+    it('applyTocMappingOnLoad marks the section hydrated in 2026 (persisted state becomes authoritative)', () => {
+      set2026(true);
+      service.applyTocMappingOnLoad();
+      expect(service.sectionHydratedFromToc()).toBe(true);
+    });
+
+    it('applyTocMappingOnLoad leaves the guard untouched in the 2025 legacy path', () => {
+      set2026(false);
+      service.applyTocMappingOnLoad();
+      expect(service.sectionHydratedFromToc()).toBe(false);
+    });
+
+    it('resetState clears both guards so state does not leak across results', () => {
+      service.sectionHydratedFromToc.set(true);
+      service.tocSelectionTouched.set(true);
+      service.resetState();
+      expect(service.sectionHydratedFromToc()).toBe(false);
+      expect(service.tocSelectionTouched()).toBe(false);
+    });
+  });
+
+  describe('P2-3001 — W3/Bilateral projects by Science Program (2026)', () => {
+    const set2026 = (value: boolean) => jest.spyOn((service as any).fieldsManagerSE, 'isContributorsPartners2026').mockReturnValue(value);
+
+    const spProjects = [
+      { project_id: '8', project_name: 'Project 8' },
+      { project_id: '9', project_name: 'Project 9' }
+    ];
+
+    beforeEach(() => {
+      (mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram = jest.fn().mockReturnValue(of({ response: spProjects }));
+      (mockApi.resultsSE as any).GET_W3BilateralProjects = jest.fn().mockReturnValue(of({ response: [] }));
+      (mockApi as any).dataControlSE = { currentResult: null, currentResultSignal: () => null };
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    });
+
+    const setPrimaryInit = (officialCode: string | null) => {
+      service.partnersBody.contributing_and_primary_initiative = [{ id: 50, official_code: officialCode }] as any;
+      service.partnersBody.result_toc_result = { initiative_id: 50, result_toc_results: [] } as any;
+    };
+
+    it('2026: loads the full SP list via by-program with the primary initiative official code', () => {
+      set2026(true);
+      setPrimaryInit('SP01');
+
+      service.loadFilteredBilateralProjects();
+
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram).toHaveBeenCalledWith('SP01');
+      expect(service.clarisaProjectsList.map(p => p.fullName)).toEqual(['Project 8', 'Project 9']);
+      expect(service.hasTocResultMapped()).toBe(true);
+      expect(service.loadingBilateralProjects()).toBe(false);
+    });
+
+    it('2026: falls back to dataControlSE.currentResult.initiative_official_code when there is no primary initiative match', () => {
+      set2026(true);
+      service.partnersBody.contributing_and_primary_initiative = [] as any;
+      service.partnersBody.result_toc_result = { initiative_id: 50, result_toc_results: [] } as any;
+      (mockApi as any).dataControlSE = { currentResult: { initiative_official_code: 'SP02' }, currentResultSignal: () => null };
+
+      service.loadFilteredBilateralProjects();
+
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram).toHaveBeenCalledWith('SP02');
+    });
+
+    it('2026: unresolvable programId degrades to an empty list without calling the API', () => {
+      set2026(true);
+      service.partnersBody.contributing_and_primary_initiative = [] as any;
+      service.partnersBody.result_toc_result = { initiative_id: 50, result_toc_results: [] } as any;
+
+      service.loadFilteredBilateralProjects();
+
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram).not.toHaveBeenCalled();
+      expect(service.clarisaProjectsList).toEqual([]);
+      expect(service.loadingBilateralProjects()).toBe(false);
+    });
+
+    it('2026: tocResultChanged is a no-op once loaded — no refetch and the user selection survives', () => {
+      set2026(true);
+      setPrimaryInit('SP01');
+      service.loadFilteredBilateralProjects();
+      service.partnersBody.bilateral_projects = [{ project_id: '8' }] as any;
+
+      service.loadFilteredBilateralProjects(true); // template handler: (tocResultChanged) → loadFilteredBilateralProjects(true)
+
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram).toHaveBeenCalledTimes(1);
+      expect(service.partnersBody.bilateral_projects).toEqual([{ project_id: '8' }]);
+    });
+
+    it('2025: keeps the legacy per-tocResultId fan-out with dedup and clearSelection', () => {
+      set2026(false);
+      (mockApi.resultsSE as any).GET_W3BilateralProjects = jest
+        .fn()
+        .mockReturnValueOnce(of({ response: [{ project_id: '1', project_name: 'P1' }] }))
+        .mockReturnValueOnce(of({ response: [{ project_id: '1', project_name: 'P1' }, { project_id: '2', project_name: 'P2' }] }));
+      service.partnersBody.result_toc_result = { result_toc_results: [{ toc_result_id: 101 }, { toc_result_id: 102 }] } as any;
+      service.partnersBody.bilateral_projects = [{ project_id: '9' }] as any;
+
+      service.loadFilteredBilateralProjects(true);
+
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjects).toHaveBeenCalledTimes(2);
+      expect((mockApi.resultsSE as any).GET_W3BilateralProjectsByProgram).not.toHaveBeenCalled();
+      expect(service.partnersBody.bilateral_projects).toEqual([]);
+      expect(service.clarisaProjectsList.map(p => p.project_id)).toEqual(['1', '2']);
+    });
+  });
+
+  /**
+   * The Lead center list is a REQUIRED field fed by BOTH center dropdowns. Before the fix it was rebuilt only
+   * when `contributing_center` existed, so a center picked in the 2026 "Other(s)" dropdown never reached it and
+   * the select showed "There are no items available for this list" until a Save draft reloaded the section.
+   */
+  describe('setPossibleLeadCenters — "Other(s)" centers feed the Lead center list live', () => {
+    it('rebuilds from otherCentersSelected when the ToC brought no contributing centers', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [{ code: 'C2' }] as any;
+
+      service.setPossibleLeadCenters(false, false);
+
+      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(['C2']);
+    });
+
+    it('rebuilds even when contributing_center has not been hydrated yet (undefined)', () => {
+      service.partnersBody.contributing_center = undefined as any;
+      service.otherCentersSelected = [{ code: 'C1' }] as any;
+
+      service.setPossibleLeadCenters(false, false);
+
+      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(['C1']);
+    });
+
+    it('merges both dropdowns', () => {
+      service.partnersBody.contributing_center = [{ code: 'C1' }] as any;
+      service.otherCentersSelected = [{ code: 'C2' }] as any;
+
+      service.setPossibleLeadCenters(false, false);
+
+      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(['C1', 'C2']);
+    });
+
+    it('stays empty when nothing is selected — the legitimate empty state', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [];
+
+      service.setPossibleLeadCenters(false, false);
+
+      expect(service.possibleLeadCenters).toEqual([]);
+    });
+
+    it('auto-assigns the lead when the only eligible center comes from the "Other(s)" dropdown', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [{ code: 'C2' }] as any;
+      service.leadCenterCode = null;
+
+      service.setPossibleLeadCenters(false, true);
+
+      expect(service.leadCenterCode).toBe('C2');
     });
   });
 });

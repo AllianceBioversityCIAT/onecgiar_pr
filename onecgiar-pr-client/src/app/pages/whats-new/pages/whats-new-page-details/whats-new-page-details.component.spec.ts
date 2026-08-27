@@ -4,7 +4,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { WhatsNewService } from '../../services/whats-new.service';
 import { CommonModule, Location } from '@angular/common';
 import { DynamicNotionBlockComponent } from '../../../../shared/components/dynamic-notion-block/dynamic-notion-block.component';
-import { TooltipModule } from 'primeng/tooltip';
 import { Subject } from 'rxjs';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
@@ -43,7 +42,7 @@ describe('WhatsNewPageDetailsComponent', () => {
     } as any;
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, DynamicNotionBlockComponent, TooltipModule, HttpClientTestingModule],
+      imports: [CommonModule, DynamicNotionBlockComponent, HttpClientTestingModule],
       providers: [
         { provide: WhatsNewService, useValue: mockWhatsNewService },
         { provide: ActivatedRoute, useValue: mockActivatedRoute },

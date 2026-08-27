@@ -3,7 +3,7 @@ import { ResultsListFiltersComponent } from './results-list-filters.component';
 import { FormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
 import { signal, SimpleChanges } from '@angular/core';
-import { ResultsListFilterService } from '../../services/results-list-filter.service';
+import { ResultsListFilterService, getFullMetadataExportBlockedReason } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -75,8 +75,15 @@ describe('ResultsListFiltersComponent', () => {
       centerOptions: createSignal<any[]>([]),
       fundingSourceOptions: createSignal<any[]>([]),
       filterCreatedByMe: createSignal(false),
-      filterSubmittedByMe: createSignal(false)
+      filterSubmittedByMe: createSignal(false),
+      requestingFullExport: createSignal(false)
     };
+    // Derived the same way the real service derives it, from the mock's own signals.
+    mockResultsListFilterService.fullMetadataExportBlockedReason = () =>
+      getFullMetadataExportBlockedReason(
+        mockResultsListFilterService.selectedPhases(),
+        mockResultsListFilterService.selectedClarisaPortfolios()
+      );
 
     // Create spy for the set method
     jest.spyOn(mockResultsListFilterService.submittersOptionsAdminOld, 'set');
@@ -1097,30 +1104,46 @@ describe('ResultsListFiltersComponent', () => {
       expect(component.tempSelectedIndicatorCategories()).toEqual([{ id: 5 }]);
       expect(component.tempSelectedStatus()).toEqual([{ id: 6 }]);
       expect(component.tempSelectedLeadCenters()).toEqual([{ id: 7 }]);
-      expect(component.visible()).toBe(true);
+      expect(component.moreFiltersOpen()).toBe(true);
     });
   });
 
   describe('applyFilters', () => {
-    it('should copy temp values to applied filter signals and close drawer', () => {
+    it('should copy secondary temp values to applied filter signals and close the More filters popover', () => {
       component.tempSelectedClarisaPortfolios.set([{ id: 1 }] as any);
       component.tempSelectedFundingSource.set([{ id: 2 }] as any);
-      component.tempSelectedPhases.set([{ id: 3 }] as any);
       component.tempSelectedSubmittersAdmin.set([{ id: 4 }] as any);
-      component.tempSelectedIndicatorCategories.set([{ id: 5 }] as any);
-      component.tempSelectedStatus.set([{ id: 6 }] as any);
       component.tempSelectedLeadCenters.set([{ id: 7 }] as any);
+      component.tempFilterCreatedByMe.set(true);
+      component.tempFilterSubmittedByMe.set(true);
+      component.moreFiltersOpen.set(true);
 
       component.applyFilters();
 
       expect(mockResultsListFilterService.selectedClarisaPortfolios()).toEqual([{ id: 1 }]);
       expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 2 }]);
-      expect(mockResultsListFilterService.selectedPhases()).toEqual([{ id: 3 }]);
       expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([{ id: 4 }]);
+      expect(mockResultsListFilterService.selectedLeadCenters()).toEqual([{ id: 7 }]);
+      expect(mockResultsListFilterService.filterCreatedByMe()).toBe(true);
+      expect(mockResultsListFilterService.filterSubmittedByMe()).toBe(true);
+      expect(component.moreFiltersOpen()).toBe(false);
+    });
+
+    // Phases, indicator categories and status are PRIMARY filters now: the template writes them
+    // straight to the service via (ngModelChange), so applyFilters must leave them untouched.
+    it('should not overwrite the primary filter signals', () => {
+      mockResultsListFilterService.selectedPhases.set([{ id: 3 }]);
+      mockResultsListFilterService.selectedIndicatorCategories.set([{ id: 5 }]);
+      mockResultsListFilterService.selectedStatus.set([{ id: 6 }]);
+      component.tempSelectedPhases.set([{ id: 99 }] as any);
+      component.tempSelectedIndicatorCategories.set([{ id: 99 }] as any);
+      component.tempSelectedStatus.set([{ id: 99 }] as any);
+
+      component.applyFilters();
+
+      expect(mockResultsListFilterService.selectedPhases()).toEqual([{ id: 3 }]);
       expect(mockResultsListFilterService.selectedIndicatorCategories()).toEqual([{ id: 5 }]);
       expect(mockResultsListFilterService.selectedStatus()).toEqual([{ id: 6 }]);
-      expect(mockResultsListFilterService.selectedLeadCenters()).toEqual([{ id: 7 }]);
-      expect(component.visible()).toBe(false);
     });
   });
 
@@ -1219,56 +1242,37 @@ describe('ResultsListFiltersComponent', () => {
     });
   });
 
+  // The top header was removed (Spartan sidebar is the sole app chrome), so there is no
+  // navbar to measure or observe: the height is pinned to 0 and no ResizeObserver is created.
   describe('calculateNavbarHeight (private)', () => {
-    it('should set navbar height from found element', () => {
-      const spy = jest.spyOn(document, 'querySelector').mockReturnValue({
-        getBoundingClientRect: () => ({ height: 80 })
-      } as any);
+    it('should pin navbar height to 0 without reading the DOM', () => {
+      const spy = jest.spyOn(document, 'querySelector');
 
       (component as any).calculateNavbarHeight();
 
-      expect(component.navbarHeight()).toBe(80);
-      spy.mockRestore();
-    });
-
-    it('should set default height when no navbar element found', () => {
-      const spy = jest.spyOn(document, 'querySelector').mockReturnValue(null);
-
-      (component as any).calculateNavbarHeight();
-
-      expect(component.navbarHeight()).toBe(60);
+      expect(component.navbarHeight()).toBe(0);
+      expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
     });
   });
 
   describe('setupResizeObserver (private)', () => {
-    it('should create ResizeObserver when navbar element exists', () => {
-      const mockObserve = jest.fn();
+    it('should not create a ResizeObserver', () => {
       const OriginalResizeObserver = (global as any).ResizeObserver;
       const MockResizeObserver = jest.fn().mockImplementation(() => ({
-        observe: mockObserve,
+        observe: jest.fn(),
         disconnect: jest.fn()
       }));
       (global as any).ResizeObserver = MockResizeObserver;
 
-      const mockElement = { getBoundingClientRect: () => ({ height: 80 }) } as any;
-      const spy = jest.spyOn(document, 'querySelector').mockReturnValue(mockElement);
+      try {
+        (component as any).setupResizeObserver();
 
-      (component as any).setupResizeObserver();
-
-      expect(MockResizeObserver).toHaveBeenCalled();
-      expect(mockObserve).toHaveBeenCalledWith(mockElement);
-      spy.mockRestore();
-      (global as any).ResizeObserver = OriginalResizeObserver;
-    });
-
-    it('should not create ResizeObserver when no navbar element', () => {
-      const spy = jest.spyOn(document, 'querySelector').mockReturnValue(null);
-
-      (component as any).setupResizeObserver();
-
-      expect((component as any).resizeObserver).toBeNull();
-      spy.mockRestore();
+        expect(MockResizeObserver).not.toHaveBeenCalled();
+        expect((component as any).resizeObserver).toBeNull();
+      } finally {
+        (global as any).ResizeObserver = OriginalResizeObserver;
+      }
     });
   });
 

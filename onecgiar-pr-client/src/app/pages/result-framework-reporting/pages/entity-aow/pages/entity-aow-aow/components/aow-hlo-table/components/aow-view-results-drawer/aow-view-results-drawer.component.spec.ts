@@ -18,10 +18,13 @@ describe('AowViewResultsDrawer', () => {
     mockEntityAowService = {
       aowId: signal<string>('test-aow-id'),
       entityId: signal<string>('test-entity-id'),
+      entityDetails: signal<any>({ name: 'Test Entity' }),
+      currentAowSelected: jest.fn(() => ({ code: 'TEST-AOW', name: 'Test AOW' })),
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
       isLoadingTocResultsByAowId: signal<boolean>(false),
+      showViewResultDrawer: signal<boolean>(true),
       viewResultDrawerFullScreen: signal<boolean>(false),
       currentResultToView: currentResultToViewSignal,
       getExistingResultsContributors: jest.fn(),
@@ -65,7 +68,7 @@ describe('AowViewResultsDrawer', () => {
       expect(columns[0]).toEqual({ title: 'Code', attr: 'result_code', width: '10%' });
       expect(columns[1]).toEqual({ title: 'Title', attr: 'title' });
       expect(columns[2]).toEqual({ title: 'Status', attr: 'status_name', width: '130px' });
-      expect(columns[3]).toEqual({ title: 'Target achieved', attr: 'contributing_indicator', width: '130px' });
+      expect(columns[3]).toEqual({ title: 'Achieved value', attr: 'contributing_indicator', width: '130px' });
     });
   });
 

@@ -12,6 +12,7 @@ describe('BilateralService (unit)', () => {
     const resultRepository = {
       findOne: jest.fn(),
       save: jest.fn(async (x) => x),
+      update: jest.fn(),
     };
     const handlersError = {} as any;
     const versioningService = {} as any;
@@ -108,6 +109,9 @@ describe('BilateralService (unit)', () => {
     const policyChangeHandler = makeHandler(ResultTypeEnum.POLICY_CHANGE);
     const otherOutputHandler = makeHandler(ResultTypeEnum.OTHER_OUTPUT);
     const otherOutcomeHandler = makeHandler(ResultTypeEnum.OTHER_OUTCOME);
+    const adUserService = {
+      resolveOrCreateContact: jest.fn().mockResolvedValue(null),
+    };
 
     const service = new BilateralService(
       dataSource,
@@ -154,6 +158,7 @@ describe('BilateralService (unit)', () => {
       policyChangeHandler as any,
       otherOutputHandler as any,
       otherOutcomeHandler as any,
+      adUserService as any,
     ) as any;
 
     Object.assign(service, overrides);
@@ -184,6 +189,7 @@ describe('BilateralService (unit)', () => {
         resultsTocResultsRepository,
         resultByInitiativesRepository,
         resultsKnowledgeProductsService,
+        adUserService,
       },
       handlers: {
         knowledgeProductHandler,
@@ -529,5 +535,441 @@ describe('BilateralService (unit)', () => {
     await expect(
       service.handleLeadCenter(1, {} as any, 1),
     ).resolves.toBeUndefined();
+  });
+
+  // P2-3166. `result.source` says a result arrived through the API but never says from whom,
+  // which is what routing a webhook back needs. These two helpers are the whole of that logic;
+  // `create()` itself is a ~20-collaborator transaction and is covered end-to-end elsewhere.
+  describe('external platform identity (P2-3166)', () => {
+    const mis = { id: 12, name: 'Reporting Tool', acronym: 'PRMS' };
+
+    describe('buildExternalIdentity', () => {
+      it('takes the platform from the authenticated key, never from the body tenant', () => {
+        const { service } = makeService();
+
+        const identity = (service as any).buildExternalIdentity(
+          { external_reference: 'STAR-9f2c-4471', tenant: 'spoofed.tenant' },
+          mis,
+        );
+
+        expect(identity).toEqual({
+          external_platform_id: 12,
+          external_platform_code: 'PRMS',
+          external_reference: 'STAR-9f2c-4471',
+        });
+        // The body's `tenant` is caller-declared; trusting it would let a caller aim our
+        // callbacks at any platform it names.
+        expect(JSON.stringify(identity)).not.toContain('spoofed.tenant');
+      });
+
+      // The reference is the platform's own id for *this* result, so it has to come off the
+      // result payload. Reading it from the envelope would give every result in a batch the same
+      // value and make the callback unmatchable — which is what it used to do.
+      it('reads the reference from the result, not from the envelope idempotencyKey', () => {
+        const { service } = makeService();
+
+        const identity = (service as any).buildExternalIdentity(
+          { external_reference: 'STAR-9f2c-4471' },
+          mis,
+        );
+        expect(identity.external_reference).toBe('STAR-9f2c-4471');
+
+        // An envelope key must not leak in when the result carries no reference of its own.
+        const noRef = (service as any).buildExternalIdentity(
+          { idempotencyKey: 'prms:kp:ingest:abc' } as any,
+          mis,
+        );
+        expect(noRef.external_reference).toBeNull();
+      });
+
+      it('keeps the reference null when it is absent or blank, never an empty string', () => {
+        const { service } = makeService();
+
+        for (const value of [undefined, '', '   ']) {
+          const identity = (service as any).buildExternalIdentity(
+            { external_reference: value },
+            mis,
+          );
+          // Null means "this result has no id in an external system" — a bilateral created in the
+          // PRMS UI. An empty string would claim one exists and is blank.
+          expect(identity.external_reference).toBeNull();
+          // The platform is still recorded: no reference does not mean no origin.
+          expect(identity.external_platform_id).toBe(12);
+        }
+      });
+
+      it('yields nulls when no platform was authenticated', () => {
+        const { service } = makeService();
+
+        expect(
+          (service as any).buildExternalIdentity({ tenant: 'whatever' }),
+        ).toEqual({
+          external_platform_id: null,
+          external_platform_code: null,
+          external_reference: null,
+        });
+      });
+
+      it('keeps the platform even when the upstream sent no idempotency key', () => {
+        const { service } = makeService();
+
+        expect((service as any).buildExternalIdentity({}, mis)).toEqual({
+          external_platform_id: 12,
+          external_platform_code: 'PRMS',
+          external_reference: null,
+        });
+      });
+    });
+
+    describe('applyExternalIdentity', () => {
+      it('stamps the identity on a header built by a type handler', async () => {
+        const { service, stubs } = makeService();
+
+        await (service as any).applyExternalIdentity(99, {
+          external_platform_id: 12,
+          external_platform_code: 'PRMS',
+          external_reference: 'abc',
+        });
+
+        expect(stubs.resultRepository.update).toHaveBeenCalledWith(99, {
+          external_platform_id: 12,
+          external_platform_code: 'PRMS',
+          external_reference: 'abc',
+        });
+      });
+
+      it('leaves the row alone when there is nothing to record', async () => {
+        const { service, stubs } = makeService();
+
+        await (service as any).applyExternalIdentity(99, {
+          external_platform_id: null,
+          external_platform_code: null,
+          external_reference: null,
+        });
+        await (service as any).applyExternalIdentity(99, undefined);
+
+        expect(stubs.resultRepository.update).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('populateTypeSpecificFromExtractedMds', () => {
+    it('forwards knowledge_product to the KP handler when promoting a KP draft', async () => {
+      const { service, handlers } = makeService();
+      const extractedMds = {
+        knowledge_product: { handle: '10568/175322' },
+      };
+
+      await service.populateTypeSpecificFromExtractedMds(
+        {
+          id: 42,
+          result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+          title: 'Some KP title',
+        } as any,
+        extractedMds,
+        7,
+      );
+
+      expect(handlers.knowledgeProductHandler.afterCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bilateralDto: expect.objectContaining({
+            knowledge_product: extractedMds['knowledge_product'],
+          }),
+          resultId: 42,
+          userId: 7,
+        }),
+      );
+    });
+  });
+
+  describe('normalizeInstitutionValue (ALLIANCE_ALIASES)', () => {
+    it.each([
+      ['ABC', true],
+      ['abc', true],
+      ['CIAT-BIOVERSITY', true],
+      ['CIAT (Alliance)', true],
+      ['BIOVERSITY (Alliance)', true],
+      ['CIAT Alliance', true],
+      ['Bioversity Alliance', true],
+      ['CIAT', false],
+      ['Bioversity', false],
+      ['Some Other Org', false],
+    ])(
+      'normalizeInstitutionValue(%s) → isAlias=%s',
+      (input, shouldNormalize) => {
+        const { service } = makeService();
+        const result = (service as any).normalizeInstitutionValue(input);
+        if (shouldNormalize) {
+          expect(result).toBe(
+            'Alliance of Bioversity and CIAT - Headquarter (Bioversity International)',
+          );
+        } else {
+          expect(result).toBe(input);
+        }
+      },
+    );
+  });
+  // CLARISA splits the Alliance into CENTER-03 "CIAT (Alliance)" (Regional Hub) and
+  // CENTER-02 "Bioversity (Alliance)" (Headquarter), and the 2026 mapping is done per
+  // centre. Resolution used to get this wrong in both directions, verified against the
+  // live index on 2026-08-26: every Alliance spelling — the canonical "CIAT (Alliance)"
+  // included — collapsed onto the Headquarter institution, while the plain acronyms fell
+  // through to a `LIKE '%BIOVERSITY%'` that matches BOTH institutions (both names contain
+  // "Bioversity") and then took whichever row the database returned first. A payload
+  // sending "BIOVERSITY" was stored as CENTER-03, CIAT.
+  describe('Alliance centre resolution', () => {
+    const centerFor = (code: string) => ({ code, institutionId: 0 });
+
+    const makeCenterService = () => {
+      const saved: any[] = [];
+      const { service } = makeService({
+        _clarisaCenters: {
+          findOne: jest.fn(async ({ where }: any) => centerFor(where.code)),
+          // Nothing should reach institution-based matching in these cases.
+          find: jest.fn(async () => []),
+        },
+        _clarisaInstitutionsRepository: { find: jest.fn(async () => []) },
+        _resultsCenterRepository: {
+          getAllResultsCenterByResultIdAndCenterId: jest.fn(async () => null),
+          save: jest.fn(async (row: any) => {
+            saved.push(row);
+            return row;
+          }),
+        },
+      });
+      return { service, saved };
+    };
+
+    it.each([
+      ['BIOVERSITY', 'CENTER-02'],
+      ['Bioversity (Alliance)', 'CENTER-02'],
+      ['bioversity alliance', 'CENTER-02'],
+      ['Bioversity International', 'CENTER-02'],
+      ['CIAT', 'CENTER-03'],
+      ['CIAT (Alliance)', 'CENTER-03'],
+      ['ciat   (alliance)', 'CENTER-03'],
+      // Pre-split spellings stay where their data already is.
+      ['ABC', 'CENTER-02'],
+      ['CIAT-BIOVERSITY', 'CENTER-02'],
+    ])('lead_center acronym %s resolves to %s', async (acronym, code) => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleLeadCenter(1, { acronym }, 9);
+
+      expect(saved).toEqual([
+        expect.objectContaining({
+          center_id: code,
+          is_leading_result: true,
+          is_primary: true,
+        }),
+      ]);
+    });
+
+    it('reads the alias from the name field too', async () => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleLeadCenter(1, { name: 'Bioversity (Alliance)' }, 9);
+
+      expect(saved[0]).toEqual(
+        expect.objectContaining({ center_id: 'CENTER-02' }),
+      );
+    });
+
+    it('keeps the two Alliance centres apart', async () => {
+      const ciat = makeCenterService();
+      const bioversity = makeCenterService();
+
+      await ciat.service.handleLeadCenter(1, { acronym: 'CIAT (Alliance)' }, 9);
+      await bioversity.service.handleLeadCenter(
+        2,
+        { acronym: 'Bioversity (Alliance)' },
+        9,
+      );
+
+      expect(ciat.saved[0].center_id).toBe('CENTER-03');
+      expect(bioversity.saved[0].center_id).toBe('CENTER-02');
+      expect(ciat.saved[0].center_id).not.toBe(bioversity.saved[0].center_id);
+    });
+
+    it('leaves a non-Alliance acronym to the normal institution path', async () => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleLeadCenter(1, { acronym: 'IITA' }, 9);
+
+      // No alias entry, and the stubs match no institution, so nothing is stored —
+      // proving the alias table did not claim it.
+      expect(saved).toEqual([]);
+    });
+
+    it('stores an Alliance contributing centre under its own code', async () => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleContributingCenters(
+        1,
+        [{ acronym: 'Bioversity (Alliance)' }],
+        9,
+        { acronym: 'IITA' },
+      );
+
+      expect(saved).toEqual([
+        expect.objectContaining({
+          center_id: 'CENTER-02',
+          is_leading_result: false,
+          is_primary: false,
+        }),
+      ]);
+    });
+
+    it('does not repeat the lead centre as a contributor, whichever spelling each field uses', async () => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleContributingCenters(
+        1,
+        [{ acronym: 'BIOVERSITY' }],
+        9,
+        { acronym: 'Bioversity (Alliance)' },
+      );
+
+      expect(saved).toEqual([]);
+    });
+
+    it('keeps a sibling Alliance centre when the other one leads', async () => {
+      const { service, saved } = makeCenterService();
+
+      await service.handleContributingCenters(
+        1,
+        [{ acronym: 'CIAT (Alliance)' }],
+        9,
+        { acronym: 'Bioversity (Alliance)' },
+      );
+
+      expect(saved).toEqual([
+        expect.objectContaining({ center_id: 'CENTER-03' }),
+      ]);
+    });
+
+    it('refuses to resolve when the alias names a code CLARISA does not have', async () => {
+      const { service, saved } = makeCenterService();
+      (service as any)._clarisaCenters.findOne = jest.fn(async () => null);
+
+      await service.handleLeadCenter(
+        1,
+        { acronym: 'Bioversity (Alliance)' },
+        9,
+      );
+
+      expect(saved).toEqual([]);
+    });
+  });
+
+  /**
+   * The lead contact person used to be written by an `update()` a few lines AFTER
+   * `initializeResultHeader` had already re-read the row, so the later
+   * `save({ ...newResultHeader, ... })` spread the stale nulls back over it and wiped both
+   * columns. Verified live: results 8911-8914 were created with a contact in the payload and
+   * came back with `lead_contact_person: null`.
+   *
+   * The invariant that makes the clobber impossible is that the header entity itself carries
+   * the contact — then any later spread-save re-writes the same values harmlessly.
+   */
+  describe('lead contact person', () => {
+    const dtoWith = (contact: any) =>
+      ({
+        title: 'T',
+        description: 'D',
+        result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        result_level_id: 4,
+        lead_contact_person: contact,
+      }) as any;
+
+    const initHeader = async (service: any, dto: any) =>
+      service.initializeResultHeader({
+        bilateralDto: dto,
+        userId: 1,
+        submittedUserId: 2,
+        version: { id: 36 },
+        year: { year: 2026 },
+      });
+
+    it('writes the contact as part of the header, not afterwards', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultRepository.save.mockImplementation(async (x: any) => ({
+        ...x,
+        id: 11382,
+      }));
+      stubs.resultRepository.findOne.mockImplementation(async () => ({
+        id: 11382,
+      }));
+      stubs.adUserService.resolveOrCreateContact.mockResolvedValue({
+        id: 77,
+        display_name: 'Nicoleta Trifa',
+      });
+
+      await initHeader(
+        service,
+        dtoWith({ name: 'n.trifa@cgiar.org', email: 'n.trifa@cgiar.org' }),
+      );
+
+      const saved = stubs.resultRepository.save.mock.calls[0][0];
+      expect(saved.lead_contact_person_id).toBe(77);
+      // The directory's own name, not the payload's — producers routinely send the email there.
+      expect(saved.lead_contact_person).toBe('Nicoleta Trifa');
+    });
+
+    it('keeps the payload name as free text when the directory has no match', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultRepository.save.mockImplementation(async (x: any) => ({
+        ...x,
+        id: 1,
+      }));
+      stubs.resultRepository.findOne.mockResolvedValue({ id: 1 });
+      stubs.adUserService.resolveOrCreateContact.mockResolvedValue(null);
+
+      await initHeader(
+        service,
+        dtoWith({ name: 'Arouna Dissa', email: 'a.dissa@ier.ml' }),
+      );
+
+      const saved = stubs.resultRepository.save.mock.calls[0][0];
+      expect(saved.lead_contact_person).toBe('Arouna Dissa');
+      expect(saved.lead_contact_person_id).toBeNull();
+    });
+
+    it('never invents a directory row from the payload', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultRepository.save.mockImplementation(async (x: any) => ({
+        ...x,
+        id: 1,
+      }));
+      stubs.resultRepository.findOne.mockResolvedValue({ id: 1 });
+      stubs.adUserService.resolveOrCreateContact.mockResolvedValue(null);
+
+      await initHeader(
+        service,
+        dtoWith({ name: 'Arouna Dissa', email: 'a.dissa@ier.ml' }),
+      );
+
+      // A fabricated row would be indistinguishable from a real person in the reporting
+      // tool's contact picker: searchUsers is cache-first and filters only by is_active.
+      expect(stubs.adUserService.resolveOrCreateContact).toHaveBeenCalledWith(
+        'a.dissa@ier.ml',
+      );
+    });
+
+    it('leaves both columns out when no contact is sent', async () => {
+      const { service, stubs } = makeService();
+      stubs.resultRepository.save.mockImplementation(async (x: any) => ({
+        ...x,
+        id: 1,
+      }));
+      stubs.resultRepository.findOne.mockResolvedValue({ id: 1 });
+
+      await initHeader(service, dtoWith(undefined));
+
+      const saved = stubs.resultRepository.save.mock.calls[0][0];
+      expect(saved.lead_contact_person).toBeUndefined();
+      expect(saved.lead_contact_person_id).toBeUndefined();
+      expect(stubs.adUserService.resolveOrCreateContact).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ResultCreatorComponent } from './result-creator.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -8,7 +9,6 @@ import { ResultLevelButtonsComponent } from './components/result-level-buttons/r
 import { SaveButtonComponent } from '../../../../custom-fields/save-button/save-button.component';
 import { RetrieveModalComponent } from '../result-detail/components/retrieve-modal/retrieve-modal.component';
 import { AlertStatusComponent } from '../../../../custom-fields/alert-status/alert-status.component';
-import { DialogModule } from 'primeng/dialog';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { jest } from '@jest/globals';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
@@ -45,6 +45,9 @@ describe('ResultCreatorComponent', () => {
       updateUserData: jest.fn(() => {
         mockResultLevelService.resultBody.initiative_id = mockApiService.dataControlSE.myInitiativesList[0].id;
       }),
+      authSE: {
+        localStorageUser: { user_name: 'test-user' }
+      },
       rolesSE: {
         validateReadOnly: jest.fn(() => Promise.resolve()),
         isAdmin: true
@@ -57,9 +60,14 @@ describe('ResultCreatorComponent', () => {
       },
       dataControlSE: {
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        fieldFeedbackList: jest.fn(() => []),
         myInitiativesList: myInitiativesList,
+        myInitiativesListText: jest.fn(() => ''),
         validateBody: jest.fn(),
-        getCurrentPhases: jest.fn(() => of({}))
+        getCurrentPhases: jest.fn(() => of({})),
+        reportingPhaseVersion: signal(0),
+        reportingCurrentPhase: { phaseYear: 2026 },
+        previousReportingPhase: { phaseYear: 2025 }
       },
       resultsSE: {
         GET_AllInitiatives: () => of({ response: myInitiativesList }),
@@ -73,6 +81,8 @@ describe('ResultCreatorComponent', () => {
     };
     mockResultLevelService = {
       cleanData: jest.fn(),
+      resultLevelListSig: jest.fn(() => []),
+      onSelectResultLevel: jest.fn(),
       resultBody: {
         initiative_id: 1,
         result_type_id: 1,
@@ -98,7 +108,7 @@ describe('ResultCreatorComponent', () => {
         RetrieveModalComponent,
         AlertStatusComponent
       ],
-      imports: [HttpClientTestingModule, DialogModule, RouterTestingModule, TermPipe, CustomFieldsModule],
+      imports: [HttpClientTestingModule, RouterTestingModule, TermPipe, CustomFieldsModule],
       providers: [
         ResultsApiService,
         {
@@ -139,7 +149,9 @@ describe('ResultCreatorComponent', () => {
 
       component.ngOnInit();
 
-      jest.runAllTimers();
+      // runOnlyPendingTimers: with Angular's timer-based CD scheduler + the throttled
+      // ngDoCheck scan (P2-2969), runAllTimers loops forever (each tick re-schedules timers).
+      jest.runOnlyPendingTimers();
 
       expect(component.resultLevelSE.resultLevelList[0].selected).toBeFalsy();
       expect(component.resultLevelSE.currentResultTypeList).toEqual([]);
@@ -419,12 +431,20 @@ describe('ResultCreatorComponent', () => {
   });
 
   describe('ngDoCheck()', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail when ngDoCheck is triggered', () => {
+    it('should call someMandatoryFieldIncompleteResultDetail in a coalesced rAF', () => {
       const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncompleteResultDetail');
+      // Scan is now throttled + coalesced into a requestAnimationFrame run outside Angular's zone (P2-2971).
+      const rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: any) => {
+        cb(0);
+        return 0;
+      });
+      (component as any).lastScanAt = 0;
+      (component as any).scanScheduled = false;
 
       component.ngDoCheck();
 
       expect(spy).toHaveBeenCalledWith('.local_container');
+      rafSpy.mockRestore();
     });
   });
 
@@ -481,6 +501,38 @@ describe('ResultCreatorComponent', () => {
       expect(component.validating).toBe(false);
       expect(component.mqapUrlError.status).toBeTruthy();
       expect(component.mqapUrlError.message).toBe('Please enter a valid handle.');
+    });
+  });
+
+  /** The guidance no longer hardcodes 2025/2026/2024 — every year comes from the active reporting phase. */
+  describe('kpAlertDescription — reporting-phase years', () => {
+    it('uses the active phase year, the next year and the previous phase year', () => {
+      const text = component.kpAlertDescription();
+
+      expect(text).toContain('only knowledge products from 2026 onwards will be accepted');
+      expect(text).toContain('published online in 2026 but issued in 2027');
+      expect(text).toContain('accepted for the 2026 reporting phase');
+      expect(text).toContain('published online in 2025 but issued in 2026 will not be accepted');
+    });
+
+    it('re-renders when the phases resolve after the first paint', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2027;
+      mockApiService.dataControlSE.previousReportingPhase.phaseYear = 2026;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(1);
+
+      expect(component.kpAlertDescription()).toContain('only knowledge products from 2027 onwards will be accepted');
+    });
+
+    it('never paints "null" while the phases have not loaded yet', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = null;
+      mockApiService.dataControlSE.previousReportingPhase.phaseYear = null;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(2);
+
+      const text = component.kpAlertDescription();
+
+      expect(text).not.toContain('null');
+      expect(text).not.toContain('NaN');
+      expect(text).toContain(`from ${new Date().getFullYear()} onwards`);
     });
   });
 });

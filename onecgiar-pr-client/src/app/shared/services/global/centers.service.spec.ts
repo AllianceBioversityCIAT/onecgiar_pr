@@ -27,6 +27,15 @@ describe('CentersService', () => {
     expect(data).toEqual(mockResponse);
   });
 
+  it('P2-3190: publishes the catalogue on the `centers` signal so late consumers can react', async () => {
+    // Fresh instance: the signal must start empty and be filled by the same response that fills `centersList`.
+    const freshApi = { resultsSE: { GET_AllCLARISACenters: jest.fn(() => of({ response: mockResponse })) } };
+    const fresh = new CentersService(freshApi as any);
+    await fresh.getData();
+    expect(fresh.centers()).toEqual(mockResponse);
+    expect(fresh.centers()).toEqual(fresh.centersList);
+  });
+
   it('should emit loadedCenters=true after successful load', done => {
     // Ensure it does not use cache so it emits from API path
     service.centersList = [];

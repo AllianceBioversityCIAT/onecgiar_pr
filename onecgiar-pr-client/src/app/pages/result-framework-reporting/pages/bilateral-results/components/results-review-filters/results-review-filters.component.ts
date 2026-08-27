@@ -1,28 +1,18 @@
 import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { InputTextModule } from 'primeng/inputtext';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BilateralResultsService } from '../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
-import { MultiSelectModule } from 'primeng/multiselect';
-import { ButtonModule } from 'primeng/button';
-import { OverlayBadgeModule } from 'primeng/overlaybadge';
-import { ChipModule } from 'primeng/chip';
+import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
+import { HlmButton } from '@spartan/button';
 @Component({
   selector: 'app-results-review-filters',
   imports: [
     CommonModule,
-    IconFieldModule,
-    InputIconModule,
-    InputTextModule,
     FormsModule,
-    MultiSelectModule,
-    ButtonModule,
-    OverlayBadgeModule,
-    ChipModule,
+    PrFilterMultiselectModule,
+    HlmButton,
     CustomFieldsModule
   ],
   templateUrl: './results-review-filters.component.html',
@@ -102,33 +92,12 @@ export class ResultsReviewFiltersComponent implements OnInit, OnDestroy {
   private resizeObserver: ResizeObserver | null = null;
 
   private calculateNavbarHeight(): void {
-    const navbar =
-      document.querySelector('app-header-panel') ||
-      document.querySelector('header') ||
-      document.querySelector('nav') ||
-      document.querySelector('.navbar') ||
-      document.querySelector('.header');
-
-    if (navbar) {
-      const height = navbar.getBoundingClientRect().height;
-      this.navbarHeight.set(height);
-    } else {
-      this.navbarHeight.set(60);
-    }
+    // Top header was removed; drawers sit flush under the content inset.
+    this.navbarHeight.set(0);
   }
 
   private setupResizeObserver(): void {
-    const navbar =
-      document.querySelector('app-header-panel') ||
-      document.querySelector('header') ||
-      document.querySelector('nav') ||
-      document.querySelector('.navbar') ||
-      document.querySelector('.header');
-
-    if (navbar) {
-      this.resizeObserver = new ResizeObserver(() => this.calculateNavbarHeight());
-      this.resizeObserver.observe(navbar);
-    }
+    // No top chrome to observe after the header removal.
   }
 
   ngOnDestroy(): void {

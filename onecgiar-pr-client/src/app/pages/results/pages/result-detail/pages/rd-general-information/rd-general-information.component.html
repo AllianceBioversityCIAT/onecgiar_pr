@@ -3,96 +3,144 @@
   [generalInfoBody]="this.generalInfoBody"
   [isPhaseOpen]="this.isPhaseOpen"></app-rd-annual-updating>
 
-<div class="detail_container">
-  @if (!this.api.rolesSE.readOnly && this.isPhaseOpen) {
-    <div style="max-width: 200px">
-      <app-pr-button
-        text="Change result type"
-        icon="move_up"
-        [reverse]="true"
-        tabindex="0"
-        (click)="this.api.dataControlSE.changeResultTypeModal = true"
-        (keydown.enter)="this.api.dataControlSE.changeResultTypeModal = true"
-        (keydown.space)="$event.preventDefault(); this.api.dataControlSE.changeResultTypeModal = true"
-        [rotateRight]="true"
-        [verticalMargin]="0">
-      </app-pr-button>
-    </div>
-  }
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
+  <!-- "Change result type" moved to the result header's ⋮ menu (app-result-header), where the
+       mockup puts result-level actions. The modal it opens still lives at the bottom of THIS
+       template, because it needs this section's `generalInfoBody` — which is also why the menu
+       only offers the action while this section is open. -->
 
   <app-alert-status
     *ngIf="this.api.dataControlSE.isKnowledgeProduct"
     description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
   </app-alert-status>
 
+  <!-- P2-3201 (INC-158283): the AI assistant note renders once, between "Change result type" and
+       "Title of Result", so it covers both the title and the description field. 2026 portfolio only. -->
+  @if (guidanceAsTooltip()) {
+    <app-alert-status [description]="aiAssistantTitlesNote" icon="auto_awesome"></app-alert-status>
+  }
+
+  <!-- P2-3201: from 2026 the guidance leaves the grey "Description" box and becomes an ⓘ tooltip
+       next to the label. Earlier phases keep the inline box (empty tooltip → no trigger rendered). -->
+  <!-- data-testid="gi-field-<payload key>": the E2E save-contract spec reads the key out of the
+       hook and asserts the field travels in the PATCH body. Adding a control here without its hook
+       simply leaves it unguarded — see cypress/e2e/result-detail/save-contract.cy.ts. -->
   <app-pr-input
+    data-testid="gi-field-result_name"
     fieldRef="[general-info]-title"
     [customLabel]="'Title of Result'"
     type="text"
+    [showDescription]="!guidanceAsTooltip()"
+    [tooltip]="guidanceTooltip('[general-info]-title')"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_name"
     [maxWords]="30">
   </app-pr-input>
 
   <app-pr-textarea
+    data-testid="gi-field-result_description"
     fieldRef="[general-info]-description"
+    [showDescriptionLabel]="!guidanceAsTooltip()"
+    [tooltip]="guidanceTooltip('[general-info]-description')"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description"
     [maxWords]="300"></app-pr-textarea>
 
-  <app-lead-contact-person-field [body]="this.generalInfoBody" [required]="this.isP25()"></app-lead-contact-person-field>
-  @if (this.isP25()) {
+  <app-lead-contact-person-field
+    [body]="this.generalInfoBody"
+    [required]="this.isLeadContactPersonRequired()"
+    [guidanceAsTooltip]="guidanceAsTooltip()"></app-lead-contact-person-field>
+  @if (this.isLeadContactPersonRequired()) {
     <div
       appFeedbackValidation
       labelText="Lead contact person"
       [isComplete]="!!this.generalInfoBody.lead_contact_person && !!this.generalInfoBody.lead_contact_person_data"></div>
   }
 
-  <h1 class="pr_label">Impact Area scores:</h1>
-  <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
+  <!-- P2-3201: the AI-assisted notification sits above the heading and covers the whole section.
+       Static block by explicit request — not collapsible, no "How it works" link. 2026 only. -->
+  @if (guidanceAsTooltip()) {
+    <app-alert-status [description]="aiImpactAreaScoresNote" icon="auto_awesome"></app-alert-status>
+  }
 
-  <!-- Template reutilizable para checkboxes de áreas de impacto -->
+  <!-- P2-3201: from 2026 the 0/1/2 scoring guidance moves into an ⓘ tooltip on the heading so the
+       section does not become note-heavy once the AI note is added. Earlier phases keep the box. -->
+  @if (guidanceAsTooltip()) {
+    <h1 class="pr_label impact_scores_heading">
+      Impact Area scores:
+      <button
+        type="button"
+        class="sgi-dac-info"
+        [prTooltip]="impactAreaScoresInfo()"
+        [prTooltipPinnable]="true"
+        prTooltipPosition="bottom"
+        prTooltipStyleClass="sgi-dac-tooltip"
+        aria-label="Impact Area scoring guidance">
+        <app-pr-info-icon />
+      </button>
+    </h1>
+  } @else {
+    <h1 class="pr_label">Impact Area scores:</h1>
+    <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
+  }
+
+  <!-- Reusable template for the Impact Area component checkboxes (P25).
+       The header is an `app-field-card` (not the legacy `app-pr-field-header` + red asterisk) so this
+       question reads like its sibling tag questions, which render through `app-pr-radio-button` → card.
+       `hasValue` reuses `isImpactAreaComplete()` — the SAME expression the sibling `appFeedbackValidation`
+       below already uses — so the card colour and the alert list can never disagree.
+       The inner `.pr-field` deliberately carries NO `mandatory` class: this field's entry in the DOM scan
+       is the hidden `appFeedbackValidation` div in each block, whose `isComplete` also encodes the
+       conditional rule (`tag != 3 || !isP25`). Marking it here would double-count the field AND make it
+       mandatory even when the tag is not 3 — a validation change. -->
   <ng-template #impactAreaCheckboxes let-fieldRef="fieldRef" let-fieldName="fieldName" let-optionsList="optionsList" let-prefix="prefix">
-    <app-pr-field-header
+    <app-field-card
       [label]="this.getImpactAreaFieldLabel(fieldRef)"
       [description]="this.getImpactAreaFieldDescription(fieldRef)"
       [required]="this.getImpactAreaFieldRequired(fieldRef)"
-      [useColon]="false">
-    </app-pr-field-header>
-    <div class="pr-field">
-      <div class="radioButtonList">
-        @for (option of optionsList; track option.id; let i = $index) {
-          <div class="radioButton">
-            <p-checkbox
-              [binary]="true"
-              [inputId]="prefix + '_checkbox_' + i"
-              [ngModel]="this.isImpactAreaSelected(fieldName, option.id)"
-              (ngModelChange)="this.toggleImpactAreaSelection(fieldName, option.id)"
-              [disabled]="this.rolesSE.readOnly">
-            </p-checkbox>
-            <label [for]="prefix + '_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
-          </div>
-        }
+      [hasValue]="this.isImpactAreaComplete(fieldName)">
+      <div class="pr-field">
+        <div class="radioButtonList">
+          @for (option of optionsList; track option.id; let i = $index) {
+            <div class="radioButton">
+              <input
+                type="checkbox"
+                class="pr-native-check"
+                [id]="prefix + '_checkbox_' + i"
+                [ngModel]="this.isImpactAreaSelected(fieldName, option.id)"
+                (ngModelChange)="this.toggleImpactAreaSelection(fieldName, option.id)"
+                [disabled]="this.rolesSE.readOnly" />
+              <label [for]="prefix + '_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
+            </div>
+          }
+        </div>
       </div>
-    </div>
+    </app-field-card>
   </ng-template>
 
   <!------- [1] ------->
   <div class="block_container">
-    <app-alert-status [description]="genderInformation()"> </app-alert-status>
+    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
+    @if (!guidanceAsTooltip()) {
+      <app-alert-status [description]="genderInformation()"> </app-alert-status>
+    }
     <div class="radio_grid">
       <app-pr-radio-button
+        data-testid="gi-field-gender_tag_id"
         [options]="this.scoreSE.genderTagScoreList"
+        variant="segmented"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-gender_tag_id"
+        [tooltip]="sectionGuidanceTooltip(genderInformation())"
         [(ngModel)]="this.generalInfoBody.gender_tag_id">
       </app-pr-radio-button>
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
-    <div appFeedbackValidation
+    <div
+      appFeedbackValidation
       [labelText]="this.getImpactAreaFieldLabel('[general-info]-gender_impact_area_id')"
-      [isComplete]="(this.generalInfoBody.gender_tag_id != 3 || !this.isP25()) || this.isImpactAreaComplete('gender_impact_area_id')"></div>
+      [isComplete]="this.generalInfoBody.gender_tag_id != 3 || !this.isP25() || this.isImpactAreaComplete('gender_impact_area_id')"></div>
     @if (this.generalInfoBody.gender_tag_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
         <ng-container
@@ -107,6 +155,7 @@
           "></ng-container>
       } @else {
         <app-pr-radio-button
+          data-testid="gi-field-gender_impact_area_id"
           [options]="this.getImpactAreasScoresComponents.genderTagScoreList()"
           optionLabel="name"
           optionValue="id"
@@ -119,20 +168,27 @@
 
   <!------- [2] ------->
   <div class="block_container">
-    <app-alert-status [description]="climateInformation()"> </app-alert-status>
+    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
+    @if (!guidanceAsTooltip()) {
+      <app-alert-status [description]="climateInformation()"> </app-alert-status>
+    }
     <div class="radio_grid" id="climate_change_tag">
       <app-pr-radio-button
+        data-testid="gi-field-climate_change_tag_id"
         [options]="this.scoreSE.genderTagScoreList"
+        variant="segmented"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-climate_change_tag_id"
+        [tooltip]="sectionGuidanceTooltip(climateInformation())"
         [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
       </app-pr-radio-button>
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
     </div>
-    <div appFeedbackValidation
+    <div
+      appFeedbackValidation
       [labelText]="this.getImpactAreaFieldLabel('[general-info]-climate_impact_area_id')"
-      [isComplete]="(this.generalInfoBody.climate_change_tag_id != 3 || !this.isP25()) || this.isImpactAreaComplete('climate_impact_area_id')"></div>
+      [isComplete]="this.generalInfoBody.climate_change_tag_id != 3 || !this.isP25() || this.isImpactAreaComplete('climate_impact_area_id')"></div>
     @if (this.generalInfoBody.climate_change_tag_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
         <ng-container
@@ -147,6 +203,7 @@
           "></ng-container>
       } @else {
         <app-pr-radio-button
+          data-testid="gi-field-climate_impact_area_id"
           [options]="this.getImpactAreasScoresComponents.climateTagScoreList()"
           optionLabel="name"
           optionValue="id"
@@ -159,20 +216,27 @@
 
   <!------- [3] ------->
   <div class="block_container">
-    <app-alert-status [description]="nutritionInformation()"> </app-alert-status>
+    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
+    @if (!guidanceAsTooltip()) {
+      <app-alert-status [description]="nutritionInformation()"> </app-alert-status>
+    }
     <div class="radio_grid">
       <app-pr-radio-button
+        data-testid="gi-field-nutrition_tag_level_id"
         [options]="this.scoreSE.genderTagScoreList"
+        variant="segmented"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-nutrition_tag_level_id"
+        [tooltip]="sectionGuidanceTooltip(nutritionInformation())"
         [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id">
       </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
     </div>
-    <div appFeedbackValidation
+    <div
+      appFeedbackValidation
       [labelText]="this.getImpactAreaFieldLabel('[general-info]-nutrition_impact_area_id')"
-      [isComplete]="(this.generalInfoBody.nutrition_tag_level_id != 3 || !this.isP25()) || this.isImpactAreaComplete('nutrition_impact_area_id')"></div>
+      [isComplete]="this.generalInfoBody.nutrition_tag_level_id != 3 || !this.isP25() || this.isImpactAreaComplete('nutrition_impact_area_id')"></div>
     @if (this.generalInfoBody.nutrition_tag_level_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
         <ng-container
@@ -187,6 +251,7 @@
           "></ng-container>
       } @else {
         <app-pr-radio-button
+          data-testid="gi-field-nutrition_impact_area_id"
           [options]="this.getImpactAreasScoresComponents.nutritionTagScoreList()"
           optionLabel="name"
           optionValue="id"
@@ -199,20 +264,31 @@
 
   <!------- [4] ------->
   <div class="block_container">
-    <app-alert-status [description]="environmentInformation()"> </app-alert-status>
+    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
+    @if (!guidanceAsTooltip()) {
+      <app-alert-status [description]="environmentInformation()"> </app-alert-status>
+    }
     <div class="radio_grid">
       <app-pr-radio-button
+        data-testid="gi-field-environmental_biodiversity_tag_level_id"
         [options]="this.scoreSE.genderTagScoreList"
+        variant="segmented"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-environmental_biodiversity_tag_level_id"
+        [tooltip]="sectionGuidanceTooltip(environmentInformation())"
         [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
       </app-pr-radio-button>
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3"></div>
     </div>
-    <div appFeedbackValidation
+    <div
+      appFeedbackValidation
       [labelText]="this.getImpactAreaFieldLabel('[general-info]-environmental_biodiversity_impact_area_id')"
-      [isComplete]="(this.generalInfoBody.environmental_biodiversity_tag_level_id != 3 || !this.isP25()) || this.isImpactAreaComplete('environmental_biodiversity_impact_area_id')"></div>
+      [isComplete]="
+        this.generalInfoBody.environmental_biodiversity_tag_level_id != 3 ||
+        !this.isP25() ||
+        this.isImpactAreaComplete('environmental_biodiversity_impact_area_id')
+      "></div>
     @if (this.generalInfoBody.environmental_biodiversity_tag_level_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
         <ng-container
@@ -227,6 +303,7 @@
           "></ng-container>
       } @else {
         <app-pr-radio-button
+          data-testid="gi-field-environmental_biodiversity_impact_area_id"
           [options]="this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList()"
           optionLabel="name"
           optionValue="id"
@@ -239,20 +316,27 @@
 
   <!------- [5] ------->
   <div class="block_container">
-    <app-alert-status [description]="povertyInformation()"> </app-alert-status>
+    <!-- P2-3201: from 2026 this Impact Area's guidance renders as an ⓘ tooltip on its tag label. -->
+    @if (!guidanceAsTooltip()) {
+      <app-alert-status [description]="povertyInformation()"> </app-alert-status>
+    }
     <div class="radio_grid">
       <app-pr-radio-button
+        data-testid="gi-field-poverty_tag_level_id"
         [options]="this.scoreSE.genderTagScoreList"
+        variant="segmented"
         optionLabel="full_name"
         optionValue="id"
         fieldRef="[general-info]-poverty_tag_level_id"
+        [tooltip]="sectionGuidanceTooltip(povertyInformation())"
         [(ngModel)]="this.generalInfoBody.poverty_tag_level_id">
       </app-pr-radio-button>
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>
     </div>
-    <div appFeedbackValidation
+    <div
+      appFeedbackValidation
       [labelText]="this.getImpactAreaFieldLabel('[general-info]-poverty_impact_area_id')"
-      [isComplete]="(this.generalInfoBody.poverty_tag_level_id != 3 || !this.isP25()) || this.isImpactAreaComplete('poverty_impact_area_id')"></div>
+      [isComplete]="this.generalInfoBody.poverty_tag_level_id != 3 || !this.isP25() || this.isImpactAreaComplete('poverty_impact_area_id')"></div>
     @if (this.generalInfoBody.poverty_tag_level_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
         <ng-container
@@ -267,6 +351,7 @@
           "></ng-container>
       } @else {
         <app-pr-radio-button
+          data-testid="gi-field-poverty_impact_area_id"
           [options]="this.getImpactAreasScoresComponents.povertyTagScoreList()"
           optionLabel="name"
           optionValue="id"
@@ -277,13 +362,21 @@
     }
   </div>
 
+  <!-- Cierre de la lista de scores (mockup: número en JetBrains Mono 500 + texto 12px/400). Da el
+       progreso de la escala en un solo sitio, en vez de repetir un marcador por fila. -->
+  <span class="impact_scores_status" data-testid="impact-areas-scored">
+    <span class="font-mono font-medium">{{ impactAreasScored }}</span> of {{ IMPACT_AREAS_TOTAL }} impact areas scored
+  </span>
+
   <app-pr-yes-or-not
+    data-testid="gi-field-is_krs"
     fieldRef="[general-info]-is_krs"
     label="yes"
     [(ngModel)]="this.generalInfoBody.is_krs"
     (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 
   <app-pr-input
+    data-testid="gi-field-krs_url"
     *ngIf="this.generalInfoBody.is_krs"
     placeholder="e.g. https://www.cgiar.org/example"
     description="Link to Key Result Story. It is also possible to select “no” and then later update this to “yes” if the result is later selected as a key result story."
@@ -292,15 +385,14 @@
     [(ngModel)]="this.generalInfoBody.krs_url">
   </app-pr-input>
 
-  <app-save-button
-    class="position_sticky"
+  <app-section-bottom-bar
     (clickSave)="onSaveSection()"
     [editable]="
       this.api.dataControlSE.currentResult?.result_type_id == 7
         ? this.api.rolesSE.access.canDdit && !this.dataControlSE?.currentResult?.status
         : false
     "
-    [disabled]="!this.generalInfoBody.result_name"></app-save-button>
+    [disabled]="!this.generalInfoBody.result_name" />
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
 </div>
 

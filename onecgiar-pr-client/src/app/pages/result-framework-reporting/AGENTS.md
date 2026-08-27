@@ -791,7 +791,7 @@ The table groups by `project_name` (PrimeNG `rowGroupMode="subheader"`).
   - Outputs: `'Innovation development'`, `'Knowledge product'`, `'Capacity sharing for development'`, `'Other output'`.
   - Outcomes: `'Innovation use'`, `'Policy change'`, `'Other outcome'`.
 - `showBilateralResultsReview` (computed) — `entityAowService.entityId() !== 'SGP-02'`. SGP-02 has no bilateral review.
-- `showReportModal` + `reportMenuItems` → a hidden `p-splitbutton` ("Report") with three menu items: AI Assistant (disabled), separator, "Unplanned result" (opens `<p-dialog>` with `app-report-result-form` from `ResultCreatorModule`).
+- `showReportModal` → opened by `onReportRequested(item)` (fired from the indicator category card's `reportRequested` output), which also calls `resultLevelSE.setPendingResultType(...)`. Drives the report `<p-dialog>` with `app-report-result-form` from `ResultCreatorModule`.
 - `ngOnInit`:
   1. `initChart()` (Chart.js plugin).
   2. Subscribes to `route.params`:
@@ -1225,7 +1225,7 @@ The drawer's UX feedback model is **terse by design** — the project relies on 
 
 ### 9.1 Color tokens used heavily
 
-- `--pr-color-primary-300` (`#5569dd`, indigo) — primary buttons, breadcrumb active link, focus rings.
+- `--pr-color-primary-300` (`#6b46e5`, indigo) — primary buttons, breadcrumb active link, focus rings.
 - `--pr-color-primary-25` — group-header background in tables.
 - `--pr-color-secondary-50` — group-header border-bottom.
 - `--pr-color-accents-1..6` — neutral greys (1 = lightest bg, 6 = body text muted).
@@ -1256,7 +1256,7 @@ All headings use the `pr-typography(...)` SCSS mixin from `styles/fonts.scss`. B
 
 - Home and entity-details: `1115px` (md). Below: collapse two-column to one-column.
 - Other SPs: `1500px` (xl) → fixed `repeat(3, 1fr)`.
-- Bilateral results: page height = `calc(100vh - 80px)` (assumes shell header = 80px).
+- Bilateral results: page height = `calc(100vh - 56px)` (shell topbar = 56px).
 
 ### 9.4 Assets used
 

@@ -1,14 +1,11 @@
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.visible"
   (onHide)="cleanObject()"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="step-n4-add-bilateral-dialog">
   <div class="modal_title">Add bilateral</div>
   <div class="modal_container partners-request-container" *ngIf="showForm">
     <app-pr-select
@@ -22,7 +19,7 @@
       [showPartnerAlert]="true">
     </app-pr-select>
 
-    <div class="auto_fit_container">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
       <app-pr-input label="Grant title" [required]="true" [(ngModel)]="biltarealBody.grant_title" placeholder="Grant title goes here...">
       </app-pr-input>
       <app-pr-input label="Center Grant ID" [required]="true" [(ngModel)]="biltarealBody.center_grant_id" placeholder="e.g. G184"> </app-pr-input>
@@ -49,7 +46,7 @@
       padding="medium"
       (click)="onAddBilateral()"></app-pr-button>
   </div>
-</p-dialog>
+</app-pr-dialog>
 <div style="width: 120px">
   <app-pr-button (click)="visible = true" padding="small" text="Add bilateral" icon="add_box" *ngIf="!this.api.rolesSE.readOnly"></app-pr-button>
 </div>

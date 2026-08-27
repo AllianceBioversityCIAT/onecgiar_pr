@@ -1,73 +1,91 @@
-<app-page-header>
-  {{ this.dataControlSE.currentResultSectionName() }}
-  <div actions class="pdf-menu-container">
-    <button type="button" class="pdf-button" (click)="togglePdfMenu()" (keydown.enter)="togglePdfMenu()" aria-label="PDF options menu">
-      <i class="pi pi-file-pdf"></i>
-      <span>PDF</span>
-      <i class="pi pi-angle-down"></i>
-    </button>
-    <div class="pdf-dropdown" *ngIf="showPdfMenu">
-      <div class="pdf-dropdown-header">Options</div>
-      <div class="pdf-dropdown-item" (click)="viewPdf()" (keydown.enter)="viewPdf()" tabindex="0" role="menuitem">
-        <i class="pi pi-file-pdf"></i>
-        <span>View PDF</span>
+<!-- Two columns: the sections sidebar and the scrolling content, per the approved mockup
+     ("PRMS Reporting.dc.html", `pageOpen`). The sections used to be nested inside the dark app
+     sidebar; they now live in their own white 240px rail, which is why this page owns a row
+     layout instead of being a single full-width column. -->
+<div class="rd_layout">
+  <app-result-sections-sidebar />
+
+  <div class="rd_content">
+    <!-- The scrolling half of the column (the mockup's `#pg-scroll`). The header and the phase
+         switcher scroll WITH the form, exactly as they do in the mockup — only the sections rail
+         and the bottom bar stay put. -->
+    <div class="rd_scroll pr-light-scroll">
+      <!-- Title, way back, result-level actions and the identity strip (code · category · level ·
+           funding · status). Replaces the docked RESULT METADATA card — its six fields moved behind
+           the ⓘ next to the code. -->
+      <app-result-header />
+
+      <div class="phase_switcher_container">
+        <app-phase-switcher></app-phase-switcher>
       </div>
-      <div class="pdf-dropdown-separator"></div>
-      <div class="pdf-dropdown-item" (click)="copyPdfLink()" (keydown.enter)="copyPdfLink()" tabindex="0" role="menuitem">
-        <i class="pi pi-copy"></i>
-        <span>Copy link</span>
+
+      <div class="section_container">
+        <!-- Encabezado de la card: pastilla con el NÚMERO de la sección + su nombre, y el check
+             verde cuando está completa (mockup: 24px `#ede9fe`/`#5733c4` 13px/600, h2 16px/700
+             con tracking -.01em). Vive aquí, en el layout, y no en cada una de las 11 secciones:
+             el número y el nombre salen de `ResultSectionsService`, que ya es dueño de la lista
+             filtrada por portafolio y tipo de resultado, así que se mantiene solo.
+             Oculto en rutas que no son una sección listada, donde no habría número que mostrar. -->
+        @if (sectionsSE.hasCurrentSection()) {
+          <div class="rd_section_head" data-testid="result-section-heading">
+            <span class="rd_section_num" aria-hidden="true">{{ sectionsSE.currentPosition() }}</span>
+            <h2 class="rd_section_title">{{ sectionsSE.currentSectionName() }}</h2>
+            @if (sectionsSE.currentSectionIsDone()) {
+              <i class="material-icons-round rd_section_done" role="img" aria-label="Section complete" data-testid="result-section-complete"
+                >check_circle</i
+              >
+            }
+          </div>
+        }
+
+        <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
+
+        <!-- The result code → id conversion (GET_resultIdToCode) gates the outlet above. Without this
+           placeholder the freshly created result lands on an empty page — the "nothing is loading"
+           gap reported after hitting Create. -->
+        <div
+          *ngIf="!this.currentResultSE.resultIdIsconverted"
+          class="flex flex-col gap-4 py-2"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          data-testid="result-detail-loading">
+          <span class="sr-only">Loading result...</span>
+          <div class="pr-skeleton" style="width: 40%; height: 24px"></div>
+          <div class="pr-skeleton" style="width: 100%; height: 14px"></div>
+          <div class="pr-skeleton" style="width: 85%; height: 14px"></div>
+          <div class="pr-skeleton" style="width: 100%; height: 180px"></div>
+          <div class="pr-skeleton" style="width: 60%; height: 14px"></div>
+          <div class="pr-skeleton" style="width: 100%; height: 120px"></div>
+        </div>
+
+        <!-- The dark "Loading section..." veil used to live here. It was driven by the boolean
+           `saveButtonSE.isGettingSection()`, so on a multi-GET section it cleared when the FIRST
+           response landed while the rest of the form was still empty, and three sections load from
+           an `effect()` with no request in flight at first paint, so it never showed for them at
+           all. Per-section `[appSectionSkeleton]` replaces it: it tracks the GET that actually
+           fills the body, and its `inert` + `pointer-events: none` keep the interaction lock the
+           veil provided. `SaveButtonService.isGettingSection` and `isGettingSectionPipe()` stay —
+           IPSR still renders the veil from them. -->
       </div>
-    </div>
-  </div>
-</app-page-header>
-<div class="local_grid">
-  <div>
-    <div class="panel_menu">
-      <app-panel-menu></app-panel-menu>
-    </div>
-  </div>
-  <div>
-    <div class="phase_switcher_container">
-      <app-phase-switcher></app-phase-switcher>
     </div>
 
-    <div class="section_container">
-      <div class="fixed_data_container">
-        <div class="metadata">
-          <div class="item">
-            Result code: <span>{{ this.api.resultsSE.currentResultCode }}</span>
-          </div>
-          <div class="item">
-            Status: <span>{{ this.dataControlSE?.currentResult?.status_name }}</span>
-          </div>
-          <div class="item">
-            Result level: <span>{{ this.dataControlSE.currentResult?.result_level_name }}</span>
-          </div>
-          <div class="item">
-            Indicator category: <span>{{ this.dataControlSE.currentResult?.result_type_name }}</span>
-          </div>
-          <div class="item">
-            Submitter:
-            <span>{{ this.dataControlSE.currentResult?.initiative_official_code }} - {{ this.dataControlSE.currentResult?.initiative_name }}</span>
-          </div>
-          <div class="item">
-            Funding source: <span>{{ this.dataControlSE.currentResult?.source_name }}</span>
-          </div>
-        </div>
-      </div>
-      <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
-      <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
-        <div class="info">
-          <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />
-          <div class="text">Loading section...</div>
-        </div>
-      </div>
-    </div>
+    <!-- Floor of the content column. Each section declares its own bottom bar (only it knows its
+         save handler and disabled rules) and the bar teleports its host node in here, so it ends
+         up OUTSIDE the scroll and at the column's full width — the mockup's layout. Empty when a
+         section renders no bar, and then it collapses to nothing. -->
+    <div class="rd_bar_slot" #bottomBarSlot></div>
   </div>
 </div>
+
+<!-- Floating RESULT METADATA card. Its position and open state live in a root-scoped service, so
+     switching result — which `PrmsRouteReuseStrategy` handles by re-creating this component — brings
+     the card back at exactly the coordinates the user left it at. -->
+<app-result-metadata-window />
+
 <app-submission-modal></app-submission-modal>
 <app-unsubmit-modal></app-unsubmit-modal>
 <app-partners-request></app-partners-request>
 <app-no-edit-container></app-no-edit-container>
 <app-ai-review></app-ai-review>
-<p-toast key="copyResultLinkPdf" position="bottom-center"></p-toast>
+<app-pr-toast key="copyResultLinkPdf"></app-pr-toast>

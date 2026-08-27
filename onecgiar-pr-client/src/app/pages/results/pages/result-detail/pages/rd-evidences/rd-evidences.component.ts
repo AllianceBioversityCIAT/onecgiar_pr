@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { EvidencesBody, EvidencesCreateInterface } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
@@ -46,10 +46,10 @@ export class RdEvidencesComponent implements OnInit {
       return 'As this knowledge product is stored in the repository, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
     let mainText = `<ul>
     <li>Submit a maximum of 6 pieces of evidence per result. If you are updating a legacy result (e.g. an innovation) that already has 6 pieces of evidence, remove any that are no longer relevant for the current reporting year and replace them with up-to-date evidence supporting the claim. Evidence will be ordered by the system from most to least recent.</li>
-    <li>All links provided should be publicly accessible. All CGIAR publications should be shared using a CGSpace link.</li>
+    <li>All links provided should be publicly accessible.</li>
     <li>Links to SharePoint, One Drive, Google Drive, DropBox and other file storage platforms are not allowed.</li>
-    <li>Files can be also uploaded to the PRMS repository.</li>
-    <li>For confidential evidence, select “Upload file” and then “No” to indicate that it should not be public.</li>
+    <li>Files can be uploaded to the PRMS repository.</li>
+    <li>For confidential evidence, select “Upload file” and then respond with “No” to the confidentiality question to indicate that it should not be public.</li>
     <li>If you need additional information or guidance on how to create an evidence entry, you can find a video tutorial at the following a <a class="open_route" href="https://cgiar.sharepoint.com/:v:/s/OneCGIARPRMSRepository/IQCPCRtUOihDQKJExjQgfIOIAZQAZH4pnHDucy3HX-w14WU?e=Xoy42x" target="_blank">link</a>.</li>
     `;
 
@@ -69,19 +69,32 @@ export class RdEvidencesComponent implements OnInit {
     this.api.dataControlSE.currentResultSectionName.set('Evidence');
   }
 
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction so the empty `EvidencesBody()` never
+   * paints as a filled-in-and-lost form; released on both `next` and `error`.
+   */
+  readonly sectionLoading = signal(true);
+
   ngOnInit(): void {
     this.getSectionInformation();
     this.validateCheckBoxes();
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_evidences().subscribe(({ response }) => {
-      this.evidencesBody = response;
-      this.sortEvidences();
-      this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
-      this.isOptional = Boolean(this.readinessLevel === 0);
-      this.isOptionalReadinessLevel = Boolean(this.readinessLevel === 0);
-      this.isSaving = false;
+    this.api.resultsSE.GET_evidences().subscribe({
+      next: ({ response }) => {
+        this.evidencesBody = response;
+        this.sortEvidences();
+        this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
+        this.isOptional = Boolean(this.readinessLevel === 0);
+        this.isOptionalReadinessLevel = Boolean(this.readinessLevel === 0);
+        this.isSaving = false;
+        this.sectionLoading.set(false);
+      },
+      error: () => {
+        this.isSaving = false;
+        this.sectionLoading.set(false);
+      }
     });
   }
 
@@ -153,8 +166,16 @@ export class RdEvidencesComponent implements OnInit {
     await this.loadAllFiles();
     this.saveButtonSE.hideSaveSpinner();
 
-    this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe(resp => {
-      this.getSectionInformation();
+    this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe({
+      next: () => this.getSectionInformation(),
+      // P2-3373: `isSaving` is only cleared by `getSectionInformation()`, which never runs when
+      // the POST fails — the flag latched on and `isEvidenceUploading()` kept every file evidence
+      // showing the "uploading" skeleton instead of its link until the page was reloaded.
+      // The error toast is already raised by `isSavingPipe`; handling the error here also stops
+      // its rethrow surfacing as an unhandled "Uncaught [object Object]".
+      error: () => {
+        this.isSaving = false;
+      }
     });
   }
 

@@ -97,6 +97,9 @@ export class IndicatorsTocInterface {
 export class InitiativeInterface {
   @ApiProperty()
   id: number;
+
+  @ApiProperty({ required: false })
+  from_toc?: boolean;
 }
 
 export class DonorInterfaceToc {

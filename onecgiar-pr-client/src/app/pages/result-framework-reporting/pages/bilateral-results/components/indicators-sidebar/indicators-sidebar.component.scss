@@ -1,7 +1,8 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
 
 .sidebar-container {
-  min-height: calc(100vh - 80px);
+  // Shell topbar (56px) + the page breadcrumb bar (40px).
+  min-height: calc(100vh - 96px);
   background-color: rgba(var(--pr-color-secondary-rgb), 0.1);
   padding: 16px 24px;
 }

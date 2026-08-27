@@ -1,6 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
+import { PrDialogComponent } from '../../../../../../shared/components/pr-dialog/pr-dialog.component';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AiReviewService } from '../../../../../../shared/services/api/ai-review.service';
@@ -10,7 +9,7 @@ import { GetImpactAreasScoresService } from '../../../../../../shared/services/g
 
 @Component({
   selector: 'app-ai-review',
-  imports: [DialogModule, ButtonModule, FormsModule, CommonModule, CustomFieldsModule],
+  imports: [PrDialogComponent, FormsModule, CommonModule, CustomFieldsModule],
   templateUrl: './ai-review.component.html',
   styleUrl: './ai-review.component.scss'
 })

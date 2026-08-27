@@ -31,5 +31,5 @@ Some Science Programs have hundreds of KPIs/indicators with very similar stateme
   - `src/app/pages/result-framework-reporting/pages/entity-aow/services/entity-aow.service.ts` — search text signal (shared across tabs).
 - **Client (reused, read-only reference):** `src/app/pages/outcome-indicator/pipes/filter-indicator-by-search.pipe.ts`, global `.search_input` style in `src/styles.scss`.
 - **Server:** none. Endpoints `GET_TocResultsByAowId` / `GET_2030Outcomes` unchanged.
-- **SDD baseline:** aligns with `docs/system-design/design.md` (consistent search/filter UX, material-icons-round) and `docs/detailed-design/detailed-design.md` (results-framework-reporting module, client-side signals architecture). No module spec exists yet under `docs/specs/` for results-framework-reporting; this change documents behavior at the OpenSpec level.
+- **SDD baseline:** aligns with `docs/ux-ui/design.md` (consistent search/filter UX, material-icons-round) and `docs/trd/trd.md` (results-framework-reporting module, client-side signals architecture). No module spec exists yet under `docs/specs/` for results-framework-reporting; this change documents behavior at the OpenSpec level.
 - **QA:** design.md + specs will spell out testable flows so QA (Cami) can derive test cases (explicit request from Ángel).

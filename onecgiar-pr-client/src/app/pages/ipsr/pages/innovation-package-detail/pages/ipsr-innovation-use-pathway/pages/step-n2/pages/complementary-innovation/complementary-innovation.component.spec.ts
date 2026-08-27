@@ -14,10 +14,7 @@ import { PrTextareaComponent } from '../../../../../../../../../../custom-fields
 import { PrRadioButtonComponent } from '../../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
 import { PrFieldValidationsComponent } from '../../../../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
-import { TooltipModule } from 'primeng/tooltip';
-import { RadioButtonModule } from 'primeng/radiobutton';
 import { of } from 'rxjs';
 import { Router } from '@angular/router';
 jest.useFakeTimers();
@@ -47,7 +44,7 @@ describe('ComplementaryInnovationComponent', () => {
         PrRadioButtonComponent,
         PrFieldValidationsComponent
       ],
-      imports: [RouterTestingModule, HttpClientTestingModule, DialogModule, FormsModule, TooltipModule, RadioButtonModule],
+      imports: [RouterTestingModule, HttpClientTestingModule, FormsModule],
       providers: [
         ApiService,
         IpsrDataControlService,

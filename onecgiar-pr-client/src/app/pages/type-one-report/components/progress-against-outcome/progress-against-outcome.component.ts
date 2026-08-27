@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { OutcomeIndicatorService } from '../../../outcome-indicator/services/outcome-indicator.service';
-import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
     selector: 'app-progress-against-outcome',
-    imports: [SkeletonModule],
+    imports: [],
     templateUrl: './progress-against-outcome.component.html',
     styleUrl: './progress-against-outcome.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

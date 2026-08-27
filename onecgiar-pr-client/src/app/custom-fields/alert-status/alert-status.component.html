@@ -1,6 +1,6 @@
-<div class="pr_alert" [style]="inlineStyles">
-  <div class="line {{ status }}"></div>
-  <div class="text pr-body-2" [innerHTML]="this.description"></div>
-  <div class="black_point" *ngIf="status == 'warning'"></div>
-  <i class="material-icons-round icon {{ status }}">{{ status }}</i>
+<div class="pr_alert {{ status }}" [style]="inlineStyles">
+  <div class="alert_badge">
+    <i class="material-icons-round">{{ iconName }}</i>
+  </div>
+  <div class="alert_text pr-body-2" [innerHTML]="this.description"></div>
 </div>

@@ -1,8 +1,8 @@
-/* To learn more about this file see: https://angular.io/config/tsconfig. */
 {
   "compileOnSave": false,
   "compilerOptions": {
     "esModuleInterop": true,
+    "skipLibCheck": true,
     "baseUrl": "./",
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
@@ -14,13 +14,30 @@
     "sourceMap": true,
     "declaration": false,
     "experimentalDecorators": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "importHelpers": true,
     "target": "ES2022",
     "module": "es2020",
     "lib": ["es2020", "dom"],
     "useDefineForClassFields": false,
-    "types": ["node", "jest", "cypress"]
+    "types": ["node", "jest", "cypress"],
+    "paths": {
+      "@spartan/input": ["./src/app/spartan/input/src/index.ts"],
+      "@spartan/utils": ["./src/app/spartan/utils/src/index.ts"],
+      "@spartan/button": ["./src/app/spartan/button/src/index.ts"],
+      "@spartan/sidebar": ["./src/app/spartan/sidebar/src/index.ts"],
+      "@spartan/separator": ["./src/app/spartan/separator/src/index.ts"],
+      "@spartan/sheet": ["./src/app/spartan/sheet/src/index.ts"],
+      "@spartan/skeleton": ["./src/app/spartan/skeleton/src/index.ts"],
+      "@spartan/tooltip": ["./src/app/spartan/tooltip/src/index.ts"],
+      "@spartan/breadcrumb": ["./src/app/spartan/breadcrumb/src/index.ts"],
+      "@spartan/dialog": ["./src/app/spartan/dialog/src/index.ts"],
+      "@spartan/input-group": ["./src/app/spartan/input-group/src/index.ts"],
+      "@spartan/textarea": ["./src/app/spartan/textarea/src/index.ts"],
+      "@spartan/kbd": ["./src/app/spartan/kbd/src/index.ts"],
+      "@spartan/command": ["./src/app/spartan/command/src/index.ts"],
+      "@spartan/native-select": ["./src/app/spartan/native-select/src/index.ts"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

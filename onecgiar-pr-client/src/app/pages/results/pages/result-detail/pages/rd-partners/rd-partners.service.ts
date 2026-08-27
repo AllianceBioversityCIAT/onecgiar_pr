@@ -1,10 +1,11 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, signal } from '@angular/core';
 import { InstitutionsInterface, PartnersBody, UnmappedMQAPInstitutionDto } from './models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { ViewRefreshService } from '../../../../../../shared/services/view-refresh.service';
 
 @Injectable({
   providedIn: 'root'
@@ -26,10 +27,19 @@ export class RdPartnersService implements OnDestroy {
   updatingLeadData: boolean = false;
   disableLeadPartner: boolean = false;
 
+  /**
+   * Drives `[appSectionSkeleton]` for the Partners section. It lives on the service because the
+   * body it guards (`partnersBody`) does too. The service is `providedIn: 'root'`, so the
+   * component raises it again on `ngOnInit` — otherwise the second result opened would render
+   * with no skeleton. Released on `next` AND `error`.
+   */
+  readonly sectionLoading = signal(true);
+
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
-    public centersSE: CentersService
+    public centersSE: CentersService,
+    private readonly viewRefreshSE: ViewRefreshService
   ) {
     this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
       if (loaded) {
@@ -123,8 +133,10 @@ export class RdPartnersService implements OnDestroy {
         this.setLeadPartnerOnLoad(onSave);
         this.setPossibleLeadCenters(onSave);
         this.setLeadCenterOnLoad(onSave);
+        this.sectionLoading.set(false);
       },
       error: _err => {
+        this.sectionLoading.set(false);
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       }
     });
@@ -158,6 +170,9 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
+        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
+        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
+        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
@@ -183,6 +198,9 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
+        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
+        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
+        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
@@ -204,6 +222,9 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
+        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
+        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
+        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
@@ -220,6 +241,9 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
+        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
+        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
+        this.viewRefreshSE.schedule();
       }, 25);
     }
   }

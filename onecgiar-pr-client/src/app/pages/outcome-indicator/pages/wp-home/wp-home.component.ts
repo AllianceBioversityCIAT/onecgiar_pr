@@ -6,29 +6,44 @@ import { OutcomeIndicatorService } from '../../services/outcome-indicator.servic
 import { FormsModule } from '@angular/forms';
 import { FilterIndicatorBySearchPipe } from '../../pipes/filter-indicator-by-search.pipe';
 import { CustomSpinnerModule } from '../../../../shared/components/custom-spinner/custom-spinner.module';
-import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { TooltipModule } from 'primeng/tooltip';
+import { HlmButton } from '@spartan/button';
+import {
+  PrGroupTableComponent,
+  PrTableHeaderDirective,
+  PrTableGroupHeaderDirective,
+  PrTableExpandedRowDirective,
+  PrTableEmptyDirective,
+  PrTableLoadingDirective,
+  PrSortableColumnDirective,
+  PrSortIconComponent,
+  PrRowTogglerDirective
+} from '../../../../shared/components/pr-table';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 
 @Component({
     selector: 'app-wp-home',
     imports: [
         CommonModule,
-        TableModule,
-        ButtonModule,
+        PrGroupTableComponent,
+        PrTableHeaderDirective,
+        PrTableGroupHeaderDirective,
+        PrTableExpandedRowDirective,
+        PrTableEmptyDirective,
+        PrTableLoadingDirective,
+        PrSortableColumnDirective,
+        PrSortIconComponent,
+        PrRowTogglerDirective,
+        HlmButton,
         CustomSpinnerModule,
         RouterLink,
         FilterIndicatorBySearchPipe,
         FormsModule,
-        TooltipModule,
         CustomFieldsModule
     ],
     templateUrl: './wp-home.component.html',
     styleUrl: './wp-home.component.scss',
-    providers: [MessageService],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WpHomeComponent implements OnDestroy, OnInit {
@@ -37,7 +52,7 @@ export class WpHomeComponent implements OnDestroy, OnInit {
   outcomeIService = inject(OutcomeIndicatorService);
   activatedRoute = inject(ActivatedRoute);
   exportTablesSE = inject(ExportTablesService);
-  messageService = inject(MessageService);
+  messageService = inject(PrToastService);
 
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Work package outcome indicators list');

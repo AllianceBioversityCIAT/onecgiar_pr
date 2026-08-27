@@ -5,7 +5,7 @@ The single web platform where **OneCGIAR Initiatives, Centers, and partners plan
 This monorepo contains both halves of the system:
 
 - **Backend** — `onecgiar-pr-server/` — NestJS 11 + TypeORM + MySQL, deployed to AWS Lambda (Serverless) or Docker.
-- **Frontend** — `onecgiar-pr-client/` — Angular 19 + PrimeNG 19, served as a static SPA behind Nginx.
+- **Frontend** — `onecgiar-pr-client/` — Angular 21 + PrimeNG, served as a static SPA behind Nginx.
 
 > **Hosted documentation:** [PRMS Wiki on Mintlify](https://mintlify.wiki/AllianceBioversityCIAT/onecgiar_pr/introduction) — browse the project documentation online, including module references and onboarding material.
 
@@ -63,7 +63,7 @@ For the full product picture — problem statement, goals, success metrics, scop
 ## Architecture at a glance
 
 ```
-                            Browser (Angular 19 SPA)
+                            Browser (Angular 21 SPA)
                                      │
                                      │ HTTPS, custom `auth` header (JWT)
                                      ▼
@@ -93,7 +93,7 @@ Highlights:
 - **MySQL is the system of record.** DynamoDB is operational logs only.
 - **AWS Cognito + Active Directory (LDAP)** for identity. PRMS doesn't own user provisioning.
 
-Full technical blueprint: [`docs/detailed-design/detailed-design.md`](./docs/detailed-design/detailed-design.md).
+Full technical blueprint: [`docs/trd/trd.md`](./docs/trd/trd.md).
 
 ---
 
@@ -108,7 +108,7 @@ onecgiar_pr/
 │   ├── serverless.yaml         AWS Lambda deploy config
 │   ├── Dockerfile              Node 20 multi-stage build
 │   └── CLAUDE.md               Backend package guide
-├── onecgiar-pr-client/         Angular 19 frontend
+├── onecgiar-pr-client/         Angular 21 frontend
 │   ├── src/                    Source tree (see src/CLAUDE.md for in-tree navigation)
 │   ├── cypress/                E2E tests
 │   ├── guides/                 Lint & format setup notes
@@ -117,8 +117,8 @@ onecgiar_pr/
 │   └── CLAUDE.md               Frontend package guide
 ├── docs/                       SDD constitutional baseline
 │   ├── prd.md                  Product Requirements Document
-│   ├── system-design/          UI/UX system blueprint
-│   ├── detailed-design/        Technical implementation blueprint
+│   ├── ux-ui/                  UI/UX system blueprint
+│   ├── trd/                    Technical requirements document (TRD)
 │   └── specs/                  Module-level specs + general-setup templates
 ├── .github/                    CI workflows
 ├── .husky/                     Git hooks
@@ -159,7 +159,7 @@ cd onecgiar-pr-client && npm ci && cd ..
 
 Both apps read from environment variables. Common keys:
 
-- **Backend** (`onecgiar-pr-server/.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER_NAME`, `DB_USER_PASS`, `JWT_SKEY`, `JWT_EXPIRES`, plus RabbitMQ, AWS, Cognito, AD, CLARISA, MQAP, SharePoint vars.
+- **Backend** (`onecgiar-pr-server/.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER_NAME`, `DB_USER_PASS`, `JWT_SKEY`, `JWT_EXPIRES`, `CGSPACE_DISCOVERY_URL` (CGSpace DSpace 7 REST base — **required**, no in-code fallback; set to `https://cgspace.cgiar.org/server/api`; when unset the KP *Browse CGSpace* tab degrades to an error state and Manual entry still works), plus RabbitMQ, AWS, Cognito, AD, CLARISA, MQAP, SharePoint vars.
 - **Frontend** (`onecgiar-pr-client/src/environments/environment.ts`): `apiBaseUrl`, Cognito + Pusher keys, etc.
 
 Secrets live in environment variables, AWS Secrets Manager, or GitHub Secrets. **Never commit `.env` files or paste tokens / webhook URLs into logs or commits** — see [Security](#security).
@@ -251,8 +251,8 @@ PRMS uses **Spec-Driven Development** (SDD). The hierarchy is:
 README.md                                ← you are here
   └── CLAUDE.md                          (operating instructions)
         ├── docs/prd.md                  Product baseline (problem, personas, goals, AC-1..AC-9)
-        ├── docs/system-design/design.md UI/UX system blueprint (tokens, components, flows, a11y)
-        ├── docs/detailed-design/        Technical implementation blueprint
+        ├── docs/ux-ui/design.md UI/UX system blueprint (tokens, components, flows, a11y)
+        ├── docs/trd/                    Technical requirements document (TRD)
         ├── docs/specs/general-setup/    Templates that module specs MUST follow
         ├── docs/specs/<module>/         Module-level specs (requirements + design + task)
         ├── onecgiar-pr-server/CLAUDE.md Backend package guide
@@ -267,8 +267,8 @@ README.md                                ← you are here
 |---|---|
 | Browse the docs online without cloning | [PRMS Wiki on Mintlify](https://mintlify.wiki/AllianceBioversityCIAT/onecgiar_pr/introduction) |
 | Understand the product, scope, goals, metrics, personas | [`docs/prd.md`](./docs/prd.md) |
-| Understand UI/UX rules, tokens, components, screens | [`docs/system-design/design.md`](./docs/system-design/design.md) |
-| Understand the technical architecture | [`docs/detailed-design/detailed-design.md`](./docs/detailed-design/detailed-design.md) |
+| Understand UI/UX rules, tokens, components, screens | [`docs/ux-ui/design.md`](./docs/ux-ui/design.md) |
+| Understand the technical architecture | [`docs/trd/trd.md`](./docs/trd/trd.md) |
 | Write a new module spec | Start from [`docs/specs/general-setup/`](./docs/specs/general-setup/) |
 | Work on the backend | [`onecgiar-pr-server/CLAUDE.md`](./onecgiar-pr-server/CLAUDE.md) → [`onecgiar-pr-server/src/CLAUDE.md`](./onecgiar-pr-server/src/CLAUDE.md) |
 | Work on the frontend | [`onecgiar-pr-client/CLAUDE.md`](./onecgiar-pr-client/CLAUDE.md) → [`onecgiar-pr-client/src/CLAUDE.md`](./onecgiar-pr-client/src/CLAUDE.md) |

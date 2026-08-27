@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter, map, startWith } from 'rxjs/operators';
 import { ResultsNotificationsService } from './pages/results-notifications/results-notifications.service';
-import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-results-outlet',
@@ -9,8 +11,21 @@ import { Router } from '@angular/router';
   standalone: false
 })
 export class ResultsOutletComponent {
-  constructor(
-    public resultsNotificationsSE: ResultsNotificationsService,
-    public router: Router
-  ) {}
+  public resultsNotificationsSE = inject(ResultsNotificationsService);
+  private readonly router = inject(Router);
+
+  /** Results list owns CURRENT chrome (title + filters); hide the legacy page-header + card shell. */
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map(() => this.router.url),
+      startWith(this.router.url)
+    ),
+    { initialValue: this.router.url }
+  );
+
+  readonly isResultsList = computed(() => {
+    // This outlet only hosts results-list + notifications. List owns CURRENT chrome.
+    return !(this.url() ?? '').includes('results-notifications');
+  });
 }

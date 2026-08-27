@@ -37,7 +37,7 @@
       </app-pr-radio-button>
 
       <div *ngIf="this.resultLevelSE.resultBody.result_level_id">
-        <app-alert-status *ngIf="isKnowledgeProduct" [description]="this.kpAlertDescription"> </app-alert-status>
+        <app-alert-status *ngIf="isKnowledgeProduct" [description]="this.kpAlertDescription()"> </app-alert-status>
 
         <div [ngClass]="{ mqap_sync_title: isKnowledgeProduct }">
           <app-pr-input

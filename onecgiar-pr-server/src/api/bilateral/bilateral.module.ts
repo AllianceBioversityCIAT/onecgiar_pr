@@ -45,15 +45,51 @@ import { ResultsCapacityDevelopmentsRepository } from '../results/summary/reposi
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
 import { NoopBilateralHandler } from './handlers/noop.handler';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ActorTypeRepository } from '../results/result-actors/repositories/actors-type.repository';
+import { BilateralVersioningService } from './services/bilateral-versioning.service';
+import { BilateralVersioningRulesModule } from './versioning-rules/bilateral-versioning-rules.module';
 import { PathwayModule } from '../ipsr-framework/pathway/pathway.module';
 import { ClarisaApiKeyValidationService } from './services/clarisa-api-key-validation.service';
 import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
+import { BilateralCenterController } from './bilateral-center.controller';
+import { BilateralProjectsService } from './services/bilateral-projects.service';
+import { BilateralCenterService } from './services/bilateral-center.service';
+import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ResultByLevelModule } from '../results/result-by-level/result-by-level.module';
+import { Result } from '../results/entities/result.entity';
+import { BilateralAiJob } from '../bilateral-ai/entities/bilateral-ai-job.entity';
+import { BilateralAiDraft } from '../bilateral-ai/entities/bilateral-ai-draft.entity';
+import { DraftEvidence } from '../bilateral-ai/entities/draft-evidence.entity';
+import { BilateralAiController } from '../bilateral-ai/bilateral-ai.controller';
+import { BilateralAiConsumer } from '../bilateral-ai/bilateral-ai.consumer';
+import { BilateralAiService } from '../bilateral-ai/services/bilateral-ai.service';
+import { BilateralAiFileStorageService } from '../bilateral-ai/services/bilateral-ai-file-storage.service';
+import { BilateralAiTextMiningService } from '../bilateral-ai/services/bilateral-ai-text-mining.service';
+import { BilateralAiProcessingQueueModule } from '../../shared/microservices/bilateral-ai-processing-queue/bilateral-ai-processing-queue.module';
+import { RoleByUserModule } from '../../auth/modules/role-by-user/role-by-user.module';
+import { AdUsersModule } from '../ad_users/ad_users.module';
+import { WebhookOutboxModule } from '../results/webhook/webhook-outbox.module';
+import { BilateralWebhookController } from './bilateral-webhook.controller';
+import { BilateralWebhookService } from './services/bilateral-webhook.service';
 
 @Module({
   imports: [
     HttpModule,
+    TypeOrmModule.forFeature([
+      ClarisaProject,
+      ClarisaCenter,
+      ClarisaInitiative,
+      Result,
+      BilateralAiJob,
+      BilateralAiDraft,
+      DraftEvidence,
+    ]),
     ResultsModule,
     VersioningModule,
+    BilateralVersioningRulesModule,
     UserModule,
     ClarisaRegionsModule,
     YearsModule,
@@ -85,12 +121,27 @@ import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
     ResultsByInititiativesModule,
     ShareResultRequestModule,
     PathwayModule,
+    ResultByLevelModule,
+    BilateralAiProcessingQueueModule,
+    RoleByUserModule,
+    AdUsersModule,
+    // P2-3166: the endpoint repository, for registering a platform's callback destination. Safe to
+    // import — that module has no service dependencies, so it cannot close a cycle back into here.
+    WebhookOutboxModule,
   ],
-  controllers: [BilateralController],
+  controllers: [
+    BilateralWebhookController,
+    BilateralCenterController,
+    BilateralController,
+    BilateralAiController,
+    BilateralAiConsumer,
+  ],
   providers: [
     ClarisaApiKeyValidationService,
     ClarisaApiKeyGuard,
     BilateralService,
+    BilateralProjectsService,
+    BilateralCenterService,
     KnowledgeProductBilateralHandler,
     CapacityChangeBilateralHandler,
     InnovationDevelopmentBilateralHandler,
@@ -102,6 +153,17 @@ import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
     ResultsCapacityDevelopmentsRepository,
     ResultsPolicyChangesRepository,
     NonPooledProjectBudgetRepository,
+    ActorTypeRepository,
+    BilateralVersioningService,
+    BilateralAiService,
+    BilateralAiFileStorageService,
+    BilateralAiTextMiningService,
+    BilateralWebhookService,
   ],
+  // P2-3166: the webhook dispatcher builds its payload from `BilateralService.findOne`, reusing the
+  // enrichment path that already serves `GET /api/bilateral/results` instead of writing a second
+  // serializer for the same document. Safe direction — `WebhookDispatchModule` imports this one and
+  // nothing imports it back.
+  exports: [BilateralService],
 })
 export class BilateralModule {}

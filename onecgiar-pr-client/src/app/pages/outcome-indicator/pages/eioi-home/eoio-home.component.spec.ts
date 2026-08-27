@@ -5,7 +5,6 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
-import { MessageService } from 'primeng/api';
 jest.useFakeTimers();
 
 describe('EoioHomeComponent', () => {
@@ -18,7 +17,7 @@ describe('EoioHomeComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CommonModule, EoioHomeComponent, HttpClientTestingModule, RouterTestingModule],
       declarations: [],
-      providers: [ExportTablesService, OutcomeIndicatorService, MessageService]
+      providers: [ExportTablesService, OutcomeIndicatorService]
     }).compileComponents();
 
     fixture = TestBed.createComponent(EoioHomeComponent);

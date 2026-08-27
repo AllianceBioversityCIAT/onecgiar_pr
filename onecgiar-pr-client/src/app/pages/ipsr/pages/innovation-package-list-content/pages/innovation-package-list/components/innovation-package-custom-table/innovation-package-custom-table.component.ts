@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output, signal } from '@angular/core';
 import { RetrieveModalService } from '../../../../../../../results/pages/result-detail/components/retrieve-modal/retrieve-modal.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { IpsrListService } from '../../services/ipsr-list.service';
@@ -33,11 +33,50 @@ export class InnovationPackageCustomTableComponent {
     { title: 'Created by', attr: 'created_by' }
   ];
 
+  // Action menu overlay state (replaces PrimeNG p-popover)
+  menuOpen = signal(false);
+  menuTop = 0;
+  menuLeft = 0;
+
   constructor(
     public api: ApiService,
     public retrieveModalSE: RetrieveModalService,
     public ipsrListService: IpsrListService
   ) {}
+
+  /** trackBy for the sub-results loops so rows are reused instead of destroyed/recreated. (P2-2973) */
+  trackBySubResult(_index: number, subResult: any): any {
+    return subResult?.id ?? _index;
+  }
+
+  toggleMenu(event: MouseEvent, subResult?: any) {
+    if (subResult) this.onPressAction(subResult);
+    event.stopPropagation();
+
+    if (this.menuOpen()) {
+      this.menuOpen.set(false);
+      return;
+    }
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.menuTop = rect.bottom + 6;
+    this.menuLeft = rect.right;
+    this.menuOpen.set(true);
+  }
+
+  closeMenu() {
+    this.menuOpen.set(false);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick() {
+    if (this.menuOpen()) this.menuOpen.set(false);
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll() {
+    if (this.menuOpen()) this.menuOpen.set(false);
+  }
 
   items: ItemMenu[] = [
     {

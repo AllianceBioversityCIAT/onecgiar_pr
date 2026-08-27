@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 import { ResultsApiService } from './results-api.service';
+import { BilateralApiService } from './bilateral-api.service';
 import { DataControlService } from '../data-control.service';
 import { RolesService } from '../global/roles.service';
 import { Title } from '@angular/platform-browser';
@@ -76,8 +77,18 @@ describe('ApiService', () => {
 
     rolesServiceSpy = {
       validateReadOnly: jest.fn(),
+      applyRolesResponse: jest.fn(function (this: { roles: unknown; isAdmin: boolean }, response: { application?: { role_id: number } }) {
+        if (!response) return;
+        this.roles = response;
+        this.isAdmin = response?.application?.role_id == 1;
+      }),
       readOnly: false,
-      isAdmin: false
+      isAdmin: false,
+      getMyCenters: jest.fn(() => [] as any[]),
+      roles: null,
+      getIsAdminValue: jest.fn(function (this: { roles: { application?: { role_id: number } } | null; isAdmin: boolean }) {
+        this.isAdmin = this.roles?.application?.role_id == 1;
+      })
     };
 
     titleServiceSpy = { setTitle: jest.fn() };
@@ -110,6 +121,7 @@ describe('ApiService', () => {
         ApiService,
         { provide: AuthService, useValue: authServiceSpy },
         { provide: ResultsApiService, useValue: resultsApiServiceSpy },
+        { provide: BilateralApiService, useValue: {} },
         { provide: DataControlService, useValue: dataControlServiceSpy },
         { provide: RolesService, useValue: rolesServiceSpy },
         { provide: Title, useValue: titleServiceSpy },
@@ -164,6 +176,7 @@ describe('ApiService', () => {
       ];
       const mockRoles = {
         response: {
+          application: { role_id: 1 },
           initiative: [
             { initiative_id: 10, description: 'Lead' },
             { initiative_id: 20, description: 'Member' }
@@ -187,6 +200,9 @@ describe('ApiService', () => {
 
       service.updateUserData(callback);
 
+      expect(rolesServiceSpy.applyRolesResponse).toHaveBeenCalledWith(mockRoles.response);
+      expect(rolesServiceSpy.roles).toEqual(mockRoles.response);
+      expect(rolesServiceSpy.isAdmin).toBe(true);
       expect(dataControlServiceSpy.myInitiativesList).toEqual(mockInitiatives);
       expect(dataControlServiceSpy.myInitiativesLoaded).toBe(true);
       expect(mockInitiatives[0].role).toBe('Lead');
@@ -214,18 +230,32 @@ describe('ApiService', () => {
       expect(callback).toHaveBeenCalled();
     });
 
+    it('should still call callback when roles API fails', () => {
+      const callback = jest.fn();
+      authServiceSpy.GET_allRolesByUser.mockReturnValue(throwError(() => new Error('roles API error')));
+      authServiceSpy.GET_initiativesByUser.mockReturnValue(of({ response: [] }));
+      authServiceSpy.GET_initiativesByUserByPortfolio.mockReturnValue(of({ response: { reporting: [], ipsr: [] } }));
+
+      service.updateUserData(callback);
+
+      expect(callback).toHaveBeenCalled();
+      expect(rolesServiceSpy.applyRolesResponse).toHaveBeenCalledWith(undefined);
+    });
+
     it('should handle error path in forkJoin subscribe', () => {
       const callback = jest.fn();
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       authServiceSpy.GET_allRolesByUser.mockReturnValue(throwError(() => new Error('API error')));
+      authServiceSpy.GET_initiativesByUser.mockReturnValue(throwError(() => new Error('API error')));
+      authServiceSpy.GET_initiativesByUserByPortfolio.mockReturnValue(throwError(() => new Error('API error')));
 
       service.updateUserData(callback);
 
       expect(dataControlServiceSpy.myInitiativesLoaded).toBe(true);
       expect(resultsListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalled();
       expect(ipsrListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalled();
-      expect(callback).not.toHaveBeenCalled();
+      expect(callback).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalled();
 
       consoleSpy.mockRestore();
@@ -631,6 +661,58 @@ describe('ApiService', () => {
     it('should call titleService.setTitle with given title', () => {
       service.setTitle('Test Title');
       expect(titleServiceSpy.setTitle).toHaveBeenCalledWith('Test Title');
+    });
+  });
+
+  // P2-3229. Deliberately not `shouldShowUpdate`: bilaterals answer to the lead CENTRE, not to
+  // the initiative map, and they also require the result to be approved.
+  describe('canUpdateBilateral', () => {
+    const currentPhase = { phaseYear: 2024 };
+    const approvedBilateral = (overrides: any = {}): any => ({
+      phase_year: 2023,
+      status_name: 'Approved',
+      lead_center: 'CIAT (Alliance)',
+      ...overrides
+    });
+
+    beforeEach(() => {
+      rolesServiceSpy.isAdmin = false;
+      rolesServiceSpy.getMyCenters = jest.fn(() => [{ center_id: 'CENTER-03', center_acronym: 'CIAT (Alliance)' }]);
+    });
+
+    it('allows a user of the lead centre on an approved past-phase result', () => {
+      expect(service.canUpdateBilateral(approvedBilateral(), currentPhase)).toBe(true);
+    });
+
+    it('refuses a user who belongs to another centre', () => {
+      rolesServiceSpy.getMyCenters = jest.fn(() => [{ center_id: 'CENTER-11', center_acronym: 'IITA' }]);
+      expect(service.canUpdateBilateral(approvedBilateral(), currentPhase)).toBe(false);
+    });
+
+    it.each(['Editing', 'Submitted', 'Pending Review', 'Rejected'])('refuses a result that is %s', status => {
+      expect(service.canUpdateBilateral(approvedBilateral({ status_name: status }), currentPhase)).toBe(false);
+    });
+
+    it('refuses a result already in the current phase', () => {
+      expect(service.canUpdateBilateral(approvedBilateral({ phase_year: 2024 }), currentPhase)).toBe(false);
+    });
+
+    it('refuses when the result has no lead centre', () => {
+      expect(service.canUpdateBilateral(approvedBilateral({ lead_center: null }), currentPhase)).toBe(false);
+    });
+
+    it('allows an admin regardless of centre membership', () => {
+      rolesServiceSpy.isAdmin = true;
+      rolesServiceSpy.getMyCenters = jest.fn(() => []);
+      expect(service.canUpdateBilateral(approvedBilateral(), currentPhase)).toBe(true);
+    });
+
+    // The list reports `lead_center` as the CLARISA ACRONYM. Comparing it against `center_id`,
+    // which is the code, matches nothing — the action would never appear and nothing would say why.
+    it('matches on the centre acronym, not on the centre code', () => {
+      rolesServiceSpy.getMyCenters = jest.fn(() => [{ center_id: 'CENTER-03', center_acronym: 'CIAT (Alliance)' }]);
+      expect(service.canUpdateBilateral(approvedBilateral({ lead_center: 'CENTER-03' }), currentPhase)).toBe(false);
+      expect(service.canUpdateBilateral(approvedBilateral({ lead_center: 'CIAT (Alliance)' }), currentPhase)).toBe(true);
     });
   });
 

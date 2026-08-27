@@ -14,16 +14,16 @@ import { InnovationLinksComponent } from './components/innovation-links/innovati
 import { YmzListStructureItemModule } from '../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { NonPooledInfoComponent } from './components/estimates/components/non-pooled-info/non-pooled-info.component';
 import { NonPooledInfoP25Component } from './components/estimates/components/non-pooled-info-p25/non-pooled-info.component';
-import { DialogModule } from 'primeng/dialog';
-import { SkeletonModule } from 'primeng/skeleton';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
-import { MessageModule } from 'primeng/message';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
 import { UserEvidenceComponent } from './components/user-evidence/user-evidence.component';
 import { InnovationUseFormModule } from '../../../../../../../shared/components/innovation-use-form/innovation-use-form.module';
 import { AssumptionsExaminationComponent } from './components/assumptions-examination/assumptions-examination.component';
 import { PartnersPoliciesSafeguardsComponent } from './components/partners-policies-safeguards/partners-policies-safeguards.component';
+import { SectionBottomBarComponent } from '../../../components/section-bottom-bar/section-bottom-bar.component';
+import { StageAssessmentComponent } from './components/stage-assessment/stage-assessment.component';
 
 @NgModule({
   declarations: [
@@ -40,17 +40,16 @@ import { PartnersPoliciesSafeguardsComponent } from './components/partners-polic
     MegatrendsComponent,
     AssumptionsExaminationComponent,
     PartnersPoliciesSafeguardsComponent,
-    NonPooledInfoP25Component
+    NonPooledInfoP25Component,
+    StageAssessmentComponent
   ],
-  imports: [
+  imports: [SectionBottomBarComponent,
     CommonModule,
     InnovationDevInfoRoutingModule,
     CustomFieldsModule,
     YmzListStructureItemModule,
-    DialogModule,
+    PrDialogComponent,
     FeedbackValidationDirectiveModule,
-    SkeletonModule,
-    MessageModule,
     TermPipe,
     InnovationUseFormModule
   ]

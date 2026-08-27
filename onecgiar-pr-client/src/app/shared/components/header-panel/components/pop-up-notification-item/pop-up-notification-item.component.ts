@@ -1,6 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormatTimeAgoPipe } from '../../../../pipes/format-time-ago/format-time-ago.pipe';
+import { BilateralApiService } from '../../../../services/api/bilateral-api.service';
+import { ResultsApiService } from '../../../../services/api/results-api.service';
+import {
+  buildResultNotificationText,
+  getNotificationActionVerb,
+  getResultNotificationTextParts,
+  isBilateralReviewNotification,
+  isContributionDecisionNotification,
+  isResultTaggedNotification
+} from '../../../../constants/notification-type.constants';
 
 @Component({
   selector: 'app-pop-up-notification-item',
@@ -10,15 +21,53 @@ import { FormatTimeAgoPipe } from '../../../../pipes/format-time-ago/format-time
 })
 export class PopUpNotificationItemComponent {
   @Input() notification: any;
+  @Output() itemSelected = new EventEmitter<void>();
+
+  private readonly router = inject(Router);
+  private readonly bilateralApi = inject(BilateralApiService);
+  private readonly resultsApi = inject(ResultsApiService);
 
   generateNotificationTextUpdates(notification) {
-    if (notification?.notification_type === 1 || notification?.notification_type === 2 || notification?.notification_type === 5) {
-      return `${notification?.obj_emitter_user?.first_name} ${notification?.obj_emitter_user?.last_name} has ${this.getNotificationAction(
-        notification?.notification_type
-      )} the result ${notification?.obj_result?.result_code} - ${notification?.obj_result?.title}`;
-    }
+    return buildResultNotificationText(notification);
+  }
 
-    return `The result ${notification?.obj_result?.result_code} - ${notification?.obj_result?.title} was successfully Quality Assessed.`;
+  /** Text parts for the template, resolved by type NAME (P2-3157). */
+  textPartsOf(notification) {
+    return getResultNotificationTextParts(notification);
+  }
+
+  /** True for the bilateral Approved / Rejected types, which route to the centre dashboard. */
+  isBilateralReview(notification): boolean {
+    return isBilateralReviewNotification(notification);
+  }
+
+  /** True for the P2-3214 tagged types, which route straight to the result. */
+  isResultTagged(notification): boolean {
+    return isResultTaggedNotification(notification);
+  }
+
+  /**
+   * True for the P2-3188 contribution decision types, which route to the result as well — what the
+   * centre wants to see is the result the SP accepted or declined, not a filtered list.
+   */
+  isContributionDecision(notification): boolean {
+    return isContributionDecisionNotification(notification);
+  }
+
+  /**
+   * P2-3214 AC4 — the tagged centre is sent to the result itself, not to the filtered notification
+   * list `generateUrlLink` builds. Mirrors `NotificationItemComponent.resultUrl`, including the
+   * IPSR result types, which live under a different route.
+   */
+  private resultDetailUrl(notification): string | null {
+    const resultCode = notification?.obj_result?.result_code;
+    if (!resultCode) return null;
+
+    const phase = notification?.obj_result?.obj_version?.id;
+    const typeId = notification?.obj_result?.obj_result_type?.id;
+    const base = typeId === 10 || typeId === 11 ? '/ipsr/detail' : '/result/result-detail';
+
+    return `${base}/${resultCode}/general-information?phase=${phase}`;
   }
 
   generateUrlLink(notification) {
@@ -34,6 +83,75 @@ export class PopUpNotificationItemComponent {
     }
   }
 
+  /**
+   * P2-3157 AC3 + AC5. A bilateral review notification takes the centre user to their bilateral
+   * dashboard with the decided result in focus, and is marked read on the way out. Every other
+   * notification keeps its plain anchor navigation untouched.
+   */
+  onNotificationClick(event: MouseEvent): void {
+    const notification = this.notification;
+
+    // P2-3214 AC4 + AC5, and P2-3188 which shares the same destination.
+    if (this.isResultTagged(notification) || this.isContributionDecision(notification)) {
+      const url = this.resultDetailUrl(notification);
+      if (!url) {
+        this.itemSelected.emit();
+        return;
+      }
+      event.preventDefault();
+      this.markAsRead(notification);
+      this.itemSelected.emit();
+      this.router.navigateByUrl(url);
+      return;
+    }
+
+    if (!this.isBilateralReview(notification)) {
+      this.itemSelected.emit();
+      return;
+    }
+
+    event.preventDefault();
+    this.markAsRead(notification);
+
+    const resultId = notification?.result_id;
+    const resultCode = notification?.obj_result?.result_code;
+
+    // The lead centre is fetched on click rather than embedded in the notification payload, to keep
+    // the notification list queries free of extra joins.
+    this.bilateralApi.GET_centersByResultId(resultId).subscribe({
+      next: response => {
+        const centers = response?.response ?? [];
+        const leadCenter = centers.find(center => !!center?.is_leading_result) ?? centers[0];
+        const acronym = leadCenter?.acronym || leadCenter?.code;
+
+        this.itemSelected.emit();
+
+        if (acronym) {
+          this.router.navigate(['/bilateral', acronym, 'home'], {
+            queryParams: resultCode ? { result: resultCode } : {}
+          });
+        } else {
+          this.router.navigateByUrl(this.generateUrlLink(notification));
+        }
+      },
+      error: () => {
+        this.itemSelected.emit();
+        this.router.navigateByUrl(this.generateUrlLink(notification));
+      }
+    });
+  }
+
+  private markAsRead(notification): void {
+    if (!notification?.notification_id || notification?.read) return;
+
+    this.resultsApi.PATCH_readNotification(notification.notification_id).subscribe({
+      next: () => {
+        notification.read = true;
+      },
+      error: err => console.error('Error marking notification as read:', err)
+    });
+  }
+
   generateNotificationTextRequest(notification) {
     if (notification?.is_map_to_toc) {
       return `${notification?.obj_requested_by?.first_name} ${notification?.obj_requested_by?.last_name} from ${notification?.obj_shared_inititiative?.official_code} has requested contribution to result ${notification?.obj_result?.result_code} - ${notification?.obj_result?.title} submitted by ${notification?.obj_owner_initiative?.official_code}`;
@@ -43,17 +161,6 @@ export class PopUpNotificationItemComponent {
   }
 
   getNotificationAction(notificationType: number) {
-    switch (notificationType) {
-      case 1:
-        return 'submitted';
-      case 2:
-        return 'unsubmitted';
-      case 3:
-        return 'Quality Assessed';
-      case 5:
-        return 'created';
-      default:
-        return '';
-    }
+    return getNotificationActionVerb(this.notification ?? { notification_type: notificationType });
   }
 }

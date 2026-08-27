@@ -1,4 +1,8 @@
+:host {
+  display: block;
+}
+
 .local_container {
-    display: grid;
-    grid-template-columns: auto 1fr;
+  padding-top: 16px;
+  box-sizing: border-box;
 }

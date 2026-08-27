@@ -1,12 +1,21 @@
-# CLAUDE.md — `onecgiar-pr-client` (Angular 19 frontend)
+# CLAUDE.md — `onecgiar-pr-client` (Angular 21 frontend)
 
 This is the **package-level guide** for the PRMS Angular client. It complements the root [`../CLAUDE.md`](../CLAUDE.md) and the SDD constitutional baseline under [`../docs/`](../docs/).
+
+> 🚧 **STACK MIGRATED — Angular 21 + Tailwind 4 + Spartan UI.** The Angular 21 upgrade and the PrimeNG → Spartan migration have landed: `package.json` pins `@angular/*` **^21.2.18**, `tailwindcss` **^4.3.2** and `@spartan-ng/brain` **^1.1.0**, and **`primeng` is no longer a dependency** — only `primeicons` (^7.0.0) remains, imported as plain CSS in `src/styles.scss`. There is no `providePrimeNG(...)` call left in `src/app/app.module.ts`, and **0** `from 'primeng/...'` imports remain under `src/`. Background on how it got here: [`docs/refactor-angular21-spartan-migration.md`](./docs/refactor-angular21-spartan-migration.md). Anything in an older doc that says "Angular 19 + PrimeNG" is stale — this file describes the stack the branch actually has.
+
+> 🅰️ **MANDATORY — Spartan MCP + skill for ANY frontend work (no exceptions).** This package ships spartan/ui (`@spartan-ng/brain` + `@spartan-ng/cli`, `components.json`). Two assistant tools are installed at the client level to make UI development correct and faster — **use them every time you touch the UI, before writing any component/markup/style:**
+>
+> - **Spartan MCP** (`spartan-ui`, registered in [`.mcp.json`](./.mcp.json)) — 17 tools that fetch **live** spartan/ui component APIs, blocks, and docs from spartan.ng. Query it for the real API/props/usage of any Spartan component **instead of guessing or relying on memory**. Approve the server once (`claude` prompts for project-scoped MCP approval on start).
+> - **Spartan skill** (`.claude/skills/spartan` → `.agents/skills/spartan`) — procedural knowledge of the Brain (headless) / Helm (styled) two-layer architecture, the `@spartan-ng/cli` generators, and composition patterns. Auto-activates in any folder with a `components.json` (i.e. this client).
+>
+> **Rule:** adding, composing, migrating (PrimeNG → Spartan), fixing, or styling any component → consult the Spartan MCP for the current component contract and follow the skill's patterns/generators. Do **not** hand-author Spartan components from memory or hallucinate props. If a session runs from the monorepo root instead of `onecgiar-pr-client/`, these tools may not auto-load — start UI work from the client folder so they engage.
 
 > **Always read the root guide first.** Frontend work MUST follow the SDD methodology:
 >
 > - [`../docs/prd.md`](../docs/prd.md) — product baseline (personas, goals, `AC-1..AC-9`).
-> - [`../docs/system-design/design.md`](../docs/system-design/design.md) — **UI/UX system blueprint** (tokens, components, flows, a11y). The canonical reference for any visual or interaction decision.
-> - [`../docs/detailed-design/detailed-design.md`](../docs/detailed-design/detailed-design.md) — technical blueprint (frontend module layout, API surfaces, integrations).
+> - [`../docs/ux-ui/design.md`](../docs/ux-ui/design.md) — **UI/UX system blueprint** (tokens, components, flows, a11y). The canonical reference for any visual or interaction decision.
+> - [`../docs/trd/trd.md`](../docs/trd/trd.md) — technical blueprint (frontend module layout, API surfaces, integrations).
 > - [`../docs/specs/general-setup/`](../docs/specs/general-setup/) — templates `/sdd-specify` MUST follow.
 >
 > **Source-tree navigation lives in [`src/CLAUDE.md`](./src/CLAUDE.md).** This file covers package-level concerns (auth header, build/test, conventions); `src/CLAUDE.md` is the in-tree guide with folder-by-folder navigation, the route tables, the service / component / theme patterns, and the anti-patterns to avoid.
@@ -15,12 +24,15 @@ This is the **package-level guide** for the PRMS Angular client. It complements 
 
 ## 1. Project overview
 
-PRMS (Planning and Reporting Management System) — the Angular 19 frontend that result submitters, QA reviewers, PMU leads, and platform admins use every day. Builds via Angular CLI; ships as a static SPA fronted by Nginx (`nginx.conf` + `Dockerfile`).
+PRMS (Planning and Reporting Management System) — the Angular 21 frontend that result submitters, QA reviewers, PMU leads, and platform admins use every day. Builds via Angular CLI; ships as a static SPA fronted by Nginx (`nginx.conf` + `Dockerfile`).
 
 | Item | Value |
 |---|---|
-| Framework | Angular **19.2** |
-| UI library | PrimeNG **19** + `@primeng/themes/aura` preset via `src/app/theme/reportingTheme.ts` |
+| Framework | Angular **21.2** (`@angular/*` ^21.2.18) |
+| UI library | **Spartan UI** — `@spartan-ng/brain` (headless Brain) + Helm components generated into `src/app/spartan` (`components.json`: `importAlias: "@spartan"`, `style: "vega"`) |
+| CSS | **Tailwind CSS 4** (`tailwindcss` ^4.3.2, `@tailwindcss/postcss`) + `@spartan-ng/brain/hlm-tailwind-preset.css`, entry `src/styles.scss` |
+| Icons | `@ng-icons/lucide` (+ `primeicons` CSS still imported for legacy icon classes) |
+| PrimeNG | **Removed.** Not in `package.json`; 0 `primeng` imports under `src/`; no `providePrimeNG(...)` in `app.module.ts` |
 | Unit tests | Jest (`jest-preset-angular`) |
 | E2E tests | Cypress |
 | State | Service + `signals` / `BehaviorSubject` (no NgRx) |
@@ -108,10 +120,14 @@ npm run test:coverage       # Jest with coverage
 npm run test:coverage:html  # Coverage with text-summary, cobertura, lcov reporters
 npm run lint                # ng lint
 npm run lint:fix            # ng lint --fix
-npm run cypress:open        # Cypress GUI
-npm run cypress:run         # Cypress headless
-npm run cypress:run:record  # Cypress recorded run
+npm run cypress:open        # Cypress GUI (E2E)
+npm run cypress:run         # Cypress headless (E2E)
+npm run cypress:component   # Cypress GUI (component testing)
+npm run test:ct             # Cypress component tests, headless
 ```
+
+> Cypress is **local-only** — there is no Cypress GitHub Actions workflow. It exists for local
+> and AI-agent self-verification (see §9 Component tests).
 
 ### Coverage thresholds (enforced in `package.json`)
 
@@ -161,7 +177,7 @@ src/
 │   │   └── routing/                 # routingApp + extraRoutingApp tables
 │   ├── internationalization/        # Terminology service + pipe (i18n)
 │   ├── sockets/                     # ngx-socket-io / WebSocket plumbing
-│   ├── theme/reportingTheme.ts      # PrimeNG theme mirroring src/styles/colors.scss
+│   ├── spartan/                     # Helm components generated by @spartan-ng/cli (alias @spartan)
 │   └── custom-fields/               # Bespoke field components
 ├── environments/                     # environment.ts, environment.prod.ts
 ├── styles/                           # Global SCSS tokens (colors, fonts, transitions, ...)
@@ -190,35 +206,124 @@ Always prefer this layout for new features. Cross-cutting primitives go to `shar
 
 ## 5. Theming, tokens, and design system
 
-Authoritative reference: [`../docs/system-design/design.md`](../docs/system-design/design.md).
+Authoritative reference: [`../docs/ux-ui/design.md`](../docs/ux-ui/design.md).
 
 ### Source of truth
 
 - **Tokens (SCSS):** `src/styles/colors.scss` and `src/styles/fonts.scss`. Custom variables and classes are prefixed `--pr-` / `.pr-`.
-- **Theme (TS):** `src/app/theme/reportingTheme.ts` mirrors the SCSS for PrimeNG (extends `@primeng/themes/aura`).
-- **Rule:** when a color or type changes, **update SCSS first** and reflect it in the TS theme. Never the other way around.
+- **Tailwind bridge:** `src/styles.scss` re-exposes those tokens to Tailwind in an `@theme inline { … }` block (`--color-brand-*` → `var(--pr-color-primary-*)`, `--color-surface-*`, `--color-ink-*`, `--font-mono`, …) and maps the Helm/shadcn keys (`--background`, `--primary`, `--ring`, `--sidebar*`) onto `--pr-*` values.
+- **Rule:** there is **one** source of truth and it is the SCSS. `colors.scss` / `fonts.scss` hold the values; `styles.scss` only *references* them with `var()`. **There is no TypeScript theme to mirror** — `src/app/theme/reportingTheme.ts` was deleted (commit `50710ea38`) and `src/app/theme/` no longer exists. If a doc still tells you to mirror a token in TS, that doc is stale.
+- `inline` on the `@theme` block is load-bearing: the values are `var()` references, so Tailwind must emit the `var()` into the utility instead of freezing resolution at `:root` (which would break every scoped override, e.g. the dark sidebar).
 
-### PrimeNG configuration
+### Colour scheme
 
-Provided in `app.module.ts` via `providePrimeNG({ theme: { preset: reportingTheme, options: { darkModeSelector: 'light' } } })`. The `darkModeSelector: 'light'` flag forces light mode globally — dark mode is **not** supported today.
+Light only. `color-scheme: light` is pinned on `:root` in `src/styles.scss`; the unreachable `:root.dark` block was removed (see the note in `src/styles.scss` ~L547). The dark sidebar is **not** dark mode — it is the `--sidebar*` token family painting dark chrome on a light page. Reintroducing dark mode is a separate change (scopable selector + toggle + persisted preference + contrast audit).
 
 ### Typography
 
-Poppins, loaded from Google Fonts. Base size **12px**. Use the `pr-typography($type)` mixin or utility classes (`pr-h1`, `pr-body-1`, etc.) from `src/styles/fonts.scss`.
+**Manrope** (variable 200–800) for display and UI text, **JetBrains Mono** (400/500/600) for codes and figures only — both loaded from Google Fonts by `src/styles/fonts.scss`. Base size **12px** on `html, body` (`src/styles/fonts.scss:14`).
+
+- `html, body { font-family: 'Manrope', 'Poppins', sans-serif; }` — Poppins is kept **only as a fallback alias** so stray legacy declarations resolve to the same stack. Poppins is no longer loaded or used as the brand face.
+- Mono is for result codes, SP/AOW/HLO identifiers and Target/Achieved values: `.pr-code` (12px), `.pr-figure` (18px), `.pr-figure-sm` (13px) — all `tabular-nums`, which is what keeps figure columns aligned. Exposed to Tailwind as `font-mono`.
+- Scale via the `pr-typography($type)` mixin or the generated utility classes (`.pr-h1`, `.pr-body-1`, …) from `src/styles/fonts.scss`.
 
 ### Component rules
 
-- Prefer **PrimeNG primitives** + **shared section components** over bespoke forms.
+- Prefer the **`custom-fields` primitives** (`app-pr-input`, `app-pr-select`, …) and **Spartan/Helm components** + **shared section components** over bespoke forms. Never a bare native `<select>`/`<input>`.
 - Status chips (`status_id` 1/2/3) MUST use a single shared component.
 - Result-level badges MUST use `--pr-color-result-level-*` tokens.
 - Tables MUST use `src/styles/table-custom-styles.scss`; filter strips MUST use `src/styles/filters-list.scss`; alerts MUST use `src/styles/custom-alert.scss`.
 - Layout patterns: page-shell + panel-menu for multi-section editors (Result Detail, IPSR); drawer for review; modal for confirm/destroy.
 
+### Styling — Tailwind-first (hard rule)
+
+**All NEW styling goes in Tailwind utilities in the template. Reach for SCSS only when it's genuinely necessary** — i.e. something Tailwind can't express cleanly:
+
+- `@keyframes` and other at-rules, complex multi-stop custom animations.
+- Pseudo-elements/selectors that would be unreadable as `before:`/`after:` arbitrary utilities.
+- `:host` box setup, and styles that must target projected/3rd-party DOM.
+- Data-driven values (dynamic gradients/colors from a signal) go via `[style.*]` bindings — not new SCSS classes.
+
+Do **not** author new `.pr-*`-style SCSS class blocks for layout/spacing/color/typography — use utilities. Arbitrary values are fine (`bg-[#1f2233]`, `shadow-[...]`, `bg-[radial-gradient(...)]`). PRMS brand tokens are exposed as utilities (`bg-brand-300`, `text-brand-400`, …) and CSS vars work in arbitrary values (`text-[var(--pr-color-secondary-400)]`). Keep the component's `.scss` as small as possible; an empty-but-for-`:host` file is the norm for new components. (Existing SCSS-heavy components are legacy — migrate opportunistically, don't add to them.)
+
+#### Tailwind preflight — ENABLED on `performance-refactor` (know how to approach it)
+
+`src/styles.scss` imports **Tailwind's preflight (base reset)**. It was historically **disabled** ("would reset PrimeNG") and **re-enabled on the `performance-refactor` branch** once PrimeNG was removed (0 `primeng` imports remain; only `primeicons`).
+
+What this means when working here:
+
+- **Preflight strips browser defaults app-wide** — `h1`-`h6` sizing/weight, `p`/`ul`/`ol` margins + list bullets, `<a>` blue color/underline, `<button>` native chrome, `body` margin, `img` inline. You style everything explicitly with utilities instead.
+- **Why it was turned on:** official **Spartan components (e.g. the sidebar) assume preflight**. Without it, browser defaults leak in and the component renders broken (list bullets, blue `<a>` links, native buttons). With preflight they render correctly out of the box — no per-component reset hacks.
+- **Known trade-off / migration debt:** legacy pages built *before* preflight assumed those defaults, so some **older layouts need touch-ups** (e.g. the header `test-environment-label` overlapping the `nav_pill` after the reset). These are being fixed opportunistically on the branch — if you touch a legacy page and a heading/list/button/spacing looks off, suspect a lost default and restyle it with utilities rather than reverting preflight.
+- **Do NOT re-disable preflight** to "fix" a single page — that reintroduces the Spartan-breakage. Fix the specific legacy element instead. A scoped reset in a component `.scss` (see `results-outlet.component.scss`) is an acceptable safety net but no longer required for Spartan components now that preflight is global.
+
+**Interactive controls — never raw native, always the design system.** For selects, inputs, checkboxes, radios, dialogs, tooltips, etc. use the project primitives — the **`custom-fields` components** (`app-pr-select`, `app-pr-input`, `app-pr-textarea`, `app-pr-checkbox`, …; import `CustomFieldsModule`, and pass `[editable]="true"` — `RolesService.readOnly` defaults to `true` and hides the control otherwise) or a **Spartan** component. **Before building ANY component, consult the Spartan MCP (`spartan-ui`) + the `spartan` skill for the real contract — do not hand-author from memory, and do not drop a bare `<select>`/`<input>` (it renders with the native OS look and breaks the design line).** `app-pr-select` API: `[options]`, `optionLabel`, `optionValue`, `placeholder`, `[required]="false"`, `[showClear]`, `(selectOptionEvent)`.
+
 ### A11y, responsive, i18n
 
-- A11y expectations: [`../docs/system-design/design.md` §10](../docs/system-design/design.md). Focus states use `--pr-color-primary-300`. Don't kill outlines.
+- A11y expectations: [`../docs/ux-ui/design.md` §10](../docs/ux-ui/design.md). Focus states use `--pr-color-primary-300`. Don't kill outlines.
 - Breakpoints: desktop-first; tablet must work. Use `<feature>.responsive.scss` for feature-level responsive overrides (see `result-creator.responsive.scss`).
 - **All user-facing strings MUST go through `src/app/internationalization/`.** No hard-coded English in templates.
+
+### Root font-size — the biggest trap in this codebase
+
+*Copied verbatim from the (now deleted) `docs/reporting-redesign/UI-RULES.md` §1.3 — these are
+shipped rules, not snapshot commentary. Section numbers in the text below refer to that original
+document and are kept as-written.*
+
+`html, body { font-size: 12px }`. Tailwind's type utilities are **rem-based**, so on this codebase:
+
+```
+text-sm  = 0.875rem = 10.5px   (not 14px)
+text-base = 1rem    = 12px     (not 16px)
+```
+
+Every size in the mockups is in **px**. If an agent writes `text-sm` expecting 14px, the whole UI comes out 25% small.
+
+**Decision: in redesign surfaces, never use rem-based Tailwind type utilities. Use explicit arbitrary px values** (`text-[14px]`, `leading-[1.45]`). Same for `size-*`/`w-*`/`h-*` where the spec gives px. Changing the root to 16px would fix this globally but would resize every legacy screen at once — out of scope here, log it as tech debt.
+
+### Hard UI rules (redesign surfaces)
+
+*Copied verbatim from the (now deleted) `docs/reporting-redesign/UI-RULES.md` §4.*
+
+Hard rules. A PR that breaks one does not merge.
+
+#### Structure
+
+1. **One `brand` button per screen.** Everything else is `brandSoft`, `outline` or `ghost`.
+2. **Never a modal on top of a modal.** Inside the drawer, secondary pickers are anchored popovers or a nested view within the same sheet with a `← Back` affordance.
+3. **One vertical scroll per view.** The drawer's header and footer are sticky; only its body scrolls.
+4. **`Escape` closes** drawer, command palette, popovers and menus. Every interactive control has a visible focus ring (`--pr-focus-ring`).
+5. **Empty states max 160px tall**: one line of 14/400 `--pr-text-secondary` + one ghost button. Never a full-height empty card.
+6. **Respect `prefers-reduced-motion`** — all durations to 1ms.
+
+#### Color
+
+7. **Violet is navigation and actions. Content surfaces are neutral.** Inside the content area there must be no violet border and no tinted background — the only exceptions are the program band, brand chips, and the primary button.
+8. **No hardcoded hex in components.** Only `var(--pr-*)` or the Tailwind aliases from §2.3.
+9. **Status fg/bg pairs are fixed.** Never recombine a foreground with another background, never invent a sixth status color.
+10. **Max two elevation levels per screen.** Cards separate with `--pr-border`, not shadow.
+11. **No gradients on large surfaces.**
+12. **Color only on semantic icons.** Decorative icons stay neutral; only the active nav icon is violet.
+
+#### Data display
+
+13. **Numeric values are `font-mono` + `tabular-nums`, right-aligned.** Column alignment is what makes the table scannable; losing it defeats the layout.
+14. **`Target` / `Achieved` are the only nomenclature.** Not "reported", not "progress", not "contribution". The year prefix follows the cycle selector.
+15. **Never a segmented progress meter on an indicator value.** Targets can be financial (`$1.2M`) or large-scale. Continuous bars only on group headers, where the number is a count of results and therefore a true proportion.
+16. **Long text is clamped, never broken.** Row title: `line-clamp-2` + inline `Show more`. HLO header: `line-clamp-1` + tooltip. Drawer: `line-clamp-3` + `Show more`. A 40-word tooltip is worse than truncation.
+17. **Row action reflects state:** `Report` when not started, `Continue` when in progress, no button once submitted.
+18. **No per-field "mandatory" badges.** Required-ness is communicated once, aggregated, in the drawer footer.
+
+#### Code
+
+19. **Tailwind-first.** New styling goes as utilities in the template. SCSS only for `@keyframes`, complex pseudo-elements, `:host` box setup, or projected third-party DOM.
+20. **No rem-based type utilities on redesign surfaces** (see §1.3). `text-[14px]`, not `text-sm`.
+21. **Icons from `@ng-icons/lucide` only.** No new `primeicons`. No inline SVG for anything Lucide already has.
+22. **Standalone components + signals.** Follow the existing `reporting-nav-sidebar` pattern: `inject()`, `signal()`, `computed()`, `toSignal()`. No NgRx.
+23. **API methods keep the `HTTP_METHOD_descriptiveName` convention** and the custom `auth` header — never `Authorization: Bearer`.
+24. **Never log tokens, keys, webhook URLs or credentials** (`.cursorrules`, hard rule).
+25. **Run only the touched module's specs**, never the full suite: `npm run test -- --testPathPattern="<file>.spec"`.
 
 ---
 
@@ -304,8 +409,93 @@ The interceptor triggers green-checks refresh for Result Detail routes and IPSR 
 ### E2E (Cypress)
 
 - Config: `cypress.config.js`; env example `cypress.env.js.example`.
-- Tests under `cypress/` and `tests/`.
+- Tests under `cypress/e2e/**/*.cy.ts` (spec pattern `cypress/e2e/**/*.{js,jsx,ts,tsx}`).
 - Cypress is the place to assert **full user flows** — submission, QA review, phase switching, share request.
+
+### 🛑 Verifying in a REAL browser — two traps that cost a whole session (2026-08-21)
+
+Both of these produce a **convincing false negative**: the feature looks broken when it is not. Read
+this before concluding that anything fails in the browser.
+
+**1. Automating this app needs TWO localStorage keys, not one.**
+
+`RolesService` resolves identity from `localStorage.getItem('user').id` — `updateUserData` returns
+early on `if (!localStorageUser?.id)` and never requests roles or initiatives. Inject only `token`
+and you get `isAdmin: false`, `readOnly: true`, `myInitiativesList: []`, and **every
+permission-gated control silently missing**. It reads exactly like a broken permission check.
+
+```js
+// the user object can be rebuilt from the JWT payload: {id, email, first_name, last_name}
+await page.evaluate(({t, u}) => {
+  localStorage.setItem('token', t);
+  localStorage.setItem('user', JSON.stringify(u));   // ← without this, the session is half-built
+}, { t: token, u: user });
+```
+
+With both keys the same session reports `isAdmin: true`, `readOnly: false` and renders the actions.
+
+**2. Never trust a dev server you did not start.**
+
+A long-running `ng serve` can keep serving a **stale bundle** while the files on disk are already
+new. Verified case: the browser was running `onReportingRowReport(row) { this.openLegacyReportModal(row); }`
+while disk had the rewritten body — the change looked completely un-applied.
+
+Before concluding anything, confirm what the browser is actually executing:
+
+```js
+window.ng.getComponent(document.querySelector('app-dashboard-lab')).someMethod.toString()
+```
+
+If it does not match disk, start your **own** server on a free port (`npm start -- --port 4500`) and
+verify there. **Do not kill or restart a server someone else is using** — check the owner first with
+`lsof -tiTCP:4200 -sTCP:LISTEN` and `lsof -a -p <pid> -d cwd`.
+
+**Bonus:** `window.ng.getComponent(el)` is the fastest way to read live signals/state
+(`canReportResults()`, `contributingCenters()`, …) without wiring up UI interactions — invaluable for
+custom controls like `pr-multi-select` that open on `:focus-within` and resist a plain `click()`.
+
+### Component tests (Cypress CT) — the way to validate `custom-fields/`
+
+`custom-fields/` is **excluded from Jest coverage** and its components render through a real
+browser layout (CSS `:focus-within` dropdowns, CDK virtual scroll, Spartan/Helm overlays) that jsdom cannot
+lay out. So the **custom-fields are validated with Cypress Component Testing**, not Jest DOM.
+
+- **Spec location:** colocated next to each component as `*.cy.ts` (e.g.
+  `src/app/custom-fields/pr-multi-select/pr-multi-select.cy.ts`). Component spec pattern is
+  `src/**/*.cy.ts` (kept separate from the `cypress/e2e/**` E2E specs).
+- **Support/runner:** `cypress/support/component.ts` + `cypress/support/component-index.html`.
+  The dev server uses the webpack `@angular-devkit/build-angular` builder (dev-only dependency)
+  driven by a curated `component.devServer.options.projectConfig` in `cypress.config.js` — the
+  app itself still builds with the esbuild `@angular/build:application` builder.
+- **What is covered today:** **all 23** `custom-fields/` components — one colocated `*.cy.ts` each,
+  **67 tests total** (`npm run test:ct` must stay green). Highlights:
+  - **CVA / ngModel fields:** `pr-input`, `pr-textarea`, `pr-select`, `pr-multi-select` (incl. external
+    in-place `splice` deselection regression), `pr-checkbox`, `pr-radio-button`, `pr-yes-or-not`,
+    `pr-range-level`
+  - **Shell / feedback:** `field-card`, `pr-field-header`, `alert-status`, `pr-word-counter`,
+    `custom-validation-tooltip`, `pr-field-validations` (placeholder mount)
+  - **Actions:** `pr-button`, `add-button`, `save-button`, `sync-button`, `edit-or-delete-item-button`
+  - **Domain:** `lead-contact-person-field`, `detail-section-title`, `no-data-text`,
+    `under-construction-point`
+- **Mount helpers:** `cypress/support/ct-utils.ts` — `mountCF(template)` for exported components;
+  `mountComponent(Class)` for declared-but-not-exported ones (`pr-word-counter`,
+  `under-construction-point`, etc.).
+- **Mounting gotcha:** `RolesService.readOnly` defaults to `true`, which hides the interactive
+  field. Pass `editable: true` to `mountCF` / `mountComponent` (see existing specs).
+
+**RULE — run the component tests to validate any change to `custom-fields/`.** They are **local-only
+(NOT wired into CI — there is no Cypress GitHub Actions workflow)**; their purpose is to let a
+developer or an AI agent self-verify these components locally. Run them and expect green before
+committing any `custom-fields/` change:
+
+```bash
+npm run test:ct            # runs all src/**/*.cy.ts headless — expect "All specs passed!"
+```
+
+> Cursor-sandbox agents only: the integrated shell sets `ELECTRON_RUN_AS_NODE=1` (breaks the
+> Cypress binary) and overrides `CYPRESS_CACHE_FOLDER` to an empty temp dir. Run with
+> `env -u ELECTRON_RUN_AS_NODE CYPRESS_CACHE_FOLDER="$HOME/Library/Caches/Cypress" npm run test:ct`.
+> Normal local shells don't need this.
 
 ---
 
@@ -316,15 +506,18 @@ The interceptor triggers green-checks refresh for Result Detail routes and IPSR 
 | **Auth header** | `auth: <JWT>`. NOT `Authorization: Bearer`. The interceptor handles it. |
 | **API method names** | `HTTP_METHOD_descriptiveName` (`GET_allRequest`, `PATCH_readNotification`). |
 | **Strings** | Always via `src/app/internationalization/`. No hard-coded English. |
-| **Theming** | PrimeNG + `reportingTheme`. Update `src/styles/colors.scss` first, mirror in TS. |
-| **Tokens / utilities** | Prefix `--pr-*` and `.pr-*`. Don't collide with PrimeNG variables. |
+| **Styling** | Tailwind utilities for all NEW styling. SCSS only when necessary (keyframes, pseudo-elements, `:host`, projected DOM). Dynamic values → `[style.*]` bindings. Don't add new `.pr-*` SCSS class blocks. |
+| **Theming** | `src/styles/colors.scss` / `fonts.scss` are the only source of truth; `src/styles.scss` re-exposes them to Tailwind via `@theme inline`. **No TS theme to mirror** — `src/app/theme/` was deleted. |
+| **Tokens / utilities** | Prefix `--pr-*` and `.pr-*`. Don't collide with the Helm preset's keys (`--color-sidebar`, `--primary`, `--ring`, … from `@spartan-ng/brain/hlm-tailwind-preset.css`). |
+| **Folder docs** | Touching any file in a folder that has its own `CLAUDE.md` → update that `CLAUDE.md` and re-stamp its `**Verified:**` line in the **same commit** (convention: [`docs/COMPONENT-DOCS.md`](./docs/COMPONENT-DOCS.md)). |
 | **Page modules** | Each feature owns `<feature>.module.ts` + `<feature>-routing.module.ts` + `components/`, `pages/`, `services/`. |
 | **Shared sections** | Reuse `shared/sections-components/` (geography, partners, evidence, DAC). Don't re-implement. |
-| **Forms** | PrimeNG controls with programmatic labels; error messages tied via `aria-describedby`. |
+| **Forms** | `custom-fields` / Spartan controls with programmatic labels; error messages tied via `aria-describedby`. |
 | **Tables / filters / alerts** | Use the canonical SCSS in `src/styles/`. |
-| **Dark mode** | Not supported — `darkModeSelector: 'light'` is enforced. |
+| **Dark mode** | Not supported — `color-scheme: light` is pinned on `:root`; the `:root.dark` block was removed. The dark sidebar is a token family, not dark mode. |
 | **Real-time** | Pusher + sockets are hints; reconcile via API before mutating state. |
 | **Coverage** | Client thresholds: 50/60/60/60. Don't lower them. |
+| **Browser verification** | Inject `token` **and** `user` in localStorage, and confirm the served bundle is not stale — see §9 "Verifying in a REAL browser". Both traps look like broken features. |
 | **Commit** | `<emoji> <type>(<scope>) [ticket]: <description>`. |
 
 ### Commit examples
@@ -355,13 +548,13 @@ When working on a frontend feature or fix:
 
 0. **Open the in-tree map.** [`src/CLAUDE.md`](./src/CLAUDE.md) describes the folder where you're about to work, the route tables to update, the services to extend, and the conventions you MUST preserve.
 1. **Confirm the spec.** Find or open `../docs/specs/<module>/requirements.md`, `design.md`, `task.md`. If missing, run `/sdd-specify` first — templates live in `../docs/specs/general-setup/`.
-2. **Cite the baseline.** Reference `G#`, `US-*`, `AC-*` from `../docs/prd.md`; cite the screen/flow id and component rules from `../docs/system-design/design.md`.
+2. **Cite the baseline.** Reference `G#`, `US-*`, `AC-*` from `../docs/prd.md`; cite the screen/flow id and component rules from `../docs/ux-ui/design.md`.
 3. **Implement.** Follow this guide: routing, interceptor, services, shared components, tokens, i18n.
 4. **Test.** Unit (Jest) + Cypress where applicable. Keep coverage above 50/60/60/60.
 5. **Verify in the browser.** Run `npm start`, sign in, exercise the happy path AND edge cases. UI changes are not "done" because the build passes.
 6. **Update docs.**
-   - If the change establishes a new UX pattern: promote it into `../docs/system-design/design.md` (§12 Design Decisions).
-   - If the change adds a new client surface or integration: update `../docs/detailed-design/detailed-design.md` accordingly.
+   - If the change establishes a new UX pattern: promote it into `../docs/ux-ui/design.md` (§12 Design Decisions).
+   - If the change adds a new client surface or integration: update `../docs/trd/trd.md` accordingly.
 7. **Commit.** Use the project commit format.
 
 ---
@@ -376,8 +569,10 @@ When working on a frontend feature or fix:
 - Main API service: [`src/app/shared/services/api/results-api.service.ts`](./src/app/shared/services/api/results-api.service.ts)
 - API aggregator: [`src/app/shared/services/api/api.service.ts`](./src/app/shared/services/api/api.service.ts)
 - Guards: [`src/app/shared/guards/check-login.guard.ts`](./src/app/shared/guards/check-login.guard.ts), [`src/app/shared/guards/check-admin.guard.ts`](./src/app/shared/guards/check-admin.guard.ts)
-- Theme: [`src/app/theme/reportingTheme.ts`](./src/app/theme/reportingTheme.ts)
+- Global styles entry (Tailwind + `@theme inline` token bridge): [`src/styles.scss`](./src/styles.scss)
 - Tokens (SCSS): [`src/styles/colors.scss`](./src/styles/colors.scss), [`src/styles/fonts.scss`](./src/styles/fonts.scss)
+- Folder-doc convention (`CLAUDE.md` beside the code, 120-line cap, `Verified:` stamp): [`docs/COMPONENT-DOCS.md`](./docs/COMPONENT-DOCS.md)
+- Deliberate departures from the visual reference (do not "correct" them back): [`docs/DESIGN-DEVIATIONS.md`](./docs/DESIGN-DEVIATIONS.md)
 - Environments: [`src/environments/environment.ts`](./src/environments/environment.ts), [`src/environments/environment.prod.ts`](./src/environments/environment.prod.ts)
 - Jest setup: [`src/setup-jest.ts`](./src/setup-jest.ts)
 - Cypress config: [`cypress.config.js`](./cypress.config.js)

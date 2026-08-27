@@ -1,7 +1,7 @@
 <div class="entity-aow-aow_tabs">
   @for (tab of tabs(); track tab.id) {
     <button
-      pButton
+      hlmBtn
       type="button"
       class="entity-aow-aow_tabs_button"
       [ngClass]="{ 'tab-button_active': isActiveTab(tab.id), 'tab-button_inactive': !isActiveTab(tab.id) }"
@@ -12,15 +12,6 @@
       }
     </button>
   }
-</div>
-
-<div class="aow-repeated-note">
-  <span class="material-icons-round aow-repeated-note_icon">warning</span>
-  <p class="aow-repeated-note_text">
-    When the same indicator is repeated twice in a HLO/Outcome, this is because the P/A planned the indicator with two
-    separate targets to facilitate granular planning. <strong>Reporting reflects data originally recorded without
-    aggregating them.</strong>
-  </p>
 </div>
 
 <div class="entity-aow-aow_content">
@@ -37,15 +28,43 @@
       </div>
     }
     @case ('outcomes') {
-      <div class="tab-content_header">
-        <h3>Intermediate Outcomes Indicators</h3>
-        <div class="tab-content_header_dot"></div>
-        <h3 class="tab-content_header_phase">Reporting Phase {{ entityAowService.reportingPhaseYear }}</h3>
-      </div>
+      <!-- Hidden only when every Outcome of this AoW is program-level: the section below already
+           lists them, so an empty table on top would read as "no data". -->
+      @if (entityAowService.tocResultsOutcomesExclusiveByAowId().length || !entityAowService.tocResultsOutcomesNonExclusiveByAowId().length) {
+        <div class="tab-content_header">
+          <h3>Intermediate Outcomes Indicators</h3>
+          <div class="tab-content_header_dot"></div>
+          <h3 class="tab-content_header_phase">Reporting Phase {{ entityAowService.reportingPhaseYear }}</h3>
+        </div>
 
-      <div class="tab-content">
-        <app-aow-hlo-table tableType="outcomes"></app-aow-hlo-table>
-      </div>
+        <div class="tab-content">
+          <app-aow-hlo-table tableType="outcomes"></app-aow-hlo-table>
+        </div>
+      }
+
+      @if (entityAowService.tocResultsOutcomesNonExclusiveByAowId().length) {
+        <div class="tab-content_header aow-non-exclusive-header">
+          <h3>Intermediate Outcomes not exclusive to this Area of Work</h3>
+        </div>
+
+        <div class="aow-non-exclusive-note">
+          <span class="material-icons-round aow-non-exclusive-note_icon">info</span>
+          <p class="aow-non-exclusive-note_text">
+            The Intermediate Outcomes below are not assigned to a specific Area of Work. They belong to
+            the Science Program as a whole, so they also appear under every other Area of Work.
+          </p>
+        </div>
+
+        <div class="tab-content">
+          <!-- The search box and the modal/drawers stay with the table above, which shares the same
+               service signals — except when that table is hidden and this one has to host them. -->
+          <app-aow-hlo-table
+            tableType="outcomes-non-exclusive"
+            instanceId="NonExclusive"
+            [showSearch]="false"
+            [renderOverlays]="!entityAowService.tocResultsOutcomesExclusiveByAowId().length"></app-aow-hlo-table>
+        </div>
+      }
     }
     @default {
       <div class="tab-content">

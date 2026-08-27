@@ -4,6 +4,45 @@
   padding: 0;
 }
 
+.pr-switch {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  margin: 0;
+  border-radius: 11px;
+  background-color: var(--pr-color-neutral-1000);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: var(--pr-color-white);
+    transition: transform 0.2s ease;
+  }
+
+  &:checked {
+    background-color: var(--pr-color-primary-300);
+  }
+
+  &:checked::before {
+    transform: translateX(18px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
 // Back link
 .back-link {
   display: inline-flex;

@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit, effect, HostListener, ElementRef } from '@angular/core';
+import { Component, DoCheck, ElementRef, OnInit, OnDestroy, ViewChild, effect, inject, NgZone } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -6,31 +6,35 @@ import { SaveButtonService } from '../../../../custom-fields/save-button/save-bu
 import { GreenChecksService } from '../../../../shared/services/global/green-checks.service';
 import { ShareRequestModalService } from './components/share-request-modal/share-request-modal.service';
 import { CurrentResultService } from '../../../../shared/services/current-result.service';
-import { MessageService } from 'primeng/api';
 import { environment } from '../../../../../environments/environment';
-import { Clipboard } from '@angular/cdk/clipboard';
+import { PdfExportService } from '../../../../shared/services/pdf-export.service';
+import { SectionBottomBarSlotService } from './components/section-bottom-bar/section-bottom-bar-slot.service';
+import { ResultSectionsService } from './components/result-sections-sidebar/result-sections.service';
 
 @Component({
   selector: 'app-result-detail',
   templateUrl: './result-detail.component.html',
   styleUrls: ['./result-detail.component.scss'],
-  providers: [MessageService],
   standalone: false
 })
-export class ResultDetailComponent implements OnInit, DoCheck {
-  showPdfMenu = false;
+export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
+  private readonly pdfSE = inject(PdfExportService);
+  private readonly ngZone = inject(NgZone);
+  private readonly bottomBarSlotSE = inject(SectionBottomBarSlotService);
+  /** Público: el template lee de aquí el número y el nombre de la sección abierta. */
+  readonly sectionsSE = inject(ResultSectionsService);
+
+  /** Floor of the content column; each section's bottom bar teleports its host node in here. */
+  @ViewChild('bottomBarSlot', { static: true }) bottomBarSlot!: ElementRef<HTMLElement>;
 
   constructor(
-    private readonly messageSE: MessageService,
     public currentResultSE: CurrentResultService,
     private readonly shareRequestModalSE: ShareRequestModalService,
     private readonly activatedRoute: ActivatedRoute,
     public api: ApiService,
     public saveButtonSE: SaveButtonService,
     public dataControlSE: DataControlService,
-    private readonly greenChecksSE: GreenChecksService,
-    private readonly clipboard: Clipboard,
-    private readonly elementRef: ElementRef
+    private readonly greenChecksSE: GreenChecksService
   ) {
     effect(() => {
       const portfolio = this.dataControlSE.currentResultSignal()?.portfolio;
@@ -42,34 +46,22 @@ export class ResultDetailComponent implements OnInit, DoCheck {
   closeInfo = false;
 
   ngOnInit(): void {
+    // Published here, NOT in ngAfterViewInit: Angular runs a child's `ngAfterViewInit` before its
+    // parent's, so a section mounting in the same pass would look for the slot and find nothing.
+    // `static: true` on the query is what makes the element already available this early.
+    this.bottomBarSlotSE.slot.set(this.bottomBarSlot.nativeElement);
     this.getData();
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    const clickedInside = this.elementRef.nativeElement.querySelector('.pdf-menu-container')?.contains(event.target);
-    if (!clickedInside && this.showPdfMenu) {
-      this.showPdfMenu = false;
-    }
+  ngOnDestroy(): void {
+    this.pdfSE.disable();
+    // The slot dies with this view; leaving a detached node published would send the next
+    // section's bar into a DOM fragment nobody renders.
+    this.bottomBarSlotSE.slot.set(null);
   }
 
-  togglePdfMenu(): void {
-    this.showPdfMenu = !this.showPdfMenu;
-  }
-
-  viewPdf(): void {
-    window.open(this.getPdfLink(), '_blank');
-    this.showPdfMenu = false;
-  }
-
-  getPdfLink(): string {
+  private getPdfLink(): string {
     return `${environment.frontBaseUrl}reports/result-details/${this.api.resultsSE.currentResultCode}?phase=${this.api.resultsSE.currentResultPhase}`;
-  }
-
-  copyPdfLink(): void {
-    this.clipboard.copy(this.getPdfLink());
-    this.messageSE.add({ key: 'copyResultLinkPdf', severity: 'success', summary: 'PDF link copied' });
-    this.showPdfMenu = false;
   }
 
   async getData() {
@@ -81,6 +73,8 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     this.api.updateUserData(() => {});
     this.api.resultsSE.currentResultCode = this.activatedRoute.snapshot.paramMap.get('id');
     this.api.resultsSE.currentResultPhase = this.activatedRoute.snapshot.queryParamMap.get('phase');
+    this.pdfSE.link.set(this.getPdfLink());
+    this.pdfSE.enabled.set(true);
     await this.GET_resultIdToCode();
 
     this.currentResultSE.GET_resultById();
@@ -111,9 +105,50 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     });
   }
 
+  /** Throttle for the mandatory-field DOM scan (was running ~2000×/s via a self-sustaining setTimeout). */
+  private static readonly SCAN_THROTTLE_MS = 150;
+  private lastScanAt = 0;
+  private scanScheduled = false;
+  private trailingScanId: any = null;
+
   ngDoCheck(): void {
-    setTimeout(() => {
-      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
-    }, 10);
+    // The mandatory-field feedback scan reads the DOM (forces reflow). Running it on every
+    // change-detection cycle — and via setTimeout, which itself re-triggered CD — produced a
+    // self-sustaining loop scanning the DOM thousands of times per second. (P2-2967/P2-2969)
+    // Now: throttled (leading + trailing edge), coalesced into a single rAF, run OUTSIDE Angular's
+    // zone so it never re-triggers CD. A single CD tick is requested only when the result changed.
+    if (this.scanScheduled) return;
+    const elapsed = Date.now() - this.lastScanAt;
+    if (elapsed >= ResultDetailComponent.SCAN_THROTTLE_MS) {
+      this.runFeedbackScan();
+    } else if (this.trailingScanId === null) {
+      // Trailing edge: guarantees the final state is scanned even if no further CD fires.
+      this.ngZone.runOutsideAngular(() => {
+        this.trailingScanId = setTimeout(() => {
+          this.trailingScanId = null;
+          this.runFeedbackScan();
+        }, ResultDetailComponent.SCAN_THROTTLE_MS - elapsed);
+      });
+    }
+  }
+
+  private runFeedbackScan(): void {
+    if (this.trailingScanId !== null) {
+      clearTimeout(this.trailingScanId);
+      this.trailingScanId = null;
+    }
+    this.lastScanAt = Date.now();
+    this.scanScheduled = true;
+    this.ngZone.runOutsideAngular(() => {
+      requestAnimationFrame(() => {
+        this.scanScheduled = false;
+        const before = this.api.dataControlSE.fieldFeedbackList();
+        this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+        if (this.api.dataControlSE.fieldFeedbackList() !== before) {
+          // Feedback list changed → re-enter the zone for one tick so the "X alerts" box repaints.
+          this.ngZone.run(() => {});
+        }
+      });
+    });
   }
 }

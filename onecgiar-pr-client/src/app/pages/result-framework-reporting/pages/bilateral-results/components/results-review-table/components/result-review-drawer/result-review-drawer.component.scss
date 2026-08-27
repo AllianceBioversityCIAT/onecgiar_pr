@@ -10,6 +10,75 @@ p {
   margin: 0;
 }
 
+// Native drawer (replaces PrimeNG p-drawer): fixed right-aligned panel + backdrop.
+// z-index 1099 keeps it below the confirm/reject app-pr-dialog masks (z-index 1100).
+.drawer-overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1099;
+  pointer-events: auto;
+}
+
+.drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  appearance: none;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.48);
+  animation: pr-drawer-backdrop-in 0.3s ease forwards;
+}
+
+.custom-drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  min-width: 65vw;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--pr-color-white);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  animation: pr-drawer-slide-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+
+  &.full-screen {
+    min-width: 100%;
+    width: 100%;
+    left: 0;
+  }
+}
+
+.drawer-panel-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@keyframes pr-drawer-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes pr-drawer-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 // Header styles
 .result-review-drawer-header {
   display: flex;
@@ -240,7 +309,7 @@ p {
 
 // Confirmation Modal Styles (centered layout)
 ::ng-deep .confirmation-modal {
-  &.p-dialog {
+  &.pr-dialog {
     border-radius: 12px !important;
     overflow: hidden;
     max-width: 650px !important;
@@ -248,7 +317,7 @@ p {
     box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
   }
 
-  .p-dialog-content {
+  .pr-dialog__body {
     padding: 0 !important;
     background-color: white;
     position: relative;
@@ -365,42 +434,33 @@ p {
   }
 }
 
+// Approve / Reject buttons (hlm-button carries the class directly now)
+.approve-button {
+  background-color: rgba(var(--pr-color-green-rgb), 0.1);
+  color: var(--pr-color-green-600);
+  border-color: var(--pr-color-green-600);
+
+  &:hover:not(.not-hover) {
+    background-color: var(--pr-color-green-600);
+    color: var(--pr-color-white);
+    border-color: var(--pr-color-green-600);
+  }
+}
+
+.reject-button {
+  background-color: rgba(var(--pr-color-red-rgb), 0.1);
+  color: var(--pr-color-red-500);
+  border-color: var(--pr-color-red-500);
+
+  &:hover {
+    background-color: var(--pr-color-red-500);
+    color: var(--pr-color-white);
+    border-color: var(--pr-color-red-500);
+  }
+}
+
 // PrimeNG overrides
 ::ng-deep {
-  .p-button {
-    &.approve-button {
-      background-color: rgba(var(--pr-color-green-rgb), 0.1);
-      color: var(--pr-color-green-600);
-      border-color: var(--pr-color-green-600);
-
-      &:hover:not(.not-hover) {
-        background-color: var(--pr-color-green-600);
-        color: var(--pr-color-white);
-        border-color: var(--pr-color-green-600);
-      }
-    }
-
-    &.reject-button {
-      background-color: rgba(var(--pr-color-red-rgb), 0.1);
-      color: var(--pr-color-red-500);
-      border-color: var(--pr-color-red-500);
-
-      &:hover {
-        background-color: var(--pr-color-red-500);
-        color: var(--pr-color-white);
-        border-color: var(--pr-color-red-500);
-      }
-    }
-  }
-
-  .p-drawer-header {
-    padding: 0 !important;
-  }
-
-  .p-drawer-footer {
-    padding: 0 !important;
-  }
-
   .p-dialog {
     .p-dialog-header {
       padding: 20px 24px;

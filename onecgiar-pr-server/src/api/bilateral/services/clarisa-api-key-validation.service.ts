@@ -7,6 +7,7 @@ import { BILATERAL_CLARISA_MICROSERVICE_NAME } from '../constants/bilateral-auth
 import {
   ClarisaApiKeyValidationRequest,
   ClarisaApiKeyValidationResponse,
+  ClarisaApiKeyValidationSuccess,
 } from '../interfaces/clarisa-api-key-validation.interface';
 
 function trimTrailingSlashes(value: string): string {
@@ -27,11 +28,19 @@ export class ClarisaApiKeyValidationService {
     this.validateUrl = `${baseUrl}/api/auth/validate-api-key`;
   }
 
+  /**
+   * Returns the full CLARISA success payload — not just a boolean — so callers can keep the
+   * calling system's identity (`mis`). That identity is the only trustworthy one available:
+   * CLARISA resolves it from the API key itself, whereas the `tenant` field in the request body
+   * is declared by the caller. P2-3166 needs it to know which platform a result came from.
+   *
+   * `null` means "not valid", which is what the guard turns into a 401.
+   */
   async validate(
     apiKey: string,
     endpointAccessed: string,
     ipAddress?: string,
-  ): Promise<boolean> {
+  ): Promise<ClarisaApiKeyValidationSuccess | null> {
     const payload: ClarisaApiKeyValidationRequest = {
       api_key: apiKey,
       microservice_name: BILATERAL_CLARISA_MICROSERVICE_NAME,
@@ -54,18 +63,20 @@ export class ClarisaApiKeyValidationService {
         ),
       );
 
-      return response.data?.valid === true;
+      return response.data?.valid === true
+        ? (response.data as ClarisaApiKeyValidationSuccess)
+        : null;
     } catch (error) {
       const axiosError = error as AxiosError<ClarisaApiKeyValidationResponse>;
 
       if (axiosError.response?.data?.valid === false) {
-        return false;
+        return null;
       }
 
       this.logger.warn(
         `CLARISA API key validation failed for endpoint ${endpointAccessed}`,
       );
-      return false;
+      return null;
     }
   }
 }

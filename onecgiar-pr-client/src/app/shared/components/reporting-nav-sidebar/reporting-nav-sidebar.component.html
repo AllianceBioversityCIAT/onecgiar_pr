@@ -1,0 +1,530 @@
+<hlm-sidebar collapsible="icon">
+  <!-- Header 64px, pad 0 16px. PR mark 32×32, PRMS 16/600, Reporting 11 muted. -->
+  <div hlmSidebarHeader class="gap-0 px-[16px] py-0">
+    <div
+      class="flex h-[64px] items-center gap-[10px]"
+      [class.justify-between]="!isCollapsed()"
+      [class.justify-center]="isCollapsed()">
+      <div class="flex min-w-0 items-center gap-[10px]" [class.justify-center]="isCollapsed()">
+        <!-- Typographic 32×32 brand tile (reference). It replaces assets/brand/prms-logo.png: the PNG
+             is a raster square that turned to mush at 32px on the rail, and the reference tints the
+             tile differently per state — violet wash expanded, plain white wash on the rail — which a
+             flat image cannot do. `aria-hidden` + the sr-only name keep it announced once. -->
+        <div
+          class="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] text-[13px] font-bold leading-none tracking-[0.02em] text-white"
+          [style.background]="isCollapsed() ? 'rgba(255, 255, 255, 0.12)' : 'rgba(109, 75, 226, 0.42)'"
+          aria-hidden="true">
+          PR
+        </div>
+        <span class="sr-only">PRMS Reporting</span>
+        @if (!isCollapsed()) {
+          <div class="flex min-w-0 flex-col gap-px">
+            <span class="text-[16px] font-semibold leading-none tracking-[-0.01em] text-white">PRMS</span>
+            <span class="text-[11px] font-medium leading-none text-[var(--pr-sidebar-fg-muted)]">Reporting</span>
+          </div>
+        }
+      </div>
+      <!-- No collapse control here: the approved header is the 32×32 brand mark plus the
+           PRMS / Reporting titles and nothing else — the collapse toggle belongs to the topbar
+           alone. Keeping both put two
+           identical buttons 60px apart — and this one was a Helm `ghost`, whose light
+           `--muted` hover painted a white pill on the dark sidebar. -->
+
+      <!-- Build number, in the free right half the header's `justify-between` already leaves.
+           It tells one deployed build apart from the next, so QA can see whether the environment
+           picked up a delivery instead of guessing. A plain counter on purpose — read out loud and
+           compared at a glance. Value + bump rule: shared/constants/app-version.constants.ts. -->
+      @if (!isCollapsed()) {
+        <span
+          class="shrink-0 rounded-full bg-white/10 px-2 py-[4px] text-[11px] font-semibold leading-none tracking-tight text-white/70"
+          [attr.data-app-version]="appVersion"
+          [title]="'Build ' + appVersion">
+          <span class="sr-only">Build</span>
+          v{{ appVersion }}
+        </span>
+      }
+    </div>
+
+    @if (!isProduction && !isCollapsed()) {
+      <span class="mt-1 flex w-max items-center gap-1.5 rounded-full border border-amber-300/70 bg-amber-50 py-[3px] pl-[3px] pr-2.5">
+        <span class="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white">
+          <i class="material-icons-round text-[12px] leading-none" aria-hidden="true">priority_high</i>
+        </span>
+        <span class="text-[11px] font-bold leading-none tracking-tight text-amber-800">Testing environment</span>
+      </span>
+    }
+
+    @if (isCollapsed()) {
+      <button
+        type="button"
+        class="hover:bg-sidebar-accent text-sidebar-foreground mx-auto flex size-8 items-center justify-center rounded-md"
+        (click)="sidebarSE.toggleSidebar()"
+        aria-label="Expand sidebar"
+        title="Expand sidebar">
+        <ng-icon name="lucidePanelLeft" class="text-[18px]" />
+      </button>
+    }
+  </div>
+
+  <div hlmSidebarContent>
+    <!-- ════════════════════════════════════════════════════════════════════
+         SCIENCE PROGRAMS — top level, above the platform links and separated by a
+         divider. That placement is the approved structure and the main change from
+         the old shape, where programmes were nested inside "Results planned in your
+         2026 ToC". Programme codes sit beside every name in mono, and CGIAR centres
+         form their own labelled block with a diamond marker.
+         Sizes are arbitrary px, never rem utilities: html is 12px, so text-sm
+         would be 10.5px.
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- COLLAPSED RAIL — 32×32 programme + centre buttons, 8px radius, 8×8 marker centred.
+         Without this the icon rail loses the programme band entirely, so a user who collapses the
+         sidebar can no longer switch programme at all. -->
+    @if (isCollapsed() && !homeSE.isLoadingSPLists()) {
+      <div hlmSidebarGroup class="pr-nav-rail">
+        @for (sp of railPrograms(); track sp.initiativeId) {
+          <a
+            class="pr-nav-rail-btn"
+            [class.pr-nav-rail-btn--active]="sp.initiativeCode === activeSpCode()"
+            [routerLink]="programLink(sp)"
+            [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
+            [attr.aria-label]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)"
+            [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
+            <span class="pr-nav-program-dot" [style.background]="programDotColor(sp.initiativeCode)"></span>
+          </a>
+        }
+        @if (getMyCenters().length > 0) {
+          <div class="pr-nav-rail-divider"></div>
+          @for (center of getMyCenters(); track center.center_id) {
+            <a
+              class="pr-nav-rail-btn"
+              [routerLink]="centerHomeLink(center)"
+              routerLinkActive
+              #rlaRailCenter="routerLinkActive"
+              [class.pr-nav-rail-btn--active]="rlaRailCenter.isActive"
+              [attr.aria-label]="center.center_name"
+              [title]="center.center_name + ' · ' + center.role_name">
+              <span class="pr-nav-center-diamond" [style.background]="programDotColor(center.center_id)"></span>
+            </a>
+          }
+        }
+      </div>
+    }
+
+    @if (!isCollapsed()) {
+      <div hlmSidebarGroup class="pr-nav-programs">
+        @if (homeSE.isLoadingSPLists()) {
+          <div class="text-sidebar-fg-muted px-2 py-1.5 text-[11px]">Loading programs…</div>
+        } @else {
+          @for (group of programGroups(); track group.key) {
+            @if (group.items.length) {
+              @if (group.key === 'mine') {
+                <!-- MY SCIENCE PROGRAMS — 44px cards, gap 6px, per the design -->
+                <div class="pr-nav-section-label">{{ group.label }}</div>
+                <div class="flex flex-col gap-[6px]">
+                  @for (sp of group.items; track sp.initiativeId) {
+                    <a
+                      class="pr-nav-program-card"
+                      [class.pr-nav-program-card--active]="sp.initiativeCode === activeSpCode()"
+                      [routerLink]="programLink(sp)"
+                      [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
+                      [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
+                      <span class="pr-nav-program-dot" [style.background]="programDotColor(sp.initiativeCode)"></span>
+                      <span class="pr-nav-program-code">{{ sp.initiativeCode }}</span>
+                      <span class="pr-nav-program-name">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                      @if (sp.initiativeCode === activeSpCode()) {
+                        <ng-icon name="lucideCheck" class="pr-nav-program-check shrink-0 text-[14px]" />
+                      }
+                    </a>
+                  }
+                </div>
+              } @else {
+                <!-- OTHER SCIENCE PROGRAMS / OTHER PROJECTS — toggle + mono count -->
+                <button type="button" class="pr-nav-others-toggle" (click)="toggleGroup(group.key)" [attr.aria-expanded]="isGroupOpen(group.key)">
+                  <span class="pr-nav-section-label pr-nav-section-label--inline">{{ group.label }}</span>
+                  <span class="pr-nav-others-count">{{ group.items.length }}</span>
+                  <ng-icon
+                    name="lucideChevronDown"
+                    class="shrink-0 text-[14px] transition-transform duration-200"
+                    [class.rotate-180]="isGroupOpen(group.key)" />
+                </button>
+                @if (isGroupOpen(group.key)) {
+                  <div class="pr-nav-others-wrap">
+                    <div class="pr-nav-others-list">
+                      <!-- Pinned favourites ride at the top of the SAME scroll box as the rest,
+                           separated by a hairline (reference). Only "Other science programs" is
+                           pinnable — "my" programmes are already permanent, and projects are not
+                           part of the reference's favourites model. -->
+                      @if (isPinnable(group) && pinnedPrograms().length) {
+                        @for (sp of pinnedPrograms(); track sp.initiativeId) {
+                          <!-- The row is a DIV wrapping the link, not an <a> itself: the star is a
+                               real <button>, and an interactive control nested inside an anchor is
+                               invalid HTML and an ARIA violation (two focusables, one name). -->
+                          <div class="pr-nav-program-row" [class.pr-nav-program-row--active]="sp.initiativeCode === activeSpCode()">
+                            <a
+                              class="pr-nav-program-link"
+                              [routerLink]="programLink(sp)"
+                              [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
+                              [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
+                              <span class="pr-nav-program-dot pr-nav-program-dot--sm" [style.background]="programDotColor(sp.initiativeCode)"></span>
+                              <span class="pr-nav-program-code pr-nav-program-code--sm">{{ sp.initiativeCode }}</span>
+                              <span class="pr-nav-program-name pr-nav-program-name--sm">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                            </a>
+                            <button
+                              type="button"
+                              class="pr-nav-pin pr-nav-pin--on"
+                              (click)="togglePin(sp.initiativeCode, $event)"
+                              [attr.aria-label]="'Unpin ' + sp.initiativeCode"
+                              [attr.aria-pressed]="true">
+                              <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">star</i>
+                            </button>
+                          </div>
+                        }
+                        <div class="pr-nav-pinned-divider" aria-hidden="true"></div>
+                      }
+
+                      @for (sp of rowsOf(group); track sp.initiativeId) {
+                        <div
+                          class="pr-nav-program-row"
+                          [class.pr-nav-program-row--active]="sp.initiativeCode === activeSpCode()"
+                          (mouseenter)="isPinnable(group) && onOtherRowEnter(sp.initiativeCode)"
+                          (mouseleave)="isPinnable(group) && onOtherRowLeave(sp.initiativeCode)">
+                          <a
+                            class="pr-nav-program-link"
+                            [routerLink]="programLink(sp)"
+                            [attr.aria-current]="sp.initiativeCode === activeSpCode() ? 'page' : null"
+                            [title]="sp.initiativeCode + ' · ' + (sp.initiativeShortName || sp.initiativeName)">
+                            <span class="pr-nav-program-dot pr-nav-program-dot--sm" [style.background]="programDotColor(sp.initiativeCode)"></span>
+                            <span class="pr-nav-program-code pr-nav-program-code--sm">{{ sp.initiativeCode }}</span>
+                            <span class="pr-nav-program-name pr-nav-program-name--sm">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                          </a>
+                          @if (isPinnable(group)) {
+                            <button
+                              type="button"
+                              class="pr-nav-pin"
+                              (click)="togglePin(sp.initiativeCode, $event)"
+                              [attr.aria-label]="'Pin ' + sp.initiativeCode"
+                              [attr.aria-pressed]="false"
+                              [attr.aria-describedby]="pinLimitWarningCode() === sp.initiativeCode ? 'pr-nav-pin-limit' : null">
+                              <i class="material-icons-round text-[14px] leading-none" aria-hidden="true">star_border</i>
+                            </button>
+                            @if (pinLimitWarningCode() === sp.initiativeCode) {
+                              <span id="pr-nav-pin-limit" class="pr-nav-pin-tip" role="tooltip">You can pin up to 5 programs.</span>
+                            }
+                          }
+                        </div>
+                      }
+                    </div>
+                    <!-- The fade is the affordance that says "this box scrolls", so it stays on
+                         whenever the block is open — the old `> 6` guard hid it exactly when the
+                         list was short enough to be ambiguous. -->
+                    <div class="pr-nav-others-fade" aria-hidden="true"></div>
+                  </div>
+                }
+              }
+            }
+          }
+        }
+      </div>
+    }
+
+    <!-- MY CGIAR CENTERS — own labelled block, diamond marker (reference lines 131-144).
+         Only rendered when the user actually has centres. -->
+    @if (!isCollapsed() && getMyCenters().length > 0) {
+      <div hlmSidebarGroup class="pr-nav-programs">
+        <div class="pr-nav-section-label pr-nav-section-label--spaced">My CGIAR centers</div>
+        <div class="flex flex-col gap-[6px]">
+          @for (center of getMyCenters(); track center.center_id) {
+            <a
+              class="pr-nav-program-card pr-nav-center-card"
+              [routerLink]="centerHomeLink(center)"
+              routerLinkActive
+              #rlaCenter="routerLinkActive"
+              [class.pr-nav-program-card--active]="rlaCenter.isActive"
+              [attr.aria-current]="rlaCenter.isActive ? 'page' : null"
+              [title]="center.center_name + ' · ' + center.role_name">
+              <span class="pr-nav-center-diamond" [style.background]="programDotColor(center.center_id)"></span>
+              <span class="pr-nav-program-name">{{ center.center_name }}</span>
+            </a>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Divider between the programme block and the platform links, per the reference:
+         1px rgba(255,255,255,.10), 16px vertical margin. Only rendered when there IS a programme
+         or centre block above it — otherwise it was an orphan rule floating under the header. -->
+    @if (!isCollapsed() && (railPrograms().length > 0 || getMyCenters().length > 0)) {
+      <div class="pr-nav-divider"></div>
+    }
+
+    <div hlmSidebarGroup class="pr-nav-platform">
+      @if (!isCollapsed()) {
+        <div class="pr-nav-section-label pr-nav-section-label--platform">Platform</div>
+      }
+      <div hlmSidebarGroupContent>
+        <!--
+          Flat Platform, in the approved order: Results Center · Innovation Packages · QA · Bilateral · My Admin.
+          No Emerging (band CTA). No second Results Center from RFR. No nested RFR group.
+        -->
+        <ul hlmSidebarMenu class="pr-nav-platform-menu">
+          @for (section of sections(); track section.path) {
+            @if (section.path === 'init-admin-module') {
+              <li hlmSidebarMenuItem>
+                <button
+                  hlmSidebarMenuButton
+                  type="button"
+                  (click)="toggleMyAdmin()"
+                  (mouseenter)="openIconFlyout('my-admin', $event)"
+                  (mouseleave)="scheduleCloseIconFlyout()"
+                  [attr.aria-expanded]="!isCollapsed() && myAdminExpanded()"
+                  [attr.aria-label]="section.prName">
+                  <ng-icon [name]="iconFor(section)" />
+                  <span>{{ section.prName }}</span>
+                  @if (!isCollapsed()) {
+                    <ng-icon
+                      name="lucideChevronDown"
+                      class="ms-auto text-[16px] transition-transform duration-200"
+                      [class.rotate-180]="myAdminExpanded()" />
+                  }
+                </button>
+
+                @if (!isCollapsed() && myAdminExpanded()) {
+                  <ul hlmSidebarMenuSub>
+                    @for (link of myAdminLinks; track link.path) {
+                      <li hlmSidebarMenuSubItem>
+                        <a hlmSidebarMenuSubButton [routerLink]="link.path" [isActive]="isSubLinkActive(link.path)">
+                          <ng-icon [name]="link.icon" />
+                          <span>{{ link.name }}</span>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                }
+              </li>
+            } @else if (section.path === 'admin-module') {
+              <li hlmSidebarMenuItem>
+                <button
+                  hlmSidebarMenuButton
+                  type="button"
+                  (click)="toggleAdminModule()"
+                  (mouseenter)="openIconFlyout('admin-module', $event)"
+                  (mouseleave)="scheduleCloseIconFlyout()"
+                  [attr.aria-expanded]="!isCollapsed() && adminModuleExpanded()"
+                  [attr.aria-label]="section.prName">
+                  <ng-icon [name]="iconFor(section)" />
+                  <span>{{ section.prName }}</span>
+                  @if (!isCollapsed()) {
+                    <ng-icon
+                      name="lucideChevronDown"
+                      class="ms-auto text-[16px] transition-transform duration-200"
+                      [class.rotate-180]="adminModuleExpanded()" />
+                  }
+                </button>
+
+                @if (!isCollapsed() && adminModuleExpanded()) {
+                  <ul hlmSidebarMenuSub>
+                    @for (link of adminModuleLinks; track link.path) {
+                      <li hlmSidebarMenuSubItem>
+                        <a hlmSidebarMenuSubButton [routerLink]="link.path" [isActive]="isSubLinkActive(link.path)">
+                          <ng-icon [name]="link.icon" />
+                          <span>{{ link.name }}</span>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                }
+              </li>
+            } @else {
+              <!-- No special case for `result` any more: the open result's sections, its progress
+                   and its AI review / Submit / Unsubmit actions moved OUT of this dark tree into
+                   the white 240px rail on the result-detail page itself
+                   (`app-result-sections-sidebar`), per the approved mockup. The row is now a plain
+                   link to the results table like any other. -->
+              <li hlmSidebarMenuItem>
+                <a
+                  hlmSidebarMenuButton
+                  [routerLink]="sectionRootLink(section)"
+                  routerLinkActive
+                  #rla="routerLinkActive"
+                  [isActive]="rla.isActive"
+                  [tooltip]="section.prName ?? ''">
+                  <ng-icon [name]="iconFor(section)" />
+                  <span>{{ section.prName }}</span>
+                </a>
+              </li>
+            }
+          }
+        </ul>
+      </div>
+    </div>
+
+    <!-- No rule between PLATFORM and EXTRAS: the reference separates them with the EXTRAS label's
+         own `padding-top: 20px` alone. The `hlmSidebarSeparator` that used to sit here read as a
+         second, competing divider next to the real one above the programme block. -->
+    <div hlmSidebarGroup class="pr-nav-extras">
+      @if (!isCollapsed()) {
+        <div class="pr-nav-section-label pr-nav-section-label--extras">Extras</div>
+      }
+      <div hlmSidebarGroupContent>
+        <ul hlmSidebarMenu role="group" aria-label="Extra tools">
+          <li hlmSidebarMenuItem>
+            <a
+              hlmSidebarMenuButton
+              routerLink="/whats-new"
+              routerLinkActive
+              #rlaWhatsNew="routerLinkActive"
+              [isActive]="rlaWhatsNew.isActive"
+              tooltip="Release notes">
+              <ng-icon name="lucideRocket" />
+              <span>Release notes</span>
+            </a>
+          </li>
+          <li hlmSidebarMenuItem>
+            <button hlmSidebarMenuButton type="button" tooltip="Notifications" (click)="goToNotifications()">
+              <ng-icon name="lucideBell" />
+              <span>Notifications</span>
+              @if (notificationBadgeCount() > 0 && !isCollapsed()) {
+                <span class="bg-[var(--pr-color-red-300)] ms-auto flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold leading-[18px] text-white">{{ notificationBadgeCount() }}</span>
+              }
+            </button>
+          </li>
+          <li hlmSidebarMenuItem>
+            <button
+              hlmSidebarMenuButton
+              type="button"
+              tooltip="Text size"
+              cdkOverlayOrigin
+              #fontTrigger="cdkOverlayOrigin"
+              (click)="fontMenuOpen.set(!fontMenuOpen())"
+              [attr.aria-expanded]="fontMenuOpen()">
+              <ng-icon name="lucideType" />
+              <span>Text size</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- No footer. The RESULT METADATA card that used to live here moved into the result-detail
+       content, next to "Phases:", where it can also be popped out as a floating card
+       (`shared/components/result-metadata/`). Rendering it in both places would show the same six
+       fields twice. The account chip lives in the TOPBAR, not in the sidebar, so nothing else is
+       left for a footer slot. -->
+
+  <button type="button" hlmSidebarRail aria-label="Toggle sidebar"></button>
+</hlm-sidebar>
+
+<!-- Collapsed-rail flyout: section title + children (portaled outside overflow:hidden content) -->
+@if (isCollapsed() && iconFlyout(); as fly) {
+  <div
+    class="pr-nav-flyout fixed z-[220] max-h-[min(70vh,520px)] w-[260px] overflow-auto rounded-xl border p-2"
+    [style.top.px]="fly.top"
+    [style.left.px]="fly.left"
+    (mouseenter)="keepIconFlyout()"
+    (mouseleave)="scheduleCloseIconFlyout()"
+    role="menu">
+    @if (fly.key === 'rfr') {
+      <p class="pr-nav-flyout__title">Science programs</p>
+      @if (homeSE.isLoadingSPLists()) {
+        <p class="m-0 px-2 py-2 text-xs text-white/55">Loading programs…</p>
+      } @else {
+        @for (group of programGroups(); track group.key) {
+          @if (group.items.length) {
+            <p class="m-0 px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-white/45">{{ group.label }}</p>
+            <ul class="pr-nav-flyout__list flex flex-col gap-0.5">
+              @for (sp of group.items; track sp.initiativeId) {
+                <li>
+                  <a
+                    class="pr-nav-flyout__link"
+                    [class.pr-nav-flyout__link--active]="sp.initiativeCode === activeSpCode()"
+                    [routerLink]="programLink(sp)"
+                    (click)="closeIconFlyout()">
+                    <img [src]="iconSrc(sp)" [alt]="sp.initiativeCode" width="16" height="16" class="size-4 shrink-0 rounded object-cover" />
+                    <span class="font-semibold">{{ sp.initiativeCode }}</span>
+                    <span class="truncate opacity-80">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        }
+      }
+    } @else if (fly.key === 'my-admin') {
+      <p class="pr-nav-flyout__title">My Admin</p>
+      <ul class="pr-nav-flyout__list flex flex-col gap-0.5">
+        @for (link of myAdminLinks; track link.path) {
+          <li>
+            <a
+              class="pr-nav-flyout__link"
+              [class.pr-nav-flyout__link--active]="isSubLinkActive(link.path)"
+              [routerLink]="link.path"
+              (click)="closeIconFlyout()">
+              <ng-icon [name]="link.icon" class="text-[16px]" />
+              <span>{{ link.name }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    } @else if (fly.key === 'admin-module') {
+      <p class="pr-nav-flyout__title">Admin module</p>
+      <ul class="pr-nav-flyout__list flex flex-col gap-0.5">
+        @for (link of adminModuleLinks; track link.path) {
+          <li>
+            <a
+              class="pr-nav-flyout__link"
+              [class.pr-nav-flyout__link--active]="isSubLinkActive(link.path)"
+              [routerLink]="link.path"
+              (click)="closeIconFlyout()">
+              <ng-icon [name]="link.icon" class="text-[16px]" />
+              <span>{{ link.name }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+}
+
+<!-- Text-size popover (opens upward from the footer) -->
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="fontTrigger"
+  [cdkConnectedOverlayOpen]="fontMenuOpen()"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  [cdkConnectedOverlayPositions]="fontMenuPositions"
+  (backdropClick)="fontMenuOpen.set(false)"
+  (detach)="fontMenuOpen.set(false)">
+  <div class="overlay_panel mb-2.5 w-[280px] rounded-2xl bg-white p-3.5 shadow-[4px_4px_10px_4px_rgba(var(--pr-color-black-rgb),0.25)]" cdkTrapFocus cdkTrapFocusAutoCapture>
+    <div class="mb-1 flex items-center gap-1.5">
+      <i class="material-icons-round text-[18px] text-brand-300" aria-hidden="true">format_size</i>
+      <p class="m-0 text-sm font-semibold text-[var(--pr-color-secondary-400)]">Text size</p>
+    </div>
+    <p class="m-0 mb-2.5 text-[11px] leading-snug text-[var(--pr-color-accents-5)]">Make text across the platform larger. Your browser zoom still works on top of this.</p>
+    <div role="radiogroup" aria-label="Text size" class="grid grid-cols-5 gap-1 rounded-xl bg-[var(--pr-color-accents-1)] p-1">
+      @for (option of fontScaleOptions; track option.value; let i = $index) {
+        <button
+          role="radio"
+          type="button"
+          [attr.aria-checked]="fontScaleSE.scale() === option.value"
+          [attr.aria-label]="option.label + ' text size'"
+          class="flex flex-col items-center gap-1 rounded-lg py-2 transition-colors duration-150"
+          [ngClass]="fontScaleSE.scale() === option.value ? 'bg-white text-brand-600 ring-1 ring-brand-300' : 'text-[var(--pr-color-accents-6)] hover:bg-white/70'"
+          (click)="selectFontScale(option.value)">
+          <span class="font-bold leading-none" [style.font-size.px]="12 + i * 3" aria-hidden="true">A</span>
+          <span class="text-[10px] font-medium leading-none">{{ option.label }}</span>
+        </button>
+      }
+    </div>
+    @if (fontScaleSE.scale() !== 'default') {
+      <button
+        type="button"
+        class="mt-2.5 flex w-full items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-medium text-brand-400 transition-colors hover:bg-brand-25"
+        (click)="fontScaleSE.reset()">
+        <i class="material-icons-round text-[14px]" aria-hidden="true">restart_alt</i>
+        Reset to default
+      </button>
+    }
+  </div>
+</ng-template>

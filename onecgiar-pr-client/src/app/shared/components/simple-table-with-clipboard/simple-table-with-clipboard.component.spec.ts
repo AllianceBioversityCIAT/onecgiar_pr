@@ -1,24 +1,22 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { MessageService } from 'primeng/api';
-import { ToastModule } from 'primeng/toast';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 import { SimpleTableWithClipboardComponent } from './simple-table-with-clipboard.component';
 
 describe('SimpleTableWithClipboardComponent', () => {
   let component: SimpleTableWithClipboardComponent;
   let fixture: ComponentFixture<SimpleTableWithClipboardComponent>;
-  let messageService: MessageService;
+  let messageService: PrToastService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [SimpleTableWithClipboardComponent],
-      imports: [ToastModule],
-      providers: [MessageService]
+      imports: []
     })
       .compileComponents();
 
     fixture = TestBed.createComponent(SimpleTableWithClipboardComponent);
     component = fixture.componentInstance;
-    messageService = TestBed.inject(MessageService);
+    messageService = TestBed.inject(PrToastService);
     fixture.detectChanges();
   });
 
@@ -62,7 +60,7 @@ describe('SimpleTableWithClipboardComponent', () => {
       execCommandSpy = jest.spyOn(document as any, 'execCommand').mockReturnValue(true);
 
       // Get the MessageService from the component's injector (component has its own provider)
-      const componentMessageService = fixture.debugElement.injector.get(MessageService);
+      const componentMessageService = fixture.debugElement.injector.get(PrToastService);
       addSpy = jest.spyOn(componentMessageService, 'add');
     });
 

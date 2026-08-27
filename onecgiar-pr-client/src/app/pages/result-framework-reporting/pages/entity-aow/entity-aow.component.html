@@ -1,14 +1,26 @@
 @let url = '/result-framework-reporting/entity-details/' + entityAowService.entityId();
 
-<div class="entity-aow_breadcrumb">
-  <span class="entity-aow_breadcrumb_homeLink" routerLink="/result-framework-reporting/home"> Science programs </span>
-  <i class="pi pi-chevron-right entity-aow_breadcrumb_separator"></i>
-  <span class="entity-aow_breadcrumb_link" routerLink="/result-framework-reporting/entity-details/{{ entityAowService.entityId() }}">
-    {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }}
-  </span>
-  <i class="pi pi-chevron-right entity-aow_breadcrumb_separator"></i>
-  <span class="entity-aow_breadcrumb_link breadcrumb_link"> {{ getCurrentRoute() }} </span>
-</div>
+<nav class="entity-aow_breadcrumb" aria-label="Breadcrumb">
+  <ol class="entity-aow_breadcrumb_list">
+    <li>
+      <a class="entity-aow_breadcrumb_homeLink" [routerLink]="programsListPath"> Science programs </a>
+    </li>
+    <li>
+      <i class="pi pi-chevron-right entity-aow_breadcrumb_separator" aria-hidden="true"></i>
+      <a class="entity-aow_breadcrumb_link" [routerLink]="url">
+        {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }}
+      </a>
+    </li>
+    <!-- getCurrentRoute() is empty until the sidebar items load; rendering it unguarded
+         left a dangling "… ›" with nothing after it on first paint. -->
+    @if (getCurrentRoute()) {
+      <li>
+        <i class="pi pi-chevron-right entity-aow_breadcrumb_separator" aria-hidden="true"></i>
+        <span class="entity-aow_breadcrumb_link breadcrumb_link" aria-current="page">{{ getCurrentRoute() }}</span>
+      </li>
+    }
+  </ol>
+</nav>
 
 <div class="entity-aow_layout">
   <aside class="entity-aow_sidebar">

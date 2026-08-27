@@ -16,10 +16,12 @@ import {
   IsDefined,
   IsInt,
   Min,
+  MaxLength,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { IsNotCloudStorageLink } from '../../../shared/validators/is-not-cloud-storage-link.validator';
 
 /* -------------------------------------------------------------------------- */
 /*                               SUB-OBJECTS                                   */
@@ -884,10 +886,16 @@ export class InstitutionDto {
 
 export class EvidenceDto {
   @ApiProperty({
-    description: 'URL linking to supporting evidence for the bilateral',
+    description:
+      'Publicly accessible URL linking to supporting evidence for the bilateral. Must include the http(s) scheme. Links to file storage platforms (SharePoint, OneDrive, Google Drive, Dropbox) are not accepted — PRMS stores the link and never copies the document, so a link behind tenant permissions cannot be rendered or reviewed.',
     example: 'https://doi.org/10.1234/abcd.2025.01',
   })
-  @IsUrl()
+  // `require_protocol` matters more than it looks: with the default options
+  // class-validator reads a bare file name as a URL, because `.pdf` passes its TLD
+  // check. `result-28808-Document-202607042143-8310.pdf` was accepted and stored as an
+  // evidence link on that basis.
+  @IsUrl({ require_protocol: true })
+  @IsNotCloudStorageLink()
   @IsNotEmpty()
   link: string;
 
@@ -1048,11 +1056,52 @@ export class LeadCenterDto {
   institution_id?: number;
 }
 
+export class LeadContactPersonDto {
+  @ApiProperty({
+    description: 'Email of the lead contact person for this result',
+    example: 'jane.doe@cgiar.org',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty({
+    description: 'Full name of the lead contact person for this result',
+    example: 'Jane Doe',
+  })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                               MAIN DTO                                     */
 /* -------------------------------------------------------------------------- */
 
 export class CreateBilateralDto {
+  /**
+   * P2-3166 — the reporting platform's own identifier for this result: a consecutive number, a
+   * UUID, or any string their system already uses.
+   *
+   * **Optional on purpose and it must stay that way.** A bilateral result created inside the PRMS
+   * UI has no external system behind it, so there is nothing to store; `null` is the honest value.
+   * Requiring it would break every producer that has no such id.
+   *
+   * Stored verbatim in `result.external_reference` and returned verbatim on the decision webhook,
+   * so a platform can map our callback onto its own record without parsing anything. It is
+   * deliberately **not** the envelope's `idempotencyKey`, which is a composed deduplication key.
+   */
+  @ApiPropertyOptional({
+    description:
+      "The reporting platform's own identifier for this result (consecutive, UUID, or any string). Returned verbatim on the decision webhook so you can map it back to your record.",
+    example: 'KP-2026-00412',
+    maxLength: 191,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(191)
+  external_reference?: string;
+
   @ApiProperty({
     description: 'Result type identifier for the bilateral',
     example: 6,
@@ -1105,6 +1154,16 @@ export class CreateBilateralDto {
   @ValidateNested()
   @Type(() => LeadCenterDto)
   lead_center: LeadCenterDto;
+
+  @ApiProperty({
+    description:
+      'Lead contact person for this result (MDS field, mandatory). Resolved/matched against Active Directory by email; falls back to storing the name only if no match is found.',
+    type: () => LeadContactPersonDto,
+  })
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LeadContactPersonDto)
+  lead_contact_person: LeadContactPersonDto;
 
   @ApiPropertyOptional({
     description:

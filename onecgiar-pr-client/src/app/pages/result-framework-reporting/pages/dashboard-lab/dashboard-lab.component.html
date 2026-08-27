@@ -1,0 +1,1602 @@
+<!-- ==================== SEARCH POPOVER — the rail's collapsed filter, expanded ==================== -->
+<!-- Primary nav is the app-level Spartan sidebar; these columns are page-local overlays. -->
+
+@if (searchOpen() && viewMode() === 'aow') {
+  <div
+    class="fixed left-[calc(var(--rail-w)+var(--panel-w)+8px)] top-[14px] z-[24] flex w-[260px] animate-[flyout-in_0.16s_cubic-bezier(0.22,1,0.36,1)] items-center gap-2 rounded-xl border border-white/[0.09] bg-[var(--pr-sidebar-bg)] px-3 py-2.5 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+    <span class="material-icons-round text-[16px] text-white/40">search</span>
+    <input
+      type="text"
+      placeholder="Filter programs…"
+      [value]="query()"
+      (input)="onQuery($any($event.target).value)"
+      (keydown.escape)="closeSearch()"
+      aria-label="Filter Science Programs"
+      autofocus
+      class="flex-1 appearance-none border-none bg-transparent text-[12px] text-white outline-none placeholder:text-white/40" />
+    <button
+      type="button"
+      (click)="closeSearch()"
+      aria-label="Close filter"
+      class="inline-flex size-6 shrink-0 appearance-none items-center justify-center rounded-lg border-0 bg-transparent text-white/40 transition-colors hover:bg-white/10 hover:text-white">
+      <span class="material-icons-round text-[15px]">close</span>
+    </button>
+  </div>
+}
+
+<!-- ==================== COLUMN 2 — Areas of Work, only while an AOW is open ====================
+     White, flush against the rail (Monday-style): no gap, no radius, no shadow.
+     Slides in from behind the rail on enter and back out on leave. -->
+@if (viewMode() === 'aow' && panelView() !== 'full') {
+  <aside
+    class="pr-panel fixed inset-y-0 left-[var(--rail-w)] z-[5] box-border flex w-[var(--panel-w)] flex-col gap-2.5 overflow-hidden border-r border-[rgba(30,32,47,0.1)] bg-white px-3 py-3.5"
+    animate.enter="pr-panel--enter"
+    animate.leave="pr-panel--leave">
+    <!-- header: back + program identity, tinted with the program's own accent -->
+    <div class="relative -mx-3 -mt-3.5 mb-1 overflow-hidden px-3 pb-3 pt-3.5" [style.background]="accentTheme().soft">
+      <span class="absolute inset-x-0 top-0 h-[3px]" [style.background]="accentTheme().gradient"></span>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          (click)="backToHome()"
+          aria-label="Back to dashboard"
+          class="inline-flex size-7 shrink-0 appearance-none items-center justify-center rounded-lg border-0 bg-white text-[var(--pr-color-accents-6)] shadow-[0_1px_3px_rgba(30,32,47,0.12)] transition-[transform,color] duration-200 hover:-translate-x-0.5 hover:text-[var(--pr-color-secondary-400)]">
+          <span class="material-icons-round text-[18px]">arrow_back</span>
+        </button>
+        @if (selected(); as sp) {
+          @if (!iconErrors().has(sp.initiativeCode)) {
+            <img class="size-7 shrink-0 rounded-lg object-cover" [src]="iconSrc(sp)" [alt]="sp.initiativeCode" width="28" height="28" (error)="onIconError(sp.initiativeCode)" />
+          }
+          <div class="min-w-0">
+            <p class="m-0 text-[12px] font-bold leading-tight" [style.color]="accentTheme().solid">{{ sp.initiativeCode }}</p>
+            <p class="m-0 truncate text-[10px] leading-tight text-[var(--pr-color-accents-6)]">{{ sp.initiativeShortName || sp.initiativeName }}</p>
+            <!-- the phase lives here now; the navbar wordmark that carried it is hidden on this surface -->
+            @if (phaseLabel()) {
+              <span
+                class="mt-1.5 inline-block rounded-full bg-white px-2 py-px text-[9px] font-bold uppercase tracking-[0.04em] shadow-[0_1px_2px_rgba(30,32,47,0.1)]"
+                [style.color]="accentTheme().solid">
+                {{ phaseLabel() }}
+              </span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="px-1">
+      <span class="text-[9px] font-bold uppercase tracking-[0.09em] text-[var(--pr-color-accents-5)]">
+        {{ panelView() === 'indicators' ? 'Indicators' : 'Areas of Work' }}
+      </span>
+    </div>
+
+    <div class="custom_scroll flex flex-1 flex-col gap-1 overflow-y-auto pr-0.5">
+      @switch (panelView()) {
+        @case ('aows') {
+      @if (loadingAows()) {
+        @for (s of [1, 2, 3, 4]; track s) {
+          <div class="h-[58px] shrink-0 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+        }
+      } @else {
+        @for (aow of aows(); track aow.id) {
+          @let isOpen = activeAowCode() === aow.code;
+          <button
+            type="button"
+            (click)="openAow(aow.code)"
+            [attr.aria-current]="isOpen ? 'true' : null"
+            class="group/aow relative flex w-full shrink-0 appearance-none flex-col gap-1.5 overflow-hidden rounded-xl border border-transparent py-2.5 pl-3 pr-2.5 text-left transition-[background,box-shadow,border-color] duration-200"
+            [class]="
+              isOpen
+                ? 'bg-white border-[rgba(30,32,47,0.08)] shadow-[0_4px_14px_rgba(30,32,47,0.10)]'
+                : 'bg-[var(--pr-color-accents-1)] hover:bg-white hover:border-[rgba(30,32,47,0.08)] hover:shadow-[0_2px_8px_rgba(30,32,47,0.06)]'
+            ">
+            <!-- active marker: the program's accent, growing from the left edge -->
+            <span
+              class="absolute inset-y-1.5 left-0 w-[3px] rounded-r-full transition-transform duration-300 motion-reduce:transition-none"
+              [style.background]="accentTheme().gradient"
+              [class]="isOpen ? 'scale-y-100' : 'scale-y-0'"></span>
+
+            <span class="text-[11.5px] font-extrabold leading-tight" [style.color]="isOpen ? accentTheme().solid : 'var(--pr-color-secondary-400)'">{{ aow.code }}</span>
+
+            <span class="line-clamp-2 text-[12px] font-medium leading-snug" [class]="isOpen ? 'text-[var(--pr-color-secondary-400)]' : 'text-[var(--pr-color-accents-6)]'">
+              {{ aow.name }}
+            </span>
+
+            <div class="flex items-center gap-1.5">
+              <div class="h-1 flex-1 overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]">
+                <div
+                  class="h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none"
+                  [style.width.%]="aow.progress || 0"
+                  [style.background]="accentTheme().gradient"></div>
+              </div>
+              <span class="w-7 shrink-0 text-right text-[9px] font-bold tabular-nums text-[var(--pr-color-accents-5)]">{{ aow.progress || 0 }}%</span>
+            </div>
+          </button>
+        }
+        @if (!aows().length) {
+          <p class="px-3 py-4 text-center text-[11px] text-[var(--pr-color-accents-5)]">No areas of work.</p>
+        }
+      }
+
+      <!-- 2030 Outcomes: not returned by the units endpoint (EOI category is filtered
+           out server-side), so it is a fixed entry — same as the old entity-aow sidebar. -->
+      <span class="my-1.5 h-px w-full shrink-0 bg-[rgba(30,32,47,0.08)]"></span>
+      <button
+        type="button"
+        (click)="openAow(outcomes2030Code)"
+        [attr.aria-current]="is2030() ? 'true' : null"
+        class="group/aow relative flex w-full shrink-0 appearance-none items-center gap-2 overflow-hidden rounded-xl border border-transparent py-2.5 pl-3 pr-2.5 text-left transition-[background,box-shadow,border-color] duration-200"
+        [class]="
+          is2030()
+            ? 'bg-white border-[rgba(30,32,47,0.08)] shadow-[0_4px_14px_rgba(30,32,47,0.10)]'
+            : 'bg-[var(--pr-color-accents-1)] hover:bg-white hover:border-[rgba(30,32,47,0.08)] hover:shadow-[0_2px_8px_rgba(30,32,47,0.06)]'
+        ">
+        <span
+          class="absolute inset-y-1.5 left-0 w-[3px] rounded-r-full transition-transform duration-300 motion-reduce:transition-none"
+          [style.background]="accentTheme().gradient"
+          [class]="is2030() ? 'scale-y-100' : 'scale-y-0'"></span>
+        <span
+          class="material-icons-round shrink-0 text-[16px]"
+          [style.color]="is2030() ? accentTheme().solid : 'var(--pr-color-accents-4)'">
+          flag
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="block text-[11.5px] font-extrabold leading-tight" [style.color]="is2030() ? accentTheme().solid : 'var(--pr-color-secondary-400)'">2030 Outcomes</span>
+          <span class="block truncate text-[10.5px] leading-tight text-[var(--pr-color-accents-5)]">Cumulative 2025–2030</span>
+        </span>
+      </button>
+        }
+
+        <!-- ===== indicators: every indicator in the program, flat ===== -->
+        @case ('indicators') {
+          @if (allPanelIndicators().length) {
+            @for (ind of allPanelIndicators(); track ind.indicator_id + '::' + ind.__aowCode) {
+              <button
+                type="button"
+                (click)="openAow(ind.__aowCode)"
+                class="group flex w-full shrink-0 appearance-none flex-col gap-1.5 rounded-xl border border-transparent bg-[var(--pr-color-accents-1)] px-3 py-2.5 text-left transition-[background,border-color,box-shadow] duration-150 hover:border-[rgba(30,32,47,0.08)] hover:bg-white hover:shadow-[0_2px_8px_rgba(30,32,47,0.06)]">
+                <!-- the indicator IS the blue chip (type_name); the long text is the output it hangs from -->
+                <span class="line-clamp-2 self-start rounded-lg bg-[#6b46e51f] px-2 py-1 text-[11px] font-semibold leading-snug text-[var(--pr-color-primary-400)]">{{ ind.type_name || 'Not provided' }}</span>
+                <span class="line-clamp-2 text-[10px] leading-snug text-[var(--pr-color-accents-5)]" [title]="ind.indicator_description">{{ ind.indicator_description }}</span>
+                <span class="flex flex-wrap items-center gap-1.5 text-[9px] font-semibold text-[var(--pr-color-accents-5)]">
+                  <span class="rounded-full bg-white px-1.5 py-px font-bold text-[var(--pr-color-accents-6)] shadow-[0_1px_2px_rgba(30,32,47,0.06)]">{{ ind.__aowCode }}</span>
+                  <span>Target {{ ind.target_value_sum ?? 0 }}</span>
+                </span>
+              </button>
+            }
+          } @else {
+            <p class="px-2 py-6 text-center text-[11px] text-[var(--pr-color-accents-5)]">Loading indicators…</p>
+          }
+        }
+
+      }
+    </div>
+  </aside>
+}
+
+<!-- ==================== SIDEBAR HOVER FLYOUT — interactive AOW preview ==================== -->
+@if (hoveredProgram(); as hp) {
+  <div
+    (mouseenter)="onFlyoutEnter()"
+    (mouseleave)="onFlyoutLeave()"
+    class="fixed z-[20] w-[308px] animate-[flyout-in_0.16s_cubic-bezier(0.22,1,0.36,1)] overflow-hidden rounded-[20px] border border-white/60 bg-white/95 p-4 shadow-[0_24px_60px_rgba(30,32,47,0.28)] backdrop-blur-sm"
+    [class]="viewMode() === 'aow' ? 'left-[calc(var(--rail-w)+var(--panel-w)+8px)]' : 'left-[calc(var(--full-w)+var(--float-gap)+4px)]'"
+    [style.top.px]="hoverTop()">
+    <div class="absolute inset-x-0 top-0 h-1" [style.background]="hoveredTheme().gradient"></div>
+
+    <div class="mb-3 flex items-center gap-2.5">
+      <span class="rounded-lg px-2 py-1 text-[12px] font-extrabold" [style.color]="hoveredTheme().solid" [style.background]="hoveredTheme().soft">{{ hp.initiativeCode }}</span>
+      <span class="truncate text-[13px] font-bold text-[var(--pr-color-secondary-400)]">{{ hp.initiativeShortName || hp.initiativeName }}</span>
+    </div>
+
+    @if (hoveredLoading()) {
+      <div class="flex flex-col gap-2">
+        @for (s of [1, 2, 3]; track s) {
+          <div class="h-9 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+        }
+      </div>
+    } @else if (hoveredAows().length) {
+      <p class="mb-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--pr-color-accents-5)]">{{ hoveredAows().length }} areas of work</p>
+      <div class="custom_scroll flex max-h-[50vh] flex-col gap-1.5 overflow-y-auto pr-1">
+        @for (aow of hoveredAows(); track aow.id) {
+          <button
+            type="button"
+            (click)="select(hp); openAow(aow.code); onFlyoutLeave()"
+            class="flex w-full appearance-none items-center gap-2.5 rounded-xl border-0 bg-[var(--pr-color-accents-1)] px-3 py-2 text-left transition-colors hover:brightness-95">
+            <span class="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold" [style.color]="hoveredTheme().solid" [style.background]="hoveredTheme().soft">{{ aow.code }}</span>
+            <span class="truncate text-[12px] font-medium text-[var(--pr-color-secondary-400)]">{{ aow.name }}</span>
+          </button>
+        }
+      </div>
+    } @else {
+      <p class="py-2 text-center text-[11px] text-[var(--pr-color-accents-5)]">No areas of work.</p>
+    }
+  </div>
+}
+
+<!-- ==================== DETAIL (right panel) — bento dashboard (Tailwind) ==================== -->
+<!-- Focus mode trims the panel gutters so the indicator table gets the full width. -->
+<section
+  class="box-border"
+  [class]="
+    viewMode() === 'aow'
+      ? (panelView() === 'full'
+          ? 'min-h-screen bg-[#eef0f3] px-5 pb-8 pt-4'
+          : 'min-h-screen bg-[#eef0f3] px-3 pb-4 pt-3')
+      : isProgramShell()
+        ? 'min-h-screen bg-[var(--pr-surface-app)] p-0'
+        : 'min-h-screen bg-[#eef0f3] px-6 pb-10 pt-5'
+  ">
+  @if (selected(); as sp) {
+    @if (viewMode() === 'aow') {
+      <!-- 3-view switch — moved here from the panel so it shows in the Full view too -->
+      <div class="mb-4 flex w-fit items-center gap-0.5 rounded-xl border border-[rgba(30,32,47,0.07)] bg-white p-1 text-[12px] font-semibold shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
+        @for (v of panelViews; track v.id) {
+          <button
+            type="button"
+            (click)="setPanelView(v.id)"
+            [attr.aria-pressed]="panelView() === v.id"
+            class="flex appearance-none items-center gap-1.5 rounded-lg border-0 px-3.5 py-1.5 transition-colors duration-150"
+            [class]="
+              panelView() === v.id
+                ? 'bg-[#6b46e51f] text-[var(--pr-color-primary-400)]'
+                : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'
+            ">
+            <span class="material-icons-round text-[16px]">{{ v.icon }}</span>{{ v.label }}
+          </button>
+        }
+      </div>
+
+      @if (panelView() === 'full') {
+        <!-- ===== FULL VIEW: every AoW with its indicators, full width ===== -->
+        <div class="flex flex-col gap-4">
+          @for (x of indicatorsByAow(); track x.aow.code) {
+            <section class="overflow-hidden rounded-2xl border border-[rgba(30,32,47,0.07)] bg-white shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
+              <button
+                type="button"
+                (click)="togglePanelAow(x.aow.code)"
+                [attr.aria-expanded]="isPanelAowExpanded(x.aow.code)"
+                class="flex w-full appearance-none items-center gap-3 border-0 px-5 py-3.5 text-left"
+                [style.background]="accentTheme().soft">
+                <span class="material-icons-round text-[20px] transition-transform duration-200" [class.-rotate-90]="!isPanelAowExpanded(x.aow.code)" [style.color]="accentTheme().solid">expand_more</span>
+                <span class="shrink-0 text-[15px] font-extrabold" [style.color]="accentTheme().solid">{{ x.aow.code }}</span>
+                <span class="min-w-0 flex-1 truncate text-[15px] font-bold text-[var(--pr-color-secondary-400)]">{{ x.aow.name }}</span>
+                <span class="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ x.count }} indicator{{ x.count === 1 ? '' : 's' }}</span>
+              </button>
+
+              @if (isPanelAowExpanded(x.aow.code)) {
+                @if (x.loading) {
+                  <div class="flex flex-col gap-2 p-4">
+                    @for (s of [1, 2]; track s) { <div class="h-16 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div> }
+                  </div>
+                } @else if (x.indicators.length) {
+                  <div class="grid grid-cols-2 gap-3 p-4 max-[1100px]:grid-cols-1">
+                    @for (ind of x.indicators; track ind.indicator_id) {
+                      <div class="flex flex-col gap-2.5 rounded-xl border border-[rgba(30,32,47,0.07)] bg-white p-3.5">
+                        <p class="m-0 line-clamp-2 text-[13.5px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]" [title]="ind.indicator_description">{{ ind.indicator_description }}</p>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                          <span class="max-w-full truncate rounded-full bg-[#6b46e51f] px-2 py-0.5 text-[11.5px] font-semibold text-[var(--pr-color-primary-400)]">{{ ind.type_name || 'Not provided' }}</span>
+                          @if (ind.center_acronym) {
+                            <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">{{ ind.center_acronym }}</span>
+                          }
+                          <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">Target: <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ ind.target_value_sum ?? 0 }}</b></span>
+                        </div>
+                        <div class="mt-auto flex items-center justify-between gap-2 pt-1">
+                          <span class="text-[11.5px] text-[var(--pr-color-accents-5)]">Achieved <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ ind.actual_achieved_value_sum ?? 0 }}</b> of {{ ind.target_value_sum ?? 0 }}</span>
+                          <button
+                            type="button"
+                            (click)="openAow(x.aow.code)"
+                            class="flex shrink-0 appearance-none items-center gap-1.5 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-3 py-1.5 text-[12px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
+                            <span class="material-icons-round text-[14px]">edit_note</span> Report result
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="px-5 py-4 text-[12.5px] text-[var(--pr-color-accents-5)]">No indicators in this Area of Work.</p>
+                }
+              }
+            </section>
+          }
+        </div>
+      } @else {
+      <!-- ==================== AOW DETAIL — one header container: identity, metrics, toolbar ==================== -->
+      <!-- NOT overflow-hidden: the select panels are absolutely positioned inside
+           and were being clipped by it, which made the filters unusable. -->
+      <section data-guide="aow-header" class="relative z-[20] mb-4 rounded-2xl border border-[rgba(30,32,47,0.07)] bg-white shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
+        <!-- accent hairline ties the header to the active program -->
+        <span class="block h-[3px] w-full rounded-t-2xl" [style.background]="accentTheme().gradient"></span>
+
+        <!-- ---- identity + metrics ---- -->
+        <div class="flex flex-wrap items-start justify-between gap-x-8 gap-y-4 px-5 pb-4 pt-4">
+          <div class="min-w-0 max-w-[52ch]">
+            <p class="m-0 flex items-center gap-1 text-[11px] font-medium text-[var(--pr-color-accents-5)]">
+              <span class="font-bold text-[var(--pr-color-secondary-400)]">{{ sp.initiativeCode }}</span>
+              <span class="material-icons-round text-[13px] text-[var(--pr-color-accents-3)]">chevron_right</span>
+              <span class="truncate">{{ sp.initiativeShortName || sp.initiativeName }}</span>
+            </p>
+
+            <h1 class="m-0 mt-1.5 text-[22px] font-bold leading-[1.15] tracking-[-0.015em] text-[var(--pr-color-secondary-400)] [text-wrap:balance]">
+              @if (is2030()) {
+                <span [style.color]="accentTheme().solid">2030 Outcomes</span>
+              } @else {
+                <span [style.color]="accentTheme().solid">{{ activeAowCode() }}</span>
+                <span class="mx-1.5 font-normal text-[var(--pr-color-accents-3)]">·</span>{{ activeAow()?.name || 'Area of Work' }}
+              }
+            </h1>
+
+            <p class="m-0 mt-1 text-[11.5px] leading-snug text-[var(--pr-color-accents-5)]">
+              {{ is2030() ? 'End of Initiative outcomes — targets accumulate from 2025 through 2030.' : 'Indicators planned in the Theory of Change for this Area of Work.' }}
+            </p>
+          </div>
+
+          @if (activeAow(); as aow) {
+            <div class="flex shrink-0 items-center gap-5">
+              @if (aow.resultsCount) {
+                <div class="flex gap-2">
+                  <span class="flex items-center gap-1.5 rounded-lg bg-[var(--pr-color-accents-1)] px-2.5 py-1.5">
+                    <span class="size-1.5 rounded-full bg-[var(--pr-color-yellow-300)]"></span>
+                    <span class="text-[11px] text-[var(--pr-color-accents-6)]">Editing</span>
+                    <b class="text-[13px] tabular-nums text-[var(--pr-color-secondary-400)]">{{ aow.resultsCount.editing }}</b>
+                  </span>
+                  <span class="flex items-center gap-1.5 rounded-lg bg-[var(--pr-color-accents-1)] px-2.5 py-1.5">
+                    <span class="size-1.5 rounded-full bg-[var(--pr-color-green-500)]"></span>
+                    <span class="text-[11px] text-[var(--pr-color-accents-6)]">Submitted</span>
+                    <b class="text-[13px] tabular-nums text-[var(--pr-color-secondary-400)]">{{ aow.resultsCount.submitted }}</b>
+                  </span>
+                </div>
+              }
+
+              <div class="flex flex-col gap-1.5">
+                <div class="flex items-baseline justify-between gap-6">
+                  <span class="text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-5)]">AoW progress</span>
+                  <span class="text-[17px] font-extrabold leading-none tabular-nums" [style.color]="accentTheme().solid">{{ aow.progress || 0 }}%</span>
+                </div>
+                <div class="h-1.5 w-[190px] overflow-hidden rounded-full bg-[var(--pr-color-accents-2)]">
+                  <div
+                    class="h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none"
+                    [style.width.%]="aow.progress || 0"
+                    [style.background]="accentTheme().gradient"></div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- ---- toolbar: tabs · search · filters · count ---- -->
+        <div data-guide="aow-search" class="relative z-[21] flex flex-wrap items-center gap-2.5 rounded-b-2xl border-t border-[rgba(30,32,47,0.07)] bg-[var(--pr-color-accents-1)] px-5 py-3">
+          @if (is2030()) {
+            <span class="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)] shadow-[0_1px_3px_rgba(30,32,47,0.08)]">
+              <span class="material-icons-round text-[16px]" [style.color]="accentTheme().solid">flag</span>
+              End of Initiative Outcomes
+              <span class="rounded-full bg-[var(--pr-color-accents-2)] px-1.5 py-px text-[10px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">
+                {{ indicatorCounts().outputs }}
+              </span>
+            </span>
+          } @else {
+            <div class="flex gap-0.5 rounded-xl bg-[var(--pr-border-divider)] p-1">
+              <button
+                type="button"
+                (click)="setIndicatorTab('outputs')"
+                class="flex appearance-none items-center gap-1.5 rounded-lg border-0 px-3 py-1.5 text-[12.5px] font-semibold transition-colors duration-150"
+                [class]="
+                  indicatorTab() === 'outputs'
+                    ? 'bg-white text-[var(--pr-color-primary-400)]'
+                    : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'
+                ">
+                <span class="material-icons-round text-[16px]">inventory_2</span>
+                High-Level Outputs
+                <span
+                  class="rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums"
+                  [class]="indicatorTab() === 'outputs' ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]' : 'bg-[var(--pr-color-accents-2)] text-[var(--pr-color-accents-6)]'">
+                  {{ indicatorCounts().outputs }}
+                </span>
+              </button>
+              <button
+                type="button"
+                (click)="setIndicatorTab('outcomes')"
+                class="flex appearance-none items-center gap-1.5 rounded-lg border-0 px-3 py-1.5 text-[12.5px] font-semibold transition-colors duration-150"
+                [class]="
+                  indicatorTab() === 'outcomes'
+                    ? 'bg-white text-[var(--pr-color-primary-400)]'
+                    : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'
+                ">
+                <span class="material-icons-round text-[16px]">track_changes</span>
+                Outcomes
+                <span
+                  class="rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums"
+                  [class]="indicatorTab() === 'outcomes' ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]' : 'bg-[var(--pr-color-accents-2)] text-[var(--pr-color-accents-6)]'">
+                  {{ indicatorCounts().outcomes }}
+                </span>
+              </button>
+            </div>
+          }
+
+          <!-- cards vs table, in front of the search as the first thing you meet -->
+          <div class="flex shrink-0 gap-0.5 rounded-xl border border-[rgba(30,32,47,0.1)] bg-white p-0.5 shadow-[0_1px_3px_rgba(30,32,47,0.06)]">
+            <button
+              type="button"
+              (click)="setIndicatorView('cards')"
+              aria-label="Card view"
+              class="inline-flex size-8 appearance-none items-center justify-center rounded-lg border-0 transition-colors"
+              [class]="
+                indicatorView() === 'cards'
+                  ? 'bg-[#6b46e51f] text-[var(--pr-color-primary-400)]'
+                  : 'bg-transparent text-[var(--pr-color-accents-5)] hover:text-[var(--pr-color-secondary-400)]'
+              ">
+              <span class="material-icons-round text-[17px]">grid_view</span>
+            </button>
+            <button
+              type="button"
+              (click)="setIndicatorView('table')"
+              aria-label="Table view"
+              class="inline-flex size-8 appearance-none items-center justify-center rounded-lg border-0 transition-colors"
+              [class]="
+                indicatorView() === 'table'
+                  ? 'bg-[#6b46e51f] text-[var(--pr-color-primary-400)]'
+                  : 'bg-transparent text-[var(--pr-color-accents-5)] hover:text-[var(--pr-color-secondary-400)]'
+              ">
+              <span class="material-icons-round text-[17px]">table_rows</span>
+            </button>
+          </div>
+
+          <!-- search across the loaded indicators (client-side, same shell as the sidebar filter) -->
+          <label
+            class="flex h-[38px] min-w-[220px] flex-1 items-center gap-2 rounded-xl border border-[rgba(30,32,47,0.08)] bg-white px-3 shadow-[0_1px_3px_rgba(30,32,47,0.06)] focus-within:border-[var(--pr-color-primary-300)] max-[900px]:w-full">
+            <span class="material-icons-round text-[17px] text-[var(--pr-color-accents-4)]">search</span>
+            <input
+              type="text"
+              placeholder="Search indicators…"
+              [value]="indicatorSearch()"
+              (input)="indicatorSearch.set($any($event.target).value)"
+              (keydown.escape)="indicatorSearch.set('')"
+              aria-label="Search indicators"
+              class="w-full flex-1 appearance-none border-none bg-transparent text-[12.5px] text-[var(--pr-color-secondary-400)] outline-none placeholder:text-[var(--pr-color-accents-4)]" />
+            @if (indicatorSearch()) {
+              <button
+                type="button"
+                (click)="indicatorSearch.set('')"
+                aria-label="Clear search"
+                class="inline-flex size-5 shrink-0 appearance-none items-center justify-center rounded-md border-0 bg-transparent text-[var(--pr-color-accents-4)] hover:text-[var(--pr-color-secondary-400)]">
+                <span class="material-icons-round text-[15px]">close</span>
+              </button>
+            }
+          </label>
+
+          <div class="w-[240px] max-[900px]:w-full">
+            <app-pr-select
+              [options]="typologySelectOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="All typologies"
+              [editable]="true"
+              [required]="false"
+              [truncateSelectionText]="true"
+              optionsInlineStyles="min-width: 360px"
+              [ngModel]="typologyFilter() || ''"
+              [ngModelOptions]="{ standalone: true }"
+              (selectOptionEvent)="typologyFilter.set($event?.value || null)">
+            </app-pr-select>
+          </div>
+          <div class="w-[170px] max-[900px]:w-full">
+            <app-pr-select
+              [options]="statusSelectOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="All statuses"
+              [editable]="true"
+              [required]="false"
+              [ngModel]="statusFilter() || ''"
+              [ngModelOptions]="{ standalone: true }"
+              (selectOptionEvent)="statusFilter.set($event?.value || null)">
+            </app-pr-select>
+          </div>
+
+          @if (hasFilters()) {
+            <button
+              type="button"
+              (click)="clearFilters()"
+              class="flex shrink-0 appearance-none items-center gap-1 rounded-lg border-0 bg-transparent px-2 py-2 text-[12px] font-semibold text-[var(--pr-color-accents-6)] transition-colors hover:text-[var(--pr-color-secondary-400)]">
+              <span class="material-icons-round text-[15px]">close</span>
+              Clear
+            </button>
+          }
+
+          <span class="ml-auto shrink-0 text-[11px] font-medium tabular-nums text-[var(--pr-color-accents-5)]">
+            @if (hasFilters()) {
+              Showing <b class="text-[var(--pr-color-secondary-400)]">{{ filteredCount() }}</b> of {{ tabTotal() }}
+            } @else {
+              <b class="text-[var(--pr-color-secondary-400)]">{{ tabTotal() }}</b> indicator{{ tabTotal() === 1 ? '' : 's' }}
+            }
+          </span>
+        </div>
+      </section>
+
+      <!-- ==================== indicators ==================== -->
+      @if (loadingToc()) {
+        <div class="flex flex-col gap-7">
+          @for (g of [1, 2]; track g) {
+            <div>
+              <div class="mb-3 h-[18px] w-1/3 animate-pulse rounded-md bg-white/70"></div>
+              <div class="divide-y divide-[rgba(30,32,47,0.06)] overflow-hidden rounded-xl border border-[rgba(30,32,47,0.08)] bg-white">
+                @for (s of [1, 2, 3, 4]; track s) {
+                  <div class="flex items-center gap-4 px-4 py-3">
+                    <div class="size-2 shrink-0 animate-pulse rounded-full bg-[var(--pr-color-accents-2)]"></div>
+                    <div class="flex-1">
+                      <div class="h-[12px] w-1/2 animate-pulse rounded bg-[var(--pr-color-accents-1)]"></div>
+                      <div class="mt-1.5 h-[9px] w-1/4 animate-pulse rounded bg-[var(--pr-color-accents-1)]"></div>
+                    </div>
+                    <div class="hidden h-[6px] w-[124px] animate-pulse rounded-full bg-[var(--pr-color-accents-2)] md:block"></div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (indicatorGroups().length) {
+        <div class="relative z-[1] flex flex-col gap-4">
+          @for (group of indicatorGroups(); track group.result_title) {
+            @let titleParts = splitGroupTitle(group.result_title);
+            <!-- One card per HLO group: tinted header (program accent) + rows attached below. -->
+            <section
+              [attr.data-guide]="$first ? 'aow-group' : null"
+              class="overflow-hidden rounded-2xl border border-[rgba(30,32,47,0.07)] bg-white shadow-[0_2px_10px_rgba(30,32,47,0.05)]">
+              <button
+                type="button"
+                (click)="toggleGroup(group.result_title)"
+                [attr.aria-expanded]="!isGroupCollapsed(group.result_title)"
+                class="group/hlo flex w-full appearance-none items-center gap-3 border-0 px-4 py-3 text-left transition-[filter] duration-200 hover:brightness-[0.97]"
+                [style.background]="accentTheme().soft">
+                <span
+                  class="inline-flex size-6 shrink-0 items-center justify-center rounded-lg bg-white shadow-[0_1px_3px_rgba(30,32,47,0.12)] transition-transform duration-200"
+                  [class.-rotate-90]="isGroupCollapsed(group.result_title)">
+                  <span class="material-icons-round text-[17px]" [style.color]="accentTheme().solid">expand_more</span>
+                </span>
+
+                @if (titleParts.code) {
+                  <span
+                    class="shrink-0 rounded-md bg-white px-2 py-0.5 text-[10.5px] font-extrabold tracking-[0.02em] shadow-[0_1px_2px_rgba(30,32,47,0.08)]"
+                    [style.color]="accentTheme().solid">
+                    {{ titleParts.code }}
+                  </span>
+                }
+
+                <h3 class="m-0 min-w-0 flex-1 text-[13.5px] font-bold leading-snug text-[var(--pr-color-secondary-400)]">{{ titleParts.name }}</h3>
+
+                <span
+                  class="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10.5px] font-bold tabular-nums shadow-[0_1px_2px_rgba(30,32,47,0.08)]"
+                  [style.color]="accentTheme().solid">
+                  {{ group.indicators.length }} indicator{{ group.indicators.length === 1 ? '' : 's' }}
+                </span>
+              </button>
+              @if (!isGroupCollapsed(group.result_title)) {
+              @if (group.indicators?.length) {
+                @if (indicatorView() === 'table') {
+                  <div class="overflow-x-auto">
+                    <table class="w-full border-collapse text-left">
+                      <thead>
+                        <tr class="bg-[var(--pr-color-accents-1)] text-[10.5px] uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">
+                          <th class="px-4 py-2 font-bold">Indicator</th>
+                          <th class="px-3 py-2 font-bold">Typology</th>
+                          <th class="w-[80px] px-3 py-2 font-bold">Center</th>
+                          <th class="w-[70px] px-3 py-2 text-right font-bold">Target</th>
+                          <th class="w-[80px] px-3 py-2 text-right font-bold">Achieved</th>
+                          <th class="w-[110px] px-3 py-2 font-bold">Status</th>
+                          <th class="w-[120px] px-3 py-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (ind of group.indicators; track ind.indicator_id; let ri = $index) {
+                          <tr class="border-t border-[rgba(30,32,47,0.06)]" [class]="ri % 2 === 0 ? 'bg-white' : 'bg-[#f8f9fd]'">
+                            <td class="px-4 py-2.5">
+                              <span class="line-clamp-2 text-[13px] font-medium leading-snug text-[var(--pr-color-secondary-400)]" [title]="ind.indicator_description">
+                                {{ ind.indicator_description }}
+                              </span>
+                            </td>
+                            <td class="px-3 py-2.5 text-[12px] text-[var(--pr-color-primary-400)]">{{ ind.type_name || '—' }}</td>
+                            <td class="px-3 py-2.5 text-[12px] text-[var(--pr-color-accents-6)]">{{ ind.center_acronym || '—' }}</td>
+                            <td class="px-3 py-2.5 text-right text-[13px] font-bold tabular-nums text-[var(--pr-color-secondary-400)]">{{ ind.target_value_sum ?? 0 }}</td>
+                            <td class="px-3 py-2.5 text-right text-[13px] font-bold tabular-nums" [style.color]="achievedColor(ind.actual_achieved_value_sum)">
+                              {{ ind.actual_achieved_value_sum ?? 0 }}
+                            </td>
+                            <td class="px-3 py-2.5">
+                              <span class="rounded-full px-2 py-0.5 text-[10.5px] font-bold {{ statusChip(ind.progress_percentage) }}">{{ statusLabel(ind.progress_percentage) }}</span>
+                            </td>
+                            <td class="px-3 py-2.5 text-right">
+                              <div class="flex items-center justify-end gap-1.5">
+                                <!-- Gated like the legacy table: no Report CTA for users who cannot submit. -->
+                                @if (entityAowService.canReportResults()) {
+                                  <button
+                                    type="button"
+                                    (click)="openLegacyReportModal(ind, group)"
+                                    class="flex appearance-none items-center gap-1 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
+                                    <span class="material-icons-round text-[13px]">edit_note</span>
+                                    Report
+                                  </button>
+                                }
+                                <button
+                                  type="button"
+                                  (click)="manageIndicator(ind, group.result_title, 'info')"
+                                  title="Information"
+                                  aria-label="Information"
+                                  class="flex size-[26px] appearance-none items-center justify-center rounded-lg border border-[rgba(30,32,47,0.14)] bg-white text-[var(--pr-color-secondary-400)] hover:border-[rgba(107,70,229,0.5)] hover:text-[var(--pr-color-primary-400)]">
+                                  <span class="material-icons-round text-[15px]">info</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                <div class="grid grid-cols-3 gap-3 p-3 max-[1500px]:grid-cols-2 max-[1100px]:grid-cols-1">
+                  @for (ind of group.indicators; track ind.indicator_id) {
+                    <!-- metadata card: what the indicator IS, not how far along it is -->
+                    <div
+                      [attr.data-guide]="$first ? 'aow-indicator' : null"
+                      class="group/row flex flex-col rounded-xl border border-[rgba(30,32,47,0.07)] bg-white p-3.5 transition-[border-color,box-shadow] duration-150 hover:border-[rgba(107,70,229,0.45)] hover:shadow-[0_6px_18px_rgba(30,32,47,0.08)]">
+                      <div class="flex items-start gap-2">
+                        <!-- clamped to 3 lines; the full wording is one hover away -->
+                        <p
+                          class="m-0 line-clamp-3 min-w-0 flex-1 text-[13.5px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]"
+                          [title]="ind.indicator_description">
+                          {{ ind.indicator_description }}
+                        </p>
+                        <span class="shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold {{ statusChip(ind.progress_percentage) }}">
+                          {{ statusLabel(ind.progress_percentage) }}
+                        </span>
+                      </div>
+
+                      <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+                        <span
+                          class="max-w-full truncate rounded-full bg-[#6b46e51f] px-2 py-0.5 text-[11.5px] font-semibold text-[var(--pr-color-primary-400)]"
+                          [title]="ind.type_name || 'Not provided'">
+                          {{ ind.type_name || 'Not provided' }}
+                        </span>
+                        @if (ind.center_acronym) {
+                          <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">
+                            {{ ind.center_acronym }}
+                          </span>
+                        }
+                        <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">
+                          Target: <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ ind.target_value_sum ?? 0 }}</b>
+                        </span>
+                        @if (ind.target_date) {
+                          <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--pr-color-accents-6)]">
+                            {{ ind.target_date }}
+                          </span>
+                        }
+                        @if (ind.location) {
+                          <span class="rounded-full border border-[rgba(30,32,47,0.1)] px-2 py-0.5 text-[11.5px] font-medium capitalize text-[var(--pr-color-accents-6)]">
+                            {{ ind.location }}
+                          </span>
+                        }
+                      </div>
+
+                      <div class="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
+                        <span class="text-[11.5px] text-[var(--pr-color-accents-5)]">
+                          Achieved
+                          <b class="tabular-nums" [style.color]="achievedColor(ind.actual_achieved_value_sum)">{{ ind.actual_achieved_value_sum ?? 0 }}</b>
+                          of {{ ind.target_value_sum ?? 0 }}
+                        </span>
+                        <div class="flex shrink-0 items-center gap-1.5">
+                          <!-- Gated like the legacy table: no Report CTA for users who cannot submit. -->
+                          @if (entityAowService.canReportResults()) {
+                            <button
+                              type="button"
+                              [attr.data-guide]="$first ? 'aow-report' : null"
+                              (click)="openLegacyReportModal(ind, group)"
+                              class="flex appearance-none items-center gap-1.5 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-3 py-1.5 text-[12px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
+                              <span class="material-icons-round text-[14px]">edit_note</span>
+                              Report result
+                            </button>
+                          }
+                          <button
+                            type="button"
+                            (click)="manageIndicator(ind, group.result_title, 'info')"
+                            class="flex appearance-none items-center gap-1.5 rounded-lg border border-[rgba(30,32,47,0.14)] bg-white px-3 py-1.5 text-[12px] font-semibold text-[var(--pr-color-secondary-400)] hover:border-[rgba(107,70,229,0.5)] hover:text-[var(--pr-color-primary-400)]">
+                            <span class="material-icons-round text-[14px]">info</span>
+                            Information
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+                }
+              } @else {
+                <p class="m-0 px-4 py-3 text-[12px] text-[var(--pr-color-accents-5)]">No indicators in this group.</p>
+              }
+              }
+            </section>
+          }
+        </div>
+      } @else {
+        <div class="rounded-[18px] border border-dashed border-[rgba(30,32,47,0.14)] bg-white/60 px-6 py-12 text-center">
+          <span class="material-icons-round text-[26px] text-[var(--pr-color-accents-3)]">{{ typologyFilter() || statusFilter() ? 'filter_alt' : 'inventory_2' }}</span>
+          <p class="m-0 mt-1 text-[13px] text-[var(--pr-color-accents-5)]">
+            {{ typologyFilter() || statusFilter() ? 'No indicators match the current filters.' : 'No indicators in this area of work yet.' }}
+          </p>
+          @if (typologyFilter() || statusFilter()) {
+            <button
+              type="button"
+              (click)="typologyFilter.set(null); statusFilter.set(null)"
+              class="mx-auto mt-3 flex appearance-none items-center gap-1 rounded-lg border-0 bg-white px-3 py-2 text-[12px] font-semibold text-[var(--pr-color-secondary-400)] shadow-[0_2px_8px_rgba(30,32,47,0.08)] transition-transform hover:-translate-y-px">
+              <span class="material-icons-round text-[15px]">close</span>
+              Clear filters
+            </button>
+          }
+        </div>
+      }
+      }
+    } @else {
+    <!-- The program shell (Overview / Reporting) owns its own spacing: the band is full-bleed and
+         the content pad is 32px, so no outer grid gap may sit between them. -->
+    <div
+      [class]="
+        showDashboardChrome()
+          ? 'grid grid-cols-4 items-stretch gap-4 max-[1180px]:grid-cols-2 max-[620px]:grid-cols-1'
+          : isProgramShell()
+            ? 'flex flex-col'
+            : 'grid grid-cols-1 items-stretch gap-4'
+      ">
+      @if (showDashboardChrome()) {
+      <!-- ===== Leader card — flat, no gradient/glow (aligned to PROGRAM-SHELL-SPEC §4 / bilateral) ===== -->
+      <article
+        class="relative col-span-2 flex min-h-[168px] flex-col justify-between gap-4 overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-white px-5 py-5 max-[620px]:col-span-1">
+        <div class="relative z-[1] flex items-center gap-3">
+          @if (!iconErrors().has(sp.initiativeCode)) {
+            <img
+              class="size-11 shrink-0 rounded-xl bg-[var(--pr-color-accents-1)] object-cover"
+              [src]="iconSrc(sp)"
+              [alt]="sp.initiativeCode"
+              (load)="extractAccent($event, sp.initiativeCode)"
+              (error)="onIconError(sp.initiativeCode)" />
+          } @else {
+            <span class="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--pr-color-accents-1)]">
+              <i class="material-icons-round text-[22px] text-[var(--pr-color-accents-5)]">hub</i>
+            </span>
+          }
+          <div class="min-w-0">
+            <p class="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-medium text-[var(--pr-color-accents-5)]">
+              {{ sp.initiativeCode }} · {{ sp.entityTypeName }}@if (phaseLabel()) {<span> · {{ phaseLabel() }}</span>}
+            </p>
+            <h1 class="mt-0.5 text-[22px] font-bold leading-[1.15] tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">
+              {{ sp.initiativeShortName || sp.initiativeName }}
+            </h1>
+          </div>
+          <a
+            class="ml-auto inline-flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-[var(--pr-color-accents-1)] text-[var(--pr-color-accents-6)] transition-colors hover:bg-[var(--pr-color-accents-2)] hover:text-[var(--pr-color-secondary-400)]"
+            [routerLink]="['/result-framework-reporting/entity-details', sp.initiativeCode]">
+            <span class="material-icons-round text-[18px]">open_in_new</span>
+          </a>
+        </div>
+
+        <div class="relative z-[1] flex flex-wrap items-center gap-3">
+          <div class="flex flex-wrap gap-2">
+            <span class="rounded-full bg-[var(--pr-color-accents-1)] px-3 py-1 text-[11px] font-semibold text-[var(--pr-color-accents-6)]">{{ selectedTotal() }} results this phase</span>
+            <span class="rounded-full bg-[var(--pr-color-accents-1)] px-3 py-1 text-[11px] font-semibold text-[var(--pr-color-accents-6)]">{{ submittedPct() }}% reported</span>
+          </div>
+          <!-- Single `brand` CTA for this screen (rule 1) — matches reporting-program-band's primary action. -->
+          <button
+            type="button"
+            data-guide="guided-entry"
+            hlmBtn
+            variant="brand"
+            (click)="openGuided()"
+            class="ml-auto shrink-0 gap-1.5 text-[11px]">
+            <span class="material-icons-round text-[14px]">auto_awesome</span>
+            Report a result
+          </button>
+        </div>
+      </article>
+
+      <!-- Reported — flat card, mono % + bar instead of a conic donut -->
+      <article
+        class="col-start-3 row-start-1 flex min-h-[168px] flex-col justify-between gap-3 rounded-[12px] border border-[var(--pr-border)] bg-white px-5 py-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Reported</p>
+        <div class="my-auto text-center">
+          <span class="text-[36px] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-[var(--pr-color-secondary-400)]">{{ submittedPct() }}%</span>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <div class="h-1.5 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+            <div class="h-full rounded-full bg-[var(--pr-color-primary-300)] transition-[width] duration-500" [style.width.%]="submittedPct()"></div>
+          </div>
+          <p class="m-0 text-[11px] text-[var(--pr-color-accents-5)]">QAed + Submitted</p>
+        </div>
+      </article>
+
+      <!-- Program snapshot -->
+      <article
+        class="col-start-4 row-start-1 flex min-h-[168px] flex-col justify-between gap-3 rounded-[12px] border border-[var(--pr-border)] bg-white px-4 py-4 max-[1180px]:col-start-auto max-[1180px]:row-start-auto">
+        <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Program snapshot</p>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="rounded-xl bg-[var(--pr-color-accents-1)] px-2.5 py-2">
+            <p class="m-0 text-[18px] font-extrabold tabular-nums leading-none text-[var(--pr-color-secondary-400)]">{{ selectedTotal() }}</p>
+            <p class="m-0 mt-1 text-[10px] font-semibold text-[var(--pr-color-accents-6)]">Results</p>
+          </div>
+          <div class="rounded-xl bg-[var(--pr-color-accents-1)] px-2.5 py-2">
+            <p class="m-0 text-[18px] font-extrabold tabular-nums leading-none text-[var(--pr-color-secondary-400)]">{{ submittedPct() }}%</p>
+            <p class="m-0 mt-1 text-[10px] font-semibold text-[var(--pr-color-accents-6)]">Reported</p>
+          </div>
+          <div class="rounded-xl bg-[var(--pr-color-accents-1)] px-2.5 py-2">
+            <p class="m-0 text-[18px] font-extrabold tabular-nums leading-none text-[var(--pr-color-secondary-400)]">{{ aowStats().count }}</p>
+            <p class="m-0 mt-1 text-[10px] font-semibold text-[var(--pr-color-accents-6)]">Areas of Work</p>
+          </div>
+          <div class="rounded-xl bg-[var(--pr-color-accents-1)] px-2.5 py-2">
+            <p class="m-0 text-[18px] font-extrabold tabular-nums leading-none text-[var(--pr-color-secondary-400)]">{{ aowStats().avgProgress }}%</p>
+            <p class="m-0 mt-1 text-[10px] font-semibold text-[var(--pr-color-accents-6)]">Avg AoW progress</p>
+          </div>
+        </div>
+        <p class="m-0 text-[11px] text-[var(--pr-color-accents-5)]">
+          <span class="font-bold tabular-nums text-[var(--pr-color-secondary-400)]">{{ aowStats().active }}</span>
+          active AoWs with results this phase
+        </p>
+      </article>
+
+      <!-- Results by status (original) -->
+      <article class="col-span-2 flex min-h-[280px] flex-col gap-3 rounded-[12px] border border-[var(--pr-border)] bg-white px-5 py-5 max-[620px]:col-span-1">
+        <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Results by status</p>
+        @if (statusRows().length) {
+          <div class="flex flex-1 flex-col justify-end">
+            <div class="flex items-end justify-around gap-3 border-b border-[rgba(30,32,47,0.1)] pb-0">
+              @for (row of statusRows(); track row.statusId) {
+                <div class="flex flex-1 flex-col items-center gap-1.5">
+                  <span class="text-[14px] font-extrabold tabular-nums text-[var(--pr-color-secondary-400)]">{{ row.count }}</span>
+                  <div
+                    class="min-h-[4px] w-full max-w-[40px] rounded-[8px_8px_0_0] transition-[height] duration-500 motion-reduce:transition-none"
+                    [style.height.px]="12 + (row.barPct || 3) * 1.1"
+                    [style.background]="row.barGradient"></div>
+                </div>
+              }
+            </div>
+            <div class="flex justify-around gap-3 pt-2">
+              @for (row of statusRows(); track row.statusId) {
+                <span class="flex-1 text-center text-[11px] font-semibold leading-tight text-[var(--pr-color-accents-6)]">{{ row.label }}</span>
+              }
+            </div>
+          </div>
+        } @else {
+          <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">No results reported yet.</p>
+        }
+      </article>
+
+      <!-- AoW progress (original) -->
+      <article class="col-span-2 flex min-h-[280px] flex-col gap-3 rounded-[12px] border border-[var(--pr-border)] bg-white px-5 py-5 max-[620px]:col-span-1">
+        <div class="flex items-baseline justify-between gap-2">
+          <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">AoW progress</p>
+          <a
+            class="text-[11px] font-semibold text-[var(--pr-color-primary-400)] no-underline hover:underline"
+            routerLink="/result-framework-reporting/planned-toc"
+            [queryParams]="{ sp: sp.initiativeId }">
+            Open Planned ToC
+          </a>
+        </div>
+        @if (loadingAows()) {
+          <div class="flex flex-1 flex-col gap-2">
+            @for (s of [1, 2, 3, 4]; track s) {
+              <div class="h-10 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+            }
+          </div>
+        } @else if (aowProgressRows().length) {
+          <div class="custom_scroll flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto">
+            @for (row of aowProgressRows(); track row.code) {
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="m-0 min-w-0 truncate text-[12px] text-[var(--pr-color-secondary-400)]">
+                    <b class="font-extrabold">{{ row.code }}</b>
+                    <span class="mx-1 text-[var(--pr-color-accents-3)]">·</span>{{ row.name }}
+                  </p>
+                  <span class="shrink-0 text-[11px] font-bold tabular-nums text-[var(--pr-color-secondary-400)]">{{ row.progress }}%</span>
+                </div>
+                <div class="h-1.5 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+                  <div
+                    class="h-full rounded-full transition-[width] duration-500"
+                    [style.width.%]="row.progress"
+                    [style.background]="accentTheme().gradient"></div>
+                </div>
+                <p class="m-0 text-[10px] text-[var(--pr-color-accents-5)]">
+                  {{ row.total }} results
+                  @if (row.total) {
+                    <span>({{ row.submitted }} submitted · {{ row.editing }} editing)</span>
+                  }
+                </p>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">No Areas of Work loaded for this program.</p>
+        }
+      </article>
+
+      <!-- ===== Needs attention / Submitted — flat cards, no gradient wash or conic dial ===== -->
+      <article class="flex aspect-square min-h-[168px] flex-col justify-between overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-white px-4 py-4 max-[1180px]:aspect-auto">
+        <div class="flex items-start justify-between gap-2">
+          <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Needs attention</p>
+          <span class="inline-flex size-8 items-center justify-center rounded-lg" [style.background]="'var(--pr-status-in-progress-bg)'">
+            <span class="material-icons-round text-[18px]" [style.color]="'var(--pr-status-in-progress-fg)'">edit_note</span>
+          </span>
+        </div>
+        <div>
+          <div class="flex items-baseline justify-between gap-2">
+            <p class="m-0 text-[32px] font-extrabold leading-none tabular-nums tracking-[-0.03em] text-[var(--pr-color-secondary-400)]">{{ pipelineStats().editing }}</p>
+            <span class="text-[13px] font-bold tabular-nums" [style.color]="'var(--pr-status-in-progress-fg)'">{{ pipelineStats().editingPct }}%</span>
+          </div>
+          <p class="m-0 mb-2 text-[12px] font-semibold text-[var(--pr-color-accents-6)]">still in Editing</p>
+          <div class="h-1.5 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+            <div class="h-full rounded-full transition-[width] duration-500" [style.width.%]="pipelineStats().editingPct" [style.background]="'var(--pr-status-in-progress-fg)'"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="flex aspect-square min-h-[168px] flex-col justify-between overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-white px-4 py-4 max-[1180px]:aspect-auto">
+        <div class="flex items-start justify-between gap-2">
+          <p class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Submitted</p>
+          <span class="inline-flex size-8 items-center justify-center rounded-lg" [style.background]="'var(--pr-status-approved-bg)'">
+            <span class="material-icons-round text-[18px]" [style.color]="'var(--pr-status-approved-fg)'">task_alt</span>
+          </span>
+        </div>
+        <div>
+          <div class="flex items-baseline justify-between gap-2">
+            <p class="m-0 text-[32px] font-extrabold leading-none tabular-nums tracking-[-0.03em] text-[var(--pr-color-secondary-400)]">{{ pipelineStats().submitted }}</p>
+            <span class="text-[13px] font-bold tabular-nums" [style.color]="'var(--pr-status-approved-fg)'">{{ pipelineStats().submittedPct }}%</span>
+          </div>
+          <p class="m-0 mb-2 text-[12px] font-semibold text-[var(--pr-color-accents-6)]">fully submitted</p>
+          <div class="h-1.5 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+            <div class="h-full rounded-full transition-[width] duration-500" [style.width.%]="pipelineStats().submittedPct" [style.background]="'var(--pr-status-approved-fg)'"></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ===== Added: charts row ===== -->
+      <article class="col-span-2 flex min-h-[200px] flex-col gap-3 rounded-[12px] border border-[var(--pr-border)] bg-white px-5 py-4 max-[620px]:col-span-1">
+        <div class="flex items-baseline justify-between gap-2">
+          <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Status mix</p>
+          <span class="text-[13px] font-extrabold tabular-nums text-[var(--pr-color-secondary-400)]">{{ pipelineStats().total }} total</span>
+        </div>
+        <!-- Single segmented bar — a true proportion of the whole (spec §4.2 rule 15 exception). -->
+        <div class="flex h-3 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+          @for (row of statusRows(); track row.statusId) {
+            @if (row.sharePct) {
+              <div class="h-full transition-[width] duration-500" [style.width.%]="row.sharePct" [style.background]="row.color"></div>
+            }
+          }
+        </div>
+        <div class="flex flex-1 flex-wrap content-center gap-x-4 gap-y-1.5">
+          @for (row of statusRows(); track row.statusId) {
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--pr-color-accents-6)]">
+              <span class="size-2 shrink-0 rounded-full" [style.background]="row.color"></span>
+              {{ row.label }} <b class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ row.count }}</b>
+            </span>
+          }
+        </div>
+      </article>
+
+      <article class="col-span-2 flex min-h-[200px] flex-col gap-3 rounded-[12px] border border-[var(--pr-border)] bg-white px-5 py-4 max-[620px]:col-span-1">
+        <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Pipeline funnel</p>
+        <div class="flex flex-1 flex-col justify-center gap-2">
+          @for (step of funnelSteps(); track step.label) {
+            <div class="grid grid-cols-[72px_1fr_36px] items-center gap-2">
+              <span class="text-[11px] font-semibold text-[var(--pr-color-accents-6)]">{{ step.label }}</span>
+              <div class="h-3.5 overflow-hidden rounded-md bg-[var(--pr-color-accents-1)]">
+                <div class="h-full rounded-md transition-[width] duration-500" [style.width.%]="step.barPct" [style.background]="step.color"></div>
+              </div>
+              <span class="text-right text-[12px] font-extrabold tabular-nums text-[var(--pr-color-secondary-400)]">{{ step.count }}</span>
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="col-span-2 flex min-h-[200px] flex-col gap-3 rounded-[12px] border border-[var(--pr-border)] bg-white px-5 py-4 max-[620px]:col-span-1">
+        <div class="flex items-baseline justify-between gap-2">
+          <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">Outputs vs outcomes</p>
+          @if (!emergingOverview().loading) {
+            <span class="text-[13px] font-extrabold tabular-nums text-[var(--pr-color-secondary-400)]">{{ emergingOverview().outputResults + emergingOverview().outcomeResults }} total</span>
+          }
+        </div>
+        @if (emergingOverview().loading) {
+          <div class="h-24 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+        } @else {
+          <div class="flex flex-1 flex-col justify-center gap-3">
+            <div>
+              <div class="mb-1 flex justify-between text-[12px] font-semibold">
+                <span class="text-[var(--pr-color-primary-400)]">Outputs</span>
+                <span class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ emergingOverview().outputResults }} · {{ emergingOverview().outputPct }}%</span>
+              </div>
+              <div class="h-2.5 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+                <div class="h-full rounded-full bg-[var(--pr-color-primary-300)] transition-[width] duration-500" [style.width.%]="emergingOverview().outputPct"></div>
+              </div>
+            </div>
+            <div>
+              <div class="mb-1 flex justify-between text-[12px] font-semibold">
+                <span [style.color]="'var(--pr-status-approved-fg)'">Outcomes</span>
+                <span class="tabular-nums text-[var(--pr-color-secondary-400)]">{{ emergingOverview().outcomeResults }} · {{ emergingOverview().outcomePct }}%</span>
+              </div>
+              <div class="h-2.5 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+                <div class="h-full rounded-full transition-[width] duration-500" [style.width.%]="emergingOverview().outcomePct" [style.background]="'var(--pr-status-approved-fg)'"></div>
+              </div>
+            </div>
+          </div>
+        }
+      </article>
+
+      <article class="col-span-2 flex min-h-[200px] flex-col gap-3 rounded-[12px] border border-[var(--pr-border)] bg-white px-5 py-4 max-[620px]:col-span-1">
+        <div class="flex items-baseline justify-between gap-2">
+          <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">AoW volume</p>
+          @if (topAowByResults(); as top) {
+            <p class="m-0 text-[11px] text-[var(--pr-color-accents-5)]">
+              Heaviest: <span class="font-bold text-[var(--pr-color-secondary-400)]">{{ top.code }}</span> ({{ top.total }})
+            </p>
+          }
+        </div>
+        @if (loadingAows()) {
+          <div class="flex flex-col gap-2">
+            @for (s of [1, 2, 3]; track s) {
+              <div class="h-7 animate-pulse rounded-lg bg-[var(--pr-color-accents-1)]"></div>
+            }
+          </div>
+        } @else if (aowVolumeRows().length) {
+          <div class="flex flex-1 flex-col justify-center gap-2">
+            @for (row of aowVolumeRows(); track row.code) {
+              <div class="grid grid-cols-[56px_1fr_28px] items-center gap-2">
+                <span class="truncate text-[11px] font-extrabold tabular-nums text-[var(--pr-color-secondary-400)]" [title]="row.name">{{ row.code }}</span>
+                <div class="h-3 overflow-hidden rounded-full bg-[var(--pr-color-accents-1)]">
+                  <div class="flex h-full transition-[width] duration-500" [style.width.%]="row.volumePct">
+                    @if (row.editingShare) {
+                      <div class="h-full bg-[#f59e0b]" [style.width.%]="row.editingShare"></div>
+                    }
+                    @if (row.submittedShare) {
+                      <div class="h-full bg-[#22c55e]" [style.width.%]="row.submittedShare"></div>
+                    }
+                  </div>
+                </div>
+                <span class="text-right text-[11px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ row.total }}</span>
+              </div>
+            }
+          </div>
+          <div class="flex gap-3 text-[10px] font-semibold text-[var(--pr-color-accents-5)]">
+            <span class="inline-flex items-center gap-1"><span class="size-1.5 rounded-full bg-[#f59e0b]"></span>Editing</span>
+            <span class="inline-flex items-center gap-1"><span class="size-1.5 rounded-full bg-[#22c55e]"></span>Submitted</span>
+          </div>
+        } @else {
+          <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">No AoWs loaded.</p>
+        }
+      </article>
+      }
+
+      @if (showEmerging()) {
+      <!-- Emerging — dedicated sidebar surface -->
+      <article class="flex min-h-[min(70vh,640px)] max-h-none flex-col overflow-hidden rounded-[12px] border border-[var(--pr-border)] bg-white p-4">
+        <h2 data-guide="emerging" class="m-0 text-[15px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">Report Emerging results</h2>
+
+        <!-- tabs -->
+        <div class="mt-3 flex gap-0.5 rounded-xl bg-[var(--pr-border-divider)] p-1">
+          <button
+            type="button"
+            (click)="setCategoryTab('outputs')"
+            class="flex-1 appearance-none rounded-lg border-0 py-2 text-[12px] font-semibold transition-colors duration-150"
+            [class]="categoryTab() === 'outputs' ? 'bg-white text-[var(--pr-color-primary-400)]' : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'">
+            Outputs ({{ groupedSummaries().outputs.length }})
+          </button>
+          <button
+            type="button"
+            (click)="setCategoryTab('outcomes')"
+            class="flex-1 appearance-none rounded-lg border-0 py-2 text-[12px] font-semibold transition-colors duration-150"
+            [class]="categoryTab() === 'outcomes' ? 'bg-white text-[var(--pr-color-primary-400)]' : 'bg-transparent text-[var(--pr-color-accents-6)] hover:text-[var(--pr-color-secondary-400)]'">
+            Outcomes ({{ groupedSummaries().outcomes.length }})
+          </button>
+        </div>
+
+        <!-- scrollable list -->
+        <div class="custom_scroll mt-3 flex flex-1 flex-col gap-2 overflow-y-auto pr-1">
+          @if (loadingSummaries()) {
+            @for (s of [1, 2, 3]; track s) {
+              <div class="h-[86px] animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+            }
+          } @else {
+            @let items = categoryTab() === 'outputs' ? groupedSummaries().outputs : groupedSummaries().outcomes;
+            @if (items.length) {
+              @for (cat of items; track cat.resultTypeId) {
+                <div class="rounded-xl bg-[var(--pr-color-accents-1)] p-3">
+                  <div class="flex items-start gap-2.5">
+                    <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--pr-color-accents-1)]">
+                      <i class="material-icons-round text-[18px] text-[var(--pr-color-secondary-400)]">{{ categoryIcon(cat.resultTypeId) }}</i>
+                    </span>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-[9px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">Indicator category</p>
+                      <p class="text-[13px] font-bold leading-tight text-[var(--pr-color-secondary-400)]">{{ cat.resultTypeName }}</p>
+                    </div>
+                  </div>
+                  <div class="mt-2.5 flex items-center justify-between">
+                    <div class="flex items-center gap-3 text-[11px] text-[var(--pr-color-accents-6)]">
+                      <span class="flex items-center gap-1"><span class="size-1.5 rounded-full bg-[var(--pr-color-accents-3)]"></span>Editing <b class="text-[var(--pr-color-secondary-400)]">{{ cat.editing }}</b></span>
+                      <span class="flex items-center gap-1"><span class="size-1.5 rounded-full bg-[var(--pr-color-blue-300)]"></span>Submitted <b class="text-[var(--pr-color-secondary-400)]">{{ cat.submitted }}</b></span>
+                    </div>
+                    <!-- Emerging entry lives next to the category it would be created under (openspec §0.1) -->
+                    <button
+                      type="button"
+                      [attr.data-guide]="$first ? 'emerging-action' : null"
+                      (click)="openGuided('emerging')"
+                      [attr.aria-label]="'Report an emerging ' + cat.resultTypeName"
+                      class="inline-flex appearance-none items-center gap-1 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
+                      Report result <span class="material-icons-round text-[14px]">arrow_forward</span>
+                    </button>
+                  </div>
+                </div>
+              }
+            } @else {
+              <p class="my-auto text-center text-[12px] text-[var(--pr-color-accents-5)]">No {{ categoryTab() }} categories.</p>
+            }
+          }
+        </div>
+
+        <!-- Single `brand` CTA for this screen (rule 1). -->
+        <button type="button" hlmBtn variant="brand" (click)="openGuided('emerging')" class="mt-3 w-full justify-center gap-2 py-2.5 text-[12.5px]">
+          Report an emerging result
+          <span class="material-icons-round text-[16px]">arrow_forward</span>
+        </button>
+      </article>
+      }
+
+      @if (showOverview()) {
+      <!-- ═══════════════════════════════════════════════════════════════════════
+           OVERVIEW TAB. Same band, different body — and it no longer bounces the
+           user back to the retired bento at /home.
+           Spec: docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §4
+           ═══════════════════════════════════════════════════════════════════════ -->
+      <article class="flex w-full min-w-0 flex-col">
+        <app-reporting-program-band
+          [programCode]="selected()?.initiativeCode || ''"
+          [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
+          [aowCount]="aows().length"
+          [plannedResultsCount]="bandPlannedResultsCount()"
+          [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
+          [cyclePhase]="dataControlSE.reportingCurrentPhase.portfolioAcronym || ''"
+          [programDotColor]="accentTheme().solid"
+          activeTab="overview"
+          [canReport]="canReportEmerging()"
+          (reportEmerging)="openReportModal()"
+          [showToolbar]="false" />
+
+        <app-program-overview
+          [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
+          [statusSegments]="overviewStatusSegments()"
+          [aowProgress]="overviewAowProgress()"
+          [xcutProgress]="overviewXcutProgress()"
+          [categories]="overviewCategories()"
+          [bilateralCategories]="overviewBilateralCategories()"
+          [bilateralCenters]="overviewBilateralCenters()" />
+      </article>
+      }
+
+      @if (showPlanned()) {
+      <!-- Reporting tab. No card wrapper: in the reference the band spans the full width and the
+           table sits directly on the canvas — the old rounded/bordered/shadowed <article> was part
+           of the retired layout. -->
+      <article class="flex w-full min-w-0 flex-col">
+          <!-- ═══════════════════════════════════════════════════════════════════════
+               PROGRAM BAND + TABS + TOOLBAR — the approved reference.
+               Replaces the old dense header (51 lines: an h2 plus the browse-mode switcher).
+               Spec: docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §3
+               ═══════════════════════════════════════════════════════════════════════ -->
+          <app-reporting-program-band
+            [programCode]="selected()?.initiativeCode || ''"
+            [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
+            [aowCount]="aows().length"
+            [plannedResultsCount]="bandPlannedResultsCount()"
+            [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
+            [cyclePhase]="dataControlSE.reportingCurrentPhase.portfolioAcronym || ''"
+            [programDotColor]="accentTheme().solid"
+            activeTab="reporting"
+            [canReport]="canReportEmerging()"
+            (reportEmerging)="openReportModal()"
+            [search]="plannedSearch()"
+            [statusValue]="reportingStatusFilter()"
+            [aowOptions]="reportingSectionOptions()"
+            [aowValue]="reportingAowFilter()"
+            [typeValue]="reportingTypeFilter()"
+            [typologyOptions]="reportingTypologyOptions()"
+            [typologyValue]="reportingTypologyFilter()"
+            [viewMode]="reportingViewMode()"
+            [allExpanded]="reportingAllOpen()"
+            [canExpandAll]="plannedBrowseView() === 'aows'"
+            (toggleExpandAll)="toggleReportingExpandAll()"
+            (searchChange)="plannedSearch.set($event)"
+            (statusChange)="reportingStatusFilter.set($event)"
+            (aowChange)="reportingAowFilter.set($event)"
+            (typeChange)="reportingTypeFilter.set($event)"
+            (typologyChange)="reportingTypologyFilter.set($event)"
+            (viewModeChange)="reportingViewMode.set($event)" />
+
+          <!-- The old filter strip (72 lines: its own search plus the AoW / typology selects)
+               was removed — the band above now owns search, filters and the grouping toggle,
+               and having two search boxes on one screen was the visible symptom. -->
+
+          <!-- Content pad: 32px on every side, 20px between AoW cards (reference :736 / :989).
+               No inner scroller — the page scrolls and the band sticks. The old `min-h-0 flex-1
+               overflow-y-auto` gave this box no height to work with, which is why the canvas
+               stopped halfway down the viewport and left a white band underneath. -->
+          <div class="flex flex-col gap-[20px] px-[32px] pb-[32px]">
+            @if (loadingAows()) {
+              @for (s of [1, 2, 3, 4]; track s) {
+                <div class="h-14 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+              }
+            } @else if (plannedBrowseView() === 'aows') {
+              @if (!plannedFilteredAows().length) {
+                <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No Areas of Work match your search.</p>
+              }
+              <!-- ════════════════════════════════════════════════════════════════════════
+                   REPORTING TAB — AoW → HLO → indicator, per the approved reference.
+                   Replaces the previous inline AoW list (86 lines of a different distribution).
+                   Spec: docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §5
+                   Presentation lives in the child; this page keeps owning the data and the drawer.
+                   ════════════════════════════════════════════════════════════════════════ -->
+              <!-- `canReport` mirrors the gate of the surface this replaced
+                   (`aow-hlo-table.component.html:111,145,149`): a read-only user, or anyone browsing a
+                   programme they do not belong to, must not be offered a Report CTA that opens a modal
+                   with no way to submit. -->
+              <app-reporting-aow-table
+                [groups]="reportingGroups()"
+                [search]="plannedSearch()"
+                [statusFilter]="reportingStatusFilter()"
+                [viewMode]="reportingViewMode()"
+                [expandAll]="reportingAllExpanded()"
+                [expandAllNonce]="reportingExpandNonce()"
+                [scopeKey]="selected()?.initiativeCode || ''"
+                [canReport]="entityAowService.canReportResults()"
+                [filtersActive]="reportingFiltersActive()"
+                (clearFilters)="clearReportingFilters()"
+                (openRow)="onReportingRowOpen($event)"
+                (reportRow)="onReportingRowReport($event)"
+                (openTarget)="onReportingOpenTarget($event)"
+                (openAchieved)="onReportingOpenAchieved($event)"
+                (allOpenChange)="reportingAllOpen.set($event)"
+                (openAow)="openAow($event)" />
+              <!-- Intermediate Outcomes + 2030 Outcomes are top-level cards inside the table
+                   (siblings of AoWs). The old "open 2030 detail" jump button is gone. -->
+            } @else if (plannedBrowseView() === 'byAow') {
+              @if (!plannedHloAowCode()) {
+                <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">Select an Area of Work to browse HLOs.</p>
+              } @else if (plannedHloLoading()) {
+                @for (s of [1, 2, 3]; track s) {
+                  <div class="mb-1 h-12 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
+                }
+              } @else if (!plannedHloGroups().length) {
+                <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No High-Level Outputs match the current filters for this Area of Work.</p>
+              } @else {
+                @for (hlo of plannedHloGroups(); track hlo.title) {
+                  <section class="overflow-hidden rounded-xl border border-[rgba(30,32,47,0.07)] bg-white">
+                    <button
+                      type="button"
+                      (click)="togglePlannedHlo(hlo.title)"
+                      [attr.aria-expanded]="isPlannedHloExpanded(hlo.title)"
+                      class="flex w-full items-center gap-2 px-2.5 py-2 text-left hover:bg-[var(--pr-color-accents-1)]">
+                      <span
+                        class="material-icons-round text-[18px] text-[var(--pr-color-accents-4)] transition-transform"
+                        [class.rotate-90]="isPlannedHloExpanded(hlo.title)"
+                        aria-hidden="true"
+                        >chevron_right</span
+                      >
+                      <span class="min-w-0 flex-1 truncate text-[12px] font-semibold text-[var(--pr-color-secondary-400)]">
+                        @if (hlo.split.code) {
+                          <span class="font-extrabold text-[var(--pr-color-primary-400)]" [innerHTML]="hlo.split.code | highlightSearch: plannedSearch()"></span>
+                          <span class="mx-1 font-normal text-[var(--pr-color-accents-3)]">·</span>
+                          <span [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
+                        } @else {
+                          <span [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
+                        }
+                      </span>
+                      <span class="shrink-0 rounded-full bg-[var(--pr-color-accents-1)] px-1.5 py-px text-[10px] font-bold tabular-nums">{{ hlo.count }}</span>
+                    </button>
+                    @if (isPlannedHloExpanded(hlo.title)) {
+                      <div class="border-t border-[rgba(30,32,47,0.06)] px-2.5 py-2">
+                        @if (plannedLayout() === 'table') {
+                          <div class="overflow-x-auto rounded-xl border border-[rgba(30,32,47,0.07)]">
+                            <table class="w-full border-collapse text-left text-[12px]">
+                              <thead class="bg-[var(--pr-color-accents-1)] text-[10px] font-bold uppercase tracking-wide text-[var(--pr-color-accents-5)]">
+                                <tr>
+                                  <th class="px-3 py-2 font-semibold">Indicator</th>
+                                  <th class="px-3 py-2 font-semibold">Type</th>
+                                  <th class="px-3 py-2 font-semibold">Target</th>
+                                  <th class="px-3 py-2 font-semibold">Achieved</th>
+                                  <th class="px-3 py-2 font-semibold"></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @for (ind of hlo.indicators; track ind.indicator_id) {
+                                  <tr class="border-t border-[rgba(30,32,47,0.06)]">
+                                    <td
+                                      class="px-3 py-2.5 font-medium text-[var(--pr-color-secondary-400)]"
+                                      [innerHTML]="ind.indicator_description | highlightSearch: plannedSearch()"></td>
+                                    <td
+                                      class="whitespace-nowrap px-3 py-2.5 text-[var(--pr-color-accents-6)]"
+                                      [innerHTML]="(ind.type_name || '—') | highlightSearch: plannedSearch()"></td>
+                                    <td class="px-3 py-2.5 tabular-nums">{{ ind.target_value_sum ?? 0 }}</td>
+                                    <td class="px-3 py-2.5 tabular-nums">{{ ind.actual_achieved_value_sum ?? 0 }}</td>
+                                    <td class="px-3 py-2.5 text-right">
+                                      <button type="button" (click)="openLegacyReportModal(ind)" class="appearance-none rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
+                                    </td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          </div>
+                        } @else {
+                          <div class="flex flex-col gap-1.5">
+                            @for (ind of hlo.indicators; track ind.indicator_id) {
+                              <div class="flex flex-col gap-1.5 rounded-lg border border-[rgba(30,32,47,0.07)] bg-[var(--pr-color-accents-1)]/50 px-2.5 py-2">
+                                <p
+                                  class="m-0 line-clamp-2 text-[11.5px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]"
+                                  [title]="ind.indicator_description"
+                                  [innerHTML]="ind.indicator_description | highlightSearch: plannedSearch()"></p>
+                                <div class="flex flex-wrap items-center justify-between gap-1.5">
+                                  <div class="flex flex-wrap items-center gap-1">
+                                    @if (ind.type_name) {
+                                      <span
+                                        class="rounded-full bg-[#6b46e51f] px-1.5 py-px text-[10px] font-semibold text-[var(--pr-color-primary-400)]"
+                                        [innerHTML]="ind.type_name | highlightSearch: plannedSearch()"></span>
+                                    }
+                                    <span class="text-[10px] text-[var(--pr-color-accents-6)]"
+                                      >{{ ind.actual_achieved_value_sum ?? 0 }}/{{ ind.target_value_sum ?? 0 }}</span
+                                    >
+                                  </div>
+                                  <button
+                                    type="button"
+                                    (click)="openLegacyReportModal(ind)"
+                                    class="flex appearance-none items-center gap-0.5 rounded-md border border-[var(--pr-color-primary-300)] bg-white px-2 py-0.5 text-[10.5px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
+                                    <span class="material-icons-round text-[12px]">edit_note</span> Report
+                                  </button>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  </section>
+                }
+              }
+            } @else {
+              <!-- Indicators — full-width flat list + chip filter above -->
+              @if (!allPanelIndicators().length) {
+                <p class="m-0 py-4 text-center text-[12px] text-[var(--pr-color-accents-5)]">Loading indicators… or none found for this program.</p>
+              } @else if (!plannedFilteredIndicators().length) {
+                <p class="m-0 py-4 text-center text-[12px] text-[var(--pr-color-accents-5)]">No indicators match the selected types.</p>
+              } @else if (plannedLayout() === 'table') {
+                <div class="w-full overflow-x-auto rounded-2xl border border-[rgba(30,32,47,0.07)]">
+                  <table class="w-full min-w-[720px] border-collapse text-left text-[12.5px]">
+                    <thead class="bg-[var(--pr-color-accents-1)] text-[10px] font-bold uppercase tracking-wide text-[var(--pr-color-accents-5)]">
+                      <tr>
+                        <th class="px-3 py-2.5 font-semibold">Indicator</th>
+                        <th class="px-3 py-2.5 font-semibold">AoW</th>
+                        <th class="px-3 py-2.5 font-semibold">HLO</th>
+                        <th class="px-3 py-2.5 font-semibold">Type</th>
+                        <th class="px-3 py-2.5 font-semibold">Target</th>
+                        <th class="px-3 py-2.5 font-semibold">Achieved</th>
+                        <th class="px-3 py-2.5 font-semibold"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (ind of plannedFilteredIndicators(); track ind.indicator_id + '::' + ind.__aowCode) {
+                        <tr class="border-t border-[rgba(30,32,47,0.06)] hover:bg-[var(--pr-color-accents-1)]/60">
+                          <td
+                            class="px-3 py-2.5 font-medium text-[var(--pr-color-secondary-400)]"
+                            [innerHTML]="ind.indicator_description | highlightSearch: plannedSearch()"></td>
+                          <td
+                            class="whitespace-nowrap px-3 py-2.5 tabular-nums text-[var(--pr-color-accents-6)]"
+                            [innerHTML]="ind.__aowCode | highlightSearch: plannedSearch()"></td>
+                          <td
+                            class="max-w-[220px] truncate px-3 py-2.5 text-[var(--pr-color-accents-6)]"
+                            [title]="ind.__hlo"
+                            [innerHTML]="(ind.__hlo || '—') | highlightSearch: plannedSearch()"></td>
+                          <td class="whitespace-nowrap px-3 py-2.5">
+                            @if (ind.type_name) {
+                              <span
+                                class="rounded-full bg-[#6b46e51f] px-1.5 py-px text-[10.5px] font-semibold text-[var(--pr-color-primary-400)]"
+                                [innerHTML]="ind.type_name | highlightSearch: plannedSearch()"></span>
+                            } @else {
+                              —
+                            }
+                          </td>
+                          <td class="px-3 py-2.5 tabular-nums">{{ ind.target_value_sum ?? 0 }}</td>
+                          <td class="px-3 py-2.5 tabular-nums">{{ ind.actual_achieved_value_sum ?? 0 }}</td>
+                          <td class="px-3 py-2.5 text-right">
+                            <button type="button" (click)="openLegacyReportModal(ind)" class="appearance-none rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <div class="grid w-full grid-cols-1 gap-2 min-[1100px]:grid-cols-2">
+                  @for (ind of plannedFilteredIndicators(); track ind.indicator_id + '::' + ind.__aowCode) {
+                    <div class="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-[rgba(30,32,47,0.07)] bg-[var(--pr-color-accents-1)]/40 px-3 py-2.5">
+                      <div class="min-w-0 flex-1">
+                        <p
+                          class="m-0 text-[12.5px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]"
+                          [innerHTML]="ind.indicator_description | highlightSearch: plannedSearch()"></p>
+                        <div class="mt-1.5 flex flex-wrap gap-1">
+                          <span
+                            class="rounded-full bg-white px-1.5 py-px text-[10px] font-semibold"
+                            [innerHTML]="ind.__aowCode | highlightSearch: plannedSearch()"></span>
+                          @if (ind.type_name) {
+                            <span
+                              class="rounded-full bg-[#6b46e51f] px-1.5 py-px text-[10px] font-semibold text-[var(--pr-color-primary-400)]"
+                              [innerHTML]="ind.type_name | highlightSearch: plannedSearch()"></span>
+                          }
+                          <span class="text-[10px] text-[var(--pr-color-accents-5)]">{{ ind.actual_achieved_value_sum ?? 0 }}/{{ ind.target_value_sum ?? 0 }}</span>
+                        </div>
+                      </div>
+                      <button type="button" (click)="openLegacyReportModal(ind)" class="shrink-0 appearance-none rounded-md border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+      </article>
+      }
+
+      @if (showCenters()) {
+      <!-- Centers — dedicated sidebar surface -->
+      <article class="flex min-h-[120px] flex-col gap-2.5 rounded-[12px] border border-[var(--pr-border)] bg-white px-4 py-4">
+        <div class="flex shrink-0 items-baseline gap-2">
+          <p data-guide="centers" class="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pr-color-accents-6)]">My CGIAR Centers</p>
+          <span class="rounded-full bg-[var(--pr-color-accents-1)] px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-[var(--pr-color-accents-6)]">{{ myCenters().length }}</span>
+        </div>
+
+        @if (myCenters().length) {
+          <!-- Full-width bottom row: Centers in a responsive grid. -->
+          <div class="grid grid-cols-3 gap-2 max-[900px]:grid-cols-2 max-[620px]:grid-cols-1">
+            @for (c of myCenters(); track c.center_id) {
+              <a
+                class="group flex items-center gap-2.5 rounded-xl border border-transparent bg-[var(--pr-color-accents-1)] px-2.5 py-2 no-underline transition-[background,border-color,box-shadow] duration-150 hover:border-[rgba(30,32,47,0.08)] hover:bg-white hover:shadow-[0_4px_14px_rgba(30,32,47,0.07)]"
+                [routerLink]="['/bilateral', c.center_acronym, 'home']">
+                <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-[var(--pr-color-primary-25)]">
+                  <i class="material-icons-round text-[15px] text-[var(--pr-color-primary-300)]">account_balance</i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-[12px] font-semibold leading-tight text-[var(--pr-color-secondary-400)]">{{ c.center_acronym || c.center_id }}</span>
+                  <span class="block truncate text-[10.5px] leading-tight text-[var(--pr-color-accents-5)]">{{ c.center_name }}</span>
+                </span>
+                <span class="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[var(--pr-color-primary-300)] px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                  Report <i class="material-icons-round text-[13px]">arrow_forward</i>
+                </span>
+              </a>
+            }
+          </div>
+        } @else {
+          <p class="my-auto text-center text-[11.5px] leading-snug text-[var(--pr-color-accents-5)]">
+            You do not have a Center User role yet.
+          </p>
+        }
+      </article>
+      }
+
+    </div>
+
+    }
+  } @else if (!homeSE.isLoadingSPLists()) {
+    <div class="flex min-h-[60vh] flex-col items-center justify-center text-center">
+      <span class="material-icons-round text-[32px] text-[var(--pr-color-accents-4)]">inbox</span>
+      <p class="mt-2 text-[13px] font-medium text-[var(--pr-color-secondary-400)]">No Science Programs found</p>
+      <p class="text-[11px] text-[var(--pr-color-accents-5)]">You are not a member of any program yet.</p>
+    </div>
+  }
+</section>
+
+<!-- ==================== GUIDED CREATION — full-screen flow ==================== -->
+@if (guidedOpen()) {
+  <app-guided-creation [prefillPath]="guidedPath()" (closed)="closeGuided()" />
+}
+
+<!-- ==================== TUTORIAL PICKER ==================== -->
+@if (tutorialsOpen()) {
+  <div class="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(30,32,47,0.5)] p-6" (click)="tutorialsOpen.set(false)">
+    <div
+      class="pr-centers__pop w-full max-w-[560px] overflow-hidden rounded-[20px] bg-white shadow-[0_28px_70px_rgba(30,32,47,0.32)]"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Reporting tutorials"
+      (click)="$event.stopPropagation()">
+      <div class="flex items-start gap-3 border-b border-[rgba(30,32,47,0.07)] px-6 py-5">
+        <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--pr-color-primary-25)]">
+          <span class="material-icons-round text-[20px] text-[var(--pr-color-primary-300)]">school</span>
+        </span>
+        <div class="min-w-0 flex-1">
+          <h2 class="m-0 text-[17px] font-bold leading-tight tracking-[-0.01em] text-[var(--pr-color-secondary-400)]">How do you want to report?</h2>
+          <p class="m-0 mt-1 text-[12.5px] leading-snug text-[var(--pr-color-accents-5)]">Pick a walkthrough. Each one highlights the screen as it goes.</p>
+        </div>
+        <button
+          type="button"
+          (click)="tutorialsOpen.set(false)"
+          aria-label="Close"
+          class="inline-flex size-8 shrink-0 appearance-none items-center justify-center rounded-full border-0 bg-transparent text-[var(--pr-color-accents-5)] transition-colors hover:bg-[var(--pr-color-accents-1)] hover:text-[var(--pr-color-secondary-400)]">
+          <span class="material-icons-round text-[19px]">close</span>
+        </button>
+      </div>
+
+      <div class="flex flex-col p-3">
+        @for (t of tutorials; track t.id) {
+          <button
+            type="button"
+            (click)="runTutorial(t.id)"
+            class="flex w-full appearance-none items-start gap-3.5 rounded-xl border-0 bg-transparent px-3 py-3 text-left transition-colors duration-150 hover:bg-[var(--pr-color-accents-1)]">
+            <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--pr-color-primary-25)]">
+              <span class="material-icons-round text-[18px] text-[var(--pr-color-primary-300)]">{{ t.icon }}</span>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="flex items-baseline gap-2">
+                <span class="text-[14px] font-bold text-[var(--pr-color-secondary-400)]">{{ t.title }}</span>
+                <span class="text-[11px] text-[var(--pr-color-accents-4)]">{{ t.length }}</span>
+              </span>
+              <span class="mt-0.5 block text-[12.5px] leading-snug text-[var(--pr-color-accents-6)]">{{ t.summary }}</span>
+            </span>
+            <span class="material-icons-round mt-1 shrink-0 text-[18px] text-[var(--pr-color-accents-3)]">play_arrow</span>
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ==================== MANAGE DRAWER (one indicator) ==================== -->
+@if (managed(); as m) {
+  <app-indicator-drawer
+    [indicator]="m.indicator"
+    [tocNode]="m.node"
+    [initiativeId]="selected()?.initiativeId || 0"
+    [groupTitle]="m.groupTitle"
+    [programCode]="selected()?.initiativeCode || ''"
+    [aowCode]="activeAowCode() || ''"
+    [accent]="accentTheme().solid"
+    [initialTab]="manageTab()"
+    [canReport]="entityAowService.canReportResults()"
+    (widthChange)="managePanelWidth.set($event)"
+    (closed)="closeManage()" />
+}
+
+<!-- ==================== LEGACY "Report result" MODAL (planned ToC) ====================
+     Reused verbatim from the AoW pages: zero inputs/outputs, driven entirely by
+     EntityAowService. The @if is load-bearing, not cosmetic — the modal fetches in ngOnInit,
+     so it has to be destroyed and re-created per open (same mount as aow-hlo-table). It wraps
+     itself in app-pr-dialog and ships its own sizing, so it needs nothing from this host. -->
+@if (entityAowService.showReportResultModal()) {
+  <app-aow-hlo-create-modal />
+}
+
+<!-- ==================== LEGACY "Report emerging result" MODAL ====================
+     Copied from the retired entity-details page so the emerging pathway keeps the exact
+     dialog, header copy and form it always had. The programme is pre-filled and locked;
+     Output/Outcome and Indicator category stay the user's choice (a single CTA cannot infer
+     them, so no `setPendingResultType` is issued). -->
+@if (showReportModal()) {
+  <app-pr-dialog
+    [visible]="showReportModal()"
+    [modal]="true"
+    [closeOnEscape]="true"
+    [showHeader]="false"
+    [dismissableMask]="true"
+    styleClass="report-emerging-dialog"
+    (onHide)="closeReportModal()">
+    <div class="report-result-header">
+      <span style="font-weight: 550; color: #000000; font-size: 16px !important; padding-left: 30px">
+        This reporting pathway is intended for results that are not planned for in the Program’s ToC
+      </span>
+      <button
+        type="button"
+        (click)="closeReportModal()"
+        aria-label="Close modal"
+        style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center">
+        <i class="material-icons-round" style="font-size: 20px">close</i>
+      </button>
+    </div>
+    <app-report-result-form
+      [selectedInitiativeId]="selected()?.initiativeId"
+      [disableInitiativeSelect]="true"
+      (resultCreated)="closeReportModal()">
+    </app-report-result-form>
+  </app-pr-dialog>
+}

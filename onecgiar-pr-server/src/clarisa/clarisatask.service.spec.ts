@@ -90,6 +90,88 @@ describe('ClarisaTaskService', () => {
     });
   });
 
+  describe('project mappers', () => {
+    let service: ClarisaTaskService;
+
+    beforeEach(() => {
+      service = makeService().service;
+    });
+
+    it('mapProjectMappings should carry programName/programShortName from global_unit_object', () => {
+      const result = (service as any).mapProjectMappings({
+        id: 1,
+        project_mappings_array: [
+          {
+            id: 10,
+            project_id: 1,
+            program_id: 5,
+            allocation: '25.00',
+            global_unit_object: {
+              id: 5,
+              smo_code: 'SP01',
+              name: 'Breeding for Tomorrow',
+              short_name: 'BfT',
+            },
+          },
+        ],
+      });
+
+      expect(result[0]).toMatchObject({
+        programCode: 'SP01',
+        programName: 'Breeding for Tomorrow',
+        programShortName: 'BfT',
+      });
+    });
+
+    it('mapProjectMappings should null out programName/programShortName when global_unit_object is absent', () => {
+      const result = (service as any).mapProjectMappings({
+        id: 1,
+        project_mappings_array: [
+          { id: 11, project_id: 1, program_id: 6, allocation: null },
+        ],
+      });
+
+      expect(result[0]).toMatchObject({
+        programCode: null,
+        programName: null,
+        programShortName: null,
+      });
+    });
+
+    it('mapProjectCountries should carry allocation_percentage as a string', () => {
+      const result = (service as any).mapProjectCountries(
+        {
+          id: 1,
+          project_countries_array: [
+            {
+              id: 20,
+              project_id: 1,
+              country_code: 840,
+              allocation_percentage: 12.5,
+            },
+          ],
+        },
+        new Set([840]),
+      );
+
+      expect(result[0].allocationPercentage).toBe('12.5');
+    });
+
+    it('mapProjectCountries should null out allocation_percentage when absent', () => {
+      const result = (service as any).mapProjectCountries(
+        {
+          id: 1,
+          project_countries_array: [
+            { id: 21, project_id: 1, country_code: 170 },
+          ],
+        },
+        new Set([170]),
+      );
+
+      expect(result[0].allocationPercentage).toBeNull();
+    });
+  });
+
   describe('clarisaBootstrapImportantData', () => {
     it('syncs institutions via INSTITUTIONS_FULL with incremental from param', async () => {
       const { service, clarisaInstitutionsRepositoryMock } = makeService();

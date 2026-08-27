@@ -6,7 +6,7 @@
 </app-alert-status>
 <div appFeedbackValidation labelText="Partners" [isComplete]="!!body?.institutions?.length">
 </div>
-<div class="auto_fit_container fadeIn">
+<div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px] fadeIn">
     <div class="dropdown-50p">
         <app-pr-multi-select [options]="this.institutionsSE.institutionsList" label="Partners"
             selectedOptionLabel="institutions_name" optionLabel="full_name" optionValue="institutions_id"

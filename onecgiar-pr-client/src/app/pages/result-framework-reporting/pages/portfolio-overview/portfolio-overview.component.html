@@ -1,0 +1,191 @@
+<!--
+  Portfolio overview — design block `showPortfolio` of `PRMS Reporting.dc.html` (read 2026-08-24).
+
+  Colours come from tokens, never from the mockup's raw hex (UI rule 8). They coincide 1:1 where it
+  matters: #F7F7F9 = --pr-surface-app, #FFFFFF = --pr-surface-card, #E3E3E8 = --pr-border,
+  #EEEEF1 = --pr-border-divider, #2B2838 = --pr-text, #9691A8 = --pr-text-subtle,
+  #5733C4 = --pr-color-primary-400, #F5F3FF = --pr-color-primary-50, #6B46E5 = --pr-color-primary-300
+  and #8B7CC4 = --pr-chart-2-muted (the bilateral fill, per DESIGN-DEVIATIONS §8 — NON-TEXT ONLY).
+  #6B6580 = --pr-text-muted exactly, and #CFC9DE = --pr-text-disabled (the zero-cell grey).
+-->
+<section class="min-h-screen bg-[var(--pr-surface-app)] p-[32px]">
+  <div class="flex flex-col gap-[20px]">
+    <!-- ── Title block ─────────────────────────────────────────────────────────────────────── -->
+    <header class="flex flex-col">
+      <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--pr-text-subtle)]">{{ eyebrow() }}</span>
+      <h1 class="mt-[4px] text-[30px] font-extrabold tracking-[-0.02em] text-[var(--pr-text)]">Portfolio overview</h1>
+      <p class="mt-[4px] text-[14px] font-normal text-[var(--pr-text-muted)]">Reporting progress across all science programs.</p>
+      @if (data.closedPhase()) {
+        <!-- Only when NO phase is open: the figures are then a closed cycle's and will not move. -->
+        <p class="mt-[4px] text-[13px] font-medium text-[var(--pr-status-in-progress-fg)]">Viewing a closed phase. Figures are final.</p>
+      }
+      @if (data.isPartial()) {
+        <p class="mt-[4px] text-[13px] font-medium text-[var(--pr-status-in-progress-fg)]">
+          Showing the first {{ data.total() }} results — the server holds more, so these figures are partial.
+        </p>
+      }
+    </header>
+
+    @if (isLoading()) {
+      <p class="text-[14px] font-normal text-[var(--pr-text-muted)]" aria-live="polite" aria-busy="true">Loading portfolio figures…</p>
+    }
+
+    @if (hasError()) {
+      <p class="text-[14px] font-normal text-[var(--pr-text-muted)]" role="alert">{{ data.error() }}</p>
+    }
+
+    @if (isEmpty()) {
+      <p class="text-[14px] font-normal text-[var(--pr-text-muted)]">No results have been reported in this phase yet.</p>
+    }
+
+    @if (hasFigures()) {
+      <!-- ── Results in this phase ─────────────────────────────────────────────────────────── -->
+      <!-- The counters are READ-ONLY. The design makes each one a drill-down, but no surface lists
+           the WHOLE portfolio filtered by status, so any destination here would be invented. Raised
+           on P2-3304 rather than shipped as a dead control. -->
+      <div class="po-card rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+        <h2 class="mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Results in this phase</h2>
+        <div class="flex flex-wrap">
+          @for (total of data.totals(); track total.label; let first = $first) {
+            <div
+              class="flex flex-col gap-[4px] rounded-[8px]"
+              [class]="first ? '' : 'ml-[20px] border-l border-[var(--pr-border)] pl-[20px]'">
+              <span class="flex items-center gap-[6px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+                @if (total.dot) {
+                  <span class="size-[8px] flex-none rounded-full" [style.background]="total.dot" aria-hidden="true"></span>
+                }
+                {{ total.label }}
+              </span>
+              <span class="font-mono text-[30px] font-bold leading-[1.1] text-[var(--pr-text)]">{{ total.n }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="grid grid-cols-12 gap-[16px]">
+        <!-- ── Results by indicator category ──────────────────────────────────────────────── -->
+        <!-- Read-only for the same reason as the counters — see P2-3304. -->
+        <div class="po-card col-span-7 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+          <h2 class="mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Results by indicator category</h2>
+          @for (bar of data.categoryBars(); track bar.name) {
+            <div class="flex min-h-[36px] items-center gap-[12px] rounded-[8px] px-[6px]">
+              <span class="max-w-[180px] flex-none truncate text-[13px] font-normal text-[var(--pr-text)]" [title]="bar.name">{{ bar.name }}</span>
+              <span class="h-[8px] min-w-[64px] flex-1 rounded-full bg-[var(--pr-border-divider)]">
+                <span class="block h-[8px] rounded-full bg-[var(--pr-color-primary-300)]" [style.width]="bar.width"></span>
+              </span>
+              <span class="min-w-[32px] flex-none text-right font-mono text-[14px] font-semibold text-[var(--pr-text)]">{{ bar.n }}</span>
+            </div>
+          }
+        </div>
+
+        <!-- ── Bilateral results ──────────────────────────────────────────────────────────── -->
+        <div class="po-card col-span-5 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+          <h2 class="mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Bilateral results</h2>
+          <div class="flex flex-col gap-[4px]">
+            <span class="text-[13px] font-normal text-[var(--pr-text-muted)]">Bilateral results in this phase</span>
+            <span class="font-mono text-[30px] font-bold leading-[1.1] text-[var(--pr-text)]">{{ data.bilateralTotal() }}</span>
+          </div>
+
+          <div class="mt-[16px] border-t border-[var(--pr-border-divider)] pt-[8px]">
+            @for (bar of bilateralRows(); track bar.code) {
+              <button
+                type="button"
+                class="flex min-h-[40px] w-full items-center gap-[12px] rounded-[8px] border-0 bg-transparent px-[6px] text-left transition-colors hover:bg-[var(--pr-surface-app)]"
+                [attr.aria-label]="'Open the Results tab of ' + bar.name"
+                (click)="openProgramme(bar.code)">
+                <span class="flex-none font-mono text-[12px] font-semibold text-[var(--pr-color-primary-400)]">{{ bar.code }}</span>
+                <span class="max-w-[180px] flex-none truncate text-[14px] font-normal text-[var(--pr-text)]" [title]="bar.name">{{ bar.name }}</span>
+                <span class="h-[8px] min-w-[56px] flex-1 rounded-full bg-[var(--pr-border-divider)]">
+                  <!-- NON-TEXT graphic: 3.52:1 on this track, clears WCAG 1.4.11 (DESIGN-DEVIATIONS §8). -->
+                  <span class="block h-[8px] rounded-full bg-[var(--pr-chart-2-muted)]" [style.width]="bar.width"></span>
+                </span>
+                <span class="min-w-[32px] flex-none text-right font-mono text-[14px] font-semibold text-[var(--pr-text)]">{{ bar.n }}</span>
+              </button>
+            }
+
+            @if (bilateralHasMore()) {
+              <button
+                type="button"
+                class="flex min-h-[36px] w-full items-center rounded-[8px] border-0 bg-transparent px-[6px] text-left text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                (click)="toggleBilateral()">
+                {{ bilateralExpanded() ? 'Show less' : 'View all' }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Progress by science program ───────────────────────────────────────────────────── -->
+      <!-- Column order is the design's: programme, TOTAL, then one column per category. -->
+      <div class="po-card rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-[20px]">
+        <h2 class="mx-[20px] mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Progress by science program</h2>
+
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse">
+            <thead>
+              <tr class="h-[40px] bg-[var(--pr-surface-app)]">
+                @for (column of columns(); track column.label; let first = $first) {
+                  <th
+                    scope="col"
+                    class="whitespace-nowrap border-b border-[var(--pr-border)] px-[10px] text-[11px] font-semibold uppercase tracking-[0.08em]"
+                    [class]="first ? 'pl-[20px] text-left' : 'text-right'"
+                    [attr.aria-sort]="isSorted(column) ? (sortAsc() ? 'ascending' : 'descending') : 'none'">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-[4px] border-0 bg-transparent p-0 text-inherit uppercase tracking-[inherit]"
+                      [style.color]="isSorted(column) ? 'var(--pr-text)' : 'var(--pr-text-secondary)'"
+                      (click)="sortBy(column)">
+                      {{ column.label }}
+                      @if (isSorted(column)) {
+                        <ng-icon
+                          name="lucideChevronDown"
+                          size="10px"
+                          strokeWidth="2"
+                          class="text-[var(--pr-color-primary-400)]"
+                          [style.transform]="sortAsc() ? 'rotate(180deg)' : 'none'" />
+                      }
+                    </button>
+                  </th>
+                }
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (row of rows(); track row.code) {
+                <tr class="min-h-[48px] border-b border-[var(--pr-border-divider)] transition-colors hover:bg-[var(--pr-surface-app)]">
+                  <td class="py-[8px] pl-[20px] pr-[10px]">
+                    <button
+                      type="button"
+                      class="flex items-center gap-[8px] border-0 bg-transparent p-0 text-left"
+                      [attr.aria-label]="'Open the Results tab of ' + row.name"
+                      (click)="openProgramme(row.code)">
+                      <span class="font-mono text-[12px] font-semibold text-[var(--pr-color-primary-400)]">{{ row.code }}</span>
+                      <span class="text-[14px] font-normal text-[var(--pr-text)]">{{ row.name }}</span>
+                    </button>
+                  </td>
+                  <td class="whitespace-nowrap px-[10px] py-[8px] text-right font-mono text-[14px] font-semibold text-[var(--pr-text)]">{{ row.total }}</td>
+                  @for (cell of row.cells; track $index) {
+                    <td
+                      class="whitespace-nowrap px-[10px] py-[8px] text-right font-mono text-[14px] font-medium"
+                      [style.color]="cell ? 'var(--pr-text)' : 'var(--pr-text-disabled)'">
+                      {{ cell }}
+                    </td>
+                  }
+                </tr>
+              }
+
+              <!-- The closing row. Not clickable, per the design. -->
+              <tr class="min-h-[48px] bg-[var(--pr-surface-app)]">
+                <td class="py-[8px] pl-[20px] pr-[10px] text-[14px] font-semibold text-[var(--pr-text)]">All programs</td>
+                <td class="whitespace-nowrap px-[10px] py-[8px] text-right font-mono text-[14px] font-semibold text-[var(--pr-text)]">{{ data.footer().total }}</td>
+                @for (cell of data.footer().cells; track $index) {
+                  <td class="whitespace-nowrap px-[10px] py-[8px] text-right font-mono text-[14px] font-semibold text-[var(--pr-text)]">{{ cell }}</td>
+                }
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </div>
+</section>

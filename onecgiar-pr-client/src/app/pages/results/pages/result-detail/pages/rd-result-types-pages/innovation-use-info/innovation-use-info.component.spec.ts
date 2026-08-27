@@ -111,6 +111,27 @@ describe('InnovationUseInfoComponent', () => {
   });
 
 
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised — this section loads from an effect, so at first paint no request exists yet', () => {
+      expect(component.sectionLoading()).toBe(true);
+    });
+
+    it('is released once the P22 section GET responds', () => {
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the P22 section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_innovationUse').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+  });
+
   describe('getSectionInformation()', () => {
     it('should get section information', () => {
       const apiServiceSpy = jest.spyOn(mockApiService.resultsSE, 'GET_innovationUse');

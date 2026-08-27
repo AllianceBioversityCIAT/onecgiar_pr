@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, signal } from '@angular/core';
 import { ResultTocResultsInterface, TheoryOfChangeBody } from './model/theoryOfChangeBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
@@ -6,6 +6,7 @@ import { InstitutionsService } from '../../../../../../shared/services/global/in
 import { GreenChecksService } from '../../../../../../shared/services/global/green-checks.service';
 import { RdTheoryOfChangesServicesService } from './rd-theory-of-changes-services.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
 
 @Component({
   selector: 'app-rd-theory-of-change',
@@ -17,6 +18,13 @@ export class RdTheoryOfChangeComponent implements OnInit {
   theoryOfChangeBody = new TheoryOfChangeBody();
   contributingInitiativesList = [];
   getConsumed = false;
+  /**
+   * Drives `[appSectionSkeleton]`. Mirrors `getConsumed`, but as a signal: the template reads it
+   * from a host binding and Angular 21 is zoneless, so a plain boolean flipped inside an HTTP
+   * subscriber no longer schedules a render on its own. Released on `next` AND `error` so a
+   * failed GET can never leave the section shimmering forever.
+   */
+  readonly sectionLoading = signal(true);
   contributingInitiativeNew = [];
 
   submitter: string = '';
@@ -46,7 +54,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
         this.api.dataControlSE.currentResult = response;
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
-          this.contributingInitiativesList = response;
+          this.contributingInitiativesList = filterOutAvisaInitiatives(response);
           this.changeDetectorRef.detectChanges();
         });
       },
@@ -60,6 +68,11 @@ export class RdTheoryOfChangeComponent implements OnInit {
     this.theoryOfChangesServices.body = [];
     this.api.resultsSE.GET_toc().subscribe({
       next: ({ response }) => {
+        // Released FIRST, before any mapping. The mask carries `inert`, so an exception thrown
+        // further down (several accesses below are only half-guarded: `body?.x.y`) would leave the
+        // section permanently uneditable — strictly worse than the half-filled-but-usable form the
+        // same exception produced before the skeleton existed. Same tick, so no visual change.
+        this.sectionLoading.set(false);
         this.theoryOfChangeBody = response;
 
         this.theoryOfChangeBody?.contributing_and_primary_initiative.forEach(
@@ -104,6 +117,7 @@ export class RdTheoryOfChangeComponent implements OnInit {
       },
       error: err => {
         this.getConsumed = true;
+        this.sectionLoading.set(false);
         this.changeDetectorRef.detectChanges();
         console.error(err);
       },

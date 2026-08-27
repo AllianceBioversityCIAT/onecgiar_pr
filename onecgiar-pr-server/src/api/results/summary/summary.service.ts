@@ -17,7 +17,9 @@ import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
 import { PolicyChangeDto } from '../dto/review-update.dto';
 import { EvidencesRepository } from '../evidences/evidences.repository';
-import { In } from 'typeorm';
+import { DataSource, In } from 'typeorm';
+import { ResultScalingStudyUrl } from '../../results-framework-reporting/result_scaling_study_urls/entities/result_scaling_study_url.entity';
+import { InnovationReadinessLevelByLevel } from '../../results-framework-reporting/innovation_dev/enum/innov-readiness-level.enum';
 import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
 import { ResultByIntitutionsTypeRepository } from '../results_by_institution_types/result_by_intitutions_type.repository';
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
@@ -30,6 +32,9 @@ import { InnoDevService } from './innovation_dev.service';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
 import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
 import { Result } from '../entities/result.entity';
+import { ResultsInnovationsUseRepository } from './repositories/results-innovations-use.repository';
+import { ResultsInnovationsUse } from './entities/results-innovations-use.entity';
+import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
 
 @Injectable()
 export class SummaryService {
@@ -52,6 +57,9 @@ export class SummaryService {
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _innoDevService: InnoDevService,
     private readonly _resultAnswerRepository: ResultAnswerRepository,
+    private readonly _dataSource: DataSource,
+    private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    private readonly _resultsByProjectsRepository: ResultsByProjectsRepository,
   ) {}
 
   /**
@@ -77,6 +85,78 @@ export class SummaryService {
         innovationUseDto,
       );
 
+      const { innov_use_to_be_determined, innovation_use_level_id } =
+        innovationUseDto;
+      // Deliberately NOT filtered by `is_active`: `results_innovations_use` has a
+      // UNIQUE index on `results_id`, so an inactive row still occupies the slot.
+      // Filtering it out here made the lookup miss, sent us down the insert branch,
+      // and the insert died on ER_DUP_ENTRY — which `returnErrorRes` turned into a
+      // response the form never surfaced, so the answer simply vanished on reload.
+      // See P2-3359.
+      const innUseExists = await this._resultsInnovationsUseRepository.findOne({
+        where: { results_id: resultId },
+      });
+      // P2-3424 — captured BEFORE the overwrite: it is what tells a genuine
+      // "Yes → No" retraction apart from a payload that simply never answered.
+      const previousHasInnovationLink = innUseExists?.has_innovation_link;
+      let innUseRow: ResultsInnovationsUse;
+      if (innUseExists) {
+        innUseExists.innov_use_to_be_determined =
+          innov_use_to_be_determined ?? null;
+        innUseExists.innovation_use_level_id = innovation_use_level_id ?? null;
+        innUseExists.last_updated_by = user.id;
+        // Reactivate rather than insert: the row owns this result's unique slot.
+        innUseExists.is_active = true;
+        this.applyOptionalInnovationUseFields(innUseExists, innovationUseDto);
+        innUseRow =
+          await this._resultsInnovationsUseRepository.save(innUseExists);
+      } else {
+        const newInnUse = new ResultsInnovationsUse();
+        // Persist FK via writable @Column (obj_result stub alone is not enough).
+        newInnUse.results_id = Number(resultId);
+        newInnUse.obj_result = { id: Number(resultId) } as any;
+        newInnUse.created_by = user.id;
+        newInnUse.last_updated_by = user.id;
+        newInnUse.is_active = true;
+        newInnUse.innov_use_to_be_determined =
+          innov_use_to_be_determined ?? null;
+        newInnUse.innovation_use_level_id = innovation_use_level_id ?? null;
+        this.applyOptionalInnovationUseFields(newInnUse, innovationUseDto);
+
+        try {
+          innUseRow =
+            await this._resultsInnovationsUseRepository.save(newInnUse);
+        } catch (saveError: any) {
+          // Concurrent request won the race for this result's unique slot.
+          if (saveError?.driverError?.code !== 'ER_DUP_ENTRY') throw saveError;
+
+          const raced = await this._resultsInnovationsUseRepository.findOne({
+            where: { results_id: resultId },
+          });
+          if (!raced) throw saveError;
+
+          raced.innov_use_to_be_determined = innov_use_to_be_determined ?? null;
+          raced.innovation_use_level_id = innovation_use_level_id ?? null;
+          raced.last_updated_by = user.id;
+          raced.is_active = true;
+          this.applyOptionalInnovationUseFields(raced, innovationUseDto);
+          innUseRow = await this._resultsInnovationsUseRepository.save(raced);
+        }
+      }
+
+      await this.saveInnovationUseScalingStudyUrls(
+        innUseRow?.result_innovation_use_id,
+        innovationUseDto,
+        user.id,
+      );
+
+      await this.saveInnovationUseLinkedResults(
+        resultId,
+        innovationUseDto,
+        previousHasInnovationLink,
+        user.id,
+      );
+
       await this._resultRepository.update(resultId, {
         last_updated_by: user.id,
         last_updated_date: new Date(),
@@ -89,6 +169,127 @@ export class SummaryService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  /**
+   * P2-3424 — tinyint / text columns that already exist on `results_innovations_use` but were being
+   * dropped because the DTO never declared them. Written ONLY when the caller sent the key: the same
+   * endpoint serves the legacy W1/W2 Innovation Use section and the W3/bilateral one, and a payload that
+   * omits a field must leave the stored value exactly as it was.
+   */
+  private applyOptionalInnovationUseFields(
+    entity: ResultsInnovationsUse,
+    dto: InnovationUseDto,
+  ): void {
+    if (dto.has_scaling_studies !== undefined) {
+      entity.has_scaling_studies = this.toNullableBoolean(
+        dto.has_scaling_studies,
+      );
+    }
+    if (dto.innov_use_2030_to_be_determined !== undefined) {
+      entity.innov_use_2030_to_be_determined = this.toNullableBoolean(
+        dto.innov_use_2030_to_be_determined,
+      );
+    }
+    if (dto.readiness_level_explanation !== undefined) {
+      entity.readiness_level_explanation =
+        dto.readiness_level_explanation ?? null;
+    }
+    if (dto.has_innovation_link !== undefined) {
+      entity.has_innovation_link = this.toNullableBoolean(
+        dto.has_innovation_link,
+      );
+    }
+  }
+
+  /** `null` stays `null` (question not answered); anything else collapses to a real boolean. */
+  private toNullableBoolean(value: unknown): boolean | null {
+    return value === null || value === undefined ? null : Boolean(value);
+  }
+
+  /**
+   * P2-3424 — study links live in `result_scaling_study_urls` keyed by `result_innov_use_id`, the same
+   * table the Innovation Development branch of this service already writes through `result_innov_dev_id`.
+   * That key belongs exclusively to this section, so a full replace is safe here.
+   *
+   * The sync only runs when the payload actually says something about the studies: a save that omits
+   * `scaling_studies_urls` must not wipe the stored links (that is how "Yes" + an untouched autosave
+   * would have erased them).
+   */
+  private async saveInnovationUseScalingStudyUrls(
+    resultInnovationUseId: number | undefined,
+    dto: InnovationUseDto,
+    userId: number,
+  ): Promise<void> {
+    if (!resultInnovationUseId) return;
+
+    const hasScalingAnswer = this.toNullableBoolean(dto.has_scaling_studies);
+    const shouldSync =
+      dto.scaling_studies_urls !== undefined || hasScalingAnswer === false;
+    if (!shouldSync) return;
+
+    const urls =
+      hasScalingAnswer === false
+        ? []
+        : (dto.scaling_studies_urls ?? [])
+            .map((url) => String(url ?? '').trim())
+            .filter((url) => url !== '');
+
+    const scalingStudyUrlRepository = this._dataSource.getRepository(
+      ResultScalingStudyUrl,
+    );
+    await scalingStudyUrlRepository.update(
+      { result_innov_use_id: resultInnovationUseId },
+      { is_active: false, last_updated_by: userId },
+    );
+
+    if (!urls.length) return;
+
+    await scalingStudyUrlRepository.save(
+      urls.map((url) => ({
+        result_innov_use_id: resultInnovationUseId,
+        study_url: url,
+        is_active: true,
+        created_by: userId,
+        last_updated_by: userId,
+      })),
+    );
+  }
+
+  /**
+   * P2-3424 — `linked_result` is SHARED: the P22 "Links to results" section writes rows for the same
+   * `origin_result_id`, so this endpoint must never wipe it opportunistically. Two narrow cases only:
+   *  - the payload answers "Yes" and carries a selection → that selection becomes the stored set;
+   *  - the payload answers "No" AND the stored answer was "Yes" → the retraction clears the links.
+   * A payload that leaves the question unanswered (`null`) or omits it altogether touches nothing.
+   */
+  private async saveInnovationUseLinkedResults(
+    resultId: number,
+    dto: InnovationUseDto,
+    previousHasInnovationLink: unknown,
+    userId: number,
+  ): Promise<void> {
+    if (dto.has_innovation_link === undefined) return;
+
+    const linkAnswer = this.toNullableBoolean(dto.has_innovation_link);
+
+    if (linkAnswer === true) {
+      if (dto.linked_results === undefined) return;
+      await this._resultsInnovationsUseRepository.replaceLinkedResultsByOrigin(
+        resultId,
+        dto.linked_results,
+        userId,
+      );
+      return;
+    }
+
+    if (linkAnswer === false && Boolean(previousHasInnovationLink)) {
+      await this._resultsInnovationsUseRepository.replaceLinkedResultsByOrigin(
+        resultId,
+        [],
+        userId,
+      );
     }
   }
 
@@ -107,7 +308,38 @@ export class SummaryService {
         el['men_non_youth'] = el.men - el.men_youth;
         el['women_non_youth'] = el.women - el.women_youth;
       });
+      const innUseExists = await this._resultsInnovationsUseRepository.findOne({
+        where: { results_id: resultId, is_active: true },
+      });
+      // P2-3424 — read side of the fields this endpoint now persists. Purely additive: every key that
+      // was already in the response keeps its exact shape.
+      const scaling_studies_urls = innUseExists?.result_innovation_use_id
+        ? (
+            await this._dataSource.getRepository(ResultScalingStudyUrl).find({
+              where: {
+                result_innov_use_id: innUseExists.result_innovation_use_id,
+                is_active: true,
+              },
+            })
+          ).map((u) => u.study_url)
+        : [];
+      const linked_results =
+        await this._resultsInnovationsUseRepository.getLinkedResultsByOrigin(
+          resultId,
+        );
+
       const innovatonUse = {
+        innov_use_to_be_determined:
+          innUseExists?.innov_use_to_be_determined ?? null,
+        innovation_use_level_id: innUseExists?.innovation_use_level_id ?? null,
+        has_scaling_studies: innUseExists?.has_scaling_studies ?? null,
+        scaling_studies_urls,
+        innov_use_2030_to_be_determined:
+          innUseExists?.innov_use_2030_to_be_determined ?? null,
+        readiness_level_explanation:
+          innUseExists?.readiness_level_explanation ?? null,
+        has_innovation_link: innUseExists?.has_innovation_link ?? null,
+        linked_results,
         actors: actorsData,
         measures: await this._resultIpMeasureRepository.find({
           where: { result_id: resultId, is_active: true },
@@ -324,6 +556,8 @@ export class SummaryService {
         innovation_nature_id,
         innovation_readiness_level_id,
         is_new_variety,
+        has_scaling_studies,
+        scaling_studies_urls,
         number_of_varieties,
         readiness_level,
         result_innovation_dev_id,
@@ -338,113 +572,167 @@ export class SummaryService {
         innDevExists.short_title = short_title;
         innDevExists.last_updated_by = user.id;
         innDevExists.is_new_variety = is_new_variety;
+        innDevExists.has_scaling_studies = has_scaling_studies;
         innDevExists.readiness_level = readiness_level;
         innDevExists.number_of_varieties = number_of_varieties;
-        innDevExists.innovation_nature_id = innovation_nature_id;
         innDevExists.innovation_developers = innovation_developers;
         innDevExists.evidences_justification = evidences_justification;
         innDevExists.innovation_collaborators = innovation_collaborators;
-        innDevExists.result_innovation_dev_id = result_innovation_dev_id;
-        innDevExists.innovation_readiness_level_id =
-          innovation_readiness_level_id;
-        innDevExists.innovation_characterization_id =
-          innovation_characterization_id;
+        if (result_innovation_dev_id != null) {
+          innDevExists.result_innovation_dev_id = result_innovation_dev_id;
+        }
         innDevExists.innovation_acknowledgement = innovation_acknowledgement;
         innDevExists.innovation_pdf = innovation_pdf;
         innDevExists.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
+        this.applyInnovationDevFkRelations(innDevExists, {
+          innovation_nature_id,
+          innovation_readiness_level_id,
+          innovation_characterization_id,
+        });
         InnDevRes = await this._resultsInnovationsDevRepository.save(
           innDevExists as any,
         );
       } else {
         const newInnDev = new ResultsInnovationsDev();
         newInnDev.created_by = user.id;
-        newInnDev.results_id = resultId;
+        // Persist FK via writable @Column (result_object stub alone is not enough).
+        newInnDev.results_id = Number(resultId);
+        newInnDev.result_object = { id: Number(resultId) } as any;
         newInnDev.last_updated_by = user.id;
         newInnDev.short_title = short_title;
         newInnDev.is_active = true;
         newInnDev.is_new_variety = is_new_variety;
+        newInnDev.has_scaling_studies = has_scaling_studies;
         newInnDev.readiness_level = readiness_level;
         newInnDev.number_of_varieties = number_of_varieties;
-        newInnDev.innovation_nature_id = innovation_nature_id;
         newInnDev.innovation_developers = innovation_developers;
         newInnDev.evidences_justification = evidences_justification;
         newInnDev.innovation_collaborators = innovation_collaborators;
-        newInnDev.result_innovation_dev_id = result_innovation_dev_id;
-        newInnDev.innovation_readiness_level_id = innovation_readiness_level_id;
-        newInnDev.innovation_characterization_id =
-          innovation_characterization_id;
+        // Never assign null PK — TypeORM would INSERT NULL and break AUTO_INCREMENT.
         newInnDev.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
+        this.applyInnovationDevFkRelations(newInnDev, {
+          innovation_nature_id,
+          innovation_readiness_level_id,
+          innovation_characterization_id,
+        });
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 
-      // * Save Questions
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q2.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.intellectual_property_rights.q1.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.intellectual_property_rights.q2.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.intellectual_property_rights.q3.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.innovation_team_diversity.options,
-      );
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.megatrends.options,
-      );
+      // Nested questionnaire / investment blocks are required for Result Review full saves,
+      // but bilateral type-specific autosave sends only core Inn Dev fields. Skip when absent.
+      const ris = createInnovationDevDto?.responsible_innovation_and_scaling;
+      if (ris?.q1?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          ris.q1.options,
+        );
+      }
+      if (ris?.q2?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          ris.q2.options,
+        );
+      }
 
-      // * Save Evidence
-      await this._innoDevService.saveEvidence(
-        resultId,
-        user.id,
-        createInnovationDevDto.reference_materials,
-        4,
-      );
+      const ipr = createInnovationDevDto?.intellectual_property_rights;
+      if (ipr?.q1?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          ipr.q1.options,
+        );
+      }
+      if (ipr?.q2?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          ipr.q2.options,
+        );
+      }
+      if (ipr?.q3?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          ipr.q3.options,
+        );
+      }
 
-      // * Save Investment
-      await this._innoDevService.saveInitiativeInvestment(
-        resultId,
-        user.id,
-        createInnovationDevDto,
-      );
-      await this._innoDevService.saveBillateralInvestment(
-        resultId,
-        user.id,
-        createInnovationDevDto,
-      );
-      await this._innoDevService.savePartnerInvestment(
-        user.id,
-        createInnovationDevDto,
-      );
+      if (createInnovationDevDto?.innovation_team_diversity?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          createInnovationDevDto.innovation_team_diversity.options,
+        );
+      }
+      if (createInnovationDevDto?.megatrends?.options) {
+        await this._innoDevService.saveOptionsAndSubOptions(
+          resultId,
+          user.id,
+          createInnovationDevDto.megatrends.options,
+        );
+      }
 
+      if (createInnovationDevDto?.reference_materials != null) {
+        await this._innoDevService.saveEvidence(
+          resultId,
+          user.id,
+          createInnovationDevDto.reference_materials,
+          4,
+        );
+      }
+
+      if (createInnovationDevDto?.initiative_expected_investment != null) {
+        await this._innoDevService.saveInitiativeInvestment(
+          resultId,
+          user.id,
+          createInnovationDevDto,
+        );
+      }
+      if (createInnovationDevDto?.bilateral_expected_investment != null) {
+        await this._innoDevService.saveBillateralInvestment(
+          resultId,
+          user.id,
+          createInnovationDevDto,
+        );
+      }
+      if (createInnovationDevDto?.institutions_expected_investment != null) {
+        await this._innoDevService.savePartnerInvestment(
+          user.id,
+          createInnovationDevDto,
+        );
+      }
+
+      // Same gating rule as the v2 innovation-dev service: scaling studies only
+      // apply once the innovation itself has reached readiness level 6+.
       if (
-        innovation_user_to_be_determined != false ||
-        innovation_user_to_be_determined != null
+        Number(innovation_readiness_level_id) >=
+          InnovationReadinessLevelByLevel.Level_6 &&
+        has_scaling_studies &&
+        scaling_studies_urls?.length
       ) {
-        // * Save InnovationUser
+        const scalingStudyUrlRepository = this._dataSource.getRepository(
+          ResultScalingStudyUrl,
+        );
+        await scalingStudyUrlRepository.update(
+          { result_innov_dev_id: InnDevRes.result_innovation_dev_id },
+          { is_active: false },
+        );
+        await scalingStudyUrlRepository.save(
+          scaling_studies_urls.map((url) => ({
+            result_innov_dev_id: InnDevRes.result_innovation_dev_id,
+            study_url: url,
+            is_active: true,
+            created_by: user.id,
+          })),
+        );
+      }
+
+      // Result Review always sends innovationUseDto; bilateral core save omits it.
+      if (innovationUseDto != null) {
         await this._innoDevService.saveAnticipatedInnoUser(
           resultId,
           user.id,
@@ -464,6 +752,45 @@ export class SummaryService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * FK fields on ResultsInnovationsDev are @RelationId (read-only). Persist via JoinColumn relations.
+   */
+  private applyInnovationDevFkRelations(
+    entity: any,
+    relations: {
+      innovation_readiness_level_id?: number | null;
+      innovation_nature_id?: number | null;
+      innovation_characterization_id?: number | null;
+    },
+  ): void {
+    const {
+      innovation_readiness_level_id,
+      innovation_nature_id,
+      innovation_characterization_id,
+    } = relations;
+
+    if (innovation_readiness_level_id !== undefined) {
+      entity.innovation_readiness_level =
+        innovation_readiness_level_id == null
+          ? null
+          : ({ id: innovation_readiness_level_id } as any);
+    }
+
+    if (innovation_nature_id !== undefined) {
+      entity.innovation_nature =
+        innovation_nature_id == null
+          ? null
+          : ({ code: innovation_nature_id } as any);
+    }
+
+    if (innovation_characterization_id !== undefined) {
+      entity.innovation_characterization =
+        innovation_characterization_id == null
+          ? null
+          : ({ id: innovation_characterization_id } as any);
     }
   }
 
@@ -544,7 +871,7 @@ export class SummaryService {
         },
       });
 
-      const bilateral_expected_investment =
+      const legacyBilateralInvestment =
         await this._resultBilateralBudgetRepository.find({
           where: {
             non_pooled_projetct_id: In(npp.map((el) => el.id)),
@@ -556,6 +883,31 @@ export class SummaryService {
             },
           },
         });
+
+      // Bilateral projects are linked via `results_by_projects` (not the legacy
+      // `non_pooled_project` catalog), so their budget rows are keyed by
+      // `result_project_id` instead — read-only merge here; saving through this
+      // (legacy) endpoint still only understands `non_pooled_projetct_id`.
+      const resultProjects = await this._resultsByProjectsRepository.find({
+        where: { result_id: resultId, is_active: true },
+      });
+      const resultProjectBilateralInvestment =
+        await this._resultBilateralBudgetRepository.find({
+          where: {
+            result_project_id: In(resultProjects.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_result_project: {
+              obj_clarisa_project: true,
+            },
+          },
+        });
+
+      const bilateral_expected_investment = [
+        ...legacyBilateralInvestment,
+        ...resultProjectBilateralInvestment,
+      ];
 
       const institutions: ResultsByInstitution[] =
         await this._resultByIntitutionsRepository.find({
@@ -576,6 +928,22 @@ export class SummaryService {
           },
         });
 
+      let scaling_studies_urls: string[] = [];
+      if (
+        Number(innDevExists?.innovation_readiness_level_id) >=
+        InnovationReadinessLevelByLevel.Level_6
+      ) {
+        const urls = await this._dataSource
+          .getRepository(ResultScalingStudyUrl)
+          .find({
+            where: {
+              result_innov_dev_id: innDevExists.result_innovation_dev_id,
+              is_active: true,
+            },
+          });
+        scaling_studies_urls = urls.map((u) => u.study_url);
+      }
+
       return {
         response: {
           ...innDevExists,
@@ -584,6 +952,7 @@ export class SummaryService {
           initiative_expected_investment,
           bilateral_expected_investment,
           institutions_expected_investment,
+          scaling_studies_urls,
           reference_materials,
           result,
         },
@@ -685,7 +1054,7 @@ export class SummaryService {
         );
       }
 
-      for (const answer of optionsWithAnswers) {
+      for (const answer of optionsWithAnswers ?? []) {
         const optionExist = await this._resultAnswerRepository.findOne({
           where: {
             result_id: resultId,

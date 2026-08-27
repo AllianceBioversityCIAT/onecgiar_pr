@@ -9,16 +9,18 @@ import { PartnersRequestModule } from './components/partners-request/partners-re
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { BreadcrumbModule } from '../../../../shared/components/breadcrumb/breadcrumb.module';
 import { NoEditContainerComponent } from './components/no-edit-container/no-edit-container.component';
-import { ButtonModule } from 'primeng/button';
 import { SubmissionModalModule } from './components/submission-modal/submission-modal.module';
 import { UnsubmitModalModule } from './components/unsubmit-modal/unsubmit-modal.module';
 import { PdfActionsModule } from './components/pdf-actions/pdf-actions.module';
-import { ToastModule } from 'primeng/toast';
+import { PrToastComponent } from 'src/app/shared/components/pr-toast';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
 import { AiReviewComponent } from './components/ai-review/ai-review.component';
-import { TooltipModule } from 'primeng/tooltip';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { ClipboardModule } from '@angular/cdk/clipboard';
+import { ResultMetadataListComponent } from '../../../../shared/components/result-metadata/result-metadata-list.component';
+import { ResultMetadataWindowComponent } from '../../../../shared/components/result-metadata/result-metadata-window.component';
+import { ResultSectionsSidebarComponent } from './components/result-sections-sidebar/result-sections-sidebar.component';
+import { ResultHeaderComponent } from './components/result-header/result-header.component';
 
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent],
@@ -28,16 +30,18 @@ import { ClipboardModule } from '@angular/cdk/clipboard';
     PartnersRequestModule,
     CustomFieldsModule,
     BreadcrumbModule,
-    ButtonModule,
     SubmissionModalModule,
     UnsubmitModalModule,
     PdfActionsModule,
-    ToastModule,
+    PrToastComponent,
     PhaseSwitcherModule,
     AiReviewComponent,
-    TooltipModule,
     PageHeaderComponent,
-    ClipboardModule
+    ClipboardModule,
+    ResultMetadataListComponent,
+    ResultMetadataWindowComponent,
+    ResultSectionsSidebarComponent,
+    ResultHeaderComponent
   ]
 })
 export class ResultDetailModule {}

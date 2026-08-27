@@ -64,6 +64,10 @@ describe('ResultsByInstitutionsService', () => {
     findResultsByProjectsByResultId: jest.fn(),
     find: jest.fn(),
   };
+  const mockResultTaggedNotificationService = {
+    notifyTaggedCenters: jest.fn().mockResolvedValue(undefined),
+    notifyTaggedBilateralProjects: jest.fn().mockResolvedValue(undefined),
+  };
 
   const createService = () =>
     new ResultsByInstitutionsService(
@@ -81,6 +85,7 @@ describe('ResultsByInstitutionsService', () => {
       mockNonPooledProjectBudgetRepository as any,
       mockResultsByProjectsService as any,
       mockResultsByProjectsRepository as any,
+      mockResultTaggedNotificationService as any,
     );
 
   beforeEach(() => {
@@ -369,6 +374,74 @@ describe('ResultsByInstitutionsService', () => {
         center_id: 'IITA',
         is_leading_result: false,
         last_updated_by: baseUser.id,
+      });
+    });
+
+    // P2-3214. The notification must fire only for centres that were not linked before, which is
+    // exactly the `else` branch of the upsert above. Without this, every partners save would
+    // re-notify the whole centre.
+    describe('tagged-centre notifications (P2-3214)', () => {
+      it('notifies only the centres that were newly linked', async () => {
+        mockResultsCenterRepository.getAllResultsCenterByResultIdAndCenterId
+          .mockResolvedValueOnce(null) // CIM is new
+          .mockResolvedValueOnce({ center_id: 'IITA' }); // IITA was already linked
+
+        await service.handleContributingCenters(
+          [
+            { code: 'CIM', is_leading_result: true } as any,
+            { code: 'IITA', is_leading_result: false } as any,
+          ],
+          baseDto,
+          baseUser,
+        );
+
+        expect(
+          mockResultTaggedNotificationService.notifyTaggedCenters,
+        ).toHaveBeenCalledWith(123, baseUser.id, ['CIM']);
+      });
+
+      it('does not notify when every centre was already linked', async () => {
+        mockResultsCenterRepository.getAllResultsCenterByResultIdAndCenterId.mockResolvedValue(
+          { center_id: 'IITA' },
+        );
+
+        await service.handleContributingCenters(
+          [{ code: 'IITA', is_leading_result: false } as any],
+          baseDto,
+          baseUser,
+        );
+
+        expect(
+          mockResultTaggedNotificationService.notifyTaggedCenters,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('does not notify when the payload clears the centres', async () => {
+        await service.handleContributingCenters([], baseDto, baseUser);
+
+        expect(
+          mockResultTaggedNotificationService.notifyTaggedCenters,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('still saves the centres when the notification blows up', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        mockResultsCenterRepository.getAllResultsCenterByResultIdAndCenterId.mockResolvedValueOnce(
+          null,
+        );
+        mockResultTaggedNotificationService.notifyTaggedCenters.mockRejectedValueOnce(
+          new Error('socket down'),
+        );
+
+        await expect(
+          service.handleContributingCenters(
+            [{ code: 'CIM', is_leading_result: true } as any],
+            baseDto,
+            baseUser,
+          ),
+        ).resolves.not.toThrow();
+
+        expect(mockResultsCenterRepository.save).toHaveBeenCalled();
       });
     });
 

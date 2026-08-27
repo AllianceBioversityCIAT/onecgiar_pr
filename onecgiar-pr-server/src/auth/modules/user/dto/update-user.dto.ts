@@ -1,5 +1,5 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreateUserDto } from './create-user.dto';
+import { CreateUserDto, CenterAssignmentDto } from './create-user.dto';
 import {
   IsArray,
   IsBoolean,
@@ -37,6 +37,12 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @ValidateNested({ each: true })
   @Type(() => RoleAssignmentDto)
   role_assignments: RoleAssignmentDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CenterAssignmentDto)
+  center_assignments?: CenterAssignmentDto[];
 }
 
 export class RoleAssignmentDto {

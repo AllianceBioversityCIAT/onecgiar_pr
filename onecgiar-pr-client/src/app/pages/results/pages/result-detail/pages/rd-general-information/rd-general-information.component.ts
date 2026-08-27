@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, effect, ViewChild, computed } from '@angular/core';
+import { Component, OnInit, inject, effect, ViewChild, computed, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -25,12 +25,78 @@ export class RdGeneralInformationComponent implements OnInit {
   @ViewChild('saveConfirmationModal') saveConfirmationModal!: SaveConfirmationModalComponent;
 
   generalInfoBody = new GeneralInfoBody();
+
+  /** Los cinco tags que componen la escala de Impact Areas, en el orden en que se renderizan. */
+  private static readonly IMPACT_AREA_TAG_FIELDS: (keyof GeneralInfoBody)[] = [
+    'gender_tag_id',
+    'climate_change_tag_id',
+    'nutrition_tag_level_id',
+    'environmental_biodiversity_tag_level_id',
+    'poverty_tag_level_id'
+  ];
+
+  readonly IMPACT_AREAS_TOTAL = RdGeneralInformationComponent.IMPACT_AREA_TAG_FIELDS.length;
+
+  /**
+   * Cuántos Impact Areas tienen una puntuación elegida. Cuenta el tag por presencia, NO por
+   * verdad: `0 — Not targeted` tiene id 1 y es una respuesta válida, así que un `!value` daría
+   * cuatro de cinco en cuanto alguien puntúa un área con cero.
+   */
+  get impactAreasScored(): number {
+    return RdGeneralInformationComponent.IMPACT_AREA_TAG_FIELDS.filter(field => {
+      const value = this.generalInfoBody[field];
+      return value !== null && value !== undefined && value !== '';
+    }).length;
+  }
   toggle = 0;
   isPhaseOpen = false;
 
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
   isP25 = computed(() => this.dataControlSE.currentResultSignal()?.portfolio === 'P25');
   fieldsManagerSE = inject(FieldsManagerService);
+
+  /**
+   * P2-3201 (INC-158283) — reporting-form guidance redesign, scoped to the CURRENT portfolio.
+   *
+   * The PO confirmed on 18 Aug 2026 that this ticket applies to the 2026 portfolio only, so the
+   * gate is the shared phase-year threshold in {@link ReportingDesignYear} (via FieldsManager) and
+   * NOT a hand-rolled year comparison. Results from earlier phases keep their inline grey guidance
+   * boxes and never see the AI notes.
+   */
+  readonly guidanceAsTooltip = computed(() => this.fieldsManagerSE.isReportingFormGuidance2026());
+
+  /**
+   * P2-3225 — Lead Contact Person is a mandatory MDS field for P25 from the 2026 phase on.
+   *
+   * Gates both the asterisk and the incomplete-fields widget entry, so that what the form asks for
+   * matches what `validation_general_information_P25` actually enforces for the green check.
+   * Deliberately NOT `isP25()`: the 2025 cycle is closed and keeps the field optional.
+   */
+  readonly isLeadContactPersonRequired = computed(() => this.fieldsManagerSE.isLeadContactPersonMandatory2026());
+
+  /**
+   * Approved AI notes (P2-3201, points 1 and 2). Static blocks by explicit request: not collapsible
+   * and with no "How it works" link — an earlier draft of the ticket proposed both and the revised
+   * description rules them out.
+   *
+   * Copy is the ticket's literal text; only the leading label and the "AI Review" button name are
+   * emphasised, as in the approved mockup.
+   */
+  readonly aiAssistantTitlesNote =
+    '<strong>AI Assistant for result Titles and Descriptions:</strong> PRMS includes an AI assistant that generates suggested titles and descriptions for results based on the information entered by users. During the 2025 reporting cycle, its use contributed to a reduction in QA comments on result titles and descriptions, from 28% to 16%. Based on this positive experience and user feedback, we encourage Programs/Accelerators to use the AI assistant to improve the quality and consistency of reported results. To use the assistant, click <strong>AI Review</strong> once it becomes available. The button is automatically enabled once all sections are completed. All AI-generated text should be carefully reviewed, validated, and, where necessary, refined before submission.';
+
+  readonly aiImpactAreaScoresNote =
+    "<strong>AI-assisted Notification for Impact Area Scores:</strong> PRMS includes an AI assistant that reviews the result's metadata (and supporting evidence for scores of 2), it assesses whether the information provided is consistent with and adequately supports the selected score, and flags potential mismatches. The assistant does not select or recommend a score; responsibility for assigning the score remains with the user. To use the assistant, click <strong>AI Review</strong> once it becomes available. Any AI-generated notifications should be carefully reviewed and used to validate, and, where necessary, revise the selected Impact Area score and its supporting evidence before submission.";
+
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction: the form is built from an empty
+   * `GeneralInfoBody()` and only filled inside the GET's subscriber, so between first paint and
+   * the response every field would otherwise read as "mandatory, empty". Released on BOTH `next`
+   * and `error` so a failed request can never leave the section shimmering forever.
+   * Deliberately NOT raised again by the post-save reload — the save spinner already covers that
+   * round-trip and a second flash reads as a glitch.
+   */
+  readonly sectionLoading = signal(true);
 
   constructor(
     public api: ApiService,
@@ -108,22 +174,44 @@ export class RdGeneralInformationComponent implements OnInit {
     return field?.description || '';
   }
 
+  /**
+   * P2-3201: the guidance a field used to render inside its grey "Description" box, returned as
+   * tooltip content once the 2026 presentation applies. Empty string before 2026 so the caller
+   * keeps the inline box and grows no ⓘ trigger.
+   */
+  guidanceTooltip(fieldRef: string): string {
+    return this.guidanceAsTooltip() ? this.getImpactAreaFieldDescription(fieldRef) : '';
+  }
+
+  /** P2-3201: same rule for guidance authored in this component instead of FieldsManager. */
+  sectionGuidanceTooltip(guidance: string): string {
+    return this.guidanceAsTooltip() ? guidance : '';
+  }
+
   getImpactAreaFieldRequired(fieldRef: string): boolean {
     const field = this.fieldsManagerSE.fields()[fieldRef];
     return field?.required ?? true;
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_generalInformationByResultId(this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe(({ response }) => {
-      this.generalInfoBody = response;
-      this.generalInfoBody.reporting_year = response['phase_year'];
-      this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
+    this.api.resultsSE.GET_generalInformationByResultId(this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe({
+      next: ({ response }) => {
+        // Released FIRST, before any mapping. The mask carries `inert`, so an exception thrown
+        // further down (`[...institutions_type]` spreads a possibly-absent key) would leave the
+        // section permanently uneditable — strictly worse than the half-filled-but-usable form
+        // the same exception produced before the skeleton existed. Same tick, so no visual change.
+        this.sectionLoading.set(false);
+        this.generalInfoBody = response;
+        this.generalInfoBody.reporting_year = response['phase_year'];
+        this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
 
-      // Normalize impact area fields to arrays (backend returns arrays, but handle single numbers for backward compatibility)
-      this.normalizeImpactAreaFields();
+        // Normalize impact area fields to arrays (backend returns arrays, but handle single numbers for backward compatibility)
+        this.normalizeImpactAreaFields();
 
-      this.GET_investmentDiscontinuedOptions(response.result_type_id);
-      this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
+        this.GET_investmentDiscontinuedOptions(response.result_type_id);
+        this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
+      },
+      error: () => this.sectionLoading.set(false)
     });
   }
 
@@ -144,7 +232,9 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody.gender_impact_area_id = this.toSingleNumber(this.generalInfoBody.gender_impact_area_id);
       this.generalInfoBody.climate_impact_area_id = this.toSingleNumber(this.generalInfoBody.climate_impact_area_id);
       this.generalInfoBody.nutrition_impact_area_id = this.toSingleNumber(this.generalInfoBody.nutrition_impact_area_id);
-      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(this.generalInfoBody.environmental_biodiversity_impact_area_id);
+      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(
+        this.generalInfoBody.environmental_biodiversity_impact_area_id
+      );
       this.generalInfoBody.poverty_impact_area_id = this.toSingleNumber(this.generalInfoBody.poverty_impact_area_id);
     }
   }
@@ -155,15 +245,17 @@ export class RdGeneralInformationComponent implements OnInit {
     }
     if (Array.isArray(value)) {
       // Extract IDs from objects if they are objects, otherwise use the values directly
-      return value.map((item: any) => {
-        if (typeof item === 'object' && item !== null) {
-          // Extract the ID property (can be string or number, convert to number)
-          const id = item.id ?? null;
-          return id !== null && id !== undefined ? Number(id) : null;
-        }
-        // If it's already a number or string, convert to number
-        return item !== null && item !== undefined ? Number(item) : null;
-      }).filter((id: any) => id !== null && id !== undefined && !Number.isNaN(id));
+      return value
+        .map((item: any) => {
+          if (typeof item === 'object' && item !== null) {
+            // Extract the ID property (can be string or number, convert to number)
+            const id = item.id ?? null;
+            return id !== null && id !== undefined ? Number(id) : null;
+          }
+          // If it's already a number or string, convert to number
+          return item !== null && item !== undefined ? Number(item) : null;
+        })
+        .filter((id: any) => id !== null && id !== undefined && !Number.isNaN(id));
     }
     // Single value: convert to number and return as array
     return value !== null && value !== undefined ? [Number(value)] : [];
@@ -244,7 +336,9 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody.gender_impact_area_id = this.toSingleNumber(this.generalInfoBody.gender_impact_area_id);
       this.generalInfoBody.climate_impact_area_id = this.toSingleNumber(this.generalInfoBody.climate_impact_area_id);
       this.generalInfoBody.nutrition_impact_area_id = this.toSingleNumber(this.generalInfoBody.nutrition_impact_area_id);
-      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(this.generalInfoBody.environmental_biodiversity_impact_area_id);
+      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(
+        this.generalInfoBody.environmental_biodiversity_impact_area_id
+      );
       this.generalInfoBody.poverty_impact_area_id = this.toSingleNumber(this.generalInfoBody.poverty_impact_area_id);
     }
 

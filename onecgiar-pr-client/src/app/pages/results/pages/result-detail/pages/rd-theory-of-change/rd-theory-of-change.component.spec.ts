@@ -231,6 +231,60 @@ describe('RdTheoryOfChangeComponent', () => {
       expect(component.getConsumed).toBeTruthy();
     });
 
+    describe('sectionLoading (skeleton)', () => {
+      it('starts raised so the empty TheoryOfChangeBody never paints as a filled-in-and-lost form', () => {
+        const fresh = TestBed.createComponent(RdTheoryOfChangeComponent).componentInstance;
+
+        expect(fresh.sectionLoading()).toBe(true);
+      });
+
+      it('is released once the section GET responds', () => {
+        component.sectionLoading.set(true);
+
+        component.getSectionInformation();
+
+        expect(component.sectionLoading()).toBe(false);
+      });
+
+      it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+        component.sectionLoading.set(true);
+        jest.spyOn(component.api.resultsSE, 'GET_toc').mockReturnValue(throwError(() => 'boom'));
+
+        component.getSectionInformation();
+
+        expect(component.sectionLoading()).toBe(false);
+      });
+
+      /**
+       * The mask carries `inert`. If the release sat AFTER the response mapping, any exception in
+       * that mapping (several accesses there are only half-guarded, `body?.x.y`) would leave the
+       * section masked and permanently uneditable — worse than the half-filled but usable form the
+       * same exception produced before the skeleton existed.
+       */
+      it('is released BEFORE the response mapping runs, so a mapping error cannot leave the section inert', () => {
+        component.sectionLoading.set(true);
+        let loadingWhileMapping: boolean | null = null;
+        jest.spyOn(component.api.resultsSE, 'GET_toc').mockReturnValue(
+          of({
+            response: {
+              // A getter is the first thing the mapping touches, so it samples the flag mid-mapping.
+              get contributing_and_primary_initiative() {
+                loadingWhileMapping = component.sectionLoading();
+                return [];
+              },
+              result_toc_result: { result_toc_results: null, initiative_id: 1 },
+              contributors_result_toc_result: [],
+              contributing_initiatives: {}
+            }
+          } as any)
+        );
+
+        component.getSectionInformation();
+
+        expect(loadingWhileMapping).toBe(false);
+      });
+    });
+
     it('should set getConsumed to true', () => {
       jest.useFakeTimers();
       jest.spyOn(component.api.resultsSE, 'GET_toc');

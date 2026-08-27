@@ -1,5 +1,16 @@
 @use '../../../../../../../../../../../../../styles/fonts.scss' as fonts;
 
+// app-pr-dialog wrapper: reproduce the old p-dialog [style] width + flush body.
+::ng-deep app-pr-dialog .new-complementary-innovation-dialog {
+  &.pr-dialog {
+    width: 70vw;
+  }
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
 .modal_title {
   width: auto;
   @include fonts.pr-typography('h2');

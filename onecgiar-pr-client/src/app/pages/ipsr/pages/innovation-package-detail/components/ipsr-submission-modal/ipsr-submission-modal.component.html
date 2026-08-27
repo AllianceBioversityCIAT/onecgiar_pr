@@ -1,6 +1,6 @@
-<p-dialog appendTo="body" header="Title" [(visible)]="this.ipsrDataControlSE.modals.submission"
-    (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
-    [dismissableMask]="true" [style]="{padding: '0px'}">
+<app-pr-dialog [(visible)]="this.ipsrDataControlSE.modals.submission"
+    (onHide)="cleanObject()" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
+    [dismissableMask]="true" styleClass="ipsr-submission-modal-dialog">
     <div class="modal_title">Submission
     </div>
     <div class="modal_container partners-request-container">
@@ -20,4 +20,4 @@
             (clickEvent)="onSubmit()">
         </app-pr-button>
     </div>
-</p-dialog>
+</app-pr-dialog>

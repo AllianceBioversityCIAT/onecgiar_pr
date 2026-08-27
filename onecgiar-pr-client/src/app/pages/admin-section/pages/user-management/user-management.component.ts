@@ -1,24 +1,24 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Table, TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
-import { InputTextModule } from 'primeng/inputtext';
-import { DialogModule } from 'primeng/dialog';
+import {
+  PrTableComponent,
+  PrSortableColumnDirective,
+  PrSortIconComponent,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective
+} from '../../../../shared/components/pr-table';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { PrSelectComponent } from '../../../../custom-fields/pr-select/pr-select.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { AddUser } from '../../../../shared/interfaces/addUser.interface';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
 
 import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 import { DynamicPanelServiceService } from '../../../../shared/components/dynamic-panel-menu/dynamic-panel-service.service';
-import { MultiSelectModule } from 'primeng/multiselect';
-import { Popover } from 'primeng/popover';
+import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { UserRolesInfoModalComponent } from '../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
 
@@ -44,18 +44,16 @@ interface CgiarOption {
   imports: [
     CommonModule,
     FormsModule,
-    TableModule,
-    ButtonModule,
-    TooltipModule,
-    InputTextModule,
-    DialogModule,
-    Popover,
     CustomFieldsModule,
-    IconFieldModule,
-    InputIconModule,
     ManageUserModalComponent,
-    MultiSelectModule,
-    UserRolesInfoModalComponent
+    PrFilterMultiselectModule,
+    UserRolesInfoModalComponent,
+    PrTableComponent,
+    PrSortableColumnDirective,
+    PrSortIconComponent,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss'
@@ -73,7 +71,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   @ViewChild('entitiesSelect') entitiesSelect!: any; // PrMultiSelectComponent
   @ViewChild('userSearchSelect') userSearchSelect!: PrSelectComponent;
   @ViewChild('manageUserModal') manageUserModal!: ManageUserModalComponent;
-  @ViewChild('userTable') userTable!: Table;
+  @ViewChild('userTable') userTable!: PrTableComponent;
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);
@@ -86,6 +84,9 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   isActivatingUser = signal<boolean>(false);
   isEditingUser = signal<boolean>(false);
   loadingUserRole = signal<boolean>(false);
+  assignmentOverlayTitle = signal('');
+  assignmentOverlayItems = signal<string[]>([]);
+  assignmentOverlayIsCenter = signal(false);
 
   // Modal variables
   showAddUserModal: boolean = false;
@@ -164,6 +165,13 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     this.userTable?.reset();
   }
 
+  // Method to handle entity filter changes
+  onEntitiesChange(value: number[]) {
+    this.selectedEntities.set(value ?? []);
+    this.getUsers();
+    this.userTable?.reset();
+  }
+
   // Method to clear all filters
   onClearFilters() {
     // Clear search timeout if exists
@@ -203,14 +211,15 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Column configuration
   columns: UserColumn[] = [
-    { label: 'User name', key: 'firstName', width: '200px' },
-    { label: 'Email', key: 'emailAddress', width: '300px' },
-    { label: 'Platform role', key: 'appRole', width: '200px' },
-    { label: 'Reporting roles', key: 'entities', width: '120px' },
-    { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
-    { label: 'User creation date', key: 'userCreationDate', width: '180px' },
-    { label: 'Status', key: 'status', width: '120px' },
-    { label: 'Actions', key: 'actions', width: '100px' }
+    { label: 'User name', key: 'firstName', width: '180px' },
+    { label: 'Email', key: 'emailAddress', width: '240px' },
+    { label: 'Platform role', key: 'appRole', width: '120px' },
+    { label: 'Science Programs', key: 'entities', width: '160px' },
+    { label: 'Centers', key: 'centers', width: '140px' },
+    { label: 'Is CGIAR', key: 'isCGIAR', width: '100px' },
+    { label: 'Created', key: 'userCreationDate', width: '120px' },
+    { label: 'Status', key: 'status', width: '100px' },
+    { label: 'Actions', key: 'actions', width: '90px' }
   ];
 
   // Status filter options
@@ -244,8 +253,13 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       next: res => {
         this.manageUserModal.addUserForm.update(form => ({
           ...form,
-          role_assignments: res.response.filter((item: any) => item.role_id !== 1 && item.role_id !== 2),
-          role_platform: res.response.find((item: any) => item.role_id === 1) ? 1 : 2
+          role_assignments: res.response.filter(
+            (item: any) => item.entity_id && item.role_id !== 1 && item.role_id !== 2
+          ),
+          center_assignments: res.response
+            .filter((item: any) => item.center_id)
+            .map((item: any) => ({ center_id: item.center_id })),
+          role_platform: res.response.some((item: any) => item.role_id === 1) ? 1 : 2
         }));
         this.loadingUserRole.set(false);
       },
@@ -267,6 +281,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           email: emailAddress,
           role_platform: 2, // Marked as guest by default (2)
           role_assignments: [],
+          center_assignments: [],
           activate: true,
           created_by: `${createdByFirstName} ${createdByLastName} (${createdByEmail})`
         });
@@ -318,32 +333,114 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     return {};
   }
 
-  // Entity display methods
-  getDisplayEntities(entities: string[]): string[] {
-    if (!entities || entities.length === 0) return [];
-    return entities.slice(0, 2); // Always show only first 2
+  // Assignment display helpers
+  readonly inlineAssignmentLimit = 1;
+
+  getDisplayAssignments(items: string[] | undefined): string[] {
+    if (!items?.length) return [];
+    return items.slice(0, this.inlineAssignmentLimit);
   }
 
-  hasMoreEntities(entities: string[]): boolean {
-    return entities && entities.length > 2;
+  hasMoreAssignments(items: string[] | undefined): boolean {
+    return (items?.length ?? 0) > this.inlineAssignmentLimit;
   }
 
-  getRemainingEntities(entities: string[]): string[] {
-    if (!entities || entities.length <= 2) return [];
-    return entities.slice(2); // Return entities from index 2 onwards
+  getAssignmentCountLabel(items: string[] | undefined, singular: string, plural: string): string {
+    const count = items?.length ?? 0;
+    if (count === 0) return '';
+    return count === 1 ? `1 ${singular}` : `${count} ${plural}`;
   }
 
-  showEntityOverlay(event: any, overlay: any, entities: string[]): void {
-    if (this.hasMoreEntities(entities)) {
-      overlay.toggle(event);
+  // "View all" assignments overlay state (replaces PrimeNG p-popover)
+  assignmentOverlayOpen = signal<boolean>(false);
+  overlayTop = 0;
+  overlayLeft = 0;
+  overlayBottom = 0;
+  overlayFlippedAbove = false;
+
+  /** Panel is right-anchored via translateX(-100%) and capped at 320px wide in SCSS. */
+  private readonly overlayPanelWidth = 320;
+  private readonly overlayViewportMargin = 8;
+
+  openAssignmentOverlay(
+    event: Event,
+    title: string,
+    items: string[] | undefined,
+    isCenter: boolean
+  ): void {
+    if ((items?.length ?? 0) <= this.inlineAssignmentLimit) return;
+    event.stopPropagation();
+
+    if (this.assignmentOverlayOpen() && this.assignmentOverlayItems() === items) {
+      this.assignmentOverlayOpen.set(false);
+      return;
     }
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const margin = this.overlayViewportMargin;
+
+    // Clamp horizontally: overlayLeft is the panel's RIGHT edge (translateX(-100%)),
+    // so keep [left - panelWidth, left] inside the viewport with an 8px margin.
+    this.overlayLeft = Math.min(Math.max(rect.right, margin + this.overlayPanelWidth), window.innerWidth - margin);
+
+    // Estimate panel height (title block + ~46px per item, list capped at 280px by SCSS)
+    // to decide whether it fits below the trigger; flip above it otherwise.
+    const estimatedHeight = Math.min(60 + (items?.length ?? 0) * 46, 340);
+    const topBelow = rect.bottom + 6;
+    const fitsBelow = topBelow + estimatedHeight <= window.innerHeight - margin;
+
+    this.overlayFlippedAbove = !fitsBelow;
+    if (fitsBelow) {
+      this.overlayTop = Math.max(margin, topBelow);
+    } else {
+      // Bottom-anchored so the panel grows upwards from just above the trigger,
+      // regardless of its real rendered height.
+      this.overlayBottom = Math.max(margin, window.innerHeight - rect.top + 6);
+    }
+
+    this.assignmentOverlayTitle.set(title);
+    this.assignmentOverlayItems.set(items ?? []);
+    this.assignmentOverlayIsCenter.set(isCenter);
+    this.assignmentOverlayOpen.set(true);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick() {
+    if (this.assignmentOverlayOpen()) this.assignmentOverlayOpen.set(false);
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll() {
+    if (this.assignmentOverlayOpen()) this.assignmentOverlayOpen.set(false);
+  }
+
+  /** Splits "{entity} - {role}" labels returned by user search API. */
+  parseAssignmentLabel(item: string): { entity: string; role: string } {
+    if (!item) return { entity: '', role: '' };
+    const separatorIndex = item.lastIndexOf(' - ');
+    if (separatorIndex === -1) return { entity: item, role: '' };
+    return {
+      entity: item.slice(0, separatorIndex).trim(),
+      role: item.slice(separatorIndex + 3).trim()
+    };
   }
 
   exportExcel(usersList) {
     const usersListMapped = [];
 
     usersList.map(result => {
-      const { firstName, lastName, emailAddress, appRole, userStatus, userCreationDate, entities, isActive, isCGIAR } = result;
+      const {
+        firstName,
+        lastName,
+        emailAddress,
+        appRole,
+        userStatus,
+        userCreationDate,
+        entities,
+        centers,
+        isActive,
+        isCGIAR
+      } = result;
       usersListMapped.push({
         firstName: firstName ?? 'Not applicable',
         lastName: lastName ?? 'Not applicable',
@@ -353,7 +450,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
         userCreationDate: userCreationDate
           ? new Date(userCreationDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
           : 'Not applicable',
-        entities: entities?.join(', ') ?? 'Not applicable',
+        sciencePrograms: entities?.join(', ') ?? 'Not applicable',
+        centers: centers?.join(', ') ?? 'Not applicable',
         isCGIAR: isCGIAR ? 'Yes' : 'No',
         isActive: isActive ? 'Active' : 'Inactive'
       });
@@ -366,7 +464,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       { header: 'Is CGIAR', key: 'isCGIAR', width: 16 },
       { header: 'Application role', key: 'appRole', width: 18 },
       { header: 'User creation date', key: 'userCreationDate', width: 20 },
-      { header: 'Entities', key: 'entities', width: 50 },
+      { header: 'Science Programs', key: 'sciencePrograms', width: 40 },
+      { header: 'Centers', key: 'centers', width: 40 },
       { header: 'Status', key: 'isActive', width: 18 }
     ];
 

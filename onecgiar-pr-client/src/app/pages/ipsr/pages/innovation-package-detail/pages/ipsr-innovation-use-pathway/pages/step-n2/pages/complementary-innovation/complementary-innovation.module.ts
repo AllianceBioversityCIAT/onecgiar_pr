@@ -3,15 +3,21 @@ import { CommonModule } from '@angular/common';
 
 import { ComplementaryInnovationRoutingModule } from './complementary-innovation-routing.module';
 import { ComplementaryInnovationComponent } from './complementary-innovation.component';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective
+} from 'src/app/shared/components/pr-table';
 import { RouterModule } from '@angular/router';
 import { FilterByTextModule } from '../../../../../../../../../../shared/pipes/filter-by-text.module';
 import { FormsModule } from '@angular/forms';
 import { TableInnovationComponent } from './components/table-innovation/table-innovation.component';
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
 import { NewComplementaryInnovationComponent } from './components/new-complementary-innovation/new-complementary-innovation.component';
-import { DialogModule } from 'primeng/dialog';
-import { CheckboxModule } from 'primeng/checkbox';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
+import { PrCheckboxValueAccessorModule } from '../../../../../../../../../../shared/directives/pr-checkbox-value-accessor.module';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
@@ -19,13 +25,17 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../../../../..
   imports: [
     CommonModule,
     ComplementaryInnovationRoutingModule,
-    TableModule,
+    PrTableComponent,
+    PrSortIconComponent,
+    PrSortableColumnDirective,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
     RouterModule,
     FilterByTextModule,
     FormsModule,
     CustomFieldsModule,
-    DialogModule,
-    CheckboxModule,
+    PrDialogComponent,
+    PrCheckboxValueAccessorModule,
     FeedbackValidationDirectiveModule
   ],
   exports: [ComplementaryInnovationComponent]

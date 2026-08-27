@@ -1,5 +1,5 @@
 <div class="box" [ngClass]="{ flatFormat: flatFormat }">
-  <div class="copy_to_clipboard_button" (click)="copyTable(tableOne)" pTooltip="Copy to clipboard" tooltipPosition="left">
+  <div class="copy_to_clipboard_button" (click)="copyTable(tableOne)" prTooltip="Copy to clipboard" prTooltipPosition="left">
     Copy <i class="material-icons-round"> content_paste </i>
   </div>
   <table #tableOne class="distribution-{{ this.distribution }} simple-table-wc">
@@ -10,7 +10,7 @@
       <th [attr.colspan]="header?.length" id="loading_data">
         <div class="loader_info">
           Loading data
-          <p-progressBar mode="indeterminate"></p-progressBar>
+          <div class="pr-progress-bar-indeterminate"></div>
         </div>
       </th>
     </tr>
@@ -27,9 +27,9 @@
             headerItem.type == 'currency' ? (dataItem[headerItem.attr] | currency: 'USD' : 'symbol' : '1.0-0') : dataItem[headerItem.attr]
           "></div>
         <div *ngIf="headerItem.attr == 'value' && loadingData && !dataItem[headerItem.attr]">
-          <p-skeleton width="100%" height="10px"></p-skeleton>
+          <div class="pr-skeleton" style="width:100%;height:10px"></div>
           <div style="margin-top: 6px">
-            <p-skeleton width="50%" height="10px"></p-skeleton>
+            <div class="pr-skeleton" style="width:50%;height:10px"></div>
           </div>
         </div>
 
@@ -45,4 +45,4 @@
   </table>
 </div>
 
-<p-toast key="myKey1"></p-toast>
+<app-pr-toast key="myKey1"></app-pr-toast>

@@ -39,33 +39,22 @@ describe('AppModule metadata', () => {
       JwtMiddleware,
       apiVersionMiddleware,
     );
+    // Route patterns follow the path-to-regexp syntax the app switched to (`*path`, not `(.*)`),
+    // and the bilateral exclusions are listed one by one because a wildcard would also swallow the
+    // authenticated bilateral endpoints.
     expect(firstChain.exclude).toHaveBeenCalledWith(
-      {
-        path: 'api/platform-report/(.*)',
-        method: RequestMethod.ALL,
-      },
-      {
-        path: 'api/bilateral/(.*)',
-        method: RequestMethod.ALL,
-      },
+      { path: 'api/platform-report/*path', method: RequestMethod.ALL },
+      { path: 'api/bilateral', method: RequestMethod.ALL },
+      { path: 'api/bilateral/create', method: RequestMethod.ALL },
+      { path: 'api/bilateral/list', method: RequestMethod.ALL },
+      { path: 'api/bilateral/results', method: RequestMethod.ALL },
+      { path: 'api/bilateral/:id', method: RequestMethod.ALL },
     );
     expect(firstChain.forRoutes).toHaveBeenCalledWith(
-      {
-        path: 'api/(.*)',
-        method: RequestMethod.ALL,
-      },
-      {
-        path: 'v2/(.*)',
-        method: RequestMethod.ALL,
-      },
-      {
-        path: 'clarisa/(.*)',
-        method: RequestMethod.ALL,
-      },
-      {
-        path: 'toc/(.*)',
-        method: RequestMethod.ALL,
-      },
+      { path: 'api/*path', method: RequestMethod.ALL },
+      { path: 'v2/*path', method: RequestMethod.ALL },
+      { path: 'clarisa/*path', method: RequestMethod.ALL },
+      { path: 'toc/*path', method: RequestMethod.ALL },
     );
 
     expect(consumer.apply).toHaveBeenNthCalledWith(2, JwtMiddleware);

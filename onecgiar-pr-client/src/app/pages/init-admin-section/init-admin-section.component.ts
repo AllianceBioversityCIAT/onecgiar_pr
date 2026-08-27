@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
@@ -9,13 +9,9 @@ import { DataControlService } from '../../shared/services/data-control.service';
   standalone: false
 })
 export class InitAdminSectionComponent implements OnInit {
-  readonly sections = [
-    { name: 'General results report', icon: 'task', path: '/init-admin-module/init-general-results-report' }
-  ];
-  constructor(
-    private dataControlSE: DataControlService,
-    public api: ApiService
-  ) {}
+  private readonly dataControlSE = inject(DataControlService);
+
+  constructor(public api: ApiService) {}
 
   ngOnInit(): void {
     this.dataControlSE.detailSectionTitle('My Admin');

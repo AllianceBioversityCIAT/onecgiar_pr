@@ -1,0 +1,108 @@
+@keyframes fsk-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.fsk {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fsk-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  &--compact {
+    gap: 8px;
+  }
+
+  &--last {
+    margin-bottom: 8px;
+  }
+}
+
+.fsk-label {
+  height: 12px;
+  width: 120px;
+  border-radius: 3px;
+  background: linear-gradient(90deg,
+    var(--pr-color-accents-1, #eee) 0%,
+    var(--pr-color-accents-2, #f5f5f5) 50%,
+    var(--pr-color-accents-1, #eee) 100%);
+  background-size: 200% 100%;
+  animation: fsk-shimmer 1.8s ease-in-out infinite;
+
+  &--sm {
+    width: 140px;
+    height: 10px;
+  }
+}
+
+.fsk-bar {
+  height: 34px;
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    var(--pr-color-accents-1, #eee) 0%,
+    var(--pr-color-accents-2, #f5f5f5) 50%,
+    var(--pr-color-accents-1, #eee) 100%);
+  background-size: 200% 100%;
+  animation: fsk-shimmer 1.8s ease-in-out infinite;
+
+  &--lg {
+    height: 80px;
+  }
+
+  &--short {
+    width: 180px;
+  }
+}
+
+.fsk-link {
+  display: block;
+  width: 140px;
+  height: 12px;
+  border-radius: 3px;
+  margin-top: 4px;
+  background: linear-gradient(90deg,
+    var(--pr-color-accents-1, #eee) 0%,
+    var(--pr-color-accents-2, #f5f5f5) 50%,
+    var(--pr-color-accents-1, #eee) 100%);
+  background-size: 200% 100%;
+  animation: fsk-shimmer 1.8s ease-in-out infinite;
+}
+
+.fsk-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 0;
+}
+
+.fsk-pills {
+  display: flex;
+  gap: 0;
+}
+
+.fsk-pill {
+  width: 90px;
+  height: 28px;
+  border-radius: 0;
+  background: linear-gradient(90deg,
+    var(--pr-color-accents-1, #eee) 0%,
+    var(--pr-color-accents-2, #f5f5f5) 50%,
+    var(--pr-color-accents-1, #eee) 100%);
+  background-size: 200% 100%;
+  animation: fsk-shimmer 1.8s ease-in-out infinite;
+  border-right: 1px solid #fff;
+
+  &:first-child {
+    border-radius: 4px 0 0 4px;
+  }
+
+  &:last-child {
+    border-radius: 0 4px 4px 0;
+    border-right: none;
+  }
+}

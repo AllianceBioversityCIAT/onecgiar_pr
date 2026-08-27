@@ -13,6 +13,7 @@ import { ApiService } from '../../shared/services/api/api.service';
 import { QualityAssuranceService } from './quality-assurance.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
 import { DomSanitizer } from '@angular/platform-browser';
+import { DataControlService } from '../../shared/services/data-control.service';
 
 jest.useFakeTimers();
 
@@ -53,11 +54,9 @@ describe('QualityAssuranceComponent', () => {
       resultLevelListSig: { set: jest.fn(), update: jest.fn() }
     };
 
-    mockDomSanitizer = {
-      bypassSecurityTrustResourceUrl: jest.fn().mockReturnValue({
-        changingThisBreaksApplicationSecurity: 'sanitized-url'
-      })
-    };
+    // P2-3322: `showIframe` is signal-backed now, so the deferred re-show really repaints and the
+    // <iframe [src]> binding is actually evaluated. A hand-rolled object is not a `SafeValue`, so it was
+    // rejected with NG0904 — spy on the real DomSanitizer instead of faking its return value.
 
     await TestBed.configureTestingModule({
       declarations: [
@@ -83,14 +82,16 @@ describe('QualityAssuranceComponent', () => {
           useValue: mockResultLevelService
         },
         {
-          provide: DomSanitizer,
-          useValue: mockDomSanitizer
+          provide: DataControlService,
+          useValue: {}
         }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(QualityAssuranceComponent);
     component = fixture.componentInstance;
+    mockDomSanitizer = TestBed.inject(DomSanitizer);
+    jest.spyOn(mockDomSanitizer, 'bypassSecurityTrustResourceUrl');
   });
 
   describe('ngOnInit', () => {
@@ -139,9 +140,7 @@ describe('QualityAssuranceComponent', () => {
 
       const expectedUrl = 'https://qatest.ciat.cgiar.org//crp?crp_id=1&token=test-token-123';
       expect(spy).toHaveBeenCalledWith(expectedUrl);
-      expect(component.sanitizedUrl).toEqual({
-        changingThisBreaksApplicationSecurity: 'sanitized-url'
-      });
+      expect(component.sanitizedUrl).toEqual(mockDomSanitizer.bypassSecurityTrustResourceUrl(expectedUrl));
     });
 
     it('should handle null values in URL', () => {

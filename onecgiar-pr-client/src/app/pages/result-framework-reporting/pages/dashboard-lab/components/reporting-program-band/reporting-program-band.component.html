@@ -1,0 +1,333 @@
+<!--
+  Program band + tabs + Reporting toolbar.
+  Reference: docs/design-references/prms-shell-CURRENT/PRMS-Shell.dc.html:315-395 (band) and
+             :883-1002 (toolbar). Every px below is read from that markup, not inferred.
+  Spec:      docs/reporting-redesign/PROGRAM-SHELL-SPEC.md §3
+
+  ⚠️ html/body is 12px — NEVER use rem Tailwind spacing/type here (px-8 ≠ 32px, h-12 ≠ 48px).
+     Always arbitrary px: p-[32px], h-[48px], text-[14px] (UI-RULES §1.3).
+
+  Two boxes on purpose: only the tinted band is sticky. In the reference the toolbar lives inside
+  the 32px content pad (`:736`), NOT inside the band — pinning it too would double the sticky
+  chrome and eat a third of the viewport on a laptop.
+-->
+
+<!-- ═══ BAND — #F7F4FD. Hairline lives on the TABS row so the active 2px underline
+     can sit flush on it (mb-[-1px] covers the 1px edge — no double-line step). ═══ -->
+<div
+  class="sticky top-[56px] z-20 flex-none bg-[var(--pr-surface-band)] transition-shadow duration-[180ms] ease-out"
+  [class]="bandCollapsed() ? 'shadow-[0_1px_2px_rgba(25,21,36,0.06)]' : 'shadow-none'">
+  <!-- ── Identity: 88px, pad 0 32px, gap 6px (reference :329).
+       Scrolled past (bandCollapsed) it animates to 0 and the band is just the 48px tabs row —
+       the reference's `bandCollapsed` variant (:383). Height is animated instead of swapping
+       blocks so the band condenses instead of jumping. `overflow-hidden` is applied ONLY while
+       collapsed: when expanded it would clip the ⓘ popover, which overflows this box by design.
+       `inert` (not `aria-hidden`) because this box still holds the ⓘ button and the 36px CTA: once
+       clipped they must leave the a11y tree AND the tab order, or keyboard focus lands on an
+       invisible link. `aria-hidden` alone would hide them while keeping them tabbable. ── -->
+  <div
+    class="relative flex flex-col justify-center gap-[6px] px-[32px] transition-[height,opacity] duration-[180ms] ease-out"
+    [class]="bandCollapsed() ? 'h-0 overflow-hidden opacity-0' : 'h-[88px] opacity-100'"
+    [attr.inert]="bandCollapsed() ? '' : null">
+    <!-- Eyebrow: dot + SP01 · REPORTING CYCLE 2026 · P25 -->
+    <div class="flex items-center gap-[7px]">
+      <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="programDotColor()"></span>
+      @if (programCode()) {
+        <!-- `font-mono` (not the global `.pr-code`): that class is UNLAYERED SCSS, so its 12px/500
+             beat the layered Tailwind utilities next to it and the code rendered a notch bigger and
+             lighter than the rest of the eyebrow. Same metric both spans now — 11px/600/0.88px
+             (reference :338-339), only the family differs. -->
+        <span
+          class="font-mono text-[11px] font-semibold leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+          {{ programCode() }}
+        </span>
+      }
+      <span
+        class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+        {{ eyebrowCycle() }}
+      </span>
+      <!-- `48 DAYS LEFT` chip intentionally absent — no cycle end date in the client. -->
+    </div>
+
+    <!-- Title row + ⓘ popover (reference :343-358). Click, not hover. -->
+    <div class="relative flex min-w-0 items-center gap-[8px] pr-[220px]">
+      <h1
+        class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-[1.35] tracking-[-0.02em] text-[var(--pr-text-heading)]">
+        {{ programName() }}
+      </h1>
+
+      <button
+        type="button"
+        class="flex h-[20px] w-[20px] shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-[var(--pr-text-subtle)] transition-colors hover:text-[var(--pr-color-primary-300)]"
+        aria-label="About this program"
+        [attr.aria-expanded]="infoOpen()"
+        [attr.aria-controls]="'pr-band-info-popover'"
+        (click)="toggleInfo($event)">
+        <ng-icon name="lucideInfo" class="text-[16px]" />
+      </button>
+
+      @if (infoOpen()) {
+        <!--
+          420×auto, radius 12, border #E3E3E8, shadow, pad 16.
+          left:0 top:34 under the title row (reference :349).
+          stopPropagation so document:click does not close it mid-interaction.
+        -->
+        <div
+          id="pr-band-info-popover"
+          role="dialog"
+          aria-label="About this program"
+          class="absolute left-0 top-[34px] z-30 w-[420px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[0_8px_24px_rgba(25,21,36,0.10)]"
+          (click)="$event.stopPropagation()">
+          <div class="mb-[8px] flex items-center gap-[8px]">
+            <span class="min-w-0 flex-1 text-[14px] font-semibold text-[var(--pr-text-heading)]">
+              About this program
+            </span>
+            <button
+              type="button"
+              class="flex h-[24px] w-[24px] shrink-0 cursor-pointer items-center justify-center rounded-[6px] border-0 bg-transparent p-0 text-[var(--pr-text-secondary)] transition-colors hover:bg-[var(--pr-surface-app)]"
+              aria-label="Close"
+              (click)="closeInfo()">
+              <ng-icon name="lucideX" class="text-[14px]" />
+            </button>
+          </div>
+
+          <div
+            class="max-h-[132px] overflow-y-auto text-[14px] font-normal leading-[1.55] text-[var(--pr-text)] [text-wrap:pretty]">
+            {{ resolvedDescription() }}
+          </div>
+
+          <div
+            class="mt-[12px] border-t border-[var(--pr-border-divider)] pt-[12px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+            {{ programMeta() }}
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Single brand CTA. Absolute — reference pins it at right:32 / top:68 of the identity box.
+         It opens the legacy emerging-result modal on the host instead of navigating away: the
+         separate `/emerging` route was a second surface for the same job. -->
+    @if (canReport()) {
+      <button
+        type="button"
+        class="absolute right-[32px] top-[68px] z-[22] flex h-[36px] shrink-0 -translate-y-1/2 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
+        (click)="reportEmerging.emit()">
+        <ng-icon name="lucideZap" class="text-[16px]" />
+        Report emerging result
+      </button>
+    }
+  </div>
+
+  <!-- ── Tabs: 48px + full-width hairline. Active tab paints a 2px violet line that
+       overlaps the hairline (mb-[-1px]) so you never see grey under the violet. ── -->
+  <nav
+    class="flex h-[48px] items-stretch gap-[24px] border-b border-[var(--pr-border-band)] px-[32px]"
+    aria-label="Program sections">
+    @if (bandCollapsed()) {
+      <!-- Collapsed identity — reference :384-386: dot + name at 15px/600, then 24px to the tabs
+           (16px gap + the 8px the reference puts on the tab strip). Lives INSIDE the tabs row so the
+           band is a single 48px bar, not two stacked ones. -->
+      <div class="pr-band-fade flex items-center gap-[16px]">
+        <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="programDotColor()"></span>
+        <span class="whitespace-nowrap text-[15px] font-semibold text-[var(--pr-text-heading)]">
+          {{ programName() }}
+        </span>
+      </div>
+    }
+    <a
+      class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+      [class]="
+        activeTab() === 'overview'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'overview' ? 'page' : null"
+      [routerLink]="overviewPath()"
+      queryParamsHandling="preserve">
+      Overview
+    </a>
+    <a
+      class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+      [class]="
+        activeTab() === 'reporting'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'reporting' ? 'page' : null"
+      [routerLink]="reportingPath()"
+      queryParamsHandling="preserve">
+      Reporting
+    </a>
+    <a
+      class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+      [class]="
+        activeTab() === 'results'
+          ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+          : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+      "
+      [attr.aria-current]="activeTab() === 'results' ? 'page' : null"
+      [routerLink]="resultsPath()"
+      queryParamsHandling="preserve">
+      Results
+    </a>
+    <!-- ⚠️ The design's FOURTH tab, `Drafts` (PRMS-Reporting.dc.html:420 / :443), sits inside an
+         `sc-if` on `centerMode` — it is a CENTER-view tab, not a programme-view one, so it is
+         deliberately absent here. This is not a missed tab; do not "fix" it.
+         One strip serves both shapes: the design duplicates the tabs for its `bandCollapsed`
+         variant (:439-443), this nav is shared by the expanded and condensed band, so a tab added
+         here appears in both. -->
+
+    @if (bandCollapsed() && canReport()) {
+      <!-- The 36px CTA of the identity block is clipped away with it, so the collapsed bar carries
+           its own 32px copy pinned right (reference :396-399). Same action, same label. -->
+      <button
+        type="button"
+        class="pr-band-fade ml-auto flex h-[32px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] self-center rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
+        (click)="reportEmerging.emit()">
+        <ng-icon name="lucideZap" class="text-[16px]" />
+        Report emerging result
+      </button>
+    }
+  </nav>
+</div>
+
+<!-- ═══ TOOLBAR — first thing in the 32px content pad (CURRENT :895-1002) ═══
+     Search · Section · Type · Category · Status  ……  Grouped | All indicators  -->
+@if (showToolbar()) {
+  <!--
+    Section heading — reference :1102, 20px/700, tracking -.01em (= -0.2px at 20px), 16px under it.
+    `<h2>`, not the reference's `<h1>`: the band already owns the page `<h1>` (the programme name),
+    and two h1s on one document is a real a11y regression for a purely visual match.
+    Padding, not margin: `:host { display: contents }` puts this next to the page column, where a
+    top margin would collapse. 32px above = the same content pad the toolbar used to carry.
+  -->
+  <h2
+    class="m-0 px-[32px] pb-[16px] pt-[32px] text-[20px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]">
+    {{ reportingHeading() }}
+  </h2>
+
+  <div
+    class="flex flex-wrap items-center gap-[12px] px-[32px] pb-[24px]"
+    role="search"
+    aria-label="Reporting filters">
+    <!-- Search: 320×36 -->
+    <!-- 320px is the reference width, but it is a MAX here: search is the only elastic item in the
+         row, so it absorbs the leftover instead of pushing `Grouped | All indicators` onto a second
+         line. At 1440 the row still lands at the reference widths. -->
+    <div class="relative h-[36px] min-w-[220px] max-w-[320px] flex-1">
+      <span
+        class="pointer-events-none absolute left-[12px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-subtle)]">
+        <ng-icon name="lucideSearch" class="text-[16px]" />
+      </span>
+      <input
+        type="text"
+        class="h-[36px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[36px] pr-[12px] text-[14px] text-[var(--pr-text-heading)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)]"
+        placeholder="Search indicators"
+        aria-label="Search indicators"
+        [value]="search()"
+        (input)="searchChange.emit($any($event.target).value)" />
+    </div>
+
+    <!-- Section (AoW + Intermediate + 2030) — MULTI, grouped into "Areas of work" /
+         "Programme-level" exactly like the reference `selSection`. -->
+    <div class="pr-band-filter w-[170px]" aria-label="Filter by section">
+      <app-pr-filter-multiselect
+        [options]="aowOptions()"
+        [group]="true"
+        optionGroupLabel="label"
+        optionGroupChildren="items"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Section"
+        countLabel="sections"
+        [ngModel]="aowValue()"
+        (changed)="aowChange.emit($event)"></app-pr-filter-multiselect>
+    </div>
+
+    <!-- Type (HLO / Outcome / Intermediate / 2030) — CURRENT selType -->
+    <div class="pr-band-filter w-[130px]" aria-label="Filter by type">
+      <app-pr-filter-select
+        [options]="typeOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Type"
+        [ngModel]="typeValue()"
+        (changed)="typeChange.emit($event)"></app-pr-filter-select>
+    </div>
+
+    <!-- Category (result type name) — always visible -->
+    <div class="pr-band-filter w-[170px]" aria-label="Filter by category">
+      <app-pr-filter-select
+        [options]="typologyOptions()"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Category"
+        [ngModel]="typologyValue()"
+        (changed)="typologyChange.emit($event)"></app-pr-filter-select>
+    </div>
+
+    <!-- Status -->
+    <div class="pr-band-filter w-[130px]" aria-label="Filter by status">
+      <app-pr-filter-select
+        [options]="statusOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Status"
+        [ngModel]="statusValue()"
+        (changed)="statusChange.emit($event)"></app-pr-filter-select>
+    </div>
+
+    <!-- Right-hand controls. The auto margin lives on the wrapper so the Expand all button and the
+         segmented switch stay glued together at the end of the row (two `ml-auto` siblings would
+         split the leftover space between them and drift apart). -->
+    <div class="ml-auto flex shrink-0 items-center gap-[12px]">
+      <!-- Expand all / Collapse all — global disclosure for the grouped table (P2-3252). Hidden in
+           `All indicators`, which is a flat list with nothing to open. -->
+      @if (viewMode() === 'grouped' && canExpandAll()) {
+        <!-- The changing label IS the state (`Expand all` ⇄ `Collapse all`), so there is no
+             `aria-pressed`: a toggle that also renames itself announces "Collapse all, pressed",
+             which reads as two contradictory facts. -->
+        <button
+          type="button"
+          class="flex h-[36px] shrink-0 items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[14px] font-medium text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]"
+          (click)="toggleExpandAll.emit()">
+          <ng-icon [name]="allExpanded() ? 'lucideChevronsDownUp' : 'lucideChevronsUpDown'" class="text-[16px]" />
+          {{ allExpanded() ? 'Collapse all' : 'Expand all' }}
+        </button>
+      }
+
+      <!-- Segmented: Grouped | All indicators (CURRENT :1001) -->
+      <div
+        role="tablist"
+        aria-label="Grouping"
+        class="flex h-[36px] shrink-0 items-center gap-[2px] rounded-[8px] bg-[var(--pr-border-divider)] p-[3px]">
+        <button
+          type="button"
+          role="tab"
+          class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
+          [class]="
+            viewMode() === 'grouped'
+              ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-selected]="viewMode() === 'grouped'"
+          (click)="viewModeChange.emit('grouped')">
+          Grouped
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
+          [class]="
+            viewMode() === 'flat'
+              ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-selected]="viewMode() === 'flat'"
+          (click)="viewModeChange.emit('flat')">
+          All indicators
+        </button>
+      </div>
+    </div>
+  </div>
+}

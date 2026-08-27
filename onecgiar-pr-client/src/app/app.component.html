@@ -1,26 +1,76 @@
 <div class="global_information" *ngIf="this.api.globalVariablesSE.get?.show_global_info">
   {{ this.api.globalVariablesSE.get?.global_info_message }}
 </div>
+
 @if (!this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
-  <app-header-panel></app-header-panel>
+  <!-- App chrome: Spartan sidebar is the only primary nav (top header removed). -->
+  <!-- Approved sidebar widths: 260px expanded, 64px collapsed. They replaced an earlier 280px /
+       ~40px pair, where the rail crammed the icons against the edge and clipped the brand mark.
+       Both MUST be px, never rem: `html` is 12px in this app, so the previous
+       `3.5rem` resolved to 42px and squashed the 32px rail buttons against the sidebar edge. -->
+  <div hlmSidebarWrapper sidebarWidth="260px" sidebarWidthIcon="64px" class="min-h-svh items-stretch">
+    @if (!this.api.dataControlSE.show_qa_full_screen && !this.api.dataControlSE.focusMode()) {
+      <app-reporting-nav-sidebar />
+    }
+
+    <main hlmSidebarInset class="flex min-h-svh min-w-0 flex-1 flex-col">
+      <div class="app-shell-header">
+        @if (testEnvironmentBanner?.enabled) {
+          <div class="test-env-banner" role="note">
+            <span class="test-env-banner__badge">TEST ENVIRONMENT</span>
+            <div class="test-env-banner__main">
+              <strong>New look &amp; feel preview.</strong>
+              Explore and get familiar with the new design. Keep in mind this environment is still evolving and will keep changing to improve the user
+              experience.
+            </div>
+            <div class="test-env-banner__actions">
+              <span
+                >Need to test something different? Use the
+                <a [href]="testEnvironmentBanner.legacyUrl" target="_blank" rel="noopener">previous design</a>.
+              </span>
+              <span
+                >Comments or improvement ideas?
+                <a [href]="'mailto:' + testEnvironmentBanner.supportEmail">PRMSTechSupport&#64;cgiar.org</a>
+              </span>
+            </div>
+          </div>
+        }
+        <!-- Topbar: toggle · search · notif · user (phase later) -->
+        @if (!this.api.dataControlSE.show_qa_full_screen && !this.api.dataControlSE.focusMode()) {
+          <app-shell-topbar />
+        }
+      </div>
+      <!-- `relative` makes this slot the containing block for a page that wants to fill the
+           viewport instead of growing the document (result-detail's two-rail layout pins itself
+           with `position: absolute; inset: 0`). Without it that page would resolve against
+           `main` — which `hlmSidebarInset` already makes `relative` — and cover the header.
+           No-op for every page that still scrolls the document. -->
+      <div class="relative min-h-0 min-w-0 flex-1">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+  </div>
+
+  <app-tawk
+    *ngIf="this.api.authSE.localStorageUser?.user_name && this.api.authSE.localStorageUser?.email && !inLocal"
+    [user]="{ username: this.api.authSE.localStorageUser.user_name, email: this.api.authSE.localStorageUser.email }">
+  </app-tawk>
+} @else if (this.rolesSE.firstValidationOfReadOnly) {
+  <router-outlet></router-outlet>
 }
-<router-outlet *ngIf="this.rolesSE.firstValidationOfReadOnly"></router-outlet>
+
 <app-external-tools></app-external-tools>
-<app-test-environment-label *ngIf="!isProduction"></app-test-environment-label>
 <app-share-request-modal></app-share-request-modal>
 @if (!this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
   <app-footer></app-footer>
 }
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.footerSE.displayContactUs"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="contact-us-dialog">
   <div class="modal_container">
     <div class="line"></div>
     <div class="line"></div>
@@ -35,6 +85,11 @@
       <a href="mailto: projectcoordinationunit@cgiar.org">projectcoordinationunit&#64;cgiar.org</a>
     </div>
   </div>
-</p-dialog>
+</app-pr-dialog>
 
-<p-toast key="globalUserNotification" [style]="{ marginTop: '50px' }" />
+<app-pr-toast key="globalUserNotification" />
+<!-- AI assistant launcher — disabled globally on request (2026-07-21). The component
+     and its engine stay wired in app.module; re-enable by restoring this block. -->
+<!-- @if (aiAssistantEnabled && !this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
+  <app-ai-assistant-panel />
+} -->

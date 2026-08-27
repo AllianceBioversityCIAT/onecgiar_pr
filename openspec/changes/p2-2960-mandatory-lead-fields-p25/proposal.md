@@ -29,4 +29,4 @@ This change is **P25-only**. P22 (`rd-partners`) already enforces Lead Center / 
   - Possibly `custom-fields/lead-contact-person-field/` (expose validity for the required marker)
   - Jest specs for the touched components (client thresholds 50/60/60/60).
 - **Backend (out of scope — report to user with evidence):** the section green-check (AC #4/#5/#6 — "section stays gray until complete") is produced by the `green-checks` / `p25 green-checks` endpoints consumed in `green-checks.service.ts`. For the green check to truly stay gray until these fields are filled, the backend completeness query must include `lead_contact_person` and `lead_center`. This requires a server change and is handed to the user.
-- **Baseline refs:** UI rules per `docs/system-design/design.md`; technical layout per `docs/detailed-design/detailed-design.md`. Jira: **P2-2960**.
+- **Baseline refs:** UI rules per `docs/ux-ui/design.md`; technical layout per `docs/trd/trd.md`. Jira: **P2-2960**.

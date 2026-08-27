@@ -27,6 +27,9 @@ export class CreateUserDto {
   role_assignments?: RoleAssignmentDto[];
 
   @IsOptional()
+  center_assignments?: CenterAssignmentDto[];
+
+  @IsOptional()
   @IsNumber()
   role_platform?: number;
 
@@ -57,4 +60,9 @@ export class RoleAssignmentDto {
 
   @IsNumber({ allowNaN: false }, { message: 'entity_id must be a number' })
   entity_id: number;
+}
+
+export class CenterAssignmentDto {
+  @IsString()
+  center_id: string;
 }

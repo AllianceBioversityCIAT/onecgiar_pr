@@ -1,0 +1,369 @@
+<app-bilateral-page-header activeTab="results" />
+
+<div class="brl">
+
+  <!-- Phase tabs -->
+  @if (phases().length > 0) {
+    <div class="brl_phases_wrap">
+      <div class="brl_phases">
+        @for (phase of phases(); track phase.id) {
+          <button
+            class="brl_phase_tab"
+            [class.brl_phase_tab--active]="selectedPhase()?.id === phase.id"
+            (click)="selectPhase(phase)">
+            {{ phase.phase_year ?? phase.phase_name }}
+            @if (phase.status) {
+              <span class="brl_phase_open">Open</span>
+            }
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Filter chips bar -->
+  <div class="brl_filter_bar">
+    <span class="brl_filter_label">
+      <i class="pi pi-filter"></i>
+      Filters
+    </span>
+
+    <div class="brl_filter_groups">
+
+      <!-- Source group -->
+      <div class="brl_filter_group">
+        <span class="brl_filter_group_label">Source</span>
+        <div class="brl_chips">
+          <button
+            class="brl_chip brl_chip--w3"
+            [class.brl_chip--active]="showW3()"
+            (click)="toggleW3()"
+            [title]="showW3() ? 'Hide W3 Bilateral results' : 'Show W3 Bilateral results'">
+            <span class="brl_chip_dot brl_chip_dot--w3"></span>
+            W3 Bilateral
+            @if (showW3()) {
+              <i class="pi pi-check brl_chip_icon"></i>
+            } @else {
+              <i class="pi pi-plus brl_chip_icon brl_chip_icon--add"></i>
+            }
+          </button>
+
+          <button
+            class="brl_chip brl_chip--w1w2"
+            [class.brl_chip--active]="showW1W2()"
+            (click)="toggleW1W2()"
+            [title]="showW1W2() ? 'Hide W1/W2 results' : 'Add W1/W2 results'">
+            <span class="brl_chip_dot brl_chip_dot--w1w2"></span>
+            W1 / W2
+            @if (showW1W2()) {
+              <i class="pi pi-check brl_chip_icon"></i>
+            } @else {
+              <i class="pi pi-plus brl_chip_icon brl_chip_icon--add"></i>
+            }
+          </button>
+        </div>
+      </div>
+
+      <div class="brl_filter_divider"></div>
+
+      <!-- Role group -->
+      <div class="brl_filter_group">
+        <span class="brl_filter_group_label">Center role</span>
+        <div class="brl_chips">
+          <button
+            class="brl_chip brl_chip--lead"
+            [class.brl_chip--active]="showLead()"
+            (click)="toggleLead()"
+            [title]="showLead() ? 'Hide results where center is lead' : 'Show results where center is lead'">
+            <span class="brl_chip_dot brl_chip_dot--lead"></span>
+            Lead · {{ ctx.centerAcronym() }}
+            @if (showLead()) {
+              <i class="pi pi-check brl_chip_icon"></i>
+            } @else {
+              <i class="pi pi-plus brl_chip_icon brl_chip_icon--add"></i>
+            }
+          </button>
+
+          <button
+            class="brl_chip brl_chip--contributing"
+            [class.brl_chip--active]="showContributing()"
+            (click)="toggleContributing()"
+            [title]="showContributing() ? 'Hide results where center is contributing' : 'Add results where center is contributing'">
+            <span class="brl_chip_dot brl_chip_dot--contributing"></span>
+            Contributing
+            @if (showContributing()) {
+              <i class="pi pi-check brl_chip_icon"></i>
+            } @else {
+              <i class="pi pi-plus brl_chip_icon brl_chip_icon--add"></i>
+            }
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Columns picker + Export CSV — same pattern as the Results Center list -->
+    <div class="brl_filter_actions">
+      <div class="rc-cols-wrap">
+        <button
+          type="button"
+          class="rc-btn rc-btn--soft"
+          [class.rc-btn--active]="columnsOpen()"
+          [attr.aria-expanded]="columnsOpen()"
+          aria-haspopup="dialog"
+          (click)="toggleColumnsPanel($event)">
+          Columns
+          <i class="pi pi-sliders-h" aria-hidden="true"></i>
+        </button>
+        @if (columnsOpen()) {
+          <div class="rc-cols-panel" role="dialog" aria-label="Visible columns" (click)="$event.stopPropagation()">
+            <div class="rc-cols-panel__title">Visible columns</div>
+            <div class="rc-cols-panel__list">
+              @for (col of allColumns; track col.key) {
+                <button type="button" class="rc-cols-item" (click)="toggleColumn(col.key, $event)">
+                  <span class="rc-cols-check" [class.rc-cols-check--on]="isColumnVisible(col.key)" aria-hidden="true">
+                    @if (isColumnVisible(col.key)) {
+                      <i class="pi pi-check"></i>
+                    }
+                  </span>
+                  <span class="rc-cols-item__label">{{ col.title }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <button type="button" class="rc-btn rc-btn--primary" [disabled]="totalCount() === 0" (click)="exportCsv()">
+        <i class="pi pi-download" aria-hidden="true"></i>
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="brl_body">
+
+    <!-- Toolbar -->
+    <div class="brl_toolbar">
+      <div class="brl_toolbar_left">
+        @if (!loading() && !error()) {
+          <span class="brl_count">
+            Showing {{ totalCount() }} of {{ totalLoaded() }} result{{ totalLoaded() === 1 ? '' : 's' }}.
+          </span>
+        }
+      </div>
+      <div class="brl_search">
+        <i class="pi pi-search brl_search_icon"></i>
+        <input
+          class="brl_search_input"
+          type="text"
+          placeholder="Search by code, title or type…"
+          [value]="searchQuery()"
+          (input)="onSearch($event)" />
+        @if (searchQuery()) {
+          <button class="brl_search_clear" (click)="searchQuery.set('')" aria-label="Clear search">
+            <i class="pi pi-times"></i>
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (error()) {
+      <div class="brl_state brl_state--error">
+        <i class="pi pi-exclamation-circle brl_state_icon"></i>
+        <span>Could not load results. Please try refreshing the page.</span>
+      </div>
+    } @else {
+      @let cols = visibleColumns();
+
+      <!-- Results table — same visual language as the Results Center list (app-pr-table, rc-* cells, status_tag chips) -->
+      <div class="table rc-table">
+        <app-pr-table
+          #table
+          sortField="result_code"
+          [sortOrder]="-1"
+          [value]="filteredResults()"
+          dataKey="result_code"
+          [loading]="initializing() || loading()"
+          [paginator]="filteredResults().length > 0"
+          [rows]="25"
+          [rowsPerPageOptions]="[25, 50, 100]"
+          [first]="searchQuery() && 0"
+          styleClass="rc-pr-table">
+          <ng-template prTableHeader>
+            <tr>
+              @for (column of cols; track column.key) {
+                <th [prSortableColumn]="column.attr" [style.width]="column.width">
+                  <div class="align-center">
+                    <pr-sort-icon [field]="column.attr"></pr-sort-icon>
+                    {{ column.title }}
+                  </div>
+                </th>
+              }
+              @if (canManageW3()) {
+                <th class="rc-th-action" style="width: 90px"></th>
+              }
+            </tr>
+          </ng-template>
+
+          <ng-template prTableBody let-result>
+            <tr
+              class="rc-row"
+              [class.rc-row--focused]="isFocused(result)"
+              (click)="openResult(result)"
+              tabindex="0"
+              (keydown.enter)="openResult(result)">
+              @for (column of cols; track column.key) {
+                <td [class]="'rc-td rc-td--' + column.attr" [style.width]="column.width">
+                  @if (column.attr === 'source') {
+                    <div class="rc-cell-link">
+                      @if (result.source === 'API') {
+                        <span class="brl_source_badge brl_source_badge--w3">W3</span>
+                      } @else {
+                        <span class="brl_source_badge brl_source_badge--w1w2">W1/W2</span>
+                      }
+                      @if (isAiResult(result)) {
+                        <span class="brl_ai_badge" title="AI Result" aria-label="AI Result">
+                          <i class="pi pi-sparkles" aria-hidden="true"></i>
+                          <span>AI Result</span>
+                        </span>
+                      }
+                    </div>
+                  } @else if (column.attr === 'result_code') {
+                    <span class="rc-cell-link rc-code">{{ result.result_code }}</span>
+                  } @else if (column.attr === 'title') {
+                    <span class="rc-cell-link rc-title" [attr.title]="result.title">
+                      <span class="rc-title__text">{{ result.title }}</span>
+                    </span>
+                  } @else if (column.attr === 'result_type') {
+                    <span class="rc-cell-link rc-plain" [attr.title]="result.result_type">{{ result.result_type }}</span>
+                  } @else if (column.attr === 'is_leading_result') {
+                    @if (result.is_leading_result === 1) {
+                      <span class="brl_role_badge brl_role_badge--lead">Lead</span>
+                    } @else {
+                      <span class="brl_role_badge brl_role_badge--contributing">Contributing</span>
+                    }
+                  } @else if (column.attr === 'status_id') {
+                    <span class="rc-cell-link rc-status-wrap">
+                      <span [class]="statusClass(result.status_id)">{{ result.status_name }}</span>
+
+                      <!-- P2-3157 AC4: read back the Science Program's rejection justification -->
+                      @if (isRejected(result)) {
+                        <button
+                          type="button"
+                          class="brl_justification_trigger"
+                          title="View rejection justification"
+                          aria-label="View rejection justification"
+                          (click)="$event.stopPropagation(); openJustification(result)">
+                          <i class="material-icons-round">warning_amber</i>
+                        </button>
+                      }
+                    </span>
+                  } @else if (column.attr === 'created_date') {
+                    <span class="rc-cell-link rc-date">{{ result.created_date | date: 'dd MMM yyyy' }}</span>
+                  }
+                </td>
+              }
+
+              @if (canManageW3()) {
+                <td class="rc-td rc-td--action" (click)="$event.stopPropagation()">
+                  @if (canEditResult(result)) {
+                    @if (confirmingDeleteId() === result.id) {
+                      <div class="brl_actions_confirm">
+                        <span class="brl_actions_confirm_text">Delete?</span>
+                        <button
+                          class="brl_action_btn brl_action_btn--danger"
+                          [disabled]="deletingId() === result.id"
+                          (click)="confirmDelete(result, $event)">
+                          @if (deletingId() === result.id) {
+                            <i class="pi pi-spin pi-spinner"></i>
+                          } @else {
+                            Yes
+                          }
+                        </button>
+                        <button class="brl_action_btn brl_action_btn--ghost" (click)="cancelDelete($event)">No</button>
+                      </div>
+                    } @else {
+                      <div class="brl_actions">
+                        <button class="brl_action_btn brl_action_btn--edit" title="Edit result" (click)="editResult(result, $event)">
+                          <i class="pi pi-pencil"></i>
+                        </button>
+                        @if (canDeleteResult(result)) {
+                          <button class="brl_action_btn brl_action_btn--delete" title="Delete result" (click)="requestDelete(result, $event)">
+                            <i class="pi pi-trash"></i>
+                          </button>
+                        }
+                      </div>
+                    }
+                  }
+                </td>
+              }
+            </tr>
+          </ng-template>
+
+          <ng-template prTableLoading>
+            <tr style="height: 200px">
+              <td [attr.colspan]="cols.length + 1" class="brl_state">
+                <i class="pi pi-spin pi-spinner brl_state_icon"></i>
+                <span>Loading results…</span>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template prTableEmpty>
+            <tr style="height: 200px">
+              <td [attr.colspan]="cols.length + 1" class="brl_state">
+                @if (results().length === 0) {
+                  <i class="pi pi-inbox brl_state_icon"></i>
+                  <span>No results found for this center in this phase.</span>
+                } @else {
+                  <i class="pi pi-filter brl_state_icon"></i>
+                  <span>
+                    No results match the active filters
+                    @if (searchQuery()) {
+                      and search query <strong>"{{ searchQuery() }}"</strong>
+                    }.
+                  </span>
+                }
+              </td>
+            </tr>
+          </ng-template>
+        </app-pr-table>
+      </div>
+    }
+
+  </div>
+</div>
+
+<!-- P2-3157 AC4: rejection justification -->
+<app-pr-dialog
+  [(visible)]="justificationVisible"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  styleClass="brl_justification_modal"
+  (onHide)="closeJustification()">
+  <div class="brl_justification_body">
+    <h2 class="brl_justification_title">Rejection justification — {{ justificationResultCode() }}</h2>
+
+    @if (justificationLoading()) {
+      <p class="brl_justification_state">Loading the review history…</p>
+    } @else if (justificationError()) {
+      <p class="brl_justification_state brl_justification_state--error">
+        The review history could not be loaded. Please try again.
+      </p>
+    } @else if (rejectionEntry(); as entry) {
+      <p class="brl_justification_meta">
+        Rejected by {{ reviewerName(entry) }} on {{ entry.created_at | date: 'dd MMM yyyy' }}
+      </p>
+      <p class="brl_justification_comment">{{ entry.comment || 'No justification was recorded.' }}</p>
+    } @else {
+      <p class="brl_justification_state">No rejection justification was recorded for this result.</p>
+    }
+  </div>
+
+  <div class="brl_justification_actions">
+    <button type="button" class="brl_justification_close" (click)="closeJustification()">Close</button>
+  </div>
+</app-pr-dialog>

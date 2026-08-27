@@ -7,29 +7,24 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { InstitutionsPipesModule } from './pipes/institutions-pipes.module';
 import { RdAnnualUpdatingComponent } from './components/rd-annual-updating/rd-annual-updating.component';
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
-import { DialogModule } from 'primeng/dialog';
-import { TableModule } from 'primeng/table';
-import { CheckboxModule } from 'primeng/checkbox';
+import { PrDialogComponent } from '../../../../../../shared/components/pr-dialog/pr-dialog.component';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
 import { ConfirmationKPComponent } from './components/confirmation-kp/confirmation-kp.component';
 import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
-import { MessageModule } from 'primeng/message';
+import { SectionBottomBarComponent } from '../../components/section-bottom-bar/section-bottom-bar.component';
 
 @NgModule({
   declarations: [RdGeneralInformationComponent, ChangeResultTypeModalComponent, ConfirmationKPComponent, SaveConfirmationModalComponent],
-  imports: [
+  imports: [SectionBottomBarComponent,
     CommonModule,
     RdGeneralInformationRoutingModule,
     RdAnnualUpdatingComponent,
     CustomFieldsModule,
     InstitutionsPipesModule,
     FeedbackValidationDirectiveModule,
-    DialogModule,
-    TableModule,
-    CheckboxModule,
+    PrDialogComponent,
     PdfIconModule,
-    MessageModule
   ]
 })
 export class RdGeneralInformationModule {}

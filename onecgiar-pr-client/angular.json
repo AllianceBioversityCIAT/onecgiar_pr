@@ -37,7 +37,6 @@
               "src/styles/fonts.scss",
               "src/styles/colors.scss",
               "src/styles/transitions.scss",
-              "src/styles/primeng-custom-styles.scss",
               "src/styles/containers.scss",
               "src/styles/table-custom-styles.scss",
               "src/app/custom-fields/custom-fields.scss",
@@ -54,6 +53,14 @@
           },
           "configurations": {
             "production": {
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": true
+                },
+                "fonts": false
+              },
               "budgets": [
                 {
                   "type": "initial",
@@ -79,6 +86,12 @@
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
+            },
+            "e2e": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": false,
+              "namedChunks": false
             }
           },
           "defaultConfiguration": "production"
@@ -91,6 +104,9 @@
             },
             "development": {
               "buildTarget": "onecgiar-pr-client:build:development"
+            },
+            "e2e": {
+              "buildTarget": "onecgiar-pr-client:build:e2e"
             }
           },
           "defaultConfiguration": "development"

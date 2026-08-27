@@ -19,6 +19,7 @@ import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-pr
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultsByProjectsModule } from '../results_by_projects/results_by_projects.module';
+import { NotificationModule } from '../../notification/notification.module';
 
 @Module({
   controllers: [ResultsByInstitutionsController],
@@ -40,7 +41,7 @@ import { ResultsByProjectsModule } from '../results_by_projects/results_by_proje
     ResultsCenterRepository,
     NonPooledProjectBudgetRepository,
   ],
-  imports: [ResultsByProjectsModule],
+  imports: [ResultsByProjectsModule, NotificationModule],
   exports: [
     ResultsByInstitutionsService,
     ResultByIntitutionsRepository,

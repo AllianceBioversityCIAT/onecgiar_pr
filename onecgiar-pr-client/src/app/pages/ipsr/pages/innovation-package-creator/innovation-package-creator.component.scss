@@ -1,3 +1,14 @@
+// app-pr-dialog wrapper: reproduce the old p-dialog [style] width + flush body.
+::ng-deep app-pr-dialog .innovation-package-creator-dialog {
+  &.pr-dialog {
+    width: 70vw;
+  }
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
 .section_container {
   margin-top: 30px;
   min-height: calc(100vh - 200px);

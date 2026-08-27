@@ -4,7 +4,6 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { NoDataTextComponent } from '../../../../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { PrFieldHeaderComponent } from '../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrRadioButtonComponent } from '../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
-import { RadioButtonModule } from 'primeng/radiobutton';
 import { FeedbackValidationDirective } from '../../../../../../../../../shared/directives/feedback-validation.directive';
 import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
@@ -36,7 +35,7 @@ describe('AnticipatedInnovationUserComponent', () => {
         FeedbackValidationDirective,
         AddButtonComponent
       ],
-      imports: [HttpClientTestingModule, RadioButtonModule, FormsModule],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [{ provide: ApiService, useValue: mockApiService }]
     }).compileComponents();
 

@@ -1,0 +1,824 @@
+/**
+ * Dark brand chrome. Every value now comes from the token layer (styles/colors.scss) —
+ * previously this block hardcoded #1f2233 + the old indigo #6b46e5, which is why the
+ * sidebar could not follow a rebrand.
+ *
+ * The scoped `hlm-sidebar { --sidebar: ... }` pattern is retained on purpose: it is how
+ * dark chrome is expressed on a light page in this system (never via `.dark`). It works
+ * because Helm maps `bg-sidebar` through `@theme inline`, so the var resolves per element
+ * at runtime and this host scope wins for its own subtree.
+ */
+:host {
+  display: contents;
+}
+
+hlm-sidebar {
+  --sidebar: var(--pr-sidebar-bg);
+  --sidebar-foreground: var(--pr-sidebar-fg);
+  --sidebar-primary: var(--pr-sidebar-active);
+  --sidebar-primary-foreground: var(--pr-color-white);
+  --sidebar-accent: var(--pr-sidebar-elevated);
+  --sidebar-accent-foreground: var(--pr-sidebar-fg);
+  --sidebar-border: var(--pr-sidebar-border);
+  --sidebar-ring: var(--pr-sidebar-accent);
+
+  // ── Helm's GENERAL tokens also need on-dark values inside this subtree.
+  // Helm recipes do not all read the --sidebar* family: `ghost` is `hover:bg-muted`,
+  // `outline` is `bg-background hover:bg-muted`, and the base button recipe focuses with
+  // `border-ring` + `ring-ring/50`. With only the root (light) values in scope, a ghost
+  // button in the sidebar hovered to a near-WHITE pill (14.09:1 against #271862) and the
+  // focus ring measured 2.61:1 — under the 3:1 non-text floor. Scoping them here keeps
+  // every Helm component correct on the dark surface without touching its recipe.
+  --background: var(--pr-sidebar-bg);
+  --foreground: var(--pr-sidebar-fg);
+  --muted: var(--pr-sidebar-hover);
+  --muted-foreground: var(--pr-sidebar-fg-muted);
+  --accent: var(--pr-sidebar-elevated);
+  --accent-foreground: var(--pr-sidebar-fg);
+  --border: var(--pr-sidebar-border);
+  --input: var(--pr-sidebar-border);
+  --ring: var(--pr-sidebar-accent);
+
+  color: var(--pr-sidebar-fg);
+  // The design: flat #271862 — no radial glow, no outer drop shadow.
+  background-color: var(--pr-sidebar-bg) !important;
+  background-image: none !important;
+  box-shadow: none;
+
+  // Right edge — Spartan uses `border-r` on the fixed container.
+  [data-slot='sidebar-container'] {
+    border-right: 1px solid var(--pr-sidebar-border) !important;
+  }
+
+  // Inner shell used when collapsible=icon — must stay a fixed-height flex column
+  // so sidebar-content can shrink and scroll.
+  [data-slot='sidebar-inner'],
+  [data-sidebar='sidebar'] {
+    background-color: transparent !important;
+    background-image: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+
+  ul[hlmSidebarMenu] {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li[hlmSidebarMenuItem],
+  li[hlmSidebarMenuSubItem] {
+    list-style: none;
+  }
+
+  a[hlmSidebarMenuButton],
+  a[hlmSidebarMenuSubButton] {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  // Content area: the design's `padding: 4px 12px 16px` on the scroll column.
+  // Force the flex/scroll chain so tall Platform + programs lists can scroll
+  // (h-svh shell → flex column → flex-1 min-h-0 → overflow-y auto).
+  [data-slot='sidebar-content'] {
+    padding: 4px 12px 16px !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    // Thin dark-on-dark scrollbar so scroll is discoverable without looking noisy.
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  }
+
+  [data-slot='sidebar-footer'] {
+    flex: none !important;
+  }
+
+  [data-slot='sidebar-header'] {
+    flex: none !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  // Platform / menu rows — 36px, flat. Active = solid brand.
+  // Icons: 20×20, inactive #A79BD4, active/hover #FFFFFF.
+  // Labels: the design weights them 500 inactive / 600 active only (not bold/700).
+  // Force weight on > span too — Manrope can look heavy if a parent 600 leaks in.
+  [data-slot='sidebar-menu-button'] {
+    height: 36px !important;
+    min-height: 36px !important;
+    gap: 10px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important; // inactive, per the design
+    font-synthesis: none;
+    color: var(--pr-sidebar-fg) !important; // #E9E4FA
+
+    // Label next to the icon — keep medium, never semibold/bold when idle.
+    > span {
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      line-height: 1.25;
+      color: inherit;
+    }
+
+    // ng-icon sizes via --ng-icon__size (host width/height inherit from it).
+    > ng-icon {
+      flex: none;
+      --ng-icon__size: 20px !important;
+      --ng-icon__color: var(--pr-sidebar-fg-muted) !important; // #A79BD4
+      width: 20px !important;
+      height: 20px !important;
+      min-width: 20px !important;
+      color: var(--pr-sidebar-fg-muted) !important;
+      line-height: 1;
+    }
+
+    // Trailing chevron stays smaller than the leading nav glyph.
+    > ng-icon.ms-auto {
+      --ng-icon__size: 16px !important;
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+    }
+  }
+
+  [data-slot='sidebar-menu-button'][data-active='true'],
+  [data-slot='sidebar-menu-button'][data-active='true']:hover {
+    background-image: none !important;
+    background-color: var(--pr-sidebar-active) !important; // #6B46E5
+    color: #fff !important;
+    font-weight: 600 !important; // active only, per the design
+    box-shadow: none !important;
+
+    > span {
+      font-weight: 600 !important;
+    }
+
+    > ng-icon {
+      --ng-icon__color: #fff !important;
+      color: #fff !important;
+    }
+  }
+
+  // Hover: colour only — do NOT bump weight (the design keeps 500 until selected).
+  [data-slot='sidebar-menu-button']:hover:not([data-active='true']) {
+    background-color: var(--pr-sidebar-hover);
+    color: #fff !important;
+    font-weight: 500 !important;
+
+    > span {
+      font-weight: 500 !important;
+    }
+
+    > ng-icon {
+      --ng-icon__color: #fff !important;
+      color: #fff !important;
+    }
+  }
+
+  /**
+   * Child tree rail — compact nested items on the dark surface.
+   */
+  ul[hlmSidebarMenuSub] {
+    margin: 0 0 4px 12px;
+    padding: 2px 0 2px 8px;
+    list-style: none;
+    border-inline-start: 1.5px solid rgba(255, 255, 255, 0.16);
+    gap: 0;
+  }
+
+  a[hlmSidebarMenuSubButton],
+  button[hlmSidebarMenuSubButton] {
+    height: 26px !important;
+    min-height: 26px !important;
+    padding-block: 0 !important;
+    padding-inline: 6px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important; // not bold
+    font-synthesis: none;
+    line-height: 1.2;
+    color: rgba(255, 255, 255, 0.72);
+
+    > span {
+      font-weight: 500 !important;
+    }
+
+    ng-icon {
+      --ng-icon__size: 14px !important;
+      font-size: 14px !important;
+      width: 14px;
+      height: 14px;
+      color: var(--pr-sidebar-fg-muted);
+    }
+
+    img {
+      width: 14px !important;
+      height: 14px !important;
+    }
+
+    small {
+      font-size: 9px !important;
+      padding-inline: 4px !important;
+      line-height: 14px;
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: rgba(255, 255, 255, 0.75) !important;
+    }
+  }
+
+  a[hlmSidebarMenuSubButton][data-active='true'],
+  button[hlmSidebarMenuSubButton][data-active='true'] {
+    color: #fff;
+    font-weight: 600 !important;
+    background: rgba(107, 70, 229, 0.35) !important;
+
+    > span {
+      font-weight: 600 !important;
+    }
+
+    ng-icon {
+      color: #fff;
+    }
+  }
+
+  [data-slot='sidebar-group-label'] {
+    color: var(--pr-sidebar-fg-muted);
+  }
+
+  // Flat platform group. The bordered `.pr-nav-rfr-box` frame, its `--rail` variant,
+  // `.pr-nav-rfr-group-label` and `.pr-nav-rfr-programs` were removed with the sidebar
+  // restructure — the reference lists platform entries at one level, and the programmes
+  // no longer nest under Planned. Only the menu wrapper survives, still in use.
+  .pr-nav-rfr-box__menu {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  [data-slot='sidebar-separator'] {
+    background: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  [data-slot='sidebar-footer'] {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SCIENCE PROGRAMS block. The approved geometry is written out here because these
+   rules are now its only record: section labels 11px/600 uppercase at .08em
+   tracking; "my" programme cards 44px tall, 8px radius, 8×8 dot, code in mono
+   12px/600, name 14px; the "other programmes" toggle above 30px rows that scroll
+   inside the group; platform links 36px with a 3px left rail on the active one;
+   dark chrome closed off by a 1px rgba(255,255,255,.10) edge.
+
+   Sizes are absolute px on purpose: html is 12px, so rem-based utilities would
+   render 25% small. Colours come from the token layer only — and where a token
+   deliberately departs from the design (the section-label colour was raised to
+   clear WCAG AA on both sidebar surfaces), the reason is recorded in
+   docs/DESIGN-DEVIATIONS.md, not re-derived here.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.pr-nav-section-label {
+  // Design: first block 12px top / 4px side / 8px bottom; later blocks 16px top.
+  padding: 12px 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--pr-sidebar-fg-muted);
+
+  // Inside the "other programmes" toggle the label sits inline.
+  &--inline {
+    flex: 1;
+    padding: 0;
+    text-align: left;
+  }
+
+  // Centers / next blocks after a list (16px top in the design).
+  &--spaced {
+    padding-top: 16px;
+  }
+
+  // Platform label after the divider.
+  &--platform {
+    padding-top: 16px;
+  }
+
+  // Extras: more air above (20px in the design).
+  &--extras {
+    padding-top: 20px;
+  }
+}
+
+/* CGIAR centre card — same 44px box as a programme, but the marker is a rotated
+   square instead of a dot, and there is no code column (reference lines 134-142). */
+.pr-nav-center-card:hover {
+  border-color: var(--pr-color-primary-200);
+}
+
+.pr-nav-center-diamond {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  transform: rotate(45deg);
+}
+
+// Content column: the design's scroll pad is 4px 12px 16px — horizontal 12px on groups.
+.pr-nav-programs,
+.pr-nav-platform,
+.pr-nav-extras {
+  padding: 0 0;
+}
+
+// Inner list alignment (cards already pad themselves).
+.pr-nav-programs {
+  padding: 0 0;
+}
+
+.pr-nav-divider {
+  height: 1px;
+  // Design: margin 20px 4px 0 under the program/centre block.
+  margin: 20px 4px 0;
+  background: var(--pr-sidebar-border);
+}
+
+.pr-nav-platform-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── Collapsed icon rail ──
+   32×32 buttons, centred, so the programme band survives collapsing. */
+.pr-nav-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+}
+
+.pr-nav-rail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  padding: 0;
+  // Reference: the INACTIVE rail button is a filled #33227A tile with a 1px white/10 hairline —
+  // not a transparent hit area. Without the fill the coloured dots floated on the sidebar
+  // background with nothing marking them as buttons.
+  border: 1px solid var(--pr-sidebar-border);
+  border-radius: 8px;
+  background: var(--pr-sidebar-elevated);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+
+  &:hover {
+    background: #3a2789;
+  }
+
+  &--active {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: var(--pr-sidebar-active);
+    box-shadow: 0 2px 6px rgba(107, 70, 229, 0.35);
+  }
+}
+
+.pr-nav-rail-divider {
+  width: 32px;
+  height: 1px;
+  flex: none;
+  margin: 6px 0;
+  background: var(--pr-sidebar-border);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   COLLAPSED RAIL (64px) — reference `<aside style="width:64px">`.
+
+   `data-collapsible="icon"` is only present on `hlm-sidebar` while the rail is
+   collapsed (see hlm-sidebar.ts host bindings), so everything here is scoped to
+   that state and cannot leak into the expanded sidebar.
+
+   Two things had to be overridden: the 16px header padding (which left 32px for
+   a 32px tile and pinned it against the edge) and Helm's
+   `group-data-[collapsible=icon]:size-8!` on the nav buttons — `size-8` is 2rem,
+   and `html` is 12px here, so it resolved to a 24px-wide box under a 36px-tall
+   SCSS rule. Hence the explicit 36×36 in px.
+   ════════════════════════════════════════════════════════════════════════════ */
+hlm-sidebar[data-collapsible='icon'] {
+  [data-slot='sidebar-header'] {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  [data-slot='sidebar-content'] {
+    // Reference rail: `padding: 8px 0 16px`, everything centred in the 64px column.
+    padding: 8px 0 16px !important;
+    align-items: center;
+  }
+
+  [data-slot='sidebar-group'],
+  [data-slot='sidebar-group-content'],
+  ul[hlmSidebarMenu] {
+    width: 100%;
+    align-items: center;
+  }
+
+  [data-slot='sidebar-menu-item'] {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  [data-slot='sidebar-menu-button'] {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    justify-content: center;
+
+    // Helm hides the label with `group-data-[collapsible=icon]:hidden`, a LAYERED utility. The
+    // 36×36 rule above is unlayered SCSS, so it wins the cascade and the label came back — clipped
+    // to the button's overflow, printing a sliver of the first letter next to every icon
+    // ("R", "I.", "C"…). Hide it here, in the same layer that resized the button. The chevron of the
+    // expandable items goes with it: there is nothing to expand in the rail.
+    > span,
+    > ng-icon.ms-auto {
+      display: none !important;
+    }
+
+    // The leading icon must survive — it is the only thing the rail shows.
+    > ng-icon:first-of-type {
+      display: inline-flex !important;
+    }
+  }
+}
+
+/* ── Focus visibility for every new interactive element in this sidebar.
+   These are custom-styled <a> elements, so without this they fall back to the global
+   `outline-ring/50` rule, which sets only outline-COLOR and never a width or style —
+   i.e. no visible indicator at all. --pr-sidebar-accent is the on-dark ring. */
+.pr-nav-program-card,
+.pr-nav-program-link,
+.pr-nav-others-toggle,
+.pr-nav-rail-btn {
+  &:focus-visible {
+    outline: 2px solid var(--pr-sidebar-accent);
+    outline-offset: 2px;
+  }
+}
+
+/* ── "My" programmes — 44px cards.
+   Active, per the design: solid #6B46E5 + 3px left rail #C4B5FD + white type + white check.
+   Inactive: elevated #33227A + 1px white/10 border. */
+.pr-nav-program-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--pr-sidebar-border);
+  border-radius: 8px;
+  background: var(--pr-sidebar-elevated); // #33227A
+  overflow: hidden;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+
+  &:hover {
+    background: #3a2789;
+  }
+
+  &--active {
+    border: none;
+    padding-left: 14px;
+    background: var(--pr-sidebar-active); // #6B46E5
+    box-shadow: 0 2px 8px rgba(107, 70, 229, 0.35);
+
+    // 3px lilac rail on the left edge — the design's marker for the active item
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--pr-sidebar-accent); // #C4B5FD
+    }
+
+    .pr-nav-program-code,
+    .pr-nav-program-name {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .pr-nav-program-dot {
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+    }
+
+    .pr-nav-program-check {
+      color: #ffffff;
+    }
+  }
+}
+
+.pr-nav-program-check {
+  flex: none;
+  color: var(--pr-sidebar-accent);
+}
+
+.pr-nav-program-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--pr-sidebar-accent);
+
+  &--sm {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+.pr-nav-program-code {
+  flex: none;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pr-sidebar-accent);
+
+  &--sm {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--pr-sidebar-fg-muted);
+  }
+}
+
+.pr-nav-program-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-sidebar-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &--sm {
+    font-size: 13px;
+    font-weight: 400;
+  }
+}
+
+/* ── "Other" programmes — the design's toggle is a padded label row, not a 32px chip ── */
+.pr-nav-others-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  // Design: padding 16px 4px 8px on the other-programs control.
+  margin-top: 0;
+  padding: 16px 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pr-sidebar-fg-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--pr-sidebar-hover);
+  }
+}
+
+.pr-nav-others-count {
+  flex: none;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--pr-sidebar-fg-muted);
+}
+
+/* Wrapper so the bottom fade sits on top of the scroll list, as the design shows it. */
+.pr-nav-others-wrap {
+  position: relative;
+}
+
+.pr-nav-others-list {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  // No gap: the reference stacks these 30px rows flush, so a hovered row's tint reads as one
+  // continuous band instead of striping. The 1px we had was just visible enough to look like a bug.
+  gap: 0;
+  max-height: 246px;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+/* Hairline under the pinned block, inside the same scroll box (reference). */
+.pr-nav-pinned-divider {
+  height: 1px;
+  flex: none;
+  margin: 6px 8px;
+  background: var(--pr-sidebar-border);
+}
+
+/* ── Pin (favourite) star on an "Other science programs" row ──
+   Hidden until the row is hovered, as in the reference — but ALSO revealed on
+   :focus-visible, otherwise the control is unreachable by keyboard. A pinned star
+   stays visible permanently: it is the state indicator, not just an affordance. */
+.pr-nav-pin {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease;
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  &:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--pr-sidebar-accent);
+    outline-offset: 1px;
+  }
+
+  // Pinned: amber filled star, always on.
+  &--on {
+    opacity: 1;
+    color: var(--pr-color-yellow-300);
+
+    &:hover {
+      color: var(--pr-color-yellow-300);
+    }
+  }
+}
+
+.pr-nav-program-row:hover .pr-nav-pin {
+  opacity: 1;
+}
+
+/* "You can pin up to 5 programs." — anchored to the row, floated over the list. */
+.pr-nav-pin-tip {
+  position: absolute;
+  right: 8px;
+  top: 28px;
+  z-index: 20;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: var(--pr-color-primary-950);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.pr-nav-others-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 24px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(39, 24, 98, 0), var(--pr-sidebar-bg));
+}
+
+.pr-nav-program-row {
+  // Anchor for the pin-limit tooltip, which is positioned against its own row.
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  min-height: 30px;
+  flex: none;
+  width: 100%;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--pr-sidebar-hover);
+  }
+
+  &--active {
+    background: var(--pr-sidebar-hover);
+
+    .pr-nav-program-name--sm {
+      color: var(--pr-sidebar-fg);
+      font-weight: 500;
+    }
+  }
+}
+
+/* The navigable part of a row. It is a child of `.pr-nav-program-row` (a plain div) so the
+   pin <button> can be a SIBLING of the link rather than nested inside it. */
+.pr-nav-program-link {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  text-decoration: none;
+}
+
+/* Collapsed-rail hover flyout — same dark console language */
+.pr-nav-flyout {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: var(--pr-sidebar-bg) !important;
+  background-image: radial-gradient(135% 85% at 50% -8%, rgba(87, 51, 196, 0.28) 0%, rgba(87, 51, 196, 0) 58%) !important;
+  color: #fff;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  &__title {
+    margin: 0;
+    padding: 4px 6px 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--pr-sidebar-fg-muted);
+  }
+
+  &__list {
+    margin: 0 0 2px 6px;
+    padding: 1px 0 1px 8px;
+    list-style: none;
+    border-inline-start: 1.5px solid rgba(255, 255, 255, 0.16);
+  }
+
+  &__link {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: rgba(255, 255, 255, 0.78);
+    text-decoration: none;
+
+    &:hover {
+      background: rgba(107, 70, 229, 0.22);
+      color: #fff;
+    }
+
+    &--active {
+      background-image: none;
+      background-color: var(--pr-sidebar-active);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: none;
+    }
+  }
+}

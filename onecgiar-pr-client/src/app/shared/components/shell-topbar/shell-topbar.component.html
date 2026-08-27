@@ -1,0 +1,167 @@
+@if (!dataControlSE.show_qa_full_screen && !dataControlSE.focusMode()) {
+  <header class="pr-shell-topbar" role="banner">
+    <!-- Sidebar collapse (CURRENT left control) -->
+    <button
+      type="button"
+      class="pr-topbar-icon-btn"
+      aria-label="Toggle sidebar"
+      (click)="toggleSidebar()">
+      <ng-icon name="lucidePanelLeft" class="text-[20px]" />
+    </button>
+
+    <!--
+      Centered search — a BUTTON that opens the global palette, per the design
+      (PRMS-Reporting.dc.html:232, `onClick="{{ openPalette }}"`). It is deliberately no longer a
+      text field: see `openSearchPalette()` for why.
+    -->
+    <button #searchTrigger type="button" class="pr-topbar-search" aria-label="Search" (click)="openSearchPalette()">
+      <ng-icon name="lucideSearch" class="pr-topbar-search__icon" />
+      <span class="pr-topbar-search__placeholder">Search</span>
+      <kbd class="pr-topbar-search__kbd" aria-hidden="true">{{ shortcutHint }}</kbd>
+    </button>
+
+    <!-- Right cluster: notifications + user (phase deferred) -->
+    <div class="pr-topbar-right">
+      <button
+        type="button"
+        class="pr-topbar-icon-btn"
+        cdkOverlayOrigin
+        #notifTrigger="cdkOverlayOrigin"
+        aria-label="Notifications"
+        aria-haspopup="true"
+        [attr.aria-expanded]="notificationsOpen()"
+        [class.pr-topbar-icon-btn--active]="notificationsOpen() || isInNotificationsRoute()"
+        (click)="notificationsOpen.set(!notificationsOpen())">
+        @if (unreadNotifications.length === 0) {
+          <ng-icon name="lucideBell" class="text-[20px]" />
+        } @else {
+          <span class="pr-topbar-badge-wrap">
+            <ng-icon name="lucideBell" class="text-[20px]" />
+            <span class="pr-topbar-badge">{{ notificationBadgeLength() }}</span>
+          </span>
+        }
+      </button>
+
+      <button
+        type="button"
+        class="pr-topbar-user"
+        cdkOverlayOrigin
+        #userTrigger="cdkOverlayOrigin"
+        aria-label="User menu"
+        aria-haspopup="true"
+        [attr.aria-expanded]="userMenuOpen()"
+        (click)="userMenuOpen.set(!userMenuOpen())">
+        <span class="pr-topbar-avatar">{{ getUserInitials() }}</span>
+        <span class="pr-topbar-user-name">{{ getUserName() }}</span>
+        <i
+          class="material-icons-round pr-topbar-chevron"
+          [class.rotate-180]="userMenuOpen()"
+          aria-hidden="true"
+          >expand_more</i
+        >
+      </button>
+    </div>
+  </header>
+
+  <!-- Notifications popover -->
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="notifTrigger"
+    [cdkConnectedOverlayOpen]="notificationsOpen()"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    [cdkConnectedOverlayPositions]="notificationsPositions"
+    (backdropClick)="notificationsOpen.set(false); handleClosePopUp()">
+    <div class="pr-topbar-panel pr-topbar-panel--notif" role="dialog" aria-label="Notifications">
+      <div class="pr-topbar-panel__head">
+        <h2 class="pr-topbar-panel__title">Notifications</h2>
+      </div>
+      <div class="pr-topbar-panel__rule"></div>
+
+      @if (unreadNotifications.length === 0) {
+        <p class="pr-topbar-panel__empty">
+          You have not received any new notifications. Go to the notifications section to see all of your latest
+          notifications.
+        </p>
+      } @else {
+        <div class="pr-topbar-notif-list">
+          @for (notification of unreadNotifications; track $index) {
+            <app-pop-up-notification-item
+              [notification]="notification"
+              (itemSelected)="notificationsOpen.set(false); handleClosePopUp()" />
+          }
+        </div>
+      }
+
+      <div class="pr-topbar-panel__footer">
+        <button
+          type="button"
+          class="pr-topbar-link"
+          (click)="goToNotifications(); notificationsOpen.set(false); handleClosePopUp()">
+          See all the notifications
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- User menu -->
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="userTrigger"
+    [cdkConnectedOverlayOpen]="userMenuOpen()"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    [cdkConnectedOverlayPositions]="userMenuPositions"
+    (backdropClick)="userMenuOpen.set(false)">
+    <div class="pr-topbar-panel pr-topbar-panel--user" role="menu">
+      <div class="pr-topbar-user-card">
+        <span class="pr-topbar-avatar pr-topbar-avatar--lg">{{ getUserInitials() }}</span>
+        <div class="min-w-0">
+          <div class="flex min-w-0 items-center gap-1.5">
+            <p class="pr-topbar-user-card__name min-w-0 truncate">{{ getUserName() }}</p>
+            <span
+              class="shrink-0 truncate rounded bg-[var(--pr-color-primary-50)] px-1.5 py-px text-[9px] font-semibold uppercase leading-[1.4] tracking-[0.3px] text-[var(--pr-color-primary-400)]"
+              >{{ getPlatformRole() }}</span
+            >
+          </div>
+          <p class="pr-topbar-user-card__email">{{ api.authSE.localStorageUser?.email }}</p>
+        </div>
+      </div>
+
+      <div class="pr-topbar-panel__rule"></div>
+
+      @if (getInitiativeSeparatedByPortfolio().length > 0) {
+        <div class="pr-topbar-panel__section">
+          <p class="pr-topbar-panel__eyebrow">My Science Programs/Accelerators</p>
+          @for (item of getInitiativeSeparatedByPortfolio(); track $index) {
+            <p class="pr-topbar-panel__row">{{ item.official_code }} - {{ item.role }}</p>
+          }
+        </div>
+      }
+
+      @if (getMyCenters().length > 0) {
+        <div class="pr-topbar-panel__section">
+          <p class="pr-topbar-panel__eyebrow">My Centers</p>
+          @for (item of getMyCenters(); track item.center_id) {
+            <p class="pr-topbar-panel__row">{{ item.center_id }} - {{ item.center_name }} ({{ item.role_name }})</p>
+          }
+        </div>
+      }
+
+      <div class="pr-topbar-panel__rule"></div>
+
+      <button
+        type="button"
+        class="pr-topbar-logout"
+        (click)="userMenuOpen.set(false); api.authSE.logout()"
+        aria-label="Log out">
+        <i class="material-icons-round text-[15px]" aria-hidden="true">logout</i>
+        Log out
+      </button>
+    </div>
+  </ng-template>
+
+  <!-- The palette itself: mounted here so the trigger and the overlay share one component, which
+       is what makes CDK's focus restore land back on the button above. -->
+  <app-global-search-palette />
+}

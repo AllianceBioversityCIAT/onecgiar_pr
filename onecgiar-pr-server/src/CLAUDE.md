@@ -673,7 +673,7 @@ If you change response shape, update [`../docs/bilateral-result-summaries.en.md`
 When you sit down to edit anything in this tree:
 
 1. Confirm the spec at `../../docs/specs/<module>/` (`requirements.md`, `design.md`, `task.md`). If missing, run `/sdd-specify` first — templates live in `../../docs/specs/general-setup/`.
-2. Cite `G#`, `US-*`, `AC-*` from `../../docs/prd.md` and the relevant workflow id (`W1..W8`) and module section from `../../docs/detailed-design/detailed-design.md`.
+2. Cite `G#`, `US-*`, `AC-*` from `../../docs/prd.md` and the relevant workflow id (`W1..W8`) and module section from `../../docs/trd/trd.md`.
 3. Implement using the folder pattern in §2.1 (or extend the right `shared/` primitive).
 4. Migration if entities changed.
 5. Tests co-located. Don't lower coverage.

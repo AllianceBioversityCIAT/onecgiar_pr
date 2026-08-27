@@ -1,0 +1,98 @@
+<div class="sgi-fields">
+  <div class="flex items-center justify-between gap-3 border-b border-[#ECEFF1] pb-3">
+    <app-alert-status
+      class="flex-1"
+      status="info"
+      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
+    </app-alert-status>
+    <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
+      {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
+    </button>
+  </div>
+
+  @if (showHiddenFieldsNote()) {
+    <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">
+      <span class="font-mono font-medium">{{ hiddenFieldsWithValues() }}</span>
+      hidden fields have values and will be saved.
+    </span>
+  }
+
+  <app-pr-input
+    label="Title of Result"
+    type="text"
+    [maxWords]="30"
+    [required]="true"
+    placeholder="Enter result title"
+    [valueValid]="!isPlaceholderTitle(title())"
+    [ngModel]="title()"
+    (ngModelChange)="onTitleChange($event)"
+    (focusout)="onTitleBlur()">
+  </app-pr-input>
+
+  <app-pr-textarea
+    label="Description"
+    [maxWords]="300"
+    [required]="true"
+    [rows]="4"
+    placeholder="Describe the result"
+    [ngModel]="description()"
+    (ngModelChange)="onDescriptionChange($event)"
+    (focusout)="onDescriptionBlur()">
+  </app-pr-textarea>
+
+  <app-lead-contact-person-field [body]="leadContactBody()" [required]="true" />
+
+  @if (showAllFields()) {
+    <div class="sgi-extra">
+      @if (isLoadingDac()) {
+        <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="false" />
+      } @else {
+        <div class="sgi-dac-section">
+          <label class="sgi-label sgi-dac-title">Impact Area Scores</label>
+          @for (area of dacAreas; track area.key) {
+            <div class="sgi-dac-row">
+              <div class="sgi-dac-label">
+                <span>{{ area.label }}</span>
+                <button
+                  type="button"
+                  class="sgi-dac-info"
+                  [prTooltip]="area.tooltip"
+                  prTooltipPosition="right"
+                  prTooltipStyleClass="sgi-dac-tooltip"
+                  aria-label="More information about {{ area.label }}">
+                  <app-pr-info-icon />
+                </button>
+              </div>
+              <div class="sgi-dac-tags">
+                @for (level of tagLevels(); track level.value) {
+                  <button
+                    type="button"
+                    class="sgi-radio"
+                    [class.sgi-radio--selected]="selectedDacLevels()[area.key] === level.value"
+                    (click)="onDacTagChange(area.key, level.value)"
+                  >
+                    {{ level.label }}
+                  </button>
+                }
+              </div>
+              @if (selectedDacLevels()[area.key] == 3) {
+                <div class="sgi-dac-subscores">
+                  @for (opt of (impactAreaSubScores()[area.key] ?? []); track opt.id) {
+                    <button
+                      type="button"
+                      class="sgi-checkbox"
+                      [class.sgi-checkbox--checked]="(selectedSubScores()[area.key] ?? []).includes(opt.id)"
+                      (click)="toggleSubScore(area.key, opt.id)"
+                    >
+                      {{ opt.title }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

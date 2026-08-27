@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RouterTestingModule } from '@angular/router/testing';
 import { IpsrComponent } from './ipsr.component';
 import { ApiService } from '../../shared/services/api/api.service';
 import { IpsrDataControlService } from './services/ipsr-data-control.service';
@@ -12,12 +13,14 @@ describe('IpsrComponent', () => {
   beforeEach(async () => {
     mockApiService = {
       rolesSE: { platformIsClosed: false },
-      globalVariablesSE: { get: { ipsr_is_closed: true } }
+      globalVariablesSE: { get: { ipsr_is_closed: true } },
+      dataControlSE: { myInitiativesLoaded: true }
     };
     mockIpsrDataControlService = { inIpsr: false };
 
     await TestBed.configureTestingModule({
       declarations: [IpsrComponent],
+      imports: [RouterTestingModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: IpsrDataControlService, useValue: mockIpsrDataControlService }

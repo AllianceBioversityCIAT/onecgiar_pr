@@ -312,11 +312,11 @@
 
   <app-alert-status [description]="alertInfoText2()"> </app-alert-status>
 
-  <p-message
+  <app-alert-status
     *ngIf="hasReadinessLevelDiminished()"
-    [style]="{ width: '100%', 'justify-content': 'flex-start' }"
-    severity="warn"
-    [text]="alertDiminishedReadinessLevel()"></p-message>
+    inlineStyles="width: 100%"
+    status="warning"
+    [description]="alertDiminishedReadinessLevel()"></app-alert-status>
 
   <app-pr-textarea
     [disabled]="saving"
@@ -329,9 +329,13 @@
   </app-pr-textarea>
 
   <!-- Innovation Links Component -->
+  <!-- P2-3294: from the 2026 phase on, this question (and its link list) drop out once the
+       Innovation Use Level reaches 6+ — confirmed by Angel Jarrín (PO) on 26-Aug-2026.
+       isScalingStudiesQuestionHiddenByLevel() carries that extra condition; it never fires for
+       phases <= 2025, which keep showing the question exactly as before. -->
   <app-pr-radio-button
     [readOnly]="saving"
-    *ngIf="getUseLevelIndex() >= 5"
+    *ngIf="getUseLevelIndex() >= 5 && !isScalingStudiesQuestionHiddenByLevel()"
     fieldRef="[innovation-use-form]-has-studies-links"
     [options]="[
       { value: true, label: 'Yes' },
@@ -342,7 +346,10 @@
     optionValue="value">
   </app-pr-radio-button>
   <!-- Studies Links Component -->
-  <app-studies-link *ngIf="body.has_scaling_studies && getUseLevelIndex() >= 6" [disabled]="saving" [body]="bodyAsAny"></app-studies-link>
+  <app-studies-link
+    *ngIf="body.has_scaling_studies && getUseLevelIndex() >= 6 && !isScalingStudiesQuestionHiddenByLevel()"
+    [disabled]="saving"
+    [body]="bodyAsAny"></app-studies-link>
 
   <app-pr-radio-button
     [readOnly]="saving"

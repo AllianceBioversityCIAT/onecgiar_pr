@@ -1,6 +1,6 @@
-<p-dialog appendTo="body" header="Title" [(visible)]="this.api.dataControlSE.showRetrieveRequest"
-    (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
-    [dismissableMask]="true" [style]="{padding: '0px'}">
+<app-pr-dialog [(visible)]="this.api.dataControlSE.showRetrieveRequest"
+    (onHide)="cleanObject()" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
+    [dismissableMask]="true" styleClass="retrieve-modal-dialog">
     <div class="modal_title">Retrieve result from previous portfolio</div>
     <div class="modal_container partners-request-container" *ngIf="showForm">
 
@@ -50,4 +50,4 @@
             [icon]="this.requesting?'loop':'send'" padding="medium" (click)="onRequestRetrieve()"></app-pr-button>
     </div>
 
-</p-dialog>
+</app-pr-dialog>

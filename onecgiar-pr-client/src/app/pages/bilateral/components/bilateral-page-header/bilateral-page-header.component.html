@@ -1,0 +1,127 @@
+@if (ctx.centerAcronym()) {
+  <div class="sticky top-0 z-20 flex-none bg-[var(--pr-surface-band)]">
+    <div class="relative flex h-[88px] flex-col justify-center gap-[6px] px-[32px]">
+      @if (pageTitle(); as title) {
+        <nav class="min-w-0" aria-label="Breadcrumb">
+          <ol class="m-0 flex min-w-0 list-none items-center gap-[6px] p-0 text-[12px] leading-none">
+            <li class="shrink-0 font-medium text-[var(--pr-text-subtle)]">CGIAR Center</li>
+            <li class="shrink-0 text-[var(--pr-text-subtle)]" aria-hidden="true">&gt;</li>
+            <li
+              class="min-w-0 truncate font-semibold text-[var(--pr-text-secondary)]"
+              aria-current="page">
+              {{ centerBreadcrumbLabel() }}
+            </li>
+          </ol>
+        </nav>
+
+        <div class="min-w-0 pr-[220px]">
+          <h1
+            class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
+            {{ title }}
+          </h1>
+        </div>
+
+        @if (hasIdentityStrip()) {
+          <div class="flex min-w-0 flex-wrap items-center gap-[8px] pr-[220px]">
+            @if (resultCode() != null) {
+              <span class="font-mono text-[12px] font-medium text-[var(--pr-text-secondary)]">{{ resultCode() }}</span>
+            }
+            @if (resultTypeName(); as typeName) {
+              <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">{{ typeName }}</span>
+            }
+            @if (isW3Bilateral()) {
+              <span
+                class="flex items-center rounded-full bg-[#EDE9FE] px-[9px] py-[3px] text-[12px] font-medium leading-none text-[#5733C4]">
+                W3/Bilateral
+              </span>
+            }
+            @if (statusBadge(); as badge) {
+              <span
+                class="flex items-center rounded-full px-[9px] py-[3px] text-[12px] font-medium leading-none"
+                [class]="badge.classes"
+                data-testid="bilateral-status-badge">
+                {{ badge.label }}
+              </span>
+            }
+          </div>
+        }
+      } @else {
+        <div class="flex items-center gap-[7px]">
+          <span class="h-[8px] w-[8px] shrink-0 rounded-full bg-[var(--pr-color-primary-300)]"></span>
+          <span
+            class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+            CGIAR Center
+          </span>
+        </div>
+
+        <div class="min-w-0 pr-[220px]">
+          <h1
+            class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
+            {{ ctx.centerAcronym() }}
+          </h1>
+
+          @if (ctx.centerName()) {
+            <p class="m-0 min-w-0 truncate text-[13px] font-normal text-[var(--pr-text-secondary)]">
+              {{ ctx.centerName() }}
+            </p>
+          }
+        </div>
+      }
+
+      @if (activeTab()) {
+        <a
+          class="absolute right-[32px] top-[68px] z-[22] flex h-[36px] shrink-0 -translate-y-1/2 items-center gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
+          [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']">
+          <i class="pi pi-bolt text-[14px]"></i>
+          {{ reportCtaLabel() }}
+        </a>
+      }
+    </div>
+
+    @if (activeTab()) {
+      <nav
+        class="flex h-[48px] items-stretch gap-[24px] border-b border-[var(--pr-border-band)] px-[32px]"
+        aria-label="Center sections">
+        <a
+          class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+          [class]="
+            activeTab() === 'overview'
+              ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+              : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-current]="activeTab() === 'overview' ? 'page' : null"
+          [routerLink]="['/bilateral', ctx.centerAcronym(), 'home']">
+          Overview
+        </a>
+        <a
+          class="mb-[-1px] flex items-center border-b-2 text-[14px] no-underline transition-colors"
+          [class]="
+            activeTab() === 'results'
+              ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+              : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-current]="activeTab() === 'results' ? 'page' : null"
+          [routerLink]="['/bilateral', ctx.centerAcronym(), 'results']">
+          Results
+        </a>
+        <a
+          class="mb-[-1px] flex items-center gap-[6px] border-b-2 text-[14px] no-underline transition-colors"
+          [class]="
+            activeTab() === 'drafts'
+              ? 'border-[var(--pr-color-primary-300)] font-semibold text-[var(--pr-text-heading)]'
+              : 'border-transparent font-medium text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          [attr.aria-current]="activeTab() === 'drafts' ? 'page' : null"
+          [routerLink]="['/bilateral', ctx.centerAcronym(), 'drafts']">
+          Drafts
+          @if (bilateralAiService.draftCountDisplay(); as count) {
+            <span
+              class="flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[var(--pr-color-primary-300)] px-[4px] text-[10px] font-semibold leading-none text-white">
+              {{ count }}
+            </span>
+          }
+        </a>
+      </nav>
+    }
+  </div>
+}

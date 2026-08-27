@@ -9,7 +9,6 @@ import { InnovationUseFormModule } from '../../../../../../../../shared/componen
 import { GeoscopeManagementModule } from '../../../../../../../../shared/components/geoscope-management/geoscope-management.module';
 import { YmzListStructureItemModule } from '../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { CollapsibleContainerModule } from '../../../../../../../../shared/components/collapsible-container/collapsible-container.module';
-import { MessageModule } from 'primeng/message';
 import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
 
 @NgModule({
@@ -23,7 +22,6 @@ import { TermPipe } from '../../../../../../../../internationalization/term.pipe
     GeoscopeManagementModule,
     YmzListStructureItemModule,
     CollapsibleContainerModule,
-    MessageModule,
     TermPipe
   ]
 })

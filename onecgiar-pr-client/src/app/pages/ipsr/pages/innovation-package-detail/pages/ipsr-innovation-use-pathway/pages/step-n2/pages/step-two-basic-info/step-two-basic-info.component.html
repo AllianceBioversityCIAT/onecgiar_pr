@@ -18,24 +18,24 @@
                             <ul>
                                 <div *ngFor="let category of subItem?.subCategories" class="field-checkbox">
                                     <li>
-                                        <p-checkbox name="group"
+                                        <input type="checkbox" prCheckboxValue class="pr-native-check" name="group"
                                             [value]="category.complementary_innovation_enabler_types_id"
                                             *ngIf="update == true"
-                                            [inputId]="category.complementary_innovation_enabler_types_id"
+                                            [id]="category.complementary_innovation_enabler_types_id"
                                             [(ngModel)]="this.bodyStep2[i].complementary_innovation_enabler_types_one"
-                                            (ngModelChange)="selectedOneLevel(category, i,1)"></p-checkbox>
+                                            (ngModelChange)="selectedOneLevel(category, i,1)" />
                                         <label [for]="category.complementary_innovation_enabler_types_id"> {{ category.group }}</label>
                                     </li>
                                     <ul>
                                         <li>
                                             <div *ngFor="let categories of category?.subCategories"
                                                 class="field-checkbox">
-                                                <p-checkbox name="group"
+                                                <input type="checkbox" prCheckboxValue class="pr-native-check" name="group"
                                                     [value]="categories.complementary_innovation_enabler_types_id"
                                                     *ngIf="update == true"
-                                                    [inputId]="categories.complementary_innovation_enabler_types_id"
+                                                    [id]="categories.complementary_innovation_enabler_types_id"
                                                     [(ngModel)]="this.bodyStep2[i].complementary_innovation_enabler_types_two"
-                                                    (ngModelChange)=" selectedTwo(category, i)"></p-checkbox>
+                                                    (ngModelChange)=" selectedTwo(category, i)" />
                                                 <label [for]="categories.complementary_innovation_enabler_types_id">{{ categories.group }}</label>
 
                                             </div>

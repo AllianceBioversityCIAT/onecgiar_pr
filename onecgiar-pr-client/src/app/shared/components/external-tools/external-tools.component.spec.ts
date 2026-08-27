@@ -52,6 +52,12 @@ describe('ExternalToolsComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('passes the result id to pusher only on a result-detail url', () => {
+    const detail = '/result/result-detail/8753/general-information?phase=36';
+    (router.events as Subject<any>).next(new NavigationStart(1, detail));
+    expect(pusher.start).toHaveBeenCalledWith(detail, '8753');
+  });
+
   it('should handle NavigationStart: set flags, scroll, start pusher and call gtag', () => {
     const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => undefined as any);
     const gtagMock = jest.fn();
@@ -62,7 +68,9 @@ describe('ExternalToolsComponent', () => {
 
     expect(api.dataControlSE.inNotifications).toBe(true); // contains results-notifications
     expect(scrollSpy).toHaveBeenCalledWith(0, 0);
-    expect(pusher.start).toHaveBeenCalledWith(url, 'abc');
+    // Not a result-detail URL → no result id. The old `url.split('/')[3]` handed Pusher the
+    // 3rd segment of ANY url ('abc' here), which 404'd the auth endpoint on every page.
+    expect(pusher.start).toHaveBeenCalledWith(url, null);
     expect(pusher.membersList).toEqual([]);
     expect(pusher.continueEditing).toBe(false);
     expect(pusher.firstUser).toBe(false);

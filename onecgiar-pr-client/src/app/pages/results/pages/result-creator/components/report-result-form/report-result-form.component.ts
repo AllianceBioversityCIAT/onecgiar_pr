@@ -1,4 +1,4 @@
-import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal, OnDestroy } from '@angular/core';
+import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal, computed, OnDestroy, NgZone, inject } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 import { Router } from '@angular/router';
@@ -7,6 +7,10 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
 import { EntityAowService } from '../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
 import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, merge, of, switchMap, takeUntil } from 'rxjs';
+import {
+  filterOutAvisaFromGroupedInitiativeOptions,
+  filterOutAvisaInitiatives
+} from '../../../../../../shared/utils/avisa-initiative.util';
 
 type TitleSearchEvent =
   | {
@@ -34,11 +38,26 @@ export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
   private readonly titleSearchDebounceMs = 500;
   mqapJson: {};
   validating = false;
-  kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
+  /**
+   * Years used by the knowledge-product guidance. `reportingCurrentPhase` / `previousReportingPhase` are PLAIN
+   * objects, so the computed depends on `reportingPhaseVersion()` — bumped by `getCurrentPhases()` — to re-render
+   * once the phases land. The calendar-year fallback keeps the sentence from ever painting "null" on first frame.
+   */
+  readonly kpGuidanceYears = computed(() => {
+    this.api.dataControlSE.reportingPhaseVersion?.();
+    const current = Number(this.api.dataControlSE.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
+    const previous = Number(this.api.dataControlSE.previousReportingPhase?.phaseYear ?? current - 1);
+    return { current, previous, next: current + 1 };
+  });
+
+  readonly kpAlertDescription = computed(() => {
+    const { current, previous, next } = this.kpGuidanceYears();
+    return `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
 The PRMS Reporting Tool will automatically retrieve all metadata entered into <strong>one of these repositories</strong>. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
-The handle will be verified, and only knowledge products from <strong>2025</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>2025</strong> but issued in <strong>2026</strong> will be accepted for the <strong>2025</strong> reporting phase.<br><br>
-Articles published online in <strong>2024</strong> but issued in <strong>2025</strong> will not be accepted and will need to be reported in the correct reporting period. Handles already reported will also not be accepted.<br><br>
+The handle will be verified, and only knowledge products from <strong>${current}</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>${current}</strong> but issued in <strong>${next}</strong> will be accepted for the <strong>${current}</strong> reporting phase.<br><br>
+Articles published online in <strong>${previous}</strong> but issued in <strong>${current}</strong> will not be accepted and will need to be reported in the correct reporting period. Handles already reported will also not be accepted.<br><br>
 If you need support to modify any of the harvested metadata from <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong>, contact your Center's knowledge manager.`;
+  });
   allInitiatives = [];
   availableInitiativesSig = signal<any[]>([]);
   allPhases = [];
@@ -80,23 +99,21 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     this.applyPendingResultTypeSelection();
     this.api.updateUserData(() => {
       if (!this.api.rolesSE.isAdmin) {
-        this.availableInitiativesSig.set(
-          Array.isArray(this.api.dataControlSE.myInitiativesListReportingByPortfolio)
-            ? [...this.api.dataControlSE.myInitiativesListReportingByPortfolio]
-            : []
-        );
-        if (this._selectedInitiativeId == null && this.api.dataControlSE.myInitiativesListReportingByPortfolio?.length === 1) {
-          this._selectedInitiativeId =
-            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.initiative_id ||
-            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.id;
+        const initiatives = this.selectableInitiatives;
+        this.availableInitiativesSig.set(initiatives);
+        if (this._selectedInitiativeId == null && initiatives.length === 1) {
+          this._selectedInitiativeId = initiatives[0]?.initiative_id || initiatives[0]?.id;
         }
         this.tryApplySelectedInitiative();
       }
       if (this._selectedInitiativeId != null) {
         this.resultLevelSE.resultBody.initiative_id = this._selectedInitiativeId as any;
         this.tryApplySelectedInitiative();
-      } else if (this.api.dataControlSE.myInitiativesListReportingByPortfolio.length == 1) {
-        this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0].id;
+      } else {
+        const initiatives = this.selectableInitiatives;
+        if (initiatives.length == 1) {
+          this.resultLevelSE.resultBody.initiative_id = initiatives[0].id;
+        }
       }
     });
 
@@ -106,7 +123,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   onSelectInit() {
-    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio) || []).find(
+    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.selectableInitiatives) || []).find(
       init => init.id == this.resultLevelSE.resultBody.initiative_id
     );
     if (!init) return;
@@ -154,10 +171,10 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
           const groupList = entityTypesResponse;
           const resultList = [];
           groupList?.forEach(groupItem => {
-            const initsGroup = this.allInitiatives.filter(item => item.typeCode == groupItem.code);
+            const initsGroup = filterOutAvisaInitiatives(this.allInitiatives.filter(item => item.typeCode == groupItem.code));
             if (initsGroup?.length) resultList.push(groupItem, ...initsGroup);
           });
-          this.allInitiatives = resultList;
+          this.allInitiatives = filterOutAvisaFromGroupedInitiativeOptions(resultList);
           this.availableInitiativesSig.set(this.allInitiatives);
           this.tryApplySelectedInitiative();
         });
@@ -173,6 +190,10 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
   get isKnowledgeProduct() {
     return this.resultLevelSE.resultBody.result_type_id == 6;
+  }
+
+  get selectableInitiatives() {
+    return filterOutAvisaInitiatives(this.api.dataControlSE.myInitiativesListReportingByPortfolio);
   }
 
   get resultTypeNamePlaceholder(): string {
@@ -280,8 +301,47 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     });
   }
 
+  /** Throttle for the mandatory-field DOM scan (was running synchronously on every CD cycle). */
+  private static readonly SCAN_THROTTLE_MS = 150;
+  private lastScanAt = 0;
+  private scanScheduled = false;
+  private trailingScanId: any = null;
+  private readonly ngZone = inject(NgZone);
+
   ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.report_container');
+    // Same fix as Result Detail (P2-2967/P2-2971): throttle (leading + trailing edge) the DOM scan,
+    // coalesce into one rAF run OUTSIDE Angular's zone, tick only when it changed.
+    if (this.scanScheduled) return;
+    const elapsed = Date.now() - this.lastScanAt;
+    if (elapsed >= ReportResultFormComponent.SCAN_THROTTLE_MS) {
+      this.runFeedbackScan();
+    } else if (this.trailingScanId === null) {
+      this.ngZone.runOutsideAngular(() => {
+        this.trailingScanId = setTimeout(() => {
+          this.trailingScanId = null;
+          this.runFeedbackScan();
+        }, ReportResultFormComponent.SCAN_THROTTLE_MS - elapsed);
+      });
+    }
+  }
+
+  private runFeedbackScan(): void {
+    if (this.trailingScanId !== null) {
+      clearTimeout(this.trailingScanId);
+      this.trailingScanId = null;
+    }
+    this.lastScanAt = Date.now();
+    this.scanScheduled = true;
+    this.ngZone.runOutsideAngular(() => {
+      requestAnimationFrame(() => {
+        this.scanScheduled = false;
+        const before = this.api.dataControlSE.fieldFeedbackList();
+        this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.report_container');
+        if (this.api.dataControlSE.fieldFeedbackList() !== before) {
+          this.ngZone.run(() => {});
+        }
+      });
+    });
   }
 
   GET_mqapValidation() {

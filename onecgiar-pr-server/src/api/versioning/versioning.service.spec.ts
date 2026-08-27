@@ -35,6 +35,7 @@ import { ResultsKnowledgeProductKeywordRepository } from '../results/results-kno
 import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { BilateralVersioningRulesService } from '../bilateral/versioning-rules/bilateral-versioning-rules.service';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/repositories/result-toc-sdg-target.repository';
 import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/repositories/result-toc-impact-area.repository';
@@ -129,6 +130,7 @@ describe('VersioningService', () => {
         ResultsKnowledgeProductMetadataRepository,
         ResultsKnowledgeProductInstitutionRepository,
         RoleByUserRepository,
+        BilateralVersioningRulesService,
         ResultsTocResultIndicatorsRepository,
         ResultsTocSdgTargetRepository,
         ResultsTocImpactAreaTargetRepository,
@@ -199,6 +201,7 @@ describe('VersioningService', () => {
           provide: ResultRepository,
           useValue: {
             findOne: jest.fn(),
+            find: jest.fn().mockResolvedValue([]),
             replicate: jest.fn(),
           },
         },
@@ -293,6 +296,128 @@ describe('VersioningService', () => {
         statusCode: HttpStatus.CONFLICT,
       }),
     );
+  });
+
+  // P2-3229. A bilateral result carried forward from the reporting tool answers to the
+  // bilateral rules and to the lead centre, not to the pool-funding rules. The gate sits in
+  // versionProcessV2 rather than in the UI because the menu that hides the action is UX and
+  // cannot be trusted to enforce anything.
+  describe('bilateral gate (P2-3229)', () => {
+    const bilateralResult = (overrides: any = {}) => ({
+      id: 31921,
+      result_code: 28565,
+      result_type_id: 5,
+      version_id: 6,
+      is_active: true,
+      source: 'API',
+      obj_result_by_initiatives: [
+        { initiative_id: 51, initiative_role_id: 1, is_active: true },
+      ],
+      ...overrides,
+    });
+
+    const rulesStub = () =>
+      testingModule.get<BilateralVersioningRulesService>(
+        BilateralVersioningRulesService,
+      );
+
+    const armRules = (leadCenter: string | null = 'CENTER-02') => {
+      const rules = rulesStub() as any;
+      rules.getActiveReportingPhase = jest.fn(async () => ({ id: 7 }));
+      rules.resolveVersionableResult = jest.fn(async () => bilateralResult());
+      rules.resolveLeadCenterCode = jest.fn(async () => leadCenter);
+      return rules;
+    };
+
+    const armRoles = (roles: any[]) => {
+      const repo = testingModule.get<RoleByUserRepository>(
+        RoleByUserRepository,
+      ) as any;
+      repo.getAllRolesByUser = jest.fn(async () => roles);
+      return repo;
+    };
+
+    it('refuses a user who does not belong to the lead centre', async () => {
+      armRules('CENTER-02');
+      armRoles([{ role_id: 9, center_id: 'CENTER-11' }]);
+      const clarisa = testingModule.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      );
+      (clarisa.findOne as jest.Mock).mockResolvedValue({
+        id: 51,
+        portfolio_id: 3,
+        active: true,
+      });
+      resultRepository.findOne.mockResolvedValueOnce(bilateralResult() as any);
+
+      await expect(
+        service.versionProcessV2(31921, 51, { id: 5 } as any),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('CENTER-02'),
+      });
+    });
+
+    it('refuses when the result has no lead centre — nobody can claim it', async () => {
+      armRules(null);
+      armRoles([{ role_id: 9, center_id: 'CENTER-02' }]);
+      const clarisa = testingModule.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      );
+      (clarisa.findOne as jest.Mock).mockResolvedValue({
+        id: 51,
+        portfolio_id: 3,
+        active: true,
+      });
+      resultRepository.findOne.mockResolvedValueOnce(bilateralResult() as any);
+
+      await expect(
+        service.versionProcessV2(31921, 51, { id: 5 } as any),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('no lead centre'),
+      });
+    });
+
+    it('defers eligibility to the shared rules rather than restating them', async () => {
+      const rules = armRules('CENTER-02');
+      armRoles([{ role_id: 9, center_id: 'CENTER-02' }]);
+      const clarisa = testingModule.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      );
+      (clarisa.findOne as jest.Mock).mockResolvedValue({
+        id: 51,
+        portfolio_id: 3,
+        active: true,
+      });
+      resultRepository.findOne.mockResolvedValueOnce(bilateralResult() as any);
+
+      await service
+        .versionProcessV2(31921, 51, { id: 5 } as any)
+        .catch(() => undefined);
+
+      expect(rules.resolveVersionableResult).toHaveBeenCalledWith('28565', 7);
+    });
+
+    it('leaves a W1/W2 result alone — the gate only applies to bilaterals', async () => {
+      const rules = armRules('CENTER-02');
+      armRoles([]);
+      const clarisa = testingModule.get<ClarisaInitiativesRepository>(
+        ClarisaInitiativesRepository,
+      );
+      (clarisa.findOne as jest.Mock).mockResolvedValue({
+        id: 51,
+        portfolio_id: 3,
+        active: true,
+      });
+      resultRepository.findOne.mockResolvedValueOnce(
+        bilateralResult({ source: 'Result' }) as any,
+      );
+
+      await service
+        .versionProcessV2(31921, 51, { id: 5 } as any)
+        .catch(() => undefined);
+
+      expect(rules.resolveVersionableResult).not.toHaveBeenCalled();
+    });
   });
 
   it('should require V2 when primary submitter is already P25 (portfolio 3)', async () => {
@@ -499,5 +624,141 @@ describe('VersioningService', () => {
         statusCode: HttpStatus.OK,
       }),
     );
+  });
+  describe('$_refreshIpsrTitleFromCoreInnovation', () => {
+    const buildManager = (overrides: {
+      coreLink?: { result_id: number } | null;
+      coreInnovation?: { title: string } | null;
+      regions?: any[];
+      countries?: any[];
+      update?: jest.Mock;
+    }) => {
+      return {
+        getRepository: jest.fn((entity: any) => {
+          switch (entity?.name) {
+            case 'Ipsr':
+              return {
+                findOne: jest
+                  .fn()
+                  .mockResolvedValue(overrides.coreLink ?? null),
+              };
+            case 'Result':
+              return {
+                findOne: jest
+                  .fn()
+                  .mockResolvedValue(overrides.coreInnovation ?? null),
+              };
+            case 'ResultRegion':
+              return {
+                find: jest.fn().mockResolvedValue(overrides.regions ?? []),
+              };
+            case 'ResultCountry':
+              return {
+                find: jest.fn().mockResolvedValue(overrides.countries ?? []),
+              };
+            default:
+              throw new Error(`Unexpected repository: ${entity?.name}`);
+          }
+        }),
+        update: overrides.update ?? jest.fn(),
+      } as any;
+    };
+
+    const call = (manager: any, result: any, previousCoreId: number) =>
+      (service as any).$_refreshIpsrTitleFromCoreInnovation(
+        manager,
+        result,
+        previousCoreId,
+        { id: 601 } as any,
+      );
+
+    it('does nothing when the core innovation link did not move', async () => {
+      const update = jest.fn();
+      const manager = buildManager({ coreLink: { result_id: 900 }, update });
+
+      await call(manager, { id: 10, geographic_scope_id: 1 }, 900);
+
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when there is no active core innovation link', async () => {
+      const update = jest.fn();
+      const manager = buildManager({ coreLink: null, update });
+
+      await call(manager, { id: 10, geographic_scope_id: 1 }, 900);
+
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('rebuilds the title from the new core innovation for a global package', async () => {
+      const update = jest.fn();
+      const manager = buildManager({
+        coreLink: { result_id: 901 },
+        coreInnovation: { title: 'Drought Tolerant Maize' },
+        update,
+      });
+      const newResult: any = {
+        id: 10,
+        geographic_scope_id: 1,
+        title: 'old title',
+      };
+
+      await call(manager, newResult, 900);
+
+      expect(update).toHaveBeenCalledTimes(1);
+      const [, criteria, patch] = update.mock.calls[0];
+      expect(criteria).toEqual({ id: 10 });
+      expect(patch.title).toBe(
+        'Innovation Package and Scaling Readiness assessment for drought tolerant maize.',
+      );
+      expect(patch.last_updated_by).toBe(601);
+      expect(newResult.title).toBe(patch.title);
+    });
+
+    it('lists the replicated countries in the rebuilt title', async () => {
+      const update = jest.fn();
+      const manager = buildManager({
+        coreLink: { result_id: 901 },
+        coreInnovation: { title: 'Drought Tolerant Maize' },
+        countries: [
+          { country_object: { name: 'Morocco' } },
+          { country_object: { name: 'Peru' } },
+        ],
+        update,
+      });
+
+      await call(
+        manager,
+        { id: 10, geographic_scope_id: 3, title: 'old title' },
+        900,
+      );
+
+      const [, , patch] = update.mock.calls[0];
+      expect(patch.title).toBe(
+        'Innovation Package and Scaling Readiness assessment for drought tolerant maize in Morocco and Peru',
+      );
+    });
+
+    it('does not write when the rebuilt title matches the current one', async () => {
+      const update = jest.fn();
+      const manager = buildManager({
+        coreLink: { result_id: 901 },
+        coreInnovation: { title: 'Drought Tolerant Maize' },
+        update,
+      });
+
+      await call(
+        manager,
+        {
+          id: 10,
+          geographic_scope_id: 1,
+          title:
+            'Innovation Package and Scaling Readiness assessment for drought tolerant maize.',
+        },
+        900,
+      );
+
+      expect(update).not.toHaveBeenCalled();
+    });
   });
 });

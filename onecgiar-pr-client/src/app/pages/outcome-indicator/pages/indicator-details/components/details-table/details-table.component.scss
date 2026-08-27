@@ -1,5 +1,14 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
 
+app-pr-table {
+  display: block;
+  margin-top: 1rem;
+}
+
+::ng-deep app-pr-table .pr-table {
+  min-width: 60rem;
+}
+
 .noDataText {
   text-align: center;
   padding: 20px 0px;

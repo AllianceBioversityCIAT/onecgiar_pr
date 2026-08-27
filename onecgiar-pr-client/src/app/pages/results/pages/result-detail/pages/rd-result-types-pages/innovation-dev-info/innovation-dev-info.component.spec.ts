@@ -18,7 +18,6 @@ import { LabelNamePipe } from '../../../../../../../custom-fields/pr-select/labe
 import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
 import { PrInputComponent } from '../../../../../../../custom-fields/pr-input/pr-input.component';
 import { YesOrNotByBooleanPipe } from '../../../../../../../custom-fields/pipes/yes-or-not-by-boolean.pipe';
-import { RadioButtonModule } from 'primeng/radiobutton';
 import { NoDataTextComponent } from '../../../../../../../custom-fields/no-data-text/no-data-text.component';
 import { FormsModule } from '@angular/forms';
 import { FeedbackValidationDirective } from '../../../../../../../shared/directives/feedback-validation.directive';
@@ -31,6 +30,7 @@ import { AddButtonComponent } from '../../../../../../../custom-fields/add-butto
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
+import { PrCheckboxComponent } from '../../../../../../../custom-fields/pr-checkbox/pr-checkbox.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
 import { signal } from '@angular/core';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
@@ -335,11 +335,21 @@ describe('InnovationDevInfoComponent', () => {
     };
 
     mockInnovationDevInfoUtilsService = {
-      mapRadioButtonBooleans: jest.fn()
+      mapRadioButtonBooleans: jest.fn(),
+      // Needed only by the render cases below: the Megatrends template calls it on every change
+      // detection pass, so a suite that renders the real template cannot leave it out.
+      isMegatrendsComplete: jest.fn(() => false),
+      mapBoolean: jest.fn()
     };
 
     const mockFieldsManagerService = {
-      isP25: jest.fn(() => false)
+      isP25: jest.fn(() => false),
+      // P2-3263 / P2-3264: the template gates two blocks on this. Default false = the pre-2026 form,
+      // which is what the rest of this suite assumes.
+      isInnovationDevFormReduced2026: jest.fn(() => false),
+      // `pr-input` / `pr-radio-button` resolve their label and required flag through this when a
+      // `fieldRef` is set. An empty map is enough: no field in this section uses one.
+      fields: jest.fn(() => ({}))
     } as any;
 
     const mockDataControlService = {
@@ -371,9 +381,12 @@ describe('InnovationDevInfoComponent', () => {
         PrFieldValidationsComponent,
         DetailSectionTitleComponent,
         AddButtonComponent,
-        MegatrendsComponent
+        MegatrendsComponent,
+        // `anticipated-innovation-user` binds ngModel to it, so rendering the pre-2026 form without
+        // it throws NG01203 before any assertion runs.
+        PrCheckboxComponent
       ],
-      imports: [HttpClientTestingModule, RadioButtonModule, FormsModule, TermPipe],
+      imports: [HttpClientTestingModule, FormsModule, TermPipe],
       providers: [
         {
           provide: ApiService,
@@ -794,6 +807,82 @@ describe('InnovationDevInfoComponent', () => {
     });
   });
 
+  describe('showScalingStudiesQuestion() — P2-3265', () => {
+    // Real CLARISA response shape (fetched from prtest 26-Aug-2026): ids start at 11 and are
+    // unrelated to `level`, which is the field the gate must read (Ángel Jarrín, Jira P2-3359 note
+    // on P2-3265). Using this exact shape proves the gate isn't reading the id or the array index.
+    const readinessLevelsCatalogue = [
+      { id: 11, level: '0', name: 'Idea' },
+      { id: 12, level: '1', name: 'Basic Research' },
+      { id: 13, level: '2', name: 'Formulation' },
+      { id: 14, level: '3', name: 'Proof of Concept' },
+      { id: 15, level: '4', name: 'Controlled Testing' },
+      { id: 16, level: '5', name: 'Model/Early Prototype' },
+      { id: 17, level: '6', name: 'Semi-Controlled Testing' },
+      { id: 18, level: '7', name: 'Prototype' },
+      { id: 19, level: '8', name: 'Uncontrolled Testing' },
+      { id: 20, level: '9', name: 'Proven Innovation' }
+    ];
+
+    const setLevel = (levelNumber: number) => {
+      component.innovationControlListSE.readinessLevelsList = readinessLevelsCatalogue as any;
+      component.innovationDevInfoBody.innovation_readiness_level_id = readinessLevelsCatalogue.find(
+        l => l.level === String(levelNumber)
+      )!.id;
+    };
+
+    describe('2026 phase onward (isInnovationDevFormReduced2026 = true) — question removed entirely', () => {
+      beforeEach(() => {
+        jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+      });
+
+      // Ticket's own table: "< 6: Not applicable (question was not shown at these levels)" +
+      // "= 6 [confirmed >= 6 by the PO]: Remove". The union covers every level 0-9 — there is no
+      // level at which the 2026 form should newly show this question.
+      it.each([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])('hides the question at level %i', level => {
+        setLevel(level);
+        expect(component.showScalingStudiesQuestion()).toBe(false);
+      });
+    });
+
+    describe('phase 2025 and earlier (isInnovationDevFormReduced2026 = false) — must render exactly as before', () => {
+      beforeEach(() => {
+        jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(false as any);
+      });
+
+      it('still shows the question at level 7, unaffected by the 2026 flip', () => {
+        setLevel(7);
+        expect(component.showScalingStudiesQuestion()).toBe(true);
+      });
+
+      it('still hides the question at level 3, matching pre-existing behavior', () => {
+        setLevel(3);
+        expect(component.showScalingStudiesQuestion()).toBe(false);
+      });
+    });
+
+    it('hides the question when no readiness level has been selected yet', () => {
+      component.innovationControlListSE.readinessLevelsList = readinessLevelsCatalogue as any;
+      component.innovationDevInfoBody.innovation_readiness_level_id = null as any;
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+      expect(component.showScalingStudiesQuestion()).toBe(false);
+    });
+
+    it('the section saves successfully with the question hidden and unanswered (green check is never blocked)', async () => {
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(true as any);
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(false as any);
+      setLevel(7); // hidden under the 2026 rule (question removed for every level)
+      component.innovationDevInfoBody.has_scaling_studies = null as any;
+      expect(component.showScalingStudiesQuestion()).toBe(false);
+
+      const patchSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev');
+      await component.onSaveSection();
+
+      expect(patchSpy).toHaveBeenCalled();
+      expect(component.savingSection).toBeFalsy();
+    });
+  });
+
   describe('onSaveSection P25 PATCH error', () => {
     it('should handle PATCH_innovationDevP25 error gracefully', async () => {
       jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
@@ -914,6 +1003,70 @@ describe('InnovationDevInfoComponent', () => {
 
       await component.onSaveSection();
       expect(component.savingSection).toBeFalsy();
+    });
+  });
+
+  /**
+   * P2-3263 (the "Demand of anticipated innovation user" section) and P2-3264 (the Megatrends question),
+   * epic P2-3243. Both are dropped from the 2026 form and both must survive untouched on earlier phases,
+   * which is the epic's governing rule.
+   */
+  describe('2026 form reduction (P2-3263 / P2-3264)', () => {
+    const render = (reduced: boolean) => {
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(reduced as any);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    it('renders both blocks on a pre-2026 phase', () => {
+      const el = render(false);
+      expect(el.querySelector('app-anticipated-innovation-user')).toBeTruthy();
+      expect(el.querySelector('app-megatrends')).toBeTruthy();
+    });
+
+    it('renders neither block from the 2026 phase on', () => {
+      const el = render(true);
+      expect(el.querySelector('app-anticipated-innovation-user')).toBeNull();
+      expect(el.querySelector('app-megatrends')).toBeNull();
+    });
+
+    it('leaves the blocks outside the epic untouched', () => {
+      const el = render(true);
+      expect(el.querySelector('app-innovation-team-diversity')).toBeTruthy();
+      expect(el.querySelector('app-intellectual-property-rights')).toBeTruthy();
+    });
+  });
+
+  /**
+   * P2-3467 (backend half of P2-3290), same epic P2-3243. From the 2026 phase the GESI and risk
+   * open-text questions are replaced by two single-choice stage questions, and
+   * "partners, policies and financial mechanisms" is retired with no replacement.
+   * Earlier phases must keep all three, which is the epic's governing rule.
+   */
+  describe('2026 stage questions (P2-3467)', () => {
+    const render = (reduced: boolean) => {
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(reduced as any);
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    it('keeps the three open-text questions on a pre-2026 phase', () => {
+      const el = render(false);
+      expect(el.querySelector('app-gesi-innovation-assessment')).toBeTruthy();
+      expect(el.querySelector('app-scale-impact-analysis')).toBeTruthy();
+      expect(el.querySelector('app-partners-policies-safeguards')).toBeTruthy();
+      expect(el.querySelector('app-stage-assessment')).toBeNull();
+    });
+
+    it('swaps in the two stage questions from the 2026 phase on', () => {
+      const el = render(true);
+      expect(el.querySelector('app-gesi-innovation-assessment')).toBeNull();
+      expect(el.querySelector('app-scale-impact-analysis')).toBeNull();
+      expect(el.querySelector('app-partners-policies-safeguards')).toBeNull();
+      expect(el.querySelectorAll('app-stage-assessment')).toHaveLength(2);
+      // assumptions-examination no se toca: sigue siendo q3 en ambas fases
+      expect(el.querySelector('app-assumptions-examination')).toBeTruthy();
     });
   });
 });

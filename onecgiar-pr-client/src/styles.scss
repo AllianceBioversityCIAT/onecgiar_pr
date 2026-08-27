@@ -1,435 +1,987 @@
+@use './styles/fonts.scss' as fonts; // SCSS @use must precede all other rules
+@use './styles/field-card.scss';
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+// Tailwind's global preflight (base reset) — RE-ENABLED now that PrimeNG was removed
+// (0 `primeng` imports remain; only `primeicons`). It lives in @layer base so utilities
+// still win. Kept in review: this resets native h1-h6/p/ul/button/form app-wide, so watch
+// for legacy-SCSS regressions that assumed browser defaults. Was disabled during the
+// PrimeNG→Spartan migration to avoid resetting PrimeNG's components.
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css';
+
+@import "@spartan-ng/brain/hlm-tailwind-preset.css";
+
+// PRMS brand tokens exposed to Tailwind (bg-brand-300, text-brand, border-brand-200, …).
+// Values reference the canonical --pr-color-* vars from styles/colors.scss so there is
+// a single source of truth. `inline` is required because values are var() references.
+@theme inline {
+  --color-brand-25: var(--pr-color-primary-25);
+  --color-brand-50: var(--pr-color-primary-50);
+  --color-brand-100: var(--pr-color-primary-100);
+  --color-brand-200: var(--pr-color-primary-200);
+  --color-brand-300: var(--pr-color-primary-300);
+  --color-brand-400: var(--pr-color-primary-400);
+  --color-brand-500: var(--pr-color-primary-500);
+  --color-brand-600: var(--pr-color-primary-600);
+  --color-brand-700: var(--pr-color-primary-700);
+  --color-brand-800: var(--pr-color-primary-800);
+  --color-brand-900: var(--pr-color-primary-900);
+  --color-brand-950: var(--pr-color-primary-950);
+  --color-brand: var(--pr-color-primary-300);
+  // Repointed: --pr-color-secondary-400 is now the dark brand SURFACE (#271862), not ink.
+  // "ink" means body text, so it tracks the text ramp. (0 consumers today — safe.)
+  --color-ink: var(--pr-text);
+
+  // ── Semantic aliases — docs/reporting-redesign/UI-RULES.md §2.3.
+  // Gives bg-surface-app, text-ink-secondary, bg-sidebar, font-mono.
+  // `inline` is REQUIRED: the values are var() references, so Tailwind must emit the var()
+  // straight into the utility instead of re-declaring a theme var. A plain @theme here would
+  // freeze resolution to :root and break every scoped override (e.g. the dark sidebar).
+  --color-surface-topbar: var(--pr-surface-topbar);
+  --color-surface-band: var(--pr-surface-band);
+  --color-surface-app: var(--pr-surface-app);
+  --color-surface-card: var(--pr-surface-card);
+  --color-surface-subtle: var(--pr-surface-subtle);
+
+  --color-ink-heading: var(--pr-text-heading);
+  --color-ink-body: var(--pr-text);
+  --color-ink-secondary: var(--pr-text-secondary);
+  --color-ink-muted: var(--pr-text-muted);
+  --color-ink-subtle: var(--pr-text-subtle);
+
+  // ⚠️ DELIBERATELY NOT DECLARED HERE: --color-sidebar and --color-sidebar-foreground.
+  // UI-RULES §2.3 proposes them, but Helm's own preset already owns those keys
+  // (@spartan-ng/brain/hlm-tailwind-preset.css: --color-sidebar: var(--sidebar) at :94).
+  // Redeclaring them to point at --pr-* would win over the preset and sever `bg-sidebar` from
+  // the raw --sidebar var — which is exactly the mechanism that lets a scoped selector paint the
+  // sidebar dark on a light page. The sidebar VALUE therefore belongs on the raw var below, not
+  // here. Only the two keys the preset does NOT define are added:
+  --color-sidebar-elevated: var(--pr-sidebar-elevated);
+  --color-sidebar-fg-muted: var(--pr-sidebar-fg-muted);
+
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
 /* You can add global styles to this file, and also import other style files */
-@use './styles/fonts.scss' as fonts;
 @import 'primeicons/primeicons.css';
 
+// CDK Overlay positioning styles — required for cdkConnectedOverlay panels
+// (header-panel user menu + notifications) to float anchored to their trigger.
+@import '@angular/cdk/overlay-prebuilt.css';
+
+// Neutralize the native OS button chrome. Tailwind's full preflight is disabled above
+// (it would reset PrimeNG), so raw <button>s render with the grey system look + native
+// border. This restores the ONE preflight rule we need. It MUST live in @layer base so
+// Tailwind's `bg-*` / `border-*` utilities (in @layer utilities) still win — styled
+// buttons (PrimeNG, Spartan, any bg-/border- utility) keep their look; only unstyled
+// buttons stop showing the native grey chrome. Add explicit backgrounds where a fill is wanted.
+@layer base {
+  button {
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: transparent;
+    border-width: 0;
+  }
+}
+
 .globalDisabled {
-  opacity: 0.5;
-  pointer-events: none;
+opacity: 0.5;
+pointer-events: none;
+}
+
+/* Screen-reader-only content (Tailwind preflight is not imported, so define it here). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skeleton loading placeholder (PrimeNG p-skeleton replacement — 0 PrimeNG).
+   Sizing comes from inline width/height/style on each element; this only owns
+   the base color + shimmer sweep. Default 1rem height / full width / 4px radius. */
+.pr-skeleton {
+  display: block;
+  width: 100%;
+  height: 1rem;
+  border-radius: 4px;
+  background-color: var(--pr-color-accents-2, #eaeaea);
+  overflow: hidden;
+  position: relative;
+}
+.pr-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: pr-skeleton-shimmer 1.2s infinite;
+}
+@keyframes pr-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* width */
+/* `.light-scroll` del mockup: barra discreta de 8px sin pista, para paneles que scrollean
+   por su cuenta dentro de la página (los dos rieles de result-detail). Distinta a
+   `.custom_scroll`, que es violeta sobre pista tintada y pesa demasiado para un panel
+   que scrollea permanentemente. */
+.pr-light-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.pr-light-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pr-light-scroll::-webkit-scrollbar-thumb {
+  background: var(--pr-border-strong);
+  border-radius: 999px;
+}
+
 .custom_scroll::-webkit-scrollbar {
-  width: 7px;
-  height: 5px;
+width: 7px;
+height: 5px;
 }
 
 /* Track */
 .custom_scroll::-webkit-scrollbar-track {
-  background: var(--pr-color-primary-50);
+background: var(--pr-color-primary-50);
 }
 
 /* Handle */
 .custom_scroll::-webkit-scrollbar-thumb {
-  background: var(--pr-color-primary-300);
-  border-radius: 10px;
+background: var(--pr-color-primary-300);
+border-radius: 10px;
 }
 
-/* Handle on hover */
+/* Handle on hover — DARKENS on hover. Was -200, which in the new ramp is a light tint
+   (#ddd6fe, 1.3885:1 on white): the thumb would have vanished on hover instead of
+   responding. -400 gives 7.8479:1 and reads as a press. */
 .custom_scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--pr-color-primary-200);
-  border-radius: 10px;
+background: var(--pr-color-primary-400);
+border-radius: 10px;
 }
 
 .position_sticky {
-  position: sticky;
-  right: 0;
-  bottom: 0;
-  z-index: 5;
+position: sticky;
+right: 0;
+bottom: 0;
+z-index: 5;
 }
 
 a {
-  text-decoration: none;
+text-decoration: none;
 }
 
 .error__link {
-  color: var(--pr-color-red-300);
-  margin: 0;
+color: var(--pr-color-red-300);
+margin: 0;
 
-  a {
-    color: var(--pr-color-red-300);
-    font-weight: 600;
+a {
+color: var(--pr-color-red-300);
+font-weight: 600;
 
-    &:hover {
-      color: var(--pr-color-red-500);
-    }
-  }
+&:hover {
+color: var(--pr-color-red-500);
 }
-
-.no-margin-top {
-  margin-top: 0px !important;
+}
 }
 
 .m-0 {
-  margin: 0;
+margin: 0;
 }
 
 .search_input {
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--pr-color-accents-4);
-  border-radius: 100px;
-  width: 50vw;
-  padding: 3px 5px;
-  margin-bottom: 10px;
-  height: min-content;
+display: flex;
+align-items: center;
+border: 1px solid var(--pr-color-accents-4);
+border-radius: 100px;
+width: 50vw;
+padding: 3px 5px;
+margin-bottom: 10px;
+height: min-content;
 
-  i {
-    color: var(--pr-color-accents-4);
-  }
-
-  input {
-    outline: none;
-    border: none;
-    width: 100%;
-    color: var(--pr-color-accents-4);
-  }
+i {
+color: var(--pr-color-accents-4);
 }
 
-.w50vw {
-  width: 50vw !important;
+input {
+outline: none;
+border: none;
+width: 100%;
+color: var(--pr-color-accents-4);
 }
-
-.w20vw {
-  width: 20vw !important;
-}
-
-.divider-50 {
-  @extend .dividerStyles;
-  margin-top: 40px;
-  margin-bottom: 50px;
 }
 
 .divider-20 {
-  @extend .dividerStyles;
-  margin-top: 20px;
-  margin-bottom: 20px;
+@extend .dividerStyles;
+margin-top: 20px;
+margin-bottom: 20px;
 }
 
 .dividerStyles {
-  border: 0.5px solid var(--pr-color-neutral-1000);
-  border-radius: 100px;
+border: 0.5px solid var(--pr-color-neutral-1000);
+border-radius: 100px;
 }
 
 //? Links selector
 .evidence_item {
-  display: grid;
-  grid-template-columns: 50px 1fr;
-  gap: 10px;
-  padding: 0px 40px 10px 40px;
-  position: relative;
-  overflow: hidden;
+display: grid;
+grid-template-columns: 50px 1fr;
+gap: 10px;
+padding: 0px 40px 10px 40px;
+position: relative;
+overflow: hidden;
 
-  .index {
-    background-color: var(--pr-color-accents-2);
-    color: var(--pr-color-accents-5);
-    width: 50px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    margin-top: 47px;
-  }
+.index {
+background-color: var(--pr-color-accents-2);
+color: var(--pr-color-accents-5);
+width: 50px;
+height: 50px;
+display: flex;
+align-items: center;
+justify-content: center;
+border-radius: 10px;
+margin-top: 47px;
+}
 
-  .link {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px;
+.link {
+display: grid;
+grid-template-columns: 1fr auto;
+gap: 10px;
 
-    .checkboxes {
-      margin-top: 50px;
-    }
-  }
+.checkboxes {
+margin-top: 50px;
+}
+}
 }
 
 .in-qa-tag {
-  background-color: var(--pr-color-yellow-300);
-  color: var(--pr-color-accents-6);
-  margin-top: 2px;
-  margin-bottom: 2px;
-  padding: 1px 5px;
-  @include fonts.pr-typography('body-3');
-  font-weight: 700;
-  text-align: center;
-  font-style: normal;
-  border-radius: 5px;
+background-color: var(--pr-color-yellow-300);
+color: var(--pr-color-accents-6);
+margin-top: 2px;
+margin-bottom: 2px;
+padding: 1px 5px;
+@include fonts.pr-typography('body-3');
+font-weight: 700;
+text-align: center;
+font-style: normal;
+border-radius: 5px;
 }
 
 .label-status-styles {
-  color: var(--pr-color-white);
-  display: inline;
-  font-style: italic;
-  font-weight: 500;
-  border-radius: 3px;
+color: var(--pr-color-white);
+display: inline;
+font-style: italic;
+font-weight: 500;
+border-radius: 3px;
 }
 
 .completeness-state {
-  @extend .label-status-styles;
-  padding: 0px 10px;
-  @include fonts.pr-typography('body-3');
-}
-
-.result-list-state {
-  @extend .label-status-styles;
-  @include fonts.pr-typography('body-3');
-  padding: 3px 10px;
+@extend .label-status-styles;
+padding: 0px 10px;
+@include fonts.pr-typography('body-3');
 }
 
 .completeness-submitted {
-  background-color: var(--pr-color-primary-300);
+background-color: var(--pr-color-primary-300);
 }
 
 .completeness-editing {
-  background-color: var(--pr-color-yellow-200);
+background-color: var(--pr-color-yellow-200);
 }
 
 .completeness-all {
-  background-color: var(--pr-color-accents-5);
+background-color: var(--pr-color-accents-5);
 }
 
 .completeness-quality-assessed {
-  background-color: var(--pr-color-blue-500);
+background-color: var(--pr-color-blue-500);
 }
 
 .completeness-discontinued {
-  background-color: var(--pr-color-orange-500);
-}
-
-.support_information .p-dialog .p-dialog-content {
-  overflow-y: auto !important;
-}
-
-.support_information .p-dialog {
-  border: none !important;
+background-color: var(--pr-color-orange-500);
 }
 
 .toc_button {
-  background-color: var(--pr-color-primary-300);
-  color: var(--pr-color-white);
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 10px;
-  padding: 3px 3px 3px 15px;
-  align-items: center;
-  @include fonts.pr-typography('body-2');
-  border-radius: 100px;
-  cursor: pointer;
-  text-decoration: none;
+background-color: var(--pr-color-primary-300);
+color: var(--pr-color-white);
+display: flex;
+flex-wrap: nowrap;
+gap: 10px;
+padding: 3px 3px 3px 15px;
+align-items: center;
+@include fonts.pr-typography('body-2');
+border-radius: 100px;
+cursor: pointer;
+text-decoration: none;
 
-  span {
-    white-space: nowrap;
-  }
-
-  img {
-    width: 15px;
-    height: 15px;
-    background-color: var(--pr-color-white);
-    border-radius: 10px;
-    padding: 2px;
-  }
+span {
+white-space: nowrap;
 }
 
-.under-construction-t1r {
-  margin-top: 5px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-style: italic;
-  color: var(--pr-color-white);
-  font-weight: 700;
-  background-color: var(--pr-color-primary-200);
-  border-radius: 5px 100px 100px 5px;
-  width: max-content;
-  padding: 2px 5px;
-  cursor: default;
-  @include fonts.pr-typography('body-3');
-
-  img {
-    width: 17px;
-    background-color: var(--pr-color-white);
-    border-radius: 100px;
-    padding: 1px;
-  }
+img {
+width: 15px;
+height: 15px;
+background-color: var(--pr-color-white);
+border-radius: 10px;
+padding: 2px;
 }
-
-.p-progressbar.p-component.p-progressbar-indeterminate {
-  height: 10px;
 }
 
 .section_final_space {
-  margin-bottom: 100px;
+margin-bottom: 100px;
 }
 
 .spinner {
-  top: 0;
-  left: 0;
-  position: absolute;
-  height: 100%;
-  width: 100%;
-  background-color: rgba(var(--pr-color-secondary-rgb), 0.337);
-  display: flex;
-  justify-content: center;
-  z-index: 10000;
+top: 0;
+left: 0;
+position: absolute;
+height: 100%;
+width: 100%;
+background-color: rgba(var(--pr-color-secondary-rgb), 0.337);
+display: flex;
+justify-content: center;
+z-index: 10000;
 
-  .info {
-    margin-top: 35vh;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    gap: 10px;
-    background-color: rgba(var(--pr-color-black-rgb), 0.24);
-    height: min-content;
-    padding: 30px;
-    border-radius: 10px;
+.info {
+margin-top: 35vh;
+display: flex;
+align-items: center;
+flex-direction: column;
+gap: 10px;
+background-color: rgba(var(--pr-color-black-rgb), 0.24);
+height: min-content;
+padding: 30px;
+border-radius: 10px;
 
-    .icon {
-      color: var(--pr-color-white);
-      font-size: 4em;
-      transform: scaleX(-1);
-    }
+.icon {
+color: var(--pr-color-white);
+font-size: 4em;
+transform: scaleX(-1);
+}
 
-    .text {
-      color: var(--pr-color-white);
-      @include fonts.pr-typography('body-2');
-    }
-  }
+.text {
+color: var(--pr-color-white);
+@include fonts.pr-typography('body-2');
+}
+}
 }
 
 .donors {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+display: flex;
+flex-direction: column;
+gap: 15px;
 
-  .donor {
-    background-color: var(--pr-color-primary-50);
-    padding: 10px 50px 40px 50px;
-    position: relative;
-    border-radius: 10px;
-  }
+.donor {
+background-color: var(--pr-color-primary-50);
+padding: 10px 50px 40px 50px;
+position: relative;
+border-radius: 10px;
+}
 }
 
 .hideElement {
-  display: none !important;
-}
-
-.phase_table {
-  .p-datatable-wrapper {
-    padding-bottom: 250px !important;
-  }
-}
-
-.p-calendar {
-  input {
-    cursor: pointer !important;
-  }
-}
-
-.tooltip-w-500 {
-  min-width: 500px !important;
+display: none !important;
 }
 
 .tooltip-w-300 {
-  min-width: 300px !important;
-}
-
-.text-underline {
-  text-decoration: underline;
+min-width: 300px !important;
 }
 
 .text-semibold {
-  font-weight: 600;
+font-weight: 600;
 }
 
 .notion-code {
-  color: var(--pr-color-red-200);
-  padding: 2px;
-  background-color: var(--pr-color-accents-1);
+color: var(--pr-color-red-200);
+padding: 2px;
+background-color: var(--pr-color-accents-1);
 }
 
 .notion-link {
-  color: var(--pr-color-accents-5);
-  text-decoration: underline;
-  word-break: break-all;
-  word-break: break-word;
-}
-
-.p-datatable-tbody > tr > td {
-  @include fonts.pr-typography('body-2');
-  font-weight: 400;
-}
-
-.p-datatable-thead > tr > th {
-  @include fonts.pr-typography('body-2');
-  font-weight: 500 !important;
-  padding: 0.375rem 0.75rem !important;
-}
-
-.p-datatable-table {
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.init-mapped {
-  background-color: var(--pr-color-primary-300);
-  padding: 0px 7px;
-  border-radius: 3px;
-  margin-right: 5px;
+color: var(--pr-color-accents-5);
+text-decoration: underline;
+word-break: break-all;
+word-break: break-word;
 }
 
 @function generate-margin-right($value) {
-  @return #{$value}px;
+@return #{$value}px;
 }
 
 @mixin generate-margin-right-classes($max: 100) {
-  @for $i from 1 through $max {
-    .m-#{$i} {
-      margin: generate-margin-right($i) !important;
-    }
+@for $i from 1 through $max {
+.m-#{$i} {
+margin: generate-margin-right($i) !important;
+}
 
-    .mr-#{$i} {
-      margin-right: generate-margin-right($i) !important;
-    }
+.mr-#{$i} {
+margin-right: generate-margin-right($i) !important;
+}
 
-    .ml-#{$i} {
-      margin-left: generate-margin-right($i) !important;
-    }
+.ml-#{$i} {
+margin-left: generate-margin-right($i) !important;
+}
 
-    .mt-#{$i} {
-      margin-top: generate-margin-right($i) !important;
-    }
+.mt-#{$i} {
+margin-top: generate-margin-right($i) !important;
+}
 
-    .mb-#{$i} {
-      margin-bottom: generate-margin-right($i) !important;
-    }
+.mb-#{$i} {
+margin-bottom: generate-margin-right($i) !important;
+}
 
-    .mx-#{$i} {
-      margin-left: generate-margin-right($i) !important;
-      margin-right: generate-margin-right($i) !important;
-    }
+.mx-#{$i} {
+margin-left: generate-margin-right($i) !important;
+margin-right: generate-margin-right($i) !important;
+}
 
-    .my-#{$i} {
-      margin-top: generate-margin-right($i) !important;
-      margin-bottom: generate-margin-right($i) !important;
-    }
-  }
+.my-#{$i} {
+margin-top: generate-margin-right($i) !important;
+margin-bottom: generate-margin-right($i) !important;
+}
+}
 }
 
 @include generate-margin-right-classes(100);
 
 /*
- * P25 column drawer: background scroll is locked in TS via `body { position: fixed; top: -scrollY }`
- * so the sticky app header is not broken by `overflow: hidden` on html/body after the user has scrolled.
- */
+* P25 column drawer: background scroll is locked in TS via `body { position: fixed; top: -scrollY }`
+* so the sticky app header is not broken by `overflow: hidden` on html/body after the user has scrolled.
+*/
 html.pr-p25-drawer-scroll-lock,
 body.pr-p25-drawer-scroll-lock {
-  overscroll-behavior: none;
+overscroll-behavior: none;
 }
 
-body.pr-p25-drawer-scroll-lock {
-  .p-datatable-scrollable .p-datatable-wrapper,
-  .p-datatable-scrollable .p-datatable-scrollable-body,
-  .p-datatable-scrollable .p-datatable-table-container,
-  .p-datatable .p-datatable-table-container {
-    overflow: hidden !important;
+
+:root {
+color-scheme: light;
+
+// Accessibility — user-controlled text size. The app's type scale is authored
+// in absolute px (200+ hardcoded sites), so a root font-size lever would not
+// cascade. `zoom` on the root scales EVERYTHING uniformly (px/em/rem + CDK
+// overlays/dialogs) from one point. Driven by FontScaleService; default = 1.
+// Native browser zoom still stacks on top (WCAG 1.4.4 resize to 200%).
+--pr-font-scale: 1;
+zoom: var(--pr-font-scale, 1);
+
+--font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+--radius: 0.625rem;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPARTAN / HELM RAW VARS — wired to the PRMS canon (styles/colors.scss).
+//
+// These were shadcn's slate DEFAULTS until now, which is why every Spartan component
+// rendered grey-blue regardless of what colors.scss said. Every Helm recipe styles
+// against these names, so this block is what actually brands the component library.
+//
+// 🛑 DO NOT re-declare these keys in an @theme block. Helm's preset already maps them
+// into Tailwind (@spartan-ng/brain/hlm-tailwind-preset.css @theme inline from :82 —
+// `--color-primary: var(--primary)` at :106). Declaring a plain @theme for them makes
+// Tailwind emit `:root,:host{...}` and freezes resolution to :root, which silently
+// severs every scoped override — the dark sidebar reverts to page colours while the
+// page still looks right. See design.md D3.
+//
+// Colour space: hex via var() is intentional and verified — `bg-primary/50` compiles to
+// color-mix(in oklab, var(--primary) 50%, transparent) and resolves hex correctly in
+// Tailwind 4.3.2. What breaks INVISIBLY is a bare channel triplet (resolves to
+// rgba(0,0,0,0), i.e. the element loses its fill with no error), so every var here must
+// be confirmed to resolve, not merely to be present.
+// ─────────────────────────────────────────────────────────────────────────────
+// --background is the PAGE CANVAS, per shadcn's own semantics — `hlm-sidebar-inset` paints
+// `bg-background` across the whole content area, so making this white erased the grey canvas.
+// Component surfaces are --card / --popover. The `outline` variant's `bg-background
+// hover:bg-muted` pair still works because --muted is a distinct tint (below), which is what
+// the original no-op hover actually needed.
+--background: var(--pr-surface-app);
+--foreground: var(--pr-text);
+--card: var(--pr-surface-card);
+--card-foreground: var(--pr-text);
+--popover: var(--pr-surface-card);
+--popover-foreground: var(--pr-text);
+
+// white on #6b46e5 = 5.7809:1 (AA, normal text)
+--primary: var(--pr-color-primary-300);
+--primary-foreground: var(--pr-color-white);
+
+// --muted is the HOVER / de-emphasised fill and must be perceptibly different from
+// --background. Both were #f7f7f9, which made `bg-background hover:bg-muted` a no-op; a second
+// neutral grey would be just as invisible against the grey canvas, so this is the soft lilac —
+// the hover registers through its tint.
+--secondary: var(--pr-color-primary-25);
+--secondary-foreground: var(--pr-text);
+--muted: var(--pr-color-primary-50);
+--muted-foreground: var(--pr-text-secondary);
+
+// Hover/selected affordance for menu + list items. Violet is allowed here: it is an
+// action state, not a content surface (rule 7). #5733c4 on #f5f3ff = 7.1583:1.
+--accent: var(--pr-color-primary-50);
+--accent-foreground: var(--pr-color-primary-400);
+
+--destructive: var(--pr-color-red-300);
+
+// ⚠️ KNOWN DEBT, not a regression: a #e3e3e8 control boundary is 1.2790:1 on white,
+// under the WCAG 1.4.11 3:1 floor. Today's shadcn default is equally light, so this
+// change neither fixes nor worsens it. Raising it needs a design call on a
+// --pr-border-control token — deliberately out of scope for this phase.
+--border: var(--pr-border);
+--input: var(--pr-border);
+
+// Focus indicator. MUST NOT equal --primary: the base button recipe focuses with
+// `focus-visible:border-ring`, so a ring the colour of the fill is literally invisible
+// (1.0000:1 on every filled brand button). The 900 stop reads on both grounds:
+// 2.9955:1 against the #6b46e5 fill and 17.3165:1 against white.
+--ring: var(--pr-color-primary-900);
+
+// ── Sidebar: dark chrome on a light page, expressed through the sidebar token family
+// (NOT via .dark). A component may still scope these on its own host to override.
+--sidebar: var(--pr-sidebar-bg);
+--sidebar-foreground: var(--pr-sidebar-fg);
+--sidebar-primary: var(--pr-sidebar-active);
+--sidebar-primary-foreground: var(--pr-color-white);
+--sidebar-accent: var(--pr-sidebar-elevated);
+--sidebar-accent-foreground: var(--pr-sidebar-fg);
+--sidebar-border: var(--pr-sidebar-border);
+--sidebar-ring: var(--pr-sidebar-accent);
+}
+
+// NOTE: the `:root.dark` block that used to sit here was REMOVED. It held 30 lines of shadcn
+// slate oklch() defaults and was unreachable: the selector was `:root.dark` (not `.dark`),
+// nothing in the app ever adds that class, and `color-scheme: light` is pinned on :root above.
+// Left in place it was a loaded gun — the moment anyone added a dark class, every Spartan
+// component would have reverted to grey-blue, silently undoing the brand wiring.
+// Reintroducing dark mode is a separate change: it needs a scopable selector, a toggle, a
+// persisted preference and its own contrast audit for all 24 values.
+
+@layer base {
+* {
+@apply border-border outline-ring/50;
+}
+body {
+@apply bg-background text-foreground;
+// Subtle canvas texture over the base background (repeats + stays fixed on scroll).
+background-image: url('assets/texture-bg.webp');
+background-repeat: repeat;
+background-size: 641px 900px;
+background-attachment: fixed;
+}
+}
+/* Chip / avatar / progress / spinner — PrimeNG leaf replacements (0 PrimeNG). */
+.pr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  background-color: var(--pr-color-accents-2, #eaeaea);
+  color: var(--pr-color-secondary-400, #2a2e45);
+  font-size: 12px;
+  line-height: 1.2;
+}
+.pr-chip .pr-chip-remove {
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--pr-color-accents-5, #666);
+}
+
+.pr-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--pr-color-primary-300, #6b46e5);
+  color: var(--pr-color-white, #fff);
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.pr-progress-bar-indeterminate {
+  position: relative;
+  height: 6px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 3px;
+  background-color: var(--pr-color-accents-2, #eaeaea);
+}
+.pr-progress-bar-indeterminate::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 40%;
+  border-radius: 3px;
+  background-color: var(--pr-color-primary-300, #6b46e5);
+  animation: pr-progress-indet 1.2s infinite ease-in-out;
+}
+@keyframes pr-progress-indet {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+.pr-spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--pr-color-accents-2, #eaeaea);
+  border-top-color: var(--pr-color-primary-300, #6b46e5);
+  border-radius: 50%;
+  animation: pr-spin 0.8s linear infinite;
+}
+@keyframes pr-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Reusable search box (PrimeNG p-iconfield + pInputText replacement). */
+.pr-search-box {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  > .material-icons-round {
+    position: absolute;
+    left: 8px;
+    font-size: 18px;
+    color: var(--pr-color-accents-4);
+    pointer-events: none;
+  }
+
+  > input {
+    padding-left: 32px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// driver.js walkthrough popover. driver.js appends it to <body>, outside every
+// component's view encapsulation, so its skin has to live here. Scoped to the
+// `pr-guide` class we pass in popoverClass — the library's defaults are left
+// alone for any other future tour.
+// ---------------------------------------------------------------------------
+.driver-popover.pr-guide {
+  max-width: 340px;
+  padding: 20px 20px 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  color: var(--pr-color-secondary-400);
+  box-shadow: 0 24px 60px rgba(30, 32, 47, 0.28);
+  font-family: 'Poppins', system-ui, sans-serif;
+
+  .driver-popover-title {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    color: var(--pr-color-secondary-400);
+  }
+
+  .driver-popover-description {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--pr-color-accents-6);
+  }
+
+  .driver-popover-close-btn {
+    top: 12px;
+    right: 12px;
+    width: 26px;
+    height: 26px;
+    border-radius: 9999px;
+    color: var(--pr-color-accents-5);
+    font-size: 18px;
+    line-height: 1;
+    transition: background-color 150ms ease-out, color 150ms ease-out;
+
+    &:hover {
+      background: var(--pr-color-accents-1);
+      color: var(--pr-color-secondary-400);
+    }
+  }
+
+  .driver-popover-footer {
+    margin-top: 18px;
+    gap: 8px;
+
+    .driver-popover-progress-text {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--pr-color-accents-5);
+    }
+
+    button {
+      padding: 7px 14px;
+      border: 0;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      text-shadow: none;
+      transition: background-color 150ms ease-out, transform 150ms ease-out;
+
+      &:hover {
+        transform: translateY(-1px);
+      }
+    }
+
+    // "Back" — quiet. "Next"/"Got it" — the brand action.
+    .driver-popover-prev-btn {
+      background: var(--pr-color-accents-1);
+      color: var(--pr-color-accents-6);
+
+      &:hover {
+        background: var(--pr-color-accents-2);
+      }
+
+      &.driver-popover-btn-disabled {
+        opacity: 0.4;
+        transform: none;
+      }
+    }
+
+    .driver-popover-next-btn {
+      background: linear-gradient(135deg, #6b46e5 0%, #5733c4 100%);
+      color: #ffffff;
+      box-shadow: 0 6px 16px rgba(87, 51, 196, 0.4);
+    }
+  }
+
+  .driver-popover-arrow {
+    border-width: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-popover.pr-guide .driver-popover-footer button:hover {
+    transform: none;
+  }
+}
+
+// ── Dialog (pr-dialog) ─────────────────────────────────────────────────
+
+.pr-dialog {
+  border-radius: 14px !important;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+  animation: pr-dialog-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  .p-dialog-header {
+    padding: 24px 28px 0 !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .p-dialog-content {
+    padding: 20px 28px 24px !important;
+    overflow: visible !important;
+  }
+
+  .p-dialog-footer {
+    padding: 0 28px 24px !important;
+    border: none !important;
+  }
+
+  // Keep confirmation copy aligned with the header and footer on discard dialogs.
+  &--discard .p-dialog-content {
+    padding: 14px 28px 24px !important;
+  }
+}
+
+.pr-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pr-dialog-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i {
+    font-size: 20px;
+  }
+
+  &--promote {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #ECFDF5, #D1FAE5);
+    border: 1px solid rgba(5, 150, 105, 0.2);
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.12);
+    i { color: #059669; font-size: 22px; }
+  }
+
+  &--discard {
+    background: #FEF2F2;
+    i { color: #DC2626; }
+  }
+}
+
+.pr-dialog-header-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.2px;
+}
+
+.pr-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pr-dialog-text {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #374151;
+  margin: 0;
+
+  strong {
+    color: #111827;
+    font-weight: 600;
+  }
+}
+
+.pr-dialog-hint {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #6B7280;
+  margin: 0;
+
+  &--danger {
+    color: #DC2626;
+  }
+}
+
+.pr-dialog-target {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  word-break: break-all;
+}
+
+.pr-dialog-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+  padding: 12px 14px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+}
+
+.pr-dialog-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pr-dialog-meta-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.pr-dialog-meta-value {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-dialog-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pr-dialog-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 20px;
+  padding: 3px 10px 3px 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  i { font-size: 14px; }
+
+  &--green {
+    background: #F0FDF4;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+    i { color: #059669; }
+  }
+
+}
+
+.pr-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.pr-dialog--promote {
+  border-top: 3px solid #059669 !important;
+  border-radius: 14px !important;
+
+  .p-dialog-footer .p-button:not(.p-button-secondary) {
+    background: #059669 !important;
+    border-color: #059669 !important;
+
+    &:hover {
+      background: #047857 !important;
+      border-color: #047857 !important;
+    }
+
+    &:focus-visible {
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.25) !important;
+    }
+  }
+}
+
+@keyframes pr-dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }

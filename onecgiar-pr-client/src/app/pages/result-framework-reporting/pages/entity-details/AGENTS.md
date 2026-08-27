@@ -1,5 +1,12 @@
 # AGENTS.md — `entity-details/`
 
+> 🛑 **STALE — THIS PAGE IS RETIRED AND UNROUTED.** `EntityDetailsComponent` is no longer reachable:
+> `shared/routing/routing-data.ts:597` says so explicitly, and `entity-details/:entityId/overview`
+> loads `DashboardLabComponent` instead. The live Overview tab is
+> `pages/dashboard-lab/components/program-overview/` — see its `CLAUDE.md`. Everything below
+> describes dead code kept in the tree; editing it changes nothing on screen. Verified 2026-08-21
+> while implementing P2-3406.
+
 > **Scope:** the `/result-framework-reporting/entity-details/:entityId` page — the **dashboard for a single Science Program / Initiative**.
 > **Parent guide:** [`../../AGENTS.md`](../../AGENTS.md) (module root).
 

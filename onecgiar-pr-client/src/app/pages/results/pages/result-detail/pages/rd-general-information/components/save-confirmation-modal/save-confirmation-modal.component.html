@@ -1,14 +1,10 @@
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="visible"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }"
-  [styleClass]="'save-confirmation-modal'">
+  styleClass="save-confirmation-modal">
   <div class="modal-header">
     <div class="header-left">
       <div class="warning-icon">
@@ -27,5 +23,5 @@
     <button class="btn-cancel" (click)="onCancel()">Cancel</button>
     <app-pr-button  padding="medium" class="btn-continue" (click)="onConfirm()" text="Yes, Continue"></app-pr-button>
   </div>
-</p-dialog>
+</app-pr-dialog>
 

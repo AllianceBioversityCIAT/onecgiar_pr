@@ -16,9 +16,11 @@ import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
+import { CENTER_ALIAS_TO_CLARISA_CENTER_CODE } from './constants/w3-center-alias.constants';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
+import { AdUserService } from '../ad_users/ad_users.service';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { DataSource, In, IsNull, Like, SelectQueryBuilder } from 'typeorm';
 import { GenderTagLevel } from '../results/gender_tag_levels/entities/gender_tag_level.entity';
@@ -94,6 +96,8 @@ import { PathwayService } from '../ipsr-framework/pathway/pathway.service';
 import { ResultType } from '../results/result_types/entities/result_type.entity';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { AssessedDuringExpertWorkshop } from '../ipsr/assessed-during-expert-workshop/entities/assessed-during-expert-workshop.entity';
+import { ClarisaApiKeyValidationMis } from './interfaces/clarisa-api-key-validation.interface';
+import { ExternalPlatformIdentity } from './interfaces/external-platform-identity.interface';
 
 /** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
 const INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID = 5;
@@ -224,6 +228,7 @@ export class BilateralService {
     private readonly _policyChangeHandler: PolicyChangeBilateralHandler,
     private readonly _otherOutputHandler: NoopBilateralHandler,
     private readonly _otherOutcomeHandler: NoopBilateralHandler,
+    private readonly _adUserService: AdUserService,
   ) {
     this.resultTypeHandlerMap = new Map<number, BilateralResultTypeHandler>([
       [_knowledgeProductHandler.resultType, _knowledgeProductHandler],
@@ -242,7 +247,10 @@ export class BilateralService {
     BilateralResultTypeHandler
   >;
 
-  async create(rootResultsDto: RootResultsDto) {
+  async create(
+    rootResultsDto: RootResultsDto,
+    platform?: ClarisaApiKeyValidationMis,
+  ) {
     const incomingResults = this.unwrapIncomingResults(rootResultsDto);
 
     if (!incomingResults.length) {
@@ -336,12 +344,20 @@ export class BilateralService {
               );
             }
 
+            // Built per result, not per request: `external_reference` is this result's own id in
+            // the calling platform, so it cannot be hoisted out of the loop.
+            const externalIdentity = this.buildExternalIdentity(
+              bilateralDto,
+              platform,
+            );
+
             const resultHeader = await this.initializeResultHeader({
               bilateralDto,
               userId,
               submittedUserId,
               version,
               year,
+              externalIdentity,
             });
             const newResultHeader = resultHeader;
             const resultId = resultHeader.id;
@@ -455,6 +471,9 @@ export class BilateralService {
             createdResults.push({
               id: resultId,
               result_code: newResultHeader.result_code,
+              // Echoed so the caller can pair `result_code` with its own record in a batch
+              // response without holding on to request order.
+              external_reference: externalIdentity.external_reference,
               is_duplicate_kp: false,
               ...kpExtra,
             });
@@ -475,7 +494,9 @@ export class BilateralService {
         );
       } catch (error) {
         this.logger.error('Error creating bilateral', error);
-        this.logger.error(error.stack);
+        this.logger.error(
+          error instanceof Error ? error.stack : JSON.stringify(error),
+        );
         throw error;
       }
     }
@@ -708,7 +729,6 @@ export class BilateralService {
 
     const qb = this._resultRepository
       .createQueryBuilder('r')
-      .where('r.is_active = :isActive', { isActive: true })
       .orderBy('r.result_code', 'DESC');
 
     this.applyListResultsFilters(qb, query);
@@ -725,6 +745,7 @@ export class BilateralService {
         });
         const filtered = this.filterActiveRelations(resultWithRelations);
         await this.enrichBilateralResultResponse(filtered);
+        this.attachResultLinks(filtered);
         return filtered;
       }),
     );
@@ -737,6 +758,25 @@ export class BilateralService {
       message: 'Results list retrieved successfully.',
       status: 200,
     };
+  }
+
+  /**
+   * Attaches the public links documented in the bilateral contract:
+   * `pdf_link` (PDF / report view) and `prms_link` (web UI deep link).
+   * Same pattern as result.repository.ts (pdf_link) and the fetcher mapper.
+   */
+  private attachResultLinks(result: any): void {
+    if (!result?.result_code) return;
+    const phase = result.version_id ?? result.obj_version?.id ?? 6;
+    const pdfBase = (
+      process.env.FRONT_END_PDF_ENDPOINT ??
+      'https://reporting.cgiar.org/reports/result-details/'
+    ).replace(/\/+$/, '');
+    const frontendBase =
+      pdfBase.replace(/\/reports\/result-details$/, '') ||
+      'https://reporting.cgiar.org';
+    result.pdf_link = `${pdfBase}/${result.result_code}?phase=${phase}`;
+    result.prms_link = `${frontendBase}/result/result-detail/${result.result_code}/general-information?phase=${phase}`;
   }
 
   async getResultsForSync(
@@ -3775,19 +3815,62 @@ export class BilateralService {
     }
   }
 
+  /**
+   * Columns for the lead contact person.
+   *
+   * The email is matched against the directory. A match contributes both the FK and the
+   * directory's own `display_name`, which is better data than the payload's `name` — producers
+   * routinely send the email in that field. No match keeps the payload name as free text with a
+   * null FK: every reader of the FK is null-guarded and notifications do not use it, so a
+   * contact who legitimately sits outside CGIAR AD (a consultant, partner staff) is stored
+   * rather than refused.
+   *
+   * Deliberately does NOT invent a directory row from the payload. `AdUserService.searchUsers`
+   * is cache-first and `searchLocalUsers` filters only by `is_active`, so a row created here
+   * would be indistinguishable from a real person in the reporting tool's contact picker.
+   *
+   * Returns null when nothing was sent, so the caller can spread it without introducing the
+   * columns at all — writing an explicit null here is what used to clear a stored contact.
+   */
+  private async resolveLeadContactColumns(
+    bilateralDto: CreateBilateralDto,
+  ): Promise<{
+    lead_contact_person: string;
+    lead_contact_person_id: number | null;
+  } | null> {
+    const contact = bilateralDto.lead_contact_person;
+    if (!contact?.email) return null;
+
+    const adUser = await this._adUserService.resolveOrCreateContact(
+      contact.email,
+    );
+
+    return {
+      lead_contact_person: adUser?.display_name?.trim() || contact.name,
+      lead_contact_person_id: adUser?.id ?? null,
+    };
+  }
+
   private async initializeResultHeader({
     bilateralDto,
     userId,
     submittedUserId,
     version,
     year,
+    externalIdentity,
   }: {
     bilateralDto: CreateBilateralDto;
     userId: number;
     submittedUserId: number;
     version: any;
     year: any;
+    externalIdentity?: ExternalPlatformIdentity;
   }): Promise<Result> {
+    // Resolved up front so BOTH branches below persist it before their closing `findOne`.
+    // That ordering is the whole point: the returned entity must already carry the contact, or
+    // the later `save({ ...newResultHeader })` in `create` spreads stale nulls back over it.
+    const leadContact = await this.resolveLeadContactColumns(bilateralDto);
+
     const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
     if (handler?.initializeResultHeader) {
       const custom = await handler.initializeResultHeader({
@@ -3798,6 +3881,18 @@ export class BilateralService {
         year,
       });
       if (custom?.resultHeader) {
+        // The type handler builds its own header (knowledge products do), so the identity is
+        // applied here rather than duplicated inside every handler.
+        await this.applyExternalIdentity(
+          custom.resultHeader.id,
+          externalIdentity,
+        );
+        if (leadContact) {
+          await this._resultRepository.update(
+            custom.resultHeader.id,
+            leadContact,
+          );
+        }
         return this._resultRepository.findOne({
           where: { id: custom.resultHeader.id },
         });
@@ -3805,6 +3900,7 @@ export class BilateralService {
     }
 
     const saved = await this._resultRepository.save({
+      ...(externalIdentity ?? {}),
       created_by: userId,
       version_id: version.id,
       title: bilateralDto.title,
@@ -3822,11 +3918,58 @@ export class BilateralService {
       }),
       source: SourceEnum.Bilateral,
       status_id: ResultStatusData.PendingReview.value,
+      ...(leadContact ?? {}),
     });
 
     return this._resultRepository.findOne({
       where: { id: saved.id },
     });
+  }
+
+  /**
+   * P2-3166. Which external platform this request came from.
+   *
+   * `platform` is resolved by CLARISA from the API key, so it is authenticated. The body's
+   * `tenant` field carries a similar-looking string but is declared by the caller, so it is
+   * deliberately NOT used here — routing a webhook on a self-declared value would let a caller
+   * point our callbacks anywhere.
+   *
+   * `external_reference` is the platform's **own** identifier for this result — per result, taken
+   * verbatim from the payload. It is deliberately not the envelope's `idempotencyKey`: that is a
+   * composed deduplication key (`{tenant}:{type}:{op}:{uniqueId}`) the producer never chose, so it
+   * cannot be matched against anything on their side without parsing.
+   *
+   * Blank is normalised to `null`. A result created in the PRMS UI has no external system behind
+   * it, and `null` says that; an empty string would claim an id exists and is empty.
+   */
+  private buildExternalIdentity(
+    bilateralDto: CreateBilateralDto,
+    platform?: ClarisaApiKeyValidationMis,
+  ): ExternalPlatformIdentity {
+    return {
+      external_platform_id: platform?.id ?? null,
+      external_platform_code: platform?.acronym ?? null,
+      external_reference: bilateralDto?.external_reference?.trim() || null,
+    };
+  }
+
+  /**
+   * P2-3166. Only writes when there is something to write, so a result created without an
+   * authenticated platform (or before this shipped) keeps its nulls instead of being stamped with
+   * empty strings.
+   */
+  private async applyExternalIdentity(
+    resultId: number,
+    identity?: ExternalPlatformIdentity,
+  ): Promise<void> {
+    if (!identity) return;
+    const hasAnything =
+      identity.external_platform_id != null ||
+      identity.external_platform_code != null ||
+      identity.external_reference != null;
+    if (!hasAnything) return;
+
+    await this._resultRepository.update(resultId, identity);
   }
 
   private async runResultTypeHandlers(context: {
@@ -3882,12 +4025,66 @@ export class BilateralService {
     'CIAT-BIOVERSITY',
     'CIAT (ALLIANCE)',
     'BIOVERSITY (ALLIANCE)',
+    'CIAT ALLIANCE',
+    'BIOVERSITY ALLIANCE',
   ]);
+
+  /** Upper-cased, whitespace collapsed — the shape the centre alias table is keyed in. */
+  private normalizeCenterAliasKey(value?: string): string | null {
+    if (!value) return null;
+    const key = value.trim().replace(/\s+/g, ' ').toUpperCase();
+    return key.length ? key : null;
+  }
+
+  /**
+   * Resolves a centre straight from the alias table, bypassing institution matching.
+   *
+   * Only the two Alliance-descended centres are listed there, and only because their
+   * institution names cannot tell them apart — see
+   * `CENTER_ALIAS_TO_CLARISA_CENTER_CODE`. Everything else returns null and goes through
+   * the normal path.
+   */
+  private async resolveAliasedCenter(
+    name?: string,
+    acronym?: string,
+  ): Promise<ClarisaCenter | null> {
+    for (const value of [acronym, name]) {
+      const key = this.normalizeCenterAliasKey(value);
+      if (!key) continue;
+
+      const code = CENTER_ALIAS_TO_CLARISA_CENTER_CODE[key];
+      if (!code) continue;
+
+      const center = await this._clarisaCenters.findOne({
+        where: { code },
+      });
+      if (!center) {
+        // The alias table names a code CLARISA does not have. Falling through to the
+        // normal path would resolve it to the wrong centre silently, which is the very
+        // thing this table exists to prevent.
+        this.logger.error(
+          `Centre alias "${value}" maps to ${code}, which is not in clarisa_center. Not resolving it.`,
+        );
+        return null;
+      }
+
+      this.logger.debug(`Resolved centre alias "${value}" to ${code}`);
+      return center;
+    }
+
+    return null;
+  }
 
   /**
    * Normalizes institution name/acronym values.
    * Maps known aliases (ABC, CIAT-BIOVERSITY, CIAT (Alliance), Bioversity (Alliance))
    * to the full institution name for matching in Clarisa.
+   *
+   * Institutions only — centres go through `resolveAliasedCenter`. Collapsing both
+   * Alliance spellings onto one institution is acceptable for a contributing *partner*,
+   * where the Alliance is one organisation; it is wrong for a *centre*, where CLARISA
+   * deliberately separates CENTER-02 and CENTER-03 and the 2026 mapping is done per
+   * centre.
    */
   private normalizeInstitutionValue(
     value: string | undefined,
@@ -3903,7 +4100,7 @@ export class BilateralService {
     return value;
   }
 
-  private async handleLeadCenter(
+  public async handleLeadCenter(
     resultId: number,
     leadCenter: { name?: string; acronym?: string; institution_id?: number },
     userId: number,
@@ -3915,7 +4112,18 @@ export class BilateralService {
       return;
     }
 
-    // Normalize ABC to CIAT
+    // Alliance-descended centres resolve from the alias table before anything else: both
+    // of their institution names contain "Bioversity", so institution matching cannot
+    // tell CENTER-02 from CENTER-03.
+    const aliasedCenter = await this.resolveAliasedCenter(
+      leadCenter.name,
+      leadCenter.acronym,
+    );
+    if (aliasedCenter) {
+      await this.persistLeadCenter(resultId, aliasedCenter, userId);
+      return;
+    }
+
     const normalizedName = this.normalizeInstitutionValue(leadCenter.name);
     const normalizedAcronym = this.normalizeInstitutionValue(
       leadCenter.acronym,
@@ -3992,11 +4200,20 @@ export class BilateralService {
       return;
     }
 
+    await this.persistLeadCenter(resultId, selectedCenter, userId);
+  }
+
+  /** Flags a centre as the result's lead, whether the row already exists or not. */
+  private async persistLeadCenter(
+    resultId: number,
+    center: ClarisaCenter,
+    userId: number,
+  ): Promise<void> {
     try {
       const existing =
         await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
           resultId,
-          selectedCenter.code,
+          center.code,
         );
       if (existing) {
         await this._resultRepository.query(
@@ -4004,13 +4221,13 @@ export class BilateralService {
           [userId, existing.id],
         );
         this.logger.debug(
-          `Updated existing lead center flags (center=${selectedCenter.code}, result=${resultId})`,
+          `Updated existing lead center flags (center=${center.code}, result=${resultId})`,
         );
         return;
       }
       await this._resultsCenterRepository.save({
         result_id: resultId,
-        center_id: selectedCenter.code,
+        center_id: center.code,
         is_primary: true,
         is_leading_result: true,
         from_cgspace: false,
@@ -4018,13 +4235,151 @@ export class BilateralService {
         created_by: userId,
       });
       this.logger.log(
-        `Lead center stored for result ${resultId}: center_id=${selectedCenter.code}`,
+        `Lead center stored for result ${resultId}: center_id=${center.code}`,
       );
     } catch (err) {
       this.logger.error(
-        `Failed to save lead center for result ${resultId}: ${selectedCenter.code}`,
+        `Failed to save lead center for result ${resultId}: ${center.code}`,
         err instanceof Error ? err.stack : JSON.stringify(err),
       );
+    }
+  }
+
+  /**
+   * Populates result-association tables from `extracted_mds` produced by the AI draft pipeline.
+   * Called during draft promotion so that lead center, contributing partners, and geo focus
+   * are written to the DB without going through the full bilateral ingestion pipeline.
+   */
+  public async populateResultFromExtractedMds(
+    result: Result,
+    extractedMds: Record<string, any>,
+    userId: number,
+  ): Promise<void> {
+    if (!extractedMds) return;
+
+    if (extractedMds.lead_center) {
+      await this.handleLeadCenter(result.id, extractedMds.lead_center, userId);
+    }
+
+    const partners = extractedMds.contributing_partners;
+    if (Array.isArray(partners) && partners.length) {
+      await this.handleInstitutions(
+        result.id,
+        partners,
+        userId,
+        result.result_type_id,
+      );
+    }
+
+    const geoFocus = extractedMds.geo_focus;
+    if (geoFocus) {
+      try {
+        const scope = await this.findScope(
+          geoFocus.scope_code,
+          geoFocus.scope_label,
+        );
+        await this.handleRegions(result, scope, geoFocus.regions ?? []);
+        await this.handleCountries(
+          result,
+          geoFocus.countries ?? [],
+          geoFocus.subnational_areas ?? [],
+          scope.id,
+          userId,
+        );
+        await this._resultRepository.save({
+          ...result,
+          geographic_scope_id: this.resolveScopeId(
+            scope.id,
+            geoFocus.countries,
+          ),
+        });
+      } catch (err) {
+        this.logger.warn(
+          `populateResultFromExtractedMds: geo_focus skipped for result ${result.id} — ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Runs the type-specific handler (same as bilateral ingest `afterCreate`) against
+   * AI-extracted data during draft promotion. Failures are logged as warnings rather
+   * than propagated, because AI-extracted fields may be partial.
+   */
+  public async populateTypeSpecificFromExtractedMds(
+    result: Result,
+    extractedMds: Record<string, any>,
+    userId: number,
+  ): Promise<void> {
+    const handler = this.resultTypeHandlerMap.get(result.result_type_id);
+    if (!handler?.afterCreate) return;
+
+    const partialDto = {
+      result_type_id: result.result_type_id,
+      title: result.title,
+      innovation_development: extractedMds['innovation_development'],
+      capacity_sharing: extractedMds['capacity_sharing'],
+      innovation_use: extractedMds['innovation_use'],
+      policy_change: extractedMds['policy_change'],
+      knowledge_product: extractedMds['knowledge_product'],
+    } as any;
+
+    try {
+      await handler.afterCreate({
+        bilateralDto: partialDto,
+        resultId: result.id,
+        userId,
+        isDuplicateResult: false,
+      });
+    } catch (err) {
+      // Deliberately non-fatal (see the doc comment above), but logged at error level:
+      // a swallowed warning here is how P2-3359 stayed invisible — the result was
+      // created and the type-specific section silently stayed empty.
+      this.logger.error(
+        `populateTypeSpecificFromExtractedMds: type-specific data NOT stored for result ${result.id} (type ${result.result_type_id}) — ${err instanceof Error ? err.message : JSON.stringify(err)}`,
+        err instanceof Error ? err.stack : undefined,
+      );
+    }
+  }
+
+  public async populateInitiativeAndTocFromProgramCode(
+    resultId: number,
+    programCode: string | null | undefined,
+    userId: number,
+  ): Promise<void> {
+    if (!programCode) return;
+
+    const initiative = await this._clarisaInitiatives.findOne({
+      where: { official_code: programCode.toUpperCase() },
+    });
+
+    if (!initiative) {
+      this.logger.warn(
+        `populateInitiativeAndTocFromProgramCode: no initiative found for program_code=${programCode}`,
+      );
+      return;
+    }
+
+    await this.upsertResultInitiative(resultId, initiative.id, 1, userId);
+
+    const existingToc = await this._resultsTocResultsRepository.findOne({
+      where: {
+        result_id: resultId,
+        initiative_ids: initiative.id,
+        is_active: true,
+      },
+    });
+
+    if (!existingToc) {
+      await this._resultsTocResultsRepository.save({
+        created_by: userId,
+        toc_result_id: null,
+        initiative_ids: initiative.id,
+        result_id: resultId,
+        toc_level_id: null,
+        planned_result: true,
+        is_active: true,
+      });
     }
   }
 
@@ -4041,9 +4396,27 @@ export class BilateralService {
   ) {
     if (!Array.isArray(centers) || !centers.length) return;
 
+    // Resolved once: an Alliance centre sent as the lead has to be recognised as the same
+    // centre here too, whichever spelling each field uses.
+    const aliasedLeadCenter = leadCenter
+      ? await this.resolveAliasedCenter(leadCenter.name, leadCenter.acronym)
+      : null;
+
     for (const centerInput of centers) {
       if (!centerInput) continue;
-      // Normalize ABC to CIAT
+
+      // Same reason as in handleLeadCenter: institution matching cannot separate
+      // CENTER-02 from CENTER-03, so the alias table decides before the fuzzy search.
+      const aliasedCenter = await this.resolveAliasedCenter(
+        centerInput.name,
+        centerInput.acronym,
+      );
+      if (aliasedCenter) {
+        if (aliasedLeadCenter?.code === aliasedCenter.code) continue;
+        await this.persistContributingCenter(resultId, aliasedCenter, userId);
+        continue;
+      }
+
       const normalizedName = this.normalizeInstitutionValue(centerInput.name);
       const normalizedAcronym = this.normalizeInstitutionValue(
         centerInput.acronym,
@@ -4117,29 +4490,38 @@ export class BilateralService {
       }
       if (!selectedCenter) continue;
 
-      const existing =
-        await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
-          resultId,
-          selectedCenter.code,
-        );
-      if (existing) continue;
+      await this.persistContributingCenter(resultId, selectedCenter, userId);
+    }
+  }
 
-      try {
-        await this._resultsCenterRepository.save({
-          result_id: resultId,
-          center_id: selectedCenter.code,
-          is_primary: false,
-          is_leading_result: false,
-          from_cgspace: false,
-          is_active: true,
-          created_by: userId,
-        });
-      } catch (err) {
-        this.logger.error(
-          `Failed to save contributing center ${selectedCenter.code} for result ${resultId}`,
-          err instanceof Error ? err.stack : JSON.stringify(err),
-        );
-      }
+  /** Adds a centre as a contributor, leaving an existing row alone. */
+  private async persistContributingCenter(
+    resultId: number,
+    center: ClarisaCenter,
+    userId: number,
+  ): Promise<void> {
+    const existing =
+      await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
+        resultId,
+        center.code,
+      );
+    if (existing) return;
+
+    try {
+      await this._resultsCenterRepository.save({
+        result_id: resultId,
+        center_id: center.code,
+        is_primary: false,
+        is_leading_result: false,
+        from_cgspace: false,
+        is_active: true,
+        created_by: userId,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to save contributing center ${center.code} for result ${resultId}`,
+        err instanceof Error ? err.stack : JSON.stringify(err),
+      );
     }
   }
 

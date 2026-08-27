@@ -2,7 +2,7 @@ import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import { Socket } from 'ngx-socket-io';
 import { Router } from '@angular/router';
 import { User } from './classes/User';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 import { ApiService } from '../shared/services/api/api.service';
 import { ResultsNotificationsService } from '../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { environment } from '../../environments/environment';
@@ -29,7 +29,7 @@ export class WebsocketService {
 
   constructor(
     public api: ApiService,
-    public messageService: MessageService,
+    public messageService: PrToastService,
     public resultsNotificationsService: ResultsNotificationsService,
     public resultFrameworkReportingHomeService: ResultFrameworkReportingHomeService
   ) {

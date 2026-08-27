@@ -1,3 +1,9 @@
+// app-pr-dialog wrapper: reproduce the old p-dialog [style] width/maxWidth.
+::ng-deep app-pr-dialog .ai-review-dialog.pr-dialog {
+  width: 90vw;
+  max-width: 1200px;
+}
+
 .ai-review-container {
   display: flex;
   flex-direction: column;

@@ -33,12 +33,17 @@ export class CognitoService {
   // webSocket = inject(WebsocketService);
   rolesSE = inject(RolesService);
 
+  private getRedirectUri(): string {
+    return `${window.location.origin}/auth`;
+  }
+
   loginWithAzureAd() {
     if (this.isLoadingAzureAd()) return;
 
     this.isLoadingAzureAd.set(true);
 
-    this.api.resultsSE.GET_loginWithAzureAd(environment.production ? 'CGIAR-Account' : 'CGIAR-AzureAD').subscribe({
+    const provider = environment.production ? 'CGIAR-Account' : 'CGIAR-AzureAD';
+    this.api.resultsSE.GET_loginWithAzureAd(provider, this.getRedirectUri()).subscribe({
       next: res => {
         window.location.href = res?.response?.authUrl;
 
@@ -64,7 +69,7 @@ export class CognitoService {
       return;
     }
 
-    this.api.resultsSE.POST_validateCognitoCode(code).subscribe({
+    this.api.resultsSE.POST_validateCognitoCode(code, this.getRedirectUri()).subscribe({
       next: res => {
         this.updateCacheService(res);
         this.redirectToHome();
@@ -179,8 +184,15 @@ export class CognitoService {
   }
 
   redirectToHome() {
-    // setTimeout(() => {
+    // Back to the deep link the user was denied before logging in; otherwise '/', which
+    // the landing resolver turns into their first science program (or the Results Center).
+    const pending = this.authService.consumePendingRedirectUrl();
+    if (pending) {
+      this.router.navigateByUrl(pending).then(ok => {
+        if (!ok) this.router.navigate(['/']);
+      });
+      return;
+    }
     this.router.navigate(['/']);
-    // }, 1000);
   }
 }

@@ -76,15 +76,34 @@
           }
         </div>
 
+        <!-- P2-3085: read-only ToC metadata the submitter configured (from backend toc_contribution_review[]). -->
+        @if (notification?.is_map_to_toc && tocReview.length) {
+          <div class="toc_review">
+            @for (review of tocReview; track $index) {
+              <div class="toc_review_card">
+                <div class="toc_review_row"><span class="toc_review_label">Level</span><span class="toc_review_value">{{ review.level || '—' }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">High Level Output / Intermediate Outcome / 2030 Outcome</span><span class="toc_review_value">{{ review.outcome_label || '—' }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">Outcome Statement</span><span class="toc_review_value">{{ review.outcome_statement || '—' }}</span></div>
+                <!-- P2-3204: `statement` carries the TOC type name; `indicator_typology` is the internal sentinel ("custom"). -->
+                <div class="toc_review_row"><span class="toc_review_label">Indicator Typology</span><span class="toc_review_value">{{ tocTypologyOf(review) }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">Unit of measurement</span><span class="toc_review_value">{{ review.unit_of_measurement || '—' }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">Target</span><span class="toc_review_value">{{ review.target ?? '—' }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">Contribution Target</span><span class="toc_review_value">{{ review.contribution_target ?? '—' }}</span></div>
+              </div>
+            }
+          </div>
+        }
+
         <div class="notification_content_actions">
           @if (!isSent) {
-            @let buttonTextConfirm = isBilateralResult ? 'Accept contribution' : notification?.is_map_to_toc ? 'Accept' : 'Map and accept';
+            <!-- P2-3106: unify accept/reject labels to "Accept contribution" / "Decline contribution". Click handlers unchanged. -->
+            @let buttonTextConfirm = 'Accept contribution';
 
             <div class="notification_content_actions_buttons">
               <app-pr-button
                 [text]="buttonTextConfirm"
                 colorType="success"
-                (click)="notification?.is_map_to_toc ? acceptOrReject(true) : mapAndAccept(notification)"
+                (click)="onAcceptContribution()"
                 [rotating]="this.requestingAccept"
                 [disabled]="invalidateRequest()"
                 [icon]="this.requestingAccept ? 'loop' : ''"
@@ -94,7 +113,7 @@
                 tooltipStyleClass="tooltip-w-300"></app-pr-button>
 
               <app-pr-button
-                [text]="isBilateralResult ? 'Decline' : 'Reject'"
+                [text]="'Decline contribution'"
                 colorType="danger"
                 (click)="showConfirmRejectDialog.set(true)"
                 [verticalMargin]="0"
@@ -198,15 +217,12 @@
 </div>
 
 <!-- Reject contribution Dialog -->
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="showConfirmRejectDialog"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [draggable]="false"
-  [style]="{ padding: '0px' }"
   styleClass="confirmation-modal reject">
   <i class="pi pi-times modal-close-icon" (click)="showConfirmRejectDialog.set(false)"></i>
   <div class="modal-body">
@@ -241,12 +257,20 @@
     </p>
   </div>
   <div class="modal-actions">
-    <p-button label="Cancel" size="large" (click)="showConfirmRejectDialog.set(false)" variant="outlined" [disabled]="requestingReject"></p-button>
-    <p-button
-      label="Confirm"
-      size="large"
+    <app-pr-button
+      text="Cancel"
+      colorType="secondary"
+      padding="big"
+      (click)="showConfirmRejectDialog.set(false)"
+      [disabled]="requestingReject"
+      [ngClass]="{ globalDisabled: requestingReject }"></app-pr-button>
+    <app-pr-button
+      text="Confirm"
+      padding="big"
+      [icon]="requestingReject ? 'loop' : ''"
+      [rotating]="requestingReject"
       (click)="acceptOrReject(false)"
       [disabled]="invalidateRequest() || requestingReject"
-      [loading]="requestingReject"></p-button>
+      [ngClass]="{ globalDisabled: invalidateRequest() || requestingReject }"></app-pr-button>
   </div>
-</p-dialog>
+</app-pr-dialog>

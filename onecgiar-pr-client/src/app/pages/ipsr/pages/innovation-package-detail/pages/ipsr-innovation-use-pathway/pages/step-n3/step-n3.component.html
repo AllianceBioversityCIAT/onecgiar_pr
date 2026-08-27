@@ -34,7 +34,7 @@
         
 
         <div style="display: flex; align-items: center;">
-            <p-checkbox inputId="ReadinessDetails" name="check" [binary]="true" [(ngModel)]="this.showDetailsOfReadiness"
+            <input type="checkbox" class="pr-native-check" id="ReadinessDetails" name="check" [(ngModel)]="this.showDetailsOfReadiness"
             (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence = null"/>
         <label for="ReadinessDetails" style="margin-left: 10px;"> I want to provide evidence details. </label>
         </div>
@@ -65,7 +65,7 @@
         </app-pr-input>
 
         <div style="display: flex; align-items: center;">
-            <p-checkbox inputId="UseDetails" name="check" [binary]="true" [(ngModel)]="this.showDetailsOfUseLevel"
+            <input type="checkbox" class="pr-native-check" id="UseDetails" name="check" [(ngModel)]="this.showDetailsOfUseLevel"
             (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence = null"/>
             <label for="UseDetails" style="margin-left: 10px;"> I want to provide evidence details. </label>
         </div>

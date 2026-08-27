@@ -12,8 +12,8 @@
 
   <div
     class="description"
-    pTooltip="Welcome to the user management panel, here you can manage the users and their roles within the platform."
-    tooltipPosition="bottom">
+    prTooltip="Welcome to the user management panel, here you can manage the users and their roles within the platform."
+    prTooltipPosition="bottom">
     Welcome to the user management panel, here you can manage the users and their roles within the platform.
   </div>
 
@@ -26,18 +26,18 @@
           <!-- User search -->
           <div class="search-container">
             <label class="search-label" for="search-user-input" style="line-height: 20px; margin-bottom: 0">Search by user:</label>
-            <p-iconfield style="width: 100%">
-              <p-inputicon styleClass="pi pi-search" />
+            <span class="pr-search-box" style="width: 100%">
+              <span class="material-icons-round">search</span>
               <input
                 type="text"
-                pInputText
+                hlmInput
                 placeholder="Search"
                 [value]="searchText()"
                 (input)="onSearchInputChange($event)"
                 class="search-field"
                 style="height: 36px; width: 100%"
                 id="search-user-input" />
-            </p-iconfield>
+            </span>
           </div>
 
           <!-- Status filter -->
@@ -76,26 +76,17 @@
           <!-- Entity filter -->
           <div class="entity-filter">
             <label class="entity-label" for="entitiesSelect">Entity:</label>
-            <p-multiSelect
+            <app-pr-filter-multiselect
               #entitiesSelect
-              id="entitiesSelect"
               [options]="initiativesService.allInitiatives()"
-              [(ngModel)]="selectedEntities"
               optionLabel="official_code"
               placeholder="All"
-              (onChange)="getUsers()"
               [ngModel]="selectedEntities()"
-              [required]="false"
+              (ngModelChange)="onEntitiesChange($event)"
               [group]="true"
               optionGroupChildren="entities"
-              [style]="{ width: '100%', height: '36px' }">
-              <ng-template let-group #group>
-                <div class="flex items-center">
-                  <span>{{ group.name }}</span>
-                  <hr style="margin: 5px 0 0" />
-                </div>
-              </ng-template>
-            </p-multiSelect>
+              optionGroupLabel="name">
+            </app-pr-filter-multiselect>
           </div>
         </div>
 
@@ -115,12 +106,17 @@
 
   <!-- export button -->
   <div class="export-button">
-    <app-pr-button text="Download .xlsx" icon="file_download" [verticalMargin]="0" (click)="this.exportExcel(this.users())"></app-pr-button>
+    <app-pr-button
+      text="Download .xlsx"
+      icon="file_download"
+      [verticalMargin]="0"
+      (clickEvent)="exportExcel(users())"
+      (keydown.enter)="exportExcel(users())"></app-pr-button>
   </div>
 
   <!-- Users table -->
   <div class="table-container">
-    <p-table
+    <app-pr-table
       #userTable
       [value]="this.users()"
       [loading]="this.loading()"
@@ -128,26 +124,25 @@
       [rows]="10"
       [rowsPerPageOptions]="[10, 25, 50]"
       styleClass="p-datatable-gridlines p-datatable-sm user-table"
-      responsiveLayout="scroll"
       [style]="{
         'min-width': '200px',
         'max-width': this.dynamicPanelService.showCompletePanel() ? 'calc(100vw - 365px)' : 'calc(100vw - 178px)',
         transition: 'max-width 0.3s ease-in-out'
       }">
-      <ng-template pTemplate="header">
+      <ng-template prTableHeader>
         <tr style="height: 54px">
           @for (column of columns; track column.key) {
-            <th [style.width]="column.width" [pSortableColumn]="column.key" scope="col">
+            <th [style.width]="column.width" [prSortableColumn]="column.key" scope="col">
               <div class="header-content">
                 {{ column.label }}
-                <p-sortIcon [field]="column.key"></p-sortIcon>
+                <pr-sort-icon [field]="column.key"></pr-sort-icon>
               </div>
             </th>
           }
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="body" let-user let-i="rowIndex">
+      <ng-template prTableBody let-user let-i="index">
         <tr>
           <td>{{ user.firstName }} {{ user.lastName }}</td>
           <td>{{ user.emailAddress }}</td>
@@ -163,34 +158,50 @@
             </div>
           </td>
           <td>
-            <div class="entities-container">
+            <div class="assignment-cell">
               @if (user.entities?.length > 0) {
-                @let displayEntities = getDisplayEntities(user.entities);
-                @for (entity of displayEntities; track entity) {
-                  <div class="entity-chip">
-                    <span>{{ entity }}</span>
-                  </div>
-                }
-                @if (hasMoreEntities(user.entities)) {
-                  <button class="view-more-btn" (click)="showEntityOverlay($event, entityOverlay, user.entities)" #entityTrigger type="button">
-                    View more
-                  </button>
-
-                  <p-popover #entityOverlay [style]="{ maxWidth: '300px' }">
-                    <div class="overlay-entities-container">
-                      <div class="overlay-title">All Entities</div>
-                      <div class="overlay-entities-grid">
-                        @for (entity of user.entities; track entity) {
-                          <div class="entity-chip">
-                            <span>{{ entity }}</span>
-                          </div>
-                        }
-                      </div>
+                <span class="assignment-count">{{ getAssignmentCountLabel(user.entities, 'program', 'programs') }}</span>
+                <div class="assignment-chips">
+                  @for (entity of getDisplayAssignments(user.entities); track entity) {
+                    <div class="entity-chip">
+                      <span>{{ entity }}</span>
                     </div>
-                  </p-popover>
+                  }
+                </div>
+                @if (hasMoreAssignments(user.entities)) {
+                  <button
+                    class="view-more-btn"
+                    type="button"
+                    (click)="openAssignmentOverlay($event, 'Science Programs / Accelerators', user.entities, false)">
+                    View all
+                  </button>
                 }
               } @else {
-                <span class="no-entities">No reporting role assigned</span>
+                <span class="no-entities">—</span>
+              }
+            </div>
+          </td>
+          <td>
+            <div class="assignment-cell">
+              @if (user.centers?.length > 0) {
+                <span class="assignment-count">{{ getAssignmentCountLabel(user.centers, 'center', 'centers') }}</span>
+                <div class="assignment-chips">
+                  @for (center of getDisplayAssignments(user.centers); track center) {
+                    <div class="center-chip">
+                      <span>{{ center }}</span>
+                    </div>
+                  }
+                </div>
+                @if (hasMoreAssignments(user.centers)) {
+                  <button
+                    class="view-more-btn"
+                    type="button"
+                    (click)="openAssignmentOverlay($event, 'CGIAR Centers', user.centers, true)">
+                    View all
+                  </button>
+                }
+              } @else {
+                <span class="no-entities">—</span>
               }
             </div>
           </td>
@@ -204,7 +215,7 @@
           <td>
             <div class="action-buttons" [class.inactive-user]="!user.isActive">
               @if (user.isActive) {
-                <button type="button" class="action-btn" (click)="onEditUser(user)" pTooltip="Edit user" tooltipPosition="top">
+                <button type="button" class="action-btn" (click)="onEditUser(user)" prTooltip="Edit user" prTooltipPosition="top">
                   <i class="material-icons-round">edit</i>
                 </button>
               }
@@ -212,8 +223,8 @@
                 type="button"
                 class="action-btn action-btn-toggle"
                 (click)="onToggleUserStatus(user)"
-                [pTooltip]="user.isActive ? 'Deactivate user' : 'Activate user'"
-                tooltipPosition="top">
+                [prTooltip]="user.isActive ? 'Deactivate user' : 'Activate user'"
+                prTooltipPosition="top">
                 <i class="material-icons-round">{{ user.isActive ? 'person_off' : 'person' }}</i>
               </button>
             </div>
@@ -221,12 +232,12 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="emptymessage">
+      <ng-template prTableEmpty>
         <tr>
           <td [attr.colspan]="columns.length" class="no-data">No users match the entered criteria</td>
         </tr>
       </ng-template>
-    </p-table>
+    </app-pr-table>
 
     <!-- Floating counter like in global-completeness-status -->
     <div class="counter">
@@ -234,6 +245,33 @@
       <span class="total">{{ this.users().length }} total</span>
     </div>
   </div>
+
+  <!-- "View all" assignments overlay (replaces PrimeNG p-popover) -->
+  @if (assignmentOverlayOpen()) {
+    <div
+      class="pr-entities-panel"
+      [style.top.px]="overlayFlippedAbove ? null : overlayTop"
+      [style.bottom.px]="overlayFlippedAbove ? overlayBottom : null"
+      [style.left.px]="overlayLeft"
+      (click)="$event.stopPropagation()">
+      <div class="overlay-assignments-container">
+        <div class="overlay-title">{{ assignmentOverlayTitle() }}</div>
+        <ul class="overlay-assignments-list">
+          @for (item of assignmentOverlayItems(); track item) {
+            @let parsed = parseAssignmentLabel(item);
+            <li
+              class="overlay-assignment-item"
+              [class.overlay-assignment-item--center]="assignmentOverlayIsCenter()">
+              <span class="overlay-assignment-name">{{ parsed.entity }}</span>
+              @if (parsed.role) {
+                <span class="overlay-assignment-role">{{ parsed.role }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
 
   <!-- Manage User Modal Component -->
   <app-manage-user-modal

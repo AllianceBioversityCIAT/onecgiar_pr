@@ -13,12 +13,10 @@ import {
   signal,
   untracked
 } from '@angular/core';
-import { DrawerModule } from 'primeng/drawer';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
-import { TextareaModule } from 'primeng/textarea';
+import { HlmButton } from '@spartan/button';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { GeoscopeManagementModule } from '../../../../../../../../shared/components/geoscope-management/geoscope-management.module';
 import { ResultToReview, BilateralResultDetail } from './result-review-drawer.interfaces';
@@ -28,6 +26,7 @@ import { CapSharingContentComponent } from './components/cap-sharing-content/cap
 import { PolicyChangeContentComponent } from './components/policy-change-content/policy-change-content.component';
 import { InnovationUseContentComponent } from './components/innovation-use-content/innovation-use-content.component';
 import { SaveChangesJustificationDialogComponent } from './components/save-changes-justification-dialog/save-changes-justification-dialog.component';
+import { filterOutAvisaInitiatives } from '../../../../../../../../shared/utils/avisa-initiative.util';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { BilateralResultsService } from '../../../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
@@ -35,18 +34,14 @@ import { CentersService } from '../../../../../../../../shared/services/global/c
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { Router } from '@angular/router';
 import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
-import { TooltipModule } from 'primeng/tooltip';
-import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
   selector: 'app-result-review-drawer',
   imports: [
-    DrawerModule,
     CommonModule,
     FormsModule,
-    ButtonModule,
-    DialogModule,
-    TextareaModule,
+    HlmButton,
+    PrDialogComponent,
     GeoscopeManagementModule,
     KpContentComponent,
     InnoDevContentComponent,
@@ -56,8 +51,6 @@ import { SkeletonModule } from 'primeng/skeleton';
     SaveChangesJustificationDialogComponent,
     CustomFieldsModule,
     RdContributorsAndPartnersModule,
-    TooltipModule,
-    SkeletonModule
   ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
@@ -171,6 +164,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   isEditingTitle = signal<boolean>(false);
 
   rejectJustification: string = '';
+  /** P2-3157: optional reviewer comment attached to an approval (UX Finding 5.3.5). */
+  approveComment: string = '';
   saveChangesJustification: string = '';
   saveChangesType: 'toc' | 'dataStandard' | null = null;
   evidenceLinkInput: string = '';
@@ -1051,7 +1046,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio || 'SP';
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe({
           next: ({ response }) => {
-            this.contributingInitiativesList.set(response || []);
+            this.contributingInitiativesList.set(filterOutAvisaInitiatives(response || []));
             if (!primaryInitiativeId && response && response.length > 0 && response[0].id) {
               primaryInitiativeId = response[0].id;
             }
@@ -1570,13 +1565,18 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     const result = this.resultToReview();
     if (!result) return;
     this.isSaving.set(true);
+    // P2-3157 / UX Finding 5.3.5: the approval comment is optional and comes from the reviewer.
+    // It used to be the hardcoded literal 'Approved', which polluted the review history that the
+    // centre now reads back.
+    const comment = this.approveComment.trim();
     const body = {
       decision: 'APPROVE' as const,
-      justification: 'Approved'
+      ...(comment ? { justification: comment } : {})
     };
     this.api.resultsSE.PATCH_BilateralReviewDecision(result.id, body).subscribe({
       next: () => {
         this.showConfirmApproveDialog.set(false);
+        this.approveComment = '';
         this.isSaving.set(false);
         this.decisionMade.emit();
         this.closeDrawer();
@@ -1590,6 +1590,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   cancelApprove(): void {
     this.showConfirmApproveDialog.set(false);
+    this.approveComment = '';
   }
 
   onReject(): void {

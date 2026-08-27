@@ -98,17 +98,14 @@
   </app-save-button>
 </div>
 
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   header="Select core Innovation"
   [(visible)]="statusPdialog"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="true"
   [dismissableMask]="true"
-  [style]="{ padding: '0px', margin: '0px', width: '70vw' }"
-  [blockScroll]="true">
+  styleClass="innovation-package-creator-dialog">
   <div style="display: flex; justify-content: center; flex-direction: column">
     @if (this.innovationPackageCreatorBody.initiative_id) {
       <div class="modal_container">
@@ -118,4 +115,4 @@
       </div>
     }
   </div>
-</p-dialog>
+</app-pr-dialog>

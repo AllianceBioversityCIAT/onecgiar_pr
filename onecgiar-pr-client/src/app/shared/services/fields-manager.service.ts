@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { CustomField } from '../interfaces/customField.interface';
 import { DataControlService } from './data-control.service';
+import { ReportingDesignYear } from '../enum/reporting-design-year.enum';
 enum Portfolios {
   'P22' = 0,
   'P25' = 1
@@ -17,6 +18,55 @@ export class FieldsManagerService {
   portfolioAcronym = computed(() => this.dataControlSE.currentResultSignal()?.portfolio);
   isP25 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P25);
   isP22 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P22);
+  /**
+   * True when the open result's reporting phase is 2026+ → new Contributors & Partners
+   * layout, labels and validations (P2-3036). 2025 and earlier keep the legacy UI.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isContributorsPartners2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof year === 'number' && year >= ReportingDesignYear.ContributorsPartnersRedesign;
+  });
+  /**
+   * True when the open result's reporting phase is 2026+ → the Innovation Development form drops the
+   * "Demand of anticipated innovation user" section (P2-3263) and the Megatrends question (P2-3264),
+   * per epic P2-3243. 2025 and earlier keep both, showing whatever was answered.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isInnovationDevFormReduced2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof year === 'number' && year >= ReportingDesignYear.InnovationDevFormReduction;
+  });
+  /**
+   * True when the open result's reporting phase is 2026+ → new Geographic location
+   * "location of benefit" wording (P2-3036 AC9) for P25 Innovation results. 2025 keeps the legacy wording.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isGeographicLocation2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof year === 'number' && year >= ReportingDesignYear.GeographicLocationRedesign;
+  });
+  /**
+   * True when the open result's reporting phase is 2026+ → reporting-form guidance redesign
+   * (P2-3201 / INC-158283): AI assistant notes, "Description of Result" label and the guidance
+   * moved from inline grey boxes into ⓘ tooltips. 2025 and earlier keep the legacy presentation.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isReportingFormGuidance2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof year === 'number' && year >= ReportingDesignYear.ReportingFormGuidanceRedesign;
+  });
+  /**
+   * True when Lead Contact Person must be filled in: P25 from the 2026 phase on (P2-3225).
+   * Unlike the other thresholds here this one also gates on the portfolio, because P22 keeps the
+   * field optional regardless of year. Mirrors the server-side green check in
+   * `validation_general_information_P25`, so UI and validation agree on the same cut-off.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isLeadContactPersonMandatory2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return this.isP25() && typeof year === 'number' && year >= ReportingDesignYear.LeadContactPersonMandatory;
+  });
   isAnInnovation = computed(
     () => this.dataControlSE.currentResultSignal()?.result_type_id == 2 || this.dataControlSE.currentResultSignal()?.result_type_id == 7
   );
@@ -50,7 +100,8 @@ export class FieldsManagerService {
           </ul>`
       },
       '[general-info]-description': {
-        label: 'Description',
+        // P2-3201: renamed to "Description of Result" from the 2026 cycle on; earlier phases keep "Description".
+        label: this.isReportingFormGuidance2026() ? 'Description of Result' : 'Description',
         placeholder: 'Enter text',
         required: !this.dataControlSE.isKnowledgeProductSignal(),
         description: `<ul>
@@ -65,7 +116,7 @@ export class FieldsManagerService {
         placeholder: 'Search for a person (min 4 characters)',
         description: `For more precise results, we recommend searching by email or username.
     <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`,
-        required: this.isP25()
+        required: this.isLeadContactPersonMandatory2026()
       },
       '[general-info]-is_krs': {
         label: 'Is this result featured in a Key Result Story for the reporting year?',
@@ -138,7 +189,7 @@ export class FieldsManagerService {
             </ul>`
       },
       '[innovation-use-form]-has-innovation-link': {
-        label: 'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?',
+        label: 'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?',
         hide: this.isP22(),
         required: true
       },

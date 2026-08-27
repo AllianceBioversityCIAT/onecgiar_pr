@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { environment } from '../../../../../../../../environments/environment';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../shared/services/global/institutions.service';
@@ -31,6 +31,13 @@ export class CapDevInfoComponent implements OnInit {
     this.api.dataControlSE.currentResultSectionName.set('Capacity Sharing for Development information');
   }
 
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction: the body object is empty until the
+   * section GET lands, so without it every mandatory field paints orange ("empty") first.
+   * Released on `next` AND `error` — a failed GET must not leave the section shimmering.
+   */
+  readonly sectionLoading = signal(true);
+
   ngOnInit(): void {
     this.getSectionInformation();
     this.requestEvent();
@@ -51,11 +58,28 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_capacityDevelopent().subscribe(({ response }) => {
-      this.capDevInfoRoutingBody = response;
+    this.api.resultsSE.GET_capacityDevelopent().subscribe({
+      next: ({ response }) => {
+        this.capDevInfoRoutingBody = response;
+        // MySQL returns tinyint values (0/1) from this legacy endpoint. The radio
+        // options use booleans, so normalize them before binding to the control.
+        if (this.capDevInfoRoutingBody && 'is_attending_for_organization' in this.capDevInfoRoutingBody) {
+          this.capDevInfoRoutingBody.is_attending_for_organization = this.normalizeAttendanceValue(
+            this.capDevInfoRoutingBody.is_attending_for_organization
+          );
+        }
 
-      this.get_capdev_term_id();
+        this.get_capdev_term_id();
+        this.sectionLoading.set(false);
+      },
+      error: () => this.sectionLoading.set(false)
     });
+  }
+
+  normalizeAttendanceValue(value: unknown): boolean | null {
+    if (value === true || value === 1 || value === '1') return true;
+    if (value === false || value === 0 || value === '0') return false;
+    return null;
   }
 
   clean_capdev_term_2() {
@@ -85,6 +109,16 @@ export class CapDevInfoComponent implements OnInit {
 
   cleanOrganizationsList() {
     this.capDevInfoRoutingBody.institutions = [];
+  }
+
+  /**
+   * P2-3241. Feeds the hidden `appFeedbackValidation` reporter next to the organizations
+   * multi-select, which is what puts "Select organizations" in the bottom bar's missing-fields
+   * list. Mirrors the server's `COUNT(rbi.id) > 0` branch in `validation_capacity_dev_P25`:
+   * an organization is only demanded once the attendance question is answered "Yes".
+   */
+  get hasSelectedOrganizations(): boolean {
+    return (this.capDevInfoRoutingBody?.institutions?.length ?? 0) > 0;
   }
 
   validate_capdev_term_id() {

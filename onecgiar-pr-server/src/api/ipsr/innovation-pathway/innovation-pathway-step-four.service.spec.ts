@@ -301,6 +301,7 @@ describe('InnovationPathwayStepFourService', () => {
               institution_roles_id: 2,
               result_kp_mqap_institution_id: null,
               is_leading_result: false,
+              from_toc: false,
               created_by: 1,
               created_date: new Date(),
               last_updated_by: 1,
@@ -369,6 +370,7 @@ describe('InnovationPathwayStepFourService', () => {
         legacy_id: null,
         krs_url: null,
         is_krs: false,
+        has_innovation_link: null,
         no_applicable_partner: false,
         geographic_scope_id: 1,
         has_regions: false,
@@ -429,6 +431,11 @@ describe('InnovationPathwayStepFourService', () => {
         external_submitter: 2,
         external_submitted_date: new Date().toISOString(),
         external_submitted_comment: 'Test Comment',
+        // P2-3166. Null is the correct value here, not a placeholder: this is an IPSR result, so no
+        // external platform pushed it in. See the four null cases documented on `result.entity.ts`.
+        external_platform_id: null,
+        external_platform_code: null,
+        external_reference: null,
         evidence_array: [],
         results_capacity_development_object: null,
         results_innovations_dev_object: null,

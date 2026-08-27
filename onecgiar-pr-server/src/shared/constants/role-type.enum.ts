@@ -2,6 +2,7 @@ export enum RoleTypeEnum {
   INITIATIVE = 'Initiative',
   ACTION_AREA = 'Action_Area',
   APPLICATION = 'Application',
+  CENTER = 'Center',
 }
 
 export enum RoleEnum {
@@ -13,6 +14,7 @@ export enum RoleEnum {
   MEMBER = 6,
   ACTION_AREA_GLOBAL_DIRECTOR = 7,
   ACTION_AREA_COORDINATOR = 8,
+  CENTER_USER = 9,
 }
 
 export enum ModuleTypeEnum {

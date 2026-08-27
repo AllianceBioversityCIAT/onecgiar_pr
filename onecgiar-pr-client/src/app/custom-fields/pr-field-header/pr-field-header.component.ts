@@ -11,6 +11,8 @@ export class PrFieldHeaderComponent {
   @Input() simpleStyle: boolean;
   @Input() label: string;
   @Input() description: string;
+  // P2-3061: optional info tooltip shown as a material-icons "info" next to the label (project line: material-icons-round + pTooltip).
+  @Input() tooltip?: string = '';
   @Input() required: boolean = true;
   @Input() readOnly: boolean;
   @Input() useColon: boolean = true;

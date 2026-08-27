@@ -107,10 +107,14 @@ import {
   ReviewDecisionEnum,
 } from './dto/review-decision.dto';
 import { ReviewUpdateDto } from './dto/review-update.dto';
+import { UpdateBilateralGeneralInfoDto } from './dto/update-bilateral-general-info.dto';
 import {
   ResultReviewHistory,
   ReviewActionEnum,
 } from './result-review-history/entities/result-review-history.entity';
+import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
+import { WebhookDeliveryRepository } from './webhook/webhook-delivery.repository';
+import { WebhookRecipientType } from './webhook/entities/webhook-endpoint.entity';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
 import { isEmpty } from '../../shared/utils/object.utils';
@@ -216,6 +220,13 @@ export class ResultsService {
     private readonly _shareResultRequestService?: ShareResultRequestService,
     @Optional()
     private readonly _shareResultRequestRepository?: ShareResultRequestRepository,
+    @Optional()
+    private readonly _resultReviewHistoryRepository?: ResultReviewHistoryRepository,
+    // @Optional() on purpose: this keeps every existing spec that constructs ResultsService without
+    // it compiling, instead of adding one more provider to dozens of test modules (the P2-3214
+    // lesson). The one caller null-checks it.
+    @Optional()
+    private readonly _webhookDeliveryRepository?: WebhookDeliveryRepository,
   ) {}
 
   /**
@@ -834,45 +845,18 @@ export class ResultsService {
 
       let leadContactPersonId: number = null;
 
-      if (
-        resultGeneralInformation.lead_contact_person_data?.mail &&
-        this._adUserService
-      ) {
-        try {
-          let adUser = await this._adUserService.getUserByIdentifier(
+      if (resultGeneralInformation.lead_contact_person_data?.mail) {
+        if (this._adUserService) {
+          const adUser = await this._adUserService.resolveOrCreateContact(
             resultGeneralInformation.lead_contact_person_data.mail,
+            resultGeneralInformation.lead_contact_person_data,
           );
-
-          if (!adUser) {
-            const adUserRepository = this._adUserService['adUserRepository'];
-            if (adUserRepository && adUserRepository.saveFromADUser) {
-              adUser = await adUserRepository.saveFromADUser(
-                resultGeneralInformation.lead_contact_person_data,
-              );
-
-              this._logger.log(
-                `Created new AD user: ${adUser.mail} with ID: ${adUser.id}`,
-              );
-            }
-          } else {
-            this._logger.log(
-              `Found existing AD user: ${adUser.mail} with ID: ${adUser.id}`,
-            );
-          }
-
-          leadContactPersonId = adUser?.id || null;
-        } catch (error) {
+          leadContactPersonId = adUser?.id ?? null;
+        } else {
           this._logger.warn(
-            `Failed to process lead_contact_person_data: ${error.message}`,
+            'AdUserService not available, skipping lead_contact_person_data processing',
           );
         }
-      } else if (
-        resultGeneralInformation.lead_contact_person_data?.mail &&
-        !this._adUserService
-      ) {
-        this._logger.warn(
-          'AdUserService not available, skipping lead_contact_person_data processing',
-        );
       }
 
       const trimmedGeneralTitle = await this.assertUniqueActiveResultTitle(
@@ -2564,6 +2548,52 @@ export class ResultsService {
     );
   }
 
+  /**
+   * P2-3157 AC4 — review trail for a bilateral result, so a centre can read the exact
+   * justification the Science Program gave when rejecting it.
+   */
+  async getBilateralReviewHistory(resultId: number) {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return this._returnResponse.format({
+          message: 'The resultId parameter must be a valid positive number.',
+          statusCode: HttpStatus.BAD_REQUEST,
+          response: [],
+        });
+      }
+
+      if (!this._resultReviewHistoryRepository) {
+        this._logger.warn('ResultReviewHistoryRepository is not available');
+        return this._returnResponse.format({
+          message: 'Review history is not available',
+          statusCode: HttpStatus.OK,
+          response: [],
+        });
+      }
+
+      const history =
+        await this._resultReviewHistoryRepository.getReviewHistoryByResultId(
+          parsedResultId,
+        );
+
+      return this._returnResponse.format({
+        message: 'Review history retrieved successfully',
+        statusCode: HttpStatus.OK,
+        response: history ?? [],
+      });
+    } catch (error) {
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
+    }
+  }
+
   async getCenters(resultId: number) {
     try {
       const centers =
@@ -2580,6 +2610,201 @@ export class ResultsService {
       return this._returnResponse.format(
         error,
         !EnvironmentExtractor.isProduction(),
+      );
+    }
+  }
+
+  /**
+   * P2-3157 — in-app notification for a bilateral review decision (Approve / Reject).
+   *
+   * Recipients are the submitter plus every active Center User of the result's lead centre, so the
+   * centre still learns about the decision if the original submitter is gone. BR1 of the ticket
+   * forbids email for these transitions, so this deliberately does NOT consult
+   * `user_notification_settings` — those flags only gate email, and filtering on them here would
+   * silently suppress the in-app notification too.
+   *
+   * Never throws: the review decision is already committed by the time this runs.
+   */
+  private async emitBilateralReviewNotification(
+    resultId: number,
+    decision: ReviewDecisionEnum,
+    user: TokenDto,
+  ): Promise<void> {
+    try {
+      if (!this._notificationService) {
+        this._logger.warn(
+          `NotificationService unavailable; skipping bilateral review notification for result ${resultId}`,
+        );
+        return;
+      }
+
+      const recipientIds = await this.getBilateralReviewRecipientIds(
+        resultId,
+        user.id,
+      );
+
+      if (!recipientIds.length) {
+        this._logger.warn(
+          `No recipients resolved for bilateral review notification on result ${resultId}`,
+        );
+        return;
+      }
+
+      const notificationType =
+        decision === ReviewDecisionEnum.APPROVE
+          ? NotificationTypeEnum.BILATERAL_RESULT_APPROVED
+          : NotificationTypeEnum.BILATERAL_RESULT_REJECTED;
+
+      await this._notificationService.emitResultNotification(
+        NotificationLevelEnum.RESULT,
+        notificationType,
+        recipientIds,
+        user.id,
+        resultId,
+      );
+    } catch (error) {
+      this._logger.warn(
+        `Failed to emit bilateral review notification for result ${resultId}`,
+        error as Error,
+      );
+    }
+  }
+
+  /**
+   * Submitter + every active Center User of the result's lead centre, de-duplicated.
+   * The emitter is filtered out downstream by `emitResultNotification`.
+   */
+  private async getBilateralReviewRecipientIds(
+    resultId: number,
+    emitterUserId: number,
+  ): Promise<number[]> {
+    const recipientIds = new Set<number>();
+
+    const result = await this._resultRepository.findOne({
+      where: { id: resultId },
+      select: ['id', 'external_submitter', 'created_by'],
+    });
+
+    // `external_submitter` is the bilateral submitter resolved at ingestion; `created_by` is the
+    // fallback when the payload carried no `submitted_by` block.
+    const submitterId = Number(
+      result?.external_submitter ?? result?.created_by,
+    );
+    if (Number.isFinite(submitterId) && submitterId > 0) {
+      recipientIds.add(submitterId);
+    }
+
+    const leadCenterCode = await this.getLeadCenterCode(resultId);
+    if (leadCenterCode && this._roleByUserRepository) {
+      try {
+        const centerUserIds =
+          await this._roleByUserRepository.getUserIdsByCenter(leadCenterCode);
+        centerUserIds.forEach((id) => recipientIds.add(id));
+      } catch (error) {
+        this._logger.warn(
+          `Failed to resolve center users for center ${leadCenterCode}`,
+          error as Error,
+        );
+      }
+    }
+
+    recipientIds.delete(emitterUserId);
+    return Array.from(recipientIds.values());
+  }
+
+  /** CLARISA code of the result's lead centre, or null when none is flagged. */
+  private async getLeadCenterCode(resultId: number): Promise<string | null> {
+    try {
+      const centers =
+        await this._resultsCenterRepository.getAllResultsCenterByResultId(
+          resultId,
+        );
+
+      const leadCenter = (centers ?? []).find(
+        (center) => Number(center?.is_leading_result) === 1,
+      );
+
+      return leadCenter?.code ? String(leadCenter.code) : null;
+    } catch (error) {
+      this._logger.warn(
+        `Failed to resolve lead center for result ${resultId}`,
+        error as Error,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * P2-3166 AC1/AC3 — queue an outbound webhook for a final review decision.
+   *
+   * Only enqueues. The payload is built and POSTed by `WebhookDispatchCron`, which is why this needs
+   * nothing but a repository: `BilateralModule` already imports `ResultsModule`, so reaching for the
+   * payload builder here would close a dependency cycle. See
+   * `docs/specs/bilateral/webhook-external-platforms/design.md` §2.3.
+   *
+   * Non-blocking and never throws: the decision is committed by the time we get here, so a delivery
+   * that cannot even be queued must not turn a successful review into a 500.
+   */
+  private async enqueueBilateralWebhook(
+    resultId: number,
+    decision: ReviewDecisionEnum,
+  ): Promise<void> {
+    try {
+      if (!this._webhookDeliveryRepository) {
+        this._logger.warn(
+          `WebhookDeliveryRepository unavailable; skipping webhook enqueue for result ${resultId}`,
+        );
+        return;
+      }
+
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId },
+        select: ['id', 'external_platform_id'],
+      });
+
+      // The predicate is `external_platform_id`, NOT `source`. `SourceEnum.Bilateral` has the literal
+      // value 'API', which means "is W3/bilateral" and not "arrived through the external API" — a
+      // centre creating a result in the PRMS UI, an AI draft promotion, and anything under SGP-02 all
+      // carry 'API' with no API key and therefore no platform to notify. See the four null cases on
+      // `result.entity.ts`.
+      const platformId = Number(result?.external_platform_id);
+      if (!Number.isFinite(platformId) || platformId <= 0) {
+        // OQ-1: if product decides centre-authored results are also notified, the CENTER branch goes
+        // here, resolving the recipient through `getLeadCenterCode`. `webhook_endpoint` already
+        // carries the discriminator, so that is rows and a branch — no migration.
+        this._logger.log(
+          `Result ${resultId} has no originating external platform; no webhook queued`,
+        );
+        return;
+      }
+
+      const endpoint = await this._webhookDeliveryRepository.findActiveEndpoint(
+        WebhookRecipientType.PLATFORM,
+        platformId,
+      );
+
+      if (!endpoint) {
+        // Not an error. A platform that pushes results without registering a callback endpoint is a
+        // supported configuration.
+        this._logger.log(
+          `No active webhook endpoint for platform ${platformId}; no webhook queued for result ${resultId}`,
+        );
+        return;
+      }
+
+      const delivery = await this._webhookDeliveryRepository.enqueue(
+        resultId,
+        endpoint.id,
+        decision,
+      );
+
+      this._logger.log(
+        `Queued webhook delivery ${delivery.id} for result ${resultId} (${decision})`,
+      );
+    } catch (error) {
+      this._logger.error(
+        `Failed to queue webhook delivery for result ${resultId}`,
+        error as Error,
       );
     }
   }
@@ -3139,6 +3364,7 @@ export class ResultsService {
 
   async getBilateralResultById(
     resultId: number,
+    versionId?: number,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
       if (!resultId || resultId <= 0) {
@@ -3149,9 +3375,17 @@ export class ResultsService {
         };
       }
 
-      const result = await this._resultRepository.findOne({
-        where: { id: resultId, source: SourceEnum.Bilateral },
-      });
+      const result = versionId
+        ? await this._resultRepository.findOne({
+            where: {
+              result_code: resultId,
+              version_id: versionId,
+              source: SourceEnum.Bilateral,
+            },
+          })
+        : await this._resultRepository.findOne({
+            where: { id: resultId, source: SourceEnum.Bilateral },
+          });
 
       if (!result) {
         return {
@@ -3161,21 +3395,31 @@ export class ResultsService {
         };
       }
 
+      const internalId = result.id;
+
       const [commonFields, tocMetadata, geoScope, contributingCenters] =
-        await this._loadBilateralBaseData(resultId);
+        await this._loadBilateralBaseData(internalId);
 
       const contributingInstitutions =
-        await this._loadContributingInstitutions(resultId);
+        await this._loadContributingInstitutions(internalId);
 
       const [contributingProjects, contributingInitiatives, evidence] =
-        await this._loadBilateralRelatedData(resultId);
+        await this._loadBilateralRelatedData(internalId);
 
       const resultTypeResponse = await this._loadBilateralResultTypeData(
-        resultId,
+        internalId,
         result.result_type_id,
       );
 
       const tocResponse = (tocMetadata?.response as Record<string, any>) ?? {};
+
+      const impactAreaScores = await this._resultImpactAreaScoresService.find(
+        internalId,
+        undefined,
+        {
+          impact_area_score: true,
+        },
+      );
 
       const mappedResult = {
         commonFields: commonFields ?? null,
@@ -3189,6 +3433,12 @@ export class ResultsService {
         contributingInitiatives: contributingInitiatives ?? [],
         evidence: evidence ?? [],
         resultTypeResponse: resultTypeResponse ?? [],
+        impactAreaScores: (impactAreaScores ?? []).map((r: any) => ({
+          id: r.id,
+          impact_area_score_id: r.impact_area_score_id,
+          impact_area: r.impact_area_score?.impact_area ?? null,
+          name: r.impact_area_score?.name ?? null,
+        })),
       };
 
       return {
@@ -3212,6 +3462,20 @@ export class ResultsService {
       this._logger.warn(
         `Common fields for Bilateral result data not found (resultId: ${resultId})`,
       );
+    } else if (commonFields.lead_contact_person_id && this._adUserRepository) {
+      try {
+        commonFields.lead_contact_person_data =
+          await this._adUserRepository.findOne({
+            where: {
+              id: commonFields.lead_contact_person_id,
+              is_active: true,
+            },
+          });
+      } catch (error) {
+        this._logger.warn(
+          `Failed to get lead contact person data for Bilateral result (resultId: ${resultId}): ${error.message}`,
+        );
+      }
     }
 
     if (!tocMetadata) {
@@ -3521,6 +3785,21 @@ export class ResultsService {
           { is_active: false },
         );
       }
+
+      // P2-3157: notify the centre in-app. Post-commit and non-blocking on purpose — the
+      // decision is already persisted, so a notification failure must never fail the request.
+      await this.emitBilateralReviewNotification(
+        parsedResultId,
+        reviewDecisionDto.decision,
+        user,
+      );
+
+      // P2-3166 AC1: queue the outbound webhook. Same posture, and for a stronger reason — this one
+      // ends in a third party's endpoint. Only the enqueue happens here; the POST is the cron's job.
+      await this.enqueueBilateralWebhook(
+        parsedResultId,
+        reviewDecisionDto.decision,
+      );
 
       return {
         response: {
@@ -3941,6 +4220,10 @@ export class ResultsService {
       accepted_contributing_initiatives,
       pending_contributing_initiatives,
     } = contributingInitiatives;
+    const hasPendingPayload = Object.prototype.hasOwnProperty.call(
+      contributingInitiatives,
+      'pending_contributing_initiatives',
+    );
 
     // Determine if Admin + Approved → create with request_status_id = 1
     const targetRequestStatusId = await this._resolveRequestStatusId(
@@ -3982,7 +4265,11 @@ export class ResultsService {
       }
     }
 
-    // Handle pending_contributing_initiatives
+    if (!hasPendingPayload) {
+      return;
+    }
+
+    // Handle pending_contributing_initiatives (explicit in payload)
     if (!pending_contributing_initiatives?.length) {
       // If there are no pending in the payload, delete all with the target request_status_id
       await this._shareResultRequestRepository.update(
@@ -4291,6 +4578,7 @@ export class ResultsService {
     }
 
     const newRecord = repo.create({
+      results_id: resultId,
       result_object: { id: resultId } as Result,
       created_by: userId,
       last_updated_by: userId,
@@ -4669,6 +4957,227 @@ export class ResultsService {
           status: error.getStatus(),
         };
       }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateBilateralGeneralInfo(
+    resultId: number,
+    dto: UpdateBilateralGeneralInfoDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (
+        !dto.title?.trim() &&
+        !dto.description?.trim() &&
+        dto.lead_contact_person === undefined &&
+        dto.lead_contact_person_data === undefined &&
+        dto.gender_tag_level_id === undefined &&
+        dto.climate_change_tag_level_id === undefined &&
+        dto.nutrition_tag_level_id === undefined &&
+        dto.environmental_biodiversity_tag_level_id === undefined &&
+        dto.poverty_tag_level_id === undefined &&
+        dto.gender_impact_area_ids === undefined &&
+        dto.climate_impact_area_ids === undefined &&
+        dto.nutrition_impact_area_ids === undefined &&
+        dto.environmental_biodiversity_impact_area_ids === undefined &&
+        dto.poverty_impact_area_ids === undefined
+      ) {
+        return {
+          response: {},
+          message: 'At least one field must be provided.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const bilateralResult = await this._resultRepository.findOne({
+        where: { id: parsedResultId, is_active: true },
+        select: ['id', 'version_id', 'source', 'title'],
+      });
+      if (!bilateralResult) {
+        return {
+          response: {},
+          message: 'Result not found.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const updates: Partial<Result> = {};
+
+      if (dto.title?.trim()) {
+        if (dto.title.trim() !== bilateralResult.title) {
+          const existing = await this._resultRepository.findOne({
+            where: {
+              title: dto.title.trim(),
+              is_active: true,
+              version_id: bilateralResult.version_id,
+            },
+          });
+          if (existing?.id && existing.id !== parsedResultId) {
+            return {
+              response: {},
+              message: 'A result with this title already exists.',
+              status: HttpStatus.CONFLICT,
+            };
+          }
+          (updates as any).title = dto.title.trim();
+        }
+      }
+
+      if (dto.description?.trim() !== undefined) {
+        (updates as any).description = dto.description.trim();
+      }
+
+      if (dto.lead_contact_person !== undefined) {
+        (updates as any).lead_contact_person = dto.lead_contact_person || null;
+      }
+
+      if (dto.lead_contact_person_data?.mail && this._adUserService) {
+        const adUser = await this._adUserService.resolveOrCreateContact(
+          dto.lead_contact_person_data.mail,
+          dto.lead_contact_person_data,
+        );
+        (updates as any).lead_contact_person_id = adUser?.id ?? null;
+      } else if (dto.lead_contact_person_data !== undefined) {
+        (updates as any).lead_contact_person_id = null;
+      }
+
+      const DAC_TAG_FIELDS: { dtoKey: string; col: string }[] = [
+        { dtoKey: 'gender_tag_level_id', col: 'gender_tag_level_id' },
+        {
+          dtoKey: 'climate_change_tag_level_id',
+          col: 'climate_change_tag_level_id',
+        },
+        { dtoKey: 'nutrition_tag_level_id', col: 'nutrition_tag_level_id' },
+        {
+          dtoKey: 'environmental_biodiversity_tag_level_id',
+          col: 'environmental_biodiversity_tag_level_id',
+        },
+        { dtoKey: 'poverty_tag_level_id', col: 'poverty_tag_level_id' },
+      ];
+      for (const { dtoKey, col } of DAC_TAG_FIELDS) {
+        if ((dto as any)[dtoKey] !== undefined) {
+          (updates as any)[col] = (dto as any)[dtoKey];
+        }
+      }
+
+      const DAC_IMPACT_FIELDS = [
+        { dtoKey: 'gender_impact_area_ids' },
+        { dtoKey: 'climate_impact_area_ids' },
+        { dtoKey: 'nutrition_impact_area_ids' },
+        { dtoKey: 'environmental_biodiversity_impact_area_ids' },
+        { dtoKey: 'poverty_impact_area_ids' },
+      ];
+      const hasImpactAreaUpdates = DAC_IMPACT_FIELDS.some(
+        (f) => (dto as any)[f.dtoKey] !== undefined,
+      );
+
+      if (Object.keys(updates).length === 0 && !hasImpactAreaUpdates) {
+        return {
+          response: { id: parsedResultId },
+          message: 'No changes to apply.',
+          status: HttpStatus.OK,
+        };
+      }
+
+      await this._dataSource.transaction(async (manager) => {
+        await this._validateBilateralResultForUpdate(
+          manager,
+          parsedResultId,
+          user,
+        );
+
+        if (Object.keys(updates).length > 0) {
+          await manager.update(Result, parsedResultId, updates);
+        }
+
+        const hasAnyImpactUpdate = DAC_IMPACT_FIELDS.some(
+          (f) => (dto as any)[f.dtoKey] !== undefined,
+        );
+
+        if (hasAnyImpactUpdate) {
+          const allScores: { impact_area_score_id: number }[] = [];
+          for (const { dtoKey } of DAC_IMPACT_FIELDS) {
+            const ids = (dto as any)[dtoKey];
+            if (ids && Array.isArray(ids)) {
+              for (const id of ids) {
+                allScores.push({ impact_area_score_id: Number(id) });
+              }
+            }
+          }
+          await this._resultImpactAreaScoresService.create(
+            parsedResultId,
+            allScores,
+            'impact_area_score_id',
+            { userId: user.id, manager },
+          );
+        }
+      });
+
+      return {
+        response: { id: parsedResultId, ...updates },
+        message: 'General info updated successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getBilateralCenterResults(centerId: string, versionId: string) {
+    try {
+      const parsedVersionId = Number(versionId);
+
+      if (!centerId?.trim()) {
+        return {
+          response: [],
+          message: 'centerId is required.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!parsedVersionId || isNaN(parsedVersionId)) {
+        return {
+          response: [],
+          message: 'versionId is required and must be a valid number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const results = await this._resultRepository.getResultsByBilateralCenter(
+        centerId,
+        parsedVersionId,
+      );
+
+      return {
+        response: results,
+        message: 'Bilateral center results retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }

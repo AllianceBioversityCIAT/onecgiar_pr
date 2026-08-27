@@ -27,7 +27,7 @@ import { ClarisaGeographicScope } from './clarisa-geographic-scopes/entities/cla
 import { ClarisaGeoscopeDto } from './dtos/clarisa-geoscope.dto';
 import { ClarisaCenter } from './clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaCgiarEntityTypeDto } from './dtos/clarisa-cgiar-entity-type.dto';
-import { ClarisaCgiarEntityDto } from './dtos/clarisa-cgiar-entity.dto';
+import { ClarisaCenterDto } from './clarisa-centers/dto/clarisa-center.dto';
 import { ClarisaPolicyType } from './clarisa-policy-types/entities/clarisa-policy-type.entity';
 import { ClarisaSdg } from './clarisa-sdgs/entities/clarisa-sdg.entity';
 import { ClarisaSdgsTarget } from './clarisa-sdgs-targets/entities/clarisa-sdgs-target.entity';
@@ -59,8 +59,16 @@ type Params = {
  * @property {'version'} version - Denotes the version of the endpoint.
  * @property {'type'} type - Defines the type or category of the item.
  * @property {'status'} status - Represents the current status of the item.
+ * @property {'phase'} phase - Filters W3 Registry-sourced projects by reporting phase (e.g. 2026).
  */
-type ClarisaParam = 'show' | 'from' | 'version' | 'type' | 'status' | 'year';
+type ClarisaParam =
+  | 'show'
+  | 'from'
+  | 'version'
+  | 'type'
+  | 'status'
+  | 'year'
+  | 'phase';
 
 /**
  * Represents the HTTP methods that can be used in requests.
@@ -275,13 +283,25 @@ export class ClarisaEndpoints<Entity, Dto> {
   );
 
   /**
-   * Represents the endpoint configuration for fetching all CGIAR entities.
+   * Represents the endpoint configuration for fetching all active centers.
    */
-  public static readonly CGIAR_ENTITIES = new ClarisaEndpoints(
-    'cgiar-entities',
+  public static readonly CENTERS_ACTIVE = new ClarisaEndpoints(
+    'centers',
     'GET',
     ClarisaCenter,
-    ClarisaEndpoints.cgiarEntityMapper,
+    (data: ClarisaCenterDto[]) => ClarisaEndpoints.centerMapper(data, true),
+    { show: 'active' },
+  );
+
+  /**
+   * Represents the endpoint configuration for fetching all inactive centers.
+   */
+  public static readonly CENTERS_INACTIVE = new ClarisaEndpoints(
+    'centers',
+    'GET',
+    ClarisaCenter,
+    (data: ClarisaCenterDto[]) => ClarisaEndpoints.centerMapper(data, false),
+    { show: 'inactive' },
   );
 
   /**
@@ -335,11 +355,28 @@ export class ClarisaEndpoints<Entity, Dto> {
     ClarisaEndpoints.portfolioMapper,
   );
 
+  /**
+   * Params for the W3 Registry cutover on the `projects` endpoint.
+   *
+   * CLARISA's `w3-registry-integration` branch tags W3-sourced bilateral projects
+   * with `phase: 2026`; legacy CLARISA-native rows are 2020-2025. As of writing
+   * that branch is not yet deployed to CLARISA's test or prod environments, so
+   * PROJECTS below intentionally does NOT pass this param yet — sending it against
+   * an environment that doesn't recognize `phase` is harmless (ignored), but
+   * activating it before an environment actually has phase-2026 data would make
+   * the bilateral project selector return a near-empty list for every center.
+   *
+   * To activate once CLARISA confirms the environment is ready, pass this as
+   * PROJECTS' 5th constructor argument.
+   */
+  private static readonly PROJECTS_W3_PARAMS: Params = { phase: 2026 };
+
   public static readonly PROJECTS = new ClarisaEndpoints(
     'projects',
     'GET',
     ClarisaProject,
     ClarisaEndpoints.projectMapper,
+    // Not yet active — see PROJECTS_W3_PARAMS above.
   );
 
   /**
@@ -516,20 +553,24 @@ export class ClarisaEndpoints<Entity, Dto> {
   }
 
   /**
-   * Maps an array of `ClarisaCgiarEntityDto` objects to an array of `DeepPartial<ClarisaCenter>` objects.
-   * Filters the input data to include only entities with `cgiarEntityTypeDTO` codes 4 or 21.
+   * Maps an array of `ClarisaCenterDto` objects to an array of `DeepPartial<ClarisaCenter>` objects.
+   * The `isActive` flag is provided by the endpoint (`show=active` / `show=inactive`) because the
+   * CLARISA `/centers` response never includes an `is_active` field.
    *
-   * @param data - An array of `ClarisaCgiarEntityDto` objects to be filtered and mapped.
-   * @returns An array of `DeepPartial<ClarisaCenter>` objects that match the filter criteria.
+   * @param data - An array of `ClarisaCenterDto` objects to be mapped.
+   * @param isActive - Whether the fetched centers are active or inactive.
+   * @returns An array of `DeepPartial<ClarisaCenter>` objects.
    */
-  static cgiarEntityMapper(
-    data: ClarisaCgiarEntityDto[],
+  static centerMapper(
+    data: ClarisaCenterDto[],
+    isActive: boolean,
   ): DeepPartial<ClarisaCenter>[] {
-    return data.filter(
-      (item) =>
-        item.cgiarEntityTypeDTO?.code == 4 ||
-        item.cgiarEntityTypeDTO?.code == 21,
-    ) as DeepPartial<ClarisaCenter>[];
+    return data.map((item) => ({
+      code: item.code,
+      institutionId: item.institutionId,
+      financial_code: item.financial_code,
+      isActive,
+    }));
   }
 
   /**
@@ -612,6 +653,32 @@ export class ClarisaEndpoints<Entity, Dto> {
       isActive: item.is_active ?? null,
       createdBy: item.created_by ?? null,
       updatedBy: item.updated_by ?? null,
+      // W3 Registry fields: CLARISA environments before `w3-registry-integration`
+      // don't send these at all (the key is `undefined`, not `null`). Omit the key
+      // entirely in that case so syncProjects()'s update() doesn't null out a
+      // column CLARISA simply doesn't support yet on this environment — an
+      // explicit `null` here means "CLARISA sent null", not "CLARISA has no such
+      // field". Without this, every 8h sync would wipe the phase-2025 backfill
+      // (and any other W3 field) back to NULL on every existing project.
+      ...(item.phase !== undefined ? { phase: item.phase } : {}),
+      ...(item.external_source !== undefined
+        ? { externalSource: item.external_source }
+        : {}),
+      ...(item.external_project_id !== undefined
+        ? { externalProjectId: item.external_project_id }
+        : {}),
+      ...(item.external_code !== undefined
+        ? { externalCode: item.external_code }
+        : {}),
+      ...(item.source_center_acronym !== undefined
+        ? { sourceCenterAcronym: item.source_center_acronym }
+        : {}),
+      ...(item.source_center_name !== undefined
+        ? { sourceCenterName: item.source_center_name }
+        : {}),
+      ...(item.source_status !== undefined
+        ? { sourceStatus: item.source_status }
+        : {}),
     }));
   }
 }

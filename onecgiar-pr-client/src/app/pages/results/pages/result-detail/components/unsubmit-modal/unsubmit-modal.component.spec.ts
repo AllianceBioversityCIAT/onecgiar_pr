@@ -7,9 +7,6 @@ import { PrTextareaComponent } from '../../../../../../custom-fields/pr-textarea
 import { PrWordCounterComponent } from '../../../../../../custom-fields/pr-word-counter/pr-word-counter.component';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PrFieldValidationsComponent } from '../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
-import { TextareaModule } from 'primeng/textarea';
-import { DialogModule } from 'primeng/dialog';
-import { TooltipModule } from 'primeng/tooltip';
 import { FormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -50,9 +47,6 @@ describe('UnsubmitModalComponent', () => {
       ],
       imports: [
         HttpClientTestingModule,
-        DialogModule,
-        TooltipModule,
-        TextareaModule,
         FormsModule
       ],
       providers: [

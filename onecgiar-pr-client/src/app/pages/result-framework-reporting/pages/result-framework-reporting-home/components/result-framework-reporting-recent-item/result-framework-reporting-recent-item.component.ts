@@ -1,12 +1,12 @@
+import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { RecentActivity } from '../../../../../../shared/interfaces/recentActivity.interface';
 import { FormatTimeAgoPipe } from '../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
 import { RouterLink } from '@angular/router';
-import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-result-framework-reporting-recent-item',
-  imports: [FormatTimeAgoPipe, RouterLink, TooltipModule],
+  imports: [PrTooltipDirectiveModule, FormatTimeAgoPipe, RouterLink],
   templateUrl: './result-framework-reporting-recent-item.component.html',
   styleUrl: './result-framework-reporting-recent-item.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -21,5 +21,12 @@ export class ResultFrameworkReportingRecentItemComponent {
 
   getTooltipText() {
     return `View result: ${this.item?.resultCode} - ${this.item?.resultTitle}`;
+  }
+
+  // "RESULT_CREATED" → "Result created"; falls back to the historical label
+  getEventLabel(): string {
+    const raw = this.item?.eventType?.replace(/_/g, ' ').trim();
+    if (!raw) return 'Result created';
+    return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
   }
 }

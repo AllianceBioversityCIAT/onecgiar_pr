@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit } from '@angular/core';
+import { Component, DoCheck, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PartnersRequestBody } from './models/partnersRequestBody.model';
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
@@ -27,7 +27,17 @@ export class PartnersRequestComponent implements OnInit, DoCheck {
     public router: Router
   ) {}
 
-  showForm = true;
+  // P2-3322: `cleanObject()` toggles this flag `false -> setTimeout -> true` to remount the form. As a plain
+  // field the delayed write notified nothing, so under zoneless change detection (Angular 21, f33bffcee) the
+  // second render pass never ran and reopening the dialog showed an empty modal until a page reload.
+  // Signal-backed, the write schedules its own render. Public API unchanged: still a boolean `showForm`.
+  private readonly _showForm = signal<boolean>(true);
+  get showForm(): boolean {
+    return this._showForm();
+  }
+  set showForm(value: boolean) {
+    this._showForm.set(value);
+  }
 
   ngOnInit(): void {
     this.getInitiativeAndRole();

@@ -8,7 +8,7 @@ import { FeedbackValidationDirectiveModule } from '../../directives/feedback-val
 @NgModule({
   declarations: [GeoscopeManagementComponent, SubGeoscopeComponent],
   imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule],
-  exports: [GeoscopeManagementComponent],
+  exports: [GeoscopeManagementComponent, SubGeoscopeComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class GeoscopeManagementModule {}

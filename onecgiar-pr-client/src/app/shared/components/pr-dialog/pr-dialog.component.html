@@ -1,0 +1,27 @@
+@if (visible) {
+  <div class="pr-dialog-mask" [class.pr-dialog-mask--modal]="modal" (click)="onMaskClick()">
+    <div
+      class="pr-dialog {{ styleClass }}"
+      role="dialog"
+      [attr.aria-modal]="modal"
+      [attr.aria-label]="header || null"
+      (click)="$event.stopPropagation()">
+      @if (showHeader) {
+        <div class="pr-dialog__header">
+          <span class="pr-dialog__title">{{ header }}</span>
+          @if (closable) {
+            <button type="button" class="pr-dialog__close" aria-label="Close" (click)="hide()">
+              <i class="pi pi-times"></i>
+            </button>
+          }
+        </div>
+      }
+
+      <div class="pr-dialog__body">
+        <ng-content></ng-content>
+      </div>
+
+      <ng-content select="[pr-dialog-footer]"></ng-content>
+    </div>
+  </div>
+}

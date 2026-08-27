@@ -1,0 +1,25 @@
+<app-pr-field-header
+  [label]="question?.question_text"
+  [description]="question?.question_description"
+  [useColon]="false"></app-pr-field-header>
+
+<app-pr-radio-button
+  (selectOptionEvent)="handleSelectionChange()"
+  [verticalAlignment]="true"
+  [options]="question?.options"
+  optionLabel="question_text"
+  optionValue="result_question_id"
+  [(ngModel)]="question['radioButtonValue']">
+</app-pr-radio-button>
+
+<div *ngIf="isNotApplicableSelected" style="margin-top: 18px; max-width: 300px;">
+  <app-pr-input
+    placeholder="Why?"
+    variant="xs"
+    [required]="true"
+    [maxWords]="maxReasonWords"
+    [(ngModel)]="selectedOption.answer_text">
+  </app-pr-input>
+</div>
+
+<div appFeedbackValidation [labelText]="question?.question_text" [isComplete]="isComplete"></div>

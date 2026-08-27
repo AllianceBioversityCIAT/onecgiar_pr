@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { GlobalVariablesService } from '../../../../shared/services/global-variables.service';
-import { MessageService } from 'primeng/api';
+import { PrToastService } from 'src/app/shared/components/pr-toast';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../shared/enum/api.enum';
 
 @Component({
@@ -20,7 +20,7 @@ export class KnowledgeProductsComponent implements OnInit {
   phaseFilter = null;
 
   constructor(
-    private messageService: MessageService,
+    private messageService: PrToastService,
     public api: ApiService,
     public exportTablesSE: ExportTablesService,
     public globalVariablesSE: GlobalVariablesService

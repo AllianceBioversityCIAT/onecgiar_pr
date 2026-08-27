@@ -1,0 +1,90 @@
+<div class="del">
+  <div class="del-section">
+    <h3 class="del-section-title">
+      <i class="material-icons-round">inventory_2</i>
+      Source Materials
+      @if (loadingUrls()) {
+        <span class="del-loading-badge">Loading...</span>
+      }
+    </h3>
+
+    @if (hasAnyEvidence()) {
+      @if (documents.length) {
+        <h4 class="del-group-title">
+          <i class="material-icons-round">description</i>
+          Documents ({{ documents.length }})
+        </h4>
+        <div class="del-list">
+          @for (doc of documents; track doc) {
+            <div class="del-item">
+              <div class="del-item-icon">
+                <i class="material-icons-round">
+                  {{ isPdf(doc) ? 'picture_as_pdf' : isViewableImage(doc) ? 'image' : 'description' }}
+                </i>
+              </div>
+              <div class="del-item-content">
+                <div class="del-item-name">{{ getFileName(doc) }}</div>
+              </div>
+              @if (getSignedUrl(doc); as url) {
+                <a class="del-action-btn" [href]="url" target="_blank" rel="noopener" title="Open in new tab">
+                  <i class="material-icons-round">open_in_new</i>
+                </a>
+                <a class="del-action-btn" [href]="url" download="{{ getFileName(doc) }}" title="Download">
+                  <i class="material-icons-round">download</i>
+                </a>
+              } @else {
+                <span class="del-action-btn del-action-btn--disabled" title="Generating link...">
+                  <i class="material-icons-round">hourglass_top</i>
+                </span>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (audioFiles.length) {
+        <h4 class="del-group-title">
+          <i class="material-icons-round">audiotrack</i>
+          Audio Recordings ({{ audioFiles.length }})
+        </h4>
+        <div class="del-list">
+          @for (audio of audioFiles; track audio) {
+            <div class="del-item del-item--audio">
+              <div class="del-item-icon del-item-icon--audio">
+                <i class="material-icons-round">audiotrack</i>
+              </div>
+              <div class="del-item-content">
+                <div class="del-item-name">{{ getFileName(audio) }}</div>
+              </div>
+              @if (getSignedUrl(audio); as url) {
+                <a class="del-action-btn" [href]="url" target="_blank" rel="noopener" title="Open in new tab">
+                  <i class="material-icons-round">open_in_new</i>
+                </a>
+                <a class="del-action-btn" [href]="url" download="{{ getFileName(audio) }}" title="Download">
+                  <i class="material-icons-round">download</i>
+                </a>
+              } @else {
+                <span class="del-action-btn del-action-btn--disabled" title="Generating link...">
+                  <i class="material-icons-round">hourglass_top</i>
+                </span>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (textContext) {
+        <h4 class="del-group-title">
+          <i class="material-icons-round">notes</i>
+          Text Context
+        </h4>
+        <div class="del-text-snippet">{{ textContext }}</div>
+      }
+    } @else {
+      <div class="del-empty">
+        <i class="material-icons-round">cloud_off</i>
+        <p>No source materials available for this draft.</p>
+      </div>
+    }
+  </div>
+</div>

@@ -1,5 +1,7 @@
-<p-drawer [(visible)]="visible" [position]="drawerFullScreen() ? 'full' : 'right'" [closable]="false" [style]="{ minWidth: '65vw' }">
-  <ng-template #header>
+<div class="drawer-overlay-root">
+  <button type="button" class="drawer-backdrop" aria-label="Close" tabindex="-1" (click)="closeDrawer()"></button>
+
+  <div class="custom-drawer-panel" [class.full-screen]="drawerFullScreen()" role="dialog" aria-modal="true">
     <div class="result-review-drawer-header">
       <p class="result-review-drawer-header_entity">
         <span class="result-review-drawer-header_entity_acronym">{{ resultDetail()?.commonFields?.center_name ?? 'Center - Not specified' }}</span>
@@ -10,11 +12,7 @@
       </p>
 
       <div class="result-review-drawer-header_icons">
-        <p-button
-          label="Go to result center"
-          styleClass="p-button-link"
-          [style.margin-right.rem]="0.5"
-          (onClick)="navigateToResultCenter()"></p-button>
+        <button hlmBtn variant="link" class="mr-2" (click)="navigateToResultCenter()">Go to result center</button>
         <i
           class="pi {{
             drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center'
@@ -26,14 +24,14 @@
         <i class="pi pi-times" style="font-size: 15px; cursor: pointer" (click)="closeDrawer()"></i>
       </div>
     </div>
-  </ng-template>
 
-  <div class="result-review-drawer-content">
+    <div class="drawer-panel-content">
+      <div class="result-review-drawer-content">
     @let fields = this.resultDetail();
     <!-- Result Header Info -->
     <div class="result-review-drawer-content_header">
       @if (isLoadingInformation()) {
-        <p-skeleton width="100%" height="25px" [shape]="'rectangle'"></p-skeleton>
+        <div class="pr-skeleton" style="width:100%;height:25px"></div>
       } @else {
         @if (isEditingTitle()) {
           <div class="result-review-drawer-content_title-edit">
@@ -56,7 +54,7 @@
       }
 
       @if (isLoadingInformation()) {
-        <p-skeleton width="100%" height="25px" [shape]="'rectangle'"></p-skeleton>
+        <div class="pr-skeleton" style="width:100%;height:25px"></div>
       } @else {
         <div class="result-review-drawer-content_meta">
           <span class="result-review-drawer-content_meta_item">
@@ -82,7 +80,7 @@
     </div>
 
     @if (isLoadingInformation()) {
-      <p-skeleton width="100%" height="250px" [shape]="'rectangle'" [style]="{ 'margin-bottom': '20px' }"></p-skeleton>
+      <div class="pr-skeleton" style="width:100%;height:250px" [style]="{ 'margin-bottom': '20px' }"></div>
     } @else {
       <div class="form-section">
         <h3 class="form-section_title">TOC ALIGNMENT</h3>
@@ -120,20 +118,20 @@
         }
         @if (canEditInDrawer()) {
           <div style="margin-top: 20px; display: flex; justify-content: flex-end">
-            <p-button
-              label="Save changes"
-              icon="pi pi-save"
+            <button
+              hlmBtn
               [disabled]="tocInitiative?.planned_result === undefined || !canEditInDrawer()"
-              (onClick)="onSaveTocChanges()"
-              styleClass="p-button-primary">
-            </p-button>
+              (click)="onSaveTocChanges()">
+              <i class="pi pi-save"></i>
+              Save changes
+            </button>
           </div>
         }
       </div>
     }
 
     @if (isLoadingInformation()) {
-      <p-skeleton width="100%" height="400px" [shape]="'rectangle'"></p-skeleton>
+      <div class="pr-skeleton" style="width:100%;height:400px"></div>
     } @else {
       @if (fields?.commonFields) {
         <div class="form-section">
@@ -153,7 +151,7 @@
 
           @if (fields?.geographicScope) {
             <app-geoscope-management
-              label="What is the main geographic focus of the Output?"
+              label="What is the geographic focus of the result?"
               [body]="fields.geographicScope"
               [readOnly]="!canEditInDrawer()"
               module="reporting">
@@ -350,7 +348,7 @@
                       [href]="evidence.link"
                       target="_blank"
                       style="
-                        color: #5569dd;
+                        color: #6b46e5;
                         text-decoration: none;
                         overflow: hidden;
                         text-overflow: ellipsis;
@@ -410,50 +408,50 @@
 
           @if (canEditInDrawer()) {
             <div style="margin-top: 20px; display: flex; justify-content: flex-end">
-              <p-button
-                label="Save changes"
-                icon="pi pi-save"
+              <button
+                hlmBtn
                 [disabled]="!canEditInDrawer()"
-                (onClick)="onSaveDataStandardChanges()"
-                styleClass="p-button-primary">
-              </p-button>
+                (click)="onSaveDataStandardChanges()">
+                <i class="pi pi-save"></i>
+                Save changes
+              </button>
             </div>
           }
         </div>
       }
     }
-  </div>
-
-  <!-- Footer Actions -->
-  @if (canEditInDrawer() && resultToReview()?.status_id == 5 && !isLoadingInformation()) {
-    <ng-template #footer>
-      <div class="result-review-drawer-footer">
-        <p-button
-          label="APPROVE"
-          [disabled]="!canApprove()"
-          styleClass="approve-button {{ !canApprove() ? 'not-hover' : '' }}"
-          (click)="canApprove() ? onApprove() : null"
-          icon="pi pi-check-circle"
-          variant="outlined"
-          [pTooltip]="getApproveButtonTooltip()"
-          tooltipPosition="top"
-          size="large" />
-        <p-button label="REJECT" styleClass="reject-button" (click)="onReject()" icon="pi pi-times-circle" variant="outlined" size="large" />
       </div>
-    </ng-template>
-  }
-</p-drawer>
+    </div>
+
+    <!-- Footer Actions -->
+    @if (canEditInDrawer() && resultToReview()?.status_id == 5 && !isLoadingInformation()) {
+      <div class="result-review-drawer-footer">
+        <button
+          hlmBtn
+          variant="outline"
+          size="lg"
+          class="approve-button"
+          [ngClass]="{ 'not-hover': !canApprove() }"
+          [disabled]="!canApprove()"
+          (click)="canApprove() ? onApprove() : null"
+          [prTooltip]="getApproveButtonTooltip()"
+          prTooltipPosition="top">
+          <i class="pi pi-check-circle"></i>
+          APPROVE
+        </button>
+        <button hlmBtn variant="outline" size="lg" class="reject-button" (click)="onReject()"><i class="pi pi-times-circle"></i>REJECT</button>
+      </div>
+    }
+  </div>
+</div>
 
 <!-- Confirm Approve Dialog -->
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="showConfirmApproveDialog"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [draggable]="false"
-  [style]="{ padding: '0px' }"
   styleClass="confirmation-modal approve">
   <i class="pi pi-times modal-close-icon" (click)="cancelApprove()"></i>
   <div class="modal-body">
@@ -463,24 +461,29 @@
 
     <h2 class="modal-title approve">APPROVE RESULT – {{ resultToReview()?.result_code }}</h2>
     <p class="modal-message">Status will be changed to "Approved", and result will be submitted.</p>
+    <div class="modal-field">
+      <label class="modal-label" for="approveComment">Comment (optional)</label>
+      <textarea
+        [(ngModel)]="approveComment"
+        id="approveComment"
+        [rows]="3"
+        placeholder="Add any note the reporting center should see..."></textarea>
+    </div>
   </div>
 
   <div class="modal-actions">
-    <p-button label="Cancel" size="large" (click)="cancelApprove()" [disabled]="isSaving()" variant="outlined"></p-button>
-    <p-button label="Confirm" size="large" (click)="confirmApprove()" [disabled]="isSaving()" [loading]="isSaving()"></p-button>
+    <button hlmBtn variant="outline" size="lg" (click)="cancelApprove()" [disabled]="isSaving()">Cancel</button>
+    <button hlmBtn size="lg" (click)="confirmApprove()" [disabled]="isSaving()">Confirm @if (isSaving()) { <i class="pi pi-spinner pi-spin"></i> }</button>
   </div>
-</p-dialog>
+</app-pr-dialog>
 
 <!-- Reject Justification Dialog -->
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="showConfirmRejectDialog"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [draggable]="false"
-  [style]="{ padding: '0px' }"
   styleClass="confirmation-modal reject">
   <i class="pi pi-times modal-close-icon" (click)="cancelReject()"></i>
   <div class="modal-body">
@@ -492,7 +495,6 @@
     <div class="modal-field">
       <label class="modal-label required" for="rejectJustification">Justification</label>
       <textarea
-        pInputTextarea
         [(ngModel)]="rejectJustification"
         id="rejectJustification"
         [rows]="4"
@@ -500,15 +502,10 @@
     </div>
   </div>
   <div class="modal-actions">
-    <p-button label="Cancel" size="large" (click)="cancelReject()" [disabled]="isSaving()" variant="outlined"></p-button>
-    <p-button
-      label="Confirm"
-      size="large"
-      (click)="confirmReject()"
-      [disabled]="!rejectJustification.trim() || isSaving()"
-      [loading]="isSaving()"></p-button>
+    <button hlmBtn variant="outline" size="lg" (click)="cancelReject()" [disabled]="isSaving()">Cancel</button>
+    <button hlmBtn size="lg" (click)="confirmReject()" [disabled]="!rejectJustification.trim() || isSaving()">Confirm @if (isSaving()) { <i class="pi pi-spinner pi-spin"></i> }</button>
   </div>
-</p-dialog>
+</app-pr-dialog>
 
 <!-- Save Changes Justification Dialog -->
 <app-save-changes-justification-dialog

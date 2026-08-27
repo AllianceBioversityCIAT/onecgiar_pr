@@ -9,7 +9,7 @@ import { SaveButtonComponent } from '../../../../../../../custom-fields/save-but
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { LabelNamePipe } from '../../../../../../../custom-fields/pr-select/label-name.pipe';
 import { FormsModule } from '@angular/forms';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { signal } from '@angular/core';
 
@@ -69,6 +69,25 @@ describe('PolicyChangeInfoComponent', () => {
 
     fixture = TestBed.createComponent(PolicyChangeInfoComponent);
     component = fixture.componentInstance;
+  });
+
+  describe('sectionLoading (skeleton)', () => {
+    it('is released once the section GET responds', () => {
+      component.sectionLoading.set(true);
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the section GET fails, so the skeleton can never get stuck', () => {
+      component.sectionLoading.set(true);
+      jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
   });
 
   describe('changeAnswerBoolean()', () => {
@@ -145,9 +164,9 @@ describe('PolicyChangeInfoComponent', () => {
   describe('policyTypeDescriptions()', () => {
     it('should return the correct HTML string', () => {
       const expectedHtml = `<strong>Policy type guidance</strong> <ul>
-        <li><strong>Policy or strategy:</strong> Policies or strategies include written decisions on, or commitments to, a particular course of action by an institution (policy); or a (government, NGO, private sector) high-level plan outlining how a particular course of action will be carried out (strategy). These documents show the intent of an organization or entity. Examples are country growth strategies, country agricultural policies, organization strategic plans or road maps. This could also be observed as information campaigns (e.g., for improved diets). These documents set the goalposts but then require other instruments for implementation.</li>
+        <li><strong>Policy or strategy:</strong> Policies are written and formally approved decisions on, or commitments to, a particular course of action by an institution or organization (including but not limited to governments, NGOs, private sector). Strategies are high-level plans outlining how a particular course of action will be carried out. These documents show the intent of an organization or entity. Examples are country growth strategies, country agricultural policies, organization strategic plans or road maps. These documents set the goalposts but then require other instruments for implementation.</li>
         <li><strong>Legal instrument:</strong> Legal instruments include laws, which are defined as Bills passed into law by the highest elected body (a parliament, congress or equivalent); or regulations, which are defined as rules or norms adopted by a government. These laws and regulations dictate very specifically actions and behaviors that are to be followed or prohibited and often include language on implications of non-compliance.</li>
-        <li><strong>Program, budget or investment:</strong> These are implementing mechanisms that often follow from a strategy, policy or law. There is typically a well-defined set of actions outlined over a specific period of time and with a specific budgetary amount attached. National Agricultural Investment Plans is an example, the budget within a ministry is another, investments from the private sector fit here, as well as programs launched by public, private and NGO sectors.</li>
+        <li><strong>Program, budget or investment:</strong> These are implementing mechanisms that often follow from a strategy, policy or law. There is typically a well-defined set of actions outlined over a specific period of time and with a specific budgetary amount attached. A National Agricultural Investment Plan is an example, the budget within a ministry is another, investments from the private sector fit here, as well as programs launched by multilateral, public, private and NGO sectors.</li>
       </ul>`;
 
       const result = component.policyTypeDescriptions();
@@ -167,6 +186,52 @@ describe('PolicyChangeInfoComponent', () => {
 
       expect(spyPATCH_policyChanges).toHaveBeenCalled();
       expect(spyGetSectionInformation).toHaveBeenCalled();
+    });
+  });
+
+  describe('clearAmountWhenNotApplicable() — P2-3371 AC05', () => {
+    it('keeps the USD amount and its status while the policy type is "Program, budget or investment"', () => {
+      component.innovationUseInfoBody.policy_type_id = 1;
+      component.innovationUseInfoBody.amount = 250000;
+      component.innovationUseInfoBody.status_amount = 1;
+
+      component.clearAmountWhenNotApplicable();
+
+      expect(component.innovationUseInfoBody.amount).toBe(250000);
+      expect(component.innovationUseInfoBody.status_amount).toBe(1);
+    });
+
+    it('drops the USD amount and its status as soon as another policy type is chosen', () => {
+      component.innovationUseInfoBody.policy_type_id = 2;
+      component.innovationUseInfoBody.amount = 250000;
+      component.innovationUseInfoBody.status_amount = 1;
+
+      component.clearAmountWhenNotApplicable();
+
+      expect(component.innovationUseInfoBody.amount).toBeNull();
+      expect(component.innovationUseInfoBody.status_amount).toBeNull();
+    });
+
+    it('does not send an amount that the form no longer shows (the two fields are hidden for policy types other than 1)', () => {
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_policyChanges');
+      component.innovationUseInfoBody.policy_type_id = 3;
+      component.innovationUseInfoBody.amount = 250000;
+      component.innovationUseInfoBody.status_amount = 2;
+
+      component.onSaveSection();
+
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ amount: null, status_amount: null }));
+    });
+
+    it('still sends the amount when the policy type does show the field', () => {
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_policyChanges');
+      component.innovationUseInfoBody.policy_type_id = 1;
+      component.innovationUseInfoBody.amount = 250000;
+      component.innovationUseInfoBody.status_amount = 1;
+
+      component.onSaveSection();
+
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ amount: 250000, status_amount: 1 }));
     });
   });
 

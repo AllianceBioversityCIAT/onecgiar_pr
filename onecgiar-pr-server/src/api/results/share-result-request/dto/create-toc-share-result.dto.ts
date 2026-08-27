@@ -9,6 +9,14 @@ export class CreateTocShareResult {
   public initiativeShareId: number[];
 
   @ApiProperty({
+    required: false,
+    description:
+      'Optional map of initiative id to from_toc flag for share requests.',
+    example: { 50: true, 61: false },
+  })
+  public initiativeFromToc?: Record<number, boolean>;
+
+  @ApiProperty({
     description: 'Indicates if this is part of the Theory of Change (ToC)',
     example: true,
   })

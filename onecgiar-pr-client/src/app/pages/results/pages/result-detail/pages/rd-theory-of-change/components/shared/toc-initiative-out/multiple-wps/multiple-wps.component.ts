@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, inject } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, inject, signal } from '@angular/core';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 import { CustomizedAlertsFeService } from '../../../../../../../../../../shared/services/customized-alerts-fe.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
@@ -18,7 +18,19 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   @Input() isNotifications?: boolean = false;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
-  @Input() showMultipleWPsContent: boolean = true;
+  // P2-3245 / P2-3275: signal-backed input. `onActiveTab()` toggles this flag `false -> setTimeout -> true`
+  // to force the content block to remount; as a plain field the second assignment happened outside any
+  // notification, so under zoneless change detection the view stayed frozen on `false` and the
+  // Level/HLO/KPI form never came back (empty container after "Add other TOC result"). Reading the signal
+  // from the template makes that write schedule a render pass on its own. Same shape as the signal-backed
+  // inputs in PrTableComponent; see ViewRefreshService for the wider zoneless context.
+  private readonly _showMultipleWPsContent = signal<boolean>(true);
+  @Input() set showMultipleWPsContent(value: boolean) {
+    this._showMultipleWPsContent.set(value);
+  }
+  get showMultipleWPsContent(): boolean {
+    return this._showMultipleWPsContent();
+  }
   activeTab: TocTab;
 
   currentPlannedResult = null;

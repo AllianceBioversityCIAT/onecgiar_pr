@@ -22,10 +22,10 @@ describe('AlertStatusComponent', () => {
 
   it('should accept only "info" or "warning" status values', () => {
     // Set valid status value
-    component.status = 'info';
+    fixture.componentRef.setInput('status', 'info');
     expect(() => fixture.detectChanges()).not.toThrowError();
 
-    component.status = 'warning';
+    fixture.componentRef.setInput('status', 'warning');
     expect(() => fixture.detectChanges()).not.toThrowError();
   });
 });

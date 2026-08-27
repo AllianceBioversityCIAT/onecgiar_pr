@@ -27,6 +27,24 @@ export class ResultRepository
   extends BaseRepository<Result>
   implements LogicalDelete<Result>
 {
+  /**
+   * SQL for `replicate()` — carries one result forward into a new phase.
+   *
+   * `source`, `creation_method`, `external_submitter`, `external_platform_id`,
+   * `external_platform_code` and `external_reference` are part of the copy on purpose: a
+   * phase change continues the *same* result, so it keeps where it came from.
+   *
+   * They were missing until 2026-08-26, and the consequences were silent. Webhook dispatch
+   * decides by `external_platform_id` (`results.service.ts`, `enqueueBilateralWebhook`), so
+   * a copy without it logs "no webhook queued" and returns — the Science Program's decision
+   * on the new version never reaches the platform that reported it. And without `source` the
+   * copy stops reading as W3/bilateral in the reporting tool and in the `/list` sync, while
+   * `external_reference` is the id the reporting platform correlates by.
+   *
+   * `status_id` is deliberately NOT one of them: the copy always starts at 1 (Editing) and
+   * any flow that needs another status sets it afterwards on the new row. This query is
+   * shared with the W1/W2 phase change, so changing it here would move everyone.
+   */
   createQueries(
     config: ReplicableConfigInterface<Result>,
   ): ConfigCustomQueryInterface {
@@ -62,6 +80,12 @@ export class ResultRepository
         r2.geographic_scope_id,
         r2.lead_contact_person,
         r2.result_code,
+        r2.source,
+        r2.creation_method,
+        r2.external_submitter,
+        r2.external_platform_id,
+        r2.external_platform_code,
+        r2.external_reference,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -95,6 +119,12 @@ export class ResultRepository
         nutrition_tag_level_id,
         environmental_biodiversity_tag_level_id,
         poverty_tag_level_id,
+        source,
+        creation_method,
+        external_submitter,
+        external_platform_id,
+        external_platform_code,
+        external_reference,
         is_replicated
         ) select
         r2.description,
@@ -128,6 +158,12 @@ export class ResultRepository
         r2.nutrition_tag_level_id,
         r2.environmental_biodiversity_tag_level_id,
         r2.poverty_tag_level_id,
+        r2.source,
+        r2.creation_method,
+        r2.external_submitter,
+        r2.external_platform_id,
+        r2.external_platform_code,
+        r2.external_reference,
         true as is_replicated
         from \`result\` r2 WHERE r2.id = ${
           config.old_result_id
@@ -2887,20 +2923,41 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         cp.short_name AS project_name,
         ci.id AS center_id,
         ci.acronym AS center_name,
+        ci_lead.id AS lead_center_id,
+        ci_lead.acronym AS lead_center_name,
         r.id,
         r.result_code,
+        r.source,
         r.external_submitter,
         CONCAT(u.first_name, ' ', u.last_name) AS submitter_name,
         r.result_level_id,
         r.result_type_id,
         r.title AS result_title,
         r.description AS result_description,
+        r.creation_method,
+        CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
         rt.name AS result_category,
-        r.status_id 
+        r.status_id,
+        r.lead_contact_person,
+        r.lead_contact_person_id,
+        r.gender_tag_level_id,
+        r.climate_change_tag_level_id,
+        r.nutrition_tag_level_id,
+        r.environmental_biodiversity_tag_level_id,
+        r.poverty_tag_level_id,
+        -- P2-3443: the External partners block of the bilateral Contributors section is stored as
+        -- results_by_institution rows (returned by the detail GET as contributingInstitutions)
+        -- plus these two flags on result. Without them the client cannot tell "no partners
+        -- declared" apart from "not answered yet", and the checkbox comes back unticked on reload.
+        r.no_applicable_partner,
+        r.is_lead_by_partner,
+        v.phase_year AS reporting_year
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
         AND rt.is_active = 1
+      LEFT JOIN version v
+        ON v.id = r.version_id
       LEFT JOIN results_by_projects rbp
         ON r.id = rbp.result_id
         AND rbp.is_active = 1
@@ -2913,7 +2970,15 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ON rc.center_id = cc.code
       LEFT JOIN clarisa_institutions ci
         ON cc.institutionId = ci.id
-      LEFT JOIN users u 
+      LEFT JOIN results_center rc_lead
+        ON r.id = rc_lead.result_id
+        AND rc_lead.is_active = 1
+        AND rc_lead.is_leading_result = true
+      LEFT JOIN clarisa_center cc_lead
+        ON rc_lead.center_id = cc_lead.code
+      LEFT JOIN clarisa_institutions ci_lead
+        ON cc_lead.institutionId = ci_lead.id
+      LEFT JOIN users u
         ON r.external_submitter = u.id
       WHERE
         r.id = ?
@@ -3483,6 +3548,57 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     try {
       const results = await this.query(query, [programId, programId]);
       return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getResultsByBilateralCenter(
+    centerId: string,
+    versionId: number,
+  ): Promise<any[]> {
+    const query = `
+      SELECT
+        r.id,
+        r.result_code,
+        r.title,
+        rt.name  AS result_type,
+        rs.result_status_id AS status_id,
+        rs.status_name,
+        r.created_date,
+        r.version_id,
+        r.source,
+        r.creation_method,
+        CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated,
+        rc.is_leading_result
+      FROM result r
+      INNER JOIN results_center rc
+             ON rc.result_id = r.id
+            AND rc.is_active = 1
+            AND (
+              rc.center_id = ?
+              OR EXISTS (
+                SELECT 1
+                FROM clarisa_center cc
+                INNER JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+                WHERE cc.code = rc.center_id
+                  AND ci.acronym = ?
+              )
+            )
+      INNER JOIN result_type rt ON rt.id = r.result_type_id AND rt.is_active = 1
+      INNER JOIN result_status rs ON rs.result_status_id = r.status_id
+      WHERE r.version_id = ?
+        AND r.source IN ('API', 'Result')
+        AND r.is_active = 1
+      ORDER BY r.created_date DESC, r.id DESC
+    `;
+
+    try {
+      return await this.query(query, [centerId, centerId, versionId]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

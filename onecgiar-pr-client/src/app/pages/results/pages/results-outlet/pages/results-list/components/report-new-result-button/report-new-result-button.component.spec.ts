@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReportNewResultButtonComponent } from './report-new-result-button.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-button/pr-button.component';
-import { TooltipModule } from 'primeng/tooltip';
 
 describe('ReportNewResultButtonComponent', () => {
   let component: ReportNewResultButtonComponent;
@@ -16,7 +15,6 @@ describe('ReportNewResultButtonComponent', () => {
       ],
       imports: [
         HttpClientTestingModule,
-        TooltipModule
       ],
     }).compileComponents();
 

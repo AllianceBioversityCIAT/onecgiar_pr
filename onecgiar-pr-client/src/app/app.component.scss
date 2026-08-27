@@ -1,5 +1,15 @@
 @use '../styles/fonts.scss' as fonts;
 
+// app-pr-dialog wrapper: restore the flush layout the old p-dialog had
+// ([style]padding:0) for the Contact us modal.
+::ng-deep app-pr-dialog .contact-us-dialog {
+  position: relative;
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
 .global_information {
   position: relative;
   z-index: 2;
@@ -13,6 +23,66 @@
     right: 0;
     margin-right: 10px;
     cursor: pointer;
+  }
+}
+
+// Keep the banner and navbar together while scrolling. The wrapper is sticky,
+// while both children remain in normal flow so neither one overlaps the other.
+.app-shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  flex: none;
+}
+
+// Test-environment banner. It intentionally stays in the main-column flow:
+// the sidebar keeps its own layout and the banner pushes the topbar/content down.
+.test-env-banner {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem 1.25rem;
+  padding: 0.625rem 1.5rem;
+  border-bottom: 3px solid var(--pr-color-yellow-100);
+  background-color: var(--pr-color-secondary-900);
+  color: var(--pr-color-white);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+
+  &__badge {
+    padding: 0.15rem 0.6rem;
+    border-radius: 0.25rem;
+    background-color: var(--pr-color-yellow-100);
+    color: var(--pr-color-secondary-950);
+    font-size: 0.6875rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  &__main {
+    strong {
+      color: var(--pr-color-yellow-100);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    justify-content: center;
+    font-weight: 400;
+
+    a {
+      color: var(--pr-color-yellow-100);
+      font-weight: 700;
+      text-decoration: underline;
+    }
   }
 }
 

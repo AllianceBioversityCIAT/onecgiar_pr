@@ -60,6 +60,10 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
 import { VersionRepository } from '../../versioning/versioning.repository';
 import { ResultDeletionAuditService } from '../../results/result-deletion-audit/result-deletion-audit.service';
 import { ResultDeletionAuditSource } from '../../results/result-deletion-audit/result-deletion-audit-source.enum';
+import {
+  GEO_SCOPE_WITH_COUNTRIES,
+  buildInnovationPackageTitle,
+} from '../utils/innovation-package-title.util';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -193,7 +197,6 @@ export class ResultInnovationPackageService {
     user: TokenDto,
   ) {
     try {
-      let innovationTitle: string;
       let innovationGeoScope: number;
 
       const coreInnovationResult = await this._resultRepository.getResultById(
@@ -297,26 +300,12 @@ export class ResultInnovationPackageService {
         innovationGeoScope = countries?.length > 1 ? 3 : 4;
       }
 
-      if (createResultInnovationPackageDto.geo_scope_id === 2) {
-        const regionsList = regions.map((r) => r.name);
-        if (result.title.endsWith('.')) {
-          result.title = result.title.replace(/\.$/, '');
-        }
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
-          result.title
-        } in ${regionsList.slice(0, -1).join(', ')}${
-          regionsList.length > 1 ? ' and ' : ''
-        }${regionsList[regionsList.length - 1]}`;
-      } else if (
-        [3, 4, 5].includes(createResultInnovationPackageDto.geo_scope_id)
-      ) {
-        innovationTitle = this.createInnovationTitle(result, countries);
-      } else {
-        if (result.title.endsWith('.')) {
-          result.title = result.title.replace(/\.$/, '');
-        }
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()}.`;
-      }
+      const innovationTitle = buildInnovationPackageTitle({
+        coreInnovationTitle: result.title,
+        geoScopeId: createResultInnovationPackageDto.geo_scope_id,
+        regionNames: regions?.map((r) => r.name),
+        countryNames: countries?.map((c) => c.name),
+      });
 
       const titleValidate = await this._resultRepository
         .createQueryBuilder('result')
@@ -1189,14 +1178,10 @@ export class ResultInnovationPackageService {
   }
 
   createInnovationTitle(result, countries) {
-    const countriesList = countries.map((c) => c.name);
-    if (result.title.endsWith('.')) {
-      result.title = result.title.replace(/\.$/, '');
-    }
-    return `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
-      .slice(0, -1)
-      .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
-      countriesList[countriesList.length - 1]
-    }`;
+    return buildInnovationPackageTitle({
+      coreInnovationTitle: result.title,
+      geoScopeId: GEO_SCOPE_WITH_COUNTRIES[0],
+      countryNames: countries?.map((c) => c.name),
+    });
   }
 }

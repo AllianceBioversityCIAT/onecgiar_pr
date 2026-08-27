@@ -1,31 +1,41 @@
 <div class="bilateral-results-layout">
   <!-- Header - Breadcrumb -->
-  <div class="bilateral-results_breadcrumb">
-    <span class="bilateral-results_breadcrumb_homeLink" routerLink="/result-framework-reporting/home"> Science programs </span>
+  <nav class="bilateral-results_breadcrumb" aria-label="Breadcrumb">
+    <ol class="bilateral-results_breadcrumb_list">
+      <li>
+        <a class="bilateral-results_breadcrumb_homeLink" [routerLink]="programsListPath"> Science programs </a>
+      </li>
 
-    <i class="pi pi-chevron-right bilateral-results_breadcrumb_separator"></i>
+      <li>
+        <i class="pi pi-chevron-right bilateral-results_breadcrumb_separator" aria-hidden="true"></i>
+        <a
+          class="bilateral-results_breadcrumb_link"
+          routerLink="/result-framework-reporting/entity-details/{{ bilateralResultsService.entityId() }}">
+          {{ bilateralResultsService.entityId() }} - {{ bilateralResultsService.entityDetails().name }}
+        </a>
+      </li>
 
-    <span class="bilateral-results_breadcrumb_link" routerLink="/result-framework-reporting/entity-details/{{ bilateralResultsService.entityId() }}">
-      {{ bilateralResultsService.entityId() }} - {{ bilateralResultsService.entityDetails().name }}
-    </span>
+      <li>
+        <i class="pi pi-chevron-right bilateral-results_breadcrumb_separator" aria-hidden="true"></i>
+        @if (!hasCenter) {
+          <span class="bilateral-results_breadcrumb_link breadcrumb_link" aria-current="page">Bilateral Results Review</span>
+        } @else {
+          <!-- Real link (focusable, middle-clickable); the handler still clears the
+               selected-centre state the old (click)-only span used to reset. -->
+          <a class="bilateral-results_breadcrumb_link" [routerLink]="resultsReviewPath()" (click)="clearSelectedCenter()">
+            Bilateral Results Review
+          </a>
+        }
+      </li>
 
-    <i class="pi pi-chevron-right bilateral-results_breadcrumb_separator"></i>
-
-    @if (!hasCenter) {
-      <span class="bilateral-results_breadcrumb_link breadcrumb_link"> Bilateral Results Review </span>
-    } @else {
-      <span
-        class="bilateral-results_breadcrumb_link"
-        (click)="navigateToResultsReview()"
-        (keydown.enter)="navigateToResultsReview()"
-        (keydown.space)="navigateToResultsReview()">
-        Bilateral Results Review
-      </span>
-
-      <i class="pi pi-chevron-right bilateral-results_breadcrumb_separator"></i>
-      <span class="bilateral-results_breadcrumb_link breadcrumb_link"> {{ center }} </span>
-    }
-  </div>
+      @if (hasCenter) {
+        <li>
+          <i class="pi pi-chevron-right bilateral-results_breadcrumb_separator" aria-hidden="true"></i>
+          <span class="bilateral-results_breadcrumb_link breadcrumb_link" aria-current="page">{{ center }}</span>
+        </li>
+      }
+    </ol>
+  </nav>
 
   <div class="layout-content">
     <app-indicators-sidebar class="sidebar"></app-indicators-sidebar>

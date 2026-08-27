@@ -40,8 +40,8 @@
             @for (person of developers; track $index) {
               <div
                 class="whats-new-page-details_header_additional-info_item_avatar"
-                [pTooltip]="person.name"
-                tooltipPosition="top"
+                [prTooltip]="person.name"
+                prTooltipPosition="top"
                 style="cursor: help">
                 <img
                   [src]="person.avatar_url ? person.avatar_url : 'https://avatar.vercel.sh/' + person.id"
@@ -56,8 +56,8 @@
 
             <div
               class="whats-new-page-details_header_additional-info_item_avatar"
-              [pTooltip]="authorItem?.name"
-              tooltipPosition="top"
+              [prTooltip]="authorItem?.name"
+              prTooltipPosition="top"
               style="cursor: help">
               <img [src]="authorItem?.avatar_url ? authorItem?.avatar_url : defaultAvatar" alt="author" width="24" height="24" />
             </div>

@@ -123,4 +123,31 @@ describe('ResultRepository (unit)', () => {
       }),
     ).rejects.toMatchObject({ status: HttpStatus.INTERNAL_SERVER_ERROR });
   });
+
+  it('includes source, result type, and reporting year in the bilateral common-fields query', async () => {
+    queryMock.mockResolvedValueOnce([{ id: 8731 }]);
+
+    await repo.getCommonFieldsBilateralResultById(8731);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.source');
+    expect(sql).toContain('v.phase_year AS reporting_year');
+    expect(sql).toContain('LEFT JOIN version v');
+    expect(sql).toContain('rt.name AS result_category');
+    expect(params).toEqual([8731]);
+  });
+
+  it('includes AI provenance fields in bilateral center results ordered newest first', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.creation_method');
+    expect(sql).toContain(
+      "CASE WHEN r.creation_method = 'AI' THEN 1 ELSE 0 END AS is_ai_generated",
+    );
+    expect(sql).toContain('ORDER BY r.created_date DESC, r.id DESC');
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
 });

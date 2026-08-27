@@ -4,22 +4,21 @@ import { NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { OutcomeIndicatorService } from '../../services/outcome-indicator.service';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { PrToastComponent, PrToastService } from 'src/app/shared/components/pr-toast';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 @Component({
   selector: 'app-outcome-indicator-home',
   templateUrl: './outcome-indicator-home.component.html',
   styleUrl: './outcome-indicator-home.component.scss',
   standalone: true,
-  imports: [NgClass, RouterLink, ToastModule, CustomFieldsModule]
+  imports: [NgClass, RouterLink, PrToastComponent, CustomFieldsModule]
 })
 export class OutcomeIndicatorHomeComponent {
   constructor(
     public api: ApiService,
     public outcomeIService: OutcomeIndicatorService,
     public exportTablesSE: ExportTablesService,
-    public messageService: MessageService
+    public messageService: PrToastService
   ) {}
 
   exportFullReport() {

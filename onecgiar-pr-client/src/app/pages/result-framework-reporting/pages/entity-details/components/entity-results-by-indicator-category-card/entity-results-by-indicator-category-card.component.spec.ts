@@ -232,7 +232,7 @@ describe('EntityResultsByIndicatorCategoryCardComponent', () => {
       expect(button).toBeTruthy();
       const htmlButton = button as HTMLButtonElement;
       expect(htmlButton.type).toBe('button');
-      expect(htmlButton.classList.contains('p-button-outlined')).toBe(true);
+      expect(htmlButton.classList.contains('entity-results-by-indicator-category-card_button-full')).toBe(true);
     });
   });
 

@@ -27,6 +27,7 @@ import { ActiveDirectoryService } from '../../services/active-directory.service'
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 import { ClarisaPortfoliosModule } from '../../../clarisa/clarisa-portfolios/clarisa-portfolios.module';
 import { ClarisaInitiativesModule } from '../../../clarisa/clarisa-initiatives/clarisa-initiatives.module';
+import { ClarisaCentersModule } from '../../../clarisa/clarisa-centers/clarisa-centers.module';
 import { VersionRepository } from '../../../api/versioning/versioning.repository';
 import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
 
@@ -56,6 +57,7 @@ import { GlobalParameterRepository } from '../../../api/global-parameter/reposit
     EmailNotificationManagementModule,
     ClarisaPortfoliosModule,
     ClarisaInitiativesModule,
+    ClarisaCentersModule,
   ],
   exports: [UserRepository, UserService, TypeOrmModule.forFeature([User])],
 })

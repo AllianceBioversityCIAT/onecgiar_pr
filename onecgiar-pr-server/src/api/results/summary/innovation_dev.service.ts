@@ -46,6 +46,10 @@ export class InnoDevService {
     user: number,
     options: Option[],
   ) {
+    if (!options?.length) {
+      return;
+    }
+
     const saveAnswer = async (data: Option | SubOption) => {
       if (data.answer_boolean == null && data.answer_text == null) {
         return; // Skip if no valid answer
@@ -92,6 +96,10 @@ export class InnoDevService {
     evidences: Evidence[],
     evidence_type_id: number,
   ) {
+    if (evidences == null) {
+      return;
+    }
+
     const existingEvidences = await this._evidenceRepository.find({
       where: {
         result_id: resultId,

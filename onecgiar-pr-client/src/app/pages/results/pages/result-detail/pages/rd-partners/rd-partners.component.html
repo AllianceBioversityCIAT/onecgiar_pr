@@ -1,4 +1,4 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="rdPartnersSE.sectionLoading()">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
   <!-- Contributing Centers start -->
   <div appFeedbackValidation labelText="Contributing CG Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>
@@ -19,8 +19,8 @@
     <div class="centers chips_container">
       <div
         class="center pr_chip_selected"
-        [pTooltip]="this.disabledText"
-        [tooltipDisabled]="!center.from_cgspace"
+        [prTooltip]="this.disabledText"
+        [prTooltipDisabled]="!center.from_cgspace"
         *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
         <div class="name" [innerHtml]="center?.name"></div>
         <i
@@ -92,7 +92,7 @@
         placeholder="Select funder"
         [(ngModel)]="donor.funder">
       </app-pr-select>
-      <div class="auto_fit_container">
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
         <app-pr-input label="Grant title" [required]="true" [(ngModel)]="donor.grant_title" placeholder="Grant title goes here..."> </app-pr-input>
         <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id" placeholder="e.g. G184"> </app-pr-input>
         <app-pr-select
@@ -132,6 +132,6 @@
     description="If you notice any discrepancies, such as partners appearing in the repository but not here, please reach out to PRMSTechSupport@cgiar.org for assistance.">
   </app-alert-status>
 
-  <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+  <app-section-bottom-bar (clickSave)="onSaveSection()" />
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
 </div>

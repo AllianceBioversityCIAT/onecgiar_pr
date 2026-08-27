@@ -42,11 +42,14 @@ describe('ReportResultFormComponent', () => {
     mockApiService = {
       dataControlSE: {
         getCurrentPhases: jest.fn(() => of({})),
-        reportingCurrentPhase: { portfolioAcronym: 'P25' },
+        reportingPhaseVersion: signal(0),
+        reportingCurrentPhase: { portfolioAcronym: 'P25', phaseYear: 2026 },
+        previousReportingPhase: { phaseYear: 2025 },
         myInitiativesListReportingByPortfolio: mockInitiatives,
         myInitiativesList: [],
         validateBody: jest.fn(),
-        someMandatoryFieldIncompleteResultDetail: jest.fn()
+        someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        fieldFeedbackList: jest.fn(() => [])
       },
       rolesSE: {
         validateReadOnly: jest.fn(() => Promise.resolve()),
@@ -407,9 +410,19 @@ describe('ReportResultFormComponent', () => {
   });
 
   describe('ngDoCheck', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail', () => {
+    it('should call someMandatoryFieldIncompleteResultDetail in a coalesced rAF', () => {
+      // Scan is now throttled + coalesced into a requestAnimationFrame run outside Angular's zone (P2-2971).
+      const rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: any) => {
+        cb(0);
+        return 0;
+      });
+      (component as any).lastScanAt = 0;
+      (component as any).scanScheduled = false;
+
       component.ngDoCheck();
+
       expect(mockApiService.dataControlSE.someMandatoryFieldIncompleteResultDetail).toHaveBeenCalledWith('.report_container');
+      rafSpy.mockRestore();
     });
   });
 
@@ -789,6 +802,45 @@ describe('ReportResultFormComponent', () => {
     it('should convert undefined to null', () => {
       component.selectedInitiativeId = undefined;
       expect((component as any)._selectedInitiativeId).toBe(null);
+    });
+  });
+
+  /**
+   * P2-3053-style fix: the knowledge-product guidance used to hardcode 2025/2026/2024. It now derives every year
+   * from the active reporting phase. `reportingCurrentPhase` is a plain object, so the computed depends on the
+   * `reportingPhaseVersion` signal to re-render once `getCurrentPhases()` lands.
+   */
+  describe('kpAlertDescription — reporting-phase years', () => {
+    it('uses the active phase year, the next year and the previous phase year', () => {
+      const text = component.kpAlertDescription();
+
+      expect(text).toContain('only knowledge products from <strong>2026</strong> will be accepted');
+      expect(text).toContain('published online in <strong>2026</strong> but issued in <strong>2027</strong>');
+      expect(text).toContain('accepted for the <strong>2026</strong> reporting phase');
+      expect(text).toContain('published online in <strong>2025</strong> but issued in <strong>2026</strong> will not be accepted');
+      expect(text).not.toContain('2024');
+    });
+
+    it('re-renders when the phases resolve after the first paint (never leaves the stale year)', () => {
+      expect(component.kpAlertDescription()).toContain('<strong>2026</strong>');
+
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2027;
+      mockApiService.dataControlSE.previousReportingPhase.phaseYear = 2026;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(1);
+
+      expect(component.kpAlertDescription()).toContain('only knowledge products from <strong>2027</strong> will be accepted');
+    });
+
+    it('never paints "null" while the phases have not loaded yet', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = null;
+      mockApiService.dataControlSE.previousReportingPhase.phaseYear = null;
+      mockApiService.dataControlSE.reportingPhaseVersion.set(2);
+
+      const text = component.kpAlertDescription();
+
+      expect(text).not.toContain('null');
+      expect(text).not.toContain('NaN');
+      expect(text).toContain(`<strong>${new Date().getFullYear()}</strong>`);
     });
   });
 });

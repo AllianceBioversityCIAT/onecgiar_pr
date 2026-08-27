@@ -1,11 +1,16 @@
+import { PrTooltipDirectiveModule } from '../../../../../../../../shared/directives/pr-tooltip-directive.module';
 import { ChangeDetectionStrategy, Component, computed, inject, Input, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
+import {
+  PrGroupTableComponent,
+  PrTableHeaderDirective,
+  PrTableGroupHeaderDirective,
+  PrTableExpandedRowDirective,
+  PrTableEmptyDirective,
+  PrRowTogglerDirective
+} from '../../../../../../../../shared/components/pr-table';
 import { EntityAowService } from '../../../../services/entity-aow.service';
-import { ProgressBarModule } from 'primeng/progressbar';
 import { CommonModule } from '@angular/common';
-import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
+import { HlmButton } from '@spartan/button';
 import { AowHloCreateModalComponent } from './components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 import { ResultLevelService } from '../../../../../../../results/pages/result-creator/services/result-level.service';
 import { AowViewResultsDrawerComponent } from './components/aow-view-results-drawer/aow-view-results-drawer.component';
@@ -21,13 +26,15 @@ export interface ColumnOrder {
 
 @Component({
   selector: 'app-aow-hlo-table',
-  imports: [
+  imports: [PrTooltipDirectiveModule,
     CommonModule,
-    FormsModule,
-    TableModule,
-    ProgressBarModule,
-    ButtonModule,
-    TooltipModule,
+    PrGroupTableComponent,
+    PrTableHeaderDirective,
+    PrTableGroupHeaderDirective,
+    PrTableExpandedRowDirective,
+    PrTableEmptyDirective,
+    PrRowTogglerDirective,
+    HlmButton,
     AowHloCreateModalComponent,
     AowViewResultsDrawerComponent,
     AowTargetDetailsDrawerComponent
@@ -40,14 +47,29 @@ export class AowHloTableComponent {
   entityAowService = inject(EntityAowService);
   resultLevelService = inject(ResultLevelService);
 
-  @Input() tableType: 'outputs' | 'outcomes' | '2030-outcomes' | 'intermediate-outcomes' = 'outputs';
+  @Input() tableType:
+    | 'outputs'
+    | 'outcomes'
+    | 'outcomes-non-exclusive'
+    | '2030-outcomes'
+    | 'intermediate-outcomes' = 'outputs';
+
+  // Set to false on secondary instances: the search box and the modal/drawers below are driven by
+  // shared service signals, so rendering them twice would duplicate the input and stack the dialogs.
+  @Input() showSearch = true;
+  @Input() renderOverlays = true;
+
+  // Suffix appended to the table and column header ids so two instances on the same page stay unique.
+  @Input() instanceId = '';
 
   tableData = computed(() => {
     switch (this.tableType) {
       case 'outputs':
         return this.entityAowService.tocResultsOutputsByAowId();
       case 'outcomes':
-        return this.entityAowService.tocResultsOutcomesByAowId();
+        return this.entityAowService.tocResultsOutcomesExclusiveByAowId();
+      case 'outcomes-non-exclusive':
+        return this.entityAowService.tocResultsOutcomesNonExclusiveByAowId();
       case '2030-outcomes':
         return this.entityAowService.tocResults2030Outcomes();
       case 'intermediate-outcomes':
@@ -57,27 +79,45 @@ export class AowHloTableComponent {
     }
   });
 
-  // P2-3141: filter groups/indicators by the AoW-level search text without mutating the service signals.
+  // Client-side toolbar filters: status chip is local to this table; the search text is the
+  // AoW-level signal on the service (P2-3141) so it also drives the empty-state message.
+  statusFilter = signal<'all' | 'Not started' | 'In progress' | 'Achieved' | 'Overachieved'>('all');
+
+  // P2-3141: filter groups/indicators by the AoW-level search text (HLO title + KPI statement +
+  // indicator typology) without mutating the service signals, combined with the redesign status chip.
   filteredTableData = computed(() => {
-    const search = this.entityAowService.searchText().trim().toUpperCase();
-    if (!search) return this.tableData();
+    const query = this.entityAowService.searchText().toLowerCase().trim();
+    const status = this.statusFilter();
+
+    // No search and no status chip → return the data untouched (same reference, no allocation).
+    if (!query && status === 'all') return this.tableData();
+
+    const byStatus = (indicators: any[]) =>
+      status === 'all' ? indicators : indicators.filter((indicator: any) => this.getStatusLabel(indicator.progress_percentage) === status);
 
     return this.tableData()
-      .map((item: any) => {
-        if ((item.result_title || '').toUpperCase().includes(search)) return item;
+      .map((group: any) => {
+        const titleMatches = !!query && (group.result_title || '').toLowerCase().includes(query);
+        // Title matches → keep the whole group (all its indicators); otherwise keep only the
+        // indicators matching the query. The status chip is applied on top of either set.
+        const searched = titleMatches
+          ? group.indicators || []
+          : (group.indicators || []).filter(
+              (indicator: any) =>
+                !query ||
+                (indicator.indicator_description || '').toLowerCase().includes(query) ||
+                (indicator.type_name || '').toLowerCase().includes(query) ||
+                // staging: AOW indicators now carry the center, so it is searchable too.
+                (indicator.center_acronym || '').toLowerCase().includes(query)
+            );
 
-        return {
-          ...item,
-          indicators: (item.indicators || []).filter(
-            (indicator: any) =>
-              (indicator.indicator_description || '').toUpperCase().includes(search) ||
-              (indicator.type_name || '').toUpperCase().includes(search) ||
-              (indicator.center_acronym || '').toUpperCase().includes(search)
-          )
-        };
+        return { group, indicators: byStatus(searched), titleMatches };
       })
-      .filter((item: any) => item.indicators?.length || (item.result_title || '').toUpperCase().includes(search));
+      .filter((entry: any) => entry.indicators.length > 0 || entry.titleMatches)
+      .map((entry: any) => ({ ...entry.group, indicators: entry.indicators }));
   });
+
+  filteredIndicatorCount = computed(() => this.filteredTableData().reduce((sum: number, g: any) => sum + (g.indicators?.length ?? 0), 0));
 
   expandedRowKeys = computed(() => {
     const expanded: { [key: string]: boolean } = {};
@@ -91,6 +131,8 @@ export class AowHloTableComponent {
     switch (this.tableType) {
       case 'outcomes':
         return 'There are no Intermediate Outcomes indicators found.';
+      case 'outcomes-non-exclusive':
+        return 'There are no Intermediate Outcomes shared with other Areas of Work.';
       case '2030-outcomes':
         return 'There are no 2030 Outcomes indicators configured for this program in the current reporting phase.';
       case 'intermediate-outcomes':
@@ -102,11 +144,16 @@ export class AowHloTableComponent {
   }
 
   // P2-3053: agreed nomenclature + dynamic phase year ("<year> target") instead of hardcoded "2025".
+  // P2-3133: the 2030 Outcomes view shows a cumulative "2030 target"; "Achieved value" replaces "Achieved target" globally.
   columnOrder = computed<ColumnOrder[]>(() => [
     { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
     { title: 'Indicator typology', attr: 'type_name', width: '10%' },
-    { title: `${this.entityAowService.reportingPhaseYear} target`.trim(), attr: 'target_value_sum', width: '10%' },
-    { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
+    {
+      title: this.tableType === '2030-outcomes' ? '2030 target' : `${this.entityAowService.reportingPhaseYear} target`.trim(),
+      attr: 'target_value_sum',
+      width: '10%'
+    },
+    { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
     { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
 

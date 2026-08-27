@@ -8,8 +8,7 @@ import { SyncButtonComponent } from '../../../../../../custom-fields/sync-button
 import { AlertStatusComponent } from '../../../../../../custom-fields/alert-status/alert-status.component';
 import { DetailSectionTitleComponent } from '../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { FormsModule } from '@angular/forms';
-import { RadioButtonModule } from 'primeng/radiobutton';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { GeoScopeEnum } from '../../../../../../shared/enum/geo-scope.enum';
@@ -55,7 +54,7 @@ describe('RdGeographicLocationComponent', () => {
         AlertStatusComponent,
         DetailSectionTitleComponent
       ],
-      imports: [HttpClientTestingModule, FormsModule, RadioButtonModule],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [
         {
           provide: ApiService,
@@ -144,6 +143,132 @@ describe('RdGeographicLocationComponent', () => {
 
       const expectedText = `The list of countries below follows the <a href='${component.ISO3166}' class="open_route" target='_blank'>ISO 3166<a> standard`;
       expect(result).toBe(expectedText);
+    });
+  });
+
+  /**
+   * This section loads from an `effect()` gated on the portfolio, so between first paint and the
+   * GET there is no request in flight at all — the skeleton must therefore start raised. Neither
+   * GET had an `error` branch before, which would have left it shimmering forever.
+   */
+  describe('sectionLoading (skeleton)', () => {
+    it('starts raised, before any request has been made', () => {
+      expect(component.sectionLoading()).toBe(true);
+    });
+
+    it('is released when the P22 section GET responds', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_geographicSection').mockReturnValue(of({ response: {} }));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the P22 section GET fails, so the skeleton can never get stuck', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_geographicSection').mockReturnValue(throwError(() => new Error('boom')));
+
+      component.getSectionInformation();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the P25 section GET responds', () => {
+      mockApiService.resultsSE.GET_geographicSectionp25 = () => of({ response: {} });
+
+      component.getSectionInformationp25();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+
+    it('is released when the P25 section GET fails', () => {
+      mockApiService.resultsSE.GET_geographicSectionp25 = () => throwError(() => new Error('boom'));
+
+      component.getSectionInformationp25();
+
+      expect(component.sectionLoading()).toBe(false);
+    });
+  });
+
+  // ----- P2-3201 (point 5): geographic focus question, unified inside 2026 only -----
+  describe('P2-3201 — geographic focus question wording', () => {
+    const asContext = (opts: { is2026: boolean; isP25?: boolean; isInnovation?: boolean }) => {
+      (component as any).fieldsManagerSE = {
+        isGeographicLocation2026: () => opts.is2026,
+        isP25: () => opts.isP25 ?? true,
+        isAnInnovation: () => opts.isInnovation ?? false
+      };
+    };
+
+    it('uses the unified 2026 question for an innovation, replacing the P2-3036 (AC9) "location of benefit" wording', () => {
+      asContext({ is2026: true, isP25: true, isInnovation: true });
+
+      expect(component.geographicFocusLabel()).toBe('What is the geographic focus of the result?');
+      expect(component.geographicFocusHeader()).toBe('What is the geographic focus of the result?');
+    });
+
+    it('uses the same unified question for a non-innovation result in 2026', () => {
+      asContext({ is2026: true, isP25: true, isInnovation: false });
+
+      expect(component.geographicFocusLabel()).toBe('What is the geographic focus of the result?');
+      expect(component.geographicFocusHeader()).toBe('What is the geographic focus of the result?');
+    });
+
+    it('keeps the legacy innovation wording for a P25 innovation before 2026', () => {
+      asContext({ is2026: false, isP25: true, isInnovation: true });
+
+      expect(component.geographicFocusLabel()).toBe('What is the current geographic focus of the innovation development, testing and/or use?');
+      expect(component.geographicFocusHeader()).toBe('What is the current geographic focus of the innovation development, testing and/or use?');
+    });
+
+    it('leaves the label undefined before 2026 for other results, so app-geoscope-management keeps building its own', () => {
+      asContext({ is2026: false, isP25: true, isInnovation: false });
+
+      expect(component.geographicFocusLabel()).toBeUndefined();
+      expect(component.geographicFocusHeader()).toBe('What is the main geographic focus of the Output?');
+    });
+  });
+
+  // ----- P2-3371: the "other geographic areas" question and its completeness entry -----
+  describe('P2-3371 — extra geo scope question is only tracked while it is on screen', () => {
+    const withField = (field: any) => {
+      (component as any).fieldsManagerSE = { fields: () => ({ '[geoscope-management]-has_extra_geo_scope': field }) };
+    };
+
+    it('does not register the question for a P22 result, where FieldsManagerService hides it', () => {
+      withField({
+        label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',
+        hide: true
+      });
+
+      expect(component.showExtraGeoScopeQuestion()).toBe(false);
+    });
+
+    it('registers the question when it is rendered (P25 innovation)', () => {
+      withField({
+        label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',
+        hide: false
+      });
+
+      expect(component.showExtraGeoScopeQuestion()).toBe(true);
+    });
+
+    it('names the completeness entry with the wording the user actually reads, not a second hard-coded one', () => {
+      withField({
+        label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',
+        hide: false
+      });
+
+      expect(component.extraGeoScopeHeader()).toBe(
+        'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?'
+      );
+      expect(component.extraGeoScopeHeader()).not.toContain('for this Output');
+    });
+
+    it('survives a fields map that has no entry for the question', () => {
+      (component as any).fieldsManagerSE = { fields: () => ({}) };
+
+      expect(component.showExtraGeoScopeQuestion()).toBe(false);
+      expect(component.extraGeoScopeHeader()).toBe('');
     });
   });
 });

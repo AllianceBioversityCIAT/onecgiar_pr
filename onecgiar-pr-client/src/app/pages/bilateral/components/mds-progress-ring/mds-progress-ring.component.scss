@@ -1,0 +1,16 @@
+.progress-ring {
+  display: block;
+}
+
+.progress-ring-text {
+  // P2-3481 groundwork: was `Inter, Poppins` — neither is the brand face, so this ring rendered
+  // in a different typeface from every number around it. fonts.scss owns the stack.
+  font-family: 'Manrope', 'Poppins', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  fill: #212121;
+}
+
+.progress-ring-fill {
+  transition: stroke-dashoffset 300ms ease, stroke 300ms ease;
+}

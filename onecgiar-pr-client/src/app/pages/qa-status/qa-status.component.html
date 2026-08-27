@@ -1,0 +1,181 @@
+<app-page-header>
+  @if (board()) {
+    <h1 class="pr-h1 mb-4">{{ board()!.boardTitle }}</h1>
+    @if (board()!.boardSubtitle) {
+      <p class="pr-body-1 mb-0">{{ board()!.boardSubtitle }}</p>
+    }
+  } @else {
+    <h1 class="pr-h1 mb-0">QA status</h1>
+  }
+</app-page-header>
+
+@if (loadError()) {
+  <div class="qa-error mt-12">
+    <span class="material-icons-round">error_outline</span>
+    <span>Could not load the QA status board. Please try again later.</span>
+  </div>
+} @else if (board()) {
+  <!-- GLOBAL METRICS -->
+  <section class="qa-card mt-12">
+    <div class="qa-card__header qa-card__header--static">
+      <span class="material-icons-round">speed</span>
+      <h2 class="pr-h3 mb-0">Global metrics</h2>
+    </div>
+    <div class="qa-card__body">
+      <div class="qa-metrics">
+        <div class="qa-metrics__col">
+          <h3 class="pr-h4 mb-4">Before</h3>
+          <ul class="qa-metrics__list">
+            <li><strong>DOM scans / sec (idle):</strong> {{ board()!.globalMetrics.before.domScansPerSecIdle ?? '—' }}</li>
+            <li><strong>Tab switch wall clock (s):</strong> {{ board()!.globalMetrics.before.tabSwitchWallClockSec ?? '—' }}</li>
+            <li><strong>Blocking time (ms):</strong> {{ board()!.globalMetrics.before.blockingTimeMs ?? '—' }}</li>
+          </ul>
+        </div>
+        <div class="qa-metrics__col">
+          <h3 class="pr-h4 mb-4">After</h3>
+          <ul class="qa-metrics__list">
+            <li><strong>DOM scans / sec (idle):</strong> {{ board()!.globalMetrics.after.domScansPerSecIdle ?? '—' }}</li>
+            <li><strong>Tab switch wall clock (s):</strong> {{ board()!.globalMetrics.after.tabSwitchWallClockSec ?? '—' }}</li>
+            <li><strong>Blocking time (ms):</strong> {{ board()!.globalMetrics.after.blockingTimeMs ?? '—' }}</li>
+          </ul>
+        </div>
+      </div>
+      @if (board()!.globalMetrics.summary) {
+        <p class="qa-summary mt-8 mb-0">{{ board()!.globalMetrics.summary }}</p>
+      }
+      @if (board()!.globalMetrics.testsPassing) {
+        <p class="qa-tests mt-4 mb-0">
+          <span class="material-icons-round">check_circle</span>
+          {{ board()!.globalMetrics.testsPassing }}
+        </p>
+      }
+    </div>
+  </section>
+
+  <!-- ITEMS -->
+  @for (item of board()!.items; track trackById($index, item)) {
+    <section class="qa-card mt-12">
+      <button
+        type="button"
+        class="qa-card__header"
+        [attr.aria-expanded]="isExpanded(item.id)"
+        (click)="toggle(item.id)">
+        <span [class]="chipClass(item.status)">{{ statusLabel(item.status) }}</span>
+        @if (item.ticket) {
+          <span class="qa-card__ticket">{{ item.ticket }}</span>
+        }
+        <span class="qa-card__title pr-h4 mb-0">{{ item.title }}</span>
+        <span class="material-icons-round qa-card__caret">
+          {{ isExpanded(item.id) ? 'expand_less' : 'expand_more' }}
+        </span>
+      </button>
+
+      @if (isExpanded(item.id)) {
+        <div class="qa-card__body">
+          @if (item.area) {
+            <p class="qa-card__area mb-8">{{ item.area }}</p>
+          }
+          @if (item.whatChanged) {
+            <h3 class="pr-h4 mb-4">What changed</h3>
+            <p class="mb-8">{{ item.whatChanged }}</p>
+          }
+
+          @if (item.howToTest?.length) {
+            <h3 class="pr-h4 mb-4">How to test</h3>
+            <ol class="qa-list mb-8">
+              @for (step of item.howToTest; track $index) {
+                <li>{{ step }}</li>
+              }
+            </ol>
+          }
+
+          @if (item.affects?.length) {
+            <h3 class="pr-h4 mb-4">Affects</h3>
+            <ul class="qa-list mb-8">
+              @for (a of item.affects; track $index) {
+                <li>{{ a }}</li>
+              }
+            </ul>
+          }
+
+          @if (item.risks?.length) {
+            <h3 class="pr-h4 mb-4">Risks / validation notes</h3>
+            <ul class="qa-list mb-8">
+              @for (r of item.risks; track $index) {
+                <li>{{ r }}</li>
+              }
+            </ul>
+          }
+
+          @if (hasMetrics(item.metricsBefore) || hasMetrics(item.metricsAfter)) {
+            <h3 class="pr-h4 mb-4">Metrics</h3>
+            <div class="qa-metrics mb-8">
+              <div class="qa-metrics__col">
+                <h4 class="pr-body-1 mb-4"><strong>Before</strong></h4>
+                @if (metricsText(item.metricsBefore); as txt) {
+                  <p class="mb-0">{{ txt }}</p>
+                } @else {
+                  <ul class="qa-metrics__list">
+                    @for (entry of metricsEntries(item.metricsBefore); track entry.key) {
+                      <li><strong>{{ entry.key }}:</strong> {{ entry.value }}</li>
+                    }
+                  </ul>
+                }
+              </div>
+              <div class="qa-metrics__col">
+                <h4 class="pr-body-1 mb-4"><strong>After</strong></h4>
+                @if (metricsText(item.metricsAfter); as txt) {
+                  <p class="mb-0">{{ txt }}</p>
+                } @else {
+                  <ul class="qa-metrics__list">
+                    @for (entry of metricsEntries(item.metricsAfter); track entry.key) {
+                      <li><strong>{{ entry.key }}:</strong> {{ entry.value }}</li>
+                    }
+                  </ul>
+                }
+              </div>
+            </div>
+          }
+
+          <h3 class="pr-h4 mb-4">Screenshots</h3>
+          @if (item.screenshots?.length) {
+            <div class="qa-shots">
+              @for (shot of item.screenshots; track $index) {
+                <img
+                  class="qa-thumb"
+                  [src]="screenshotSrc(shot)"
+                  [alt]="item.title + ' screenshot'"
+                  loading="lazy" />
+              }
+            </div>
+          } @else {
+            <p class="qa-empty mb-0">No screenshots</p>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  @if (board()!.extraImprovements?.length) {
+    <section class="qa-card mt-12">
+      <div class="qa-card__header qa-card__header--static">
+        <span class="material-icons-round">lightbulb</span>
+        <h2 class="pr-h3 mb-0">Planned / deferred improvements</h2>
+      </div>
+      <div class="qa-card__body">
+        <ul class="qa-list mb-0">
+          @for (extra of board()!.extraImprovements; track $index) {
+            <li>{{ extra }}</li>
+          }
+        </ul>
+      </div>
+    </section>
+  }
+} @else {
+  <!-- LOADING SKELETON -->
+  <div class="qa-skeleton mt-12" aria-busy="true">
+    <div class="qa-skeleton__bar"></div>
+    <div class="qa-skeleton__bar"></div>
+    <div class="qa-skeleton__bar"></div>
+  </div>
+}

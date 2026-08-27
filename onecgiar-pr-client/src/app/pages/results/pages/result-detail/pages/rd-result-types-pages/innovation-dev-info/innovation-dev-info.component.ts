@@ -1,4 +1,4 @@
-import { Component, computed, effect } from '@angular/core';
+import { Component, computed, effect, signal } from '@angular/core';
 import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
@@ -24,6 +24,14 @@ export class InnovationDevInfoComponent {
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
   evidencesBody: EvidencesBody = new EvidencesBody();
+
+  /**
+   * Drives `[appSectionSkeleton]`. TRUE from construction and NOT from "a request is in flight":
+   * this section loads from an `effect()` gated on `currentResultSignal()?.portfolio`, so between
+   * first paint and the GET there is no request at all and the empty body would paint as a
+   * mandatory-but-empty form. Released on `next` AND `error`.
+   */
+  readonly sectionLoading = signal(true);
 
   constructor(
     private readonly api: ApiService,
@@ -52,11 +60,19 @@ export class InnovationDevInfoComponent {
   });
 
   getSectionInformationp25(): void {
-    this.api.resultsSE.GET_innovationDevP25().subscribe(({ response }) => {
-      this.innovationDevInfoBody = response;
-      this.convertOrganizations(response?.innovatonUse?.organization);
-      this.normalizeInnovationDevBooleans();
-      this.savingSection = false;
+    this.api.resultsSE.GET_innovationDevP25().subscribe({
+      next: ({ response }) => {
+        this.innovationDevInfoBody = response;
+        this.convertOrganizations(response?.innovatonUse?.organization);
+        this.normalizeInnovationDevBooleans();
+        this.savingSection = false;
+        this.sectionLoading.set(false);
+      },
+      error: err => {
+        console.error(err);
+        this.savingSection = false;
+        this.sectionLoading.set(false);
+      }
     });
     this.api.resultsSE.GET_questionsInnovationDevelopmentP25().subscribe(({ response }) => {
       this.innovationDevelopmentQuestions = response;
@@ -97,10 +113,12 @@ export class InnovationDevInfoComponent {
         this.innovationDevInfoBody = response;
         this.normalizeInnovationDevBooleans();
         this.savingSection = false;
+        this.sectionLoading.set(false);
       },
       error: err => {
         console.error(err);
         this.savingSection = false;
+        this.sectionLoading.set(false);
       }
     });
   }
@@ -324,5 +342,56 @@ export class InnovationDevInfoComponent {
     const selectedId = this.innovationDevInfoBody.innovation_readiness_level_id;
     const index = this.innovationControlListSE.readinessLevelsList.findIndex(level => level.id === selectedId);
     return index >= 0 ? index : -1;
+  }
+
+  /**
+   * The catalogue's numeric `level` (0-9) for the currently selected readiness level, or `null`
+   * when nothing is selected / the catalogue has not loaded yet.
+   *
+   * P2-3265 / P2-3359: read the catalogue row's `level` field, never the row `id` (auto-increment,
+   * unrelated to the level number) nor its array position. `getReadinessLevelIndex()` above happens
+   * to line up with `level` only because CLARISA currently returns the rows pre-sorted 0..9 with no
+   * gaps — that is an accident of today's data, not a guarantee.
+   */
+  private getSelectedReadinessLevelValue(): number | null {
+    const selectedId = this.innovationDevInfoBody?.innovation_readiness_level_id;
+    if (selectedId === null || selectedId === undefined || !this.innovationControlListSE?.readinessLevelsList) {
+      return null;
+    }
+    const selected = this.innovationControlListSE.readinessLevelsList.find((level: any) => level.id === selectedId);
+    if (!selected) {
+      return null;
+    }
+    const levelValue = Number(selected.level);
+    return Number.isNaN(levelValue) ? null : levelValue;
+  }
+
+  /**
+   * P2-3265 (epic P2-3243): whether the "Have any studies been conducted to inform the innovation
+   * scaling strategy design..." question (and its follow-up studies-link list) should render.
+   *
+   * Ticket's own Conditional Logic table: "< 6: Not applicable (question was not shown at these
+   * levels)" + "= 6 [confirmed >= 6 by the PO, Ángel Jarrín, Jira P2-3265, 26-Aug-2026 16:14]:
+   * Remove — question must no longer appear". The union of both rows covers every level (0-9): the
+   * question is dropped entirely for the 2026 phase onward, regardless of the selected readiness
+   * level — there is no level at which it should newly appear. (An earlier pass of this gate showed
+   * it for levels 1-5, misreading a follow-up paraphrase as reversing the "< 6: not applicable" row;
+   * corrected 26-Aug-2026 after re-reading the ticket's literal table against this same file's
+   * pre-existing `>= 6` condition, which the table's "< 6" row was describing all along.)
+   *
+   * Phases up to and including 2025 must keep rendering exactly as before this change (Ángel Jarrín,
+   * Jira P2-3243 epic note, 23-Aug-2026): visible only from level 6 up. Gated on the reporting PHASE
+   * YEAR via `isInnovationDevFormReduced2026()` (already 2026-thresholded for this same epic), never
+   * on `isP25()`/portfolio — prtest holds 2025-phase results inside the P25 portfolio.
+   */
+  showScalingStudiesQuestion(): boolean {
+    if (this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+      return false;
+    }
+    const levelValue = this.getSelectedReadinessLevelValue();
+    if (levelValue === null) {
+      return false;
+    }
+    return levelValue >= 6;
   }
 }

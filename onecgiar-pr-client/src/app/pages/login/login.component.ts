@@ -3,13 +3,12 @@ import { AuthService } from '../../shared/services/api/auth.service';
 import { CognitoService } from '../../shared/services/cognito.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PasswordModule } from 'primeng/password';
-import { InputTextModule } from 'primeng/inputtext';
+import { HlmInput } from '@spartan/input';
 import { Router } from '@angular/router';
 
 @Component({
     selector: 'app-login',
-    imports: [CommonModule, FormsModule, PasswordModule, InputTextModule],
+    imports: [CommonModule, FormsModule, HlmInput],
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -20,14 +19,32 @@ export class LoginComponent implements OnInit, OnDestroy {
   router = inject(Router);
 
   showLoginForm = signal(false);
+  showPassword = false;
+  showConfirmPassword = false;
 
   toggleLoginForm(): void {
     this.showLoginForm.set(!this.showLoginForm());
   }
 
+  toggleShowPassword(): void {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleShowConfirmPassword(): void {
+    this.showConfirmPassword = !this.showConfirmPassword;
+  }
+
   ngOnInit(): void {
     if (this.authService.localStorageUser) {
-      this.router.navigate(['/']);
+      // Already signed in: honour the deep link that sent them here, if any.
+      const pending = this.authService.consumePendingRedirectUrl();
+      if (pending) {
+        this.router.navigateByUrl(pending).then(ok => {
+          if (!ok) this.router.navigate(['/']);
+        });
+      } else {
+        this.router.navigate(['/']);
+      }
     }
 
     this.authService.inLogin.set(true);

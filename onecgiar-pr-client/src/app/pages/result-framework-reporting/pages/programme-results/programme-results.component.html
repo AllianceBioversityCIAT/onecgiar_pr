@@ -1,0 +1,514 @@
+<!--
+  Results tab of the programme shell.
+  Design: `PRMS Reporting.dc.html` → `<sc-if value="{{ showProgResults }}">` (:1333-1540).
+  Every measurement is an arbitrary px value on purpose: `html` is 12px, so rem-based Tailwind
+  utilities land 25% short of the mockup (client CLAUDE.md §5 / UI-RULES §1.3).
+-->
+
+<!-- The "Coming soon" tag. One markup, one wording, five places — so QA and the Jira tickets
+     describe the same thing everywhere. -->
+<ng-template #comingSoon>
+  <span
+    class="inline-flex h-[16px] flex-none items-center rounded-full bg-[var(--pr-color-primary-50)] px-[6px] text-[10px] font-semibold uppercase leading-none tracking-[0.06em] text-[var(--pr-color-primary-400)]">
+    Coming soon
+  </span>
+</ng-template>
+
+<section class="min-h-screen bg-[var(--pr-surface-app)] p-0">
+  <article class="flex w-full min-w-0 flex-col">
+    <!-- Same band, same tab strip, third tab active. `showToolbar` off: this tab owns its own
+         filter row (the band's toolbar belongs to Reporting). `canReport` off: the emerging-result
+         CTA opens a modal this surface does not host. -->
+    <app-reporting-program-band
+      [programCode]="programmeCode()"
+      [programName]="programmeName()"
+      [cycleYear]="cycleYear"
+      [cyclePhase]="cyclePhase"
+      activeTab="results"
+      [canReport]="false"
+      [showToolbar]="false" />
+
+    <!-- TAB BODY — design :762: flex:1, 32px pad, ONE flex column at 16px. -->
+    <div class="flex flex-1 flex-col gap-[16px] p-[32px]">
+      <!-- ═════════════════════════════ 1. TITLE ROW ═════════════════════════════ -->
+      <div class="flex items-center gap-[12px]">
+        <h1 class="m-0 flex-1 text-[20px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]">Results</h1>
+
+        <!-- Columns picker. NOTE: the same picker exists inline in results-list and again in
+             bilateral-results-list; it is not extracted to a shared component. Written locally
+             here on purpose — extracting it would mean editing two live screens. Follow-up:
+             lift all three into `shared/components/pr-columns-picker/`. -->
+        <div class="relative flex-none">
+          <button
+            type="button"
+            class="flex h-[36px] items-center gap-[7px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-surface-app)]"
+            [attr.aria-expanded]="columnsOpen()"
+            aria-haspopup="dialog"
+            (click)="toggleColumnsPanel($event)">
+            Columns
+            <ng-icon name="lucideCog" size="15px" strokeWidth="1.8" class="text-[var(--pr-text-secondary)]" />
+          </button>
+
+          @if (columnsOpen()) {
+            <div
+              role="dialog"
+              aria-label="Optional columns"
+              (click)="$event.stopPropagation()"
+              class="pgr-pop absolute right-0 top-[40px] z-30 w-[220px] cursor-default rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[6px] shadow-[0_8px_24px_rgba(25,21,36,0.10)]">
+              <div
+                class="px-[10px] pb-[6px] pt-[8px] text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+                Optional columns
+              </div>
+              @for (column of optionalColumns; track column.key) {
+                <button
+                  type="button"
+                  role="menuitemcheckbox"
+                  [attr.aria-checked]="isColumnVisible(column.key)"
+                  class="flex h-[36px] w-full items-center gap-[10px] rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-normal text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-surface-app)]"
+                  (click)="toggleColumn(column.key, $event)">
+                  <span
+                    class="flex size-[16px] flex-none items-center justify-center rounded-[4px] border-[1.5px]"
+                    [class]="
+                      isColumnVisible(column.key)
+                        ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-300)]'
+                        : 'border-[var(--pr-border-strong)] bg-[var(--pr-surface-card)]'
+                    "
+                    aria-hidden="true">
+                    @if (isColumnVisible(column.key)) {
+                      <ng-icon name="lucideCheck" size="11px" strokeWidth="2.2" class="text-white" />
+                    }
+                  </span>
+                  {{ column.label }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Export CSV -->
+        <button
+          type="button"
+          class="flex h-[36px] flex-none items-center gap-[7px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white transition-colors hover:bg-[var(--pr-color-primary-400)] disabled:cursor-not-allowed disabled:opacity-50"
+          [disabled]="!filteredRows().length"
+          [attr.title]="filteredRows().length ? 'Download the filtered rows and visible columns as CSV.' : 'There is nothing to export.'"
+          (click)="exportCsv()">
+          <ng-icon name="lucideDownload" size="15px" strokeWidth="1.8" class="text-white" />
+          Export CSV
+        </button>
+      </div>
+
+      <!-- ═════════════════════════════ 2. FILTER ROW ════════════════════════════ -->
+      <div class="flex flex-wrap items-center gap-[12px]" role="search" aria-label="Results filters">
+        <!-- Search: 320 × 40, icon at left 12 -->
+        <div class="relative w-[320px] flex-none">
+          <span class="pointer-events-none absolute left-[12px] top-1/2 flex -translate-y-1/2 text-[var(--pr-text-muted)]">
+            <ng-icon name="lucideSearch" size="16px" strokeWidth="1.9" />
+          </span>
+          <input
+            type="text"
+            class="h-[40px] w-full rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] pl-[36px] pr-[12px] text-[14px] font-normal text-[var(--pr-text)] outline-none transition-colors placeholder:text-[var(--pr-text-subtle)] focus-visible:border-[var(--pr-color-primary-300)]"
+            placeholder="Search results or indicators…"
+            aria-label="Search results or indicators"
+            [value]="searchDraft()"
+            (input)="onSearchInput($any($event.target).value)" />
+        </div>
+
+        <!-- Section — MULTI-select, grouped.
+             P2-3398: ships VISIBLE BUT DISABLED. No endpoint returns a programme's full result set
+             with an AoW / Section field, so every row's `section` is empty and this filter could
+             only ever hide everything. The grouped options stay wired, so enabling it later is one
+             flag on [disabled]. -->
+        <div class="flex flex-none items-center gap-[6px]">
+          <div
+            class="pgr-filter pgr-filter--section w-[190px] cursor-not-allowed opacity-60"
+            aria-disabled="true"
+            title="Filtering by section is not available yet: the results feed does not carry the area of work.">
+            <app-pr-filter-multiselect
+              [options]="sectionOptions()"
+              [group]="true"
+              optionGroupLabel="label"
+              optionGroupChildren="items"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Section"
+              countLabel="sections"
+              [disabled]="true"
+              [ngModel]="filter.selectedSections()"
+              (changed)="filter.selectedSections.set($event)"></app-pr-filter-multiselect>
+          </div>
+          <ng-container [ngTemplateOutlet]="comingSoon"></ng-container>
+        </div>
+
+        <!-- Status — single-select -->
+        <div class="pgr-filter w-[150px]" aria-label="Filter by status">
+          <app-pr-filter-select
+            [options]="statusSelectOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Status"
+            [ngModel]="selectValue(filter.selectedStatus())"
+            (changed)="onStatusChange($event)"></app-pr-filter-select>
+        </div>
+
+        <!-- Category — single-select (`result_type`) -->
+        <div class="pgr-filter w-[190px]" aria-label="Filter by category">
+          <app-pr-filter-select
+            [options]="categorySelectOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Category"
+            [ngModel]="selectValue(filter.selectedCategory())"
+            (changed)="onCategoryChange($event)"></app-pr-filter-select>
+        </div>
+
+        <!-- Origin — single-select (`source_name`: W1/W2 · W3/Bilaterals) -->
+        <div class="pgr-filter w-[130px]" aria-label="Filter by origin">
+          <app-pr-filter-select
+            [options]="originSelectOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Origin"
+            [ngModel]="selectValue(filter.selectedOrigin())"
+            (changed)="onOriginChange($event)"></app-pr-filter-select>
+        </div>
+      </div>
+
+      <!-- ═════════════════════════════ 3. CHIP ROW ══════════════════════════════ -->
+      @if (filter.hasActiveFilters()) {
+        <div class="flex flex-wrap items-center gap-[8px]">
+          @for (chip of filter.activeChips(); track chip.dimension + '|' + chip.value) {
+            <span class="pr-chip pgr-chip">
+              {{ chip.label }}
+              <button type="button" class="pgr-chip-remove" aria-label="Remove filter" (click)="clearChip(chip)">
+                <ng-icon name="lucideX" size="10px" strokeWidth="2.6" />
+              </button>
+            </span>
+          }
+          <button
+            type="button"
+            class="h-[26px] rounded-[8px] border-0 bg-transparent px-[10px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+            (click)="clearAll()">
+            Clear all
+          </button>
+        </div>
+      }
+
+      <!-- ════════════════════════════ 4. COUNTS ROW ═════════════════════════════
+           Counts are computed over the rows filtered by EVERYTHING EXCEPT status, so each pill
+           keeps a meaningful number while one status is selected — which is what makes them
+           clickable in the first place. -->
+      <div class="flex flex-wrap items-center gap-[12px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
+        <span class="font-medium text-[var(--pr-text-heading)]">{{ totalLabel() }}</span>
+
+        @for (count of statusCounts(); track count.statusName) {
+          <span class="flex items-center gap-[12px]">
+            <span class="h-[14px] w-px bg-[var(--pr-border)]" aria-hidden="true"></span>
+            <button
+              type="button"
+              class="flex h-[26px] items-center gap-[7px] rounded-full border-0 px-[9px] text-[13px] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+              [class]="
+                isStatusActive(count.statusName)
+                  ? 'bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+                  : 'bg-transparent font-normal text-[var(--pr-text-secondary)]'
+              "
+              [attr.aria-pressed]="isStatusActive(count.statusName)"
+              (click)="onStatusCountClick(count.statusName)">
+              <span class="size-[6px] flex-none rounded-full" [style.background]="statusFg(count.statusId)" aria-hidden="true"></span>
+              <span class="font-mono font-medium tabular-nums">{{ count.count }}</span>
+              {{ count.statusName }}
+            </button>
+          </span>
+        }
+      </div>
+
+      <!-- ══════════════════════════════ 5. TABLE ════════════════════════════════ -->
+      @if (isFirstLoad()) {
+        <!-- The mockup draws no loading state; shipping none would be a regression on the spinner
+             the other results tables already have. Skeletons keep the 52px row rhythm. -->
+        <div class="flex flex-col gap-[8px]" aria-live="polite" aria-busy="true">
+          <span class="sr-only">Loading results</span>
+          @for (skeleton of [1, 2, 3, 4, 5, 6]; track skeleton) {
+            <div class="h-[52px] animate-pulse rounded-[8px] bg-[var(--pr-surface-card)]"></div>
+          }
+        </div>
+      } @else if (data.error(); as errorMessage) {
+        <!-- Also not in the mockup. A silent failure that looks like "no results" is worse. -->
+        <div
+          role="alert"
+          class="flex max-h-[160px] flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[32px]">
+          <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">{{ errorMessage }}</p>
+        </div>
+      } @else if (hasRows()) {
+        <app-pr-table
+          #tbl
+          styleClass="pgr-table"
+          sortField="code"
+          [sortOrder]="-1"
+          [value]="filteredRows()"
+          [loading]="data.loading()">
+          <!-- HEADER. The FIRST head cell is the (empty) checkbox track: without it every header
+               would sit one column left of its data. The LAST is the sticky spacer that keeps the
+               header aligned with the sticky actions cell. -->
+          <ng-template prTableHeader>
+            <tr class="pgr-row pgr-head" [style.grid-template-columns]="grid()" [style.min-width]="minWidth()">
+              @for (column of visibleColumns(); track column.key) {
+                @if (column.key === 'select') {
+                  <th class="pgr-th" scope="col"><span class="sr-only">Select</span></th>
+                } @else if (column.key === 'section') {
+                  <th
+                    class="pgr-th pgr-th--soon"
+                    scope="col"
+                    aria-disabled="true"
+                    [style.color]="'var(--pr-text-secondary)'"
+                    title="The results feed does not carry the area of work yet, so this column is empty.">
+                    {{ column.label }}
+                    <ng-container [ngTemplateOutlet]="comingSoon"></ng-container>
+                  </th>
+                } @else {
+                  <th
+                    class="pgr-th pgr-th--sortable"
+                    scope="col"
+                    tabindex="0"
+                    [prSortableColumn]="column.sortField"
+                    [style.color]="sortColor(tbl, column.sortField)"
+                    (keydown.enter)="tbl.sort(column.sortField)">
+                    {{ column.label }} {{ sortArrow(tbl, column.sortField) }}
+                  </th>
+                }
+              }
+              <th class="pgr-sticky-head" scope="col" aria-hidden="true"></th>
+            </tr>
+          </ng-template>
+
+          <!-- ROWS. One @for over the SAME visible-column list as the header, so a column toggle
+               can never leave header and cells out of step. -->
+          <ng-template prTableBody let-row>
+            <tr
+              class="pgr-row pgr-data-row"
+              [style.grid-template-columns]="grid()"
+              [style.min-width]="minWidth()"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'Open result ' + row.code"
+              (click)="openResult(row)"
+              (keydown.enter)="onRowKeydown($event, row)"
+              (keydown.space)="onRowKeydown($event, row)">
+              @for (column of visibleColumns(); track column.key) {
+                @switch (column.key) {
+                  @case ('select') {
+                    <td class="pgr-td">
+                      <!-- 1 · SELECT. P2-3397 — visible and DISABLED: PrTableComponent's
+                           selectionMode only toggles a css class, the design has no select-all and
+                           no bulk-action bar, so a working checkbox would drive nothing. The 16px
+                           track stays exactly as designed. -->
+                      <button
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        aria-label="Select result"
+                        title="Selecting results is not available yet (Coming soon) — there is no bulk action to apply to a selection."
+                        class="flex size-[16px] cursor-not-allowed items-center justify-center rounded-[4px] border-[1.5px] border-[var(--pr-border-strong)] bg-[var(--pr-surface-card)] opacity-50"
+                        (click)="$event.stopPropagation()"></button>
+                    </td>
+                  }
+                  @case ('code') {
+                    <!-- 2 · CODE — mono, tabular, no truncation, no tooltip. -->
+                    <td class="pgr-td font-mono text-[12px] font-medium tabular-nums text-[var(--pr-text-heading)]">{{ row.code }}</td>
+                  }
+                  @case ('title') {
+                    <!-- 3 · RESULT — two lines at 2px: title, then the indicator / KPI line. -->
+                    <td class="pgr-td">
+                      <span class="flex min-w-0 flex-col gap-[2px]">
+                        <span class="truncate text-[14px] font-medium text-[var(--pr-text-heading)]" [attr.title]="row.title">
+                          {{ row.title }}
+                        </span>
+                        <!-- P2-3399 — the indicator line keeps the design's exact geometry and has
+                             no value: no programme-results payload carries a ToC indicator, and
+                             filling it with the result level would be fabricated data. -->
+                        <!-- No per-row "Coming soon" tag here on purpose: repeating it once per
+                             row printed it 476 times on SP01, which drowned the titles it was
+                             meant to annotate. The absence is announced ONCE, on the SECTION
+                             column header, which is empty for the very same reason (P2-3398 /
+                             P2-3399 are the same missing payload). The row keeps the design's
+                             two-line geometry and the explanation in its title attribute. -->
+                        <span
+                          class="flex min-w-0 items-center gap-[6px] text-[13px] font-normal text-[var(--pr-text-secondary)]"
+                          title="The indicator this result reports against is not in the results feed yet.">
+                          <span class="truncate">{{ row.indicator }}</span>
+                        </span>
+                      </span>
+                    </td>
+                  }
+                  @case ('section') {
+                    <!-- 4 · SECTION — the design's chip + name geometry, empty value (P2-3398). -->
+                    <td class="pgr-td">
+                      <span class="flex min-w-0 items-center gap-[8px]">
+                        @if (row.section) {
+                          <span
+                            class="flex-none rounded-[6px] bg-[var(--pr-color-primary-100)] px-[8px] py-[3px] font-mono text-[12px] font-medium uppercase text-[var(--pr-color-primary-400)]">
+                            {{ row.section }}
+                          </span>
+                        }
+                        <span class="min-w-0 flex-1 truncate text-[13px] font-normal text-[var(--pr-text-secondary)]"></span>
+                      </span>
+                    </td>
+                  }
+                  @case ('category') {
+                    <!-- 5 · CATEGORY — truncated + native tooltip. -->
+                    <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="row.category">
+                      {{ row.category }}
+                    </td>
+                  }
+                  @case ('status') {
+                    <!-- 6 · STATUS — pill from the fixed --pr-status-* fg/bg PAIR (UI-RULES 9). -->
+                    <td class="pgr-td">
+                      <span
+                        class="inline-block whitespace-nowrap rounded-full px-[9px] py-[3px] text-[12px] font-medium"
+                        [style.color]="statusFg(row.statusId)"
+                        [style.background]="statusBg(row.statusId)">
+                        {{ row.statusName }}
+                      </span>
+                    </td>
+                  }
+                  @case ('createdBy') {
+                    <!-- 7 · CREATED BY (optional) — truncated + tooltip. -->
+                    <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="row.createdBy">
+                      {{ row.createdBy }}
+                    </td>
+                  }
+                  @case ('created') {
+                    <!-- 8 · CREATED (optional) — muted date, nowrap, no tooltip. -->
+                    <td class="pgr-td whitespace-nowrap text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                      {{ cellText(row, 'created') }}
+                    </td>
+                  }
+                  @case ('origin') {
+                    <!-- 9 · ORIGIN (optional) — nowrap, no tooltip. -->
+                    <td class="pgr-td whitespace-nowrap text-[13px] font-normal text-[var(--pr-text)]">{{ row.origin }}</td>
+                  }
+                  @case ('center') {
+                    <!-- 10 · CENTER (optional) — truncated + tooltip. -->
+                    <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="row.center">
+                      {{ row.center }}
+                    </td>
+                  }
+                  @case ('updated') {
+                    <!-- 11 · UPDATED — always visible, after the four optional columns.
+                         Blank-tolerant: the list payload carries no last-updated timestamp today. -->
+                    <td class="pgr-td whitespace-nowrap text-[13px] font-normal text-[var(--pr-text-secondary)]">
+                      {{ cellText(row, 'updated') }}
+                    </td>
+                  }
+                }
+              }
+
+              <!-- 12 · ACTIONS — sticky right, `background: inherit` so the row / hover colour
+                   follows it and scrolled cells never bleed through. -->
+              <td class="pgr-td pgr-actions" [class.pgr-actions--open]="isMenuOpen(row)">
+                <button
+                  type="button"
+                  class="flex size-[32px] items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-secondary)] transition-colors hover:bg-[#f3f2f7]"
+                  aria-label="More actions"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="isMenuOpen(row)"
+                  (click)="toggleRowMenu(row, $event)">
+                  <ng-icon name="lucideMoreHorizontal" size="18px" strokeWidth="2" />
+                </button>
+
+                @if (isMenuOpen(row)) {
+                  <div
+                    role="menu"
+                    class="pgr-pop pgr-pop--menu absolute right-0 top-[36px] z-30 w-[248px] cursor-default rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[6px] shadow-[0_8px_24px_rgba(25,21,36,0.10)]"
+                    (click)="$event.stopPropagation()">
+                    <!-- 1 · Open result — the same handler as the row click. -->
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                      (click)="openResult(row)">
+                      Open result
+                    </button>
+
+                    <!-- 2 · View indicator. P2-3395 — visible, disabled, tagged: no results payload
+                         carries `toc_result_id` / `toc_results_indicator_id`, and the indicator
+                         drawer needs a whole indicator row, so there is nothing to open. -->
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled
+                      aria-disabled="true"
+                      title="Opening the indicator behind a result is not available yet — the results feed does not include it."
+                      class="flex h-[36px] w-full cursor-not-allowed items-center justify-between gap-[6px] whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] opacity-50">
+                      View indicator
+                      <ng-container [ngTemplateOutlet]="comingSoon"></ng-container>
+                    </button>
+
+                    <!-- 3 · Download PDF — the anchor the app already uses in two other places. -->
+                    <a
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] no-underline transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                      [href]="pdfHref(row)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      (click)="closeRowMenu()">
+                      Download PDF
+                    </a>
+
+                    <!-- 4 · Copy link — copies the ABSOLUTE url of the same destination "Open result"
+                         opens. P2-3396 closed on 2026-08-24: "Download PDF" above already hands out
+                         the report url, so this one gives out the result page itself. -->
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                      (click)="copyLink(row)">
+                      Copy link
+                    </button>
+                  </div>
+                }
+              </td>
+            </tr>
+          </ng-template>
+
+          <!-- Only ever seen on a RELOAD — the first load is the skeleton above. -->
+          <ng-template prTableLoading>
+            <tr class="pgr-row" [style.grid-template-columns]="'1fr'" [style.min-width]="minWidth()">
+              <td class="pgr-td flex h-[52px] items-center text-[13px] text-[var(--pr-text-secondary)]" aria-live="polite" aria-busy="true">
+                Loading results…
+              </td>
+            </tr>
+          </ng-template>
+        </app-pr-table>
+      }
+
+      <!-- ══════════════════════════ 6. EMPTY STATES ═════════════════════════════
+           Mutually exclusive computeds, unlike the mockup's three independent blocks. The toolbar,
+           the chips and the counts stay OUTSIDE them, so they remain visible in both. -->
+      @if (isFilteredEmpty()) {
+        <div
+          class="flex max-h-[160px] flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[32px]">
+          <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">No results match these filters.</p>
+          <button
+            type="button"
+            class="h-[32px] rounded-[8px] border-0 bg-transparent px-[12px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+            (click)="clearAll()">
+            Clear all filters
+          </button>
+        </div>
+      }
+
+      @if (isNothingYet()) {
+        <div
+          class="flex max-h-[160px] flex-col items-start gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[32px]">
+          <p class="m-0 text-[14px] font-normal text-[var(--pr-text-secondary)]">No results reported in this programme yet.</p>
+          <button
+            type="button"
+            class="flex h-[32px] items-center rounded-[8px] border-0 bg-transparent px-[12px] text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+            (click)="goToReporting()">
+            Go to Reporting
+          </button>
+        </div>
+      }
+    </div>
+  </article>
+</section>

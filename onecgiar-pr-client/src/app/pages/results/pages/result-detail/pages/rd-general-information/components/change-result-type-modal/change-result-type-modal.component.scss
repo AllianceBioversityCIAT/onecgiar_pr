@@ -1,11 +1,21 @@
 @use '../../../../../../../../../styles/fonts.scss' as fonts;
 
+// app-pr-dialog wrapper: restore the flush layout the old p-dialog had
+// ([style]padding:0) so the full-bleed header bar renders like before.
+::ng-deep app-pr-dialog .change-result-type-dialog {
+  position: relative;
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
 .modal_container {
   padding: 20px 40px 50px 40px;
   max-width: 70vw !important;
   width: 100% !important;
   min-height: 70vh;
-  font-family: 'Poppins', sans-serif !important;
+  font-family: 'Manrope', 'Poppins', sans-serif !important;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -16,7 +26,7 @@
 }
 
 .modal_header {
-  background-color: var(--pr-color-secondary-400);
+  background-color: var(--pr-color-primary-800);
   width: 100%;
   padding: 10px 20px;
   display: flex;

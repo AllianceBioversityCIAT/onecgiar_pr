@@ -18,14 +18,17 @@ import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
+import { BilateralApiService } from './bilateral-api.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResultsApiService {
+  private readonly bilateralApiSE = inject(BilateralApiService);
+
   constructor(
     public http: HttpClient,
-    private saveButtonSE: SaveButtonService,
+    private readonly saveButtonSE: SaveButtonService,
     public ipsrDataControlSE: IpsrDataControlService
   ) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
@@ -51,6 +54,9 @@ export class ResultsApiService {
     if (searchParams) {
       if (searchParams.limit) queryParams.push(`limit=${searchParams.limit}`);
       if (searchParams.page) queryParams.push(`page=${searchParams.page}`);
+      // Encoded: titles carry spaces, ampersands and percent signs, any of which would otherwise
+      // truncate or corrupt the query string.
+      if (searchParams.title) queryParams.push(`title=${encodeURIComponent(searchParams.title)}`);
       if (searchParams.status_id) queryParams.push(`status_id=${searchParams.status_id}`);
       if (searchParams.portfolio_id) queryParams.push(`portfolio_id=${searchParams.portfolio_id}`);
       if (searchParams.result_type_id) queryParams.push(`result_type_id=${searchParams.result_type_id}`);
@@ -252,9 +258,10 @@ export class ResultsApiService {
       .pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  // Standard envelope: the section body arrives under `response`.
   GET_partnersSection() {
     return this.http
-      .get<PartnersBody>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`)
+      .get<{ response: PartnersBody }>(`${this.apiBaseUrl}results-by-institutions/partners/result/${this.currentResultId}`)
       .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
@@ -385,6 +392,17 @@ export class ResultsApiService {
 
   GET_mqapValidation(handle) {
     return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/mqap?handle=${handle}`);
+  }
+
+  GET_cgspaceSearch(params: any): Observable<any> {
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/cgspace/search`, { params });
+  }
+
+  GET_cgspaceFacet(name: string, prefix?: string, size?: number): Observable<any> {
+    const params: any = {};
+    if (prefix) params.prefix = prefix;
+    if (size) params.size = size;
+    return this.http.get<any>(`${this.apiBaseUrl}results-knowledge-products/cgspace/facets/${name}`, { params });
   }
 
   GET_resultknowledgeProducts() {
@@ -738,16 +756,11 @@ export class ResultsApiService {
     if (this.ipsrDataControlSE.inIpsr) {
       throw new Error('Full metadata export is only available from the Results module.');
     }
-    return this.http.post<any>(
-      `${this.apiBaseUrl}get/reporting/full-metadata-export/jobs`,
-      filtersParams
-    );
+    return this.http.post<any>(`${this.apiBaseUrl}get/reporting/full-metadata-export/jobs`, filtersParams);
   }
 
   GET_reportingFullMetadataExportJob(jobId: string) {
-    return this.http.get<any>(
-      `${this.apiBaseUrl}get/reporting/full-metadata-export/jobs/${jobId}`
-    );
+    return this.http.get<any>(`${this.apiBaseUrl}get/reporting/full-metadata-export/jobs/${jobId}`);
   }
 
   POST_AdminKPExcelReport(body) {
@@ -839,7 +852,9 @@ export class ResultsApiService {
   }
 
   PATCH_primaryImpactAreaKrs(body) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/type-one-report/primary/primary-impact-area/create`, body);
+    return this.http
+      .patch<any>(`${environment.apiBaseUrl}api/type-one-report/primary/primary-impact-area/create`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GETallInnovations(initiativesList) {
@@ -1311,12 +1326,16 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.releasesNotesApiUrl}/blocks/${blockId}/children`);
   }
 
-  GET_loginWithAzureAd(provider: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}auth/login/provider?provider=${provider}`);
+  GET_loginWithAzureAd(provider: string, redirectUri?: string) {
+    const params = new URLSearchParams({ provider });
+    if (redirectUri) params.set('redirectUri', redirectUri);
+    return this.http.get<any>(`${environment.apiBaseUrl}auth/login/provider?${params.toString()}`);
   }
 
-  POST_validateCognitoCode(code: string) {
-    return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, { code });
+  POST_validateCognitoCode(code: string, redirectUri?: string) {
+    const body: Record<string, string> = { code };
+    if (redirectUri) body['redirectUri'] = redirectUri;
+    return this.http.post<any>(`${environment.apiBaseUrl}auth/validate/code`, body);
   }
 
   PATCH_updateUserStatus(body: UpdateUserStatus) {
@@ -1361,6 +1380,7 @@ export class ResultsApiService {
   PATCH_updateUserRoles(body: {
     email: string;
     role_assignments: { role_id: number; entity_id: number; force_swap?: boolean }[];
+    center_assignments?: { center_id: string }[];
     role_platform: number;
     first_name: string;
     last_name: string;
@@ -1393,9 +1413,10 @@ export class ResultsApiService {
     );
   }
 
-  GET_TocResultsByAowId(entityId: string, aowId: string, year?: string) {
-    const queryParams: string[] = [`program=${entityId}`, `areaOfWork=${aowId}`];
+  GET_TocResultsByAowId(entityId: string, aowId?: string | null, year?: string) {
+    const queryParams: string[] = [`program=${entityId}`];
 
+    if (aowId) queryParams.push(`areaOfWork=${aowId}`);
     if (year) queryParams.push(`year=${year}`);
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
@@ -1420,8 +1441,13 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=${tocResultId}`);
   }
 
+  // P2-3001: full W3/Bilateral list of a Science Program (official code, e.g. SP01), bypassing the indicator-level filter.
+  GET_W3BilateralProjectsByProgram(programId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects/by-program?programId=${programId}`);
+  }
+
   POST_createResult(body: any) {
-    return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body);
+    return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GET_ExistingResultsContributors(resultTocResultId: string, tocResultIndicatorId: string) {
@@ -1453,23 +1479,23 @@ export class ResultsApiService {
   }
 
   PATCH_BilateralTocMetadata(resultId: number | string, body: any) {
-    return this.http
-      .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/toc-metadata/${resultId}`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+    return this.bilateralApiSE.PATCH_BilateralTocMetadata(resultId, body);
   }
 
   PATCH_BilateralDataStandard(resultId: number | string, body: any) {
-    return this.http
-      .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+    return this.bilateralApiSE.PATCH_BilateralDataStandard(resultId, body);
   }
 
   PATCH_BilateralResultTitle(resultId: number | string, body: any) {
-    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/${resultId}/title`, body);
+    return this.bilateralApiSE.PATCH_BilateralResultTitle(resultId, body);
   }
 
   GET_ClarisaProjects() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
+  }
+
+  GET_bilateralProjects(centerId: string | number) {
+    return this.bilateralApiSE.GET_bilateralProjects(centerId);
   }
 
   GET_ClarisaPortfolios() {
@@ -1488,11 +1514,13 @@ export class ResultsApiService {
   GET_PendingReviewCount(programId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/pending-review?programId=${programId}`);
   }
+
   GET_BilateralResultDetail(resultId: string | number) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`);
+    return this.bilateralApiSE.GET_BilateralResultDetail(resultId);
   }
 
-  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification: string }) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}/review-decision`, body);
+  /** `justification` is mandatory on REJECT and an optional reviewer comment on APPROVE (P2-3157). */
+  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification?: string }) {
+    return this.bilateralApiSE.PATCH_BilateralReviewDecision(resultId, body);
   }
 }

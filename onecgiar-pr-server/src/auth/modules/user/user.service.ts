@@ -9,7 +9,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { DataSource, Brackets, In, Not, QueryRunner } from 'typeorm';
+import { DataSource, Brackets, In, Not, QueryRunner, IsNull } from 'typeorm';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { returnFormatUser } from './dto/return-create-user.dto';
@@ -32,11 +32,14 @@ import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 import { ROLE_IDS } from './constants/roles';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleRepository } from '../role/Role.repository';
+import { Role } from '../role/entities/role.entity';
 import { RoleByUser } from '../role-by-user/entities/role-by-user.entity';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { VersionRepository } from '../../../api/versioning/versioning.repository';
 import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
+import { ClarisaCentersRepository } from '../../../clarisa/clarisa-centers/clarisa-centers.repository';
+import { ClarisaCenter } from '../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 
 @Injectable()
 export class UserService {
@@ -58,6 +61,7 @@ export class UserService {
     private readonly _roleRepository: RoleRepository,
     private readonly _versionRepository: VersionRepository,
     private readonly _globalParametersRepository: GlobalParameterRepository,
+    private readonly clarisaCentersRepository: ClarisaCentersRepository,
 
     @InjectDataSource()
     private readonly dataSource: DataSource,
@@ -314,6 +318,18 @@ export class UserService {
         }
       }
 
+      if ('center_assignments' in dto && dto.center_assignments?.length) {
+        const seenCenters = new Set<string>();
+        for (const assignment of dto.center_assignments) {
+          if (seenCenters.has(assignment.center_id)) {
+            throw new BadRequestException(
+              `Each user can only have one role per center.`,
+            );
+          }
+          seenCenters.add(assignment.center_id);
+        }
+      }
+
       dto.created_by = currentUser?.id || adminUser?.id;
       dto.last_updated_by = currentUser?.id || adminUser?.id;
 
@@ -340,8 +356,39 @@ export class UserService {
         where: { user: newUser.id },
       });
 
+      const hasInitiativeAssignments = (dto.role_assignments?.length ?? 0) > 0;
+      const hasCenterAssignments =
+        'center_assignments' in dto &&
+        (dto.center_assignments?.length ?? 0) > 0;
+
+      if (!hasInitiativeAssignments && idRoleByUser) {
+        await queryRunner.manager.update(
+          RoleByUser,
+          {
+            user: newUser.id,
+            initiative_id: Not(IsNull()),
+            active: true,
+          },
+          { active: false, last_updated_by: currentUser?.id },
+        );
+      }
+
+      if (!hasCenterAssignments && idRoleByUser) {
+        await queryRunner.manager.update(
+          RoleByUser,
+          {
+            user: newUser.id,
+            center_id: Not(IsNull()),
+            active: true,
+          },
+          { active: false, last_updated_by: currentUser?.id },
+        );
+      }
+
       if (
-        (!dto.role_assignments || dto.role_assignments.length === 0) &&
+        !hasInitiativeAssignments &&
+        !hasCenterAssignments &&
+        !dto.role_platform &&
         idRoleByUser
       ) {
         await queryRunner.manager.update(
@@ -360,11 +407,20 @@ export class UserService {
         );
       }
 
-      const hasAssignments = dto.role_assignments?.length > 0;
+      const hasAssignments = hasInitiativeAssignments;
       if (hasAssignments) {
         await this.validateAndAssignRoles(
           queryRunner,
           dto.role_assignments,
+          newUser,
+          currentUser,
+        );
+      }
+
+      if (hasCenterAssignments && 'center_assignments' in dto) {
+        await this.validateAndAssignCenterRoles(
+          queryRunner,
+          dto.center_assignments,
           newUser,
           currentUser,
         );
@@ -391,6 +447,9 @@ export class UserService {
         user: userId,
         active: true,
         role: In([ROLE_IDS.ADMIN, ROLE_IDS.GUEST]),
+        initiative_id: IsNull(),
+        action_area_id: IsNull(),
+        center_id: IsNull(),
       },
     });
 
@@ -406,6 +465,9 @@ export class UserService {
       await queryRunner.manager.save(RoleByUser, {
         user: userId,
         role: rolePlatform,
+        initiative_id: null,
+        action_area_id: null,
+        center_id: null,
         created_by: currentUserId,
         last_updated_by: currentUserId,
       });
@@ -429,16 +491,19 @@ export class UserService {
         where: { user: user.id, initiative_id: entity_id, active: true },
       });
 
+      if (
+        existingAssignment &&
+        Number(existingAssignment.role) === Number(role_id)
+      ) {
+        continue;
+      }
+
       const hadNonMemberRolePreviously =
         !!existingAssignment &&
         Number(existingAssignment.role) !== ROLE_IDS.MEMBER;
-      const roleByUserId =
-        !rbu_id && hadNonMemberRolePreviously && existingAssignment
-          ? existingAssignment.id
-          : rbu_id;
+      const roleByUserId = rbu_id ?? existingAssignment?.id;
 
-      const isDuplicateRoleAssignment = existingAssignment && !roleByUserId;
-      if (isDuplicateRoleAssignment) {
+      if (existingAssignment && !roleByUserId) {
         throw new BadRequestException(
           `The user already has a role in the selected entity.`,
         );
@@ -501,6 +566,69 @@ export class UserService {
         role: role_id,
         user: user.id,
         initiative_id: entity_id,
+        active: true,
+        created_by: currentUser.id,
+        last_updated_by: currentUser.id,
+      });
+    }
+  }
+
+  private async validateAndAssignCenterRoles(
+    queryRunner: QueryRunner,
+    assignments: { center_id: string }[],
+    user: User,
+    currentUser: User,
+  ) {
+    for (const { center_id } of assignments) {
+      if (!center_id) {
+        throw new BadRequestException(
+          'A center must be selected for the Center User role.',
+        );
+      }
+
+      const existingAssignment = await queryRunner.manager.findOne(RoleByUser, {
+        where: { user: user.id, center_id, active: true },
+      });
+
+      if (
+        existingAssignment &&
+        Number(existingAssignment.role) === ROLE_IDS.CENTER_USER
+      ) {
+        continue;
+      }
+
+      if (existingAssignment) {
+        throw new BadRequestException(
+          `The user already has a role in the selected center.`,
+        );
+      }
+
+      const centerUserRole = await queryRunner.manager.findOne(Role, {
+        where: { id: ROLE_IDS.CENTER_USER, active: true },
+      });
+
+      if (!centerUserRole) {
+        throw new BadRequestException(
+          'Center User role is not configured in the system. Run migration SeedCenterUserRole.',
+        );
+      }
+
+      const center = await queryRunner.manager.findOne(ClarisaCenter, {
+        where: { code: center_id },
+      });
+
+      if (!center) {
+        throw new BadRequestException(
+          `Center ${center_id} was not found or is inactive.`,
+        );
+      }
+
+      await queryRunner.manager.save(RoleByUser, {
+        role: ROLE_IDS.CENTER_USER,
+        user: user.id,
+        center_id,
+        initiative_id: null,
+        action_area_id: null,
         active: true,
         created_by: currentUser.id,
         last_updated_by: currentUser.id,
@@ -748,6 +876,8 @@ export class UserService {
           'rbu.user = users.id AND rbu.active = 1',
         )
         .leftJoin('clarisa_initiatives', 'ent', 'ent.id = rbu.initiative_id')
+        .leftJoin('clarisa_center', 'cc', 'cc.code = rbu.center_id')
+        .leftJoin('clarisa_institutions', 'ci', 'ci.id = cc.institutionId')
         .leftJoin('role', 'rol', 'rol.id = rbu.role')
         .leftJoin('role_levels', 'rlvl', 'rol.role_level_id = rlvl.id')
         .leftJoin(User, 'creator', 'creator.id = users.created_by')
@@ -766,9 +896,27 @@ export class UserService {
           'users.created_date AS "userCreationDate"',
           `
           GROUP_CONCAT(
-            DISTINCT CONCAT(ent.official_code, ' - ', rol.description)
+            DISTINCT CASE
+              WHEN rbu.initiative_id IS NOT NULL
+              THEN CONCAT(ent.official_code, ' - ', rol.description)
+              ELSE NULL
+            END
             ORDER BY ent.official_code SEPARATOR ', '
           ) AS "entities"
+          `,
+          `
+          GROUP_CONCAT(
+            DISTINCT CASE
+              WHEN rbu.center_id IS NOT NULL
+              THEN CONCAT(
+                COALESCE(ci.acronym, rbu.center_id),
+                ' - ',
+                rol.description
+              )
+              ELSE NULL
+            END
+            ORDER BY rbu.center_id SEPARATOR ', '
+          ) AS "centers"
           `,
           'creator.first_name AS "createdByFirstName"',
           'creator.last_name AS "createdByLastName"',
@@ -892,6 +1040,9 @@ export class UserService {
         ...user,
         entities: user.entities
           ? user.entities.split(', ').map((code: string) => code.trim())
+          : [],
+        centers: user.centers
+          ? user.centers.split(', ').map((code: string) => code.trim())
           : [],
       }));
 
@@ -1419,11 +1570,25 @@ export class UserService {
         },
       });
 
-      const existingPairs = new Set(
-        existingRoles.map((r) => `${r.initiative_id}:${r.role}`),
+      const existingInitiativeRoles = existingRoles.filter(
+        (r) => r.initiative_id != null,
       );
-      const incomingPairs = new Set(
+      const existingCenterRoles = existingRoles.filter(
+        (r) => r.center_id != null,
+      );
+
+      const existingInitiativePairs = new Set(
+        existingInitiativeRoles.map((r) => `${r.initiative_id}:${r.role}`),
+      );
+      const incomingInitiativePairs = new Set(
         (dto.role_assignments || []).map((r) => `${r.entity_id}:${r.role_id}`),
+      );
+
+      const existingCenterIds = new Set(
+        existingCenterRoles.map((r) => r.center_id),
+      );
+      const incomingCenterIds = new Set(
+        (dto.center_assignments || []).map((c) => c.center_id),
       );
 
       await this._userRepository.update(user.id, {
@@ -1432,10 +1597,19 @@ export class UserService {
         last_name: dto?.last_name,
       });
 
-      const rolesToRemove = existingRoles.filter(
+      const initiativeRolesToRemove = existingInitiativeRoles.filter(
         (existing) =>
-          !incomingPairs.has(`${existing.initiative_id}:${existing.role}`),
+          !incomingInitiativePairs.has(
+            `${existing.initiative_id}:${existing.role}`,
+          ),
       );
+      const centerRolesToRemove = existingCenterRoles.filter(
+        (existing) => !incomingCenterIds.has(existing.center_id),
+      );
+      const rolesToRemove = [
+        ...initiativeRolesToRemove,
+        ...centerRolesToRemove,
+      ];
 
       for (const role of rolesToRemove) {
         role.active = false;
@@ -1445,14 +1619,22 @@ export class UserService {
 
       await this.saveUserToDB(dto, token.id);
 
-      const newlyAssigned = (dto.role_assignments || []).filter(
-        (r) => !existingPairs.has(`${r.entity_id}:${r.role_id}`),
+      const newlyAssignedInitiatives = (dto.role_assignments || []).filter(
+        (r) => !existingInitiativePairs.has(`${r.entity_id}:${r.role_id}`),
+      );
+      const newlyAssignedCenters = (dto.center_assignments || []).filter(
+        (c) => !existingCenterIds.has(c.center_id),
       );
 
-      if (newlyAssigned.length > 0 || rolesToRemove.length > 0) {
+      if (
+        newlyAssignedInitiatives.length > 0 ||
+        newlyAssignedCenters.length > 0 ||
+        rolesToRemove.length > 0
+      ) {
         await this.sendUserRolesUpdatedEmail({
           user,
-          newlyAssigned,
+          newlyAssigned: newlyAssignedInitiatives,
+          newlyAssignedCenters,
           rolesRemoved: rolesToRemove,
         });
       }
@@ -1483,9 +1665,10 @@ export class UserService {
   private async sendUserRolesUpdatedEmail(params: {
     user: User;
     newlyAssigned: { entity_id: number; role_id: number }[];
+    newlyAssignedCenters: { center_id: string }[];
     rolesRemoved: RoleByUser[];
   }): Promise<void> {
-    const { user, newlyAssigned, rolesRemoved } = params;
+    const { user, newlyAssigned, newlyAssignedCenters, rolesRemoved } = params;
 
     const templateDB = await this._templateRepository.findOne({
       where: { name: EmailTemplate.ROLES_UPDATE },
@@ -1500,16 +1683,27 @@ export class UserService {
 
     const compiledTemplate = handlebars.compile(templateDB.template);
 
-    const [assignedList, revokedList] = await Promise.all([
-      this.buildInitiativesFromAssignments(newlyAssigned),
-      this.buildInitiativesFromRemoved(rolesRemoved),
-    ]);
+    const [assignedList, revokedList, assignedCenters, revokedCenters] =
+      await Promise.all([
+        this.buildInitiativesFromAssignments(newlyAssigned),
+        this.buildInitiativesFromRemoved(
+          rolesRemoved.filter((r) => r.initiative_id != null),
+        ),
+        this.buildCentersFromAssignments(newlyAssignedCenters),
+        this.buildCentersFromRemoved(
+          rolesRemoved.filter((r) => r.center_id != null),
+        ),
+      ]);
 
     const emailData: Record<string, any> = {
       userName: `${user.first_name} ${user.last_name}`.trim(),
       new_roles_assigned_per_entity:
         assignedList && assignedList.length > 0 ? assignedList : [],
       revoked_roles: revokedList && revokedList.length > 0 ? revokedList : [],
+      new_centers_assigned:
+        assignedCenters && assignedCenters.length > 0 ? assignedCenters : [],
+      revoked_centers:
+        revokedCenters && revokedCenters.length > 0 ? revokedCenters : [],
     };
 
     const technicalTeamEmailsRecord =
@@ -1608,6 +1802,80 @@ export class UserService {
     }[];
   }
 
+  private async buildCentersFromAssignments(
+    assignments: { center_id: string }[],
+  ): Promise<
+    { center_code: string; center_name: string; role_name: string }[]
+  > {
+    if (!assignments || assignments.length === 0) return [];
+
+    const centerCodes = Array.from(
+      new Set(assignments.map((a) => a.center_id)),
+    );
+    const centers = await this.clarisaCentersRepository.find({
+      where: { code: In(centerCodes) },
+      relations: ['clarisa_institution'],
+    });
+    const centerMap = new Map(centers.map((c) => [c.code, c]));
+
+    return assignments
+      .map((a) => {
+        const center = centerMap.get(a.center_id);
+        if (!center) return null;
+        return {
+          center_code: center.code,
+          center_name: center.clarisa_institution?.name || center.code,
+          role_name: 'Center User',
+        };
+      })
+      .filter(Boolean) as {
+      center_code: string;
+      center_name: string;
+      role_name: string;
+    }[];
+  }
+
+  private async buildCentersFromRemoved(
+    removed: RoleByUser[],
+  ): Promise<
+    { center_code: string; center_name: string; role_name: string }[]
+  > {
+    if (!removed || removed.length === 0) return [];
+
+    const centerCodes = Array.from(
+      new Set(removed.map((r) => r.center_id).filter(Boolean)),
+    );
+    const roleIds = Array.from(new Set(removed.map((r) => Number(r.role))));
+
+    const [centers, roles] = await Promise.all([
+      this.clarisaCentersRepository.find({
+        where: { code: In(centerCodes) },
+        relations: ['clarisa_institution'],
+      }),
+      this._roleRepository.find({ where: { id: In(roleIds) } }),
+    ]);
+
+    const centerMap = new Map(centers.map((c) => [c.code, c]));
+    const roleMap = new Map(roles.map((r) => [r.id, r]));
+
+    return removed
+      .map((r) => {
+        const center = centerMap.get(r.center_id);
+        const rol = roleMap.get(Number(r.role));
+        if (!center || !rol) return null;
+        return {
+          center_code: center.code,
+          center_name: center.clarisa_institution?.name || center.code,
+          role_name: rol.description,
+        };
+      })
+      .filter(Boolean) as {
+      center_code: string;
+      center_name: string;
+      role_name: string;
+    }[];
+  }
+
   async findRoleByEntity(email: string): Promise<any> {
     try {
       const cleanEmail = email?.trim().toLowerCase();
@@ -1628,12 +1896,13 @@ export class UserService {
         .createQueryBuilder('rbu')
         .leftJoin('role', 'rol', 'rol.id = rbu.role')
         .leftJoin('clarisa_initiatives', 'ent', 'ent.id = rbu.initiative_id')
-        .where('rbu.obj_user = :userId', { userId: user.id })
+        .where('rbu.user = :userId', { userId: user.id })
         .andWhere('rbu.active = true')
         .select([
-          'rbu.id',
-          'rbu.role as role_id',
-          'rbu.initiative_id as entity_id',
+          'rbu.id AS id',
+          'rbu.role AS role_id',
+          'rbu.initiative_id AS entity_id',
+          'rbu.center_id AS center_id',
         ])
         .getRawMany();
 

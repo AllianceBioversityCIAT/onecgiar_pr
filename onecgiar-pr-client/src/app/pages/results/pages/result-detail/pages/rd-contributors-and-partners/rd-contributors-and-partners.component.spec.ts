@@ -68,6 +68,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       loadFilteredBilateralProjects: jest.fn(),
       loadClarisaProjects: jest.fn(),
       resetState: jest.fn(),
+      setPossibleLeadCenters: jest.fn(),
       contributingInitiativeNew: [],
       leadPartnerId: null,
       leadCenterCode: null,
@@ -97,9 +98,9 @@ describe('RdContributorsAndPartnersComponent', () => {
         { provide: ChangeDetectorRef, useValue: mockChangeDetectorRef },
         { provide: InstitutionsService, useValue: {} },
         { provide: RolesService, useValue: {} },
-        { provide: CentersService, useValue: {} },
+        { provide: CentersService, useValue: { centers: signal([]) } },
         { provide: ResultLevelService, useValue: {} },
-        { provide: FieldsManagerService, useValue: {} }
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => false, isP25: () => false } }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
@@ -205,6 +206,26 @@ describe('RdContributorsAndPartnersComponent', () => {
       mockRdPartnersSE.leadCenterCode = 'C1';
       component.deleteContributingCenter(0, false);
       expect(mockRdPartnersSE.leadCenterCode).toBeNull();
+    });
+  });
+
+  /**
+   * The "Other(s)" dropdown is the ONLY way to add a center when the ToC brought none (P2-2998 AC4).
+   * Without this wiring the required "Lead center" select stayed empty until a Save draft reloaded the section.
+   */
+  describe('onOtherCenterSelect', () => {
+    it('recomputes the lead-center options as soon as an "Other(s)" center is picked', () => {
+      component.onOtherCenterSelect({});
+      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true);
+    });
+
+    it('offers a useful hint for the legitimate empty state instead of a bare "no items available"', () => {
+      // Asserts the INTENT, not the copy: the empty state must point at the contributing-center
+      // step instead of the bare "no items available". Tying this to an exact sentence made the
+      // suite fail on a wording change that was itself fine (merge of 2026-08-27).
+      expect(component.noLeadCentersNote).toBeTruthy();
+      expect(component.noLeadCentersNote.toLowerCase()).toContain('contributing center');
+      expect(component.noLeadCentersNote.toLowerCase()).toContain('lead center');
     });
   });
 
@@ -436,5 +457,206 @@ describe('RdContributorsAndPartnersComponent', () => {
       const result = component.formatResultLabel({});
       expect(result).toBe('');
     });
+  });
+
+  // ----- P2-3358: one single linked / bundled question for every result typology -----
+  describe('P2-3358 — linked/bundled question wording', () => {
+    const SINGLE_QUESTION =
+      'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?';
+    const asPhase = (isCP2026: boolean) => {
+      (component as any).fieldsManagerSE = { isContributorsPartners2026: () => isCP2026, isP25: () => true };
+    };
+    const asResultType = (result_type_id: number) => {
+      mockApiService.dataControlSE.currentResultSignal = signal({ result_type_id });
+    };
+
+    it('asks the single question for a Policy change result — its own variant is retired', () => {
+      asPhase(true);
+      asResultType(1); // Policy change
+
+      expect(component.linkedResultQuestionLabel).toBe(SINGLE_QUESTION);
+      expect(component.linkedResultQuestionLabel).not.toContain('contributed to this policy change');
+    });
+
+    it('asks the same single question for every other component-rendered result type', () => {
+      asPhase(true);
+
+      [3, 4, 5, 6, 8, 9].forEach(resultTypeId => {
+        asResultType(resultTypeId);
+        expect(component.linkedResultQuestionLabel).toBe(SINGLE_QUESTION);
+      });
+    });
+
+    it('no longer opens the sentence with "Is this innovation"', () => {
+      asPhase(true);
+      asResultType(5);
+
+      expect(component.linkedResultQuestionLabel).not.toContain('Is this innovation');
+      expect(component.linkedResultQuestionLabel.startsWith('Is this result')).toBe(true);
+    });
+
+    it('exposes no per-typology branching for this question any more', () => {
+      expect((component as any).isPolicyChangeResult).toBeUndefined();
+      expect((component as any).POLICY_CHANGE_RESULT_TYPE_ID).toBeUndefined();
+    });
+
+    it('renders no header above the question — not even for a 2026 result', () => {
+      asPhase(true);
+      asResultType(2); // Innovation use
+
+      expect((component as any).linkedResultHeaderLabel).toBeUndefined();
+      expect((component as any).showLinkedResultHeader).toBeUndefined();
+    });
+  });
+
+});
+
+describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconciliation (QA P2-2929/P2-2998)', () => {
+  let component: RdContributorsAndPartnersComponent;
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let svc: any;
+
+  const CENTERS_CATALOG = [
+    { code: 'C1', institutionId: 11, full_name: 'Center One' },
+    { code: 'C2', institutionId: 22, full_name: 'Center Two' }
+  ];
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    svc = {
+      partnersBody: new ContributorsAndPartnersBody(),
+      getSectionInformation: jest.fn(),
+      loadFilteredBilateralProjects: jest.fn(),
+      resetState: jest.fn(),
+      setPossibleLeadCenters: jest.fn(),
+      contributingInitiativeNew: [],
+      leadPartnerId: null,
+      leadCenterCode: null,
+      updatingLeadData: false,
+      scienceSelected: [],
+      otherScienceSelected: [],
+      otherCentersSelected: [],
+      loadedAcceptedScienceIds: new Set<number>(),
+      loadedPendingScience: [],
+      tocReferenceSynergyInitiativeIds: signal<number[]>([]),
+      tocReferenceCenterInstitutionIds: signal<number[]>([]),
+      tocReferencePartnerInstitutionIds: signal<number[]>([]),
+      sectionHydratedFromToc: signal(false),
+      tocSelectionTouched: signal(false)
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [HttpClientTestingModule, FormsModule, TermPipe, CustomFieldsModule],
+      providers: [
+        {
+          provide: ApiService,
+          useValue: {
+            dataControlSE: {
+              currentResult: { result_code: 'R-123', version_id: 1, portfolio: 'P25' },
+              currentResultSectionName: signal(''),
+              findClassTenSeconds: jest.fn().mockResolvedValue(true)
+            },
+            resultsSE: { GET_resultById: jest.fn().mockReturnValue(of({ response: {} })) }
+          }
+        },
+        { provide: RdContributorsAndPartnersService, useValue: svc },
+        { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn() } },
+        { provide: InstitutionsService, useValue: {} },
+        { provide: RolesService, useValue: {} },
+        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) } },
+        { provide: ResultLevelService, useValue: {} },
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => true, isP25: () => true } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    })
+      // Empty template: these tests exercise the effects, not the DOM — avoids mocking the whole 2026 template surface.
+      .overrideComponent(RdContributorsAndPartnersComponent, { set: { template: '' } })
+      .compileComponents();
+
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    component = fixture.componentInstance;
+    component.allScienceProgramsList.set([
+      { id: 1, official_code: 'SP01' },
+      { id: 3, official_code: 'SP03' },
+      { id: 4, official_code: 'SP04' },
+      { id: 7, official_code: 'SP07' }
+    ]);
+  });
+
+  const flush = () => fixture.detectChanges();
+
+  it('preselects the SP of the first node and prunes them when switching to a node without synergy programs', () => {
+    svc.tocReferenceSynergyInitiativeIds.set([1, 3, 4]);
+    flush();
+    expect(svc.scienceSelected.map((sp: any) => sp.id)).toEqual([1, 3, 4]);
+
+    // switch to Outcome 2 — no synergy programs
+    svc.tocReferenceSynergyInitiativeIds.set([]);
+    flush();
+    expect(svc.scienceSelected).toEqual([]);
+  });
+
+  it('adds the union (deduplicated) when a second node is selected', () => {
+    svc.tocReferenceSynergyInitiativeIds.set([1]);
+    flush();
+    svc.tocReferenceSynergyInitiativeIds.set([1, 7]);
+    flush();
+    expect(svc.scienceSelected.map((sp: any) => sp.id)).toEqual([1, 7]);
+  });
+
+  it('keeps Other sentinel, manual and persisted items while pruning stale preloaded SP', () => {
+    svc.tocReferenceSynergyInitiativeIds.set([1]);
+    flush();
+    // persisted (no `new`) + Other sentinel appear alongside the preloaded SP01
+    svc.scienceSelected = [...svc.scienceSelected, { id: 99, official_code: 'SP99' }, { id: component.OTHER_SP_CODE }];
+
+    svc.tocReferenceSynergyInitiativeIds.set([7]);
+    flush();
+    const ids = svc.scienceSelected.map((sp: any) => sp.id);
+    expect(ids).not.toContain(1); // stale preloaded pruned
+    expect(ids).toContain(99); // persisted survives
+    expect(ids).toContain(component.OTHER_SP_CODE); // sentinel survives
+    expect(ids).toContain(7); // new node preselected
+  });
+
+  it('cold-load guard (P2-3115): hydrated section without in-session ToC touch never prefills', () => {
+    svc.sectionHydratedFromToc.set(true);
+    svc.tocSelectionTouched.set(false);
+    svc.tocReferenceSynergyInitiativeIds.set([1, 3]);
+    flush();
+    expect(svc.scienceSelected).toEqual([]);
+
+    // a genuine in-session ToC selection authorizes the prefill
+    svc.tocSelectionTouched.set(true);
+    flush();
+    expect(svc.scienceSelected.map((sp: any) => sp.id)).toEqual([1, 3]);
+  });
+
+  it('reconciles Centers on node change, recomputes leads and clears a pruned lead', () => {
+    svc.tocReferenceCenterInstitutionIds.set([11]);
+    flush();
+    expect(svc.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
+    svc.leadCenterCode = 'C1';
+
+    svc.tocReferenceCenterInstitutionIds.set([22]);
+    flush();
+    expect(svc.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C2']);
+    expect(svc.leadCenterCode).toBeNull(); // pruned lead cleared
+    expect(svc.setPossibleLeadCenters).toHaveBeenCalledWith(true);
+  });
+
+  it('unrelated effect re-runs with the same refs do not churn the selection', () => {
+    svc.tocReferenceSynergyInitiativeIds.set([1]);
+    flush();
+    const userEdited = [{ id: 7, official_code: 'SP07', manual: true }];
+    svc.scienceSelected = userEdited;
+
+    // re-run with identical refs (e.g. other signals fire) — selection untouched
+    svc.tocSelectionTouched.set(true);
+    flush();
+    expect(svc.scienceSelected).toBe(userEdited);
   });
 });

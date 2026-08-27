@@ -1,0 +1,127 @@
+<div class="tsf-fields">
+  <!-- P2-3346/P2-3348: AC1 lists "Number of people trained" as ONE mandatory MDS field, and the hint
+       below tells the user to fall back to "Unknown" when the gender split is unavailable. So the
+       GROUP is mandatory — any one of the four counts satisfies it — while the individual inputs stay
+       optional. The MDS tracker registers a single `people-trained` item to match (see updateMds). -->
+  <div class="tsf-field">
+    <label class="tsf-label">Number of people trained <span class="tsf-required">*</span></label>
+    <p class="tsf-hint">{{ peopleTrainedDesc }}</p>
+  </div>
+
+  <div class="tsf-row">
+    <app-pr-input
+      label="Women"
+      type="number"
+      placeholder="Type quantity"
+      [required]="false"
+      [(ngModel)]="body.female_using"
+      (ngModelChange)="onFieldChange()">
+    </app-pr-input>
+    <app-pr-input
+      label="Men"
+      type="number"
+      placeholder="Type quantity"
+      [required]="false"
+      [(ngModel)]="body.male_using"
+      (ngModelChange)="onFieldChange()">
+    </app-pr-input>
+  </div>
+
+  <div class="tsf-row">
+    <app-pr-input
+      label="Non-binary"
+      type="number"
+      placeholder="Type quantity"
+      [required]="false"
+      [(ngModel)]="body.non_binary_using"
+      (ngModelChange)="onFieldChange()">
+    </app-pr-input>
+    <app-pr-input
+      label="Unknown"
+      type="number"
+      placeholder="Type quantity"
+      [required]="false"
+      [(ngModel)]="body.has_unkown_using"
+      (ngModelChange)="onFieldChange()">
+    </app-pr-input>
+  </div>
+
+  <app-pr-radio-button
+    label="Length of training"
+    [description]="lengthOfTrainingDesc"
+    [options]="capdevsTerms"
+    optionLabel="name"
+    optionValue="capdev_term_id"
+    [required]="true"
+    [(ngModel)]="capdevTermId1"
+    (ngModelChange)="onCapdevTermId1Change()">
+  </app-pr-radio-button>
+
+  <app-pr-radio-button
+    label="Delivery Method"
+    [description]="deliveryMethodDesc"
+    [options]="deliveryMethods"
+    optionLabel="name"
+    optionValue="capdev_delivery_method_id"
+    [required]="true"
+    [(ngModel)]="body.capdev_delivery_method_id"
+    (ngModelChange)="onFieldChange()">
+  </app-pr-radio-button>
+
+  <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
+    <app-alert-status
+      class="flex-1"
+      status="info"
+      description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting. If you need to complete the full metadata for this section, click the button on the right.">
+    </app-alert-status>
+    <button type="button" class="tsf-save-btn shrink-0" (click)="toggleShowAll()">
+      {{ showAllFields() ? 'Hide full metadata' : 'Complete full metadata' }}
+    </button>
+  </div>
+
+  @if (showAllFields()) {
+    <div class="flex flex-col gap-[18px]">
+      <app-pr-radio-button
+        label="Were the trainees attending on behalf of an organization?"
+        [options]="attendanceOptions"
+        optionLabel="name"
+        optionValue="id"
+        [required]="false"
+        [(ngModel)]="body.is_attending_for_organization"
+        (ngModelChange)="onAttendanceChange()">
+      </app-pr-radio-button>
+
+      @if (capdevTermId1 === 4 || capdevTermId1 === 1 || capdevTermId1 === 2) {
+        <app-pr-radio-button
+          [options]="capdevsSubTerms"
+          optionLabel="name"
+          optionValue="capdev_term_id"
+          [required]="false"
+          [(ngModel)]="capdevTermId2"
+          (ngModelChange)="onCapdevTermId2Change()">
+        </app-pr-radio-button>
+      }
+
+      @if (body.is_attending_for_organization) {
+        <app-pr-multi-select
+          [options]="institutionsSE.institutionsList"
+          [required]="false"
+          selectedLabel="organization(s) selected"
+          selectedOptionLabel="institutions_name"
+          optionLabel="institutions_name"
+          optionValue="institutions_id"
+          placeholder="Select organizations"
+          [(ngModel)]="body.institutions"
+          (ngModelChange)="onFieldChange()">
+        </app-pr-multi-select>
+      }
+    </div>
+  }
+</div>
+
+<div class="tsf-actions">
+  <button class="tsf-save-btn" type="button" [disabled]="saving()" (click)="onSave()">
+    <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
+    {{ saving() ? 'Saving...' : 'Save' }}
+  </button>
+</div>

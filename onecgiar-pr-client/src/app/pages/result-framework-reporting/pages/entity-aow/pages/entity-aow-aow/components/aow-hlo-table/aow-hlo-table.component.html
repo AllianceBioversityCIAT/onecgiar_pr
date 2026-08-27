@@ -1,58 +1,79 @@
-<div class="search_input" style="width: 100%; margin-bottom: 1rem">
-  <i class="material-icons-round">search</i>
-  <input
-    id="aowIndicatorSearchInput"
-    type="text"
-    placeholder="Find indicator..."
-    aria-label="Find indicator"
-    [ngModel]="entityAowService.searchText()"
-    (ngModelChange)="entityAowService.searchText.set($event)" />
-</div>
+@if (showSearch) {
+  <div class="mb-3 flex flex-wrap items-center gap-2">
+    <div class="relative min-w-[240px] max-w-[400px] flex-1">
+      <i class="material-icons-round pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-[var(--pr-color-accents-4)]" aria-hidden="true">search</i>
+      <input
+        id="aowIndicatorSearchInput"
+        type="text"
+        class="h-9 w-full rounded-lg border border-[var(--pr-color-accents-2)] bg-white pl-8 pr-3 text-xs text-[var(--pr-color-secondary-400)] outline-none transition-colors placeholder:text-[var(--pr-color-accents-4)] focus:border-brand-300"
+        placeholder="Search by HLO or KPI statement…"
+        aria-label="Search indicators"
+        [value]="entityAowService.searchText()"
+        (input)="entityAowService.searchText.set($any($event.target).value)" />
+    </div>
 
-<p-table
-  id="tocResultsByAowIdTable"
-  styleClass="p-datatable-gridlines p-datatable-sm"
+    <select
+      class="h-9 min-w-[140px] shrink-0 cursor-pointer rounded-lg border border-[var(--pr-color-accents-2)] bg-white px-2.5 text-xs text-[var(--pr-color-secondary-400)] outline-none focus:border-brand-300"
+      aria-label="Filter by status"
+      (change)="statusFilter.set($any($event.target).value)">
+      <option value="all">All statuses</option>
+      <option value="Not started">Not started</option>
+      <option value="In progress">In progress</option>
+      <option value="Achieved">Achieved</option>
+      <option value="Overachieved">Overachieved</option>
+    </select>
+
+    <span class="ml-auto text-xs font-semibold text-[var(--pr-color-accents-5)]">
+      {{ filteredIndicatorCount() }} {{ filteredIndicatorCount() === 1 ? 'indicator' : 'indicators' }}
+    </span>
+  </div>
+}
+
+<app-pr-group-table
+  [id]="'tocResultsByAowIdTable' + instanceId"
   [value]="filteredTableData()"
   [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes() || entityAowService.isLoadingIntermediateOutcomes()"
   sortField="result_title"
   [sortOrder]="1"
-  responsiveLayout="scroll"
   dataKey="result_title"
-  sortMode="single"
-  rowGroupMode="subheader"
   groupRowsBy="result_title"
   [expandedRowKeys]="expandedRowKeys()">
-  <ng-template pTemplate="header">
+  <ng-template prTableHeader>
     <tr>
       @for (column of columnOrder(); track column.attr) {
-        <th [id]="column.attr" style="text-align: center" [style.width]="column.width">
+        <th [id]="column.attr + instanceId" style="text-align: center" [style.width]="column.width">
           {{ column.title }}
         </th>
       }
-      <th id="actions" style="text-align: center; width: 16%">Actions</th>
+      <th [id]="'actions' + instanceId" style="text-align: center; width: 16%">Actions</th>
     </tr>
   </ng-template>
 
-  <ng-template #groupheader let-item let-rowIndex="rowIndex" let-expanded="expanded">
+  <ng-template prTableGroupHeader let-item let-rowIndex="rowIndex" let-expanded="expanded">
     <tr>
       <td colspan="8" style="background: var(--pr-color-primary-25); border-bottom: 1px solid var(--pr-color-secondary-50)">
         <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding-right: 20px">
-          <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem; cursor: pointer" pRipple [pRowToggler]="item">
-            <button
-              type="button"
-              pButton
-              class="p-button-text p-button-rounded"
-              style="border: none; box-shadow: none !important"
-              [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
+          <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem; cursor: pointer" [prRowToggler]="item">
+            <button type="button" hlmBtn variant="ghost" size="icon-sm">
+              <i class="pi" [ngClass]="expanded ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+            </button>
 
             <span style="font-weight: bold">{{ item.result_title }}</span>
+
+            @if (tableType === 'outcomes-non-exclusive') {
+              <span
+                class="tab-content_chip non-exclusive-chip"
+                pTooltip="This Intermediate Outcome is not assigned to a single Area of Work, so it appears under all of them.">
+                Not exclusive to this AoW
+              </span>
+            }
           </div>
         </div>
       </td>
     </tr>
   </ng-template>
 
-  <ng-template #expandedrow let-item>
+  <ng-template prTableExpandedRow let-item>
     @if (item.indicators.length) {
       @for (result of item.indicators; track result.indicator_id + '-' + (result.center_id ?? $index)) {
         <tr>
@@ -60,14 +81,14 @@
             <div class="kpi-statement-cell">
               <span class="kpi-statement-text">{{ result.indicator_description }}</span>
               @if (result.center_acronym) {
-                <span class="tab-content_chip center-chip" [pTooltip]="'CGIAR Center: ' + result.center_acronym">
+                <span class="tab-content_chip center-chip" [prTooltip]="'CGIAR Center: ' + result.center_acronym">
                   {{ result.center_acronym }}
                 </span>
               }
             </div>
           </td>
           <td>
-            <div class="tab-content_chip" [pTooltip]="!result.type_name ? 'This information should be filled in the ToC Board' : ''">
+            <div class="tab-content_chip" [prTooltip]="!result.type_name ? 'This information should be filled in the ToC Board' : ''">
               {{ result.type_name || 'Not provided' }}
             </div>
           </td>
@@ -89,25 +110,27 @@
             <div class="tab-content_actions">
               @if (entityAowService.canReportResults()) {
                 <button
-                  pButton
-                  label="Report result"
+                  hlmBtn
+                  size="sm"
                   type="button"
-                  class="pr-body-3 tab-content_actions_button"
-                  (click)="openReportResultModal(item, result.indicator_id, result.center_id)"></button>
+                  class="pr-body-1 tab-content_actions_button"
+                  (click)="openReportResultModal(item, result.indicator_id, result.center_id)">Report result</button>
               }
               <button
-                pButton
-                label="View results"
+                hlmBtn
+                variant="outline"
+                size="sm"
                 type="button"
-                class="p-button-outlined pr-body-3 tab-content_actions_button"
-                (click)="openViewResultDrawer(item, result.indicator_id, result.center_id)"></button>
+                class="pr-body-1 tab-content_actions_button"
+                (click)="openViewResultDrawer(item, result.indicator_id, result.center_id)">View results</button>
               @if (hasTargets(item, result.indicator_id, result.center_id)) {
                 <button
-                  pButton
-                  label="Target details"
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
                   type="button"
-                  class="p-button-outlined pr-body-3 tab-content_actions_button"
-                  (click)="openTargetDetailsDrawer(item, result)"></button>
+                  class="pr-body-1 tab-content_actions_button"
+                  (click)="openTargetDetailsDrawer(item, result)">Target details</button>
               }
             </div>
           </td>
@@ -125,11 +148,11 @@
             </p>
             @if (entityAowService.canReportResults()) {
               <button
-                pButton
-                label="Report result"
+                hlmBtn
+                size="sm"
                 type="button"
                 class="pr-body-3 no-indicators-button"
-                (click)="openReportResultModal(item, null)"></button>
+                (click)="openReportResultModal(item, null)">Report result</button>
             }
           </div>
         </td>
@@ -137,7 +160,7 @@
     }
   </ng-template>
 
-  <ng-template #emptymessage>
+  <ng-template prTableEmpty>
     <tr style="height: 200px">
       <td colspan="8" class="tab-content_empty">
         @if (entityAowService.searchText().trim()) {
@@ -148,16 +171,18 @@
       </td>
     </tr>
   </ng-template>
-</p-table>
+</app-pr-group-table>
 
-@if (entityAowService.showReportResultModal()) {
-  <app-aow-hlo-create-modal></app-aow-hlo-create-modal>
-}
+@if (renderOverlays) {
+  @if (entityAowService.showReportResultModal()) {
+    <app-aow-hlo-create-modal></app-aow-hlo-create-modal>
+  }
 
-@if (entityAowService.showViewResultDrawer()) {
-  <app-aow-view-results-drawer></app-aow-view-results-drawer>
-}
+  @if (entityAowService.showViewResultDrawer()) {
+    <app-aow-view-results-drawer></app-aow-view-results-drawer>
+  }
 
-@if (entityAowService.showTargetDetailsDrawer()) {
-  <app-aow-target-details-drawer></app-aow-target-details-drawer>
+  @if (entityAowService.showTargetDetailsDrawer()) {
+    <app-aow-target-details-drawer></app-aow-target-details-drawer>
+  }
 }

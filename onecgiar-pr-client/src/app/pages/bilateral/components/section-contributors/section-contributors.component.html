@@ -1,0 +1,345 @@
+<div class="sc-fields" data-section="contributors">
+  <app-alert-status
+    status="info"
+    description="The fields displayed on this screen correspond to the minimum data standard (MDS) required for bilateral result reporting.">
+  </app-alert-status>
+
+  @if (primarySpData(); as sp) {
+    <div class="sc-card sc-card--toc">
+      <div class="sc-card__header">
+        <div class="sc-card__title">
+          <span class="sc-card__icon toc-icon"></span>
+          <span>Theory of Change Alignment</span>
+        </div>
+      </div>
+      <div class="sc-card__body">
+        <!-- P2-3368: the primary SP is auto-assigned from the centre and never editable here (AC1). -->
+        <div class="sc-field">
+          <div class="flex items-center justify-between gap-2">
+            <label class="sc-label">Primary contributing science program</label>
+            <span class="sc-card__badge">Read only</span>
+          </div>
+          <div class="sc-sp-header">
+            <img class="sc-sp-icon" [src]="sp.iconSrc" width="32" height="32" alt="" />
+            <div class="sc-sp-info">
+              <span class="sc-sp-code">{{ sp.programCode }} — {{ sp.name || sp.shortName }}</span>
+              @if (sp.allocation) {
+                <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
+              }
+            </div>
+          </div>
+        </div>
+        <app-section-toc [resultLevelId]="creationService.resultLevelId()"></app-section-toc>
+      </div>
+    </div>
+
+    @if (availableSecondarySpOptions().length || creationService.selectedSecondarySps().length) {
+      <div class="sc-card relative z-[150]">
+        <div class="sc-card__header">
+          <div class="sc-card__title">
+            <span class="sc-card__icon sp-icon"></span>
+            <span>Contributing science programs</span>
+            @if (unpersistedFieldsComingSoon) {
+              <span
+                class="rounded-full bg-[var(--pr-surface-app)] px-[8px] py-[2px] text-[11px] font-medium text-[var(--pr-text-muted)]"
+                data-testid="secondary-sps-coming-soon"
+                >Coming soon</span
+              >
+            }
+          </div>
+        </div>
+        <div class="sc-card__body">
+          <!--
+            Rendered only when the project's science programs are known. An existing result loads with
+            `sciencePrograms: []` (bilateral-creation.service.ts:170), so on a saved result the chips
+            below are the whole story — see the note on availableSecondarySpOptions().
+
+            ── Visible but DISABLED, `Coming soon` ────────────────────────────────────────────
+            There is no field for this on SaveBilateralContributorsDto: the pick used to live in a
+            component signal and vanish on reload. The control stays on screen because it is part
+            of the designed flow; the tag is what stops it reading as broken. Unblocked by a BACK
+            ticket that adds the field — then flip `unpersistedFieldsComingSoon`.
+          -->
+          @if (availableSecondarySpOptions().length) {
+            <div class="w-full max-w-[480px]" [ngClass]="{ globalDisabled: unpersistedFieldsComingSoon }">
+              <app-pr-multi-select
+                label="Contributing science programs"
+                [options]="availableSecondarySpOptions()"
+                [ngModel]="selectedSecondarySpIds()"
+                (ngModelChange)="onSecondarySpsModelChange($event)"
+                optionLabel="full_name"
+                optionValue="programId"
+                placeholder="Add another programme…"
+                [required]="false"
+                [isStatic]="true">
+              </app-pr-multi-select>
+            </div>
+          }
+          @if (creationService.selectedSecondarySps().length) {
+            <div class="sc-chips">
+              @for (sp of creationService.selectedSecondarySps(); track sp.programId) {
+                <span class="sc-sp-badge">
+                  {{ sp.programCode }}
+                  @if (sp.allocation) {
+                    <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
+                  }
+                </span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
+
+  <div class="sc-card sc-card--lead-center">
+    <div class="sc-card__header">
+      <div class="sc-card__title">
+        <span class="sc-card__icon lead-icon"></span>
+        <span>Lead center</span>
+      </div>
+      <span class="sc-card__badge">Read only</span>
+    </div>
+    <div class="sc-card__body">
+      <span class="sc-lead">{{ creationService.selectedProject()?.leadCenter?.acronym }} - {{ creationService.selectedProject()?.leadCenter?.name }}</span>
+    </div>
+  </div>
+
+  <div class="sc-card sc-card--centers">
+    <div class="sc-card__header">
+      <div class="sc-card__title">
+        <span class="sc-card__icon center-icon"></span>
+        <span>Contributing CGIAR centers</span>
+        <!-- P2-3368 asks for an ⓘ tooltip here but never supplies the guidance text, and W1/W2 has
+             none to reuse. Icon left out rather than shipped empty — see this folder's CLAUDE.md. -->
+      </div>
+    </div>
+    <div class="sc-card__body">
+      <div class="w-full max-w-[480px]">
+        <app-pr-multi-select
+          label="Contributing CGIAR centers"
+          [options]="availableCentersComputed()"
+          [disableOptions]="disabledCenterOptions()"
+          [ngModel]="selectedCenterInstitutionIds()"
+          (ngModelChange)="onCentersModelChange($event)"
+          optionLabel="full_name"
+          optionValue="institutionId"
+          placeholder="Centers which collaborate with this result"
+          [required]="false"
+          [isStatic]="true">
+        </app-pr-multi-select>
+      </div>
+      @if (selectedCenterInstitutionIds().length) {
+        <div class="sc-selected-chips">
+          @for (id of selectedCenterInstitutionIds(); track id) {
+            <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id)">
+              {{ getCenterDisplayName(id) }}
+              @if (!isLeadCenter(id)) {
+                <button type="button" class="sc-chip-remove" (click)="removeCenter(id)">×</button>
+              }
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="sc-card sc-card--projects">
+    <div class="sc-card__header">
+      <div class="sc-card__title">
+        <span class="sc-card__icon project-icon"></span>
+        <span>Contributing W3/bilateral projects</span>
+      </div>
+    </div>
+    <div class="sc-card__body">
+      <div class="w-full max-w-[480px]">
+        <app-pr-multi-select
+          label="Contributing W3/bilateral projects"
+          [options]="availableProjectsComputed()"
+          [disableOptions]="disabledProjectOptions()"
+          [ngModel]="selectedProjectIds()"
+          (ngModelChange)="onProjectsModelChange($event)"
+          optionLabel="fullName"
+          optionValue="id"
+          placeholder="The drop-down list includes all bilateral projects"
+          [required]="false"
+          [isStatic]="true">
+        </app-pr-multi-select>
+      </div>
+      @if (selectedProjectIds().length) {
+        <div class="sc-selected-chips">
+          @for (id of selectedProjectIds(); track id) {
+            <span class="sc-chip sc-chip--project" [class.sc-chip-readonly]="isLeadProject(id)">
+              {{ getProjectDisplayName(id) }}
+              @if (!isLeadProject(id)) {
+                <button type="button" class="sc-chip-remove" (click)="removeProject(id)">×</button>
+              }
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!--
+    P2-3368 · External partners. Mandatory, satisfied either way (AC5/AC7). No partner-type / nature
+    attributes: the story puts them explicitly OUT of scope for bilateral results (AC6).
+  -->
+  <div class="sc-card">
+    <div class="sc-card__header">
+      <div class="sc-card__title">
+        <span class="sc-card__icon center-icon"></span>
+        <span>External partners</span>
+        <span class="text-[var(--pr-color-red-300)]">*</span>
+      </div>
+    </div>
+    <div class="sc-card__body">
+      <!--
+        ── Failed read of the stored partner block ──────────────────────────────────────────
+        The hydrate effect fires once and never re-runs on its own, so without this the section
+        became a silent black hole: every PATCH dropped the partner keys while the block still
+        looked complete. The banner says it in plain words and the button is the only way back.
+      -->
+      @if (partnersLoadFailed()) {
+        <div class="flex flex-col items-start gap-[8px]" data-testid="partners-load-error">
+          <app-alert-status
+            status="error"
+            description="We could not load the partners already saved for this result, so nothing you choose here can be saved right now. Please retry.">
+          </app-alert-status>
+          <button
+            type="button"
+            class="inline-flex items-center gap-[6px] rounded-[6px] border border-[var(--pr-color-red-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-red-300)] transition-colors hover:bg-[var(--pr-color-red-50)]"
+            data-testid="partners-load-retry"
+            (click)="retryLoadExternalPartners()">
+            <i class="material-icons-round text-[14px]">refresh</i>
+            Retry loading partners
+          </button>
+        </div>
+      }
+
+      <app-pr-checkbox
+        label="This result has no external partners"
+        [isStatic]="true"
+        [required]="false"
+        [ngModel]="noExternalPartners()"
+        (ngModelChange)="noExternalPartners.set($event)"
+        (selectOptionEvent)="onNoExternalPartnersChange()">
+      </app-pr-checkbox>
+
+      @if (!noExternalPartners()) {
+        <div class="w-full max-w-[480px]">
+          <app-pr-multi-select
+            label="External partners"
+            [options]="availablePartners()"
+            [ngModel]="selectedPartnerInstitutionIds()"
+            (ngModelChange)="onPartnersModelChange($event)"
+            optionLabel="full_name"
+            optionValue="institutions_id"
+            selectedOptionLabel="institutions_name"
+            placeholder="Select the partners that contributed to this result"
+            [required]="true"
+            [isStatic]="true">
+          </app-pr-multi-select>
+        </div>
+
+        @if (selectedPartnerInstitutionIds().length) {
+          <div class="sc-selected-chips">
+            @for (id of selectedPartnerInstitutionIds(); track id) {
+              <span class="sc-chip">
+                {{ getPartnerDisplayName(id) }}
+                <button type="button" class="sc-chip-remove" (click)="removePartner(id)">×</button>
+              </span>
+            }
+          </div>
+        } @else {
+          <span class="text-[12px] font-normal text-[var(--pr-color-red-300)]">
+            Add at least one external partner, or tick “This result has no external partners”.
+          </span>
+        }
+      }
+    </div>
+  </div>
+
+  <!-- P2-3368 · Minimum-data banner + Full Metadata toggle, below Block 1. -->
+  <div class="flex items-center justify-between gap-3 border-t border-[#ECEFF1] pt-3">
+    <app-alert-status
+      class="flex-1"
+      status="info"
+      description="The fields above are the minimum data standards required to report a bilateral result. Add the full metadata if you need to report more.">
+    </app-alert-status>
+    <button
+      type="button"
+      class="shrink-0 rounded-[6px] border border-[var(--pr-color-primary-300)] bg-white px-[14px] py-[7px] text-[12px] font-semibold text-[var(--pr-color-primary-300)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+      (click)="toggleShowAll()">
+      {{ fullMetadataButtonLabel() }}
+    </button>
+  </div>
+
+  @if (showHiddenFieldsNote()) {
+    <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">
+      <span class="font-mono font-medium">{{ hiddenFieldsWithValues() }}</span>
+      {{ hiddenFieldsWithValues() === 1 ? 'hidden field has values and will be saved.' : 'hidden fields have values and will be saved.' }}
+    </span>
+  }
+
+  @if (showLinkedResultQuestion()) {
+    <div class="sc-card">
+      <div class="sc-card__body flex flex-col gap-[18px]">
+        <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">You are completing the full metadata for this section. These fields are optional.</span>
+
+        <!--
+          ── Linked / bundled question — visible but DISABLED, `Coming soon` ──────────────────
+          P2-3358 wording: one question for every typology. No mandatory indicator (AC10).
+          The answer (and the results it unlocks) has no field on SaveBilateralContributorsDto and
+          no home in the bilateral detail payload: it used to be written to a component signal and
+          nothing else, so the user answered, was told "1 hidden field has values and will be
+          saved.", reloaded, and found it empty. The controls stay on screen because the flow
+          expects them; the tag is what keeps them honest. Unblocked by a BACK ticket that adds the
+          field — then flip `unpersistedFieldsComingSoon`.
+        -->
+        <div class="flex items-start gap-[8px]">
+          <div class="flex-1" [ngClass]="{ globalDisabled: unpersistedFieldsComingSoon }">
+            <app-pr-radio-button
+              [label]="linkedResultQuestionLabel"
+              [required]="false"
+              [disabled]="unpersistedFieldsComingSoon"
+              [options]="yesNoOptions"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="hasLinkedResult()"
+              (ngModelChange)="onHasLinkedResultChange($event)">
+            </app-pr-radio-button>
+          </div>
+          @if (unpersistedFieldsComingSoon) {
+            <span
+              class="mt-[2px] shrink-0 rounded-full bg-[var(--pr-surface-app)] px-[8px] py-[2px] text-[11px] font-medium text-[var(--pr-text-muted)]"
+              data-testid="linked-result-coming-soon"
+              >Coming soon</span
+            >
+          }
+        </div>
+
+        @if (showLinkedResultsDropdown()) {
+          <div class="w-full max-w-[480px]" [ngClass]="{ globalDisabled: unpersistedFieldsComingSoon }">
+            <app-pr-multi-select
+              label="Select a result."
+              [options]="innovationUseResultsSE.resultsList"
+              [ngModel]="selectedLinkedResultIds()"
+              (ngModelChange)="onLinkedResultsModelChange($event)"
+              optionLabel="title"
+              optionValue="id"
+              optionGroupLabel="name"
+              optionGroupChildren="options"
+              selectedLabel="Results selected"
+              selectedOptionLabel="title"
+              placeholder="Please select a result"
+              [displayLabelFormatter]="formatResultLabel"
+              [required]="false"
+              [isStatic]="true">
+            </app-pr-multi-select>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

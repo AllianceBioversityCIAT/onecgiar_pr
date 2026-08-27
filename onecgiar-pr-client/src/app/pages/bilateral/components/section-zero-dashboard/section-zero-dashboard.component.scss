@@ -1,0 +1,444 @@
+.bp-dashboard {
+  display: grid;
+  grid-template-columns: 7fr 3fr;
+  gap: 18px;
+  margin-bottom: 28px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bp-dashboard-card {
+  // Grid items default to `min-width: auto`, which lets their min-content (here, the
+  // un-wrapped `.bp-project-name`) override the `1fr 1fr` split and grow this card
+  // past its track — squeezing the actions card and overflowing the whole row past
+  // `.bilateral-creator`'s fixed width. `min-width: 0` lets `1fr` actually apply and
+  // lets `.bp-project-name`'s ellipsis truncate instead of forcing extra width.
+  min-width: 0;
+  background: #FFFFFF;
+  border: 1px solid #E8ECEE;
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 200ms ease;
+
+  &:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+  }
+
+  &--progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1.5px solid var(--pr-color-primary-50);
+    background: linear-gradient(to bottom, var(--pr-color-primary-25), #FFFFFF);
+  }
+}
+
+.bp-card-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--pr-color-primary-500);
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 12px;
+    background: var(--pr-color-primary-300);
+    border-radius: 2px;
+  }
+}
+
+.bp-project-card {
+  position: relative;
+}
+
+.bp-section-header {
+  margin: 0 0 14px;
+}
+
+.bp-section-title {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pr-color-secondary-400);
+}
+
+.bp-section-subtitle {
+  margin: 0;
+  font-size: 11px;
+  color: var(--pr-color-accents-4, #888);
+}
+
+// A labeled metadata strip (code / type / phase / funding source) — read as a data
+// record (label above value, thin dividers) rather than a row of colorful chips.
+// The label itself disambiguates each field, which reads as more deliberate/precise
+// than color-coding and doesn't rely on color perception to tell fields apart.
+.bp-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  margin: 0 0 14px;
+  padding-right: 90px;
+}
+
+.bp-meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 14px;
+  border-left: 1px solid var(--pr-color-accents-2, #E8ECEE);
+
+  &:first-child {
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+.bp-meta-field-label {
+  margin: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--pr-color-accents-4, #888);
+}
+
+.bp-meta-field-value {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pr-color-secondary-400);
+  white-space: nowrap;
+
+  // Identifier — monospace, the academic-record convention for a code/accession number.
+  &--code {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  }
+
+  // The one field worth a color, since it's an operational distinction (W3 vs W1/W2)
+  // reviewers act on — reuses the app's own brand accent instead of a new hue.
+  &--w3 {
+    color: var(--pr-color-primary-500);
+  }
+
+  // The project name is the card's primary identifier — same label-above-value shape
+  // as its siblings, just larger/bolder so it still reads as the lead field.
+  &--project {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--pr-color-primary-600);
+    letter-spacing: -0.2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// Project / Center / Program as a labeled list — same label-above-value shape as
+// .bp-result-meta above, stacked instead of side-by-side so each field gets full
+// width for its value (the project name in particular needs the room to read).
+.bp-project-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.bp-project-fields .bp-meta-field {
+  padding: 0;
+  border-left: none;
+
+  &:not(:first-child) {
+    padding-top: 10px;
+    border-top: 1px solid var(--pr-color-accents-2, #E8ECEE);
+  }
+}
+
+.bp-meta-field-value--project {
+  white-space: normal;
+}
+
+// Summary/Description read as short paragraphs, not single-line values — same
+// labeled-list shape as .bp-project-fields but wrapping instead of truncating.
+.bp-project-summary-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--pr-color-accents-2, #E8ECEE);
+}
+
+.bp-meta-field--full {
+  padding: 0;
+  border-left: none;
+
+  .bp-meta-field-value {
+    white-space: normal;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+}
+
+.bp-sp-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.bp-sp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--pr-color-primary-100);
+  color: var(--pr-color-primary-600);
+  background: var(--pr-color-primary-50);
+
+  &--primary {
+    background: linear-gradient(135deg, var(--pr-color-primary-300), var(--pr-color-primary-400));
+    border-color: transparent;
+    color: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(var(--pr-color-primary-rgb), 0.2);
+  }
+}
+
+.bp-sp-allocation {
+  opacity: 0.75;
+  font-weight: 400;
+}
+
+.bp-empty-hint {
+  font-size: 13px;
+  color: #CFD8DC;
+  margin: 0;
+  font-style: italic;
+}
+
+@keyframes bp-skel-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.bp-skel-name,
+.bp-skel-pill {
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    var(--pr-color-accents-1, #eee) 0%,
+    var(--pr-color-accents-2, #f5f5f5) 50%,
+    var(--pr-color-accents-1, #eee) 100%);
+  background-size: 200% 100%;
+  animation: bp-skel-shimmer 1.8s ease-in-out infinite;
+}
+
+.bp-skel-name {
+  width: 100%;
+  height: 16px;
+  margin-top: 8px;
+
+  &--sm {
+    width: 40%;
+    height: 22px;
+    border-radius: 14px;
+    margin-top: 10px;
+  }
+}
+
+.bp-skel-pill {
+  width: 70px;
+  height: 24px;
+  border-radius: 16px;
+
+  &--sm {
+    width: 50px;
+  }
+}
+
+.bp-ai-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  // Same emerald gradient as the AI upload/text-mining flow's submit button
+  // (bilateral-ai-upload.component.scss `.aiu-submit-btn`) — one consistent
+  // "AI" color across the module instead of an unrelated purple.
+  background: linear-gradient(135deg, #047857, #059669);
+  color: #FFFFFF;
+  box-shadow: 0 2px 7px rgba(5, 150, 105, 0.3);
+}
+
+.bp-ai-badge-icon {
+  font-size: 11px;
+}
+
+.bp-progress-center {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 14px;
+}
+
+.bp-section-breakdown {
+  width: 100%;
+}
+
+.bp-breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  cursor: pointer;
+  font-size: 11px;
+  border-radius: 4px;
+  transition: background 120ms ease;
+
+  &:hover {
+    background: #F0F4F8;
+  }
+}
+
+.bp-breakdown-name {
+  flex: 1;
+  color: #455A64;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.bp-breakdown-count {
+  color: #90A4AE;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-size: 10px;
+  min-width: 28px;
+  text-align: right;
+}
+
+.bp-breakdown-bar {
+  width: 44px;
+  height: 4px;
+  background: #ECEFF1;
+  border-radius: 2px;
+  overflow: hidden;
+
+  .bp-breakdown-fill {
+    height: 100%;
+    background: var(--pr-color-primary-300);
+    transition: width 300ms ease;
+    border-radius: 2px;
+
+    &.bp-breakdown-fill--complete {
+      background: var(--pr-color-green-500);
+    }
+  }
+}
+
+.bp-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 12px;
+  margin-bottom: 7px;
+  border: 1px solid #E4E9EC;
+  border-radius: 8px;
+  background: #FFFFFF;
+  cursor: pointer;
+  font-size: 12px;
+  color: #52636C;
+  font-family: inherit;
+  font-weight: 500;
+  text-align: left;
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+
+  i {
+    flex: 0 0 20px;
+    width: 20px;
+    font-size: 16px;
+    line-height: 1;
+    text-align: center;
+    color: #9AAAB2;
+  }
+
+  .bp-action-status {
+    margin-left: auto;
+    padding: 3px 6px;
+    border-radius: 999px;
+    background: #F4F7F8;
+    color: #9AAAB2;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.35px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  &:hover:not(:disabled) {
+    background: #F8FAFB;
+    border-color: #C8D3D8;
+    box-shadow: 0 2px 7px rgba(38, 50, 56, 0.06);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    background: #FBFCFD;
+    border-color: #EEF1F3;
+    color: #A9B5BB;
+    cursor: not-allowed;
+
+    i { color: #C2CDD2; }
+  }
+
+  &--primary {
+    background: linear-gradient(135deg, var(--pr-color-primary-300), var(--pr-color-primary-400));
+    border-color: transparent;
+    color: #FFFFFF;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 6px rgba(var(--pr-color-primary-rgb), 0.15);
+
+    i { color: rgba(255, 255, 255, 0.85); }
+
+    .bp-action-status {
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--pr-color-primary-400), var(--pr-color-primary-500));
+      box-shadow: 0 4px 12px rgba(var(--pr-color-primary-rgb), 0.25);
+    }
+
+    &:disabled {
+      opacity: 1;
+      background: linear-gradient(135deg, var(--pr-color-primary-200), var(--pr-color-primary-300));
+      border-color: transparent;
+      color: #FFFFFF;
+
+      i { color: rgba(255, 255, 255, 0.85); }
+      .bp-action-status { background: rgba(255, 255, 255, 0.14); }
+    }
+  }
+
+  &--submit { margin-top: 5px; }
+}

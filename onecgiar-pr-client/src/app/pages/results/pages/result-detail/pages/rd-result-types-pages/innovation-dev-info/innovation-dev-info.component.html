@@ -1,4 +1,4 @@
-<div class="detail_container">
+<div class="detail_container" [appSectionSkeleton]="sectionLoading()">
   <app-alert-status [description]="alertInfoText()"> </app-alert-status>
   <app-pr-input fieldRef="[innovation-dev-info]-long_title" [required]="false" [readOnly]="true" [ngModel]="innovationDevInfoBody?.result?.title">
   </app-pr-input>
@@ -40,7 +40,14 @@
     </app-pr-input>
   </div>
 
-  <app-anticipated-innovation-user [body]="innovationDevInfoBody" [saving]="this.savingSection"></app-anticipated-innovation-user>
+  <!-- P2-3263: the "Demand of anticipated innovation user" section is dropped from the 2026 form.
+       Gated on the reporting phase YEAR, not on the portfolio: a 2025-phase result must still render it
+       with whatever was reported, and `isP25()` answers "which portfolio", which is not the same question
+       — the test environment holds 2025-phase results inside the P25 portfolio. The component stays: it
+       is the only renderer for this data and previous phases still need it. -->
+  @if (!this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+    <app-anticipated-innovation-user [body]="innovationDevInfoBody" [saving]="this.savingSection"></app-anticipated-innovation-user>
+  }
 
   @if (this.fieldsManagerSE.isP25()) {
     <div class="evidences">
@@ -57,16 +64,42 @@
     </div>
   }
 
-  <app-megatrends [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-megatrends>
+  <!-- P2-3264: the Megatrends question is dropped from the 2026 form. Same phase-year gate as P2-3263,
+       and for the same reason. Stored answers are untouched: a 2025-phase result still renders the
+       question with what was answered. -->
+  @if (!this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+    <app-megatrends [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-megatrends>
+  }
 
   <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
 
-  <div class="paddingLeft20">
-    <app-gesi-innovation-assessment [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
-    <app-scale-impact-analysis [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
+  <div class="pl-[20px]">
+    <!--
+      P2-3467: from the 2026 phase the GESI and risk open-text questions are replaced by two
+      single-choice stage questions, and "partners, policies and financial mechanisms" is retired
+      with no replacement. Same phase-year gate as P2-3264, and for the same reason: isP25() answers
+      "which portfolio", and the P25 portfolio also holds 2025-phase results that must keep the old
+      questions. The server serves whichever set matches the phase on the same q1/q2 slots, and q3
+      stays "assumptions examination" in both.
+    -->
+    @if (this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+      <app-stage-assessment
+        questionKey="q1"
+        [body]="innovationDevInfoBody"
+        [options]="innovationDevelopmentQuestions"></app-stage-assessment>
+      <app-stage-assessment
+        questionKey="q2"
+        [body]="innovationDevInfoBody"
+        [options]="innovationDevelopmentQuestions"></app-stage-assessment>
+    } @else {
+      <app-gesi-innovation-assessment [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
+      <app-scale-impact-analysis [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
+    }
     @if (this.fieldsManagerSE.isP25()) {
       <app-assumptions-examination [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-assumptions-examination>
-      <app-partners-policies-safeguards [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-partners-policies-safeguards>
+      @if (!this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+        <app-partners-policies-safeguards [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-partners-policies-safeguards>
+      }
     }
   </div>
 
@@ -121,11 +154,11 @@
 
   <app-alert-status [description]="alertInfoText2()"> </app-alert-status>
 
-  <p-message
+  <app-alert-status
     *ngIf="hasReadinessLevelDiminished()"
-    [style]="{ width: '100%', 'justify-content': 'flex-start' }"
-    severity="warn"
-    [text]="alertDiminishedReadinessLevel()"></p-message>
+    inlineStyles="width: 100%"
+    status="warning"
+    [description]="alertDiminishedReadinessLevel()"></app-alert-status>
 
   <app-pr-textarea
     placeholder="Provide a brief explanation here..."
@@ -135,9 +168,14 @@
     description="<strong>Example:</strong> We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence. ">
   </app-pr-textarea>
 
+  <!-- P2-3265: readiness-level gate for "Have any studies been conducted to inform the innovation
+       scaling strategy design...". showScalingStudiesQuestion() reads the catalogue's `level` field
+       (never the id or array index, see P2-3359). From the 2026 phase onward the question is dropped
+       entirely, for every readiness level; phases <= 2025 keep rendering exactly as before (visible
+       only from level 6 up). -->
   @if (this.fieldsManagerSE.isP25()) {
     <app-pr-radio-button
-      *ngIf="getReadinessLevelIndex() >= 6"
+      *ngIf="showScalingStudiesQuestion()"
       fieldRef="[innovation-use-form]-has-studies-links"
       [options]="[
         { value: true, label: 'Yes' },
@@ -148,7 +186,7 @@
       optionValue="value">
     </app-pr-radio-button>
     <app-studies-link
-      *ngIf="innovationDevInfoBody.has_scaling_studies && getReadinessLevelIndex() >= 6"
+      *ngIf="innovationDevInfoBody.has_scaling_studies && showScalingStudiesQuestion()"
       [body]="innovationDevInfoBody"></app-studies-link>
   }
 
@@ -157,4 +195,4 @@
   <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks" [saving]="this.savingSection"></app-innovation-links>
 </div>
 
-<app-save-button class="position_sticky" [disabled]="savingSection" (clickSave)="onSaveSection()"></app-save-button>
+<app-section-bottom-bar [disabled]="savingSection" (clickSave)="onSaveSection()" />

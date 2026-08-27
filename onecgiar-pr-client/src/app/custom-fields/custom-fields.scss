@@ -1,4 +1,6 @@
 @use '../../styles/fonts.scss' as fonts;
+// Global mask for [appSectionSkeleton]; must reach projected/legacy descendant DOM.
+@use './section-skeleton/section-skeleton.scss';
 
 .pr_description {
   @include fonts.pr-typography('body-2');
@@ -6,12 +8,16 @@
   margin-bottom: 5px;
 }
 
+// Label de campo. El mockup lo define como 14px/600 en `--pr-text`, con 6px hasta el control.
+// `h4` aporta el 14px pero pesa 500, así que el peso se fija aquí en vez de mover la escala
+// tipográfica entera (h4 lo usan también encabezados que no son labels).
 .pr_label {
   margin-top: 20px;
-  margin-bottom: 7px;
-  color: var(--pr-color-black);
+  margin-bottom: 6px;
+  color: var(--pr-text);
   text-align: left;
   @include fonts.pr-typography('h4');
+  font-weight: 600;
 }
 
 .pr_description.readOnly {
@@ -21,26 +27,7 @@
   }
 }
 
-.support_information .p-dialog .p-dialog-content {
-  background: var(--pr-color-white);
-  color: var(--pr-color-secondary-400);
-  padding: 0px !important;
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.p-dialog {
-  border: none !important;
-  overflow: hidden !important;
-}
-
-.p-dialog-content {
-  padding: 0px !important;
-}
-
 input::placeholder,
-.p-dropdown .p-dropdown-label.p-placeholder,
-.p-inputtextarea::placeholder,
 .select_placeholder {
   color: var(--pr-color-accents-3);
   font-weight: 400;
@@ -97,7 +84,7 @@ input::placeholder,
     position: relative;
     background-color: var(--pr-color-white);
     @include fonts.pr-typography('body-1');
-    font-family: 'Poppins', sans-serif !important;
+    font-family: 'Manrope', 'Poppins', sans-serif !important;
     width: 100%;
     cursor: pointer;
 
@@ -142,9 +129,20 @@ input::placeholder,
       .search_input_container {
         width: 100%;
         padding: 5px 10px;
+        position: relative;
+        display: flex;
+        align-items: center;
 
-        .p-fluid {
-          width: 100%;
+        .search_icon {
+          position: absolute;
+          left: 18px;
+          font-size: 18px;
+          color: var(--pr-color-accents-4);
+          pointer-events: none;
+        }
+
+        input {
+          padding-left: 32px;
         }
       }
 
@@ -214,10 +212,23 @@ input::placeholder,
     pointer-events: none;
     border-radius: 3px;
   }
+
+  .pr-select-clear {
+    position: absolute;
+    right: 52px;
+    z-index: 2;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--pr-color-accents-4);
+
+    &:hover {
+      color: var(--pr-color-red-300);
+    }
+  }
 }
 
 .disabled {
-  p-checkbox {
+  .pr-native-check {
     opacity: 0.7;
   }
 
@@ -253,4 +264,233 @@ input::placeholder,
   @include fonts.pr-typography('body-3');
   font-style: italic;
   color: var(--pr-color-accents-5);
+}
+
+/* ------------------------------------------------------------------
+   Native checkbox / radio (Spartan migration — 0 PrimeNG)
+   Clones the previous PrimeNG look: box with neutral-1000 border,
+   primary-300 fill when checked. No brain directives → cannot loop.
+   Shared by pr-checkbox, pr-radio-button and pr-multi-select.
+------------------------------------------------------------------ */
+.pr-native-check,
+.pr-native-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--pr-color-neutral-1000);
+  background-color: var(--pr-color-white);
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.pr-native-check {
+  border-radius: 4px;
+
+  &::after {
+    content: '';
+    width: 10px;
+    height: 10px;
+    transform: scale(0);
+    transition: transform 0.12s ease-in-out;
+    background-color: var(--pr-color-white);
+    /* checkmark shape */
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+
+  &:checked {
+    background-color: var(--pr-color-primary-300);
+    border-color: var(--pr-color-primary-300);
+
+    &::after {
+      transform: scale(1);
+    }
+  }
+}
+
+.pr-native-radio {
+  border-radius: 50%;
+
+  &::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 0.12s ease-in-out;
+    background-color: var(--pr-color-primary-300);
+  }
+
+  &:checked {
+    border-color: var(--pr-color-primary-300);
+
+    &::after {
+      transform: scale(1);
+    }
+  }
+}
+
+/* ------------------------------------------------------------------
+   Lightweight tooltip (Spartan migration — replaces PrimeNG pTooltip).
+   Rendered on <body> by PrTooltipDirective; positioned inline.
+------------------------------------------------------------------ */
+// El `info-pop` del mockup: superficie BLANCA con regla de 1px, radio 12 y la sombra estándar.
+// Antes era `--pr-color-primary-800` con texto blanco a 11px — un globo morado oscuro, del
+// diseño anterior. Dos razones para cambiarlo, no una:
+//  · el mockup no define NINGÚN tooltip oscuro: sus popovers de guía son blancos
+//    (`PRMS-Reporting.dc.html`, `class="info-pop"`), y para etiquetas de una línea usa el
+//    `title` nativo del navegador;
+//  · la regla 7 del client ("el violeta es navegación y acciones; las superficies de contenido
+//    son neutras") lo prohíbe: un tooltip es contenido.
+// 13px en vez de 11: estos tooltips llevan párrafos y listas, no una palabra.
+.pr-tooltip {
+  position: absolute;
+  z-index: 100000;
+  // 340px es el ancho que el diseño da al popover de un CAMPO, y sin scroll: su texto es corto.
+  // Los 240px anteriores venían del globo de una línea. `min()` evita que se salga en móvil.
+  width: 340px;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--pr-border);
+  background-color: var(--pr-surface-card);
+  color: var(--pr-text);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.55;
+  text-wrap: pretty;
+  pointer-events: none;
+  box-shadow: var(--pr-shadow-2);
+  // `prmsPop` del diseño: entra 4px desde arriba, .16s ease-out. Antes sólo hacía fade.
+  animation: pr-tooltip-pop 0.16s ease-out;
+
+  // Los enlaces dentro del popover: `#5733c4` subrayado, como en el mockup.
+  a {
+    color: var(--pr-color-primary-400);
+    text-decoration: underline;
+  }
+
+  // Los subtítulos que trae el contenido ("Example topics", "Collective global targets").
+  b,
+  strong {
+    font-weight: 600;
+    color: var(--pr-text);
+  }
+}
+
+/* P2-3201: a pinned tooltip must accept the pointer, otherwise its links and its scrollbar are
+   unreachable — which is the whole reason pinning exists (e.g. the CGIAR 2030 Strategy link in
+   the Impact Area scoring guidance). */
+.pr-tooltip.pr-tooltip--pinned {
+  pointer-events: auto;
+}
+
+// Shared trigger used by Impact Area Scores and Type-Specific guidance.
+.sgi-dac-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  // Neutro en reposo (#6b6580) y violeta al hover (#6b46e5), sin pastilla de fondo — el mockup
+  // lo trata como una ayuda discreta junto al label. En violeta permanente competía con el
+  // propio label y salpicaba de color un formulario que el diseño quiere neutro.
+  color: var(--pr-text-muted);
+  background: transparent;
+  cursor: help;
+  font-size: 16px;
+  line-height: 1;
+
+  .material-icons-round {
+    font-size: 16px;
+  }
+
+  &:hover {
+    color: var(--pr-color-primary-300);
+    background: transparent;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pr-color-primary-300);
+    outline-offset: 1px;
+  }
+}
+
+/* Impact Area guidance contains the same contextual helper text used by W1/W2. */
+// Guía de campo: el mockup le da 380px y scroll propio cuando el texto es largo.
+// El color del enlace ya no se redefine aquí — era blanco porque el fondo era oscuro.
+// Guía de sección: 420px y 320px de alto con scroll propio, los valores del diseño para el
+// popover que abre el ⓘ del encabezado de scores y el de cada fila. El scroll usa la misma barra
+// discreta que el resto de los paneles (`.pr-light-scroll`, thumb de 8px en `--pr-border-strong`).
+.pr-tooltip.sgi-dac-tooltip {
+  width: 420px;
+  max-width: min(420px, calc(100vw - 32px));
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 14px;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--pr-border-strong);
+    border-radius: 999px;
+  }
+
+  ul {
+    margin: 6px 0 0;
+    padding-left: 17px;
+  }
+
+  li + li {
+    margin-top: 6px;
+  }
+}
+
+/* Policy-type guidance is intentionally long, so keep it readable without taking over the form. */
+.pr-tooltip.tsf-policy-guidance-tooltip {
+  width: 520px;
+  max-width: min(520px, calc(100vw - 32px));
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  padding: 14px;
+
+  ul {
+    margin: 6px 0 0;
+    padding-left: 17px;
+  }
+
+  li + li {
+    margin-top: 6px;
+  }
+}
+
+@keyframes pr-tooltip-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

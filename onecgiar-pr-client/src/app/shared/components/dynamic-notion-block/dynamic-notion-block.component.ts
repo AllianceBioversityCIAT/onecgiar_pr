@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, Input, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CheckboxModule } from 'primeng/checkbox';
 import { RouterModule, Router } from '@angular/router';
 import { WhatsNewService } from '../../../pages/whats-new/services/whats-new.service';
 import { CommonModule } from '@angular/common';
 
 @Component({
     selector: 'app-dynamic-notion-block',
-    imports: [FormsModule, CheckboxModule, RouterModule, CommonModule],
+    imports: [FormsModule, RouterModule, CommonModule],
     templateUrl: './dynamic-notion-block.component.html',
     styleUrl: './dynamic-notion-block.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

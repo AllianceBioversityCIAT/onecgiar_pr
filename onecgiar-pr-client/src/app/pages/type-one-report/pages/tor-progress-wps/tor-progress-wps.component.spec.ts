@@ -3,7 +3,6 @@ import { TorProgressWpsComponent } from './tor-progress-wps.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { OutcomeIndicatorService } from '../../../outcome-indicator/services/outcome-indicator.service';
-import { MessageService } from 'primeng/api';
 jest.useFakeTimers();
 
 describe('TorProgressWpsComponent', () => {
@@ -16,7 +15,7 @@ describe('TorProgressWpsComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [],
       imports: [HttpClientTestingModule],
-      providers: [ExportTablesService, OutcomeIndicatorService, MessageService]
+      providers: [ExportTablesService, OutcomeIndicatorService]
     }).compileComponents();
 
     fixture = TestBed.createComponent(TorProgressWpsComponent);
