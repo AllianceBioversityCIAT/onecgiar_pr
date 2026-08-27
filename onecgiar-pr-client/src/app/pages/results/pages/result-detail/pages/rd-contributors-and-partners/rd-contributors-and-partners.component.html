@@ -115,8 +115,9 @@
         (selectOptionEvent)="onContributingCenterSelect($event)">
       </app-pr-multi-select>
     } @else {
-      <!-- P2-2998 AC4: ToC returned no centers → show note; the Other(s) dropdown below auto-activates with ALL centers. -->
-      <app-pr-field-header label="Contributing CGIAR Centers" [required]="false"></app-pr-field-header>
+      <!-- P2-2998 AC4: ToC returned no centers → show note; the Other(s) dropdown below auto-activates with ALL centers.
+           OTV-R-1: the field-header that used to duplicate the dropdown's own label was removed — the dropdown below
+           now carries "Contributing CGIAR Centers" itself via its conditional [label]. -->
       <div class="pr-message">
         <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
         <p>{{ noCentersNote }}</p>
@@ -161,8 +162,9 @@
        AC4: it auto-activates when the ToC returned no reference centers, even without the user picking "Other". -->
   @if (isCP2026() && (showOtherCenters || !hasReferenceCenters())) {
     <app-pr-multi-select
+      data-testid="toc-other-centers"
       [options]="otherCentersList()"
-      label="Other(s) Contributing CGIAR Centers"
+      [label]="hasReferenceCenters() ? 'Other(s) Contributing CGIAR Centers' : 'Contributing CGIAR Centers'"
       selectedLabel="Center(s) selected"
       optionLabel="full_name"
       optionValue="code"
@@ -315,8 +317,9 @@
       </app-pr-multi-select>
     } @else {
       <!-- P2-2929 empty state — ALIGNED WITH Centers AC4 (per Santi 2026-07-03): ToC returned no Science Programs →
-           show the orange note and auto-activate the "Other(s)" dropdown below (no need to pick "Other" first). -->
-      <app-pr-field-header label="Contributing Science Program/Accelerator" [required]="false"></app-pr-field-header>
+           show the orange note and auto-activate the "Other(s)" dropdown below (no need to pick "Other" first).
+           OTV-R-2: the field-header that used to duplicate the dropdown's own label was removed — the dropdown
+           below now carries "Contributing Science Program/Accelerator" itself via its conditional [label]. -->
       <div class="pr-message">
         <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
         <p>{{ noScienceProgramsNote }}</p>
@@ -336,8 +339,9 @@
          "Other" OR auto-activates when the ToC returned no Science Programs (empty state). -->
     @if (showOtherScience || !hasReferenceScience()) {
       <app-pr-multi-select
+        data-testid="toc-other-science"
         [options]="otherScienceList()"
-        label="Other(s) Science Program(s)"
+        [label]="hasReferenceScience() ? 'Other(s) Science Program(s)' : 'Contributing Science Program/Accelerator'"
         selectedLabel="Science Program(s) selected"
         optionLabel="full_name"
         optionValue="id"

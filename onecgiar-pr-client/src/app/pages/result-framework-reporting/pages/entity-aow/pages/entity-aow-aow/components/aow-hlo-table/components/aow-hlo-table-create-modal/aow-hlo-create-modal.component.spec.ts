@@ -671,4 +671,100 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       expect(component.isAdmin()).toBe(true);
     });
   });
+
+  // OTV-T-2 (P2-3499): empty-ToC "Other(s)" label/header must not be shown when the ToC found nothing.
+  // RB-S1: [label] is a property binding — it never reflects as a DOM attribute, so selectors here go
+  // through the data-testid hooks and read the internally-rendered .pr_label text, never [label="…"].
+  describe('OTV-AC-3/4/7: Other(s) Centers label + Other(s) Science header visibility (P2-3499)', () => {
+    // The Centers/Science section only renders once the "which title-input mode" gate at
+    // template line ~158 is satisfied (`!currentResultIsKnowledgeProduct() || kpEntryMode() === 'manual' || handler`).
+    // The default beforeEach mock is a Knowledge Product indicator (tabs mode), which keeps that gate
+    // closed until a CGSpace item is picked — so these DOM-level tests use a non-KP indicator (mirroring
+    // the existing AC-2 "non-KP" test above) purely to get the section on-screen; it has no bearing on
+    // the hasReferenceCenters()/hasReferenceScience() logic under test.
+    beforeEach(() => {
+      mockEntityAowService.currentResultToReport.set({
+        toc_result_id: 'TOC-100',
+        result_level_id: 3,
+        result_title: 'Test Outcome Result',
+        indicators: [
+          {
+            indicator_description: 'Policy Indicator',
+            type_name: 'Policy change indicator',
+            result_type_id: 1,
+            result_level_id: 3,
+            targets_by_center: { centers: [] }
+          }
+        ],
+        toc_partner_institution_ids: []
+      });
+      component.createResultBody.update(b => ({ ...b, result_type_id: 1 }));
+    });
+
+    it('empty-ToC state: Centers dropdown resolves to "Contributing CGIAR Centers" (not "Other(s)…"), no duplicate sibling header, and the Science "Other(s)" header is absent from the DOM entirely', async () => {
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      // Sanity: this is genuinely the empty-ToC case the assertions below depend on.
+      expect(component.hasReferenceCenters()).toBe(false);
+      expect(component.hasReferenceScience()).toBe(false);
+
+      const centersEl = fixture.debugElement.query(By.css('[data-testid="toc-other-centers"]'));
+      expect(centersEl).toBeTruthy();
+      const centersLabelEl = centersEl.query(By.css('.pr_label'));
+      const centersLabelText = centersLabelEl.nativeElement.textContent.trim();
+      expect(centersLabelText).toContain('Contributing CGIAR Centers');
+      expect(centersLabelText).not.toContain('Other(s)');
+
+      // No sibling header outside the testid'd element duplicates that same label text
+      // (app-pr-multi-select always nests its own internal app-pr-field-header — RB-S1/§10 —
+      // so the correct check is "no OTHER .pr_label with this text", not "no app-pr-field-header at all").
+      const allLabelEls: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.pr_label'));
+      const duplicateOutsideTestid = allLabelEls.filter(
+        el => el.textContent?.trim().startsWith('Contributing CGIAR Centers') && !centersEl.nativeElement.contains(el)
+      );
+      expect(duplicateOutsideTestid.length).toBe(0);
+
+      const scienceHeaderEl = fixture.debugElement.query(By.css('[data-testid="toc-other-science-header"]'));
+      expect(scienceHeaderEl).toBeNull();
+    });
+
+    it('non-empty-ToC + "Other(s)" sentinel selected: both testid hooks still carry "Other(s)…" text, unchanged (OTV-AC-7 regression guard)', async () => {
+      // Let ngOnInit's async ToC preselection (centersSE.getData().then(...)) settle FIRST — it overwrites
+      // tocCenters/tocSciencePrograms with the (empty) ToC-derived set, so the opt-in sentinel state below
+      // must be applied AFTER that settles, or the async preselection clobbers it.
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      component.tocCenters.set([
+        { code: 'ABC', acronym: 'ABC', name: 'Alliance', full_name: 'Alliance', institutionId: 100, from_toc: true }
+      ]);
+      component.contributingCenters.set([...component.tocCenters(), component.otherCentersSentinel]);
+
+      component.tocSciencePrograms.set([{ id: 51, official_code: 'SP02', name: 'Sustainable Farming', from_toc: true }]);
+      mockEntityAowService.selectedEntities.set([
+        ...component.tocSciencePrograms(),
+        { id: -999, official_code: 'Other(s)', name: 'Science Program(s)/Accelerator(s)' }
+      ]);
+
+      fixture.detectChanges();
+
+      // Sanity: this is genuinely the opt-in case, not the empty-ToC case.
+      expect(component.hasReferenceCenters()).toBe(true);
+      expect(component.showOtherCenters()).toBe(true);
+      expect(component.hasReferenceScience()).toBe(true);
+      expect(component.showOtherScience()).toBe(true);
+
+      const centersEl = fixture.debugElement.query(By.css('[data-testid="toc-other-centers"]'));
+      expect(centersEl).toBeTruthy();
+      const centersLabelEl = centersEl.query(By.css('.pr_label'));
+      expect(centersLabelEl.nativeElement.textContent.trim()).toContain('Other(s) Contributing CGIAR Centers');
+
+      const scienceHeaderEl = fixture.debugElement.query(By.css('[data-testid="toc-other-science-header"]'));
+      expect(scienceHeaderEl).toBeTruthy();
+      const scienceLabelEl = scienceHeaderEl.query(By.css('.pr_label'));
+      expect(scienceLabelEl.nativeElement.textContent.trim()).toContain('Other(s) Science Program(s)/Accelerator(s)');
+    });
+  });
 });
