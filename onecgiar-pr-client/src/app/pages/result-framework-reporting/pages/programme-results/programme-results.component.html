@@ -171,6 +171,17 @@
             [ngModel]="selectValue(filter.selectedOrigin())"
             (changed)="onOriginChange($event)"></app-pr-filter-select>
         </div>
+
+        <!-- Center — single-select (`lead_center`) -->
+        <div class="pgr-filter w-[150px]" aria-label="Filter by center">
+          <app-pr-filter-select
+            [options]="centerSelectOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Center"
+            [ngModel]="selectValue(filter.selectedCenter())"
+            (changed)="onCenterChange($event)"></app-pr-filter-select>
+        </div>
       </div>
 
       <!-- ═════════════════════════════ 3. CHIP ROW ══════════════════════════════ -->

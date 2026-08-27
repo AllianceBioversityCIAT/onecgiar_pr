@@ -214,12 +214,21 @@ describe('ProgrammeResultsComponent', () => {
 
     component.onOriginChange('W3/Bilaterals');
     expect(component.filteredRows().map(row => row.code)).toEqual(['5003']);
+    component.onOriginChange('all');
+
+    component.onCenterChange('IITA');
+    expect(component.filteredRows().map(row => row.code)).toEqual(['5002']);
+
+    component.onCenterChange('all');
+    expect(filterService().selectedCenter()).toBeNull();
+    expect(component.filteredRows().length).toBe(3);
   });
 
   it('offers only option values that exist in the loaded rows', () => {
     expect(component.statusSelectOptions().map(option => option.value)).toEqual(['Editing', 'Submitted']);
     expect(component.originSelectOptions().map(option => option.value)).toEqual(['W1/W2', 'W3/Bilaterals']);
     expect(component.categorySelectOptions().every(option => !!option.value)).toBe(true);
+    expect(component.centerSelectOptions().map(option => option.value)).toEqual(['CIAT', 'IITA', 'ILRI']);
   });
 
   // ── chips ─────────────────────────────────────────────────────────────────────────────────
@@ -240,18 +249,28 @@ describe('ProgrammeResultsComponent', () => {
     expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: Submitted']);
   }));
 
+  it('renders a Center chip when the center filter is set', () => {
+    component.onCenterChange('IITA');
+    fixture.detectChanges();
+
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Center: IITA']);
+    expect(text()).toContain('Center: IITA');
+  });
+
   it('Clear all resets every dimension including the undebounced search box', fakeAsync(() => {
     component.onSearchInput('maize');
     tick(300);
     component.onStatusChange('Editing');
     component.onCategoryChange('Policy change');
     component.onOriginChange('W1/W2');
+    component.onCenterChange('IITA');
 
     component.clearAll();
     tick(300);
 
     expect(component.searchDraft()).toBe('');
     expect(filterService().hasActiveFilters()).toBe(false);
+    expect(filterService().selectedCenter()).toBeNull();
     expect(component.filteredRows().length).toBe(3);
   }));
 
@@ -275,6 +294,22 @@ describe('ProgrammeResultsComponent', () => {
 
   it('counters respect the other dimensions', () => {
     component.onOriginChange('W1/W2');
+    expect(component.statusCounts()).toEqual([
+      { statusId: 1, statusName: 'Editing', count: 1 },
+      { statusId: 3, statusName: 'Submitted', count: 1 }
+    ]);
+  });
+
+  it('recomputes status pill counts over the center-filtered rows', () => {
+    setup([
+      { ...RAW_ITEMS[0], id: 1, result_code: '1', status_id: '1', status_name: 'Editing', lead_center: 'IITA' },
+      { ...RAW_ITEMS[0], id: 2, result_code: '2', status_id: '3', status_name: 'Submitted', lead_center: 'IITA' },
+      { ...RAW_ITEMS[0], id: 3, result_code: '3', status_id: '1', status_name: 'Editing', lead_center: 'IWMI' },
+      { ...RAW_ITEMS[0], id: 4, result_code: '4', status_id: '3', status_name: 'Submitted', lead_center: 'IWMI' }
+    ]);
+
+    component.onCenterChange('IITA');
+    expect(component.filteredRows().map(row => row.code)).toEqual(['1', '2']);
     expect(component.statusCounts()).toEqual([
       { statusId: 1, statusName: 'Editing', count: 1 },
       { statusId: 3, statusName: 'Submitted', count: 1 }

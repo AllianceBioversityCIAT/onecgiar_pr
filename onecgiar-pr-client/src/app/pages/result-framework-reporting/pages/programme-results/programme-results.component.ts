@@ -565,6 +565,7 @@ export class ProgrammeResultsComponent {
   readonly statusSelectOptions = computed(() => this.data.statusOptions().map(value => ({ value, label: value })));
   readonly categorySelectOptions = computed(() => this.data.categoryOptions().map(value => ({ value, label: value })));
   readonly originSelectOptions = computed(() => this.data.originOptions().map(value => ({ value, label: value })));
+  readonly centerSelectOptions = computed(() => this.data.centerOptions().map(value => ({ value, label: value })));
 
   /**
    * Section options, grouped "Areas of work" / "Programme-level" exactly like
@@ -662,6 +663,10 @@ export class ProgrammeResultsComponent {
 
   onOriginChange(value: unknown): void {
     this.filter.selectedOrigin.set(this.toFilterValue(value));
+  }
+
+  onCenterChange(value: unknown): void {
+    this.filter.selectedCenter.set(this.toFilterValue(value));
   }
 
   // ── Status counters ─────────────────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@
 - **Module / feature:** `programme-results` — URL ↔ filter bridge + center filter (client only)
 - **Linked spec:** `requirements.md` (RFD-R-1..3) + `design.md` (RFD-DD-1..5)
 - **Owner / driver:** j.cadavid@cgiar.org
-- **Status:** approved — ready for /akili-execute (2026-08-27)
+- **Status:** in-progress (RFD-T-2 done 2026-08-27)
 - **Depth:** Lite · **Budget:** 2 tasks / ~150 LOC / 1 review round (design.md §1)
 - **Family:** `../family.md` row #1 · `Parallel-safe: yes` · may run in a worktree concurrently with #2
 
@@ -15,8 +15,8 @@
 - [x] `design.md` approved (Phase 2 gate 2026-08-27)
 - [x] No open questions blocking (`origin` values confirmed `W1/W2` · `W3/Bilaterals`)
 - [x] No migrations, no backend
-- [ ] No conflicting in-flight spec touching `programme-results/**` (check `docs/specs/` at execution start)
-- [ ] **Do not touch `package.json` / `package-lock.json`** (reserved to sibling #2 — `../family.md` §3)
+- [x] No conflicting in-flight spec touching `programme-results/**` (check `docs/specs/` at execution start)
+- [x] **Do not touch `package.json` / `package-lock.json`** (reserved to sibling #2 — `../family.md` §3)
 
 ## 3. Task list
 
@@ -49,11 +49,11 @@
 - **Estimate:** S (~60 LOC incl. spec)
 - **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] Filter-service spec: predicate match / no-match / empty-center row; chip label; `clearChip` and `clearAll` reset center. **FAIL input:** comparing against `row.origin` instead of `row.center` → match test red.
-  - [ ] Data-service spec: `centerOptions` deduped, sorted, **no blanks** with fixtures containing `''`/`null` centers. **FAIL input:** remove the `!!value` filter → red.
-  - [ ] Component spec: `onCenterChange('IITA')` sets the signal; rendered chip text `Center: IITA`; status pill counts recomputed (fixture with two centers, two statuses).
-  - [ ] HITL diff check: the new select is `app-pr-filter-select` (presence-assertion only — what it cannot prove: that `DataControlService` stays quiet at runtime; covered by the manual RFD-AC-3 pass on the running app: no false "mandatory field incomplete" state).
-  - [ ] Full suite + lint green (same disqualifier as T-1).
+  - [x] Filter-service spec: predicate match / no-match / empty-center row; chip label; `clearChip` and `clearAll` reset center. **FAIL input:** comparing against `row.origin` instead of `row.center` → match test red.
+  - [x] Data-service spec: `centerOptions` deduped, sorted, **no blanks** with fixtures containing `''`/`null` centers. **FAIL input:** remove the `!!value` filter → red.
+  - [x] Component spec: `onCenterChange('IITA')` sets the signal; rendered chip text `Center: IITA`; status pill counts recomputed (fixture with two centers, two statuses).
+  - [x] HITL diff check: the new select is `app-pr-filter-select` (presence-assertion only — what it cannot prove: that `DataControlService` stays quiet at runtime; covered by the manual RFD-AC-3 pass on the running app: no false "mandatory field incomplete" state).
+  - [x] Full suite + lint green (same disqualifier as T-1).
 
 ## 4. Dependency graph
 

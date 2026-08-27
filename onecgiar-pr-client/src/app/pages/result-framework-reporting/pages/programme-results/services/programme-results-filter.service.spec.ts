@@ -42,6 +42,7 @@ describe('ProgrammeResultsFilterService', () => {
     expect(service.selectedStatus()).toBeNull();
     expect(service.selectedCategory()).toBeNull();
     expect(service.selectedOrigin()).toBeNull();
+    expect(service.selectedCenter()).toBeNull();
     expect(service.hasActiveFilters()).toBe(false);
     expect(service.activeChips()).toEqual([]);
   });
@@ -107,6 +108,20 @@ describe('ProgrammeResultsFilterService', () => {
       expect(service.filterRows(rows)).toEqual([]);
     });
 
+    it('filters by center, matching a row and rejecting a row with an empty center', () => {
+      const centerRows = [
+        row({ code: '1', center: 'IITA' }),
+        row({ code: '2', center: 'IWMI' }),
+        row({ code: '3', center: '' })
+      ];
+
+      service.selectedCenter.set('IITA');
+      expect(service.filterRows(centerRows).map(r => r.code)).toEqual(['1']);
+
+      service.selectedCenter.set('IWMI');
+      expect(service.filterRows(centerRows).map(r => r.code)).toEqual(['2']);
+    });
+
     it('combines every dimension with AND', () => {
       service.searchText.set('a');
       service.selectedStatus.set('Editing');
@@ -149,6 +164,7 @@ describe('ProgrammeResultsFilterService', () => {
       service.selectedStatus.set('Submitted');
       service.selectedCategory.set('Policy change');
       service.selectedOrigin.set('W1/W2');
+      service.selectedCenter.set('IITA');
 
       expect(service.activeChips()).toEqual([
         { label: 'Search: maize', dimension: 'search', value: 'maize' },
@@ -156,7 +172,8 @@ describe('ProgrammeResultsFilterService', () => {
         { label: 'Section: AoW2', dimension: 'section', value: 'AoW2' },
         { label: 'Status: Submitted', dimension: 'status', value: 'Submitted' },
         { label: 'Category: Policy change', dimension: 'category', value: 'Policy change' },
-        { label: 'Origin: W1/W2', dimension: 'origin', value: 'W1/W2' }
+        { label: 'Origin: W1/W2', dimension: 'origin', value: 'W1/W2' },
+        { label: 'Center: IITA', dimension: 'center', value: 'IITA' }
       ]);
       expect(service.hasActiveFilters()).toBe(true);
     });
@@ -178,6 +195,7 @@ describe('ProgrammeResultsFilterService', () => {
       service.selectedStatus.set('Submitted');
       service.selectedCategory.set('Policy change');
       service.selectedOrigin.set('W1/W2');
+      service.selectedCenter.set('IITA');
     });
 
     it('clears one dimension at a time', () => {
@@ -192,6 +210,9 @@ describe('ProgrammeResultsFilterService', () => {
 
       service.clearOrigin();
       expect(service.selectedOrigin()).toBeNull();
+
+      service.clearCenter();
+      expect(service.selectedCenter()).toBeNull();
 
       expect(service.selectedSections()).toEqual(['AoW1', 'AoW2']);
     });
@@ -214,16 +235,19 @@ describe('ProgrammeResultsFilterService', () => {
 
       service.clearChip(chips.find(chip => chip.dimension === 'status')!);
       expect(service.selectedStatus()).toBeNull();
+
+      service.clearChip(chips.find(chip => chip.dimension === 'center')!);
+      expect(service.selectedCenter()).toBeNull();
     });
 
     it('clearChip() is a no-op on an unknown dimension', () => {
       service.clearChip({ label: 'x', dimension: 'nope' as any, value: 'x' });
-      expect(service.activeChips()).toHaveLength(6);
+      expect(service.activeChips()).toHaveLength(7);
       service.clearChip(undefined as any);
-      expect(service.activeChips()).toHaveLength(6);
+      expect(service.activeChips()).toHaveLength(7);
     });
 
-    it('clearAll() resets all five dimensions at once', () => {
+    it('clearAll() resets all six dimensions at once', () => {
       service.clearAll();
 
       expect(service.searchText()).toBe('');
@@ -231,6 +255,7 @@ describe('ProgrammeResultsFilterService', () => {
       expect(service.selectedStatus()).toBeNull();
       expect(service.selectedCategory()).toBeNull();
       expect(service.selectedOrigin()).toBeNull();
+      expect(service.selectedCenter()).toBeNull();
       expect(service.hasActiveFilters()).toBe(false);
       expect(service.activeChips()).toEqual([]);
     });

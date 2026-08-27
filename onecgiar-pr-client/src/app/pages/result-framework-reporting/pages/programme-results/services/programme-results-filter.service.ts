@@ -1,8 +1,8 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { ProgrammeResultRow } from './programme-results.service';
 
-/** The five filter dimensions of the Results tab toolbar, left to right. */
-export type ProgrammeResultsFilterDimension = 'search' | 'section' | 'status' | 'category' | 'origin';
+/** The six filter dimensions of the Results tab toolbar, left to right. */
+export type ProgrammeResultsFilterDimension = 'search' | 'section' | 'status' | 'category' | 'origin' | 'center';
 
 /** One entry of the chip row. `value` is what `clearChip()` needs to remove just this one. */
 export interface ProgrammeResultsFilterChip {
@@ -25,6 +25,7 @@ export interface ProgrammeResultsFilterState {
   selectedStatus: string | null;
   selectedCategory: string | null;
   selectedOrigin: string | null;
+  selectedCenter: string | null;
 }
 
 /** Which dimensions to skip. Used for the status counters, which must ignore the status filter. */
@@ -66,6 +67,7 @@ export function matchesProgrammeResultFilters(
   if (!options.ignoreStatus && state.selectedStatus && normalize(state.selectedStatus) !== normalize(row?.statusName)) return false;
   if (state.selectedCategory && normalize(state.selectedCategory) !== normalize(row?.category)) return false;
   if (state.selectedOrigin && normalize(state.selectedOrigin) !== normalize(row?.origin)) return false;
+  if (state.selectedCenter && normalize(state.selectedCenter) !== normalize(row?.center)) return false;
 
   return true;
 }
@@ -120,14 +122,17 @@ export class ProgrammeResultsFilterService {
   readonly selectedCategory = signal<string | null>(null);
   /** SINGLE-select, matched against `row.origin` (`source_name`). */
   readonly selectedOrigin = signal<string | null>(null);
+  /** SINGLE-select, matched against `row.center` (`lead_center`). */
+  readonly selectedCenter = signal<string | null>(null);
 
-  /** Plain snapshot of all five dimensions — what the pure predicates take. */
+  /** Plain snapshot of all six dimensions — what the pure predicates take. */
   readonly state = computed<ProgrammeResultsFilterState>(() => ({
     searchText: this.searchText(),
     selectedSections: this.selectedSections(),
     selectedStatus: this.selectedStatus(),
     selectedCategory: this.selectedCategory(),
-    selectedOrigin: this.selectedOrigin()
+    selectedOrigin: this.selectedOrigin(),
+    selectedCenter: this.selectedCenter()
   }));
 
   /** True when at least one dimension is narrowing the list. Drives the chip row and the
@@ -149,6 +154,8 @@ export class ProgrammeResultsFilterService {
     if (category) chips.push({ label: `Category: ${category}`, dimension: 'category', value: category });
     const origin = this.selectedOrigin();
     if (origin) chips.push({ label: `Origin: ${origin}`, dimension: 'origin', value: origin });
+    const center = this.selectedCenter();
+    if (center) chips.push({ label: `Center: ${center}`, dimension: 'center', value: center });
 
     return chips;
   });
@@ -195,6 +202,10 @@ export class ProgrammeResultsFilterService {
     this.selectedOrigin.set(null);
   }
 
+  clearCenter(): void {
+    this.selectedCenter.set(null);
+  }
+
   /** Removes exactly the filter a chip stands for. Wire it to the chip's X button. */
   clearChip(chip: ProgrammeResultsFilterChip): void {
     switch (chip?.dimension) {
@@ -213,17 +224,21 @@ export class ProgrammeResultsFilterService {
       case 'origin':
         this.clearOrigin();
         return;
+      case 'center':
+        this.clearCenter();
+        return;
       default:
         return;
     }
   }
 
-  /** Resets all five dimensions. Shared by "Clear all" and the filtered empty state's button. */
+  /** Resets all six dimensions. Shared by "Clear all" and the filtered empty state's button. */
   clearAll(): void {
     this.searchText.set('');
     this.selectedSections.set([]);
     this.selectedStatus.set(null);
     this.selectedCategory.set(null);
     this.selectedOrigin.set(null);
+    this.selectedCenter.set(null);
   }
 }
