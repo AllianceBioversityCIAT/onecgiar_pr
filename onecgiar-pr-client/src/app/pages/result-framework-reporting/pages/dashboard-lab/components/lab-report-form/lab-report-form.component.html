@@ -330,7 +330,7 @@
         <button
           type="submit"
           [disabled]="!canSave() || creatingResult()"
-          class="inline-flex appearance-none items-center gap-2 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 py-2.5 text-[13.5px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8]">
+          class="inline-flex cursor-pointer appearance-none items-center gap-2 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 py-2.5 text-[13.5px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8]">
           {{ creatingResult() ? 'Creating…' : 'Create and continue' }}
           @if (creatingResult()) {
             <span class="material-icons-round animate-spin text-[16px]">progress_activity</span>

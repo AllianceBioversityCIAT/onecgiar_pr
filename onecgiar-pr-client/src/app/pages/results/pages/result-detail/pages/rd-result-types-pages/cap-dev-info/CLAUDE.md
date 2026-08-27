@@ -1,6 +1,6 @@
 # cap-dev-info — Capacity Sharing for Development information
 
-**Verified:** 2026-08-25 · branch performance-refactor · bc25304fb
+**Verified:** 2026-08-27 · branch performance-refactor · 6407a50fa
 
 ## Qué es
 Sección de detalle del resultado para los resultados de tipo **Capacity Sharing** (Pool Funding,
@@ -56,9 +56,14 @@ El green check **no** lo decide el cliente. Lo decide una función MySQL. El cli
   al final del template — mismo patrón que `geoscope-management.component.html:47`. Su
   `FeedbackValidationDirectiveModule` **no** lo re-exporta `CustomFieldsModule`: se importa aparte en
   `cap-dev-info.module.ts`.
-- ⚠️ **El sub-radio Long-term/Short-term es OPCIONAL a propósito.** `validate_capdev_term_id()` hace
-  `capdev_term_id = capdev_term_id_2 ?? capdev_term_id_1`, así que el grupo principal ya satisface
+- ⚠️ **El sub-radio (`label="Degree"`, PhD/Master) es OPCIONAL a propósito.** `validate_capdev_term_id()`
+  hace `capdev_term_id = capdev_term_id_2 ?? capdev_term_id_1`, así que el grupo principal ya satisface
   `valid_text(capdev_term_id)`. Marcarlo obligatorio pediría un dato que el servidor no exige.
+- ⚠️ **Ese `label="Degree"` NO es decorativo: es lo que hace que el grupo se dibuje dentro de su card**
+  (P2-3385). Sin `label` ni `description`, el getter `isBare` de `field-card` da `true` y se salta la
+  clase `field_card` entera → las opciones quedaban sueltas fuera del contenedor. Dos tests del spec
+  ("renders INSIDE a field card" y "framing … did NOT make it mandatory") caen si alguien lo quita o si
+  al ponerlo flipea `required`.
 - ⚠️ **0 es una respuesta válida** en los cuatro contadores: el servidor rechaza `NULL`, no `0`.
   Cualquier validación que trate `0` como vacío vuelve a bloquear la sección.
 - ⚠️ **`is_attending_for_organization` llega como tinyint (0/1)** del endpoint legacy y las opciones del
