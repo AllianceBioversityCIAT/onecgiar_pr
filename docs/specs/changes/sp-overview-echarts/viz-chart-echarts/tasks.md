@@ -15,8 +15,8 @@
 - [x] `design.md` approved (Phase 2 gate 2026-08-27)
 - [x] Reference source available: `~/Development/alliance-research-indicators-main` @ `831388cd` (`git show 831388cd:client/research-indicators/src/app/shared/components/viz-chart/…`)
 - [x] No migrations, no backend
-- [ ] Record `npx ng build` initial-chunk sizes **before** any change (baseline for VCE-AC-1)
-- [ ] No other in-flight spec editing `package.json`
+- [x] Record `npx ng build` initial-chunk sizes **before** any change (baseline for VCE-AC-1)
+- [x] No other in-flight spec editing `package.json`
 
 ## 3. Task list
 
@@ -34,11 +34,11 @@
 - **Estimate:** M (~200 LOC incl. spec)
 - **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] All spec cases in design §10 row 1 green. **FAIL inputs:** remove the `requireTable` guard → "setOption not called" case red; drop `ngOnDestroy` → dispose/disconnect case red; spread `animation:false` into the same reference → "input untouched" case red; remove `on('click')` → emit case red.
-  - [ ] Registration gate: `grep -rn "from 'echarts'" onecgiar-pr-client/src/app` returns 0 hits (only `echarts/core|charts|components|renderers|features` allowed). **FAIL input:** `import * as echarts from 'echarts'`. **What this cannot prove:** that tree-shaking actually happened — that is the bundle gate below.
-  - [ ] Bundle gate: `npx ng build` **before and after on the same base commit**; record both initial-chunk sizes (raw + gz) in `execution.md`. Guideline delta < ~350 kB raw / ~110 kB gz. **Disqualifier:** a single post-change reading with no same-base baseline is not a delta — report "inconclusive", not a pass. **FAIL input:** root `echarts` import → delta roughly doubles.
-  - [ ] Full suite: `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean; `npx ng build` succeeds. **If the suite fails on ESM transform of `echarts`/`zrender` despite the mock**, add `transformIgnorePatterns: ["node_modules/(?!(.*\\.mjs$|echarts|zrender))"]` to the `package.json` jest block and record it in `execution.md` — otherwise leave Jest config untouched. **Disqualifier:** narrowing with `--testPathPattern`.
-  - [ ] `git diff --stat` limited to `package.json`, `package-lock.json`, `shared/components/pr-viz-chart/**` (VCE-AC-4 minus the util, which is T-2).
+  - [x] All spec cases in design §10 row 1 green. **FAIL inputs:** remove the `requireTable` guard → "setOption not called" case red; drop `ngOnDestroy` → dispose/disconnect case red; spread `animation:false` into the same reference → "input untouched" case red; remove `on('click')` → emit case red.
+  - [x] Registration gate: `grep -rn "from 'echarts'" onecgiar-pr-client/src/app` returns 0 hits (only `echarts/core|charts|components|renderers|features` allowed). **FAIL input:** `import * as echarts from 'echarts'`. **What this cannot prove:** that tree-shaking actually happened — that is the bundle gate below.
+  - [x] Bundle gate: `npx ng build` **before and after on the same base commit**; record both initial-chunk sizes (raw + gz) in `execution.md`. Guideline delta < ~350 kB raw / ~110 kB gz. **Disqualifier:** a single post-change reading with no same-base baseline is not a delta — report "inconclusive", not a pass. **FAIL input:** root `echarts` import → delta roughly doubles.
+  - [x] Full suite: `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean; `npx ng build` succeeds. **If the suite fails on ESM transform of `echarts`/`zrender` despite the mock**, add `transformIgnorePatterns: ["node_modules/(?!(.*\\.mjs$|echarts|zrender))"]` to the `package.json` jest block and record it in `execution.md` — otherwise leave Jest config untouched. **Disqualifier:** narrowing with `--testPathPattern`.
+  - [x] `git diff --stat` limited to `package.json`, `package-lock.json`, `shared/components/pr-viz-chart/**` (VCE-AC-4 minus the util, which is T-2).
 
 ### `VCE-T-2` — Token resolver util (`chart-tokens.util.ts`) with status tokens fenced
 
@@ -51,10 +51,10 @@
 - **Estimate:** S (~80 LOC incl. spec)
 - **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] Spec asserts the **requested name set** equals `CHART_TOKEN_NAMES` (spy on `getPropertyValue`) — jsdom returns `''` for custom props, so value assertions would be tautological (Alliance KZ-017). **FAIL input:** add `--pr-status-approved-fg` to the chart list → disjointness assertion red.
-  - [ ] Spec: undefined token → `''`, never a hex string. **FAIL input:** add a `|| '#6b46e5'` fallback → red.
-  - [ ] Hex gate: `grep -nE "#[0-9a-fA-F]{3,8}\b" onecgiar-pr-client/src/app/shared/utils/chart-tokens.util.ts onecgiar-pr-client/src/app/shared/components/pr-viz-chart/*.ts` → 0 hits (VCE-AC-3). **What this cannot prove:** that the *resolved* colors are right at runtime — rendered correctness is sibling #3's HITL/T6 gate (explicit gap, requirements §9).
-  - [ ] Full suite + lint green (same disqualifier as T-1).
+  - [x] Spec asserts the **requested name set** equals `CHART_TOKEN_NAMES` (spy on `getPropertyValue`) — jsdom returns `''` for custom props, so value assertions would be tautological (Alliance KZ-017). **FAIL input:** add `--pr-status-approved-fg` to the chart list → disjointness assertion red.
+  - [x] Spec: undefined token → `''`, never a hex string. **FAIL input:** add a `|| '#6b46e5'` fallback → red.
+  - [x] Hex gate: `grep -nE "#[0-9a-fA-F]{3,8}\b" onecgiar-pr-client/src/app/shared/utils/chart-tokens.util.ts onecgiar-pr-client/src/app/shared/components/pr-viz-chart/*.ts` → 0 hits (VCE-AC-3). **What this cannot prove:** that the *resolved* colors are right at runtime — rendered correctness is sibling #3's HITL/T6 gate (explicit gap, requirements §9).
+  - [x] Full suite + lint green (same disqualifier as T-1).
 
 ## 4. Dependency graph
 
