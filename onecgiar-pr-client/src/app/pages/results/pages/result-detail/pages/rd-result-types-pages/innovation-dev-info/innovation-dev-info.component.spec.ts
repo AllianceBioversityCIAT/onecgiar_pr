@@ -954,12 +954,43 @@ describe('InnovationDevInfoComponent', () => {
       expect(el.querySelector('app-megatrends')).toBeNull();
     });
 
-    it('drops only those two blocks — the rest of the form stays', () => {
+    it('leaves the blocks outside the epic untouched', () => {
       const el = render(true);
       expect(el.querySelector('app-innovation-team-diversity')).toBeTruthy();
+      expect(el.querySelector('app-intellectual-property-rights')).toBeTruthy();
+    });
+  });
+
+  /**
+   * P2-3467 (backend half of P2-3290), same epic P2-3243. From the 2026 phase the GESI and risk
+   * open-text questions are replaced by two single-choice stage questions, and
+   * "partners, policies and financial mechanisms" is retired with no replacement.
+   * Earlier phases must keep all three, which is the epic's governing rule.
+   */
+  describe('2026 stage questions (P2-3467)', () => {
+    const render = (reduced: boolean) => {
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationDevFormReduced2026').mockReturnValue(reduced as any);
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    it('keeps the three open-text questions on a pre-2026 phase', () => {
+      const el = render(false);
       expect(el.querySelector('app-gesi-innovation-assessment')).toBeTruthy();
       expect(el.querySelector('app-scale-impact-analysis')).toBeTruthy();
-      expect(el.querySelector('app-intellectual-property-rights')).toBeTruthy();
+      expect(el.querySelector('app-partners-policies-safeguards')).toBeTruthy();
+      expect(el.querySelector('app-stage-assessment')).toBeNull();
+    });
+
+    it('swaps in the two stage questions from the 2026 phase on', () => {
+      const el = render(true);
+      expect(el.querySelector('app-gesi-innovation-assessment')).toBeNull();
+      expect(el.querySelector('app-scale-impact-analysis')).toBeNull();
+      expect(el.querySelector('app-partners-policies-safeguards')).toBeNull();
+      expect(el.querySelectorAll('app-stage-assessment')).toHaveLength(2);
+      // assumptions-examination no se toca: sigue siendo q3 en ambas fases
+      expect(el.querySelector('app-assumptions-examination')).toBeTruthy();
     });
   });
 });

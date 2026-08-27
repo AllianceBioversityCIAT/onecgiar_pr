@@ -23,6 +23,7 @@ import { InnovationUseFormModule } from '../../../../../../../shared/components/
 import { AssumptionsExaminationComponent } from './components/assumptions-examination/assumptions-examination.component';
 import { PartnersPoliciesSafeguardsComponent } from './components/partners-policies-safeguards/partners-policies-safeguards.component';
 import { SectionBottomBarComponent } from '../../../components/section-bottom-bar/section-bottom-bar.component';
+import { StageAssessmentComponent } from './components/stage-assessment/stage-assessment.component';
 
 @NgModule({
   declarations: [
@@ -39,7 +40,8 @@ import { SectionBottomBarComponent } from '../../../components/section-bottom-ba
     MegatrendsComponent,
     AssumptionsExaminationComponent,
     PartnersPoliciesSafeguardsComponent,
-    NonPooledInfoP25Component
+    NonPooledInfoP25Component,
+    StageAssessmentComponent
   ],
   imports: [SectionBottomBarComponent,
     CommonModule,

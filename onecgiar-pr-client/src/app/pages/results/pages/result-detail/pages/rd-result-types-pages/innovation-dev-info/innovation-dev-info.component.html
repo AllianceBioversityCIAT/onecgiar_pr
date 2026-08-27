@@ -74,11 +74,32 @@
   <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
 
   <div class="pl-[20px]">
-    <app-gesi-innovation-assessment [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
-    <app-scale-impact-analysis [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
+    <!--
+      P2-3467: from the 2026 phase the GESI and risk open-text questions are replaced by two
+      single-choice stage questions, and "partners, policies and financial mechanisms" is retired
+      with no replacement. Same phase-year gate as P2-3264, and for the same reason: isP25() answers
+      "which portfolio", and the P25 portfolio also holds 2025-phase results that must keep the old
+      questions. The server serves whichever set matches the phase on the same q1/q2 slots, and q3
+      stays "assumptions examination" in both.
+    -->
+    @if (this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+      <app-stage-assessment
+        questionKey="q1"
+        [body]="innovationDevInfoBody"
+        [options]="innovationDevelopmentQuestions"></app-stage-assessment>
+      <app-stage-assessment
+        questionKey="q2"
+        [body]="innovationDevInfoBody"
+        [options]="innovationDevelopmentQuestions"></app-stage-assessment>
+    } @else {
+      <app-gesi-innovation-assessment [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
+      <app-scale-impact-analysis [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
+    }
     @if (this.fieldsManagerSE.isP25()) {
       <app-assumptions-examination [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-assumptions-examination>
-      <app-partners-policies-safeguards [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-partners-policies-safeguards>
+      @if (!this.fieldsManagerSE.isInnovationDevFormReduced2026()) {
+        <app-partners-policies-safeguards [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-partners-policies-safeguards>
+      }
     }
   </div>
 

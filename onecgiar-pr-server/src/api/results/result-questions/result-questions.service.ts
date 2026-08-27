@@ -2,6 +2,12 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultQuestionsRepository } from './repository/result-questions.repository';
 import { ResultAnswerRepository } from './repository/result-answers.repository';
+import {
+  isGesiStageQuestion,
+  isRetiredScalingQuestion,
+  isReducedInnovationDevForm,
+  isRiskStageQuestion,
+} from './innovation-dev-questions.const';
 
 /** Bilateral innovation-dev questionnaire: PRMS prompt as `question`; answers via `text` / `boolean` and/or `selections`. */
 export type InnovationDevCleanAnswer = {
@@ -340,15 +346,22 @@ export class ResultQuestionsService {
         },
       });
 
+      const phaseYear = await this.getResultPhaseYear(resultId);
+
       const scalingWithOptions = await Promise.all(
         topLevelQuestions.map(async (topLevelQuestion) => {
-          const childQuestions = await this._resultQuestionRepository.find({
+          const allChildQuestions = await this._resultQuestionRepository.find({
             where: {
               question_level: 2,
               parent_question_id: topLevelQuestion.result_question_id,
               version: 'P25',
             },
           });
+
+          const childQuestions = this.selectScalingQuestionsForPhase(
+            allChildQuestions,
+            phaseYear,
+          );
 
           const questionsWithOptions = await Promise.all(
             childQuestions.map(async (childQuestion) => {
@@ -387,6 +400,67 @@ export class ResultQuestionsService {
     } catch (error) {
       return this._handlerError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * Reporting phase year of a result, or `null` when it cannot be resolved.
+   *
+   * Read straight off the repository connection so the service keeps its current
+   * dependencies: adding a constructor argument would ripple into every module
+   * that provides `ResultQuestionsService` (`result-questions.module.ts`,
+   * `results.module.ts`) and into the bilateral consumer.
+   */
+  private async getResultPhaseYear(resultId: number): Promise<number | null> {
+    const rows: { phase_year: number | null }[] =
+      await this._resultQuestionRepository.query(
+        `
+          SELECT v.phase_year AS phase_year
+          FROM \`result\` r
+            INNER JOIN version v ON v.id = r.version_id
+          WHERE r.id = ?
+            AND r.is_active = TRUE
+          LIMIT 1;
+        `,
+        [resultId],
+      );
+
+    const phaseYear = rows?.[0]?.phase_year;
+
+    return phaseYear == null ? null : Number(phaseYear);
+  }
+
+  /**
+   * Picks the "Responsible innovation and scaling" questions the result's phase
+   * must be served (P2-3467).
+   *
+   * From 2026 the three open-text questions are replaced by the two stage ones,
+   * which are surfaced first so the form reads GESI → risk → assumptions.
+   * Earlier phases keep the exact set and order they get today — the two new
+   * questions are simply filtered out.
+   */
+  private selectScalingQuestionsForPhase<T extends { question_text: string }>(
+    childQuestions: T[],
+    phaseYear: number | null,
+  ): T[] {
+    const isStageQuestion = (q: T) =>
+      isGesiStageQuestion(q.question_text) ||
+      isRiskStageQuestion(q.question_text);
+
+    if (!isReducedInnovationDevForm(phaseYear)) {
+      return childQuestions.filter((q) => !isStageQuestion(q));
+    }
+
+    const gesiStage = childQuestions.filter((q) =>
+      isGesiStageQuestion(q.question_text),
+    );
+    const riskStage = childQuestions.filter((q) =>
+      isRiskStageQuestion(q.question_text),
+    );
+    const kept = childQuestions.filter(
+      (q) => !isStageQuestion(q) && !isRetiredScalingQuestion(q.question_text),
+    );
+
+    return [...gesiStage, ...riskStage, ...kept];
   }
 
   async intellectualPropertyRights(resultId: number) {
