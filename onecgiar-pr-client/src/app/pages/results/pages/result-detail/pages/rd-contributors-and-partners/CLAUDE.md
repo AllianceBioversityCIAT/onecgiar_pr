@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-26 · branch performance-refactor · 038dcd77b
+**Verified:** 2026-08-27 · branch qa-development-2026 · 80ace471a
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
