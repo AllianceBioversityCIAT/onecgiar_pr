@@ -8,15 +8,24 @@
   max-height: 70vh !important;
 
   .pr_chip_selected {
-    padding: 10px;
+    padding: 12px 14px;
     position: relative;
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: space-between;
+    border-radius: 10px;
+
+    // UX polish (ui-ux-pro-max, 2026-08-27): clear hierarchy — name leads, typology is metadata.
+    .name {
+      font-weight: 600;
+    }
 
     // PRS-R-2: the typology line reads as read-only metadata.
     .type {
       color: var(--pr-text-muted, #6b6580);
+      font-size: 12.5px;
+      margin-top: 2px;
 
       strong {
         font-weight: 500;
@@ -31,10 +40,13 @@
       border-left: 1px solid var(--pr-color-accents-2);
       padding-left: 15px;
 
+      // Overline label: reads as a field caption, not as content (typography/hierarchy rule).
       .role_label {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--pr-text-secondary, #5d5872);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--pr-text-muted, #6b6580);
         white-space: nowrap;
       }
     }
@@ -54,9 +66,23 @@
     .deliveries_container {
       display: flex;
       align-items: center;
-      gap: 15px;
+      gap: 12px;
+
+      // Delete as a proper icon button: feedback on hover, stable layout (no scale).
       i {
-        font-size: 20px;
+        font-size: 19px;
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background-color 0.2s ease, color 0.2s ease;
+
+        &:hover {
+          background-color: var(--pr-color-red-50, #fee2e2);
+          color: var(--pr-color-red-300, #dc2626);
+        }
       }
     }
 
@@ -65,17 +91,39 @@
       gap: 10px;
 
       .delivery {
-        padding: 7px 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-height: 32px;
+        padding: 5px 14px;
         background-color: var(--pr-color-white);
         color: var(--pr-color-primary-300);
         cursor: pointer;
-        border-radius: 15px;
+        border-radius: 16px;
         font-weight: 500;
+        border: 1px solid var(--pr-color-accents-2);
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+
+        // Hover feedback without layout shift (color/border only, no transform).
+        &:not(.active):hover {
+          border-color: var(--pr-color-primary-300);
+          background-color: var(--pr-color-primary-50, #eef0fc);
+        }
       }
 
       .delivery.active {
         background-color: var(--pr-color-primary-300) !important;
         color: var(--pr-color-white) !important;
+        border-color: var(--pr-color-primary-300) !important;
+        box-shadow: 0 1px 4px rgba(107, 70, 229, 0.35);
+
+        // Selection is not signalled by color alone (a11y): active pills carry a check mark.
+        &::before {
+          content: 'check';
+          font-family: 'Material Icons Round';
+          font-size: 14px;
+          line-height: 1;
+        }
       }
     }
   }
@@ -146,5 +194,13 @@
 
   p {
     margin: 0;
+  }
+}
+
+// Micro-interactions respect reduced-motion preferences.
+@media (prefers-reduced-motion: reduce) {
+  .chips_container .pr_chip_selected .delivery,
+  .chips_container .pr_chip_selected .deliveries_container i {
+    transition: none;
   }
 }
