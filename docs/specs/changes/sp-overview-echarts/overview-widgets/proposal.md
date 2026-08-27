@@ -28,9 +28,9 @@ See parent `../proposal.md` §3. In short: six DOM-bar cards in `program-overvie
 | Card | Change | Navigation target (`…/entity-details/:code/results?…`) |
 |---|---|---|
 | W1/W2 results by indicator category | rows enabled, chip removed | `category=<name>` |
-| W3/Bilateral results by indicator category | rows enabled, chip removed | `origin=<W3/Bilateral>&category=<name>` |
+| W3/Bilateral results by indicator category | rows enabled, chip removed | `origin=W3%2FBilaterals&category=<name>` |
 | Reporting status | segments + legend dots clickable; **status donut** (`app-pr-viz-chart` pie) added beside/instead of the bar (decide at specify) | `status=<statusName>` |
-| Centers with reported W3/bilateral results | rows enabled | `origin=<W3/Bilateral>&center=<acronym>` |
+| Centers with reported W3/bilateral results | rows enabled | `origin=W3%2FBilaterals&center=<acronym>` |
 | **NEW — Heatmap: indicator category × status (W1/W2)** | `app-pr-viz-chart` heatmap from `totalsByType[{resultTypeName, editing, qualityAssessed, submitted}]` | `category=…&status=…`; `others` cells non-navigable |
 | **NEW — Heatmap: center × indicator category (W3/Bilateral)** | `app-pr-viz-chart` heatmap from flattened `by-program-and-centers` rows (`lead_center` × `indicator_category`) | `origin=…&center=…&category=…` |
 | Progress by area of work | unchanged, static (section filter inert — P2-3398/3399) | — |
