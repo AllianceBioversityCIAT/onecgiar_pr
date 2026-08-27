@@ -80,7 +80,7 @@
             </div>
 
             <!-- Browse panel: mounted and kept with [hidden] per R-21 -->
-            <div [hidden]="kpEntryMode() !== 'browse'">
+            <div brnTabsContent="browse" [hidden]="kpEntryMode() !== 'browse'">
               @if (createResultBody().handler) {
                 <div class="mb-4 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/90 to-emerald-50/40 p-4 flex flex-col gap-3 shadow-xs">
                   <div class="flex items-center justify-between gap-3">
@@ -131,7 +131,7 @@
             </div>
 
             <!-- Manual entry panel -->
-            <div [hidden]="kpEntryMode() !== 'manual'">
+            <div brnTabsContent="manual" [hidden]="kpEntryMode() !== 'manual'">
               <div class="mqap_sync_title">
                 <app-pr-input
                   [isStatic]="true"

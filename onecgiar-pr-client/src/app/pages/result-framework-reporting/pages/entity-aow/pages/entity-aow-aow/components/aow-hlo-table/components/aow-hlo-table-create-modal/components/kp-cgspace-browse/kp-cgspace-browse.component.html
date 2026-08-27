@@ -105,7 +105,7 @@
 
     <!-- Empty State -->
     @if (status() === 'empty') {
-      <div class="flex flex-col items-center justify-center py-10 px-4 text-center border border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-empty">
+      <div aria-live="polite" class="flex flex-col items-center justify-center py-10 px-4 text-center border border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-empty">
         <i class="pi pi-inbox text-3xl text-gray-400 mb-2"></i>
         <p class="text-sm text-gray-700">No items found in CGSpace for this search. Try different terms or use <button type="button" data-test="switch-to-manual-empty" class="text-[var(--pr-color-primary-300)] hover:underline font-semibold cursor-pointer inline p-0 border-0 bg-transparent" (click)="switchToManual.emit()">Manual entry</button>.</p>
       </div>
@@ -113,7 +113,7 @@
 
     <!-- Error State -->
     @if (status() === 'error') {
-      <div class="flex flex-col items-center justify-center py-8 px-6 text-center border border-red-200 rounded-xl bg-red-50/60 shadow-xs" data-test="cgspace-error">
+      <div aria-live="polite" class="flex flex-col items-center justify-center py-8 px-6 text-center border border-red-200 rounded-xl bg-red-50/60 shadow-xs" data-test="cgspace-error">
         <div class="size-11 rounded-full bg-red-100 flex items-center justify-center text-red-600 mb-2.5">
           <i class="pi pi-exclamation-triangle text-xl"></i>
         </div>

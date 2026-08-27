@@ -82,7 +82,7 @@
   - [x] Env var in all three places; no value committed beyond the public default.
   - [x] Commit `✨ feat(results-knowledge-products): Expose CGSpace search and facets endpoints`.
 
-### [ ] `KPB-T-5` — Extend the Spartan brain Jest mock with `BrnTabs*` stubs
+### [x] `KPB-T-5` — Extend the Spartan brain Jest mock with `BrnTabs*` stubs
 - **Type:** `tests`
 - **Description:** Add minimal standalone stub directives for `BrnTabsDirective`, `BrnTabsListDirective`, `BrnTabsTriggerDirective`, `BrnTabsContentDirective` (names verified against `node_modules/@spartan-ng/brain/tabs` exports) to `tests/mocks/spartanBrainMock.ts`, exposing `role` attributes so a11y presence assertions can run. Prerequisite for every client test.
 - **Implements:** enables tests for `KPB-R-1`, `KPB-R-11`; NFR Accessibility (presence level)
@@ -96,7 +96,7 @@
   - [x] Mock extended; full client suite green.
   - [x] Commit `🔧 fix(tests): Add BrnTabs stubs to spartan brain mock`.
 
-### [ ] `KPB-T-6` — `KpCgspaceBrowseComponent` (search, filters, states, cards) — TDD
+### [x] `KPB-T-6` — `KpCgspaceBrowseComponent` (search, filters, states, cards) — TDD
 - **Type:** `client`
 - **Description:** New standalone OnPush component per design §6.2/§6.3: inputs `busy`, `phaseYear`, `isAdmin`; output `itemSelected`; signals + `toObservable` → `debounceTime(400)` → `distinctUntilChanged` → `switchMap`; Enter runs immediately; min 3 chars unless a filter is set; Type/Center selects from facets (prefix type-ahead, clearable → param omitted); Year locked chip for non-admin (`year=phaseYear` always sent), editable list `phaseYear-10..phaseYear` for admin; states idle/loading (inputs enabled)/empty/error/results with the exact copies from design §6.2; counter `Showing N of M items from CGSpace`; cards per R-4 (first author + "et al.", ≤ 3 country chips, monospace handle); Load more; **Use this item** (disabled when `busy`, `aria-label`); **View details** host allow-list + `noopener,noreferrer`. Tailwind-only styling; `aria-live` region. `ResultsApiService.GET_cgspaceSearch` / `GET_cgspaceFacet` added.
 - **Implements:** `KPB-R-2`, `KPB-R-3`, `KPB-R-4`, `KPB-R-6`, `KPB-R-11`, `KPB-R-12`, `KPB-R-20`, `KPB-AC-3`, `KPB-AC-4`, `KPB-AC-6`, `KPB-AC-7` (client half), `KPB-AC-8`, `KPB-AC-12`, `KPB-AC-14`; NFR Accessibility/Responsiveness/Performance (debounce)
@@ -111,7 +111,7 @@
   - [x] No SCSS beyond `:host`; tokens `--pr-color-primary-300` / gray only.
   - [x] Commit `✨ feat(kp-cgspace-browse): Add CGSpace browse component for KP reporting`.
 
-### [ ] `KPB-T-7` — Integrate tabs into `AowHloCreateModalComponent` and wire selection to MQAP sync
+### [x] `KPB-T-7` — Integrate tabs into `AowHloCreateModalComponent` and wire selection to MQAP sync
 - **Type:** `client`
 - **Description:** Add brain tabs (Browse default / Manual entry) rendered iff `currentResultIsKnowledgeProduct()`; move the existing handle + Sync markup verbatim under Manual; mount `<app-kp-cgspace-browse>` under Browse with `[hidden]` when not active (R-21); pass `phaseYear` (`dataControlSE.reportingCurrentPhase.phaseYear`) and admin flag; `onCgspaceItemSelected(item)` sets `handler = item.itemUrl`, `handleSource='browse'`, calls `GET_mqapValidation()` unchanged (regex already accepts the uuid URL — DD-4); manual edit resets `handleSource`; existing-result and 422 responses flow through the current handlers (R-13); reset browse state on drawer close.
 - **Implements:** `KPB-R-1`, `KPB-R-5`, `KPB-R-7`, `KPB-R-8`, `KPB-R-13`, `KPB-R-21`, `KPB-AC-1`, `KPB-AC-2`, `KPB-AC-5`, `KPB-AC-9`, `KPB-AC-13`
@@ -125,7 +125,7 @@
   - [x] All cases green; lint clean; existing modal specs unchanged and green.
   - [x] Commit `✨ feat(aow-hlo-create-modal): Add Browse CGSpace / Manual entry tabs for KP results`.
 
-### [ ] `KPB-T-8` — Scoped test, lint and migration gate (never the full suites locally)
+### [x] `KPB-T-8` — Scoped test, lint and migration gate (never the full suites locally)
 - **Type:** `tests`
 - **Description:** **Hard rule (user, 2026-08-26): never run a package's full Jest suite locally — it exhausts machine resources.** Run only the spec's own spec files by path, lint both packages scoped, `migration:check`. The full-suite/coverage-threshold gate is delegated to CI on the PR. Fix only test/lint fallout inside this spec's files.
 - **Implements:** gate for all `KPB-R-*`; NFR Backwards compatibility
@@ -138,7 +138,7 @@
 - **Definition of done:**
   - [x] Four commands green, output summary lines pasted in `execution.md`.
 
-### [ ] `KPB-T-9` — HITL smoke, visual and accessibility check (T6-routed)
+### [x] `KPB-T-9` — HITL smoke, visual and accessibility check (T6-routed)
 - **Type:** `rollout | docs`
 - **Description:** With local server (`CGSPACE_DISCOVERY_URL` set) and client running (`docs/infrastructure.md` §6), open `/result-framework-reporting/entity-details/SP04?tocView=aows` → a KP indicator → Report. Perform: search `maize`, filter by Type and Center, confirm the locked Year chip as non-admin (and editable as admin), Use this item → title populated, create the result, compare with a Manual-entry creation of the same handle in the DB (`result_knowledge_product` row equality except ids/timestamps); trigger the error state by pointing the env var at an unreachable host; keyboard-navigate the tabs; compare screenshot against `mockup/browse-cgspace.png`. Record results (incl. the `10947` MQAP check from T-1) in `execution.md`.
 - **Implements:** `KPB-AC-1`, `KPB-AC-5`, `KPB-AC-7`, `KPB-AC-12`; defect classes "visual fidelity", "a11y keyboard/contrast", "real CGSpace drift" (requirements §9 — no automated gate)

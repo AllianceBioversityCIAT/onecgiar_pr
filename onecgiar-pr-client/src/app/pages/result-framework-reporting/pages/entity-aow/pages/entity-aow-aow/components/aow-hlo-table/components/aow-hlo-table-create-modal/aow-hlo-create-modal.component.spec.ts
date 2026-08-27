@@ -487,7 +487,7 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       expect(component.currentResultIsKnowledgeProduct()).toBe(false);
       const tabsEl = fixture.debugElement.query(By.css('[brnTabsList], [role="tablist"], app-kp-cgspace-browse'));
       expect(tabsEl).toBeNull();
-      expect(fixture.nativeElement).toMatchSnapshot();
+      expect(fixture.nativeElement.innerHTML).toMatchSnapshot();
     });
   });
 

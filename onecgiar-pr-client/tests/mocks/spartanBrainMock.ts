@@ -311,10 +311,4 @@ export const BrnTabsImports = [
   BrnTabsContentLazy
 ] as const;
 
-export {
-  BrnTabs as BrnTabsDirective,
-  BrnTabsList as BrnTabsListDirective,
-  BrnTabsTrigger as BrnTabsTriggerDirective,
-  BrnTabsContent as BrnTabsContentDirective
-};
 

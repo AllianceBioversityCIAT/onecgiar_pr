@@ -27,7 +27,7 @@ describe('KpCgspaceBrowseComponent', () => {
     authors: ['Smith, John', 'Doe, Jane', 'Silva, Carlos'],
     affiliations: ['Alliance of Bioversity and CIAT'],
     countries: ['Kenya', 'Colombia', 'Ethiopia', 'Peru'],
-    doi: 'https://doi.org/10.1016/j.worlddev.2026.105681',
+    doi: 'https://hdl.handle.net/10568/128401',
     uri: 'https://hdl.handle.net/10568/128401'
   };
 
@@ -461,7 +461,7 @@ describe('KpCgspaceBrowseComponent', () => {
       windowOpenSpy.mockRestore();
     });
 
-    it('should open itemUrl in new tab with noopener,noreferrer for allowed hosts (cgspace.cgiar.org, hdl.handle.net, doi.org)', () => {
+    it('should open itemUrl in new tab with noopener,noreferrer for allowed hosts (cgspace.cgiar.org, hdl.handle.net)', () => {
       // cgspace host
       component.openItemDetails(sampleItem1);
       expect(windowOpenSpy).toHaveBeenCalledWith(
@@ -481,9 +481,9 @@ describe('KpCgspaceBrowseComponent', () => {
 
       // doi host
       windowOpenSpy.mockClear();
-      component.openItemDetails({ ...sampleItem1, itemUrl: 'https://doi.org/10.1016/j.worlddev.2026.105681' });
+      component.openItemDetails({ ...sampleItem1, itemUrl: 'https://hdl.handle.net/10568/128401' });
       expect(windowOpenSpy).toHaveBeenCalledWith(
-        'https://doi.org/10.1016/j.worlddev.2026.105681',
+        'https://hdl.handle.net/10568/128401',
         '_blank',
         'noopener,noreferrer'
       );

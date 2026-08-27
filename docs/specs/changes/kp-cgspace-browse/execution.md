@@ -62,3 +62,26 @@ At Leader start the tree was clean; by the time `tasks.md` was written the worki
 - Verification: scoped jest results-knowledge-products 4 suites / 56 tests; scoped eslint clean; tsc clean.
 - Reviewer (rev-server): PASS, no regression vs design §4.1/§7. ADVISORY: README wording "defaults to … when unset" is false (no in-code fallback → 502) — fix phrase before merge.
 - Runtime note: rev-server and impl-client sessions terminated afterwards with "weekly limit" — impl-client (T-5/6/7 rework attempt 2) died mid-work; state assessed below.
+
+### `KPB-T-5` / `KPB-T-6` / `KPB-T-7` — attempt 2 **PASS (Reviewer waived)** (2026-08-27)
+- Attempt 2 split: concurrent session resolved the two blocking items (min-length gating `MIN_QUERY_LENGTH=3`, Center prefix type-ahead + `distinctUntilChanged`) and restored the original modal spec text. Leader applied the remaining items inline **with explicit user approval** (subagent usage limit): `doi.org` removed from `ALLOWED_HOSTS` (+ test updated), `BrnTabs*Directive` aliases removed from mock + spec, snapshot switched to `innerHTML` and regenerated scoped (no `id="rootN"`), `brnTabsContent="browse|manual"` on both panels, `aria-live="polite"` on empty/error blocks.
+- SCSS overrides for `app-pr-select` kept — recorded as accepted deviation `KPB-DD-8` in design.md.
+- Verification (scoped): jest modal folder + mock spec → 3 suites / 62 tests / 1 snapshot; scoped eslint: only the pre-existing `spartanBrainMock.ts:168` `no-input-rename` error (BrnDialogContent, not this spec).
+- Reviewer: **re-audit waived by user** ("está funcionando bien"); rev-client's round-1 findings all addressed or recorded (DD-8). Author ≠ auditor not satisfied for attempt 2 — recorded as accepted risk.
+
+### `KPB-T-8` — Scoped gate — **PASS** (2026-08-27)
+- Server: jest results-knowledge-products 4 suites / 56 tests; scoped eslint clean; `migration:check` 0 pending (run after T-4 attempt 2; server files unchanged since).
+- Client: 3 suites / 62 tests / 1 snapshot; scoped eslint (1 pre-existing error outside spec).
+- Coverage thresholds: CI (accepted local gap per user rule).
+
+### `KPB-T-9` — HITL — **PASS (user-declared)** (2026-08-27)
+- User verified the feature functionally in the local stack ("veo que está funcionando bien"). Not individually evidenced: DB-row parity Browse vs Manual, dead-host error state, keyboard pass, screenshot vs mockup, MQAP `10947` uuid URL (JD-21). Recorded as accepted gaps for the PR reviewer.
+
+## Summary
+All 9 tasks closed on 2026-08-27. Budget: 9 tasks (= budget), LOC well above the ~780 estimate because the concurrent session's implementation is larger (client spec alone +450 lines) — tripwire noted post hoc, not escalated since the user reviewed the result. Review rounds: server 2, client 1 + waived re-audit.
+
+## Constitution Impact: KPB-T-3 / KPB-T-6
+- New server sub-module `api/results/results-knowledge-products/cgspace-discovery/` (service, mapper, DTOs, fixtures) — `onecgiar-pr-server/src/CLAUDE.md`/`AGENTS.md` integrations list should mention the CGSpace Discovery proxy next to MQAP.
+- New client component `aow-hlo-table-create-modal/components/kp-cgspace-browse/` — first `@spartan-ng/brain/tabs` usage in the app (ux-ui §8 inventory update, `KPB-DD-7`).
+- New env var `CGSPACE_DISCOVERY_URL` (serverless.yaml, README, infrastructure.md).
+- CodeGraph re-index pending.

@@ -4,15 +4,11 @@ import { By } from '@angular/platform-browser';
 import {
   BrnTabs,
   BrnTabsContent,
-  BrnTabsContentDirective,
   BrnTabsContentLazy,
-  BrnTabsDirective,
   BrnTabsImports,
   BrnTabsList,
-  BrnTabsListDirective,
   BrnTabsPaginatedList,
   BrnTabsTrigger,
-  BrnTabsTriggerDirective
 } from '@spartan-ng/brain/tabs';
 
 @Component({
@@ -52,18 +48,13 @@ describe('Spartan brain tabs mock (@spartan-ng/brain/tabs)', () => {
   });
 
   describe('Exports and aliases', () => {
-    it('should export all standard BrnTabs symbols and aliases', () => {
+    it('should export all standard BrnTabs symbols', () => {
       expect(BrnTabs).toBeDefined();
       expect(BrnTabsList).toBeDefined();
       expect(BrnTabsTrigger).toBeDefined();
       expect(BrnTabsContent).toBeDefined();
       expect(BrnTabsContentLazy).toBeDefined();
       expect(BrnTabsPaginatedList).toBeDefined();
-
-      expect(BrnTabsDirective).toBe(BrnTabs);
-      expect(BrnTabsListDirective).toBe(BrnTabsList);
-      expect(BrnTabsTriggerDirective).toBe(BrnTabsTrigger);
-      expect(BrnTabsContentDirective).toBe(BrnTabsContent);
     });
 
     it('should include all 5 directives in BrnTabsImports', () => {

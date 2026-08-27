@@ -122,7 +122,7 @@ export class KpCgspaceBrowseComponent implements OnInit, OnDestroy {
   });
 
   /** Design §7 / §6.2: View details may only open these hosts. */
-  readonly ALLOWED_HOSTS = ['cgspace.cgiar.org', 'hdl.handle.net', 'doi.org'];
+  readonly ALLOWED_HOSTS = ['cgspace.cgiar.org', 'hdl.handle.net'];
 
   /** Minimum free-text length before a query is sent upstream (R-2, AC-8). */
   readonly MIN_QUERY_LENGTH = 3;

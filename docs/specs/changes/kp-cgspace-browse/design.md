@@ -197,7 +197,14 @@ None.
 - **Alternatives considered:** hand-rolled `role=tab` buttons (re-implements keyboard nav); a segmented control via `app-pr-button` group (no tablist semantics).
 - **Consequences:** first tabs usage in the app — becomes the reference; mock extension is a prerequisite task.
 
+### `KPB-DD-8` — Accepted deviation: scoped SCSS overrides for `app-pr-select` inside the Browse component
+- **Context:** the Type/Center filters reuse the shared `app-pr-select`, whose dropdown width/hover/focus styles cannot be reached with Tailwind utilities from the consumer template. The implementation shipped `kp-cgspace-browse.component.scss` (`:host ::ng-deep … !important`) restyling `.custom_select` only within this component.
+- **Decision:** accept the deviation from ux-ui §12 (Tailwind-only) for this component; verified working in HITL by the user. Everything else in the component stays Tailwind-only.
+- **Alternatives considered:** extend `app-pr-select` with size/width inputs (touches a shared component used across the app — out of this spec's scope); rewrite the filters without `app-pr-select` (loses shared behaviour).
+- **Consequences:** coupling to `pr-select` internal markup; a future `pr-select` refactor must re-check this file. Follow-up recorded in §13 to promote the needed knobs into `app-pr-select` and delete the SCSS.
+
 ## 13. Open Gaps & Follow-ups
+- Follow-up: add width/variant inputs to `app-pr-select` so `kp-cgspace-browse.component.scss` can be removed (`KPB-DD-8`).
 - Follow-up spec: apply `KpCgspaceBrowseComponent` to `result-creator`, `bilateral-result-creator`, `lab-report-form`.
 - Follow-up: MELSpace/WorldFish via `repository` param + dedup (proposal OQ-4).
 - Verify in the fixture task: exact metadata keys for DOI/country, accepted `dateIssued` filter form, MQAP resolution of a `10947` uuid URL (JD-17/JD-21).
