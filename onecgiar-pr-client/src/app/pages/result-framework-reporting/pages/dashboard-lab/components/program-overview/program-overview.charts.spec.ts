@@ -1,4 +1,4 @@
-import { CHART_TOKEN_NAMES, STATUS_TOKEN_NAMES, resolveChartTokens, resolveStatusTokens } from '../../../../../../shared/utils/chart-tokens.util';
+import { CHART_TOKEN_NAMES, resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
 import { heatmapOption, heatmapTable, cellLinkFromClick, donutOption, donutTable, sectorLinkFromClick, abbreviateAxisLabel } from './program-overview.charts';
 import { HeatmapModel, StatusSegment } from './program-overview.component';
 
@@ -126,35 +126,32 @@ describe('program-overview.charts donut (OVW-T-4)', () => {
   ];
 
   describe('donutOption', () => {
+    const palette = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
+
     it('emits one sector per non-zero segment, omitting zero-count segments from the pie', () => {
-      const tokens = resolveStatusTokens();
-      const option = donutOption(segments, tokens);
+      const option = donutOption(segments, palette);
       const series = (option.series as { data: unknown[] }[])[0];
       expect(series.data.length).toBe(2);
     });
 
-    it('colors sectors from STATUS_TOKEN_NAMES only — never CHART_TOKEN_NAMES (the ramp)', () => {
-      const requested: string[] = [];
-      jest.spyOn(window, 'getComputedStyle').mockReturnValue({
-        getPropertyValue: jest.fn().mockImplementation((name: string) => {
-          requested.push(name);
-          return '';
-        })
-      } as unknown as CSSStyleDeclaration);
+    it('colors sectors from the provided violet palette in order (quick/donut-violet-scale)', () => {
+      const option = donutOption(segments, palette);
+      const series = (option.series as { data: { itemStyle: { color: string } }[] }[])[0];
+      // Two non-zero sectors → first two palette entries, deterministic by slot order.
+      expect(series.data.map(d => d.itemStyle.color)).toEqual(['V1', 'V2']);
+    });
 
-      const tokens = resolveStatusTokens();
-      donutOption(segments, tokens);
-
-      expect(requested.length).toBeGreaterThan(0);
-      expect(requested.every(name => (STATUS_TOKEN_NAMES as readonly string[]).includes(name))).toBe(true);
-      expect(requested.some(name => (CHART_TOKEN_NAMES as readonly string[]).includes(name))).toBe(false);
-
-      jest.restoreAllMocks();
+    it('cycles the palette when there are more sectors than colors, and never emits undefined', () => {
+      const many: StatusSegment[] = ['a', 'b', 'c'].map((k, i) => ({
+        key: k, label: k, count: i + 1, bg: '', fg: '', statusName: k, link: null
+      }));
+      const option = donutOption(many, ['V1', 'V2']);
+      const series = (option.series as { data: { itemStyle: { color: string } }[] }[])[0];
+      expect(series.data.map(d => d.itemStyle.color)).toEqual(['V1', 'V2', 'V1']);
     });
 
     it('uses radius [62%, 88%], hides sector labels and the legend, and centers the total in the title', () => {
-      const tokens = resolveStatusTokens();
-      const option = donutOption(segments, tokens);
+      const option = donutOption(segments, palette);
       const series = (option.series as { radius: string[]; label: { show: boolean } }[])[0];
       expect(series.radius).toEqual(['62%', '88%']);
       expect(series.label.show).toBe(false);
@@ -163,15 +160,7 @@ describe('program-overview.charts donut (OVW-T-4)', () => {
       expect((option.title as { text: string; subtext: string }).subtext).toBe('results');
     });
 
-    it('reuses the notStarted token pair for the discontinued slot (OVW-DD-5)', () => {
-      const discontinued: StatusSegment[] = [
-        { key: 'discontinued', label: 'Discontinued', count: 2, bg: '', fg: '', statusName: 'Discontinued', link: { status: 'Discontinued' } }
-      ];
-      const tokens = resolveStatusTokens();
-      const option = donutOption(discontinued, tokens);
-      const series = (option.series as { data: { itemStyle: { color: string } }[] }[])[0];
-      expect(series.data[0].itemStyle.color).toBe(tokens.notStarted.fg);
-    });
+
   });
 
   describe('donutTable', () => {

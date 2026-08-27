@@ -6,13 +6,11 @@
 // `VizChartTableModel`, and resolve a `chartClick` event back to the `OverviewLink` stored on the
 // clicked cell/sector.
 //
-// Documented exception to `VCE-DD-3`'s "status colours are not chart colours" fence: `donutOption`
-// below (`OVW-R-4`/`OVW-DD-5`) is the ONE place in this file that colors series data from
-// `resolveStatusTokens()` — the widget IS status-keyed, so its sectors must match the legend dots
-// on the Reporting-status meter beside it. `heatmapOption` above stays on `resolveChartTokens().ramp`
-// only, never `resolveStatusTokens()`.
+// No fence exception lives here anymore: `quick/donut-violet-scale` (user-approved 2026-08-27,
+// amends `OVW-DD-5`) moved the donut onto the violet chart palette, so every function in this
+// file colors from `resolveChartTokens()` values only — `VCE-DD-3`'s "status colours are not
+// chart colours" fence holds without exceptions.
 import type { EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
-import type { ResolvedStatusTokens } from '../../../../../../shared/utils/chart-tokens.util';
 import type { HeatmapModel, OverviewLink, StatusSegment } from './program-overview.component';
 
 /**
@@ -124,20 +122,9 @@ export function cellLinkFromClick(event: { data?: unknown }, model: HeatmapModel
   return model.cells.find(cell => cell.r === r && cell.c === c)?.link ?? null;
 }
 
-/**
- * Maps a `StatusSegment.key` slot to its `ResolvedStatusTokens` property (`OVW-DD-5`).
- * `discontinued` has no dedicated status token pair, so it reuses `notStarted` — the same
- * substitution the parent's `OVERVIEW_DISCONTINUED_SLOT` already makes for `bg`/`fg`
- * (`dashboard-lab.component.ts`), kept consistent here so the sector matches the legend dot.
- */
-const DONUT_SLOT_TOKEN: Record<string, keyof ResolvedStatusTokens> = {
-  'not-started': 'notStarted',
-  'in-progress': 'inProgress',
-  submitted: 'submitted',
-  'in-qa': 'inQa',
-  approved: 'approved',
-  discontinued: 'notStarted'
-};
+// quick/donut-violet-scale (user-approved 2026-08-27, amends OVW-DD-5): sectors use the
+// violet chart palette like every other chart on the page, NOT the status fg tokens. The
+// sector ↔ legend-dot colour link is deliberately given up; the tooltip names each status.
 
 /**
  * Builds the `app-pr-viz-chart` `options` for the Reporting-status donut (`OVW-R-4`). Only
@@ -147,14 +134,14 @@ const DONUT_SLOT_TOKEN: Record<string, keyof ResolvedStatusTokens> = {
  * `resolveChartTokens().ramp`. No sector labels, no legend (the card already renders one beside
  * the donut); the center `title` prints the total.
  */
-export function donutOption(segments: StatusSegment[], statusTokens: ResolvedStatusTokens): EChartsOption {
+export function donutOption(segments: StatusSegment[], palette: string[]): EChartsOption {
   const total = segments.reduce((sum, segment) => sum + segment.count, 0);
   const data = segments
     .filter(segment => segment.count > 0)
-    .map(segment => ({
+    .map((segment, index) => ({
       name: segment.label,
       value: segment.count,
-      itemStyle: { color: statusTokens[DONUT_SLOT_TOKEN[segment.key] ?? 'notStarted'].fg }
+      itemStyle: { color: palette[index % (palette.length || 1)] ?? '' }
     }));
 
   return {

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { PrVizChartComponent, EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
-import { resolveChartTokens, resolveStatusTokens } from '../../../../../../shared/utils/chart-tokens.util';
+import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
 import { heatmapOption, heatmapTable, cellLinkFromClick, donutOption, donutTable, sectorLinkFromClick } from './program-overview.charts';
 import type { ECElementEvent } from 'echarts/core';
 
@@ -175,9 +175,14 @@ export class ProgramOverviewComponent {
    * exception to the "status colours are not chart colours" fence. jsdom resolves every entry to
    * `''`; real browsers resolve the `--pr-status-*-fg/bg` pairs.
    */
-  private readonly statusTokens = computed(() => resolveStatusTokens());
+  /** Violet sector palette for the donut (quick/donut-violet-scale): ramp + the two extra
+   * violets — six distinct steps for up to six sectors, all from approved chart tokens. */
+  private readonly donutPalette = computed(() => {
+    const tokens = resolveChartTokens();
+    return [...tokens.ramp, tokens.bilateralMuted, tokens.primaryStrong];
+  });
 
-  readonly donutOption = computed<EChartsOption>(() => donutOption(this.statusSegments(), this.statusTokens()));
+  readonly donutOption = computed<EChartsOption>(() => donutOption(this.statusSegments(), this.donutPalette()));
 
   readonly donutTable = computed<VizChartTableModel>(() => donutTable(this.statusSegments()));
 
