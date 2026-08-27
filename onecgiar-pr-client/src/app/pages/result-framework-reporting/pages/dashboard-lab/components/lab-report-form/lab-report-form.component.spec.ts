@@ -308,38 +308,32 @@ describe('LabReportFormComponent', () => {
   });
 
   describe('knowledge-product entry modes', () => {
-    it('starts on manual entry — browsing the repository has no endpoint yet (P2-3231)', async () => {
+    it('starts on browse entry now that repository browsing is enabled (P2-3231)', async () => {
       await setup({ indicator: indicator({ result_type_id: 6, type_name: 'Number of knowledge products' }), tocNode: {} });
 
-      expect(component.kpEntryMode()).toBe('manual');
+      expect(component.kpEntryMode()).toBe('browse');
+      expect(component.kpBrowseEnabled).toBe(true);
     });
 
-    /**
-     * P2-3479. Business asked to hide `Browse CGSpace` rather than show it disabled, because P/As
-     * are testing now and a dead tab reads as a broken feature. The whole switcher goes with it: a
-     * tablist holding one tab is worse than none.
-     *
-     * ⚠️ The suite's `setup()` blanks the template (`set: { template: '' }`), so a DOM assertion
-     * here would pass against an empty node and prove nothing. This asserts the flag AND reads the
-     * real template off disk, which is the only honest check available without rebuilding the
-     * whole TestBed with every child component the template pulls in.
-     */
-    it('keeps repository browsing switched off', async () => {
-      await setup({ indicator: indicator({ result_type_id: 6, type_name: 'Number of knowledge products' }), tocNode: {} });
-
-      expect(component.kpBrowseEnabled).toBe(false);
-    });
-
-    it('gates the whole mode switcher behind that flag, not just the tab', () => {
+    it('renders both Browse CGSpace and Manual entry tabs in template', () => {
       const template = readFileSync(join(__dirname, 'lab-report-form.component.html'), 'utf8');
 
-      // The tablist and the Browse CGSpace button must both sit inside the @if.
-      const gate = template.indexOf('@if (kpBrowseEnabled)');
-      expect(gate).toBeGreaterThan(-1);
-      expect(template.indexOf('role="tablist"')).toBeGreaterThan(gate);
-      expect(template.indexOf('Browse CGSpace')).toBeGreaterThan(gate);
-      // Manual entry's own field must NOT be inside it.
-      expect(template.indexOf('Repository link/handle')).toBeGreaterThan(template.indexOf('Browse CGSpace'));
+      expect(template.indexOf('Browse CGSpace')).toBeGreaterThan(-1);
+      expect(template.indexOf('Manual entry')).toBeGreaterThan(-1);
+      expect(template.indexOf('app-kp-cgspace-browse')).toBeGreaterThan(-1);
+      expect(template.indexOf('Repository link/handle')).toBeGreaterThan(-1);
+    });
+
+    it('updates handler and calls validateHandle when onCgspaceItemSelected is called', async () => {
+      await setup({ indicator: indicator({ result_type_id: 6, type_name: 'Number of knowledge products' }), tocNode: {} });
+
+      const item: any = {
+        itemUrl: 'https://cgspace.cgiar.org/items/679513e4-eeba-4a06-a017-015862e7b9b3'
+      };
+      component.onCgspaceItemSelected(item);
+
+      expect(component.createResultBody().handler).toBe(item.itemUrl);
+      expect(api.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(item.itemUrl);
     });
   });
 });

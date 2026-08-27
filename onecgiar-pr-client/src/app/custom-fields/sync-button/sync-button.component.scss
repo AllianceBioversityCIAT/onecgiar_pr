@@ -1,3 +1,8 @@
+:host.in-bottom-bar {
+  display: inline-flex;
+  align-items: center;
+}
+
 .fixed_button {
   position: fixed;
   right: 0;
@@ -5,6 +10,41 @@
   margin-right: 250px;
   margin-bottom: 50px;
   z-index: 100;
+
+  &.in-bottom-bar {
+    position: static !important;
+    margin: 0 !important;
+    z-index: auto !important;
+
+    ::ng-deep .pr_button {
+      height: 38px !important;
+      border-radius: 8px !important;
+      padding: 0 16px !important;
+      margin: 0 !important;
+      gap: 6px !important;
+      background-color: #1e202f !important;
+      border: 1px solid #1e202f !important;
+      box-shadow: none !important;
+      transition: all 0.2s ease !important;
+
+      &:hover {
+        background-color: #2b2838 !important;
+        border-color: #2b2838 !important;
+      }
+
+      .text {
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #ffffff !important;
+      }
+
+      i {
+        font-size: 18px !important;
+        margin: 0 !important;
+        color: #ffffff !important;
+      }
+    }
+  }
 
   &:hover {
     .fields-feedback-list {

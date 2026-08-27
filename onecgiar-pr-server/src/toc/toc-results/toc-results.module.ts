@@ -3,6 +3,10 @@ import { TocResultsService } from './toc-results.service';
 import { TocResultsController } from './toc-results.controller';
 import { TocResultsRepository } from './toc-results.repository';
 import { VersioningService } from '../../api/versioning/versioning.service';
+// This module provides VersioningService itself, so it needs the module that provides the
+// bilateral eligibility rules VersioningService now depends on. It is a leaf module (imports
+// nothing), so there is no cycle to guard against.
+import { BilateralVersioningRulesModule } from '../../api/bilateral/versioning-rules/bilateral-versioning-rules.module';
 import { VersionRepository } from '../../api/versioning/versioning.repository';
 import { ResultRepository } from '../../api/results/result.repository';
 import { ApplicationModulesRepository } from '../../api/versioning/repositories/application-modules.repository';
@@ -137,6 +141,7 @@ import { YearRepository } from '../../api/results/years/year.repository';
   imports: [
     SharePointModule,
     MQAPModule,
+    BilateralVersioningRulesModule,
     forwardRef(() => VersioningModule),
     forwardRef(() => ResultInnovationPackageModule),
     forwardRef(() => InnovationPathwayModule),

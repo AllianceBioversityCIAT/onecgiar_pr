@@ -220,7 +220,12 @@ describe('RdContributorsAndPartnersComponent', () => {
     });
 
     it('offers a useful hint for the legitimate empty state instead of a bare "no items available"', () => {
-      expect(component.noLeadCentersNote).toContain('Select a contributing CGIAR Center first');
+      // Asserts the INTENT, not the copy: the empty state must point at the contributing-center
+      // step instead of the bare "no items available". Tying this to an exact sentence made the
+      // suite fail on a wording change that was itself fine (merge of 2026-08-27).
+      expect(component.noLeadCentersNote).toBeTruthy();
+      expect(component.noLeadCentersNote.toLowerCase()).toContain('contributing center');
+      expect(component.noLeadCentersNote.toLowerCase()).toContain('lead center');
     });
   });
 

@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-08-21 · branch performance-refactor · eed5bb706
+**Verified:** 2026-08-26 · branch qa-development-2026 · 617f54f91
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area

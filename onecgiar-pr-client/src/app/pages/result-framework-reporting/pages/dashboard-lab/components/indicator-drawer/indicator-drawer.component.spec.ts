@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
-import { IndicatorDrawerComponent } from './indicator-drawer.component';
+import { IndicatorDrawerComponent, initialDrawerWidth } from './indicator-drawer.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 /**
@@ -139,6 +139,44 @@ describe('IndicatorDrawerComponent', () => {
       fixture.detectChanges();
 
       expect(component.formDirty()).toBe(false);
+    });
+  });
+  describe('responsive width and collapsible context header (2026-08-27)', () => {
+    const setViewport = (w: number) => Object.defineProperty(window, 'innerWidth', { configurable: true, value: w });
+    const originalWidth = window.innerWidth;
+    afterEach(() => setViewport(originalWidth));
+
+    it('initialDrawerWidth: full-bleed under 768px, 740 baseline on laptops, capped at 1100 on very wide screens', () => {
+      setViewport(390);
+      expect(initialDrawerWidth()).toBe(390);
+      setViewport(1280);
+      expect(initialDrawerWidth()).toBe(740);
+      setViewport(3800);
+      expect(initialDrawerWidth()).toBe(1100);
+      setViewport(1000);
+      expect(initialDrawerWidth()).toBe(680); // viewport - 320 guard beats the 740 baseline
+    });
+
+    it('context header starts expanded on desktop widths and toggles collapsed/expanded', async () => {
+      await setup({ toc_result_id: 'toc-1', related_node_id: 'IND-55' });
+      // jsdom default innerWidth (1024) >= 768 -> expanded
+      expect(component.contextCollapsed()).toBe(false);
+      component.toggleContext();
+      expect(component.contextCollapsed()).toBe(true);
+      component.toggleContext();
+      expect(component.contextCollapsed()).toBe(false);
+    });
+
+    // The suite renders with template:'' (shallow), so the stacking fix is asserted on the
+    // template source itself. Presence-level only: it proves the overlay declares a higher
+    // z-index (z-60) than the sticky form footer (z-30) and that the old z-[5] is gone —
+    // the actual paint order was verified manually (T6/HITL 2026-08-27 screenshots).
+    it('unsaved-changes overlay declares z-[60], above the sticky form footer (z-30)', () => {
+      const fs = require('fs');
+      const tpl = fs.readFileSync(require('path').join(__dirname, 'indicator-drawer.component.html'), 'utf8');
+      expect(tpl).toContain('inset-0 z-[60]');
+      expect(tpl).not.toContain('inset-0 z-[5]');
+      expect(tpl).toContain('max-w-[100vw]');
     });
   });
 });

@@ -84,6 +84,7 @@ describe('ApiService', () => {
       }),
       readOnly: false,
       isAdmin: false,
+      getMyCenters: jest.fn(() => [] as any[]),
       roles: null,
       getIsAdminValue: jest.fn(function (this: { roles: { application?: { role_id: number } } | null; isAdmin: boolean }) {
         this.isAdmin = this.roles?.application?.role_id == 1;
@@ -660,6 +661,58 @@ describe('ApiService', () => {
     it('should call titleService.setTitle with given title', () => {
       service.setTitle('Test Title');
       expect(titleServiceSpy.setTitle).toHaveBeenCalledWith('Test Title');
+    });
+  });
+
+  // P2-3229. Deliberately not `shouldShowUpdate`: bilaterals answer to the lead CENTRE, not to
+  // the initiative map, and they also require the result to be approved.
+  describe('canUpdateBilateral', () => {
+    const currentPhase = { phaseYear: 2024 };
+    const approvedBilateral = (overrides: any = {}): any => ({
+      phase_year: 2023,
+      status_name: 'Approved',
+      lead_center: 'CIAT (Alliance)',
+      ...overrides
+    });
+
+    beforeEach(() => {
+      rolesServiceSpy.isAdmin = false;
+      rolesServiceSpy.getMyCenters = jest.fn(() => [{ center_id: 'CENTER-03', center_acronym: 'CIAT (Alliance)' }]);
+    });
+
+    it('allows a user of the lead centre on an approved past-phase result', () => {
+      expect(service.canUpdateBilateral(approvedBilateral(), currentPhase)).toBe(true);
+    });
+
+    it('refuses a user who belongs to another centre', () => {
+      rolesServiceSpy.getMyCenters = jest.fn(() => [{ center_id: 'CENTER-11', center_acronym: 'IITA' }]);
+      expect(service.canUpdateBilateral(approvedBilateral(), currentPhase)).toBe(false);
+    });
+
+    it.each(['Editing', 'Submitted', 'Pending Review', 'Rejected'])('refuses a result that is %s', status => {
+      expect(service.canUpdateBilateral(approvedBilateral({ status_name: status }), currentPhase)).toBe(false);
+    });
+
+    it('refuses a result already in the current phase', () => {
+      expect(service.canUpdateBilateral(approvedBilateral({ phase_year: 2024 }), currentPhase)).toBe(false);
+    });
+
+    it('refuses when the result has no lead centre', () => {
+      expect(service.canUpdateBilateral(approvedBilateral({ lead_center: null }), currentPhase)).toBe(false);
+    });
+
+    it('allows an admin regardless of centre membership', () => {
+      rolesServiceSpy.isAdmin = true;
+      rolesServiceSpy.getMyCenters = jest.fn(() => []);
+      expect(service.canUpdateBilateral(approvedBilateral(), currentPhase)).toBe(true);
+    });
+
+    // The list reports `lead_center` as the CLARISA ACRONYM. Comparing it against `center_id`,
+    // which is the code, matches nothing — the action would never appear and nothing would say why.
+    it('matches on the centre acronym, not on the centre code', () => {
+      rolesServiceSpy.getMyCenters = jest.fn(() => [{ center_id: 'CENTER-03', center_acronym: 'CIAT (Alliance)' }]);
+      expect(service.canUpdateBilateral(approvedBilateral({ lead_center: 'CENTER-03' }), currentPhase)).toBe(false);
+      expect(service.canUpdateBilateral(approvedBilateral({ lead_center: 'CIAT (Alliance)' }), currentPhase)).toBe(true);
     });
   });
 

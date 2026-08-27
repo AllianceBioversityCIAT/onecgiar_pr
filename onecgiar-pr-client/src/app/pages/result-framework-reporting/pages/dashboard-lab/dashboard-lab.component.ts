@@ -1414,7 +1414,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
             __hlo: g?.result_title,
             __tier: tier,
             toc_result_id: g?.toc_result_id,
-            __hloNode: g
+            __hloNode: g,
+            __isIntermediateCrosscut: tier === 'outcome' && g?.is_aow !== true
           }))
         );
       const indicators = [...fromTier(toc?.outputs, 'output'), ...fromTier(toc?.outcomes, 'outcome')];

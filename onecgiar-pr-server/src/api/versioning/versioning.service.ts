@@ -3,7 +3,7 @@ import { CreateVersioningDto } from './dto/create-versioning.dto';
 import { UpdateVersioningDto } from './dto/update-versioning.dto';
 import { Version } from './entities/version.entity';
 import { VersionRepository } from './versioning.repository';
-import { Result } from '../results/entities/result.entity';
+import { Result, SourceEnum } from '../results/entities/result.entity';
 import { ResultRepository } from '../results/result.repository';
 import { ApplicationModules } from './entities/application-modules.entity';
 import { ApplicationModulesRepository } from './repositories/application-modules.repository';
@@ -71,6 +71,8 @@ import {
   buildInnovationPackageTitle,
 } from '../ipsr/utils/innovation-package-title.util';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { BilateralVersioningRulesService } from '../bilateral/versioning-rules/bilateral-versioning-rules.service';
 
 /** Clarisa `clarisa_initiatives.portfolio_id` for CGIAR Programs (P25). */
 const PORTFOLIO_CGIAR_PROGRAMS_P25_ID = 3;
@@ -129,6 +131,8 @@ export class VersioningService {
     private readonly _resultAnswerRepository: ResultAnswerRepository,
     private readonly dataSource: DataSource,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository,
+    private readonly _bilateralRules: BilateralVersioningRulesService,
   ) {}
 
   /**
@@ -706,6 +710,19 @@ export class VersioningService {
         },
       );
       if (primaryPortfolio?.portfolio_id === PORTFOLIO_CGIAR_PROGRAMS_P25_ID) {
+        // P2-3229. A W3/Bilateral result always maps to a Science Program, which is always
+        // P25, so this branch is the only one it can reach — and asking the caller for an
+        // `entityId` would be asking it to restate something the result already says. The
+        // programme is derived from the result's own role-1 initiative and V2 runs with it,
+        // exactly as the API path does, so both entry points send the same thing.
+        if (legacy_result.source === SourceEnum.Bilateral) {
+          const entityId = await this._bilateralRules.resolveTargetEntityId(
+            legacy_result,
+            String(legacy_result.result_code ?? legacy_result.id),
+          );
+          return await this.versionProcessV2(legacy_result.id, entityId, user);
+        }
+
         throw ReturnResponseUtil.format({
           message: `Results whose primary submitter is already a P25 CGIAR Program must use phase change with entityId (V2).`,
           response: legacy_result.id,
@@ -760,6 +777,64 @@ export class VersioningService {
     }
   }
 
+  /**
+   * Gate for carrying a W3/Bilateral result forward from the reporting tool (P2-3229).
+   *
+   * Non-bilateral results fall straight through: W1/W2 keeps the rules it already had, and
+   * AVISA (`SGP-02`) results are handled by the pool-funding branch in the results list, so
+   * they never reach here as bilaterals.
+   *
+   * Eligibility comes from `BilateralVersioningRulesService`, the same leaf service the API
+   * endpoint uses. That is deliberate: AC9 requires both paths to accept and refuse the same
+   * things, and one shared implementation is the only version of that which stays true.
+   *
+   * Authorisation is what differs by caller. Here it is the JWT user's membership of the
+   * result's **lead** centre — a contributing centre is not enough. Admins pass, consistent
+   * with every other role check in the platform.
+   */
+  private async assertBilateralVersioningAllowed(
+    result: Result,
+    user: TokenDto,
+  ): Promise<void> {
+    if (result.source !== SourceEnum.Bilateral) return;
+
+    const resultCode = String(result.result_code ?? result.id);
+    const activePhase = await this._bilateralRules.getActiveReportingPhase();
+
+    // Re-resolves from the code rather than trusting the row handed in: this is where "already
+    // carried forward" and "only exists in the current phase" are caught, and both are about
+    // the set of rows for that code, not about this one.
+    await this._bilateralRules.resolveVersionableResult(
+      resultCode,
+      activePhase.id,
+    );
+
+    const leadCenterCode = await this._bilateralRules.resolveLeadCenterCode(
+      result.id,
+    );
+    if (!leadCenterCode) {
+      throw ReturnResponseUtil.format({
+        message: `Result ${resultCode} has no lead centre, so there is nobody who can carry it forward.`,
+        response: result.id,
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    const roles = await this._roleByUserRepository.getAllRolesByUser(user.id);
+    const isAdmin = (roles ?? []).some((role: any) => +role.role_id === 1);
+    const belongsToLeadCentre = (roles ?? []).some(
+      (role: any) => role.center_id === leadCenterCode,
+    );
+
+    if (!isAdmin && !belongsToLeadCentre) {
+      throw ReturnResponseUtil.format({
+        message: `Only users of centre ${leadCenterCode}, which leads result ${resultCode}, can carry it into a new phase.`,
+        response: result.id,
+        statusCode: HttpStatus.FORBIDDEN,
+      });
+    }
+  }
+
   async versionProcessV2(result_id: number, entity_id: number, user: TokenDto) {
     const entity = await this._clarisaInitiativesRepository.findOne({
       where: { id: entity_id, active: true },
@@ -790,6 +865,14 @@ export class VersioningService {
         statusCode: HttpStatus.NOT_FOUND,
       });
     }
+
+    // P2-3229. A W3/Bilateral result carried forward from the reporting tool answers to the
+    // bilateral rules, not the pool-funding ones: it must be approved, from a previous phase,
+    // not already carried forward, and not a Knowledge Product — the same set the API path
+    // applies, from the same service, so the two cannot drift (AC9). And only a user of the
+    // result's LEAD centre may do it, which is the check the menu in the results list mirrors
+    // for UX but cannot be trusted to enforce.
+    await this.assertBilateralVersioningAllowed(legacy_result, user);
 
     const mainInitiative = legacy_result.obj_result_by_initiatives?.find(
       (rbi) => +rbi.initiative_role_id === 1,

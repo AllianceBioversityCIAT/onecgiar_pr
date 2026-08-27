@@ -143,6 +143,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   // and auto-activate the "Other(s)" dropdown with ALL centers (mirrors hasReferenceScience for Science Programs).
   hasReferenceCenters = computed(() => this.rdPartnersSE.tocReferenceCenterInstitutionIds().length > 0);
   noCentersNote = 'No CGIAR Centers related to the established HLO/Outcomes were found';
+  noLeadCentersNote = 'Please select at least one contributing center to choose a lead center';
 
   // "Other(s) CGIAR Centers" is a special item at the END of the first dropdown's list (per Excel), not an outside
   // checkbox. Selecting it toggles the second dropdown; it is never persisted as a real center.
@@ -201,16 +202,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     this.rdPartnersSE.setPossibleLeadCenters(true);
   }
 
-  // The Other(s) dropdown feeds `otherCentersSelected`, which is lead-eligible too. Without recomputing here the
-  // "Lead center" list (a REQUIRED field) stayed empty until a Save draft reloaded the section — and when the ToC
-  // brings no centers this dropdown is the ONLY way to add one, so the form looked like a dead end.
-  // Parity with `onContributingCenterSelect` / `deleteOtherCenter`, which already recompute.
-  onOtherCenterSelect(_event: any) {
+  onOtherCenterSelect(_event?: any) {
     this.rdPartnersSE.setPossibleLeadCenters(true);
   }
-
-  // Shown instead of the generic "no items available" when nothing is lead-eligible yet.
-  noLeadCentersNote = 'Select a contributing CGIAR Center first — only centers already added in this section can be chosen as the result lead.';
 
   deleteOtherCenter(index: number) {
     // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).

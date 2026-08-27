@@ -1,4 +1,5 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
@@ -46,7 +47,7 @@ import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SectionBottomBarComponent implements OnDestroy {
+export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   /** Lets a read-only user still save (same escape hatch `app-save-button` has). */
   @Input() editable = false;
   /** Consumer-side veto — a section that knows its own form is not saveable yet. */
@@ -85,6 +86,13 @@ export class SectionBottomBarComponent implements OnDestroy {
     return !this.rolesSE.readOnly || this.editable;
   }
 
+  ngAfterViewInit(): void {
+    const el = this.hostRef.nativeElement.querySelector('.sbb-sync-slot') as HTMLElement;
+    if (el) {
+      this.slotSE.syncSlot.set(el);
+    }
+  }
+
   /**
    * Move the host node into the layout's slot, as an effect rather than a one-shot hook: the
    * slot is published by a component that may mount in the same change-detection pass, so
@@ -103,6 +111,7 @@ export class SectionBottomBarComponent implements OnDestroy {
    * the two never stack during the route transition.
    */
   ngOnDestroy(): void {
+    this.slotSE.syncSlot.set(null);
     this.hostRef.nativeElement.remove();
   }
 

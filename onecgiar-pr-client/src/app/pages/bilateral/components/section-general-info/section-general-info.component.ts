@@ -237,7 +237,10 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
     const titleFilled = !this.isPlaceholderTitle(t) && !!t.trim();
     const descriptionFilled = !!d.trim();
     const body = this.leadContactBody();
-    const leadContactFilled = !!body.lead_contact_person && !!body.lead_contact_person_data;
+    // A name is enough, with or without a directory match — see `hasSelectedContact` in
+    // `lead-contact-person-field`. Requiring the match would leave every API-reported result
+    // with an MDS field its centre user cannot complete.
+    const leadContactFilled = !!body.lead_contact_person;
 
     this.mdsTracker.setSectionFields('general-info', [
       { key: 'title', label: 'Title', filled: titleFilled },

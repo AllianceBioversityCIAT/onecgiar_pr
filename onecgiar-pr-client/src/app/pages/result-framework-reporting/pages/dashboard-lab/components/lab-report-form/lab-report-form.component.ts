@@ -9,11 +9,15 @@ import { ResultLevelService } from '../../../../../results/pages/result-creator/
 import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-initiative.util';
 import { buildCreateResultPayload, OTHER_CENTERS_CODE, OTHER_SP_ID, ReportResultFormBody } from '../../../../shared/report-result/create-result-payload.util';
 import { KP_HANDLE_NO_ERROR, KpHandleError, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
+import {
+  KpCgspaceBrowseComponent,
+  CgspaceItemDto
+} from '../../../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
 
 /** `result_type_id` of Knowledge product — the ONLY category that branches this form. */
 const KNOWLEDGE_PRODUCT_TYPE_ID = 6;
 
-/** Which entry mode the knowledge-product block is on. `browse` is not available yet — see P2-3231. */
+/** Which entry mode the knowledge-product block is on. */
 export type KpEntryMode = 'browse' | 'manual';
 
 /**
@@ -35,8 +39,9 @@ export type KpEntryMode = 'browse' | 'manual';
 @Component({
   selector: 'app-lab-report-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomFieldsModule],
+  imports: [CommonModule, FormsModule, CustomFieldsModule, KpCgspaceBrowseComponent],
   templateUrl: './lab-report-form.component.html',
+  styleUrls: ['./lab-report-form.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LabReportFormComponent {
@@ -103,20 +108,53 @@ export class LabReportFormComponent {
   readonly allInitiatives = signal<any[]>([]);
   readonly bilateralProjects = signal<any[]>([]);
   readonly selectedBilateral = signal<any[]>([]);
-  /** `browse` is rendered but disabled until P2-3231 ships a repository search. */
-  readonly kpEntryMode = signal<KpEntryMode>('manual');
+  readonly kpEntryMode = signal<KpEntryMode>('browse');
+  readonly handleSource = signal<'browse' | 'manual'>('browse');
 
   /**
-   * P2-3479 — the `Browse CGSpace` tab is hidden, not just disabled.
-   *
-   * The house rule is to leave an unbuilt control visible-but-disabled with a `Coming soon` tag,
-   * exactly where the design puts it. Business overrode that for this one: P/As start testing now
-   * and a dead tab in the Knowledge Product flow reads as a broken feature to them.
-   *
-   * The whole mode switcher goes with it — a tablist holding a single tab is worse than no tablist.
-   * Flip this back to `true` when browsing lands (P2-3231, epic P2-3230) and both tabs return.
+   * P2-3479 / P2-3231: Browsing CGSpace is now available via KpCgspaceBrowseComponent.
    */
-  readonly kpBrowseEnabled = false;
+  readonly kpBrowseEnabled = true;
+
+  readonly phaseYear = computed(() => this.api.dataControlSE?.reportingCurrentPhase?.phaseYear ?? new Date().getFullYear());
+  readonly isAdmin = computed(() => !!this.api.rolesSE?.isAdmin);
+
+  onCgspaceItemSelected(item: CgspaceItemDto): void {
+    const url = item.itemUrl || item.handleUrl || item.handle;
+    this.validatingHandler.set(true);
+    this.handleSource.set('browse');
+
+    const error = validateKpHandle(url);
+    this.mqapUrlError.set(error);
+    if (error.status) {
+      this.validatingHandler.set(false);
+      this.api.alertsFe.show({
+        id: 'reportResultError',
+        title: 'Error!',
+        description: error.message || 'Invalid CGSpace URL',
+        status: 'error'
+      });
+      return;
+    }
+
+    this.api.resultsSE.GET_mqapValidation(url).subscribe({
+      next: (resp: any) => {
+        this.mqapJson.set(resp.response);
+        this.patch('handler', url);
+        this.patch('result_name', resp.response?.title ?? '');
+        this.validatingHandler.set(false);
+      },
+      error: (err: any) => {
+        this.validatingHandler.set(false);
+        this.api.alertsFe.show({
+          id: 'reportResultError',
+          title: 'Error!',
+          description: err?.error?.message || 'Could not retrieve metadata for this item',
+          status: 'error'
+        });
+      }
+    });
+  }
 
   /** The level the category options belong to. Never chosen by the user. */
   readonly resultLevelId = computed(() => this.indicator()?.result_level_id ?? this.tocNode()?.result_level_id ?? this.emergingCategory()?.levelId ?? null);
@@ -232,7 +270,8 @@ export class LabReportFormComponent {
     });
     this.mqapJson.set(null);
     this.mqapUrlError.set({ ...KP_HANDLE_NO_ERROR });
-    this.kpEntryMode.set('manual');
+    this.kpEntryMode.set('browse');
+    this.handleSource.set('browse');
     this.contributingCenters.set([]);
     this.otherCentersSelected.set([]);
     this.selectedScience.set([]);
@@ -363,12 +402,15 @@ export class LabReportFormComponent {
         this.mqapJson.set(resp.response);
         this.patch('result_name', resp.response?.title ?? '');
         this.validatingHandler.set(false);
-        this.api.alertsFe.show({
-          id: 'reportResultSuccess',
-          title: 'Metadata successfully retrieved',
-          description: 'Title: ' + this.createResultBody().result_name,
-          status: 'success'
-        });
+        if (this.handleSource() === 'manual') {
+          this.api.alertsFe.show({
+            id: 'reportResultSuccess',
+            title: 'Metadata successfully retrieved',
+            description: 'Title: ' + this.createResultBody().result_name,
+            status: 'success',
+            closeIn: 1500
+          });
+        }
       },
       error: (err: any) => {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
@@ -376,6 +418,13 @@ export class LabReportFormComponent {
         this.patch('result_name', '');
       }
     });
+  }
+
+  clearSelectedKpItem(): void {
+    this.patch('handler', '');
+    this.patch('result_name', '');
+    this.mqapJson.set(null);
+    this.mqapUrlError.set({ ...KP_HANDLE_NO_ERROR });
   }
 
   // ---- chip removal: every multi-value field shows its selection as removable chips ----

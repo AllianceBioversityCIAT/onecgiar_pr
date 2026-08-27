@@ -23,6 +23,7 @@ import { BilateralPageHeaderComponent } from '../../components/bilateral-page-he
 import { BilateralProgressAsideComponent } from '../../components/bilateral-progress-aside/bilateral-progress-aside.component';
 import { FormSkeletonComponent } from '../../components/form-skeleton/form-skeleton.component';
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
+import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
 
 const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
   3: [
@@ -41,6 +42,7 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
 @Component({
   selector: 'app-bilateral-result-creator',
   imports: [
+    PhaseSwitcherModule,
     SectionZeroDashboardComponent,
     BilateralAccordionComponent,
     BilateralProjectSelectorComponent,
@@ -167,6 +169,29 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
       if (id && !this.isCreating() && !this.creationService.isLoadingResult()) {
         this.resultId.set(id);
         this.autoSaveService.setResultId(id);
+        this.loadPhasesForSwitcher(id);
+      }
+    });
+  }
+
+  /**
+   * P2-3229 AC5. Feeds `app-phase-switcher` the phases this result exists in, so a result
+   * carried across years can be navigated between them.
+   *
+   * The switcher reads `dataControlSE.resultPhaseList` and the endpoint keys off
+   * `resultsSE.currentResultId`, which is why both are set here rather than in the template —
+   * same pairing `result-detail.component.ts` uses. Hooked to the same effect that publishes the
+   * internal id, because that id is exactly what the endpoint needs and it is null until then.
+   */
+  private loadPhasesForSwitcher(resultId: number): void {
+    this.api.resultsSE.currentResultId = resultId;
+    this.api.resultsSE.GET_versioningResult().subscribe({
+      next: ({ response }) => {
+        this.api.dataControlSE.resultPhaseList = response ?? [];
+      },
+      // A result with no phase history is not an error state: the switcher simply renders nothing.
+      error: () => {
+        this.api.dataControlSE.resultPhaseList = [];
       }
     });
   }

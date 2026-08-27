@@ -1,10 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import {
-  CreateFeedbackDto,
-  FeedbackType,
-} from './dto/create-feedback.dto';
+import { CreateFeedbackDto, FeedbackType } from './dto/create-feedback.dto';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
@@ -40,7 +37,10 @@ export class FeedbackService {
       );
     }
     if (!title) {
-      throw new HttpException("Field 'title' is required", HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        "Field 'title' is required",
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (!description) {
       throw new HttpException(
@@ -74,19 +74,15 @@ export class FeedbackService {
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post(
-          `${this.jiraBaseUrl}/rest/api/3/issue`,
-          payload,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-              Authorization: `Basic ${Buffer.from(
-                `${this.jiraEmail}:${this.jiraToken}`,
-              ).toString('base64')}`,
-            },
+        this.httpService.post(`${this.jiraBaseUrl}/rest/api/3/issue`, payload, {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Basic ${Buffer.from(
+              `${this.jiraEmail}:${this.jiraToken}`,
+            ).toString('base64')}`,
           },
-        ),
+        }),
       );
 
       const issueKey = response.data?.key;
@@ -132,7 +128,7 @@ export class FeedbackService {
       .trim();
     const reportedBy = reporterName
       ? `${reporterName} (${user?.email ?? 'unknown'})`
-      : user?.email ?? 'unknown';
+      : (user?.email ?? 'unknown');
 
     const contextRows: string[] = [
       `Reported by: ${reportedBy}`,
