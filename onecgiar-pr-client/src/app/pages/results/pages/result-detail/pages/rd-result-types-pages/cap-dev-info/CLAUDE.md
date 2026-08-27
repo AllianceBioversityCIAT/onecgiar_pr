@@ -1,78 +1,78 @@
 # cap-dev-info — Capacity Sharing for Development information
 
-**Verified:** 2026-08-27 · branch performance-refactor · 6407a50fa
+**Verified:** 2026-08-27 · branch performance-refactor · 3ca36ff51
 
-## Qué es
-Sección de detalle del resultado para los resultados de tipo **Capacity Sharing** (Pool Funding,
-W1/W2): a cuánta gente se capacitó, duración, modalidad de entrega y si asistían en nombre de una
-organización.
+## What it is
+The result-detail section for **Capacity Sharing** results (Pool Funding, W1/W2): how many people were
+trained, for how long, the delivery method, and whether they attended on behalf of an organization.
 
-## Contrato
-- Componente NO standalone (`standalone: false`), declarado en `cap-dev-info.module.ts`.
-- Estado: **el componente es dueño del body**, no hay servicio propio.
-  `CapDevInfoComponent.capDevInfoRoutingBody` (`model/capDevInfoRoutingBody.ts`) es la fuente de verdad.
-- Endpoints vía `ApiService.resultsSE`:
+## Contract
+- NOT standalone (`standalone: false`), declared in `cap-dev-info.module.ts`.
+- State: **the component owns the body** — there is no dedicated service.
+  `CapDevInfoComponent.capDevInfoRoutingBody` (`model/capDevInfoRoutingBody.ts`) is the source of truth.
+- Endpoints via `ApiService.resultsSE`:
   - `GET_capacityDevelopent()` / `PATCH_capacityDevelopent(body)`
-  - `GET_capdevsTerms()` → se parte en dos con `splice(0,2)`: los 2 primeros son los **sub-términos**
-    (Long-term / Short-term, ids 1-2) y los 2 siguientes el grupo principal (ids 3-4).
+  - `GET_capdevsTerms()` → split in two with `splice(0,2)`: the first 2 are the **sub-terms**
+    (Long-term / Short-term, ids 1-2), the next 2 are the parent group (ids 3-4).
   - `GET_capdevsDeliveryMethod()`
-- `institutionsSE.institutionsList` (`InstitutionsService`) alimenta el multi-select de organizaciones.
-- `sectionLoading` (signal) maneja `[appSectionSkeleton]`; se libera en `next` **y** en `error`.
-- `hasSelectedOrganizations` (getter) alimenta el reporter oculto `appFeedbackValidation`.
+- `institutionsSE.institutionsList` (`InstitutionsService`) feeds the organizations multi-select.
+- `sectionLoading` (signal) drives `[appSectionSkeleton]`; released in `next` **and** in `error`.
+- `hasSelectedOrganizations` (getter) feeds the hidden `appFeedbackValidation` reporter.
 
-## Dónde se usa
-- Ruta hija de `result-detail`, cargada por `cap-dev-info-routing.module.ts`; el enrutado por tipo de
-  resultado vive en `rd-result-types-pages/`.
-- El pie de sección (`app-section-bottom-bar`) lee `DataControlService.fieldFeedbackList()`, que se
-  llena escaneando el DOM desde `result-detail.component.ts:146`.
+## Where it is used
+- Child route of `result-detail`, loaded by `cap-dev-info-routing.module.ts`; the per-result-type
+  routing lives in `rd-result-types-pages/`.
+- The section footer (`app-section-bottom-bar`) reads `DataControlService.fieldFeedbackList()`, filled
+  by a DOM scan started at `result-detail.component.ts:146`.
 
-## Cómo se marca un campo como obligatorio aquí
-El green check **no** lo decide el cliente. Lo decide una función MySQL. El cliente solo tiene que
-(a) pintar el asterisco y (b) hacer que el campo entre en la lista "N fields missing" del pie:
+## How a field is marked mandatory here
+The green check is **not** decided by the client. A MySQL function decides it. The client only has to
+(a) paint the asterisk and (b) get the field into the footer's "N fields missing" list:
 
-| Control | Cómo entra en la lista |
+| Control | How it enters the list |
 |---|---|
-| `app-pr-input` | `[required]="true"` → `.pr-input.mandatory`; vacío = `.input-validation` sin texto |
-| `app-pr-radio-button` | `[required]="true"` → `.pr-field.mandatory`; `complete` si `value != null` |
-| `app-pr-multi-select` | **no emite nada** → hace falta un `<div appFeedbackValidation labelText…>` al lado |
+| `app-pr-input` | `[required]="true"` → `.pr-input.mandatory`; empty = `.input-validation` with no text |
+| `app-pr-radio-button` | `[required]="true"` → `.pr-field.mandatory`; `complete` when `value != null` |
+| `app-pr-multi-select` | **emits nothing** → needs a sibling `<div appFeedbackValidation labelText…>` |
 
-## Trampas (⚠️ = ya rompió algo)
-- ⚠️ **El green check vive en MySQL, no acá.** `validation_capacity_dev_P25`
-  (`onecgiar-pr-server/src/migrations/1762528725798-createValidtionP25.ts:251-292`), resuelta por el SP
-  `validate_sections_mapped_batch`, exige **7 cosas**: `female_using`, `male_using`,
-  `non_binary_using`, `has_unkown_using` (los cuatro NOT NULL), `valid_text(capdev_term_id)`,
-  `valid_text(capdev_delivery_method_id)` y `is_attending_for_organization` NOT NULL; y si la
-  respuesta es **Yes**, además ≥1 fila en `results_by_institution` con `institution_roles_id = 3`.
-  Hasta el 25-ago-2026 el cliente marcaba **uno solo** → la sección nunca se ponía verde y nadie le
-  decía al usuario qué faltaba (**P2-3241 rebotó por esto**). Si mañana alguien relaja o endurece la
-  función SQL, **este HTML hay que tocarlo en el mismo cambio**.
-- ⚠️ **NO es un gate de portafolio ni de fase.** `validation_capacity_dev_P22`
-  (`…/1761849861521-createValidtionP22.ts:125-166`) es **idéntica** a la P25, campo por campo. Por eso
-  los `[required]` van sin `isP25()` ni `isCP2026()`: envolverlos en un gate dejaría a un portafolio
-  sin aviso y con la sección atascada en naranja. Verificado el 25-ago-2026 comparando ambas funciones.
-- ⚠️ **`app-pr-multi-select` no se autorreporta.** No renderiza `.pr-field.mandatory`, así que un
-  multi-select obligatorio y vacío es **invisible** para
-  `DataControlService.someMandatoryFieldIncompleteResultDetail()`. Por eso el `<div appFeedbackValidation>`
-  al final del template — mismo patrón que `geoscope-management.component.html:47`. Su
-  `FeedbackValidationDirectiveModule` **no** lo re-exporta `CustomFieldsModule`: se importa aparte en
-  `cap-dev-info.module.ts`.
-- ⚠️ **El sub-radio (`label="Degree"`, PhD/Master) es OPCIONAL a propósito.** `validate_capdev_term_id()`
-  hace `capdev_term_id = capdev_term_id_2 ?? capdev_term_id_1`, así que el grupo principal ya satisface
-  `valid_text(capdev_term_id)`. Marcarlo obligatorio pediría un dato que el servidor no exige.
-- ⚠️ **Ese `label="Degree"` NO es decorativo: es lo que hace que el grupo se dibuje dentro de su card**
-  (P2-3385). Sin `label` ni `description`, el getter `isBare` de `field-card` da `true` y se salta la
-  clase `field_card` entera → las opciones quedaban sueltas fuera del contenedor. Dos tests del spec
-  ("renders INSIDE a field card" y "framing … did NOT make it mandatory") caen si alguien lo quita o si
-  al ponerlo flipea `required`.
-- ⚠️ **0 es una respuesta válida** en los cuatro contadores: el servidor rechaza `NULL`, no `0`.
-  Cualquier validación que trate `0` como vacío vuelve a bloquear la sección.
-- ⚠️ **`is_attending_for_organization` llega como tinyint (0/1)** del endpoint legacy y las opciones del
-  radio son booleanas → `normalizeAttendanceValue()` (P2-3246). Sin eso el valor guardado "No" no se
-  pinta al recargar.
-- El texto de ayuda dice que si no hay datos desagregados se use "Unknown", pero el servidor igual
-  exige los otros tres NOT NULL → hay que escribir `0`. Es regla del servidor, no del cliente.
-- En Jest, `innerText` no existe en jsdom y el escaneo de campos faltantes lo lee: el spec instala un
-  shim `innerText → textContent` en `HTMLElement.prototype` y lo restaura en `afterAll`.
+## Traps (⚠️ = already broke something)
+- ⚠️ **The green check lives in MySQL, not here.** `validation_capacity_dev_P25`
+  (`onecgiar-pr-server/src/migrations/1762528725798-createValidtionP25.ts:251-292`), resolved by the SP
+  `validate_sections_mapped_batch`, demands **7 things**: `female_using`, `male_using`,
+  `non_binary_using`, `has_unkown_using` (all four NOT NULL), `valid_text(capdev_term_id)`,
+  `valid_text(capdev_delivery_method_id)` and `is_attending_for_organization` NOT NULL; and when the
+  answer is **Yes**, at least one `results_by_institution` row with `institution_roles_id = 3`.
+  Until 2026-08-25 the client marked only **one** of them → the section could never turn green and
+  nobody told the user what was missing (**P2-3241 was bounced for this**). If anyone relaxes or
+  tightens that SQL function, **this template must change in the same commit**.
+- ⚠️ **This is NOT a portfolio gate nor a phase gate.** `validation_capacity_dev_P22`
+  (`…/1761849861521-createValidtionP22.ts:125-166`) is **identical** to the P25 one, field by field.
+  That is why the `[required]` flags carry no `isP25()` or `isCP2026()`: wrapping them in a gate would
+  leave one portfolio with no warning and the section stuck in orange. Verified 2026-08-25 by
+  comparing both functions.
+- ⚠️ **`app-pr-multi-select` does not self-report.** It renders no `.pr-field.mandatory`, so a
+  mandatory empty multi-select is **invisible** to
+  `DataControlService.someMandatoryFieldIncompleteResultDetail()`. Hence the `<div appFeedbackValidation>`
+  at the end of the template — same pattern as `geoscope-management.component.html:47`. Its
+  `FeedbackValidationDirectiveModule` is **not** re-exported by `CustomFieldsModule`: it is imported
+  separately in `cap-dev-info.module.ts`.
+- ⚠️ **The sub-radio (`label="Degree"`, PhD/Master) is OPTIONAL on purpose.** `validate_capdev_term_id()`
+  sets `capdev_term_id = capdev_term_id_2 ?? capdev_term_id_1`, so the parent group already satisfies
+  `valid_text(capdev_term_id)`. Marking it required would demand a value the server never asks for.
+- ⚠️ **That `label="Degree"` is NOT decorative: it is what makes the group render inside its card**
+  (P2-3385). With neither `label` nor `description`, `field-card`'s `isBare` getter returns `true` and
+  the whole `field_card` class is skipped → the options used to sit loose outside the container. Two
+  specs ("renders INSIDE a field card" and "framing … did NOT make it mandatory") fail if anyone drops
+  the label, or if adding it flips `required`.
+- ⚠️ **0 is a valid answer** in the four counters: the server rejects `NULL`, not `0`. Any validation
+  treating `0` as empty blocks the section again.
+- ⚠️ **`is_attending_for_organization` arrives as a tinyint (0/1)** from the legacy endpoint while the
+  radio options are booleans → `normalizeAttendanceValue()` (P2-3246). Without it a saved "No" does
+  not render on reload.
+- The help text says to use "Unknown" when disaggregated data is unavailable, but the server still
+  demands the other three NOT NULL → you must type `0`. That is a server rule, not a client one.
+- In Jest, `innerText` does not exist in jsdom and the missing-fields scan reads it: the spec installs
+  an `innerText → textContent` shim on `HTMLElement.prototype` and restores it in `afterAll`.
 
-## Pendiente / Coming soon
-- Nada visible-deshabilitado en esta sección.
+## Pending / Coming soon
+- Nothing visible-but-disabled in this section.
