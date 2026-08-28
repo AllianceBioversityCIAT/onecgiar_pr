@@ -32,9 +32,9 @@ export const AXIS_LABEL_ABBREVIATIONS: Record<string, string> = {
   'Knowledge product': 'KP',
   'Innovation development': 'Inno-Dev',
   'Innovation use': 'Inno-Use',
-  'Policy change': 'PC',
-  'Other output': 'Other-Out',
-  'Other outcome': 'Other-Onc',
+  'Policy change': 'Policy',
+  'Other output': 'Other-Output',
+  'Other outcome': 'Other-Outcome',
   'Quality Assessed': 'QAed'
 };
 
@@ -338,6 +338,115 @@ export function singleBarTable(caption: string, bars: SingleBarRow[]): VizChartT
  * resolves to `null` — swallowed by `ProgramOverviewComponent.emitLink`, never emitted.
  */
 export function singleBarLinkFromClick(event: { dataIndex?: number }, bars: SingleBarRow[]): OverviewLink | null {
+  const i = event?.dataIndex;
+  if (typeof i !== 'number') return null;
+  return bars[i]?.link ?? null;
+}
+
+/**
+ * Builds the `app-pr-viz-chart` `options` for a Basic Radar Chart
+ * for "W3/Bilateral results by indicator category".
+ *
+ * Each category in `bars` becomes an axis on the radar polygon.
+ * Abbreviates axis names for neat polygon rendering.
+ */
+export function radarOption(bars: SingleBarRow[], color: string, labelColor: string): EChartsOption {
+  const maxCount = bars.length ? Math.max(...bars.map(bar => bar.count)) : 0;
+  const max = Math.ceil(maxCount * 1.15) || 10;
+
+  const indicator = bars.map(bar => ({
+    name: abbreviateAxisLabel(bar.name),
+    max
+  }));
+
+  const values = bars.map(bar => bar.count);
+
+  return {
+    tooltip: {
+      trigger: 'item',
+      confine: true,
+      formatter: () => {
+        const header = `<div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#111827;">W3/Bilateral results by indicator category</div>`;
+        const lines = bars.map(bar => {
+          const abbr = abbreviateAxisLabel(bar.name);
+          const nameLabel = abbr !== bar.name ? `${abbr} (${bar.name})` : bar.name;
+          const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;"></span>`;
+          const note = bar.link ? '' : ' <span style="font-size:10px;color:#9ca3af;">(not navigable)</span>';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;line-height:1.6;font-size:12px;"><span>${dot}${nameLabel}</span><strong style="color:#111827;">${bar.count}</strong>${note}</div>`;
+        });
+        return `${header}${lines.join('')}`;
+      }
+    },
+    radar: {
+      indicator,
+      shape: 'polygon',
+      splitNumber: 4,
+      axisName: {
+        color: labelColor,
+        fontSize: 12,
+        fontWeight: 500
+      },
+      splitLine: {
+        lineStyle: {
+          color: 'rgba(0, 0, 0, 0.08)'
+        }
+      },
+      splitArea: {
+        show: true,
+        areaStyle: {
+          color: ['rgba(250, 250, 250, 0.3)', 'rgba(235, 235, 235, 0.15)']
+        }
+      }
+    },
+    series: [
+      {
+        name: 'W3/Bilateral results',
+        type: 'radar',
+        data: [
+          {
+            value: values,
+            name: 'W3/Bilateral results',
+            symbol: 'circle',
+            symbolSize: 6,
+            itemStyle: { color },
+            lineStyle: { color, width: 2 },
+            areaStyle: {
+              color: color.startsWith('#')
+                ? `${color}33`
+                : color.startsWith('rgb(')
+                  ? color.replace('rgb(', 'rgba(').replace(')', ', 0.25)')
+                  : 'rgba(124, 58, 237, 0.25)'
+            },
+            label: {
+              show: true,
+              color: labelColor,
+              fontSize: 11,
+              fontWeight: 600,
+              formatter: (params: unknown) => {
+                const payload = params as { value?: number };
+                return typeof payload?.value === 'number' && payload.value > 0 ? String(payload.value) : '';
+              }
+            }
+          }
+        ]
+      }
+    ]
+  } as EChartsOption;
+}
+
+/** Visually-hidden `<table>` pairing for the radar card — caption + category/count rows. */
+export function radarTable(caption: string, bars: SingleBarRow[]): VizChartTableModel {
+  return {
+    caption,
+    headers: ['Indicator category', 'Results'],
+    rows: bars.map(bar => [bar.name, bar.count])
+  };
+}
+
+/**
+ * Resolves a radar chart click event back to the `OverviewLink` stored on the clicked row, if applicable.
+ */
+export function radarLinkFromClick(event: { dataIndex?: number }, bars: SingleBarRow[]): OverviewLink | null {
   const i = event?.dataIndex;
   if (typeof i !== 'number') return null;
   return bars[i]?.link ?? null;

@@ -359,6 +359,10 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     });
     expect(centers.find(c => c.name === 'IITA')?.link).toEqual({ origin: 'W3/Bilaterals', center: 'IITA' });
     expect(centers.find(c => c.name === 'Not specified')?.link).toBeNull();
+
+    const bilateralSegments = component.overviewBilateralStatusSegments();
+    expect(bilateralSegments.find(s => s.label === 'Approved')?.count).toBe(2);
+    expect(bilateralSegments.find(s => s.label === 'Approved')?.link).toEqual({ origin: 'W3/Bilaterals', status: 'Approved' });
   });
 
   it('onOverviewLink navigates once with the entity-details commands and exact query params (origin+center)', async () => {

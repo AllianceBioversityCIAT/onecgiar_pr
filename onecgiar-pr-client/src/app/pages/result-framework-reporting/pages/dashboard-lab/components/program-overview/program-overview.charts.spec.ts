@@ -12,7 +12,10 @@ import {
   datasetIdsFor,
   singleBarOption,
   singleBarTable,
-  singleBarLinkFromClick
+  singleBarLinkFromClick,
+  radarOption,
+  radarTable,
+  radarLinkFromClick
 } from './program-overview.charts';
 import { HeatmapModel, OverviewLink, StatusSegment } from './program-overview.component';
 
@@ -412,6 +415,64 @@ describe('program-overview.charts singleBarOption / singleBarTable / singleBarLi
   });
 });
 
+describe('program-overview.charts radarOption / radarTable / radarLinkFromClick', () => {
+  const bars = [
+    { name: 'Capacity sharing for development', count: 70, link: { origin: 'W3/Bilaterals', category: 'Capacity sharing for development' } },
+    { name: 'Innovation development', count: 30, link: { origin: 'W3/Bilaterals', category: 'Innovation development' } },
+    { name: 'Knowledge product', count: 0, link: null }
+  ];
+
+  describe('radarOption', () => {
+    it('builds a radar chart configuration with indicators matching abbreviated categories', () => {
+      const option = radarOption(bars, '#7c3aed', '#374151') as {
+        radar: { indicator: { name: string; max: number }[] };
+        series: { type: string; data: { value: number[] }[] }[];
+      };
+      expect(option.radar).toBeDefined();
+      expect(option.radar.indicator.map(ind => ind.name)).toEqual(['Cap-Dev', 'Inno-Dev', 'KP']);
+      expect(option.series[0].type).toBe('radar');
+      expect(option.series[0].data[0].value).toEqual([70, 30, 0]);
+    });
+
+    it('formats tooltips with category names and counts', () => {
+      const option = radarOption(bars, '#7c3aed', '#374151') as {
+        tooltip: { formatter: () => string };
+      };
+      const formatted = option.tooltip.formatter();
+      expect(formatted).toContain('Capacity sharing for development');
+      expect(formatted).toContain('70');
+      expect(formatted).toContain('Innovation development');
+      expect(formatted).toContain('30');
+      expect(formatted).toContain('(not navigable)');
+    });
+
+    it('does not throw for an empty array', () => {
+      expect(() => radarOption([], '#7c3aed', '#374151')).not.toThrow();
+    });
+  });
+
+  describe('radarTable', () => {
+    it('builds caption, headers and rows for accessible table', () => {
+      const table = radarTable('W3/Bilateral results by indicator category', bars);
+      expect(table.caption).toBe('W3/Bilateral results by indicator category');
+      expect(table.headers).toEqual(['Indicator category', 'Results']);
+      expect(table.rows).toEqual([
+        ['Capacity sharing for development', 70],
+        ['Innovation development', 30],
+        ['Knowledge product', 0]
+      ]);
+    });
+  });
+
+  describe('radarLinkFromClick', () => {
+    it('resolves dataIndex to link', () => {
+      expect(radarLinkFromClick({ dataIndex: 0 }, bars)).toEqual({ origin: 'W3/Bilaterals', category: 'Capacity sharing for development' });
+      expect(radarLinkFromClick({ dataIndex: 2 }, bars)).toBeNull();
+      expect(radarLinkFromClick({}, bars)).toBeNull();
+    });
+  });
+});
+
 describe('program-overview.charts donut (OVW-T-4)', () => {
   const segments: StatusSegment[] = [
     { key: 'not-started', label: 'Not started', count: 0, bg: '', fg: '', statusName: 'Not started', link: null },
@@ -493,6 +554,9 @@ describe('program-overview.charts donut (OVW-T-4)', () => {
 describe('program-overview.charts axis abbreviations (quick/heatmap-axis-abbreviations)', () => {
   it('abbreviates known long labels at display level and passes unknown labels through', () => {
     expect(abbreviateAxisLabel('Capacity sharing for development')).toBe('Cap-Dev');
+    expect(abbreviateAxisLabel('Policy change')).toBe('Policy');
+    expect(abbreviateAxisLabel('Other outcome')).toBe('Other-Outcome');
+    expect(abbreviateAxisLabel('Other output')).toBe('Other-Output');
     expect(abbreviateAxisLabel('Quality Assessed')).toBe('QAed');
     expect(abbreviateAxisLabel('Editing')).toBe('Editing');
     expect(abbreviateAxisLabel('IITA')).toBe('IITA');

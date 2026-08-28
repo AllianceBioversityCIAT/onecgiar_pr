@@ -1162,6 +1162,7 @@
         <app-program-overview
           [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
           [statusSegments]="overviewStatusSegments()"
+          [bilateralStatusSegments]="overviewBilateralStatusSegments()"
           [aowProgress]="overviewAowProgress()"
           [xcutProgress]="overviewXcutProgress()"
           [bilateralCategories]="overviewBilateralCategories()"

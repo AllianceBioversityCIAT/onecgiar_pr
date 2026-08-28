@@ -10,6 +10,9 @@ import {
   singleBarOption,
   singleBarTable,
   singleBarLinkFromClick,
+  radarOption,
+  radarTable,
+  radarLinkFromClick,
   donutOption,
   donutTable,
   sectorLinkFromClick
@@ -44,6 +47,8 @@ export interface StatusSegment {
   /** `{status: statusName}` when `count > 0`, else `null` (non-navigable). */
   link: OverviewLink | null;
 }
+
+export type OverviewSection = 'all' | 'w1w2' | 'bilateral' | 'aow';
 
 export interface AowProgressRow {
   code: string;
@@ -118,6 +123,8 @@ export class ProgramOverviewComponent {
   readonly xcutProgress = input<AowProgressRow[]>([]);
   /** W3/Bilateral results by category, primary-role only (P2-3302). */
   readonly bilateralCategories = input<CategoryBar[]>([]);
+  /** W3/Bilateral results reporting status segments. */
+  readonly bilateralStatusSegments = input<StatusSegment[]>([]);
   /** Centers with reported W3/bilateral results. */
   readonly bilateralCenters = input<OverviewCenterBar[]>([]);
   /** W1/W2 category × status matrix (`OVW-R-2`). `null`/empty `rows` → card shows its empty state. */
@@ -142,6 +149,34 @@ export class ProgramOverviewComponent {
   emitLink(link: OverviewLink | null): void {
     if (link) this.openResults.emit(link);
   }
+
+  /** Active section filter: 'all' | 'w1w2' | 'bilateral' | 'aow' */
+  readonly activeSection = signal<OverviewSection>('all');
+
+  setActiveSection(section: OverviewSection): void {
+    this.activeSection.set(this.activeSection() === section && section !== 'all' ? 'all' : section);
+  }
+
+  readonly aowStats = computed(() => {
+    const rows = this.aowProgress();
+    const totalPlanned = rows.reduce((sum, r) => sum + r.total, 0);
+    const totalDone = rows.reduce((sum, r) => sum + r.done, 0);
+    const pct = totalPlanned ? Math.round((totalDone / totalPlanned) * 100) : 0;
+    return { totalPlanned, totalDone, pct, count: rows.length };
+  });
+
+  readonly contributingCentersCount = computed(() => {
+    const centers = this.bilateralCenters();
+    return centers.filter(c => c.name !== 'Not specified').length || centers.length;
+  });
+
+  readonly w1w2SubmittedCount = computed(() =>
+    this.statusSegments().find(s => s.key === 'submitted')?.count ?? 0
+  );
+
+  readonly bilateralApprovedCount = computed(() =>
+    this.bilateralStatusSegments().find(s => s.key === 'approved')?.count ?? 0
+  );
 
   /**
    * Chart-ramp tokens, resolved once per render pass. Reversed so the visualMap runs
@@ -269,6 +304,43 @@ export class ProgramOverviewComponent {
     return this.segmentWidth(segment) > 8;
   }
 
+  readonly bilateralDonutOption = computed<EChartsOption>(() =>
+    donutOption(this.bilateralStatusSegments(), this.donutPalette())
+  );
+
+  readonly bilateralDonutTable = computed<VizChartTableModel>(() =>
+    donutTable(this.bilateralStatusSegments())
+  );
+
+  onBilateralDonutClick(event: ECElementEvent): void {
+    this.emitLink(sectorLinkFromClick(event, this.bilateralStatusSegments()));
+  }
+
+  readonly bilateralStatusTotal = computed(() =>
+    this.bilateralStatusSegments().reduce((sum, s) => sum + s.count, 0)
+  );
+
+  bilateralSegmentWidth(segment: StatusSegment): number {
+    const total = this.bilateralStatusTotal();
+    return total ? (segment.count / total) * 100 : 0;
+  }
+
+  showsBilateralSegmentCount(segment: StatusSegment): boolean {
+    return this.bilateralSegmentWidth(segment) > 8;
+  }
+
+  bilateralSegmentPercent(segment: StatusSegment): number {
+    const total = this.bilateralStatusTotal();
+    return total ? Math.round((segment.count / total) * 100) : 0;
+  }
+
+  readonly bilateralApprovedPercent = computed(() => {
+    const total = this.bilateralStatusTotal();
+    if (!total) return 0;
+    const approved = this.bilateralStatusSegments().find(s => s.key === 'approved')?.count ?? 0;
+    return Math.round((approved / total) * 100);
+  });
+
   percentOf(row: AowProgressRow): number {
     return row.total ? Math.round((row.done / row.total) * 100) : 0;
   }
@@ -295,19 +367,19 @@ export class ProgramOverviewComponent {
 
   readonly bilateralCategoriesOption = computed<EChartsOption | null>(() => {
     const bars = this.bilateralCategories();
-    return bars.length ? singleBarOption(bars, this.bilateralCategoriesColor(), this.totalLabelColor()) : null;
+    return bars.length ? radarOption(bars, this.bilateralCategoriesColor(), this.totalLabelColor()) : null;
   });
 
   readonly bilateralCategoriesTable = computed<VizChartTableModel | null>(() => {
     const bars = this.bilateralCategories();
-    return bars.length ? singleBarTable('W3/Bilateral results by indicator category', bars) : null;
+    return bars.length ? radarTable('W3/Bilateral results by indicator category', bars) : null;
   });
 
-  readonly bilateralCategoriesHeight = computed(() => this.barCardHeight(this.bilateralCategories().length));
+  readonly bilateralCategoriesHeight = computed(() => '320px');
 
   /** Resolves the clicked row back to its `OverviewLink` and emits (or swallows a `null`). */
   onBilateralCategoriesClick(event: ECElementEvent): void {
-    this.emitLink(singleBarLinkFromClick(event, this.bilateralCategories()));
+    this.emitLink(radarLinkFromClick(event, this.bilateralCategories()));
   }
 
   readonly bilateralCentersOption = computed<EChartsOption | null>(() => {

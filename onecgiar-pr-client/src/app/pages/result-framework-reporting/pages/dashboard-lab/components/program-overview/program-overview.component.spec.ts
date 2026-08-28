@@ -142,35 +142,33 @@ describe('ProgramOverviewComponent', () => {
     // and status → status headline → bilateral volume + contributors → their cross → plan progress.
     expect(headings).toEqual([
       'About this program',
+      'Reporting status',
       'W1/W2 results by category and status',
       'Reporting status',
-      // P2-3481: the titles name the funding type, so a user can tell the two blocks apart.
       'W3/Bilateral results by indicator category',
-      'Centers with reported W3/bilateral results',
       'W3/Bilateral results by center and category',
       'Progress by area of work'
     ]);
   });
 
-  it('no longer renders the three cards removed on user request', () => {
+  it('no longer renders the cards removed on user request', () => {
     const text = fixture.nativeElement.textContent as string;
-    // P2-3298 / P2-3300 / P2-3299 respectively.
+    // P2-3298 / P2-3300 / P2-3299 and Centers card removed on user request
     expect(text).not.toContain('Reporting pace');
     expect(text).not.toContain('Needs attention');
     expect(text).not.toContain('Impact so far');
     expect(text).not.toContain('Countries reached');
+    expect(text).not.toContain('Centers with reported W3/bilateral results');
   });
 
   /**
    * Rewritten from "there is still no SVG" (`OVW-T-3`, tasks.md DoD): the two matrix cards, the
-   * Reporting-status donut (`OVW-T-4`), and — since `CVT-A-5` converted them from DOM bars —
-   * the two single-series bilateral bar cards each mount a real `app-pr-viz-chart` host, always
-   * paired with a non-null `tableModel` (the wrapper clears the chart otherwise — `OVW-R-2`/
-   * `OVW-R-3`/`OVW-R-4`/`CVT-A-5` a11y pairing).
+   * Reporting-status donut (`OVW-T-4`), and the bilateral radar card each mount a real
+   * `app-pr-viz-chart` host, always paired with a non-null `tableModel`.
    */
-  it('renders 5 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
+  it('renders 4 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
     const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-    expect(hosts.length).toBe(5);
+    expect(hosts.length).toBe(4);
     hosts.forEach(host => {
       expect(host.componentInstance.tableModel()).toBeTruthy();
       expect(host.componentInstance.options()).toBeTruthy();
@@ -218,19 +216,14 @@ describe('ProgramOverviewComponent', () => {
   // single-series `app-pr-viz-chart` hosts (like the matrix/donut cards); those members and DOM
   // rows no longer exist. See the `bilateral single-series bar cards (CVT-A-5)` describe below.
 
-  describe('bilateral single-series bar cards (CVT-A-5 / CVT-DD-9)', () => {
-    it('mounts an app-pr-viz-chart host per card, each with non-null options/tableModel and the right caption', () => {
+  describe('bilateral indicator categories radar card', () => {
+    it('mounts an app-pr-viz-chart host with non-null options/tableModel and the right caption', () => {
       const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
       const categoriesHost = hosts.find(h => h.componentInstance.chartTitle() === 'W3/Bilateral results by indicator category');
-      const centersHost = hosts.find(h => h.componentInstance.chartTitle() === 'Centers with reported W3/bilateral results');
 
       expect(categoriesHost).toBeTruthy();
       expect(categoriesHost?.componentInstance.options()).toBeTruthy();
       expect(categoriesHost?.componentInstance.tableModel()?.caption).toBe('W3/Bilateral results by indicator category');
-
-      expect(centersHost).toBeTruthy();
-      expect(centersHost?.componentInstance.options()).toBeTruthy();
-      expect(centersHost?.componentInstance.tableModel()?.caption).toBe('Centers with reported W3/bilateral results');
     });
 
     it('emits the stored link when a navigable bilateral-categories row is activated', () => {
@@ -242,27 +235,6 @@ describe('ProgramOverviewComponent', () => {
 
       expect(emitted).toEqual([{ origin: 'W3/Bilaterals', category: 'Capacity sharing for development' }]);
       sub.unsubscribe();
-    });
-
-    it('emits the stored link when a navigable center row is activated', () => {
-      const emitted: OverviewLink[] = [];
-      const sub = component.openResults.subscribe(link => emitted.push(link));
-
-      // dataIndex 0 = centers[0] = 'CIAT'.
-      component.onBilateralCentersClick({ dataIndex: 0 } as unknown as ECElementEvent);
-
-      expect(emitted).toEqual([{ origin: 'W3/Bilaterals', center: 'CIAT' }]);
-      sub.unsubscribe();
-    });
-
-    /** FAIL input: resolving the synthetic "Not specified" row's `link: null` to a real link turns this red. */
-    it('emits nothing when the non-navigable "Not specified" center row is activated', () => {
-      const emitSpy = jest.spyOn(component.openResults, 'emit');
-
-      // dataIndex 4 = centers[4] = 'Not specified' (link: null).
-      component.onBilateralCentersClick({ dataIndex: 4 } as unknown as ECElementEvent);
-
-      expect(emitSpy).not.toHaveBeenCalled();
     });
 
     /** FAIL input: a resolver that doesn't guard a missing/non-numeric dataIndex turns this red. */
@@ -279,15 +251,6 @@ describe('ProgramOverviewComponent', () => {
       fixture.detectChanges();
       expect(fixture.nativeElement.textContent).toContain('No bilateral results are linked to this program yet.');
       expect(component.bilateralCategoriesOption()).toBeNull();
-    });
-
-    it('shows an empty state instead of a chart when no centers have reported bilateral results', () => {
-      fixture.componentRef.setInput('bilateralCenters', []);
-      fixture.detectChanges();
-      expect(fixture.nativeElement.textContent).toContain(
-        'No centers have reported bilateral results for this program yet.'
-      );
-      expect(component.bilateralCentersOption()).toBeNull();
     });
 
     it('does not render legacy bilateral role counts or review stub', () => {
@@ -533,8 +496,8 @@ describe('ProgramOverviewComponent', () => {
     /** FAIL input: a second chart host per card, or a table rebuilt on toggle, turns this red. */
     it('keeps exactly one app-pr-viz-chart host per card and the same tableModel reference across the switch', () => {
       const beforeHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-      // CVT-A-5: 2 matrix cards + donut + 2 single-series bilateral bar cards = 5 hosts total.
-      expect(beforeHosts.length).toBe(5);
+      // 2 matrix cards + donut + 1 bilateral radar card = 4 hosts total.
+      expect(beforeHosts.length).toBe(4);
       const w12TableBefore = component.w12HeatmapTable();
       const bilateralTableBefore = component.bilateralHeatmapTable();
 
@@ -543,7 +506,7 @@ describe('ProgramOverviewComponent', () => {
       fixture.detectChanges();
 
       const afterHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-      expect(afterHosts.length).toBe(5);
+      expect(afterHosts.length).toBe(4);
       expect(component.w12HeatmapTable()).toBe(w12TableBefore);
       expect(component.bilateralHeatmapTable()).toBe(bilateralTableBefore);
     });
@@ -685,13 +648,13 @@ describe('ProgramOverviewComponent', () => {
     });
 
     /** FAIL input: the separator landing after the card (or elsewhere) turns this red. */
-    it('places the "W1/W2" separator immediately before the W1/W2 matrix card', () => {
+    it('places the "W1/W2" separator immediately before the W1/W2 reporting status card', () => {
       const children = gridChildren();
       const separatorIndex = children.findIndex(
         el => el.getAttribute('aria-hidden') === 'true' && el.textContent?.trim() === 'W1/W2'
       );
       const w12CardIndex = children.findIndex(
-        el => el.querySelector('h2')?.textContent?.trim() === 'W1/W2 results by category and status'
+        el => el.querySelector('h2')?.textContent?.trim() === 'Reporting status'
       );
       expect(separatorIndex).toBeGreaterThan(-1);
       expect(w12CardIndex).toBe(separatorIndex + 1);
@@ -704,7 +667,7 @@ describe('ProgramOverviewComponent', () => {
         el => el.getAttribute('aria-hidden') === 'true' && el.textContent?.trim() === 'W3/Bilateral'
       );
       const bilateralCardIndex = children.findIndex(
-        el => el.querySelector('h2')?.textContent?.trim() === 'W3/Bilateral results by indicator category'
+        (el, idx) => idx > separatorIndex && el.querySelector('h2')?.textContent?.trim() === 'Reporting status'
       );
       expect(separatorIndex).toBeGreaterThan(-1);
       expect(bilateralCardIndex).toBe(separatorIndex + 1);
@@ -716,6 +679,106 @@ describe('ProgramOverviewComponent', () => {
       expect(headings.length).toBe(7);
       expect(headings).not.toContain('W1/W2');
       expect(headings).not.toContain('W3/Bilateral');
+    });
+  });
+
+  describe('W3/Bilateral Reporting status card', () => {
+    it('renders empty message when no bilateral status segments provided', () => {
+      expect(fixture.nativeElement.textContent).toContain('No bilateral results reported for this program yet.');
+    });
+
+    it('renders donut and progress bar when bilateral status segments are present', () => {
+      const bilateralSegs: StatusSegment[] = [
+        {
+          key: 'pending',
+          label: 'Pending Review',
+          count: 12,
+          bg: '#fef3c7',
+          fg: '#b45309',
+          statusName: 'Pending Review',
+          link: { origin: 'W3/Bilaterals', status: 'Pending Review' }
+        },
+        {
+          key: 'approved',
+          label: 'Approved',
+          count: 8,
+          bg: '#d1fae5',
+          fg: '#047857',
+          statusName: 'Approved',
+          link: { origin: 'W3/Bilaterals', status: 'Approved' }
+        }
+      ];
+      fixture.componentRef.setInput('bilateralStatusSegments', bilateralSegs);
+      fixture.detectChanges();
+
+      expect(component.bilateralStatusTotal()).toBe(20);
+      expect(component.bilateralSegmentWidth(bilateralSegs[0])).toBe(60);
+      expect(component.bilateralSegmentWidth(bilateralSegs[1])).toBe(40);
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+    });
+  });
+
+  describe('KPI summary cards and section filtering', () => {
+    it('computes correct totals for all 4 KPI cards', () => {
+      expect(component.statusTotal()).toBe(7);
+      expect(component.bilateralStatusTotal()).toBe(0);
+      expect(component.contributingCentersCount()).toBe(4);
+      expect(component.aowStats().pct).toBe(30);
+      expect(component.aowStats().count).toBe(2);
+    });
+
+    it('renders 4 KPI card buttons with proper content', () => {
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('W1/W2 Results');
+      expect(text).toContain('W3 / Bilateral');
+      expect(text).toContain('Contributing Centers');
+      expect(text).toContain('Areas of Work');
+    });
+
+    it('filters visible sections when a section tab is clicked', () => {
+      expect(component.activeSection()).toBe('all');
+
+      // Click W1/W2
+      component.setActiveSection('w1w2');
+      fixture.detectChanges();
+      expect(component.activeSection()).toBe('w1w2');
+      let headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
+      expect(headings).toContain('Reporting status');
+      expect(headings).toContain('W1/W2 results by category and status');
+      expect(headings).not.toContain('W3/Bilateral results by indicator category');
+      expect(headings).not.toContain('Progress by area of work');
+
+      // Click Bilateral
+      component.setActiveSection('bilateral');
+      fixture.detectChanges();
+      expect(component.activeSection()).toBe('bilateral');
+      headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
+      expect(headings).toContain('W3/Bilateral results by indicator category');
+      expect(headings).toContain('W3/Bilateral results by center and category');
+      expect(headings).not.toContain('W1/W2 results by category and status');
+      expect(headings).not.toContain('Progress by area of work');
+
+      // Click AoW
+      component.setActiveSection('aow');
+      fixture.detectChanges();
+      expect(component.activeSection()).toBe('aow');
+      headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
+      expect(headings).toEqual(['About this program', 'Progress by area of work']);
+
+      // Reset to all
+      component.setActiveSection('all');
+      fixture.detectChanges();
+      expect(component.activeSection()).toBe('all');
+      headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
+      expect(headings.length).toBe(7);
+    });
+
+    it('toggles section to "all" when clicking the currently active section', () => {
+      component.setActiveSection('w1w2');
+      expect(component.activeSection()).toBe('w1w2');
+
+      component.setActiveSection('w1w2');
+      expect(component.activeSection()).toBe('all');
     });
   });
 });

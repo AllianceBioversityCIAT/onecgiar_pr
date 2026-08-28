@@ -1026,6 +1026,89 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   });
 
+  /** Bilateral results reporting status segments (Pending Review, In QA, Approved, Rejected). */
+  readonly overviewBilateralStatusSegments = computed<OverviewStatusSegment[]>(() => {
+    const rows = this.bilateralRows();
+    if (!rows.length) return [];
+
+    const byStatus = new Map<string, number>();
+    for (const r of rows) {
+      const name = r.status_name?.trim() || 'Pending Review';
+      byStatus.set(name, (byStatus.get(name) ?? 0) + 1);
+    }
+
+    const slots: { key: string; label: string; bg: string; fg: string; matchers: string[] }[] = [
+      {
+        key: 'pending',
+        label: 'Pending Review',
+        bg: 'var(--pr-status-submitted-bg)',
+        fg: 'var(--pr-status-submitted-fg)',
+        matchers: ['pending review', 'pending', 'submitted']
+      },
+      {
+        key: 'in-qa',
+        label: 'In QA',
+        bg: 'var(--pr-status-in-qa-bg)',
+        fg: 'var(--pr-status-in-qa-fg)',
+        matchers: ['in qa', 'quality assessed']
+      },
+      {
+        key: 'approved',
+        label: 'Approved',
+        bg: 'var(--pr-status-approved-bg)',
+        fg: 'var(--pr-status-approved-fg)',
+        matchers: ['approved']
+      },
+      {
+        key: 'rejected',
+        label: 'Rejected',
+        bg: 'var(--pr-status-not-started-bg)',
+        fg: 'var(--pr-status-not-started-fg)',
+        matchers: ['rejected', 'discontinued']
+      }
+    ];
+
+    const matchedNames = new Set<string>();
+    const segments: OverviewStatusSegment[] = [];
+
+    for (const slot of slots) {
+      let count = 0;
+      let matchedName = slot.label;
+      for (const [name, c] of byStatus.entries()) {
+        if (slot.matchers.includes(name.toLowerCase())) {
+          count += c;
+          matchedNames.add(name);
+          matchedName = name;
+        }
+      }
+      segments.push({
+        key: slot.key,
+        label: slot.label,
+        count,
+        bg: slot.bg,
+        fg: slot.fg,
+        statusName: matchedName,
+        link: count > 0 ? { origin: BILATERAL_ORIGIN, status: matchedName } : null
+      });
+    }
+
+    for (const [name, count] of byStatus.entries()) {
+      if (!matchedNames.has(name) && count > 0) {
+        segments.push({
+          key: name.toLowerCase().replace(/\s+/g, '-'),
+          label: name,
+          count,
+          bg: 'var(--pr-status-in-progress-bg)',
+          fg: 'var(--pr-status-in-progress-fg)',
+          statusName: name,
+          link: { origin: BILATERAL_ORIGIN, status: name }
+        });
+      }
+    }
+
+    return segments;
+  });
+
   /** Columns of the W1/W2 heatmap (`OVW-R-2`) — `others` (statuses 4–8, undecomposable) → 'Other'. */
   private static readonly W12_HEATMAP_COLS = ['Editing', 'Quality Assessed', 'Submitted', 'Other'] as const;
 

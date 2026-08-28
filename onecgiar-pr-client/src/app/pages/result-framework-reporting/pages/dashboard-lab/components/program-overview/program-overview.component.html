@@ -28,67 +28,208 @@
       {{ description() }}
     </p>
   </section>
-  <!-- Section separator (CVT-A-4/CVT-DD-8, amendment 2026-08-27, owner, CVT-T-3 gate): visual
-       group label only — small uppercase label + hairline rule, `aria-hidden="true"`, NOT a
-       heading, so it never touches the pinned <h2> count/order (stays 7). Groups "W1/W2 results
-       by category and status" with "Reporting status" below it. -->
-  <div class="col-span-12 flex items-center gap-[12px]" aria-hidden="true">
-    <span class="shrink-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">W1/W2</span>
-    <span class="h-px flex-1 bg-[var(--pr-border)]"></span>
-  </div>
-  <!-- 2 · W1/W2 results by category and status (heatmap/bars) · span 12 — CVT-A-3 (amendment,
-       2026-08-27, owner, CVT-T-3 gate): the single-series "W1/W2 results by indicator category"
-       card (former card 2, P2-3303) is REMOVED — with bars as the default view and bar-end
-       totals (CVT-A-1/A-2), this matrix card's rows ARE the indicator categories, so it fully
-       subsumes the deleted card. Expanded from col-span-6 to col-span-12 (full width). -->
-  <section class="col-span-12 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-    <div class="mb-[16px] flex items-center justify-between gap-[12px]">
-      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
-        W1/W2 results by category and status
-      </h2>
-      <!-- Heatmap↔Bars toggle (CVT-R-1/CVT-DD-6) — status-pill styling, right-aligned, present
-           even when the card is empty (toggle-dependent divergence is out of scope). -->
-      <div class="flex shrink-0 items-center gap-0.5 rounded-[8px] border border-[var(--pr-border)] p-[2px]">
-        <button
-          type="button"
-          (click)="setW12ViewMode('heatmap')"
-          [attr.aria-pressed]="w12ViewMode() === 'heatmap'"
-          [class]="
-            w12ViewMode() === 'heatmap'
-              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
-              : 'bg-transparent text-[var(--pr-text-secondary)]'
-          "
-          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
-          Heatmap
-        </button>
-        <button
-          type="button"
-          (click)="setW12ViewMode('bars')"
-          [attr.aria-pressed]="w12ViewMode() === 'bars'"
-          [class]="
-            w12ViewMode() === 'bars'
-              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
-              : 'bg-transparent text-[var(--pr-text-secondary)]'
-          "
-          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
-          Bars
-        </button>
+
+  <!-- KPI Summary Cards: Totals and key health metrics -->
+  <div class="col-span-12 grid grid-cols-12 gap-[16px]">
+    <!-- KPI 1: W1/W2 Results -->
+    <button
+      type="button"
+      (click)="setActiveSection('w1w2')"
+      class="col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
+      [class]="activeSection() === 'w1w2'
+        ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
+        : 'border-[var(--pr-border)]'">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+          W1/W2 Results
+        </span>
+        <span class="inline-flex h-[24px] items-center rounded-full bg-[var(--pr-color-primary-50)] px-[8px] text-[11px] font-semibold text-[var(--pr-color-primary-600)]">
+          Core
+        </span>
       </div>
+      <div class="flex items-baseline gap-[8px]">
+        <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+          {{ statusTotal() }}
+        </span>
+        <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
+      </div>
+      <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
+        <span class="h-[7px] w-[7px] rounded-full bg-[var(--pr-status-submitted-fg)]"></span>
+        <span>{{ w1w2SubmittedCount() }} submitted</span>
+        <span class="text-[var(--pr-text-muted)]">·</span>
+        <span>{{ statusSegments().length }} statuses</span>
+      </div>
+    </button>
+
+    <!-- KPI 2: W3 / Bilateral Results -->
+    <button
+      type="button"
+      (click)="setActiveSection('bilateral')"
+      class="col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
+      [class]="activeSection() === 'bilateral'
+        ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
+        : 'border-[var(--pr-border)]'">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+          W3 / Bilateral
+        </span>
+        <span class="inline-flex h-[24px] items-center rounded-full bg-purple-50 px-[8px] text-[11px] font-semibold text-purple-700">
+          Projects
+        </span>
+      </div>
+      <div class="flex items-baseline gap-[8px]">
+        <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+          {{ bilateralStatusTotal() }}
+        </span>
+        <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
+      </div>
+      <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
+        <span class="h-[7px] w-[7px] rounded-full bg-[var(--pr-status-approved-fg)]"></span>
+        <span>{{ bilateralApprovedPercent() }}% approved</span>
+        <span class="text-[var(--pr-text-muted)]">·</span>
+        <span>{{ bilateralCategories().length }} categories</span>
+      </div>
+    </button>
+
+    <!-- KPI 3: Contributing Centers -->
+    <button
+      type="button"
+      (click)="setActiveSection('bilateral')"
+      class="col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
+      [class]="activeSection() === 'bilateral'
+        ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
+        : 'border-[var(--pr-border)]'">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+          Contributing Centers
+        </span>
+        <span class="inline-flex h-[24px] items-center rounded-full bg-emerald-50 px-[8px] text-[11px] font-semibold text-emerald-700">
+          Centers
+        </span>
+      </div>
+      <div class="flex items-baseline gap-[8px]">
+        <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+          {{ contributingCentersCount() }}
+        </span>
+        <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">institutes</span>
+      </div>
+      <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
+        <span class="truncate">Reporting bilateral results</span>
+      </div>
+    </button>
+
+    <!-- KPI 4: Areas of Work Progress -->
+    <button
+      type="button"
+      (click)="setActiveSection('aow')"
+      class="col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
+      [class]="activeSection() === 'aow'
+        ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
+        : 'border-[var(--pr-border)]'">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+          Areas of Work
+        </span>
+        <span class="inline-flex h-[24px] items-center rounded-full bg-blue-50 px-[8px] text-[11px] font-semibold text-blue-700">
+          Plan
+        </span>
+      </div>
+      <div class="flex items-baseline gap-[8px]">
+        <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+          {{ aowStats().pct }}%
+        </span>
+        <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">completed</span>
+      </div>
+      <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
+        <span>{{ aowStats().totalDone }}/{{ aowStats().totalPlanned }} KPIs</span>
+        <span class="text-[var(--pr-text-muted)]">·</span>
+        <span>{{ aowStats().count }} AoWs</span>
+      </div>
+    </button>
+  </div>
+
+  <!-- Section filter tabs -->
+  <div class="col-span-12 flex flex-wrap items-center justify-between gap-[12px] pt-1">
+    <div class="inline-flex rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] p-[3px]" role="tablist" aria-label="Section filter">
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeSection() === 'all'"
+        (click)="setActiveSection('all')"
+        class="cursor-pointer rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        [class]="activeSection() === 'all'
+          ? 'bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] shadow-sm font-bold'
+          : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
+        All Sections
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeSection() === 'w1w2'"
+        (click)="setActiveSection('w1w2')"
+        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        [class]="activeSection() === 'w1w2'
+          ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
+          : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
+        <span>W1/W2</span>
+        @if (statusTotal() > 0) {
+          <span class="rounded-full bg-[var(--pr-border)] px-[7px] py-[1px] text-[11px] font-bold tabular-nums">
+            {{ statusTotal() }}
+          </span>
+        }
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeSection() === 'bilateral'"
+        (click)="setActiveSection('bilateral')"
+        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        [class]="activeSection() === 'bilateral'
+          ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
+          : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
+        <span>W3 / Bilateral</span>
+        @if (bilateralStatusTotal() > 0) {
+          <span class="rounded-full bg-[var(--pr-border)] px-[7px] py-[1px] text-[11px] font-bold tabular-nums">
+            {{ bilateralStatusTotal() }}
+          </span>
+        }
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeSection() === 'aow'"
+        (click)="setActiveSection('aow')"
+        class="flex cursor-pointer items-center gap-[6px] rounded-[7px] border-0 px-[14px] py-[6px] text-[13px] font-semibold transition-all duration-150 focus-visible:outline-none"
+        [class]="activeSection() === 'aow'
+          ? 'bg-[var(--pr-surface-card)] text-[var(--pr-color-primary-600)] shadow-sm font-bold'
+          : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'">
+        <span>Areas of Work</span>
+        @if (aowProgress().length > 0) {
+          <span class="rounded-full bg-[var(--pr-border)] px-[7px] py-[1px] text-[11px] font-bold tabular-nums">
+            {{ aowProgress().length }}
+          </span>
+        }
+      </button>
     </div>
 
-    @if (w12Heatmap()?.rows?.length || w12HeatmapLoading()) {
-      <app-pr-viz-chart
-        [options]="w12ChartOption()"
-        [tableModel]="w12HeatmapTable()"
-        [chartTitle]="'W1/W2 results by category and status'"
-        height="240px"
-        [loading]="w12HeatmapLoading()"
-        (chartClick)="onW12HeatmapClick($event)" />
-    } @else {
-      <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">No W1/W2 results reported yet.</p>
+    @if (activeSection() !== 'all') {
+      <button
+        type="button"
+        (click)="setActiveSection('all')"
+        class="cursor-pointer border-0 bg-transparent text-[12.5px] font-medium text-[var(--pr-color-primary-500)] hover:underline">
+        Show all sections
+      </button>
     }
-  </section>
-  <!-- 4 · Reporting status · span 12 (was 8: the 4-col Reporting pace beside it is gone) -->
+  </div>
+
+  @if (activeSection() === 'all' || activeSection() === 'w1w2') {
+    <!-- Section separator (CVT-A-4/CVT-DD-8): visual group label for W1/W2 -->
+    <div class="col-span-12 flex items-center gap-[12px]" aria-hidden="true">
+      <span class="shrink-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">W1/W2</span>
+      <span class="h-px flex-1 bg-[var(--pr-border)]"></span>
+    </div>
+
+  <!-- 3 · W1/W2 Reporting status · span 12 -->
   <section
     class="col-span-12 flex min-h-[180px] flex-col gap-[16px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
     <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
@@ -159,27 +300,164 @@
       <p class="m-0 text-[14px] text-[var(--pr-text-secondary)]">No results reported for this program yet.</p>
     }
   </section>
-  <!-- Section separator (CVT-A-4/CVT-DD-8) — same pattern as the W1/W2 separator above; groups
-       the three bilateral cards (indicator category, centers, heatmap/bars). -->
-  <div class="col-span-12 flex items-center gap-[12px]" aria-hidden="true">
-    <span class="shrink-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">W3/Bilateral</span>
-    <span class="h-px flex-1 bg-[var(--pr-border)]"></span>
-  </div>
-  <!-- 5 · W3/Bilateral results by indicator category · span 6 — P2-3302 ("Number of result by
-       Indicator category"). Primary-role only, as the design's subtitle states.
-       CVT-A-5 (amendment, 2026-08-27, owner, CVT-T-3 gate): converted from DOM bars to
-       `app-pr-viz-chart` (single-series horizontal bar, no toggle) — one charting library
-       across the Overview. `bilateralCategoryWidth` and its button rows are removed. -->
+
+  <!-- 4 · W1/W2 results by category and status (heatmap/bars) · span 12 -->
+  <section class="col-span-12 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+    <div class="mb-[16px] flex items-center justify-between gap-[12px]">
+      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+        W1/W2 results by category and status
+      </h2>
+      <!-- Heatmap↔Bars toggle (CVT-R-1/CVT-DD-6) — status-pill styling, right-aligned, present
+           even when the card is empty (toggle-dependent divergence is out of scope). -->
+      <div class="flex shrink-0 items-center gap-0.5 rounded-[8px] border border-[var(--pr-border)] p-[2px]">
+        <button
+          type="button"
+          (click)="setW12ViewMode('heatmap')"
+          [attr.aria-pressed]="w12ViewMode() === 'heatmap'"
+          [class]="
+            w12ViewMode() === 'heatmap'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
+              : 'bg-transparent text-[var(--pr-text-secondary)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Heatmap
+        </button>
+        <button
+          type="button"
+          (click)="setW12ViewMode('bars')"
+          [attr.aria-pressed]="w12ViewMode() === 'bars'"
+          [class]="
+            w12ViewMode() === 'bars'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
+              : 'bg-transparent text-[var(--pr-text-secondary)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Bars
+        </button>
+      </div>
+    </div>
+
+    @if (w12Heatmap()?.rows?.length || w12HeatmapLoading()) {
+      <app-pr-viz-chart
+        [options]="w12ChartOption()"
+        [tableModel]="w12HeatmapTable()"
+        [chartTitle]="'W1/W2 results by category and status'"
+        height="240px"
+        [loading]="w12HeatmapLoading()"
+        (chartClick)="onW12HeatmapClick($event)" />
+    } @else {
+      <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">No W1/W2 results reported yet.</p>
+    }
+  </section>
+  }
+
+  @if (activeSection() === 'all' || activeSection() === 'bilateral') {
+    <!-- Section separator: W3/Bilateral -->
+    <div class="col-span-12 flex items-center gap-[12px]" aria-hidden="true">
+      <span class="shrink-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">W3/Bilateral</span>
+      <span class="h-px flex-1 bg-[var(--pr-border)]"></span>
+    </div>
+
+  <!-- 5 · W3/Bilateral reporting status · span 6 -->
   <section
-    class="col-span-6 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
-    <div class="flex items-center gap-[8px]">
+    class="col-span-6 flex flex-col justify-between rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
+    <div>
+      <h2 class="m-0 mb-[6px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
+      <span class="text-[13px] font-normal text-[var(--pr-text-muted)]">
+        Status of bilateral results where this program is tagged
+      </span>
+    </div>
+
+    @if (bilateralStatusTotal() > 0) {
+      <div class="my-[16px] flex items-center gap-[20px]">
+        <div class="w-[150px] shrink-0">
+          <app-pr-viz-chart
+            [options]="bilateralDonutOption()"
+            [tableModel]="bilateralDonutTable()"
+            chartTitle="Bilateral reporting status"
+            height="150px"
+            (chartClick)="onBilateralDonutClick($event)" />
+        </div>
+
+        <div class="flex min-w-0 flex-1 flex-col justify-center gap-[12px]">
+          <div class="flex h-[38px] overflow-hidden rounded-[8px] border border-[var(--pr-border)]">
+            @for (segment of bilateralStatusSegments(); track segment.key) {
+              @if (segment.count > 0) {
+                <div
+                  class="relative flex h-[38px] items-center justify-center overflow-hidden"
+                  [style.width.%]="bilateralSegmentWidth(segment)"
+                  [style.background]="segment.bg"
+                  [title]="segment.label + ': ' + segment.count">
+                  @if (segment.link) {
+                    <button
+                      type="button"
+                      class="absolute inset-0 h-full w-full cursor-pointer border-0 bg-transparent p-0 transition-[filter] hover:brightness-95"
+                      [attr.aria-label]="segment.statusName + ': ' + segment.count"
+                      (click)="emitLink(segment.link)"></button>
+                  }
+                  @if (showsBilateralSegmentCount(segment)) {
+                    <span class="pr-figure-sm text-[13px] font-semibold" [style.color]="segment.fg">{{ segment.count }}</span>
+                  }
+                </div>
+              }
+            }
+          </div>
+
+          <div class="flex items-center justify-between text-[12px] text-[var(--pr-text-secondary)]">
+            <span>Total: <strong class="text-[var(--pr-text-heading)]">{{ bilateralStatusTotal() }}</strong> results</span>
+            <span>Approved: <strong class="text-[var(--pr-status-approved-fg)]">{{ bilateralApprovedPercent() }}%</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distributed 2x2 grid of status metric tiles to fill and balance the card height -->
+      <div class="grid grid-cols-2 gap-[10px]">
+        @for (segment of bilateralStatusSegments(); track segment.key) {
+          @if (segment.link) {
+            <button
+              type="button"
+              class="flex cursor-pointer items-center justify-between rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[12px] py-[9px] transition-colors hover:bg-[var(--pr-surface-hover)]"
+              (click)="emitLink(segment.link)">
+              <div class="flex min-w-0 items-center gap-[8px]">
+                <span class="h-[9px] w-[9px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
+                <span class="truncate text-[12.5px] font-medium text-[var(--pr-text-heading)]">{{ segment.label }}</span>
+              </div>
+              <div class="flex shrink-0 items-baseline gap-[4px]">
+                <span class="pr-figure-sm text-[14px] font-bold text-[var(--pr-text-heading)] tabular-nums">{{ segment.count }}</span>
+                <span class="text-[11px] font-medium text-[var(--pr-text-muted)] tabular-nums">({{ bilateralSegmentPercent(segment) }}%)</span>
+              </div>
+            </button>
+          } @else {
+            <div
+              class="flex items-center justify-between rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[12px] py-[9px] opacity-60">
+              <div class="flex min-w-0 items-center gap-[8px]">
+                <span class="h-[9px] w-[9px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
+                <span class="truncate text-[12.5px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
+              </div>
+              <div class="flex shrink-0 items-baseline gap-[4px]">
+                <span class="pr-figure-sm text-[14px] font-medium text-[var(--pr-text-muted)] tabular-nums">{{ segment.count }}</span>
+                <span class="text-[11px] text-[var(--pr-text-muted)] tabular-nums">(0%)</span>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    } @else {
+      <p class="m-0 text-[14px] text-[var(--pr-text-secondary)]">No bilateral results reported for this program yet.</p>
+    }
+  </section>
+
+  <!-- 6 · W3/Bilateral results by indicator category · span 6: Basic Radar Chart of bilateral results by category -->
+  <section
+    class="col-span-6 flex flex-col justify-between rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
+    <div>
       <h2 class="m-0 mb-[6px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
         W3/Bilateral results by indicator category
       </h2>
+      <span class="text-[13px] font-normal text-[var(--pr-text-muted)]">
+        Bilateral results where this program is the primary contributor
+      </span>
     </div>
-    <span class="mb-[16px] text-[13px] font-normal text-[var(--pr-text-muted)]">
-      Bilateral results where this program is the primary contributor
-    </span>
 
     @if (bilateralCategories().length) {
       <app-pr-viz-chart
@@ -191,32 +469,6 @@
     } @else {
       <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">
         No bilateral results are linked to this program yet.
-      </p>
-    }
-  </section>
-  <!-- 6 · Centers with reported W3/bilateral results · span 6 — CVT-A-5: same conversion as
-       card 5 above; `centerWidth` and its button rows are removed. -->
-  <section
-    class="col-span-6 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
-    <div class="flex items-center gap-[8px]">
-      <h2 class="m-0 mb-[6px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
-        Centers with reported W3/bilateral results
-      </h2>
-    </div>
-    <span class="mb-[16px] text-[13px] font-normal text-[var(--pr-text-muted)]">
-      Centers reporting W3 and bilateral results for this program
-    </span>
-
-    @if (bilateralCenters().length) {
-      <app-pr-viz-chart
-        [options]="bilateralCentersOption()"
-        [tableModel]="bilateralCentersTable()"
-        [chartTitle]="'Centers with reported W3/bilateral results'"
-        [height]="bilateralCentersHeight()"
-        (chartClick)="onBilateralCentersClick($event)" />
-    } @else {
-      <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">
-        No centers have reported bilateral results for this program yet.
       </p>
     }
   </section>
@@ -275,6 +527,9 @@
       <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">No bilateral results in review yet.</p>
     }
   </section>
+  }
+
+  @if (activeSection() === 'all' || activeSection() === 'aow') {
   <!-- 8 · Progress by area of work · span 12 (+ xcut footer) -->
   <section
     class="col-span-12 flex flex-col gap-[8px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
@@ -325,4 +580,5 @@
       </div>
     }
   </section>
+  }
 </div>
