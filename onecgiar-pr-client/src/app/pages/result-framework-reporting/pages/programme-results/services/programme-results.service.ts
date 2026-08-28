@@ -68,6 +68,19 @@ export interface ProgrammeResultRow {
   phaseYear: number | null;
   /** `submitter` — the programme official code (e.g. `SP01`) in the review-drawer route. */
   submitterCode: string;
+
+  /**
+   * P2-3508 — the untouched payload item.
+   *
+   * "Update result" cannot be decided from the mapped fields: `ApiService.shouldShowUpdate`
+   * reads `initiative_entity_map` / `initiative_entity_user`, and `ChangePhaseModalComponent`
+   * reads `id`, `result_code`, `source_name`, `lead_center`, `submitter` and
+   * `initiative_entity_map` straight off `DataControlService.currentResult`. Re-mapping each of
+   * those into this row would fork the eligibility rule from the one the old Results list
+   * enforces; keeping the raw item means both screens ask the exact same question of the exact
+   * same object. It costs nothing extra — the response is already in memory.
+   */
+  raw: Record<string, any>;
 }
 
 /** Envelope of `GET /api/results/get/all/roles/filter/{userId}` (paginated). */
@@ -140,7 +153,8 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
     versionId: text(raw?.['version_id']),
     phaseName: text(raw?.['phase_name']),
     phaseYear: num(raw?.['phase_year']),
-    submitterCode: text(raw?.['submitter'])
+    submitterCode: text(raw?.['submitter']),
+    raw: raw ?? {}
   };
 }
 

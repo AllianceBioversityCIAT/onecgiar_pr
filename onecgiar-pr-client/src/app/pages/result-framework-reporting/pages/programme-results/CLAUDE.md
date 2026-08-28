@@ -1,6 +1,6 @@
 # programme-results
 
-**Verified:** 2026-08-24 · branch performance-refactor · f36b45bf3
+**Verified:** 2026-08-28 · branch performance-refactor · f65871e71
 
 **What this owns:** the **Results** tab of the programme shell (`entity-details/:entityId/results`) — one flat, searchable table of every result reported by that one programme, plus its filter row, clickable status counters, Columns picker and CSV export.
 
@@ -9,28 +9,23 @@
 - `ProgrammeResultsComponent` is standalone + `OnPush`, and **provides both services itself**
   (`programme-results.component.ts:150`). Neither is `providedIn: 'root'` on purpose: leaving the tab
   must drop the rows and the filters instead of leaking one programme's state into the next.
-- `ProgrammeResultsService` owns **data**: `rows()` (mapped `ProgrammeResultRow[]`), `loading()`,
-  `error()`, `totalReported()`, `isPartial()`, and the derived option lists
-  `statusOptions/categoryOptions/originOptions` — derived from the rows we hold, never hardcoded, so a
-  dropdown can only ever offer a value some row actually has.
+- `ProgrammeResultsService` owns **data**: `rows()`, `loading()`, `error()`, `totalReported()`,
+  `isPartial()`, and `statusOptions/categoryOptions/originOptions` — derived from the rows we hold,
+  never hardcoded, so a dropdown can only offer a value some row actually has.
 - `ProgrammeResultsFilterService` owns **filter state only** — no HTTP, no idea where rows come from:
-  `searchText`, `selectedSections[]` (multi), `selectedStatus`, `selectedCategory`, `selectedOrigin`,
-  plus `activeChips()` / `hasActiveFilters()` and the pure predicates
-  `matchesProgrammeResultFilters` / `buildStatusCounts` that the spec drives directly.
-- **Sorting belongs to `app-pr-table`**, not to either service. The component only renders the arrow
-  glyph and the active colour (`sortArrow()` / `sortColor()`); `prSortableColumn` host-binds
-  `aria-sort` itself — do not set it in the template.
-- The component is the only place that joins them: `filteredRows()` (`:521`) = filter over data;
-  `totalLabel()` (`:530`); and the **mutually exclusive** view states `isFirstLoad` / `hasRows` /
-  `isFilteredEmpty` / `isNothingYet` (`:539-543`) — the mockup draws three independent blocks, this
-  does not.
+  `searchText`, `selectedSections[]`, `selectedStatus/Category/Origin`, `activeChips()`,
+  `hasActiveFilters()`, plus the pure predicates `matchesProgrammeResultFilters` / `buildStatusCounts`.
+- **Sorting belongs to `app-pr-table`.** The component only renders the glyph and colour
+  (`sortArrow()` / `sortColor()`); `prSortableColumn` host-binds `aria-sort` — never set it in the template.
+- The component is the only place that joins them: `filteredRows()` (`:521`), `totalLabel()` (`:530`)
+  and the **mutually exclusive** view states `isFirstLoad`/`hasRows`/`isFilteredEmpty`/`isNothingYet`
+  (`:539-543`) — the mockup draws three independent blocks, this does not.
 - Layout invariant: the header row and every data row are **one CSS grid built from the same
   `visibleColumns()` list** — `grid()` and `minWidth()` (`:500-518`) are recomputed from it, which is
   the only thing keeping them aligned when an optional column toggles.
 - Data path: route code (`SP01`) → numeric `initiativeId` via `GET_ScienceProgramsProgress()`
   (`services/programme-results.service.ts:271`) → `GET_AllResultsWithUseRole(userId, {submitter_id})`
-  (`:216`). `load()` is re-entrant and token-guarded, so a fast programme switch cannot land a stale
-  response.
+  (`:216`). `load()` is token-guarded, so a fast programme switch cannot land a stale response.
 - Row activation mirrors `results-list.component.ts:634` exactly: a `W3/Bilaterals` row that is
   neither AVISA (`SGP-02`) nor `Approved` opens the bilateral **review drawer**; everything else opens
   Result Detail with `?phase=versionId` (`resultRoute()`, `:746`).
@@ -92,29 +87,34 @@
   would leave every pill but one at zero and break the clickable counters.
 - **Status colours are fg/bg PAIRS** (`STATUS_TOKENS`, `:99`), copied verbatim from
   `result-header.component.ts:17` so a status looks identical here and on the result page. Never
-  recombine a foreground with another background, never add a sixth status colour (UI-RULES rule 9).
-  Unknown `status_id` falls back to the `not-started` pair, not to a new colour.
+  recombine a foreground with another background, never add a sixth (UI-RULES rule 9). An unknown
+  `status_id` falls back to the `not-started` pair.
 - **The Columns picker is a deliberate local duplicate** of `results-list.component.ts:47-140` and
-  `bilateral-results-list.component.ts` — extracting it means editing two live screens. Follow-up
-  (own PR): lift all three into `shared/components/pr-columns-picker/`. Do not "DRY" it in passing.
-- 🛑 **Never use `custom-fields/pr-select` (or any `custom-fields` field) on this surface.** Those
-  components render `.pr-field.mandatory` / `.pr-select.mandatory`, and the green-check machinery
-  counts those nodes by **CSS class through a DOM scan** (`DataControlService.someMandatoryFieldIncomplete`,
-  `shared/services/data-control.service.ts:208` and `:224`) — a filter dropdown that happens to sit
-  inside a scanned container is read as an incomplete mandatory field. The filter row uses the shared
-  `app-pr-filter-select` / `app-pr-filter-multiselect` (they render `.custom_select`, invisible to that
-  scan) reskinned to 40px via `.pgr-filter ::ng-deep`, borrowed from `.pr-band-filter` so the two
-  toolbars cannot drift.
-- CSV export reuses `bilateral-results-list.component.ts:299`, **not** `ExportTablesService` — that
-  service only writes `.xlsx` through exceljs, so wiring the design's "Export CSV" button to it would
-  hand the user a spreadsheet under a CSV label. `cellText()` is the single row→text function shared by
-  the cells and the export, so they can never disagree.
+  `bilateral-results-list.component.ts`; extracting it means editing two live screens. Do not "DRY"
+  it in passing — follow-up is its own PR into `shared/components/pr-columns-picker/`.
+- 🛑 **Never use `custom-fields/pr-select` (or any `custom-fields` field) on this surface.** They emit
+  `.pr-field.mandatory`, and the green-check DOM scan (`DataControlService.someMandatoryFieldIncomplete`,
+  `shared/services/data-control.service.ts:208`, `:224`) counts those nodes by CSS class — a filter
+  dropdown inside a scanned container reads as an incomplete mandatory field. Use the shared
+  `app-pr-filter-select` / `app-pr-filter-multiselect` (`.custom_select`, invisible to the scan),
+  reskinned to 40px via `.pgr-filter ::ng-deep` borrowed from `.pr-band-filter`.
+- ⚠️ **`Update result` (P2-3508) delegates eligibility, it does not re-derive it.** `canUpdateResult()`
+  runs the same branch as `results-list.component.ts:483`: non-AVISA `W3/Bilaterals` →
+  `api.canUpdateBilateral`, everything else → `api.shouldShowUpdate`. Both read fields this row does
+  **not** map (`initiative_entity_map`, `initiative_entity_user`), which is why `row.raw` keeps the
+  untouched payload item. Fork the rule and this screen offers an update the old list refuses.
+- ⚠️ **`app-change-phase-modal` is mounted LAZILY** (`@if (changePhaseModalMounted())`). Its
+  `ngOnInit` fires `getCurrentPhases()` + `GET_phaseReportingInitiatives()`; mounting it eagerly cost
+  two requests per visit and broke every component spec on `getCurrentPhases` of an undefined mock.
+  It reads the result off `DataControlService.currentResult`, so set that **before** raising
+  `chagePhaseModal` (historical misspelling — do not rename).
+- CSV export reuses `bilateral-results-list.component.ts:299`, **not** `ExportTablesService` (which
+  only writes `.xlsx`, so "Export CSV" would hand out a spreadsheet). `cellText()` is the one row→text
+  function behind both the cells and the export, so they cannot disagree.
 
 ## Open product questions — P2-3400 (business decision, blocks QA sign-off)
 
-- **Single table vs per-category tables.** P2-2017 (*Ready To Develop*, Ángel) approves several tables
-  reached from cards with a left menu; the live design shows one table with search + filters. We built
-  the design — if P2-2017 still stands, QA rejects this tab for not matching it.
-- **Name collision.** P2-3169 / P2-3317 already call a Centers-panel tab "Results tab".
-- **"Origin" is an assumption** — wired to `source_name` (`W1/W2` | `W3/Bilaterals`), the closest
-  existing field. If product meant something else, both the filter and the column change.
+- **Single table vs per-category tables:** P2-2017 approves several tables behind cards + a left menu;
+  the live design shows one filtered table, which is what we built. If P2-2017 stands, QA rejects this.
+- **Name collision:** P2-3169 / P2-3317 already call a Centers-panel tab "Results tab".
+- **`Origin` is an assumption** — wired to `source_name`, the closest existing field.

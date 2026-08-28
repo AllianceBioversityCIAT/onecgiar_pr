@@ -457,6 +457,20 @@
                       Open result
                     </button>
 
+                    <!-- 1b · Update result. P2-3508 — P/A users reach a previously reported result
+                         through this menu to carry it into the current phase and map it to the 2026
+                         ToC. Same eligibility branch and same modal as the old Results list; hidden
+                         (not disabled) when the row is not eligible, which is how that list behaves. -->
+                    @if (canUpdateResult(row)) {
+                      <button
+                        type="button"
+                        role="menuitem"
+                        class="flex h-[36px] w-full items-center whitespace-nowrap rounded-[8px] border-0 bg-transparent px-[10px] text-left text-[14px] font-medium text-[var(--pr-text)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
+                        (click)="updateResult(row)">
+                        Update result
+                      </button>
+                    }
+
                     <!-- 2 · View indicator. P2-3395 — visible, disabled, tagged: no results payload
                          carries `toc_result_id` / `toc_results_indicator_id`, and the indicator
                          drawer needs a whole indicator row, so there is nothing to open. -->
@@ -540,3 +554,11 @@
     </div>
   </article>
 </section>
+
+<!-- P2-3508 · The phase-replication modal reads `DataControlService.currentResult` and its own
+     `chagePhaseModal` flag, so it only needs to be on the page — no inputs. It is NOT mounted in
+     the shell: `results-list` and `innovation-package-list` each mount their own copy, and this
+     screen now does the same — but lazily, because its ngOnInit fires two requests. -->
+@if (changePhaseModalMounted()) {
+  <app-change-phase-modal></app-change-phase-modal>
+}

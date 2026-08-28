@@ -127,9 +127,24 @@ describe('ProgrammeResultsService', () => {
           versionId: '34',
           phaseName: '',
           phaseYear: null,
-          submitterCode: 'SP01'
+          submitterCode: 'SP01',
+          // P2-3508 — the untouched item rides along so the "Update result" eligibility rule and
+          // the phase modal can read the same object the old Results list reads.
+          raw: expect.objectContaining({ id: '8101', result_code: '5834' })
         }
       ]);
+    });
+
+    // P2-3508 — the eligibility rule reads fields this row does not map (initiative_entity_map,
+    // initiative_entity_user). If `raw` ever stops being the whole item, "Update result" silently
+    // disappears for everyone, which is exactly the bug the ticket reported.
+    it('keeps the whole payload item on the row, not just the mapped fields', () => {
+      service.load('SP01');
+
+      const raw = service.rows()[0].raw;
+      expect(raw).toBeDefined();
+      expect(Object.keys(raw).length).toBeGreaterThan(10);
+      expect(raw['submitter']).toBe('SP01');
     });
 
     it('errors when the programme code is not in the progress response, without asking for rows', () => {

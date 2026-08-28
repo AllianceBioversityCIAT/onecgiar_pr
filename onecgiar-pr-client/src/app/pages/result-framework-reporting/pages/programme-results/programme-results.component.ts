@@ -19,6 +19,8 @@ import {
 import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { DataControlService } from '../../../../shared/services/data-control.service';
+import { ApiService } from '../../../../shared/services/api/api.service';
+import { ChangePhaseModalModule } from '../../../../shared/components/change-phase-modal/change-phase-modal.module';
 import {
   BandFilterGroup,
   ReportingProgramBandComponent
@@ -148,7 +150,8 @@ function formatDate(value: string): string {
     PrTableLoadingDirective,
     PrSortableColumnDirective,
     PrFilterSelectComponent,
-    PrFilterMultiselectModule
+    PrFilterMultiselectModule,
+    ChangePhaseModalModule
   ],
   providers: [
     ProgrammeResultsService,
@@ -486,6 +489,7 @@ export class ProgrammeResultsComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dataControlSE = inject(DataControlService);
+  private readonly api = inject(ApiService);
   private readonly homeSE = inject(ResultFrameworkReportingHomeService);
   private readonly bilateralSE = inject(BilateralResultsService);
   private readonly clipboard = inject(Clipboard);
@@ -819,6 +823,60 @@ export class ProgrammeResultsComponent {
 
   closeRowMenu(): void {
     this.openMenuKey.set(null);
+  }
+
+  // ── Update result (P2-3508) ─────────────────────────────────────────────────────────────
+  /**
+   * Mounts the phase-replication modal only once someone asks for it.
+   *
+   * `ChangePhaseModalComponent.ngOnInit` fires `getCurrentPhases()` and
+   * `GET_phaseReportingInitiatives()`, so mounting it unconditionally would cost two requests on
+   * every visit to a tab where most rows cannot be updated at all. Once mounted it stays: the
+   * modal owns its own visibility through `chagePhaseModal`, and tearing it down mid-close would
+   * cut its own flag handling.
+   */
+  readonly changePhaseModalMounted = signal(false);
+
+  /**
+   * Whether this row may be carried into the current phase.
+   *
+   * The rule is NOT re-derived here: it is the same branch `results-list.component.ts:483`
+   * (`onPressAction`) runs. A W3/Bilateral row that is not AVISA goes through
+   * `canUpdateBilateral` (lead centre + Approved + past phase); everything else, including
+   * AVISA, goes through `shouldShowUpdate` (initiative membership + past phase). Forking these
+   * would let this screen offer an update the old list refuses, or refuse one it offers.
+   *
+   * This is UX only. `versionProcessV2` enforces the same rules server-side — a hidden menu
+   * item was never authorisation.
+   */
+  canUpdateResult(row: ProgrammeResultRow): boolean {
+    const result = row?.raw as any;
+    if (!result) return false;
+
+    const phase = this.dataControlSE.reportingCurrentPhase;
+    return this.usesBilateralReviewFlow(row)
+      ? this.api.canUpdateBilateral(result, phase)
+      : this.api.shouldShowUpdate(result, phase);
+  }
+
+  /**
+   * Opens the phase-replication modal for this row.
+   *
+   * `ChangePhaseModalComponent` reads the result off `DataControlService.currentResult` rather
+   * than through an input, so the contract is: set it (and `resultsSE.currentResultId`, which
+   * the modal's siblings rely on) BEFORE flipping the flag — exactly what
+   * `results-list.component.ts:483` does. `chagePhaseModal` keeps its historical misspelling.
+   */
+  updateResult(row: ProgrammeResultRow): void {
+    this.closeRowMenu();
+
+    const result = row?.raw as any;
+    if (!result) return;
+
+    this.api.resultsSE.currentResultId = result.id;
+    this.dataControlSE.currentResult = result;
+    this.changePhaseModalMounted.set(true);
+    this.dataControlSE.chagePhaseModal = true;
   }
 
   // ── Row activation ──────────────────────────────────────────────────────────────────────

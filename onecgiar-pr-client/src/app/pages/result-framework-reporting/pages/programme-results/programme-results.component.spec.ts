@@ -126,8 +126,14 @@ describe('ProgrammeResultsComponent', () => {
             }
           })
         ),
-        GET_AllResultsWithUseRole: getAllResults
-      }
+        GET_AllResultsWithUseRole: getAllResults,
+        currentResultId: null as number | null
+      },
+      // P2-3508 — "Update result" delegates eligibility to ApiService instead of re-deriving it, so
+      // the mock has to answer. Default false: the menu tests below assert the four base items, and
+      // a permissive default would silently add a fifth to every one of them.
+      shouldShowUpdate: jest.fn(() => false),
+      canUpdateBilateral: jest.fn(() => false)
     };
 
     TestBed.resetTestingModule();
@@ -603,6 +609,119 @@ describe('ProgrammeResultsComponent', () => {
     expect(copyLink.disabled).toBe(false);
     expect(copyLink.className).not.toContain('cursor-not-allowed');
     expect(copyLink.textContent).not.toContain('Coming soon');
+  });
+
+  // ── Update result (P2-3508) ──────────────────────────────────────────────────────────────
+  // P/A users reached previously reported results through this menu to carry them into the current
+  // phase and map them to the 2026 ToC. The option was absent from the rebuilt menu, leaving that
+  // workflow with no entry point on this screen.
+  describe('Update result (P2-3508)', () => {
+    const openMenu = () => {
+      component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
+      fixture.detectChanges();
+      return fixture.debugElement
+        .queryAll(By.css('[role="menu"] [role="menuitem"]'))
+        .map(item => ((item.nativeElement as HTMLElement).textContent ?? '').replace(/\s+/g, ' ').trim());
+    };
+
+    it('offers Update result right after Open result when the row is eligible', () => {
+      const api = TestBed.inject(ApiService) as any;
+      api.shouldShowUpdate.mockReturnValue(true);
+
+      expect(openMenu()).toEqual(['Open result', 'Update result', 'View indicator Coming soon', 'Download PDF', 'Copy link']);
+    });
+
+    it('hides it when the row is not eligible, exactly as the old Results list does', () => {
+      const api = TestBed.inject(ApiService) as any;
+      api.shouldShowUpdate.mockReturnValue(false);
+
+      expect(openMenu()).not.toContain('Update result');
+    });
+
+    // The whole point of delegating: this screen must not be able to offer an update the old list
+    // refuses, so the eligibility question is asked of ApiService against the untouched payload
+    // item — never re-derived from the mapped row.
+    it('asks ApiService about the raw payload item, not the mapped row', () => {
+      const api = TestBed.inject(ApiService) as any;
+      const row = component.data.rows()[0];
+
+      component.canUpdateResult(row);
+
+      expect(api.shouldShowUpdate).toHaveBeenCalledWith(row.raw, expect.anything());
+      expect(api.canUpdateBilateral).not.toHaveBeenCalled();
+    });
+
+    it('routes a non-AVISA W3/Bilateral row through the bilateral rule instead', () => {
+      const api = TestBed.inject(ApiService) as any;
+      const row = { ...component.data.rows()[0], origin: 'W3/Bilaterals', submitterCode: 'SP01' };
+
+      component.canUpdateResult(row);
+
+      expect(api.canUpdateBilateral).toHaveBeenCalledWith(row.raw, expect.anything());
+      expect(api.shouldShowUpdate).not.toHaveBeenCalled();
+    });
+
+    it('AVISA bilaterals keep the W1/W2 rule', () => {
+      const api = TestBed.inject(ApiService) as any;
+      const row = { ...component.data.rows()[0], origin: 'W3/Bilaterals', submitterCode: 'SGP-02' };
+
+      component.canUpdateResult(row);
+
+      expect(api.shouldShowUpdate).toHaveBeenCalled();
+      expect(api.canUpdateBilateral).not.toHaveBeenCalled();
+    });
+
+    it('never offers it on a row with no payload behind it', () => {
+      expect(component.canUpdateResult({ ...component.data.rows()[0], raw: undefined } as any)).toBe(false);
+    });
+
+    // The modal reads the result off DataControlService, so setting it BEFORE raising the flag is
+    // the contract — a flag raised first opens the modal on whatever result was there last.
+    it('seeds the modal with the result and only then opens it', () => {
+      const api = TestBed.inject(ApiService) as any;
+      const dataControl = TestBed.inject(DataControlService);
+      const row = component.data.rows()[0];
+      const order: string[] = [];
+      let stored: any = null;
+      Object.defineProperty(dataControl, 'currentResult', {
+        configurable: true,
+        get: () => stored,
+        set: value => {
+          stored = value;
+          order.push('result');
+        }
+      });
+      Object.defineProperty(dataControl, 'chagePhaseModal', {
+        configurable: true,
+        get: () => false,
+        set: () => order.push('flag')
+      });
+
+      component.updateResult(row);
+
+      expect(order).toEqual(['result', 'flag']);
+      expect(stored).toBe(row.raw);
+      expect(api.resultsSE.currentResultId).toBe(row.raw['id']);
+    });
+
+    it('closes the row menu when it opens the modal', () => {
+      component.toggleRowMenu(component.data.rows()[0], new MouseEvent('click'));
+      expect(component.isMenuOpen(component.data.rows()[0])).toBe(true);
+
+      component.updateResult(component.data.rows()[0]);
+
+      expect(component.isMenuOpen(component.data.rows()[0])).toBe(false);
+    });
+
+    // ChangePhaseModalComponent.ngOnInit fires two requests, so it must not exist until asked for.
+    it('does not mount the phase modal until Update result is used', () => {
+      expect(component.changePhaseModalMounted()).toBe(false);
+      expect(fixture.debugElement.query(By.css('app-change-phase-modal'))).toBeNull();
+
+      component.updateResult(component.data.rows()[0]);
+
+      expect(component.changePhaseModalMounted()).toBe(true);
+    });
   });
 
   it('keeps every menu label on ONE line — the label wrapped and pushed the pill out of the popup', () => {
