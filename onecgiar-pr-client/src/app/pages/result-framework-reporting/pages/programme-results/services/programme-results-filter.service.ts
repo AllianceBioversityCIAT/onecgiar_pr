@@ -39,6 +39,96 @@ function normalize(value: unknown): string {
 }
 
 /**
+ * The Results Framework's own indicator categories (P2-3312), in RF order, spelled as the
+ * `result_type` values this payload actually carries.
+ *
+ * The ticket names them the way the RF does — "Number of innovations", "Number of knowledge
+ * products", "Number of people trained (capacity sharing for development)", "Number of policies
+ * influenced", "Number of actors using or benefiting from innovations", "Number of Policy
+ * (Policy Change)". Those are INDICATOR names; this screen's Category column and Category filter
+ * both render `result_type`, so the list is kept in `result_type` language or the dropdown would
+ * stop agreeing with the column beside it. The two policy indicators collapse onto the single
+ * `Policy change` result type, which is why six RF names map to five entries here.
+ *
+ * Everything else the endpoint can return — `Capacity change`, `Other outcome`, `Other output`,
+ * `Impact contribution` (result_type_id 3, 4, 8, 9; verified live on prtest 2026-08-28 over all
+ * 6135 rows) — is not an RF category and is offered as the single `Other` bucket below.
+ */
+export const STANDARD_RF_CATEGORIES: readonly string[] = [
+  'Innovation development',
+  'Knowledge product',
+  'Capacity sharing for development',
+  'Policy change',
+  'Innovation use'
+];
+
+/**
+ * Sentinel held by `selectedCategory` when the "Other" bucket is picked. Deliberately not a
+ * human string: it also travels in the `category` query param, where it must never collide with
+ * a real `result_type` name.
+ */
+export const PROGRAMME_RESULTS_OTHER_CATEGORY = '__other__';
+
+/** What the "Other" bucket is called in the dropdown and in its chip. */
+export const PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL = 'Other';
+
+/** True when `value` is one of the RF categories above. Case- and whitespace-insensitive. */
+export function isStandardRfCategory(value: unknown): boolean {
+  const needle = normalize(value);
+  return !!needle && STANDARD_RF_CATEGORIES.some(name => normalize(name) === needle);
+}
+
+/**
+ * Category predicate. Split out of `matchesProgrammeResultFilters` because it is the one
+ * dimension with two modes: an exact `result_type` match, or the `Other` bucket, which passes
+ * every row whose category is NOT an RF one.
+ */
+export function matchesProgrammeResultCategory(row: ProgrammeResultRow, selectedCategory: string | null): boolean {
+  if (!selectedCategory) return true;
+  if (selectedCategory === PROGRAMME_RESULTS_OTHER_CATEGORY) return !isStandardRfCategory(row?.category);
+  return normalize(selectedCategory) === normalize(row?.category);
+}
+
+/**
+ * The Category dropdown's options (P2-3312): the RF categories that some row actually has, in RF
+ * order, then a single `Other` bucket when any non-RF row exists. Nothing is hidden from the
+ * TABLE by this — the Category column still prints the real `result_type`, and `Other` selects
+ * every non-RF row at once.
+ *
+ * `presentCategories` is `ProgrammeResultsService.categoryOptions()` (the values this programme
+ * actually reported), so a category no row has is never offered — the labels come from the
+ * payload rather than from the constant, keeping the dropdown's casing identical to the column's.
+ *
+ * `selectedCategory` is threaded in for one case: the Overview tab deep-links here with an exact
+ * `category=<result_type>` (`dashboard-lab.component.ts` heatmap/card links), and that value can
+ * be a non-RF one. Dropping it from the options would leave the pill showing its placeholder
+ * while the table was demonstrably filtered, so exactly that one value stays selectable.
+ */
+export function buildCategoryFilterOptions(
+  presentCategories: readonly string[],
+  selectedCategory: string | null
+): { value: string; label: string }[] {
+  const present = (presentCategories ?? []).filter(Boolean);
+
+  const options = STANDARD_RF_CATEGORIES.map(standard => present.find(value => normalize(value) === normalize(standard)))
+    .filter((value): value is string => !!value)
+    .map(value => ({ value, label: value }));
+
+  if (selectedCategory && selectedCategory !== PROGRAMME_RESULTS_OTHER_CATEGORY && !isStandardRfCategory(selectedCategory)) {
+    // Keep the SELECTED string as the value (that is what `selectedCategory` will be compared
+    // against), but prefer the payload's own casing for the label.
+    const label = present.find(value => normalize(value) === normalize(selectedCategory)) ?? selectedCategory;
+    options.push({ value: selectedCategory, label });
+  }
+
+  if (present.some(value => !isStandardRfCategory(value))) {
+    options.push({ value: PROGRAMME_RESULTS_OTHER_CATEGORY, label: PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL });
+  }
+
+  return options;
+}
+
+/**
  * Free-text predicate. Matches the result TITLE and the result CODE, case-insensitively,
  * on a substring — the design's placeholder is "Search results or indicators…", and the
  * indicator line is empty for now (P2-3398), so it is matched too but can never hit.
@@ -76,7 +166,7 @@ export function matchesProgrammeResultFilters(
   }
 
   if (!options.ignoreStatus && state.selectedStatus && normalize(state.selectedStatus) !== normalize(row?.statusName)) return false;
-  if (state.selectedCategory && normalize(state.selectedCategory) !== normalize(row?.category)) return false;
+  if (!matchesProgrammeResultCategory(row, state.selectedCategory)) return false;
   if (state.selectedOrigin && normalize(state.selectedOrigin) !== normalize(row?.origin)) return false;
   if (state.selectedCenter && normalize(state.selectedCenter) !== normalize(row?.center)) return false;
 
@@ -167,7 +257,11 @@ export class ProgrammeResultsFilterService {
     const status = this.selectedStatus();
     if (status) chips.push({ label: `Status: ${status}`, dimension: 'status', value: status });
     const category = this.selectedCategory();
-    if (category) chips.push({ label: `Category: ${category}`, dimension: 'category', value: category });
+    if (category) {
+      // The `Other` bucket travels as a sentinel (P2-3312) — the chip must read "Other", not it.
+      const categoryLabel = category === PROGRAMME_RESULTS_OTHER_CATEGORY ? PROGRAMME_RESULTS_OTHER_CATEGORY_LABEL : category;
+      chips.push({ label: `Category: ${categoryLabel}`, dimension: 'category', value: category });
+    }
     const origin = this.selectedOrigin();
     if (origin) chips.push({ label: `Origin: ${origin}`, dimension: 'origin', value: origin });
     const center = this.selectedCenter();

@@ -33,7 +33,12 @@ import {
 } from '../bilateral-results/bilateral-results.service';
 import { PrToastService } from '../../../../shared/components/pr-toast';
 import { ProgrammeResultRow, ProgrammeResultsService } from './services/programme-results.service';
-import { ProgrammeResultsFilterChip, ProgrammeResultsFilterService, buildStatusCounts } from './services/programme-results-filter.service';
+import {
+  ProgrammeResultsFilterChip,
+  ProgrammeResultsFilterService,
+  buildCategoryFilterOptions,
+  buildStatusCounts
+} from './services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
 
 /**
@@ -576,7 +581,14 @@ export class ProgrammeResultsComponent {
   // ── Filter options ──────────────────────────────────────────────────────────────────────
   readonly phaseSelectOptions = computed(() => this.data.phaseOptions().map(value => ({ value, label: value })));
   readonly statusSelectOptions = computed(() => this.data.statusOptions().map(value => ({ value, label: value })));
-  readonly categorySelectOptions = computed(() => this.data.categoryOptions().map(value => ({ value, label: value })));
+  /**
+   * P2-3312 — the RF categories only, plus one `Other` bucket. NOT
+   * `categoryOptions().map(...)` like its four neighbours: the flat list mixed the six Results
+   * Framework categories with `Other output` / `Other outcome` / `Capacity change` /
+   * `Impact contribution`, which is what end users asked us to stop doing. See
+   * `buildCategoryFilterOptions` for why the selected value is threaded in.
+   */
+  readonly categorySelectOptions = computed(() => buildCategoryFilterOptions(this.data.categoryOptions(), this.filter.selectedCategory()));
   readonly originSelectOptions = computed(() => this.data.originOptions().map(value => ({ value, label: value })));
   readonly centerSelectOptions = computed(() => this.data.centerOptions().map(value => ({ value, label: value })));
 

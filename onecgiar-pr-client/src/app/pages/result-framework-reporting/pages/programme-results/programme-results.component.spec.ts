@@ -6,7 +6,7 @@ import { ActivatedRoute, ParamMap, Router, convertToParamMap } from '@angular/ro
 import { BehaviorSubject, of } from 'rxjs';
 
 import { PGR_COLUMN_STORAGE_KEY, ProgrammeResultsComponent } from './programme-results.component';
-import { ProgrammeResultsFilterService } from './services/programme-results-filter.service';
+import { PROGRAMME_RESULTS_OTHER_CATEGORY, ProgrammeResultsFilterService } from './services/programme-results-filter.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
@@ -269,6 +269,44 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.originSelectOptions().map(option => option.value)).toEqual(['W1/W2', 'W3/Bilaterals']);
     expect(component.categorySelectOptions().every(option => !!option.value)).toBe(true);
     expect(component.centerSelectOptions().map(option => option.value)).toEqual(['CIAT', 'IITA', 'ILRI']);
+  });
+
+  // ── P2-3312 ───────────────────────────────────────────────────────────────────────────────
+  // End-user feedback: the Category dropdown must offer the Results Framework categories only.
+  // The pure builder is covered in the filter-service spec; these two lock the WIRING — that the
+  // component feeds it the loaded rows and the current selection, and that picking the bucket
+  // narrows the table to exactly the non-RF rows.
+  describe('Category dropdown limited to RF categories (P2-3312)', () => {
+    it('lists the RF categories in RF order, with no Other bucket when every row is standard', () => {
+      expect(component.categorySelectOptions()).toEqual([
+        { value: 'Innovation development', label: 'Innovation development' },
+        { value: 'Capacity sharing for development', label: 'Capacity sharing for development' },
+        { value: 'Policy change', label: 'Policy change' }
+      ]);
+    });
+
+    it('collapses non-RF categories into one Other option that selects exactly them', () => {
+      const rows = component.data.rows();
+      component.data.rows.set([
+        ...rows,
+        { ...rows[0], id: 4, code: '5004', category: 'Other output' },
+        { ...rows[0], id: 5, code: '5005', category: 'Impact contribution' }
+      ]);
+      fixture.detectChanges();
+
+      const options = component.categorySelectOptions();
+      expect(options.map(option => option.label)).toEqual([
+        'Innovation development',
+        'Capacity sharing for development',
+        'Policy change',
+        'Other'
+      ]);
+      expect(options.some(option => option.value === 'Other output')).toBe(false);
+      expect(options.some(option => option.value === 'Impact contribution')).toBe(false);
+
+      component.onCategoryChange(PROGRAMME_RESULTS_OTHER_CATEGORY);
+      expect(component.filteredRows().map(row => row.code)).toEqual(['5004', '5005']);
+    });
   });
 
   // ── chips ─────────────────────────────────────────────────────────────────────────────────

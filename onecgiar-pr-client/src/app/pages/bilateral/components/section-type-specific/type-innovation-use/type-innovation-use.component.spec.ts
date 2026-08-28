@@ -828,6 +828,47 @@ describe('TypeInnovationUseComponent', () => {
     });
   });
 
+  /**
+   * P2-3533 — `innov_use_to_be_determined` was the one answer missing from `hydrateStoredAnswers()`,
+   * and it is the field that gates the whole Actors block (`.component.html:17`, `=== false`).
+   * On reload it came back as `0`, `0 === false` is false, so the block never rendered and the radio
+   * matched neither option: the actors looked lost and the obvious reaction is to add them again.
+   */
+  describe('P2-3533 — reload of the answer that gates the Actors block', () => {
+    it('normalizes the stored 0 into the false the radio binds, keeping the actors reachable', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(
+        of({
+          response: {
+            innov_use_to_be_determined: 0,
+            actors: [{ actor_type_id: 1, women: 2, men: 3 }],
+          },
+        }),
+      );
+      build();
+      fixture.detectChanges();
+
+      // The strict `=== false` in the template is what renders the block; a `0` here fails it.
+      expect(component.body.innov_use_to_be_determined).toBe(false);
+      expect(component.body.actors).toHaveLength(1);
+    });
+
+    it('normalizes a stored 1 into true', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { innov_use_to_be_determined: 1 } }));
+      build();
+      fixture.detectChanges();
+
+      expect(component.body.innov_use_to_be_determined).toBe(true);
+    });
+
+    it('leaves the question unanswered instead of turning it into a No', () => {
+      bilateralApi.GET_innovationUse.mockReturnValue(of({ response: { innov_use_to_be_determined: null } }));
+      build();
+      fixture.detectChanges();
+
+      expect(component.body.innov_use_to_be_determined).toBeNull();
+    });
+  });
+
   // P2-3424 — the endpoint now stores and returns these fields, so what the user typed has to come back
   // usable. MySQL hands `tinyint` columns over as 1/0 and the radios bind true/false.
   describe('P2-3424 — reload of the fields the endpoint now persists', () => {

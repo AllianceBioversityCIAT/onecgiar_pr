@@ -276,7 +276,7 @@
             <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
             <app-pr-filter-multiselect
               [options]="dropdown1ScienceOptions()"
-              optionLabel="official_code"
+              optionLabel="sp_label"
               placeholder="Select entity"
               [(ngModel)]="entityAowService.selectedEntities"
               (changed)="onScienceSelect()"
@@ -323,7 +323,7 @@
 
             <app-pr-filter-multiselect
               [options]="otherScienceList()"
-              optionLabel="official_code"
+              optionLabel="sp_label"
               placeholder="Select other entity"
               [ngModel]="otherScienceSelected()"
               (changed)="otherScienceSelected.set($event ?? [])"

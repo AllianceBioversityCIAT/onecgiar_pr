@@ -22,6 +22,35 @@ interface CreateResultBody {
   contribution_to_indicator_target: number | null;
 }
 
+/**
+ * Display label for a Science Program option: `SP01 - Sustainable Farming`.
+ *
+ * QA 2026-08-28: the two Science Program dropdowns in this modal showed only `official_code`
+ * ("SP01"), while the centre dropdowns beside them show `full_name` and the project one shows
+ * `project_name` — an inconsistency inside a single form, not a decision.
+ *
+ * 🛑 Composed at the single point where the list is loaded, NOT inside the `options` computed.
+ * `pr-filter-multiselect` stores whole option objects in the model when no `optionValue` is given,
+ * and its `sameValue()` compares by key count, so an extra field present on the options but absent
+ * from the preselected values makes preselection silently stop matching. Both derive from the array
+ * normalised here, so their shape stays identical.
+ *
+ * The label is what the dropdown's own search filters on (`pr-filter-multiselect:120`), so this also
+ * makes the fields searchable by code AND by name — before, only by code.
+ */
+type ScienceProgramNameFields = {
+  official_code?: string | null;
+  name?: string | null;
+  initiative_name?: string | null;
+  short_name?: string | null;
+};
+
+export function withScienceProgramLabel<T extends ScienceProgramNameFields>(sp: T): T & { sp_label: string } {
+  const code = `${sp?.official_code ?? ''}`.trim();
+  const name = `${sp?.name ?? sp?.initiative_name ?? sp?.short_name ?? ''}`.trim();
+  return { ...sp, sp_label: code && name ? `${code} - ${name}` : code || name };
+}
+
 @Component({
   selector: 'app-aow-hlo-create-modal',
   imports: [
@@ -38,6 +67,7 @@ interface CreateResultBody {
   styleUrl: './aow-hlo-create-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
+
 export class AowHloCreateModalComponent implements OnInit {
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
@@ -124,7 +154,7 @@ export class AowHloCreateModalComponent implements OnInit {
   // Dropdown 1: the ToC-derived Science Programs + the "Other(s)" sentinel that opens dropdown 2.
   dropdown1ScienceOptions = computed(() => [
     ...this.tocSciencePrograms(),
-    { id: this.OTHER_SP_ID, official_code: 'Other(s)', name: 'Science Program(s)/Accelerator(s)' }
+    { id: this.OTHER_SP_ID, official_code: 'Other(s)', name: 'Science Program(s)/Accelerator(s)', sp_label: 'Other(s)' }
   ]);
 
   // Dropdown 2: every Science Program not derived from the ToC node.
@@ -141,7 +171,9 @@ export class AowHloCreateModalComponent implements OnInit {
     );
     this.api.resultsSE.GET_AllInitiatives('p25').subscribe(({ response }) => {
       // P2-3131: exclude AVISA (SGP-02) from the "Other(s) Science Program" dropdown in the report popup.
-      const all = filterOutAvisaInitiatives(response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id));
+      const all = filterOutAvisaInitiatives(
+        response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id)
+      ).map(withScienceProgramLabel);
       this.allInitiatives.set(all);
       this.preselectTocSciencePrograms(all);
     });

@@ -159,4 +159,175 @@ describe('MyDraftResultsComponent', () => {
       expect(component.getDraftStatusClass(noResult)).toContain('mdr-status--draft');
     });
   });
+
+  describe('P2-3319 — filter the Drafts tab by project', () => {
+    /** Three drafts across two projects, so a project filter has something to hide. */
+    const draftOfProject = (id: number, projectId: number, title: string): BilateralAiDraft =>
+      ({
+        ...draftStub,
+        id,
+        extracted_mds: { title, indicator: 'Capacity Sharing' },
+        job: { ...(draftStub as any).job, project_id: projectId },
+      }) as unknown as BilateralAiDraft;
+
+    const alpha = draftOfProject(1, 7, 'Alpha draft');
+    const beta = draftOfProject(2, 7, 'Beta draft');
+    const gamma = draftOfProject(3, 9, 'Gamma draft');
+
+    beforeEach(() => {
+      bilateralAiService.projectNameMap.set({ 7: 'PRJ-Seven', 9: 'PRJ-Nine' });
+      bilateralAiService.draftList.set([alpha, beta, gamma]);
+      bilateralAiService.isDraftListLoaded.set(true);
+      fixture.detectChanges();
+    });
+
+    const renderedTitles = (): string[] =>
+      fixture.debugElement.queryAll(By.css('.mdr-card-title')).map(node => node.nativeElement.textContent.trim());
+
+    it('offers one option per project present in the drafts, named and alphabetical', () => {
+      expect(component.projectFilterOptions()).toEqual([
+        { value: '9', label: 'PRJ-Nine' },
+        { value: '7', label: 'PRJ-Seven' },
+      ]);
+    });
+
+    it('falls back to the raw project id while the project names are still loading', () => {
+      bilateralAiService.projectNameMap.set({});
+      fixture.detectChanges();
+      expect(component.projectFilterOptions().map(option => option.label)).toEqual(['7', '9']);
+    });
+
+    it('never offers a project that has no drafts in this list', () => {
+      // 42 exists in CLARISA but produced no drafts — offering it would empty the page.
+      bilateralAiService.projectNameMap.set({ 7: 'PRJ-Seven', 9: 'PRJ-Nine', 42: 'PRJ-FortyTwo' });
+      fixture.detectChanges();
+      expect(component.projectFilterOptions().map(option => option.value)).not.toContain('42');
+    });
+
+    it('shows every draft while no project is selected', () => {
+      expect(component.filter.selectedProjectId()).toBeNull();
+      expect(component.filter.hasActiveFilters()).toBe(false);
+      expect(component.drafts().map(draft => draft.id)).toEqual([1, 2, 3]);
+      expect(renderedTitles()).toEqual(['Alpha draft', 'Beta draft', 'Gamma draft']);
+    });
+
+    it('keeps only the drafts of the selected project', () => {
+      component.onProjectFilterChange('7');
+      fixture.detectChanges();
+
+      expect(component.drafts().map(draft => draft.id)).toEqual([1, 2]);
+      expect(renderedTitles()).toEqual(['Alpha draft', 'Beta draft']);
+      expect(component.hasDrafts()).toBe(true);
+      expect(component.isFilteredEmpty()).toBe(false);
+    });
+
+    it('matches ids the payload serialises as strings', () => {
+      bilateralAiService.draftList.set([
+        { ...alpha, job: { ...(alpha as any).job, project_id: '7' } } as unknown as BilateralAiDraft,
+        gamma,
+      ]);
+      component.onProjectFilterChange('7');
+      fixture.detectChanges();
+
+      expect(component.drafts().map(draft => draft.id)).toEqual([1]);
+    });
+
+    it('counts the hidden drafts in the subtitle', () => {
+      expect(component.subtitle()).toBe('3 drafts ready for review');
+      component.onProjectFilterChange('7');
+      fixture.detectChanges();
+      expect(component.subtitle()).toBe('Showing 2 of 3 drafts');
+    });
+
+    it('shows a chip naming the active project', () => {
+      component.onProjectFilterChange('7');
+      fixture.detectChanges();
+
+      expect(component.selectedProjectLabel()).toBe('PRJ-Seven');
+      const chip = fixture.debugElement.query(By.css('.mdr-filter-chip'));
+      expect(chip.nativeElement.textContent).toContain('PRJ-Seven');
+    });
+
+    it('brings every draft back when the filter is cleared', () => {
+      component.onProjectFilterChange('7');
+      fixture.detectChanges();
+      expect(component.drafts().length).toBe(2);
+
+      component.clearFilters();
+      fixture.detectChanges();
+
+      expect(component.filter.selectedProjectId()).toBeNull();
+      expect(component.filter.hasActiveFilters()).toBe(false);
+      expect(component.drafts().map(draft => draft.id)).toEqual([1, 2, 3]);
+      expect(renderedTitles()).toEqual(['Alpha draft', 'Beta draft', 'Gamma draft']);
+      expect(fixture.debugElement.query(By.css('.mdr-filter-chip'))).toBeNull();
+    });
+
+    it('clears the filter through the chip button', () => {
+      component.onProjectFilterChange('7');
+      fixture.detectChanges();
+
+      fixture.debugElement.query(By.css('.mdr-filter-chip button')).nativeElement.click();
+      fixture.detectChanges();
+
+      expect(component.filter.selectedProjectId()).toBeNull();
+      expect(renderedTitles().length).toBe(3);
+    });
+
+    it('treats the shared select sentinel and a re-pick of the active project as "no filter"', () => {
+      component.onProjectFilterChange('all');
+      expect(component.filter.selectedProjectId()).toBeNull();
+
+      component.onProjectFilterChange('7');
+      component.onProjectFilterChange('7');
+      expect(component.filter.selectedProjectId()).toBeNull();
+    });
+
+    it('maps a null selection back to the shared select sentinel', () => {
+      expect(component.selectValue(component.filter.selectedProjectId())).toBe('all');
+      component.onProjectFilterChange('9');
+      expect(component.selectValue(component.filter.selectedProjectId())).toBe('9');
+    });
+
+    it('offers a way out when the filter hides everything', () => {
+      bilateralAiService.draftList.set([gamma]);
+      component.onProjectFilterChange('7');
+      fixture.detectChanges();
+
+      expect(component.hasAnyDrafts()).toBe(true);
+      expect(component.hasDrafts()).toBe(false);
+      expect(component.isFilteredEmpty()).toBe(true);
+
+      const empty = fixture.debugElement.query(By.css('.mdr-empty--filtered'));
+      expect(empty).not.toBeNull();
+      // The "no drafts yet" CTA must NOT be the one on screen: it sends the user off to create a result.
+      expect(empty.nativeElement.textContent).toContain('Clear filter');
+
+      empty.query(By.css('.mdr-empty-cta')).nativeElement.click();
+      fixture.detectChanges();
+      expect(component.isFilteredEmpty()).toBe(false);
+      expect(component.drafts().map(draft => draft.id)).toEqual([3]);
+    });
+
+    it('keeps the "no drafts yet" empty state when the centre really has none', () => {
+      bilateralAiService.draftList.set([]);
+      fixture.detectChanges();
+
+      expect(component.isFilteredEmpty()).toBe(false);
+      expect(fixture.debugElement.query(By.css('.mdr-empty--filtered'))).toBeNull();
+      expect(fixture.debugElement.query(By.css('.mdr-empty'))).not.toBeNull();
+      expect(component.subtitle()).toBe('No drafts yet');
+      // No toolbar to filter an empty list with.
+      expect(fixture.debugElement.query(By.css('.mdr-filter'))).toBeNull();
+    });
+
+    it('ignores drafts whose payload carries no job when a project is selected', () => {
+      const orphan = { ...alpha, id: 4, job: undefined } as unknown as BilateralAiDraft;
+      bilateralAiService.draftList.set([alpha, orphan]);
+      component.onProjectFilterChange('7');
+      fixture.detectChanges();
+
+      expect(component.drafts().map(draft => draft.id)).toEqual([1]);
+    });
+  });
 });

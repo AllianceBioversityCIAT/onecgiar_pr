@@ -22,8 +22,12 @@
     z-index: 100;
   }
 
+  // QA 2026-08-28: was `5`, i.e. BELOW the `.sc-card` base of 10, so the card that follows in the
+  // DOM (External partners) painted over this one's open dropdown panel and swallowed the option
+  // list. The ladder is meant to descend with document order so an upper card's panel overlays the
+  // cards beneath it, which needs every value to stay above that base.
   &--projects {
-    z-index: 5;
+    z-index: 50;
   }
 
   &__header {

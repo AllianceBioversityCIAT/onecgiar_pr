@@ -100,15 +100,27 @@ export class ComplementaryInnovationComponent implements OnInit {
         this.complementaryInnovationService.bodyNewComplementaryInnovation.other_funcions =
           response?.findResultComplementaryInnovation?.other_funcions;
 
-        response?.findComplementaryInnovationFuctions.forEach(element => {
-          const name = this.complementaryFunction.find(
+        // P2-3529: the checkbox group binds `[value]="subItem"` where `subItem` is an object taken from
+        // `cols` (built in `setupColumns()` out of `this.complementaryFunction`). `prCheckboxValue`
+        // resolves membership with `indexOf`, i.e. REFERENCE equality for objects
+        // (shared/directives/pr-checkbox-value-accessor.directive.ts:61) — the PrimeNG `p-checkbox` it
+        // replaced used deep equality. Rehydrating with freshly built literals therefore produced an
+        // array that could never match any `subItem`, so every saved Function rendered unchecked while
+        // the plain text fields on the same modal reloaded fine. Reuse the SAME object reference.
+        this.complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions = (
+          response?.findComplementaryInnovationFuctions ?? []
+        ).map(element => {
+          const option = this.complementaryFunction?.find(
             item => item.complementary_innovation_functions_id === element.complementary_innovation_function_id
-          )?.name;
+          );
 
-          this.complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions.push({
-            complementary_innovation_functions_id: element.complementary_innovation_function_id,
-            name: name
-          });
+          // Unknown id (catalog changed): keep it in the payload so saving does not silently drop it.
+          return (
+            option ?? {
+              complementary_innovation_functions_id: element.complementary_innovation_function_id,
+              name: undefined
+            }
+          );
         });
 
         setTimeout(() => {

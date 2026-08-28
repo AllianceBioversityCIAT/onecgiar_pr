@@ -1,13 +1,36 @@
 @use '../../../../../../../../../../../../../styles/fonts.scss' as fonts;
 
 // app-pr-dialog wrapper: reproduce the old p-dialog [style] width + flush body.
+//
+// P2-3530: the panel used to be the single scroll container (`.pr-dialog { overflow: auto }` from
+// pr-dialog.component.scss), so on a low-resolution screen the whole form — title included — scrolled
+// as one block and the "Save and continue" row sat ~500px below the fold. Ownership of the scroll is
+// moved to the body: the panel clamps to the viewport and clips, the body scrolls internally, and the
+// title stays put while the action row stays pinned at the bottom.
 ::ng-deep app-pr-dialog .new-complementary-innovation-dialog {
   &.pr-dialog {
     width: 70vw;
+    max-width: 1200px;
+    max-height: 90vh;
+    // The panel must NOT scroll — its body does (below). Overrides the base `overflow: auto`.
+    overflow: hidden;
   }
 
   .pr-dialog__body {
     padding: 0;
+    // Flex child of the column panel: `min-height: 0` is what allows it to shrink below its content
+    // height so `overflow-y` actually produces a scrollbar instead of stretching the panel.
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  @media (max-width: 1200px) {
+    &.pr-dialog {
+      width: 95vw;
+    }
   }
 }
 
@@ -21,10 +44,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+// Wrapper around title + fields. Owns the internal scroll (P2-3530).
+.modal_content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .modal_container {
-  padding: 20px 40px 80px 70px;
+  // Was `20px 40px 80px 70px`: the 80px bottom reserved room for `.buttons { margin-top: -50px }`.
+  // The action row is a pinned footer now, so the reserve is gone and the horizontal padding shrinks
+  // with the viewport instead of eating a fixed 110px out of a narrow dialog.
+  padding: 20px clamp(16px, 3vw, 40px) 20px clamp(16px, 5vw, 70px);
   width: 100% !important;
 }
 
@@ -33,9 +71,9 @@
   justify-content: flex-end;
   gap: 10px;
   width: 100%;
-  margin-top: -50px;
-  padding-right: 50px;
-  padding-bottom: 10px;
+  // Pinned footer: never scrolls away, so the mandatory action stays reachable at any height.
+  flex: 0 0 auto;
+  padding: 10px clamp(16px, 3vw, 50px) 10px clamp(16px, 3vw, 50px);
 }
 
 .selectedInnovation {
@@ -50,5 +88,24 @@
 
 .container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  // Two columns while there is room; collapses to one below ~600px of usable width instead of
+  // squeezing the long function labels into unreadable slivers.
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  column-gap: 24px;
+}
+
+// "Other enabler functions" — was inline `width: 50%; margin-top: -30px; margin-left: 20px`, which
+// overlapped the checkbox grid once the grid collapsed to one column.
+.other_functions_field {
+  width: 50%;
+  margin-top: -30px;
+  margin-left: 20px;
+}
+
+@media (max-width: 900px) {
+  .other_functions_field {
+    width: 100%;
+    margin-top: 10px;
+    margin-left: 0;
+  }
 }

@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { AowHloCreateModalComponent } from './aow-hlo-create-modal.component';
+import { AowHloCreateModalComponent, withScienceProgramLabel } from './aow-hlo-create-modal.component';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
@@ -660,6 +660,31 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
     });
   });
 
+  /**
+   * Guards the WIRING, not the helper. Removing `.map(withScienceProgramLabel)` from the load in
+   * `ngOnInit` left every helper unit test green while the dropdowns went back to showing "SP01",
+   * so the composition has to be asserted on what the options actually carry.
+   */
+  describe('Science Program label wiring (QA 2026-08-28)', () => {
+    it('labels the options the two Science Program dropdowns read', () => {
+      (component.api.resultsSE.GET_AllInitiatives as jest.Mock).mockReturnValue(
+        of({ response: [{ id: 11, initiative_id: 11, official_code: 'SP01', name: 'Sustainable Farming' }] })
+      );
+
+      component.ngOnInit();
+
+      expect(component.allInitiatives()[0].sp_label).toBe('SP01 - Sustainable Farming');
+      expect(component.otherScienceList()[0].sp_label).toBe('SP01 - Sustainable Farming');
+    });
+
+    it('keeps the "Other(s)" sentinel readable in dropdown 1', () => {
+      const sentinel = component.dropdown1ScienceOptions().find((o: any) => o.id === component.OTHER_SP_ID);
+
+      // Without its own sp_label the sentinel row would render blank once optionLabel moved.
+      expect(sentinel.sp_label).toBe('Other(s)');
+    });
+  });
+
   describe('Helper Getters and Computed Signals (phaseYear, isAdmin)', () => {
     it('should compute phaseYear from api.dataControlSE.reportingCurrentPhase', () => {
       expect(component.phaseYear()).toBe(2026);
@@ -766,5 +791,40 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       const scienceLabelEl = scienceHeaderEl.query(By.css('.pr_label'));
       expect(scienceLabelEl.nativeElement.textContent.trim()).toContain('Other(s) Science Program(s)/Accelerator(s)');
     });
+  });
+
+});
+
+/**
+ * QA 2026-08-28. The dropdowns showed "SP01" with no name, while the centre and project fields
+ * in the same modal show a name. The label is composed at load time rather than in the options
+ * computed, because `pr-filter-multiselect` keeps whole objects in the model and compares them by
+ * key count — see the doc comment on the helper.
+ */
+describe('Science Program display label (QA 2026-08-28)', () => {
+  it('composes code and name', () => {
+    expect(withScienceProgramLabel({ official_code: 'SP01', name: 'Sustainable Farming' }).sp_label).toBe(
+      'SP01 - Sustainable Farming'
+    );
+  });
+
+  it('falls back to the other name fields the payload may carry', () => {
+    expect(withScienceProgramLabel({ official_code: 'SP02', initiative_name: 'Nutrition' }).sp_label).toBe('SP02 - Nutrition');
+    expect(withScienceProgramLabel({ official_code: 'SP03', short_name: 'Climate' }).sp_label).toBe('SP03 - Climate');
+  });
+
+  it('degrades to whichever half exists instead of printing a dangling dash', () => {
+    expect(withScienceProgramLabel({ official_code: 'SP04' }).sp_label).toBe('SP04');
+    expect(withScienceProgramLabel({ name: 'Only a name' }).sp_label).toBe('Only a name');
+    expect(withScienceProgramLabel({}).sp_label).toBe('');
+  });
+
+  it('keeps every original field, so the model shape the dropdown compares stays intact', () => {
+    const original = { id: 7, official_code: 'SP05', name: 'Genetic Innovation', from_toc: true };
+    const labelled = withScienceProgramLabel(original);
+
+    expect(labelled).toEqual({ ...original, sp_label: 'SP05 - Genetic Innovation' });
+    // The helper must not mutate: preselection spreads the same source array.
+    expect((original as any).sp_label).toBeUndefined();
   });
 });
