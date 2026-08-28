@@ -12,6 +12,7 @@ import {
   OverviewLink,
   HeatmapModel
 } from './program-overview.component';
+import type { TocMapModel } from '../../dashboard-lab.toc-map';
 
 // `PrVizChartComponent` (imported by `ProgramOverviewComponent`) pulls in real echarts, which
 // jsdom cannot render. Mocked exactly as `pr-viz-chart.component.spec.ts` does — this suite tests
@@ -68,18 +69,6 @@ describe('ProgramOverviewComponent', () => {
     { code: 'AOW01', name: 'Market', done: 3, total: 8 }
   ];
 
-  /** Mirrors the real prtest shape for SP02: 8 own categories, uncapped. */
-  const categories: CategoryBar[] = [
-    { name: 'Innovation development', count: 15, link: { category: 'Innovation development' } },
-    { name: 'Other output', count: 10, link: { category: 'Other output' } },
-    { name: 'Capacity sharing for development', count: 6, link: { category: 'Capacity sharing for development' } },
-    { name: 'Innovation use', count: 6, link: { category: 'Innovation use' } },
-    { name: 'Knowledge product', count: 6, link: { category: 'Knowledge product' } },
-    { name: 'Policy change', count: 5, link: { category: 'Policy change' } },
-    { name: 'Other outcome', count: 1, link: { category: 'Other outcome' } },
-    { name: 'Innovation Packages', count: 1, link: { category: 'Innovation Packages' } }
-  ];
-
   const bilateralCategories: CategoryBar[] = [
     { name: 'Capacity sharing for development', count: 70, link: { origin: 'W3/Bilaterals', category: 'Capacity sharing for development' } },
     { name: 'Innovation development', count: 30, link: { origin: 'W3/Bilaterals', category: 'Innovation development' } }
@@ -131,7 +120,6 @@ describe('ProgramOverviewComponent', () => {
     fixture.componentRef.setInput('programName', 'Breeding for Tomorrow');
     fixture.componentRef.setInput('statusSegments', segments);
     fixture.componentRef.setInput('aowProgress', aows);
-    fixture.componentRef.setInput('categories', categories);
     fixture.componentRef.setInput('bilateralCategories', bilateralCategories);
     fixture.componentRef.setInput('bilateralCenters', centers);
     fixture.componentRef.setInput('w12Heatmap', w12Heatmap);
@@ -142,45 +130,51 @@ describe('ProgramOverviewComponent', () => {
   /**
    * Guards the card ORDER, which is the whole point of P2-3303 ("prominent … under about this
    * program"). Any reordering has to be a deliberate edit here, never an accident.
-   * Extended by `OVW-T-3` (design §6.2) with the two new heatmap cards (4 and 5).
+   * Extended by `OVW-T-3` (design §6.2) with the two new heatmap cards.
+   * **Amendment `CVT-A-3`** (owner, CVT-T-3 HITL gate): the standalone "W1/W2 results by
+   * indicator category" card is removed (bars-default + bar-end totals make the W1/W2 matrix
+   * card fully subsume it) — 8 headings drop to 7, deliberately, here.
+   * **`TCM-R-1`** (`changes/overview-toc-map`, TCM-T-3, deliberate recorded edit): appends the
+   * "Theory of Change map" card directly below "Progress by area of work" — 7 headings become 8.
+   * FAIL input: the append missing (card not rendered, or its `<h2>` renamed/dropped) → red.
    */
-  it('renders the eight Overview cards in the approved design order', () => {
+  it('renders the eight Overview cards in the approved design order (CVT-A-3, TCM-R-1)', () => {
     const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
 
-    // Order amended by quick/overview-card-order (user-approved 2026-08-27): narrative flow
-    // context → own results + pipeline → status headline → bilateral volume + contributors →
-    // their cross → plan progress. P2-3303 still holds: W1/W2 categories directly under About.
+    // Order amended by CVT-A-3 (2026-08-27, owner, CVT-T-3 gate — supersedes P2-3303's placement
+    // decision and quick/overview-card-order's 8-card layout): context → own results by category
+    // and status → status headline → bilateral volume + contributors → their cross → plan progress
+    // → whole-program ToC map (TCM-R-1, appended 2026-08-28).
     expect(headings).toEqual([
       'About this program',
-      // P2-3481: the titles name the funding type, so a user can tell the two blocks apart.
-      'W1/W2 results by indicator category',
+      'Reporting status',
       'W1/W2 results by category and status',
       'Reporting status',
       'W3/Bilateral results by indicator category',
-      'Centers with reported W3/bilateral results',
       'W3/Bilateral results by center and category',
-      'Progress by area of work'
+      'Progress by area of work',
+      'Theory of Change map'
     ]);
   });
 
-  it('no longer renders the three cards removed on user request', () => {
+  it('no longer renders the cards removed on user request', () => {
     const text = fixture.nativeElement.textContent as string;
-    // P2-3298 / P2-3300 / P2-3299 respectively.
+    // P2-3298 / P2-3300 / P2-3299 and Centers card removed on user request
     expect(text).not.toContain('Reporting pace');
     expect(text).not.toContain('Needs attention');
     expect(text).not.toContain('Impact so far');
     expect(text).not.toContain('Countries reached');
+    expect(text).not.toContain('Centers with reported W3/bilateral results');
   });
 
   /**
-   * Rewritten from "there is still no SVG" (`OVW-T-3`, tasks.md DoD): the two heatmap cards plus
-   * the Reporting-status donut (`OVW-T-4`) each mount a real `app-pr-viz-chart` host, always
-   * paired with a non-null `tableModel` (the wrapper clears the chart otherwise — `OVW-R-2`/
-   * `OVW-R-3`/`OVW-R-4` a11y pairing).
+   * Rewritten from "there is still no SVG" (`OVW-T-3`, tasks.md DoD): the two matrix cards, the
+   * Reporting-status donut (`OVW-T-4`), and the bilateral radar card each mount a real
+   * `app-pr-viz-chart` host, always paired with a non-null `tableModel`.
    */
-  it('renders 3 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
+  it('renders 4 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
     const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-    expect(hosts.length).toBe(3);
+    expect(hosts.length).toBe(4);
     hosts.forEach(host => {
       expect(host.componentInstance.tableModel()).toBeTruthy();
       expect(host.componentInstance.options()).toBeTruthy();
@@ -217,112 +211,52 @@ describe('ProgramOverviewComponent', () => {
     expect(component.percentOf({ code: 'AOW09', name: 'Empty', done: 0, total: 0 })).toBe(0);
   });
 
-  describe('results by indicator category', () => {
-    it('scales each bar against the largest count in its own series', () => {
-      expect(component.categoryWidth(categories[0])).toBe(100);
-      expect(component.categoryWidth(categories[1])).toBeCloseTo((10 / 15) * 100);
-      expect(component.categoryWidth(categories[6])).toBeCloseTo((1 / 15) * 100);
+  // The former "results by indicator category" describe block (W1/W2 own-results single-series
+  // card: categoryWidth, its four-item-cap/no-cap coverage, its empty state, its aria-label and
+  // singular/plural cases) is REMOVED under `CVT-A-3` — that card no longer exists; the W1/W2
+  // matrix card (bars-default + bar-end totals) now covers the same information.
+
+  // The former "bilateral breakdowns" / "centers with reported W3/bilateral results" describe
+  // blocks (DOM-button rows, `bilateralCategoryWidth`/`bilateralCentersMax`/`centerWidth`,
+  // per-row `button[aria-label]` assertions) are REMOVED under `CVT-A-5` — both cards are now
+  // single-series `app-pr-viz-chart` hosts (like the matrix/donut cards); those members and DOM
+  // rows no longer exist. See the `bilateral single-series bar cards (CVT-A-5)` describe below.
+
+  describe('bilateral indicator categories radar card', () => {
+    it('mounts an app-pr-viz-chart host with non-null options/tableModel and the right caption', () => {
+      const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
+      const categoriesHost = hosts.find(h => h.componentInstance.chartTitle() === 'W3/Bilateral results by indicator category');
+
+      expect(categoriesHost).toBeTruthy();
+      expect(categoriesHost?.componentInstance.options()).toBeTruthy();
+      expect(categoriesHost?.componentInstance.tableModel()?.caption).toBe('W3/Bilateral results by indicator category');
     });
 
-    /**
-     * The old vertical chart capped at 4 columns, which hid half of SP02's categories — still
-     * true. Rewritten for `OVW-T-2`: rows are real buttons now, so this also pins the count of
-     * navigable `button[aria-label]` controls to "every row with a link" plus the meter segments
-     * that got a link (the synthetic `Not specified` center and zero-count segments do not).
-     */
-    it('renders every category with no four-item cap, using a navigable button per linked row', () => {
-      expect(categories.length).toBe(8);
+    it('emits the stored link when a navigable bilateral-categories row is activated', () => {
+      const emitted: OverviewLink[] = [];
+      const sub = component.openResults.subscribe(link => emitted.push(link));
 
-      const buttons = fixture.nativeElement.querySelectorAll('button[aria-label]');
-      const linkedRows = [...categories, ...bilateralCategories, ...centers].filter(r => r.link !== null).length;
-      const linkedSegments = segments.filter(s => s.count > 0 && s.link !== null).length;
-      expect(buttons.length).toBe(linkedRows + linkedSegments);
+      // dataIndex 0 = bilateralCategories[0] = 'Capacity sharing for development'.
+      component.onBilateralCategoriesClick({ dataIndex: 0 } as unknown as ECElementEvent);
+
+      expect(emitted).toEqual([{ origin: 'W3/Bilaterals', category: 'Capacity sharing for development' }]);
+      sub.unsubscribe();
     });
 
-    it('returns 0 instead of NaN for an all-zero series', () => {
-      const zeroes: CategoryBar[] = [
-        { name: 'A', count: 0, link: null },
-        { name: 'B', count: 0, link: null }
-      ];
-      fixture.componentRef.setInput('categories', zeroes);
-      fixture.detectChanges();
-      expect(component.categoryWidth(zeroes[0])).toBe(0);
-      expect(Number.isNaN(component.categoryWidth(zeroes[0]))).toBe(false);
+    /** FAIL input: a resolver that doesn't guard a missing/non-numeric dataIndex turns this red. */
+    it('emits nothing when the click event carries no numeric dataIndex', () => {
+      const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+      component.onBilateralCategoriesClick({} as unknown as ECElementEvent);
+
+      expect(emitSpy).not.toHaveBeenCalled();
     });
 
-    it('shows an empty state instead of an empty chart', () => {
-      fixture.componentRef.setInput('categories', []);
-      fixture.detectChanges();
-      expect(fixture.nativeElement.textContent).toContain('No result categories reported yet.');
-    });
-
-    it('exposes the count to assistive tech and hides the bar itself', () => {
-      const row = fixture.nativeElement.querySelector('button[aria-label^="Innovation development"]');
-      expect(row.getAttribute('aria-label')).toBe('Innovation development: 15 results');
-      expect(row.querySelector('[aria-hidden="true"]')).toBeTruthy();
-    });
-
-    it('says "1 result", not "1 results", for a single-result category', () => {
-      const singles = fixture.nativeElement.querySelectorAll('button[aria-label$="1 result"]');
-      // Two categories sit at count 1 in the fixture (Other outcome, Innovation Packages).
-      expect(singles.length).toBe(2);
-    });
-  });
-
-  describe('bilateral breakdowns', () => {
-    it('normalises the bilateral bars against their own maximum, not the own-results one', () => {
-      // 70 is the bilateral max even though the own-results series peaks at 15.
-      expect(component.bilateralCategoryWidth(bilateralCategories[0])).toBe(100);
-      expect(component.bilateralCategoryWidth(bilateralCategories[1])).toBeCloseTo((30 / 70) * 100);
-    });
-
-    it('shows an empty state when no bilateral results are linked', () => {
+    it('shows an empty state instead of a chart when no bilateral categories are linked', () => {
       fixture.componentRef.setInput('bilateralCategories', []);
       fixture.detectChanges();
       expect(fixture.nativeElement.textContent).toContain('No bilateral results are linked to this program yet.');
-    });
-  });
-
-  describe('centers with reported W3/bilateral results', () => {
-    it('calculates center bar width relative to the maximum center count', () => {
-      expect(component.bilateralCentersMax()).toBe(45);
-      expect(component.centerWidth(centers[0])).toBe(100);
-      expect(component.centerWidth(centers[1])).toBeCloseTo((32 / 45) * 100);
-      expect(component.centerWidth(centers[2])).toBeCloseTo((4 / 45) * 100);
-    });
-
-    it('renders center acronyms, counts, and width styling in the DOM', () => {
-      const text = fixture.nativeElement.textContent as string;
-      expect(text).toContain('CIAT');
-      expect(text).toContain('45');
-      expect(text).toContain('IRRI');
-      expect(text).toContain('32');
-      expect(text).toContain('CIMMYT');
-      expect(text).toContain('4');
-
-      const ciatButton = fixture.nativeElement.querySelector('button[aria-label="CIAT: 45 results"]');
-      expect(ciatButton).toBeTruthy();
-      const ciatBar = ciatButton.querySelector('.bg-\\[var\\(--pr-chart-2\\)\\]');
-      expect(ciatBar.style.width).toBe('100%');
-    });
-
-    it('says "1 result", not "1 results", for a single-result center', () => {
-      fixture.componentRef.setInput('bilateralCenters', [
-        { name: 'CIP', count: 1, link: { origin: 'W3/Bilaterals', center: 'CIP' } }
-      ]);
-      fixture.detectChanges();
-      const row = fixture.nativeElement.querySelector('button[aria-label="CIP: 1 result"]');
-      expect(row).toBeTruthy();
-    });
-
-    it('shows an empty state when no centers have reported bilateral results', () => {
-      fixture.componentRef.setInput('bilateralCenters', []);
-      fixture.detectChanges();
-      expect(component.bilateralCentersMax()).toBe(0);
-      expect(component.centerWidth({ name: 'CIAT', count: 0, link: null })).toBe(0);
-      expect(fixture.nativeElement.textContent).toContain(
-        'No centers have reported bilateral results for this program yet.'
-      );
+      expect(component.bilateralCategoriesOption()).toBeNull();
     });
 
     it('does not render legacy bilateral role counts or review stub', () => {
@@ -336,24 +270,13 @@ describe('ProgramOverviewComponent', () => {
   });
 
   describe('row navigability (OVW-R-1 / OVW-DD-1 / OVW-DD-3)', () => {
-    /**
-     * Renamed from "ships the category and center rows visible but disabled" and inverted:
-     * P2-3408 landed, so every row with a destination is now a real, enabled button — only the
-     * synthetic `Not specified` center (no single filter value, `OVW-DD-3`) stays disabled.
-     * FAIL input: re-adding `disabled` unconditionally on the row button turns this red.
-     */
-    it('renders linked rows as enabled buttons and keeps Not specified disabled', () => {
-      const rows: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button.min-h-\\[36px\\]'));
-      expect(rows.length).toBe(categories.length + bilateralCategories.length + centers.length);
-
-      const linkedRows = rows.filter(row => row.getAttribute('aria-label'));
-      expect(linkedRows.length).toBeGreaterThan(0);
-      expect(linkedRows.every(row => !row.disabled)).toBe(true);
-
-      const disabledRows = rows.filter(row => row.disabled);
-      expect(disabledRows.length).toBe(1);
-      expect(disabledRows[0].textContent).toContain('Not specified');
-    });
+    // `CVT-A-5` converted the bilateral-categories and centers cards from DOM `button` rows to
+    // `app-pr-viz-chart` hosts (no keyboard-focusable per-row buttons any more — accepted
+    // tradeoff, consistent with the matrix/donut cards per the amendment). The DOM-row tests
+    // that lived here (enabled/disabled row buttons, clicking the "IITA" row button, clicking
+    // the disabled "Not specified" row button) are REMOVED — their click-resolution coverage now
+    // lives in `bilateral single-series bar cards (CVT-A-5)` above, via `onBilateralCentersClick`/
+    // `onBilateralCategoriesClick` directly, since there is no DOM row left to click.
 
     /**
      * Renamed from "announces Coming soon once per affected section": the chip is gone now that
@@ -366,28 +289,9 @@ describe('ProgramOverviewComponent', () => {
       expect(tags.length).toBe(0);
     });
 
-    it('emits the row link when a linked row is clicked', () => {
-      const emitted: OverviewLink[] = [];
-      const sub = component.openResults.subscribe(link => emitted.push(link));
-
-      const iitaButton: HTMLButtonElement = fixture.nativeElement.querySelector('button[aria-label^="IITA"]');
-      expect(iitaButton).toBeTruthy();
-      iitaButton.click();
-
-      expect(emitted).toEqual([{ origin: 'W3/Bilaterals', center: 'IITA' }]);
-      sub.unsubscribe();
-    });
-
-    it('emits nothing when the disabled Not specified row is activated', () => {
+    /** FAIL input: resolving a `null` link to a truthy emission turns this red. */
+    it('emitLink swallows null and never emits (OVW-DD-3 guard)', () => {
       const emitSpy = jest.spyOn(component.openResults, 'emit');
-
-      // A native `disabled` button never dispatches a click at all — this proves the DOM side.
-      const disabledButton: HTMLButtonElement = fixture.nativeElement.querySelector('button[disabled]');
-      expect(disabledButton.textContent).toContain('Not specified');
-      disabledButton.click();
-      expect(emitSpy).not.toHaveBeenCalled();
-
-      // This proves the guard itself, independent of the browser's disabled-click suppression.
       component.emitLink(null);
       expect(emitSpy).not.toHaveBeenCalled();
     });
@@ -407,6 +311,15 @@ describe('ProgramOverviewComponent', () => {
   });
 
   describe('heatmap cell navigability (OVW-R-2 / OVW-R-3 / OVW-DD-3)', () => {
+    // CVT-A-1 flipped the default view mode to 'bars' — these cases exercise the HEATMAP
+    // resolver specifically (heatmap-shaped `{data: [c, r, value]}` events), so they force
+    // heatmap mode explicitly rather than relying on the (now bars) default.
+    beforeEach(() => {
+      component.setW12ViewMode('heatmap');
+      component.setBilateralViewMode('heatmap');
+      fixture.detectChanges();
+    });
+
     it('emits the stored link when a navigable W1/W2 heatmap cell is activated', () => {
       const emitted: OverviewLink[] = [];
       const sub = component.openResults.subscribe(link => emitted.push(link));
@@ -547,6 +460,419 @@ describe('ProgramOverviewComponent', () => {
       component.onDonutClick({ name: 'Approved' } as unknown as ECElementEvent);
 
       expect(emitSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * `CVT-T-2`: per-card view toggle (`CVT-R-1`), mode-aware options (`CVT-R-2`), navigation
+   * parity in bars mode (`CVT-R-3`), and the a11y/host invariants (`CVT-R-4`).
+   * **Amendment `CVT-A-1`** (owner, CVT-T-3 HITL gate): default view is now `'bars'` on both
+   * cards — the assertions below were flipped to match (originals kept only in comments/git
+   * history, never silently rewritten in place).
+   */
+  describe('matrix view toggle (CVT-R-1 / CVT-R-4 / CVT-A-1)', () => {
+    /** FAIL input: defaulting either signal to `'heatmap'` turns this red. */
+    it('defaults both matrix cards to a bars-shaped option on init (CVT-A-1)', () => {
+      expect(component.w12ViewMode()).toBe('bars');
+      expect(component.bilateralViewMode()).toBe('bars');
+
+      const w12Option = component.w12ChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
+      const bilateralOption = component.bilateralChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
+      expect(w12Option?.series?.[0]?.type).toBe('bar');
+      expect(w12Option?.visualMap).toBeUndefined();
+      expect(bilateralOption?.series?.[0]?.type).toBe('bar');
+      expect(bilateralOption?.visualMap).toBeUndefined();
+    });
+
+    /** FAIL input: sharing one signal between the two cards turns this red. */
+    it('toggling the W1/W2 card to heatmap leaves the bilateral card in bars (independence)', () => {
+      component.setW12ViewMode('heatmap');
+      fixture.detectChanges();
+
+      const w12Option = component.w12ChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
+      expect(component.w12ViewMode()).toBe('heatmap');
+      expect(w12Option?.series?.[0]?.type).toBe('heatmap');
+      expect(w12Option?.visualMap).toBeTruthy();
+
+      const bilateralOption = component.bilateralChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
+      expect(component.bilateralViewMode()).toBe('bars');
+      expect(bilateralOption?.series?.[0]?.type).toBe('bar');
+    });
+
+    /** FAIL input: a second chart host per card, or a table rebuilt on toggle, turns this red. */
+    it('keeps exactly one app-pr-viz-chart host per card and the same tableModel reference across the switch', () => {
+      const beforeHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
+      // 2 matrix cards + donut + 1 bilateral radar card = 4 hosts total.
+      expect(beforeHosts.length).toBe(4);
+      const w12TableBefore = component.w12HeatmapTable();
+      const bilateralTableBefore = component.bilateralHeatmapTable();
+
+      component.setW12ViewMode('heatmap');
+      component.setBilateralViewMode('heatmap');
+      fixture.detectChanges();
+
+      const afterHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
+      expect(afterHosts.length).toBe(4);
+      expect(component.w12HeatmapTable()).toBe(w12TableBefore);
+      expect(component.bilateralHeatmapTable()).toBe(bilateralTableBefore);
+    });
+
+    /** FAIL input: dropping the toggle when the model is empty (instead of only the chart) turns this red. */
+    it('keeps the toggle present (but no chart) when a matrix card has no rows, in both modes', () => {
+      fixture.componentRef.setInput('w12Heatmap', { rows: [], cols: [], cells: [], caption: 'W1/W2 results by category and status' });
+      fixture.detectChanges();
+
+      // Already default 'bars' — empty state renders regardless of mode.
+      expect(fixture.nativeElement.textContent).toContain('No W1/W2 results reported yet.');
+      const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
+      expect(buttons.some(b => b.textContent?.trim() === 'Heatmap')).toBe(true);
+      expect(buttons.some(b => b.textContent?.trim() === 'Bars')).toBe(true);
+      expect(component.w12ChartOption()).toBeNull();
+
+      component.setW12ViewMode('heatmap');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('No W1/W2 results reported yet.');
+      expect(component.w12ChartOption()).toBeNull();
+    });
+
+    describe('toggle controls', () => {
+      /** FAIL input: missing a button, or defaulting `aria-pressed` wrong, turns this red. */
+      it('renders a Heatmap/Bars toggle (2 buttons) per matrix card, Bars pressed by default (CVT-A-1)', () => {
+        const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
+        const heatmapButtons = buttons.filter(b => b.textContent?.trim() === 'Heatmap');
+        const barsButtons = buttons.filter(b => b.textContent?.trim() === 'Bars');
+
+        expect(heatmapButtons.length).toBe(2);
+        expect(barsButtons.length).toBe(2);
+        heatmapButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('false'));
+        barsButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('true'));
+      });
+
+      /** FAIL input: one shared signal driving both cards' buttons turns this red. */
+      it('flips aria-pressed and the mode signal for only the clicked card', () => {
+        const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
+        // DOM order follows the template: W1/W2 heatmap card's toggle renders before the
+        // bilateral heatmap card's toggle.
+        const [w12HeatmapButton] = buttons.filter(b => b.textContent?.trim() === 'Heatmap');
+
+        w12HeatmapButton.click();
+        fixture.detectChanges();
+
+        expect(component.w12ViewMode()).toBe('heatmap');
+        expect(component.bilateralViewMode()).toBe('bars');
+        expect(w12HeatmapButton.getAttribute('aria-pressed')).toBe('true');
+      });
+    });
+
+    /** Segment click resolution in bars mode must agree with the heatmap resolver (`CVT-R-3`). */
+    describe('bars-mode click resolution', () => {
+      beforeEach(() => {
+        // Explicit precondition — already the default under CVT-A-1, kept for readability and to
+        // stay correct if the default is ever revisited.
+        component.setW12ViewMode('bars');
+        fixture.detectChanges();
+      });
+
+      it('emits the stored link when a navigable bars-mode segment is activated', () => {
+        const emitted: OverviewLink[] = [];
+        const sub = component.openResults.subscribe(link => emitted.push(link));
+
+        // seriesIndex 0 = "Editing" column, dataIndex 0 = "Knowledge product" row.
+        component.onW12HeatmapClick({ seriesIndex: 0, dataIndex: 0 } as unknown as ECElementEvent);
+
+        expect(emitted).toEqual([{ category: 'Knowledge product', status: 'Editing' }]);
+        sub.unsubscribe();
+      });
+
+      /** FAIL input: a bars-mode resolver bypassing the null-link check turns this red. */
+      it('emits nothing when the Other-column bars-mode segment (link: null) is activated', () => {
+        const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+        // seriesIndex 3 = "Other" column — its cell's link is null.
+        component.onW12HeatmapClick({ seriesIndex: 3, dataIndex: 0 } as unknown as ECElementEvent);
+
+        expect(emitSpy).not.toHaveBeenCalled();
+      });
+
+      /** FAIL input: a click resolving against the bar-end totals artifact's index turns this red. */
+      it('emits nothing when the bar-end totals artifact (one past the last real column) is activated', () => {
+        const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+        component.onW12HeatmapClick({ seriesIndex: 4, dataIndex: 0 } as unknown as ECElementEvent);
+
+        expect(emitSpy).not.toHaveBeenCalled();
+      });
+    });
+
+    /**
+     * `CVT-A-2` (OQ-1 overridden = yes): bar-end row totals thread through the component's
+     * mode-aware option in the default (bars) mode. Structural assertions only — token-name
+     * passthrough (KZ-SPO-1), never a resolved CSS value (jsdom returns `''` for both, so
+     * asserting equality with the empty string here would pass for the wrong reason).
+     */
+    describe('bar-end row totals (CVT-A-2)', () => {
+      it("appends a totals series to the default bars option, formatting each row's real total", () => {
+        const w12Option = component.w12ChartOption() as {
+          series: { label?: { show?: boolean; formatter?: (p: unknown) => string } }[];
+        };
+        const totalsSeries = w12Option.series[w12Option.series.length - 1];
+
+        expect(totalsSeries.label?.show).toBe(true);
+        // Fixture row 0 "Knowledge product": Editing 3 + Quality Assessed 1 + Submitted 2 + Other 4 = 10.
+        expect(totalsSeries.label?.formatter?.({ dataIndex: 0 })).toBe('10');
+      });
+
+      it('uses the SAME resolved text-secondary token for both cards’ totals labels (no hex, no per-card divergence)', () => {
+        const w12Option = component.w12ChartOption() as { series: { label?: { color?: string } }[] };
+        const bilateralOption = component.bilateralChartOption() as { series: { label?: { color?: string } }[] };
+        const w12Color = w12Option.series[w12Option.series.length - 1].label?.color;
+        const bilateralColor = bilateralOption.series[bilateralOption.series.length - 1].label?.color;
+
+        expect(w12Color).toBe(bilateralColor);
+        expect(w12Color).not.toMatch(/^#/);
+      });
+    });
+  });
+
+  /**
+   * `CVT-A-4` (amendment, owner, CVT-T-3 gate): two `aria-hidden` visual group-label rows
+   * ("W1/W2" · "W3/Bilateral") — no reordering, no new headings, pinned 7-heading assertion
+   * (`CVT-A-3`) stays untouched.
+   */
+  describe('section separators (CVT-A-4 / CVT-DD-8)', () => {
+    /** Direct children of the 12-col grid, in DOM order — separators and cards are siblings here. */
+    function gridChildren(): Element[] {
+      return Array.from(fixture.nativeElement.querySelectorAll('.grid.grid-cols-12 > *'));
+    }
+
+    /** FAIL input: a missing/extra separator, wrong label text, or a non-hidden row turns this red. */
+    it('renders exactly 2 separator rows, aria-hidden, with the exact group labels', () => {
+      const separators: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('div[aria-hidden="true"]'));
+      expect(separators.length).toBe(2);
+      expect(separators.map(el => el.textContent?.trim())).toEqual(['W1/W2', 'W3/Bilateral']);
+      separators.forEach(el => expect(el.getAttribute('aria-hidden')).toBe('true'));
+    });
+
+    /** FAIL input: the separator landing after the card (or elsewhere) turns this red. */
+    it('places the "W1/W2" separator immediately before the W1/W2 reporting status card', () => {
+      const children = gridChildren();
+      const separatorIndex = children.findIndex(
+        el => el.getAttribute('aria-hidden') === 'true' && el.textContent?.trim() === 'W1/W2'
+      );
+      const w12CardIndex = children.findIndex(
+        el => el.querySelector('h2')?.textContent?.trim() === 'Reporting status'
+      );
+      expect(separatorIndex).toBeGreaterThan(-1);
+      expect(w12CardIndex).toBe(separatorIndex + 1);
+    });
+
+    /** FAIL input: the separator landing after the bilateral group (or elsewhere) turns this red. */
+    it('places the "W3/Bilateral" separator immediately before the first bilateral card', () => {
+      const children = gridChildren();
+      const separatorIndex = children.findIndex(
+        el => el.getAttribute('aria-hidden') === 'true' && el.textContent?.trim() === 'W3/Bilateral'
+      );
+      const bilateralCardIndex = children.findIndex(
+        (el, idx) => idx > separatorIndex && el.querySelector('h2')?.textContent?.trim() === 'Reporting status'
+      );
+      expect(separatorIndex).toBeGreaterThan(-1);
+      expect(bilateralCardIndex).toBe(separatorIndex + 1);
+    });
+
+    /** FAIL input: a separator promoted to a real heading turns this red (breaks the pinned pin). */
+    it('adds no screen-reader noise and does not touch the pinned 8-heading assertion (TCM-R-1)', () => {
+      const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
+      expect(headings.length).toBe(8);
+      expect(headings).not.toContain('W1/W2');
+      expect(headings).not.toContain('W3/Bilateral');
+    });
+  });
+
+  describe('W3/Bilateral Reporting status card', () => {
+    it('renders empty message when no bilateral status segments provided', () => {
+      expect(fixture.nativeElement.textContent).toContain('No bilateral results reported for this program yet.');
+    });
+
+    it('renders donut and progress bar when bilateral status segments are present', () => {
+      const bilateralSegs: StatusSegment[] = [
+        {
+          key: 'pending',
+          label: 'Pending Review',
+          count: 12,
+          bg: '#fef3c7',
+          fg: '#b45309',
+          statusName: 'Pending Review',
+          link: { origin: 'W3/Bilaterals', status: 'Pending Review' }
+        },
+        {
+          key: 'approved',
+          label: 'Approved',
+          count: 8,
+          bg: '#d1fae5',
+          fg: '#047857',
+          statusName: 'Approved',
+          link: { origin: 'W3/Bilaterals', status: 'Approved' }
+        }
+      ];
+      fixture.componentRef.setInput('bilateralStatusSegments', bilateralSegs);
+      fixture.detectChanges();
+
+      expect(component.bilateralStatusTotal()).toBe(20);
+      expect(component.bilateralSegmentWidth(bilateralSegs[0])).toBe(60);
+      expect(component.bilateralSegmentWidth(bilateralSegs[1])).toBe(40);
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+    });
+  });
+
+  /**
+   * Theory-of-Change map card (`changes/overview-toc-map`, TCM-T-3). Default `beforeEach` leaves
+   * `tocMap`/`tocMapLoading` at their input defaults (`null`/`false`) — the empty state — so the
+   * pre-existing "5 `app-pr-viz-chart`" counts above are untouched; these tests set the two inputs
+   * explicitly per case.
+   */
+  describe('Theory of Change map card (TCM-T-3)', () => {
+    const tocModel: TocMapModel = {
+      spCode: 'SP01',
+      spName: 'Breeding for Tomorrow',
+      branches: [
+        {
+          kind: 'aow',
+          code: 'AOW01',
+          name: 'Area of Work 1',
+          done: 1,
+          total: 2,
+          target: 10,
+          achieved: 4,
+          leaves: [
+            { code: 'OP1', title: 'Output one', level: 'OUTPUT', indicators: 1, target: 6, achieved: 4, done: 1, total: 1 },
+            { code: 'OP2', title: 'Output two', level: 'OUTPUT', indicators: 1, target: 4, achieved: 0, done: 0, total: 1 }
+          ]
+        }
+      ]
+    };
+
+    /** FAIL input: the card missing its `<h2>` append, or a chart with no table, turns this red. */
+    it('renders one app-pr-viz-chart with a non-null tableModel when a model is provided', () => {
+      fixture.componentRef.setInput('tocMap', tocModel);
+      fixture.detectChanges();
+
+      // 4 pre-existing wrapper instances (donut, W1/W2, bilateral heatmap, bilateral radar — no
+      // bilateral donut in the default fixture, `bilateralStatusSegments` unset) + 1 for the map.
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+      expect(component.tocMapOption()).not.toBeNull();
+      expect(component.tocMapTable()).not.toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Theory of Change map');
+    });
+
+    /** FAIL input: a chart rendered with no table (wrapper clears it) — the wrapper contract itself. */
+    it('shows the wrapper loading state while ToC calls are in flight, even with no model yet', () => {
+      fixture.componentRef.setInput('tocMap', null);
+      fixture.componentRef.setInput('tocMapLoading', true);
+      fixture.detectChanges();
+
+      // The wrapper renders (loading skeleton) even with null options/tableModel — one more than
+      // the empty-state case below, which renders no wrapper at all.
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+      expect(component.tocMapOption()).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('No Theory of Change data loaded yet.');
+    });
+
+    /** Empty program (TCM-R-2 "Empty program" scenario): no model, not loading → the card's own empty state. */
+    it('shows the card empty state once settled with no model — no chart, no throw', () => {
+      fixture.componentRef.setInput('tocMap', null);
+      fixture.componentRef.setInput('tocMapLoading', false);
+      expect(() => fixture.detectChanges()).not.toThrow();
+
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(4);
+      expect(fixture.nativeElement.textContent).toContain('No Theory of Change data loaded yet.');
+    });
+
+    /** FAIL input: a resolver bypass (emitting on every click, not just AoW nodes) turns this red. */
+    it('emits openAow ONLY when the click resolves to an AoW node — leaf/root/malformed payloads never emit', () => {
+      fixture.componentRef.setInput('tocMap', tocModel);
+      fixture.detectChanges();
+
+      const emitted: string[] = [];
+      component.openAow.subscribe(code => emitted.push(code));
+
+      component.onTocMapClick({ data: { tocMapPayload: { kind: 'aow', aowCode: 'AOW01' } } } as unknown as ECElementEvent);
+      expect(emitted).toEqual(['AOW01']);
+
+      component.onTocMapClick({ data: { tocMapPayload: { kind: 'leaf', aowCode: null } } } as unknown as ECElementEvent);
+      component.onTocMapClick({ data: { tocMapPayload: { kind: 'root', aowCode: null } } } as unknown as ECElementEvent);
+      component.onTocMapClick({ data: {} } as unknown as ECElementEvent);
+      component.onTocMapClick({} as unknown as ECElementEvent);
+
+      // No further emissions past the one real AoW click.
+      expect(emitted).toEqual(['AOW01']);
+    });
+  });
+
+  describe('KPI summary cards and section filtering', () => {
+    it('computes correct totals for all 4 KPI cards', () => {
+      expect(component.statusTotal()).toBe(7);
+      expect(component.bilateralStatusTotal()).toBe(0);
+      expect(component.contributingCentersCount()).toBe(4);
+      expect(component.aowStats().pct).toBe(30);
+      expect(component.aowStats().count).toBe(2);
+    });
+
+    it('renders 4 KPI card buttons with proper content', () => {
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('W1/W2 Results');
+      expect(text).toContain('W3 / Bilateral');
+      expect(text).toContain('Contributing Centers');
+      expect(text).toContain('Areas of Work');
+    });
+
+    it('filters visible sections when a section tab is clicked', () => {
+      expect(component.activeSection()).toBe('all');
+
+      // Click W1/W2
+      component.setActiveSection('w1w2');
+      fixture.detectChanges();
+      expect(component.activeSection()).toBe('w1w2');
+      let headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
+      expect(headings).toContain('Reporting status');
+      expect(headings).toContain('W1/W2 results by category and status');
+      expect(headings).not.toContain('W3/Bilateral results by indicator category');
+      expect(headings).not.toContain('Progress by area of work');
+      expect(headings).not.toContain('Theory of Change map');
+
+      // Click Bilateral
+      component.setActiveSection('bilateral');
+      fixture.detectChanges();
+      expect(component.activeSection()).toBe('bilateral');
+      headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
+      expect(headings).toContain('W3/Bilateral results by indicator category');
+      expect(headings).toContain('W3/Bilateral results by center and category');
+      expect(headings).not.toContain('W1/W2 results by category and status');
+      expect(headings).not.toContain('Progress by area of work');
+      expect(headings).not.toContain('Theory of Change map');
+
+      // Click AoW
+      component.setActiveSection('aow');
+      fixture.detectChanges();
+      expect(component.activeSection()).toBe('aow');
+      headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
+      // TCM-R-1: the ToC map card shares the AoW filter's gate — it appears alongside
+      // "Progress by area of work", directly below it.
+      expect(headings).toEqual(['About this program', 'Progress by area of work', 'Theory of Change map']);
+
+      // Reset to all
+      component.setActiveSection('all');
+      fixture.detectChanges();
+      expect(component.activeSection()).toBe('all');
+      headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
+      expect(headings.length).toBe(8);
+    });
+
+    it('toggles section to "all" when clicking the currently active section', () => {
+      component.setActiveSection('w1w2');
+      expect(component.activeSection()).toBe('w1w2');
+
+      component.setActiveSection('w1w2');
+      expect(component.activeSection()).toBe('all');
     });
   });
 });

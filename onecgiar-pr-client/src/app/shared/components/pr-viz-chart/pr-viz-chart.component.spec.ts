@@ -19,7 +19,8 @@ jest.mock('echarts/core', () => ({
 jest.mock('echarts/charts', () => ({
   BarChart: class BarChart {},
   PieChart: class PieChart {},
-  HeatmapChart: class HeatmapChart {}
+  HeatmapChart: class HeatmapChart {},
+  RadarChart: class RadarChart {}
 }));
 
 jest.mock('echarts/components', () => ({
@@ -28,7 +29,8 @@ jest.mock('echarts/components', () => ({
   GridComponent: class GridComponent {},
   DatasetComponent: class DatasetComponent {},
   LegendComponent: class LegendComponent {},
-  VisualMapComponent: class VisualMapComponent {}
+  VisualMapComponent: class VisualMapComponent {},
+  RadarComponent: class RadarComponent {}
 }));
 
 jest.mock('echarts/renderers', () => ({
@@ -113,8 +115,10 @@ describe('PrVizChartComponent', () => {
   });
 
   describe('Module Registration & Initialization', () => {
-    it('registers exactly the 11 declared modules', () => {
-      expect(REGISTERED_ECHARTS_MODULES.length).toBe(11);
+    it('registers exactly the 14 declared modules', () => {
+      // 13 → 14: additive `TreeChart` registration for the ToC map (`changes/overview-toc-map`,
+      // TCM-T-1) — no existing module removed.
+      expect(REGISTERED_ECHARTS_MODULES.length).toBe(14);
     });
 
     it('initializes echarts with SVG renderer and emits chartInit', () => {

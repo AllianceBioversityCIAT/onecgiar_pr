@@ -10,6 +10,8 @@ import { ResultRepository } from '../results/result.repository';
 import { CreateResultsFrameworkResultDto } from './dto/create-results-framework.dto';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
+import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
+import { VersioningService } from '../versioning/versioning.service';
 import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
 import type { ReportingTocContext } from './reporting-toc-context/reporting-toc-context.interface';
 import { CreateResultFromFrameworkCommand } from './application/commands/create-result-from-framework/create-result-from-framework.command';
@@ -35,6 +37,7 @@ export class ResultsFrameworkReportingService {
     private readonly _tocResultsRepository: AoWBilateralRepository,
     private readonly _tocCatalogRepository: TocResultsRepository,
     private readonly _resultRepository: ResultRepository,
+    private readonly _versioningService: VersioningService,
     private readonly _createResultFromFrameworkHandler: CreateResultFromFrameworkHandler,
     private readonly _getExistingResultContributorsToIndicatorsHandler: GetExistingResultContributorsToIndicatorsHandler,
   ) {}
@@ -556,15 +559,19 @@ export class ResultsFrameworkReportingService {
     }
   }
 
-  async getProgramIndicatorContributionSummary(program?: string) {
+  async getProgramIndicatorContributionSummary(
+    program?: string,
+    versionId?: number,
+  ) {
     try {
-      const { initiative, activeYearValue } =
-        await this.resolveInitiativeAndYear(program ?? '');
+      const { initiative } = await this.resolveInitiative(program ?? '');
+      const resolvedVersionId =
+        await this.resolveIndicatorSummaryVersionId(versionId);
 
       const [rawSummary, activeResultTypes] = await Promise.all([
         this._resultRepository.getIndicatorContributionSummaryByProgram(
           initiative.id,
-          activeYearValue,
+          resolvedVersionId,
         ),
         this._resultRepository.getActiveResultTypes(),
       ]);
@@ -850,7 +857,13 @@ export class ResultsFrameworkReportingService {
     return error;
   }
 
-  private async resolveInitiativeAndYear(programId: string) {
+  /**
+   * Resolves the program-identifier half of `resolveInitiativeAndYear`, without the
+   * `year` table lookup — the `getProgramIndicatorContributionSummary` call (W12-R-2)
+   * scopes by reporting phase (`version_id`), not by the decoupled `year.active` config
+   * row, so it must not depend on an active `year` row existing.
+   */
+  private async resolveInitiative(programId: string) {
     const normalizedProgram = programId?.trim().toUpperCase();
 
     if (!normalizedProgram) {
@@ -871,6 +884,40 @@ export class ResultsFrameworkReportingService {
         'No initiative was found with the provided program identifier.',
       );
     }
+
+    return { initiative, normalizedProgram };
+  }
+
+  /**
+   * Resolves `versionId` for `getProgramIndicatorContributionSummary` (W12-R-2): an
+   * explicit, finite `versionId` is honored as-is; otherwise the current REPORTING
+   * phase (`$_findActivePhase`) is used — never `resolveInitiativeAndYear`'s
+   * `year.active` fallback (W12-DD-3).
+   */
+  private async resolveIndicatorSummaryVersionId(
+    versionId?: number,
+  ): Promise<number> {
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      return versionId;
+    }
+
+    const activePhase = await this._versioningService.$_findActivePhase(
+      AppModuleIdEnum.REPORTING,
+    );
+
+    if (!activePhase?.id) {
+      throw this.buildHttpError(
+        HttpStatus.NOT_FOUND,
+        'No active reporting phase was found.',
+      );
+    }
+
+    return Number(activePhase.id);
+  }
+
+  private async resolveInitiativeAndYear(programId: string) {
+    const { initiative, normalizedProgram } =
+      await this.resolveInitiative(programId);
 
     const activeYear = await this._yearRepository.findOne({
       where: { active: true },

@@ -1,7 +1,7 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { By } from '@angular/platform-browser';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { CgspaceItemDto, KpCgspaceBrowseComponent } from './kp-cgspace-browse.component';
 import { ResultsApiService } from 'src/app/shared/services/api/results-api.service';
 import { CustomFieldsModule } from 'src/app/custom-fields/custom-fields.module';
@@ -562,6 +562,26 @@ describe('KpCgspaceBrowseComponent', () => {
       expect(testComp.centerOptions().length).toBeGreaterThan(0);
       expect(testComp.typeOptions().some(t => t.label === 'Journal Article')).toBe(true);
       expect(testComp.centerOptions().some(c => c.label.includes('Alliance'))).toBe(true);
+    });
+
+    it('should format center options with acronym - name pattern', () => {
+      const ciatOption = component.centerOptions().find(c => c.value === 'International Center for Tropical Agriculture');
+      expect(ciatOption?.label).toBe('CIAT - International Center for Tropical Agriculture');
+
+      const allianceOption = component.centerOptions().find(c => c.value.includes('Alliance'));
+      expect(allianceOption?.label).toMatch(/^Alliance - /);
+    });
+
+    it('should render spinner icon when loading facets', () => {
+      mockResultsApiService.GET_cgspaceFacet.mockReturnValue(new Subject());
+      const testFixture = TestBed.createComponent(KpCgspaceBrowseComponent);
+      testFixture.detectChanges();
+
+      const centerSpinner = testFixture.nativeElement.querySelector('.kp-filter-center .pi-spinner');
+      expect(centerSpinner).toBeTruthy();
+
+      const typeSpinner = testFixture.nativeElement.querySelector('.kp-filter-type .pi-spinner');
+      expect(typeSpinner).toBeTruthy();
     });
   });
 });

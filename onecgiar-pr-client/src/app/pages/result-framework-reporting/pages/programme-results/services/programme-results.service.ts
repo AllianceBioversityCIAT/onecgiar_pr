@@ -62,6 +62,10 @@ export interface ProgrammeResultRow {
   // the route helper can stay a pure function of the row.
   /** `version_id` — `?phase=` on the result-detail route. */
   versionId: string;
+  /** `phase_name` — for phase filtering and display. */
+  phaseName: string;
+  /** `phase_year` — for phase filtering and display. */
+  phaseYear: number | null;
   /** `submitter` — the programme official code (e.g. `SP01`) in the review-drawer route. */
   submitterCode: string;
 }
@@ -134,6 +138,8 @@ export function toProgrammeResultRow(raw: Record<string, any>): ProgrammeResultR
     indicator: '',
     section: '',
     versionId: text(raw?.['version_id']),
+    phaseName: text(raw?.['phase_name']),
+    phaseYear: num(raw?.['phase_year']),
     submitterCode: text(raw?.['submitter'])
   };
 }
@@ -176,6 +182,14 @@ export class ProgrammeResultsService {
 
   // Option lists are DERIVED from the rows we hold (bilateral-results.service.ts:57-71),
   // never hardcoded, so a dropdown can only ever offer a value that matches something.
+  readonly phaseOptions = computed(() => {
+    const unique = new Set(
+      this.rows()
+        .map(row => row.phaseName || (row.phaseYear ? `Phase ${row.phaseYear}` : ''))
+        .filter(Boolean)
+    );
+    return [...unique].sort((a, b) => b.localeCompare(a));
+  });
   readonly statusOptions = computed(() => optionsOf(this.rows(), row => row.statusName));
   readonly categoryOptions = computed(() => optionsOf(this.rows(), row => row.category));
   readonly originOptions = computed(() => optionsOf(this.rows(), row => row.origin));

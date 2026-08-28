@@ -55,7 +55,7 @@
             role="tab"
             [attr.aria-selected]="kpEntryMode() === 'browse'"
             (click)="kpEntryMode.set('browse')"
-            class="flex-1 rounded-lg border-0 py-2 text-sm font-semibold transition-all cursor-pointer"
+            class="flex-1 rounded-lg border-0 py-2 text-[15px] font-semibold transition-all cursor-pointer focus:outline-none"
             [ngClass]="kpEntryMode() === 'browse' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
             Browse CGSpace
           </button>
@@ -64,7 +64,7 @@
             role="tab"
             [attr.aria-selected]="kpEntryMode() === 'manual'"
             (click)="kpEntryMode.set('manual')"
-            class="flex-1 rounded-lg border-0 py-2 text-sm font-semibold transition-all cursor-pointer"
+            class="flex-1 rounded-lg border-0 py-2 text-[15px] font-semibold transition-all cursor-pointer focus:outline-none"
             [ngClass]="kpEntryMode() === 'manual' ? 'bg-white text-[var(--pr-color-primary-300)] shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-900'">
             Manual entry
           </button>
@@ -128,7 +128,7 @@
         <p class="m-0 mb-2 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
           Repository link/handle <span class="text-[var(--pr-color-red-300)]">*</span>
         </p>
-        <div class="flex items-start gap-2">
+        <div class="flex items-center gap-2">
           <div class="min-w-0 flex-1">
             <!-- `isStatic` is what keeps a field editable: `editable` is declared on pr-input but never
                  read, and RolesService.readOnly defaults to true. -->
@@ -145,7 +145,7 @@
             type="button"
             (click)="validateHandle()"
             [disabled]="validatingHandler() || creatingResult()"
-            class="mt-1 inline-flex h-[46px] shrink-0 appearance-none items-center gap-1.5 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 text-[13.5px] font-semibold text-white disabled:opacity-50 cursor-pointer">
+            class="inline-flex h-[40px] shrink-0 appearance-none items-center justify-center gap-1.5 rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-4 text-sm font-semibold text-white transition-all disabled:opacity-50 cursor-pointer focus:outline-none">
             {{ validatingHandler() ? 'Syncing…' : 'Sync' }}
             <span class="material-icons-round text-[16px]" [class.animate-spin]="validatingHandler()">sync</span>
           </button>

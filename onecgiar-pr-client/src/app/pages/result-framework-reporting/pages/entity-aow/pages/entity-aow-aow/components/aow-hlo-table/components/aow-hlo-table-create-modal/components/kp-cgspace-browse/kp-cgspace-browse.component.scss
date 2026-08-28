@@ -44,10 +44,17 @@
       }
 
       .text {
-        font-size: 13px !important;
+        font-size: 13.5px !important;
         color: #374151 !important;
         font-weight: 500 !important;
         line-height: 36px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        padding-right: 44px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        display: block !important;
       }
 
       .select_placeholder {
@@ -67,7 +74,7 @@
       }
 
       .pr-select-clear {
-        right: 32px !important;
+        right: 28px !important;
         font-size: 16px !important;
         color: #9ca3af !important;
 
