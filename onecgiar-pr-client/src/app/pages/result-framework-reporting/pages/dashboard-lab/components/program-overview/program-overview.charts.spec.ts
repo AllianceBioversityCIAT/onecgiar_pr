@@ -1,4 +1,4 @@
-import { CHART_TOKEN_NAMES, resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
+import { CHART_TOKEN_NAMES, resolveChartTokens, ResolvedChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
 import {
   heatmapOption,
   heatmapTable,
@@ -15,9 +15,13 @@ import {
   singleBarLinkFromClick,
   radarOption,
   radarTable,
-  radarLinkFromClick
+  radarLinkFromClick,
+  tocMapOption,
+  tocMapTable,
+  tocMapAowFromClick
 } from './program-overview.charts';
 import { HeatmapModel, OverviewLink, StatusSegment } from './program-overview.component';
+import type { TocBranch, TocLeaf, TocMapModel } from '../../dashboard-lab.toc-map';
 
 describe('program-overview.charts (OVW-T-3)', () => {
   const model: HeatmapModel = {
@@ -589,5 +593,369 @@ describe('program-overview.charts axis abbreviations (quick/heatmap-axis-abbrevi
 
     expect(rotateOf(4)).toBe(0);
     expect(rotateOf(7)).toBe(35);
+  });
+});
+
+/**
+ * `TCM-T-2` — Theory-of-Change map builders (`tocMapOption` / `tocMapTable` / `tocMapAowFromClick`)
+ * over `TocMapModel` (dashboard-lab.toc-map.ts, TCM-T-1). Fixtures build `TocMapModel` literals
+ * directly (same style as `HeatmapModel` fixtures above) rather than through `buildTocMapModel` —
+ * this suite owns rendering/encoding/resolution, not model math (that unit's own spec covers it).
+ */
+describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
+  // Non-hex placeholder token names (KZ-SPO-1) — `tocMapOption` must never resolve/invent a color,
+  // only pass these straight through into `itemStyle.color`.
+  const tokens: ResolvedChartTokens = {
+    ramp: ['ramp-q0', 'ramp-q1', 'ramp-q2', 'ramp-q3'],
+    primary: 'token-primary',
+    primaryStrong: 'token-primary-strong',
+    bilateralMuted: 'token-muted-structural',
+    textSecondary: 'token-text-secondary',
+    border: 'token-border'
+  };
+
+  function makeLeaf(partial: Partial<TocLeaf>): TocLeaf {
+    return {
+      code: null,
+      title: 'Untitled leaf',
+      level: 'OUTPUT',
+      indicators: 1,
+      target: 0,
+      achieved: 0,
+      done: 0,
+      total: 1,
+      ...partial
+    };
+  }
+
+  function makeBranch(partial: Partial<TocBranch> & Pick<TocBranch, 'kind' | 'code' | 'name' | 'leaves'>): TocBranch {
+    return {
+      done: 0,
+      total: 0,
+      target: 0,
+      achieved: 0,
+      ...partial
+    };
+  }
+
+  function makeModel(branches: TocBranch[]): TocMapModel {
+    return { spCode: 'SP01', spName: 'Science Program One', branches };
+  }
+
+  /** Test-only shape of a produced tree data node — mirrors `TocMapTreeNode` (not exported). */
+  interface TestTreeNode {
+    name: string;
+    symbolSize: number;
+    itemStyle: { color: string };
+    label: { show: boolean };
+    tocMapPayload: {
+      kind: string;
+      aowCode: string | null;
+      code: string | null;
+      title: string;
+      level: string;
+      indicators: number;
+      target: number;
+      achieved: number;
+      done: number;
+      total: number;
+    };
+    children?: TestTreeNode[];
+  }
+
+  interface TestTreeOption {
+    tooltip: { formatter: (params: unknown) => string };
+    series: [
+      {
+        type: string;
+        layout: string;
+        initialTreeDepth: number;
+        roam: boolean;
+        symbolSize: number;
+        label: { show: boolean };
+        data: TestTreeNode[];
+      }
+    ];
+  }
+
+  function buildOption(model: TocMapModel): TestTreeOption {
+    return tocMapOption(model, tokens) as unknown as TestTreeOption;
+  }
+
+  /** Walks the whole produced tree (root → branches → leaves) — the independent parity check for the table spec below. */
+  function countTreeNodes(node: TestTreeNode): number {
+    return 1 + (node.children ?? []).reduce((sum, child) => sum + countTreeNodes(child), 0);
+  }
+
+  describe('tocMapOption — shape (TCM-R-2/3/7)', () => {
+    const model = makeModel([
+      makeBranch({
+        kind: 'aow',
+        code: 'AOW01',
+        name: 'Area of Work 1',
+        done: 1,
+        total: 2,
+        leaves: [makeLeaf({ code: 'OP1', done: 1, total: 1 }), makeLeaf({ code: 'OP2', done: 0, total: 1 })]
+      })
+    ]);
+
+    it('is a radial tree series, fully expanded, with no roam/zoom (deterministic — TCM-R-7)', () => {
+      const option = buildOption(model);
+      const series = option.series[0];
+      expect(series.type).toBe('tree');
+      expect(series.layout).toBe('radial');
+      expect(series.initialTreeDepth).toBe(-1);
+      expect(series.roam).toBe(false);
+    });
+
+    it('scales symbolSize root > branch > leaf, in that strict order', () => {
+      const option = buildOption(model);
+      const root = option.series[0].data[0];
+      const branch = root.children![0];
+      const leaf = branch.children![0];
+      expect(root.symbolSize).toBeGreaterThan(branch.symbolSize);
+      expect(branch.symbolSize).toBeGreaterThan(leaf.symbolSize);
+    });
+
+    it('shows root + branch labels, hides leaf labels (OQ-1 default)', () => {
+      const option = buildOption(model);
+      const root = option.series[0].data[0];
+      const branch = root.children![0];
+      const leaf = branch.children![0];
+      expect(root.label.show).toBe(true);
+      expect(branch.label.show).toBe(true);
+      expect(leaf.label.show).toBe(false);
+      // Series-level default also reads "off" — a FAIL input here (leaf labels turned on, or a
+      // `graph`/force layout swapped in) would flip these booleans/strings red.
+      expect(option.series[0].label.show).toBe(false);
+    });
+  });
+
+  describe('tocMapOption — progress quartile → ramp token (TCM-DD-4)', () => {
+    // 0%, 30%, 60%, 100%, and a 0-indicator structural node — boundary-adjacent ratios included
+    // (25/50/75% would land in the HIGHER bucket; the off-by-one FAIL case flips `>=` to `>`).
+    const zero = makeLeaf({ code: 'Z', done: 0, total: 10 }); // 0%
+    const q1 = makeLeaf({ code: 'A', done: 3, total: 10 }); // 30% → bucket 1
+    const q2 = makeLeaf({ code: 'B', done: 6, total: 10 }); // 60% → bucket 2
+    const full = makeLeaf({ code: 'C', done: 10, total: 10 }); // 100% → bucket 3
+    const structural = makeLeaf({ code: 'D', done: 0, total: 0 }); // total === 0, no ratio
+
+    const model = makeModel([
+      makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', leaves: [zero, q1, q2, full, structural] })
+    ]);
+
+    it('colors each leaf by its EXACT quartile ramp token name (never a resolved value)', () => {
+      const leaves = buildOption(model).series[0].data[0].children![0].children!;
+      const colorOf = (code: string) => leaves.find(l => l.tocMapPayload.code === code)!.itemStyle.color;
+
+      expect(colorOf('Z')).toBe(tokens.ramp[0]);
+      expect(colorOf('A')).toBe(tokens.ramp[1]);
+      expect(colorOf('B')).toBe(tokens.ramp[2]);
+      expect(colorOf('C')).toBe(tokens.ramp[3]);
+      // total === 0 → the muted STRUCTURAL token, not a ramp index (no division by zero).
+      expect(colorOf('D')).toBe(tokens.bilateralMuted);
+      // Never a hex literal, whatever the token happens to be named.
+      leaves.forEach(l => expect(l.itemStyle.color.startsWith('#')).toBe(false));
+    });
+
+    it('boundary values (exactly 25/50/75%) land in the HIGHER bucket — the exact off-by-one a wrong comparator would miss', () => {
+      const boundaryModel = makeModel([
+        makeBranch({
+          kind: 'aow',
+          code: 'AOW01',
+          name: 'Area of Work 1',
+          leaves: [
+            makeLeaf({ code: 'B25', done: 25, total: 100 }),
+            makeLeaf({ code: 'B50', done: 50, total: 100 }),
+            makeLeaf({ code: 'B75', done: 75, total: 100 })
+          ]
+        })
+      ]);
+      const leaves = buildOption(boundaryModel).series[0].data[0].children![0].children!;
+      const colorOf = (code: string) => leaves.find(l => l.tocMapPayload.code === code)!.itemStyle.color;
+
+      expect(colorOf('B25')).toBe(tokens.ramp[1]);
+      expect(colorOf('B50')).toBe(tokens.ramp[2]);
+      expect(colorOf('B75')).toBe(tokens.ramp[3]);
+    });
+
+    it('the SP root carries no progress concept — brand primary fill, never quartile-colored', () => {
+      const root = buildOption(model).series[0].data[0];
+      expect(root.itemStyle.color).toBe(tokens.primary);
+    });
+
+    // Not provable here (jsdom-blind, TCM-AC-3): whether the resulting radial picture is legible
+    // at 1280/1024px — only the encoding-is-correct claim above is a unit-test concern.
+  });
+
+  describe('tocMapOption — tooltip formatter (TCM-R-4)', () => {
+    function tooltipFor(node: TestTreeNode, model: TocMapModel): string {
+      const option = buildOption(model);
+      return option.tooltip.formatter({ data: node });
+    }
+
+    it('a full leaf: code+title, level, "N indicators", Target Σ, Achieved Σ, progress — matches the requirements.md worked example', () => {
+      // requirements.md TCM-R-4 scenario: "OP 3.3.4", 2 indicators (targets 10,5; achieved 4,0) → target 15, achieved 4, progress 1/2.
+      const leaf = makeLeaf({ code: 'OP 3.3.4', title: 'Adoption of climate-smart practices', level: 'OUTPUT', indicators: 2, target: 15, achieved: 4, done: 1, total: 2 });
+      const model = makeModel([makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', leaves: [leaf] })]);
+      const node = buildOption(model).series[0].data[0].children![0].children![0];
+
+      expect(tooltipFor(node, model)).toBe(
+        ['OP 3.3.4 Adoption of climate-smart practices', 'Output', '2 indicators', 'Target: 15', 'Achieved: 4', 'Progress: 1/2'].join('<br/>')
+      );
+    });
+
+    it('a 0-indicator (structural) leaf: "0 indicators", Target/Achieved 0, progress 0/0 — no NaN, no $ figures', () => {
+      const leaf = makeLeaf({ code: 'STR-1', title: 'Structural placeholder', level: 'EOI', indicators: 0, target: 0, achieved: 0, done: 0, total: 0 });
+      const model = makeModel([makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', leaves: [leaf] })]);
+      const node = buildOption(model).series[0].data[0].children![0].children![0];
+      const text = tooltipFor(node, model);
+
+      expect(text).toBe(['STR-1 Structural placeholder', 'EoI', '0 indicators', 'Target: 0', 'Achieved: 0', 'Progress: 0/0'].join('<br/>'));
+      expect(text).not.toContain('NaN');
+      expect(text).not.toContain('$');
+    });
+
+    it('an AoW node: level "AoW", the branch\'s OWN figures, PLUS the click-affordance hint appended last', () => {
+      const model = makeModel([
+        makeBranch({
+          kind: 'aow',
+          code: 'AOW02',
+          name: 'Area of Work 2',
+          done: 3,
+          total: 7,
+          target: 42,
+          achieved: 18,
+          leaves: [makeLeaf({ code: 'X', indicators: 4 }), makeLeaf({ code: 'Y', indicators: 3 })]
+        })
+      ]);
+      const node = buildOption(model).series[0].data[0].children![0];
+
+      expect(tooltipFor(node, model)).toBe(
+        ['AOW02 Area of Work 2', 'AoW', '7 indicators', 'Target: 42', 'Achieved: 18', 'Progress: 3/7', 'Click to open this Area of Work'].join(
+          '<br/>'
+        )
+      );
+    });
+
+    it('a null-code leaf with a long title: the tooltip AND the node name fall back to a TRUNCATED title (TCM-R-2 forward pointer)', () => {
+      const longTitle = 'A'.repeat(80); // far past the truncation length
+      const leaf = makeLeaf({ code: null, title: longTitle, indicators: 1, target: 1, achieved: 0, done: 0, total: 1 });
+      const model = makeModel([makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', leaves: [leaf] })]);
+      const node = buildOption(model).series[0].data[0].children![0].children![0];
+      const text = tooltipFor(node, model);
+      const [label] = text.split('<br/>');
+
+      // Truncated: shorter than the full 80-char title, ends with an ellipsis marker, never the raw title.
+      expect(label.length).toBeLessThan(longTitle.length);
+      expect(label.endsWith('…')).toBe(true);
+      expect(label).not.toBe(longTitle);
+      // The node's own `name` (used if labels are ever turned on) gets the SAME truncated fallback.
+      expect(node.name).toBe(label);
+    });
+
+    it('a coded leaf keeps its FULL title untruncated, even past the truncation length (fallback is null-code ONLY)', () => {
+      const longTitle = 'B'.repeat(80);
+      const leaf = makeLeaf({ code: 'HLO1', title: longTitle, indicators: 1, target: 1, achieved: 1, done: 1, total: 1 });
+      const model = makeModel([makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', leaves: [leaf] })]);
+      const node = buildOption(model).series[0].data[0].children![0].children![0];
+      const text = tooltipFor(node, model);
+
+      expect(text.startsWith(`HLO1 ${longTitle}`)).toBe(true);
+    });
+  });
+
+  describe('tocMapAowFromClick — parity over every fixture AoW + null for everything else (TCM-R-5)', () => {
+    const aowCodes = ['AOW01', 'AOW02', 'AOW03'];
+    const model = makeModel([
+      ...aowCodes.map(code =>
+        makeBranch({ kind: 'aow', code, name: `Area of Work ${code.slice(-2)}`, leaves: [makeLeaf({ code: `${code}-L1` })] })
+      ),
+      makeBranch({ kind: 'program', code: 'PROGRAM', name: 'Program-level', leaves: [makeLeaf({ code: 'SHARED-1' })] }),
+      makeBranch({ kind: 'intermediate', code: 'intermediate-outcomes', name: 'Intermediate outcomes', leaves: [makeLeaf({ code: 'IO-1' })] }),
+      makeBranch({ kind: '2030', code: '2030-outcomes', name: '2030 outcomes', leaves: [makeLeaf({ code: 'O30-1' })] })
+    ]);
+    const option = buildOption(model);
+    const root = option.series[0].data[0];
+
+    it('resolves EVERY fixture AoW branch node to its own code (parity over the set, not a sample)', () => {
+      aowCodes.forEach(code => {
+        const branchNode = root.children!.find(b => b.tocMapPayload.code === code)!;
+        expect(tocMapAowFromClick({ data: branchNode }, model)).toBe(code);
+      });
+    });
+
+    it('the SP root never resolves', () => {
+      expect(tocMapAowFromClick({ data: root }, model)).toBeNull();
+    });
+
+    it('every leaf under every branch never resolves (parity over the full leaf set)', () => {
+      root.children!.forEach(branch => {
+        branch.children!.forEach(leafNode => {
+          expect(tocMapAowFromClick({ data: leafNode }, model)).toBeNull();
+        });
+      });
+    });
+
+    it('Program-level / Intermediate outcomes / 2030 outcomes branch nodes never resolve', () => {
+      (['program', 'intermediate', '2030'] as const).forEach(kind => {
+        const branchNode = root.children!.find(b => b.tocMapPayload.kind === kind)!;
+        expect(tocMapAowFromClick({ data: branchNode }, model)).toBeNull();
+      });
+    });
+
+    it('malformed/out-of-range events never resolve (no data, no payload, no aowCode, unknown code)', () => {
+      expect(tocMapAowFromClick({}, model)).toBeNull();
+      expect(tocMapAowFromClick({ data: {} }, model)).toBeNull();
+      expect(tocMapAowFromClick({ data: { tocMapPayload: { kind: 'aow' } } }, model)).toBeNull();
+      expect(tocMapAowFromClick({ data: { tocMapPayload: { kind: 'aow', aowCode: 'NOT-IN-MODEL' } } }, model)).toBeNull();
+    });
+  });
+
+  describe('tocMapTable (TCM-R-6)', () => {
+    const model = makeModel([
+      makeBranch({
+        kind: 'aow',
+        code: 'AOW01',
+        name: 'Area of Work 1',
+        done: 1,
+        total: 2,
+        target: 15,
+        achieved: 4,
+        leaves: [
+          makeLeaf({ code: 'OP1', title: 'Output one', indicators: 1, target: 10, achieved: 4, done: 1, total: 1 }),
+          makeLeaf({ code: 'OP2', title: 'Output two', indicators: 1, target: 5, achieved: 0, done: 0, total: 1 })
+        ]
+      }),
+      makeBranch({
+        kind: 'program',
+        code: 'PROGRAM',
+        name: 'Program-level',
+        done: 1,
+        total: 1,
+        target: 20,
+        achieved: 5,
+        leaves: [makeLeaf({ code: 'SHARED-1', title: 'Shared outcome', indicators: 1, target: 20, achieved: 5, done: 1, total: 1 })]
+      })
+    ]);
+
+    it('row count matches the chart\'s OWN rendered node count exactly (root + every branch + every leaf)', () => {
+      const option = buildOption(model);
+      const expectedCount = countTreeNodes(option.series[0].data[0]); // independent walk of the actual tree
+      expect(tocMapTable(model).rows.length).toBe(expectedCount);
+      expect(expectedCount).toBe(1 + 2 + 3); // root + 2 branches + 3 leaves — sanity-pinned
+    });
+
+    it('caption is the SP name, headers are stable, and cells match the model fields exactly', () => {
+      const table = tocMapTable(model);
+      expect(table.caption).toBe('Science Program One');
+      expect(table.headers).toEqual(['Branch', 'Code', 'Title', 'Level', 'Indicators', 'Target', 'Achieved', 'Progress']);
+
+      const leafRow = table.rows.find(row => row[1] === 'OP1')!;
+      expect(leafRow).toEqual(['Area of Work 1', 'OP1', 'Output one', 'Output', 1, 10, 4, '1/1']);
+
+      const branchRow = table.rows.find(row => row[0] === 'Area of Work 1' && row[1] === 'AOW01')!;
+      expect(branchRow).toEqual(['Area of Work 1', 'AOW01', 'Area of Work 1', 'AoW', 2, 15, 4, '1/2']);
+    });
   });
 });

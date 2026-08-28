@@ -38,7 +38,7 @@
   - [x] Wrapper: existing `pr-viz-chart` spec suite green post-registration; `npx ng build` green (union typecheck — **the input that fails it:** a tree option object against a union missing `TreeSeriesOption`).
   - [x] Full suite `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean. **Disqualifier:** `--testPathPattern` narrowing.
 
-### `TCM-T-2` — Pure chart builders: `tocMapOption` + `tocMapTable` + `tocMapAowFromClick`
+### [x] `TCM-T-2` — Pure chart builders: `tocMapOption` + `tocMapTable` + `tocMapAowFromClick`
 
 - **Type:** `client`
 - **Description:** In `program-overview.charts.ts` per design §2.2 items 2–6 + TCM-DD-3/4/6: `tocMapOption(model, tokens)` — ECharts `tree`, `layout: 'radial'`, fully expanded, no roam; depth-scaled `symbolSize`; root+branch labels on, leaf labels off; node fill = ramp token by `done/total` quartile, muted structural token when `total === 0`; tooltip formatter per TCM-R-4 (code+title, level, n indicators, Σtarget, Σachieved, done/total; AoW nodes append the click hint). `tocMapTable(model)` — one row per rendered node, caption = SP name. `tocMapAowFromClick(event, model)` — AoW branch node → its code; root/leaf/program/intermediate/2030/malformed → `null`. Extend `program-overview.charts.spec.ts`.
@@ -53,12 +53,12 @@
 - **Estimate:** M (~160 LOC incl. spec)
 - **Skills:** `angular-developer`, `tdd`
 - **Definition of done:**
-  - [ ] Option-shape spec: series type `tree`, `layout: 'radial'`, expand-all, no roam; symbolSize root > branch > leaf; label config root/branch on + leaf off. **FAIL input:** force/graph config or leaf labels on → red.
-  - [ ] Quartile spec: fixture leaves at 0%, 30%, 60%, 100%, and `total === 0` → exact ramp token NAME per node (never resolved values — jsdom `''`, KZ-SPO-1). **FAIL input:** off-by-one quartile boundary → red. **What this cannot prove:** the rendered look — TCM-AC-3 (T6).
-  - [ ] Tooltip spec: full leaf, 0-indicator node, and AoW node → exact strings incl. Σtarget/Σachieved/done/total; no `$`. **FAIL input:** formatter reading the artifact's own value instead of the model → red.
-  - [ ] Parity spec: `tocMapAowFromClick` over EVERY fixture AoW returns its code; root, each leaf, program/intermediate/2030 branches, and `{}`/out-of-range events return null. **Disqualifier:** sampling one AoW is not parity.
-  - [ ] Table spec: row count === rendered node count; each row's cells match the node's model fields; caption = SP name. **FAIL input:** independent derivation drifting → red.
-  - [ ] Full suite + lint green (same disqualifier).
+  - [x] Option-shape spec: series type `tree`, `layout: 'radial'`, expand-all, no roam; symbolSize root > branch > leaf; label config root/branch on + leaf off. **FAIL input:** force/graph config or leaf labels on → red.
+  - [x] Quartile spec: fixture leaves at 0%, 30%, 60%, 100%, and `total === 0` → exact ramp token NAME per node (never resolved values — jsdom `''`, KZ-SPO-1). **FAIL input:** off-by-one quartile boundary → red. **What this cannot prove:** the rendered look — TCM-AC-3 (T6).
+  - [x] Tooltip spec: full leaf, 0-indicator node, and AoW node → exact strings incl. Σtarget/Σachieved/done/total; no `$`. **FAIL input:** formatter reading the artifact's own value instead of the model → red.
+  - [x] Parity spec: `tocMapAowFromClick` over EVERY fixture AoW returns its code; root, each leaf, program/intermediate/2030 branches, and `{}`/out-of-range events return null. **Disqualifier:** sampling one AoW is not parity.
+  - [x] Table spec: row count === rendered node count; each row's cells match the node's model fields; caption = SP name. **FAIL input:** independent derivation drifting → red.
+  - [x] Full suite + lint green (same disqualifier).
 
 ### `TCM-T-3` — Card wiring: model computed, bindings, navigation, heading 7→8
 

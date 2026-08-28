@@ -11,7 +11,9 @@
 // file colors from `resolveChartTokens()` values only — `VCE-DD-3`'s "status colours are not
 // chart colours" fence holds without exceptions.
 import type { EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
+import type { ResolvedChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
 import type { HeatmapModel, OverviewLink, StatusSegment } from './program-overview.component';
+import type { TocBranch, TocBranchKind, TocLeaf, TocMapModel } from '../../dashboard-lab.toc-map';
 
 /**
  * Builds the `app-pr-viz-chart` `options` for a `HeatmapModel`. `ramp` is the light→dark color
@@ -523,4 +525,297 @@ export function sectorLinkFromClick(event: { name?: string }, segments: StatusSe
   const name = event?.name;
   if (!name) return null;
   return segments.find(segment => segment.label === name)?.link ?? null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// Theory-of-Change map (`changes/overview-toc-map`, TCM-T-2) — pure builders over `TocMapModel`
+// (built by `buildTocMapModel`, dashboard-lab.toc-map.ts / TCM-T-1). Same purity fence as every
+// other builder above: `tokens` is caller-resolved (`ResolvedChartTokens`); `resolveChartTokens()`
+// is never called from this file (KZ-SPO-1 — jsdom resolves every CSS custom property to `''`).
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Depth-scaled `symbolSize` (TCM-R-3): root > branch > leaf, always in that strict order. */
+const TOC_MAP_ROOT_SYMBOL_SIZE = 48;
+const TOC_MAP_BRANCH_SYMBOL_SIZE = 30;
+const TOC_MAP_LEAF_SYMBOL_SIZE = 14;
+
+/**
+ * Longest a null-code leaf's title renders as before truncating (TCM-R-2's fallback clause,
+ * TCM-T-1 forward pointer). Only applies when a leaf has no parsed `code` — a coded leaf's
+ * tooltip/table always shows the FULL title (the code already disambiguates it).
+ */
+const TOC_MAP_TITLE_TRUNCATE_LENGTH = 40;
+
+type TocMapNodeKind = 'root' | TocBranchKind | 'leaf';
+
+/**
+ * Carried on every ECharts tree data node (`data[i].tocMapPayload`). The tooltip formatter and
+ * `tocMapAowFromClick` both read this back off `params.data`/`event.data` — never off `name` or
+ * any other ECharts-owned field, so neither drifts if display text changes independently.
+ */
+interface TocMapNodePayload {
+  kind: TocMapNodeKind;
+  /** Populated ONLY for `kind: 'aow'` — the code `tocMapAowFromClick` resolves. */
+  aowCode: string | null;
+  code: string | null;
+  title: string;
+  /** Raw `TocLeaf.level` for a leaf (`'OUTPUT'|'OUTCOME'|'EOI'` on the wire); ignored otherwise. */
+  level: string;
+  indicators: number;
+  target: number;
+  achieved: number;
+  done: number;
+  total: number;
+}
+
+interface TocMapTreeNode {
+  name: string;
+  symbolSize: number;
+  itemStyle: { color: string };
+  label: { show: boolean };
+  tocMapPayload: TocMapNodePayload;
+  children?: TocMapTreeNode[];
+}
+
+function truncateTocMapTitle(title: string): string {
+  const trimmed = title.trim();
+  return trimmed.length > TOC_MAP_TITLE_TRUNCATE_LENGTH ? `${trimmed.slice(0, TOC_MAP_TITLE_TRUNCATE_LENGTH - 1)}…` : trimmed;
+}
+
+/**
+ * `done/total` quartile → ramp index (`TCM-DD-4`): `[0,.25)→0  [.25,.5)→1  [.5,.75)→2  [.75,1]→3`.
+ * Checked top-down with `>=` so every named boundary (25/50/75%) lands in the HIGHER bucket, never
+ * the lower one — the exact case an off-by-one would get backwards. `total === 0` is not a
+ * quartile at all (structural — the caller never calls this for that case).
+ */
+function tocMapQuartileIndex(done: number, total: number): 0 | 1 | 2 | 3 {
+  const ratio = total > 0 ? done / total : 0;
+  if (ratio >= 0.75) return 3;
+  if (ratio >= 0.5) return 2;
+  if (ratio >= 0.25) return 1;
+  return 0;
+}
+
+/**
+ * Node fill: the quartile ramp token when the node carries indicators, else the muted structural
+ * token (`total === 0` — TCM-R-3's "plain structural node, no division by zero"). Never a hex
+ * literal, never a resolved value — `tokens` arrives already resolved by the caller (KZ-SPO-1).
+ */
+function tocMapNodeColor(done: number, total: number, tokens: ResolvedChartTokens): string {
+  if (total <= 0) return tokens.bilateralMuted;
+  return tokens.ramp[tocMapQuartileIndex(done, total)];
+}
+
+function tocMapSumIndicators(leaves: TocLeaf[]): number {
+  return leaves.reduce((sum, leaf) => sum + leaf.indicators, 0);
+}
+
+/** "AoW" / "Output" / "Program-level" / … — TCM-R-4's "level name" tooltip field. */
+function tocMapLevelName(info: { kind: TocMapNodeKind; level?: string }): string {
+  if (info.kind === 'leaf') {
+    switch (info.level) {
+      case 'OUTPUT':
+        return 'Output';
+      case 'OUTCOME':
+        return 'Outcome';
+      case 'EOI':
+        return 'EoI';
+      default:
+        return info.level || 'Result';
+    }
+  }
+  switch (info.kind) {
+    case 'root':
+      return 'SP';
+    case 'aow':
+      return 'AoW';
+    case 'program':
+      return 'Program-level';
+    case 'intermediate':
+      return 'Intermediate outcomes';
+    case '2030':
+      return '2030 outcomes';
+    default:
+      return '';
+  }
+}
+
+/**
+ * Tooltip formatter (`TCM-R-4`): code+title (title truncated ONLY when `code` is null — TCM-R-2's
+ * fallback clause), level name, "N indicators", `Target: Σ`, `Achieved: Σ`, `Progress: done/total`.
+ * AoW nodes append the click-affordance hint (design §2.2 item 4). Never a `$` figure — PRMS has
+ * no per-node financial linkage (TCM-R-4 BUT clause), and never an invented percentage beyond the
+ * stated fields.
+ */
+function tocMapTooltip(payload: TocMapNodePayload): string {
+  const label = payload.code ? `${payload.code} ${payload.title}` : truncateTocMapTitle(payload.title);
+  const indicatorWord = payload.indicators === 1 ? 'indicator' : 'indicators';
+  const lines = [
+    label,
+    tocMapLevelName(payload),
+    `${payload.indicators} ${indicatorWord}`,
+    `Target: ${payload.target}`,
+    `Achieved: ${payload.achieved}`,
+    `Progress: ${payload.done}/${payload.total}`
+  ];
+  if (payload.kind === 'aow') {
+    lines.push('Click to open this Area of Work');
+  }
+  return lines.join('<br/>');
+}
+
+function tocMapLeafNode(leaf: TocLeaf, tokens: ResolvedChartTokens): TocMapTreeNode {
+  const payload: TocMapNodePayload = {
+    kind: 'leaf',
+    aowCode: null,
+    code: leaf.code,
+    title: leaf.title,
+    level: leaf.level,
+    indicators: leaf.indicators,
+    target: leaf.target,
+    achieved: leaf.achieved,
+    done: leaf.done,
+    total: leaf.total
+  };
+  return {
+    // OQ-1 default: leaf labels OFF (label.show below), tooltip carries the name — this `name`
+    // still identifies the node internally (and is the fallback if labels are ever turned on).
+    name: leaf.code ?? truncateTocMapTitle(leaf.title),
+    symbolSize: TOC_MAP_LEAF_SYMBOL_SIZE,
+    itemStyle: { color: tocMapNodeColor(leaf.done, leaf.total, tokens) },
+    label: { show: false },
+    tocMapPayload: payload
+  };
+}
+
+function tocMapBranchNode(branch: TocBranch, tokens: ResolvedChartTokens): TocMapTreeNode {
+  const payload: TocMapNodePayload = {
+    kind: branch.kind,
+    aowCode: branch.kind === 'aow' ? branch.code : null,
+    code: branch.code,
+    title: branch.name,
+    level: '',
+    indicators: tocMapSumIndicators(branch.leaves),
+    target: branch.target,
+    achieved: branch.achieved,
+    done: branch.done,
+    total: branch.total
+  };
+  return {
+    name: branch.name,
+    symbolSize: TOC_MAP_BRANCH_SYMBOL_SIZE,
+    itemStyle: { color: tocMapNodeColor(branch.done, branch.total, tokens) },
+    label: { show: true },
+    tocMapPayload: payload,
+    children: branch.leaves.map(leaf => tocMapLeafNode(leaf, tokens))
+  };
+}
+
+/**
+ * Builds the `app-pr-viz-chart` `options` for the Theory-of-Change map (`TCM-R-2`/`TCM-R-3`/
+ * `TCM-R-7`). ECharts `tree`, `layout: 'radial'`, fully expanded (`initialTreeDepth: -1`), no
+ * roam/zoom — deterministic geometry, same data → same picture (`TCM-DD-3`). Root = SP node
+ * (brand primary fill — it carries no indicators, so it is never quartile-colored); branch/leaf
+ * fill by `done/total` quartile; root+branch labels on, leaf labels off (`TCM-DD-6`).
+ */
+export function tocMapOption(model: TocMapModel, tokens: ResolvedChartTokens): EChartsOption {
+  const rootPayload: TocMapNodePayload = {
+    kind: 'root',
+    aowCode: null,
+    code: null,
+    title: model.spName,
+    level: '',
+    indicators: 0,
+    target: 0,
+    achieved: 0,
+    done: 0,
+    total: 0
+  };
+
+  const rootNode: TocMapTreeNode = {
+    name: model.spName,
+    symbolSize: TOC_MAP_ROOT_SYMBOL_SIZE,
+    itemStyle: { color: tokens.primary },
+    label: { show: true },
+    tocMapPayload: rootPayload,
+    children: model.branches.map(branch => tocMapBranchNode(branch, tokens))
+  };
+
+  return {
+    tooltip: {
+      formatter: (params: unknown) => {
+        const payload = params as { data?: { tocMapPayload?: TocMapNodePayload } };
+        const node = payload?.data?.tocMapPayload;
+        return node ? tocMapTooltip(node) : '';
+      }
+    },
+    series: [
+      {
+        type: 'tree',
+        layout: 'radial',
+        initialTreeDepth: -1,
+        roam: false,
+        // Series-level fallback symbolSize/label — every node below sets its OWN (root/branch/
+        // leaf), this default only ever matters if ECharts falls back before data is set.
+        symbolSize: TOC_MAP_LEAF_SYMBOL_SIZE,
+        label: { show: false },
+        data: [rootNode]
+      }
+    ]
+  } as EChartsOption;
+}
+
+/**
+ * Visually-hidden `<table>` pairing for the ToC map (`TCM-R-6`) — one row per node the chart
+ * renders: the SP root, every branch, every leaf, in the SAME depth-first order `tocMapOption`
+ * builds its tree — so chart-node ↔ table-row count parity holds by construction (one derivation
+ * walked twice, not two independent ones).
+ */
+export function tocMapTable(model: TocMapModel): VizChartTableModel {
+  const rows: (string | number)[][] = [['', '', model.spName, tocMapLevelName({ kind: 'root' }), 0, 0, 0, '0/0']];
+
+  model.branches.forEach(branch => {
+    rows.push([
+      branch.name,
+      branch.code,
+      branch.name,
+      tocMapLevelName({ kind: branch.kind }),
+      tocMapSumIndicators(branch.leaves),
+      branch.target,
+      branch.achieved,
+      `${branch.done}/${branch.total}`
+    ]);
+    branch.leaves.forEach(leaf => {
+      rows.push([
+        branch.name,
+        leaf.code ?? '',
+        leaf.title,
+        tocMapLevelName({ kind: 'leaf', level: leaf.level }),
+        leaf.indicators,
+        leaf.target,
+        leaf.achieved,
+        `${leaf.done}/${leaf.total}`
+      ]);
+    });
+  });
+
+  return {
+    caption: model.spName,
+    headers: ['Branch', 'Code', 'Title', 'Level', 'Indicators', 'Target', 'Achieved', 'Progress'],
+    rows
+  };
+}
+
+/**
+ * Resolves a ToC map `chartClick` event back to the clicked node's AoW code (`TCM-R-5`): an AoW
+ * branch node → its code; the SP root, any leaf, and the Program-level/Intermediate/2030 branch
+ * nodes → `null` (tooltip-only in v1). Also `null` for a malformed event (no `data`, no payload,
+ * no `aowCode`) or a code that does not belong to any AoW branch in THIS model (defensive parity
+ * with the other resolvers in this file).
+ */
+export function tocMapAowFromClick(event: { data?: unknown }, model: TocMapModel): string | null {
+  const data = event?.data as { tocMapPayload?: TocMapNodePayload } | undefined;
+  const payload = data?.tocMapPayload;
+  if (!payload || payload.kind !== 'aow' || !payload.aowCode) return null;
+  return model.branches.some(branch => branch.kind === 'aow' && branch.code === payload.aowCode) ? payload.aowCode : null;
 }
