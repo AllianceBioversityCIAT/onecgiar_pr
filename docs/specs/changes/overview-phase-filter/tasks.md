@@ -66,7 +66,7 @@ OPF-T-2 (client API wrappers) ───┼──▶ OPF-T-3 (resolver + loaders)
 
 ## OPF-T-5 — Switch-hardening tests + live HITL verification
 
-- **Status:** `[ ]` · **Size:** M (~50 LOC tests + probe script reuse) · **Depends:** OPF-T-3, OPF-T-4
+- **Status:** `[x]` *(Leader-inline, owner-approved compression; switch-hardening tests were delivered inside T-3/T-4)* · **Size:** M (~50 LOC tests + probe script reuse) · **Depends:** OPF-T-3, OPF-T-4
 - **Requirements:** OPF-R-3 (regression clauses), OPF-R-2 Scenario (live), defect classes D3 + D4 (requirements.md §8)
 - **Design:** design.md §3, §8
 - **Skills:** `angular-developer`, `systematic-debugging` (if the probe diverges)
