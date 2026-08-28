@@ -185,6 +185,24 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     return !!found;
   });
 
+  /**
+   * P2-3154 — the Science Program reviews, it does not rewrite.
+   *
+   * AC1 locks every Minimum Data Standard field the Center reported (title, description,
+   * geographic scope, partners, evidence, type-specific details) in a strictly read-only
+   * state; AC2 leaves the TOC alignment section as the only editable area, because BR1 makes
+   * the alignment the Science Program's exclusive responsibility.
+   *
+   * Platform administrators are deliberately untouched: the story only speaks about the SP
+   * Leader, so their existing ability to correct reported data is preserved as-is.
+   *
+   * It delegates to `canEditInDrawer()` on purpose: editing Data Standards is a subset of
+   * editing in the drawer, and reading it keeps this computed subscribed to the same signals
+   * (`resultToReview`, `resultDetail`). A computed that only read the plain `isAdmin` flag
+   * would have no signal dependency at all and would cache its first value forever.
+   */
+  canEditDataStandards = computed(() => this.canEditInDrawer() && !!this.api.rolesSE?.isAdmin);
+
   private savedReadOnly: boolean | null = null;
   private readonly drawerReadOnlyEffectRef = signal<EffectRef | undefined>(undefined);
 
@@ -339,6 +357,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   startEditingTitle(): void {
+    // P2-3154 AC1: hiding the pencil is the UI; this guard is what actually locks the title.
+    if (!this.canEditDataStandards()) return;
     this.editingTitleValue.set(this.resultDetail()?.commonFields?.result_title ?? '');
     this.isEditingTitle.set(true);
   }
@@ -432,6 +452,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.showConfirmSaveChangesDialog.set(true);
   }
   onSaveDataStandardChanges(): void {
+    // P2-3154 AC1/AC2: only the TOC alignment is saveable by the reviewing Science Program.
+    if (!this.canEditDataStandards()) return;
     this.saveChangesType = 'dataStandard';
     this.saveChangesJustification = '';
     this.showConfirmSaveChangesDialog.set(true);
