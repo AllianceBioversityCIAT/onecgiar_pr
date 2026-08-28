@@ -34,7 +34,8 @@ export class ResultByIntitutionsTypeRepository
         rbit.institution_types_id,
         rbit.how_many,
         rbit.other_institution,
-        rbit.graduate_students
+        rbit.graduate_students,
+        rbit.section_id
         from results_by_institution_type rbit WHERE  rbit.results_id = ${
           config.old_result_id
         } and rbit.is_active > 0
@@ -52,7 +53,8 @@ export class ResultByIntitutionsTypeRepository
         institution_types_id,
         how_many,
         other_institution,
-        graduate_students
+        graduate_students,
+        section_id
         )
         select
         rbit.is_active,
@@ -67,7 +69,8 @@ export class ResultByIntitutionsTypeRepository
         rbit.institution_types_id,
         rbit.how_many,
         rbit.other_institution,
-        rbit.graduate_students
+        rbit.graduate_students,
+        rbit.section_id
         from results_by_institution_type rbit WHERE  rbit.results_id = ${
           config.old_result_id
         } and rbit.is_active > 0`,
