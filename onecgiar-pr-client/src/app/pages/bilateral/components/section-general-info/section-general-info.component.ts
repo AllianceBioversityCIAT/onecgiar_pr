@@ -323,6 +323,10 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
 
   onTitleChange(value: string): void {
     this.title.set(value);
+    // The page header reads `creationService.resultTitle()`, which otherwise only changes when
+    // `loadResult` runs — so without this the header kept showing `Bilateral Draft #<id>` until a
+    // reload. Writing the same value back is a no-op for the hydration effect above.
+    this.creationService.resultTitle.set(value);
     this.autoSaveService.updateField('title', value, 'text');
   }
 
