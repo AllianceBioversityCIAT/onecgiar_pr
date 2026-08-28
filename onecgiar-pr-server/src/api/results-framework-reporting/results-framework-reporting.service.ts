@@ -254,6 +254,7 @@ export class ResultsFrameworkReportingService {
     program?: string,
     areaOfWork?: string,
     year?: string,
+    versionId?: number,
   ) {
     try {
       const normalizedProgram = program?.trim();
@@ -288,8 +289,10 @@ export class ResultsFrameworkReportingService {
         );
       }
 
-      const tocContext =
-        await this._reportingTocContextService.resolve(normalizedYear);
+      const tocContext = await this.resolveTocContextForRequest(
+        versionId,
+        normalizedYear,
+      );
       const resolvedYear = tocContext.reportingYear;
 
       const compositeCode = `${normalizedProgram.toUpperCase()}-${normalizedArea.toUpperCase()}`;
@@ -460,7 +463,7 @@ export class ResultsFrameworkReportingService {
     indicator.center_name = matchedCenter.center_name;
   }
 
-  async getToc2030Outcomes(programId?: string) {
+  async getToc2030Outcomes(programId?: string, versionId?: number) {
     try {
       const normalizedProgram = programId?.trim();
 
@@ -471,7 +474,7 @@ export class ResultsFrameworkReportingService {
         );
       }
 
-      const tocContext = await this._reportingTocContextService.resolve();
+      const tocContext = await this.resolveTocContextForRequest(versionId);
       const resolvedYear = tocContext.reportingYear;
 
       const toc2030Outcomes = await this._tocResultsRepository.find2030Outcomes(
@@ -509,7 +512,7 @@ export class ResultsFrameworkReportingService {
     }
   }
 
-  async getIntermediateOutcomes(programId?: string) {
+  async getIntermediateOutcomes(programId?: string, versionId?: number) {
     try {
       const normalizedProgram = programId?.trim();
 
@@ -520,7 +523,7 @@ export class ResultsFrameworkReportingService {
         );
       }
 
-      const tocContext = await this._reportingTocContextService.resolve();
+      const tocContext = await this.resolveTocContextForRequest(versionId);
 
       const intermediateOutcomes =
         await this._tocResultsRepository.findIntermediateOutcomes(
@@ -913,6 +916,33 @@ export class ResultsFrameworkReportingService {
     }
 
     return Number(activePhase.id);
+  }
+
+  /**
+   * Resolves the ToC context for the `toc-results` family (OPF-R-6): an explicit
+   * `versionId` wins over the legacy `year` override and is resolved directly
+   * from the `version` row (`ReportingTocContextService.resolveByVersionId`) —
+   * never via year-equality (DD-2). Absent `versionId` falls back to the
+   * existing `resolve(yearOverride)` path, byte-identical to today (OPF-R-3).
+   * A non-numeric `versionId` (e.g. NaN from an unparsable query value) is
+   * rejected here as a 4xx rather than silently treated as absent.
+   */
+  private async resolveTocContextForRequest(
+    versionId?: number,
+    yearOverride?: number,
+  ): Promise<ReportingTocContext> {
+    if (versionId !== undefined) {
+      if (!Number.isFinite(versionId)) {
+        throwServiceError(
+          'The versionId query parameter must be a valid integer.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      return this._reportingTocContextService.resolveByVersionId(versionId);
+    }
+
+    return this._reportingTocContextService.resolve(yearOverride);
   }
 
   private async resolveInitiativeAndYear(programId: string) {

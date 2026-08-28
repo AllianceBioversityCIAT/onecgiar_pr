@@ -1,3 +1,4 @@
+import { HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
@@ -85,6 +86,7 @@ const defaultTocContext = {
 
 const mockReportingTocContextService = {
   resolve: jest.fn(),
+  resolveByVersionId: jest.fn(),
 };
 
 const buildTocContextError = (message: string, status: number) => {
@@ -1185,6 +1187,226 @@ describe('ResultsFrameworkReportingService', () => {
         'SP04',
         tocContext,
       );
+    });
+  });
+
+  describe('OPF-R-6: versionId override on the ToC family (toc-results, 2030-outcomes, intermediate-outcomes)', () => {
+    beforeEach(() => {
+      mockReportingTocContextService.resolveByVersionId.mockReset();
+      mockTocResultsRepository.findByCompositeCode.mockReset();
+      mockTocResultsRepository.find2030Outcomes.mockReset();
+      mockTocResultsRepository.findIntermediateOutcomes.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+        [],
+      );
+    });
+
+    describe('getWorkPackagesByProgramAndArea', () => {
+      it('resolves the ToC context from the version row when versionId is given, ignoring the legacy year param', async () => {
+        mockReportingTocContextService.resolveByVersionId.mockResolvedValueOnce(
+          {
+            reportingYear: 2025,
+            phaseUuid: 'PHASE-34-UUID',
+            versionId: 34,
+            phaseName: 'Reporting 2025',
+          },
+        );
+        mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+          {
+            toc_result_id: 1,
+            category: 'OUTPUT',
+            result_title: 'Result 1',
+            related_node_id: 'NODE-1',
+            indicators: [],
+          },
+        ]);
+
+        const result: any = await service.getWorkPackagesByProgramAndArea(
+          'SP01',
+          'AOW01',
+          '2099', // legacy year — must be ignored once versionId wins
+          34,
+        );
+
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).toHaveBeenCalledWith(34);
+        expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
+        expect(result.response.year).toBe(2025);
+        expect(result.response.metadata.phaseUuid).toBe('PHASE-34-UUID');
+      });
+
+      it('falls back to resolve(year) when versionId is absent (OPF-R-3 regression guard)', async () => {
+        mockReportingTocContextService.resolve.mockResolvedValueOnce({
+          reportingYear: 2024,
+          phaseUuid: 'PHASE-1',
+        });
+        mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+          {
+            toc_result_id: 1,
+            category: 'OUTPUT',
+            result_title: 'Result 1',
+            related_node_id: 'NODE-1',
+            indicators: [],
+          },
+        ]);
+
+        await service.getWorkPackagesByProgramAndArea('SP01', 'AOW01', '2024');
+
+        expect(mockReportingTocContextService.resolve).toHaveBeenCalledWith(
+          2024,
+        );
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('rejects a non-numeric versionId with a 4xx instead of silently falling back', async () => {
+        const result: any = await service.getWorkPackagesByProgramAndArea(
+          'SP01',
+          'AOW01',
+          undefined,
+          NaN,
+        );
+
+        expect(result.status).toBe(HttpStatus.BAD_REQUEST);
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).not.toHaveBeenCalled();
+        expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
+      });
+
+      it('surfaces an unknown versionId as a 4xx (not an empty 200)', async () => {
+        mockReportingTocContextService.resolveByVersionId.mockRejectedValueOnce(
+          buildTocContextError('No version was found for versionId 9999.', 404),
+        );
+
+        const result: any = await service.getWorkPackagesByProgramAndArea(
+          'SP01',
+          'AOW01',
+          undefined,
+          9999,
+        );
+
+        expect(result.status).toBe(404);
+        expect(
+          mockTocResultsRepository.findByCompositeCode,
+        ).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('getToc2030Outcomes', () => {
+      it('resolves the ToC context from the version row when versionId is given', async () => {
+        mockReportingTocContextService.resolveByVersionId.mockResolvedValueOnce(
+          {
+            reportingYear: 2025,
+            phaseUuid: 'PHASE-34-UUID',
+            versionId: 34,
+            phaseName: 'Reporting 2025',
+          },
+        );
+        mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([
+          { toc_result_id: 1, category: 'EOI', indicators: [] },
+        ]);
+
+        const result: any = await service.getToc2030Outcomes('sp01', 34);
+
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).toHaveBeenCalledWith(34);
+        expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
+        expect(result.response.year).toBe(2025);
+      });
+
+      it('falls back to resolve() when versionId is absent (OPF-R-3 regression guard)', async () => {
+        mockReportingTocContextService.resolve.mockResolvedValueOnce({
+          reportingYear: 2030,
+          phaseUuid: 'PHASE-1',
+        });
+        mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([
+          { toc_result_id: 1, category: 'EOI', indicators: [] },
+        ]);
+
+        await service.getToc2030Outcomes('sp01');
+
+        expect(mockReportingTocContextService.resolve).toHaveBeenCalled();
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('rejects a non-numeric versionId with a 4xx', async () => {
+        const result: any = await service.getToc2030Outcomes('sp01', NaN);
+
+        expect(result.status).toBe(HttpStatus.BAD_REQUEST);
+        expect(
+          mockTocResultsRepository.find2030Outcomes,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('surfaces an unknown versionId as a 4xx (not an empty 200)', async () => {
+        mockReportingTocContextService.resolveByVersionId.mockRejectedValueOnce(
+          buildTocContextError('No version was found for versionId 9999.', 404),
+        );
+
+        const result: any = await service.getToc2030Outcomes('sp01', 9999);
+
+        expect(result.status).toBe(404);
+        expect(
+          mockTocResultsRepository.find2030Outcomes,
+        ).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('getIntermediateOutcomes', () => {
+      it('resolves the ToC context from the version row when versionId is given', async () => {
+        mockReportingTocContextService.resolveByVersionId.mockResolvedValueOnce(
+          {
+            reportingYear: 2025,
+            phaseUuid: 'PHASE-34-UUID',
+            versionId: 34,
+            phaseName: 'Reporting 2025',
+          },
+        );
+        mockTocResultsRepository.findIntermediateOutcomes.mockResolvedValueOnce(
+          [],
+        );
+
+        const result: any = await service.getIntermediateOutcomes('sp01', 34);
+
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).toHaveBeenCalledWith(34);
+        expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
+        expect(result.response.year).toBe(2025);
+      });
+
+      it('falls back to resolve() when versionId is absent (OPF-R-3 regression guard)', async () => {
+        mockReportingTocContextService.resolve.mockResolvedValueOnce({
+          reportingYear: 2026,
+          phaseUuid: 'PHASE-1',
+        });
+        mockTocResultsRepository.findIntermediateOutcomes.mockResolvedValueOnce(
+          [],
+        );
+
+        await service.getIntermediateOutcomes('sp01');
+
+        expect(mockReportingTocContextService.resolve).toHaveBeenCalled();
+        expect(
+          mockReportingTocContextService.resolveByVersionId,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('rejects a non-numeric versionId with a 4xx', async () => {
+        const result: any = await service.getIntermediateOutcomes('sp01', NaN);
+
+        expect(result.status).toBe(HttpStatus.BAD_REQUEST);
+        expect(
+          mockTocResultsRepository.findIntermediateOutcomes,
+        ).not.toHaveBeenCalled();
+      });
     });
   });
 

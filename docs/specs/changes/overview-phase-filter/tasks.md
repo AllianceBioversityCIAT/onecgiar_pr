@@ -22,7 +22,7 @@ OPF-T-2 (client API wrappers) ───┼──▶ OPF-T-3 (resolver + loaders)
 
 ## OPF-T-1 — Server: version-row ToC override + `versionId` on the ToC family
 
-- **Status:** `[ ]` · **Size:** M (~140 LOC) · **Depends:** none
+- **Status:** `[x]` · **Size:** M (~140 LOC) · **Depends:** none
 - **Requirements:** OPF-R-6 (all clauses), OPF-R-3 (absent-param clause, server side)
 - **Design:** design.md §6, §7, DD-2
 - **Skills:** `nestjs-expert`, `api-design-principles`, `tdd`

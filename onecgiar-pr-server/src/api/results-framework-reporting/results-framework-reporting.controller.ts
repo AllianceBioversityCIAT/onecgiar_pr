@@ -117,6 +117,13 @@ export class ResultsFrameworkReportingController {
     required: false,
     description: 'Optional phase year to filter the work packages.',
   })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional phase/version identifier. Wins over `year` when both are present; defaults to the active reporting phase when absent.',
+  })
   @ApiOkResponse({
     description: 'Work packages retrieved successfully.',
   })
@@ -124,11 +131,18 @@ export class ResultsFrameworkReportingController {
     @Query('program') program: string,
     @Query('areaOfWork') areaOfWork: string,
     @Query('year') year?: string,
+    @Query('versionId') versionId?: string,
   ) {
+    const parsedVersion =
+      versionId !== undefined && versionId !== null
+        ? Number(versionId)
+        : undefined;
+
     return this.resultsFrameworkReportingService.getWorkPackagesByProgramAndArea(
       program,
       areaOfWork,
       year,
+      parsedVersion,
     );
   }
 
@@ -144,12 +158,28 @@ export class ResultsFrameworkReportingController {
     required: true,
     description: 'Program identifier (e.g. SP01).',
   })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional phase/version identifier. Defaults to the active reporting phase when absent.',
+  })
   @ApiOkResponse({
     description: 'Intermediate outcomes retrieved successfully.',
   })
-  getIntermediateOutcomes(@Query('programId') programId: string) {
+  getIntermediateOutcomes(
+    @Query('programId') programId: string,
+    @Query('versionId') versionId?: string,
+  ) {
+    const parsedVersion =
+      versionId !== undefined && versionId !== null
+        ? Number(versionId)
+        : undefined;
+
     return this.resultsFrameworkReportingService.getIntermediateOutcomes(
       programId,
+      parsedVersion,
     );
   }
 
@@ -165,11 +195,29 @@ export class ResultsFrameworkReportingController {
     required: true,
     description: 'Program identifier (e.g. SP01).',
   })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional phase/version identifier. Defaults to the active reporting phase when absent.',
+  })
   @ApiOkResponse({
     description: 'ToC 2030 outcomes retrieved successfully.',
   })
-  getToc2030Outcomes(@Query('programId') programId: string) {
-    return this.resultsFrameworkReportingService.getToc2030Outcomes(programId);
+  getToc2030Outcomes(
+    @Query('programId') programId: string,
+    @Query('versionId') versionId?: string,
+  ) {
+    const parsedVersion =
+      versionId !== undefined && versionId !== null
+        ? Number(versionId)
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getToc2030Outcomes(
+      programId,
+      parsedVersion,
+    );
   }
 
   @Get('programs/indicator-contribution-summary')

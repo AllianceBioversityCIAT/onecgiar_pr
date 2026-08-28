@@ -82,6 +82,77 @@ export class ReportingTocContextService {
     return reportingYear;
   }
 
+  /**
+   * Resolves ToC reporting parameters directly from a `version` row, given its
+   * `versionId` — never via year-equality lookup (OPF-R-6, DD-2). Two version
+   * rows can share `phase_year` while carrying different `toc_pahse_id`s, so
+   * `resolve(yearOverride)` cannot be reused here; the row itself is the source
+   * of truth for both `reportingYear` and `phaseUuid`.
+   */
+  async resolveByVersionId(versionId: number): Promise<ReportingTocContext> {
+    if (!Number.isFinite(versionId) || versionId <= 0) {
+      throw this.buildResolutionError(
+        HttpStatus.BAD_REQUEST,
+        'The versionId must be a valid positive integer.',
+      );
+    }
+
+    const versionRow = await this.findVersionPhaseById(versionId);
+
+    if (!versionRow) {
+      throw this.buildResolutionError(
+        HttpStatus.NOT_FOUND,
+        `No version was found for versionId ${versionId}.`,
+      );
+    }
+
+    if (versionRow.phase_year === null || versionRow.phase_year === undefined) {
+      throw this.buildResolutionError(
+        HttpStatus.NOT_FOUND,
+        `The version row ${versionId} has no phase year configured.`,
+      );
+    }
+
+    if (!versionRow.toc_pahse_id?.trim()) {
+      throw this.buildResolutionError(
+        HttpStatus.NOT_FOUND,
+        `No TOC phase is configured for version ${versionId}.`,
+      );
+    }
+
+    return {
+      reportingYear: versionRow.phase_year,
+      phaseUuid: versionRow.toc_pahse_id.trim(),
+      versionId: versionRow.id,
+      phaseName: versionRow.phase_name,
+    };
+  }
+
+  private async findVersionPhaseById(
+    versionId: number,
+  ): Promise<VersionPhaseRow | null> {
+    const query = `
+      SELECT
+        v.id,
+        v.toc_pahse_id,
+        v.phase_year,
+        v.phase_name
+      FROM \`${env.DB_NAME}\`.\`version\` v
+      WHERE
+        v.is_active = 1
+        AND v.app_module_id = ?
+        AND v.id = ?
+      LIMIT 1
+    `;
+
+    const rows = await this._dataSource.query(query, [
+      REPORTING_TOC_APP_MODULE_ID,
+      versionId,
+    ]);
+
+    return rows?.[0] ?? null;
+  }
+
   private async findActiveVersionPhase(
     reportingYear: number,
   ): Promise<VersionPhaseRow | null> {
