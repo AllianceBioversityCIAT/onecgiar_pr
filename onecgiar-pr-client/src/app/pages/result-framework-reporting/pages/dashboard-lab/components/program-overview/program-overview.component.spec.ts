@@ -12,6 +12,7 @@ import {
   OverviewLink,
   HeatmapModel
 } from './program-overview.component';
+import type { TocMapModel } from '../../dashboard-lab.toc-map';
 
 // `PrVizChartComponent` (imported by `ProgramOverviewComponent`) pulls in real echarts, which
 // jsdom cannot render. Mocked exactly as `pr-viz-chart.component.spec.ts` does — this suite tests
@@ -133,13 +134,17 @@ describe('ProgramOverviewComponent', () => {
    * **Amendment `CVT-A-3`** (owner, CVT-T-3 HITL gate): the standalone "W1/W2 results by
    * indicator category" card is removed (bars-default + bar-end totals make the W1/W2 matrix
    * card fully subsume it) — 8 headings drop to 7, deliberately, here.
+   * **`TCM-R-1`** (`changes/overview-toc-map`, TCM-T-3, deliberate recorded edit): appends the
+   * "Theory of Change map" card directly below "Progress by area of work" — 7 headings become 8.
+   * FAIL input: the append missing (card not rendered, or its `<h2>` renamed/dropped) → red.
    */
-  it('renders the seven Overview cards in the approved design order (CVT-A-3)', () => {
+  it('renders the eight Overview cards in the approved design order (CVT-A-3, TCM-R-1)', () => {
     const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
 
     // Order amended by CVT-A-3 (2026-08-27, owner, CVT-T-3 gate — supersedes P2-3303's placement
     // decision and quick/overview-card-order's 8-card layout): context → own results by category
-    // and status → status headline → bilateral volume + contributors → their cross → plan progress.
+    // and status → status headline → bilateral volume + contributors → their cross → plan progress
+    // → whole-program ToC map (TCM-R-1, appended 2026-08-28).
     expect(headings).toEqual([
       'About this program',
       'Reporting status',
@@ -147,7 +152,8 @@ describe('ProgramOverviewComponent', () => {
       'Reporting status',
       'W3/Bilateral results by indicator category',
       'W3/Bilateral results by center and category',
-      'Progress by area of work'
+      'Progress by area of work',
+      'Theory of Change map'
     ]);
   });
 
@@ -673,10 +679,10 @@ describe('ProgramOverviewComponent', () => {
       expect(bilateralCardIndex).toBe(separatorIndex + 1);
     });
 
-    /** FAIL input: a separator promoted to a real heading turns this red (breaks CVT-A-3's pin). */
-    it('adds no screen-reader noise and does not touch the pinned 7-heading assertion', () => {
+    /** FAIL input: a separator promoted to a real heading turns this red (breaks the pinned pin). */
+    it('adds no screen-reader noise and does not touch the pinned 8-heading assertion (TCM-R-1)', () => {
       const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
-      expect(headings.length).toBe(7);
+      expect(headings.length).toBe(8);
       expect(headings).not.toContain('W1/W2');
       expect(headings).not.toContain('W3/Bilateral');
     });
@@ -718,6 +724,90 @@ describe('ProgramOverviewComponent', () => {
     });
   });
 
+  /**
+   * Theory-of-Change map card (`changes/overview-toc-map`, TCM-T-3). Default `beforeEach` leaves
+   * `tocMap`/`tocMapLoading` at their input defaults (`null`/`false`) — the empty state — so the
+   * pre-existing "5 `app-pr-viz-chart`" counts above are untouched; these tests set the two inputs
+   * explicitly per case.
+   */
+  describe('Theory of Change map card (TCM-T-3)', () => {
+    const tocModel: TocMapModel = {
+      spCode: 'SP01',
+      spName: 'Breeding for Tomorrow',
+      branches: [
+        {
+          kind: 'aow',
+          code: 'AOW01',
+          name: 'Area of Work 1',
+          done: 1,
+          total: 2,
+          target: 10,
+          achieved: 4,
+          leaves: [
+            { code: 'OP1', title: 'Output one', level: 'OUTPUT', indicators: 1, target: 6, achieved: 4, done: 1, total: 1 },
+            { code: 'OP2', title: 'Output two', level: 'OUTPUT', indicators: 1, target: 4, achieved: 0, done: 0, total: 1 }
+          ]
+        }
+      ]
+    };
+
+    /** FAIL input: the card missing its `<h2>` append, or a chart with no table, turns this red. */
+    it('renders one app-pr-viz-chart with a non-null tableModel when a model is provided', () => {
+      fixture.componentRef.setInput('tocMap', tocModel);
+      fixture.detectChanges();
+
+      // 4 pre-existing wrapper instances (donut, W1/W2, bilateral heatmap, bilateral radar — no
+      // bilateral donut in the default fixture, `bilateralStatusSegments` unset) + 1 for the map.
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+      expect(component.tocMapOption()).not.toBeNull();
+      expect(component.tocMapTable()).not.toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Theory of Change map');
+    });
+
+    /** FAIL input: a chart rendered with no table (wrapper clears it) — the wrapper contract itself. */
+    it('shows the wrapper loading state while ToC calls are in flight, even with no model yet', () => {
+      fixture.componentRef.setInput('tocMap', null);
+      fixture.componentRef.setInput('tocMapLoading', true);
+      fixture.detectChanges();
+
+      // The wrapper renders (loading skeleton) even with null options/tableModel — one more than
+      // the empty-state case below, which renders no wrapper at all.
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+      expect(component.tocMapOption()).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('No Theory of Change data loaded yet.');
+    });
+
+    /** Empty program (TCM-R-2 "Empty program" scenario): no model, not loading → the card's own empty state. */
+    it('shows the card empty state once settled with no model — no chart, no throw', () => {
+      fixture.componentRef.setInput('tocMap', null);
+      fixture.componentRef.setInput('tocMapLoading', false);
+      expect(() => fixture.detectChanges()).not.toThrow();
+
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(4);
+      expect(fixture.nativeElement.textContent).toContain('No Theory of Change data loaded yet.');
+    });
+
+    /** FAIL input: a resolver bypass (emitting on every click, not just AoW nodes) turns this red. */
+    it('emits openAow ONLY when the click resolves to an AoW node — leaf/root/malformed payloads never emit', () => {
+      fixture.componentRef.setInput('tocMap', tocModel);
+      fixture.detectChanges();
+
+      const emitted: string[] = [];
+      component.openAow.subscribe(code => emitted.push(code));
+
+      component.onTocMapClick({ data: { tocMapPayload: { kind: 'aow', aowCode: 'AOW01' } } } as unknown as ECElementEvent);
+      expect(emitted).toEqual(['AOW01']);
+
+      component.onTocMapClick({ data: { tocMapPayload: { kind: 'leaf', aowCode: null } } } as unknown as ECElementEvent);
+      component.onTocMapClick({ data: { tocMapPayload: { kind: 'root', aowCode: null } } } as unknown as ECElementEvent);
+      component.onTocMapClick({ data: {} } as unknown as ECElementEvent);
+      component.onTocMapClick({} as unknown as ECElementEvent);
+
+      // No further emissions past the one real AoW click.
+      expect(emitted).toEqual(['AOW01']);
+    });
+  });
+
   describe('KPI summary cards and section filtering', () => {
     it('computes correct totals for all 4 KPI cards', () => {
       expect(component.statusTotal()).toBe(7);
@@ -747,6 +837,7 @@ describe('ProgramOverviewComponent', () => {
       expect(headings).toContain('W1/W2 results by category and status');
       expect(headings).not.toContain('W3/Bilateral results by indicator category');
       expect(headings).not.toContain('Progress by area of work');
+      expect(headings).not.toContain('Theory of Change map');
 
       // Click Bilateral
       component.setActiveSection('bilateral');
@@ -757,20 +848,23 @@ describe('ProgramOverviewComponent', () => {
       expect(headings).toContain('W3/Bilateral results by center and category');
       expect(headings).not.toContain('W1/W2 results by category and status');
       expect(headings).not.toContain('Progress by area of work');
+      expect(headings).not.toContain('Theory of Change map');
 
       // Click AoW
       component.setActiveSection('aow');
       fixture.detectChanges();
       expect(component.activeSection()).toBe('aow');
       headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
-      expect(headings).toEqual(['About this program', 'Progress by area of work']);
+      // TCM-R-1: the ToC map card shares the AoW filter's gate — it appears alongside
+      // "Progress by area of work", directly below it.
+      expect(headings).toEqual(['About this program', 'Progress by area of work', 'Theory of Change map']);
 
       // Reset to all
       component.setActiveSection('all');
       fixture.detectChanges();
       expect(component.activeSection()).toBe('all');
       headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
-      expect(headings.length).toBe(7);
+      expect(headings.length).toBe(8);
     });
 
     it('toggles section to "all" when clicking the currently active section', () => {

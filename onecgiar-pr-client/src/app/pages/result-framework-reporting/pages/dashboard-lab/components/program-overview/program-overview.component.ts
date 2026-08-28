@@ -15,8 +15,12 @@ import {
   radarLinkFromClick,
   donutOption,
   donutTable,
-  sectorLinkFromClick
+  sectorLinkFromClick,
+  tocMapOption,
+  tocMapTable,
+  tocMapAowFromClick
 } from './program-overview.charts';
+import type { TocMapModel } from '../../dashboard-lab.toc-map';
 import type { ECElementEvent } from 'echarts/core';
 
 /** A matrix card's view mode (`CVT-R-1`): default `'bars'` (`CVT-A-1`), session-local, per-card. */
@@ -139,11 +143,29 @@ export class ProgramOverviewComponent {
   readonly w12HeatmapLoading = input<boolean>(false);
 
   /**
+   * Theory-of-Change map model (`changes/overview-toc-map`, TCM-T-3) — built by the parent's
+   * `overviewTocMap` computed (`buildTocMapModel`, TCM-T-1) from the SAME `tocByKey`/units data the
+   * rest of this Overview already renders. `null` → the card's empty state (no chart, no throw —
+   * TCM-R-2's "Empty program" scenario) UNLESS `tocMapLoading` is true, in which case the wrapper's
+   * loading state shows instead (TCM-R-1).
+   */
+  readonly tocMap = input<TocMapModel | null>(null);
+  /** True while any ToC bucket the map needs is still in flight for the current SP (TCM-R-1). */
+  readonly tocMapLoading = input<boolean>(false);
+
+  /**
    * Typed navigation intent (`OVW-R-5`). Rows, status meter segments, legend items and heatmap
    * cells call `emitLink()` on activation; the parent (`dashboard-lab`) performs the actual
    * navigation.
    */
   readonly openResults = output<OverviewLink>();
+
+  /**
+   * `TCM-R-5`: emits ONLY when the click resolves to an AoW node's code — `tocMapAowFromClick`
+   * already returns `null` for the SP root, every leaf, and the program-level branches, so this
+   * output is the single non-null gate the parent (`dashboard-lab`) can trust for navigation.
+   */
+  readonly openAow = output<string>();
 
   /** `null` (no destination — `Other`/`Not specified`/zero-count) is swallowed, never emitted. */
   emitLink(link: OverviewLink | null): void {
@@ -396,5 +418,30 @@ export class ProgramOverviewComponent {
 
   onBilateralCentersClick(event: ECElementEvent): void {
     this.emitLink(singleBarLinkFromClick(event, this.bilateralCenters()));
+  }
+
+  /**
+   * `null`-safe by construction (TCM-T-2 Reviewer forward pointer): `tocMapOption`/`tocMapTable`
+   * (the pure builders) take a non-nullable `TocMapModel` — `buildTocMapModel` returns
+   * `TocMapModel | null`, so THESE computeds are the only guard between that `null` and the
+   * builders. `resolveChartTokens()` is called here (the component), never from the pure
+   * `program-overview.charts.ts` file — same fence every other card in this component follows.
+   */
+  readonly tocMapOption = computed<EChartsOption | null>(() => {
+    const model = this.tocMap();
+    return model ? tocMapOption(model, resolveChartTokens()) : null;
+  });
+
+  readonly tocMapTable = computed<VizChartTableModel | null>(() => {
+    const model = this.tocMap();
+    return model ? tocMapTable(model) : null;
+  });
+
+  /** Resolves the click to an AoW code and emits `openAow` ONLY on a non-null result (`TCM-R-5`). */
+  onTocMapClick(event: ECElementEvent): void {
+    const model = this.tocMap();
+    if (!model) return;
+    const code = tocMapAowFromClick(event, model);
+    if (code) this.openAow.emit(code);
   }
 }

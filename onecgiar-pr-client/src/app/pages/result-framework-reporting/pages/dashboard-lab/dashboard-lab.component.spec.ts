@@ -385,6 +385,34 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
       queryParams: { category: 'KP' }
     });
   });
+
+  /**
+   * `TCM-R-5` (`changes/overview-toc-map`, TCM-T-3) — `program-overview`'s `openAow` resolves a
+   * ToC map click down to an AoW code and this handler navigates. The located route is the SAME
+   * one the retired `entity-aow-card` already links to
+   * (`pages/entity-details/components/entity-aow-card/entity-aow-card.component.html:16`:
+   * `/result-framework-reporting/entity-details/{entityId}/aow/{item.code}`) and the "Entity AOW"
+   * route in `shared/routing/routing-data.ts` (`entity-details/:entityId/aow`, `:aowId` child).
+   * What this CANNOT prove: that the AoW page actually renders at the far end of that route — a
+   * jsdom unit test never resolves lazy `loadComponent` routes. That is TCM-AC-3/T6 (manual/HITL).
+   */
+  it('onOpenAow navigates once to the entity-aow route for the selected SP + clicked AoW code', async () => {
+    const component = await createComponent();
+
+    component.onOpenAow('AOW03');
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'aow', 'AOW03']);
+  });
+
+  it('onOpenAow does nothing when no SP is selected', async () => {
+    const component = await createComponent();
+    component.selectedId.set(null);
+
+    component.onOpenAow('AOW03');
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
 });
 
 /**

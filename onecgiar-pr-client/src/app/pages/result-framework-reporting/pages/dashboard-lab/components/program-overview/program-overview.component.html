@@ -4,16 +4,18 @@
   12-col · gap 16px · pad 32px · cards white / 1px --pr-border / radius 12 / pad 20
   Order (amended by CVT-A-3, 2026-08-27, owner, CVT-T-3 gate — supersedes P2-3303's placement
   decision and quick/overview-card-order's 8-card layout): About 12 · W1/W2 heatmap/bars 12 ·
-  Status 12 · BilCats 6 + BilCenters 6 · Bilateral heatmap 12 · AoW 12. The former standalone
-  "W1/W2 results by indicator category" card was REMOVED (see CVT-A-3 note at card 2 below) —
-  with bars-default + bar-end totals the matrix card fully subsumes it. Narrative: context →
-  own results by category and status → status headline → bilateral volume + contributors →
-  their cross (full width for 7 rotated columns) → plan progress.
+  Status 12 · BilCats 6 + BilCenters 6 · Bilateral heatmap 12 · AoW 12 · ToC map 12 (TCM-T-3,
+  `changes/overview-toc-map` — card 9, directly below AoW, program-wide, same `aow`-filter gate).
+  The former standalone "W1/W2 results by indicator category" card was REMOVED (see CVT-A-3 note
+  at card 2 below) — with bars-default + bar-end totals the matrix card fully subsumes it.
+  Narrative: context → own results by category and status → status headline → bilateral volume +
+  contributors → their cross (full width for 7 rotated columns) → plan progress → whole-program
+  ToC map.
   Card order is asserted deliberately in the spec (`OVW-T-3`/§6.2, CVT-A-3 amendment: 8→7
-  headings) — a reorder must edit that assertion, never a silent diff.
+  headings; TCM-R-1: 7→8) — a reorder must edit that assertion, never a silent diff.
   CVT-A-4 (amendment, 2026-08-27, owner, CVT-T-3 gate): two `aria-hidden` section-separator rows
   ("W1/W2" · "W3/Bilateral") group the cards visually — no reordering, no new `<h2>`s, so the
-  pinned 7-heading assertion is untouched.
+  pinned heading assertion (now 8, TCM-R-1) is untouched by them.
   Reporting pace / Needs attention / Impact so far were REMOVED (P2-3298 / P2-3300 / P2-3299).
   ⚠️ html is 12px — only arbitrary px values.
 -->
@@ -578,6 +580,26 @@
           </div>
         }
       </div>
+    }
+  </section>
+
+  <!-- 9 · Theory of Change map · span 12 (TCM-R-1: directly below "Progress by area of work",
+       program-wide content — outside the W1/W2 · W3/Bilateral separators, same as card 8 above). -->
+  <section class="col-span-12 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+    <h2 class="m-0 mb-[16px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+      Theory of Change map
+    </h2>
+
+    @if (tocMap() || tocMapLoading()) {
+      <app-pr-viz-chart
+        [options]="tocMapOption()"
+        [tableModel]="tocMapTable()"
+        [chartTitle]="'Theory of Change map'"
+        height="460px"
+        [loading]="tocMapLoading()"
+        (chartClick)="onTocMapClick($event)" />
+    } @else {
+      <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">No Theory of Change data loaded yet.</p>
     }
   </section>
   }

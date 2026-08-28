@@ -60,7 +60,7 @@
   - [x] Table spec: row count === rendered node count; each row's cells match the node's model fields; caption = SP name. **FAIL input:** independent derivation drifting → red.
   - [x] Full suite + lint green (same disqualifier).
 
-### `TCM-T-3` — Card wiring: model computed, bindings, navigation, heading 7→8
+### [x] `TCM-T-3` — Card wiring: model computed, bindings, navigation, heading 7→8
 
 - **Type:** `client`
 - **Description:** Per design §2.1/§2.2 + TCM-DD-2: `dashboard-lab.component.ts` — `overviewTocMap` computed (null while any bucket loads) + `(openAow)` handler navigating to the AoW's existing `entity-aow` route (locate the exact route from the app's routing during implementation); `.html` — `[tocMap]` + `(openAow)` bindings. `program-overview` — `tocMap` input, option/table computeds (null-safe), `openAow` output emitting only on non-null resolver result, the new full-width card directly below "Progress by area of work" (own `<h2>` "Theory of Change map", wrapper loading state, empty state, height per design §6.1); pinned heading assertion 7 → 8 with a TCM-R-1 citation comment. Extend `program-overview.component.spec.ts` (+ `dashboard-lab.component.spec.ts` only if the computed/handler needs it).
@@ -74,12 +74,12 @@
 - **Estimate:** M (~120 LOC incl. spec)
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
 - **Definition of done:**
-  - [ ] Init spec: with a model, the card renders one `app-pr-viz-chart` (Overview host count 5 → 6) with non-null tableModel; heading assertion now 8, cited. **FAIL input:** missing heading append → assertion red.
-  - [ ] Prior pinned assertions (separators, card order) unmodified in the diff and green. **FAIL input:** any edit to them.
-  - [ ] Null-model spec: loading → wrapper loading state; empty model → empty state, option computed null. **FAIL input:** rendering a chart with no table → wrapper clears it (design §2.2 constraint).
-  - [ ] Click spec: AoW payload → `openAow` emits the code (via subscribe); leaf/root payload → no emission. **FAIL input:** resolver bypass → red.
-  - [ ] Navigation: handler routes to the located `entity-aow` route — assert router call args in spec, **and record what that cannot prove** (the real page landing is TCM-AC-3/T6).
-  - [ ] Full suite + lint + `ng build` green (same disqualifier).
+  - [x] Init spec: with a model, the card renders one `app-pr-viz-chart` (Overview host count 5 → 6) with non-null tableModel; heading assertion now 8, cited. **FAIL input:** missing heading append → assertion red.
+  - [x] Prior pinned assertions (separators, card order) unmodified in the diff and green. **FAIL input:** any edit to them.
+  - [x] Null-model spec: loading → wrapper loading state; empty model → empty state, option computed null. **FAIL input:** rendering a chart with no table → wrapper clears it (design §2.2 constraint).
+  - [x] Click spec: AoW payload → `openAow` emits the code (via subscribe); leaf/root payload → no emission. **FAIL input:** resolver bypass → red.
+  - [x] Navigation: handler routes to the located `entity-aow` route — assert router call args in spec, **and record what that cannot prove** (the real page landing is TCM-AC-3/T6).
+  - [x] Full suite + lint + `ng build` green (same disqualifier).
 
 ### `TCM-T-4` — Closure: gates + HITL layout decision
 

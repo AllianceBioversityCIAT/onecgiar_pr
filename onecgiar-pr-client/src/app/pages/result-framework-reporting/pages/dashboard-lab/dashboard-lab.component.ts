@@ -38,6 +38,7 @@ import {
   OverviewLink,
   HeatmapModel
 } from './components/program-overview/program-overview.component';
+import { buildTocMapModel, TocMapModel } from './dashboard-lab.toc-map';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
 import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
@@ -1203,6 +1204,68 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       shownOf: total > 8 ? { shown: shown.length, total } : undefined
     };
   });
+
+  /**
+   * `true` while any ToC bucket the map needs (every AoW, plus the two program-level buckets) is
+   * still in flight for the current SP — same guard SHAPE as `loadingAows`/`loadingToc` (a key is
+   * "in flight" once requested and not yet resolved into `tocByKey`). Also true while the AoW list
+   * itself hasn't settled (`loadingAows()`), since the map cannot even name its branches yet.
+   */
+  readonly overviewTocMapLoading = computed(() => {
+    if (this.loadingAows()) return true;
+    const sp = this.selected()?.initiativeCode;
+    if (!sp) return false;
+    const keys = [...this.aows().map(aow => `${sp}::${aow.code}`), `${sp}::${INTERMEDIATE_OUTCOMES_CODE}`, `${sp}::${OUTCOMES_2030_CODE}`];
+    const loadingKeys = this.loadingTocKeys();
+    const map = this.tocByKey();
+    return keys.some(key => loadingKeys.has(key) && !map.has(key));
+  });
+
+  /**
+   * Theory-of-Change map model (`TCM-R-2`, `changes/overview-toc-map`) — feeds the ALREADY-LOADED
+   * `aows()`/`tocByKey()` (no new HTTP calls) plus `splitGroupTitle` (the existing HLO title
+   * parser) into the pure `buildTocMapModel`. `null` while the SP itself isn't resolved OR
+   * `buildTocMapModel` finds nothing to render (empty program) — `program-overview` tells the two
+   * cases apart using `overviewTocMapLoading()` alongside this.
+   */
+  readonly overviewTocMap = computed<TocMapModel | null>(() => {
+    const sp = this.selected();
+    if (!sp) return null;
+    const spCode = sp.initiativeCode;
+    const map = this.tocByKey();
+    // Matches `tocByKey`'s own declared bucket type (`{ outputs: any[]; outcomes: any[] }`) — the
+    // ToC node shape stays untyped-`any` here same as every other reader of this signal.
+    const tocByAow = new Map<string, { outputs: any[]; outcomes: any[] }>();
+    this.aows().forEach(aow => {
+      const bucket = map.get(`${spCode}::${aow.code}`);
+      if (bucket) tocByAow.set(aow.code, bucket);
+    });
+
+    return buildTocMapModel({
+      spCode,
+      spName: sp.initiativeShortName || sp.initiativeName || '',
+      aows: this.aows(),
+      tocByAow,
+      intermediateOutcomes: map.get(`${spCode}::${INTERMEDIATE_OUTCOMES_CODE}`) ?? null,
+      outcomes2030: map.get(`${spCode}::${OUTCOMES_2030_CODE}`) ?? null,
+      parseTitle: title => this.splitGroupTitle(title)
+    });
+  });
+
+  /**
+   * `program-overview` resolves a ToC map click down to an AoW code (`tocMapAowFromClick`) and
+   * emits it ONLY for an AoW node (`TCM-R-5`); this parent navigates to that AoW's EXISTING
+   * `entity-aow` page — same route the retired `entity-aow-card`
+   * (`pages/entity-details/components/entity-aow-card/entity-aow-card.component.html:16`) already
+   * links to: `/result-framework-reporting/entity-details/:entityId/aow/:aowId`
+   * (`shared/routing/routing-data.ts` "Entity AOW" route, `:aowId` child) — mirrors the array-form
+   * `router.navigate` call `onOverviewLink` (below) uses for the sibling 'results' route.
+   */
+  onOpenAow(code: string): void {
+    const spCode = this.selected()?.initiativeCode;
+    if (!spCode) return;
+    this.router.navigate(['/result-framework-reporting/entity-details', spCode, 'aow', code]);
+  }
 
   /** Fetch the programme's bilateral rows. Overview only — the other tabs do not use them. */
   private loadBilateralRows(code: string): void {
