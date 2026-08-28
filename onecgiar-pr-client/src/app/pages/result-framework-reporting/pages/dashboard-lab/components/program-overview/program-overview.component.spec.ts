@@ -172,9 +172,9 @@ describe('ProgramOverviewComponent', () => {
    * Reporting-status donut (`OVW-T-4`), and the bilateral radar card each mount a real
    * `app-pr-viz-chart` host, always paired with a non-null `tableModel`.
    */
-  it('renders 4 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
+  it('renders 5 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
     const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-    expect(hosts.length).toBe(4);
+    expect(hosts.length).toBe(5);
     hosts.forEach(host => {
       expect(host.componentInstance.tableModel()).toBeTruthy();
       expect(host.componentInstance.options()).toBeTruthy();
@@ -499,8 +499,8 @@ describe('ProgramOverviewComponent', () => {
     /** FAIL input: a second chart host per card, or a table rebuilt on toggle, turns this red. */
     it('keeps exactly one app-pr-viz-chart host per card and the same tableModel reference across the switch', () => {
       const beforeHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-      // 2 matrix cards + donut + 1 bilateral radar card = 4 hosts total.
-      expect(beforeHosts.length).toBe(4);
+      // 2 matrix cards + donut + 1 bilateral radar card + 1 velocity trendline = 5 hosts total.
+      expect(beforeHosts.length).toBe(5);
       const w12TableBefore = component.w12HeatmapTable();
       const bilateralTableBefore = component.bilateralHeatmapTable();
 
@@ -509,7 +509,7 @@ describe('ProgramOverviewComponent', () => {
       fixture.detectChanges();
 
       const afterHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-      expect(afterHosts.length).toBe(4);
+      expect(afterHosts.length).toBe(5);
       expect(component.w12HeatmapTable()).toBe(w12TableBefore);
       expect(component.bilateralHeatmapTable()).toBe(bilateralTableBefore);
     });
@@ -717,7 +717,7 @@ describe('ProgramOverviewComponent', () => {
       expect(component.bilateralStatusTotal()).toBe(20);
       expect(component.bilateralSegmentWidth(bilateralSegs[0])).toBe(60);
       expect(component.bilateralSegmentWidth(bilateralSegs[1])).toBe(40);
-      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(6);
     });
 
     /**
@@ -771,9 +771,9 @@ describe('ProgramOverviewComponent', () => {
       fixture.componentRef.setInput('tocMap', tocModel);
       fixture.detectChanges();
 
-      // 4 pre-existing wrapper instances (donut, W1/W2, bilateral heatmap, bilateral radar — no
+      // 5 pre-existing wrapper instances (donut, velocity trendline, W1/W2, bilateral heatmap, bilateral radar — no
       // bilateral donut in the default fixture, `bilateralStatusSegments` unset) + 1 for the map.
-      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(6);
       expect(component.tocMapOption()).not.toBeNull();
       expect(component.tocMapTable()).not.toBeNull();
       expect(fixture.nativeElement.textContent).toContain('Theory of Change map');
@@ -787,7 +787,7 @@ describe('ProgramOverviewComponent', () => {
 
       // The wrapper renders (loading skeleton) even with null options/tableModel — one more than
       // the empty-state case below, which renders no wrapper at all.
-      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(6);
       expect(component.tocMapOption()).toBeNull();
       expect(fixture.nativeElement.textContent).not.toContain('No Theory of Change data loaded yet.');
     });
@@ -798,7 +798,7 @@ describe('ProgramOverviewComponent', () => {
       fixture.componentRef.setInput('tocMapLoading', false);
       expect(() => fixture.detectChanges()).not.toThrow();
 
-      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(4);
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
       expect(fixture.nativeElement.textContent).toContain('No Theory of Change data loaded yet.');
     });
 
@@ -888,6 +888,16 @@ describe('ProgramOverviewComponent', () => {
 
       component.setActiveSection('w1w2');
       expect(component.activeSection()).toBe('all');
+    });
+  });
+
+  describe('Reporting progress velocity trendline', () => {
+    it('computes reporting trend option and displays trendline in reporting status card header', () => {
+      const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
+      const trendHost = hosts.find(h => h.componentInstance.chartTitle() === 'Reporting progress velocity');
+      expect(trendHost).toBeTruthy();
+      expect(component.reportingTrendModel()).toBeDefined();
+      expect(component.reportingTrendChartOption()).toBeDefined();
     });
   });
 });

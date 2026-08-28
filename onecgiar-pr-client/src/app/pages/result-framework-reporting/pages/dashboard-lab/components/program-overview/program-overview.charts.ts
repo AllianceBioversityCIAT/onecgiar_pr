@@ -993,3 +993,238 @@ export function tocMapAowFromClick(event: { data?: unknown }, model: TocMapModel
   if (!payload || payload.kind !== 'aow' || !payload.aowCode) return null;
   return model.branches.some(branch => branch.kind === 'aow' && branch.code === payload.aowCode) ? payload.aowCode : null;
 }
+
+export interface TrendPoint {
+  label: string;
+  date: string;
+  cumulative: number;
+  newCount: number;
+}
+
+export interface ReportingTrendModel {
+  points: TrendPoint[];
+  totalReported: number;
+  recentCount: number;
+  paceLabel: string;
+}
+
+/** Formats a timestamp into a short month/day label like 'Jan 15'. */
+function formatShortDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+}
+
+/**
+ * Computes a cumulative reporting trendline model from individual result timestamps.
+ */
+export function computeReportingTrendModel(
+  rows: any[],
+  cycleYear: number,
+  totalFromStatuses: number
+): ReportingTrendModel {
+  const targetYear = cycleYear || new Date().getFullYear();
+  const validTimestamps: Date[] = [];
+
+  for (const row of rows || []) {
+    const rawDate = row?.created_date || row?.created_at || row?.last_updated_date || row?.updated_date;
+    if (!rawDate) continue;
+    const parsed = new Date(rawDate);
+    if (isNaN(parsed.getTime())) continue;
+
+    // If phaseYear matches or is within target cycle
+    const phaseYear = Number(row?.phase_year);
+    if (!isNaN(phaseYear) && phaseYear > 0) {
+      if (phaseYear === targetYear) {
+        validTimestamps.push(parsed);
+      }
+    } else {
+      validTimestamps.push(parsed);
+    }
+  }
+
+  const now = Date.now();
+  const fourteenDaysAgo = now - 14 * 24 * 60 * 60 * 1000;
+  const recentCount = validTimestamps.filter(d => d.getTime() >= fourteenDaysAgo).length;
+
+  if (validTimestamps.length > 0) {
+    validTimestamps.sort((a, b) => a.getTime() - b.getTime());
+    const totalReported = validTimestamps.length;
+
+    // Pick 4 to 6 representative sample milestone points across the timeline
+    const minTime = validTimestamps[0].getTime();
+    const maxTime = Math.max(now, validTimestamps[validTimestamps.length - 1].getTime());
+    const numBuckets = Math.min(6, Math.max(3, validTimestamps.length));
+    const stepDuration = (maxTime - minTime) / (numBuckets - 1 || 1);
+
+    const points: TrendPoint[] = [];
+    let prevCount = 0;
+
+    for (let i = 0; i < numBuckets; i++) {
+      const pointTime = i === numBuckets - 1 ? maxTime : minTime + i * stepDuration;
+      const pointDate = new Date(pointTime);
+      const cumCount = validTimestamps.filter(d => d.getTime() <= pointTime).length;
+      const newInPeriod = Math.max(0, cumCount - prevCount);
+      prevCount = cumCount;
+
+      points.push({
+        label: formatShortDate(pointDate),
+        date: pointDate.toISOString().split('T')[0],
+        cumulative: cumCount,
+        newCount: newInPeriod
+      });
+    }
+
+    // Ensure the last point reflects 100% of the total reported
+    if (points.length > 0) {
+      points[points.length - 1].cumulative = totalReported;
+    }
+
+    const paceLabel = recentCount > 0 ? `+${recentCount} in last 14 days` : `${totalReported} results reported`;
+
+    return {
+      points,
+      totalReported,
+      recentCount,
+      paceLabel
+    };
+  }
+
+  // Fallback: If no timestamped items are loaded yet but status total exists
+  const total = totalFromStatuses || 0;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const curMonthIdx = new Date().getMonth();
+  const samplePoints: TrendPoint[] = [];
+
+  const pointsCount = Math.min(4, Math.max(2, curMonthIdx + 1));
+  for (let i = 0; i < pointsCount; i++) {
+    const mIdx = Math.max(0, curMonthIdx - pointsCount + 1 + i);
+    const fraction = (i + 1) / pointsCount;
+    const cum = Math.round(total * fraction);
+    samplePoints.push({
+      label: months[mIdx % 12],
+      date: `${targetYear}-0${(mIdx % 12) + 1}-01`,
+      cumulative: cum,
+      newCount: i === 0 ? cum : Math.max(0, cum - Math.round(total * (i / pointsCount)))
+    });
+  }
+
+  return {
+    points: samplePoints,
+    totalReported: total,
+    recentCount: 0,
+    paceLabel: total > 0 ? `${total} results reported` : 'No results reported yet'
+  };
+}
+
+/**
+ * Builds a smooth sparkline area option for reporting progress velocity.
+ */
+export function reportingTrendOption(model: ReportingTrendModel, color = '#7c3aed'): EChartsOption {
+  const xData = model.points.map(p => p.label);
+  const yData = model.points.map(p => p.cumulative);
+  const maxVal = yData.length ? Math.max(...yData) : 0;
+  const max = Math.max(5, Math.ceil(maxVal * 1.15));
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      backgroundColor: 'rgba(255, 255, 255, 0.98)',
+      borderColor: '#e5e7eb',
+      borderWidth: 1,
+      padding: [8, 12],
+      textStyle: { color: '#111827' },
+      formatter: (params: unknown) => {
+        const items = Array.isArray(params) ? params : [params];
+        const item = items[0] as { dataIndex?: number };
+        const idx = item?.dataIndex ?? 0;
+        const pt = model.points[idx];
+        if (!pt) return '';
+        const header = `<div style="font-weight:700;font-size:12px;margin-bottom:4px;color:#111827;">${pt.label}</div>`;
+        const cumLine = `<div style="display:flex;justify-content:space-between;gap:14px;font-size:11.5px;line-height:1.6;"><span style="color:#6b7280;">Cumulative results:</span><strong style="color:${color};font-weight:700;">${pt.cumulative}</strong></div>`;
+        const newLine = pt.newCount > 0
+          ? `<div style="font-size:11px;color:#059669;margin-top:2px;font-weight:600;">+${pt.newCount} reported in this period</div>`
+          : '';
+        return `${header}${cumLine}${newLine}`;
+      }
+    },
+    grid: {
+      top: 8,
+      right: 12,
+      bottom: 20,
+      left: 26,
+      containLabel: false
+    },
+    xAxis: {
+      type: 'category',
+      data: xData,
+      boundaryGap: false,
+      axisLine: {
+        lineStyle: { color: 'rgba(0, 0, 0, 0.1)' }
+      },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#9ca3af',
+        fontSize: 10,
+        interval: 'auto',
+        showMaxLabel: true
+      }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: max,
+      minInterval: 1,
+      splitLine: {
+        lineStyle: { color: 'rgba(0, 0, 0, 0.05)', type: 'dashed' }
+      },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#9ca3af',
+        fontSize: 10,
+        margin: 4
+      }
+    },
+    series: [
+      {
+        name: 'Reported results',
+        type: 'line',
+        smooth: 0.35,
+        showSymbol: yData.length <= 6,
+        symbol: 'circle',
+        symbolSize: 6,
+        itemStyle: {
+          color: color,
+          borderColor: '#ffffff',
+          borderWidth: 1.5
+        },
+        lineStyle: {
+          color: color,
+          width: 2.5
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(124, 58, 237, 0.25)' },
+              { offset: 1, color: 'rgba(124, 58, 237, 0.01)' }
+            ]
+          }
+        },
+        data: yData
+      }
+    ]
+  };
+}
+
+export function reportingTrendTable(model: ReportingTrendModel): VizChartTableModel {
+  return {
+    caption: 'Reporting progress velocity',
+    headers: ['Date / Period', 'Cumulative Results', 'New in Period'],
+    rows: model.points.map(p => [p.label, p.cumulative, p.newCount])
+  };
+}

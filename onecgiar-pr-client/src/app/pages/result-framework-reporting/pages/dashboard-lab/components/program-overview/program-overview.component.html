@@ -238,11 +238,42 @@
   <!-- 3 · W1/W2 Reporting status · span 12 -->
   <section
     class="col-span-12 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-    <div class="mb-[20px]">
-      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
-      <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">
-        W1/W2 reporting progress and breakdown for this Science Program
-      </p>
+    <div class="mb-[20px] flex flex-wrap items-center justify-between gap-[16px]">
+      <div class="min-w-[200px]">
+        <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
+        <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+          W1/W2 reporting progress and breakdown for this Science Program
+        </p>
+      </div>
+
+      <!-- Trendline Box (Reporting Progress Velocity across Active Phase) -->
+      @if (statusTotal() > 0 || meterLoading()) {
+        <div class="flex flex-col rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)]/70 px-[14px] py-[8px] min-w-[280px] sm:min-w-[340px] md:min-w-[380px] shadow-2xs">
+          <div class="flex items-center justify-between gap-[8px] mb-[2px]">
+            <div class="flex items-center gap-[6px]">
+              <span class="text-[11.5px] font-semibold text-[var(--pr-text-heading)]">
+                Reporting Velocity
+              </span>
+              <span class="inline-flex items-center rounded-full bg-purple-50 px-[7px] py-[1px] text-[10px] font-bold text-purple-700 border border-purple-200">
+                Phase {{ cycleYear() }}
+              </span>
+            </div>
+            <span class="text-[11px] font-bold text-emerald-600 tabular-nums">
+              {{ reportingTrendModel().paceLabel }}
+            </span>
+          </div>
+
+          <!-- Trendline Chart -->
+          <div class="h-[70px] w-full">
+            <app-pr-viz-chart
+              class="w-full h-full block"
+              [options]="reportingTrendChartOption()"
+              [tableModel]="reportingTrendTable()"
+              chartTitle="Reporting progress velocity"
+              height="70px" />
+          </div>
+        </div>
+      }
     </div>
 
     @if (statusTotal() > 0 || meterLoading()) {

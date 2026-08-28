@@ -823,8 +823,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // internally, so this effect is ALSO phase-reactive (closes the W12 reactivity gap recorded in
     // design.md DD-1 — this loader used to resolve `versionId` once and never revisit it).
     effect(() => {
-      const code = this.selected()?.initiativeCode;
-      if (this.rfrView() === 'overview' && code) this.loadBilateralRows(code);
+      const sp = this.selected();
+      const code = sp?.initiativeCode;
+      const id = sp?.initiativeId;
+      if (this.rfrView() === 'overview') {
+        if (code) this.loadBilateralRows(code);
+        if (id) this.loadProgramResults(id);
+      }
     });
 
     // Overview meter (design.md DD-3): `sp.versions` from the shared default payload carries only
@@ -1220,6 +1225,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly bilateralRowsByKey = signal<Map<string, ResultToReview[]>>(new Map());
   private readonly loadingBilateralKeys = signal<Set<string>>(new Set());
 
+  private readonly programResultsByKey = signal<Map<string, any[]>>(new Map());
+  private readonly loadingProgramResultsKeys = signal<Set<string>>(new Set());
+
+  readonly overviewProgramResults = computed<any[]>(() => {
+    const sp = this.selected();
+    const id = sp?.initiativeId;
+    if (!id) return [];
+    const key = this.summaryCacheKey(String(id), this.effectiveVersionId());
+    return this.programResultsByKey().get(key) ?? [];
+  });
+
   /** Selected program's bilateral rows for the CURRENT phase key only (design.md DD-4). */
   private readonly bilateralRows = computed<ResultToReview[]>(() => {
     const code = this.selected()?.initiativeCode;
@@ -1560,6 +1576,33 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private cacheBilateralRows(key: string, rows: ResultToReview[]): void {
     this.bilateralRowsByKey.update(map => new Map(map).set(key, rows));
     this.loadingBilateralKeys.update(set => {
+      const next = new Set(set);
+      next.delete(key);
+      return next;
+    });
+  }
+
+  private loadProgramResults(id: number): void {
+    const userId = this.api.authSE?.localStorageUser?.id;
+    if (!userId || !id) return;
+    const versionId = this.effectiveVersionId();
+    const key = this.summaryCacheKey(String(id), versionId);
+    if (this.programResultsByKey().has(key) || this.loadingProgramResultsKeys().has(key)) return;
+    this.loadingProgramResultsKeys.update(set => new Set(set).add(key));
+    this.api.resultsSE.GET_AllResultsWithUseRole(userId, {
+      submitter_id: String(id),
+      limit: 2000,
+      page: 1
+    }).subscribe({
+      next: (res: any) =>
+        this.cacheProgramResults(key, res?.response?.items ?? []),
+      error: () => this.cacheProgramResults(key, [])
+    });
+  }
+
+  private cacheProgramResults(key: string, rows: any[]): void {
+    this.programResultsByKey.update(map => new Map(map).set(key, rows));
+    this.loadingProgramResultsKeys.update(set => {
       const next = new Set(set);
       next.delete(key);
       return next;

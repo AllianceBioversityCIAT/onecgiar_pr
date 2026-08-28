@@ -1209,6 +1209,8 @@
           [bilateralLoading]="loadingBilateral()"
           [tocMap]="overviewTocMap()"
           [tocMapLoading]="overviewTocMapLoading()"
+          [programResults]="overviewProgramResults()"
+          [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
           (openResults)="onOverviewLink($event)"
           (openAow)="onOpenAow($event)" />
       </article>

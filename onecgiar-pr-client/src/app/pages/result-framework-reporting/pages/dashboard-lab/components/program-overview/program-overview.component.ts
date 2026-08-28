@@ -20,7 +20,11 @@ import {
   sectorLinkFromClick,
   tocMapOption,
   tocMapTable,
-  tocMapAowFromClick
+  tocMapAowFromClick,
+  computeReportingTrendModel,
+  reportingTrendOption,
+  reportingTrendTable,
+  ReportingTrendModel
 } from './program-overview.charts';
 import type { TocMapModel } from '../../dashboard-lab.toc-map';
 import type { ECElementEvent } from 'echarts/core';
@@ -167,6 +171,11 @@ export class ProgramOverviewComponent {
   readonly tocMap = input<TocMapModel | null>(null);
   /** True while any ToC bucket the map needs is still in flight for the current SP (TCM-R-1). */
   readonly tocMapLoading = input<boolean>(false);
+
+  /** Individual result rows for computing reporting trend / velocity */
+  readonly programResults = input<any[]>([]);
+  /** Active cycle year (e.g. 2026) */
+  readonly cycleYear = input<number>(new Date().getFullYear());
 
   /**
    * Typed navigation intent (`OVW-R-5`). Rows, status meter segments, legend items and heatmap
@@ -337,6 +346,18 @@ export class ProgramOverviewComponent {
   });
 
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
+
+  readonly reportingTrendModel = computed<ReportingTrendModel>(() =>
+    computeReportingTrendModel(this.programResults(), this.cycleYear(), this.statusTotal())
+  );
+
+  readonly reportingTrendChartOption = computed<EChartsOption>(() =>
+    reportingTrendOption(this.reportingTrendModel(), this.totalLabelColor())
+  );
+
+  readonly reportingTrendTable = computed<VizChartTableModel>(() =>
+    reportingTrendTable(this.reportingTrendModel())
+  );
 
   segmentPercent(segment: StatusSegment): number {
     const total = this.statusTotal();

@@ -19,7 +19,9 @@ import {
   radarLinkFromClick,
   tocMapOption,
   tocMapTable,
-  tocMapAowFromClick
+  tocMapAowFromClick,
+  computeReportingTrendModel,
+  reportingTrendOption
 } from './program-overview.charts';
 import { HeatmapModel, OverviewLink, StatusSegment } from './program-overview.component';
 import type { TocBranch, TocLeaf, TocMapModel } from '../../dashboard-lab.toc-map';
@@ -1027,6 +1029,57 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
 
       const branchRow = table.rows.find(row => row[0] === 'Area of Work 1' && row[1] === 'AOW01')!;
       expect(branchRow).toEqual(['Area of Work 1', 'AOW01', 'Area of Work 1', 'AoW', 2, 15, 4, '1/2']);
+    });
+  });
+});
+
+describe('program-overview.charts computeReportingTrendModel & reportingTrendOption', () => {
+  const sampleResults = [
+    { id: 1, result_code: 'R1', created_date: '2026-01-15T10:00:00Z', phase_year: 2026 },
+    { id: 2, result_code: 'R2', created_date: '2026-01-28T14:30:00Z', phase_year: 2026 },
+    { id: 3, result_code: 'R3', created_date: '2026-02-10T09:00:00Z', phase_year: 2026 },
+    { id: 4, result_code: 'R4', created_date: '2026-02-25T11:00:00Z', phase_year: 2026 },
+    { id: 5, result_code: 'R5', created_date: '2026-03-01T15:00:00Z', phase_year: 2026 }
+  ];
+
+  describe('computeReportingTrendModel', () => {
+    it('computes cumulative progress points across the reporting cycle', () => {
+      const model = computeReportingTrendModel(sampleResults, 2026, 5);
+      expect(model.points.length).toBeGreaterThanOrEqual(3);
+      expect(model.totalReported).toBe(5);
+      expect(model.points[model.points.length - 1].cumulative).toBe(5);
+    });
+
+    it('falls back gracefully when results array is empty but status total exists', () => {
+      const model = computeReportingTrendModel([], 2026, 11);
+      expect(model.totalReported).toBe(11);
+      expect(model.points.length).toBeGreaterThanOrEqual(2);
+      expect(model.paceLabel).toBe('11 results reported');
+    });
+
+    it('returns empty model when both results and status total are 0', () => {
+      const model = computeReportingTrendModel([], 2026, 0);
+      expect(model.totalReported).toBe(0);
+      expect(model.paceLabel).toBe('No results reported yet');
+    });
+  });
+
+  describe('reportingTrendOption', () => {
+    it('builds an ECharts smooth line chart with gradient areaStyle and tooltip', () => {
+      const model = computeReportingTrendModel(sampleResults, 2026, 5);
+      const option = reportingTrendOption(model, '#7c3aed') as {
+        xAxis: { data: string[] };
+        series: { type: string; smooth: number; data: number[] }[];
+        tooltip: { formatter: (params: unknown) => string };
+      };
+
+      expect(option.series[0].type).toBe('line');
+      expect(option.series[0].smooth).toBe(0.35);
+      expect(option.series[0].data.length).toBe(model.points.length);
+      expect(option.xAxis.data.length).toBe(model.points.length);
+
+      const tooltipHtml = option.tooltip.formatter({ dataIndex: 0 });
+      expect(tooltipHtml).toContain('Cumulative results:');
     });
   });
 });
