@@ -1031,8 +1031,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .sort((a, b) => (b.phase_year ?? 0) - (a.phase_year ?? 0))
       .map(p => {
         const isOpen = typeof p.status === 'boolean' ? p.status : Number(p.id) === Number(openPhaseId);
+        // `version.id` is a bigint column — TypeORM serializes it as a STRING on the wire ("36").
+        // Every phase-aware wrapper guards with `typeof versionId === 'number'`, so a raw string
+        // here silently drops the param from every URL (the live all-cards-stuck-on-the-open-phase
+        // bug, hotfix h2): normalize at the single origin instead of loosening four guards.
         return {
-          versionId: p.id,
+          versionId: Number(p.id),
           label: `${p.phase_name} · ${p.phase_year}`,
           phaseTagLabel: isOpen ? 'Open' : '',
           phaseTagTone: 'open'

@@ -1237,10 +1237,14 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
   // `PhasesService.phases.reporting` fixture: 2 phases of SP04's own portfolio (34 closed, 36
   // open — `status` is the server-authoritative Open flag) + 1 phase of a DIFFERENT portfolio
   // (12, the old P22 2022-2024 cycle) that OPF-R-1's BUT clause says must never appear for SP04.
+  // Wire-shape fixture (hotfix h2): `version.id` is a bigint column, so the REAL payload carries
+  // it as a STRING ("34"), not a number — a numeric fixture here is exactly the type-axis
+  // blindness (KZ-TCM-1) that let the raw `p.id` reach the strict `typeof === 'number'` wrapper
+  // guards and silently drop `versionId` from every URL in production.
   const REPORTING_PHASES: Phases[] = [
-    { id: 34, phase_name: 'Reporting 2025', phase_year: 2025, status: false, obj_portfolio: { id: PORTFOLIO_ID, acronym: 'P25' } } as Phases,
-    { id: 36, phase_name: 'Reporting 2026', phase_year: 2026, status: true, obj_portfolio: { id: PORTFOLIO_ID, acronym: 'P25' } } as Phases,
-    { id: 12, phase_name: 'Reporting 2023', phase_year: 2023, status: false, obj_portfolio: { id: 99, acronym: 'P22' } } as Phases
+    { id: '34' as any, phase_name: 'Reporting 2025', phase_year: 2025, status: false, obj_portfolio: { id: PORTFOLIO_ID, acronym: 'P25' } } as Phases,
+    { id: '36' as any, phase_name: 'Reporting 2026', phase_year: 2026, status: true, obj_portfolio: { id: PORTFOLIO_ID, acronym: 'P25' } } as Phases,
+    { id: '12' as any, phase_name: 'Reporting 2023', phase_year: 2023, status: false, obj_portfolio: { id: 99, acronym: 'P22' } } as Phases
   ];
 
   function apiMock(overrides: Record<string, jest.Mock> = {}) {
