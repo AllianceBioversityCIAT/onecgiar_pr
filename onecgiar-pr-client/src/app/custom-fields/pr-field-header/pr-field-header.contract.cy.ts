@@ -145,26 +145,55 @@ describe('PrFieldHeaderComponent — contract', () => {
     });
   });
 
-  describe('info tooltip (P2-3061 — new on this branch, contract from the ticket intent)', () => {
+  describe('info tooltip (P2-3061 · pinnable since P2-3323)', () => {
+    // P2-3323: this block used to target `.pr_label_tooltip`, a class that exists only in the
+    // SCSS — the template renders `button.sgi-dac-info`. Every assertion here was passing
+    // against nothing, which is why the click regression reached production unnoticed.
+    const TIP = 'Use a short, factual title.';
+    const withTooltip = `<app-pr-field-header label="Result title" tooltip="${TIP}"></app-pr-field-header>`;
+
     it('[contract] shows no info icon when no tooltip is configured', () => {
       mountCFHost(`<app-pr-field-header label="Result title"></app-pr-field-header>`);
-      cy.get('.pr_label_tooltip').should('not.exist');
+      cy.get('button.sgi-dac-info').should('not.exist');
     });
 
     it('[contract] renders an info icon next to the label when a tooltip is configured', () => {
-      mountCFHost(`<app-pr-field-header label="Result title" tooltip="Use a short, factual title."></app-pr-field-header>`);
+      mountCFHost(withTooltip);
       cy.get('.pr_label_row .pr_label').should('contain.text', 'Result title:');
-      cy.get('.pr_label_tooltip').should('exist').and('contain.text', 'info');
+      cy.get('button.sgi-dac-info').should('exist').and('have.attr', 'aria-label', 'More information');
     });
 
-    it('[contract] reveals the tooltip text on hover and hides it on leave', () => {
-      mountCFHost(`<app-pr-field-header label="Result title" tooltip="Use a short, factual title."></app-pr-field-header>`);
+    it('[contract] reveals the tooltip on hover and hides it on leave while unpinned', () => {
+      mountCFHost(withTooltip);
+      cy.get('button.sgi-dac-info').trigger('mouseenter');
+      cy.contains(TIP).should('be.visible');
+      cy.get('button.sgi-dac-info').trigger('mouseleave');
+      cy.contains(TIP).should('not.exist');
+    });
 
-      cy.get('.pr_label_tooltip').trigger('mouseenter');
-      cy.contains('Use a short, factual title.').should('be.visible');
+    // ── P2-3323 — the regression this block exists for ──────────────────────────────────
+    it('[contract] PINS the tooltip on click instead of hiding it', () => {
+      mountCFHost(withTooltip);
+      cy.get('button.sgi-dac-info').trigger('mouseenter').click();
+      cy.contains(TIP).should('be.visible');
+    });
 
-      cy.get('.pr_label_tooltip').trigger('mouseleave');
-      cy.contains('Use a short, factual title.').should('not.exist');
+    it('[contract] a pinned tooltip survives the pointer leaving, so its links stay reachable', () => {
+      mountCFHost(withTooltip);
+      cy.get('button.sgi-dac-info').trigger('mouseenter').click();
+      cy.get('button.sgi-dac-info').trigger('mouseleave');
+      cy.contains(TIP).should('be.visible');
+    });
+
+    // Escape-to-dismiss is deliberately NOT asserted here. It belongs to PrTooltipDirective, not
+    // to this component, and `pr-tooltip.directive.spec.ts` already covers it ("closes on Escape").
+    // Reproducing it in component testing needs a KeyboardEvent dispatched into the app iframe's
+    // realm, which neither `.type('{esc}')`, `.trigger('keydown')` nor a cross-realm
+    // `dispatchEvent` delivers — the test failed on the harness, never on the code. A red that
+    // comes from the harness teaches people to ignore reds.
+    it('[contract] the trigger looks clickable, not hover-only', () => {
+      mountCFHost(withTooltip);
+      cy.get('button.sgi-dac-info').should('have.css', 'cursor', 'pointer');
     });
 
     it('[contract] keeps the label text identical whether or not a tooltip is present', () => {

@@ -57,10 +57,14 @@
             <div class="sgi-dac-row">
               <div class="sgi-dac-label">
                 <span>{{ area.label }}</span>
+                <!-- P2-3323: pinnable, like every other .sgi-dac-info trigger. The Impact Area
+                     guidance is several paragraphs long, so a click must pin it open instead of
+                     hiding it. -->
                 <button
                   type="button"
                   class="sgi-dac-info"
                   [prTooltip]="area.tooltip"
+                  [prTooltipPinnable]="true"
                   prTooltipPosition="right"
                   prTooltipStyleClass="sgi-dac-tooltip"
                   aria-label="More information about {{ area.label }}">
