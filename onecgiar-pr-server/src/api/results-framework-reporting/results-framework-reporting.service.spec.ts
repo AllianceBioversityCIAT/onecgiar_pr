@@ -2503,4 +2503,63 @@ describe('ResultsFrameworkReportingService', () => {
       expect(result.status).toBe(400);
     });
   });
+
+  /**
+   * P2-3255. `assignIndicatorCenterContext` exists to fill the scalar centre when SQL left it
+   * unset, by matching a centre's target on year + value. That was safe while SQL emitted one row
+   * per target×centre. It is not safe now: a target shared by N centres arrives as one row with
+   * the scalars deliberately null, and the year+value match cannot tell those N apart — it would
+   * pick whichever comes first and put back exactly the misreport the ticket removed.
+   */
+  describe('assignIndicatorCenterContext with shared targets (P2-3255)', () => {
+    const sharedIndicator = () => ({
+      center_id: null,
+      center_acronym: null,
+      target_date: '2026',
+      target_value: '1',
+      centers: [
+        { center_id: 2, center_acronym: 'BIOVERSITY' },
+        { center_id: 3, center_acronym: 'CIAT' },
+      ],
+      targets_by_center: {
+        centers: [
+          {
+            center_id: 2,
+            center_acronym: 'BIOVERSITY',
+            targets: [{ year: '2026', target_value: '1' }],
+          },
+          {
+            center_id: 3,
+            center_acronym: 'CIAT',
+            targets: [{ year: '2026', target_value: '1' }],
+          },
+        ],
+      },
+    });
+
+    it('leaves the scalar centre unset when several centres hold the target', () => {
+      const indicator = sharedIndicator();
+
+      (service as any).assignIndicatorCenterContext(indicator, 2026);
+
+      expect(indicator.center_id).toBeNull();
+      expect(indicator.center_acronym).toBeNull();
+    });
+
+    it('still resolves the centre when only one holds the target', () => {
+      const indicator = sharedIndicator();
+      indicator.centers = [{ center_id: 3, center_acronym: 'CIAT' }];
+      indicator.targets_by_center.centers = [
+        {
+          center_id: 3,
+          center_acronym: 'CIAT',
+          targets: [{ year: '2026', target_value: '1' }],
+        },
+      ];
+
+      (service as any).assignIndicatorCenterContext(indicator, 2026);
+
+      expect(indicator.center_id).toBe(3);
+    });
+  });
 });
