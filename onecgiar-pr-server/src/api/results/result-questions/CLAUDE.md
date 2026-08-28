@@ -1,6 +1,6 @@
 # result-questions
 
-**Verified:** 2026-08-26 · branch performance-refactor · ccc7aaeed
+**Verified:** 2026-08-28 · branch performance-refactor · ccdc8b597
 
 ## Qué es
 Motor de cuestionarios guardado en base de datos (`result_questions` / `result_answers`). Sirve dos
@@ -30,12 +30,15 @@ No hay pantalla de administración: **cada pregunta se crea, edita o borra por m
 - `src/api/bilateral/bilateral.service.ts` — mismo cuestionario para resultados bilaterales.
 
 ## Trampas (⚠️ = ya rompió algo o va a romper)
-- ⚠️ **`intellectualPropertyRightsV2` (`result-questions.service.ts:536-539`) sigue mapeando
-  `q1..q4` POR POSICIÓN.** `find()` no lleva `ORDER BY`: el orden es el que devuelva MySQL, y
-  añadir/quitar un hijo de 100 desplaza todos los slots posteriores → el cliente pinta la pregunta
-  equivocada en el componente equivocado, para **todos** los P25 (fase 2025 incluida).
-  `responsibleInnovationAndScalingV2` ya está arreglado (slots fijados por id, P2-3465); IPR no.
-  Mismo patrón sin arreglar en las dos funciones P22 (`:363`, `:478`).
+- ✅ **`intellectualPropertyRightsV2` ya NO mapea por posición** (P2-3272, 28-ago-2026). Los slots
+  se fijan por id en `INTELLECTUAL_PROPERTY_RIGHTS_P25_SLOTS` (`:67-74`: q1→101, q2→102, q3→103,
+  q4→138) y se aplican con `assignQuestionSlotsById` (`:637-640`). Añadir o quitar un hijo de la
+  pregunta 100 ya no desplaza los slots, que es el requisito previo para consolidar las cuatro
+  preguntas de IPR en una (P2-3513, Juanda). `responsibleInnovationAndScalingV2` usa el mismo
+  patrón desde P2-3465.
+- ⚠️ **Las dos funciones P22 (`:363`, `:478`) SIGUEN mapeando por posición.** No se tocaron a
+  propósito: P22 es retrocompatibilidad pura y no recibe preguntas nuevas. Si algún día se añade
+  un hijo allí, el cliente pintará la pregunta equivocada.
 - ⚠️ **Solo la consulta de nivel 1 filtra `version: 'P25'`** en `intellectualPropertyRightsV2`
   (`:493-500`) y en `innovationTeamDiversityV2` (`:615-622`); los niveles 2/3 no filtran.
   Hoy es inocuo porque esos hijos son filas P25, pero un id reutilizado entre portafolios lo rompe.
