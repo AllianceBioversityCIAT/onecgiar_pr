@@ -15,7 +15,7 @@
   [dismissableMask]="true"
   styleClass="new-complementary-innovation-dialog"
   (onHide)="complementaryInnovationService.resetAll()">
-  <div style="display: flex; justify-content: center; flex-direction: column">
+  <div class="modal_content">
     <div class="modal_title">
       {{ this.api.rolesSE.readOnly ? 'View' : this.complementaryInnovationService.isEdit ? 'Edit' : 'New' }} complementary innovation/ enabler/
       solution
@@ -100,7 +100,7 @@
       @if (complementaryInnovationService.complementaries) {
         <div style="display: flex; align-content: flex-end; width: 100%; justify-content: flex-end">
           <app-pr-input
-            style="width: 50%; margin-top: -30px; margin-left: 20px"
+            class="other_functions_field"
             label="Other enabler functions"
             [required]="false"
             [readOnly]="this.api.rolesSE.readOnly"
