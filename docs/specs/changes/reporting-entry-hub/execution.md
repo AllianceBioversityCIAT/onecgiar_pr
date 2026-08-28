@@ -37,3 +37,25 @@ _(entries appended below, evidence before checkbox)_
 
 **Final:** PASS · attempts 2 · requirements covered REH-R-3/3.2/3.6/4.6/9/9.1, REH-AC-12/13 · verification: 10/10 + 3/3 + lint clean · gate: auto-approved (pre-approved mode).
 - Follow-ups recorded (not tasks): `getProjectsByCenter` resolves `institutionId` before `code` (collision risk, pre-existing); design §5 wording "`center_id` is `undefined` (not `null`)" → "no `center_id` key" at archive.
+
+### `REH-T-3` — Client: `ReportingEntryHubComponent`
+
+- **Date:** 2026-08-28 · **Implementer:** akili-implementer (sonnet, effort high) · **Reviewer:** akili-reviewer (opus)
+- **Skills assigned:** `angular-developer`, `ui-ux-pro-max`, `tdd` (as listed)
+
+**Attempt 1**
+- Files (new): `onecgiar-pr-client/src/app/pages/result-framework-reporting/pages/dashboard-lab/components/reporting-entry-hub/reporting-entry-hub.component.{ts,html,scss,spec.ts}`, `…/hub-copy.ts`; edit `onecgiar-pr-client/tests/mocks/ngIconsLucideMock.ts` (+`lucideChevronUp`, `lucideArrowRight`).
+- Implementer verification: `npx jest …/components/reporting-entry-hub --no-coverage` → 22 passed; `npx ng lint --quiet` → All files pass linting.
+- Implementer assumptions: (1) during search, only centers with a match expand (REH-R-3.4 literal); (2) added `id="reporting-entry-hub-w3"` + `tabindex="-1"` on the W3 heading as the anchor T-4/T-5 need (Leader: accepted — it can only live in this template).
+- Reviewer verdict: **FAIL** — (1) search behaviour contradicts REH-AC-4 / REH-TEST-3(e) "both expanded" while matching REH-R-3.4. **Leader adjudication:** the spec was internally inconsistent; R-3.4 is the better UX (an expanded zero-match group is an empty box) → `requirements.md` REH-AC-4 and `tasks.md` (e) amended to "matching center expanded, non-matching unchanged"; forward/backward sweep for "both expanded" clean. No code change required for (1). (2) three `aria-live` announcement strings hard-coded in the component instead of `hub-copy.ts` — violates T-3 DoD / NFR i18n → rework.
+- Reviewer verified conformant: inputs/outputs per design §6.2; all W3 states; slice/Show all; counters; default expansion; REH-R-12; localStorage try/catch; disabled Create result title; disabled Report with `title`; a11y structure; tokens checked against `colors.scss` and the exemplar — no new hex, no new SCSS class; `@akili-spec`.
+- ADVISORY (recorded): `Show all N` label uses `center.matching` while rows come from `center.projects` (can differ under the 300 cap); toggle during search announces without visible effect (Leader folded this one-liner into attempt 2); `laneSubtitle`/`activePhaseNote` render "in ." when the year is unknown; `visibleCenters` naming; `aria-controls` dangles while collapsed; (c)/(d) assert via method not DOM.
+
+**Attempt 2** — in progress (issue 2 only + the announce-during-search one-liner).
+
+### `REH-T-2` — Server: controller endpoint
+
+- **Date:** 2026-08-28 · **Implementer:** akili-implementer (sonnet, effort low) · **Reviewer:** akili-reviewer (opus) · **Skills:** `nestjs-expert`
+- **Attempt 1** — Files: `onecgiar-pr-server/src/api/results-framework-reporting/results-framework-reporting.controller.{ts,spec.ts}`. Verification: controller spec 20/20 passed (19 prior + `getReportingEntryHubProjects`); `npx eslint src/api/results-framework-reporting --quiet` clean (after `--fix` on prettier).
+- Reviewer verdict: **PASS** — route/query per design §4.1, `@UserToken()` → `user.id`, no duplicated validation, envelope by identity, Swagger trio; route stays under `JwtMiddleware` (`/api/(.*)`, not excluded); DI real provider; no route shadowing.
+- **Final:** PASS · attempts 1 · covers REH-R-9 (HTTP), REH-AC-12 · gate: auto-approved (pre-approved mode).

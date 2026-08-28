@@ -16,10 +16,12 @@ import {
 } from '@nestjs/swagger';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ResultsService } from '../results/results.service';
+import { ReportingEntryHubService } from './services/reporting-entry-hub.service';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ScienceProgramProgressResponseDto } from '../results/dto/science-program-progress.dto';
 import { CreateResultsFrameworkResultDto } from './dto/create-results-framework.dto';
+import { ReportingEntryHubProjectsDto } from './dto/reporting-entry-hub-projects.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
@@ -30,6 +32,7 @@ export class ResultsFrameworkReportingController {
   constructor(
     private readonly resultsFrameworkReportingService: ResultsFrameworkReportingService,
     private readonly resultsService: ResultsService,
+    private readonly reportingEntryHubService: ReportingEntryHubService,
   ) {}
 
   @Get('get/science-programs/progress')
@@ -298,6 +301,32 @@ export class ResultsFrameworkReportingController {
   })
   getBilateralProjectsByProgram(@Query('programId') programId: string) {
     return this.resultsFrameworkReportingService.getBilateralProjectsByScienceProgram(
+      programId,
+    );
+  }
+
+  @Get('reporting-entry-hub/projects')
+  @ApiOperation({
+    summary: "List the caller's center bilateral projects for a program",
+    description:
+      "Resolves the caller's Center-level role assignments and returns, per center, the bilateral projects funding the given science program in the active reporting year.",
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Science program official code (e.g. SP02).',
+  })
+  @ApiOkResponse({
+    description: 'Reporting entry hub projects retrieved successfully.',
+    type: ReportingEntryHubProjectsDto,
+  })
+  getReportingEntryHubProjects(
+    @UserToken() user: TokenDto,
+    @Query('programId') programId: string,
+  ) {
+    return this.reportingEntryHubService.getMyCenterProjects(
+      user.id,
       programId,
     );
   }

@@ -2,11 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ResultsFrameworkReportingController } from './results-framework-reporting.controller';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ResultsService } from '../results/results.service';
+import { ReportingEntryHubService } from './services/reporting-entry-hub.service';
 
 describe('ResultsFrameworkReportingController', () => {
   let controller: ResultsFrameworkReportingController;
   let reportingService: jest.Mocked<ResultsFrameworkReportingService>;
   let resultsService: jest.Mocked<ResultsService>;
+  let reportingEntryHubService: jest.Mocked<ReportingEntryHubService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -31,6 +33,12 @@ describe('ResultsFrameworkReportingController', () => {
             getScienceProgramProgress: jest.fn(),
           },
         },
+        {
+          provide: ReportingEntryHubService,
+          useValue: {
+            getMyCenterProjects: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -41,6 +49,9 @@ describe('ResultsFrameworkReportingController', () => {
       ResultsFrameworkReportingService,
     ) as jest.Mocked<ResultsFrameworkReportingService>;
     resultsService = module.get(ResultsService) as jest.Mocked<ResultsService>;
+    reportingEntryHubService = module.get(
+      ReportingEntryHubService,
+    ) as jest.Mocked<ReportingEntryHubService>;
   });
 
   it('should be defined', () => {
@@ -272,6 +283,36 @@ describe('ResultsFrameworkReportingController', () => {
       controller.getDashboardStats('SP01');
 
       expect(reportingService.getDashboardStats).toHaveBeenCalledWith('SP01');
+    });
+  });
+
+  describe('getReportingEntryHubProjects', () => {
+    it('should delegate to ReportingEntryHubService with the user id and programId, returning its envelope unchanged (REH-TEST-2)', async () => {
+      const user: any = { id: 1 };
+      const envelope = {
+        response: {
+          programCode: 'SP02',
+          activeYear: 2026,
+          truncated: false,
+          centers: [],
+        },
+        message: 'Reporting entry hub projects retrieved successfully.',
+        status: 200,
+      };
+      reportingEntryHubService.getMyCenterProjects.mockResolvedValueOnce(
+        envelope as any,
+      );
+
+      const result = await controller.getReportingEntryHubProjects(
+        user,
+        'SP02',
+      );
+
+      expect(reportingEntryHubService.getMyCenterProjects).toHaveBeenCalledWith(
+        user.id,
+        'SP02',
+      );
+      expect(result).toBe(envelope);
     });
   });
 });
