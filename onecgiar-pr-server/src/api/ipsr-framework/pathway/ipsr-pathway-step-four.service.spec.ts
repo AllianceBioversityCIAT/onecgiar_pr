@@ -20,12 +20,15 @@ import { InstitutionRoleEnum } from '../../results/results_by_institutions/entit
 
 describe('IpsrPathwayStepFourService', () => {
   let service: IpsrPathwayStepFourService;
+  let moduleRef: TestingModule;
 
   const mockResultByInstitutionsRepository = {
+    find: jest.fn(),
     findOne: jest.fn(),
   };
 
   const mockResultInstitutionsBudgetRepository = {
+    find: jest.fn(),
     findOne: jest.fn(),
     save: jest.fn(),
     create: jest.fn(),
@@ -103,6 +106,7 @@ describe('IpsrPathwayStepFourService', () => {
       ],
     }).compile();
 
+    moduleRef = module;
     service = module.get(IpsrPathwayStepFourService);
   });
 
@@ -258,6 +262,49 @@ describe('IpsrPathwayStepFourService', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('has_scaling_studies NULL coercion (P2-3426 green-check guard)', () => {
+    const resultId = 32177;
+
+    const mockOf = (token: any) => moduleRef.get(token) as any;
+
+    const stubGetStepFour = (has_scaling_studies: number | null) => {
+      mockOf(EvidencesRepository).find.mockResolvedValue([]);
+      mockOf(ResultByInitiativesRepository).find.mockResolvedValue([]);
+      mockOf(ResultInitiativeBudgetRepository).find.mockResolvedValue([]);
+      mockOf(ResultsByProjectsRepository).find.mockResolvedValue([]);
+      mockOf(NonPooledProjectBudgetRepository).find.mockResolvedValue([]);
+      mockOf(getRepositoryToken(ResultScalingStudyUrl)).find.mockResolvedValue(
+        [],
+      );
+      mockResultByInstitutionsRepository.find.mockResolvedValue([]);
+      mockResultInstitutionsBudgetRepository.find.mockResolvedValue([]);
+      mockOf(ResultInnovationPackageRepository).findOne.mockResolvedValue({
+        result_innovation_package_id: resultId,
+        is_result_ip_published: false,
+        ipsr_pdf_report: null,
+        has_scaling_studies,
+      });
+    };
+
+    it('should coerce an unanswered has_scaling_studies to false so the step stays greenable', async () => {
+      stubGetStepFour(null);
+
+      const { response } = (await service.getStepFour(resultId)) as any;
+
+      expect(response.has_scaling_studies).toBe(false);
+      expect(response.has_scaling_studies).not.toBeNull();
+      expect(response.has_scaling_studies).not.toBeUndefined();
+    });
+
+    it('should keep the stored value when has_scaling_studies is answered', async () => {
+      stubGetStepFour(1);
+
+      const { response } = (await service.getStepFour(resultId)) as any;
+
+      expect(response.has_scaling_studies).toBe(1);
     });
   });
 });
