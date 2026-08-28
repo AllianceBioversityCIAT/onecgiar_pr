@@ -18,12 +18,20 @@ import { Router } from '@angular/router';
 export interface DacScores {
   field_name: string;
   tag_id: string | number;
-  impact_area_id?: string | null;
+  impact_area_id?: (string | number)[];
   change_reason?: string;
   canSave?: boolean;
   ai_recommendation?: string;
   display_title?: string;
   is_validated?: boolean;
+  user_validated?: boolean;
+}
+
+export interface DacScorePayload {
+  field_name: string;
+  tag_id: number;
+  impact_area_id: number[];
+  change_reason?: string;
 }
 
 @Injectable({
@@ -87,6 +95,22 @@ export class AiReviewService {
   }
 
   /**
+   * Normaliza el valor de componentes que llega del API a una lista.
+   * El endpoint puede devolver null, un id suelto o una lista de ids.
+   * @param value - Valor crudo recibido del backend
+   * @returns Siempre una lista de ids (vacía si no hay selección)
+   */
+  normalizeImpactAreaIds(value: unknown): (string | number)[] {
+    if (Array.isArray(value)) {
+      return value.filter(id => id !== null && id !== undefined && id !== '');
+    }
+
+    if (value === null || value === undefined || value === '') return [];
+
+    return [value as string | number];
+  }
+
+  /**
    * Enriquece los DAC scores con las recomendaciones de IA
    * @param dacScores - Array de DAC scores del backend
    * @param impactAreaScores - Recomendaciones de IA para cada área de impacto
@@ -95,9 +119,17 @@ export class AiReviewService {
   private enrichDacScoresWithAIRecommendations(dacScores: DacScores[], impactAreaScores: ImpactAreaScores): DacScores[] {
     return dacScores.map(score => {
       const mappingKey = this.mapFieldNameToImpactAreaKey(score.field_name);
+      const impactAreaIds = this.normalizeImpactAreaIds(score.impact_area_id);
 
       if (!mappingKey) {
-        return { ...score, canSave: false, display_title: this.mapFieldNameToDisplayTitle(score.field_name), is_validated: false };
+        return {
+          ...score,
+          impact_area_id: impactAreaIds,
+          canSave: false,
+          display_title: this.mapFieldNameToDisplayTitle(score.field_name),
+          is_validated: false,
+          user_validated: false
+        };
       }
 
       const aiRecommendation = impactAreaScores[mappingKey] || '';
@@ -105,10 +137,12 @@ export class AiReviewService {
 
       const enrichedScore: DacScores = {
         ...score,
+        impact_area_id: impactAreaIds,
         canSave: false,
         display_title: this.mapFieldNameToDisplayTitle(score.field_name),
         ai_recommendation: aiRecommendation,
-        is_validated: isValidated
+        is_validated: isValidated,
+        user_validated: false
       };
 
       return enrichedScore;
@@ -352,7 +386,7 @@ export class AiReviewService {
   }
 
   // Save DAC score
-  PATCH_saveDacScore(resultId: number | string, dacScore: Omit<DacScores, 'canSave'>) {
+  PATCH_saveDacScore(resultId: number | string, dacScore: DacScorePayload) {
     return new Promise((resolve, reject) => {
       return this.http
         .patch<any>(`${this.baseApiBaseUrl}ai/dac-scores/${resultId}`, dacScore)

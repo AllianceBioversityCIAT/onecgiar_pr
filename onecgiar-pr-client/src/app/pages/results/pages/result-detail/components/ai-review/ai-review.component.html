@@ -63,10 +63,10 @@
 
       <div class="impact-areas-grid">
         @for (dacScore of aiReviewSE.dacScores(); track dacScore.field_name) {
-          <div class="field-section" [class.ai-validated]="dacScore.is_validated">
+          <div class="field-section" [class.ai-validated]="isCardValidated(dacScore)">
           <div class="field-header">
-            <h3 class="field-title">{{ dacScore.display_title || dacScore.field_name }}</h3>
-            @if (dacScore.is_validated) {
+            <h3 class="field-title">{{ getDacScoreTitle(dacScore) }}</h3>
+            @if (isCardValidated(dacScore)) {
               <span class="improvement-badge updated-badge"> <i class="pi pi-check-circle"></i> AI Validated</span>
             } @else {
               <span class="improvement-badge needs-improvement-badge"> <i class="pi pi-exclamation-triangle"></i> Needs improvement</span>
@@ -100,15 +100,15 @@
             </div>
           </div>
 
-          @if (dacScore.tag_id === '3') {
+          @if (isPrincipal(dacScore)) {
             <div class="component-section">
               <label class="version-label">Component</label>
               <div class="radio-button-group">
                 @for (component of getComponentListByFieldName(dacScore.field_name); track component.id) {
                   <div class="radio-button-item" (click)="onComponentChange(dacScore, component.id)">
-                    <div class="radio-circle" [class.selected]="dacScore.impact_area_id === component.id">
-                      @if (dacScore.impact_area_id === component.id) {
-                        <div class="radio-dot"></div>
+                    <div class="checkbox-square" [class.selected]="isComponentSelected(dacScore, component.id)">
+                      @if (isComponentSelected(dacScore, component.id)) {
+                        <i class="material-icons-round checkbox-check">check</i>
                       }
                     </div>
                     <label class="radio-label">{{ component.name }}</label>
@@ -128,6 +128,17 @@
           </app-pr-button>
           </div>
         }
+      </div>
+
+      <div class="validate-all-section">
+        <app-pr-button
+          [ngClass]="{ globalDisabled: !hasPendingChanges || isValidatingAll }"
+          text="Validate"
+          icon="task_alt"
+          [showBackground]="true"
+          class="validate-all-button"
+          (click)="onValidateAll()">
+        </app-pr-button>
       </div>
     </div>
   </div>
