@@ -955,6 +955,10 @@ export class BilateralCenterService {
         {
           status_id: ResultStatusData.PendingReview.value,
           last_updated_by: user.id,
+          // The reviewer's "Submission date" column reads `external_submitted_date`
+          // (`result.repository.ts:2844`). Only the interoperability path used to write it, so
+          // results submitted from the centre form reached the review queue with an empty date.
+          external_submitted_date: new Date().toISOString(),
         },
       );
 

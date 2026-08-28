@@ -805,6 +805,28 @@ describe('BilateralCenterService', () => {
       expect(resultRepository.manager.transaction).toHaveBeenCalled();
     });
 
+    it('stamps the submission date the review queue shows', async () => {
+      (resultRepository.findOne as jest.Mock).mockResolvedValue(editingResult);
+      const update = jest.fn().mockResolvedValue({});
+      (
+        resultRepository.manager.transaction as jest.Mock
+      ).mockImplementationOnce(async (cb: any) =>
+        cb({
+          update,
+          create: jest.fn((_entity, payload) => payload),
+          save: jest.fn().mockResolvedValue({}),
+        }),
+      );
+
+      await service.submitForReview(user, 77);
+
+      const [, , patch] = update.mock.calls[0];
+      expect(patch.external_submitted_date).toEqual(expect.any(String));
+      expect(new Date(patch.external_submitted_date).toString()).not.toBe(
+        'Invalid Date',
+      );
+    });
+
     it('accepts an AI Draft result too', async () => {
       (resultRepository.findOne as jest.Mock).mockResolvedValue({
         ...editingResult,
