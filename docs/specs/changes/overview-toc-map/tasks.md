@@ -20,7 +20,7 @@
 
 ## 3. Task list
 
-### `TCM-T-1` — Wrapper registration + pure `buildTocMapModel` (+ model spec)
+### [x] `TCM-T-1` — Wrapper registration + pure `buildTocMapModel` (+ model spec)
 
 - **Type:** `client`
 - **Description:** (a) In `pr-viz-chart.component.ts`: register `TreeChart` — the design §2.1 3-edit additive change (import, `REGISTERED_ECHARTS_MODULES`, `TreeSeriesOption` into the local `EChartsOption` union). (b) New `dashboard-lab/dashboard-lab.toc-map.ts`: `TocMapModel`/`TocBranch`/`TocLeaf` types (design §3) + pure `buildTocMapModel(...)` per design §2.2 item 1 and TCM-DD-1/4/5: branch order AoWs-by-code → "Program-level" → "Intermediate outcomes" → "2030 outcomes"; `is_aow: false` dedupe into ONE program branch; `done/total` = AoW-card counting rule; `total === 0` leaves structural; empty branches omitted (OQ-2); labels via the existing `splitGroupTitle` output with truncated-title fallback; empty/loading inputs → `null`/empty model, no throw. (c) New `dashboard-lab.toc-map.spec.ts`.
@@ -32,11 +32,11 @@
 - **Estimate:** M (~150 LOC incl. spec)
 - **Skills:** `angular-developer`, `tdd`
 - **Definition of done:**
-  - [ ] Dedupe spec: fixture repeats one `is_aow: false` node under 2 AoWs → node appears exactly once, under "Program-level"; AoW branches hold only their own `is_aow: true` nodes. **FAIL input:** skipping dedupe → count red; attach-to-first-AoW → branch-membership red.
-  - [ ] Progress spec: asymmetric fixture where each AoW's `done/total` differs; assert exact values AND that running the same fixture through the AoW-card rule (indicators with `actual_achieved_value_sum > 0`) yields identical numbers. **FAIL input:** a second/divergent derivation → red. **Disqualifier:** asserting only that values are numbers (not exact) is not evidence.
-  - [ ] `total === 0` leaf → structural (no ratio, no NaN); empty buckets → branch omitted; fully empty inputs → null model, no throw. **FAIL input:** division by zero → NaN assertion red.
-  - [ ] Wrapper: existing `pr-viz-chart` spec suite green post-registration; `npx ng build` green (union typecheck — **the input that fails it:** a tree option object against a union missing `TreeSeriesOption`).
-  - [ ] Full suite `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean. **Disqualifier:** `--testPathPattern` narrowing.
+  - [x] Dedupe spec: fixture repeats one `is_aow: false` node under 2 AoWs → node appears exactly once, under "Program-level"; AoW branches hold only their own `is_aow: true` nodes. **FAIL input:** skipping dedupe → count red; attach-to-first-AoW → branch-membership red.
+  - [x] Progress spec: asymmetric fixture where each AoW's `done/total` differs; assert exact values AND that running the same fixture through the AoW-card rule (indicators with `actual_achieved_value_sum > 0`) yields identical numbers. **FAIL input:** a second/divergent derivation → red. **Disqualifier:** asserting only that values are numbers (not exact) is not evidence.
+  - [x] `total === 0` leaf → structural (no ratio, no NaN); empty buckets → branch omitted; fully empty inputs → null model, no throw. **FAIL input:** division by zero → NaN assertion red.
+  - [x] Wrapper: existing `pr-viz-chart` spec suite green post-registration; `npx ng build` green (union typecheck — **the input that fails it:** a tree option object against a union missing `TreeSeriesOption`).
+  - [x] Full suite `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean. **Disqualifier:** `--testPathPattern` narrowing.
 
 ### `TCM-T-2` — Pure chart builders: `tocMapOption` + `tocMapTable` + `tocMapAowFromClick`
 

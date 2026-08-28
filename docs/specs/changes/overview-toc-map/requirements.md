@@ -54,7 +54,7 @@ The SP Overview already loads the full ToC tree it needs (proposal §3, scout-ve
 - GIVEN a ToC node with `is_aow: false` that the payload repeats under every AoW
 - WHEN the model is built
 - THEN that node appears EXACTLY ONCE, under a single "Program-level" branch off the root
-- AND per-AoW branches contain only `is_aow: true` nodes
+- AND per-AoW branches contain only `is_aow: true` nodes *(clarified at execution, TCM-T-1 attempt-1 adjudication: sharedness applies to the OUTCOME tier — the codebase's definition (`dashboard-lab.component.ts` cross-cut stamp) — so output-tier (HLO) nodes always stay on their AoW branch regardless of `is_aow`; the literal both-tier reading would violate TCM-R-3's "can never disagree" MUST. See execution.md TCM-T-1.)*
 - BUT the model must NOT refetch or add HTTP calls (same signals the Overview already fills)
 - AND IT MUST label nodes with the code parsed by the existing `splitGroupTitle()` (falling back to truncated title when the parse returns null)
 

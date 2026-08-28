@@ -18,7 +18,9 @@ import {
   HeatmapChart,
   HeatmapSeriesOption,
   RadarChart,
-  RadarSeriesOption
+  RadarSeriesOption,
+  TreeChart,
+  TreeSeriesOption
 } from 'echarts/charts';
 import {
   TitleComponent,
@@ -46,6 +48,7 @@ export const REGISTERED_ECHARTS_MODULES = [
   PieChart,
   HeatmapChart,
   RadarChart,
+  TreeChart,
   TitleComponent,
   TooltipComponent,
   GridComponent,
@@ -70,6 +73,7 @@ export type EChartsOption = echarts.ComposeOption<
   | PieSeriesOption
   | HeatmapSeriesOption
   | RadarSeriesOption
+  | TreeSeriesOption
   | TitleComponentOption
   | TooltipComponentOption
   | GridComponentOption
