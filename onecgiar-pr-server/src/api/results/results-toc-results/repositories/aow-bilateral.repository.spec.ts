@@ -63,7 +63,7 @@ describe('AoWBilateralRepository', () => {
       'COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
     );
     expect(query).toContain('GROUP BY');
-    expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC, ci.acronym ASC');
+    expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC');
     expect(query).toContain('FROM toc_test.toc_results tr');
     expect(query).toContain(
       'LEFT JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.toc_id',
@@ -75,7 +75,10 @@ describe('AoWBilateralRepository', () => {
     expect(query).toContain('JOIN toc_test.toc_result_indicator_target');
     expect(query).toContain('toc_result_indicator_target_center');
     expect(query).toContain('clarisa_institutions');
-    expect(query).toContain('ci.acronym AS center_acronym');
+    // P2-3255: the scalar `ci.acronym AS center_acronym` was replaced by the aggregated
+    // `centers_concat`. Selecting the acronym as a column was what forced it into the GROUP BY,
+    // which is what fanned one shared target out into one row per centre.
+    expect(query).toContain('AS centers_concat');
     expect(query).toContain('AND trit.target_date = ?');
     expect(query).toContain('WHERE');
     expect(query).toContain('AND tr.phase = ?');
@@ -538,6 +541,117 @@ describe('AoWBilateralRepository', () => {
           ],
         },
       ]);
+    });
+  });
+
+  /**
+   * P2-3255. A target shared by N centres was emitted as N rows, because `tritc.center_id` and
+   * `ci.acronym` sat in the GROUP BY. Every consumer that sums rows then multiplied by N: the ToC
+   * map inflated `target`, `achieved`, `done` and the indicator count all at once
+   * (`dashboard-lab.toc-map.ts:129-132`), and the achieved value was the same figure stamped onto
+   * each row by `fetchAndGroupTocResults`, not N real contributions.
+   */
+  describe('shared targets are one row, not one per centre (P2-3255)', () => {
+    const buildQuery = (options: any = {}) =>
+      (repository as any).buildTocQuery('SP13', {
+        context: defaultContext,
+        ...options,
+      });
+
+    it('does not group by centre, so one target stays one row', () => {
+      const { query } = buildQuery();
+      const groupBy = query.slice(query.indexOf('GROUP BY'));
+
+      expect(groupBy).not.toContain('tritc.center_id');
+      expect(groupBy).not.toContain('ci.acronym');
+    });
+
+    it('groups by the target identity instead', () => {
+      const { query } = buildQuery();
+      const groupBy = query.slice(query.indexOf('GROUP BY'));
+
+      // Without this, two distinct targets that happen to share a value and date collapse together.
+      expect(groupBy).toContain('trit.toc_indicator_target_id');
+    });
+
+    it('still exposes the centres, aggregated rather than fanned out', () => {
+      const { query } = buildQuery();
+      const select = query.slice(0, query.indexOf('FROM'));
+
+      expect(select).toContain('GROUP_CONCAT');
+      expect(select).toContain('centers_concat');
+    });
+
+    it('does not order by a column it no longer groups by', () => {
+      const { query } = buildQuery();
+
+      // lastIndexOf, not indexOf: the FIRST `ORDER BY` in this query is the one inside
+      // GROUP_CONCAT, which is legitimate — it is what makes the concatenation deterministic.
+      // `ORDER BY ci.acronym` as the row ordering was only valid while the acronym was grouped.
+      expect(query.slice(query.lastIndexOf('ORDER BY'))).not.toContain(
+        'ci.acronym',
+      );
+    });
+  });
+
+  describe('groupTocRows centre exposure (P2-3255)', () => {
+    const rowWith = (centersConcat: string | null) => ({
+      toc_result_id: 1,
+      category: 'OUTCOME',
+      result_title: 'R',
+      related_node_id: 'N1',
+      is_aow: 1,
+      indicator_id: 'IND-1',
+      indicator_description: 'd',
+      toc_result_indicator_id: 'TRI-1',
+      indicator_related_node_id: 'N1',
+      unit_messurament: null,
+      type_value: null,
+      type_name: null,
+      location: null,
+      target_value_sum: 1,
+      actual_achieved_value_sum: 1,
+      number_target: 1,
+      target_date: '2026',
+      target_value: '1',
+      progress_percentage: '100%',
+      centers_concat: centersConcat,
+    });
+
+    const group = (rows: any[]) => (repository as any).groupTocRows(rows);
+
+    it('turns one shared-target row into one indicator carrying every centre', () => {
+      const [result] = group([rowWith('2::BIOVERSITY||3::CIAT||15::IWMI')]);
+
+      expect(result.indicators).toHaveLength(1);
+      expect(result.indicators[0].centers).toEqual([
+        { center_id: 2, center_acronym: 'BIOVERSITY' },
+        { center_id: 3, center_acronym: 'CIAT' },
+        { center_id: 15, center_acronym: 'IWMI' },
+      ]);
+    });
+
+    it('leaves the scalar centre null when the target is shared', () => {
+      const [result] = group([rowWith('2::BIOVERSITY||3::CIAT')]);
+
+      // Reporting one of several centres as "the" centre is the lie this ticket is about. Both
+      // client consumers already treat null as "no centre filter", which is the right semantics.
+      expect(result.indicators[0].center_id).toBeNull();
+      expect(result.indicators[0].center_acronym).toBeNull();
+    });
+
+    it('keeps the scalar centre when exactly one centre holds the target', () => {
+      const [result] = group([rowWith('3::CIAT')]);
+
+      expect(result.indicators[0].center_id).toBe(3);
+      expect(result.indicators[0].center_acronym).toBe('CIAT');
+    });
+
+    it('survives a target with no centre association at all', () => {
+      const [result] = group([rowWith(null)]);
+
+      expect(result.indicators[0].centers).toEqual([]);
+      expect(result.indicators[0].center_id).toBeNull();
     });
   });
 });
