@@ -172,7 +172,24 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
         this.loadPhasesForSwitcher(id);
       }
     });
+
+    /**
+     * P2-3520 — P2-3352 requires the form to be read-only once the result leaves Editing, and
+     * `isEditableByCenterUser()` already answered that question but nothing consumed it: the form
+     * stayed open after Submit for Review and the autosave kept writing while the Science Program
+     * reviewed.
+     *
+     * Locking the autosave is what protects the data; `isFormReadOnly` is what the sections read to
+     * disable their controls. An effect rather than a call inside `submitResult()` so a result that
+     * is ALREADY out of Editing when the page loads is locked too.
+     */
+    effect(() => {
+      this.autoSaveService.setReadOnly(!this.creationService.isEditableByCenterUser());
+    });
   }
+
+  /** P2-3520 — single gate the sections and the Submit button read, so no template knows the status numbers. */
+  readonly isFormReadOnly = computed(() => !this.creationService.isEditableByCenterUser());
 
   /**
    * P2-3229 AC5. Feeds `app-phase-switcher` the phases this result exists in, so a result
@@ -417,6 +434,10 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   submitResult(): void {
     const rid = this.resultId();
     if (!rid) return;
+
+    // P2-3520: greying out the button is the UI; this guard is what stops a second submission of a
+    // result that already left the centre's hands.
+    if (this.isFormReadOnly()) return;
 
     // P2-3340: word ceilings are painted red by pr-input but have never blocked anything anywhere in
     // PRMS, so an over-limit Short title used to submit unchanged. Refuse here and name the offending

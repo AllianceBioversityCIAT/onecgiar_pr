@@ -63,6 +63,7 @@
           @if (availableSecondarySpOptions().length) {
             <div class="w-full max-w-[480px]" [ngClass]="{ globalDisabled: unpersistedFieldsComingSoon }">
               <app-pr-multi-select
+                [readOnly]="readOnly()"
                 label="Contributing science programs"
                 [options]="availableSecondarySpOptions()"
                 [ngModel]="selectedSecondarySpIds()"
@@ -117,6 +118,7 @@
     <div class="sc-card__body">
       <div class="w-full max-w-[480px]">
         <app-pr-multi-select
+          [readOnly]="readOnly()"
           label="Contributing CGIAR centers"
           [options]="availableCentersComputed()"
           [disableOptions]="disabledCenterOptions()"
@@ -135,7 +137,8 @@
             <span class="sc-chip" [class.sc-chip-readonly]="isLeadCenter(id)">
               {{ getCenterDisplayName(id) }}
               @if (!isLeadCenter(id)) {
-                <button type="button" class="sc-chip-remove" (click)="removeCenter(id)">×</button>
+                <button type="button" class="sc-chip-remove"
+                  [disabled]="readOnly()" (click)="removeCenter(id)">×</button>
               }
             </span>
           }
@@ -154,6 +157,7 @@
     <div class="sc-card__body">
       <div class="w-full max-w-[480px]">
         <app-pr-multi-select
+          [readOnly]="readOnly()"
           label="Contributing W3/bilateral projects"
           [options]="availableProjectsComputed()"
           [disableOptions]="disabledProjectOptions()"
@@ -172,7 +176,8 @@
             <span class="sc-chip sc-chip--project" [class.sc-chip-readonly]="isLeadProject(id)">
               {{ getProjectDisplayName(id) }}
               @if (!isLeadProject(id)) {
-                <button type="button" class="sc-chip-remove" (click)="removeProject(id)">×</button>
+                <button type="button" class="sc-chip-remove"
+                  [disabled]="readOnly()" (click)="removeProject(id)">×</button>
               }
             </span>
           }
@@ -218,6 +223,7 @@
       }
 
       <app-pr-checkbox
+        [readOnly]="readOnly()"
         label="This result has no external partners"
         [isStatic]="true"
         [required]="false"
@@ -229,6 +235,7 @@
       @if (!noExternalPartners()) {
         <div class="w-full max-w-[480px]">
           <app-pr-multi-select
+            [readOnly]="readOnly()"
             label="External partners"
             [options]="availablePartners()"
             [ngModel]="selectedPartnerInstitutionIds()"
@@ -247,7 +254,8 @@
             @for (id of selectedPartnerInstitutionIds(); track id) {
               <span class="sc-chip">
                 {{ getPartnerDisplayName(id) }}
-                <button type="button" class="sc-chip-remove" (click)="removePartner(id)">×</button>
+                <button type="button" class="sc-chip-remove"
+                  [disabled]="readOnly()" (click)="removePartner(id)">×</button>
               </span>
             }
           </div>
@@ -322,6 +330,7 @@
         @if (showLinkedResultsDropdown()) {
           <div class="w-full max-w-[480px]" [ngClass]="{ globalDisabled: unpersistedFieldsComingSoon }">
             <app-pr-multi-select
+              [readOnly]="readOnly()"
               label="Select a result."
               [options]="innovationUseResultsSE.resultsList"
               [ngModel]="selectedLinkedResultIds()"

@@ -16,6 +16,8 @@ export class SectionZeroDashboardComponent {
 
   /** Submit request in flight — owned by BilateralResultCreatorComponent. */
   isSubmitting = input<boolean>(false);
+  /** P2-3520 — the result already left Editing, so it must not be submitted again. */
+  readOnly = input<boolean>(false);
 
   submitRequested = output<void>();
 
@@ -36,7 +38,7 @@ export class SectionZeroDashboardComponent {
   }
 
   onSubmit(): void {
-    if (this.isSubmitting()) return;
+    if (this.isSubmitting() || this.readOnly()) return;
     this.submitRequested.emit();
   }
 }

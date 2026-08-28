@@ -45,6 +45,13 @@ export class SectionContributorsComponent implements OnInit, OnDestroy {
   readonly api = inject(ApiService);
   readonly bilateralApi = inject(BilateralApiService);
 
+  /**
+   * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
+   * Read straight from the service, the way this section already reads the rest of the result state.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
+
   private centersSubscription?: Subscription;
 
   readonly primarySpData = computed(() => {

@@ -15,7 +15,7 @@
       [showFieldHeader]="false"
       [lockRequiredFromFieldManager]="true"
       [required]="false"
-      [disabled]="isContactLocked"
+      [disabled]="isContactLocked || readOnly"
       [(ngModel)]="userSearchService.searchQuery"
       (input)="onSearchInput($event)"
       (blur)="onContactBlur()"
