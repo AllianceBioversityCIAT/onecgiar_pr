@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DashboardLabComponent } from './dashboard-lab.component';
@@ -1434,5 +1434,43 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
 
     expect(component.loadingMeter()).toBe(true);
     expect(component.latestVersion(component.selected())).toBeNull();
+  });
+
+  // (h) HOTFIX red→green: the owner's HITL found cards flashing empty states / vanishing on a
+  // phase switch instead of showing a loading skeleton. Root cause: the OLD `loadingX` computeds
+  // required `loadingXKeys().has(key)`, and that set is populated INSIDE the constructor `effect()`
+  // that calls the loader — which runs asynchronously relative to the `selectedVersionId.set(...)`
+  // write that triggered it (Angular schedules `effect()` callbacks after the signal write, never
+  // in the same synchronous turn). In that window: `effectiveVersionId()` already resolves to the
+  // NEW key (computed signals recompute synchronously on read), so the data computed reads an
+  // empty cache entry for it, while `loadingXKeys()` has NOT been populated yet → loading reads
+  // false too → the empty state renders instead of a skeleton. Asserted here with NO
+  // `TestBed.tick()` and NO manual loader invocation — exactly the window a real click leaves open.
+  it('(h) loading computeds are true immediately on a phase switch, before any effect flush or HTTP settles', async () => {
+    const component = await createComponent(apiMock(), PROGRAM, 36);
+
+    component.selectedVersionId.set(34);
+
+    expect(component.loadingSummaries()).toBe(true);
+    expect(component.loadingBilateral()).toBe(true);
+    expect(component.loadingMeter()).toBe(true);
+  });
+
+  // (i) Error path still ends with the empty state, never a stuck loader (OPF-R-5) — a cache-miss
+  // gate would otherwise spin forever on a request that failed, since nothing ever populates the
+  // cache. Each loader's `error` handler MUST cache a value (`[]` / `null`) so the key becomes
+  // "settled" and loading flips back to false.
+  it('(i) an errored fetch settles into the empty state, not a stuck loader', async () => {
+    const getSummary = jest.fn().mockReturnValue(throwError(() => new Error('network error')));
+    const api = apiMock({ GET_IndicatorContributionSummary: getSummary });
+    const component = await createComponent(api);
+
+    component.selectedVersionId.set(34);
+    expect(component.loadingSummaries()).toBe(true);
+
+    (component as any).refreshSelectedSummaries();
+
+    expect(component.loadingSummaries()).toBe(false);
+    expect(component.groupedSummaries()).toEqual({ outputs: [], outcomes: [] });
   });
 });

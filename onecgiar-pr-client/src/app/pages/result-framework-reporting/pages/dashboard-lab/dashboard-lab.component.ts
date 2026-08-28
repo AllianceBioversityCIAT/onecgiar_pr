@@ -392,13 +392,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       outcomes: summaries.filter(item => OUTCOME_NAMES.includes(item?.resultTypeName))
     };
   });
+  /**
+   * HOTFIX (`changes/overview-phase-filter`, owner HITL): the OLD implementation required
+   * `loadingSummaryCodes().has(key)`, and that set is populated INSIDE the constructor `effect()`
+   * that calls `refreshSelectedSummaries()` — which runs asynchronously relative to the
+   * `selectedVersionId.set(...)` write that triggers it (Angular flushes `effect()` callbacks
+   * after the signal write, never in the same synchronous turn a click handler runs in). In that
+   * window, `groupedSummaries()` already reads the NEW (empty) cache key while the loading set
+   * still only knows the OLD key — the card fell through to its empty state for a frame/tick
+   * instead of showing a skeleton (verified red: `loadingSummaries()` read `false` immediately
+   * after `.set()`, before any effect flush). Fixed by inverting the invariant: a key is loading
+   * whenever it simply has no cache entry yet — independent of the in-flight set's timing.
+   * `refreshSelectedSummaries()`'s effect is unconditional (fires whenever `code` exists,
+   * regardless of tab), so a cache-miss here always means "will be fetched" — never a stuck
+   * loader (OPF-R-5): the `error` handler in `loadSummaries` below still caches `[]`, which
+   * settles this back to `false`. `loadingSummaryCodes` itself stays — `loadSummaries`'s own
+   * de-dup guard (skip a second concurrent fetch for the same key) still needs it.
+   */
   readonly loadingSummaries = computed(() => {
     const versionId = this.effectiveVersionId();
     const sp = this.selected();
     const code = sp?.initiativeCode;
     if (!code) return false;
     const key = this.summaryCacheKey(code, versionId);
-    return this.loadingSummaryCodes().has(key) && !this.summariesByCode().has(key);
+    return !this.summariesByCode().has(key);
   });
 
   /**
@@ -645,12 +662,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return this.tocByKey().get(this.tocCacheKey(sp.initiativeCode, aow)) ?? { outputs: [] as any[], outcomes: [] as any[] };
   });
 
+  /**
+   * HOTFIX (same root cause as `loadingSummaries` above): inverted to cache-presence — a key is
+   * loading whenever it has no `tocByKey` entry yet. `loadingTocKeys` stays — every `loadToc`
+   * call site's own de-dup guard still needs it.
+   */
   readonly loadingToc = computed(() => {
     const sp = this.selected();
     const aow = this.activeAowCode();
     if (!sp || !aow) return false;
     const key = this.tocCacheKey(sp.initiativeCode, aow);
-    return this.loadingTocKeys().has(key) && !this.tocByKey().has(key);
+    return !this.tocByKey().has(key);
   });
 
   readonly indicatorCounts = computed(() => {
@@ -1019,20 +1041,21 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * True only while the CURRENT key's meter overlay fetch is in flight (design.md §8 States,
-   * `changes/overview-phase-filter` OPF-T-4): distinguishes "not fetched yet" (this signal true)
-   * from a settled `null` (fetch errored / no matching row — this signal is false once the entry
-   * exists in the map, whatever it resolved to; `latestVersion()` below already renders the
-   * meter's zeroed state for that case). `false` on the default path — the loading affordance only
-   * ever applies to an EXPLICIT phase selection (`activeSelection()`), same gate as the overlay
-   * cache itself.
+   * HOTFIX (same root cause as `loadingSummaries` above): inverted to cache-presence — a key is
+   * loading whenever it has no `meterOverlayByKey` entry yet. `false` on the default path — the
+   * loading affordance only ever applies to an EXPLICIT phase selection (`activeSelection()`),
+   * same gate the overlay cache itself uses in `loadMeterOverlay`'s effect, so a cache-miss here
+   * always means "will be fetched," never a stuck loader. Once settled (fetch resolved OR
+   * errored — `cacheMeterOverlay` always writes an entry, `null` on error), this is `false` and
+   * `latestVersion()` below renders the meter's zeroed state for the `null` case.
+   * `loadingMeterKeys` stays — `loadMeterOverlay`'s own de-dup guard still needs it.
    */
   readonly loadingMeter = computed(() => {
     const sp = this.selected();
     const versionId = this.activeSelection();
     if (!sp?.initiativeCode || versionId === null) return false;
     const key = this.summaryCacheKey(sp.initiativeCode, versionId);
-    return this.loadingMeterKeys().has(key) && !this.meterOverlayByKey().has(key);
+    return !this.meterOverlayByKey().has(key);
   });
 
   /**
@@ -1211,17 +1234,22 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   );
 
   /**
-   * True only while the CURRENT key's bilateral rows fetch is in flight (design.md §8 States,
-   * `changes/overview-phase-filter` OPF-T-4 remediation) — same shape as `loadingSummaries` above,
-   * reused for the W3/Bilateral cards' `bilateralLoading` input on `app-program-overview`.
+   * HOTFIX (same root cause as `loadingSummaries` above): inverted to cache-presence — a key is
+   * loading whenever it has no `bilateralRowsByKey` entry yet, independent of the in-flight set's
+   * timing. Gated on `rfrView() === 'overview'`, mirroring the constructor effect that actually
+   * calls `loadBilateralRows` (only fires on Overview) — off that tab this is never fetched, so a
+   * bare cache-miss check would spin forever; the view gate keeps it settled `false` there
+   * (harmless either way since `app-program-overview` — the only consumer — only renders on
+   * Overview, but this keeps the computed correct on its own terms). `loadingBilateralKeys` stays
+   * — `loadBilateralRows`'s own de-dup guard still needs it.
    */
   readonly loadingBilateral = computed(() => {
     const versionId = this.effectiveVersionId();
     const sp = this.selected();
     const code = sp?.initiativeCode;
-    if (!code) return false;
+    if (!code || this.rfrView() !== 'overview') return false;
     const key = this.summaryCacheKey(code, versionId);
-    return this.loadingBilateralKeys().has(key) && !this.bilateralRowsByKey().has(key);
+    return !this.bilateralRowsByKey().has(key);
   });
 
   /** Centers with reported W3/bilateral results, ranked descending by count with alphabetical tie-breaking. */
@@ -1447,6 +1475,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * "in flight" once requested and not yet resolved into `tocByKey`). Also true while the AoW list
    * itself hasn't settled (`loadingAows()`), since the map cannot even name its branches yet.
    */
+  // HOTFIX (same root cause as `loadingSummaries` above): inverted to cache-presence — a bucket is
+  // loading whenever it simply has no `tocByKey` entry yet. The `loadAllTocs()` effect (constructor,
+  // gated `rfrView() === 'planned' || 'overview'`) fetches every one of these keys unconditionally
+  // once the SP/AoW list is known, so a cache-miss always means "will be fetched."
   readonly overviewTocMapLoading = computed(() => {
     if (this.loadingAows()) return true;
     const sp = this.selected()?.initiativeCode;
@@ -1456,9 +1488,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       this.tocCacheKey(sp, INTERMEDIATE_OUTCOMES_CODE),
       this.tocCacheKey(sp, OUTCOMES_2030_CODE)
     ];
-    const loadingKeys = this.loadingTocKeys();
     const map = this.tocByKey();
-    return keys.some(key => loadingKeys.has(key) && !map.has(key));
+    return keys.some(key => !map.has(key));
   });
 
   /**
