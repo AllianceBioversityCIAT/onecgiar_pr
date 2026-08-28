@@ -369,6 +369,16 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** Selected program's categories, split into outputs / outcomes. */
   readonly groupedSummaries = computed(() => {
+    // Tracked read, otherwise unused: `reportingCurrentPhase` is a plain mutable object (not a
+    // signal), so mutating it alone never busts this computed's memo. Without reading the
+    // signal here, a phase switch whose corrected key is ALREADY cached (e.g. flipping back to
+    // a previously-seen phase) would keep serving the OLD key's matrix forever — this computed
+    // would never re-run to notice the phase changed, since neither `selected()` nor
+    // `summariesByCode()` (its other dependencies) changed either. Reading the version bump
+    // here forces a fresh evaluation, which re-reads `reportingCurrentPhase` at its CURRENT
+    // value (live-regression fix, W12; see the constructor effect for the "not yet cached" half
+    // of this same bug).
+    this.dataControlSE?.reportingPhaseVersion?.();
     const sp = this.selected();
     const code = sp?.initiativeCode;
     const versionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
@@ -380,6 +390,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     };
   });
   readonly loadingSummaries = computed(() => {
+    // See `groupedSummaries` above for why this tracked (otherwise unused) read is required.
+    this.dataControlSE?.reportingPhaseVersion?.();
     const sp = this.selected();
     const code = sp?.initiativeCode;
     if (!code) return false;
@@ -1526,14 +1538,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     }
     // The programme now comes from the PATH (`…/entity-details/SP01`), by code. In-app
     // navigation keeps this component alive, so react to param changes as well as the first load.
-    this.entityParamSub = this.route.paramMap.subscribe(pm => this.selectProgramByCode(pm.get('entityId')));
+    this.entityParamSub = this.route?.paramMap?.subscribe(pm => this.selectProgramByCode(pm?.get('entityId')));
 
-    // Phases may already be loaded (shared service) or still in flight — cover both.
-    this.reportingPhases.set(this.phasesSE.phases.reporting ?? []);
-    this.phasesSub = this.phasesSE.getPhasesObservable().subscribe(list => this.reportingPhases.set(list ?? []));
+    this.reportingPhases.set(this.phasesSE?.phases?.reporting ?? []);
+    if (typeof this.phasesSE?.getPhasesObservable === 'function') {
+      this.phasesSub = this.phasesSE.getPhasesObservable().subscribe(list => this.reportingPhases.set(list ?? []));
+    }
 
     // React to `?sp=` changes — kept for links saved before the move to path addressing.
-    this.spParamSub = this.route.queryParamMap.subscribe(qp => {
+    this.spParamSub = this.route?.queryParamMap?.subscribe(qp => {
       const raw = qp.get('sp');
       const id = raw ? Number(raw) : NaN;
       if (!Number.isNaN(id)) {
@@ -1590,7 +1603,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** Rehydrate the view from the URL so a reload stays on the same program + AOW + Planned mode. */
   private restoreFromUrl(): void {
-    const qp = this.route.snapshot.queryParamMap;
+    const qp = this.route?.snapshot?.queryParamMap;
+    if (!qp) return;
     const sp = qp.get('sp');
     if (sp) {
       const id = Number(sp);

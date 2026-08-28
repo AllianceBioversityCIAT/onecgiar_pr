@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DashboardLabComponent } from './dashboard-lab.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
@@ -634,7 +634,13 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
         {
           provide: ApiService,
           useValue: {
-            resultsSE: { GET_IndicatorContributionSummary: getIndicatorContributionSummary }
+            resultsSE: {
+              GET_IndicatorContributionSummary: getIndicatorContributionSummary,
+              // Needed once effects are actually flushed (see the "flushed effects" tests
+              // below): the constructor's OTHER effect calls `loadAows` unconditionally
+              // whenever a program is selected.
+              GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { units: [] } }))
+            }
           }
         },
         {
@@ -642,14 +648,30 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
           useValue: {
             focusMode: signal(false),
             slimNav: signal(false),
-            reportingCurrentPhase: { phaseId: null, phaseYear: null, phaseName: null, portfolioAcronym: null, portfolioId: null }
+            reportingCurrentPhase: { phaseId: null, phaseYear: null, phaseName: null, portfolioAcronym: null, portfolioId: null },
+            // Real signal, not a jest.fn: the fix reads this INSIDE `groupedSummaries` /
+            // `loadingSummaries` (Issue 1) and the dedicated summaries effect (Issue 2) — both
+            // need `.update()`/tracked-read semantics a mock function can't provide.
+            reportingPhaseVersion: signal(0)
           }
         },
         { provide: ReportingGuideService, useValue: {} },
-        { provide: Router, useValue: {} },
+        // `navigate` is needed once effects are flushed: the constructor's URL-mirroring effect
+        // calls it unconditionally (unless a pending-AOW/pending-filters restore is in flight,
+        // which is never the case for these tests).
+        { provide: Router, useValue: { navigate: jest.fn() } },
         { provide: ActivatedRoute, useValue: { data: of({}), snapshot: { data: {} } } },
         { provide: PhasesService, useValue: { phases: { reporting: [] } } },
-        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined } },
+        {
+          provide: EntityAowService,
+          useValue: {
+            onCloseReportResultModal: () => undefined,
+            // Needed once effects are flushed: `primeEntityAowContext()` (called from the same
+            // effect as `loadAows`) reads/writes `entityId` and calls `getAllDetailsData`.
+            entityId: signal(''),
+            getAllDetailsData: jest.fn()
+          }
+        },
         { provide: ResultLevelService, useValue: {} }
       ]
     })
@@ -784,6 +806,62 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
     (component as any).refreshSelectedSummaries();
     expect(getSummary).toHaveBeenNthCalledWith(2, 'SP04', 10);
     expect(component.groupedSummaries().outputs.length).toBe(1);
+    expect(component.groupedSummaries().outputs[0].resultTypeName).toBe('Innovation development');
+  });
+
+  // Reviewer rework (Issue 2): the previous test above calls `refreshSelectedSummaries()`
+  // directly, so it gives zero coverage to the ACTUAL constructor effect that reads
+  // `reportingPhaseVersion()` — deleting that read (or the whole dedicated effect) would not
+  // redden anything. This test flushes REAL Angular effects (`TestBed.tick()`, the project's
+  // established idiom — see `font-scale.service.spec.ts`, `global-search-palette.service.spec.ts`)
+  // so the effect itself, not a stand-in method call, is what's under test.
+  it('flushed effects: a reportingPhaseVersion() bump re-fetches under the corrected key (Issue 2)', async () => {
+    const getSummary = jest
+      .fn()
+      .mockReturnValueOnce(of({ response: { totalsByType: [] } }))
+      .mockReturnValueOnce(of({ response: { totalsByType: [] } }));
+    const component = await createComponent(getSummary);
+
+    // Flushes every constructor effect's first run, including the dedicated summaries effect:
+    // no phase known yet, so `latestVersion()` falls back to the highest phaseYear — 20.
+    TestBed.tick();
+    expect(getSummary).toHaveBeenNthCalledWith(1, 'SP04', 20);
+
+    // The phase lands late (a different version than the fallback guessed) and bumps the
+    // signal the effect now reads — mirroring `DataControlService.getCurrentPhases()`.
+    (component.dataControlSE as any).reportingCurrentPhase.phaseId = 10;
+    (component.dataControlSE.reportingPhaseVersion as WritableSignal<number>).update(v => v + 1);
+    TestBed.tick();
+
+    expect(getSummary).toHaveBeenNthCalledWith(2, 'SP04', 10);
+  });
+
+  // Reviewer rework (Issue 1): when the CORRECTED key is already cached (e.g. the phase flips
+  // back to one already fetched), `loadSummaries` early-returns — no fetch, no `summariesByCode`
+  // write, nothing to force a recompute. Before the fix, `groupedSummaries` would keep returning
+  // its memoized value from whichever key it last resolved. Pre-seeding both cache entries
+  // directly isolates this from fetch/effect timing entirely — it is purely a test of
+  // `groupedSummaries`'s OWN reactivity to `reportingPhaseVersion()`.
+  it('a phase-version bump busts the memoized groupedSummaries when the corrected key is already cached (Issue 1)', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [] } }));
+    const component = await createComponent(getSummary);
+
+    component.summariesByCode.set(
+      new Map([
+        ['SP04::20', [{ resultTypeId: 1, resultTypeName: 'Knowledge product', editing: 1, submitted: 0, qualityAssessed: 0, others: 0, totalResults: 1 } as any]],
+        ['SP04::10', [{ resultTypeId: 2, resultTypeName: 'Innovation development', editing: 1, submitted: 0, qualityAssessed: 0, others: 0, totalResults: 1 } as any]]
+      ])
+    );
+
+    // No phase known yet -> fallback resolves versionId 20 -> memoizes the V20 read.
+    expect(component.groupedSummaries().outputs[0].resultTypeName).toBe('Knowledge product');
+
+    // The phase resolves to v10 — already cached (a cache HIT; `loadSummaries` would no-op if
+    // called). Mutating the plain `reportingCurrentPhase` object alone would NOT bust the
+    // computed's memo; bumping `reportingPhaseVersion` (now read inside `groupedSummaries`) does.
+    (component.dataControlSE as any).reportingCurrentPhase.phaseId = 10;
+    (component.dataControlSE.reportingPhaseVersion as WritableSignal<number>).update(v => v + 1);
+
     expect(component.groupedSummaries().outputs[0].resultTypeName).toBe('Innovation development');
   });
 });
