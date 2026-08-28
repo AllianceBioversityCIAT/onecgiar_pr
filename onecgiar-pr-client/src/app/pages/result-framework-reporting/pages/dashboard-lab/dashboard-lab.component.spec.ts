@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DashboardLabComponent } from './dashboard-lab.component';
@@ -127,9 +127,15 @@ describe('DashboardLabComponent — indicatorsByAow() / fromTier stamping (RES-T
     return component;
   }
 
-  /** Seeds the one AoW `indicatorsByAow()` iterates, and its ToC payload for that AoW. */
+  /**
+   * Seeds the one AoW `indicatorsByAow()` iterates, and its ToC payload for that AoW.
+   * `tocByKey` is now keyed `${program}::${aow}::${versionId ?? 'default'}` (design.md DD-4,
+   * `changes/overview-phase-filter`) — this fixture never selects a phase and the
+   * DataControlService mock has no `reportingCurrentPhase`, so the resolved key is
+   * `SP02::SP02-AOW01::default` (see `tocCacheKey`).
+   */
   function setToc(component: DashboardLabComponent, toc: { outputs?: unknown[]; outcomes?: unknown[] }) {
-    const key = `${PROGRAM.initiativeCode}::${AOW_CODE}`;
+    const key = `${PROGRAM.initiativeCode}::${AOW_CODE}::default`;
     component.aowsByCode.set(new Map([[PROGRAM.initiativeCode, [{ code: AOW_CODE, name: 'AoW 01' } as unknown as Unit]]]));
     component.tocByKey.set(new Map([[key, { outputs: (toc.outputs ?? []) as any[], outcomes: (toc.outcomes ?? []) as any[] }]]));
   }
@@ -348,7 +354,13 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
         initiative_role_id: '1'
       }
     ] as unknown as ResultToReview[];
-    (component as unknown as { bilateralRows: { set: (v: ResultToReview[]) => void } }).bilateralRows.set(rows);
+    // `bilateralRows` is now a computed reading `bilateralRowsByKey` (design.md DD-4,
+    // `changes/overview-phase-filter`): this fixture's PROGRAM carries one version (versionId 1)
+    // and no selector/`reportingCurrentPhase`, so `effectiveVersionId()` resolves to 1 and the
+    // key is `SP02::1` (see `summaryCacheKey`).
+    (component as unknown as { bilateralRowsByKey: { set: (v: Map<string, ResultToReview[]>) => void } }).bilateralRowsByKey.set(
+      new Map([['SP02::1', rows]])
+    );
 
     const categories = component.overviewBilateralCategories();
     const centers = component.overviewBilateralCenters();
@@ -552,8 +564,10 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
         initiative_role_id: '1'
       }))
     );
-    (component as unknown as { bilateralRows: { set: (v: ResultToReview[]) => void } }).bilateralRows.set(
-      rows as unknown as ResultToReview[]
+    // Same `code::default` key as the `summariesByCode` fixtures above — this BASE_PROGRAM has no
+    // versions and the DataControlService mock has no `reportingCurrentPhase`.
+    (component as unknown as { bilateralRowsByKey: { set: (v: Map<string, ResultToReview[]>) => void } }).bilateralRowsByKey.set(
+      new Map([['SP02::default', rows as unknown as ResultToReview[]]])
     );
 
     const heatmap = component.overviewBilateralHeatmap();
@@ -580,8 +594,8 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
       { lead_center: 'C01', indicator_category: 'Knowledge product', initiative_role_id: '1' },
       { lead_center: 'C02', indicator_category: 'Innovation development', initiative_role_id: '1' }
     ];
-    (component as unknown as { bilateralRows: { set: (v: ResultToReview[]) => void } }).bilateralRows.set(
-      rows as unknown as ResultToReview[]
+    (component as unknown as { bilateralRowsByKey: { set: (v: Map<string, ResultToReview[]>) => void } }).bilateralRowsByKey.set(
+      new Map([['SP02::default', rows as unknown as ResultToReview[]]])
     );
 
     const heatmap = component.overviewBilateralHeatmap();
@@ -865,5 +879,313 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
     (component.dataControlSE.reportingPhaseVersion as WritableSignal<number>).update(v => v + 1);
 
     expect(component.groupedSummaries().outputs[0].resultTypeName).toBe('Innovation development');
+  });
+});
+
+/**
+ * THIRD spec block for `DashboardLabComponent`, scoped to `OPF-T-3`
+ * (`docs/specs/changes/overview-phase-filter/`): `effectiveVersionId()` is the single phase
+ * resolver every loader consumes (design.md DD-1), and `summariesByCode` / `bilateralRowsByKey`
+ * / `tocByKey` / `meterOverlayByKey` are all `code::versionId`-keyed caches (design.md DD-4) —
+ * a late response for a phase the viewer switched away from must land in ITS OWN key and never
+ * be read. Uses its own `createComponent()` (independent of the blocks above): every mock
+ * INCLUDES `reportingPhaseVersion` as a real signal (its absence was the recorded W12
+ * blindness this family's tests must not repeat) and a full `ApiService.resultsSE` so every
+ * loader under test can actually be invoked. Private loaders are invoked directly via
+ * `(component as any)` — same established pattern as the W12-T-2 block above — except test (e),
+ * which flushes real Angular effects (`TestBed.tick()`) to prove the CONSTRUCTOR wiring itself,
+ * not just the extracted method, reacts to a late-arriving active phase.
+ */
+describe('DashboardLabComponent — phase filter resolver + loaders (OPF-T-3)', () => {
+  const AOW: Unit = { id: 'u1', code: 'AOW01', name: 'AoW 01', composeCode: 'AOW01', level: 1, year: 2026, progress: 0 };
+
+  // Two real phases the fixture program has — Reporting 2025 (34) and Reporting 2026 (36) — so
+  // `latestVersion()`'s "highest phaseYear" fallback resolves to 36 when no phase is known yet.
+  const PROGRAM: SPProgress = {
+    initiativeId: 40,
+    initiativeCode: 'SP04',
+    initiativeName: 'Science Program 04',
+    initiativeShortName: 'SP04',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P25',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: [
+      { versionId: 34, phaseName: 'Reporting 2025', phaseYear: 2025, totalResults: 0, statuses: [] },
+      { versionId: 36, phaseName: 'Reporting 2026', phaseYear: 2026, totalResults: 0, statuses: [] }
+    ]
+  };
+
+  function apiMock(overrides: Record<string, jest.Mock> = {}) {
+    return {
+      resultsSE: {
+        GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { units: [] } })),
+        GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of({ response: { totalsByType: [] } })),
+        GET_ResultToReview: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_2030Outcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
+        GET_IntermediateOutcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
+        GET_TocResultsByAowId: jest.fn().mockReturnValue(of({ response: { tocResultsOutputs: [], tocResultsOutcomes: [] } })),
+        GET_ScienceProgramsProgress: jest.fn().mockReturnValue(of({ response: { mySciencePrograms: [], otherSciencePrograms: [] } })),
+        ...overrides
+      }
+    };
+  }
+
+  /**
+   * `viewSubject`, when passed, backs `route.data` so a test can push a DIFFERENT `rfrView` after
+   * construction (test (f) below) — `of(...)` completes on first emission and cannot do this.
+   * Every other test omits it and gets the original fixed `of({ rfrView: 'overview' })`.
+   */
+  async function createComponent(api: ReturnType<typeof apiMock>, viewSubject?: Subject<{ rfrView: string }>) {
+    await TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: signal([]),
+            otherSPsList: signal([PROGRAM]),
+            otherProjectsList: signal([])
+          }
+        },
+        { provide: ApiService, useValue: api },
+        {
+          provide: DataControlService,
+          useValue: {
+            focusMode: signal(false),
+            slimNav: signal(false),
+            reportingCurrentPhase: { phaseId: null, phaseYear: null, phaseName: null, portfolioAcronym: null, portfolioId: null },
+            // Real signal, not a jest.fn — the OPF-T-3 disqualifier: a mock lacking this field
+            // cannot exercise `effectiveVersionId()`'s tracked read (test (e) below).
+            reportingPhaseVersion: signal(0)
+          }
+        },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            data: viewSubject ? viewSubject.asObservable() : of({ rfrView: 'overview' }),
+            snapshot: { data: { rfrView: 'overview' } }
+          }
+        },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        {
+          provide: EntityAowService,
+          useValue: { onCloseReportResultModal: () => undefined, entityId: signal(''), getAllDetailsData: jest.fn() }
+        },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    })
+      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(DashboardLabComponent);
+    const component = fixture.componentInstance;
+    component.selectedId.set(PROGRAM.initiativeId);
+    return component;
+  }
+
+  // (a) OPF-N-1: the untouched selector must fire the SAME calls as today — and ZERO extra
+  // requests. The four families each fire once, with `effectiveVersionId()`'s fallback-resolved
+  // versionId (36, unchanged pre-spec behavior for summaries/bilateral); the ToC family gets NO
+  // `versionId` at all (it never took one before OPF-T-1/T-2), and the meter overlay
+  // (`GET_ScienceProgramsProgress`) — the one call this spec COULD have added unconditionally —
+  // must not fire at all.
+  it('(a) default path (no selection): loaders fire the same calls as today, with zero extra requests', async () => {
+    const api = apiMock({
+      GET_TocResultsByAowId: jest.fn().mockReturnValue(of({ response: { tocResultsOutputs: [], tocResultsOutcomes: [] } }))
+    });
+    const component = await createComponent(api);
+    component.aowsByCode.set(new Map([['SP04', [AOW]]]));
+
+    expect(component.selectedVersionId()).toBeNull();
+
+    (component as any).refreshSelectedSummaries();
+    (component as any).loadBilateralRows('SP04');
+    (component as any).loadAllTocs();
+
+    expect(api.resultsSE.GET_IndicatorContributionSummary).toHaveBeenCalledTimes(1);
+    expect(api.resultsSE.GET_IndicatorContributionSummary).toHaveBeenCalledWith('SP04', 36);
+    expect(api.resultsSE.GET_ResultToReview).toHaveBeenCalledTimes(1);
+    expect(api.resultsSE.GET_ResultToReview).toHaveBeenCalledWith('SP04', undefined, 36, 'all');
+    expect(api.resultsSE.GET_2030Outcomes).toHaveBeenCalledTimes(1);
+    expect(api.resultsSE.GET_2030Outcomes).toHaveBeenCalledWith('SP04', undefined);
+    expect(api.resultsSE.GET_IntermediateOutcomes).toHaveBeenCalledTimes(1);
+    expect(api.resultsSE.GET_IntermediateOutcomes).toHaveBeenCalledWith('SP04', undefined);
+    expect(api.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledTimes(1);
+    expect(api.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith('SP04', 'AOW01', undefined, undefined);
+    // OPF-N-1: no meter overlay fetch when the selector is untouched.
+    expect(api.resultsSE.GET_ScienceProgramsProgress).not.toHaveBeenCalled();
+  });
+
+  // (b) An EXPLICIT selection (phase 34) must reach every one of the four loaders, including the
+  // meter overlay — the one call gated on `selectedVersionId() !== null`.
+  it('(b) selecting phase 34: every loader is called with 34', async () => {
+    const api = apiMock();
+    const component = await createComponent(api);
+    component.aowsByCode.set(new Map([['SP04', [AOW]]]));
+    component.selectedVersionId.set(34);
+
+    (component as any).refreshSelectedSummaries();
+    (component as any).loadBilateralRows('SP04');
+    (component as any).loadAllTocs();
+    (component as any).loadMeterOverlay('SP04', 34);
+
+    expect(api.resultsSE.GET_IndicatorContributionSummary).toHaveBeenCalledWith('SP04', 34);
+    expect(api.resultsSE.GET_ResultToReview).toHaveBeenCalledWith('SP04', undefined, 34, 'all');
+    expect(api.resultsSE.GET_2030Outcomes).toHaveBeenCalledWith('SP04', 34);
+    expect(api.resultsSE.GET_IntermediateOutcomes).toHaveBeenCalledWith('SP04', 34);
+    expect(api.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith('SP04', 'AOW01', undefined, 34);
+    expect(api.resultsSE.GET_ScienceProgramsProgress).toHaveBeenCalledWith(34);
+  });
+
+  // (c) KZ-TCM-1 axis: phases A (34) and B (36) carry DIFFERENT ToC fixtures. A → B → A, with
+  // B's HTTP response held back (a `Subject`, unresolved) until AFTER the viewer has already
+  // switched back to A. Disqualifier this guards against: an untracked signal or a
+  // program::aow-only cache key would let B's late write clobber A's key; the fix (design.md
+  // DD-4) is that B's response can only ever land under ITS OWN key (`SP04::AOW01::36`).
+  it('(c) A → B → A: a late B response lands invisibly in its own key, never under A', async () => {
+    const responses: Subject<{ response: { tocResultsOutputs: unknown[]; tocResultsOutcomes: unknown[] } }>[] = [];
+    const getToc = jest.fn().mockImplementation(() => {
+      const subject = new Subject<{ response: { tocResultsOutputs: unknown[]; tocResultsOutcomes: unknown[] } }>();
+      responses.push(subject);
+      return subject.asObservable();
+    });
+    const api = apiMock({ GET_TocResultsByAowId: getToc });
+    const component = await createComponent(api);
+    component.aowsByCode.set(new Map([['SP04', [AOW]]]));
+
+    const A_INDICATORS = [{ toc_result_id: 'A1', result_title: 'HLO A', indicators: [{ indicator_id: 'IND-A' }] }];
+    const B_INDICATORS = [{ toc_result_id: 'B1', result_title: 'HLO B', indicators: [{ indicator_id: 'IND-B' }] }];
+
+    // 1) Select A (34), fetch resolves immediately.
+    component.selectedVersionId.set(34);
+    (component as any).loadToc('SP04', 'AOW01');
+    responses[0].next({ response: { tocResultsOutputs: A_INDICATORS, tocResultsOutcomes: [] } });
+    responses[0].complete();
+
+    // 2) Switch to B (36); fetch fires but is held — simulates a slow response in flight.
+    component.selectedVersionId.set(36);
+    (component as any).loadToc('SP04', 'AOW01');
+
+    // 3) Switch BACK to A (34) before B resolves. A's key is already cached — no 3rd HTTP call.
+    component.selectedVersionId.set(34);
+    (component as any).loadToc('SP04', 'AOW01');
+    expect(getToc).toHaveBeenCalledTimes(2);
+
+    // 4) NOW B's late response lands.
+    responses[1].next({ response: { tocResultsOutputs: B_INDICATORS, tocResultsOutcomes: [] } });
+    responses[1].complete();
+
+    // The viewer is on A: the render must show ONLY A's indicator, never B's.
+    const rendered = component.indicatorsByAow().find(x => x.aow.code === 'AOW01');
+    const renderedIds = (rendered?.indicators ?? []).map((i: any) => i.indicator_id);
+    expect(renderedIds).toEqual(['IND-A']);
+
+    // B's late response is visible ONLY under its own key — never merged into A's.
+    expect(component.tocByKey().get('SP04::AOW01::34')?.outputs).toEqual(A_INDICATORS);
+    expect(component.tocByKey().get('SP04::AOW01::36')?.outputs).toEqual(B_INDICATORS);
+  });
+
+  // (d) OPF-N-3: returning to an already-visited phase reuses its cache — no refetch. Exercised
+  // through `refreshSelectedSummaries()` (the `effectiveVersionId()`-driven entry point this task
+  // rewires), not through `loadSummaries()` directly (already covered by the W12-T-2 block above).
+  it('(d) returning to a cached phase does not refetch (summaries)', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [] } }));
+    const api = apiMock({ GET_IndicatorContributionSummary: getSummary });
+    const component = await createComponent(api);
+
+    component.selectedVersionId.set(34);
+    (component as any).refreshSelectedSummaries();
+    component.selectedVersionId.set(36);
+    (component as any).refreshSelectedSummaries();
+    expect(getSummary).toHaveBeenCalledTimes(2);
+
+    // Back to 34 — already cached under `SP04::34`.
+    component.selectedVersionId.set(34);
+    (component as any).refreshSelectedSummaries();
+
+    expect(getSummary).toHaveBeenCalledTimes(2);
+  });
+
+  // (e) OPF-R-4 "AND IT MUST": with the selector left UNTOUCHED (`selectedVersionId()` stays
+  // `null` throughout), a late-arriving active phase must still converge the default path.
+  // Mirrors the established "flushed effects" idiom (W12-T-2 block above, `TestBed.tick()`) but
+  // proves it through `effectiveVersionId()` (design.md DD-1) rather than the pre-spec ad hoc
+  // resolution. The mock's `reportingPhaseVersion` MUST be a real signal — see the disqualifier
+  // in this block's header comment.
+  it('(e) a late reportingPhaseVersion bump converges the default path onto the real active phase', async () => {
+    const getSummary = jest
+      .fn()
+      .mockReturnValueOnce(of({ response: { totalsByType: [{ resultTypeId: 1, resultTypeName: 'Knowledge product' }] } }))
+      .mockReturnValueOnce(of({ response: { totalsByType: [{ resultTypeId: 2, resultTypeName: 'Innovation development' }] } }));
+    const api = apiMock({ GET_IndicatorContributionSummary: getSummary });
+    const component = await createComponent(api);
+
+    expect(component.selectedVersionId()).toBeNull();
+
+    // No phase known yet: `effectiveVersionId()` falls back to the highest phaseYear (36).
+    TestBed.tick();
+    expect(getSummary).toHaveBeenNthCalledWith(1, 'SP04', 36);
+
+    // The REAL active phase lands late, and it is a DIFFERENT version than the fallback guessed.
+    (component.dataControlSE as any).reportingCurrentPhase.phaseId = 34;
+    (component.dataControlSE.reportingPhaseVersion as WritableSignal<number>).update(v => v + 1);
+    TestBed.tick();
+
+    expect(getSummary).toHaveBeenNthCalledWith(2, 'SP04', 34);
+    expect(component.groupedSummaries().outputs[0]?.resultTypeName).toBe('Innovation development');
+  });
+
+  // (f) Remediation: the selector lives ONLY in the Overview header band, but `selectedVersionId`
+  // is component-wide and (by DD-5) is NOT reset on a tab switch — so without a view-gate, a
+  // selection made on Overview would leak into Planned/Reporting's shared ToC/summary/bilateral
+  // loaders. The fix is `activeSelection()` (honors the selection only while `rfrView() ===
+  // 'overview'`), read by `effectiveVersionId`, `tocVersionForKey`, and `latestVersion`'s meter
+  // overlay — ONE gate, not one per consumer (DD-1). Uses `viewSubject` (a `Subject`, not `of`) so
+  // `rfrView` can change TWICE after construction without touching `selectedVersionId` at all.
+  it('(f) a selection made on Overview does not leak into a non-Overview view, and is restored on return', async () => {
+    const api = apiMock();
+    const viewSubject = new Subject<{ rfrView: string }>();
+    const component = await createComponent(api, viewSubject);
+    component.aowsByCode.set(new Map([['SP04', [AOW]]]));
+
+    // Select 34 while on Overview (the fixture's initial route data).
+    component.selectedVersionId.set(34);
+    expect(component.activeSelection()).toBe(34);
+    expect(component.effectiveVersionId()).toBe(34);
+
+    // Switch to a non-Overview view — WITHOUT touching the selector.
+    viewSubject.next({ rfrView: 'planned' });
+    expect(component.rfrView()).toBe('planned');
+    expect(component.activeSelection()).toBeNull();
+    // Falls back to the default resolution (highest phaseYear, 36) — never the leaked 34.
+    expect(component.effectiveVersionId()).toBe(36);
+
+    (component as any).refreshSelectedSummaries();
+    (component as any).loadBilateralRows('SP04');
+    (component as any).loadAllTocs();
+
+    expect(api.resultsSE.GET_IndicatorContributionSummary).toHaveBeenCalledWith('SP04', 36);
+    expect(api.resultsSE.GET_ResultToReview).toHaveBeenCalledWith('SP04', undefined, 36, 'all');
+    expect(api.resultsSE.GET_2030Outcomes).toHaveBeenCalledWith('SP04', undefined);
+    expect(api.resultsSE.GET_IntermediateOutcomes).toHaveBeenCalledWith('SP04', undefined);
+    expect(api.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith('SP04', 'AOW01', undefined, undefined);
+    // 34 must never reach ANY of the four loaders while off the Overview tab.
+    expect(api.resultsSE.GET_IndicatorContributionSummary).not.toHaveBeenCalledWith('SP04', 34);
+    expect(api.resultsSE.GET_ResultToReview).not.toHaveBeenCalledWith('SP04', undefined, 34, 'all');
+    expect(api.resultsSE.GET_2030Outcomes).not.toHaveBeenCalledWith('SP04', 34);
+    expect(api.resultsSE.GET_IntermediateOutcomes).not.toHaveBeenCalledWith('SP04', 34);
+    expect(api.resultsSE.GET_TocResultsByAowId).not.toHaveBeenCalledWith('SP04', 'AOW01', undefined, 34);
+    expect(api.resultsSE.GET_ScienceProgramsProgress).not.toHaveBeenCalled();
+
+    // Switch back to Overview — 34 is restored with NO new selection call.
+    viewSubject.next({ rfrView: 'overview' });
+    expect(component.activeSelection()).toBe(34);
+    expect(component.effectiveVersionId()).toBe(34);
   });
 });

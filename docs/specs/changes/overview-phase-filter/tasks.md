@@ -44,7 +44,7 @@ OPF-T-2 (client API wrappers) ───┼──▶ OPF-T-3 (resolver + loaders)
 
 ## OPF-T-3 — Dashboard-lab: selection signal, single resolver, loaders rewired, per-phase caches
 
-- **Status:** `[ ]` · **Size:** L (~180 LOC) · **Depends:** OPF-T-2 (and OPF-T-1 for live behavior, not for compile)
+- **Status:** `[x]` · **Size:** L (~180 LOC) · **Depends:** OPF-T-2 (and OPF-T-1 for live behavior, not for compile)
 - **Requirements:** OPF-R-2 (all clauses), OPF-R-4 (all clauses), OPF-N-1, OPF-N-3
 - **Design:** design.md §8, DD-1, DD-3, DD-4
 - **Skills:** `angular-developer`, `tdd`
