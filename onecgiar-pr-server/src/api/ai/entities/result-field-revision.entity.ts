@@ -10,11 +10,17 @@ import {
 import { Result } from '../../results/entities/result.entity';
 import { User } from '../../../auth/modules/user/entities/user.entity';
 import { AiReviewProposal } from './ai-review-proposal.entity';
+import { DacFieldName } from '../constants/dac-field-name.enum';
 
 export enum ResultFieldRevisionFieldName {
   TITLE = 'title',
   DESCRIPTION = 'description',
   SHORT_TITLE = 'short_title',
+  GENDER = DacFieldName.GENDER,
+  CLIMATE = DacFieldName.CLIMATE,
+  NUTRITION = DacFieldName.NUTRITION,
+  ENVIRONMENTAL = DacFieldName.ENVIRONMENTAL,
+  POVERTY = DacFieldName.POVERTY,
 }
 
 export enum ResultFieldRevisionProvenance {

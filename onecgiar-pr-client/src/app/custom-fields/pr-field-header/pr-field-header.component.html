@@ -14,10 +14,16 @@
       [ngClass]="{ required: this.required, simpleStyle: simpleStyle }"
       [innerHTML]="this.label + (this.useColon ? ':' : '')"></div>
     <!-- P2-3339: inline SVG, not an icon-font ligature — see PrInfoIconComponent. -->
+    <!-- P2-3323: pinnable, exactly like field-card. Guidance texts carry links and several
+         paragraphs, so a click must pin the bubble open instead of hiding it — otherwise the
+         links are unreachable and a tap on a phone opens and closes it in the same gesture.
+         Only this template opts in: the directive's default (click hides) still guards the
+         ~40 action tooltips that rely on it. -->
     <button
       type="button"
       class="sgi-dac-info"
       [prTooltip]="this.tooltip"
+      [prTooltipPinnable]="true"
       prTooltipPosition="right"
       prTooltipStyleClass="sgi-dac-tooltip"
       aria-label="More information">

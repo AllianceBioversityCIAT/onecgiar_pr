@@ -411,7 +411,9 @@ input::placeholder,
   // propio label y salpicaba de color un formulario que el diseño quiere neutro.
   color: var(--pr-text-muted);
   background: transparent;
-  cursor: help;
+  // P2-3323: `pointer`, not `help`. Every .sgi-dac-info trigger is now pinnable — a click pins
+  // the guidance open — so the cursor must say "clickable". `help` promised hover-only.
+  cursor: pointer;
   font-size: 16px;
   line-height: 1;
 

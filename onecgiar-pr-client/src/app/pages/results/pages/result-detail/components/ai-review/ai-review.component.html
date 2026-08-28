@@ -56,5 +56,90 @@
         </app-pr-button>
       </div>
     }
+
+    <!-- Impact Areas Section -->
+    <div class="impact-areas-section">
+      <h2 class="section-title">IMPACT AREAS</h2>
+
+      <div class="impact-areas-grid">
+        @for (dacScore of aiReviewSE.dacScores(); track dacScore.field_name) {
+          <div class="field-section" [class.ai-validated]="isCardValidated(dacScore)">
+          <div class="field-header">
+            <h3 class="field-title">{{ getDacScoreTitle(dacScore) }}</h3>
+            @if (isCardValidated(dacScore)) {
+              <span class="improvement-badge updated-badge"> <i class="pi pi-check-circle"></i> AI Validated</span>
+            } @else {
+              <span class="improvement-badge needs-improvement-badge"> <i class="pi pi-exclamation-triangle"></i> Needs improvement</span>
+            }
+          </div>
+
+          @if (!dacScore.is_validated) {
+            <div class="proposal-section">
+              <div class="proposal-label"><i class="pi pi-lightbulb"></i> AI review</div>
+              <div class="proposal-content">
+                {{ dacScore.ai_recommendation || 'No AI recommendation available' }}
+              </div>
+            </div>
+          }
+
+          <div class="line-divider"></div>
+
+          <label class="version-label">Result version</label>
+          <div class="current-version">
+            <div class="radio-button-group">
+              @for (option of scoreSE.genderTagScoreList; track option.id) {
+                <div class="radio-button-item" (click)="onResultVersionChange(dacScore, option.id)">
+                  <div class="radio-circle" [class.selected]="dacScore.tag_id === option.id">
+                    @if (dacScore.tag_id === option.id) {
+                      <div class="radio-dot"></div>
+                    }
+                  </div>
+                  <label class="radio-label">{{ option.full_name }}</label>
+                </div>
+              }
+            </div>
+          </div>
+
+          @if (isPrincipal(dacScore)) {
+            <div class="component-section">
+              <label class="version-label">Component</label>
+              <div class="radio-button-group">
+                @for (component of getComponentListByFieldName(dacScore.field_name); track component.id) {
+                  <div class="radio-button-item" (click)="onComponentChange(dacScore, component.id)">
+                    <div class="checkbox-square" [class.selected]="isComponentSelected(dacScore, component.id)">
+                      @if (isComponentSelected(dacScore, component.id)) {
+                        <i class="material-icons-round checkbox-check">check</i>
+                      }
+                    </div>
+                    <label class="radio-label">{{ component.name }}</label>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <app-pr-button
+            [ngClass]="{ globalDisabled: !dacScore.canSave }"
+            text="Save changes"
+            icon="save"
+            [showBackground]="true"
+            class="save-button-custom"
+            (click)="onSaveDacScore(dacScore)">
+          </app-pr-button>
+          </div>
+        }
+      </div>
+
+      <div class="validate-all-section">
+        <app-pr-button
+          [ngClass]="{ globalDisabled: !hasPendingChanges || isValidatingAll }"
+          text="Validate"
+          icon="task_alt"
+          [showBackground]="true"
+          class="validate-all-button"
+          (click)="onValidateAll()">
+        </app-pr-button>
+      </div>
+    </div>
   </div>
 </app-pr-dialog>

@@ -47,7 +47,10 @@
           <div class="result-review-drawer-content_title-wrapper">
             <p class="result-review-drawer-content_title">
               {{ fields?.commonFields?.result_title }}
-              <i class="pi pi-pencil" style="cursor: pointer; font-size: 13px; color: var(--pr-color-primary-400)" (click)="startEditingTitle()"></i>
+              <!-- P2-3154 AC1: the title is Center-reported data, read-only for the reviewing Science Program. -->
+              @if (canEditDataStandards()) {
+                <i class="pi pi-pencil" style="cursor: pointer; font-size: 13px; color: var(--pr-color-primary-400)" (click)="startEditingTitle()"></i>
+              }
             </p>
           </div>
         }
@@ -142,7 +145,7 @@
             placeholder="Enter text"
             [required]="false"
             [(ngModel)]="fields.commonFields.result_description"
-            [disabled]="!canEditInDrawer()">
+            [disabled]="!canEditDataStandards()">
           </app-pr-textarea>
 
           <hr class="form-section_separator" />
@@ -153,7 +156,7 @@
             <app-geoscope-management
               label="What is the geographic focus of the result?"
               [body]="fields.geographicScope"
-              [readOnly]="!canEditInDrawer()"
+              [readOnly]="!canEditDataStandards()"
               module="reporting">
             </app-geoscope-management>
 
@@ -168,7 +171,7 @@
                 optionValue="value"
                 label="Are there any regions that you wish to specify for this Output?"
                 [(ngModel)]="fields.geographicScope.has_extra_geo_scope"
-                [disabled]="!canEditInDrawer()">
+                [disabled]="!canEditDataStandards()">
               </app-pr-radio-button>
 
               @if (fields.geographicScope.has_extra_geo_scope) {
@@ -181,7 +184,7 @@
                     has_regions: fields.geographicScope.has_extra_regions,
                     has_countries: fields.geographicScope.has_extra_countries
                   }"
-                  [readOnly]="!canEditInDrawer()"
+                  [readOnly]="!canEditDataStandards()"
                   [hideTobeDetermined]="true"
                   module="reporting">
                 </app-geoscope-management>
@@ -201,7 +204,7 @@
             [required]="false"
             [(ngModel)]="fields.contributingCenters"
             placeholder="Select center(s)"
-            [readOnly]="!canEditInDrawer()">
+            [readOnly]="!canEditDataStandards()">
           </app-pr-multi-select>
 
           <app-pr-multi-select
@@ -214,7 +217,7 @@
             selectedLabel="Projects selected"
             selectedOptionLabel="fullName"
             placeholder="Select project"
-            [readOnly]="!canEditInDrawer()"
+            [readOnly]="!canEditDataStandards()"
             [disableOptions]="disabledContributingProjectOptions()"
             [cannotRemoveOptionValues]="leadProjectIds()"
             (ngModelChange)="onContributingProjectsChange($event)">
@@ -251,7 +254,7 @@
             [displayLabelFormatter]="contributingInitiativesFormatter"
             [(ngModel)]="fields.contributingInitiatives"
             placeholder="Select Science Programs"
-            [readOnly]="!canEditInDrawer()">
+            [readOnly]="!canEditDataStandards()">
           </app-pr-multi-select>
 
           <div *ngIf="fields?.contributors_result_toc_result?.length">
@@ -310,12 +313,12 @@
             [required]="false"
             [(ngModel)]="fields.contributingInstitutions"
             placeholder="Select partner"
-            [readOnly]="!canEditInDrawer()">
+            [readOnly]="!canEditDataStandards()">
           </app-pr-multi-select>
 
           <hr class="form-section_separator" />
 
-          @if (canEditInDrawer()) {
+          @if (canEditDataStandards()) {
             <app-pr-input
               label="Evidence"
               placeholder="Paste the link"
@@ -323,7 +326,7 @@
               [required]="false"
               [(ngModel)]="evidenceLinkInput"
               (keyup.enter)="addEvidenceLink()"
-              [disabled]="!canEditInDrawer()">
+              [disabled]="!canEditDataStandards()">
             </app-pr-input>
           }
 
@@ -362,13 +365,13 @@
                       >{{ evidence.link }}</a
                     >
 
-                    @if (canEditInDrawer()) {
+                    @if (canEditDataStandards()) {
                       <i
                         class="pi pi-times"
                         style="cursor: pointer; font-size: 12px; color: #6b7280; flex-shrink: 0"
-                        [style.cursor]="canEditInDrawer() ? 'pointer' : 'not-allowed'"
-                        [style.opacity]="canEditInDrawer() ? '1' : '0.5'"
-                        (click)="canEditInDrawer() ? removeEvidenceLink($index) : null"></i>
+                        [style.cursor]="canEditDataStandards() ? 'pointer' : 'not-allowed'"
+                        [style.opacity]="canEditDataStandards() ? '1' : '0.5'"
+                        (click)="canEditDataStandards() ? removeEvidenceLink($index) : null"></i>
                     }
                   </span>
                 }
@@ -389,28 +392,28 @@
 
             @switch (fields?.commonFields?.result_type_id) {
               @case (1) {
-                <app-policy-change-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-policy-change-content>
+                <app-policy-change-content [resultDetail]="resultDetail()" [disabled]="!canEditDataStandards()"></app-policy-change-content>
               }
               @case (2) {
-                <app-innovation-use-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-innovation-use-content>
+                <app-innovation-use-content [resultDetail]="resultDetail()" [disabled]="!canEditDataStandards()"></app-innovation-use-content>
               }
               @case (5) {
-                <app-cap-sharing-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-cap-sharing-content>
+                <app-cap-sharing-content [resultDetail]="resultDetail()" [disabled]="!canEditDataStandards()"></app-cap-sharing-content>
               }
               @case (6) {
                 <app-kp-content [resultDetail]="resultDetail()"></app-kp-content>
               }
               @case (7) {
-                <app-inno-dev-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-inno-dev-content>
+                <app-inno-dev-content [resultDetail]="resultDetail()" [disabled]="!canEditDataStandards()"></app-inno-dev-content>
               }
             }
           }
 
-          @if (canEditInDrawer()) {
+          @if (canEditDataStandards()) {
             <div style="margin-top: 20px; display: flex; justify-content: flex-end">
               <button
                 hlmBtn
-                [disabled]="!canEditInDrawer()"
+                [disabled]="!canEditDataStandards()"
                 (click)="onSaveDataStandardChanges()">
                 <i class="pi pi-save"></i>
                 Save changes

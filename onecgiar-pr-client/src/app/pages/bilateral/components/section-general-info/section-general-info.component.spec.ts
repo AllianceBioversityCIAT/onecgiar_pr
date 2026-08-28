@@ -425,6 +425,13 @@ describe('SectionGeneralInfoComponent', () => {
       expect(autoSave.notifyBlur).toHaveBeenCalledWith('title', 'New title');
     });
 
+    it('publishes the title to the creation service so the page header follows the edit', () => {
+      build();
+      creation.resultTitle.set('Bilateral Draft #11405');
+      component.onTitleChange('A real title');
+      expect(creation.resultTitle()).toBe('A real title');
+    });
+
     it('updates and flushes the description', () => {
       build();
       component.onDescriptionChange('New desc');

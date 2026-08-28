@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { DacFieldName } from '../../constants/dac-field-name.enum';
 
 export class SessionResponseDto {
   @ApiProperty({
@@ -260,4 +261,27 @@ export class ResultContextFieldDto {
     nullable: true,
   })
   original_text?: string;
+}
+
+export class DacScoreResponseDto {
+  @ApiProperty({
+    description: 'DAC field identifier',
+    enum: DacFieldName,
+    example: DacFieldName.GENDER,
+  })
+  field_name: DacFieldName;
+
+  @ApiProperty({
+    description: 'Associated tag id for the field',
+    example: 3,
+    nullable: true,
+  })
+  tag_id?: number;
+
+  @ApiProperty({
+    description: 'Impact area linked to the field (only when tag === 3)',
+    example: 12,
+    nullable: true,
+  })
+  impact_area_id?: number;
 }

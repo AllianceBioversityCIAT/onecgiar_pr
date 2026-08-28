@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -26,6 +26,13 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   readonly mdsTracker = inject(BilateralMdsTrackerService);
   private readonly bilateralApi = inject(BilateralApiService);
   private readonly autoSave = inject(BilateralAutoSaveService);
+
+  /**
+   * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
+   * Read straight from the service, the way this section already reads the rest of the result state.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
   private manualSaveSub?: Subscription;
 
   evidenceBody = signal<BilateralEvidenceBody>({

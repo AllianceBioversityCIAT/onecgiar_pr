@@ -1,6 +1,6 @@
 # bilateral-result-creator
 
-**Verified:** 2026-08-26 · branch performance-refactor · f79596103
+**Verified:** 2026-08-28 · branch performance-refactor · 596ef6842
 
 ## Qué es
 La página que hace de wizard de creación **y** de editor de un resultado W3/Bilateral. `isCreating()`
@@ -17,6 +17,9 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   (`.component.html:131`) y la que ata el autosave (`autoSaveService.setResultId`).
 - Autosave y MDS tracker se proveen **por componente** (`providers:` del `@Component`), así que cada
   visita arranca limpia.
+- **Solo lectura (P2-3520):** `isFormReadOnly()` = `!creationService.isEditableByCenterUser()`. Es la
+  única puerta: las cinco secciones exponen su propio `readOnly` computado igual, el botón Submit lo
+  recibe por input, y un `effect` del constructor llama `autoSaveService.setReadOnly()` con él.
 
 ## Dónde se usa
 - `bilateral-routing.module.ts` — rutas `create` y `result/:id`.
@@ -42,7 +45,13 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
   muda.
 - `hasTypeSpecificSection` lee `creationService.resultTypeId()`, no el signal local: el local solo lo
   escribe el wizard y en el editor siempre es `null`.
+- ⚠️ **El candado de solo lectura son DOS mitades y hacen falta las dos.** Deshabilitar los controles
+  es la visible; `autoSaveService.setReadOnly()` es la que impide que el cambio llegue a la base. Con
+  solo la primera, cualquier control que se quede interactivo (una plantilla nueva, una sección que
+  guarde desde un `effect`) vuelve a escribir mientras el Science Program revisa — que es el fallo
+  que P2-3520 arregló. Y con solo la segunda, el usuario teclea y nada se guarda, sin saber por qué.
+- ⚠️ Ese `effect` **no** puede vivir dentro de `submitResult()`: un resultado que ya llega fuera de
+  `Editing` al cargar la página tiene que quedar bloqueado sin que nadie pulse Submit.
 
 ## Pendiente / Coming soon
-- P2-3352 pide además que el formulario sea **solo lectura** en Pending review / Approved / Rejected.
-  Hoy el badge se pinta pero **ningún campo se bloquea**. Sin ticket propio todavía.
+- Nada abierto en esta carpeta.

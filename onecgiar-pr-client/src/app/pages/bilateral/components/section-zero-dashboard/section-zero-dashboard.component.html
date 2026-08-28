@@ -129,7 +129,7 @@
     </button>
     <button
       class="bp-action-btn bp-action-btn--primary bp-action-btn--submit"
-      [disabled]="overallStatus() !== 'complete' || isSubmitting()"
+      [disabled]="overallStatus() !== 'complete' || isSubmitting() || readOnly()"
       [attr.aria-busy]="isSubmitting()"
       type="button"
       (click)="onSubmit()">

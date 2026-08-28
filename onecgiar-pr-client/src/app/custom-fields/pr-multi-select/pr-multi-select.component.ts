@@ -197,9 +197,14 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   }
 
   selectedLabelDescription() {
-    if (this.nextSelectedLabel()) return `${this.selectedLabel()}(${this.value?.length}) ${this.nextSelectedLabel()}(${this.value?.length})`;
+    // P2-3523: `value` is undefined until the parent writes into it, and `undefined` used to reach
+    // the interpolation verbatim — every Policy Change section opened showing "Organization (undefined)".
+    // Both branches need the fallback: the two-label branch reads the same length twice.
+    const count = this.value?.length ?? 0;
 
-    return `${this.selectedLabel()} (${this.value?.length})`;
+    if (this.nextSelectedLabel()) return `${this.selectedLabel()}(${count}) ${this.nextSelectedLabel()}(${count})`;
+
+    return `${this.selectedLabel()} (${count})`;
   }
 
   onChange(_) {}

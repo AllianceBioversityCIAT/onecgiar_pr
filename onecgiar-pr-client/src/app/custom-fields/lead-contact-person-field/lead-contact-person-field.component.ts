@@ -20,6 +20,12 @@ export class LeadContactPersonFieldComponent implements OnChanges {
   @Input() required = false;
   /** P2-3201: render the field guidance as an ⓘ tooltip instead of the inline grey description box. */
   @Input() guidanceAsTooltip = false;
+  /**
+   * P2-3520: the whole form is read-only once the result leaves Editing. Separate from
+   * `isContactLocked`, which is this field's own "a contact is already picked" state — that one the
+   * field clears itself, this one is imposed from outside.
+   */
+  @Input() readOnly = false;
   isContactLocked: boolean = false;
   /** True while the input still holds a name loaded from the result rather than typed. */
   private queryCameFromHydration = false;

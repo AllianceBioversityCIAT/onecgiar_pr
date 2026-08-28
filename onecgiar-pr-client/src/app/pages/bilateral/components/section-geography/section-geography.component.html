@@ -20,6 +20,7 @@
 
     <div class="sg-card__body">
       <app-pr-select
+        [readOnly]="readOnly()"
         class="block w-full max-w-[480px]"
         label="Geographic Scope"
         [required]="true"
@@ -38,6 +39,7 @@
       @if (geographicLocationBody().geo_scope_id && geographicLocationBody().geo_scope_id !== 1 && geographicLocationBody().geo_scope_id !== 50) {
         @if (geographicLocationBody().geo_scope_id !== 2) {
           <app-pr-radio-button
+            [readOnly]="readOnly()"
             label="Are there any regions that you wish to specify for this result?"
             [options]="yesNoOptions"
             optionLabel="name"
@@ -51,6 +53,7 @@
         @if (geographicLocationBody().geo_scope_id === 2 || geographicLocationBody().has_regions) {
           <div class="sg-field">
             <app-pr-multi-select
+              [readOnly]="readOnly()"
               class="block w-full max-w-[480px]"
               label="Select regions"
               [required]="true"
@@ -67,7 +70,8 @@
                 @for (reg of geographicLocationBody().regions; track reg.id) {
                   <span class="sg-chip">
                     {{ reg.name }}
-                    <button type="button" class="sg-chip-remove" (click)="removeRegion(reg)">×</button>
+                    <button type="button" class="sg-chip-remove"
+                      [disabled]="readOnly()" (click)="removeRegion(reg)">×</button>
                   </span>
                 }
               </div>
@@ -81,6 +85,7 @@
         <!-- Country questions and select -->
         @if (geographicLocationBody().geo_scope_id !== 3 && geographicLocationBody().geo_scope_id !== 5) {
           <app-pr-radio-button
+            [readOnly]="readOnly()"
             label="Are there any countries that you wish to specify for this result?"
             [options]="yesNoOptions"
             optionLabel="name"
@@ -94,6 +99,7 @@
         @if (geographicLocationBody().geo_scope_id === 3 || geographicLocationBody().geo_scope_id === 5 || geographicLocationBody().has_countries) {
           <div class="sg-field">
             <app-pr-multi-select
+              [readOnly]="readOnly()"
               class="block w-full max-w-[480px]"
               label="Select countries"
               [required]="true"
@@ -110,7 +116,8 @@
                 @for (c of geographicLocationBody().countries; track c.id) {
                   <span class="sg-chip">
                     {{ c.full_name || c.name }}
-                    <button type="button" class="sg-chip-remove" (click)="removeCountry(c)">×</button>
+                    <button type="button" class="sg-chip-remove"
+                      [disabled]="readOnly()" (click)="removeCountry(c)">×</button>
                   </span>
                 }
               </div>
@@ -162,6 +169,7 @@
           <!-- P2-3504 · Innovation results ask the business-approved geographic-impact question;
                other typologies keep the legacy wording. Both come from `isInnovationResult()`. -->
           <app-pr-radio-button
+            [readOnly]="readOnly()"
             [label]="extraScopeQuestionLabel()"
             [description]="extraScopeQuestionDescription()"
             [options]="yesNoOptions"
@@ -178,6 +186,7 @@
 
         @if (extraGeographicLocationBody().has_extra_geo_scope) {
           <app-pr-select
+            [readOnly]="readOnly()"
             class="block w-full max-w-[480px]"
             label="What is the geographic scope where there may be potential impact in other geographic areas?"
             [required]="true"
@@ -196,6 +205,7 @@
           @if (extraGeographicLocationBody().geo_scope_id === 2 || extraGeographicLocationBody().has_regions) {
             <div class="sg-field">
               <app-pr-multi-select
+                [readOnly]="readOnly()"
                 class="block w-full max-w-[480px]"
                 label="Select extra regions"
                 [required]="true"
@@ -212,7 +222,8 @@
                   @for (reg of extraGeographicLocationBody().regions; track reg.id) {
                     <span class="sg-chip">
                       {{ reg.name }}
-                      <button type="button" class="sg-chip-remove" (click)="removeExtraRegion(reg)">×</button>
+                      <button type="button" class="sg-chip-remove"
+                        [disabled]="readOnly()" (click)="removeExtraRegion(reg)">×</button>
                     </span>
                   }
                 </div>
@@ -227,6 +238,7 @@
           @if (extraGeographicLocationBody().geo_scope_id === 3 || extraGeographicLocationBody().geo_scope_id === 5 || extraGeographicLocationBody().has_countries) {
             <div class="sg-field">
               <app-pr-multi-select
+                [readOnly]="readOnly()"
                 class="block w-full max-w-[480px]"
                 label="Select extra countries"
                 [required]="true"
@@ -243,7 +255,8 @@
                   @for (c of extraGeographicLocationBody().countries; track c.id) {
                     <span class="sg-chip">
                       {{ c.full_name || c.name }}
-                      <button type="button" class="sg-chip-remove" (click)="removeExtraCountry(c)">×</button>
+                      <button type="button" class="sg-chip-remove"
+                        [disabled]="readOnly()" (click)="removeExtraCountry(c)">×</button>
                     </span>
                   }
                 </div>

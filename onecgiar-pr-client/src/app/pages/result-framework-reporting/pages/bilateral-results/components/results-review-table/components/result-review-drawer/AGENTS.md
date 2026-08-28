@@ -151,7 +151,44 @@ The `setTimeout` cascade is the single most fragile pattern in the drawer. See �
 
 ---
 
+## 3b. Two permission gates, not one (P2-3154)
+
+The drawer has **two** gates and they answer different questions. Mixing them up re-opens a defect
+this story exists to close.
+
+| Gate | Answers | True for | Drives |
+|---|---|---|---|
+| `canEditInDrawer()` (`:178`) | "may this user act on the result at all?" | platform admin, **or** a user owning the entity while `status_id == 5` | TOC ALIGNMENT section + its Save, the Approve/Reject footer |
+| `canEditDataStandards()` (`:189`) | "may this user rewrite what the Center reported?" | **platform admin only** | the title pencil, the whole DATA STANDARDS section (`html:137-421`) + its Save |
+
+P2-3154 AC1/AC2/BR1: the Science Program reviews, it does not rewrite. Everything the Center
+reported is displayed but locked; the TOC alignment is the Program's exclusive responsibility and
+stays editable. Admins are out of the story's scope, so they keep full editing.
+
+- `canEditDataStandards` delegates to `canEditInDrawer()` **on purpose**. A computed reading only
+  the plain `isAdmin` flag has no signal dependency and caches its first value forever.
+- The hidden buttons are only the UI. The real locks are the early returns in `startEditingTitle()`
+  and `onSaveDataStandardChanges()`.
+- ⚠️ **Verified in the browser (2026-08-27, result under SP01):** with `isAdmin` forced false and
+  `status_id == 5` — title pencil 0, Save under DATA STANDARDS 0, Save under TOC 1, Data Standards
+  textareas 1/1 disabled, inputs 13/15 disabled. Clicking a different option on the "Actor type"
+  select left the value at `1`: `pr-select` blocks in its click handler (`pr-select.component.html:69`),
+  not by an `option.disabled` class — so counting `.option:not(.disabled)` is a **false alarm**,
+  measure the value instead.
+- ⚠️ **Pre-existing, deliberately NOT fixed here:** the `*-content` children take `[disabled]`, which
+  in `pr-select` / `pr-input` blocks the interaction but does **not** switch the control to its
+  read-only rendering, so those fields look editable while being inert. This is how the drawer's
+  non-editable mode already behaved before P2-3154; changing it would touch every other
+  non-editable scenario, which is outside this story.
+
+---
+
 ## 4. Read-only toggle mechanics (`RolesService.readOnly` global flip)
+
+> ⚠️ Read §3b first. This flip is still required — the TOC tree needs it — and it is safe alongside
+> the Data Standards lock because every control ORs its own input with the global
+> (`pr-radio-button.component.ts:136`, `pr-multi-select.component.ts:193,196`), so an explicit
+> `readOnly`/`disabled` true wins regardless.
 
 ### 4.1 Why this exists
 
@@ -289,6 +326,7 @@ The footer (Approve + Reject buttons) is **conditionally rendered**:
 |---|---|---|---|---|
 | `status_id != 5` | **No (footer hidden)** | — | — | — |
 | `!canEditInDrawer()` (non-admin, doesn't own initiative) | **No (footer hidden)** | — | — | — |
+| SP Leader owning the entity, `status_id == 5` | Yes | per the rows below | Enabled | — (Data Standards are read-only for them — §3b) |
 | `isLoadingInformation()` | **No (footer hidden)** | — | — | — |
 | `isToCCompleted() === false` | Yes | Disabled | Enabled | "Please complete and save the TOC data before approving the result" |
 | `hasTocUnsavedChanges() === true` | Yes | Disabled | Enabled | "Please save the TOC changes before approving the result" |
@@ -583,7 +621,8 @@ canEditInDrawer = computed(() => {
 });
 ```
 - **Threat**: client-only guard. A user with devtools can call PATCH endpoints directly even if the UI hides the buttons.
-- **Mitigation in code**: the UI consistently uses `canEditInDrawer()` for `[editable]`, `[disabled]`, and the footer conditional. Helps prevent accidents.
+- **Mitigation in code**: the UI consistently uses `canEditInDrawer()` for `[editable]`, `[disabled]`, and the footer conditional, and `canEditDataStandards()` for everything the Center reported (§3b). Helps prevent accidents.
+- **Since P2-3154**: `PATCH .../review-update/data-standard/:id` is no longer called by a non-admin reviewer. The endpoint still accepts it — the server MUST enforce the same rule, or the story is UI-deep only.
 - **Recommendation**: enforce the same chain server-side on **every** bilateral PATCH endpoint. Treat the client check as UX only.
 
 ### 11.3 `RolesService.readOnly` global flip

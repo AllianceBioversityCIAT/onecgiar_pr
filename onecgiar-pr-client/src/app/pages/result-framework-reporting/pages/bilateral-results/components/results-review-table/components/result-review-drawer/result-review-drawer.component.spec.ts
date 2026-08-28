@@ -457,6 +457,55 @@ describe('ResultReviewDrawerComponent', () => {
     });
   });
 
+  // ------------------------------------------------- P2-3154 exclusive TOC editing
+
+  describe('canEditDataStandards (P2-3154)', () => {
+    /** Puts the component in the exact scenario AC1 describes: SP Leader, result pending review. */
+    const asReviewingScienceProgram = () => {
+      apiMock.rolesSE.isAdmin = false;
+      apiMock.dataControlSE.myInitiativesList = [{ official_code: 'SP01' }];
+      TestBed.inject(BilateralResultsService).entityId.set('SP01');
+      component.resultToReview.set({ id: '1', status_id: 5 } as any);
+    };
+
+    it('AC2 — the SP Leader keeps the TOC alignment editable', () => {
+      asReviewingScienceProgram();
+      expect(component.canEditInDrawer()).toBe(true);
+    });
+
+    it('AC1 — but every Minimum Data Standard field is locked for that same SP Leader', () => {
+      asReviewingScienceProgram();
+      expect(component.canEditDataStandards()).toBe(false);
+    });
+
+    it('AC1 — the title cannot be edited even if startEditingTitle is called directly', () => {
+      asReviewingScienceProgram();
+      component.resultDetail.set(buildDetail());
+      component.startEditingTitle();
+      expect(component.isEditingTitle()).toBe(false);
+    });
+
+    it('AC1 — the Data Standards save is refused for the SP Leader', () => {
+      asReviewingScienceProgram();
+      component.onSaveDataStandardChanges();
+      expect(component.saveChangesType).toBeNull();
+      expect(component.showConfirmSaveChangesDialog()).toBe(false);
+    });
+
+    it('AC2 — the TOC save still works for the SP Leader', () => {
+      asReviewingScienceProgram();
+      component.tocInitiative = { planned_result: true };
+      component.onSaveTocChanges();
+      expect(component.saveChangesType).toBe('toc');
+      expect(component.showConfirmSaveChangesDialog()).toBe(true);
+    });
+
+    it('platform administrators are out of scope and keep full editing', () => {
+      apiMock.rolesSE.isAdmin = true;
+      expect(component.canEditDataStandards()).toBe(true);
+    });
+  });
+
   // ------------------------------------------------------------------- toc edits
 
   describe('toc edit handlers', () => {
@@ -520,6 +569,8 @@ describe('ResultReviewDrawerComponent', () => {
 
   describe('title editing', () => {
     it('startEditingTitle uses the current title or an empty fallback', () => {
+      // P2-3154: the title is only editable by a platform administrator.
+      apiMock.rolesSE.isAdmin = true;
       component.startEditingTitle();
       expect(component.editingTitleValue()).toBe('');
       expect(component.isEditingTitle()).toBe(true);
@@ -607,6 +658,8 @@ describe('ResultReviewDrawerComponent', () => {
     });
 
     it('onSaveDataStandardChanges opens the dialog', () => {
+      // P2-3154: Data Standards are only saveable by a platform administrator.
+      apiMock.rolesSE.isAdmin = true;
       component.onSaveDataStandardChanges();
       expect(component.saveChangesType).toBe('dataStandard');
       expect(component.showConfirmSaveChangesDialog()).toBe(true);

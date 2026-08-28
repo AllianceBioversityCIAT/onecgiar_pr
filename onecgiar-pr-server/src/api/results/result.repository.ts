@@ -653,6 +653,7 @@ WHERE
         rl.name AS result_level_name,
         rt.id AS result_type_id,
         r.created_date,
+        r.last_updated_date,
         ci.official_code AS submitter,
         ci.name AS submitter_name,
         ci.short_name AS submitter_short_name,

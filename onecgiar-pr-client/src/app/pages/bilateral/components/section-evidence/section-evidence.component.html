@@ -34,10 +34,12 @@
             </span>
           }
           <div class="sev-card-actions">
-            <button type="button" class="sev-icon-btn sev-icon-btn--edit" title="Edit" (click)="editItem(item)">
+            <button type="button" class="sev-icon-btn sev-icon-btn--edit"
+              [disabled]="readOnly()" title="Edit" (click)="editItem(item)">
               <i class="material-icons-round">edit</i>
             </button>
-            <button type="button" class="sev-icon-btn sev-icon-btn--delete" title="Delete" (click)="confirmDelete(item)">
+            <button type="button" class="sev-icon-btn sev-icon-btn--delete"
+              [disabled]="readOnly()" title="Delete" (click)="confirmDelete(item)">
               <i class="material-icons-round">delete</i>
             </button>
           </div>
@@ -65,7 +67,8 @@
       <div class="sev-draft">
         <div class="sev-draft-header">
           <span class="sev-draft-title">{{ editingId() !== null ? 'Edit Evidence' : 'Add New Evidence' }}</span>
-          <button type="button" class="sev-icon-btn" (click)="cancelDraft()">
+          <button type="button" class="sev-icon-btn"
+            [disabled]="readOnly()" (click)="cancelDraft()">
             <i class="material-icons-round">close</i>
           </button>
         </div>
@@ -74,10 +77,12 @@
           <div class="sev-draft-field">
             <label class="sev-draft-label">Source <span class="sev-required">*</span></label>
             <div class="sev-draft-radios">
-              <button type="button" class="sev-radio" [class.sev-radio--selected]="!draftItem().is_sharepoint" (click)="setDraftLinkMode()">
+              <button type="button" class="sev-radio"
+                [disabled]="readOnly()" [class.sev-radio--selected]="!draftItem().is_sharepoint" (click)="setDraftLinkMode()">
                 <i class="material-icons-round">link</i> Link
               </button>
-              <button type="button" class="sev-radio" [class.sev-radio--selected]="draftItem().is_sharepoint" (click)="setDraftFileMode()">
+              <button type="button" class="sev-radio"
+                [disabled]="readOnly()" [class.sev-radio--selected]="draftItem().is_sharepoint" (click)="setDraftFileMode()">
                 <i class="material-icons-round">upload_file</i> Upload File
               </button>
             </div>
@@ -87,6 +92,7 @@
             <div class="sev-draft-field">
               <label class="sev-draft-label">Link <span class="sev-required">*</span></label>
               <input
+                [disabled]="readOnly()"
                 type="url"
                 class="sev-draft-input"
                 [value]="draftItem().link ?? ''"
@@ -124,7 +130,8 @@
                 <div class="sev-draft-file">
                   <i class="material-icons-round">description</i>
                   <span class="sev-draft-file-name">{{ draftItem().sp_file_name }}</span>
-                  <button type="button" class="sev-icon-btn sev-icon-btn--delete" (click)="removeDraftFile()">
+                  <button type="button" class="sev-icon-btn sev-icon-btn--delete"
+                    [disabled]="readOnly()" (click)="removeDraftFile()">
                     <i class="material-icons-round">delete</i>
                   </button>
                 </div>
@@ -138,9 +145,11 @@
                   <i class="material-icons-round sev-draft-dropzone-icon">cloud_upload</i>
                   <span class="sev-draft-dropzone-text">Select a file or drag and drop</span>
                   <span class="sev-draft-dropzone-hint">jpg, png, doc, xlsx or PDF, max 1 GB</span>
-                  <button type="button" class="sev-draft-dropzone-btn" (click)="fileInput.click()">Select file</button>
+                  <button type="button" class="sev-draft-dropzone-btn"
+                    [disabled]="readOnly()" (click)="fileInput.click()">Select file</button>
                 </div>
                 <input
+                  [disabled]="readOnly()"
                   #fileInput
                   type="file"
                   class="sev-hidden-input"
@@ -154,6 +163,7 @@
           <div class="sev-draft-field">
             <label class="sev-draft-label">Description (optional)</label>
             <textarea
+              [disabled]="readOnly()"
               class="sev-draft-textarea"
               [value]="draftItem().description ?? ''"
               (input)="onDraftDescriptionInput($event)"
@@ -172,6 +182,7 @@
               @for (tag of impactAreaTags; track tag.field) {
                 <label class="flex cursor-pointer items-center gap-[7px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
                   <input
+                    [disabled]="readOnly()"
                     type="checkbox"
                     class="size-[15px] cursor-pointer accent-[var(--pr-color-primary-300)]"
                     [checked]="!!draftItem()[tag.field]"
@@ -188,6 +199,7 @@
               @for (tag of resultTypeTags; track tag.field) {
                 <label class="flex cursor-pointer items-center gap-[7px] text-[13px] font-normal text-[var(--pr-text-secondary)]">
                   <input
+                    [disabled]="readOnly()"
                     type="checkbox"
                     class="size-[15px] cursor-pointer accent-[var(--pr-color-primary-300)]"
                     [checked]="!!draftItem()[tag.field]"
@@ -200,8 +212,9 @@
         </div>
 
         <div class="sev-draft-footer">
-          <button type="button" class="sev-btn sev-btn--secondary" (click)="cancelDraft()">Cancel</button>
-          <button type="button" class="sev-btn sev-btn--primary" [disabled]="!isDraftValid" (click)="confirmDraft()">
+          <button type="button" class="sev-btn sev-btn--secondary"
+            [disabled]="readOnly()" (click)="cancelDraft()">Cancel</button>
+          <button type="button" class="sev-btn sev-btn--primary" [disabled]="!isDraftValid || readOnly()" (click)="confirmDraft()">
             {{ editingId() !== null ? 'Save Changes' : 'Add Evidence' }}
           </button>
         </div>
@@ -209,7 +222,8 @@
     }
 
     @if (canAddMore && !showDraft()) {
-      <button type="button" class="sev-add-trigger" (click)="addNew()">
+      <button type="button" class="sev-add-trigger"
+        [disabled]="readOnly()" (click)="addNew()">
         <i class="material-icons-round">add</i>
         Add evidence
       </button>
@@ -241,7 +255,7 @@
         }
       </span>
     </div>
-    <button type="button" class="sev-save-btn" [disabled]="saveStatus() === 'saving'" (click)="saveSection()">
+    <button type="button" class="sev-save-btn" [disabled]="saveStatus() === 'saving' || readOnly()" (click)="saveSection()">
       <i class="material-icons-round">save</i> Save Evidence
     </button>
   </div>

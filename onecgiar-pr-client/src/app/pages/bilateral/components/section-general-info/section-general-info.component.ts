@@ -148,6 +148,12 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
 
   readonly showHiddenFieldsNote = computed(() => !this.showAllFields() && this.hiddenFieldsWithValues() > 0);
 
+  /**
+   * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
+   * Read straight from the service, the way this section already reads the rest of the result state.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
   constructor() {
     this.autoSaveService.registerField('title', 'text');
     this.autoSaveService.registerField('description', 'text');
@@ -323,6 +329,10 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
 
   onTitleChange(value: string): void {
     this.title.set(value);
+    // The page header reads `creationService.resultTitle()`, which otherwise only changes when
+    // `loadResult` runs — so without this the header kept showing `Bilateral Draft #<id>` until a
+    // reload. Writing the same value back is a no-op for the hydration effect above.
+    this.creationService.resultTitle.set(value);
     this.autoSaveService.updateField('title', value, 'text');
   }
 

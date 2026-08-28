@@ -24,6 +24,7 @@
     [required]="true"
     placeholder="Enter result title"
     [valueValid]="!isPlaceholderTitle(title())"
+    [readOnly]="readOnly()"
     [ngModel]="title()"
     (ngModelChange)="onTitleChange($event)"
     (focusout)="onTitleBlur()">
@@ -35,12 +36,13 @@
     [required]="true"
     [rows]="4"
     placeholder="Describe the result"
+    [readOnly]="readOnly()"
     [ngModel]="description()"
     (ngModelChange)="onDescriptionChange($event)"
     (focusout)="onDescriptionBlur()">
   </app-pr-textarea>
 
-  <app-lead-contact-person-field [body]="leadContactBody()" [required]="true" />
+  <app-lead-contact-person-field [body]="leadContactBody()" [required]="true" [readOnly]="readOnly()" />
 
   @if (showAllFields()) {
     <div class="sgi-extra">
@@ -57,10 +59,14 @@
             <div class="sgi-dac-row">
               <div class="sgi-dac-label">
                 <span>{{ area.label }}</span>
+                <!-- P2-3323: pinnable, like every other .sgi-dac-info trigger. The Impact Area
+                     guidance is several paragraphs long, so a click must pin it open instead of
+                     hiding it. -->
                 <button
                   type="button"
                   class="sgi-dac-info"
                   [prTooltip]="area.tooltip"
+                  [prTooltipPinnable]="true"
                   prTooltipPosition="right"
                   prTooltipStyleClass="sgi-dac-tooltip"
                   aria-label="More information about {{ area.label }}">
@@ -73,6 +79,7 @@
                     type="button"
                     class="sgi-radio"
                     [class.sgi-radio--selected]="selectedDacLevels()[area.key] === level.value"
+                    [disabled]="readOnly()"
                     (click)="onDacTagChange(area.key, level.value)"
                   >
                     {{ level.label }}
@@ -86,6 +93,7 @@
                       type="button"
                       class="sgi-checkbox"
                       [class.sgi-checkbox--checked]="(selectedSubScores()[area.key] ?? []).includes(opt.id)"
+                      [disabled]="readOnly()"
                       (click)="toggleSubScore(area.key, opt.id)"
                     >
                       {{ opt.title }}
