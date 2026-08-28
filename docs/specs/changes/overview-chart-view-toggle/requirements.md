@@ -119,6 +119,10 @@ The two matrix cards ("W1/W2 results by category and status", "W3/Bilateral resu
 
 - **OQ-1** Bar-end total label (sum per row). **Default: no** (tooltips + segment sizes suffice; keeps the card quiet). Overridable at the gate.
   > **OVERRIDDEN (CVT-A-2, 2026-08-27, owner, at CVT-T-3 HITL gate): yes** — each stacked bar shows its row total at the bar end (preserves the exact counts the single-series card gives).
+
+- **AMENDMENT CVT-A-3 (2026-08-27, owner, at CVT-T-3 HITL gate):** the "W1/W2 results by indicator category" single-series card (card 2, promoted by P2-3303) is **removed** — with bars as the default view and bar-end totals (CVT-A-1/A-2), the W1/W2 matrix card fully subsumes it (its rows ARE the indicator categories). The W1/W2 matrix card expands to full width (`col-span-12`). The pinned Overview heading-order assertion drops from 8 to 7 headings (deliberate, recorded edit). Scope extension: the now-dead `categories` input chain may be cleaned up in `program-overview` and its `dashboard-lab` binding (supersedes the "parent unchanged" out-of-scope line for this cleanup only). The **W3/Bilateral "by indicator category" card (card 5) stays** — the bilateral matrix rows are centers, not categories, so it is NOT redundant.
+
+- **AMENDMENT CVT-A-4 (2026-08-27, owner, at CVT-T-3 HITL gate):** add two section separators to the Overview grid: "W1/W2" before the W1/W2 matrix card, grouping it with "Reporting status"; "W3/Bilateral" before the three bilateral cards. "About this program" (top) and "Progress by area of work" (bottom) stay outside the separators (global). No card reordering (current order already matches the grouping). Separators are visual group labels: existing tokens only, `aria-hidden="true"` (card `<h2>`s already name their source, so screen readers lose nothing), and they MUST NOT alter the pinned `<h2>` count/order assertion (7).
 - **OQ-2** Toggle control placement: heading row right-aligned (default) vs above the chart. **Default: heading row.**
 
 ## 12. Requirement ID Index

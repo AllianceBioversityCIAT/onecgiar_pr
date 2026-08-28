@@ -110,3 +110,21 @@ Checklist handed to the user:
 1. **RISK:** `barWidth: 0` is inert (ECharts honors only truthy barWidth); invisibility rests on zero data + transparent. If a future ECharts honored it, per-stack-group semantics could collapse the visible bars. Suggested: drop it or comment it inert-by-design.
 2. **RELIABILITY:** component-level totals-click test hardcodes `seriesIndex: 4` instead of deriving `cols.length` — "emits nothing" passes for any out-of-range index.
 3. **READABILITY (spec doc):** scenario body still narrates the heatmap default — **addressed now**: clarifying line added to the CVT-A-1 amendment block.
+
+### Amendment record — CVT-A-3 / CVT-A-4 (2026-08-27, owner at the CVT-T-3 HITL gate)
+
+- **User direction:** (A-3) "esta ya no es necesaria" — remove the "W1/W2 results by indicator category" card, redundant now that the W1/W2 matrix defaults to bars with row totals (its rows ARE the categories). Bilateral "by indicator category" card kept — its matrix rows are centers, different dimension. (A-4) "podríamos adicionar separadores Ejemplo W1/W2 y W3" — section separators; grouping confirmed via structured question: About (top, global) → ── W1/W2 ── [matrix, Reporting status] → ── W3/Bilateral ── [3 bilateral cards] → Progress by AoW (bottom, global); no reordering needed.
+- **Docs amended:** requirements.md CVT-A-3/A-4 blocks; design.md CVT-DD-7/DD-8. Scope extension to `dashboard-lab` (dead `categories` chain cleanup) explicitly authorized in CVT-A-3.
+
+#### Implementation loop (combined, chained on one Implementer; single combined Reviewer audit)
+
+- **Status:** PASS (attempt 1) · Implementer: `impl-cvt-t2` · Reviewer: `rev-cvt-t2`
+- **Files:** `program-overview.component.html/.ts/.spec.ts`, `dashboard-lab.component.html/.ts` (+111/−153).
+- **What (A-3):** card 2 `<section>` deleted; W1/W2 matrix `col-span-6`→`col-span-12` (responsive override dropped); `categories` input + `categoriesMax` + `categoryWidth()` removed; parent `overviewCategories` computed + `[categories]` binding removed (repo-grep: sole consumer); `CategoryBar`/`OverviewCategoryBar` kept (bilateral chain uses them); `overviewW12Heatmap` doc comment re-written (no dangling reference); pinned heading assertion 8→7, renamed + CVT-A-3 cited, tombstone comment for the 6 removed tests; row-count formula fixed.
+- **What (A-4):** two `col-span-12` separator rows (`div aria-hidden="true"`: uppercase label `--pr-text-secondary` + `h-px` rule `--pr-border`), placed before the W1/W2 matrix and before the bilateral group; 4 new tests (count/labels/aria-hidden/positions + heading-contract negative).
+- **Verification:** after A-3: FULL suite 482/6901 (−6, exactly the dead card's tests), `ng build` succeeded (proves no other template binds `[categories]` — the decisive gate for input removal). After A-4: FULL suite **482 suites / 6905 tests** green (+4), lint clean. No hex, no new tokens, no package.json.
+- **Reviewer:** **STATUS: PASS** — removal complete with no survivors/orphans; bilateral chain untouched; heading assertion deliberate + cited; separators exactly per CVT-DD-8, no reordering, h2 contract pinned negatively.
+
+#### ADVISORY (non-gating, recorded)
+1. **RELIABILITY:** separator count test queries `div[aria-hidden="true"]` tree-wide; `pr-viz-chart`'s loading container matches when loading — scope to grid children if it ever flakes.
+2. **RISK (a11y, within spec):** "Reporting status"'s h2 names no funding source, so SR users don't get its W1/W2 grouping (separators are aria-hidden by design). Cheapest future fix: extend that heading text, not un-hiding the separator.

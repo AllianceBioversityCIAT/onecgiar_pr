@@ -113,8 +113,6 @@ export class ProgramOverviewComponent {
   readonly aowProgress = input<AowProgressRow[]>([]);
   /** Cross-cutting buckets (Intermediate / 2030) under the AoW list. */
   readonly xcutProgress = input<AowProgressRow[]>([]);
-  /** Own (W1/W2) results by result category, already filtered to count > 0 and sorted desc. */
-  readonly categories = input<CategoryBar[]>([]);
   /** W3/Bilateral results by category, primary-role only (P2-3302). */
   readonly bilateralCategories = input<CategoryBar[]>([]);
   /** Centers with reported W3/bilateral results. */
@@ -277,22 +275,15 @@ export class ProgramOverviewComponent {
     return row.total ? Math.round((row.done / row.total) * 100) : 0;
   }
 
-  private readonly categoriesMax = computed(() => Math.max(...this.categories().map(c => c.count), 1));
-
   private readonly bilateralCategoriesMax = computed(() => Math.max(...this.bilateralCategories().map(c => c.count), 1));
 
   /**
    * Bar width as a share of the LARGEST bar in its own series, so the biggest category fills the
-   * track and the ranking reads at a glance. Each card normalises against its own maximum — the
-   * own-results and bilateral cards are two separate scales, not one shared one.
+   * track and the ranking reads at a glance.
    *
    * The `Math.max(..., 1)` in the denominator is what keeps an all-zero (or empty) series at 0%
    * instead of `NaN`.
    */
-  categoryWidth(bar: CategoryBar): number {
-    return (bar.count / this.categoriesMax()) * 100;
-  }
-
   bilateralCategoryWidth(bar: CategoryBar): number {
     return (bar.count / this.bilateralCategoriesMax()) * 100;
   }

@@ -2,12 +2,18 @@
   Overview — approved live design (`.design-snapshots/PRMS-Reporting.dc.html`, `showOverview`)
   extended by `changes/sp-overview-echarts/overview-widgets` (design §6.2).
   12-col · gap 16px · pad 32px · cards white / 1px --pr-border / radius 12 / pad 20
-  Order (amended by quick/overview-card-order, approved 2026-08-27): About 12 ·
-  OwnCats 6 + W1/W2 heatmap 6 · Status 12 · BilCats 6 + BilCenters 6 · Bilateral heatmap 12 ·
-  AoW 12. Narrative: context → own results + pipeline → status headline → bilateral volume +
-  contributors → their cross (full width for 7 rotated columns) → plan progress.
-  Card order is asserted deliberately in the spec (`OVW-T-3`/§6.2, amendment noted) —
-  a reorder must edit that assertion, never a silent diff.
+  Order (amended by CVT-A-3, 2026-08-27, owner, CVT-T-3 gate — supersedes P2-3303's placement
+  decision and quick/overview-card-order's 8-card layout): About 12 · W1/W2 heatmap/bars 12 ·
+  Status 12 · BilCats 6 + BilCenters 6 · Bilateral heatmap 12 · AoW 12. The former standalone
+  "W1/W2 results by indicator category" card was REMOVED (see CVT-A-3 note at card 2 below) —
+  with bars-default + bar-end totals the matrix card fully subsumes it. Narrative: context →
+  own results by category and status → status headline → bilateral volume + contributors →
+  their cross (full width for 7 rotated columns) → plan progress.
+  Card order is asserted deliberately in the spec (`OVW-T-3`/§6.2, CVT-A-3 amendment: 8→7
+  headings) — a reorder must edit that assertion, never a silent diff.
+  CVT-A-4 (amendment, 2026-08-27, owner, CVT-T-3 gate): two `aria-hidden` section-separator rows
+  ("W1/W2" · "W3/Bilateral") group the cards visually — no reordering, no new `<h2>`s, so the
+  pinned 7-heading assertion is untouched.
   Reporting pace / Needs attention / Impact so far were REMOVED (P2-3298 / P2-3300 / P2-3299).
   ⚠️ html is 12px — only arbitrary px values.
 -->
@@ -22,46 +28,20 @@
       {{ description() }}
     </p>
   </section>
-  <!-- 2 · W1/W2 results by indicator category · span 6 — promoted here by P2-3303 ("prominent … under
-       about this program") and re-drawn as horizontal bars per the design. -->
-  <section
-    class="col-span-6 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
-    <div class="mb-[20px] flex items-center gap-[8px]">
-      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
-        W1/W2 results by indicator category
-      </h2>
-    </div>
-
-    @if (categories().length) {
-      <div class="flex flex-col">
-        @for (bar of categories(); track bar.name) {
-          <button
-            type="button"
-            [disabled]="!bar.link"
-            (click)="emitLink(bar.link)"
-            class="flex min-h-[36px] cursor-pointer items-center gap-[12px] rounded-[8px] border-none bg-transparent px-[6px] text-left transition-colors hover:bg-[var(--pr-color-primary-50)] disabled:cursor-default disabled:hover:bg-transparent"
-            [attr.aria-label]="bar.link ? bar.name + ': ' + bar.count + (bar.count === 1 ? ' result' : ' results') : null">
-            <span class="min-w-0 max-w-[180px] flex-auto truncate text-[13px] font-normal text-[var(--pr-text)]" [title]="bar.name">
-              {{ bar.name }}
-            </span>
-            <span
-              class="h-[8px] min-w-[64px] flex-auto overflow-hidden rounded-full bg-[var(--pr-border-divider)]"
-              aria-hidden="true">
-              <span class="block h-[8px] rounded-full bg-[var(--pr-chart-2)]" [style.width.%]="categoryWidth(bar)"></span>
-            </span>
-            <span class="pr-figure-sm min-w-[32px] flex-none text-right text-[14px] font-semibold text-[var(--pr-text-heading)]">
-              {{ bar.count }}
-            </span>
-          </button>
-        }
-      </div>
-    } @else {
-      <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">No result categories reported yet.</p>
-    }
-  </section>
-  <!-- 3 · W1/W2 results by category and status (heatmap) · span 6 -->
-  <section
-    class="col-span-6 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
+  <!-- Section separator (CVT-A-4/CVT-DD-8, amendment 2026-08-27, owner, CVT-T-3 gate): visual
+       group label only — small uppercase label + hairline rule, `aria-hidden="true"`, NOT a
+       heading, so it never touches the pinned <h2> count/order (stays 7). Groups "W1/W2 results
+       by category and status" with "Reporting status" below it. -->
+  <div class="col-span-12 flex items-center gap-[12px]" aria-hidden="true">
+    <span class="shrink-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">W1/W2</span>
+    <span class="h-px flex-1 bg-[var(--pr-border)]"></span>
+  </div>
+  <!-- 2 · W1/W2 results by category and status (heatmap/bars) · span 12 — CVT-A-3 (amendment,
+       2026-08-27, owner, CVT-T-3 gate): the single-series "W1/W2 results by indicator category"
+       card (former card 2, P2-3303) is REMOVED — with bars as the default view and bar-end
+       totals (CVT-A-1/A-2), this matrix card's rows ARE the indicator categories, so it fully
+       subsumes the deleted card. Expanded from col-span-6 to col-span-12 (full width). -->
+  <section class="col-span-12 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
     <div class="mb-[16px] flex items-center justify-between gap-[12px]">
       <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
         W1/W2 results by category and status
@@ -179,6 +159,12 @@
       <p class="m-0 text-[14px] text-[var(--pr-text-secondary)]">No results reported for this program yet.</p>
     }
   </section>
+  <!-- Section separator (CVT-A-4/CVT-DD-8) — same pattern as the W1/W2 separator above; groups
+       the three bilateral cards (indicator category, centers, heatmap/bars). -->
+  <div class="col-span-12 flex items-center gap-[12px]" aria-hidden="true">
+    <span class="shrink-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">W3/Bilateral</span>
+    <span class="h-px flex-1 bg-[var(--pr-border)]"></span>
+  </div>
   <!-- 5 · W3/Bilateral results by indicator category · span 6 — P2-3302 ("Number of result by
        Indicator category"). Primary-role only, as the design's subtitle states. -->
   <section

@@ -975,24 +975,6 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .filter(r => r.total > 0);
   });
 
-  /**
-   * Results by indicator category — from the program's type summaries.
-   *
-   * NOT capped. The old `.slice(0, 4)` existed only because four 88px vertical columns were all
-   * that fitted; the card is now a full-height list of horizontal bars, and the cap was hiding
-   * half the data (SP02 reports 8 categories). Colour is per CARD now, so no per-row colour.
-   */
-  readonly overviewCategories = computed<OverviewCategoryBar[]>(() => {
-    const { outputs, outcomes } = this.groupedSummaries();
-    return [...outputs, ...outcomes]
-      .map(c => ({ name: c.resultTypeName, count: (c.editing || 0) + (c.submitted || 0) }))
-      .filter(c => c.count > 0)
-      .sort((a, b) => b.count - a.count)
-      // No `origin` here — the summary endpoint counts the program's own results across all
-      // sources (OQ-2 default). Adding `origin: 'W1/W2'` would narrow the Results tab list.
-      .map(c => ({ ...c, link: { category: c.name } }));
-  });
-
   // ── W3/Bilateral figures for the Overview tab (P2-3302) ───────────────────
   //
   // Source: GET /api/results/by-program-and-centers?programId=<SP>, the same call the bilateral
@@ -1048,12 +1030,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private static readonly W12_HEATMAP_COLS = ['Editing', 'Quality Assessed', 'Submitted', 'Other'] as const;
 
   /**
-   * W1/W2 category × status heatmap (`OVW-R-2`, design §2.2 item 2). Rows are the SAME summaries
-   * and order as `overviewCategories` (outputs then outcomes, `Innovation Use(IPSR)` already
-   * excluded by `groupedSummaries`) — but unlike that bar, every status column is kept (including
-   * `qualityAssessed`, dropped from the bar on purpose — OQ-1). Rows whose four cells are all zero
-   * are omitted; the `Other` column (statuses 4–8) has no single filter value, so its cells carry
-   * `link: null` (`OVW-DD-3`).
+   * W1/W2 category × status heatmap (`OVW-R-2`, design §2.2 item 2). Rows are the program's
+   * type summaries (outputs then outcomes, `Innovation Use(IPSR)` already excluded by
+   * `groupedSummaries`) — every status column is kept (including `qualityAssessed`, OQ-1). Rows
+   * whose four cells are all zero are omitted; the `Other` column (statuses 4–8) has no single
+   * filter value, so its cells carry `link: null` (`OVW-DD-3`).
+   * `CVT-A-3`: this matrix (bars-default + bar-end totals) is now the ONLY W1/W2 own-results
+   * card — the standalone single-series "by indicator category" card (formerly fed by
+   * `overviewCategories`, removed) is gone; its rows ARE the indicator categories.
    */
   readonly overviewW12Heatmap = computed<HeatmapModel>(() => {
     const { outputs, outcomes } = this.groupedSummaries();

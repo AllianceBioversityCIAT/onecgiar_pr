@@ -68,18 +68,6 @@ describe('ProgramOverviewComponent', () => {
     { code: 'AOW01', name: 'Market', done: 3, total: 8 }
   ];
 
-  /** Mirrors the real prtest shape for SP02: 8 own categories, uncapped. */
-  const categories: CategoryBar[] = [
-    { name: 'Innovation development', count: 15, link: { category: 'Innovation development' } },
-    { name: 'Other output', count: 10, link: { category: 'Other output' } },
-    { name: 'Capacity sharing for development', count: 6, link: { category: 'Capacity sharing for development' } },
-    { name: 'Innovation use', count: 6, link: { category: 'Innovation use' } },
-    { name: 'Knowledge product', count: 6, link: { category: 'Knowledge product' } },
-    { name: 'Policy change', count: 5, link: { category: 'Policy change' } },
-    { name: 'Other outcome', count: 1, link: { category: 'Other outcome' } },
-    { name: 'Innovation Packages', count: 1, link: { category: 'Innovation Packages' } }
-  ];
-
   const bilateralCategories: CategoryBar[] = [
     { name: 'Capacity sharing for development', count: 70, link: { origin: 'W3/Bilaterals', category: 'Capacity sharing for development' } },
     { name: 'Innovation development', count: 30, link: { origin: 'W3/Bilaterals', category: 'Innovation development' } }
@@ -131,7 +119,6 @@ describe('ProgramOverviewComponent', () => {
     fixture.componentRef.setInput('programName', 'Breeding for Tomorrow');
     fixture.componentRef.setInput('statusSegments', segments);
     fixture.componentRef.setInput('aowProgress', aows);
-    fixture.componentRef.setInput('categories', categories);
     fixture.componentRef.setInput('bilateralCategories', bilateralCategories);
     fixture.componentRef.setInput('bilateralCenters', centers);
     fixture.componentRef.setInput('w12Heatmap', w12Heatmap);
@@ -142,20 +129,22 @@ describe('ProgramOverviewComponent', () => {
   /**
    * Guards the card ORDER, which is the whole point of P2-3303 ("prominent … under about this
    * program"). Any reordering has to be a deliberate edit here, never an accident.
-   * Extended by `OVW-T-3` (design §6.2) with the two new heatmap cards (4 and 5).
+   * Extended by `OVW-T-3` (design §6.2) with the two new heatmap cards.
+   * **Amendment `CVT-A-3`** (owner, CVT-T-3 HITL gate): the standalone "W1/W2 results by
+   * indicator category" card is removed (bars-default + bar-end totals make the W1/W2 matrix
+   * card fully subsume it) — 8 headings drop to 7, deliberately, here.
    */
-  it('renders the eight Overview cards in the approved design order', () => {
+  it('renders the seven Overview cards in the approved design order (CVT-A-3)', () => {
     const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
 
-    // Order amended by quick/overview-card-order (user-approved 2026-08-27): narrative flow
-    // context → own results + pipeline → status headline → bilateral volume + contributors →
-    // their cross → plan progress. P2-3303 still holds: W1/W2 categories directly under About.
+    // Order amended by CVT-A-3 (2026-08-27, owner, CVT-T-3 gate — supersedes P2-3303's placement
+    // decision and quick/overview-card-order's 8-card layout): context → own results by category
+    // and status → status headline → bilateral volume + contributors → their cross → plan progress.
     expect(headings).toEqual([
       'About this program',
-      // P2-3481: the titles name the funding type, so a user can tell the two blocks apart.
-      'W1/W2 results by indicator category',
       'W1/W2 results by category and status',
       'Reporting status',
+      // P2-3481: the titles name the funding type, so a user can tell the two blocks apart.
       'W3/Bilateral results by indicator category',
       'Centers with reported W3/bilateral results',
       'W3/Bilateral results by center and category',
@@ -217,57 +206,10 @@ describe('ProgramOverviewComponent', () => {
     expect(component.percentOf({ code: 'AOW09', name: 'Empty', done: 0, total: 0 })).toBe(0);
   });
 
-  describe('results by indicator category', () => {
-    it('scales each bar against the largest count in its own series', () => {
-      expect(component.categoryWidth(categories[0])).toBe(100);
-      expect(component.categoryWidth(categories[1])).toBeCloseTo((10 / 15) * 100);
-      expect(component.categoryWidth(categories[6])).toBeCloseTo((1 / 15) * 100);
-    });
-
-    /**
-     * The old vertical chart capped at 4 columns, which hid half of SP02's categories — still
-     * true. Rewritten for `OVW-T-2`: rows are real buttons now, so this also pins the count of
-     * navigable `button[aria-label]` controls to "every row with a link" plus the meter segments
-     * that got a link (the synthetic `Not specified` center and zero-count segments do not).
-     */
-    it('renders every category with no four-item cap, using a navigable button per linked row', () => {
-      expect(categories.length).toBe(8);
-
-      const buttons = fixture.nativeElement.querySelectorAll('button[aria-label]');
-      const linkedRows = [...categories, ...bilateralCategories, ...centers].filter(r => r.link !== null).length;
-      const linkedSegments = segments.filter(s => s.count > 0 && s.link !== null).length;
-      expect(buttons.length).toBe(linkedRows + linkedSegments);
-    });
-
-    it('returns 0 instead of NaN for an all-zero series', () => {
-      const zeroes: CategoryBar[] = [
-        { name: 'A', count: 0, link: null },
-        { name: 'B', count: 0, link: null }
-      ];
-      fixture.componentRef.setInput('categories', zeroes);
-      fixture.detectChanges();
-      expect(component.categoryWidth(zeroes[0])).toBe(0);
-      expect(Number.isNaN(component.categoryWidth(zeroes[0]))).toBe(false);
-    });
-
-    it('shows an empty state instead of an empty chart', () => {
-      fixture.componentRef.setInput('categories', []);
-      fixture.detectChanges();
-      expect(fixture.nativeElement.textContent).toContain('No result categories reported yet.');
-    });
-
-    it('exposes the count to assistive tech and hides the bar itself', () => {
-      const row = fixture.nativeElement.querySelector('button[aria-label^="Innovation development"]');
-      expect(row.getAttribute('aria-label')).toBe('Innovation development: 15 results');
-      expect(row.querySelector('[aria-hidden="true"]')).toBeTruthy();
-    });
-
-    it('says "1 result", not "1 results", for a single-result category', () => {
-      const singles = fixture.nativeElement.querySelectorAll('button[aria-label$="1 result"]');
-      // Two categories sit at count 1 in the fixture (Other outcome, Innovation Packages).
-      expect(singles.length).toBe(2);
-    });
-  });
+  // The former "results by indicator category" describe block (W1/W2 own-results single-series
+  // card: categoryWidth, its four-item-cap/no-cap coverage, its empty state, its aria-label and
+  // singular/plural cases) is REMOVED under `CVT-A-3` — that card no longer exists; the W1/W2
+  // matrix card (bars-default + bar-end totals) now covers the same information.
 
   describe('bilateral breakdowns', () => {
     it('normalises the bilateral bars against their own maximum, not the own-results one', () => {
@@ -344,7 +286,9 @@ describe('ProgramOverviewComponent', () => {
      */
     it('renders linked rows as enabled buttons and keeps Not specified disabled', () => {
       const rows: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button.min-h-\\[36px\\]'));
-      expect(rows.length).toBe(categories.length + bilateralCategories.length + centers.length);
+      // CVT-A-3: the former W1/W2 own-results row card is removed — only bilateralCategories
+      // (card "W3/Bilateral results by indicator category") and centers use this row markup now.
+      expect(rows.length).toBe(bilateralCategories.length + centers.length);
 
       const linkedRows = rows.filter(row => row.getAttribute('aria-label'));
       expect(linkedRows.length).toBeGreaterThan(0);
@@ -726,6 +670,60 @@ describe('ProgramOverviewComponent', () => {
         expect(w12Color).toBe(bilateralColor);
         expect(w12Color).not.toMatch(/^#/);
       });
+    });
+  });
+
+  /**
+   * `CVT-A-4` (amendment, owner, CVT-T-3 gate): two `aria-hidden` visual group-label rows
+   * ("W1/W2" · "W3/Bilateral") — no reordering, no new headings, pinned 7-heading assertion
+   * (`CVT-A-3`) stays untouched.
+   */
+  describe('section separators (CVT-A-4 / CVT-DD-8)', () => {
+    /** Direct children of the 12-col grid, in DOM order — separators and cards are siblings here. */
+    function gridChildren(): Element[] {
+      return Array.from(fixture.nativeElement.querySelectorAll('.grid.grid-cols-12 > *'));
+    }
+
+    /** FAIL input: a missing/extra separator, wrong label text, or a non-hidden row turns this red. */
+    it('renders exactly 2 separator rows, aria-hidden, with the exact group labels', () => {
+      const separators: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('div[aria-hidden="true"]'));
+      expect(separators.length).toBe(2);
+      expect(separators.map(el => el.textContent?.trim())).toEqual(['W1/W2', 'W3/Bilateral']);
+      separators.forEach(el => expect(el.getAttribute('aria-hidden')).toBe('true'));
+    });
+
+    /** FAIL input: the separator landing after the card (or elsewhere) turns this red. */
+    it('places the "W1/W2" separator immediately before the W1/W2 matrix card', () => {
+      const children = gridChildren();
+      const separatorIndex = children.findIndex(
+        el => el.getAttribute('aria-hidden') === 'true' && el.textContent?.trim() === 'W1/W2'
+      );
+      const w12CardIndex = children.findIndex(
+        el => el.querySelector('h2')?.textContent?.trim() === 'W1/W2 results by category and status'
+      );
+      expect(separatorIndex).toBeGreaterThan(-1);
+      expect(w12CardIndex).toBe(separatorIndex + 1);
+    });
+
+    /** FAIL input: the separator landing after the bilateral group (or elsewhere) turns this red. */
+    it('places the "W3/Bilateral" separator immediately before the first bilateral card', () => {
+      const children = gridChildren();
+      const separatorIndex = children.findIndex(
+        el => el.getAttribute('aria-hidden') === 'true' && el.textContent?.trim() === 'W3/Bilateral'
+      );
+      const bilateralCardIndex = children.findIndex(
+        el => el.querySelector('h2')?.textContent?.trim() === 'W3/Bilateral results by indicator category'
+      );
+      expect(separatorIndex).toBeGreaterThan(-1);
+      expect(bilateralCardIndex).toBe(separatorIndex + 1);
+    });
+
+    /** FAIL input: a separator promoted to a real heading turns this red (breaks CVT-A-3's pin). */
+    it('adds no screen-reader noise and does not touch the pinned 7-heading assertion', () => {
+      const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
+      expect(headings.length).toBe(7);
+      expect(headings).not.toContain('W1/W2');
+      expect(headings).not.toContain('W3/Bilateral');
     });
   });
 });
