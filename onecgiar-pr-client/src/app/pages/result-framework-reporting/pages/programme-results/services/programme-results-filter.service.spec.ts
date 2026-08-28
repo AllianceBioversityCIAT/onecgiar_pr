@@ -39,6 +39,7 @@ describe('ProgrammeResultsFilterService', () => {
   it('starts with every dimension empty and no chips', () => {
     expect(service.searchText()).toBe('');
     expect(service.selectedSections()).toEqual([]);
+    expect(service.selectedPhase()).toBeNull();
     expect(service.selectedStatus()).toBeNull();
     expect(service.selectedCategory()).toBeNull();
     expect(service.selectedOrigin()).toBeNull();
@@ -122,6 +123,19 @@ describe('ProgrammeResultsFilterService', () => {
       expect(service.filterRows(centerRows).map(r => r.code)).toEqual(['2']);
     });
 
+    it('filters by phase, matching row phaseName, phaseYear, or versionId', () => {
+      const phaseRows = [
+        row({ code: '1', phaseName: 'Reporting 2026 - P26', phaseYear: 2026, versionId: '36' }),
+        row({ code: '2', phaseName: 'Reporting 2024 - P24', phaseYear: 2024, versionId: '20' })
+      ];
+
+      service.selectedPhase.set('Reporting 2026 - P26');
+      expect(service.filterRows(phaseRows).map(r => r.code)).toEqual(['1']);
+
+      service.selectedPhase.set('2024');
+      expect(service.filterRows(phaseRows).map(r => r.code)).toEqual(['2']);
+    });
+
     it('combines every dimension with AND', () => {
       service.searchText.set('a');
       service.selectedStatus.set('Editing');
@@ -161,6 +175,7 @@ describe('ProgrammeResultsFilterService', () => {
     it('builds one chip per active value, in toolbar order', () => {
       service.searchText.set('maize');
       service.selectedSections.set(['AoW1', 'AoW2']);
+      service.selectedPhase.set('Phase 2026');
       service.selectedStatus.set('Submitted');
       service.selectedCategory.set('Policy change');
       service.selectedOrigin.set('W1/W2');
@@ -170,6 +185,7 @@ describe('ProgrammeResultsFilterService', () => {
         { label: 'Search: maize', dimension: 'search', value: 'maize' },
         { label: 'Section: AoW1', dimension: 'section', value: 'AoW1' },
         { label: 'Section: AoW2', dimension: 'section', value: 'AoW2' },
+        { label: 'Phase: Phase 2026', dimension: 'phase', value: 'Phase 2026' },
         { label: 'Status: Submitted', dimension: 'status', value: 'Submitted' },
         { label: 'Category: Policy change', dimension: 'category', value: 'Policy change' },
         { label: 'Origin: W1/W2', dimension: 'origin', value: 'W1/W2' },
@@ -192,6 +208,7 @@ describe('ProgrammeResultsFilterService', () => {
     beforeEach(() => {
       service.searchText.set('maize');
       service.selectedSections.set(['AoW1', 'AoW2']);
+      service.selectedPhase.set('Phase 2026');
       service.selectedStatus.set('Submitted');
       service.selectedCategory.set('Policy change');
       service.selectedOrigin.set('W1/W2');
@@ -201,6 +218,9 @@ describe('ProgrammeResultsFilterService', () => {
     it('clears one dimension at a time', () => {
       service.clearSearch();
       expect(service.searchText()).toBe('');
+
+      service.clearPhase();
+      expect(service.selectedPhase()).toBeNull();
 
       service.clearStatus();
       expect(service.selectedStatus()).toBeNull();
@@ -236,22 +256,26 @@ describe('ProgrammeResultsFilterService', () => {
       service.clearChip(chips.find(chip => chip.dimension === 'status')!);
       expect(service.selectedStatus()).toBeNull();
 
+      service.clearChip(chips.find(chip => chip.dimension === 'phase')!);
+      expect(service.selectedPhase()).toBeNull();
+
       service.clearChip(chips.find(chip => chip.dimension === 'center')!);
       expect(service.selectedCenter()).toBeNull();
     });
 
     it('clearChip() is a no-op on an unknown dimension', () => {
       service.clearChip({ label: 'x', dimension: 'nope' as any, value: 'x' });
-      expect(service.activeChips()).toHaveLength(7);
+      expect(service.activeChips()).toHaveLength(8);
       service.clearChip(undefined as any);
-      expect(service.activeChips()).toHaveLength(7);
+      expect(service.activeChips()).toHaveLength(8);
     });
 
-    it('clearAll() resets all six dimensions at once', () => {
+    it('clearAll() resets all seven dimensions at once', () => {
       service.clearAll();
 
       expect(service.searchText()).toBe('');
       expect(service.selectedSections()).toEqual([]);
+      expect(service.selectedPhase()).toBeNull();
       expect(service.selectedStatus()).toBeNull();
       expect(service.selectedCategory()).toBeNull();
       expect(service.selectedOrigin()).toBeNull();

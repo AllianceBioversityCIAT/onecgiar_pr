@@ -35,8 +35,10 @@ import {
   AowProgressRow as OverviewAowProgressRow,
   CategoryBar as OverviewCategoryBar,
   OverviewCenterBar,
-  OverviewLink
+  OverviewLink,
+  HeatmapModel
 } from './components/program-overview/program-overview.component';
+import { buildTocMapModel, TocMapModel } from './dashboard-lab.toc-map';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from '../programme-results/services/programme-results-query-params';
 import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 import { PhasesService } from '../../../../shared/services/global/phases.service';
@@ -166,12 +168,19 @@ interface AowProgressRow {
   total: number;
 }
 
-/** One indicator category (result type) with its reporting counts. */
+/**
+ * One indicator category (result type) with its reporting counts. `qualityAssessed`, `others` and
+ * `totalResults` were already on the wire but unused; widened for the `OVW-T-3` heatmap (`others`
+ * is the undecomposable statuses-4–8 bucket — requirements.md §2 discovery table).
+ */
 interface IndicatorCategory {
   resultTypeId: number;
   resultTypeName: string;
   editing: number;
   submitted: number;
+  qualityAssessed: number;
+  others: number;
+  totalResults: number;
 }
 
 /**
@@ -344,15 +353,36 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   });
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
 
-  /** Indicator categories cached by program code + active Outputs/Outcomes tab. */
+  /** Indicator categories cached by program code + version (W12-R-2: phase-keyed, not code-only). */
   readonly summariesByCode = signal<Map<string, IndicatorCategory[]>>(new Map());
   private readonly loadingSummaryCodes = signal<Set<string>>(new Set());
   readonly categoryTab = signal<'outputs' | 'outcomes'>('outputs');
 
+  /**
+   * Single key builder for `summariesByCode` (W12-R-2 §12 DD-5): every reader/writer of the
+   * map goes through this, so a phase switch (different `versionId`) never serves a stale
+   * cached matrix under the same program code.
+   */
+  private summaryCacheKey(code: string, versionId: number | null | undefined): string {
+    return `${code}::${versionId ?? 'default'}`;
+  }
+
   /** Selected program's categories, split into outputs / outcomes. */
   readonly groupedSummaries = computed(() => {
-    const code = this.selected()?.initiativeCode;
-    const all = (code ? this.summariesByCode().get(code) : []) ?? [];
+    // Tracked read, otherwise unused: `reportingCurrentPhase` is a plain mutable object (not a
+    // signal), so mutating it alone never busts this computed's memo. Without reading the
+    // signal here, a phase switch whose corrected key is ALREADY cached (e.g. flipping back to
+    // a previously-seen phase) would keep serving the OLD key's matrix forever — this computed
+    // would never re-run to notice the phase changed, since neither `selected()` nor
+    // `summariesByCode()` (its other dependencies) changed either. Reading the version bump
+    // here forces a fresh evaluation, which re-reads `reportingCurrentPhase` at its CURRENT
+    // value (live-regression fix, W12; see the constructor effect for the "not yet cached" half
+    // of this same bug).
+    this.dataControlSE?.reportingPhaseVersion?.();
+    const sp = this.selected();
+    const code = sp?.initiativeCode;
+    const versionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    const all = (code ? this.summariesByCode().get(this.summaryCacheKey(code, versionId)) : []) ?? [];
     const summaries = all.filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
     return {
       outputs: summaries.filter(item => OUTPUT_NAMES.includes(item?.resultTypeName)),
@@ -360,8 +390,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     };
   });
   readonly loadingSummaries = computed(() => {
-    const code = this.selected()?.initiativeCode;
-    return !!code && this.loadingSummaryCodes().has(code) && !this.summariesByCode().has(code);
+    // See `groupedSummaries` above for why this tracked (otherwise unused) read is required.
+    this.dataControlSE?.reportingPhaseVersion?.();
+    const sp = this.selected();
+    const code = sp?.initiativeCode;
+    if (!code) return false;
+    const versionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    const key = this.summaryCacheKey(code, versionId);
+    return this.loadingSummaryCodes().has(key) && !this.summariesByCode().has(key);
   });
 
   /**
@@ -662,12 +698,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   constructor() {
-    // Load the selected program's Areas of Work + indicator categories on selection change.
+    // Load the selected program's Areas of Work on selection change.
     effect(() => {
-      const code = this.selected()?.initiativeCode;
+      const sp = this.selected();
+      const code = sp?.initiativeCode;
       if (code) {
         this.loadAows(code);
-        this.loadSummaries(code);
         // Warm the legacy modals' context here, not on click: `canReportResults()` needs an async
         // phase check and would otherwise hide the submit button on a cold open.
         this.primeEntityAowContext();
@@ -680,6 +716,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         this.reportingAllOpen.set(false);
         this.reportingExpandNonce.set(0);
       }
+    });
+
+    /**
+     * Load the selected program's indicator-contribution summary. Kept in its OWN effect,
+     * separate from the one above (live-regression fix, W12): that effect resets AoW filters
+     * and expand/collapse state on every run, and re-running THAT just because the reporting
+     * phase landed would wipe user-driven filter state for no reason.
+     *
+     * This effect ALSO reads `reportingPhaseVersion()` (bumped by
+     * `DataControlService.getCurrentPhases()`, called fire-and-forget from the app shell) so a
+     * late-arriving phase re-resolves `versionId` and re-fetches under the corrected cache key —
+     * mirroring `result-creator.component.ts` / `report-result-form.component.ts`, which already
+     * depend on `reportingPhaseVersion()` for the same reason. Without this, `latestVersion()`'s
+     * "highest phaseYear" fallback (used while `reportingCurrentPhase.phaseId` is still null) can
+     * pick a DIFFERENT version than the one the phase resolves to once it loads; the summary gets
+     * cached under the fallback's key, `groupedSummaries`/`loadingSummaries` are Angular
+     * `computed()`s that don't proactively react to `reportingCurrentPhase` mutating (it's a
+     * plain object, not a signal, so this effect not depending on `reportingPhaseVersion()` is
+     * what silently and permanently orphans the fetch — nothing else re-triggers a re-read), and
+     * the card is stuck showing "No W1/W2 results reported yet." with no spinner and no retry.
+     */
+    effect(() => {
+      this.dataControlSE.reportingPhaseVersion();
+      this.refreshSelectedSummaries();
     });
 
     // By AOW requires a selected AOW — prefer `?tocAow=`, else keep/pick the first.
@@ -967,24 +1027,6 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .filter(r => r.total > 0);
   });
 
-  /**
-   * Results by indicator category — from the program's type summaries.
-   *
-   * NOT capped. The old `.slice(0, 4)` existed only because four 88px vertical columns were all
-   * that fitted; the card is now a full-height list of horizontal bars, and the cap was hiding
-   * half the data (SP02 reports 8 categories). Colour is per CARD now, so no per-row colour.
-   */
-  readonly overviewCategories = computed<OverviewCategoryBar[]>(() => {
-    const { outputs, outcomes } = this.groupedSummaries();
-    return [...outputs, ...outcomes]
-      .map(c => ({ name: c.resultTypeName, count: (c.editing || 0) + (c.submitted || 0) }))
-      .filter(c => c.count > 0)
-      .sort((a, b) => b.count - a.count)
-      // No `origin` here — the summary endpoint counts the program's own results across all
-      // sources (OQ-2 default). Adding `origin: 'W1/W2'` would narrow the Results tab list.
-      .map(c => ({ ...c, link: { category: c.name } }));
-  });
-
   // ── W3/Bilateral figures for the Overview tab (P2-3302) ───────────────────
   //
   // Source: GET /api/results/by-program-and-centers?programId=<SP>, the same call the bilateral
@@ -1036,9 +1078,258 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   });
 
+  /** Bilateral results reporting status segments (Pending Review, In QA, Approved, Rejected). */
+  readonly overviewBilateralStatusSegments = computed<OverviewStatusSegment[]>(() => {
+    const rows = this.bilateralRows();
+    if (!rows.length) return [];
+
+    const byStatus = new Map<string, number>();
+    for (const r of rows) {
+      const name = r.status_name?.trim() || 'Pending Review';
+      byStatus.set(name, (byStatus.get(name) ?? 0) + 1);
+    }
+
+    const slots: { key: string; label: string; bg: string; fg: string; matchers: string[] }[] = [
+      {
+        key: 'editing',
+        label: 'Editing',
+        bg: 'var(--pr-status-in-progress-bg)',
+        fg: 'var(--pr-status-in-progress-fg)',
+        matchers: ['editing', 'draft']
+      },
+      {
+        key: 'pending',
+        label: 'Pending Review',
+        bg: 'var(--pr-status-submitted-bg)',
+        fg: 'var(--pr-status-submitted-fg)',
+        matchers: ['pending review', 'pending', 'submitted']
+      },
+      {
+        key: 'in-qa',
+        label: 'In QA',
+        bg: 'var(--pr-status-in-qa-bg)',
+        fg: 'var(--pr-status-in-qa-fg)',
+        matchers: ['in qa', 'quality assessed']
+      },
+      {
+        key: 'approved',
+        label: 'Approved',
+        bg: 'var(--pr-status-approved-bg)',
+        fg: 'var(--pr-status-approved-fg)',
+        matchers: ['approved']
+      },
+      {
+        key: 'rejected',
+        label: 'Rejected',
+        bg: 'var(--pr-status-not-started-bg)',
+        fg: 'var(--pr-status-not-started-fg)',
+        matchers: ['rejected', 'discontinued']
+      }
+    ];
+
+    const matchedNames = new Set<string>();
+    const segments: OverviewStatusSegment[] = [];
+
+    for (const slot of slots) {
+      let count = 0;
+      let matchedName = slot.label;
+      for (const [name, c] of byStatus.entries()) {
+        if (slot.matchers.includes(name.toLowerCase())) {
+          count += c;
+          matchedNames.add(name);
+          matchedName = name;
+        }
+      }
+      segments.push({
+        key: slot.key,
+        label: slot.label,
+        count,
+        bg: slot.bg,
+        fg: slot.fg,
+        statusName: matchedName,
+        link: count > 0 ? { origin: BILATERAL_ORIGIN, status: matchedName } : null
+      });
+    }
+
+    for (const [name, count] of byStatus.entries()) {
+      if (!matchedNames.has(name) && count > 0) {
+        segments.push({
+          key: name.toLowerCase().replace(/\s+/g, '-'),
+          label: name,
+          count,
+          bg: 'var(--pr-status-in-progress-bg)',
+          fg: 'var(--pr-status-in-progress-fg)',
+          statusName: name,
+          link: { origin: BILATERAL_ORIGIN, status: name }
+        });
+      }
+    }
+
+    return segments;
+  });
+
+  /** Columns of the W1/W2 heatmap (`OVW-R-2`) — `others` (statuses 4–8, undecomposable) → 'Other'. */
+  private static readonly W12_HEATMAP_COLS = ['Editing', 'Quality Assessed', 'Submitted', 'Other'] as const;
+
+  /**
+   * W1/W2 category × status heatmap (`OVW-R-2`, design §2.2 item 2). Rows are the program's
+   * type summaries (outputs then outcomes, `Innovation Use(IPSR)` already excluded by
+   * `groupedSummaries`) — every status column is kept (including `qualityAssessed`, OQ-1). Rows
+   * whose four cells are all zero are omitted; the `Other` column (statuses 4–8) has no single
+   * filter value, so its cells carry `link: null` (`OVW-DD-3`).
+   * `CVT-A-3`: this matrix (bars-default + bar-end totals) is now the ONLY W1/W2 own-results
+   * card — the standalone single-series "by indicator category" card (formerly fed by
+   * `overviewCategories`, removed) is gone; its rows ARE the indicator categories.
+   */
+  readonly overviewW12Heatmap = computed<HeatmapModel>(() => {
+    const { outputs, outcomes } = this.groupedSummaries();
+    const cols = [...DashboardLabComponent.W12_HEATMAP_COLS];
+    const rows: string[] = [];
+    const cells: HeatmapModel['cells'] = [];
+
+    for (const item of [...outputs, ...outcomes]) {
+      const values = [item.editing || 0, item.qualityAssessed || 0, item.submitted || 0, item.others || 0];
+      if (!values.some(value => value > 0)) continue;
+
+      const r = rows.length;
+      rows.push(item.resultTypeName);
+      values.forEach((value, c) => {
+        cells.push({
+          r,
+          c,
+          value,
+          // 'Other' (c === 3) aggregates statuses 4–8 and cannot be expressed as one `status`.
+          link: c === 3 ? null : { category: item.resultTypeName, status: cols[c] }
+        });
+      });
+    }
+
+    return { rows, cols, cells, caption: 'W1/W2 results by category and status' };
+  });
+
+  /**
+   * W3/Bilateral center × category heatmap (`OVW-R-3`, design §2.2 item 2 / `OVW-DD-6`). Rows are
+   * `lead_center` over ALL bilateral rows — the same population as `overviewBilateralCenters`, NOT
+   * the primary-only set `overviewBilateralCategories` uses — so row totals reconcile with the
+   * center bars. Capped at the top 8 centers by total (desc, then name); `shownOf` is only set
+   * when more than 8 exist. `Not specified` rows are non-navigable (`OVW-DD-3`).
+   */
+  readonly overviewBilateralHeatmap = computed<HeatmapModel>(() => {
+    const caption = 'W3/Bilateral results by center and category';
+    const subtitle = 'Bilateral results in review (Submitted · In QA · Approved)';
+    const rows = this.bilateralRows();
+    if (!rows.length) return { rows: [], cols: [], cells: [], caption, subtitle };
+
+    const cols = [...new Set(rows.map(r => r.indicator_category?.trim()).filter((c): c is string => !!c))].sort((a, b) =>
+      a.localeCompare(b)
+    );
+
+    const byCenter = new Map<string, Map<string, number>>();
+    for (const row of rows) {
+      const category = row.indicator_category?.trim();
+      if (!category) continue;
+      const center = row.lead_center?.trim() || 'Not specified';
+      if (!byCenter.has(center)) byCenter.set(center, new Map());
+      const counts = byCenter.get(center)!;
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+
+    const centerTotals = [...byCenter.entries()]
+      .map(([name, counts]) => ({ name, counts, total: [...counts.values()].reduce((sum, v) => sum + v, 0) }))
+      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+    const total = centerTotals.length;
+    const shown = centerTotals.slice(0, 8);
+
+    const cells: HeatmapModel['cells'] = [];
+    shown.forEach((center, r) => {
+      cols.forEach((category, c) => {
+        cells.push({
+          r,
+          c,
+          value: center.counts.get(category) ?? 0,
+          link: center.name === 'Not specified' ? null : { origin: BILATERAL_ORIGIN, center: center.name, category }
+        });
+      });
+    });
+
+    return {
+      rows: shown.map(c => c.name),
+      cols,
+      cells,
+      caption,
+      subtitle,
+      shownOf: total > 8 ? { shown: shown.length, total } : undefined
+    };
+  });
+
+  /**
+   * `true` while any ToC bucket the map needs (every AoW, plus the two program-level buckets) is
+   * still in flight for the current SP — same guard SHAPE as `loadingAows`/`loadingToc` (a key is
+   * "in flight" once requested and not yet resolved into `tocByKey`). Also true while the AoW list
+   * itself hasn't settled (`loadingAows()`), since the map cannot even name its branches yet.
+   */
+  readonly overviewTocMapLoading = computed(() => {
+    if (this.loadingAows()) return true;
+    const sp = this.selected()?.initiativeCode;
+    if (!sp) return false;
+    const keys = [...this.aows().map(aow => `${sp}::${aow.code}`), `${sp}::${INTERMEDIATE_OUTCOMES_CODE}`, `${sp}::${OUTCOMES_2030_CODE}`];
+    const loadingKeys = this.loadingTocKeys();
+    const map = this.tocByKey();
+    return keys.some(key => loadingKeys.has(key) && !map.has(key));
+  });
+
+  /**
+   * Theory-of-Change map model (`TCM-R-2`, `changes/overview-toc-map`) — feeds the ALREADY-LOADED
+   * `aows()`/`tocByKey()` (no new HTTP calls) plus `splitGroupTitle` (the existing HLO title
+   * parser) into the pure `buildTocMapModel`. `null` while the SP itself isn't resolved OR
+   * `buildTocMapModel` finds nothing to render (empty program) — `program-overview` tells the two
+   * cases apart using `overviewTocMapLoading()` alongside this.
+   */
+  readonly overviewTocMap = computed<TocMapModel | null>(() => {
+    const sp = this.selected();
+    if (!sp) return null;
+    const spCode = sp.initiativeCode;
+    const map = this.tocByKey();
+    // Matches `tocByKey`'s own declared bucket type (`{ outputs: any[]; outcomes: any[] }`) — the
+    // ToC node shape stays untyped-`any` here same as every other reader of this signal.
+    const tocByAow = new Map<string, { outputs: any[]; outcomes: any[] }>();
+    this.aows().forEach(aow => {
+      const bucket = map.get(`${spCode}::${aow.code}`);
+      if (bucket) tocByAow.set(aow.code, bucket);
+    });
+
+    return buildTocMapModel({
+      spCode,
+      spName: sp.initiativeShortName || sp.initiativeName || '',
+      aows: this.aows(),
+      tocByAow,
+      intermediateOutcomes: map.get(`${spCode}::${INTERMEDIATE_OUTCOMES_CODE}`) ?? null,
+      outcomes2030: map.get(`${spCode}::${OUTCOMES_2030_CODE}`) ?? null,
+      parseTitle: title => this.splitGroupTitle(title)
+    });
+  });
+
+  /**
+   * `program-overview` resolves a ToC map click down to an AoW code (`tocMapAowFromClick`) and
+   * emits it ONLY for an AoW node (`TCM-R-5`); this parent navigates to that AoW's EXISTING
+   * `entity-aow` page — same route the retired `entity-aow-card`
+   * (`pages/entity-details/components/entity-aow-card/entity-aow-card.component.html:16`) already
+   * links to: `/result-framework-reporting/entity-details/:entityId/aow/:aowId`
+   * (`shared/routing/routing-data.ts` "Entity AOW" route, `:aowId` child) — mirrors the array-form
+   * `router.navigate` call `onOverviewLink` (below) uses for the sibling 'results' route.
+   */
+  onOpenAow(code: string): void {
+    const spCode = this.selected()?.initiativeCode;
+    if (!spCode) return;
+    this.router.navigate(['/result-framework-reporting/entity-details', spCode, 'aow', code]);
+  }
+
   /** Fetch the programme's bilateral rows. Overview only — the other tabs do not use them. */
   private loadBilateralRows(code: string): void {
-    this.api.resultsSE.GET_ResultToReview(code).subscribe({
+    const versionId = this.latestVersion(this.selected())?.versionId
+      ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    this.api.resultsSE.GET_ResultToReview(code, undefined, versionId ?? undefined, 'all').subscribe({
       next: (res: { response?: { results?: ResultToReview[] }[] }) =>
         this.bilateralRows.set((res?.response ?? []).flatMap(g => g.results ?? [])),
       error: () => this.bilateralRows.set([])
@@ -1247,14 +1538,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     }
     // The programme now comes from the PATH (`…/entity-details/SP01`), by code. In-app
     // navigation keeps this component alive, so react to param changes as well as the first load.
-    this.entityParamSub = this.route.paramMap.subscribe(pm => this.selectProgramByCode(pm.get('entityId')));
+    this.entityParamSub = this.route?.paramMap?.subscribe(pm => this.selectProgramByCode(pm?.get('entityId')));
 
-    // Phases may already be loaded (shared service) or still in flight — cover both.
-    this.reportingPhases.set(this.phasesSE.phases.reporting ?? []);
-    this.phasesSub = this.phasesSE.getPhasesObservable().subscribe(list => this.reportingPhases.set(list ?? []));
+    this.reportingPhases.set(this.phasesSE?.phases?.reporting ?? []);
+    if (typeof this.phasesSE?.getPhasesObservable === 'function') {
+      this.phasesSub = this.phasesSE.getPhasesObservable().subscribe(list => this.reportingPhases.set(list ?? []));
+    }
 
     // React to `?sp=` changes — kept for links saved before the move to path addressing.
-    this.spParamSub = this.route.queryParamMap.subscribe(qp => {
+    this.spParamSub = this.route?.queryParamMap?.subscribe(qp => {
       const raw = qp.get('sp');
       const id = raw ? Number(raw) : NaN;
       if (!Number.isNaN(id)) {
@@ -1311,7 +1603,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** Rehydrate the view from the URL so a reload stays on the same program + AOW + Planned mode. */
   private restoreFromUrl(): void {
-    const qp = this.route.snapshot.queryParamMap;
+    const qp = this.route?.snapshot?.queryParamMap;
+    if (!qp) return;
     const sp = qp.get('sp');
     if (sp) {
       const id = Number(sp);
@@ -1387,21 +1680,41 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Fetch (and cache) the indicator-contribution summary (result-type categories). */
-  private loadSummaries(code: string): void {
-    if (this.summariesByCode().has(code) || this.loadingSummaryCodes().has(code)) return;
-    this.loadingSummaryCodes.update(set => new Set(set).add(code));
-    this.api.resultsSE.GET_IndicatorContributionSummary(code).subscribe({
-      next: (res: { response?: { totalsByType?: IndicatorCategory[] } }) => this.cacheSummaries(code, res?.response?.totalsByType ?? []),
-      error: () => this.cacheSummaries(code, [])
+  /**
+   * Resolves `versionId` for the selected program EXACTLY like `loadBilateralRows` (W12-R-4)
+   * and (re)loads its indicator-contribution summary. Extracted so it can be called both on
+   * program selection AND on a later phase-context update (see the constructor effect above) —
+   * the resolution and the fetch must always happen together, or the two would each resolve
+   * `versionId` at DIFFERENT moments (see the effect's comment for why that is the bug).
+   */
+  private refreshSelectedSummaries(): void {
+    const sp = this.selected();
+    const code = sp?.initiativeCode;
+    if (!code) return;
+    const versionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    this.loadSummaries(code, versionId ?? undefined);
+  }
+
+  /**
+   * Fetch (and cache) the indicator-contribution summary (result-type categories).
+   * `versionId` resolved EXACTLY like `loadBilateralRows` (W12-R-4): the phase-preferring
+   * `latestVersion()` id, falling back to the reporting shell's current phase.
+   */
+  private loadSummaries(code: string, versionId?: number): void {
+    const key = this.summaryCacheKey(code, versionId);
+    if (this.summariesByCode().has(key) || this.loadingSummaryCodes().has(key)) return;
+    this.loadingSummaryCodes.update(set => new Set(set).add(key));
+    this.api.resultsSE.GET_IndicatorContributionSummary(code, versionId).subscribe({
+      next: (res: { response?: { totalsByType?: IndicatorCategory[] } }) => this.cacheSummaries(key, res?.response?.totalsByType ?? []),
+      error: () => this.cacheSummaries(key, [])
     });
   }
 
-  private cacheSummaries(code: string, items: IndicatorCategory[]): void {
-    this.summariesByCode.update(map => new Map(map).set(code, items));
+  private cacheSummaries(key: string, items: IndicatorCategory[]): void {
+    this.summariesByCode.update(map => new Map(map).set(key, items));
     this.loadingSummaryCodes.update(set => {
       const next = new Set(set);
-      next.delete(code);
+      next.delete(key);
       return next;
     });
   }
@@ -2290,6 +2603,16 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   latestVersion(sp: SPProgress | null | undefined): Version | null {
     if (!sp?.versions?.length) return null;
+    const currentPhaseId = this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    const currentPhaseYear = this.dataControlSE?.reportingCurrentPhase?.phaseYear;
+    if (currentPhaseId != null) {
+      const matchId = sp.versions.find(v => Number(v.versionId) === Number(currentPhaseId));
+      if (matchId) return matchId;
+    }
+    if (currentPhaseYear != null) {
+      const matchYear = sp.versions.find(v => Number(v.phaseYear) === Number(currentPhaseYear));
+      if (matchYear) return matchYear;
+    }
     return sp.versions.reduce((latest, v) => (v.phaseYear > latest.phaseYear ? v : latest), sp.versions[0]);
   }
 

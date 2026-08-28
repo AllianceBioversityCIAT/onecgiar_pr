@@ -46,6 +46,8 @@ const RAW_ITEMS: Record<string, unknown>[] = [
     source_name: 'W1/W2',
     lead_center: 'CIAT',
     version_id: '11',
+    phase_name: 'Reporting 2026',
+    phase_year: 2026,
     submitter: 'SP01'
   },
   {
@@ -61,6 +63,8 @@ const RAW_ITEMS: Record<string, unknown>[] = [
     source_name: 'W1/W2',
     lead_center: 'IITA',
     version_id: '11',
+    phase_name: 'Reporting 2026',
+    phase_year: 2026,
     submitter: 'SP01'
   },
   {
@@ -77,6 +81,8 @@ const RAW_ITEMS: Record<string, unknown>[] = [
     source_name: 'W3/Bilaterals',
     lead_center: 'ILRI',
     version_id: '12',
+    phase_name: 'Reporting 2024',
+    phase_year: 2024,
     submitter: 'SP01'
   }
 ];
@@ -386,10 +392,10 @@ describe('ProgrammeResultsComponent', () => {
     expect(commands).toEqual([]);
     expect(extras.queryParamsHandling).toBe('merge');
     expect(extras.replaceUrl).toBe(true);
-    expect(extras.queryParams).toEqual({ status: null, category: 'Policy change', origin: null, center: null });
+    expect(extras.queryParams).toEqual({ phase: null, status: null, category: 'Policy change', origin: null, center: null });
   });
 
-  it('(e) Clear all mirrors all four params back to null', () => {
+  it('(e) Clear all mirrors all five params back to null', () => {
     setup(RAW_ITEMS, { category: 'Policy change', status: 'Submitted', center: 'IITA' });
     (router.navigate as jest.Mock).mockClear();
 
@@ -398,7 +404,7 @@ describe('ProgrammeResultsComponent', () => {
 
     expect(router.navigate).toHaveBeenCalledTimes(1);
     const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
-    expect(extras.queryParams).toEqual({ status: null, category: null, origin: null, center: null });
+    expect(extras.queryParams).toEqual({ phase: null, status: null, category: null, origin: null, center: null });
   });
 
   it('(f) a param pushed through the route updates state and does NOT trigger a mirror navigate (anti-loop)', () => {
@@ -418,6 +424,23 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002', '5003']);
     expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: submitted']);
     expect(text()).toContain('Status: submitted');
+  });
+
+  it('(h) filters by phase from dropdown change and updates the URL and chip', () => {
+    setup(RAW_ITEMS, {});
+    (router.navigate as jest.Mock).mockClear();
+
+    component.onPhaseChange('Reporting 2026');
+    fixture.detectChanges();
+
+    expect(filterService().selectedPhase()).toBe('Reporting 2026');
+    expect(component.filteredRows().map(r => r.code)).toEqual(['5001', '5002']);
+    expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2026']);
+    expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
+      queryParams: expect.objectContaining({ phase: 'Reporting 2026' }),
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    }));
   });
 
   it('maps status ids to the fixed --pr-status-* token PAIRS, never a recombination', () => {

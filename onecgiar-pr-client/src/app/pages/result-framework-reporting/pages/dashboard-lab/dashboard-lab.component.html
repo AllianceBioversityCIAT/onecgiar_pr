@@ -1162,12 +1162,18 @@
         <app-program-overview
           [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
           [statusSegments]="overviewStatusSegments()"
+          [bilateralStatusSegments]="overviewBilateralStatusSegments()"
           [aowProgress]="overviewAowProgress()"
           [xcutProgress]="overviewXcutProgress()"
-          [categories]="overviewCategories()"
           [bilateralCategories]="overviewBilateralCategories()"
           [bilateralCenters]="overviewBilateralCenters()"
-          (openResults)="onOverviewLink($event)" />
+          [w12Heatmap]="overviewW12Heatmap()"
+          [bilateralHeatmap]="overviewBilateralHeatmap()"
+          [w12HeatmapLoading]="loadingSummaries()"
+          [tocMap]="overviewTocMap()"
+          [tocMapLoading]="overviewTocMapLoading()"
+          (openResults)="onOverviewLink($event)"
+          (openAow)="onOpenAow($event)" />
       </article>
       }
 

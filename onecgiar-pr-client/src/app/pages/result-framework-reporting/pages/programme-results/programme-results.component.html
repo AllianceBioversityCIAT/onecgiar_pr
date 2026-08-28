@@ -139,6 +139,17 @@
           <ng-container [ngTemplateOutlet]="comingSoon"></ng-container>
         </div>
 
+        <!-- Phase — single-select -->
+        <div class="pgr-filter w-[170px]" aria-label="Filter by phase">
+          <app-pr-filter-select
+            [options]="phaseSelectOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Phase"
+            [ngModel]="selectValue(filter.selectedPhase())"
+            (changed)="onPhaseChange($event)"></app-pr-filter-select>
+        </div>
+
         <!-- Status — single-select -->
         <div class="pgr-filter w-[150px]" aria-label="Filter by status">
           <app-pr-filter-select
@@ -379,6 +390,12 @@
                         [style.background]="statusBg(row.statusId)">
                         {{ row.statusName }}
                       </span>
+                    </td>
+                  }
+                  @case ('phase') {
+                    <!-- PHASE (optional) — truncated + tooltip. -->
+                    <td class="pgr-td truncate text-[13px] font-normal text-[var(--pr-text)]" [attr.title]="cellText(row, 'phase')">
+                      {{ cellText(row, 'phase') }}
                     </td>
                   }
                   @case ('createdBy') {

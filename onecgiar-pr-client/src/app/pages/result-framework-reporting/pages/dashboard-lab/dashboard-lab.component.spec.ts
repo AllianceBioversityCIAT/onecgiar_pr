@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DashboardLabComponent } from './dashboard-lab.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
@@ -13,6 +13,45 @@ import { ResultLevelService } from '../../../results/pages/result-creator/servic
 import { SPProgress, Status } from '../../../../shared/interfaces/SP-progress.interface';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
 import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
+
+// `DashboardLabComponent` imports `ProgramOverviewComponent`, which (since `OVW-T-3`) imports the
+// real `PrVizChartComponent` → real `echarts/core` — an ESM package Jest cannot parse without a
+// transform. Mocked exactly as `pr-viz-chart.component.spec.ts` does; nothing below ever renders
+// the template (it's overridden to `''`), so these mocks only need to satisfy module resolution.
+jest.mock('echarts/core', () => ({
+  use: jest.fn(),
+  init: jest.fn(() => ({
+    setOption: jest.fn(),
+    resize: jest.fn(),
+    clear: jest.fn(),
+    dispose: jest.fn(),
+    isDisposed: jest.fn(() => false),
+    on: jest.fn()
+  }))
+}));
+
+jest.mock('echarts/charts', () => ({
+  BarChart: class BarChart {},
+  PieChart: class PieChart {},
+  HeatmapChart: class HeatmapChart {}
+}));
+
+jest.mock('echarts/components', () => ({
+  TitleComponent: class TitleComponent {},
+  TooltipComponent: class TooltipComponent {},
+  GridComponent: class GridComponent {},
+  DatasetComponent: class DatasetComponent {},
+  LegendComponent: class LegendComponent {},
+  VisualMapComponent: class VisualMapComponent {}
+}));
+
+jest.mock('echarts/renderers', () => ({
+  SVGRenderer: class SVGRenderer {}
+}));
+
+jest.mock('echarts/features', () => ({
+  UniversalTransition: class UniversalTransition {}
+}));
 
 /**
  * FIRST spec file for `DashboardLabComponent` (~2.2k LOC host component — per its own CLAUDE.md,
@@ -320,6 +359,10 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     });
     expect(centers.find(c => c.name === 'IITA')?.link).toEqual({ origin: 'W3/Bilaterals', center: 'IITA' });
     expect(centers.find(c => c.name === 'Not specified')?.link).toBeNull();
+
+    const bilateralSegments = component.overviewBilateralStatusSegments();
+    expect(bilateralSegments.find(s => s.label === 'Approved')?.count).toBe(2);
+    expect(bilateralSegments.find(s => s.label === 'Approved')?.link).toEqual({ origin: 'W3/Bilaterals', status: 'Approved' });
   });
 
   it('onOverviewLink navigates once with the entity-details commands and exact query params (origin+center)', async () => {
@@ -341,5 +384,484 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'results'], {
       queryParams: { category: 'KP' }
     });
+  });
+
+  /**
+   * `TCM-R-5` (`changes/overview-toc-map`, TCM-T-3) — `program-overview`'s `openAow` resolves a
+   * ToC map click down to an AoW code and this handler navigates. The located route is the SAME
+   * one the retired `entity-aow-card` already links to
+   * (`pages/entity-details/components/entity-aow-card/entity-aow-card.component.html:16`:
+   * `/result-framework-reporting/entity-details/{entityId}/aow/{item.code}`) and the "Entity AOW"
+   * route in `shared/routing/routing-data.ts` (`entity-details/:entityId/aow`, `:aowId` child).
+   * What this CANNOT prove: that the AoW page actually renders at the far end of that route — a
+   * jsdom unit test never resolves lazy `loadComponent` routes. That is TCM-AC-3/T6 (manual/HITL).
+   */
+  it('onOpenAow navigates once to the entity-aow route for the selected SP + clicked AoW code', async () => {
+    const component = await createComponent();
+
+    component.onOpenAow('AOW03');
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'aow', 'AOW03']);
+  });
+
+  it('onOpenAow does nothing when no SP is selected', async () => {
+    const component = await createComponent();
+    component.selectedId.set(null);
+
+    component.onOpenAow('AOW03');
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * `OVW-T-3` — the two heatmap matrix computeds (`overviewW12Heatmap`, `overviewBilateralHeatmap`).
+ * Same established pattern as `OVW-T-1` above: template overridden to '', no `detectChanges()`,
+ * computeds called directly.
+ */
+describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => {
+  const BASE_PROGRAM: SPProgress = {
+    initiativeId: 2,
+    initiativeCode: 'SP02',
+    initiativeName: 'Science Program 02',
+    initiativeShortName: 'SP02',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P25',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: []
+  };
+
+  async function createComponent() {
+    await TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: signal([]),
+            otherSPsList: signal([BASE_PROGRAM]),
+            otherProjectsList: signal([])
+          }
+        },
+        { provide: ApiService, useValue: {} },
+        { provide: DataControlService, useValue: { focusMode: signal(false), slimNav: signal(false) } },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+        { provide: ActivatedRoute, useValue: { data: of({}), snapshot: { data: {} } } },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined } },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    })
+      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(DashboardLabComponent);
+    const component = fixture.componentInstance;
+    component.selectedId.set(BASE_PROGRAM.initiativeId);
+    return component;
+  }
+
+  it('W1/W2 heatmap: keeps the one row with a nonzero cell, maps cells to [editing,qualityAssessed,submitted,others], and makes the Other cell non-navigable', async () => {
+    const component = await createComponent();
+    component.summariesByCode.set(
+      // W12-R-2: `summariesByCode` is now keyed by `code::versionId` (this fixture's PROGRAM has
+      // no versions and the DataControlService mock has no `reportingCurrentPhase`, so the
+      // resolved key is `SP02::default` — see `summaryCacheKey`/`groupedSummaries`).
+      new Map([
+        [
+          'SP02::default',
+          [
+            {
+              resultTypeId: 6,
+              resultTypeName: 'Knowledge product',
+              editing: 1,
+              qualityAssessed: 2,
+              submitted: 0,
+              others: 3,
+              totalResults: 6
+            },
+            {
+              resultTypeId: 7,
+              resultTypeName: 'Innovation development',
+              editing: 0,
+              qualityAssessed: 0,
+              submitted: 0,
+              others: 0,
+              totalResults: 0
+            }
+          ]
+        ]
+      ])
+    );
+
+    const heatmap = component.overviewW12Heatmap();
+
+    // Only 'Knowledge product' survives — the all-zero 'Innovation development' row is dropped.
+    expect(heatmap.rows).toEqual(['Knowledge product']);
+    expect(heatmap.cols).toEqual(['Editing', 'Quality Assessed', 'Submitted', 'Other']);
+    expect(heatmap.cells.map(c => c.value)).toEqual([1, 2, 0, 3]);
+
+    expect(heatmap.cells.find(c => c.c === 0)?.link).toEqual({ category: 'Knowledge product', status: 'Editing' });
+    expect(heatmap.cells.find(c => c.c === 1)?.link).toEqual({ category: 'Knowledge product', status: 'Quality Assessed' });
+    expect(heatmap.cells.find(c => c.c === 2)?.link).toEqual({ category: 'Knowledge product', status: 'Submitted' });
+    // FAIL input: mapping 'Other' to {status:'Other'} instead of null turns this red.
+    expect(heatmap.cells.find(c => c.c === 3)?.link).toBeNull();
+  });
+
+  it('W1/W2 heatmap: returns an empty-rows model (not null) when nothing survives the all-zero filter', async () => {
+    const component = await createComponent();
+    component.summariesByCode.set(
+      // Same `code::default` key as above — see note there.
+      new Map([['SP02::default', [{ resultTypeId: 7, resultTypeName: 'Innovation development', editing: 0, qualityAssessed: 0, submitted: 0, others: 0, totalResults: 0 }]]])
+    );
+
+    const heatmap = component.overviewW12Heatmap();
+
+    expect(heatmap.rows).toEqual([]);
+    expect(heatmap.cells).toEqual([]);
+  });
+
+  it('bilateral heatmap: caps at the top 8 of 10 centers (sorted total desc, then name), sets shownOf, and keeps Not specified non-navigable', async () => {
+    const component = await createComponent();
+    // 10 groups by total (desc): C01 20 · C02 18 · Not specified 16 · C03 14 · C04 12 · C05 10 ·
+    // C06 8 · C07 6 — top 8 — then C08 4 · C09 2 fall outside the cap.
+    const groupCounts: [string, number][] = [
+      ['C01', 20],
+      ['C02', 18],
+      ['', 16], // → 'Not specified'
+      ['C03', 14],
+      ['C04', 12],
+      ['C05', 10],
+      ['C06', 8],
+      ['C07', 6],
+      ['C08', 4],
+      ['C09', 2]
+    ];
+    const rows = groupCounts.flatMap(([center, count]) =>
+      Array.from({ length: count }, () => ({
+        lead_center: center,
+        indicator_category: 'Knowledge product',
+        initiative_role_id: '1'
+      }))
+    );
+    (component as unknown as { bilateralRows: { set: (v: ResultToReview[]) => void } }).bilateralRows.set(
+      rows as unknown as ResultToReview[]
+    );
+
+    const heatmap = component.overviewBilateralHeatmap();
+
+    expect(heatmap.rows.length).toBe(8);
+    expect(heatmap.shownOf).toEqual({ shown: 8, total: 10 });
+    expect(heatmap.rows[0]).toBe('C01');
+    expect(heatmap.rows).toContain('Not specified');
+    expect(heatmap.rows).not.toContain('C08');
+    expect(heatmap.rows).not.toContain('C09');
+
+    const notSpecifiedRow = heatmap.rows.indexOf('Not specified');
+    const notSpecifiedCells = heatmap.cells.filter(c => c.r === notSpecifiedRow);
+    expect(notSpecifiedCells.every(c => c.link === null)).toBe(true);
+
+    const c01Row = heatmap.rows.indexOf('C01');
+    const c01Cell = heatmap.cells.find(c => c.r === c01Row && c.c === heatmap.cols.indexOf('Knowledge product'));
+    expect(c01Cell?.link).toEqual({ origin: 'W3/Bilaterals', center: 'C01', category: 'Knowledge product' });
+  });
+
+  it('bilateral heatmap: omits shownOf and keeps every row when there are 8 or fewer centers', async () => {
+    const component = await createComponent();
+    const rows = [
+      { lead_center: 'C01', indicator_category: 'Knowledge product', initiative_role_id: '1' },
+      { lead_center: 'C02', indicator_category: 'Innovation development', initiative_role_id: '1' }
+    ];
+    (component as unknown as { bilateralRows: { set: (v: ResultToReview[]) => void } }).bilateralRows.set(
+      rows as unknown as ResultToReview[]
+    );
+
+    const heatmap = component.overviewBilateralHeatmap();
+
+    expect(heatmap.rows.length).toBe(2);
+    expect(heatmap.shownOf).toBeUndefined();
+  });
+});
+
+/**
+ * SECOND spec block for `DashboardLabComponent`, scoped to `W12-T-2` (`docs/specs/bugfix/
+ * w12-overview-phase-origin-alignment`): `loadSummaries()`/`summariesByCode` must resolve
+ * `versionId` exactly like `loadBilateralRows` (W12-R-4) and key the cache by `code + version`
+ * (W12-R-2 §"Cache is phase-keyed", W12-DD-5) — a code-only key would serve a stale matrix
+ * across a phase switch. Uses its own `createComponent()` (independent of the RES-T-2 block
+ * above) because these tests need a real `ApiService.resultsSE.GET_IndicatorContributionSummary`
+ * mock and a `DataControlService.reportingCurrentPhase` fallback, neither of which the RES-T-2
+ * helper wires up. `loadSummaries` is private — invoked via `(component as any)` — but the cache
+ * it writes (`summariesByCode`) is a public signal, so assertions read the real public state.
+ */
+describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12-R-2 / W12-R-4)', () => {
+  const PROGRAM: SPProgress = {
+    initiativeId: 4,
+    initiativeCode: 'SP04',
+    initiativeName: 'Science Program 04',
+    initiativeShortName: 'SP04',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P25',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: [
+      { versionId: 10, phaseName: 'Reporting 2025', phaseYear: 2025, totalResults: 0, statuses: [] },
+      { versionId: 20, phaseName: 'Reporting 2026', phaseYear: 2026, totalResults: 0, statuses: [] }
+    ]
+  };
+
+  async function createComponent(getIndicatorContributionSummary: jest.Mock) {
+    await TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: signal([]),
+            otherSPsList: signal([PROGRAM]),
+            otherProjectsList: signal([])
+          }
+        },
+        {
+          provide: ApiService,
+          useValue: {
+            resultsSE: {
+              GET_IndicatorContributionSummary: getIndicatorContributionSummary,
+              // Needed once effects are actually flushed (see the "flushed effects" tests
+              // below): the constructor's OTHER effect calls `loadAows` unconditionally
+              // whenever a program is selected.
+              GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { units: [] } }))
+            }
+          }
+        },
+        {
+          provide: DataControlService,
+          useValue: {
+            focusMode: signal(false),
+            slimNav: signal(false),
+            reportingCurrentPhase: { phaseId: null, phaseYear: null, phaseName: null, portfolioAcronym: null, portfolioId: null },
+            // Real signal, not a jest.fn: the fix reads this INSIDE `groupedSummaries` /
+            // `loadingSummaries` (Issue 1) and the dedicated summaries effect (Issue 2) — both
+            // need `.update()`/tracked-read semantics a mock function can't provide.
+            reportingPhaseVersion: signal(0)
+          }
+        },
+        { provide: ReportingGuideService, useValue: {} },
+        // `navigate` is needed once effects are flushed: the constructor's URL-mirroring effect
+        // calls it unconditionally (unless a pending-AOW/pending-filters restore is in flight,
+        // which is never the case for these tests).
+        { provide: Router, useValue: { navigate: jest.fn() } },
+        { provide: ActivatedRoute, useValue: { data: of({}), snapshot: { data: {} } } },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        {
+          provide: EntityAowService,
+          useValue: {
+            onCloseReportResultModal: () => undefined,
+            // Needed once effects are flushed: `primeEntityAowContext()` (called from the same
+            // effect as `loadAows`) reads/writes `entityId` and calls `getAllDetailsData`.
+            entityId: signal(''),
+            getAllDetailsData: jest.fn()
+          }
+        },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    })
+      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(DashboardLabComponent);
+    const component = fixture.componentInstance;
+    component.selectedId.set(PROGRAM.initiativeId);
+    return component;
+  }
+
+  it('passes the resolved versionId through to GET_IndicatorContributionSummary', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [] } }));
+    const component = await createComponent(getSummary);
+
+    (component as any).loadSummaries('SP04', 10);
+
+    expect(getSummary).toHaveBeenCalledWith('SP04', 10);
+  });
+
+  it('caches the summary under a version-qualified key, not the code alone', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [{ resultTypeId: 1, resultTypeName: 'Outcome' }] } }));
+    const component = await createComponent(getSummary);
+
+    (component as any).loadSummaries('SP04', 10);
+
+    const cache = component.summariesByCode();
+    expect(cache.has('SP04::10')).toBe(true);
+    expect(cache.has('SP04')).toBe(false);
+  });
+
+  // FAIL input this regression closes: a cache keyed by `code` alone would already have an
+  // entry for 'SP04' after the V1 fetch above and would short-circuit the V2 fetch below,
+  // serving V1's matrix under V2 (the exact bug W12-R-2's "Cache is phase-keyed" scenario names).
+  it('refetches on a phase switch (V1 cached does not block a V2 fetch)', async () => {
+    const getSummary = jest
+      .fn()
+      .mockReturnValueOnce(of({ response: { totalsByType: [{ resultTypeId: 1, resultTypeName: 'V1 type' }] } }))
+      .mockReturnValueOnce(of({ response: { totalsByType: [{ resultTypeId: 2, resultTypeName: 'V2 type' }] } }));
+    const component = await createComponent(getSummary);
+
+    (component as any).loadSummaries('SP04', 10);
+    (component as any).loadSummaries('SP04', 20);
+
+    expect(getSummary).toHaveBeenCalledTimes(2);
+    expect(getSummary).toHaveBeenNthCalledWith(1, 'SP04', 10);
+    expect(getSummary).toHaveBeenNthCalledWith(2, 'SP04', 20);
+
+    const cache = component.summariesByCode();
+    expect(cache.get('SP04::10')).toEqual([{ resultTypeId: 1, resultTypeName: 'V1 type' }]);
+    expect(cache.get('SP04::20')).toEqual([{ resultTypeId: 2, resultTypeName: 'V2 type' }]);
+  });
+
+  it('does not refetch the same code + version pair (cache hit)', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [] } }));
+    const component = await createComponent(getSummary);
+
+    (component as any).loadSummaries('SP04', 10);
+    (component as any).loadSummaries('SP04', 10);
+
+    expect(getSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it('groupedSummaries reads the version-qualified key for the selected program', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [] } }));
+    const component = await createComponent(getSummary);
+
+    // No current-phase hint is stubbed, so `latestVersion()` falls back to the highest
+    // `phaseYear` in the fixture — versionId 20 (phaseYear 2026) — same resolution
+    // `loadSummaries` itself would use; the key below MUST match it, not the code alone.
+    const resolvedVersionId = component.latestVersion(component.selected())?.versionId;
+    expect(resolvedVersionId).toBe(20);
+
+    component.summariesByCode.set(
+      new Map([
+        [
+          `SP04::${resolvedVersionId}`,
+          [
+            {
+              resultTypeId: 1,
+              resultTypeName: 'Knowledge product',
+              editing: 1,
+              submitted: 0,
+              qualityAssessed: 0,
+              others: 0,
+              totalResults: 1
+            } as any
+          ]
+        ]
+      ])
+    );
+
+    expect(component.groupedSummaries().outputs.length).toBe(1);
+  });
+
+  // Live regression (owner screenshot after W12-T-2): SP04's matrix card showed "No W1/W2
+  // results reported yet." for a program with real results. Root cause: the constructor
+  // effect resolved `versionId` ONCE (via `latestVersion()`'s "highest phaseYear" fallback,
+  // since `reportingCurrentPhase.phaseId` was still null at effect-fire time) and cached the
+  // summary under THAT key; `reportingCurrentPhase` is a plain mutable object, not a signal,
+  // so once `getCurrentPhases()` landed and the phase resolved to a DIFFERENT version than the
+  // fallback guessed, `groupedSummaries` computed a NEW key on its next read — a cache miss,
+  // permanently, since nothing ever re-fetched under the corrected key. Fix: `loadSummaries`
+  // was extracted into `refreshSelectedSummaries()`, called from its OWN effect that also reads
+  // `reportingPhaseVersion()` (bumped by `DataControlService.getCurrentPhases()`), so a
+  // late-arriving phase re-triggers a fetch under the corrected key. This test exercises
+  // `refreshSelectedSummaries()` directly (not the effect's Angular-scheduling itself, which is
+  // framework-guaranteed) to prove the corrected-key fetch actually heals the stale cache.
+  it('a late-arriving phase (fallback resolved a different version than the real one) re-fetches and heals the empty read', async () => {
+    const getSummary = jest
+      .fn()
+      .mockReturnValueOnce(of({ response: { totalsByType: [{ resultTypeId: 1, resultTypeName: 'Knowledge product' }] } }))
+      .mockReturnValueOnce(of({ response: { totalsByType: [{ resultTypeId: 2, resultTypeName: 'Innovation development' }] } }));
+    const component = await createComponent(getSummary);
+
+    // Simulates the OLD, single-shot effect: fires once, before the phase has loaded, resolving
+    // via the "highest phaseYear" fallback — versionId 20 (see the fixture/test above).
+    (component as any).loadSummaries('SP04', 20);
+    expect(getSummary).toHaveBeenNthCalledWith(1, 'SP04', 20);
+
+    // The phase lands late, and it is NOT the version the fallback guessed.
+    (component.dataControlSE as any).reportingCurrentPhase.phaseId = 10;
+
+    // RED: `groupedSummaries` is read for the first time only now — it resolves versionId 10
+    // (matched by id, since the phase is known) and looks up a key nothing has written yet.
+    expect(component.groupedSummaries().outputs).toEqual([]);
+    expect(component.groupedSummaries().outcomes).toEqual([]);
+
+    // GREEN: the fix's dedicated effect body, invoked directly here in place of Angular's
+    // `reportingPhaseVersion()`-triggered re-run, re-resolves and re-fetches under the real key.
+    (component as any).refreshSelectedSummaries();
+    expect(getSummary).toHaveBeenNthCalledWith(2, 'SP04', 10);
+    expect(component.groupedSummaries().outputs.length).toBe(1);
+    expect(component.groupedSummaries().outputs[0].resultTypeName).toBe('Innovation development');
+  });
+
+  // Reviewer rework (Issue 2): the previous test above calls `refreshSelectedSummaries()`
+  // directly, so it gives zero coverage to the ACTUAL constructor effect that reads
+  // `reportingPhaseVersion()` — deleting that read (or the whole dedicated effect) would not
+  // redden anything. This test flushes REAL Angular effects (`TestBed.tick()`, the project's
+  // established idiom — see `font-scale.service.spec.ts`, `global-search-palette.service.spec.ts`)
+  // so the effect itself, not a stand-in method call, is what's under test.
+  it('flushed effects: a reportingPhaseVersion() bump re-fetches under the corrected key (Issue 2)', async () => {
+    const getSummary = jest
+      .fn()
+      .mockReturnValueOnce(of({ response: { totalsByType: [] } }))
+      .mockReturnValueOnce(of({ response: { totalsByType: [] } }));
+    const component = await createComponent(getSummary);
+
+    // Flushes every constructor effect's first run, including the dedicated summaries effect:
+    // no phase known yet, so `latestVersion()` falls back to the highest phaseYear — 20.
+    TestBed.tick();
+    expect(getSummary).toHaveBeenNthCalledWith(1, 'SP04', 20);
+
+    // The phase lands late (a different version than the fallback guessed) and bumps the
+    // signal the effect now reads — mirroring `DataControlService.getCurrentPhases()`.
+    (component.dataControlSE as any).reportingCurrentPhase.phaseId = 10;
+    (component.dataControlSE.reportingPhaseVersion as WritableSignal<number>).update(v => v + 1);
+    TestBed.tick();
+
+    expect(getSummary).toHaveBeenNthCalledWith(2, 'SP04', 10);
+  });
+
+  // Reviewer rework (Issue 1): when the CORRECTED key is already cached (e.g. the phase flips
+  // back to one already fetched), `loadSummaries` early-returns — no fetch, no `summariesByCode`
+  // write, nothing to force a recompute. Before the fix, `groupedSummaries` would keep returning
+  // its memoized value from whichever key it last resolved. Pre-seeding both cache entries
+  // directly isolates this from fetch/effect timing entirely — it is purely a test of
+  // `groupedSummaries`'s OWN reactivity to `reportingPhaseVersion()`.
+  it('a phase-version bump busts the memoized groupedSummaries when the corrected key is already cached (Issue 1)', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [] } }));
+    const component = await createComponent(getSummary);
+
+    component.summariesByCode.set(
+      new Map([
+        ['SP04::20', [{ resultTypeId: 1, resultTypeName: 'Knowledge product', editing: 1, submitted: 0, qualityAssessed: 0, others: 0, totalResults: 1 } as any]],
+        ['SP04::10', [{ resultTypeId: 2, resultTypeName: 'Innovation development', editing: 1, submitted: 0, qualityAssessed: 0, others: 0, totalResults: 1 } as any]]
+      ])
+    );
+
+    // No phase known yet -> fallback resolves versionId 20 -> memoizes the V20 read.
+    expect(component.groupedSummaries().outputs[0].resultTypeName).toBe('Knowledge product');
+
+    // The phase resolves to v10 — already cached (a cache HIT; `loadSummaries` would no-op if
+    // called). Mutating the plain `reportingCurrentPhase` object alone would NOT bust the
+    // computed's memo; bumping `reportingPhaseVersion` (now read inside `groupedSummaries`) does.
+    (component.dataControlSE as any).reportingCurrentPhase.phaseId = 10;
+    (component.dataControlSE.reportingPhaseVersion as WritableSignal<number>).update(v => v + 1);
+
+    expect(component.groupedSummaries().outputs[0].resultTypeName).toBe('Innovation development');
   });
 });

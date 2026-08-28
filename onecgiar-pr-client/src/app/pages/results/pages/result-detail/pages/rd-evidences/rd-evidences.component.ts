@@ -1,16 +1,38 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
 import { EvidencesBody, EvidencesCreateInterface } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 @Component({
   selector: 'app-rd-evidences',
   templateUrl: './rd-evidences.component.html',
   styleUrls: ['./rd-evidences.component.scss'],
   standalone: false
 })
-export class RdEvidencesComponent implements OnInit {
+export class RdEvidencesComponent implements OnInit, OnDestroy {
+  /** CLARISA result type "Policy change" — the only type P2-3262 puts guidance behind an ⓘ. */
+  private static readonly POLICY_CHANGE_RESULT_TYPE_ID = 1;
+
+  /**
+   * `clarisa_policy_stage.id` → the stage NUMBER the guidance is written against.
+   * Verified live on 27-Aug-2026 against `GET /clarisa/policy-stages/get/all`
+   * (6 = "Stage 1", 7 = "Stage 2", 8 = "Stage 3").
+   * Kept local instead of injecting `PolicyControlListService`: that service fires two CLARISA
+   * GETs from its constructor, and this section renders for EVERY result type, so injecting it
+   * would add two requests to Knowledge Products, Innovations and the rest for nothing.
+   */
+  private static readonly POLICY_STAGE_NUMBER_BY_ID: Readonly<Record<number, number>> = { 6: 1, 7: 2, 8: 3 };
+
+  private readonly fieldsManagerSE = inject(FieldsManagerService);
+
+  /** `results_policy_changes.policy_stage_id` of the open result; null until the GET lands. */
+  policyStageId: number | null = null;
+  /** One stage lookup per open result. Reset by the effect when the result changes (phase switch). */
+  private policyStageRequested = false;
+  private lastResultIdSeen: unknown = undefined;
+
   evidencesBody = new EvidencesBody();
   readinessLevel: number = 0;
   isOptional: boolean = false;
@@ -60,6 +82,108 @@ export class RdEvidencesComponent implements OnInit {
     return mainText;
   }
 
+  /**
+   * P2-3262: TRUE when the evidence guidance must leave the grey box and live behind the single ⓘ
+   * of the section heading — Policy change results only, from the 2026 reporting phase on.
+   *
+   * PHASE, NOT PORTFOLIO. The gate is the shared phase-year threshold
+   * `ReportingDesignYear.ReportingFormGuidanceRedesign` (via `FieldsManagerService`), the very same
+   * one P2-3201 used to move field guidance into ⓘ tooltips — this is the same redesign, applied to
+   * one more section. `isP25()` answers "which portfolio" and is NOT interchangeable: prtest holds
+   * 2025-phase results inside the P25 portfolio, and a portfolio gate would rewrite their form.
+   */
+  policyChangeGuidanceAsTooltip(): boolean {
+    return (
+      this.api.dataControlSE?.currentResult?.result_type_id === RdEvidencesComponent.POLICY_CHANGE_RESULT_TYPE_ID &&
+      this.fieldsManagerSE.isReportingFormGuidance2026()
+    );
+  }
+
+  /**
+   * P2-3262 Part 1 + Part 2: the general evidence rules (identical text to the grey box every other
+   * result type still shows) followed by the Policy change block, whose stage requirement adapts to
+   * the stage already chosen in the "Policy change information" section.
+   */
+  policyChangeEvidenceGuidance(): string {
+    return `${this.alertStatus()}${this.policyChangeSpecificGuidance()}`;
+  }
+
+  /** Part 2 only. Split out so the stage-dependent branch is testable on its own. */
+  private policyChangeSpecificGuidance(): string {
+    return `<p><strong>Policy change evidence</strong></p>
+    <p>Evidence is required for all stages to validate the specific claims made as to the relationship between CGIAR's research and any reported policy outcome (i.e. that there was a meaningful contribution of CGIAR). Evidence supporting the CGIAR contribution does not need to be public — it may be kept out of the public domain. In some cases, the contribution could be explicitly mentioned in a policy strategy or impact assessment study; in others it may only appear in emails or verbally.</p>
+    ${this.stageSpecificRequirements()}
+    <p><strong>Examples per evidence type</strong></p>
+    <p><strong>CGIAR contribution to an outcome (Stages 1, 2 and 3)</strong></p>
+    <ul>
+    <li>Citation of CGIAR outputs in the document used as evidence</li>
+    <li>Acknowledgement of the CGIAR contribution</li>
+    <li>Third-party evaluations describing the CGIAR contribution</li>
+    <li>Documents co-authored by, or quoting, the organization with the policy outcome</li>
+    <li>Media stories announcing the outcome that mention CGIAR</li>
+    <li>Emails from the organization acknowledging the contribution</li>
+    </ul>
+    <p><strong>Evidence that a policy outcome has taken place (Stage 2)</strong></p>
+    <ul>
+    <li>A link to the new or revised policy document (strategy, law, regulation, program, investment)</li>
+    <li>If unavailable, a digital copy stored for review</li>
+    <li>A link to the policy organization's website announcing the outcome</li>
+    <li>A link to a media story announcing it</li>
+    </ul>
+    <p><strong>Evidence of impact of a policy (Stage 3)</strong></p>
+    <ul>
+    <li>Strong evidence such as a peer-reviewed publication or an external evaluation is required.</li>
+    </ul>`;
+  }
+
+  /**
+   * The stage requirement the ticket writes for the stage currently selected on the result.
+   * Stage 1 has no requirement of its own in the ticket, so it renders none.
+   * The ticket does not say what to show BEFORE a stage is picked (the stage lives in another
+   * section); both requirements are listed then, so the guidance is never empty.
+   */
+  private stageSpecificRequirements(): string {
+    const stage = RdEvidencesComponent.POLICY_STAGE_NUMBER_BY_ID[this.policyStageId];
+    const items: string[] = [];
+    if (stage === undefined || stage === 2)
+      items.push(
+        '<li><strong>Stage 2 – Policy enacted:</strong> Evidence that an outcome has taken place is required, e.g., a link to the published/enacted documents must be provided.</li>'
+      );
+    if (stage === undefined || stage === 3)
+      items.push(
+        '<li><strong>Stage 3 – Evidence of impact of policy:</strong> A link to strong evidence of the impact of the policy on people or the environment must be provided. Where a Key Results Story is completed to evidence a policy outcome, other links to evidence are not required.</li>'
+      );
+    if (!items.length) return '';
+    return `<p><strong>Stage-specific requirements</strong></p><ul>${items.join('')}</ul>`;
+  }
+
+  /**
+   * Publishes (or clears) the section-heading ⓘ. Re-run after the policy-change GET lands, because
+   * the stage-specific paragraph is only known then.
+   */
+  private publishSectionGuidance(): void {
+    this.dataControlSE.currentResultSectionGuidance.set(this.policyChangeGuidanceAsTooltip() ? this.policyChangeEvidenceGuidance() : '');
+  }
+
+  /** Fires the stage lookup at most once per open result, and only behind the P2-3262 gate. */
+  private maybeFetchPolicyStage(): void {
+    if (!this.policyChangeGuidanceAsTooltip() || this.policyStageRequested) return;
+    this.policyStageRequested = true;
+    this.getPolicyStage();
+  }
+
+  /** Only source of `policy_stage_id` for this section: the Policy change information endpoint. */
+  private getPolicyStage(): void {
+    this.api.resultsSE.GET_policyChanges().subscribe({
+      next: ({ response }) => {
+        this.policyStageId = response?.policy_stage_id ?? null;
+        this.publishSectionGuidance();
+      },
+      // A failed lookup must not blank the guidance: it stays on the "no stage picked yet" text.
+      error: () => this.publishSectionGuidance()
+    });
+  }
+
   constructor(
     public api: ApiService,
     public innovationControlListSE: InnovationControlListService,
@@ -67,6 +191,23 @@ export class RdEvidencesComponent implements OnInit {
     public dataControlSE: DataControlService
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Evidence');
+
+    /**
+     * P2-3262: the result can land AFTER this section mounts (`GET_resultById` resets
+     * `currentResultSignal` to `{}` and fills it later), and it changes again on a phase switch
+     * without the component being recreated. Publishing only from `ngOnInit` would leave the ⓘ
+     * missing in the first case and stale in the second.
+     */
+    effect(() => {
+      const current = this.dataControlSE.currentResultSignal();
+      if (current?.id !== this.lastResultIdSeen) {
+        this.lastResultIdSeen = current?.id;
+        this.policyStageId = null;
+        this.policyStageRequested = false;
+      }
+      this.publishSectionGuidance();
+      this.maybeFetchPolicyStage();
+    });
   }
 
   /**
@@ -78,6 +219,15 @@ export class RdEvidencesComponent implements OnInit {
   ngOnInit(): void {
     this.getSectionInformation();
     this.validateCheckBoxes();
+    // P2-3262: publish immediately (so the ⓘ is there on first paint) and again once the stage lands.
+    this.publishSectionGuidance();
+    this.maybeFetchPolicyStage();
+  }
+
+  /** P2-3262: the shell heading is shared — leaving this set would show Evidence guidance on the
+   * next section the user opens. */
+  ngOnDestroy(): void {
+    this.dataControlSE.currentResultSectionGuidance.set('');
   }
 
   getSectionInformation() {
@@ -128,8 +278,10 @@ export class RdEvidencesComponent implements OnInit {
     evidenceIterator.percentage = 100;
   }
 
-  async loadAllFiles() {
+  /** P2-3220: returns the names of the files whose SharePoint upload failed (empty when all went up). */
+  async loadAllFiles(): Promise<string[]> {
     const { evidences } = this.evidencesBody;
+    const failed: string[] = [];
     let count = 0;
     for (const evidenceIterator of evidences) {
       if (evidenceIterator.file) count++;
@@ -155,16 +307,32 @@ export class RdEvidencesComponent implements OnInit {
         evidenceIterator.sp_file_name = response?.name;
         evidenceIterator.sp_folder_path = response?.parentReference?.path.split('root:').pop();
       } catch (error) {
-        console.error(error);
+        // P2-3220: never fail silently. The section is saved either way (the file also travels in
+        // the multipart body of `POST_evidences`), but an evidence with no `link` and no `sp_*`
+        // metadata is not stored in SharePoint, and the user has to be told rather than left
+        // believing the upload worked.
+        failed.push(evidenceIterator?.file?.name ?? 'file');
+        console.error('[rd-evidences] SharePoint upload failed for', evidenceIterator?.file?.name, error);
       }
     }
+    return failed;
   }
 
   async onSaveSection() {
     this.isSaving = true;
     this.saveButtonSE.showSaveSpinner();
-    await this.loadAllFiles();
+    const failedUploads = await this.loadAllFiles();
     this.saveButtonSE.hideSaveSpinner();
+
+    // P2-3220: tell the user explicitly which files did not reach SharePoint.
+    if (failedUploads.length) {
+      this.api.alertsFe.show({
+        id: 'evidence-upload-failed',
+        title: `${failedUploads.length} file(s) could not be stored: ${failedUploads.join(', ')}`,
+        description: 'The evidence was saved, but those files are not in SharePoint. Please re-attach them and save again.',
+        status: 'error'
+      });
+    }
 
     this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe({
       next: () => this.getSectionInformation(),

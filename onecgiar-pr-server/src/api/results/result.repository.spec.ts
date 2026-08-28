@@ -150,4 +150,82 @@ describe('ResultRepository (unit)', () => {
     expect(sql).toContain('ORDER BY r.created_date DESC, r.id DESC');
     expect(params).toEqual(['BIO', 'BIO', 36]);
   });
+
+  // W12-R-2: matrix must count only W1/W2-origin (source='Result'), primary-submitter
+  // (initiative_role_id=1) results in the requested version, with the meter's status/type
+  // universe (status != 4, type NOT IN (10, 11)) — not the pre-fix bilateral/contributor/
+  // year-scoped/narrower-universe query.
+  describe('getIndicatorContributionSummaryByProgram (W12-R-2)', () => {
+    it('binds exactly as many parameters as the SQL has ? placeholders (hotfix: a ? inside a SQL comment was consumed by mysql2 as a 3rd placeholder → QueryFailedError 500)', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      // mysql2 substitutes positionally and does NOT skip SQL comments — every `?` counts.
+      expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+      expect(params).toEqual([15, 42]);
+    });
+
+    it('scopes by origin (r.source = Result) to exclude bilateral (source=API) rows', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain("r.source = 'Result'");
+    });
+
+    it('scopes by ownership (rbi.initiative_role_id = 1) to exclude contributor-role rows', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('rbi.initiative_role_id = 1');
+    });
+
+    it('scopes by r.version_id (not the year-COALESCE) to exclude other-version rows', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('AND r.version_id = ?');
+      expect(sql).not.toContain('reported_year_id');
+      expect(sql).not.toContain('COALESCE');
+      expect(params).toEqual([15, 42]);
+    });
+
+    it('reconciles the status universe to the meter (status != 4, not IN (1,2,3))', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('r.status_id != 4');
+      expect(sql).not.toContain('r.status_id IN (1, 2, 3)');
+    });
+
+    it('reconciles the result-type universe to the meter (NOT IN (10, 11))', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('r.result_type_id NOT IN (10, 11)');
+      expect(sql).not.toContain(
+        'r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)',
+      );
+    });
+
+    it('drops the result_level_id filter absent from the meter base query (W12-DD-2)', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).not.toContain('result_level_id');
+    });
+  });
 });

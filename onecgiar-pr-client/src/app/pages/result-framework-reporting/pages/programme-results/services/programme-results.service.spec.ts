@@ -125,6 +125,8 @@ describe('ProgrammeResultsService', () => {
           indicator: '',
           section: '',
           versionId: '34',
+          phaseName: '',
+          phaseYear: null,
           submitterCode: 'SP01'
         }
       ]);
@@ -246,15 +248,19 @@ describe('ProgrammeResultsService', () => {
       GET_AllResultsWithUseRole.mockReturnValue(
         of(
           resultsResponse([
-            rawResult({ status_name: 'Submitted', result_type: 'Innovation development', source_name: 'W3/Bilaterals', lead_center: 'IITA' }),
-            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2', lead_center: 'IWMI' }),
-            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2', lead_center: 'IWMI' }),
-            rawResult({ status_name: null, result_type: '', source_name: undefined, lead_center: '' }),
-            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2', lead_center: null })
+            rawResult({ status_name: 'Submitted', result_type: 'Innovation development', source_name: 'W3/Bilaterals', lead_center: 'IITA', phase_name: 'Reporting 2026 - P26' }),
+            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2', lead_center: 'IWMI', phase_name: 'Reporting 2024 - P24' }),
+            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2', lead_center: 'IWMI', phase_name: 'Reporting 2026 - P26' }),
+            rawResult({ status_name: null, result_type: '', source_name: undefined, lead_center: '', phase_name: '' }),
+            rawResult({ status_name: 'Editing', result_type: 'Capacity sharing', source_name: 'W1/W2', lead_center: null, phase_name: null })
           ])
         )
       );
       service.load('SP01');
+    });
+
+    it('derives sorted descending, de-duplicated phase options', () => {
+      expect(service.phaseOptions()).toEqual(['Reporting 2026 - P26', 'Reporting 2024 - P24']);
     });
 
     it('derives sorted, de-duplicated status options', () => {
@@ -274,13 +280,14 @@ describe('ProgrammeResultsService', () => {
     });
 
     it('never offers an empty option', () => {
-      const all = [...service.statusOptions(), ...service.categoryOptions(), ...service.originOptions(), ...service.centerOptions()];
+      const all = [...service.phaseOptions(), ...service.statusOptions(), ...service.categoryOptions(), ...service.originOptions(), ...service.centerOptions()];
       expect(all.every(option => option.length > 0)).toBe(true);
     });
 
     it('empties the option lists again on reset()', () => {
       service.reset();
 
+      expect(service.phaseOptions()).toEqual([]);
       expect(service.statusOptions()).toEqual([]);
       expect(service.categoryOptions()).toEqual([]);
       expect(service.originOptions()).toEqual([]);

@@ -109,8 +109,12 @@
     font-weight: 600;
   }
 
+  // P2-3262: `flex: 1` used to stretch the title across the row, which would have parked the
+  // section ⓘ against the right edge instead of next to the name. The title now sizes to its
+  // content and the green check keeps the right edge through `margin-left: auto`, so the heading
+  // looks identical for every section that publishes no guidance.
   .rd_section_title {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
     margin: 0;
     font-size: 16px;
@@ -119,8 +123,16 @@
     color: var(--pr-text-heading);
   }
 
+  // P2-3262: the section-level guidance trigger. `.sgi-dac-info` (custom-fields.scss, global)
+  // already styles the button; only its flex behaviour belongs to this row.
+  .rd_section_head .sgi-dac-info {
+    flex: none;
+    margin-left: -6px;
+  }
+
   .rd_section_done {
     flex: none;
+    margin-left: auto;
     font-size: 16px;
     color: var(--pr-status-approved-fg);
   }

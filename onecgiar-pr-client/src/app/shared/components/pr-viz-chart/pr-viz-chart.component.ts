@@ -16,7 +16,11 @@ import {
   PieChart,
   PieSeriesOption,
   HeatmapChart,
-  HeatmapSeriesOption
+  HeatmapSeriesOption,
+  RadarChart,
+  RadarSeriesOption,
+  TreeChart,
+  TreeSeriesOption
 } from 'echarts/charts';
 import {
   TitleComponent,
@@ -30,7 +34,9 @@ import {
   LegendComponent,
   LegendComponentOption,
   VisualMapComponent,
-  VisualMapComponentOption
+  VisualMapComponentOption,
+  RadarComponent,
+  RadarComponentOption
 } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
 import { UniversalTransition } from 'echarts/features';
@@ -41,12 +47,15 @@ export const REGISTERED_ECHARTS_MODULES = [
   BarChart,
   PieChart,
   HeatmapChart,
+  RadarChart,
+  TreeChart,
   TitleComponent,
   TooltipComponent,
   GridComponent,
   DatasetComponent,
   LegendComponent,
   VisualMapComponent,
+  RadarComponent,
   UniversalTransition
 ];
 
@@ -63,12 +72,15 @@ export type EChartsOption = echarts.ComposeOption<
   | BarSeriesOption
   | PieSeriesOption
   | HeatmapSeriesOption
+  | RadarSeriesOption
+  | TreeSeriesOption
   | TitleComponentOption
   | TooltipComponentOption
   | GridComponentOption
   | DatasetComponentOption
   | LegendComponentOption
   | VisualMapComponentOption
+  | RadarComponentOption
 >;
 
 @Component({

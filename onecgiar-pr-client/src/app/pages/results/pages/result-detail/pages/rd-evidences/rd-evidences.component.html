@@ -1,5 +1,10 @@
 <div class="detail_container" [appSectionSkeleton]="sectionLoading()">
-  <app-alert-status [description]="alertStatus()"> </app-alert-status>
+  <!-- P2-3262: for Policy change results from the 2026 phase on, this guidance moves into the single
+       ⓘ of the section heading (published from the component into `currentResultSectionGuidance`).
+       Every other result type and every earlier phase keeps this grey box exactly as it was. -->
+  @if (!policyChangeGuidanceAsTooltip()) {
+    <app-alert-status [description]="alertStatus()"> </app-alert-status>
+  }
 
   <app-alert-status *ngIf="isOptional" description="No evidence is required for innovations that are at innovation readiness level 0 (idea).">
   </app-alert-status>

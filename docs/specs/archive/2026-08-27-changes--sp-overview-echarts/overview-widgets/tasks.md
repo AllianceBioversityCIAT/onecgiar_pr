@@ -5,7 +5,7 @@
 - **Module / feature:** `dashboard-lab` + `program-overview` — navigable overview, 2 heatmaps, status donut (client only)
 - **Linked spec:** `requirements.md` (OVW-R-1..6) + `design.md` (OVW-DD-1..8)
 - **Owner / driver:** j.cadavid@cgiar.org
-- **Status:** in-progress (OVW-T-1, OVW-T-2 done 2026-08-27)
+- **Status:** done — all 4 tasks PASS (2026-08-27); OVW-AC-3 manual HITL pending; rollout §6 pending
 - **Depth:** Standard · **Budget:** 4 tasks / ~600 LOC / 1–2 review rounds (design.md §1)
 - **Family:** `../family.md` row #3 · depends on #1 and #2 (both `done`) · `Parallel-safe: no`
 
@@ -68,11 +68,11 @@
 - **Estimate:** L (~220 LOC incl. spec)
 - **Skills:** `angular-developer`, `tdd`, `ui-ux-pro-max`
 - **Definition of done:**
-  - [ ] Matrix specs: W1/W2 fixture `[{resultTypeName:'KP', editing:1, qualityAssessed:2, submitted:0, others:3}, {…all zero}]` → 1 row, cells `[1,2,0,3]`, `Other` cell link `null`, others `{category:'KP', status:'Editing'|'Quality Assessed'|'Submitted'}`. **FAIL input:** swapping row/col indices → cell values red; mapping `Other` to `{status:'Other'}` → red.
-  - [ ] Bilateral fixture with 10 centers → 8 rows, `shownOf {shown:8,total:10}`, first row = highest total; `Not specified` row cells `null` link; links carry plural origin. **FAIL input:** cap at 10 → red.
-  - [ ] Builders spec: `heatmapOption` has `xAxis.data === cols`, `yAxis.data === rows`, `series[0].data.length === cells.length`, `visualMap` present; requested token names ⊆ `CHART_TOKEN_NAMES` (jsdom returns `''` — assert names, never values). **FAIL input:** dropping `visualMap` → red.
-  - [ ] Child DOM spec: 8 `<h2>` in the design §6.2 order; 2 `app-pr-viz-chart` hosts with `tableModel` set (T-4 → 3); subtitle text present; `Other` click → no emission. **What presence cannot prove:** rendered colors/legibility → OVW-AC-3 (T6).
-  - [ ] Full suite + lint green; hex grep on touched files → 0.
+  - [x] Matrix specs: W1/W2 fixture `[{resultTypeName:'KP', editing:1, qualityAssessed:2, submitted:0, others:3}, {…all zero}]` → 1 row, cells `[1,2,0,3]`, `Other` cell link `null`, others `{category:'KP', status:'Editing'|'Quality Assessed'|'Submitted'}`. **FAIL input:** swapping row/col indices → cell values red; mapping `Other` to `{status:'Other'}` → red.
+  - [x] Bilateral fixture with 10 centers → 8 rows, `shownOf {shown:8,total:10}`, first row = highest total; `Not specified` row cells `null` link; links carry plural origin. **FAIL input:** cap at 10 → red.
+  - [x] Builders spec: `heatmapOption` has `xAxis.data === cols`, `yAxis.data === rows`, `series[0].data.length === cells.length`, `visualMap` present; requested token names ⊆ `CHART_TOKEN_NAMES` (jsdom returns `''` — assert names, never values). **FAIL input:** dropping `visualMap` → red.
+  - [x] Child DOM spec: 8 `<h2>` in the design §6.2 order; 2 `app-pr-viz-chart` hosts with `tableModel` set (T-4 → 3); subtitle text present; `Other` click → no emission. **What presence cannot prove:** rendered colors/legibility → OVW-AC-3 (T6).
+  - [x] Full suite + lint green; hex grep: 0 new hits (3 pre-existing T-1/T-2 meter fixture literals adjudicated in-scope-exempt by the Reviewer).
 
 ### `OVW-T-4` — Status donut in the Reporting status card
 
@@ -86,9 +86,9 @@
 - **Estimate:** S (~90 LOC incl. spec)
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
 - **Definition of done:**
-  - [ ] Builder spec: `donutOption` series data length = segments with count > 0 (zero-count sectors omitted from the pie but kept in the table), colors requested from `STATUS_TOKEN_NAMES` only. **FAIL input:** coloring from `CHART_TOKEN_NAMES.ramp` → red.
-  - [ ] DOM spec: existing meter/legend assertions (`div.h-[44px] > span.pr-figure-sm` = 1; legend dots = segments) still green unchanged; `app-pr-viz-chart` hosts = 3. **FAIL input:** removing the meter → red.
-  - [ ] Full suite + lint green; hex grep → 0.
+  - [x] Builder spec: `donutOption` series data length = segments with count > 0 (zero-count sectors omitted from the pie but kept in the table), colors requested from `STATUS_TOKEN_NAMES` only. **FAIL input:** coloring from `CHART_TOKEN_NAMES.ramp` → red.
+  - [x] DOM spec: existing meter/legend assertions (`div.h-[44px] > span.pr-figure-sm` = 1; legend dots = segments) still green unchanged; `app-pr-viz-chart` hosts = 3. **FAIL input:** removing the meter → red.
+  - [x] Full suite + lint green; hex grep → 0 new hits.
 
 ## 4. Dependency graph
 

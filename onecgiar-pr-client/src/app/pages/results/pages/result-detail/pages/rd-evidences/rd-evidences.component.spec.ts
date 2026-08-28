@@ -10,6 +10,8 @@ import { AlertStatusComponent } from '../../../../../../custom-fields/alert-stat
 import { SaveButtonComponent } from '../../../../../../custom-fields/save-button/save-button.component';
 import { DetailSectionTitleComponent } from '../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { signal } from '@angular/core';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 jest.useFakeTimers();
 
@@ -19,6 +21,7 @@ describe('RdEvidencesComponent', () => {
   let mockApiService: any;
   let mockInnovationControlListService: any;
   let mockSaveButtonService: any;
+  let mockFieldsManagerService: any;
   const mockGET_evidencesResponse = {
     evidences: [],
     innovation_readiness_level_id: 1
@@ -40,7 +43,8 @@ describe('RdEvidencesComponent', () => {
         POST_createUploadSession: async () => firstValueFrom(await Promise.resolve(of(mockGET_loadFileInUploadSessionResponse))),
         GET_loadFileInUploadSession: () => of({ nextExpectedRanges: ['sampleRange'] }),
         PUT_loadFileInUploadSession: () => of(mockPUT_loadFileInUploadSessionResponse),
-        POST_evidences: () => of({ response: [] })
+        POST_evidences: () => of({ response: [] }),
+        GET_policyChanges: () => of({ response: { policy_stage_id: null } })
       },
       alertsFe: {
         show: jest.fn()
@@ -68,6 +72,11 @@ describe('RdEvidencesComponent', () => {
       hideSaveSpinner: jest.fn()
     };
 
+    // P2-3262: the guidance gate is the PHASE-year threshold, never the portfolio.
+    mockFieldsManagerService = {
+      isReportingFormGuidance2026: jest.fn().mockReturnValue(false)
+    };
+
     await TestBed.configureTestingModule({
       declarations: [RdEvidencesComponent, NoDataTextComponent, AlertStatusComponent, SaveButtonComponent, DetailSectionTitleComponent],
       imports: [HttpClientTestingModule],
@@ -83,6 +92,10 @@ describe('RdEvidencesComponent', () => {
         {
           provide: SaveButtonService,
           useValue: mockSaveButtonService
+        },
+        {
+          provide: FieldsManagerService,
+          useValue: mockFieldsManagerService
         }
       ]
     }).compileComponents();
@@ -126,6 +139,156 @@ describe('RdEvidencesComponent', () => {
       const result = component.alertStatus();
       expect(result).toContain('Submit a maximum of 6 pieces of evidence per result.');
       expect(result).not.toContain('Please list evidence from most to least important.');
+    });
+  });
+
+  // P2-3262: the evidence guidance moves from the grey box into ONE ⓘ on the section heading,
+  // for Policy change results only, from the 2026 reporting phase on.
+  describe('P2-3262 — Policy change evidence guidance', () => {
+    const asPolicyChange2026 = () => {
+      mockApiService.dataControlSE.isKnowledgeProduct = false;
+      mockApiService.dataControlSE.currentResult = { result_type_id: 1 };
+      mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(true);
+    };
+
+    describe('policyChangeGuidanceAsTooltip (the gate)', () => {
+      it('is TRUE for a Policy change result in a 2026+ phase', () => {
+        asPolicyChange2026();
+
+        expect(component.policyChangeGuidanceAsTooltip()).toBe(true);
+      });
+
+      it('is FALSE for a Policy change result in a pre-2026 phase — the ticket is 2026-onwards only', () => {
+        asPolicyChange2026();
+        mockFieldsManagerService.isReportingFormGuidance2026.mockReturnValue(false);
+
+        expect(component.policyChangeGuidanceAsTooltip()).toBe(false);
+      });
+
+      it('is FALSE for any other result type, even in 2026 — "no tooltip for result types other than Policy Change"', () => {
+        asPolicyChange2026();
+        mockApiService.dataControlSE.currentResult = { result_type_id: 5 };
+
+        expect(component.policyChangeGuidanceAsTooltip()).toBe(false);
+      });
+
+      it('reads the PHASE gate, never the portfolio', () => {
+        asPolicyChange2026();
+
+        component.policyChangeGuidanceAsTooltip();
+
+        expect(mockFieldsManagerService.isReportingFormGuidance2026).toHaveBeenCalled();
+      });
+    });
+
+    describe('policyChangeEvidenceGuidance (the tooltip text)', () => {
+      beforeEach(() => asPolicyChange2026());
+
+      it('opens with Part 1 — the same general rules the grey box shows everywhere else', () => {
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Submit a maximum of 6 pieces of evidence per result.');
+        expect(text).toContain('Links to SharePoint, One Drive, Google Drive, DropBox and other file storage platforms are not allowed.');
+      });
+
+      it('follows with Part 2 — the Policy change rule and the examples grouped by evidence type', () => {
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Evidence is required for all stages to validate the specific claims');
+        expect(text).toContain('CGIAR contribution to an outcome (Stages 1, 2 and 3)');
+        expect(text).toContain('Evidence that a policy outcome has taken place (Stage 2)');
+        expect(text).toContain('Evidence of impact of a policy (Stage 3)');
+      });
+
+      it('shows ONLY the Stage 2 requirement when the result is at stage 2 (CLARISA id 7)', () => {
+        component.policyStageId = 7;
+
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Stage 2 – Policy enacted:');
+        expect(text).not.toContain('Stage 3 – Evidence of impact of policy:');
+      });
+
+      it('shows ONLY the Stage 3 requirement when the result is at stage 3 (CLARISA id 8)', () => {
+        component.policyStageId = 8;
+
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Stage 3 – Evidence of impact of policy:');
+        expect(text).not.toContain('Stage 2 – Policy enacted:');
+      });
+
+      it('shows no stage requirement at stage 1 (CLARISA id 6) — the ticket writes none for it', () => {
+        component.policyStageId = 6;
+
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).not.toContain('Stage-specific requirements');
+      });
+
+      it('lists both requirements while no stage has been chosen yet, so the guidance is never empty', () => {
+        component.policyStageId = null;
+
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Stage 2 – Policy enacted:');
+        expect(text).toContain('Stage 3 – Evidence of impact of policy:');
+      });
+    });
+
+    describe('publishing into the section heading', () => {
+      let dataControlSE: DataControlService;
+
+      beforeEach(() => {
+        dataControlSE = TestBed.inject(DataControlService);
+      });
+
+      it('publishes the guidance and fetches the stage on init for a Policy change 2026 result', () => {
+        asPolicyChange2026();
+        const stageSpy = jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges');
+
+        component.ngOnInit();
+
+        expect(stageSpy).toHaveBeenCalled();
+        expect(dataControlSE.currentResultSectionGuidance()).toContain('Evidence is required for all stages');
+      });
+
+      it('stores the stage from the policy-change GET so the text can adapt to it', () => {
+        asPolicyChange2026();
+        jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges').mockReturnValue(of({ response: { policy_stage_id: 8 } }));
+
+        component.ngOnInit();
+
+        expect(component.policyStageId).toBe(8);
+        expect(dataControlSE.currentResultSectionGuidance()).toContain('Stage 3 – Evidence of impact of policy:');
+      });
+
+      it('keeps the guidance when the stage lookup fails, instead of blanking the ⓘ', () => {
+        asPolicyChange2026();
+        jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges').mockReturnValue(throwError(() => new Error('boom')));
+
+        component.ngOnInit();
+
+        expect(dataControlSE.currentResultSectionGuidance()).toContain('Evidence is required for all stages');
+      });
+
+      it('publishes nothing — and asks for no stage — for any other result type', () => {
+        const stageSpy = jest.spyOn(mockApiService.resultsSE, 'GET_policyChanges');
+
+        component.ngOnInit();
+
+        expect(stageSpy).not.toHaveBeenCalled();
+        expect(dataControlSE.currentResultSectionGuidance()).toBe('');
+      });
+
+      it('clears the heading on destroy, so the guidance cannot leak into the next section', () => {
+        asPolicyChange2026();
+        component.ngOnInit();
+
+        component.ngOnDestroy();
+
+        expect(dataControlSE.currentResultSectionGuidance()).toBe('');
+      });
     });
   });
 
@@ -230,15 +393,29 @@ describe('RdEvidencesComponent', () => {
       expect(spyEndLoadFile).toHaveBeenCalled();
     });
 
-    it('should handle errors in loadAllFiles', async () => {
+    /**
+     * P2-3220: a failed upload must be REPORTABLE, not just logged. This used to assert the exact
+     * console.error argument, which broke the moment the message got a prefix and told us nothing
+     * about behaviour. Now it asserts what the caller can act on: the list of files that failed.
+     */
+    it('returns the names of the files whose upload failed, so the caller can warn the user', async () => {
       const mockEvidences = [{ file: new File([], 'file1.pdf') }, { file: new File([], 'file2.pdf') }, { file: undefined }];
       component.evidencesBody.evidences = mockEvidences;
       jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession').mockRejectedValue('Error from POST_createUploadSession');
-      const consoleSpy = jest.spyOn(console, 'error');
 
-      await component.loadAllFiles();
+      const failed = await component.loadAllFiles();
 
-      expect(consoleSpy).toHaveBeenCalledWith('Error from POST_createUploadSession');
+      expect(failed).toEqual(['file1.pdf', 'file2.pdf']);
+    });
+
+    it('returns an empty list when every upload succeeds', async () => {
+      component.evidencesBody.evidences = [{ file: new File([], 'ok.pdf') }] as any;
+      jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession').mockResolvedValue({ response: 'http://upload/' } as any);
+      jest.spyOn(mockApiService.resultsSE, 'PUT_loadFileInUploadSession').mockResolvedValue({ webUrl: 'http://sp/f', id: 'd1', name: 'ok.pdf' } as any);
+
+      const failed = await component.loadAllFiles();
+
+      expect(failed).toEqual([]);
     });
   });
 

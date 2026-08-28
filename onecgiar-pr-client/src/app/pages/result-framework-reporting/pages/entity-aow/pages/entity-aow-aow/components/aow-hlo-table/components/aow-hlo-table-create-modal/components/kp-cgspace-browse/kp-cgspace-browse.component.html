@@ -5,7 +5,7 @@
     <div class="relative w-full">
       <input
         type="text"
-        class="w-full pl-9 pr-10 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-300)] focus:border-[var(--pr-color-primary-300)] text-gray-900 placeholder-gray-400"
+        class="w-full h-[38px] pl-9 pr-10 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-300)] focus:border-[var(--pr-color-primary-300)] text-gray-800 placeholder-gray-400 font-normal transition-colors shadow-2xs"
         placeholder="Search CGSpace by title, author, or DOI..."
         [value]="query()"
         (input)="onQueryInput($event)"
@@ -29,31 +29,43 @@
     <!-- Filters row -->
     <div class="flex flex-wrap items-center gap-2">
       <!-- Type Filter -->
-      <div class="w-44 min-w-[160px] kp-filter-type">
+      <div class="relative w-44 min-w-[160px] kp-filter-type">
         <app-pr-select
           [options]="typeOptions()"
           optionLabel="label"
           optionValue="value"
           placeholder="Filter by type"
           [showClear]="true"
+          [truncateSelectionText]="true"
           optionsInlineStyles="min-width: 260px;"
           [ngModel]="selectedType()"
           (selectOptionEvent)="onTypeSelect($event)">
         </app-pr-select>
+        @if (loadingTypes()) {
+          <div class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center justify-center bg-white px-0.5 z-10" title="Loading types...">
+            <i class="pi pi-spin pi-spinner text-gray-400 text-xs"></i>
+          </div>
+        }
       </div>
 
       <!-- Center Filter -->
-      <div class="w-56 min-w-[190px] kp-filter-center">
+      <div class="relative w-64 min-w-[210px] kp-filter-center">
         <app-pr-select
           [options]="centerOptions()"
           optionLabel="label"
           optionValue="value"
           placeholder="Filter by center"
           [showClear]="true"
+          [truncateSelectionText]="true"
           optionsInlineStyles="min-width: 440px; max-width: 520px;"
           [ngModel]="selectedCenter()"
           (selectOptionEvent)="onCenterSelect($event)">
         </app-pr-select>
+        @if (loadingCenters()) {
+          <div class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center justify-center bg-white px-0.5 z-10" title="Loading centers...">
+            <i class="pi pi-spin pi-spinner text-gray-400 text-xs"></i>
+          </div>
+        }
       </div>
 
       <!-- Year Filter: Locked chip for non-admin, editable select for admin -->
@@ -95,10 +107,10 @@
       <div class="flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50" data-test="cgspace-idle">
         <i class="pi pi-search text-2xl text-gray-400 mb-2"></i>
         @if (query().trim().length > 0 && query().trim().length < 3 && !hasActiveFilter()) {
-          <p class="text-sm text-gray-600 font-medium">Please enter at least 3 characters to search CGSpace.</p>
+          <p class="text-[14.5px] text-gray-700 font-medium">Please enter at least 3 characters to search CGSpace.</p>
         } @else {
-          <p class="text-sm text-gray-600 font-medium">Search CGSpace by title, author, or DOI to find a Knowledge Product.</p>
-          <p class="text-xs text-gray-400 mt-1">Type at least 3 characters or select a filter above.</p>
+          <p class="text-[15px] text-gray-700 font-medium">Search CGSpace by title, author, or DOI to find a Knowledge Product.</p>
+          <p class="text-[13px] text-gray-500 mt-1">Type at least 3 characters or select a filter above.</p>
         }
       </div>
     }

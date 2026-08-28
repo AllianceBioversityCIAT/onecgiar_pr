@@ -83,4 +83,44 @@ describe('InnovationDevInfoUtilsService', () => {
       expect(body.options[2].saved).toBeFalsy();
     });
   });
+  /**
+   * P2-3290 / P2-3467. From the 2026 phase a "Responsible innovation and scaling" slot can be empty
+   * by design: `q4` has no replacement, and the two stage questions are matched by text, so one the
+   * server cannot match arrives as `undefined`. Both helpers are called in a straight line over every
+   * slot, so a throw here skipped the groups behind it.
+   */
+  describe('empty question slots (2026 form)', () => {
+    it.each([
+      ['undefined', undefined],
+      ['null', null],
+      ['a slot with no options', {}],
+      ['a slot with an empty option list', { options: [] }]
+    ])('mapBoolean ignores %s', (_label, body) => {
+      expect(() => service.mapBoolean(body as any)).not.toThrow();
+    });
+
+    it.each([
+      ['undefined', undefined],
+      ['null', null],
+      ['a slot with no options', {}],
+      ['a slot with an empty option list', { options: [] }]
+    ])('mapRadioButtonBooleans ignores %s', (_label, body) => {
+      expect(() => service.mapRadioButtonBooleans(body as any)).not.toThrow();
+    });
+
+    it('leaves a populated slot behaving exactly as before', () => {
+      const body = {
+        options: [
+          { result_question_id: 1, answer_boolean: false, saved: false },
+          { result_question_id: 2, answer_boolean: true, saved: false }
+        ],
+        radioButtonValue: null
+      };
+
+      service.mapRadioButtonBooleans(body);
+
+      expect(body.radioButtonValue).toBe(2);
+      expect(body.options[1].saved).toBe(true);
+    });
+  });
 });

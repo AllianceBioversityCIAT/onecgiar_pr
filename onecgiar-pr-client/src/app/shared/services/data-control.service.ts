@@ -41,6 +41,15 @@ export class DataControlService {
   currentNotification = null;
   currentResultSectionName = signal('');
   /**
+   * P2-3262: HTML guidance published by the open section so the result-detail shell can render a
+   * single ⓘ trigger next to the section heading ("4 Evidence ⓘ"). Empty string = no trigger, which
+   * is every section that has not opted in, so the heading is unchanged for all of them.
+   *
+   * The publisher owns the reset: a section that sets it MUST clear it on destroy, or its guidance
+   * leaks into the next section's heading.
+   */
+  readonly currentResultSectionGuidance = signal<string>('');
+  /**
    * Focus mode: a surface has asked the shell to shed its chrome and give the page
    * the whole viewport — the header/navigation bar is not rendered at all. Used by
    * the AOW detail view and the guided creation flow, both of which provide their

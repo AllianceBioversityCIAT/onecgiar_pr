@@ -30,6 +30,23 @@
           <div class="rd_section_head" data-testid="result-section-heading">
             <span class="rd_section_num" aria-hidden="true">{{ sectionsSE.currentPosition() }}</span>
             <h2 class="rd_section_title">{{ sectionsSE.currentSectionName() }}</h2>
+            <!-- P2-3262: single ⓘ for the whole section, next to its name (PO's option A). Rendered
+                 only for the sections that publish guidance into `currentResultSectionGuidance`;
+                 every other section keeps the heading exactly as it was. Same trigger, tooltip and
+                 pinning as the P2-3201 field guidance, so both read as one mechanism. -->
+            @if (dataControlSE.currentResultSectionGuidance()) {
+              <button
+                type="button"
+                class="sgi-dac-info"
+                data-testid="result-section-guidance"
+                [prTooltip]="dataControlSE.currentResultSectionGuidance()"
+                [prTooltipPinnable]="true"
+                prTooltipPosition="bottom"
+                prTooltipStyleClass="sgi-dac-tooltip"
+                [attr.aria-label]="sectionsSE.currentSectionName() + ' guidance'">
+                <app-pr-info-icon />
+              </button>
+            }
             @if (sectionsSE.currentSectionIsDone()) {
               <i class="material-icons-round rd_section_done" role="img" aria-label="Section complete" data-testid="result-section-complete"
                 >check_circle</i

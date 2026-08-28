@@ -5,7 +5,7 @@
 - **Module / feature:** `shared/components/pr-viz-chart` + `shared/utils/chart-tokens.util` + `echarts` dependency (client only)
 - **Linked spec:** `requirements.md` (VCE-R-1..5) + `design.md` (VCE-DD-1..6)
 - **Owner / driver:** j.cadavid@cgiar.org
-- **Status:** approved — ready for /akili-execute (2026-08-27)
+- **Status:** done — VCE-T-1 + VCE-T-2 PASS (2026-08-27, executed in worktree by peer session); rollout §6 pending
 - **Depth:** Lite · **Budget:** 2 tasks / ~280 LOC / 1 review round (design.md §1)
 - **Family:** `../family.md` row #2 · `Parallel-safe: yes` · may run in a worktree concurrently with #1
 

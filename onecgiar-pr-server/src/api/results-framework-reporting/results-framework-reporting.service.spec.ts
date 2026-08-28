@@ -29,6 +29,8 @@ import { GetExistingResultContributorsToIndicatorsHandler } from './application/
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
 import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
+import { VersioningService } from '../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -157,6 +159,12 @@ const mockDataSource = {
   query: jest.fn(),
 };
 
+// W12-R-2: default versionId resolution goes through VersioningService.$_findActivePhase
+// (AppModuleIdEnum.REPORTING), never YearRepository/`year.active` — see resolveIndicatorSummaryVersionId.
+const mockVersioningService = {
+  $_findActivePhase: jest.fn(),
+};
+
 describe('ResultsFrameworkReportingService', () => {
   let service: ResultsFrameworkReportingService;
 
@@ -210,6 +218,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ResultRepository,
           useValue: mockResultRepository,
+        },
+        {
+          provide: VersioningService,
+          useValue: mockVersioningService,
         },
         { provide: ResultsService, useValue: mockResultsService },
         {
@@ -1178,17 +1190,24 @@ describe('ResultsFrameworkReportingService', () => {
 
   describe('getProgramIndicatorContributionSummary', () => {
     beforeEach(() => {
-      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
+      // W12-R-2: default resolution goes through VersioningService.$_findActivePhase, not
+      // YearRepository — no default stub here on purpose, so a spec that forgets to mock
+      // $_findActivePhase fails loudly instead of silently reusing a stale year fixture.
+      mockVersioningService.$_findActivePhase.mockReset();
       mockResultRepository.getIndicatorContributionSummaryByProgram.mockReset();
       mockResultRepository.getActiveResultTypes.mockReset();
     });
 
-    it('should aggregate indicator contribution summaries for the program', async () => {
+    it('should aggregate indicator contribution summaries for the program, scoped by the active reporting phase', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
         id: 15,
         official_code: 'SP05',
         name: 'Sample Program',
       });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 2025,
+      } as any);
 
       mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
         { id: 1, name: 'Outcome' },
@@ -1222,10 +1241,10 @@ describe('ResultsFrameworkReportingService', () => {
       const result: any =
         await service.getProgramIndicatorContributionSummary('sp05');
 
-      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
-        where: { active: true },
-        select: ['year'],
-      });
+      expect(mockVersioningService.$_findActivePhase).toHaveBeenCalledWith(
+        AppModuleIdEnum.REPORTING,
+      );
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
       expect(
         mockResultRepository.getIndicatorContributionSummaryByProgram,
       ).toHaveBeenCalledWith(15, 2025);
@@ -1274,12 +1293,88 @@ describe('ResultsFrameworkReportingService', () => {
       });
     });
 
+    // Reviewer remediation (W12-T-2 rework attempt 2): the repo predicate widened from
+    // `status_id IN (1,2,3)` to `!= 4` (proven at the repo layer, red-before/green-after —
+    // see result.repository.spec.ts), which means rows with status_id outside {1,2,3} (e.g.
+    // 5 Pending Review, 7 Rejected) can now legitimately reach this mapper for the first time.
+    // This case observes the CONSEQUENCE of that widening: the mapper's pre-existing `default:`
+    // branch (results-framework-reporting.service.ts:~658-661), previously structurally dead
+    // for this endpoint, now routes such rows into `others` (design §12 reversion challenge (a)).
+    // Green-only by construction: the mapper's switch/default was already there and is UNCHANGED
+    // by this fix, so there is no pre-fix/post-fix behavior difference to redden here — the
+    // red-before evidence for the underlying predicate change lives in result.repository.spec.ts.
+    it('routes a status_id outside {1,2,3} (5, 7) into the others bucket (W12-DD-2 reversion challenge (a))', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 2025,
+      } as any);
+
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
+        { id: 1, name: 'Outcome' },
+      ]);
+
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 1,
+            total_results: '1',
+          },
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 5,
+            total_results: '2',
+          },
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 7,
+            total_results: '3',
+          },
+        ],
+      );
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp05');
+
+      expect(result.status).toBe(200);
+      expect(result.response.totalsByType).toEqual([
+        {
+          resultTypeId: 1,
+          resultTypeName: 'Outcome',
+          totalResults: 6,
+          editing: 1,
+          qualityAssessed: 0,
+          submitted: 0,
+          others: 5,
+        },
+      ]);
+      expect(result.response.statusTotals).toEqual({
+        editing: 1,
+        qualityAssessed: 0,
+        submitted: 0,
+        others: 5,
+        total: 6,
+      });
+    });
+
     it('should return zeroed totals when no indicator-linked results are found', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
         id: 99,
         official_code: 'SP99',
         name: 'Program 99',
       });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 2025,
+      } as any);
 
       mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
         { id: 1, name: 'Outcome' },
@@ -1377,6 +1472,371 @@ describe('ResultsFrameworkReportingService', () => {
         mockResultRepository.getIndicatorContributionSummaryByProgram,
       ).not.toHaveBeenCalled();
       expect(mockResultRepository.getActiveResultTypes).not.toHaveBeenCalled();
+    });
+
+    // W12-R-2 / W12-DD-3: default resolution must go through $_findActivePhase, never
+    // resolveInitiativeAndYear's `year.active` fallback.
+    it('should honor an explicit, finite versionId without consulting the active phase', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [],
+      );
+
+      const result: any = await service.getProgramIndicatorContributionSummary(
+        'sp05',
+        12,
+      );
+
+      expect(mockVersioningService.$_findActivePhase).not.toHaveBeenCalled();
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).toHaveBeenCalledWith(15, 12);
+      expect(result.status).toBe(200);
+    });
+
+    it('should default to the active REPORTING phase when versionId is absent (FAIL input for a year.active fallback)', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 77,
+      } as any);
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [],
+      );
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp05');
+
+      expect(mockVersioningService.$_findActivePhase).toHaveBeenCalledWith(
+        AppModuleIdEnum.REPORTING,
+      );
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).toHaveBeenCalledWith(15, 77);
+      expect(result.status).toBe(200);
+    });
+
+    it('should default to the active REPORTING phase when versionId is non-numeric', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 77,
+      } as any);
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [],
+      );
+
+      const result: any = await service.getProgramIndicatorContributionSummary(
+        'sp05',
+        Number('not-a-number'),
+      );
+
+      expect(mockVersioningService.$_findActivePhase).toHaveBeenCalledWith(
+        AppModuleIdEnum.REPORTING,
+      );
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).toHaveBeenCalledWith(15, 77);
+      expect(result.status).toBe(200);
+    });
+
+    it('should return a handler error when no active reporting phase is found and versionId is absent', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce(null);
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp05');
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * W12-R-3 parity: meter total === Σ matrix `totalResults` over ONE shared mixed fixture.
+   * `RAW_UNIVERSE` below mixes every excluded class (source='API', role=2, other-version,
+   * status 4, type 10/11) plus the classes that must now be INCLUDED (status 5/7, a
+   * null/orphan `result_level_id` row). `SHARED_UNIVERSE_PREDICATE` is the ONE filter both
+   * sides apply — it stands in for the two repo SQL predicates, which are independently
+   * pinned per-class in `result.repository.spec.ts` (this spec does not re-verify SQL; it
+   * asserts the two MAPPERS agree given an identical, already-filtered row set).
+   *
+   * `result_level_id`: this is NOT a proof of agreement — it is a second documented residual
+   * gap, in the same honest register as the Discontinued one below, and in the OPPOSITE
+   * direction. The meter's base query DOES constrain this column: it `INNER JOIN`s
+   * `result_level` on `r.result_level_id` (`result.repository.ts:692`), which silently drops
+   * any row whose `result_level_id` is null or an orphan id — an inner join with no match
+   * removes the row entirely. The matrix query (`getIndicatorContributionSummaryByProgram`)
+   * has no such join and no `result_level_id` predicate at all (W12-DD-2 dropped the old
+   * `IN (3,4)` filter without adding a join). So a null/orphan-level row is counted by the
+   * MATRIX and NOT by the METER — meter < matrix on that row, the mirror image of the
+   * Discontinued case below (meter possibly > matrix). Both mappers in THIS spec trivially
+   * "agree" on the null-level survivor only because neither mapper function reads
+   * `result_level_id` at all — that is a fact about the mapper layer, not evidence that the
+   * underlying SQL populations match. This spec assumes such rows do not occur in practice;
+   * if that assumption is wrong, this spec would not catch the divergence.
+   *
+   * `status_id = 4` (Discontinued): the matrix explicitly excludes it (`status_id != 4`).
+   * The meter's own base WHERE has NO status predicate at all — nothing stops a real,
+   * `is_active` Discontinued row from reaching it. This spec assumes (does not prove) that
+   * such rows don't occur in the "current phase, active, primary-submitter" population in
+   * practice; if that assumption is ever wrong, meter/matrix totals would diverge on a
+   * Discontinued row and this spec would not catch it (accepted residual gap, parallel to
+   * the `result_level_id` note above — flagged, not silently assumed away).
+   */
+  describe('W12-R-3: meter total === Σ matrix totalResults (parity)', () => {
+    const TARGET_VERSION = 42;
+    const OTHER_VERSION = 99;
+
+    // One raw candidate universe; `count` rows of that shape. Mixes every excluded class
+    // with the classes that must now be included.
+    const RAW_UNIVERSE = [
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 1,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 10,
+      }, // included: Editing
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 3,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 1,
+      }, // included: Submitted
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 5,
+        resultTypeId: 1,
+        resultLevelId: 4,
+        count: 2,
+      }, // included: Pending Review (was structurally dead pre-fix)
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 7,
+        resultTypeId: 2,
+        resultLevelId: null,
+        count: 1,
+      }, // included: Rejected + orphan result_level_id
+      {
+        source: 'API',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 1,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 13,
+      }, // excluded: bilateral origin
+      {
+        source: 'Result',
+        roleId: 2,
+        versionId: TARGET_VERSION,
+        statusId: 1,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 3,
+      }, // excluded: contributor role
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: OTHER_VERSION,
+        statusId: 1,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 4,
+      }, // excluded: other phase
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 4,
+        resultTypeId: 1,
+        resultLevelId: 3,
+        count: 6,
+      }, // excluded: Discontinued
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 1,
+        resultTypeId: 10,
+        resultLevelId: 3,
+        count: 2,
+      }, // excluded: type 10
+      {
+        source: 'Result',
+        roleId: 1,
+        versionId: TARGET_VERSION,
+        statusId: 2,
+        resultTypeId: 11,
+        resultLevelId: 3,
+        count: 1,
+      }, // excluded: type 11
+    ];
+
+    const SHARED_UNIVERSE_PREDICATE = (row: (typeof RAW_UNIVERSE)[number]) =>
+      row.source === 'Result' &&
+      row.roleId === 1 &&
+      row.versionId === TARGET_VERSION &&
+      row.statusId !== 4 &&
+      ![10, 11].includes(row.resultTypeId);
+
+    const survivors = RAW_UNIVERSE.filter(SHARED_UNIVERSE_PREDICATE);
+    const EXPECTED_TOTAL = survivors.reduce((sum, r) => sum + r.count, 0); // 14
+
+    function computeMeterTotal(rows: typeof survivors): number {
+      const meterRows = rows.flatMap((group) =>
+        Array.from({ length: group.count }, () => ({
+          submitter_id: 15,
+          submitter: 'SP04',
+          submitter_name: 'Science Program 04',
+          // NOTE: in the real query this `role_id` is `r2.id as role_id` from `role_by_user`
+          // (the CALLING USER's role on the initiative, used only for `container.editable` /
+          // my-vs-other bucketing) — NOT `rbi.initiative_role_id` (the origin/ownership axis
+          // the SHARED_UNIVERSE_PREDICATE's `roleId` field represents, already applied above
+          // to build `survivors`). Reused here as a stand-in value only because
+          // `buildScienceProgramBuckets` needs some non-GUEST role_id per row; it plays no
+          // part in the SP04/type/status counts this spec asserts on.
+          role_id: group.roleId,
+          version_id: group.versionId,
+          phase_name: 'Reporting 2026',
+          phase_year: 2026,
+          status_id: group.statusId,
+          status_name: `Status ${group.statusId}`,
+        })),
+      );
+
+      const { mySciencePrograms, otherSciencePrograms } = (
+        ResultsService.prototype as any
+      ).buildScienceProgramBuckets(
+        meterRows,
+        [{ id: 15, official_code: 'SP04', name: 'Science Program 04' }] as any,
+        new Map(),
+        new Map(),
+      );
+
+      const program = [...mySciencePrograms, ...otherSciencePrograms].find(
+        (p: any) => p.initiativeId === 15,
+      );
+      return (
+        program?.versions?.find((v: any) => v.versionId === TARGET_VERSION)
+          ?.totalResults ?? 0
+      );
+    }
+
+    async function computeMatrixTotal(rows: typeof survivors): Promise<number> {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP04',
+        name: 'Science Program 04',
+      });
+      mockVersioningService.$_findActivePhase.mockReset();
+
+      const grouped = new Map<
+        string,
+        {
+          result_type_id: number;
+          result_type_name: string;
+          status_id: number;
+          total_results: number;
+        }
+      >();
+      for (const group of rows) {
+        const key = `${group.resultTypeId}:${group.statusId}`;
+        const existing = grouped.get(key);
+        if (existing) {
+          existing.total_results += group.count;
+        } else {
+          grouped.set(key, {
+            result_type_id: group.resultTypeId,
+            result_type_name: group.resultTypeId === 1 ? 'Outcome' : 'Output',
+            status_id: group.statusId,
+            total_results: group.count,
+          });
+        }
+      }
+
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
+        { id: 1, name: 'Outcome' },
+        { id: 2, name: 'Output' },
+      ]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        Array.from(grouped.values()),
+      );
+
+      const result: any = await service.getProgramIndicatorContributionSummary(
+        'SP04',
+        TARGET_VERSION,
+      );
+
+      return result.response.totalsByType.reduce(
+        (sum: number, t: any) => sum + t.totalResults,
+        0,
+      );
+    }
+
+    it('meter total equals Σ matrix totalResults over the shared, correctly-filtered universe', async () => {
+      const meterTotal = computeMeterTotal(survivors);
+      const matrixTotal = await computeMatrixTotal(survivors);
+
+      expect(meterTotal).toBe(EXPECTED_TOTAL);
+      expect(matrixTotal).toBe(EXPECTED_TOTAL);
+      expect(meterTotal).toBe(matrixTotal);
+    });
+
+    // FAIL input (named per DoD): re-widening either universe breaks parity. Simulated here
+    // by narrowing the MATRIX side back to the pre-fix `status_id IN (1,2,3)` universe (drops
+    // the status 5/7 survivors) while the meter keeps the full, correct survivor set —
+    // reproducing exactly what re-adding that predicate (or dropping `fundingSource` from the
+    // meter's filters, the other named FAIL input) would do to this assertion: red.
+    it('is sensitive to a re-widened universe (FAIL input: matrix status_id IN (1,2,3) again)', async () => {
+      const meterTotal = computeMeterTotal(survivors);
+      const preFixMatrixSurvivors = survivors.filter((r) => r.statusId <= 3);
+
+      const matrixTotal = await computeMatrixTotal(preFixMatrixSurvivors);
+
+      // Concrete values, not just inequality: meter keeps the full, correct survivor set
+      // (10 Editing + 1 Submitted + 2 status-5 + 1 status-7 = 14); the narrowed matrix drops
+      // the status 5/7 survivors (10 + 1 = 11) — the exact numbers a re-widened-status
+      // regression would produce, not an arbitrary mismatch.
+      expect(meterTotal).toBe(14);
+      expect(matrixTotal).toBe(11);
+      expect(meterTotal).not.toBe(matrixTotal);
     });
   });
 

@@ -1795,7 +1795,10 @@ export class ResultsService {
     ReturnResponseDto<ScienceProgramProgressResponseDto> | returnErrorDto
   > {
     try {
-      const filters: Record<string, number | number[]> = { portfolioId: 3 };
+      const filters: Record<string, number | number[] | string | string[]> = {
+        portfolioId: 3,
+        fundingSource: ['Result'],
+      };
 
       let effectiveVersionId = versionId;
       if (
@@ -3272,6 +3275,8 @@ export class ResultsService {
   async getResultsByProgramAndCenters(
     programId: string,
     centerIds?: string | string[],
+    versionId?: string,
+    statusIds?: string,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
       if (!programId?.trim()) {
@@ -3306,6 +3311,8 @@ export class ResultsService {
         await this._resultRepository.getResultsByProgramAndCenters(
           normalizedProgramId,
           processedCenterIds,
+          versionId,
+          statusIds,
         );
 
       const mappedResults = rawResults.map((row) => ({

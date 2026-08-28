@@ -81,6 +81,20 @@
   text-transform: uppercase;
 }
 
+// P2-3169 AC2 — "Output" / "Outcome" next to the indicator chip. Same pill geometry as
+// .mdr-card-type, muted so the indicator stays the dominant label of the two.
+.mdr-card-level {
+  font-size: 10px;
+  font-weight: 600;
+  color: #4A5568;
+  background: #EDF2F7;
+  padding: 2px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
 .mdr-card-meta {
   display: flex;
   flex-direction: column;
@@ -116,6 +130,14 @@
   min-width: 0;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+// P2-3169 AC2 — the AI-Assistant session id reads as data, so it gets the mono face the rest of
+// the revamp uses for codes and ids.
+.mdr-meta-session {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  cursor: help;
 }
 
 .mdr-meta-docs {
@@ -162,63 +184,26 @@
   flex-shrink: 0;
 }
 
-.mdr-completeness {
-  display: flex;
+// P2-3169 AC2 — the draft status chip. Replaces a decorative progress ring that drew a fixed 50%
+// arc and printed a hardcoded "Draft" inside it: neither came from the payload. Palette matches the
+// .status_* chips of the bilateral results list (bilateral-results-list.component.scss:639-645),
+// keyed by the same ResultStatusData ids, so one result reads the same in both places.
+.mdr-status {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
-.mdr-pct-circle {
-  position: relative;
-  width: 42px;
-  height: 42px;
-}
-
-.mdr-pct-svg {
-  width: 42px;
-  height: 42px;
-  transform: rotate(-90deg);
-}
-
-.mdr-pct-bg {
-  fill: none;
-  stroke: #EDF2F7;
-  stroke-width: 3;
-}
-
-.mdr-pct-fill {
-  fill: none;
-  stroke: #A0AEC0;
-  stroke-width: 3;
-  stroke-linecap: round;
-  transition: stroke-dasharray 500ms ease, stroke 300ms ease;
-}
-
-.mdr-pct-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  font-weight: 700;
-  color: #718096;
-}
-
-.mdr-pct--empty {
-  .mdr-pct-fill { stroke: #CBD5E0; }
-  .mdr-pct-text { color: #A0AEC0; }
-}
-
-.mdr-pct--partial {
-  .mdr-pct-fill { stroke: #D97706; }
-  .mdr-pct-text { color: #92400E; }
-}
-
-.mdr-pct--complete {
-  .mdr-pct-fill { stroke: #059669; }
-  .mdr-pct-text { color: #065F46; }
-}
+.mdr-status--draft { color: #4338CA; background: #E0E7FF; }
+.mdr-status--editing { color: #6B7280; background: #F3F4F6; }
+.mdr-status--pending { color: #B45309; background: #FEF3C7; }
+.mdr-status--approved { color: #047857; background: #D1FAE5; }
+.mdr-status--rejected { color: #B91C1C; background: #FEE2E2; }
 
 .mdr-date {
   font-size: 11px;
