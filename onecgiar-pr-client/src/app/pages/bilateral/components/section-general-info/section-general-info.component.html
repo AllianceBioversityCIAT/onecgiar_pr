@@ -44,6 +44,10 @@
 
   @if (showAllFields()) {
     <div class="sgi-extra">
+      <!-- P2-3519 · Full-metadata note. Same copy Section 2 (Contributors & Partners) already
+           renders on its own toggle; Section 1 was the only one expanding without it. -->
+      <span class="text-[12px] font-normal text-[var(--pr-text-secondary)]">You are completing the full metadata for this section. These fields are optional.</span>
+
       @if (isLoadingDac()) {
         <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="false" />
       } @else {
