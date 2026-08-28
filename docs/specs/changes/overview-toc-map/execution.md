@@ -79,3 +79,11 @@
 3. Tooltips correctos; look-at: nodo AoW muestra "N indicators" (todas las tiers) junto a progreso done/total (solo output tier) — correcto por diseño, ¿confunde?
 4. Click en AoW aterriza en su página entity-aow.
 5. Comportamiento con el filtro de secciones: el mapa vive dentro del gate `aow` (se oculta al filtrar W1/W2·Bilateral) — decisión de gap-fill del Implementer, confirmar en vivo.
+
+### TCM-T-4 — HITL round 1 findings + fix (2026-08-28)
+
+- **Owner live-render findings (SP02 screenshot):** (1) nodes hollow — tree default `symbol: 'emptyCircle'` never paints `itemStyle.color`, so the quartile encoding was invisible; (2) branch labels = full AoW names rotated along the radius, colliding at the hub. Owner considered a Sankey pivot; **decision at gate: radial KEPT with fixes** (structured question; Sankey recorded as the alternative if the re-render still disappoints).
+- **Fix (Implementer `impl-tcm-t1`, Reviewer PASS):** `symbol: 'circle'` (series-level); root label = `spCode`, AoW branches = `code`, program branches = 'Program'/'Intermediate'/'2030', `rotate: 0`, `distance: 8` (branch only); leaf labels stay OFF (OQ-1 default revisited and held); full names verified preserved in tooltip payload + a11y table by pre-existing load-bearing assertions. Diff: charts.ts + spec only (+97/−6), no tokens/hex, geometry constants untouched.
+- **Verification:** FULL suite 483 suites / **6965 tests** (+3, reconciles exactly); lint clean. Reviewer: all 3 new tests bite their FAIL inputs; test-delta reconciliation confirms earlier ±drift was the concurrent session's.
+- **ADVISORY (recorded, die here):** `distance: 8` unasserted (one-line addition would pin it); root label has no `distance` (knob if the re-render shows hub crowding).
+- **Still owed for closure:** owner re-render confirmation (fills visible, labels clear) + remaining checklist (tooltips, AoW click landing, section-filter behavior) → then the final TCM-R-7/OQ-1 decision record and `[x]`.

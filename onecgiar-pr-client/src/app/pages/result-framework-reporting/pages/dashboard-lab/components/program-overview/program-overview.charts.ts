@@ -572,7 +572,9 @@ interface TocMapTreeNode {
   name: string;
   symbolSize: number;
   itemStyle: { color: string };
-  label: { show: boolean };
+  // `rotate`/`distance` are set on root/branch labels only (HITL fix, TCM-T-4): horizontal, short
+  // labels that clear the hub — see `tocMapBranchLabel` and the root/branch node builders below.
+  label: { show: boolean; rotate?: number; distance?: number };
   tocMapPayload: TocMapNodePayload;
   children?: TocMapTreeNode[];
 }
@@ -688,6 +690,28 @@ function tocMapLeafNode(leaf: TocLeaf, tokens: ResolvedChartTokens): TocMapTreeN
   };
 }
 
+/**
+ * Short, HORIZONTAL branch label (HITL fix, TCM-T-4, SP02 live-render finding: full AoW names
+ * rotated along the radius collided at the hub, illegible at 6+ branches). AoW branches label by
+ * their own `code` (`AOW01`…, already the identifier the tooltip/table also lead with); the three
+ * program-level branches get a fixed short display label. Full names are UNCHANGED everywhere
+ * else — tooltip (`tocMapTooltip` reads `payload.title`, not this) and the a11y table.
+ */
+function tocMapBranchLabel(branch: TocBranch): string {
+  switch (branch.kind) {
+    case 'aow':
+      return branch.code;
+    case 'program':
+      return 'Program';
+    case 'intermediate':
+      return 'Intermediate';
+    case '2030':
+      return '2030';
+    default:
+      return branch.name;
+  }
+}
+
 function tocMapBranchNode(branch: TocBranch, tokens: ResolvedChartTokens): TocMapTreeNode {
   const payload: TocMapNodePayload = {
     kind: branch.kind,
@@ -702,10 +726,15 @@ function tocMapBranchNode(branch: TocBranch, tokens: ResolvedChartTokens): TocMa
     total: branch.total
   };
   return {
-    name: branch.name,
+    // HITL fix (TCM-T-4, SP02 live render): short code/label, not the full name — full names
+    // collide at the hub past ~4 branches. Full `branch.name` is untouched everywhere else
+    // (tooltip via `payload.title`, and the a11y table).
+    name: tocMapBranchLabel(branch),
     symbolSize: TOC_MAP_BRANCH_SYMBOL_SIZE,
     itemStyle: { color: tocMapNodeColor(branch.done, branch.total, tokens) },
-    label: { show: true },
+    // `rotate: 0` + a small `distance` bump off the hub (HITL fix) — radial layout otherwise
+    // rotates labels along the radius, which reads fine for one branch and illegible for six.
+    label: { show: true, rotate: 0, distance: 8 },
     tocMapPayload: payload,
     children: branch.leaves.map(leaf => tocMapLeafNode(leaf, tokens))
   };
@@ -733,10 +762,12 @@ export function tocMapOption(model: TocMapModel, tokens: ResolvedChartTokens): E
   };
 
   const rootNode: TocMapTreeNode = {
-    name: model.spName,
+    // HITL fix (TCM-T-4): the SP CODE, not the full program name — short + horizontal at the
+    // hub. The full name still reaches the tooltip (`rootPayload.title = model.spName`, untouched).
+    name: model.spCode,
     symbolSize: TOC_MAP_ROOT_SYMBOL_SIZE,
     itemStyle: { color: tokens.primary },
-    label: { show: true },
+    label: { show: true, rotate: 0 },
     tocMapPayload: rootPayload,
     children: model.branches.map(branch => tocMapBranchNode(branch, tokens))
   };
@@ -755,6 +786,11 @@ export function tocMapOption(model: TocMapModel, tokens: ResolvedChartTokens): E
         layout: 'radial',
         initialTreeDepth: -1,
         roam: false,
+        // HITL fix (TCM-T-4, SP02 live render): ECharts tree series defaults to `symbol:
+        // 'emptyCircle'` — an unfilled ring whose OWN border, not `itemStyle.color`, is the only
+        // visible stroke. Every node rendered hollow regardless of quartile/muted/primary fill.
+        // `'circle'` is the solid marker `itemStyle.color` actually paints.
+        symbol: 'circle',
         // Series-level fallback symbolSize/label — every node below sets its OWN (root/branch/
         // leaf), this default only ever matters if ECharts falls back before data is set.
         symbolSize: TOC_MAP_LEAF_SYMBOL_SIZE,

@@ -647,7 +647,7 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
     name: string;
     symbolSize: number;
     itemStyle: { color: string };
-    label: { show: boolean };
+    label: { show: boolean; rotate?: number; distance?: number };
     tocMapPayload: {
       kind: string;
       aowCode: string | null;
@@ -671,6 +671,7 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
         layout: string;
         initialTreeDepth: number;
         roam: boolean;
+        symbol: string;
         symbolSize: number;
         label: { show: boolean };
         data: TestTreeNode[];
@@ -708,6 +709,18 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
       expect(series.roam).toBe(false);
     });
 
+    /**
+     * HITL fix (TCM-T-4, SP02 live render finding #1): ECharts tree defaults to `symbol:
+     * 'emptyCircle'` — a hollow ring whose OWN stroke, not `itemStyle.color`, is the only visible
+     * line, so every quartile/muted/primary fill was invisible. FAIL input: reverting to the
+     * default (omitting `symbol`, or `'emptyCircle'`) turns this red.
+     */
+    it('uses a FILLED circle symbol so itemStyle.color (quartile/muted/primary) actually paints', () => {
+      const option = buildOption(model);
+      expect(option.series[0].symbol).toBe('circle');
+      expect(option.series[0].symbol).not.toBe('emptyCircle');
+    });
+
     it('scales symbolSize root > branch > leaf, in that strict order', () => {
       const option = buildOption(model);
       const root = option.series[0].data[0];
@@ -728,6 +741,48 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
       // Series-level default also reads "off" — a FAIL input here (leaf labels turned on, or a
       // `graph`/force layout swapped in) would flip these booleans/strings red.
       expect(option.series[0].label.show).toBe(false);
+    });
+
+    /**
+     * HITL fix (TCM-T-4, SP02 live render finding #2): radial layout rotates labels along the
+     * radius by default — illegible past a couple of branches. FAIL input: a nonzero/omitted
+     * `rotate` on root or branch labels turns this red.
+     */
+    it('renders root + branch labels HORIZONTAL (rotate: 0), never rotated along the radius', () => {
+      const option = buildOption(model);
+      const root = option.series[0].data[0];
+      const branch = root.children![0];
+      expect(root.label.rotate).toBe(0);
+      expect(branch.label.rotate).toBe(0);
+    });
+
+    /**
+     * HITL fix (TCM-T-4): short, non-colliding label TEXT — root shows the SP code, AoW branches
+     * show their own code, and the three program-level branches get fixed short labels. Full
+     * names are UNCHANGED in the tooltip (`payload.title`) and the a11y table (asserted
+     * separately below/in the tooltip + table describe blocks). FAIL input: any of these reverting
+     * to the full name (the SP name, or "Program-level"/"Intermediate outcomes"/"2030 outcomes")
+     * turns this red.
+     */
+    it('labels root with the SP CODE and branches with SHORT text — AoW code, "Program"/"Intermediate"/"2030"', () => {
+      const shortLabelsModel = makeModel([
+        makeBranch({ kind: 'aow', code: 'AOW01', name: 'Area of Work 1', leaves: [makeLeaf({ code: 'OP1' })] }),
+        makeBranch({ kind: 'program', code: 'PROGRAM', name: 'Program-level', leaves: [makeLeaf({ code: 'SHARED-1' })] }),
+        makeBranch({ kind: 'intermediate', code: 'intermediate-outcomes', name: 'Intermediate outcomes', leaves: [makeLeaf({ code: 'IO-1' })] }),
+        makeBranch({ kind: '2030', code: '2030-outcomes', name: '2030 outcomes', leaves: [makeLeaf({ code: 'O30-1' })] })
+      ]);
+      const root = buildOption(shortLabelsModel).series[0].data[0];
+      const labelOf = (kind: string) => root.children!.find(b => b.tocMapPayload.kind === kind)!.name;
+
+      expect(root.name).toBe('SP01');
+      expect(labelOf('aow')).toBe('AOW01');
+      expect(labelOf('program')).toBe('Program');
+      expect(labelOf('intermediate')).toBe('Intermediate');
+      expect(labelOf('2030')).toBe('2030');
+
+      // Full names untouched elsewhere — the payload (tooltip source) still carries them.
+      const programBranch = root.children!.find(b => b.tocMapPayload.kind === 'program')!;
+      expect(programBranch.tocMapPayload.title).toBe('Program-level');
     });
   });
 
