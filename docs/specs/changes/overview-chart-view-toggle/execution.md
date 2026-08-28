@@ -128,3 +128,20 @@ Checklist handed to the user:
 #### ADVISORY (non-gating, recorded)
 1. **RELIABILITY:** separator count test queries `div[aria-hidden="true"]` tree-wide; `pr-viz-chart`'s loading container matches when loading — scope to grid children if it ever flakes.
 2. **RISK (a11y, within spec):** "Reporting status"'s h2 names no funding source, so SR users don't get its W1/W2 grouping (separators are aria-hidden by design). Cheapest future fix: extend that heading text, not un-hiding the separator.
+
+### Amendment record — CVT-A-5 (2026-08-27, owner at the CVT-T-3 HITL gate)
+
+- **User direction:** "cambia estas graficas por las de la nueva libreria" — convert the two bilateral single-series DOM-bars cards ("W3/Bilateral results by indicator category", "Centers with reported W3/bilateral results") to ECharts via `app-pr-viz-chart`. Recorded as CVT-A-5 / CVT-DD-9 (supersedes the spec's out-of-scope line and, for these two cards, the family's "DOM bars for single-series rows" pattern).
+
+#### Implementation loop
+
+- **Status:** PASS (attempt 1) · Implementer: `impl-cvt-t2` · Reviewer: `rev-cvt-t2`
+- **Files:** `program-overview.charts.ts` (+90), `charts.spec.ts` (+104), `component.ts` (+65/−), `.html` (−55/+10), `component.spec.ts` (±168).
+- **What:** pure `singleBarOption(bars, color, labelColor)` (structural `SingleBarRow`; yAxis `inverse`+`interval: 0`+`abbreviateAxisLabel`; value label at bar end; no `id`/`universalTransition` — pinned negatively so these can never enter the matrix morph set) + `singleBarTable` + null-safe `singleBarLinkFromClick`; one host per card (`options`/`tableModel`/`chartTitle`/`height`/`chartClick`→`emitLink`); `barCardHeight = max(160, rows*36)px`; dead width/max members removed (usage-grepped first); token fidelity exact — categories `--pr-chart-2-muted`, centers `--pr-chart-2` via UNREVERSED `resolveChartTokens().ramp[1]` (Reviewer: reusing the component's reversed `heatmapRamp` would have silently shipped `--pr-chart-3`; avoided and documented).
+- **Verification:** FULL suite **482 suites / 6914 tests** green; lint clean; `ng build` exit 0; no hex; no package.json; `dashboard-lab` zero changes; heading contract 7 untouched; separators/matrix/toggle/donut untouched.
+- **Reviewer:** **STATUS: PASS** — builders pure and KZ-SPO-1-behavioral (formatter called, not presence-checked); click parity exercised against a REAL null-link fixture row (not out-of-range); coverage displacement adjudicated test-by-test (replacements stronger where it matters); host counts updated in both assertion sites.
+- **Gate condition (Reviewer):** CVT-AC-3 HITL must cover these two cards specifically (abbreviation legibility at half-width, bar-end labels vs padding, the 160px floor on the 2-row card) — earlier HITL passes predate them as charts.
+
+#### ADVISORY (non-gating, recorded)
+1. **RISK (a11y, cumulative — decision for the owner, not this task):** with CVT-A-3 + CVT-A-5 the Overview now has NO keyboard-reachable drill-down: all navigation is chart-mark clicks (SVG marks non-focusable by family precedent; the hidden table reaches the data, not the action). Candidate follow-up: hidden-table cells as links. Surfaced at the next gate.
+2. **RELIABILITY:** no assertion that the hidden table's CONTENT renders into these two cards (caption/non-null only); one rendered-text line would restore the deleted DOM test's true subject.

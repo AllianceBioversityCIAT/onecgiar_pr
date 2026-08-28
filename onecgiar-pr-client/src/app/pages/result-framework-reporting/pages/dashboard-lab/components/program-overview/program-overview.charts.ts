@@ -253,6 +253,96 @@ export function barLinkFromClick(event: { seriesIndex?: number; dataIndex?: numb
   return model.cells.find(cell => cell.r === r && cell.c === c)?.link ?? null;
 }
 
+/**
+ * Row shape shared by `CategoryBar` and `OverviewCenterBar` (both `{ name, count, link }`) —
+ * `singleBarOption`/`singleBarTable`/`singleBarLinkFromClick` work for either without importing
+ * both types; a `CategoryBar[]` or `OverviewCenterBar[]` satisfies this structurally.
+ */
+type SingleBarRow = { name: string; count: number; link: OverviewLink | null };
+
+/**
+ * Builds the `app-pr-viz-chart` `options` for a single-series horizontal bar card
+ * (`CVT-A-5`/`CVT-DD-9`) — converts the former DOM-bars cards ("W3/Bilateral results by
+ * indicator category", "Centers with reported W3/bilateral results") to ECharts, one series, no
+ * toggle. `color` is the caller-resolved existing chart token that card used as a DOM fill
+ * (`--pr-chart-2` for centers, `--pr-chart-2-muted` for bilateral categories — same MEANING kept,
+ * just resolved and passed in, never hardcoded here — KZ-SPO-1); `labelColor` is the caller-
+ * resolved text token for the bar-end value label (mirrors `stackedBarOption`'s
+ * `totalLabelColor`).
+ *
+ * `yAxis.inverse` + `abbreviateAxisLabel` + `interval: 0` mirror `stackedBarOption`'s ROW axis
+ * treatment (KZ-SPO-1): the row (name) axis is this chart's category axis, so it is the one that
+ * needs every label forced visible and abbreviated at display level — `bars[i].name` itself is
+ * untouched (tooltip/table/links keep the full name).
+ *
+ * No `universalTransition`, no shared/morph ids — these cards have no heatmap↔bars toggle
+ * (`CVT-A-5`), so there is nothing to morph between.
+ */
+export function singleBarOption(bars: SingleBarRow[], color: string, labelColor: string): EChartsOption {
+  const names = bars.map(bar => bar.name);
+  const counts = bars.map(bar => bar.count);
+
+  return {
+    tooltip: {
+      formatter: (params: unknown) => {
+        const payload = params as { dataIndex?: number };
+        const i = payload?.dataIndex;
+        const bar = typeof i === 'number' ? bars[i] : undefined;
+        if (!bar) return '';
+        const note = bar.link ? '' : ' (not navigable)';
+        return `${bar.name}: ${bar.count}${note}`;
+      }
+    },
+    // Extra right padding so the bar-end value labels never clip against the card edge (mirrors
+    // stackedBarOption's totals-label padding).
+    grid: { left: 96, right: 40, top: 16, bottom: 16, containLabel: true },
+    xAxis: { type: 'value' },
+    yAxis: {
+      type: 'category',
+      data: names,
+      inverse: true,
+      axisLabel: { interval: 0, formatter: abbreviateAxisLabel }
+    },
+    series: [
+      {
+        type: 'bar',
+        data: counts,
+        itemStyle: { color },
+        label: {
+          show: true,
+          position: 'right',
+          color: labelColor,
+          formatter: (params: unknown) => {
+            const payload = params as { value?: number };
+            return typeof payload?.value === 'number' ? String(payload.value) : '';
+          }
+        }
+      }
+    ]
+  } as EChartsOption;
+}
+
+/** Visually-hidden `<table>` pairing for a single-series bar card — caption + name/count rows. */
+export function singleBarTable(caption: string, bars: SingleBarRow[]): VizChartTableModel {
+  return {
+    caption,
+    headers: ['Name', 'Results'],
+    rows: bars.map(bar => [bar.name, bar.count])
+  };
+}
+
+/**
+ * Resolves a single-series bar `chartClick` event back to the `OverviewLink` stored on the
+ * clicked row. Bar click events carry the row's `dataIndex` (aligned to `bars`, set by
+ * `singleBarOption` above); anything unresolvable (missing/non-numeric index, out-of-range)
+ * resolves to `null` — swallowed by `ProgramOverviewComponent.emitLink`, never emitted.
+ */
+export function singleBarLinkFromClick(event: { dataIndex?: number }, bars: SingleBarRow[]): OverviewLink | null {
+  const i = event?.dataIndex;
+  if (typeof i !== 'number') return null;
+  return bars[i]?.link ?? null;
+}
+
 // quick/donut-violet-scale (user-approved 2026-08-27, amends OVW-DD-5): sectors use the
 // violet chart palette like every other chart on the page, NOT the status fg tokens. The
 // sector ↔ legend-dot colour link is deliberately given up; the tooltip names each status.

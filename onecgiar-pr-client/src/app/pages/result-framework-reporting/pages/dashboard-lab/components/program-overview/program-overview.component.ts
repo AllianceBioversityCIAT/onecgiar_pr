@@ -7,6 +7,9 @@ import {
   cellLinkFromClick,
   stackedBarOption,
   barLinkFromClick,
+  singleBarOption,
+  singleBarTable,
+  singleBarLinkFromClick,
   donutOption,
   donutTable,
   sectorLinkFromClick
@@ -253,11 +256,6 @@ export class ProgramOverviewComponent {
 
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
 
-  readonly bilateralCentersMax = computed(() => {
-    const rows = this.bilateralCenters();
-    return rows.length ? Math.max(...rows.map(r => r.count)) : 0;
-  });
-
   segmentWidth(segment: StatusSegment): number {
     const total = this.statusTotal();
     return total ? (segment.count / total) * 100 : 0;
@@ -275,21 +273,56 @@ export class ProgramOverviewComponent {
     return row.total ? Math.round((row.done / row.total) * 100) : 0;
   }
 
-  private readonly bilateralCategoriesMax = computed(() => Math.max(...this.bilateralCategories().map(c => c.count), 1));
+  /**
+   * `--pr-chart-2-muted` resolved once per render pass — the "W3/Bilateral results by indicator
+   * category" card's bar fill (`CVT-A-5`), the same token its old DOM bar used
+   * (`bg-[var(--pr-chart-2-muted)]`) — meaning preserved, only the rendering technology changed.
+   */
+  private readonly bilateralCategoriesColor = computed(() => resolveChartTokens().bilateralMuted);
 
   /**
-   * Bar width as a share of the LARGEST bar in its own series, so the biggest category fills the
-   * track and the ranking reads at a glance.
-   *
-   * The `Math.max(..., 1)` in the denominator is what keeps an all-zero (or empty) series at 0%
-   * instead of `NaN`.
+   * `--pr-chart-2` resolved once per render pass — the "Centers with reported W3/bilateral
+   * results" card's bar fill (`CVT-A-5`), the same token its old DOM bar used
+   * (`bg-[var(--pr-chart-2)]`). `resolveChartTokens().ramp` is `[chart-1, chart-2, chart-3,
+   * chart-4]` (unreversed, unlike `heatmapRamp`), so index 1 is `--pr-chart-2`.
    */
-  bilateralCategoryWidth(bar: CategoryBar): number {
-    return (bar.count / this.bilateralCategoriesMax()) * 100;
+  private readonly bilateralCentersColor = computed(() => resolveChartTokens().ramp[1] ?? '');
+
+  /** Row-count-driven height (`CVT-DD-9`): a 160px floor, then ~36px/row (the old DOM row height). */
+  private barCardHeight(rowCount: number): string {
+    return `${Math.max(160, rowCount * 36)}px`;
   }
 
-  centerWidth(bar: OverviewCenterBar): number {
-    const max = this.bilateralCentersMax();
-    return max ? (bar.count / max) * 100 : 0;
+  readonly bilateralCategoriesOption = computed<EChartsOption | null>(() => {
+    const bars = this.bilateralCategories();
+    return bars.length ? singleBarOption(bars, this.bilateralCategoriesColor(), this.totalLabelColor()) : null;
+  });
+
+  readonly bilateralCategoriesTable = computed<VizChartTableModel | null>(() => {
+    const bars = this.bilateralCategories();
+    return bars.length ? singleBarTable('W3/Bilateral results by indicator category', bars) : null;
+  });
+
+  readonly bilateralCategoriesHeight = computed(() => this.barCardHeight(this.bilateralCategories().length));
+
+  /** Resolves the clicked row back to its `OverviewLink` and emits (or swallows a `null`). */
+  onBilateralCategoriesClick(event: ECElementEvent): void {
+    this.emitLink(singleBarLinkFromClick(event, this.bilateralCategories()));
+  }
+
+  readonly bilateralCentersOption = computed<EChartsOption | null>(() => {
+    const bars = this.bilateralCenters();
+    return bars.length ? singleBarOption(bars, this.bilateralCentersColor(), this.totalLabelColor()) : null;
+  });
+
+  readonly bilateralCentersTable = computed<VizChartTableModel | null>(() => {
+    const bars = this.bilateralCenters();
+    return bars.length ? singleBarTable('Centers with reported W3/bilateral results', bars) : null;
+  });
+
+  readonly bilateralCentersHeight = computed(() => this.barCardHeight(this.bilateralCenters().length));
+
+  onBilateralCentersClick(event: ECElementEvent): void {
+    this.emitLink(singleBarLinkFromClick(event, this.bilateralCenters()));
   }
 }

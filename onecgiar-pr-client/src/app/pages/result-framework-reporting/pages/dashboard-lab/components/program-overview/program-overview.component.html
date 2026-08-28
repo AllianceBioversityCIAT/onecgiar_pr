@@ -166,7 +166,10 @@
     <span class="h-px flex-1 bg-[var(--pr-border)]"></span>
   </div>
   <!-- 5 · W3/Bilateral results by indicator category · span 6 — P2-3302 ("Number of result by
-       Indicator category"). Primary-role only, as the design's subtitle states. -->
+       Indicator category"). Primary-role only, as the design's subtitle states.
+       CVT-A-5 (amendment, 2026-08-27, owner, CVT-T-3 gate): converted from DOM bars to
+       `app-pr-viz-chart` (single-series horizontal bar, no toggle) — one charting library
+       across the Overview. `bilateralCategoryWidth` and its button rows are removed. -->
   <section
     class="col-span-6 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
     <div class="flex items-center gap-[8px]">
@@ -179,37 +182,20 @@
     </span>
 
     @if (bilateralCategories().length) {
-      <div class="flex flex-col">
-        @for (bar of bilateralCategories(); track bar.name) {
-          <button
-            type="button"
-            [disabled]="!bar.link"
-            (click)="emitLink(bar.link)"
-            class="flex min-h-[36px] cursor-pointer items-center gap-[12px] rounded-[8px] border-none bg-transparent px-[6px] text-left transition-colors hover:bg-[var(--pr-color-primary-50)] disabled:cursor-default disabled:hover:bg-transparent"
-            [attr.aria-label]="bar.link ? bar.name + ': ' + bar.count + (bar.count === 1 ? ' bilateral result' : ' bilateral results') : null">
-            <span class="min-w-0 max-w-[180px] flex-auto truncate text-[13px] font-normal text-[var(--pr-text)]" [title]="bar.name">
-              {{ bar.name }}
-            </span>
-            <span
-              class="h-[8px] min-w-[64px] flex-auto overflow-hidden rounded-full bg-[var(--pr-border-divider)]"
-              aria-hidden="true">
-              <span
-                class="block h-[8px] rounded-full bg-[var(--pr-chart-2-muted)]"
-                [style.width.%]="bilateralCategoryWidth(bar)"></span>
-            </span>
-            <span class="pr-figure-sm min-w-[32px] flex-none text-right text-[14px] font-semibold text-[var(--pr-text-heading)]">
-              {{ bar.count }}
-            </span>
-          </button>
-        }
-      </div>
+      <app-pr-viz-chart
+        [options]="bilateralCategoriesOption()"
+        [tableModel]="bilateralCategoriesTable()"
+        [chartTitle]="'W3/Bilateral results by indicator category'"
+        [height]="bilateralCategoriesHeight()"
+        (chartClick)="onBilateralCategoriesClick($event)" />
     } @else {
       <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">
         No bilateral results are linked to this program yet.
       </p>
     }
   </section>
-  <!-- 6 · Centers with reported W3/bilateral results · span 6 -->
+  <!-- 6 · Centers with reported W3/bilateral results · span 6 — CVT-A-5: same conversion as
+       card 5 above; `centerWidth` and its button rows are removed. -->
   <section
     class="col-span-6 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
     <div class="flex items-center gap-[8px]">
@@ -222,28 +208,12 @@
     </span>
 
     @if (bilateralCenters().length) {
-      <div class="flex flex-col">
-        @for (bar of bilateralCenters(); track bar.name) {
-          <button
-            type="button"
-            [disabled]="!bar.link"
-            (click)="emitLink(bar.link)"
-            class="flex min-h-[36px] cursor-pointer items-center gap-[12px] rounded-[8px] border-none bg-transparent px-[6px] text-left transition-colors hover:bg-[var(--pr-color-primary-50)] disabled:cursor-default disabled:hover:bg-transparent"
-            [attr.aria-label]="bar.link ? bar.name + ': ' + bar.count + (bar.count === 1 ? ' result' : ' results') : null">
-            <span class="min-w-0 max-w-[180px] flex-auto truncate text-[13px] font-normal text-[var(--pr-text)]" [title]="bar.name">
-              {{ bar.name }}
-            </span>
-            <span
-              class="h-[8px] min-w-[64px] flex-auto overflow-hidden rounded-full bg-[var(--pr-border-divider)]"
-              aria-hidden="true">
-              <span class="block h-[8px] rounded-full bg-[var(--pr-chart-2)]" [style.width.%]="centerWidth(bar)"></span>
-            </span>
-            <span class="pr-figure-sm min-w-[32px] flex-none text-right text-[14px] font-semibold text-[var(--pr-text-heading)]">
-              {{ bar.count }}
-            </span>
-          </button>
-        }
-      </div>
+      <app-pr-viz-chart
+        [options]="bilateralCentersOption()"
+        [tableModel]="bilateralCentersTable()"
+        [chartTitle]="'Centers with reported W3/bilateral results'"
+        [height]="bilateralCentersHeight()"
+        (chartClick)="onBilateralCentersClick($event)" />
     } @else {
       <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">
         No centers have reported bilateral results for this program yet.

@@ -9,7 +9,10 @@ import {
   abbreviateAxisLabel,
   stackedBarOption,
   barLinkFromClick,
-  datasetIdsFor
+  datasetIdsFor,
+  singleBarOption,
+  singleBarTable,
+  singleBarLinkFromClick
 } from './program-overview.charts';
 import { HeatmapModel, OverviewLink, StatusSegment } from './program-overview.component';
 
@@ -306,6 +309,105 @@ describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)'
     /** FAIL input: a resolver that matches the totals artifact's index to a real cell turns this red. */
     it('resolves the totals-artifact seriesIndex (one past the last real column) to null — CVT-A-2 click-parity guard', () => {
       expect(barLinkFromClick({ seriesIndex: barModel.cols.length, dataIndex: 0 }, barModel)).toBeNull();
+    });
+  });
+});
+
+describe('program-overview.charts singleBarOption / singleBarTable / singleBarLinkFromClick (CVT-A-5 / CVT-DD-9)', () => {
+  // Asymmetric fixture, one row with a null link (mirrors the "Not specified" synthetic center
+  // row) — works for either `CategoryBar[]` or `OverviewCenterBar[]` since both are structurally
+  // `{ name, count, link }`.
+  const bars = [
+    { name: 'Capacity sharing for development', count: 70, link: { origin: 'W3/Bilaterals', category: 'Capacity sharing for development' } },
+    { name: 'Innovation development', count: 30, link: { origin: 'W3/Bilaterals', category: 'Innovation development' } },
+    { name: 'Not specified', count: 3, link: null }
+  ];
+
+  describe('singleBarOption', () => {
+    it('builds a single bar series, data aligned to bars, colored by the caller-resolved token (name only, never a hex)', () => {
+      const option = singleBarOption(bars, 'chart-2-token', 'label-color-token') as {
+        series: { type: string; data: number[]; itemStyle: { color: string } }[];
+      };
+      expect(option.series.length).toBe(1);
+      expect(option.series[0].type).toBe('bar');
+      expect(option.series[0].data).toEqual([70, 30, 3]);
+      expect(option.series[0].itemStyle.color).toBe('chart-2-token');
+      expect(option.series[0].itemStyle.color.startsWith('#')).toBe(false);
+    });
+
+    it('sets yAxis.data to bar names (unreordered), inverse: true, interval: 0 + abbreviateAxisLabel (KZ-SPO-1)', () => {
+      const option = singleBarOption(bars, 'c', 'l') as {
+        yAxis: { data: string[]; inverse: boolean; axisLabel: { interval: number; formatter: (v: string) => string } };
+      };
+      expect(option.yAxis.data).toEqual(bars.map(bar => bar.name));
+      expect(option.yAxis.inverse).toBe(true);
+      expect(option.yAxis.axisLabel.interval).toBe(0);
+      expect(option.yAxis.axisLabel.formatter('Capacity sharing for development')).toBe('Cap-Dev');
+    });
+
+    it('has a value-type xAxis (magnitude), matching the horizontal single-bar shape', () => {
+      const option = singleBarOption(bars, 'c', 'l') as { xAxis: { type: string } };
+      expect(option.xAxis.type).toBe('value');
+    });
+
+    it('shows a value label at the bar end, colored by the caller-resolved text token (name only, never a hex)', () => {
+      const option = singleBarOption(bars, 'c', 'label-token') as {
+        series: { label: { show: boolean; position: string; color: string; formatter: (p: unknown) => string } }[];
+      };
+      const label = option.series[0].label;
+      expect(label.show).toBe(true);
+      expect(label.position).toBe('right');
+      expect(label.color).toBe('label-token');
+      expect(label.color.startsWith('#')).toBe(false);
+      expect(label.formatter({ value: 70 })).toBe('70');
+    });
+
+    it('tooltip names the row and its count, flagging a non-navigable row', () => {
+      const option = singleBarOption(bars, 'c', 'l');
+      const formatter = (option.tooltip as { formatter: (p: unknown) => string }).formatter;
+      expect(formatter({ dataIndex: 0 })).toBe('Capacity sharing for development: 70');
+      expect(formatter({ dataIndex: 2 })).toBe('Not specified: 3 (not navigable)');
+    });
+
+    /** FAIL input: adding a shared/morph id or universalTransition turns this red — this card has no toggle. */
+    it('adds no universalTransition and no shared/morph id (CVT-A-5: no toggle on this card)', () => {
+      const option = singleBarOption(bars, 'c', 'l') as { series: { id?: string; universalTransition?: unknown }[] };
+      expect(option.series[0].id).toBeUndefined();
+      expect(option.series[0].universalTransition).toBeUndefined();
+    });
+
+    /** FAIL input: throwing (or fabricating a row) for an empty input turns this red. */
+    it('does not throw for an empty bars array, and produces empty axis/series data', () => {
+      expect(() => singleBarOption([], 'c', 'l')).not.toThrow();
+      const option = singleBarOption([], 'c', 'l') as { yAxis: { data: string[] }; series: { data: number[] }[] };
+      expect(option.yAxis.data).toEqual([]);
+      expect(option.series[0].data).toEqual([]);
+    });
+  });
+
+  describe('singleBarTable', () => {
+    it('builds caption/headers/rows, mirroring heatmapTable/donutTable', () => {
+      const table = singleBarTable('Some card caption', bars);
+      expect(table.caption).toBe('Some card caption');
+      expect(table.headers).toEqual(['Name', 'Results']);
+      expect(table.rows).toEqual([
+        ['Capacity sharing for development', 70],
+        ['Innovation development', 30],
+        ['Not specified', 3]
+      ]);
+    });
+  });
+
+  describe('singleBarLinkFromClick', () => {
+    it('resolves dataIndex → bars[i].link for every row (parity, not sampling), including a null link', () => {
+      bars.forEach((bar, i) => {
+        expect(singleBarLinkFromClick({ dataIndex: i }, bars)).toEqual(bar.link);
+      });
+    });
+
+    it('resolves a missing/non-numeric/out-of-range dataIndex to null instead of throwing', () => {
+      expect(singleBarLinkFromClick({}, bars)).toBeNull();
+      expect(singleBarLinkFromClick({ dataIndex: 99 }, bars)).toBeNull();
     });
   });
 });

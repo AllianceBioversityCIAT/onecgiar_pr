@@ -162,14 +162,15 @@ describe('ProgramOverviewComponent', () => {
   });
 
   /**
-   * Rewritten from "there is still no SVG" (`OVW-T-3`, tasks.md DoD): the two heatmap cards plus
-   * the Reporting-status donut (`OVW-T-4`) each mount a real `app-pr-viz-chart` host, always
+   * Rewritten from "there is still no SVG" (`OVW-T-3`, tasks.md DoD): the two matrix cards, the
+   * Reporting-status donut (`OVW-T-4`), and — since `CVT-A-5` converted them from DOM bars —
+   * the two single-series bilateral bar cards each mount a real `app-pr-viz-chart` host, always
    * paired with a non-null `tableModel` (the wrapper clears the chart otherwise — `OVW-R-2`/
-   * `OVW-R-3`/`OVW-R-4` a11y pairing).
+   * `OVW-R-3`/`OVW-R-4`/`CVT-A-5` a11y pairing).
    */
-  it('renders 3 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
+  it('renders 5 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
     const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-    expect(hosts.length).toBe(3);
+    expect(hosts.length).toBe(5);
     hosts.forEach(host => {
       expect(host.componentInstance.tableModel()).toBeTruthy();
       expect(host.componentInstance.options()).toBeTruthy();
@@ -211,60 +212,82 @@ describe('ProgramOverviewComponent', () => {
   // singular/plural cases) is REMOVED under `CVT-A-3` — that card no longer exists; the W1/W2
   // matrix card (bars-default + bar-end totals) now covers the same information.
 
-  describe('bilateral breakdowns', () => {
-    it('normalises the bilateral bars against their own maximum, not the own-results one', () => {
-      // 70 is the bilateral max even though the own-results series peaks at 15.
-      expect(component.bilateralCategoryWidth(bilateralCategories[0])).toBe(100);
-      expect(component.bilateralCategoryWidth(bilateralCategories[1])).toBeCloseTo((30 / 70) * 100);
+  // The former "bilateral breakdowns" / "centers with reported W3/bilateral results" describe
+  // blocks (DOM-button rows, `bilateralCategoryWidth`/`bilateralCentersMax`/`centerWidth`,
+  // per-row `button[aria-label]` assertions) are REMOVED under `CVT-A-5` — both cards are now
+  // single-series `app-pr-viz-chart` hosts (like the matrix/donut cards); those members and DOM
+  // rows no longer exist. See the `bilateral single-series bar cards (CVT-A-5)` describe below.
+
+  describe('bilateral single-series bar cards (CVT-A-5 / CVT-DD-9)', () => {
+    it('mounts an app-pr-viz-chart host per card, each with non-null options/tableModel and the right caption', () => {
+      const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
+      const categoriesHost = hosts.find(h => h.componentInstance.chartTitle() === 'W3/Bilateral results by indicator category');
+      const centersHost = hosts.find(h => h.componentInstance.chartTitle() === 'Centers with reported W3/bilateral results');
+
+      expect(categoriesHost).toBeTruthy();
+      expect(categoriesHost?.componentInstance.options()).toBeTruthy();
+      expect(categoriesHost?.componentInstance.tableModel()?.caption).toBe('W3/Bilateral results by indicator category');
+
+      expect(centersHost).toBeTruthy();
+      expect(centersHost?.componentInstance.options()).toBeTruthy();
+      expect(centersHost?.componentInstance.tableModel()?.caption).toBe('Centers with reported W3/bilateral results');
     });
 
-    it('shows an empty state when no bilateral results are linked', () => {
+    it('emits the stored link when a navigable bilateral-categories row is activated', () => {
+      const emitted: OverviewLink[] = [];
+      const sub = component.openResults.subscribe(link => emitted.push(link));
+
+      // dataIndex 0 = bilateralCategories[0] = 'Capacity sharing for development'.
+      component.onBilateralCategoriesClick({ dataIndex: 0 } as unknown as ECElementEvent);
+
+      expect(emitted).toEqual([{ origin: 'W3/Bilaterals', category: 'Capacity sharing for development' }]);
+      sub.unsubscribe();
+    });
+
+    it('emits the stored link when a navigable center row is activated', () => {
+      const emitted: OverviewLink[] = [];
+      const sub = component.openResults.subscribe(link => emitted.push(link));
+
+      // dataIndex 0 = centers[0] = 'CIAT'.
+      component.onBilateralCentersClick({ dataIndex: 0 } as unknown as ECElementEvent);
+
+      expect(emitted).toEqual([{ origin: 'W3/Bilaterals', center: 'CIAT' }]);
+      sub.unsubscribe();
+    });
+
+    /** FAIL input: resolving the synthetic "Not specified" row's `link: null` to a real link turns this red. */
+    it('emits nothing when the non-navigable "Not specified" center row is activated', () => {
+      const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+      // dataIndex 4 = centers[4] = 'Not specified' (link: null).
+      component.onBilateralCentersClick({ dataIndex: 4 } as unknown as ECElementEvent);
+
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    /** FAIL input: a resolver that doesn't guard a missing/non-numeric dataIndex turns this red. */
+    it('emits nothing when the click event carries no numeric dataIndex', () => {
+      const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+      component.onBilateralCategoriesClick({} as unknown as ECElementEvent);
+
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    it('shows an empty state instead of a chart when no bilateral categories are linked', () => {
       fixture.componentRef.setInput('bilateralCategories', []);
       fixture.detectChanges();
       expect(fixture.nativeElement.textContent).toContain('No bilateral results are linked to this program yet.');
-    });
-  });
-
-  describe('centers with reported W3/bilateral results', () => {
-    it('calculates center bar width relative to the maximum center count', () => {
-      expect(component.bilateralCentersMax()).toBe(45);
-      expect(component.centerWidth(centers[0])).toBe(100);
-      expect(component.centerWidth(centers[1])).toBeCloseTo((32 / 45) * 100);
-      expect(component.centerWidth(centers[2])).toBeCloseTo((4 / 45) * 100);
+      expect(component.bilateralCategoriesOption()).toBeNull();
     });
 
-    it('renders center acronyms, counts, and width styling in the DOM', () => {
-      const text = fixture.nativeElement.textContent as string;
-      expect(text).toContain('CIAT');
-      expect(text).toContain('45');
-      expect(text).toContain('IRRI');
-      expect(text).toContain('32');
-      expect(text).toContain('CIMMYT');
-      expect(text).toContain('4');
-
-      const ciatButton = fixture.nativeElement.querySelector('button[aria-label="CIAT: 45 results"]');
-      expect(ciatButton).toBeTruthy();
-      const ciatBar = ciatButton.querySelector('.bg-\\[var\\(--pr-chart-2\\)\\]');
-      expect(ciatBar.style.width).toBe('100%');
-    });
-
-    it('says "1 result", not "1 results", for a single-result center', () => {
-      fixture.componentRef.setInput('bilateralCenters', [
-        { name: 'CIP', count: 1, link: { origin: 'W3/Bilaterals', center: 'CIP' } }
-      ]);
-      fixture.detectChanges();
-      const row = fixture.nativeElement.querySelector('button[aria-label="CIP: 1 result"]');
-      expect(row).toBeTruthy();
-    });
-
-    it('shows an empty state when no centers have reported bilateral results', () => {
+    it('shows an empty state instead of a chart when no centers have reported bilateral results', () => {
       fixture.componentRef.setInput('bilateralCenters', []);
       fixture.detectChanges();
-      expect(component.bilateralCentersMax()).toBe(0);
-      expect(component.centerWidth({ name: 'CIAT', count: 0, link: null })).toBe(0);
       expect(fixture.nativeElement.textContent).toContain(
         'No centers have reported bilateral results for this program yet.'
       );
+      expect(component.bilateralCentersOption()).toBeNull();
     });
 
     it('does not render legacy bilateral role counts or review stub', () => {
@@ -278,26 +301,13 @@ describe('ProgramOverviewComponent', () => {
   });
 
   describe('row navigability (OVW-R-1 / OVW-DD-1 / OVW-DD-3)', () => {
-    /**
-     * Renamed from "ships the category and center rows visible but disabled" and inverted:
-     * P2-3408 landed, so every row with a destination is now a real, enabled button — only the
-     * synthetic `Not specified` center (no single filter value, `OVW-DD-3`) stays disabled.
-     * FAIL input: re-adding `disabled` unconditionally on the row button turns this red.
-     */
-    it('renders linked rows as enabled buttons and keeps Not specified disabled', () => {
-      const rows: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button.min-h-\\[36px\\]'));
-      // CVT-A-3: the former W1/W2 own-results row card is removed — only bilateralCategories
-      // (card "W3/Bilateral results by indicator category") and centers use this row markup now.
-      expect(rows.length).toBe(bilateralCategories.length + centers.length);
-
-      const linkedRows = rows.filter(row => row.getAttribute('aria-label'));
-      expect(linkedRows.length).toBeGreaterThan(0);
-      expect(linkedRows.every(row => !row.disabled)).toBe(true);
-
-      const disabledRows = rows.filter(row => row.disabled);
-      expect(disabledRows.length).toBe(1);
-      expect(disabledRows[0].textContent).toContain('Not specified');
-    });
+    // `CVT-A-5` converted the bilateral-categories and centers cards from DOM `button` rows to
+    // `app-pr-viz-chart` hosts (no keyboard-focusable per-row buttons any more — accepted
+    // tradeoff, consistent with the matrix/donut cards per the amendment). The DOM-row tests
+    // that lived here (enabled/disabled row buttons, clicking the "IITA" row button, clicking
+    // the disabled "Not specified" row button) are REMOVED — their click-resolution coverage now
+    // lives in `bilateral single-series bar cards (CVT-A-5)` above, via `onBilateralCentersClick`/
+    // `onBilateralCategoriesClick` directly, since there is no DOM row left to click.
 
     /**
      * Renamed from "announces Coming soon once per affected section": the chip is gone now that
@@ -310,28 +320,9 @@ describe('ProgramOverviewComponent', () => {
       expect(tags.length).toBe(0);
     });
 
-    it('emits the row link when a linked row is clicked', () => {
-      const emitted: OverviewLink[] = [];
-      const sub = component.openResults.subscribe(link => emitted.push(link));
-
-      const iitaButton: HTMLButtonElement = fixture.nativeElement.querySelector('button[aria-label^="IITA"]');
-      expect(iitaButton).toBeTruthy();
-      iitaButton.click();
-
-      expect(emitted).toEqual([{ origin: 'W3/Bilaterals', center: 'IITA' }]);
-      sub.unsubscribe();
-    });
-
-    it('emits nothing when the disabled Not specified row is activated', () => {
+    /** FAIL input: resolving a `null` link to a truthy emission turns this red. */
+    it('emitLink swallows null and never emits (OVW-DD-3 guard)', () => {
       const emitSpy = jest.spyOn(component.openResults, 'emit');
-
-      // A native `disabled` button never dispatches a click at all — this proves the DOM side.
-      const disabledButton: HTMLButtonElement = fixture.nativeElement.querySelector('button[disabled]');
-      expect(disabledButton.textContent).toContain('Not specified');
-      disabledButton.click();
-      expect(emitSpy).not.toHaveBeenCalled();
-
-      // This proves the guard itself, independent of the browser's disabled-click suppression.
       component.emitLink(null);
       expect(emitSpy).not.toHaveBeenCalled();
     });
@@ -542,7 +533,8 @@ describe('ProgramOverviewComponent', () => {
     /** FAIL input: a second chart host per card, or a table rebuilt on toggle, turns this red. */
     it('keeps exactly one app-pr-viz-chart host per card and the same tableModel reference across the switch', () => {
       const beforeHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-      expect(beforeHosts.length).toBe(3);
+      // CVT-A-5: 2 matrix cards + donut + 2 single-series bilateral bar cards = 5 hosts total.
+      expect(beforeHosts.length).toBe(5);
       const w12TableBefore = component.w12HeatmapTable();
       const bilateralTableBefore = component.bilateralHeatmapTable();
 
@@ -551,7 +543,7 @@ describe('ProgramOverviewComponent', () => {
       fixture.detectChanges();
 
       const afterHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-      expect(afterHosts.length).toBe(3);
+      expect(afterHosts.length).toBe(5);
       expect(component.w12HeatmapTable()).toBe(w12TableBefore);
       expect(component.bilateralHeatmapTable()).toBe(bilateralTableBefore);
     });
