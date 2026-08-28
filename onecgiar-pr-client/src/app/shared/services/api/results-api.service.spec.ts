@@ -5033,6 +5033,17 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
+
+    it('should call GET_ResultToReview with versionId when provided', done => {
+      service.GET_ResultToReview('prog1', undefined, 36).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/by-program-and-centers?programId=prog1&versionId=36`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_PendingReviewCount', () => {

@@ -789,16 +789,36 @@ export class ResultsController {
       'Center IDs to filter by. Can be a single ID or comma-separated values.',
     example: 'CT01,CT02,CT03',
   })
+  @ApiQuery({
+    name: 'versionId',
+    type: String,
+    required: false,
+    description:
+      'Phase/version ID to filter results by (e.g., active reporting cycle).',
+    example: '36',
+  })
+  @ApiQuery({
+    name: 'statusIds',
+    type: String,
+    required: false,
+    description:
+      'Comma-separated status IDs or "all" to filter by specific statuses (defaults to all active statuses except discontinued).',
+    example: '1,5,6,7',
+  })
   @ApiOkResponse({
     description: 'Results retrieved and grouped by project successfully.',
   })
   async getResultsByProgramAndCenters(
     @Query('programId') programId: string,
     @Query('centerIds') centerIds?: string | string[],
+    @Query('versionId') versionId?: string,
+    @Query('statusIds') statusIds?: string,
   ) {
     return this.resultsService.getResultsByProgramAndCenters(
       programId,
       centerIds,
+      versionId,
+      statusIds,
     );
   }
 

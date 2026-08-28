@@ -1,8 +1,8 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { ProgrammeResultRow } from './programme-results.service';
 
-/** The six filter dimensions of the Results tab toolbar, left to right. */
-export type ProgrammeResultsFilterDimension = 'search' | 'section' | 'status' | 'category' | 'origin' | 'center';
+/** The seven filter dimensions of the Results tab toolbar, left to right. */
+export type ProgrammeResultsFilterDimension = 'search' | 'section' | 'phase' | 'status' | 'category' | 'origin' | 'center';
 
 /** One entry of the chip row. `value` is what `clearChip()` needs to remove just this one. */
 export interface ProgrammeResultsFilterChip {
@@ -22,6 +22,7 @@ export interface ProgrammeResultsStatusCount {
 export interface ProgrammeResultsFilterState {
   searchText: string;
   selectedSections: string[];
+  selectedPhase: string | null;
   selectedStatus: string | null;
   selectedCategory: string | null;
   selectedOrigin: string | null;
@@ -61,6 +62,16 @@ export function matchesProgrammeResultFilters(
   // Section is multi-select (OR within the dimension). Always passes in v1: every row's
   // `section` is '' because no endpoint exposes the AoW for the full result set (P2-3399).
   if (state.selectedSections?.length && !state.selectedSections.some(section => normalize(section) === normalize(row?.section))) {
+    return false;
+  }
+
+  if (
+    state.selectedPhase &&
+    normalize(state.selectedPhase) !== normalize(row?.phaseName) &&
+    normalize(state.selectedPhase) !== normalize(row?.phaseYear) &&
+    normalize(state.selectedPhase) !== normalize(row?.versionId) &&
+    normalize(state.selectedPhase) !== normalize(`Phase ${row?.phaseYear}`)
+  ) {
     return false;
   }
 
@@ -116,6 +127,8 @@ export class ProgrammeResultsFilterService {
    */
   readonly selectedSections = signal<string[]>([]);
 
+  /** SINGLE-select, matched against `row.phaseName` / `row.phaseYear` / `row.versionId`. */
+  readonly selectedPhase = signal<string | null>(null);
   /** SINGLE-select, matched against `row.statusName`. `null` = no status filter. */
   readonly selectedStatus = signal<string | null>(null);
   /** SINGLE-select, matched against `row.category` (`result_type`). */
@@ -125,10 +138,11 @@ export class ProgrammeResultsFilterService {
   /** SINGLE-select, matched against `row.center` (`lead_center`). */
   readonly selectedCenter = signal<string | null>(null);
 
-  /** Plain snapshot of all six dimensions — what the pure predicates take. */
+  /** Plain snapshot of all seven dimensions — what the pure predicates take. */
   readonly state = computed<ProgrammeResultsFilterState>(() => ({
     searchText: this.searchText(),
     selectedSections: this.selectedSections(),
+    selectedPhase: this.selectedPhase(),
     selectedStatus: this.selectedStatus(),
     selectedCategory: this.selectedCategory(),
     selectedOrigin: this.selectedOrigin(),
@@ -148,6 +162,8 @@ export class ProgrammeResultsFilterService {
     for (const section of this.selectedSections()) {
       if (section) chips.push({ label: `Section: ${section}`, dimension: 'section', value: section });
     }
+    const phase = this.selectedPhase();
+    if (phase) chips.push({ label: `Phase: ${phase}`, dimension: 'phase', value: phase });
     const status = this.selectedStatus();
     if (status) chips.push({ label: `Status: ${status}`, dimension: 'status', value: status });
     const category = this.selectedCategory();
@@ -190,6 +206,10 @@ export class ProgrammeResultsFilterService {
     this.selectedSections.set(this.selectedSections().filter(value => value !== section));
   }
 
+  clearPhase(): void {
+    this.selectedPhase.set(null);
+  }
+
   clearStatus(): void {
     this.selectedStatus.set(null);
   }
@@ -215,6 +235,9 @@ export class ProgrammeResultsFilterService {
       case 'section':
         this.clearSections(chip.value);
         return;
+      case 'phase':
+        this.clearPhase();
+        return;
       case 'status':
         this.clearStatus();
         return;
@@ -232,10 +255,11 @@ export class ProgrammeResultsFilterService {
     }
   }
 
-  /** Resets all six dimensions. Shared by "Clear all" and the filtered empty state's button. */
+  /** Resets all seven dimensions. Shared by "Clear all" and the filtered empty state's button. */
   clearAll(): void {
     this.searchText.set('');
     this.selectedSections.set([]);
+    this.selectedPhase.set(null);
     this.selectedStatus.set(null);
     this.selectedCategory.set(null);
     this.selectedOrigin.set(null);

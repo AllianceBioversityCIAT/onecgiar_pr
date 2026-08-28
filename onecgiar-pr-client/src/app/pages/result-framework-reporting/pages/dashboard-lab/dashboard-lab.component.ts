@@ -1040,6 +1040,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
     const slots: { key: string; label: string; bg: string; fg: string; matchers: string[] }[] = [
       {
+        key: 'editing',
+        label: 'Editing',
+        bg: 'var(--pr-status-in-progress-bg)',
+        fg: 'var(--pr-status-in-progress-fg)',
+        matchers: ['editing', 'draft']
+      },
+      {
         key: 'pending',
         label: 'Pending Review',
         bg: 'var(--pr-status-submitted-bg)',
@@ -1269,7 +1276,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** Fetch the programme's bilateral rows. Overview only — the other tabs do not use them. */
   private loadBilateralRows(code: string): void {
-    this.api.resultsSE.GET_ResultToReview(code).subscribe({
+    const versionId = this.latestVersion(this.selected())?.versionId
+      ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    this.api.resultsSE.GET_ResultToReview(code, undefined, versionId ?? undefined, 'all').subscribe({
       next: (res: { response?: { results?: ResultToReview[] }[] }) =>
         this.bilateralRows.set((res?.response ?? []).flatMap(g => g.results ?? [])),
       error: () => this.bilateralRows.set([])
@@ -2521,6 +2530,16 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   latestVersion(sp: SPProgress | null | undefined): Version | null {
     if (!sp?.versions?.length) return null;
+    const currentPhaseId = this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    const currentPhaseYear = this.dataControlSE?.reportingCurrentPhase?.phaseYear;
+    if (currentPhaseId != null) {
+      const matchId = sp.versions.find(v => Number(v.versionId) === Number(currentPhaseId));
+      if (matchId) return matchId;
+    }
+    if (currentPhaseYear != null) {
+      const matchYear = sp.versions.find(v => Number(v.phaseYear) === Number(currentPhaseYear));
+      if (matchYear) return matchYear;
+    }
     return sp.versions.reduce((latest, v) => (v.phaseYear > latest.phaseYear ? v : latest), sp.versions[0]);
   }
 

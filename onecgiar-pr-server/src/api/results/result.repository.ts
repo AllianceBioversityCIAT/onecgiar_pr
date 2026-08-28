@@ -2785,8 +2785,14 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   async getResultsByProgramAndCenters(
     programId: string,
     centerIds?: string[],
+    versionId?: string | number,
+    statusIds?: string,
   ): Promise<any[]> {
     const hasCenterFilter = centerIds && centerIds.length > 0;
+    const hasVersionFilter =
+      versionId !== undefined &&
+      versionId !== null &&
+      String(versionId).trim().length > 0;
     const joinType = hasCenterFilter ? 'INNER' : 'LEFT';
 
     const baseQuery = `
@@ -2839,31 +2845,31 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND rt.is_active = 1
       JOIN results_by_inititiative rbi
         ON r.id = rbi.result_id
-      AND rbi.is_active = 1
+        AND rbi.is_active = 1
       JOIN initiative_roles ir
       	ON rbi.initiative_role_id = ir.id
       JOIN clarisa_initiatives ci
         ON rbi.inititiative_id = ci.id
-      AND ci.active = 1
+        AND ci.active = 1
       LEFT JOIN results_by_projects rbp
         ON r.id = rbp.result_id
-      AND rbp.is_active = 1
+        AND rbp.is_active = 1
       LEFT JOIN clarisa_projects cp
         ON rbp.project_id = cp.id
       JOIN result_status rs 
         ON r.status_id = rs.result_status_id
       LEFT JOIN results_toc_result rtr
         ON r.id = rtr.results_id
-      AND rtr.is_active = 1
+        AND rtr.is_active = 1
       LEFT JOIN Integration_information.toc_results tr 
         ON rtr.toc_result_id = tr.id
-      AND tr.is_active = 1
+        AND tr.is_active = 1
       LEFT JOIN Integration_information.toc_work_packages twp
         ON tr.wp_id = twp.toc_id
       LEFT JOIN results_toc_result_indicators rtri
         ON rtri.results_toc_results_id = rtr.result_toc_result_id
-      AND rtri.is_active = 1
-      AND (rtri.is_not_aplicable = 0 OR rtri.is_not_aplicable IS NULL)
+        AND rtri.is_active = 1
+        AND (rtri.is_not_aplicable = 0 OR rtri.is_not_aplicable IS NULL)
       LEFT JOIN Integration_information.toc_results_indicators t_selected
         ON (
             (CONVERT(t_selected.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
@@ -2879,7 +2885,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.source = 'API'
         AND ci.official_code = ?
         AND r.is_active = 1
-        AND r.status_id IN (5, 6, 7) 
     `;
 
     const params: any[] = [programId];
@@ -2890,6 +2895,29 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       const placeholders = centerIds.map(() => '?').join(',');
       finalQuery += ` AND lc.center_id IN (${placeholders})`;
       params.push(...centerIds);
+    }
+
+    if (hasVersionFilter) {
+      finalQuery += ` AND r.version_id = ?`;
+      params.push(versionId);
+    }
+
+    if (
+      statusIds &&
+      statusIds.trim().length > 0 &&
+      statusIds !== 'all' &&
+      statusIds !== '*'
+    ) {
+      const parsedStatusIds = statusIds
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => !Number.isNaN(n) && n > 0);
+      if (parsedStatusIds.length > 0) {
+        finalQuery += ` AND r.status_id IN (${parsedStatusIds.map(() => '?').join(',')})`;
+        params.push(...parsedStatusIds);
+      }
+    } else if (statusIds !== 'all' && statusIds !== '*') {
+      finalQuery += ` AND r.status_id != 4`;
     }
 
     finalQuery += `

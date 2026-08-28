@@ -37,6 +37,7 @@ export interface OverviewLink {
   category?: string;
   origin?: string;
   center?: string;
+  phase?: string;
 }
 
 /** One segment of the Reporting-status meter. `fg` doubles as the legend dot colour. */

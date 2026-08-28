@@ -1502,10 +1502,21 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }
 
-  GET_ResultToReview(programId: string, centerIds?: string[]) {
+  GET_ResultToReview(
+    programId: string,
+    centerIds?: string[],
+    versionId?: string | number,
+    statusIds?: string,
+  ) {
     let url = `${environment.apiBaseUrl}api/results/by-program-and-centers?programId=${programId}`;
     if (centerIds?.length === 1) {
       url += `&centerIds=${centerIds.join(',')}`;
+    }
+    if (versionId !== undefined && versionId !== null && String(versionId).trim().length > 0) {
+      url += `&versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    if (statusIds !== undefined && statusIds !== null && String(statusIds).trim().length > 0) {
+      url += `&statusIds=${encodeURIComponent(String(statusIds))}`;
     }
 
     return this.http.get<any>(url);

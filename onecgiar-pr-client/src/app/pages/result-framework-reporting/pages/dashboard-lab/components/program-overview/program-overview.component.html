@@ -412,12 +412,13 @@
         </div>
       </div>
 
-      <!-- Distributed 2x2 grid of status metric tiles to fill and balance the card height -->
+      <!-- Distributed grid of status metric tiles to fill and balance the card height -->
       <div class="grid grid-cols-2 gap-[10px]">
-        @for (segment of bilateralStatusSegments(); track segment.key) {
+        @for (segment of bilateralStatusSegments(); track segment.key; let last = $last) {
           @if (segment.link) {
             <button
               type="button"
+              [class.col-span-2]="last && bilateralStatusSegments().length % 2 !== 0"
               class="flex cursor-pointer items-center justify-between rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[12px] py-[9px] transition-colors hover:bg-[var(--pr-surface-hover)]"
               (click)="emitLink(segment.link)">
               <div class="flex min-w-0 items-center gap-[8px]">
@@ -431,6 +432,7 @@
             </button>
           } @else {
             <div
+              [class.col-span-2]="last && bilateralStatusSegments().length % 2 !== 0"
               class="flex items-center justify-between rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[12px] py-[9px] opacity-60">
               <div class="flex min-w-0 items-center gap-[8px]">
                 <span class="h-[9px] w-[9px] shrink-0 rounded-full" [style.background]="segment.fg"></span>

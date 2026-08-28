@@ -3272,6 +3272,8 @@ export class ResultsService {
   async getResultsByProgramAndCenters(
     programId: string,
     centerIds?: string | string[],
+    versionId?: string,
+    statusIds?: string,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
       if (!programId?.trim()) {
@@ -3306,6 +3308,8 @@ export class ResultsService {
         await this._resultRepository.getResultsByProgramAndCenters(
           normalizedProgramId,
           processedCenterIds,
+          versionId,
+          statusIds,
         );
 
       const mappedResults = rawResults.map((row) => ({

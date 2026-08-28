@@ -570,6 +570,7 @@ export class ProgrammeResultsComponent {
   readonly isFirstLoad = computed(() => this.data.loading() && !this.filteredRows().length);
 
   // ── Filter options ──────────────────────────────────────────────────────────────────────
+  readonly phaseSelectOptions = computed(() => this.data.phaseOptions().map(value => ({ value, label: value })));
   readonly statusSelectOptions = computed(() => this.data.statusOptions().map(value => ({ value, label: value })));
   readonly categorySelectOptions = computed(() => this.data.categoryOptions().map(value => ({ value, label: value })));
   readonly originSelectOptions = computed(() => this.data.originOptions().map(value => ({ value, label: value })));
@@ -649,11 +650,13 @@ export class ProgrammeResultsComponent {
       const params = this.queryParams();
 
       untracked(() => {
+        const phase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
         const status = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.status);
         const category = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category);
         const origin = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin);
         const center = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.center);
 
+        if (phase !== this.filter.selectedPhase()) this.filter.selectedPhase.set(phase);
         if (status !== this.filter.selectedStatus()) this.filter.selectedStatus.set(status);
         if (category !== this.filter.selectedCategory()) this.filter.selectedCategory.set(category);
         if (origin !== this.filter.selectedOrigin()) this.filter.selectedOrigin.set(origin);
@@ -662,12 +665,13 @@ export class ProgrammeResultsComponent {
     });
 
     // ── Filters → URL (RFD-R-2) ─────────────────────────────────────────────────────────────
-    // The second half of the anti-loop guard: read the four filter signals (tracked), then
+    // The second half of the anti-loop guard: read the five filter signals (tracked), then
     // diff them against the route's OWN last-known snapshot inside `untracked` so reading the
     // snapshot never becomes a dependency. Hydrating the same value the URL already carries
     // recomputes an identical `next` and skips `navigate` entirely — that is what breaks the
     // hydrate ↔ mirror cycle, not a `pending*` flag (RFD-DD-5).
     effect(() => {
+      const phase = this.filter.selectedPhase();
       const status = this.filter.selectedStatus();
       const category = this.filter.selectedCategory();
       const origin = this.filter.selectedOrigin();
@@ -676,6 +680,7 @@ export class ProgrammeResultsComponent {
       untracked(() => {
         const current = this.route.snapshot.queryParamMap;
         const next: Record<string, string | null> = {
+          [PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase]: phase,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.status]: status,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.category]: category,
           [PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin]: origin,
@@ -684,7 +689,7 @@ export class ProgrammeResultsComponent {
         const changed = Object.entries(next).some(([key, value]) => (current.get(key) ?? null) !== (value ?? null));
         if (!changed) return;
 
-        // `merge` preserves `phase`/`reviewResult`/`reviewResultId`; `replaceUrl` keeps a filter
+        // `merge` preserves other params; `replaceUrl` keeps a filter
         // tweak from becoming a Back-button trap (RFD-DD-4) — same stance as dashboard-lab's
         // mirror effect (`dashboard-lab.component.ts`).
         this.router.navigate([], { relativeTo: this.route, queryParams: next, queryParamsHandling: 'merge', replaceUrl: true });
@@ -717,6 +722,10 @@ export class ProgrammeResultsComponent {
 
   selectValue(value: string | null): string {
     return value ?? 'all';
+  }
+
+  onPhaseChange(value: unknown): void {
+    this.filter.selectedPhase.set(this.toFilterValue(value));
   }
 
   onStatusChange(value: unknown): void {
@@ -921,6 +930,8 @@ export class ProgrammeResultsComponent {
         return row?.category ?? '';
       case 'status':
         return row?.statusName ?? '';
+      case 'phase':
+        return row?.phaseName || (row?.phaseYear ? `Phase ${row.phaseYear}` : '');
       case 'createdBy':
         return row?.createdBy ?? '';
       case 'created':
