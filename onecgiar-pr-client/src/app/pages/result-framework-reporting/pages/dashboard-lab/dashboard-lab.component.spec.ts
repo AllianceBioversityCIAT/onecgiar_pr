@@ -745,4 +745,45 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
 
     expect(component.groupedSummaries().outputs.length).toBe(1);
   });
+
+  // Live regression (owner screenshot after W12-T-2): SP04's matrix card showed "No W1/W2
+  // results reported yet." for a program with real results. Root cause: the constructor
+  // effect resolved `versionId` ONCE (via `latestVersion()`'s "highest phaseYear" fallback,
+  // since `reportingCurrentPhase.phaseId` was still null at effect-fire time) and cached the
+  // summary under THAT key; `reportingCurrentPhase` is a plain mutable object, not a signal,
+  // so once `getCurrentPhases()` landed and the phase resolved to a DIFFERENT version than the
+  // fallback guessed, `groupedSummaries` computed a NEW key on its next read — a cache miss,
+  // permanently, since nothing ever re-fetched under the corrected key. Fix: `loadSummaries`
+  // was extracted into `refreshSelectedSummaries()`, called from its OWN effect that also reads
+  // `reportingPhaseVersion()` (bumped by `DataControlService.getCurrentPhases()`), so a
+  // late-arriving phase re-triggers a fetch under the corrected key. This test exercises
+  // `refreshSelectedSummaries()` directly (not the effect's Angular-scheduling itself, which is
+  // framework-guaranteed) to prove the corrected-key fetch actually heals the stale cache.
+  it('a late-arriving phase (fallback resolved a different version than the real one) re-fetches and heals the empty read', async () => {
+    const getSummary = jest
+      .fn()
+      .mockReturnValueOnce(of({ response: { totalsByType: [{ resultTypeId: 1, resultTypeName: 'Knowledge product' }] } }))
+      .mockReturnValueOnce(of({ response: { totalsByType: [{ resultTypeId: 2, resultTypeName: 'Innovation development' }] } }));
+    const component = await createComponent(getSummary);
+
+    // Simulates the OLD, single-shot effect: fires once, before the phase has loaded, resolving
+    // via the "highest phaseYear" fallback — versionId 20 (see the fixture/test above).
+    (component as any).loadSummaries('SP04', 20);
+    expect(getSummary).toHaveBeenNthCalledWith(1, 'SP04', 20);
+
+    // The phase lands late, and it is NOT the version the fallback guessed.
+    (component.dataControlSE as any).reportingCurrentPhase.phaseId = 10;
+
+    // RED: `groupedSummaries` is read for the first time only now — it resolves versionId 10
+    // (matched by id, since the phase is known) and looks up a key nothing has written yet.
+    expect(component.groupedSummaries().outputs).toEqual([]);
+    expect(component.groupedSummaries().outcomes).toEqual([]);
+
+    // GREEN: the fix's dedicated effect body, invoked directly here in place of Angular's
+    // `reportingPhaseVersion()`-triggered re-run, re-resolves and re-fetches under the real key.
+    (component as any).refreshSelectedSummaries();
+    expect(getSummary).toHaveBeenNthCalledWith(2, 'SP04', 10);
+    expect(component.groupedSummaries().outputs.length).toBe(1);
+    expect(component.groupedSummaries().outputs[0].resultTypeName).toBe('Innovation development');
+  });
 });

@@ -686,14 +686,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   constructor() {
-    // Load the selected program's Areas of Work + indicator categories on selection change.
+    // Load the selected program's Areas of Work on selection change.
     effect(() => {
       const sp = this.selected();
       const code = sp?.initiativeCode;
       if (code) {
         this.loadAows(code);
-        const summariesVersionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
-        this.loadSummaries(code, summariesVersionId ?? undefined);
         // Warm the legacy modals' context here, not on click: `canReportResults()` needs an async
         // phase check and would otherwise hide the submit button on a cold open.
         this.primeEntityAowContext();
@@ -706,6 +704,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         this.reportingAllOpen.set(false);
         this.reportingExpandNonce.set(0);
       }
+    });
+
+    /**
+     * Load the selected program's indicator-contribution summary. Kept in its OWN effect,
+     * separate from the one above (live-regression fix, W12): that effect resets AoW filters
+     * and expand/collapse state on every run, and re-running THAT just because the reporting
+     * phase landed would wipe user-driven filter state for no reason.
+     *
+     * This effect ALSO reads `reportingPhaseVersion()` (bumped by
+     * `DataControlService.getCurrentPhases()`, called fire-and-forget from the app shell) so a
+     * late-arriving phase re-resolves `versionId` and re-fetches under the corrected cache key —
+     * mirroring `result-creator.component.ts` / `report-result-form.component.ts`, which already
+     * depend on `reportingPhaseVersion()` for the same reason. Without this, `latestVersion()`'s
+     * "highest phaseYear" fallback (used while `reportingCurrentPhase.phaseId` is still null) can
+     * pick a DIFFERENT version than the one the phase resolves to once it loads; the summary gets
+     * cached under the fallback's key, `groupedSummaries`/`loadingSummaries` are Angular
+     * `computed()`s that don't proactively react to `reportingCurrentPhase` mutating (it's a
+     * plain object, not a signal, so this effect not depending on `reportingPhaseVersion()` is
+     * what silently and permanently orphans the fetch — nothing else re-triggers a re-read), and
+     * the card is stuck showing "No W1/W2 results reported yet." with no spinner and no retry.
+     */
+    effect(() => {
+      this.dataControlSE.reportingPhaseVersion();
+      this.refreshSelectedSummaries();
     });
 
     // By AOW requires a selected AOW — prefer `?tocAow=`, else keep/pick the first.
@@ -1642,6 +1664,21 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       next.delete(code);
       return next;
     });
+  }
+
+  /**
+   * Resolves `versionId` for the selected program EXACTLY like `loadBilateralRows` (W12-R-4)
+   * and (re)loads its indicator-contribution summary. Extracted so it can be called both on
+   * program selection AND on a later phase-context update (see the constructor effect above) —
+   * the resolution and the fetch must always happen together, or the two would each resolve
+   * `versionId` at DIFFERENT moments (see the effect's comment for why that is the bug).
+   */
+  private refreshSelectedSummaries(): void {
+    const sp = this.selected();
+    const code = sp?.initiativeCode;
+    if (!code) return;
+    const versionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    this.loadSummaries(code, versionId ?? undefined);
   }
 
   /**
