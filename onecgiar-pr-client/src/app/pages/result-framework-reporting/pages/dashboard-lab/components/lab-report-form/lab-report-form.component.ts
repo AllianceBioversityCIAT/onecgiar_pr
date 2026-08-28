@@ -228,7 +228,7 @@ export class LabReportFormComponent {
   readonly showOtherScience = computed(() => this.selectedScience().some((sp: any) => sp?.id === OTHER_SP_ID));
   readonly dropdown1ScienceOptions = computed(() => [
     ...this.tocSciencePrograms(),
-    { id: OTHER_SP_ID, official_code: 'Other(s)', name: 'Science Program(s)/Accelerator(s)' }
+    { id: OTHER_SP_ID, official_code: 'Other(s)', name: 'Science Program(s)/Accelerator(s)', full_name: 'Other(s) Science Program(s)/Accelerator(s)' }
   ]);
   readonly otherScienceList = computed(() => {
     const tocIds = new Set(this.tocSciencePrograms().map((sp: any) => sp.id));
