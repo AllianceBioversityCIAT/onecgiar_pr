@@ -50,4 +50,18 @@ describe('FooterComponent', () => {
     component.onMouseLeave();
     expect(component.isHover).toBe(false);
   });
+
+  // P2-3145: the glossary link is the only way the Reporting Tool points at the
+  // centralized CLARISA glossary, so both the label and the destination are asserted.
+  it('should render the glossary link in the footer', () => {
+    component.routes = [{ path: '/' }];
+    fixture.detectChanges();
+
+    const anchors: HTMLAnchorElement[] = Array.from(fixture.nativeElement.querySelectorAll('.footer a.f-button'));
+    const glossary = anchors.find(anchor => anchor.textContent?.trim() === 'Glossary of Terms');
+
+    expect(glossary).toBeTruthy();
+    expect(glossary?.getAttribute('href')).toBe('https://clarisa.cgiar.org/landing-page/glossary');
+    expect(glossary?.getAttribute('target')).toBe('_blank');
+  });
 });
