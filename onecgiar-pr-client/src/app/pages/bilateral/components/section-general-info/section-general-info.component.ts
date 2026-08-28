@@ -148,6 +148,12 @@ export class SectionGeneralInfoComponent implements OnInit, OnDestroy {
 
   readonly showHiddenFieldsNote = computed(() => !this.showAllFields() && this.hiddenFieldsWithValues() > 0);
 
+  /**
+   * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
+   * Read straight from the service, the way this section already reads the rest of the result state.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
   constructor() {
     this.autoSaveService.registerField('title', 'text');
     this.autoSaveService.registerField('description', 'text');

@@ -959,6 +959,13 @@ export class BilateralCenterService {
           // (`result.repository.ts:2844`). Only the interoperability path used to write it, so
           // results submitted from the centre form reached the review queue with an empty date.
           external_submitted_date: new Date().toISOString(),
+          // Same gap for "Submitted by": the drawer renders `submitter_name`, which the query builds
+          // from `LEFT JOIN users u ON r.external_submitter = u.id` (`result.repository.ts:3019-3020`),
+          // so an unstamped column left the reviewer without knowing who sent the result.
+          // The column is a FK to `users.id` (`result.entity.ts:525-535`, `@ManyToOne(() => User)`):
+          // "external" describes where the RESULT came from, not that the user must be external, so a
+          // platform user id is the value it was built for.
+          external_submitter: user.id,
         },
       );
 

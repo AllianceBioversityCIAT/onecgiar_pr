@@ -42,6 +42,13 @@ export class SectionGeographyComponent {
   readonly mdsTracker = inject(BilateralMdsTrackerService);
 
   /**
+   * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
+   * Read straight from the service, the way this section already reads the rest of the result state.
+   */
+  readonly readOnly = computed(() => !this.creationService.isEditableByCenterUser());
+
+
+  /**
    * The initial GET must never replace a value the user has already edited.
    * Saves are optimistic and serialized by BilateralAutoSaveService, so a
    * post-PATCH GET would only rehydrate stale intermediate state and can race
