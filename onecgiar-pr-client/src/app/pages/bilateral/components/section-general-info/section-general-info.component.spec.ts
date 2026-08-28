@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
@@ -526,6 +529,25 @@ describe('SectionGeneralInfoComponent', () => {
       component.selectedSubScores.set({});
       component.showAllFields.set(false);
       expect(component.showHiddenFieldsNote()).toBe(false);
+    });
+  });
+
+  // P2-3519 — QA found Section 1 expanding its full metadata with no note, while Section 2
+  // (Contributors & Partners) rendered it correctly. This suite builds the component with
+  // `.overrideTemplate('<div></div>')`, so the real markup is never rendered here and a DOM
+  // assertion would always pass vacuously. The note is a static literal with no component state
+  // behind it, so the only regression possible is someone deleting the span: assert the template
+  // file itself, and assert it sits inside the `showAllFields()` block rather than above it.
+  describe('full-metadata note (P2-3519)', () => {
+    const NOTE = 'You are completing the full metadata for this section. These fields are optional.';
+    const template = readFileSync(join(__dirname, 'section-general-info.component.html'), 'utf8');
+
+    it('declares the full-metadata note', () => {
+      expect(template).toContain(NOTE);
+    });
+
+    it('keeps the note inside the expanded block, so it never shows while collapsed', () => {
+      expect(template.indexOf('@if (showAllFields()) {')).toBeLessThan(template.indexOf(NOTE));
     });
   });
 

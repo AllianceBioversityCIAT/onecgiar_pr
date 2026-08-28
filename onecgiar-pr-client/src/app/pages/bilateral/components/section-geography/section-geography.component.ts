@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
@@ -9,6 +9,14 @@ import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker
 import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
 import { GeoscopeManagementModule } from '../../../../shared/components/geoscope-management/geoscope-management.module';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+
+/**
+ * `result_type_id` values FieldsManagerService treats as "an innovation" (`isAnInnovation()`).
+ * Local constants because the client has no shared ResultTypeEnum — the rest of the bilateral
+ * module compares the raw ids the same way (see `isKnowledgeProductType` in the result creator).
+ */
+const INNOVATION_USE_TYPE_ID = 2;
+const INNOVATION_DEVELOPMENT_TYPE_ID = 7;
 
 const YES_NO_OPTIONS = [
   { id: true, name: 'Yes' },
@@ -85,6 +93,33 @@ export class SectionGeographyComponent {
   ];
 
   readonly yesNoOptions = YES_NO_OPTIONS;
+
+  /**
+   * P2-3504 — Innovation results must ask the geographic-impact question with the wording business
+   * approved, not the legacy "regions ... for this Output?" one. The classic form already switched
+   * (FieldsManagerService gates `[geoscope-management]-has_extra_geo_scope` on
+   * `isP22() || !isAnInnovation()`, where `isAnInnovation()` is result_type 2 or 7); the bilateral
+   * form kept the old copy, so the same result read differently depending on which form opened it.
+   *
+   * Gated on the result type rather than reused blindly: the legacy wording is still the right
+   * question for non-innovation typologies, and rewording those was not asked for.
+   */
+  readonly isInnovationResult = computed(() => {
+    const typeId = this.creationService.resultTypeId();
+    return typeId === INNOVATION_USE_TYPE_ID || typeId === INNOVATION_DEVELOPMENT_TYPE_ID;
+  });
+
+  readonly extraScopeQuestionLabel = computed(() =>
+    this.isInnovationResult()
+      ? 'Are there any other geographic areas where the innovation could be impactful (beyond current development and use)?'
+      : 'Are there any regions that you wish to specify for this Output?'
+  );
+
+  readonly extraScopeQuestionDescription = computed(() =>
+    this.isInnovationResult()
+      ? 'This should reflect other geographies where the innovation development, testing and/or use could also contribute to outcomes and impact.'
+      : ''
+  );
 
   constructor() {
     // On a deep link, currentResultId initially contains the public result
