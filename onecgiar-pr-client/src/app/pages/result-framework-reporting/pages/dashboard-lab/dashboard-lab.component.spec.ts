@@ -400,19 +400,36 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
   });
 
   /**
-   * `TCM-R-5` (`changes/overview-toc-map`, TCM-T-3) — `program-overview`'s `openAow` resolves a
-   * ToC map click down to an AoW code and this handler navigates. The located route is the SAME
-   * one the retired `entity-aow-card` already links to
+   * `TCM-R-5` (`changes/overview-toc-map`, TCM-T-3) / `REH-R-10`, `REH-TEST-4` (a) (`changes/reporting-entry-hub`,
+   * design.md REH-DD-3) — `onOpenAow` routes BY CODE: an AoW code present in `aows()` lands on the
+   * "By AOW" browse view with `tocAow` set. Fixed 2026-08-28 — before the fix this test asserted
+   * `{ tocView: 'aows' }` with no `tocAow` for EVERY code, `AOW03` included (recorded red below).
+   * The located route is the SAME one the retired `entity-aow-card` already links to
    * (`pages/entity-details/components/entity-aow-card/entity-aow-card.component.html:16`:
    * `/result-framework-reporting/entity-details/{entityId}/aow/{item.code}`) and the "Entity AOW"
    * route in `shared/routing/routing-data.ts` (`entity-details/:entityId/aow`, `:aowId` child).
    * What this CANNOT prove: that the AoW page actually renders at the far end of that route — a
    * jsdom unit test never resolves lazy `loadComponent` routes. That is TCM-AC-3/T6 (manual/HITL).
    */
-  it('onOpenAow navigates once to the entity-aow route for the selected SP + clicked AoW code', async () => {
+  it('onOpenAow navigates once to the byAow view with tocAow for a code present in aows() (REH-TEST-4a)', async () => {
     const component = await createComponent();
+    component.aowsByCode.set(new Map([['SP02', [{ code: 'AOW03', name: 'AoW 03' } as unknown as Unit]]]));
 
     component.onOpenAow('AOW03');
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02'], {
+      queryParams: { tocView: 'byAow', tocAow: 'AOW03' }
+    });
+  });
+
+  /** `REH-TEST-4` (a2) — any code NOT in `aows()` (the cross-cutting sentinel, ToC-map non-AoW
+   *  clicks) keeps landing on the grouped view, with no `tocAow`. `aows()` is empty in this
+   *  fixture (no `aowsByCode` entry), so `'xcut'` is never a member. */
+  it("onOpenAow('xcut') navigates to the grouped view with no tocAow (REH-TEST-4a2)", async () => {
+    const component = await createComponent();
+
+    component.onOpenAow('xcut');
 
     expect(navigate).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02'], {

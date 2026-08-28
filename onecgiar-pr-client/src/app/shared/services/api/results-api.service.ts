@@ -1465,6 +1465,14 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects/by-program?programId=${programId}`);
   }
 
+  // @akili-spec changes/reporting-entry-hub
+  // "Where to report" hub (REH-R-9) — the signed-in user's centers' bilateral projects allocating
+  // to this program, active-reporting-phase only. NOT `this.apiBaseUrl` (already ends in
+  // `api/results/`) — same convention as the sibling `GET_W3BilateralProjectsByProgram` above.
+  GET_reportingEntryHubProjects(programId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/reporting-entry-hub/projects?programId=${programId}`);
+  }
+
   POST_createResult(body: any) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }

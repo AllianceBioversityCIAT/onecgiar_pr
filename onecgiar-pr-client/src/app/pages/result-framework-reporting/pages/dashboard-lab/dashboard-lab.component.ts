@@ -45,6 +45,17 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { ReportingGuideService, TutorialId } from './services/reporting-guide.service';
 import { HlmButton } from '@spartan/button';
+// @akili-spec changes/reporting-entry-hub
+import {
+  ReportingEntryHubComponent,
+  HubProgramLevelKind,
+  HubProgramLevelRow,
+  HubCreateResultEvent,
+  HubW3State,
+  HubW3Data
+} from './components/reporting-entry-hub/reporting-entry-hub.component';
+import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
+import { BilateralProject } from '../../../bilateral/services/bilateral-creation.interfaces';
 
 /**
  * Reporting-status meter — the reference's five canonical states, in this exact order.
@@ -239,6 +250,7 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     ReportingAowTableComponent,
     ReportingProgramBandComponent,
     ProgramOverviewComponent,
+    ReportingEntryHubComponent,
     HlmButton,
     // Legacy reporting surfaces reused VERBATIM — the drawer/guided copies stay in the tree but are
     // no longer the ones users reach (see `openLegacyReportModal` / `openReportModal`).
@@ -272,6 +284,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * It also owns `resultBody` / `cleanData()` for the emerging-result form below.
    */
   private readonly resultLevelSE = inject(ResultLevelService);
+  /** @akili-spec changes/reporting-entry-hub — `createResult` preselects the W3 project + navigates. */
+  private readonly bilateralCreationSE = inject(BilateralCreationService);
 
   /**
    * Reporting phases with their start / end dates.
@@ -832,6 +846,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Reporting Entry Hub — W3 lane (`changes/reporting-entry-hub`, design.md §6.2). ALWAYS issued
+    // once a program is selected and Overview is showing — never gated on `myCenters()` (REH-R-4.1:
+    // the server, not the client, decides "no centers"). Deferred with `setTimeout(0)` so the
+    // request never competes with first paint. `w3Code` dedupes re-runs of THIS effect (e.g. a
+    // phase switch, which does not change the W3 lane per REH-DD-2) — `retryW3()` bypasses it.
+    effect(() => {
+      const code = this.selected()?.initiativeCode;
+      if (this.rfrView() !== 'overview' || !code || this.w3Code === code) return;
+      this.w3Code = code;
+      setTimeout(() => this.fetchW3Projects(code), 0);
+    });
+
     // Overview meter (design.md DD-3): `sp.versions` from the shared default payload carries only
     // ONE version per program (today's effective phase — see design.md §5), so looking back at a
     // DIFFERENT phase needs its own row, fetched here and overlaid by `latestVersion()`. Gated on
@@ -1209,6 +1235,76 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .filter(r => r.total > 0);
   });
 
+  // ── Reporting Entry Hub (`changes/reporting-entry-hub`) ───────────────────
+  //
+  // W1/W2 lane: no request — built from `overviewAowProgress()` / `overviewXcutProgress()`
+  // (already computed above for the "Progress by area of work" card). ⚠️ Do NOT reuse
+  // `aowProgressRows()` / the local `AowProgressRow` interface below (different shape, capped at 8,
+  // no `done`) — design.md §2.3.
+  //
+  // W3 lane: ONE request per program, issued unconditionally once `selected()` is ready — never
+  // short-circuited on `RolesService.getMyCenters()` (a plain non-reactive property that may be
+  // empty on a cold load; the server derives centre membership from the token). Deferred with
+  // `setTimeout(0)` so it never blocks first paint (design.md §6.2 `DashboardLabComponent` row).
+
+  /** `HubProgramLevelRow[]` — `overviewXcutProgress()` mapped code → kind (REH-R-2.1). */
+  readonly hubProgramLevelRows = computed<HubProgramLevelRow[]>(() =>
+    this.overviewXcutProgress()
+      .map(row => {
+        const kind: HubProgramLevelKind | null =
+          row.code === OUTCOMES_2030_CODE ? '2030' : row.code === INTERMEDIATE_OUTCOMES_CODE ? 'intermediate' : null;
+        return kind ? ({ kind, name: row.name, done: row.done, total: row.total } satisfies HubProgramLevelRow) : null;
+      })
+      .filter((row): row is HubProgramLevelRow => row !== null)
+  );
+
+  /** W3 lane state, owned here (not by the hub) — same place as `bilateralRows` above. */
+  readonly w3State = signal<HubW3State>({ status: 'loading' });
+  /** The program code the current `w3State` was fetched for — dedupes the load effect. */
+  private w3Code: string | null = null;
+
+  readonly hubActiveYear = computed<number | null>(() => this.w3State().data?.activeYear ?? null);
+
+  /** REH-R-6: the W3 lane lists the ACTIVE reporting phase only — this drives its "not active phase" note. */
+  readonly hubIsActivePhase = computed<boolean>(() => {
+    const activeYear = this.hubActiveYear();
+    const selectedYear = this.latestVersion(this.selected())?.phaseYear ?? null;
+    return activeYear == null || selectedYear == null || activeYear === selectedYear;
+  });
+
+  private fetchW3Projects(code: string): void {
+    this.w3State.set({ status: 'loading' });
+    this.api.resultsSE.GET_reportingEntryHubProjects(code).subscribe({
+      next: ({ response }: { response: HubW3Data }) => {
+        const status = (response?.centers?.length ?? 0) === 0 ? 'no-centers' : 'ready';
+        this.w3State.set({ status, data: response });
+      },
+      error: () => this.w3State.set({ status: 'error' })
+    });
+  }
+
+  /** Bound to the hub's `(retryW3)` — bypasses the `w3Code` dedupe so a retry always re-fetches. */
+  retryW3(): void {
+    const code = this.selected()?.initiativeCode;
+    if (code) this.fetchW3Projects(code);
+  }
+
+  /** `(reportProgramLevel)` — REH-R-2.3 / REH-AC-2 BUT: program-level rows land on `tocView=aows`
+   *  only, never `tocAow`. Reuses the fixed `onOpenAow` — neither program-level code is ever a
+   *  member of `aows()`, so it always falls into that method's "anything else" branch. */
+  onReportProgramLevel(kind: HubProgramLevelKind): void {
+    this.onOpenAow(kind === '2030' ? OUTCOMES_2030_CODE : INTERMEDIATE_OUTCOMES_CODE);
+  }
+
+  /** `(createResult)` — REH-DD-4: preselect the project, then navigate to that center's creator. */
+  onHubCreateResult(event: HubCreateResultEvent): void {
+    if (!event.center.acronym) return;
+    // The hub's `HubProject` is shaped identically to `BilateralProject` PLUS `allocation`
+    // (design.md §4.1 REH-DD-4) — `id` is a bigint-backed string on the wire, hence the cast.
+    this.bilateralCreationSE.selectProject(event.project as unknown as BilateralProject);
+    this.router.navigate(['/bilateral', event.center.acronym, 'create']);
+  }
+
   // ── W3/Bilateral figures for the Overview tab (P2-3302) ───────────────────
   //
   // Source: GET /api/results/by-program-and-centers?programId=<SP>, the same call the bilateral
@@ -1551,13 +1647,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * links to: `/result-framework-reporting/entity-details/:entityId/aow/:aowId`
    * (`shared/routing/routing-data.ts` "Entity AOW" route, `:aowId` child) — mirrors the array-form
    * `router.navigate` call `onOverviewLink` (below) uses for the sibling 'results' route.
+   *
+   * `changes/reporting-entry-hub` (REH-R-10, design.md REH-DD-3): **fixed** to route BY CODE — an
+   * AoW code present in `aows()` lands on the Reporting tab's "By AOW" browse view (`tocView=byAow`
+   * + `tocAow=<code>`), already parsed/restored/written by this component; every other code
+   * (`'xcut'`, the Intermediate/2030 codes from `onReportProgramLevel`, and the ToC-map click)
+   * keeps landing on the grouped `tocView=aows` view — unchanged for those callers. No
+   * `queryParamsHandling`: none exists today, and `merge` would drag `aow/typ/st/q` onto the
+   * Reporting tab's own params.
    */
   onOpenAow(code: string): void {
     const spCode = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
     if (!spCode) return;
-    this.router.navigate(['/result-framework-reporting/entity-details', spCode], {
-      queryParams: { tocView: 'aows' }
-    });
+    const isAowCode = this.aows().some(a => a.code === code);
+    this.router.navigate(
+      ['/result-framework-reporting/entity-details', spCode],
+      isAowCode ? { queryParams: { tocView: 'byAow', tocAow: code } } : { queryParams: { tocView: 'aows' } }
+    );
   }
 
   /**

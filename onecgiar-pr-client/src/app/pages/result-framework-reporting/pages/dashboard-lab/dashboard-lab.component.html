@@ -1194,6 +1194,24 @@
           }
         </div>
 
+        <!-- Reporting Entry Hub (`changes/reporting-entry-hub`, REH-R-1) — mounted BEFORE
+             `app-program-overview`, design.md §6.1. -->
+        <app-reporting-entry-hub
+          id="reporting-entry-hub"
+          [programCode]="selected()?.initiativeCode || ''"
+          [phaseLabel]="phaseLabel()"
+          [isActivePhase]="hubIsActivePhase()"
+          [activeYear]="hubActiveYear()"
+          [aowRows]="overviewAowProgress()"
+          [programLevelRows]="hubProgramLevelRows()"
+          [canReportW1W2]="entityAowService.canReportResults()"
+          [w3State]="w3State()"
+          [myCentersCount]="myCenters().length"
+          (reportAow)="onOpenAow($event)"
+          (reportProgramLevel)="onReportProgramLevel($event)"
+          (createResult)="onHubCreateResult($event)"
+          (retryW3)="retryW3()" />
+
         <app-program-overview
           [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
           [statusSegments]="overviewStatusSegments()"
