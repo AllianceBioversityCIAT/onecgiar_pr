@@ -427,8 +427,17 @@ export class ResultsFrameworkReportingService {
     indicator: any,
     resolvedYear: number,
   ): void {
-    // Prefer center already resolved from SQL (one row per target×center).
+    // Prefer center already resolved from SQL.
     if (indicator?.center_id != null && indicator?.center_acronym) {
+      return;
+    }
+
+    // P2-3255: the SQL no longer emits one row per target×centre — a target shared by N centres is
+    // one row carrying `centers[]`, with the scalars left null precisely because naming one of
+    // them as "the" centre is a misreport. The year+value fallback below cannot tell those N
+    // apart, so it would pick an arbitrary one and put the lie back. Only fall through when a
+    // single centre holds the target.
+    if (Array.isArray(indicator?.centers) && indicator.centers.length > 1) {
       return;
     }
 

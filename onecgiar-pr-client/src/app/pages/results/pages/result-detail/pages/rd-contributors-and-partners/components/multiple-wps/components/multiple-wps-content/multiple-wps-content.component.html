@@ -1,11 +1,15 @@
 <div class="container" *ngIf="activeTab">
+  <!-- P2-3235: Level + node reflect the alignment the Results Framework module wrote at creation. In 2026
+       they render read-only (see tocAlignmentReadOnly) so Section 2 shows the link instead of becoming a
+       second writer for it. Level-generic: locking Level locks every @switch branch under it. -->
   <div class="flex flex-nowrap w-full gap-[20px] [&>*]:flex-1 [&>*]:max-w-none" *ngIf="(activeTab?.planned_result !== null || activeTab?.planned_result === null) && showMultipleWPsContent">
     <div style="max-width: 250px" *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && (isCP2026() ? !isUnplanned : true)">
       <app-pr-select
         [options]="this.tocResultListFiltered()"
         label="Level"
-        [editable]="editable"
-        [disabled]="!editable"
+        [editable]="editable && !tocAlignmentReadOnly()"
+        [readOnly]="tocAlignmentReadOnly()"
+        [disabled]="!editable || tocAlignmentReadOnly()"
         [required]="!isUnplanned"
         optionLabel="name"
         optionValue="toc_level_id"
@@ -21,9 +25,10 @@
           <app-pr-select
             [options]="eoiList()"
             [label]="this.secondFieldLabel()"
-            [editable]="editable"
+            [editable]="editable && !tocAlignmentReadOnly()"
+            [readOnly]="tocAlignmentReadOnly()"
             [required]="!isUnplanned"
-            [disabled]="(resultLevelId === 1 && false) || !editable"
+            [disabled]="(resultLevelId === 1 && false) || !editable || tocAlignmentReadOnly()"
             optionLabel="title"
             optionValue="toc_result_id"
             placeholder="Select outcome"
@@ -35,9 +40,10 @@
           <app-pr-select
             [options]="outcomeList()"
             [label]="this.secondFieldLabel()"
-            [editable]="editable"
+            [editable]="editable && !tocAlignmentReadOnly()"
+            [readOnly]="tocAlignmentReadOnly()"
             [required]="!isUnplanned"
-            [disabled]="(resultLevelId === 1 && false) || !editable"
+            [disabled]="(resultLevelId === 1 && false) || !editable || tocAlignmentReadOnly()"
             optionLabel="extraInformation"
             [extraInformation]="true"
             optionValue="toc_result_id"
@@ -53,8 +59,9 @@
             optionLabel="extraInformation"
             optionValue="toc_result_id"
             [required]="!isUnplanned"
-            [disabled]="!editable"
-            [editable]="editable"
+            [disabled]="!editable || tocAlignmentReadOnly()"
+            [editable]="editable && !tocAlignmentReadOnly()"
+            [readOnly]="tocAlignmentReadOnly()"
             placeholder="Select output"
             [(ngModel)]="activeTab.toc_result_id"
             [extraInformation]="true"

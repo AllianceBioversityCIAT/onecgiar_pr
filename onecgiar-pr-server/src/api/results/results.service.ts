@@ -3189,8 +3189,7 @@ export class ResultsService {
         environmental_biodiversity_tag_level_description:
           result.obj_environmental_biodiversity_tag_level?.description || null,
         environmental_biodiversity_impact_area_impact_area:
-          result.obj_environmental_biodiversity_impact_area?.name ||
-          null,
+          result.obj_environmental_biodiversity_impact_area?.name || null,
         poverty_tag_level_description:
           result.obj_poverty_tag_level_id?.description || null,
         poverty_impact_area_impact_area:

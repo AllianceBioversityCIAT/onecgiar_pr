@@ -584,9 +584,14 @@ export class ResultsKnowledgeProductsService {
   }
 
   extractHandleIdentifier(rawUrl: string): string {
-    const hasQuery = (rawUrl ?? '').indexOf('?');
-    const linkSplit = (rawUrl ?? '')
-      .slice(0, hasQuery != -1 ? hasQuery : rawUrl.length)
+    // P2-3534: `rawUrl` was guarded twice and read raw once — `rawUrl.length` threw
+    // "Cannot read properties of null (reading 'length')" straight at the user whenever CGSpace had
+    // no record for the handle, because MQAP still answers with an object but `Handle: null`.
+    // Normalised once instead of guarding each use, which is how the third one got missed.
+    const url = rawUrl ?? '';
+    const hasQuery = url.indexOf('?');
+    const linkSplit = url
+      .slice(0, hasQuery != -1 ? hasQuery : url.length)
       .split('/');
     return linkSplit.slice(linkSplit.length - 2).join('/');
   }
@@ -633,6 +638,23 @@ export class ResultsKnowledgeProductsService {
       }
 
       if (validateExisting) {
+        // P2-3534: a handle with the right shape but no document behind it comes back from MQAP as an
+        // object with `Handle: null`, and the next line used to throw a raw JavaScript error at the
+        // user instead of saying the document was not found — a plain typo in the number produced a
+        // 500 reading "Cannot read properties of null".
+        //
+        // Deliberately inside this branch: the three callers that pass `validateExisting = false`
+        // (service.ts:160, service.ts:1172, bilateral.service.ts:3804) never reached the throwing
+        // line, so they never had this bug. Guarding them too would change behaviour nobody asked
+        // about, on paths this ticket did not cover.
+        if (!mqapResponse?.Handle) {
+          throw {
+            response: {},
+            message: `No knowledge product was found in CGSpace for handle ${handle}. Please check the number and try again.`,
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
         const handleId = this.extractHandleIdentifier(mqapResponse?.Handle);
 
         const existingResultKnowledgeProduct =

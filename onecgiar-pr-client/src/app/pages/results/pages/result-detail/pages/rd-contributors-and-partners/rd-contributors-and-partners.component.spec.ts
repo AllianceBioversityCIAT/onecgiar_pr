@@ -660,3 +660,218 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
     expect(svc.scienceSelected).toBe(userEdited);
   });
 });
+
+// ----- P2-3249: "Contributing CGIAR Centers" mandatory + at least one centre from the ToC -----
+/**
+ * The rule has THREE preconditions and they are disjoint (decision recorded on P2-3249, 2026-08-28):
+ *   2026 split + ToC brings centres  → only a ToC-bucket centre satisfies it ("Other(s)" never does);
+ *   2026 split + ToC brings none     → the "Other(s)" dropdown IS the field, so any centre satisfies it;
+ *   pre-2026 flat dropdown           → no ToC bucket exists, so any centre satisfies it.
+ *
+ * `isContributorsPartners2026` is mocked as a SIGNAL on purpose: `isCP2026` is a `computed()`, so a plain
+ * function returning a constant would let the first read cache forever and the phase flip would be a no-op.
+ */
+describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mandatory rule (P2-3249)', () => {
+  let component: RdContributorsAndPartnersComponent;
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let svc: any;
+  let is2026: any;
+
+  const CENTERS_CATALOG = [
+    { code: 'C1', institutionId: 11, full_name: 'Center One' },
+    { code: 'C2', institutionId: 22, full_name: 'Center Two' }
+  ];
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    is2026 = signal(true);
+    svc = {
+      partnersBody: new ContributorsAndPartnersBody(),
+      getSectionInformation: jest.fn(),
+      loadFilteredBilateralProjects: jest.fn(),
+      resetState: jest.fn(),
+      setPossibleLeadCenters: jest.fn(),
+      contributingInitiativeNew: [],
+      leadPartnerId: null,
+      leadCenterCode: null,
+      updatingLeadData: false,
+      scienceSelected: [],
+      otherScienceSelected: [],
+      otherCentersSelected: [],
+      otherPartnersSelected: [],
+      loadedAcceptedScienceIds: new Set<number>(),
+      loadedPendingScience: [],
+      OTHER_PARTNERS_CODE: '__OTHER_PARTNERS__',
+      tocReferenceSynergyInitiativeIds: signal<number[]>([]),
+      tocReferenceCenterInstitutionIds: signal<number[]>([]),
+      tocReferencePartnerInstitutionIds: signal<number[]>([]),
+      // Hydrated + untouched: the preselection effect must not silently fill the field for us.
+      sectionHydratedFromToc: signal(true),
+      tocSelectionTouched: signal(false)
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [HttpClientTestingModule, FormsModule, TermPipe, CustomFieldsModule],
+      providers: [
+        {
+          provide: ApiService,
+          useValue: {
+            dataControlSE: {
+              currentResult: { result_code: 'R-123', version_id: 1, portfolio: 'P25' },
+              currentResultSectionName: signal(''),
+              findClassTenSeconds: jest.fn().mockResolvedValue(true)
+            },
+            resultsSE: {
+              GET_resultById: jest.fn().mockReturnValue(of({ response: {} })),
+              PATCH_ContributorsPartners: jest.fn().mockReturnValue(of({}))
+            }
+          }
+        },
+        { provide: RdContributorsAndPartnersService, useValue: svc },
+        { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn() } },
+        { provide: InstitutionsService, useValue: {} },
+        { provide: RolesService, useValue: {} },
+        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) } },
+        { provide: ResultLevelService, useValue: {} },
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => is2026(), isP25: () => true } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    })
+      // Empty template: these cases exercise the rule, not the DOM. The DOM contract (that the marker really
+      // reaches the mandatory-field scan) is asserted in rd-contributors-and-partners.zoneless.spec.ts.
+      .overrideComponent(RdContributorsAndPartnersComponent, { set: { template: '' } })
+      .compileComponents();
+
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    component = fixture.componentInstance;
+  });
+
+  const tocCenter = (code: string) => ({ code, institutionId: code === 'C1' ? 11 : 22, full_name: `Center ${code}` });
+
+  describe('2026 split, the ToC DOES bring centres', () => {
+    beforeEach(() => {
+      svc.tocReferenceCenterInstitutionIds.set([11, 22]);
+      fixture.detectChanges();
+    });
+
+    it('requires a ToC centre', () => {
+      expect(component.requiresTocCenter).toBe(true);
+    });
+
+    it('is incomplete with nothing selected', () => {
+      svc.partnersBody.contributing_center = [];
+      expect(component.contributingCentersComplete).toBe(false);
+    });
+
+    it('is complete with one ToC centre selected', () => {
+      svc.partnersBody.contributing_center = [tocCenter('C1')];
+      expect(component.contributingCentersComplete).toBe(true);
+    });
+
+    it('stays complete after deselecting one of two ToC centres (AC: one may remain)', () => {
+      svc.partnersBody.contributing_center = [tocCenter('C1'), tocCenter('C2')];
+      expect(component.contributingCentersComplete).toBe(true);
+      svc.partnersBody.contributing_center = [tocCenter('C2')];
+      expect(component.contributingCentersComplete).toBe(true);
+    });
+
+    // THE ticket. "Other(s)" centres must not satisfy the minimum on their own.
+    it('is INCOMPLETE when every ToC centre is removed and only "Other(s)" centres remain', () => {
+      svc.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
+      svc.otherCentersSelected = [
+        { code: 'ZZZ', institutionId: 99 },
+        { code: 'YYY', institutionId: 98 }
+      ];
+      expect(component.otherCentersSelectedCount).toBe(2);
+      expect(component.contributingCentersComplete).toBe(false);
+    });
+
+    it('does not count the UI-only "Other(s)" sentinel as a selected ToC centre', () => {
+      svc.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
+      expect(component.tocCentersSelectedCount).toBe(0);
+    });
+
+    it('is complete when a ToC centre AND "Other(s)" centres are selected together', () => {
+      svc.partnersBody.contributing_center = [tocCenter('C1'), { code: component.OTHER_CENTERS_CODE }];
+      svc.otherCentersSelected = [{ code: 'ZZZ', institutionId: 99 }];
+      expect(component.contributingCentersComplete).toBe(true);
+    });
+
+    // The missing-fields LABEL lives as a static attribute in the template (the directive freezes a bound one),
+    // so it is asserted against the rendered DOM in rd-contributors-and-partners.zoneless.spec.ts.
+    it('names the ToC condition in the inline validation message', () => {
+      expect(component.contributingCentersValidationMessage).toContain('Theory of Change');
+      expect(component.contributingCentersValidationMessage).toContain('Other(s)');
+    });
+  });
+
+  describe('2026 split, the ToC brings NO centres (P2-3324 / P2-3326 branch)', () => {
+    beforeEach(() => {
+      svc.tocReferenceCenterInstitutionIds.set([]);
+      fixture.detectChanges();
+    });
+
+    it('does not require a ToC centre — that would be impossible to satisfy', () => {
+      expect(component.hasReferenceCenters()).toBe(false);
+      expect(component.requiresTocCenter).toBe(false);
+    });
+
+    it('is incomplete with nothing selected — "Other(s)" is mandatory here', () => {
+      svc.partnersBody.contributing_center = [];
+      svc.otherCentersSelected = [];
+      expect(component.contributingCentersComplete).toBe(false);
+    });
+
+    it('is complete with an "Other(s)" centre alone', () => {
+      svc.otherCentersSelected = [{ code: 'ZZZ', institutionId: 99 }];
+      expect(component.contributingCentersComplete).toBe(true);
+    });
+
+    it('uses the generic message, with no ToC condition in it', () => {
+      expect(component.contributingCentersValidationMessage).not.toContain('Theory of Change');
+    });
+  });
+
+  // Constraint: there are TWO code paths for this dropdown and a rule added to one silently misses the other.
+  describe('pre-2026 flat dropdown', () => {
+    beforeEach(() => {
+      is2026.set(false);
+      svc.tocReferenceCenterInstitutionIds.set([11, 22]);
+      fixture.detectChanges();
+    });
+
+    it('never requires a ToC centre — the flat path has no ToC bucket, even when the ToC has centres', () => {
+      expect(component.isCP2026()).toBe(false);
+      expect(component.hasReferenceCenters()).toBe(true);
+      expect(component.requiresTocCenter).toBe(false);
+    });
+
+    it('is incomplete with nothing selected', () => {
+      svc.partnersBody.contributing_center = [];
+      expect(component.contributingCentersComplete).toBe(false);
+    });
+
+    it('is complete with any centre from the flat catalogue', () => {
+      svc.partnersBody.contributing_center = [tocCenter('C1')];
+      expect(component.contributingCentersComplete).toBe(true);
+    });
+  });
+
+  // ⚠️ Legacy `from_toc = 0` rows: the column is NOT NULL DEFAULT 0, so a result saved before the 2026 split
+  // loads every centre into "Other(s)". Documented and deliberate: the rule fires and the user re-picks a ToC centre.
+  it('reports a legacy result (every centre bucketed as Other) as incomplete, but never blocks the PATCH', () => {
+    svc.tocReferenceCenterInstitutionIds.set([11, 22]);
+    fixture.detectChanges();
+    svc.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
+    svc.otherCentersSelected = [{ code: 'C1', institutionId: 11, from_toc: 0 }];
+
+    expect(component.contributingCentersComplete).toBe(false);
+
+    // Save draft still goes through: this is feedback (src/CLAUDE.md §21.5 layer 1), not a hard gate.
+    component.onSaveSection();
+    expect((component as any).api.resultsSE.PATCH_ContributorsPartners).toHaveBeenCalled();
+  });
+});

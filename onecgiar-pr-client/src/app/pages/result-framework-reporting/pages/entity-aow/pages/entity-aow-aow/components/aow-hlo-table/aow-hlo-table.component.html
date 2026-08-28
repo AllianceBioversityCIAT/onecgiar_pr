@@ -75,14 +75,31 @@
 
   <ng-template prTableExpandedRow let-item>
     @if (item.indicators.length) {
-      @for (result of item.indicators; track result.indicator_id + '-' + (result.center_id ?? $index)) {
+      <!--
+        P2-3257: track by the TARGET, not by the centre. Since P2-3255 one target is one row, so
+        `center_id` is null whenever centres share it and this key fell back to $index.
+      -->
+      @for (result of item.indicators; track result.indicator_id + '-' + (result.toc_indicator_target_id ?? $index)) {
         <tr>
           <td class="text-secondary-300" style="min-width: 150px !important">
             <div class="kpi-statement-cell">
               <span class="kpi-statement-text">{{ result.indicator_description }}</span>
-              @if (result.center_acronym) {
-                <span class="tab-content_chip center-chip" [prTooltip]="'CGIAR Center: ' + result.center_acronym">
-                  {{ result.center_acronym }}
+              <!--
+                P2-3257, both scenarios. A target shared by several centres is ONE row, so its
+                centres render as a group of chips here. A centre with its OWN target is its own
+                row (different `toc_indicator_target_id`), so it shows a single chip against its
+                own target. The distinction falls out of the row collapse from P2-3255 — no
+                grouping logic is needed in the template.
+              -->
+              @for (centre of result.centers ?? []; track centre.center_id) {
+                <span
+                  class="tab-content_chip center-chip"
+                  [prTooltip]="
+                    (result.centers?.length ?? 0) > 1
+                      ? 'CGIAR Center: ' + centre.center_acronym + ' — shares this target with ' + ((result.centers?.length ?? 1) - 1) + ' other center(s)'
+                      : 'CGIAR Center: ' + centre.center_acronym
+                  ">
+                  {{ centre.center_acronym }}
                 </span>
               }
             </div>
@@ -114,7 +131,7 @@
                   size="sm"
                   type="button"
                   class="pr-body-1 tab-content_actions_button"
-                  (click)="openReportResultModal(item, result.indicator_id, result.center_id)">Report result</button>
+                  (click)="openReportResultModal(item, result.indicator_id, result.toc_indicator_target_id)">Report result</button>
               }
               <button
                 hlmBtn
@@ -122,8 +139,8 @@
                 size="sm"
                 type="button"
                 class="pr-body-1 tab-content_actions_button"
-                (click)="openViewResultDrawer(item, result.indicator_id, result.center_id)">View results</button>
-              @if (hasTargets(item, result.indicator_id, result.center_id)) {
+                (click)="openViewResultDrawer(item, result.indicator_id, result.toc_indicator_target_id)">View results</button>
+              @if (hasTargets(item, result.indicator_id, result.toc_indicator_target_id)) {
                 <button
                   hlmBtn
                   variant="outline"

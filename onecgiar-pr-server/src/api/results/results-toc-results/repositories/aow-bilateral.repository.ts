@@ -29,6 +29,10 @@ interface TocResultRow {
   is_aow?: number | null;
   center_id?: number | null;
   center_acronym?: string | null;
+  /** P2-3255: `id::acronym` pairs joined by `||`, one target = one row. Null when unassociated. */
+  centers_concat?: string | null;
+  /** P2-3257: the target's own id — what tells a shared target from individual ones. */
+  toc_indicator_target_id?: number | null;
 }
 
 export interface TocResultResponse {
@@ -60,8 +64,20 @@ export interface TocResultResponse {
     result_type_name?: string | null;
     result_level_id?: number | null;
     /** Center for this disaggregated indicator row (toc_result_indicator_target_center → clarisa_institutions). */
+    /**
+     * P2-3255: every centre holding this target. The scalars below stay for consumers that
+     * already read them, but are only filled when exactly ONE centre holds it — naming one of
+     * several as "the" centre is the misreport this ticket is about.
+     */
+    centers: Array<{ center_id: number; center_acronym: string | null }>;
     center_id?: number | null;
     center_acronym?: string | null;
+    /**
+     * P2-3257: identity of the target this row represents. Two centres carrying the SAME id share
+     * one target; different ids mean each centre has its own. Without it the client cannot tell
+     * the two apart, which is the whole ask of that ticket.
+     */
+    toc_indicator_target_id?: number | null;
   }>;
 }
 
@@ -410,8 +426,11 @@ export class AoWBilateralRepository {
         trit.number_target,
         trit.target_date,
         trit.target_value,
-        tritc.center_id AS center_id,
-        ci.acronym AS center_acronym,
+        trit.toc_indicator_target_id,
+        GROUP_CONCAT(
+          DISTINCT CONCAT(tritc.center_id, '::', COALESCE(ci.acronym, ''))
+          ORDER BY ci.acronym SEPARATOR '||'
+        ) AS centers_concat,
         CASE
           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
@@ -503,12 +522,46 @@ export class AoWBilateralRepository {
         trit.number_target,
         trit.target_date,
         trit.target_value,
-        tritc.center_id,
-        ci.acronym
-      ORDER BY tr.id ASC, tri.id ASC, ci.acronym ASC
+        trit.toc_indicator_target_id
+      ORDER BY tr.id ASC, tri.id ASC
     `;
 
     return { query, params };
+  }
+
+  /**
+   * P2-3255. Turns the aggregated `id::acronym||id::acronym` string into the centre list, and
+   * fills the legacy scalars only when a single centre holds the target.
+   *
+   * Both client consumers of the scalar already treat null as "no centre filter"
+   * (`resolveTargetDetailsCenterId` falls back to a year/target lookup, `hasTargets` skips the
+   * filter), so a shared target reads correctly rather than picking an arbitrary centre.
+   */
+  private centreFieldsOf(row: TocResultRow): {
+    centers: Array<{ center_id: number; center_acronym: string | null }>;
+    center_id: number | null;
+    center_acronym: string | null;
+  } {
+    const centers = (row.centers_concat ?? '')
+      .split('||')
+      .filter((pair) => pair !== '')
+      .map((pair) => {
+        const [id, acronym] = pair.split('::');
+        return {
+          center_id: Number(id),
+          center_acronym:
+            acronym === '' || acronym === undefined ? null : acronym,
+        };
+      })
+      .filter((centre) => Number.isFinite(centre.center_id));
+
+    const single = centers.length === 1 ? centers[0] : null;
+
+    return {
+      centers,
+      center_id: single?.center_id ?? null,
+      center_acronym: single?.center_acronym ?? null,
+    };
   }
 
   private groupTocRows(rows: TocResultRow[]): TocResultResponse[] {
@@ -546,8 +599,8 @@ export class AoWBilateralRepository {
           result_level_id: row.result_level_id ?? null,
           result_type_id: row.result_type_id ?? null,
           result_type_name: row.result_type_name ?? null,
-          center_id: row.center_id ?? null,
-          center_acronym: row.center_acronym ?? null,
+          toc_indicator_target_id: row.toc_indicator_target_id ?? null,
+          ...this.centreFieldsOf(row),
         };
 
         grouped.get(row.toc_result_id)?.indicators.push(indicator);
