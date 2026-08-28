@@ -88,4 +88,39 @@ describe('PrMultiSelectComponent', () => {
       expect(component.value[0].code).toBe('C1');
     });
   });
+
+  describe('selectedLabelDescription() — P2-3523', () => {
+    it('prints (0), never the word undefined, before the parent writes a value', () => {
+      fixture.componentRef.setInput('selectedLabel', 'Organization');
+      fixture.detectChanges();
+
+      // A Policy Change section binds `[(ngModel)]` to a field that does not exist yet, so Angular
+      // pushes `undefined` down into the control — that is the state that printed "(undefined)".
+      component.writeValue(undefined);
+
+      expect(component.value).toBeUndefined();
+      expect(component.selectedLabelDescription()).toBe('Organization (0)');
+      expect(component.selectedLabelDescription()).not.toContain('undefined');
+    });
+
+    it('counts the selected entries once the value is written', () => {
+      fixture.componentRef.setInput('selectedLabel', 'Organization');
+      fixture.detectChanges();
+      component.writeValue([{ code: 'C1' }, { code: 'C2' }]);
+
+      expect(component.selectedLabelDescription()).toBe('Organization (2)');
+    });
+
+    it('applies the fallback to the two-label branch as well', () => {
+      fixture.componentRef.setInput('selectedLabel', 'Organization');
+      fixture.componentRef.setInput('nextSelectedLabel', 'Partner');
+      fixture.detectChanges();
+
+      component.writeValue(undefined);
+
+      expect(component.value).toBeUndefined();
+      expect(component.selectedLabelDescription()).toBe('Organization(0) Partner(0)');
+      expect(component.selectedLabelDescription()).not.toContain('undefined');
+    });
+  });
 });
