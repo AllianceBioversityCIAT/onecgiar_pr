@@ -159,8 +159,11 @@
 
       <div class="sg-card__body">
         <div class="sg-field">
+          <!-- P2-3504 · Innovation results ask the business-approved geographic-impact question;
+               other typologies keep the legacy wording. Both come from `isInnovationResult()`. -->
           <app-pr-radio-button
-            label="Are there any regions that you wish to specify for this Output?"
+            [label]="extraScopeQuestionLabel()"
+            [description]="extraScopeQuestionDescription()"
             [options]="yesNoOptions"
             optionLabel="name"
             optionValue="id"

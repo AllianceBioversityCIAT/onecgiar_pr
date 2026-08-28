@@ -30,6 +30,9 @@ describe('SectionGeographyComponent', () => {
     creation = {
       currentResultId: signal<number | null>(77),
       isLoadingResult: signal(false),
+      // P2-3504 — the extra-scope question reads the result type to pick its wording. Without this
+      // the computed calls `undefined()` the first time a template or a test evaluates it.
+      resultTypeId: signal<number | null>(null),
     };
     autoSave = {
       manualSave$,
@@ -494,6 +497,53 @@ describe('SectionGeographyComponent', () => {
         'geography',
         expect.arrayContaining([expect.objectContaining({ key: 'geo-scope', filled: true })])
       );
+    });
+  });
+
+  // P2-3504 — the classic form asks innovations "…other geographic areas where the innovation could
+  // be impactful…" while this one still asked the legacy "…regions … for this Output?". Same result,
+  // two different questions depending on which form you opened.
+  describe('extra-scope question wording (P2-3504)', () => {
+    const INNOVATION_LABEL =
+      'Are there any other geographic areas where the innovation could be impactful (beyond current development and use)?';
+    const LEGACY_LABEL = 'Are there any regions that you wish to specify for this Output?';
+
+    it.each([
+      ['Innovation Use', 2],
+      ['Innovation Development', 7],
+    ])('asks the innovation question for %s', (_name, typeId) => {
+      build();
+      creation.resultTypeId.set(typeId);
+      expect(component.isInnovationResult()).toBe(true);
+      expect(component.extraScopeQuestionLabel()).toBe(INNOVATION_LABEL);
+      expect(component.extraScopeQuestionDescription()).toContain('could also contribute to outcomes and impact');
+    });
+
+    it.each([
+      ['Policy Change', 1],
+      ['Capacity Sharing', 5],
+      ['Knowledge Product', 6],
+    ])('keeps the legacy wording for %s, which nobody asked to reword', (_name, typeId) => {
+      build();
+      creation.resultTypeId.set(typeId);
+      expect(component.isInnovationResult()).toBe(false);
+      expect(component.extraScopeQuestionLabel()).toBe(LEGACY_LABEL);
+      expect(component.extraScopeQuestionDescription()).toBe('');
+    });
+
+    it('falls back to the legacy wording while the result type has not loaded', () => {
+      build();
+      creation.resultTypeId.set(null);
+      expect(component.extraScopeQuestionLabel()).toBe(LEGACY_LABEL);
+    });
+
+    // The ticket asks for "No (default selected)". This form deliberately keeps the answer null
+    // until the user picks one (see the field's own comment) and surfaces "Please answer Yes or No."
+    // Defaulting to No would answer a required question on the user's behalf, so it stays null and
+    // the contradiction is reported on the ticket instead of being silently resolved here.
+    it('leaves the answer unanswered rather than defaulting it to No', () => {
+      build();
+      expect(component.extraGeographicLocationBody().has_extra_geo_scope).toBeNull();
     });
   });
 });
