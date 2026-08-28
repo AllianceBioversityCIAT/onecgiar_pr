@@ -45,4 +45,6 @@ decide cuál de las dos es: sin `:id` en la ruta es el wizard; con `:id` es el e
 
 ## Pendiente / Coming soon
 - P2-3352 pide además que el formulario sea **solo lectura** en Pending review / Approved / Rejected.
-  Hoy el badge se pinta pero **ningún campo se bloquea**. Sin ticket propio todavía.
+  Hoy el badge se pinta pero **ningún campo se bloquea**, y el autosave sigue escribiendo en la base
+  después del Submit (verificado el 28-ago-2026 contra el backend con el resultado 8937). Ticket
+  propio: **P2-3520**.
