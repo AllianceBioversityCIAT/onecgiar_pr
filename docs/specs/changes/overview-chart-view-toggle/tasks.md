@@ -60,7 +60,7 @@
   - [x] Bars-mode click: `Other` segment event → no emission; navigable segment → the cell's link (via `openResults.subscribe`). **FAIL input:** resolver bypassing the null check → red.
   - [x] Full suite + lint + `ng build` green (same disqualifier). **Presence caveat:** `aria-pressed` + classes prove markup; pressed-state *visibility* and control affordance are CVT-AC-3 (T6).
 
-### [~] `CVT-T-3` — Morph verification + HITL decision record
+### [x] `CVT-T-3` — Morph verification + HITL decision record
 
 - **Type:** `tests` / verification
 - **Description:** Close the spec: (a) full-suite + lint + build re-run on the final tree; (b) static gates (hex grep 0 new; diff confined to `program-overview/**`; no `package.json`); (c) **HITL/T6 pass (CVT-AC-3)** on SP02 at 1280/1024px: toggle affordance, bars legibility (half-width and full-width cards), morph quality — decide **morph kept** vs **fallback** (drop shared ids/flag, plain swap; one-line code change) and record the decision + evidence in `execution.md`; (d) segment-click chips land correctly on the Results tab (spot: one navigable + one `Other`).
@@ -71,9 +71,9 @@
 - **Estimate:** S
 - **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] Static gates green with outputs recorded in `execution.md`. **FAIL input:** a hex literal or an out-of-folder diff line.
-  - [ ] HITL outcome recorded: "morph kept" or "fallback taken (reason)". **Disqualifier:** closing the task with no recorded decision — the SHOULD requires the decision, not necessarily the morph. **What automated gates cannot prove here:** everything visual — this task exists to close that gap.
-  - [ ] Full suite green on the final tree (post-decision).
+  - [x] Static gates green with outputs recorded in `execution.md`. **FAIL input:** a hex literal or an out-of-folder diff line.
+  - [x] HITL outcome recorded: "morph kept" or "fallback taken (reason)". **Disqualifier:** closing the task with no recorded decision — the SHOULD requires the decision, not necessarily the morph. **What automated gates cannot prove here:** everything visual — this task exists to close that gap.
+  - [x] Full suite green on the final tree (post-decision).
 
 ## 4. Dependency graph
 

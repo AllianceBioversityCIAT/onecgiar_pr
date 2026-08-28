@@ -145,3 +145,13 @@ Checklist handed to the user:
 #### ADVISORY (non-gating, recorded)
 1. **RISK (a11y, cumulative — decision for the owner, not this task):** with CVT-A-3 + CVT-A-5 the Overview now has NO keyboard-reachable drill-down: all navigation is chart-mark clicks (SVG marks non-focusable by family precedent; the hidden table reaches the data, not the action). Candidate follow-up: hidden-table cells as links. Surfaced at the next gate.
 2. **RELIABILITY:** no assertion that the hidden table's CONTENT renders into these two cards (caption/non-null only); one rendered-text line would restore the deleted DOM test's true subject.
+
+### CVT-T-3 — CLOSURE (2026-08-27/28)
+
+- **Final static gates (all spec commits, `400abcb2b..6cb0552`):** code diff confined to `program-overview/**` + the CVT-A-3-authorized `dashboard-lab` cleanup (7 files total); **0 new hex**; **0 `package.json` diff**. Final tree verification (post CVT-A-5): FULL suite **482 suites / 6914 tests** green, lint clean, `ng build` exit 0.
+- **HITL / CVT-AC-3 (owner, 2026-08-28):** final checklist presented covering the toggle+morph, bars default+totals, separators, full-width matrix, ramp collision on the bilateral matrix, the two ECharts-converted bilateral cards, and click chips. Owner verdict: **"perfect"** — recorded as CVT-AC-3 PASS across the amended build. **Morph decision: KEPT** (no fallback; the owner iterated over multiple live reloads through A-1..A-5 and approved the final state). CVT-R-4 motion-parity note stands (reduced-motion wrapper-owned).
+- **Open items handed to the owner (outside this spec):** (a) cumulative keyboard drill-down gap (CVT-A-5 advisory 1) — candidate follow-up proposal; (b) `changes/overview-toc-map` proposal awaiting review; (c) kaizen-queued `program-overview/CLAUDE.md` rewrite now also stale re: DOM-bars invariant (extend the pending kaizen item at archive).
+
+## 3. Summary
+
+All tasks complete: CVT-T-1 ✅ · CVT-T-2 ✅ · CVT-T-3 ✅ (incl. owner amendments CVT-A-1..A-5, each PASS on attempt 1; 0 rework rounds, 0 HALTs, 0 pivots). Budget note: the approved budget (3 tasks / ~300 LOC / 1 review round) was exceeded by owner-directed amendments at the HITL gate (5 amendments, ~1,100 LOC net across code+tests, 5 review rounds — all gated, recorded, and PASSed individually). Spec ready for /akili-archive.
