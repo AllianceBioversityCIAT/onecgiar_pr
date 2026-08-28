@@ -1072,4 +1072,24 @@ describe('ResultsListComponent', () => {
       expect(spyUpdateResultsList).toHaveBeenCalledWith();
     });
   });
+
+  describe('ActivatedRoute query parameters handling', () => {
+    it('should apply query parameters to resultsListFilterSE on init', () => {
+      component.activatedRoute = {
+        queryParams: of({
+          funding: 'w1w2',
+          status: '2',
+          program: 'SP01',
+          category: 'Knowledge product',
+          search: 'query'
+        })
+      } as any;
+
+      component.ngOnInit();
+
+      expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 1, name: 'W1/W2' }]);
+      expect(mockResultsListFilterService.selectedStatus()).toEqual([{ status_id: 2 }]);
+      expect(mockResultsListFilterService.text_to_search()).toBe('SP01');
+    });
+  });
 });
