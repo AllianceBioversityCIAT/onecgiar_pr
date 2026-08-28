@@ -17,6 +17,8 @@ import {
   PieSeriesOption,
   HeatmapChart,
   HeatmapSeriesOption,
+  LineChart,
+  LineSeriesOption,
   RadarChart,
   RadarSeriesOption,
   TreeChart,
@@ -47,6 +49,7 @@ export const REGISTERED_ECHARTS_MODULES = [
   BarChart,
   PieChart,
   HeatmapChart,
+  LineChart,
   RadarChart,
   TreeChart,
   TitleComponent,
@@ -72,6 +75,7 @@ export type EChartsOption = echarts.ComposeOption<
   | BarSeriesOption
   | PieSeriesOption
   | HeatmapSeriesOption
+  | LineSeriesOption
   | RadarSeriesOption
   | TreeSeriesOption
   | TitleComponentOption
