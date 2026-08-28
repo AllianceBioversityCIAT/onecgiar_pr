@@ -33,32 +33,36 @@
 
   <!-- KPI Summary Cards: Totals and key health metrics -->
   <div class="col-span-12 grid grid-cols-12 gap-[16px]">
-    <!-- KPI 1: W1/W2 Results -->
+    <!-- KPI 1: W1/W2 Results (Hero Highlight Card with diffused purple gradient) -->
     <button
       type="button"
       (click)="setActiveSection('w1w2')"
-      class="col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:shadow-sm focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
+      class="group relative overflow-hidden col-span-3 flex cursor-pointer flex-col justify-between gap-[12px] rounded-[12px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[18px] text-left transition-all duration-200 shadow-md hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 hover:-translate-y-0.5 focus-visible:outline-none max-[1024px]:col-span-6 max-[640px]:col-span-12"
       [class]="activeSection() === 'w1w2'
-        ? 'border-[var(--pr-color-primary-500)] ring-2 ring-[var(--pr-color-primary-500)]'
-        : 'border-[var(--pr-border)]'">
-      <div class="flex items-center justify-between">
-        <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">
+        ? 'ring-2 ring-purple-300 shadow-lg'
+        : ''">
+      <!-- Diffused background glow effect -->
+      <div class="pointer-events-none absolute -right-[24px] -top-[24px] h-[110px] w-[110px] rounded-full bg-white/15 blur-[20px]"></div>
+      <div class="pointer-events-none absolute -left-[20px] -bottom-[20px] h-[90px] w-[90px] rounded-full bg-purple-900/40 blur-[18px]"></div>
+
+      <div class="relative z-10 flex items-center justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-purple-200">
           W1/W2 Results
         </span>
-        <span class="inline-flex h-[24px] items-center rounded-full bg-[var(--pr-color-primary-50)] px-[8px] text-[11px] font-semibold text-[var(--pr-color-primary-600)]">
+        <span class="inline-flex h-[24px] items-center rounded-full bg-white/15 px-[9px] text-[11px] font-semibold text-white backdrop-blur-xs border border-white/20">
           Core
         </span>
       </div>
-      <div class="flex items-baseline gap-[8px]">
-        <span class="pr-figure text-[32px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums">
+      <div class="relative z-10 flex items-baseline gap-[8px]">
+        <span class="pr-figure text-[32px] font-extrabold leading-none text-white tabular-nums drop-shadow-xs">
           {{ statusTotal() }}
         </span>
-        <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
+        <span class="text-[13px] font-medium text-purple-200">results</span>
       </div>
-      <div class="flex items-center gap-[6px] text-[12px] text-[var(--pr-text-secondary)]">
-        <span class="h-[7px] w-[7px] rounded-full bg-[var(--pr-status-submitted-fg)]"></span>
+      <div class="relative z-10 flex items-center gap-[6px] text-[12px] text-purple-100 font-medium">
+        <span class="h-[7px] w-[7px] rounded-full bg-emerald-400"></span>
         <span>{{ w1w2SubmittedCount() }} submitted</span>
-        <span class="text-[var(--pr-text-muted)]">·</span>
+        <span class="text-purple-300">·</span>
         <span>{{ statusSegments().length }} statuses</span>
       </div>
     </button>
@@ -233,68 +237,105 @@
 
   <!-- 3 · W1/W2 Reporting status · span 12 -->
   <section
-    class="col-span-12 flex min-h-[180px] flex-col gap-[16px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-    <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
+    class="col-span-12 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+    <div class="mb-[20px]">
+      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
+      <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+        W1/W2 reporting progress and breakdown for this Science Program
+      </p>
+    </div>
 
     @if (statusTotal() > 0) {
-      <div class="flex items-center gap-[24px]">
-        <!-- Donut (OVW-R-4/OVW-DD-5) — beside the meter, never replacing or reflowing it. -->
-        <div class="w-[160px] shrink-0">
-          <app-pr-viz-chart
-            [options]="donutOption()"
-            [tableModel]="donutTable()"
-            chartTitle="Reporting status"
-            height="160px"
-            (chartClick)="onDonutClick($event)" />
+      <div class="grid grid-cols-1 items-center gap-[24px] lg:grid-cols-12">
+        <!-- Donut (separated slices with visible numbers) -->
+        <div class="lg:col-span-4 flex items-center justify-center">
+          <div class="w-[240px] h-[220px] shrink-0">
+            <app-pr-viz-chart
+              class="w-full h-full block cursor-pointer"
+              [options]="donutOption()"
+              [tableModel]="donutTable()"
+              chartTitle="Reporting status"
+              height="220px"
+              (chartClick)="onDonutClick($event)" />
+          </div>
         </div>
 
-        <div class="flex min-w-0 flex-1 flex-col gap-[16px]">
-          <div class="flex h-[44px] overflow-hidden rounded-[8px]">
+        <!-- Interactive Status Metric Grid -->
+        <div class="flex flex-col gap-[14px] lg:col-span-8">
+          <!-- Dynamic interactive status metric tiles with mini progress indicators -->
+          <div class="grid grid-cols-2 gap-[10px] sm:grid-cols-3">
             @for (segment of statusSegments(); track segment.key) {
-              @if (segment.count > 0) {
-                <div
-                  class="relative flex h-[44px] items-center justify-center overflow-hidden"
-                  [style.width.%]="segmentWidth(segment)"
-                  [style.background]="segment.bg"
-                  [title]="segment.label + ': ' + segment.count">
-                  @if (segment.link) {
-                    <!-- Full-slice hit target: keeps the count span a direct child of this div (the
-                         44px figure) while making the whole slice a real, keyboard-native button. -->
-                    <button
-                      type="button"
-                      class="absolute inset-0 h-full w-full cursor-pointer border-0 bg-transparent p-0 transition-[filter] hover:brightness-95"
-                      [attr.aria-label]="segment.statusName + ': ' + segment.count"
-                      (click)="emitLink(segment.link)"></button>
-                  }
-                  <!-- Reference prints the count only in segments wider than 8% — narrow neighbours
-                       would otherwise overlap their numbers ("1 1" stacked). -->
-                  @if (showsSegmentCount(segment)) {
-                    <span class="pr-figure-sm text-[14px] font-semibold" [style.color]="segment.fg">{{ segment.count }}</span>
-                  }
+              @if (segment.link) {
+                <button
+                  type="button"
+                  (click)="emitLink(segment.link)"
+                  class="group relative flex flex-col justify-between rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[12px] py-[9px] text-left transition-all duration-200 cursor-pointer overflow-hidden hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs hover:-translate-y-0.5">
+                  <div class="flex items-center justify-between gap-[8px] w-full mb-[6px]">
+                    <div class="flex min-w-0 items-center gap-[8px]">
+                      <span
+                        class="h-[9px] w-[9px] shrink-0 rounded-full transition-transform group-hover:scale-125"
+                        [style.background]="segment.fg"></span>
+                      <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+                        {{ segment.label }}
+                      </span>
+                    </div>
+                    <div class="flex shrink-0 items-baseline gap-[3px]">
+                      <span class="pr-figure-sm text-[14px] font-bold text-[var(--pr-text-heading)] tabular-nums">
+                        {{ segment.count }}
+                      </span>
+                      <span class="text-[11px] font-medium text-[var(--pr-text-muted)] tabular-nums">
+                        ({{ segmentPercent(segment) }}%)
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Mini proportional status progress bar -->
+                  <div class="h-[3px] w-full overflow-hidden rounded-full bg-[var(--pr-border)]/50">
+                    <div
+                      class="h-full rounded-full transition-all duration-500"
+                      [style.width.%]="segmentPercent(segment)"
+                      [style.background]="segment.fg"></div>
+                  </div>
+                </button>
+              } @else {
+                <div class="flex flex-col justify-between rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[12px] py-[9px] text-left opacity-60">
+                  <div class="flex items-center justify-between gap-[8px] w-full mb-[6px]">
+                    <div class="flex min-w-0 items-center gap-[8px]">
+                      <span
+                        class="h-[9px] w-[9px] shrink-0 rounded-full"
+                        [style.background]="segment.fg"></span>
+                      <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text-secondary)]">
+                        {{ segment.label }}
+                      </span>
+                    </div>
+                    <div class="flex shrink-0 items-baseline gap-[3px]">
+                      <span class="pr-figure-sm text-[14px] font-medium text-[var(--pr-text-muted)] tabular-nums">
+                        {{ segment.count }}
+                      </span>
+                      <span class="text-[11px] font-medium text-[var(--pr-text-muted)] tabular-nums">
+                        (0%)
+                      </span>
+                    </div>
+                  </div>
+                  <div class="h-[3px] w-full overflow-hidden rounded-full bg-[var(--pr-border)]/50"></div>
                 </div>
               }
             }
           </div>
 
-          <div class="flex flex-wrap gap-x-[20px] gap-y-[8px]">
-            @for (segment of statusSegments(); track segment.key) {
-              @if (segment.link) {
-                <button
-                  type="button"
-                  class="flex cursor-pointer items-center gap-[8px] border-0 bg-transparent p-0 transition-colors hover:opacity-80"
-                  (click)="emitLink(segment.link)">
-                  <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
-                  <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
-                  <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ segment.count }}</span>
-                </button>
-              } @else {
-                <span class="flex items-center gap-[8px]">
-                  <span class="h-[8px] w-[8px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
-                  <span class="text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
-                  <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-heading)]">{{ segment.count }}</span>
-                </span>
-              }
-            }
+          <!-- Interactive status banner -->
+          <div class="flex items-center justify-between rounded-[8px] bg-[var(--pr-color-primary-50)]/60 px-[14px] py-[8px] text-[12.5px] border border-[var(--pr-color-primary-200)]/50">
+            <div class="flex items-center gap-[8px] text-[var(--pr-text-secondary)]">
+              <span class="font-medium">Total reporting:</span>
+              <strong class="font-bold text-[var(--pr-text-heading)]">{{ statusTotal() }} results</strong>
+            </div>
+            <button
+              type="button"
+              (click)="emitLink({ origin: 'W1/W2' })"
+              class="flex items-center gap-[4px] font-bold text-[var(--pr-color-primary-600)] hover:underline cursor-pointer border-0 bg-transparent p-0 text-[12px]">
+              <span>View results</span>
+              <span>&rarr;</span>
+            </button>
           </div>
         </div>
       </div>
@@ -309,32 +350,43 @@
       <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
         W1/W2 results by category and status
       </h2>
-      <!-- Heatmap↔Bars toggle (CVT-R-1/CVT-DD-6) — status-pill styling, right-aligned, present
-           even when the card is empty (toggle-dependent divergence is out of scope). -->
+      <!-- View Mode Toggle: Horizontal Bar (primary) · Vertical Bar · Heatmap -->
       <div class="flex shrink-0 items-center gap-0.5 rounded-[8px] border border-[var(--pr-border)] p-[2px]">
+        <button
+          type="button"
+          (click)="setW12ViewMode('horizontal-bar')"
+          [attr.aria-pressed]="w12ViewMode() === 'horizontal-bar'"
+          [class]="
+            w12ViewMode() === 'horizontal-bar'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)] font-bold shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Horizontal Bar
+        </button>
+        <button
+          type="button"
+          (click)="setW12ViewMode('vertical-bar')"
+          [attr.aria-pressed]="w12ViewMode() === 'vertical-bar'"
+          [class]="
+            w12ViewMode() === 'vertical-bar'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)] font-bold shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Vertical Bar
+        </button>
         <button
           type="button"
           (click)="setW12ViewMode('heatmap')"
           [attr.aria-pressed]="w12ViewMode() === 'heatmap'"
           [class]="
             w12ViewMode() === 'heatmap'
-              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
-              : 'bg-transparent text-[var(--pr-text-secondary)]'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)] font-bold shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
           "
           class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
           Heatmap
-        </button>
-        <button
-          type="button"
-          (click)="setW12ViewMode('bars')"
-          [attr.aria-pressed]="w12ViewMode() === 'bars'"
-          [class]="
-            w12ViewMode() === 'bars'
-              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
-              : 'bg-transparent text-[var(--pr-text-secondary)]'
-          "
-          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
-          Bars
         </button>
       </div>
     </div>
@@ -364,91 +416,102 @@
   <section
     class="col-span-6 flex flex-col justify-between rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
     <div>
-      <h2 class="m-0 mb-[6px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
-      <span class="text-[13px] font-normal text-[var(--pr-text-muted)]">
-        Status of bilateral results where this program is tagged
-      </span>
-    </div>
-
-    @if (bilateralStatusTotal() > 0) {
-      <div class="my-[16px] flex items-center gap-[20px]">
-        <div class="w-[150px] shrink-0">
-          <app-pr-viz-chart
-            [options]="bilateralDonutOption()"
-            [tableModel]="bilateralDonutTable()"
-            chartTitle="Bilateral reporting status"
-            height="150px"
-            (chartClick)="onBilateralDonutClick($event)" />
+      <div class="flex items-start justify-between gap-[12px] mb-[16px]">
+        <div>
+          <h2 class="m-0 mb-[4px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">Reporting status</h2>
+          <span class="text-[13px] font-normal text-[var(--pr-text-muted)]">
+            Status of bilateral results where this program is tagged
+          </span>
         </div>
+        <div class="inline-flex items-center gap-[6px] rounded-full bg-[var(--pr-surface-ground)] px-[11px] py-[3px] border border-[var(--pr-border)] shadow-2xs">
+          <span class="text-[11.5px] font-medium text-[var(--pr-text-secondary)]">Approved:</span>
+          <strong class="text-[12.5px] font-bold text-emerald-600 tabular-nums">{{ bilateralApprovedPercent() }}%</strong>
+        </div>
+      </div>
 
-        <div class="flex min-w-0 flex-1 flex-col justify-center gap-[12px]">
-          <div class="flex h-[38px] overflow-hidden rounded-[8px] border border-[var(--pr-border)]">
+      @if (bilateralStatusTotal() > 0) {
+        <div class="grid grid-cols-1 items-center gap-[18px] sm:grid-cols-12">
+          <!-- Donut chart -->
+          <div class="sm:col-span-5 flex flex-col items-center justify-center">
+            <div class="w-[180px] h-[180px] shrink-0">
+              <app-pr-viz-chart
+                class="w-full h-full block cursor-pointer"
+                [options]="bilateralDonutOption()"
+                [tableModel]="bilateralDonutTable()"
+                chartTitle="Bilateral reporting status"
+                height="180px"
+                (chartClick)="onBilateralDonutClick($event)" />
+            </div>
+            <span class="text-[11.5px] text-[var(--pr-text-muted)] mt-[4px]">
+              Total: <strong class="text-[var(--pr-text-heading)] font-semibold">{{ bilateralStatusTotal() }}</strong> results
+            </span>
+          </div>
+
+          <!-- Status Metric Tiles with Micro Progress Lines -->
+          <div class="sm:col-span-7 flex flex-col gap-[7px]">
             @for (segment of bilateralStatusSegments(); track segment.key) {
-              @if (segment.count > 0) {
-                <div
-                  class="relative flex h-[38px] items-center justify-center overflow-hidden"
-                  [style.width.%]="bilateralSegmentWidth(segment)"
-                  [style.background]="segment.bg"
-                  [title]="segment.label + ': ' + segment.count">
-                  @if (segment.link) {
-                    <button
-                      type="button"
-                      class="absolute inset-0 h-full w-full cursor-pointer border-0 bg-transparent p-0 transition-[filter] hover:brightness-95"
-                      [attr.aria-label]="segment.statusName + ': ' + segment.count"
-                      (click)="emitLink(segment.link)"></button>
-                  }
-                  @if (showsBilateralSegmentCount(segment)) {
-                    <span class="pr-figure-sm text-[13px] font-semibold" [style.color]="segment.fg">{{ segment.count }}</span>
-                  }
+              @if (segment.link) {
+                <button
+                  type="button"
+                  (click)="emitLink(segment.link)"
+                  class="group relative flex flex-col justify-between rounded-[9px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[11px] py-[7px] text-left transition-all duration-200 cursor-pointer overflow-hidden hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs hover:-translate-y-0.5">
+                  <div class="flex items-center justify-between gap-[8px] w-full mb-[4px]">
+                    <div class="flex min-w-0 items-center gap-[7px]">
+                      <span
+                        class="h-[8px] w-[8px] shrink-0 rounded-full transition-transform group-hover:scale-125"
+                        [style.background]="segment.fg"></span>
+                      <span class="truncate text-[12px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+                        {{ segment.label }}
+                      </span>
+                    </div>
+                    <div class="flex shrink-0 items-baseline gap-[3px]">
+                      <span class="pr-figure-sm text-[13px] font-bold text-[var(--pr-text-heading)] tabular-nums">
+                        {{ segment.count }}
+                      </span>
+                      <span class="text-[10.5px] font-medium text-[var(--pr-text-muted)] tabular-nums">
+                        ({{ bilateralSegmentPercent(segment) }}%)
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Mini proportional status progress bar -->
+                  <div class="h-[3px] w-full overflow-hidden rounded-full bg-[var(--pr-border)]/50">
+                    <div
+                      class="h-full rounded-full transition-all duration-500"
+                      [style.width.%]="bilateralSegmentPercent(segment)"
+                      [style.background]="segment.fg"></div>
+                  </div>
+                </button>
+              } @else {
+                <div class="flex flex-col justify-between rounded-[9px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[11px] py-[7px] text-left opacity-55">
+                  <div class="flex items-center justify-between gap-[8px] w-full mb-[4px]">
+                    <div class="flex min-w-0 items-center gap-[7px]">
+                      <span
+                        class="h-[8px] w-[8px] shrink-0 rounded-full"
+                        [style.background]="segment.fg"></span>
+                      <span class="truncate text-[12px] font-medium text-[var(--pr-text-secondary)]">
+                        {{ segment.label }}
+                      </span>
+                    </div>
+                    <div class="flex shrink-0 items-baseline gap-[3px]">
+                      <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-muted)] tabular-nums">
+                        {{ segment.count }}
+                      </span>
+                      <span class="text-[10.5px] font-medium text-[var(--pr-text-muted)] tabular-nums">
+                        (0%)
+                      </span>
+                    </div>
+                  </div>
+                  <div class="h-[3px] w-full overflow-hidden rounded-full bg-[var(--pr-border)]/50"></div>
                 </div>
               }
             }
           </div>
-
-          <div class="flex items-center justify-between text-[12px] text-[var(--pr-text-secondary)]">
-            <span>Total: <strong class="text-[var(--pr-text-heading)]">{{ bilateralStatusTotal() }}</strong> results</span>
-            <span>Approved: <strong class="text-[var(--pr-status-approved-fg)]">{{ bilateralApprovedPercent() }}%</strong></span>
-          </div>
         </div>
-      </div>
-
-      <!-- Distributed grid of status metric tiles to fill and balance the card height -->
-      <div class="grid grid-cols-2 gap-[10px]">
-        @for (segment of bilateralStatusSegments(); track segment.key; let last = $last) {
-          @if (segment.link) {
-            <button
-              type="button"
-              [class.col-span-2]="last && bilateralStatusSegments().length % 2 !== 0"
-              class="flex cursor-pointer items-center justify-between rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[12px] py-[9px] transition-colors hover:bg-[var(--pr-surface-hover)]"
-              (click)="emitLink(segment.link)">
-              <div class="flex min-w-0 items-center gap-[8px]">
-                <span class="h-[9px] w-[9px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
-                <span class="truncate text-[12.5px] font-medium text-[var(--pr-text-heading)]">{{ segment.label }}</span>
-              </div>
-              <div class="flex shrink-0 items-baseline gap-[4px]">
-                <span class="pr-figure-sm text-[14px] font-bold text-[var(--pr-text-heading)] tabular-nums">{{ segment.count }}</span>
-                <span class="text-[11px] font-medium text-[var(--pr-text-muted)] tabular-nums">({{ bilateralSegmentPercent(segment) }}%)</span>
-              </div>
-            </button>
-          } @else {
-            <div
-              [class.col-span-2]="last && bilateralStatusSegments().length % 2 !== 0"
-              class="flex items-center justify-between rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[12px] py-[9px] opacity-60">
-              <div class="flex min-w-0 items-center gap-[8px]">
-                <span class="h-[9px] w-[9px] shrink-0 rounded-full" [style.background]="segment.fg"></span>
-                <span class="truncate text-[12.5px] font-normal text-[var(--pr-text-secondary)]">{{ segment.label }}</span>
-              </div>
-              <div class="flex shrink-0 items-baseline gap-[4px]">
-                <span class="pr-figure-sm text-[14px] font-medium text-[var(--pr-text-muted)] tabular-nums">{{ segment.count }}</span>
-                <span class="text-[11px] text-[var(--pr-text-muted)] tabular-nums">(0%)</span>
-              </div>
-            </div>
-          }
-        }
-      </div>
-    } @else {
-      <p class="m-0 text-[14px] text-[var(--pr-text-secondary)]">No bilateral results reported for this program yet.</p>
-    }
+      } @else {
+        <p class="m-0 text-[14px] text-[var(--pr-text-secondary)]">No bilateral results reported for this program yet.</p>
+      }
+    </div>
   </section>
 
   <!-- 6 · W3/Bilateral results by indicator category · span 6: Basic Radar Chart of bilateral results by category -->
@@ -483,31 +546,43 @@
       <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
         W3/Bilateral results by center and category
       </h2>
-      <!-- Heatmap↔Bars toggle (CVT-R-1/CVT-DD-6) — independent from the W1/W2 card's toggle. -->
+      <!-- View Mode Toggle: Horizontal Bar (primary) · Vertical Bar · Heatmap -->
       <div class="flex shrink-0 items-center gap-0.5 rounded-[8px] border border-[var(--pr-border)] p-[2px]">
+        <button
+          type="button"
+          (click)="setBilateralViewMode('horizontal-bar')"
+          [attr.aria-pressed]="bilateralViewMode() === 'horizontal-bar'"
+          [class]="
+            bilateralViewMode() === 'horizontal-bar'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)] font-bold shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Horizontal Bar
+        </button>
+        <button
+          type="button"
+          (click)="setBilateralViewMode('vertical-bar')"
+          [attr.aria-pressed]="bilateralViewMode() === 'vertical-bar'"
+          [class]="
+            bilateralViewMode() === 'vertical-bar'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)] font-bold shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Vertical Bar
+        </button>
         <button
           type="button"
           (click)="setBilateralViewMode('heatmap')"
           [attr.aria-pressed]="bilateralViewMode() === 'heatmap'"
           [class]="
             bilateralViewMode() === 'heatmap'
-              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
-              : 'bg-transparent text-[var(--pr-text-secondary)]'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)] font-bold shadow-xs'
+              : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
           "
           class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
           Heatmap
-        </button>
-        <button
-          type="button"
-          (click)="setBilateralViewMode('bars')"
-          [attr.aria-pressed]="bilateralViewMode() === 'bars'"
-          [class]="
-            bilateralViewMode() === 'bars'
-              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
-              : 'bg-transparent text-[var(--pr-text-secondary)]'
-          "
-          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
-          Bars
         </button>
       </div>
     </div>
@@ -536,49 +611,127 @@
   @if (activeSection() === 'all' || activeSection() === 'aow') {
   <!-- 8 · Progress by area of work · span 12 (+ xcut footer) -->
   <section
-    class="col-span-12 flex flex-col gap-[8px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-    <h2 class="m-0 mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
-      Progress by area of work
-    </h2>
+    class="col-span-12 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+    <div class="mb-[20px] flex flex-wrap items-center justify-between gap-[12px]">
+      <div>
+        <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+          Progress by area of work
+        </h2>
+        <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+          Completion progress against planned Key Performance Indicators (KPIs) per Area of Work
+        </p>
+      </div>
 
-    @if (aowProgress().length) {
-      @for (row of aowProgress(); track row.code) {
-        <div class="flex h-[48px] items-center gap-[10px] px-[8px] text-left">
-          <span class="pr-code shrink-0 text-[12px] font-medium text-[var(--pr-text-secondary)]">{{ row.code }}</span>
-          <span class="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--pr-text-heading)]">{{ row.name }}</span>
-          <span class="h-[8px] w-[120px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]" aria-hidden="true">
-            <span
-              class="block h-[8px] rounded-[4px] bg-[var(--pr-color-primary-300)]"
-              [style.width.%]="percentOf(row)"></span>
+      @if (aowProgress().length) {
+        <div class="flex items-center gap-[8px] rounded-full bg-[var(--pr-color-primary-50)] px-[12px] py-[5px] border border-[var(--pr-color-primary-100)]">
+          <span class="text-[12px] font-medium text-[var(--pr-text-secondary)]">Overall:</span>
+          <span class="text-[13px] font-bold text-[var(--pr-color-primary-700)] tabular-nums">
+            {{ aowStats().pct }}%
           </span>
-          <span class="pr-figure-sm w-[44px] shrink-0 text-right text-[13px] font-medium text-[var(--pr-text-heading)]">
-            {{ row.done }}/{{ row.total }}
-          </span>
-          <span class="w-[40px] shrink-0 text-right text-[13px] font-semibold text-[var(--pr-text-secondary)]">
-            {{ percentOf(row) }}%
-          </span>
+          <span class="text-[11px] font-medium text-[var(--pr-text-muted)]">({{ aowStats().totalDone }}/{{ aowStats().totalPlanned }} KPIs)</span>
         </div>
       }
+    </div>
+
+    @if (aowProgress().length) {
+      <div class="flex flex-col gap-[8px]">
+        @for (row of aowProgress(); track row.code) {
+          <div
+            (click)="row.code ? openAow.emit(row.code) : null"
+            class="group flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[16px] py-[12px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs"
+            [class.cursor-pointer]="!!row.code">
+            
+            <!-- Left: AoW Code Badge + Name -->
+            <div class="flex min-w-0 flex-1 items-center gap-[12px]">
+              <span class="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-purple-100/80 px-[8px] py-[2px] font-mono text-[11px] font-bold text-purple-800 border border-purple-200/70 group-hover:bg-purple-200/80 transition-colors">
+                {{ row.code }}
+              </span>
+              <span class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+                {{ row.name }}
+              </span>
+            </div>
+
+            <!-- Right: Progress Bar + Targets + Percent Badge -->
+            <div class="flex shrink-0 items-center gap-[16px]">
+              <!-- Progress Bar -->
+              <span class="h-[7px] w-[140px] overflow-hidden rounded-full bg-[var(--pr-border)]/60" aria-hidden="true">
+                <span
+                  class="block h-full rounded-full transition-all duration-500"
+                  [style.width.%]="percentOf(row)"
+                  [ngClass]="percentOf(row) >= 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-[var(--pr-color-primary-500)] to-[var(--pr-color-primary-400)]'"></span>
+              </span>
+
+              <!-- KPIs Metric -->
+              <div class="w-[72px] text-right font-medium tabular-nums text-[12.5px] text-[var(--pr-text-secondary)]">
+                <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.done }}</strong>
+                <span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                <span class="ml-1 text-[11px] text-[var(--pr-text-muted)]">KPIs</span>
+              </div>
+
+              <!-- Percent Badge -->
+              <div
+                class="inline-flex w-[48px] justify-center rounded-[6px] px-[6px] py-[2px] text-[11.5px] font-bold tabular-nums"
+                [ngClass]="{
+                  'bg-emerald-50 text-emerald-700 border border-emerald-200': percentOf(row) >= 100,
+                  'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] border border-[var(--pr-color-primary-200)]': percentOf(row) > 0 && percentOf(row) < 100,
+                  'bg-gray-100 text-gray-500 border border-gray-200': percentOf(row) === 0
+                }">
+                {{ percentOf(row) }}%
+              </div>
+            </div>
+          </div>
+        }
+      </div>
     } @else {
       <p class="m-0 px-[8px] py-[12px] text-[14px] text-[var(--pr-text-secondary)]">No areas of work loaded yet.</p>
     }
 
     @if (xcutProgress().length) {
-      <div class="mt-[12px] flex flex-col border-t border-[var(--pr-border-divider)] pt-[12px]">
+      <div class="mt-[16px] flex flex-col gap-[8px]">
+        <div class="my-[4px] flex items-center gap-[8px]">
+          <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">
+            Strategic Outcomes & Targets
+          </span>
+          <span class="h-px flex-1 bg-[var(--pr-border)]" aria-hidden="true"></span>
+        </div>
+
         @for (row of xcutProgress(); track row.code) {
-          <div class="flex h-[48px] items-center gap-[10px] px-[8px]">
-            <span class="min-w-0 flex-1 truncate text-[14px] font-medium text-[var(--pr-text-heading)]">{{ row.name }}</span>
-            <span class="h-[8px] w-[120px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]" aria-hidden="true">
-              <span
-                class="block h-[8px] rounded-[4px] bg-[var(--pr-color-primary-300)]"
-                [style.width.%]="percentOf(row)"></span>
-            </span>
-            <span class="pr-figure-sm w-[44px] shrink-0 text-right text-[13px] font-medium text-[var(--pr-text-heading)]">
-              {{ row.done }}/{{ row.total }}
-            </span>
-            <span class="w-[40px] shrink-0 text-right text-[13px] font-semibold text-[var(--pr-text-secondary)]">
-              {{ percentOf(row) }}%
-            </span>
+          <div
+            (click)="openAow.emit(row.code || 'xcut')"
+            class="cursor-pointer flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-[var(--pr-border)]/80 bg-[var(--pr-surface-ground)]/60 px-[16px] py-[10px] text-left transition-all duration-150 hover:bg-[var(--pr-surface-card)] hover:border-[var(--pr-color-primary-300)] hover:shadow-xs">
+            <div class="flex min-w-0 flex-1 items-center gap-[10px]">
+              <span class="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-blue-50 px-[7px] py-[2px] text-[10.5px] font-bold text-blue-700 border border-blue-200">
+                Outcome
+              </span>
+              <span class="min-w-0 truncate text-[13.5px] font-medium text-[var(--pr-text-heading)]">
+                {{ row.name }}
+              </span>
+            </div>
+
+            <div class="flex shrink-0 items-center gap-[16px]">
+              <span class="h-[7px] w-[140px] overflow-hidden rounded-full bg-[var(--pr-border)]/60" aria-hidden="true">
+                <span
+                  class="block h-full rounded-full transition-all duration-500"
+                  [style.width.%]="percentOf(row)"
+                  [ngClass]="percentOf(row) >= 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'"></span>
+              </span>
+
+              <div class="w-[72px] text-right font-medium tabular-nums text-[12.5px] text-[var(--pr-text-secondary)]">
+                <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.done }}</strong>
+                <span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                <span class="ml-1 text-[11px] text-[var(--pr-text-muted)]">KPIs</span>
+              </div>
+
+              <div
+                class="inline-flex w-[48px] justify-center rounded-[6px] px-[6px] py-[2px] text-[11.5px] font-bold tabular-nums"
+                [ngClass]="{
+                  'bg-emerald-50 text-emerald-700 border border-emerald-200': percentOf(row) >= 100,
+                  'bg-blue-50 text-blue-700 border border-blue-200': percentOf(row) > 0 && percentOf(row) < 100,
+                  'bg-gray-100 text-gray-500 border border-gray-200': percentOf(row) === 0
+                }">
+                {{ percentOf(row) }}%
+              </div>
+            </div>
           </div>
         }
       </div>

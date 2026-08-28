@@ -183,6 +183,17 @@ export function stackedBarOption(model: HeatmapModel, ramp: string[], totalLabel
     // second shape"), instead of ECharts drawing a zero-height sliver.
     data: rows.map((_, r) => valueAt(r, c) || null),
     itemStyle: { color: ramp[c % (ramp.length || 1)] ?? '' },
+    label: {
+      show: true,
+      position: 'inside',
+      formatter: (params: unknown) => {
+        const payload = params as { value?: number };
+        return payload?.value && payload.value > 0 ? String(payload.value) : '';
+      },
+      fontSize: 11,
+      fontWeight: 700,
+      color: '#ffffff'
+    },
     universalTransition: { enabled: true }
   }));
 
@@ -199,6 +210,7 @@ export function stackedBarOption(model: HeatmapModel, ramp: string[], totalLabel
             show: true,
             position: 'right',
             color: totalLabelColor,
+            fontWeight: 700,
             formatter: (params: unknown) => {
               const payload = params as { dataIndex?: number };
               const r = payload?.dataIndex;
@@ -236,6 +248,87 @@ export function stackedBarOption(model: HeatmapModel, ramp: string[], totalLabel
       inverse: true,
       axisLabel: { interval: 0, formatter: abbreviateAxisLabel }
     },
+    series: [...columnSeries, ...totalsSeries]
+  } as EChartsOption;
+}
+
+/**
+ * Builds vertical stacked-bars option for a `HeatmapModel`.
+ */
+export function stackedBarVerticalOption(model: HeatmapModel, ramp: string[], totalLabelColor: string): EChartsOption {
+  const { rows, cols, cells } = model;
+  const seriesIds = datasetIdsFor(model);
+  const valueAt = (r: number, c: number): number => cells.find(cell => cell.r === r && cell.c === c)?.value ?? 0;
+  const linkAt = (r: number, c: number): OverviewLink | null => cells.find(cell => cell.r === r && cell.c === c)?.link ?? null;
+  const rowTotal = (r: number): number => cols.reduce((sum, _col, c) => sum + valueAt(r, c), 0);
+
+  const columnSeries = cols.map((colName, c) => ({
+    type: 'bar',
+    id: seriesIds[c],
+    name: colName,
+    stack: 'total',
+    data: rows.map((_, r) => valueAt(r, c) || null),
+    itemStyle: { color: ramp[c % (ramp.length || 1)] ?? '' },
+    label: {
+      show: true,
+      position: 'inside',
+      formatter: (params: unknown) => {
+        const payload = params as { value?: number };
+        return payload?.value && payload.value > 0 ? String(payload.value) : '';
+      },
+      fontSize: 11,
+      fontWeight: 700,
+      color: '#ffffff'
+    },
+    universalTransition: { enabled: true }
+  }));
+
+  const totalsSeries = rows.length
+    ? [
+        {
+          type: 'bar',
+          stack: 'total',
+          silent: true,
+          barWidth: 0,
+          itemStyle: { color: 'transparent' },
+          data: rows.map(() => 0),
+          label: {
+            show: true,
+            position: 'top',
+            color: totalLabelColor,
+            fontWeight: 700,
+            formatter: (params: unknown) => {
+              const payload = params as { dataIndex?: number };
+              const r = payload?.dataIndex;
+              return typeof r === 'number' ? String(rowTotal(r)) : '';
+            }
+          }
+        }
+      ]
+    : [];
+
+  return {
+    tooltip: {
+      formatter: (params: unknown) => {
+        const payload = params as { seriesIndex?: number; dataIndex?: number; seriesName?: string };
+        const c = payload?.seriesIndex;
+        const r = payload?.dataIndex;
+        const rowName = typeof r === 'number' ? (rows[r] ?? '') : '';
+        const colName = payload?.seriesName ?? (typeof c === 'number' ? (cols[c] ?? '') : '');
+        const value = typeof r === 'number' && typeof c === 'number' ? valueAt(r, c) : 0;
+        const navigable = typeof r === 'number' && typeof c === 'number' ? Boolean(linkAt(r, c)) : false;
+        const note = navigable ? '' : ' (not navigable)';
+        return `${rowName} × ${colName}: ${value}${note}`;
+      }
+    },
+    grid: { left: 48, right: 24, top: 28, bottom: 44, containLabel: true },
+    legend: { show: false },
+    xAxis: {
+      type: 'category',
+      data: rows,
+      axisLabel: { interval: 0, rotate: 18, formatter: abbreviateAxisLabel }
+    },
+    yAxis: { type: 'value' },
     series: [...columnSeries, ...totalsSeries]
   } as EChartsOption;
 }
@@ -352,7 +445,7 @@ export function singleBarLinkFromClick(event: { dataIndex?: number }, bars: Sing
  * Each category in `bars` becomes an axis on the radar polygon.
  * Abbreviates axis names for neat polygon rendering.
  */
-export function radarOption(bars: SingleBarRow[], color: string, labelColor: string): EChartsOption {
+export function radarOption(bars: SingleBarRow[], color: string, labelColor: string, isDarkTheme = false): EChartsOption {
   const maxCount = bars.length ? Math.max(...bars.map(bar => bar.count)) : 0;
   const max = Math.ceil(maxCount * 1.15) || 10;
 
@@ -386,17 +479,19 @@ export function radarOption(bars: SingleBarRow[], color: string, labelColor: str
       axisName: {
         color: labelColor,
         fontSize: 12,
-        fontWeight: 500
+        fontWeight: isDarkTheme ? 600 : 500
       },
       splitLine: {
         lineStyle: {
-          color: 'rgba(0, 0, 0, 0.08)'
+          color: isDarkTheme ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.08)'
         }
       },
       splitArea: {
         show: true,
         areaStyle: {
-          color: ['rgba(250, 250, 250, 0.3)', 'rgba(235, 235, 235, 0.15)']
+          color: isDarkTheme
+            ? ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.12)']
+            : ['rgba(250, 250, 250, 0.3)', 'rgba(235, 235, 235, 0.15)']
         }
       }
     },
@@ -411,13 +506,15 @@ export function radarOption(bars: SingleBarRow[], color: string, labelColor: str
             symbol: 'circle',
             symbolSize: 6,
             itemStyle: { color },
-            lineStyle: { color, width: 2 },
+            lineStyle: { color, width: 2.5 },
             areaStyle: {
-              color: color.startsWith('#')
-                ? `${color}33`
-                : color.startsWith('rgb(')
-                  ? color.replace('rgb(', 'rgba(').replace(')', ', 0.25)')
-                  : 'rgba(124, 58, 237, 0.25)'
+              color: isDarkTheme
+                ? 'rgba(255, 255, 255, 0.3)'
+                : color.startsWith('#')
+                  ? `${color}33`
+                  : color.startsWith('rgb(')
+                    ? color.replace('rgb(', 'rgba(').replace(')', ', 0.25)')
+                    : 'rgba(124, 58, 237, 0.25)'
             },
             label: {
               show: true,
@@ -473,7 +570,12 @@ export function donutOption(segments: StatusSegment[], palette: string[]): EChar
     .map((segment, index) => ({
       name: segment.label,
       value: segment.count,
-      itemStyle: { color: palette[index % (palette.length || 1)] ?? '' }
+      itemStyle: {
+        color: palette[index % (palette.length || 1)] || segment.fg || '',
+        borderRadius: 4,
+        borderColor: '#ffffff',
+        borderWidth: 2
+      }
     }));
 
   return {
@@ -482,18 +584,54 @@ export function donutOption(segments: StatusSegment[], palette: string[]): EChar
       subtext: 'results',
       left: 'center',
       top: 'center',
-      textStyle: { fontSize: 20, fontWeight: 700 },
-      subtextStyle: { fontSize: 12 }
+      textStyle: { fontSize: 22, fontWeight: 800, color: '#2B2838' },
+      subtextStyle: { fontSize: 12, fontWeight: 500, color: '#6B6580' }
     },
-    tooltip: { trigger: 'item' },
+    tooltip: {
+      trigger: 'item',
+      confine: true,
+      formatter: (params: unknown) => {
+        const payload = params as { name?: string; value?: number; percent?: number };
+        return `<strong>${payload.name ?? ''}</strong>: ${payload.value ?? 0} (${payload.percent ?? 0}%)`;
+      }
+    },
     legend: { show: false },
     series: [
       {
         type: 'pie',
-        radius: ['62%', '88%'],
-        avoidLabelOverlap: false,
-        label: { show: false },
-        labelLine: { show: false },
+        radius: ['52%', '74%'],
+        center: ['50%', '50%'],
+        avoidLabelOverlap: true,
+        minAngle: 12,
+        padAngle: 3,
+        itemStyle: {
+          borderRadius: 4,
+          borderColor: '#ffffff',
+          borderWidth: 2
+        },
+        label: {
+          show: true,
+          position: 'outside',
+          formatter: '{c}',
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#3B0764',
+          distanceToLabelLine: 4
+        },
+        labelLine: {
+          show: true,
+          length: 6,
+          length2: 6,
+          lineStyle: { color: '#A78BFA', width: 1.2 }
+        },
+        emphasis: {
+          scale: true,
+          scaleSize: 4,
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(91, 33, 182, 0.3)'
+          }
+        },
         data
       }
     ]

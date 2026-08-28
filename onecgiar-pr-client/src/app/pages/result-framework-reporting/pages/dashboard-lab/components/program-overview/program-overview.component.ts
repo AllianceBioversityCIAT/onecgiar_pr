@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { PrVizChartComponent, EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
 import {
@@ -6,6 +7,7 @@ import {
   heatmapTable,
   cellLinkFromClick,
   stackedBarOption,
+  stackedBarVerticalOption,
   barLinkFromClick,
   singleBarOption,
   singleBarTable,
@@ -23,8 +25,8 @@ import {
 import type { TocMapModel } from '../../dashboard-lab.toc-map';
 import type { ECElementEvent } from 'echarts/core';
 
-/** A matrix card's view mode (`CVT-R-1`): default `'bars'` (`CVT-A-1`), session-local, per-card. */
-export type ChartViewMode = 'heatmap' | 'bars';
+/** A matrix card's view mode: default 'vertical-bar', then 'horizontal-bar', then 'heatmap'. */
+export type ChartViewMode = 'vertical-bar' | 'horizontal-bar' | 'heatmap';
 
 /**
  * Typed navigation intent for the Results tab (`OVW-R-5` emission contract). Only the defined
@@ -112,7 +114,7 @@ export interface HeatmapModel {
 @Component({
   selector: 'app-program-overview',
   standalone: true,
-  imports: [PrVizChartComponent],
+  imports: [NgClass, PrVizChartComponent],
   templateUrl: './program-overview.component.html',
   styleUrls: ['./program-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -221,8 +223,8 @@ export class ProgramOverviewComponent {
    * a pure view preference over data the parent already supplies — the parent owns data/links,
    * this component owns geometry.
    */
-  readonly w12ViewMode = signal<ChartViewMode>('bars');
-  readonly bilateralViewMode = signal<ChartViewMode>('bars');
+  readonly w12ViewMode = signal<ChartViewMode>('horizontal-bar');
+  readonly bilateralViewMode = signal<ChartViewMode>('horizontal-bar');
 
   setW12ViewMode(mode: ChartViewMode): void {
     this.w12ViewMode.set(mode);
@@ -232,13 +234,18 @@ export class ProgramOverviewComponent {
     this.bilateralViewMode.set(mode);
   }
 
-  /** Mode-aware options (`CVT-DD-2`): one host per card, the computed swaps builders on toggle. */
+  /** Mode-aware options: vertical bar (default), horizontal bar, or heatmap. */
   readonly w12ChartOption = computed<EChartsOption | null>(() => {
     const model = this.w12Heatmap();
     if (!model || !model.rows.length) return null;
-    return this.w12ViewMode() === 'bars'
-      ? stackedBarOption(model, this.heatmapRamp(), this.totalLabelColor())
-      : heatmapOption(model, this.heatmapRamp());
+    const mode = this.w12ViewMode();
+    if (mode === 'vertical-bar') {
+      return stackedBarVerticalOption(model, this.heatmapRamp(), this.totalLabelColor());
+    } else if (mode === 'horizontal-bar') {
+      return stackedBarOption(model, this.heatmapRamp(), this.totalLabelColor());
+    } else {
+      return heatmapOption(model, this.heatmapRamp());
+    }
   });
 
   readonly w12HeatmapTable = computed<VizChartTableModel | null>(() => {
@@ -249,9 +256,14 @@ export class ProgramOverviewComponent {
   readonly bilateralChartOption = computed<EChartsOption | null>(() => {
     const model = this.bilateralHeatmap();
     if (!model || !model.rows.length) return null;
-    return this.bilateralViewMode() === 'bars'
-      ? stackedBarOption(model, this.heatmapRamp(), this.totalLabelColor())
-      : heatmapOption(model, this.heatmapRamp());
+    const mode = this.bilateralViewMode();
+    if (mode === 'vertical-bar') {
+      return stackedBarVerticalOption(model, this.heatmapRamp(), this.totalLabelColor());
+    } else if (mode === 'horizontal-bar') {
+      return stackedBarOption(model, this.heatmapRamp(), this.totalLabelColor());
+    } else {
+      return heatmapOption(model, this.heatmapRamp());
+    }
   });
 
   readonly bilateralHeatmapTable = computed<VizChartTableModel | null>(() => {
@@ -266,14 +278,14 @@ export class ProgramOverviewComponent {
   onW12HeatmapClick(event: ECElementEvent): void {
     const model = this.w12Heatmap();
     if (!model) return;
-    const link = this.w12ViewMode() === 'bars' ? barLinkFromClick(event, model) : cellLinkFromClick(event, model);
+    const link = this.w12ViewMode() === 'heatmap' ? cellLinkFromClick(event, model) : barLinkFromClick(event, model);
     this.emitLink(link);
   }
 
   onBilateralHeatmapClick(event: ECElementEvent): void {
     const model = this.bilateralHeatmap();
     if (!model) return;
-    const link = this.bilateralViewMode() === 'bars' ? barLinkFromClick(event, model) : cellLinkFromClick(event, model);
+    const link = this.bilateralViewMode() === 'heatmap' ? cellLinkFromClick(event, model) : barLinkFromClick(event, model);
     this.emitLink(link);
   }
 
@@ -313,6 +325,11 @@ export class ProgramOverviewComponent {
   });
 
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
+
+  segmentPercent(segment: StatusSegment): number {
+    const total = this.statusTotal();
+    return total ? Math.round((segment.count / total) * 100) : 0;
+  }
 
   segmentWidth(segment: StatusSegment): number {
     const total = this.statusTotal();

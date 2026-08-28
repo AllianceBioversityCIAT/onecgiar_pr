@@ -1320,9 +1320,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * `router.navigate` call `onOverviewLink` (below) uses for the sibling 'results' route.
    */
   onOpenAow(code: string): void {
-    const spCode = this.selected()?.initiativeCode;
+    const spCode = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
     if (!spCode) return;
-    this.router.navigate(['/result-framework-reporting/entity-details', spCode, 'aow', code]);
+    this.router.navigate(['/result-framework-reporting/entity-details', spCode], {
+      queryParams: { tocView: 'aows' }
+    });
   }
 
   /** Fetch the programme's bilateral rows. Overview only — the other tabs do not use them. */

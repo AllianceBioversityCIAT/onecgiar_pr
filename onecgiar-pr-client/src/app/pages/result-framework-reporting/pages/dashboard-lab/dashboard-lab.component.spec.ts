@@ -402,7 +402,9 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     component.onOpenAow('AOW03');
 
     expect(navigate).toHaveBeenCalledTimes(1);
-    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'aow', 'AOW03']);
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02'], {
+      queryParams: { tocView: 'aows' }
+    });
   });
 
   it('onOpenAow does nothing when no SP is selected', async () => {

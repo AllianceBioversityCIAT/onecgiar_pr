@@ -8,6 +8,7 @@ import {
   sectorLinkFromClick,
   abbreviateAxisLabel,
   stackedBarOption,
+  stackedBarVerticalOption,
   barLinkFromClick,
   datasetIdsFor,
   singleBarOption,
@@ -212,14 +213,14 @@ describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)'
       expect(option.xAxis.type).toBe('value');
     });
 
-    it('hides the legend but shows no label on the COLUMN series themselves (CVT-DD-5a)', () => {
+    it('hides the legend and shows inside labels for numbers on the column series', () => {
       const option = stackedBarOption(barModel, ramp, totalLabelColor) as {
         legend: { show: boolean };
         series: { label?: { show?: boolean } }[];
       };
       expect(option.legend.show).toBe(false);
       const columnSeries = option.series.slice(0, barModel.cols.length);
-      columnSeries.forEach(s => expect(s.label?.show).not.toBe(true));
+      columnSeries.forEach(s => expect(s.label?.show).toBe(true));
     });
 
     it('tooltip names row × full column and flags a non-navigable segment, mirroring heatmapOption', () => {
@@ -316,6 +317,20 @@ describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)'
     /** FAIL input: a resolver that matches the totals artifact's index to a real cell turns this red. */
     it('resolves the totals-artifact seriesIndex (one past the last real column) to null — CVT-A-2 click-parity guard', () => {
       expect(barLinkFromClick({ seriesIndex: barModel.cols.length, dataIndex: 0 }, barModel)).toBeNull();
+    });
+  });
+
+  describe('stackedBarVerticalOption', () => {
+    it('builds vertical stacked bar with category xAxis and value yAxis', () => {
+      const option = stackedBarVerticalOption(barModel, ramp, totalLabelColor) as {
+        xAxis: { type: string; data: string[] };
+        yAxis: { type: string };
+        series: { type: string; stack: string }[];
+      };
+      expect(option.xAxis.type).toBe('category');
+      expect(option.xAxis.data).toEqual(barModel.rows);
+      expect(option.yAxis.type).toBe('value');
+      expect(option.series.length).toBe(barModel.cols.length + 1);
     });
   });
 });
@@ -511,11 +526,12 @@ describe('program-overview.charts donut (OVW-T-4)', () => {
       expect(series.data.map(d => d.itemStyle.color)).toEqual(['V1', 'V2', 'V1']);
     });
 
-    it('uses radius [62%, 88%], hides sector labels and the legend, and centers the total in the title', () => {
+    it('uses radius [52%, 74%], shows separated slices and sector labels, and centers the total in the title', () => {
       const option = donutOption(segments, palette);
-      const series = (option.series as { radius: string[]; label: { show: boolean } }[])[0];
-      expect(series.radius).toEqual(['62%', '88%']);
-      expect(series.label.show).toBe(false);
+      const series = (option.series as { radius: string[]; label: { show: boolean }; padAngle: number }[])[0];
+      expect(series.radius).toEqual(['52%', '74%']);
+      expect(series.padAngle).toBe(3);
+      expect(series.label.show).toBe(true);
       expect((option.legend as { show: boolean }).show).toBe(false);
       expect((option.title as { text: string; subtext: string }).text).toBe('7');
       expect((option.title as { text: string; subtext: string }).subtext).toBe('results');
