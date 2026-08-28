@@ -220,6 +220,11 @@ export class TypeInnovationUseComponent implements OnInit {
    * Without this the stored answer reloads unselected and the block it gates stays hidden.
    */
   private hydrateStoredAnswers(): void {
+    // P2-3533 — this one was missing, and it is the field that gates the whole Actors block
+    // (`.component.html:17`, `=== false`). Its siblings were normalised here from the start, so on
+    // reload the answer came back as `0`, matched neither radio option and rendered nothing: the
+    // actors looked lost, and the obvious reaction is to enter them again.
+    this.normalizeStoredBoolean('innov_use_to_be_determined');
     this.normalizeStoredBoolean('has_scaling_studies');
     this.normalizeStoredBoolean('innov_use_2030_to_be_determined');
   }
