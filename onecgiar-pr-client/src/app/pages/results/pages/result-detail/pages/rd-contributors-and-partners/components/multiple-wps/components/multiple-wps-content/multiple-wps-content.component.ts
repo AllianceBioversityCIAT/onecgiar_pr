@@ -114,6 +114,39 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   hloStatementTooltip = computed(() => (this.isCP2026() ? 'Maps to TOC: Output or Outcome statement' : ''));
 
+  /**
+   * P2-3235: reflect the ToC alignment that the Results Framework module already holds, read-only.
+   *
+   * The link is not re-derived here. `LinkFrameworkResultTocService` (server) writes `toc_result_id`
+   * AND `toc_level_id` on the primary `results_toc_result` row at creation time, so by the time
+   * Section 2 loads, the Level and node dropdowns are already sitting on the module's choice. What
+   * this flag adds is that Section 2 stops being a second writer for the same link — the decision
+   * agreed with Ángel on 28-Aug: reflected and read-only, corrected in the module that owns it.
+   *
+   * Level-generic ON PURPOSE. Ángel widened the ask beyond Intermediate Outcomes to HLO and 2030
+   * Outcomes, and the template is already a per-level `@switch`, so locking the Level select locks
+   * every branch below it. Restricting this to one level would mean ADDING a special case.
+   *
+   * ⚠️ Gate is `isCP2026()` = PHASE YEAR (`fields-manager.service.ts:26`), never `isP25()`, which is
+   * PORTFOLIO. The two are routinely confused in this zone and the same screen already uses both
+   * (`multiple-wps.component.ts:143` vs `multiple-wps-content.component.html:3`).
+   *
+   * ⚠️ A tab with no node yet stays editable. Locking an empty tab would leave a result unable to be
+   * aligned at all, which is strictly worse than the inconsistency this ticket is closing.
+   */
+  tocAlignmentReadOnly = computed(() => {
+    // Same reactive trigger as selectedTocNode(): the node dropdown writes onto the plain `activeTab`
+    // object in place, so without this the memo would keep the pre-selection verdict.
+    this.selectionVersion();
+    if (!this.isCP2026() || this.isUnplanned) return false;
+    const tab = this.activeTabSignal() ?? this.activeTab;
+    return this.isFilled(tab?.toc_level_id) && this.isFilled(tab?.toc_result_id);
+  });
+
+  private isFilled(value: unknown): boolean {
+    return value !== null && value !== undefined && value !== '';
+  }
+
   // P2-3063 (L3): read-only Indicator Typology = the "Type" of the selected KPI in TOC.
   // `selectedIndicatorData()` already holds the selected indicator (set by updateSelectedIndicatorData()).
   // P2-3204: the TOC sends TWO fields per indicator and they are not interchangeable:
