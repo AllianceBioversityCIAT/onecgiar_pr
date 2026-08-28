@@ -156,6 +156,17 @@ describe('ResultRepository (unit)', () => {
   // universe (status != 4, type NOT IN (10, 11)) — not the pre-fix bilateral/contributor/
   // year-scoped/narrower-universe query.
   describe('getIndicatorContributionSummaryByProgram (W12-R-2)', () => {
+    it('binds exactly as many parameters as the SQL has ? placeholders (hotfix: a ? inside a SQL comment was consumed by mysql2 as a 3rd placeholder → QueryFailedError 500)', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getIndicatorContributionSummaryByProgram(15, 42);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      // mysql2 substitutes positionally and does NOT skip SQL comments — every `?` counts.
+      expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+      expect(params).toEqual([15, 42]);
+    });
+
     it('scopes by origin (r.source = Result) to exclude bilateral (source=API) rows', async () => {
       queryMock.mockResolvedValueOnce([]);
 

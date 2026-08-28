@@ -2632,7 +2632,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND rbi.inititiative_id = ?
         AND rbi.is_active = 1
         AND rbi.initiative_role_id = 1
-      -- Kept deliberately though \`v\` is otherwise unreferenced (the r.version_id = ?
+      -- Kept deliberately though \`v\` is otherwise unreferenced (the r.version_id placeholder
       -- predicate below already does the scoping): it enforces that r.version_id points
       -- at a real \`version\` row, mirroring the meter's own join (result.repository.ts:~692).
       INNER JOIN \`version\` v
