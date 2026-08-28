@@ -147,24 +147,26 @@ describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)'
     caption: 'W1/W2 results by category and status'
   };
   const ramp = ['t4', 't3', 't2', 't1'];
+  // Non-hex placeholder, asserted by identity passthrough only (KZ-SPO-1) — never a resolved value.
+  const totalLabelColor = 'text-secondary-token';
 
   describe('stackedBarOption', () => {
-    it('emits one bar series per column, all sharing stack "total"', () => {
-      const option = stackedBarOption(barModel, ramp);
+    it('emits one bar series per column plus one bar-end totals artifact, all sharing stack "total" (CVT-A-2)', () => {
+      const option = stackedBarOption(barModel, ramp, totalLabelColor);
       const series = option.series as { type: string; stack: string }[];
-      expect(series.length).toBe(barModel.cols.length);
+      expect(series.length).toBe(barModel.cols.length + 1);
       expect(series.every(s => s.type === 'bar')).toBe(true);
       expect(series.every(s => s.stack === 'total')).toBe(true);
     });
 
-    it('names each series after the FULL column name (never the abbreviation)', () => {
-      const option = stackedBarOption(barModel, ramp);
-      const series = option.series as { name: string }[];
-      expect(series.map(s => s.name)).toEqual(barModel.cols);
+    it('names each COLUMN series after the FULL column name (never the abbreviation)', () => {
+      const option = stackedBarOption(barModel, ramp, totalLabelColor);
+      const columnSeries = (option.series as { name?: string }[]).slice(0, barModel.cols.length);
+      expect(columnSeries.map(s => s.name)).toEqual(barModel.cols);
     });
 
-    it('aligns each series data to ROWS, cell value at (r,c) — 0 becomes null, never a 0 sliver', () => {
-      const option = stackedBarOption(barModel, ramp);
+    it('aligns each COLUMN series data to ROWS, cell value at (r,c) — 0 becomes null, never a 0 sliver', () => {
+      const option = stackedBarOption(barModel, ramp, totalLabelColor);
       const series = option.series as { data: (number | null)[] }[];
       // series[0] = Editing column → rows [2, 7]
       expect(series[0].data).toEqual([2, 7]);
@@ -178,15 +180,15 @@ describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)'
       // misalign row 0 / row 1 — either breaks the equalities above.
     });
 
-    it('colors each series by RAMP INDEX (name), cycling — never a resolved CSS value', () => {
-      const option = stackedBarOption(barModel, ramp);
-      const series = option.series as { itemStyle: { color: string } }[];
-      expect(series.map(s => s.itemStyle.color)).toEqual(ramp);
-      expect(series.every(s => !s.itemStyle.color.startsWith('#'))).toBe(true);
+    it('colors each COLUMN series by RAMP INDEX (name), cycling — never a resolved CSS value', () => {
+      const option = stackedBarOption(barModel, ramp, totalLabelColor);
+      const columnSeries = (option.series as { itemStyle: { color: string } }[]).slice(0, barModel.cols.length);
+      expect(columnSeries.map(s => s.itemStyle.color)).toEqual(ramp);
+      expect(columnSeries.every(s => !s.itemStyle.color.startsWith('#'))).toBe(true);
     });
 
     it('sets yAxis.data to ROWS (unreordered), inverse: true, interval: 0 + abbreviateAxisLabel (KZ-SPO-1)', () => {
-      const option = stackedBarOption(barModel, ramp) as {
+      const option = stackedBarOption(barModel, ramp, totalLabelColor) as {
         yAxis: { data: string[]; inverse: boolean; axisLabel: { interval: number; formatter: (v: string) => string } };
       };
       expect(option.yAxis.data).toEqual(barModel.rows);
@@ -196,20 +198,22 @@ describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)'
     });
 
     it('has a value-type xAxis (magnitude), matching the horizontal stacked-bar shape', () => {
-      const option = stackedBarOption(barModel, ramp) as { xAxis: { type: string } };
+      const option = stackedBarOption(barModel, ramp, totalLabelColor) as { xAxis: { type: string } };
       expect(option.xAxis.type).toBe('value');
     });
 
-    it('hides the legend and adds no bar-end totals (CVT-DD-5, OQ-1 default "no")', () => {
-      const option = stackedBarOption(barModel, ramp) as { legend: { show: boolean }; series: { label?: { show: boolean } }[] };
+    it('hides the legend but shows no label on the COLUMN series themselves (CVT-DD-5a)', () => {
+      const option = stackedBarOption(barModel, ramp, totalLabelColor) as {
+        legend: { show: boolean };
+        series: { label?: { show?: boolean } }[];
+      };
       expect(option.legend.show).toBe(false);
-      option.series.forEach(s => {
-        expect(s.label?.show).not.toBe(true);
-      });
+      const columnSeries = option.series.slice(0, barModel.cols.length);
+      columnSeries.forEach(s => expect(s.label?.show).not.toBe(true));
     });
 
     it('tooltip names row × full column and flags a non-navigable segment, mirroring heatmapOption', () => {
-      const option = stackedBarOption(barModel, ramp);
+      const option = stackedBarOption(barModel, ramp, totalLabelColor);
       const formatter = (option.tooltip as { formatter: (p: unknown) => string }).formatter;
 
       // Editing @ row 0 (Knowledge product): navigable, value 2
@@ -218,16 +222,68 @@ describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)'
       expect(formatter({ seriesIndex: 3, dataIndex: 0, seriesName: 'Other' })).toBe('Knowledge product × Other: 3 (not navigable)');
     });
 
-    it('shares series ids with heatmapOption for the same model (CVT-DD-4 morph) and enables universalTransition on every series', () => {
-      const bars = stackedBarOption(barModel, ramp);
+    it('shares series ids with heatmapOption for the same model (CVT-DD-4 morph) and enables universalTransition on every COLUMN series ONLY', () => {
+      const bars = stackedBarOption(barModel, ramp, totalLabelColor);
       const heatmap = heatmapOption(barModel, ramp);
-      const barSeries = bars.series as { id: string; universalTransition: { enabled: boolean } }[];
+      const allSeries = bars.series as { id?: string; universalTransition?: { enabled: boolean } }[];
+      const columnSeries = allSeries.slice(0, barModel.cols.length);
       const heatmapSeries = (heatmap.series as { universalTransition: { enabled: boolean; seriesKey: string[] } }[])[0];
 
-      expect(barSeries.map(s => s.id)).toEqual(datasetIdsFor(barModel));
-      expect(heatmapSeries.universalTransition.seriesKey).toEqual(barSeries.map(s => s.id));
+      expect(columnSeries.map(s => s.id)).toEqual(datasetIdsFor(barModel));
+      expect(heatmapSeries.universalTransition.seriesKey).toEqual(columnSeries.map(s => s.id));
       expect(heatmapSeries.universalTransition.enabled).toBe(true);
-      expect(barSeries.every(s => s.universalTransition.enabled)).toBe(true);
+      expect(columnSeries.every(s => s.universalTransition?.enabled)).toBe(true);
+    });
+
+    /**
+     * `CVT-A-2` (OQ-1 overridden = yes): bar-end row totals. The totals artifact is a final,
+     * invisible series stacked on the same group — asserted here separately from the column
+     * series above so a regression to either half fails independently.
+     */
+    describe('bar-end row totals (CVT-A-2 / CVT-DD-5a)', () => {
+      it('appends exactly one totals series, stacked with the column series, carrying NO id and NO universalTransition (outside the CVT-DD-4 morph set)', () => {
+        const option = stackedBarOption(barModel, ramp, totalLabelColor);
+        const totalsSeries = (option.series as { id?: string; stack?: string; universalTransition?: unknown }[]).slice(-1)[0];
+        expect(totalsSeries.stack).toBe('total');
+        expect(totalsSeries.id).toBeUndefined();
+        expect(totalsSeries.universalTransition).toBeUndefined();
+      });
+
+      it('is invisible and non-interactive: transparent fill, zero bar width, silent (no hit area)', () => {
+        const option = stackedBarOption(barModel, ramp, totalLabelColor);
+        const totalsSeries = (option.series as { silent?: boolean; barWidth?: number; itemStyle: { color: string } }[]).slice(-1)[0];
+        expect(totalsSeries.silent).toBe(true);
+        expect(totalsSeries.barWidth).toBe(0);
+        expect(totalsSeries.itemStyle.color).toBe('transparent');
+      });
+
+      it('carries a zero data value per row (so it adds no visible height) with a label at the bar end', () => {
+        const option = stackedBarOption(barModel, ramp, totalLabelColor);
+        const totalsSeries = (option.series as { data: number[]; label: { show: boolean; position: string; color: string } }[]).slice(
+          -1
+        )[0];
+        expect(totalsSeries.data).toEqual([0, 0]);
+        expect(totalsSeries.label.show).toBe(true);
+        expect(totalsSeries.label.position).toBe('right');
+        // Token-name passthrough only (KZ-SPO-1) — never a resolved/hex value.
+        expect(totalsSeries.label.color).toBe(totalLabelColor);
+      });
+
+      it("formats the REAL row total (sum across all columns), not the artifact's own zero value", () => {
+        const option = stackedBarOption(barModel, ramp, totalLabelColor);
+        const totalsSeries = (option.series as { label: { formatter: (p: unknown) => string } }[]).slice(-1)[0];
+        // Row 0 (Knowledge product): 2 + 0 + 5 + 3 = 10
+        expect(totalsSeries.label.formatter({ dataIndex: 0 })).toBe('10');
+        // Row 1 (Innovation development): 7 + 4 + 0 + 0 = 11
+        expect(totalsSeries.label.formatter({ dataIndex: 1 })).toBe('11');
+      });
+
+      /** FAIL input: an empty model that still appends a totals series (or throws) turns this red. */
+      it('adds no totals artifact and does not throw for an empty model (no rows, "no artifacts")', () => {
+        const emptyModel: HeatmapModel = { rows: [], cols: [], cells: [], caption: 'Empty' };
+        expect(() => stackedBarOption(emptyModel, ramp, totalLabelColor)).not.toThrow();
+        expect(stackedBarOption(emptyModel, ramp, totalLabelColor).series).toEqual([]);
+      });
     });
   });
 
@@ -245,6 +301,11 @@ describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)'
       expect(barLinkFromClick({}, barModel)).toBeNull();
       expect(barLinkFromClick({ seriesIndex: 0 }, barModel)).toBeNull();
       expect(barLinkFromClick({ seriesIndex: 99, dataIndex: 99 }, barModel)).toBeNull();
+    });
+
+    /** FAIL input: a resolver that matches the totals artifact's index to a real cell turns this red. */
+    it('resolves the totals-artifact seriesIndex (one past the last real column) to null — CVT-A-2 click-parity guard', () => {
+      expect(barLinkFromClick({ seriesIndex: barModel.cols.length, dataIndex: 0 }, barModel)).toBeNull();
     });
   });
 });

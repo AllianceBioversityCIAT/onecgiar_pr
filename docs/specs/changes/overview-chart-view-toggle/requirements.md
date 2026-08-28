@@ -17,7 +17,7 @@ The two matrix cards ("W1/W2 results by category and status", "W3/Bilateral resu
 ## 3. In Scope / Out of Scope
 
 ### In scope
-- A per-card view toggle (Heatmap · Bars), default heatmap, session-local state.
+- A per-card view toggle (Heatmap · Bars), default heatmap *(amended CVT-A-1: default bars)*, session-local state.
 - Stacked horizontal bars view rendered from the **same** `HeatmapModel`; morph between views; navigation parity; a11y parity.
 - Jest coverage; spec updates confined to `program-overview/**`.
 
@@ -39,6 +39,7 @@ The two matrix cards ("W1/W2 results by category and status", "W3/Bilateral resu
 ### Required (MUST)
 
 - **`CVT-R-1` View toggle.** Each matrix card MUST offer a two-option control (Heatmap · Bars) in its heading row; heatmap is the default; each card's state is independent and session-local.
+  > **AMENDMENT CVT-A-1 (2026-08-27, owner, at CVT-T-3 HITL gate):** the default view is **bars** on both cards; the toggle switches to heatmap. Supersedes "heatmap is the default" above and the scenario line "AND IT MUST default back to heatmap on a fresh page load" (now: default back to **bars**). The *Switching one card* scenario below still narrates the pre-amendment default (both cards opening in heatmap) — read it as a state reached by toggling; the switching/independence/heading behavior it specifies is unchanged. Original text kept for traceability.
 
 #### Scenario: Switching one card
 - GIVEN the Overview with both matrix cards in heatmap view
@@ -117,6 +118,7 @@ The two matrix cards ("W1/W2 results by category and status", "W3/Bilateral resu
 ## 11. Open Questions
 
 - **OQ-1** Bar-end total label (sum per row). **Default: no** (tooltips + segment sizes suffice; keeps the card quiet). Overridable at the gate.
+  > **OVERRIDDEN (CVT-A-2, 2026-08-27, owner, at CVT-T-3 HITL gate): yes** — each stacked bar shows its row total at the bar end (preserves the exact counts the single-series card gives).
 - **OQ-2** Toggle control placement: heading row right-aligned (default) vs above the chart. **Default: heading row.**
 
 ## 12. Requirement ID Index

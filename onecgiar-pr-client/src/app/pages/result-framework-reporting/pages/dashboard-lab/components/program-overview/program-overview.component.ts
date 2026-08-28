@@ -13,7 +13,7 @@ import {
 } from './program-overview.charts';
 import type { ECElementEvent } from 'echarts/core';
 
-/** A matrix card's view mode (`CVT-R-1`): default `'heatmap'`, session-local, per-card. */
+/** A matrix card's view mode (`CVT-R-1`): default `'bars'` (`CVT-A-1`), session-local, per-card. */
 export type ChartViewMode = 'heatmap' | 'bars';
 
 /**
@@ -150,12 +150,20 @@ export class ProgramOverviewComponent {
   private readonly heatmapRamp = computed(() => [...resolveChartTokens().ramp].reverse());
 
   /**
-   * Per-card view mode (`CVT-R-1`/`CVT-DD-1`): independent, session-local, default `'heatmap'`.
-   * Owned here (not the parent) because it is a pure view preference over data the parent already
-   * supplies — the parent owns data/links, this component owns geometry.
+   * Bar-end row-total label color (`CVT-A-2`) — the existing `--pr-text-secondary` token,
+   * resolved once per render pass alongside `heatmapRamp`. Never a hex literal.
    */
-  readonly w12ViewMode = signal<ChartViewMode>('heatmap');
-  readonly bilateralViewMode = signal<ChartViewMode>('heatmap');
+  private readonly totalLabelColor = computed(() => resolveChartTokens().textSecondary);
+
+  /**
+   * Per-card view mode (`CVT-R-1`/`CVT-DD-1`): independent, session-local. **Amendment `CVT-A-1`**
+   * (owner, CVT-T-3 HITL gate): default is now `'bars'` on both cards — supersedes the original
+   * `'heatmap'` default; the toggle switches to heatmap. Owned here (not the parent) because it is
+   * a pure view preference over data the parent already supplies — the parent owns data/links,
+   * this component owns geometry.
+   */
+  readonly w12ViewMode = signal<ChartViewMode>('bars');
+  readonly bilateralViewMode = signal<ChartViewMode>('bars');
 
   setW12ViewMode(mode: ChartViewMode): void {
     this.w12ViewMode.set(mode);
@@ -169,7 +177,9 @@ export class ProgramOverviewComponent {
   readonly w12ChartOption = computed<EChartsOption | null>(() => {
     const model = this.w12Heatmap();
     if (!model || !model.rows.length) return null;
-    return this.w12ViewMode() === 'bars' ? stackedBarOption(model, this.heatmapRamp()) : heatmapOption(model, this.heatmapRamp());
+    return this.w12ViewMode() === 'bars'
+      ? stackedBarOption(model, this.heatmapRamp(), this.totalLabelColor())
+      : heatmapOption(model, this.heatmapRamp());
   });
 
   readonly w12HeatmapTable = computed<VizChartTableModel | null>(() => {
@@ -180,7 +190,9 @@ export class ProgramOverviewComponent {
   readonly bilateralChartOption = computed<EChartsOption | null>(() => {
     const model = this.bilateralHeatmap();
     if (!model || !model.rows.length) return null;
-    return this.bilateralViewMode() === 'bars' ? stackedBarOption(model, this.heatmapRamp()) : heatmapOption(model, this.heatmapRamp());
+    return this.bilateralViewMode() === 'bars'
+      ? stackedBarOption(model, this.heatmapRamp(), this.totalLabelColor())
+      : heatmapOption(model, this.heatmapRamp());
   });
 
   readonly bilateralHeatmapTable = computed<VizChartTableModel | null>(() => {

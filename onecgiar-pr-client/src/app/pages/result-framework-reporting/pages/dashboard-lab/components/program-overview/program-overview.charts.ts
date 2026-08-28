@@ -148,14 +148,64 @@ export function cellLinkFromClick(event: { data?: unknown }, model: HeatmapModel
  * the ROW axis is this view's category axis, so it is the one that needs `interval: 0` and the
  * display-only abbreviation to stay legible — `model.rows` itself is untouched.
  *
- * No legend, no bar-end totals (`CVT-DD-5`, OQ-1 default "no"): tooltips + segment size are the
- * quantity affordance; the ramp + tooltip series name are the column-identity affordance.
+ * No legend (`CVT-DD-5a`). **Amendment `CVT-A-2`** (OQ-1 overridden = yes, owner at the CVT-T-3
+ * HITL gate): each stacked bar shows its row TOTAL at the bar end. Implementation: one extra
+ * `bar` series, appended AFTER the `cols.length` real column series, stacked on the SAME
+ * `stack: 'total'` group with every data value `0` — a stacked bar's own rectangle starts where
+ * the cumulative stack ends, so a zero-width rectangle sits exactly at the row's total x
+ * position, and its `label.position: 'right'` renders the real sum (read from `rowTotal`, not
+ * this series' own zero value) just past the last visible segment. This totals artifact:
+ *  - carries **no `id`** and **no `universalTransition`** — it is intentionally outside the
+ *    `datasetIdsFor` morph identity set (`CVT-DD-4`); only the `cols.length` real column series
+ *    (indices `0..cols.length-1`) morph with `heatmapOption`.
+ *  - is `silent: true` with `barWidth: 0` (no hit area) — and even if a click event ever reported
+ *    its `seriesIndex` (`cols.length`, one past the last real column), `barLinkFromClick` already
+ *    resolves that to `null` (no cell in `model.cells` carries that column index).
+ *  - is omitted entirely when the model has no rows — no total to show, no artifact rendered.
+ * `totalLabelColor` is the caller-resolved `--pr-text-secondary` token value (never a hex
+ * literal — `resolveChartTokens()` is never called from this pure module, KZ-SPO-1).
  */
-export function stackedBarOption(model: HeatmapModel, ramp: string[]): EChartsOption {
+export function stackedBarOption(model: HeatmapModel, ramp: string[], totalLabelColor: string): EChartsOption {
   const { rows, cols, cells } = model;
   const seriesIds = datasetIdsFor(model);
   const valueAt = (r: number, c: number): number => cells.find(cell => cell.r === r && cell.c === c)?.value ?? 0;
   const linkAt = (r: number, c: number): OverviewLink | null => cells.find(cell => cell.r === r && cell.c === c)?.link ?? null;
+  const rowTotal = (r: number): number => cols.reduce((sum, _col, c) => sum + valueAt(r, c), 0);
+
+  const columnSeries = cols.map((colName, c) => ({
+    type: 'bar',
+    id: seriesIds[c],
+    name: colName,
+    stack: 'total',
+    // 0 → null so a zero-value cell produces no visible segment (CVT-R-2 "Same data,
+    // second shape"), instead of ECharts drawing a zero-height sliver.
+    data: rows.map((_, r) => valueAt(r, c) || null),
+    itemStyle: { color: ramp[c % (ramp.length || 1)] ?? '' },
+    universalTransition: { enabled: true }
+  }));
+
+  const totalsSeries = rows.length
+    ? [
+        {
+          type: 'bar',
+          stack: 'total',
+          silent: true,
+          barWidth: 0,
+          itemStyle: { color: 'transparent' },
+          data: rows.map(() => 0),
+          label: {
+            show: true,
+            position: 'right',
+            color: totalLabelColor,
+            formatter: (params: unknown) => {
+              const payload = params as { dataIndex?: number };
+              const r = payload?.dataIndex;
+              return typeof r === 'number' ? String(rowTotal(r)) : '';
+            }
+          }
+        }
+      ]
+    : [];
 
   return {
     tooltip: {
@@ -171,7 +221,8 @@ export function stackedBarOption(model: HeatmapModel, ramp: string[]): EChartsOp
         return `${rowName} × ${colName}: ${value}${note}`;
       }
     },
-    grid: { left: 96, right: 24, top: 16, bottom: 16, containLabel: true },
+    // Extra right padding so the bar-end total labels (CVT-A-2) never clip against the card edge.
+    grid: { left: 96, right: 40, top: 16, bottom: 16, containLabel: true },
     legend: { show: false },
     xAxis: { type: 'value' },
     // Same KZ-SPO-1 fix as the heatmap's xAxis, applied here to the ROW axis: interval: 0
@@ -183,17 +234,7 @@ export function stackedBarOption(model: HeatmapModel, ramp: string[]): EChartsOp
       inverse: true,
       axisLabel: { interval: 0, formatter: abbreviateAxisLabel }
     },
-    series: cols.map((colName, c) => ({
-      type: 'bar',
-      id: seriesIds[c],
-      name: colName,
-      stack: 'total',
-      // 0 → null so a zero-value cell produces no visible segment (CVT-R-2 "Same data,
-      // second shape"), instead of ECharts drawing a zero-height sliver.
-      data: rows.map((_, r) => valueAt(r, c) || null),
-      itemStyle: { color: ramp[c % (ramp.length || 1)] ?? '' },
-      universalTransition: { enabled: true }
-    }))
+    series: [...columnSeries, ...totalsSeries]
   } as EChartsOption;
 }
 

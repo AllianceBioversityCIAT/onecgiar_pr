@@ -407,6 +407,15 @@ describe('ProgramOverviewComponent', () => {
   });
 
   describe('heatmap cell navigability (OVW-R-2 / OVW-R-3 / OVW-DD-3)', () => {
+    // CVT-A-1 flipped the default view mode to 'bars' — these cases exercise the HEATMAP
+    // resolver specifically (heatmap-shaped `{data: [c, r, value]}` events), so they force
+    // heatmap mode explicitly rather than relying on the (now bars) default.
+    beforeEach(() => {
+      component.setW12ViewMode('heatmap');
+      component.setBilateralViewMode('heatmap');
+      fixture.detectChanges();
+    });
+
     it('emits the stored link when a navigable W1/W2 heatmap cell is activated', () => {
       const emitted: OverviewLink[] = [];
       const sub = component.openResults.subscribe(link => emitted.push(link));
@@ -553,34 +562,37 @@ describe('ProgramOverviewComponent', () => {
   /**
    * `CVT-T-2`: per-card view toggle (`CVT-R-1`), mode-aware options (`CVT-R-2`), navigation
    * parity in bars mode (`CVT-R-3`), and the a11y/host invariants (`CVT-R-4`).
+   * **Amendment `CVT-A-1`** (owner, CVT-T-3 HITL gate): default view is now `'bars'` on both
+   * cards — the assertions below were flipped to match (originals kept only in comments/git
+   * history, never silently rewritten in place).
    */
-  describe('matrix view toggle (CVT-R-1 / CVT-R-4)', () => {
-    /** FAIL input: defaulting either signal to `'bars'` turns this red. */
-    it('defaults both matrix cards to a heatmap-shaped option on init', () => {
-      expect(component.w12ViewMode()).toBe('heatmap');
-      expect(component.bilateralViewMode()).toBe('heatmap');
+  describe('matrix view toggle (CVT-R-1 / CVT-R-4 / CVT-A-1)', () => {
+    /** FAIL input: defaulting either signal to `'heatmap'` turns this red. */
+    it('defaults both matrix cards to a bars-shaped option on init (CVT-A-1)', () => {
+      expect(component.w12ViewMode()).toBe('bars');
+      expect(component.bilateralViewMode()).toBe('bars');
 
       const w12Option = component.w12ChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
       const bilateralOption = component.bilateralChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
-      expect(w12Option?.series?.[0]?.type).toBe('heatmap');
-      expect(w12Option?.visualMap).toBeTruthy();
-      expect(bilateralOption?.series?.[0]?.type).toBe('heatmap');
-      expect(bilateralOption?.visualMap).toBeTruthy();
+      expect(w12Option?.series?.[0]?.type).toBe('bar');
+      expect(w12Option?.visualMap).toBeUndefined();
+      expect(bilateralOption?.series?.[0]?.type).toBe('bar');
+      expect(bilateralOption?.visualMap).toBeUndefined();
     });
 
     /** FAIL input: sharing one signal between the two cards turns this red. */
-    it('toggling the W1/W2 card to bars leaves the bilateral card in heatmap (independence)', () => {
-      component.setW12ViewMode('bars');
+    it('toggling the W1/W2 card to heatmap leaves the bilateral card in bars (independence)', () => {
+      component.setW12ViewMode('heatmap');
       fixture.detectChanges();
 
       const w12Option = component.w12ChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
-      expect(component.w12ViewMode()).toBe('bars');
-      expect(w12Option?.series?.[0]?.type).toBe('bar');
-      expect(w12Option?.visualMap).toBeUndefined();
+      expect(component.w12ViewMode()).toBe('heatmap');
+      expect(w12Option?.series?.[0]?.type).toBe('heatmap');
+      expect(w12Option?.visualMap).toBeTruthy();
 
       const bilateralOption = component.bilateralChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
-      expect(component.bilateralViewMode()).toBe('heatmap');
-      expect(bilateralOption?.series?.[0]?.type).toBe('heatmap');
+      expect(component.bilateralViewMode()).toBe('bars');
+      expect(bilateralOption?.series?.[0]?.type).toBe('bar');
     });
 
     /** FAIL input: a second chart host per card, or a table rebuilt on toggle, turns this red. */
@@ -590,8 +602,8 @@ describe('ProgramOverviewComponent', () => {
       const w12TableBefore = component.w12HeatmapTable();
       const bilateralTableBefore = component.bilateralHeatmapTable();
 
-      component.setW12ViewMode('bars');
-      component.setBilateralViewMode('bars');
+      component.setW12ViewMode('heatmap');
+      component.setBilateralViewMode('heatmap');
       fixture.detectChanges();
 
       const afterHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
@@ -605,12 +617,14 @@ describe('ProgramOverviewComponent', () => {
       fixture.componentRef.setInput('w12Heatmap', { rows: [], cols: [], cells: [], caption: 'W1/W2 results by category and status' });
       fixture.detectChanges();
 
+      // Already default 'bars' — empty state renders regardless of mode.
       expect(fixture.nativeElement.textContent).toContain('No W1/W2 results reported yet.');
       const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
       expect(buttons.some(b => b.textContent?.trim() === 'Heatmap')).toBe(true);
       expect(buttons.some(b => b.textContent?.trim() === 'Bars')).toBe(true);
+      expect(component.w12ChartOption()).toBeNull();
 
-      component.setW12ViewMode('bars');
+      component.setW12ViewMode('heatmap');
       fixture.detectChanges();
       expect(fixture.nativeElement.textContent).toContain('No W1/W2 results reported yet.');
       expect(component.w12ChartOption()).toBeNull();
@@ -618,15 +632,15 @@ describe('ProgramOverviewComponent', () => {
 
     describe('toggle controls', () => {
       /** FAIL input: missing a button, or defaulting `aria-pressed` wrong, turns this red. */
-      it('renders a Heatmap/Bars toggle (2 buttons) per matrix card, Heatmap pressed by default', () => {
+      it('renders a Heatmap/Bars toggle (2 buttons) per matrix card, Bars pressed by default (CVT-A-1)', () => {
         const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
         const heatmapButtons = buttons.filter(b => b.textContent?.trim() === 'Heatmap');
         const barsButtons = buttons.filter(b => b.textContent?.trim() === 'Bars');
 
         expect(heatmapButtons.length).toBe(2);
         expect(barsButtons.length).toBe(2);
-        heatmapButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('true'));
-        barsButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('false'));
+        heatmapButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('false'));
+        barsButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('true'));
       });
 
       /** FAIL input: one shared signal driving both cards' buttons turns this red. */
@@ -634,20 +648,22 @@ describe('ProgramOverviewComponent', () => {
         const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
         // DOM order follows the template: W1/W2 heatmap card's toggle renders before the
         // bilateral heatmap card's toggle.
-        const [w12BarsButton] = buttons.filter(b => b.textContent?.trim() === 'Bars');
+        const [w12HeatmapButton] = buttons.filter(b => b.textContent?.trim() === 'Heatmap');
 
-        w12BarsButton.click();
+        w12HeatmapButton.click();
         fixture.detectChanges();
 
-        expect(component.w12ViewMode()).toBe('bars');
-        expect(component.bilateralViewMode()).toBe('heatmap');
-        expect(w12BarsButton.getAttribute('aria-pressed')).toBe('true');
+        expect(component.w12ViewMode()).toBe('heatmap');
+        expect(component.bilateralViewMode()).toBe('bars');
+        expect(w12HeatmapButton.getAttribute('aria-pressed')).toBe('true');
       });
     });
 
     /** Segment click resolution in bars mode must agree with the heatmap resolver (`CVT-R-3`). */
     describe('bars-mode click resolution', () => {
       beforeEach(() => {
+        // Explicit precondition — already the default under CVT-A-1, kept for readability and to
+        // stay correct if the default is ever revisited.
         component.setW12ViewMode('bars');
         fixture.detectChanges();
       });
@@ -671,6 +687,44 @@ describe('ProgramOverviewComponent', () => {
         component.onW12HeatmapClick({ seriesIndex: 3, dataIndex: 0 } as unknown as ECElementEvent);
 
         expect(emitSpy).not.toHaveBeenCalled();
+      });
+
+      /** FAIL input: a click resolving against the bar-end totals artifact's index turns this red. */
+      it('emits nothing when the bar-end totals artifact (one past the last real column) is activated', () => {
+        const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+        component.onW12HeatmapClick({ seriesIndex: 4, dataIndex: 0 } as unknown as ECElementEvent);
+
+        expect(emitSpy).not.toHaveBeenCalled();
+      });
+    });
+
+    /**
+     * `CVT-A-2` (OQ-1 overridden = yes): bar-end row totals thread through the component's
+     * mode-aware option in the default (bars) mode. Structural assertions only — token-name
+     * passthrough (KZ-SPO-1), never a resolved CSS value (jsdom returns `''` for both, so
+     * asserting equality with the empty string here would pass for the wrong reason).
+     */
+    describe('bar-end row totals (CVT-A-2)', () => {
+      it("appends a totals series to the default bars option, formatting each row's real total", () => {
+        const w12Option = component.w12ChartOption() as {
+          series: { label?: { show?: boolean; formatter?: (p: unknown) => string } }[];
+        };
+        const totalsSeries = w12Option.series[w12Option.series.length - 1];
+
+        expect(totalsSeries.label?.show).toBe(true);
+        // Fixture row 0 "Knowledge product": Editing 3 + Quality Assessed 1 + Submitted 2 + Other 4 = 10.
+        expect(totalsSeries.label?.formatter?.({ dataIndex: 0 })).toBe('10');
+      });
+
+      it('uses the SAME resolved text-secondary token for both cards’ totals labels (no hex, no per-card divergence)', () => {
+        const w12Option = component.w12ChartOption() as { series: { label?: { color?: string } }[] };
+        const bilateralOption = component.bilateralChartOption() as { series: { label?: { color?: string } }[] };
+        const w12Color = w12Option.series[w12Option.series.length - 1].label?.color;
+        const bilateralColor = bilateralOption.series[bilateralOption.series.length - 1].label?.color;
+
+        expect(w12Color).toBe(bilateralColor);
+        expect(w12Color).not.toMatch(/^#/);
       });
     });
   });

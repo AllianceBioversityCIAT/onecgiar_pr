@@ -90,3 +90,23 @@ Checklist handed to the user:
 4. Morph quality heatmap↔bars → decide **morph kept** vs **fallback** (drop `seriesKey`/ids, plain swap — one-line change, pre-approved by CVT-R-5).
 5. Segment clicks: one navigable segment lands on the Results tab with correct chips; one `Other` segment does nothing.
 6. Optional user decision (CVT-T-2 Reviewer advisory, scope growth needs approval): `role="group"` + per-card `aria-label` on the toggle groups.
+
+### Amendment record — CVT-A-1 / CVT-A-2 (2026-08-27, owner at the CVT-T-3 HITL gate)
+
+- **User direction (HITL gate):** open in bars and switch to heatmap ("que abra en bars y se cambie a heatmap"). Scope confirmed via structured question: default `'bars'` on **both** matrix cards (CVT-A-1); bar-end row totals shown (CVT-A-2, OQ-1 override, its text marked "overridable at the gate"); the single-series "by indicator category" card **stays** (consolidation declined — recorded as possible future proposal).
+- **Docs amended (never silent rewrite):** requirements.md CVT-R-1 + in-scope + OQ-1; design.md §2.1 row, §11, new CVT-DD-5a; tasks.md rollback note + CVT-T-3 amendment work item. Historical entries (completed tasks, proposal.md) left as record.
+- **Code delegation:** Implementer briefed for the amendment diff (signals default + totals + test flips); Reviewer gate applies as usual.
+
+### Amendment CVT-A-1/A-2 — implementation loop
+
+- **Status:** PASS (attempt 1) · 2026-08-27 · Implementer: `impl-cvt-t2` (context reused) · Reviewer: `rev-cvt-t2`
+- **Files:** `program-overview.charts.ts` (+50 src), `component.ts` (+10), both spec files (+9 net tests).
+- **What:** signals default `'bars'` (both cards); `stackedBarOption(model, ramp, totalLabelColor)` — bar-end totals via an appended zero-value `bar` series on the same stack (`silent`, transparent, no `id`, no `universalTransition`, label `position: 'right'` with real `rowTotal(r)` formatter, `''` on malformed payload; grid right 24→40); `totalLabelColor` computed threads `resolveChartTokens().textSecondary` (token-only, purity fence kept). Tests flipped symmetrically for the bars default; five new totals cases; resolver-guard cases (artifact `seriesIndex = cols.length` → null at both levels); heatmap-navigability block now forces `'heatmap'` via `beforeEach` (Reviewer: strengthens — removes implicit-default dependency); old "no totals" case correctly superseded by CVT-DD-5a with net coverage up.
+- **Verification:** FULL suite → **482 suites / 6907 tests** green (+9); lint clean; no hex ('transparent' keyword only); no package.json; pinned `<h2>` assertion untouched (no template in diff).
+- **Reviewer:** **STATUS: PASS** — totals provably outside the CVT-DD-4 morph set, provably unresolvable by `barLinkFromClick` (three independent layers), provably absent for empty models; all 3 `stackedBarOption` call sites updated; jsdom-safe identity assertions (KZ-SPO-1).
+- **Gate condition (Reviewer):** CVT-T-3 must NOT close on the pre-amendment HITL — the totals' rendered position/legibility is jsdom-unprovable; **re-run CVT-AC-3 on the amended build**.
+
+#### ADVISORY (non-gating, recorded)
+1. **RISK:** `barWidth: 0` is inert (ECharts honors only truthy barWidth); invisibility rests on zero data + transparent. If a future ECharts honored it, per-stack-group semantics could collapse the visible bars. Suggested: drop it or comment it inert-by-design.
+2. **RELIABILITY:** component-level totals-click test hardcodes `seriesIndex: 4` instead of deriving `cols.length` — "emits nothing" passes for any out-of-range index.
+3. **READABILITY (spec doc):** scenario body still narrates the heatmap default — **addressed now**: clarifying line added to the CVT-A-1 amendment block.

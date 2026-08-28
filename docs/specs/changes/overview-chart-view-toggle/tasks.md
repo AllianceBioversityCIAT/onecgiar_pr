@@ -66,6 +66,7 @@
 - **Description:** Close the spec: (a) full-suite + lint + build re-run on the final tree; (b) static gates (hex grep 0 new; diff confined to `program-overview/**`; no `package.json`); (c) **HITL/T6 pass (CVT-AC-3)** on SP02 at 1280/1024px: toggle affordance, bars legibility (half-width and full-width cards), morph quality — decide **morph kept** vs **fallback** (drop shared ids/flag, plain swap; one-line code change) and record the decision + evidence in `execution.md`; (d) segment-click chips land correctly on the Results tab (spot: one navigable + one `Other`).
 - **Implements:** `CVT-R-5` (morph SHOULD + recorded fallback decision) · `CVT-R-4` (motion parity — reduced-motion instant swap is wrapper-owned, verified by the existing wrapper spec; note it) · CVT-AC-1/2/3 closure
 - **Files (expected):** none (or the one-line fallback edit + spec id adjustments if taken)
+- **Amendment work (CVT-A-1/A-2, owner @ gate 2026-08-27):** default `'bars'` on both viewMode signals; bar-end row totals in `stackedBarOption`; test expectations updated accordingly (init/aria-pressed defaults flip; totals asserted). Executed inside CVT-T-3 as user-directed amendment — see execution.md.
 - **Depends on:** CVT-T-2 · **Blocks:** —
 - **Estimate:** S
 - **Skills:** `angular-developer`
@@ -107,4 +108,4 @@ Coverage thresholds (50/60/60/60) unaffected.
 
 ## 8. Roll-back plan
 
-Revert the single PR; default view was heatmap, so no user-visible state is lost. No deps, no API, no persisted state.
+Revert the single PR; default view was heatmap, so no user-visible state is lost. No deps, no API, no persisted state. *(Amended CVT-A-1: default is now bars — reverting the PR restores the pre-spec heatmap-only cards; still safe, no persisted state.)*

@@ -15,7 +15,7 @@
 |---|---|
 | `program-overview.charts.ts` | + `stackedBarOption(model, ramp)` (pure) · + `barLinkFromClick(event, model)` (pure) · shared `datasetIdsFor(model)` note so heatmap/bar series carry matching ids for the morph |
 | `program-overview.charts.spec.ts` | + option-shape, parity, KZ-SPO-1 cases |
-| `program-overview.component.ts` | + `w12ViewMode` / `bilateralViewMode` signals (`'heatmap' \| 'bars'`, default `'heatmap'`) · option computeds become mode-aware (`w12ChartOption()` returns heatmap or bars option) · click handlers route through the mode's resolver · `setW12ViewMode()` / `setBilateralViewMode()` |
+| `program-overview.component.ts` | + `w12ViewMode` / `bilateralViewMode` signals (`'heatmap' \| 'bars'`, default `'heatmap'` *(amended CVT-A-1: default `'bars'`)*) · option computeds become mode-aware (`w12ChartOption()` returns heatmap or bars option) · click handlers route through the mode's resolver · `setW12ViewMode()` / `setBilateralViewMode()` |
 | `program-overview.component.html` | + segmented control in each matrix card's heading row (right-aligned) · `[options]` binding switches with the mode · `tableModel`, `chartTitle`, `height`, `(chartClick)` unchanged |
 | `program-overview.component.spec.ts` | toggle cases per §10 |
 
@@ -58,7 +58,7 @@ None / one option rebuild per toggle (computed) / none.
 | Manual (T6) | CVT-AC-3: legibility 1280/1024, morph or fallback decision, click chips |
 
 ## 11. Backwards Compatibility
-Default view is the shipped heatmap; a user who never touches the toggle sees no change. All family tests must stay green (heatmap path untouched except shared ids).
+Default view is the shipped heatmap; a user who never touches the toggle sees no change. *(Amended CVT-A-1: default is now bars — users see the bars view on load; the heatmap remains one click away. Owner-accepted visible change.)* All family tests must stay green (heatmap path untouched except shared ids).
 
 ## 12. Design Decisions
 
@@ -69,6 +69,7 @@ Default view is the shipped heatmap; a user who never touches the toggle sees no
 | `CVT-DD-3` | One `bar` series per column with `stack`, zero → `null` | Gives per-segment click payloads (seriesIndex = column) and native zero-suppression; a single matrix-series bar hack loses column identity on click. |
 | `CVT-DD-4` | Morph via shared ids + `universalTransition`, with a recorded plain-swap fallback | Alliance-proven; the fallback is pre-approved (CVT-R-5) so a bad morph never costs a rework loop. |
 | `CVT-DD-5` | No bar-end totals, no legend in bars view (OQ-1 default) | Tooltips + segment size suffice; keeps the card quiet. Overridable later as a quick. |
+| `CVT-DD-5a` | **Amendment (2026-08-27, owner, CVT-T-3 gate):** bar-end row totals **shown** (OQ-1 overridden = CVT-A-2); legend stays hidden. Default view = **bars** on both cards (CVT-A-1), toggle switches to heatmap. | User decision at the HITL gate; totals preserve exact counts; amendment recorded, never silent rewrite. |
 | `CVT-DD-6` | Toggle styled on the status-pill pattern + `focus-visible` ring | Reuses an approved interactive pattern; closes the family Reviewer's focus-ring advisory for the new controls. |
 
 **Reversion challenge (Step 2.3):** nothing shipped is removed — heatmap remains the default and its path is untouched (only shared ids added). OVW-DD-4's *decision* is superseded at the proposal level (recorded), not a behavior reversion. No challenge needed beyond this note.
