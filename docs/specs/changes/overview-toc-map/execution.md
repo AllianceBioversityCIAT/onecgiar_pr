@@ -87,3 +87,14 @@
 - **Verification:** FULL suite 483 suites / **6965 tests** (+3, reconciles exactly); lint clean. Reviewer: all 3 new tests bite their FAIL inputs; test-delta reconciliation confirms earlier ±drift was the concurrent session's.
 - **ADVISORY (recorded, die here):** `distance: 8` unasserted (one-line addition would pin it); root label has no `distance` (knob if the re-render shows hub crowding).
 - **Still owed for closure:** owner re-render confirmation (fills visible, labels clear) + remaining checklist (tooltips, AoW click landing, section-filter behavior) → then the final TCM-R-7/OQ-1 decision record and `[x]`.
+
+### TCM-T-4 — CLOSURE (2026-08-28)
+
+- **HITL round 2 (owner):** re-render with filled nodes + short labels approved ("OK") — covers TCM-AC-3: legibility, encoding visible, tooltips, AoW click, section-filter behavior accepted as implemented.
+- **TCM-R-7 decision: radial KEPT** (fallback circular graph NOT taken; Sankey considered and declined at round 1). **OQ-1: leaf labels OFF** (default held after live review). OQ-2 (empty branches omitted) held.
+- Final tree: FULL client suite **483 suites / 6965 tests** green (re-run at commit `…` of the fix); lint clean; `ng build` exit 0. Static gates (b) unchanged from the earlier record (scope-confined, 0 hex, no package.json).
+- Open follow-ups recorded, not tasked: `distance` assertion + root-label distance knob (advisories); keyboard drill-down (Overview-wide, pre-existing).
+
+## 3. Summary
+
+All tasks complete: TCM-T-1 ✅ (attempt 2 — one real Reviewer FAIL: `is_aow` partition on the output tier, remediated with a red→green-proven fixture) · TCM-T-2 ✅ (attempt 1) · TCM-T-3 ✅ (attempt 1 after re-cutting a concurrent session's hunks out of the diff — environmental, no attempt consumed) · TCM-T-4 ✅ (one HITL fix round: filled symbols + short labels). Budget 4 tasks / ~430 LOC / 1 round per task → actual 4 tasks / ~560 LOC incl. the HITL fix / 1 rework round total. Spec ready for /akili-archive.

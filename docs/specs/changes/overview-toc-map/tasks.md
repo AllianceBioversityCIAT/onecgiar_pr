@@ -81,7 +81,7 @@
   - [x] Navigation: handler routes to the located `entity-aow` route — assert router call args in spec, **and record what that cannot prove** (the real page landing is TCM-AC-3/T6).
   - [x] Full suite + lint + `ng build` green (same disqualifier).
 
-### [~] `TCM-T-4` — Closure: gates + HITL layout decision
+### [x] `TCM-T-4` — Closure: gates + HITL layout decision
 
 - **Type:** `tests` / verification
 - **Description:** (a) Full suite + lint + build on the final tree; (b) static gates (hex grep 0 new; diff confined to wrapper registration + `dashboard-lab/**`; no `package.json`); (c) **HITL/T6 (TCM-AC-3)** on SP02 at 1280/1024px: radial legibility (labels, spacing, 5+ AoWs × ~6–10 leaves), progress encoding readable, tooltips correct, AoW click lands on the right page — decide **radial kept** vs **circular-graph fallback** (TCM-R-7; if taken: builder-level swap + `GraphChart` registration, recorded); revisit OQ-1 (leaf labels) with the live render; (d) record everything in `execution.md`.
@@ -91,9 +91,9 @@
 - **Estimate:** S
 - **Skills:** `angular-developer`
 - **Definition of done:**
-  - [ ] Static gates green, outputs recorded. **FAIL input:** a hex literal or an out-of-scope diff line.
-  - [ ] HITL outcome recorded: "radial kept" or "fallback taken (reason)" + OQ-1 label decision. **Disqualifier:** closing with no recorded decision. **What automated gates cannot prove here:** everything visual — this task exists to close that gap.
-  - [ ] Full suite green on the final tree (post-decision).
+  - [x] Static gates green, outputs recorded. **FAIL input:** a hex literal or an out-of-scope diff line.
+  - [x] HITL outcome recorded: "radial kept" or "fallback taken (reason)" + OQ-1 label decision. **Disqualifier:** closing with no recorded decision. **What automated gates cannot prove here:** everything visual — this task exists to close that gap.
+  - [x] Full suite green on the final tree (post-decision).
 
 ## 4. Dependency graph
 
