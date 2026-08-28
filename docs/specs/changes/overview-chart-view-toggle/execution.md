@@ -59,3 +59,34 @@
 - **Issues:** concurrent foreign session active in this shared worktree (`kp-cgspace-browse/**` quick) — CVT-T-1's commit initially swept its staged files in twice; corrected by `--only` pathspec commits; CVT-T-2 committed the same way. Convention reminder: one AKILI session per checkout.
 - **Final verification:** full suite green (482/6898), lint clean, build clean.
 - **Gate:** auto-advanced to CVT-T-3 per the user's fast directive; CVT-T-3's HITL stops for the user regardless.
+
+## CVT-T-3 — Morph verification + HITL decision record
+
+- **Status:** `[~]` in progress — automated gates (a)+(b) complete and green; awaiting user HITL (CVT-AC-3) · **Date:** 2026-08-27
+- **Implements:** CVT-R-5 (morph SHOULD + recorded decision), CVT-R-4 (motion parity note), CVT-AC-1/2/3 closure
+
+### (a) Full re-run on final tree (post CVT-T-2 commit `5020e8503`)
+
+- `npx jest --silent --reporters=summary --no-coverage` → **Test Suites: 482 passed · Tests: 6898 passed · Snapshots: 1 passed** (79.2s)
+- `npx ng lint --quiet` → All files pass linting.
+- `npx ng build` → succeeded (dist emitted; pre-existing warnings only).
+
+### (b) Static gates
+
+- Hex grep over the spec's combined diff (`400abcb2b~1..5020e8503`, client): **0 new hex literals**.
+- Diff scope: spec commits touch exactly `program-overview/**` (5 files) + this spec's `execution.md`/`tasks.md`. (Other files in the branch range belong to a concurrent session's `kp-cgspace-browse` quick — not this spec.)
+- `package.json`: **0 diff**.
+
+### CVT-R-4 motion-parity note (per task description)
+
+Reduced-motion instant swap is wrapper-owned (`pr-viz-chart` disables engine animation under `prefers-reduced-motion`), verified by the existing wrapper spec — not re-tested here by design.
+
+### (c)+(d) HITL — PENDING USER (CVT-AC-3, SP02 @ 1280px & 1024px)
+
+Checklist handed to the user:
+1. Toggle affordance clear on both matrix cards (heading-row segmented control).
+2. Bars legibility — half-width W1/W2 card AND full-width bilateral card.
+3. **Forward pointer from CVT-T-1 advisory:** ramp collision on the bilateral card — 7 columns cycle 4 ramp colors, so columns 5–7 repeat the fills of 1–3 inside one stacked bar. Look specifically at whether adjacent same-color segments mislead.
+4. Morph quality heatmap↔bars → decide **morph kept** vs **fallback** (drop `seriesKey`/ids, plain swap — one-line change, pre-approved by CVT-R-5).
+5. Segment clicks: one navigable segment lands on the Results tab with correct chips; one `Other` segment does nothing.
+6. Optional user decision (CVT-T-2 Reviewer advisory, scope growth needs approval): `role="group"` + per-card `aria-label` on the toggle groups.
