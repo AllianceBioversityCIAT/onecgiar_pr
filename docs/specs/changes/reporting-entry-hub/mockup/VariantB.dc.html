@@ -1,0 +1,180 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+  <style>
+    html { font-size: 12px; }
+    body { margin: 0; font-family: Poppins, "Segoe UI", system-ui, sans-serif; color: #2b2838; background: #f7f7f9; }
+    a { color: #4a2bb8; text-decoration: none; } a:hover { color: #3f2499; }
+    * { box-sizing: border-box; }
+    .tab { display: flex; align-items: center; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: 14px; font-weight: 500; color: #5d5872; }
+    .tab.on { border-bottom-color: #6b46e5; font-weight: 600; color: #191524; }
+    .card { border-radius: 12px; border: 1px solid #e3e3e8; background: #ffffff; padding: 20px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 10px; border: 1px solid #e3e3e8; background: #f7f7f9; padding: 10px 14px; }
+    .code { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(243,232,255,0.8); border: 1px solid rgba(233,213,255,0.7); padding: 2px 8px; font-family: "SF Mono", Menlo, monospace; font-size: 11px; font-weight: 700; color: #6b21a8; }
+    .name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 600; color: #191524; }
+    .bar { position: relative; height: 7px; width: 140px; border-radius: 999px; background: rgba(227,227,232,0.6); overflow: hidden; }
+    .bar > span { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4a2bb8, #5733c4); }
+    .kpi { width: 72px; text-align: right; font-size: 12.5px; font-weight: 500; color: #5d5872; font-variant-numeric: tabular-nums; }
+    .kpi b { color: #191524; } .kpi i { font-style: normal; color: #6b6580; }
+    .pct { display: inline-flex; width: 48px; justify-content: center; border-radius: 6px; padding: 2px 6px; font-size: 11.5px; font-weight: 700; background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+    .go { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid #ddd6fe; background: #ffffff; font-size: 12.5px; font-weight: 600; color: #4a2bb8; white-space: nowrap; }
+    .go.primary { background: #6b46e5; border-color: #6b46e5; color: #ffffff; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: #f5f3ff; border: 1px solid #ede9fe; padding: 3px 10px; font-size: 11.5px; font-weight: 600; color: #4a2bb8; }
+    .chip em { font-style: normal; font-weight: 700; color: #33227a; }
+    .badge { display: inline-flex; height: 24px; align-items: center; border-radius: 999px; padding: 0 9px; font-size: 11px; font-weight: 600; }
+    .dot { width: 8px; height: 8px; border-radius: 999px; }
+    .muted { font-size: 12px; color: #6b6580; }
+    .cta-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; padding-top: 12px; border-top: 1px solid #eeeef1; font-size: 12.5px; font-weight: 600; color: #4a2bb8; }
+    .railh { margin: 0; font-size: 13px; font-weight: 700; color: #191524; }
+    .rails { margin: 2px 0 0; font-size: 12px; color: #6b6580; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; min-height: 1080px; background: #f7f7f9; display: flex; flex-direction: column;">
+
+  <!-- Program band (existing) -->
+  <div style="background: #ffffff; border-bottom: 1px solid #e4e0ef;">
+    <div style="position: relative; padding: 24px 32px 8px 32px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9691a8;">
+        <span class="dot" style="background: #f97316;"></span><span>SP02 · Reporting cycle 2026 · P25</span>
+      </div>
+      <h1 style="margin: 6px 0 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: #191524;">Sustainable Farming</h1>
+      <div style="position: absolute; right: 32px; top: 50px; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; background: #6b46e5; color: #ffffff; font-size: 14px; font-weight: 600;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>
+        <span>Report emerging result</span>
+      </div>
+    </div>
+    <nav style="display: flex; height: 48px; align-items: stretch; gap: 24px; padding: 0 32px;" aria-label="Program sections">
+      <span class="tab on">Overview</span><span class="tab">Reporting</span><span class="tab">Results</span>
+    </nav>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 12px; padding: 16px 32px; background: #ffffff; border-bottom: 1px solid #eeeef1;">
+    <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6580;">Phase</span>
+    <div style="display: inline-flex; align-items: stretch; border-radius: 8px; overflow: hidden; border: 1px solid #e3e3e8;">
+      <span style="display: flex; align-items: center; padding: 0 14px; height: 34px; font-size: 13px; color: #191524; background: #ffffff;">Reporting 2026 · 2026</span>
+      <span style="display: flex; align-items: center; justify-content: center; width: 44px; background: #6b46e5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+    </div>
+  </div>
+
+  <!-- Body: 8 + 4 -->
+  <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; padding: 32px; align-items: start;">
+
+    <!-- Main column -->
+    <div style="grid-column: span 8; display: flex; flex-direction: column; gap: 16px;">
+
+      <!-- KPI strip: cards 1 + 2 gain a CTA footer -->
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+        <div style="position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid rgba(168,85,247,0.3); background: linear-gradient(135deg, #4a1d96, #5c24b8 50%, #793ce8); padding: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #e9d5ff;">W1/W2 Results</span><span class="badge" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: #ffffff;">Core</span></div>
+          <div style="display: flex; align-items: baseline; gap: 8px;"><span style="font-size: 32px; font-weight: 800; line-height: 1; color: #ffffff;">32</span><span style="font-size: 13px; font-weight: 500; color: #e9d5ff;">results</span></div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #f3e8ff;"><span class="dot" style="width: 7px; height: 7px; background: #34d399;"></span><span>1 submitted</span><span style="color: #d8b4fe;">·</span><span>5 statuses</span></div>
+          <div class="cta-foot" style="border-top-color: rgba(255,255,255,0.2); color: #ffffff;"><span>Report a W1/W2 result</span><span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: #e9d5ff;">by Area of Work<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span></div>
+        </div>
+        <div class="card" style="display: flex; flex-direction: column; gap: 12px; padding: 18px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #6b6580;">W3 / Bilateral</span><span class="badge" style="background: #faf5ff; color: #7e22ce;">Projects</span></div>
+          <div style="display: flex; align-items: baseline; gap: 8px;"><span style="font-size: 32px; font-weight: 800; line-height: 1; color: #191524;">34</span><span style="font-size: 13px; font-weight: 500; color: #6b6580;">results</span></div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5d5872;"><span class="dot" style="width: 7px; height: 7px; background: #047857;"></span><span>0% approved</span><span style="color: #6b6580;">·</span><span>6 categories</span></div>
+          <div class="cta-foot"><span>Create a W3 result</span><span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: #6b6580;">via your center<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span></div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding: 18px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #6b6580;">Contributing Centers</span><span class="badge" style="background: #ecfdf5; color: #047857;">Centers</span></div>
+          <div style="display: flex; align-items: baseline; gap: 8px;"><span style="font-size: 32px; font-weight: 800; line-height: 1; color: #191524;">4</span><span style="font-size: 13px; font-weight: 500; color: #6b6580;">institutes</span></div>
+          <div style="font-size: 12px; color: #5d5872;">Reporting bilateral results</div>
+        </div>
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding: 18px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #6b6580;">Areas of Work</span><span class="badge" style="background: #eff6ff; color: #1d4ed8;">Plan</span></div>
+          <div style="display: flex; align-items: baseline; gap: 8px;"><span style="font-size: 32px; font-weight: 800; line-height: 1; color: #191524;">0%</span><span style="font-size: 13px; font-weight: 500; color: #6b6580;">completed</span></div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5d5872;"><span>0/234 KPIs</span><span style="color: #6b6580;">·</span><span>5 AoWs</span></div>
+        </div>
+      </div>
+
+      <!-- About (existing) -->
+      <section class="card">
+        <h2 style="margin: 0 0 20px; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #191524;">About this program</h2>
+        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #2b2838;">Sustainable Farming modernizes CGIAR and national breeding programs so that farmers get climate-resilient, market-preferred varieties faster. The program connects market intelligence, breeding pipelines, trait discovery, genetic innovation and seed systems into one delivery chain.</p>
+      </section>
+
+      <!-- Progress by AoW (existing, rows now carry an inline Report action on hover) -->
+      <section class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px;">
+          <div>
+            <h2 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #191524;">Progress by area of work</h2>
+            <p style="margin: 2px 0 0; font-size: 13px; color: #6b6580;">Completion progress against planned KPIs per Area of Work</p>
+          </div>
+          <span style="display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; background: #f5f3ff; border: 1px solid #ede9fe; padding: 5px 12px; font-size: 12px; color: #5d5872;">Overall: <b style="font-size: 13px; color: #33227a;">0%</b> <span style="font-size: 11px; color: #6b6580;">(0/234 KPIs)</span></span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="row"><div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;"><span class="code">AOW01</span><span class="name">Accelerating AI-Enabled Farm Advisory at Scale</span></div><div style="display: flex; align-items: center; gap: 16px;"><span class="bar"><span style="width: 0%;"></span></span><span class="kpi"><b>0</b><i>/53</i> <i style="font-size: 11px;">KPIs</i></span><span class="pct">0%</span><span class="go">Report</span></div></div>
+          <div class="row" style="background: #ffffff; border-color: #6b46e5;"><div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;"><span class="code">AOW02</span><span class="name">Enabling Preparedness and Rapid Response to Emerging Shocks</span></div><div style="display: flex; align-items: center; gap: 16px;"><span class="bar"><span style="width: 0%;"></span></span><span class="kpi"><b>0</b><i>/49</i> <i style="font-size: 11px;">KPIs</i></span><span class="pct">0%</span><span class="go primary">Report</span></div></div>
+          <div class="row"><div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;"><span class="code">AOW03</span><span class="name">Delivering Integrated Solutions to Systemic Farm-Level Binding Constraints</span></div><div style="display: flex; align-items: center; gap: 16px;"><span class="bar"><span style="width: 0%;"></span></span><span class="kpi"><b>0</b><i>/51</i> <i style="font-size: 11px;">KPIs</i></span><span class="pct">0%</span><span class="go">Report</span></div></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Right rail: Where to report -->
+    <aside style="grid-column: span 4; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 16px;">
+      <section class="card" style="padding: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <h2 style="margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: #191524;">Where to report</h2>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="border-radius: 10px; border: 1px solid #e3e3e8; padding: 12px; box-shadow: inset 3px 0 0 #6b46e5;">
+            <p class="railh">W1/W2 · Pooled</p>
+            <p class="rails">By Area of Work on the Reporting tab.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;">
+              <span class="code">AOW01</span><span class="code">AOW02</span><span class="code">AOW03</span><span class="code">AOW04</span><span class="code">AOW05</span>
+              <span class="badge" style="height: 22px; background: #dbeafe; color: #1d4ed8;">Intermediate</span><span class="badge" style="height: 22px; background: #dbeafe; color: #1d4ed8;">2030</span>
+            </div>
+            <div style="margin-top: 12px;"><span class="go" style="width: 100%; justify-content: center;">Open Reporting<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></span></div>
+          </div>
+
+          <div style="border-radius: 10px; border: 1px solid #e3e3e8; padding: 12px; box-shadow: inset 3px 0 0 #047857;">
+            <p class="railh">W3 · Bilateral projects</p>
+            <p class="rails">Through your CGIAR Center.</p>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+              <div class="row" style="background: #ffffff; padding: 8px 10px;">
+                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1;"><span class="name" style="font-size: 12.5px;">B-A1368 <span style="font-weight: 500; color: #6b6580;">· Alliance</span></span><span class="chip" style="align-self: flex-start;">SP02 <em>40%</em></span></div>
+                <span class="go primary" style="height: 28px; padding: 0 10px;">Create</span>
+              </div>
+              <div class="row" style="background: #ffffff; padding: 8px 10px;">
+                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1;"><span class="name" style="font-size: 12.5px;">B-A1601 <span style="font-weight: 500; color: #6b6580;">· Alliance</span></span><span class="chip" style="align-self: flex-start;">SP02 <em>100%</em></span></div>
+                <span class="go primary" style="height: 28px; padding: 0 10px;">Create</span>
+              </div>
+              <div class="row" style="background: #ffffff; padding: 8px 10px;">
+                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1;"><span class="name" style="font-size: 12.5px;">B-A2210 <span style="font-weight: 500; color: #6b6580;">· AfricaRice</span></span><span class="chip" style="align-self: flex-start;">SP02 <em>25%</em></span></div>
+                <span class="go primary" style="height: 28px; padding: 0 10px;">Create</span>
+              </div>
+            </div>
+            <p class="muted" style="margin: 10px 0 0;">3 projects across 2 of your 4 centers allocate to SP02.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Empty state preview (no Center User role) -->
+      <section class="card" style="padding: 16px; border-style: dashed;">
+        <p style="margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #9691a8;">State · user without a center</p>
+        <div style="border-radius: 10px; border: 1px solid #e3e3e8; padding: 12px; box-shadow: inset 3px 0 0 #047857;">
+          <p class="railh">W3 · Bilateral projects</p>
+          <p class="rails" style="margin-top: 6px;">W3 results are reported by CGIAR Centers. You are not assigned to a center yet.</p>
+          <div style="margin-top: 10px; display: flex; gap: 8px;"><span class="go" style="flex: 1; justify-content: center;">Request center access</span></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

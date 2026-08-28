@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+  <style>
+    html { font-size: 12px; }
+    body { margin: 0; font-family: Poppins, "Segoe UI", system-ui, sans-serif; color: #2b2838; background: #f7f7f9; }
+    a { color: #4a2bb8; text-decoration: none; } a:hover { color: #3f2499; }
+    * { box-sizing: border-box; }
+    .tab { display: flex; align-items: center; gap: 6px; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: 14px; font-weight: 500; color: #5d5872; }
+    .tab.on { border-bottom-color: #6b46e5; font-weight: 600; color: #191524; }
+    .card { border-radius: 12px; border: 1px solid #e3e3e8; background: #ffffff; padding: 20px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 10px; border: 1px solid #e3e3e8; background: #f7f7f9; padding: 10px 14px; }
+    .code { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(243,232,255,0.8); border: 1px solid rgba(233,213,255,0.7); padding: 2px 8px; font-family: "SF Mono", Menlo, monospace; font-size: 11px; font-weight: 700; color: #6b21a8; }
+    .name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 600; color: #191524; }
+    .bar { position: relative; height: 7px; width: 140px; border-radius: 999px; background: rgba(227,227,232,0.6); overflow: hidden; }
+    .bar > span { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4a2bb8, #5733c4); }
+    .kpi { width: 72px; text-align: right; font-size: 12.5px; font-weight: 500; color: #5d5872; font-variant-numeric: tabular-nums; }
+    .kpi b { color: #191524; } .kpi i { font-style: normal; color: #6b6580; }
+    .go { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid #ddd6fe; background: #ffffff; font-size: 12.5px; font-weight: 600; color: #4a2bb8; white-space: nowrap; }
+    .go.primary { background: #6b46e5; border-color: #6b46e5; color: #ffffff; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: #f5f3ff; border: 1px solid #ede9fe; padding: 3px 10px; font-size: 11.5px; font-weight: 600; color: #4a2bb8; }
+    .chip em { font-style: normal; font-weight: 700; color: #33227a; }
+    .badge { display: inline-flex; height: 24px; align-items: center; border-radius: 999px; padding: 0 9px; font-size: 11px; font-weight: 600; }
+    .dot { width: 8px; height: 8px; border-radius: 999px; }
+    .muted { font-size: 12px; color: #6b6580; }
+    .seg { display: inline-flex; border-radius: 10px; border: 1px solid #e3e3e8; background: #f7f7f9; padding: 3px; }
+    .seg span { display: inline-flex; align-items: center; gap: 6px; border-radius: 7px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: #5d5872; }
+    .seg span.on { background: #ffffff; color: #3f2499; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .count { border-radius: 999px; background: #e3e3e8; padding: 1px 7px; font-size: 11px; font-weight: 700; }
+    .filter { display: inline-flex; align-items: center; justify-content: space-between; height: 40px; min-width: 150px; padding: 0 12px; border-radius: 8px; border: 1px solid #e3e3e8; background: #ffffff; font-size: 13px; color: #5d5872; }
+    .center { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #6b6580; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; min-height: 1080px; background: #f7f7f9; display: flex; flex-direction: column;">
+
+  <!-- Program band: tabs renamed Overview / Report / Results -->
+  <div style="background: #ffffff; border-bottom: 1px solid #e4e0ef;">
+    <div style="position: relative; padding: 24px 32px 8px 32px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9691a8;">
+        <span class="dot" style="background: #f97316;"></span><span>SP02 · Reporting cycle 2026 · P25</span>
+      </div>
+      <h1 style="margin: 6px 0 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: #191524;">Sustainable Farming</h1>
+      <div style="position: absolute; right: 32px; top: 50px; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; background: #6b46e5; color: #ffffff; font-size: 14px; font-weight: 600;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg>
+        <span>Report emerging result</span>
+      </div>
+    </div>
+    <nav style="display: flex; height: 48px; align-items: stretch; gap: 24px; padding: 0 32px;" aria-label="Program sections">
+      <span class="tab">Overview</span>
+      <span class="tab on">Report <span class="count" style="background: #ede9fe; color: #33227a;">W1/W2 · W3</span></span>
+      <span class="tab">Results</span>
+    </nav>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 12px; padding: 16px 32px; background: #ffffff; border-bottom: 1px solid #eeeef1;">
+    <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6580;">Phase</span>
+    <div style="display: inline-flex; align-items: stretch; border-radius: 8px; overflow: hidden; border: 1px solid #e3e3e8;">
+      <span style="display: flex; align-items: center; padding: 0 14px; height: 34px; font-size: 13px; color: #191524; background: #ffffff;">Reporting 2026 · 2026</span>
+      <span style="display: flex; align-items: center; justify-content: center; width: 44px; background: #6b46e5;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 16px; padding: 32px;">
+
+    <!-- Report tab header: path switch -->
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;">
+      <div>
+        <h2 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; color: #191524;">Report a result for Sustainable Farming</h2>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #6b6580;">Choose the funding path first. W1/W2 goes through the program's ToC; W3 goes through your center's bilateral projects.</p>
+      </div>
+      <div class="seg" role="tablist" aria-label="Funding path">
+        <span class="on">W1/W2 · Pooled <span class="count">5 AoWs</span></span>
+        <span>W3 · Bilateral <span class="count">3 projects</span></span>
+      </div>
+    </div>
+
+    <!-- W1/W2 pane = today's Reporting tab content, unchanged -->
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div class="filter" style="flex: 1; min-width: 0; justify-content: flex-start; gap: 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9691a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>Search indicators</div>
+      <div class="filter">Section<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></div>
+      <div class="filter">Type<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></div>
+      <div class="filter">Category<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></div>
+      <div class="filter">Status<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: #ffffff;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5d5872" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        <span class="code">AOW01</span><span class="name" style="font-size: 15px;">Accelerating AI-Enabled Farm Advisory at Scale</span><span class="muted">69 KPIs</span>
+        <span class="bar"><span style="width: 1%;"></span></span><span class="kpi" style="width: 80px;"><b>1</b> of 69</span><span class="kpi" style="width: 40px;">1%</span>
+      </div>
+      <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 16px 20px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5d5872" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        <span class="code">AOW02</span><span class="name" style="font-size: 15px;">Enabling Preparedness and Rapid Response to Emerging Shocks</span><span class="muted">65 KPIs</span>
+        <span class="bar"><span style="width: 2%;"></span></span><span class="kpi" style="width: 80px;"><b>1</b> of 65</span><span class="kpi" style="width: 40px;">2%</span>
+      </div>
+      <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 16px 20px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5d5872" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        <span class="badge" style="background: #dbeafe; color: #1d4ed8;">Outcome</span><span class="name" style="font-size: 15px;">Intermediate outcomes</span><span class="muted">16 KPIs · program-level</span>
+        <span class="bar"><span style="width: 6%;"></span></span><span class="kpi" style="width: 80px;"><b>1</b> of 16</span><span class="kpi" style="width: 40px;">6%</span>
+      </div>
+    </div>
+
+    <!-- W3 pane (shown below for the canvas; in the app it replaces the pane above when the switch is toggled) -->
+    <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #9691a8; white-space: nowrap;">Second pane · W3 · Bilateral (toggle state)</span>
+      <span style="flex: 1; height: 1px; background: #e3e3e8;"></span>
+    </div>
+
+    <section class="card" style="border-style: dashed;">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #191524;">Your centers' projects funding SP02</h3>
+          <p class="muted" style="margin: 2px 0 0;">Create result opens the bilateral creator for that center with the project preselected.</p>
+        </div>
+        <span class="badge" style="background: #d1fae5; color: #047857;">3 projects · 2 centers</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+        <div class="row" style="flex-direction: column; align-items: stretch; background: #ffffff; padding: 14px;">
+          <div class="center" style="margin-bottom: 8px;"><span class="dot" style="background: #6b46e5;"></span>Alliance</div>
+          <span class="name">B-A1368</span>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px;"><span class="chip">SP02 <em>40%</em></span><span class="chip" style="color: #6b6580; background: #f7f7f9; border-color: #e3e3e8;">SP01 60%</span></div>
+          <span class="go primary" style="justify-content: center;">Create result</span>
+        </div>
+        <div class="row" style="flex-direction: column; align-items: stretch; background: #ffffff; padding: 14px;">
+          <div class="center" style="margin-bottom: 8px;"><span class="dot" style="background: #6b46e5;"></span>Alliance</div>
+          <span class="name">B-A1601</span>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px;"><span class="chip">SP02 <em>100%</em></span></div>
+          <span class="go primary" style="justify-content: center;">Create result</span>
+        </div>
+        <div class="row" style="flex-direction: column; align-items: stretch; background: #ffffff; padding: 14px;">
+          <div class="center" style="margin-bottom: 8px;"><span class="dot" style="background: #19ae58;"></span>AfricaRice</div>
+          <span class="name">B-A2210</span>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px;"><span class="chip">SP02 <em>25%</em></span><span class="chip" style="color: #6b6580; background: #f7f7f9; border-color: #e3e3e8;">SP06 75%</span></div>
+          <span class="go primary" style="justify-content: center;">Create result</span>
+        </div>
+      </div>
+      <p class="muted" style="margin: 14px 0 0;">Not seeing your center? W3 reporting needs a <strong>Center User</strong> role. <a href="#">Request access</a></p>
+    </section>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

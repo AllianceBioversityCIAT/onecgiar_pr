@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
+import { ReportingEntryHubService } from './services/reporting-entry-hub.service';
+import { BilateralProjectsService } from '../bilateral/services/bilateral-projects.service';
+import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-projects.entity';
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ResultsFrameworkReportingController } from './results-framework-reporting.controller';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
@@ -37,6 +43,11 @@ import { VersioningModule } from '../versioning/versioning.module';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([
+      ClarisaProject,
+      ClarisaCenter,
+      ClarisaInitiative,
+    ]),
     ResultsModule,
     VersioningModule,
     ResultsKnowledgeProductsModule,
@@ -57,6 +68,8 @@ import { VersioningModule } from '../versioning/versioning.module';
   controllers: [ResultsFrameworkReportingController],
   providers: [
     ResultsFrameworkReportingService,
+    ReportingEntryHubService,
+    BilateralProjectsService,
     ClarisaInitiativesRepository,
     RoleByUserRepository,
     ClarisaGlobalUnitRepository,
