@@ -1,6 +1,17 @@
 import { CHART_TOKEN_NAMES, resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
-import { heatmapOption, heatmapTable, cellLinkFromClick, donutOption, donutTable, sectorLinkFromClick, abbreviateAxisLabel } from './program-overview.charts';
-import { HeatmapModel, StatusSegment } from './program-overview.component';
+import {
+  heatmapOption,
+  heatmapTable,
+  cellLinkFromClick,
+  donutOption,
+  donutTable,
+  sectorLinkFromClick,
+  abbreviateAxisLabel,
+  stackedBarOption,
+  barLinkFromClick,
+  datasetIdsFor
+} from './program-overview.charts';
+import { HeatmapModel, OverviewLink, StatusSegment } from './program-overview.component';
 
 describe('program-overview.charts (OVW-T-3)', () => {
   const model: HeatmapModel = {
@@ -112,6 +123,128 @@ describe('program-overview.charts (OVW-T-3)', () => {
       expect(cellLinkFromClick({}, model)).toBeNull();
       expect(cellLinkFromClick({ data: 'not-an-array' }, model)).toBeNull();
       expect(cellLinkFromClick({ data: [99, 99, 1] }, model)).toBeNull();
+    });
+  });
+});
+
+describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)', () => {
+  // Asymmetric 2×4 fixture with distinct nonzero values per (r,c) — transposing rows/columns
+  // would misalign every per-column stack value, so this catches an r/c swap the 2×2-style
+  // "sampling two cells" approach would miss.
+  const barModel: HeatmapModel = {
+    rows: ['Knowledge product', 'Innovation development'],
+    cols: ['Editing', 'Quality Assessed', 'Submitted', 'Other'],
+    cells: [
+      { r: 0, c: 0, value: 2, link: { category: 'Knowledge product', status: 'Editing' } },
+      { r: 0, c: 1, value: 0, link: { category: 'Knowledge product', status: 'Quality Assessed' } },
+      { r: 0, c: 2, value: 5, link: { category: 'Knowledge product', status: 'Submitted' } },
+      { r: 0, c: 3, value: 3, link: null },
+      { r: 1, c: 0, value: 7, link: { category: 'Innovation development', status: 'Editing' } },
+      { r: 1, c: 1, value: 4, link: { category: 'Innovation development', status: 'Quality Assessed' } },
+      { r: 1, c: 2, value: 0, link: { category: 'Innovation development', status: 'Submitted' } },
+      { r: 1, c: 3, value: 0, link: null }
+    ],
+    caption: 'W1/W2 results by category and status'
+  };
+  const ramp = ['t4', 't3', 't2', 't1'];
+
+  describe('stackedBarOption', () => {
+    it('emits one bar series per column, all sharing stack "total"', () => {
+      const option = stackedBarOption(barModel, ramp);
+      const series = option.series as { type: string; stack: string }[];
+      expect(series.length).toBe(barModel.cols.length);
+      expect(series.every(s => s.type === 'bar')).toBe(true);
+      expect(series.every(s => s.stack === 'total')).toBe(true);
+    });
+
+    it('names each series after the FULL column name (never the abbreviation)', () => {
+      const option = stackedBarOption(barModel, ramp);
+      const series = option.series as { name: string }[];
+      expect(series.map(s => s.name)).toEqual(barModel.cols);
+    });
+
+    it('aligns each series data to ROWS, cell value at (r,c) — 0 becomes null, never a 0 sliver', () => {
+      const option = stackedBarOption(barModel, ramp);
+      const series = option.series as { data: (number | null)[] }[];
+      // series[0] = Editing column → rows [2, 7]
+      expect(series[0].data).toEqual([2, 7]);
+      // series[1] = Quality Assessed → rows [null (was 0), 4]
+      expect(series[1].data).toEqual([null, 4]);
+      // series[2] = Submitted → rows [5, null (was 0)]
+      expect(series[2].data).toEqual([5, null]);
+      // series[3] = Other → rows [3, null (was 0)] — nonzero but non-navigable, still rendered
+      expect(series[3].data).toEqual([3, null]);
+      // Transposing rows/cols would instead read cols.length (4) values per series, or
+      // misalign row 0 / row 1 — either breaks the equalities above.
+    });
+
+    it('colors each series by RAMP INDEX (name), cycling — never a resolved CSS value', () => {
+      const option = stackedBarOption(barModel, ramp);
+      const series = option.series as { itemStyle: { color: string } }[];
+      expect(series.map(s => s.itemStyle.color)).toEqual(ramp);
+      expect(series.every(s => !s.itemStyle.color.startsWith('#'))).toBe(true);
+    });
+
+    it('sets yAxis.data to ROWS (unreordered), inverse: true, interval: 0 + abbreviateAxisLabel (KZ-SPO-1)', () => {
+      const option = stackedBarOption(barModel, ramp) as {
+        yAxis: { data: string[]; inverse: boolean; axisLabel: { interval: number; formatter: (v: string) => string } };
+      };
+      expect(option.yAxis.data).toEqual(barModel.rows);
+      expect(option.yAxis.inverse).toBe(true);
+      expect(option.yAxis.axisLabel.interval).toBe(0);
+      expect(option.yAxis.axisLabel.formatter('Knowledge product')).toBe('KP');
+    });
+
+    it('has a value-type xAxis (magnitude), matching the horizontal stacked-bar shape', () => {
+      const option = stackedBarOption(barModel, ramp) as { xAxis: { type: string } };
+      expect(option.xAxis.type).toBe('value');
+    });
+
+    it('hides the legend and adds no bar-end totals (CVT-DD-5, OQ-1 default "no")', () => {
+      const option = stackedBarOption(barModel, ramp) as { legend: { show: boolean }; series: { label?: { show: boolean } }[] };
+      expect(option.legend.show).toBe(false);
+      option.series.forEach(s => {
+        expect(s.label?.show).not.toBe(true);
+      });
+    });
+
+    it('tooltip names row × full column and flags a non-navigable segment, mirroring heatmapOption', () => {
+      const option = stackedBarOption(barModel, ramp);
+      const formatter = (option.tooltip as { formatter: (p: unknown) => string }).formatter;
+
+      // Editing @ row 0 (Knowledge product): navigable, value 2
+      expect(formatter({ seriesIndex: 0, dataIndex: 0, seriesName: 'Editing' })).toBe('Knowledge product × Editing: 2');
+      // Other @ row 0: non-navigable (link: null)
+      expect(formatter({ seriesIndex: 3, dataIndex: 0, seriesName: 'Other' })).toBe('Knowledge product × Other: 3 (not navigable)');
+    });
+
+    it('shares series ids with heatmapOption for the same model (CVT-DD-4 morph) and enables universalTransition on every series', () => {
+      const bars = stackedBarOption(barModel, ramp);
+      const heatmap = heatmapOption(barModel, ramp);
+      const barSeries = bars.series as { id: string; universalTransition: { enabled: boolean } }[];
+      const heatmapSeries = (heatmap.series as { universalTransition: { enabled: boolean; seriesKey: string[] } }[])[0];
+
+      expect(barSeries.map(s => s.id)).toEqual(datasetIdsFor(barModel));
+      expect(heatmapSeries.universalTransition.seriesKey).toEqual(barSeries.map(s => s.id));
+      expect(heatmapSeries.universalTransition.enabled).toBe(true);
+      expect(barSeries.every(s => s.universalTransition.enabled)).toBe(true);
+    });
+  });
+
+  describe('barLinkFromClick', () => {
+    it('resolves (seriesIndex → c, dataIndex → r) to the SAME link cellLinkFromClick resolves for every cell (parity, not sampling)', () => {
+      for (const cell of barModel.cells) {
+        const barResult = barLinkFromClick({ seriesIndex: cell.c, dataIndex: cell.r }, barModel);
+        const heatmapResult = cellLinkFromClick({ data: [cell.c, cell.r, cell.value] }, barModel);
+        expect(barResult).toEqual(heatmapResult);
+        expect(barResult).toEqual(cell.link as OverviewLink | null);
+      }
+    });
+
+    it('resolves an event with missing/non-numeric indices to null instead of throwing', () => {
+      expect(barLinkFromClick({}, barModel)).toBeNull();
+      expect(barLinkFromClick({ seriesIndex: 0 }, barModel)).toBeNull();
+      expect(barLinkFromClick({ seriesIndex: 99, dataIndex: 99 }, barModel)).toBeNull();
     });
   });
 });

@@ -42,6 +42,16 @@ export function abbreviateAxisLabel(value: string): string {
   return AXIS_LABEL_ABBREVIATIONS[value] ?? value;
 }
 
+/**
+ * One morph-target id per column, shared by `heatmapOption`'s single matrix series (as its
+ * `universalTransition.seriesKey`, the ECharts "one-to-many" split) and `stackedBarOption`'s
+ * per-column bar series (as each series' own `id`) — CVT-DD-4. Deterministic from `model.cols`
+ * so the same model always yields the same ids on both sides of the toggle.
+ */
+export function datasetIdsFor(model: HeatmapModel): string[] {
+  return model.cols.map((_, c) => `col-${c}`);
+}
+
 export function heatmapOption(model: HeatmapModel, ramp: string[]): EChartsOption {
   const { rows, cols, cells } = model;
   const data = cells.map(cell => [cell.c, cell.r, cell.value]);
@@ -88,10 +98,15 @@ export function heatmapOption(model: HeatmapModel, ramp: string[]): EChartsOptio
     series: [
       {
         type: 'heatmap',
+        id: 'heatmap-matrix',
         data,
         // Always show cell values — 1-2 digit counts fit even on the 7-column bilateral
         // heatmap now that column labels are abbreviated/rotated (user request, same quick).
-        label: { show: true }
+        label: { show: true },
+        // CVT-DD-4: one-to-many morph target — the bars view's per-column series carry these
+        // same ids (datasetIdsFor) as their own `id`, so `stackedBarOption` below is the sole
+        // other place this array is generated.
+        universalTransition: { enabled: true, seriesKey: datasetIdsFor(model) }
       }
     ]
   } as EChartsOption;
@@ -119,6 +134,81 @@ export function cellLinkFromClick(event: { data?: unknown }, model: HeatmapModel
   const point = Array.isArray(event?.data) ? (event.data as number[]) : null;
   if (!point || point.length < 2) return null;
   const [c, r] = point;
+  return model.cells.find(cell => cell.r === r && cell.c === c)?.link ?? null;
+}
+
+/**
+ * Builds the `app-pr-viz-chart` `options` for a `HeatmapModel`'s stacked-bars view (`CVT-R-2`).
+ * Same model as `heatmapOption` — one horizontal stacked bar per row, one `bar` series per
+ * column (`CVT-DD-3`: per-column series, not one matrix series, so a click carries the column
+ * via `seriesIndex`). `ramp` is the same violet ramp `heatmapOption` receives; colors are
+ * asserted by ramp index in specs, never by resolved value (KZ-SPO-1 — jsdom returns `''`).
+ *
+ * `yAxis.inverse` + `abbreviateAxisLabel` mirror `heatmapOption`'s xAxis treatment (KZ-SPO-1):
+ * the ROW axis is this view's category axis, so it is the one that needs `interval: 0` and the
+ * display-only abbreviation to stay legible — `model.rows` itself is untouched.
+ *
+ * No legend, no bar-end totals (`CVT-DD-5`, OQ-1 default "no"): tooltips + segment size are the
+ * quantity affordance; the ramp + tooltip series name are the column-identity affordance.
+ */
+export function stackedBarOption(model: HeatmapModel, ramp: string[]): EChartsOption {
+  const { rows, cols, cells } = model;
+  const seriesIds = datasetIdsFor(model);
+  const valueAt = (r: number, c: number): number => cells.find(cell => cell.r === r && cell.c === c)?.value ?? 0;
+  const linkAt = (r: number, c: number): OverviewLink | null => cells.find(cell => cell.r === r && cell.c === c)?.link ?? null;
+
+  return {
+    tooltip: {
+      formatter: (params: unknown) => {
+        const payload = params as { seriesIndex?: number; dataIndex?: number; seriesName?: string };
+        const c = payload?.seriesIndex;
+        const r = payload?.dataIndex;
+        const rowName = typeof r === 'number' ? (rows[r] ?? '') : '';
+        const colName = payload?.seriesName ?? (typeof c === 'number' ? (cols[c] ?? '') : '');
+        const value = typeof r === 'number' && typeof c === 'number' ? valueAt(r, c) : 0;
+        const navigable = typeof r === 'number' && typeof c === 'number' ? Boolean(linkAt(r, c)) : false;
+        const note = navigable ? '' : ' (not navigable)';
+        return `${rowName} × ${colName}: ${value}${note}`;
+      }
+    },
+    grid: { left: 96, right: 24, top: 16, bottom: 16, containLabel: true },
+    legend: { show: false },
+    xAxis: { type: 'value' },
+    // Same KZ-SPO-1 fix as the heatmap's xAxis, applied here to the ROW axis: interval: 0
+    // forces every row label to render, abbreviated at display level only (model.rows keeps
+    // the full names for the tooltip/table/links).
+    yAxis: {
+      type: 'category',
+      data: rows,
+      inverse: true,
+      axisLabel: { interval: 0, formatter: abbreviateAxisLabel }
+    },
+    series: cols.map((colName, c) => ({
+      type: 'bar',
+      id: seriesIds[c],
+      name: colName,
+      stack: 'total',
+      // 0 → null so a zero-value cell produces no visible segment (CVT-R-2 "Same data,
+      // second shape"), instead of ECharts drawing a zero-height sliver.
+      data: rows.map((_, r) => valueAt(r, c) || null),
+      itemStyle: { color: ramp[c % (ramp.length || 1)] ?? '' },
+      universalTransition: { enabled: true }
+    }))
+  } as EChartsOption;
+}
+
+/**
+ * Resolves a bars-view `chartClick` event back to the `OverviewLink` stored on the clicked
+ * segment. Each `stackedBarOption` series is one column (`seriesIndex` → `c`) and its data is
+ * row-index-aligned (`dataIndex` → `r`) — the same `(r, c)` pair `cellLinkFromClick` resolves
+ * from the heatmap's `[c, r, value]` triple, so both resolvers agree on every cell of a model
+ * (`CVT-R-3` parity). Anything unresolvable (missing indices, unknown `r`/`c`) is `null` —
+ * swallowed by `ProgramOverviewComponent.emitLink`, never emitted.
+ */
+export function barLinkFromClick(event: { seriesIndex?: number; dataIndex?: number }, model: HeatmapModel): OverviewLink | null {
+  const c = event?.seriesIndex;
+  const r = event?.dataIndex;
+  if (typeof c !== 'number' || typeof r !== 'number') return null;
   return model.cells.find(cell => cell.r === r && cell.c === c)?.link ?? null;
 }
 

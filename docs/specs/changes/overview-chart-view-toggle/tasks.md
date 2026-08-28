@@ -21,7 +21,7 @@
 
 ## 3. Task list
 
-### `CVT-T-1` — Pure builders: `stackedBarOption` + `barLinkFromClick` (+ shared morph ids)
+### [x] `CVT-T-1` — Pure builders: `stackedBarOption` + `barLinkFromClick` (+ shared morph ids)
 
 - **Type:** `client`
 - **Description:** In `program-overview.charts.ts` add `stackedBarOption(model: HeatmapModel, ramp: string[]): EChartsOption` per design §2.2 item 3 — yAxis = rows (`inverse: true`, `axisLabel { interval: 0, formatter: abbreviateAxisLabel }`), xAxis value, one `bar` series per column with `stack: 'total'`, `name` = full column name, `color: ramp[c % ramp.length]`, data aligned to rows with `0 → null`, tooltip naming row × column with the "(not navigable)" note for null-link cells, `universalTransition` enabled with series/dataset ids **shared with `heatmapOption`** (add the same ids there — the only heatmap-path edit, CVT-DD-4). Add `barLinkFromClick(event, model)` resolving `(seriesIndex → c, dataIndex → r)` to the stored cell link. Extend `program-overview.charts.spec.ts`.
@@ -34,11 +34,11 @@
 - **Estimate:** M (~130 LOC incl. spec)
 - **Skills:** `angular-developer`, `tdd`
 - **Definition of done:**
-  - [ ] Option-shape spec with an asymmetric 2×4 fixture (distinct values): series count = 4 (columns), each `stack: 'total'`, series `s` data at row `r` = cell value or `null` when 0, yAxis data = rows. **FAIL input:** transposing rows/columns → stack-value assertions red.
-  - [ ] **Parity spec:** for every `(r, c)` of the fixture, `barLinkFromClick({seriesIndex: c, dataIndex: r}, model)` equals `cellLinkFromClick({data: [c, r, v]}, model)` — incl. the null cells. **FAIL input:** off-by-one in either index mapping → red. **Disqualifier:** sampling two cells is not parity — the spec must iterate the whole matrix.
-  - [ ] Colors asserted by ramp **index/name**, never resolved values (jsdom empty strings — KZ-SPO-1 precedent); `interval: 0` + `abbreviateAxisLabel` asserted on the bars option. **FAIL input:** dropping the formatter → red.
-  - [ ] Shared ids: both builders' series/dataset ids equal for the same model; `universalTransition` enabled. **FAIL input:** divergent ids → equality red. **What this cannot prove:** that the morph *renders* well — CVT-AC-3 (T6), with the CVT-R-5 fallback pre-approved.
-  - [ ] Full suite `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean. **Disqualifier:** `--testPathPattern` narrowing.
+  - [x] Option-shape spec with an asymmetric 2×4 fixture (distinct values): series count = 4 (columns), each `stack: 'total'`, series `s` data at row `r` = cell value or `null` when 0, yAxis data = rows. **FAIL input:** transposing rows/columns → stack-value assertions red.
+  - [x] **Parity spec:** for every `(r, c)` of the fixture, `barLinkFromClick({seriesIndex: c, dataIndex: r}, model)` equals `cellLinkFromClick({data: [c, r, v]}, model)` — incl. the null cells. **FAIL input:** off-by-one in either index mapping → red. **Disqualifier:** sampling two cells is not parity — the spec must iterate the whole matrix.
+  - [x] Colors asserted by ramp **index/name**, never resolved values (jsdom empty strings — KZ-SPO-1 precedent); `interval: 0` + `abbreviateAxisLabel` asserted on the bars option. **FAIL input:** dropping the formatter → red.
+  - [x] Shared ids: both builders' series/dataset ids equal for the same model; `universalTransition` enabled. **FAIL input:** divergent ids → equality red. **What this cannot prove:** that the morph *renders* well — CVT-AC-3 (T6), with the CVT-R-5 fallback pre-approved.
+  - [x] Full suite `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean. **Disqualifier:** `--testPathPattern` narrowing.
 
 ### `CVT-T-2` — Toggle state, segmented control, mode-aware bindings
 
