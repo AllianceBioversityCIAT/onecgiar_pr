@@ -21,6 +21,13 @@ export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
   depthSearchList: any[] = [];
   exactTitleFound = false;
   titleCheckFailed = false;
+  /**
+   * P2-3526 — an empty similar-results list is not the same claim as "there are no similar results".
+   * The ElasticSearch host behind the similarity search stopped resolving, and its error handler
+   * emptied the list, which rendered as "no similarities" — the screen told the user the title was
+   * free right before Save refused it. This flag keeps the two states apart.
+   */
+  depthSearchFailed = false;
   /** Title depth-search / uniqueness check in flight (mirrors ReportResultFormComponent). */
   loadingDepthSearch = signal(false);
   /** Initial 4-deep serial chain (phases → roles → initiatives) still running. */
@@ -219,6 +226,7 @@ export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
       this.depthSearchList = [];
       this.exactTitleFound = false;
       this.titleCheckFailed = false;
+      this.depthSearchFailed = false;
       this.loadingDepthSearch.set(false);
       return;
     }
@@ -231,12 +239,14 @@ export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
 
     this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe({
       next: (response: any[]) => {
+        this.depthSearchFailed = false;
         this.depthSearchList = response.map(result => ({
           ...result,
           phase: this.allPhases.find(phase => phase.id === result?.version_id)
         }));
       },
       error: () => {
+        this.depthSearchFailed = true;
         this.depthSearchList = [];
       }
     });

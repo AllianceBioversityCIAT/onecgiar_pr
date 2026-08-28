@@ -338,6 +338,41 @@ describe('ResultCreatorComponent', () => {
       expect(component.titleCheckFailed).toBe(true);
       expect(spy).toHaveBeenCalled();
     });
+
+    // P2-3526 — an empty list must not be reported to the user as "no similar results" when the
+    // similarity search itself never answered. The ElasticSearch host stopped resolving, so this
+    // is the branch that runs in production today.
+    it('flags the similarity search as failed when it errors, keeping it apart from an empty result', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_FindResultsElastic').mockReturnValue(throwError('NXDOMAIN'));
+
+      component.depthSearch('title 1');
+
+      expect(component.depthSearchList).toEqual([]);
+      expect(component.depthSearchFailed).toBe(true);
+    });
+
+    it('clears the failed flag once the similarity search answers', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_FindResultsElastic').mockReturnValue(throwError('NXDOMAIN'));
+      component.depthSearch('title 1');
+      expect(component.depthSearchFailed).toBe(true);
+
+      jest.spyOn(mockApiService.resultsSE, 'GET_FindResultsElastic').mockReturnValue(of([]));
+      component.depthSearch('title 2');
+
+      expect(component.depthSearchFailed).toBe(false);
+    });
+
+    it('resets every title-check flag when the title is emptied', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_FindResultsElastic').mockReturnValue(throwError('NXDOMAIN'));
+      component.depthSearch('title 1');
+      expect(component.depthSearchFailed).toBe(true);
+
+      component.depthSearch('   ');
+
+      expect(component.depthSearchFailed).toBe(false);
+      expect(component.exactTitleFound).toBe(false);
+      expect(component.titleCheckFailed).toBe(false);
+    });
   });
 
   describe('getLegacyType', () => {

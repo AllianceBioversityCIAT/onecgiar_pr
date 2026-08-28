@@ -131,4 +131,42 @@ describe('SimilarResultsComponent', () => {
       expect(result).toBe('???');
     });
   });
+
+  // P2-3526 — the "no similarities" line was the only message the screen ever showed, and it rendered
+  // on an empty list no matter why the list was empty. That is what told the user a taken title was free.
+  describe('the empty-list message — P2-3526', () => {
+    // A fresh fixture per case: the shared one has already run a change-detection pass, and setting
+    // inputs after it trips NG0100 rather than testing anything.
+    const render = (inputs: Partial<SimilarResultsComponent>) => {
+      const own = TestBed.createComponent(SimilarResultsComponent);
+      Object.assign(own.componentInstance, { options: [], searchFailed: false, hideNoSimilaritiesMessage: false }, inputs);
+      own.detectChanges();
+      return own.nativeElement.textContent as string;
+    };
+
+    it('claims no similarities only when the search actually ran and came back empty', () => {
+      expect(render({})).toContain('has no similarities');
+    });
+
+    it('says the check could not run instead of claiming the title is free', () => {
+      const text = render({ searchFailed: true });
+
+      expect(text).not.toContain('has no similarities');
+      expect(text).toContain('could not check for similar results');
+    });
+
+    it('stays silent when the parent already warns that the exact title is taken', () => {
+      const text = render({ searchFailed: true, hideNoSimilaritiesMessage: true });
+
+      expect(text).not.toContain('has no similarities');
+      expect(text).not.toContain('could not check for similar results');
+    });
+
+    it('still lists the similar results it was given', () => {
+      const text = render({ options: [{ result_code: 8937, title: 'An existing title', type: 'Policy change' }] });
+
+      expect(text).not.toContain('has no similarities');
+      expect(text).toContain('Similar results have already been reported');
+    });
+  });
 });
