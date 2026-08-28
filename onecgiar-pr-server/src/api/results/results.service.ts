@@ -1795,7 +1795,10 @@ export class ResultsService {
     ReturnResponseDto<ScienceProgramProgressResponseDto> | returnErrorDto
   > {
     try {
-      const filters: Record<string, number | number[]> = { portfolioId: 3 };
+      const filters: Record<string, number | number[] | string | string[]> = {
+        portfolioId: 3,
+        fundingSource: ['Result'],
+      };
 
       let effectiveVersionId = versionId;
       if (

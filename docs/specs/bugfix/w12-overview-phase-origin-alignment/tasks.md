@@ -20,7 +20,7 @@
 
 ## 3. Task list
 
-### `W12-T-1` — Meter: W1/W2-origin filter + regression (server)
+### [x] `W12-T-1` — Meter: W1/W2-origin filter + regression (server)
 
 - **Type:** `server`
 - **Description:** In `results.service.ts` `getScienceProgramProgress` (~:1798) add `fundingSource: ['Result']` to `filters` (the repo's `addInGeneric('r.source', filters?.fundingSource)` at `result.repository.ts:739` already applies it). **Regression test first (red):** in `results.service.spec.ts`, assert the repo is called with filters containing `fundingSource: ['Result']` AND `versionId` — run it against the pre-fix code and record the red output; then apply the one-liner → green.
@@ -30,10 +30,10 @@
 - **Estimate:** S (~30 LOC incl. spec)
 - **Skills:** `nestjs-expert`, `tdd`, `systematic-debugging`
 - **Definition of done:**
-  - [ ] Regression spec **red on pre-fix code (output recorded verbatim), green after**. **Disqualifier:** a spec that was never seen red is not regression evidence.
-  - [ ] Filters assertion includes BOTH `fundingSource: ['Result']` and the existing `versionId` (phase scoping preserved). **FAIL input:** dropping either key → red.
-  - [ ] Grep: no other caller of the progress method changes behaviour unexpectedly (record).
-  - [ ] Full server suite `npx jest --silent --reporters=summary --forceExit` green; `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` clean; `npm run migration:check` clean. **Disqualifier:** path-pattern narrowing.
+  - [x] Regression spec **red on pre-fix code (output recorded verbatim), green after**. **Disqualifier:** a spec that was never seen red is not regression evidence.
+  - [x] Filters assertion includes BOTH `fundingSource: ['Result']` and the existing `versionId` (phase scoping preserved). **FAIL input:** dropping either key → red.
+  - [x] Grep: no other caller of the progress method changes behaviour unexpectedly (record).
+  - [x] Full server suite `npx jest --silent --reporters=summary --forceExit` green; `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` clean; `npm run migration:check` clean. **Disqualifier:** path-pattern narrowing.
 
 ### `W12-T-2` — Matrix: origin + role + versionId + universe (server) · client passes the phase + versioned cache
 

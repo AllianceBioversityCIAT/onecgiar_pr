@@ -909,9 +909,16 @@ describe('ResultsService (unit, pure mocks)', () => {
 
     const result = await resultService.getScienceProgramProgress(userTest);
 
+    // W12-R-1: the meter MUST scope to W1/W2 origin (source = 'Result') while
+    // keeping the existing phase scoping (versionId) — regression for the
+    // bilateral-leak bug (Overview meter counted W3/bilateral results too).
     expect(
       mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered,
-    ).toHaveBeenCalledWith(userTest.id, { portfolioId: 3, versionId: 1 });
+    ).toHaveBeenCalledWith(userTest.id, {
+      portfolioId: 3,
+      versionId: 1,
+      fundingSource: ['Result'],
+    });
 
     const payload = result.response as ScienceProgramProgressResponseDto;
 
