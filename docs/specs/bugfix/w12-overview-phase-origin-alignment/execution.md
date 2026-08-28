@@ -33,3 +33,22 @@
 - **Verification:** attempt 1 full: server **197 / 1737**, eslint, `migration:check` 0; client **483 / 6973**, `ng lint`, `ng build`. Attempt 2 scoped (owner directed no full reruns): 59/59 server specs, 285/285 client api spec, lint clean on touched files.
 - **Forward pointers → W12-T-3:** (1) parity fixture must include a NULL/orphan `result_level_id` row — the meter INNER JOINs `result_level`, the matrix does not; (2) W12-AC-4 must spot-check an **AoW detail** page (`entity-aow.service.ts:167,191` consume the same endpoint — data now phase/origin/role-scoped) and a bilateral-only SP's **home card** (T-1 pointer).
 - **ADVISORY (recorded, die here):** `reportingCurrentPhase` read non-reactively — late phase resolution could cache under `::default` then miss under `::N` (silent empty; pre-existing pattern, cost raised by versioned key; fix = derive key from `reportingPhaseVersion()`); `?versionId=` empty string → `Number('')=0` finite → `version_id = 0` (mirrors shipped `results.controller.ts`; fix both together); comment cites `:~692` should be `:702`.
+
+## W12-T-3 — Parity + owner verification
+
+- **Status (code half):** PASS (attempt 2) · 2026-08-28 · Implementer: `impl-w12-t2` · Reviewer: `rev-w12-t2`
+- **File:** `results-framework-reporting.service.spec.ts` (+~130 LOC: `W12-R-3` describe).
+- **What:** ONE `RAW_UNIVERSE` (survivors: Editing×10, Submitted×1, Pending-Review×2 [status 5], Rejected×1 w/ null `result_level_id`; excluded: 'API'×13, role-2×3, other-version×4, status-4×6, type-10×2, type-11×1) + ONE `SHARED_UNIVERSE_PREDICATE` fed to BOTH mappers → meter 14 === Σ matrix 14. Meter mapper `buildScienceProgramBuckets` invoked via `ResultsService.prototype` (Reviewer verified zero `this.` refs — pure, same code the endpoint runs; sidesteps the 45-dep DI). FAIL-input test: matrix re-narrowed to status ≤ 3 → concrete 14 vs 11 asserted.
+- **Attempt 1 FAIL → attempt 2:** the `result_level_id` "positive proof" claim was false (meter INNER JOINs `result_level` at `result.repository.ts:692`, matrix does not → null-level row: meter < matrix); rewritten as a documented residual. + concrete 14/11 assertions + `role_id` fixture comment.
+- **Two documented residuals (requirements-level, NOT implementation defects — carry into owner verification):** (1) meter has no `status_id != 4` predicate (Results tab neither) while the matrix excludes Discontinued; (2) meter drops null/orphan `result_level_id` rows, matrix doesn't. Either makes the three numbers legitimately diverge if such rows exist for the SP checked.
+- **Verification:** scoped 49/49 in file; eslint clean.
+
+### DB diagnostic (Leader, 2026-08-28, local QA DB via server creds — values never printed)
+- Active reporting phase: **exactly one** — id 36 "Reporting 2026" (pre-flight confirmed in data).
+- SP04 breakdown by (version, source, role, status): v36 `Result`/role-1 = **10 Editing + 1 Submitted = 11**; v36 `API` = 11 (status 1) + 2 (status 5); v36 `Result`/role-2 = 1; v34 carries 32 W1/W2 + 81 bilateral; v30 = 2.
+- **New matrix SQL @ v36 → 11** (= Results tab). Confirms every W12-T-2 predicate and explains the original 24 (11 W1/W2 + 11 bilateral Editing + 2 bilateral Pending Review) and 23 (year-scoped, incl. role-2 and prior-version rows).
+- Owner's post-fix empty card: the endpoint returned all-zero for `versionId=36` → **local server was serving stale code** (a `dist/src/main` process predating the change); the server has since restarted (01:09) with the new `dist`. Not a code defect.
+
+### Hotfix under W12-T-2 scope — summaries cache reactivity (in flight, attempt 2)
+- Real, separate gap found while chasing the empty card (Reviewer's attempt-1 advisory): nothing in `dashboard-lab` reads `reportingPhaseVersion()`, so a phase landing/switching after the load could orphan the versioned cache key. Attempt 1: dedicated `effect()` + `refreshSelectedSummaries()` (not folded into the selection effect — that one resets filter state); RED/GREEN recorded. Reviewer FAIL (2 items): computeds must also read the signal (cache-HIT phase switch served memoized old matrix — W12-R-2 BUT clause), and the effect's signal read had zero test coverage (mocks lacked `reportingPhaseVersion`). Attempt 2 in progress.
+- **ADVISORY (recorded):** `loadBilateralRows` has the identical structural gap (agy's W3 code, effect doesn't read `reportingPhaseVersion()`) → own quick for the owner.
