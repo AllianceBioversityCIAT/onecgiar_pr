@@ -397,5 +397,26 @@ describe('ReportingProgramBandComponent', () => {
       expect(code.className).toContain('font-semibold');
       expect(code.className).toContain('tracking-[0.08em]');
     });
+
+    /**
+     * `changes/overview-phase-filter` OPF-T-4 (Leader remediation): the Overview host wires
+     * `phaseLabelOverride` to its own `effectiveVersionId()`-derived phase label so the eyebrow
+     * follows an explicit phase selection instead of the global `reportingCurrentPhase`
+     * (`cycleYear`/`cyclePhase`).
+     */
+    it('replaces the cycleYear/cyclePhase-derived tail with phaseLabelOverride when provided', async () => {
+      await build({ cycleYear: 2026, cyclePhase: 'P25', phaseLabelOverride: 'Reporting 2025 · 2025' });
+
+      expect(component.eyebrowCycle()).toBe('· Reporting 2025 · 2025');
+      expect(text()).toContain('Reporting 2025 · 2025');
+      expect(text()).not.toContain('Reporting cycle 2026');
+    });
+
+    /** Absent input (default `''`) keeps the original cycleYear/cyclePhase tail byte-identical. */
+    it('falls back to the cycleYear/cyclePhase-derived tail when phaseLabelOverride is absent', async () => {
+      await build({ cycleYear: 2026, cyclePhase: 'P25' });
+
+      expect(component.eyebrowCycle()).toBe('· Reporting cycle 2026 · P25');
+    });
   });
 });

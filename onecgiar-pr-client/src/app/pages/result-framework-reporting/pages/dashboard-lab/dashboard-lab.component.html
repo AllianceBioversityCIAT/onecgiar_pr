@@ -1153,11 +1153,46 @@
           [plannedResultsCount]="bandPlannedResultsCount()"
           [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
           [cyclePhase]="dataControlSE.reportingCurrentPhase.portfolioAcronym || ''"
+          [phaseLabelOverride]="selectedPhaseLabel()"
           [programDotColor]="accentTheme().solid"
           activeTab="overview"
           [canReport]="canReportEmerging()"
           (reportEmerging)="openReportModal()"
           [showToolbar]="false" />
+
+        <!-- ═══ PHASE SELECTOR — Overview-only (changes/overview-phase-filter, OPF-R-1, design.md
+             §8/DD-6). Lives in THIS template rather than inside `app-reporting-program-band` on
+             purpose: that band is shared with the Reporting tab, and the selector must render only
+             here, next to the band's own eyebrow. Same content pad (32px) as the band, so the strip
+             reads as one identity header. `null` from `selectedVersionId` shows the Open phase
+             selected by default (`effectiveVersionId()` resolves it); picking any row writes a
+             concrete `versionId` into `selectedVersionId` via `onPhaseOptionSelected`. ═══ -->
+        <div
+          class="flex flex-wrap items-center gap-[10px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-card)] px-[32px] py-[12px]"
+          role="group"
+          aria-label="Reporting phase">
+          <span class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">Phase</span>
+          <div class="opf-phase-select w-[210px] max-[620px]:w-full">
+            <app-pr-select
+              [options]="phaseSelectorOptions()"
+              optionLabel="label"
+              optionValue="versionId"
+              optionBadgeLabel="phaseTagLabel"
+              optionBadgeTone="phaseTagTone"
+              placeholder="Select phase"
+              [editable]="true"
+              [required]="false"
+              [truncateSelectionText]="true"
+              [ngModel]="effectiveVersionId()"
+              [ngModelOptions]="{ standalone: true }"
+              (selectOptionEvent)="onPhaseOptionSelected($event)">
+            </app-pr-select>
+          </div>
+          @if (loadingMeter()) {
+            <span class="material-icons-round animate-spin text-[14px] text-[var(--pr-text-subtle)]" aria-hidden="true">progress_activity</span>
+            <span class="sr-only">Loading phase data…</span>
+          }
+        </div>
 
         <app-program-overview
           [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
@@ -1170,6 +1205,8 @@
           [w12Heatmap]="overviewW12Heatmap()"
           [bilateralHeatmap]="overviewBilateralHeatmap()"
           [w12HeatmapLoading]="loadingSummaries()"
+          [meterLoading]="loadingMeter()"
+          [bilateralLoading]="loadingBilateral()"
           [tocMap]="overviewTocMap()"
           [tocMapLoading]="overviewTocMapLoading()"
           (openResults)="onOverviewLink($event)"
@@ -1194,6 +1231,7 @@
             [plannedResultsCount]="bandPlannedResultsCount()"
             [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
             [cyclePhase]="dataControlSE.reportingCurrentPhase.portfolioAcronym || ''"
+            [phaseLabelOverride]="selectedPhaseLabel()"
             [programDotColor]="accentTheme().solid"
             activeTab="reporting"
             [canReport]="canReportEmerging()"

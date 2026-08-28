@@ -55,7 +55,7 @@ OPF-T-2 (client API wrappers) ───┼──▶ OPF-T-3 (resolver + loaders)
 
 ## OPF-T-4 — Selector UI + per-card loading/empty states
 
-- **Status:** `[ ]` · **Size:** M (~90 LOC) · **Depends:** OPF-T-3
+- **Status:** `[x]` · **Size:** M (~90 LOC) · **Depends:** OPF-T-3
 - **Requirements:** OPF-R-1 (all clauses), OPF-R-5 (all clauses), OPF-N-2
 - **Design:** design.md §8 (Selector, States), DD-5, DD-6
 - **Skills:** `angular-developer`, `frontend-design`

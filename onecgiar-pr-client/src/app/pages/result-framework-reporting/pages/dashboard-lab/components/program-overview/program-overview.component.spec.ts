@@ -439,6 +439,26 @@ describe('ProgramOverviewComponent', () => {
 
       expect(emitSpy).not.toHaveBeenCalled();
     });
+
+    /**
+     * `changes/overview-phase-filter` OPF-T-4 (Leader remediation, OPF-R-2 "AND IT MUST show a
+     * loading state on each card"): mirrors the W1/W2 heatmap loading fix above (line ~370) — the
+     * donut host sat inside `@if (statusTotal() > 0)`, so an explicit phase selection whose meter
+     * overlay is still in flight (zero settled results) rendered the empty state instead of a
+     * loading skeleton.
+     */
+    it('renders the donut loading skeleton instead of the empty state while meterLoading (OPF-T-4)', () => {
+      fixture.componentRef.setInput('statusSegments', []);
+      fixture.componentRef.setInput('meterLoading', true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain('No results reported for this program yet.');
+      const donutHost = fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).find(
+        host => host.componentInstance.chartTitle() === 'Reporting status'
+      );
+      expect(donutHost).toBeTruthy();
+      expect(donutHost?.componentInstance.loading()).toBe(true);
+    });
   });
 
   /**
@@ -698,6 +718,24 @@ describe('ProgramOverviewComponent', () => {
       expect(component.bilateralSegmentWidth(bilateralSegs[0])).toBe(60);
       expect(component.bilateralSegmentWidth(bilateralSegs[1])).toBe(40);
       expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+    });
+
+    /**
+     * `changes/overview-phase-filter` OPF-T-4 (Leader remediation, OPF-R-2 "AND IT MUST show a
+     * loading state on each card"): same fix as the W1/W2 meter donut above, for the W3/Bilateral
+     * cards — `bilateralStatusSegments` is unset in this describe's default fixture (0 total), so
+     * setting `bilateralLoading` alone exercises the previously-unreachable loading branch.
+     */
+    it('renders the bilateral donut loading skeleton instead of the empty state while bilateralLoading (OPF-T-4)', () => {
+      fixture.componentRef.setInput('bilateralLoading', true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain('No bilateral results reported for this program yet.');
+      const donutHost = fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).find(
+        host => host.componentInstance.chartTitle() === 'Bilateral reporting status'
+      );
+      expect(donutHost).toBeTruthy();
+      expect(donutHost?.componentInstance.loading()).toBe(true);
     });
   });
 

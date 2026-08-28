@@ -245,7 +245,7 @@
       </p>
     </div>
 
-    @if (statusTotal() > 0) {
+    @if (statusTotal() > 0 || meterLoading()) {
       <div class="grid grid-cols-1 items-center gap-[24px] lg:grid-cols-12">
         <!-- Donut (separated slices with visible numbers) -->
         <div class="lg:col-span-4 flex items-center justify-center">
@@ -256,6 +256,7 @@
               [tableModel]="donutTable()"
               chartTitle="Reporting status"
               height="220px"
+              [loading]="meterLoading()"
               (chartClick)="onDonutClick($event)" />
           </div>
         </div>
@@ -429,7 +430,7 @@
         </div>
       </div>
 
-      @if (bilateralStatusTotal() > 0) {
+      @if (bilateralStatusTotal() > 0 || bilateralLoading()) {
         <div class="grid grid-cols-1 items-center gap-[18px] sm:grid-cols-12">
           <!-- Donut chart -->
           <div class="sm:col-span-5 flex flex-col items-center justify-center">
@@ -440,6 +441,7 @@
                 [tableModel]="bilateralDonutTable()"
                 chartTitle="Bilateral reporting status"
                 height="180px"
+                [loading]="bilateralLoading()"
                 (chartClick)="onBilateralDonutClick($event)" />
             </div>
             <span class="text-[11.5px] text-[var(--pr-text-muted)] mt-[4px]">
@@ -526,12 +528,13 @@
       </span>
     </div>
 
-    @if (bilateralCategories().length) {
+    @if (bilateralCategories().length || bilateralLoading()) {
       <app-pr-viz-chart
         [options]="bilateralCategoriesOption()"
         [tableModel]="bilateralCategoriesTable()"
         [chartTitle]="'W3/Bilateral results by indicator category'"
         [height]="bilateralCategoriesHeight()"
+        [loading]="bilateralLoading()"
         (chartClick)="onBilateralCategoriesClick($event)" />
     } @else {
       <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">
@@ -587,7 +590,7 @@
       </div>
     </div>
 
-    @if (bilateralHeatmap()?.rows?.length) {
+    @if (bilateralHeatmap()?.rows?.length || bilateralLoading()) {
       <span class="mb-[16px] text-[13px] font-normal text-[var(--pr-text-muted)]">
         Bilateral results in review (Submitted · In QA · Approved)
       </span>
@@ -601,6 +604,7 @@
         [tableModel]="bilateralHeatmapTable()"
         [chartTitle]="'W3/Bilateral results by center and category'"
         height="240px"
+        [loading]="bilateralLoading()"
         (chartClick)="onBilateralHeatmapClick($event)" />
     } @else {
       <p class="m-0 text-[14px] font-normal text-[var(--pr-text-muted)]">No bilateral results in review yet.</p>

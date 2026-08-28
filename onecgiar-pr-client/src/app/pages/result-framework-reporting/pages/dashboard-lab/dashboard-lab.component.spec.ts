@@ -11,6 +11,7 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 import { SPProgress, Status } from '../../../../shared/interfaces/SP-progress.interface';
+import { Phases } from '../../../../shared/interfaces/phasesList.interface';
 import { Unit } from '../entity-details/interfaces/entity-details.interface';
 import { ResultToReview } from '../bilateral-results/components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 
@@ -1187,5 +1188,251 @@ describe('DashboardLabComponent — phase filter resolver + loaders (OPF-T-3)', 
     viewSubject.next({ rfrView: 'overview' });
     expect(component.activeSelection()).toBe(34);
     expect(component.effectiveVersionId()).toBe(34);
+  });
+});
+
+/**
+ * FOURTH spec block for `DashboardLabComponent`, scoped to `OPF-T-4`
+ * (`docs/specs/changes/overview-phase-filter/`): the phase selector's option/tag list
+ * (`phaseSelectorOptions`), the DD-3 overlay-effect wiring, and the meter's null-vs-loading
+ * distinction (`latestVersion()` / `loadingMeter()` — the fallthrough fix demanded by T-3's
+ * ADVISORY (1)/(2)/(3)). Same nulled-template convention as the OPF-T-3 block above (this file's
+ * own established pattern — every block here avoids rendering the real ~2.2k-line template, which
+ * pulls in real echarts/`ProgramOverviewComponent`/`ReportingProgramBandComponent` children): tests
+ * read the computed signals and invoke private loaders directly via `(component as any)`, same as
+ * OPF-T-3. Per tasks.md's own "presence-assertion caveat", a DOM-level render of `<app-pr-select>`
+ * would prove presence but not operability anyway — that verification is D4, owned by the HITL
+ * check in OPF-T-5, not by this block's gate.
+ *
+ * REVIEWER FIX (attempt 2, load-bearing): `sp.versions` can NEVER carry more than the ONE
+ * effective-phase row the server pins before querying (`results.service.ts` ~:1818-1823) — a
+ * fixture handing it two versions is a shape the server cannot produce (inverted KZ-TCM-1
+ * blindness: it made the WRONG pre-fix implementation pass). `PROGRAM.versions` below now has
+ * exactly one row, matching production. `phaseSelectorOptions` instead sources from
+ * `PhasesService.phases.reporting` (`REPORTING_PHASES` fixture), filtered to the program's own
+ * portfolio — `PORTFOLIO_ID` — with a THIRD, foreign-portfolio phase in the fixture that every
+ * option-list test asserts is excluded (the BUT clause this filter exists to preserve).
+ */
+describe('DashboardLabComponent — phase selector options + meter null/loading states (OPF-T-4)', () => {
+  const PORTFOLIO_ID = 1;
+
+  // The real shape (design.md §5): the shared default payload's `sp.versions` carries only the
+  // Open phase's own row. Non-zero total/statuses so a wrong implementation that falls through to
+  // it under an explicit CLOSED-phase (34) selection is caught by test (e).
+  const PROGRAM: SPProgress = {
+    initiativeId: 40,
+    initiativeCode: 'SP04',
+    initiativeName: 'Science Program 04',
+    initiativeShortName: 'SP04',
+    portfolioId: PORTFOLIO_ID,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P25',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 11,
+    progress: 0,
+    versions: [{ versionId: 36, phaseName: 'Reporting 2026', phaseYear: 2026, totalResults: 11, statuses: [{ statusId: 5, statusName: 'Submitted', count: 11 }] }]
+  };
+
+  // `PhasesService.phases.reporting` fixture: 2 phases of SP04's own portfolio (34 closed, 36
+  // open — `status` is the server-authoritative Open flag) + 1 phase of a DIFFERENT portfolio
+  // (12, the old P22 2022-2024 cycle) that OPF-R-1's BUT clause says must never appear for SP04.
+  const REPORTING_PHASES: Phases[] = [
+    { id: 34, phase_name: 'Reporting 2025', phase_year: 2025, status: false, obj_portfolio: { id: PORTFOLIO_ID, acronym: 'P25' } } as Phases,
+    { id: 36, phase_name: 'Reporting 2026', phase_year: 2026, status: true, obj_portfolio: { id: PORTFOLIO_ID, acronym: 'P25' } } as Phases,
+    { id: 12, phase_name: 'Reporting 2023', phase_year: 2023, status: false, obj_portfolio: { id: 99, acronym: 'P22' } } as Phases
+  ];
+
+  function apiMock(overrides: Record<string, jest.Mock> = {}) {
+    return {
+      resultsSE: {
+        GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { units: [] } })),
+        GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of({ response: { totalsByType: [] } })),
+        GET_ResultToReview: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_2030Outcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
+        GET_IntermediateOutcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
+        GET_TocResultsByAowId: jest.fn().mockReturnValue(of({ response: { tocResultsOutputs: [], tocResultsOutcomes: [] } })),
+        GET_ScienceProgramsProgress: jest.fn().mockReturnValue(of({ response: { mySciencePrograms: [], otherSciencePrograms: [] } })),
+        ...overrides
+      }
+    };
+  }
+
+  async function createComponent(
+    api: ReturnType<typeof apiMock>,
+    program: SPProgress = PROGRAM,
+    openPhaseId: number | null = 36,
+    phases: Phases[] = REPORTING_PHASES
+  ) {
+    await TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: { mySPsList: signal([]), otherSPsList: signal([program]), otherProjectsList: signal([]) }
+        },
+        { provide: ApiService, useValue: api },
+        {
+          provide: DataControlService,
+          useValue: {
+            focusMode: signal(false),
+            slimNav: signal(false),
+            reportingCurrentPhase: { phaseId: openPhaseId, phaseYear: 2026, phaseName: 'Reporting 2026', portfolioAcronym: 'P25', portfolioId: PORTFOLIO_ID },
+            reportingPhaseVersion: signal(0)
+          }
+        },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+        { provide: ActivatedRoute, useValue: { data: of({ rfrView: 'overview' }), snapshot: { data: { rfrView: 'overview' } } } },
+        // `reportingPhases` (the field this catalogue actually reads) is seeded from
+        // `phasesSE.phases.reporting` at CONSTRUCTION time (a field initializer) — no `ngOnInit()`
+        // or observable flush needed in these tests.
+        { provide: PhasesService, useValue: { phases: { reporting: phases } } },
+        {
+          provide: EntityAowService,
+          useValue: { onCloseReportResultModal: () => undefined, entityId: signal(''), getAllDetailsData: jest.fn() }
+        },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    })
+      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(DashboardLabComponent);
+    const component = fixture.componentInstance;
+    component.selectedId.set(program.initiativeId);
+    return component;
+  }
+
+  // (a) OPF-R-1: options come from the program's own PORTFOLIO catalogue (never `sp.versions`,
+  // which the server pins to one row) — at least the 2 phases of SP04's portfolio, sorted
+  // `phase_year` desc, labeled "«phase_name» · «phase_year»" — and the foreign-portfolio phase
+  // (12, a different portfolio) is excluded (OPF-R-1 BUT clause).
+  it('(a) options list every phase of the program\'s own portfolio, newest year first, excluding foreign portfolios', async () => {
+    const component = await createComponent(apiMock());
+    const options = component.phaseSelectorOptions();
+
+    expect(options.length).toBeGreaterThanOrEqual(2);
+    expect(options.map(o => o.versionId)).toEqual([36, 34]);
+    expect(options.map(o => o.label)).toEqual(['Reporting 2026 · 2026', 'Reporting 2025 · 2025']);
+    // The foreign-portfolio phase (id 12, portfolio 99) must never appear for SP04 (portfolio 1).
+    expect(options.some(o => o.versionId === 12)).toBe(false);
+  });
+
+  // (b) OPF-R-1 BUT: the Open marker renders on EXACTLY the row whose OWN `status` flag is true
+  // (server-authoritative) — never on a second row, never on none, and never on the
+  // foreign-portfolio phase (already excluded from the list entirely by test (a)).
+  it('(b) the Open tag is present on exactly the row whose own status flag is true', async () => {
+    const component = await createComponent(apiMock(), PROGRAM, 36);
+    const options = component.phaseSelectorOptions();
+    expect(options.filter(o => o.phaseTagLabel === 'Open').map(o => o.versionId)).toEqual([36]);
+    expect(options.find(o => o.versionId === 34)?.phaseTagLabel).toBe('');
+  });
+
+  // (c) OPF-R-5: a phase with zero reported results renders every card's empty-state input (`[]`)
+  // with no thrown error, and the selector's own option list stays populated (usable) — never the
+  // selector going blank alongside the empty cards. The selector's catalogue (PhasesService) is
+  // independent of the RESULTS payload, so it stays populated even though `sp.versions`' single
+  // row now reports zero.
+  it('(c) an empty-results phase yields empty-state inputs, no thrown errors, selector stays populated', async () => {
+    const EMPTY_PROGRAM: SPProgress = {
+      ...PROGRAM,
+      totalResults: 0,
+      versions: [{ versionId: 34, phaseName: 'Reporting 2025', phaseYear: 2025, totalResults: 0, statuses: [] }]
+    };
+    const component = await createComponent(apiMock(), EMPTY_PROGRAM, null);
+
+    expect(() => component.overviewStatusSegments()).not.toThrow();
+    expect(component.overviewStatusSegments()).toEqual([]);
+    expect(() => component.phaseSelectorOptions()).not.toThrow();
+    // The catalogue (PhasesService) is independent of `sp.versions`/results, so it stays fully
+    // populated — the selector never goes blank just because the CURRENT phase has zero results.
+    expect(component.phaseSelectorOptions().length).toBeGreaterThanOrEqual(2);
+  });
+
+  // Reviewer remediation: the Open marker's FALLBACK path — "fall back to
+  // `reportingCurrentPhase.phaseId` equality only if `status` is unavailable". Exercised with a
+  // phase row whose own `status` flag is missing from the wire (`undefined`, not `false`).
+  it('falls back to reportingCurrentPhase.phaseId equality for the Open tag when a phase row carries no status flag', async () => {
+    const phasesWithMissingStatus: Phases[] = [
+      { id: 34, phase_name: 'Reporting 2025', phase_year: 2025, obj_portfolio: { id: PORTFOLIO_ID, acronym: 'P25' } } as Phases,
+      { id: 36, phase_name: 'Reporting 2026', phase_year: 2026, obj_portfolio: { id: PORTFOLIO_ID, acronym: 'P25' } } as Phases
+    ];
+    const component = await createComponent(apiMock(), PROGRAM, 36, phasesWithMissingStatus);
+
+    const options = component.phaseSelectorOptions();
+    expect(options.filter(o => o.phaseTagLabel === 'Open').map(o => o.versionId)).toEqual([36]);
+  });
+
+  // Reviewer remediation, Issue 2: `selectedPhaseLabel` (bound to `reporting-program-band`'s
+  // `phaseLabelOverride`) must be `''` on the DEFAULT path — the band keeps its own
+  // `cycleYear`/`cyclePhase` tail, byte-identical to before this spec (OPF-R-3) — and must equal
+  // `phaseLabel()` once an EXPLICIT phase is selected on the Overview tab.
+  it("selectedPhaseLabel is '' on the default path and reflects phaseLabel() once a phase is explicitly selected", async () => {
+    const component = await createComponent(apiMock(), PROGRAM, 36);
+
+    expect(component.selectedVersionId()).toBeNull();
+    expect(component.selectedPhaseLabel()).toBe('');
+
+    component.selectedVersionId.set(34);
+    const key = (component as any).summaryCacheKey('SP04', 34);
+    (component as any).cacheMeterOverlay(key, { versionId: 34, phaseName: 'Reporting 2025', phaseYear: 2025, totalResults: 5, statuses: [] });
+
+    expect(component.selectedPhaseLabel()).toBe('Reporting 2025 · 2025');
+  });
+
+  // (d) T-3 ADVISORY (2): a positive wiring test for the DD-3 overlay effect — writing an explicit
+  // selection on Overview must fire `GET_ScienceProgramsProgress(versionId)` through the
+  // component's own constructor effect (not only when a test invokes the private loader directly).
+  it('(d) selecting a phase on Overview fires GET_ScienceProgramsProgress with that versionId', async () => {
+    const getProgress = jest.fn().mockReturnValue(of({ response: { mySciencePrograms: [], otherSciencePrograms: [] } }));
+    const api = apiMock({ GET_ScienceProgramsProgress: getProgress });
+    const component = await createComponent(api);
+    TestBed.tick(); // flush the constructor effects' first run (activeSelection() still null here)
+
+    component.selectedVersionId.set(34);
+    TestBed.tick();
+
+    expect(getProgress).toHaveBeenCalledWith(34);
+  });
+
+  // (e) T-3 ADVISORY (1): a CACHED-NULL meter overlay (fetch resolved to nothing — errored or no
+  // matching row) must render the zeroed state — it must NEVER fall through to the Open phase's
+  // row. Fixture: the Open row (36) carries totalResults 11 and a non-empty `statuses` list; the
+  // explicit selection is the CLOSED phase 34, whose overlay is cached `null`.
+  it("(e) a cached-null meter overlay renders the zeroed state, never the Open row's numbers", async () => {
+    const component = await createComponent(apiMock(), PROGRAM, 36);
+    component.selectedVersionId.set(34);
+
+    const key = (component as any).summaryCacheKey('SP04', 34);
+    (component as any).cacheMeterOverlay(key, null);
+
+    expect(component.latestVersion(component.selected())).toBeNull();
+    expect(component.overviewStatusSegments()).toEqual([]);
+    expect(component.totalResults(component.selected() as SPProgress)).toBe(0);
+    expect(component.loadingMeter()).toBe(false); // settled (cached null), not loading
+
+    // Non-vacuity: the Open phase's row really does carry 11 / a non-empty statuses list — proving
+    // the assertions above are not vacuously true (a fixture where both phases matched could not
+    // tell a leak apart from a fix).
+    const openRow = PROGRAM.versions.find(v => v.versionId === 36);
+    expect(openRow?.totalResults).toBe(11);
+    expect(openRow?.statuses.length).toBeGreaterThan(0);
+  });
+
+  // (e2) The loading-vs-settled distinction requirement 4 asks for: while the overlay fetch is in
+  // flight (key present in the loading set, absent from the resolved map), `loadingMeter()` is
+  // true and `latestVersion()` still returns `null` — the non-leak guarantee in (e) holds BEFORE
+  // the fetch settles too, not only after.
+  it('(e2) a meter overlay fetch in flight is loading, not settled, and still never leaks the Open row', async () => {
+    const pending = new Subject<{ response: { mySciencePrograms: SPProgress[]; otherSciencePrograms: SPProgress[] } }>();
+    const api = apiMock({ GET_ScienceProgramsProgress: jest.fn().mockReturnValue(pending.asObservable()) });
+    const component = await createComponent(api, PROGRAM, 36);
+    component.selectedVersionId.set(34);
+
+    (component as any).loadMeterOverlay('SP04', 34);
+
+    expect(component.loadingMeter()).toBe(true);
+    expect(component.latestVersion(component.selected())).toBeNull();
   });
 });

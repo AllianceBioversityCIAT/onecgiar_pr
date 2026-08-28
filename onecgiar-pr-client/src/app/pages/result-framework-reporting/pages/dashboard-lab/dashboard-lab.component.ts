@@ -276,10 +276,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /**
    * Reporting phases with their start / end dates.
    *
-   * ⚠️ CURRENTLY WRITTEN BUT NEVER READ. Its only consumer was the Overview's Reporting-pace
-   * card, removed by P2-3298. The plumbing (and its ngOnInit subscription) is kept deliberately
-   * so this change stays out of `ngOnInit`/`ngOnDestroy`, which a parallel workflow is editing.
-   * Delete it — and `phasesSE`, `Phases`, `phasesSub` with it — when nothing else claims it.
+   * Claimed by `phaseSelectorOptions` below (`changes/overview-phase-filter` OPF-T-4, Reviewer
+   * remediation): `sp.versions` from the shared default payload carries only ONE row per program
+   * (the server pins `filters.versionId` to the effective phase before querying — `results.service.ts`
+   * ~:1818-1823), so it can never list a program's other phases. This catalogue — already fetched
+   * app-wide by `PhasesService`, filtered here to the selected program's own portfolio — is the
+   * only source that actually has every phase.
    */
   private readonly reportingPhases = signal<Phases[]>(this.phasesSE.phases.reporting ?? []);
 
@@ -976,11 +978,84 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     );
   });
 
-  /** Phase chip taken from the first program's latest version. */
+  /**
+   * Options for the Overview phase selector (`changes/overview-phase-filter` OPF-T-4, OPF-R-1).
+   *
+   * REVIEWER FIX (attempt 2): `sp.versions` can NEVER carry more than the program's single
+   * effective-phase row — the server pins `filters.versionId` to it before querying
+   * (`results.service.ts` ~:1818-1823) — so building options from it renders exactly one row and
+   * no phase can ever be selected in production. The real catalogue is `PhasesService.phases.reporting`
+   * (`reportingPhases()` above), filtered to the SELECTED program's own portfolio
+   * (`sp.portfolioId` vs. each phase's `obj_portfolio.id`) — that filter is what preserves the BUT
+   * clause (a different portfolio's phases, e.g. 2022–2024, never appear). Sorted `phase_year` desc,
+   * labeled "«phase_name» · «phase_year»". `phaseTagLabel`/`phaseTagTone` are read by
+   * `app-pr-select`'s `optionBadgeLabel`/`optionBadgeTone` (a per-option chip): the Open marker is
+   * the phase's own `status` flag (server-authoritative), falling back to `reportingCurrentPhase`
+   * id-equality only on the rare row where `status` itself is missing.
+   */
+  readonly phaseSelectorOptions = computed(() => {
+    const sp = this.selected();
+    if (!sp) return [];
+    const portfolioId = sp.portfolioId;
+    const openPhaseId = this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    return this.reportingPhases()
+      .filter(p => p?.obj_portfolio?.id != null && Number(p.obj_portfolio.id) === Number(portfolioId))
+      .slice()
+      .sort((a, b) => (b.phase_year ?? 0) - (a.phase_year ?? 0))
+      .map(p => {
+        const isOpen = typeof p.status === 'boolean' ? p.status : Number(p.id) === Number(openPhaseId);
+        return {
+          versionId: p.id,
+          label: `${p.phase_name} · ${p.phase_year}`,
+          phaseTagLabel: isOpen ? 'Open' : '',
+          phaseTagTone: 'open'
+        };
+      });
+  });
+
+  /** Wires the Overview phase selector's `(selectOptionEvent)` to `selectedVersionId` (design.md DD-1). */
+  onPhaseOptionSelected(option: { versionId: number } | null): void {
+    if (option?.versionId != null) this.selectedVersionId.set(option.versionId);
+  }
+
+  /**
+   * True only while the CURRENT key's meter overlay fetch is in flight (design.md §8 States,
+   * `changes/overview-phase-filter` OPF-T-4): distinguishes "not fetched yet" (this signal true)
+   * from a settled `null` (fetch errored / no matching row — this signal is false once the entry
+   * exists in the map, whatever it resolved to; `latestVersion()` below already renders the
+   * meter's zeroed state for that case). `false` on the default path — the loading affordance only
+   * ever applies to an EXPLICIT phase selection (`activeSelection()`), same gate as the overlay
+   * cache itself.
+   */
+  readonly loadingMeter = computed(() => {
+    const sp = this.selected();
+    const versionId = this.activeSelection();
+    if (!sp?.initiativeCode || versionId === null) return false;
+    const key = this.summaryCacheKey(sp.initiativeCode, versionId);
+    return this.loadingMeterKeys().has(key) && !this.meterOverlayByKey().has(key);
+  });
+
+  /**
+   * Phase chip for the SELECTED program's effective phase (OPF-T-4 fix, `changes/overview-phase-filter`
+   * ADVISORY (3)) — this used to key off `allPrograms()[0]`, which showed the wrong program's phase
+   * the moment a viewer picked a program other than the first one in the list. `latestVersion()`
+   * already resolves through `activeSelection()`/`effectiveVersionId()`'s same chain, so this stays
+   * in lockstep with an explicit phase selection on the Overview tab.
+   */
   readonly phaseLabel = computed(() => {
-    const v = this.latestVersion(this.allPrograms()[0]);
+    const v = this.latestVersion(this.selected());
     return v ? `${v.phaseName} · ${v.phaseYear}` : '';
   });
+
+  /**
+   * `reporting-program-band`'s `phaseLabelOverride` input (Reviewer fix, attempt 2): bound ONLY
+   * while an EXPLICIT phase is selected on the Overview tab (`activeSelection() !== null`) —
+   * unconditionally binding `phaseLabel()` regressed the Reporting tab's eyebrow (out of scope,
+   * `activeSelection()` is null-gated there so this still resolves `''`) AND the Overview DEFAULT
+   * path (`· Reporting cycle 2026 · P25` → `· Reporting 2026 · 2026`, violating OPF-R-3's
+   * byte-identical default). `''` tells the band to keep its own `cycleYear`/`cyclePhase` tail.
+   */
+  readonly selectedPhaseLabel = computed(() => (this.activeSelection() === null ? '' : this.phaseLabel()));
 
   /** Ordered, colored status breakdown for the selected program's latest version. */
   readonly statusRows = computed<StatusRow[]>(() => {
@@ -1134,6 +1209,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly bilateralPrimaryRows = computed(() =>
     this.bilateralRows().filter(r => String(r.initiative_role_id ?? '') === BILATERAL_PRIMARY_ROLE_ID)
   );
+
+  /**
+   * True only while the CURRENT key's bilateral rows fetch is in flight (design.md §8 States,
+   * `changes/overview-phase-filter` OPF-T-4 remediation) — same shape as `loadingSummaries` above,
+   * reused for the W3/Bilateral cards' `bilateralLoading` input on `app-program-overview`.
+   */
+  readonly loadingBilateral = computed(() => {
+    const versionId = this.effectiveVersionId();
+    const sp = this.selected();
+    const code = sp?.initiativeCode;
+    if (!code) return false;
+    const key = this.summaryCacheKey(code, versionId);
+    return this.loadingBilateralKeys().has(key) && !this.bilateralRowsByKey().has(key);
+  });
 
   /** Centers with reported W3/bilateral results, ranked descending by count with alphabetical tie-breaking. */
   readonly overviewBilateralCenters = computed<OverviewCenterBar[]>(() => {
@@ -2752,15 +2841,19 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   latestVersion(sp: SPProgress | null | undefined): Version | null {
     if (!sp) return null;
-    // An EXPLICIT phase selection is served from the overlay above once it arrives; while it is
-    // still loading (or the request errored) this falls through to the resolution below, same as
-    // before this spec — the loading/empty states are owned by the selector UI task, not here.
-    // `activeSelection()` (not raw `selectedVersionId()`) so this overlay is honored ONLY on the
-    // Overview tab — same view-gate as `effectiveVersionId`/`tocVersionForKey` (design.md DD-1).
+    // An EXPLICIT phase selection (Overview only, `activeSelection()`) is served EXCLUSIVELY from
+    // the overlay cache below — it must NEVER fall through to the resolution further down. Falling
+    // through would silently serve the OPEN phase's row under a CLOSED phase selection, which is
+    // exactly the mixed-phase page OPF-R-2 forbids (e.g. Reporting 2026 numbers next to Reporting
+    // 2025 cards). `meterOverlayByKey` holds `undefined` while the fetch has not landed yet
+    // (`loadingMeter()` distinguishes that from a settled `null`) and `null` once it has resolved to
+    // nothing (fetch error / no matching row) — both cases return `null` HERE, so the meter renders
+    // its zeroed/empty state either way (OPF-R-5), never someone else's numbers.
+    // `activeSelection()` (not raw `selectedVersionId()`) so this is honored ONLY on the Overview
+    // tab — same view-gate as `effectiveVersionId`/`tocVersionForKey` (design.md DD-1).
     const explicitVersionId = this.activeSelection();
     if (explicitVersionId !== null) {
-      const overlay = this.meterOverlayByKey().get(this.summaryCacheKey(sp.initiativeCode, explicitVersionId));
-      if (overlay) return overlay;
+      return this.meterOverlayByKey().get(this.summaryCacheKey(sp.initiativeCode, explicitVersionId)) ?? null;
     }
     if (!sp.versions?.length) return null;
     const currentPhaseId = this.dataControlSE?.reportingCurrentPhase?.phaseId;
@@ -2777,7 +2870,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   totalResults(sp: SPProgress): number {
-    return this.latestVersion(sp)?.totalResults ?? sp.totalResults ?? 0;
+    const version = this.latestVersion(sp);
+    if (version) return version.totalResults;
+    // No explicit phase selection → `sp.totalResults` is the default/active-phase number (unchanged
+    // pre-spec fallback). An EXPLICIT selection with no resolved version (overlay still loading, or
+    // settled `null`) must NOT borrow it — `sp.totalResults` is the OPEN phase's number, and this
+    // "results this phase" figure would otherwise leak it under a closed-phase selection, the same
+    // mixed-phase class `latestVersion()` above closes for the meter.
+    return this.activeSelection() === null ? (sp.totalResults ?? 0) : 0;
   }
 
   isActive(sp: SPProgress): boolean {

@@ -140,10 +140,22 @@ export class ProgramOverviewComponent {
   readonly bilateralHeatmap = input<HeatmapModel | null>(null);
   /**
    * `OVW-R-6` (SHOULD): wrapper loading skeleton while the parent's source signal is still
-   * loading. Bound only to `w12Heatmap` — the parent has no equivalent bilateral-loading signal
-   * today (design §13 open gap), so `bilateralHeatmap`'s card has no loading input to bind.
+   * loading.
    */
   readonly w12HeatmapLoading = input<boolean>(false);
+  /**
+   * `changes/overview-phase-filter` OPF-T-4 (Leader remediation, OPF-R-2 "AND IT MUST show a
+   * loading state on each card"): wrapper loading skeleton for the "Reporting status" (W1/W2
+   * meter) card, while an explicit phase selection's meter overlay fetch is in flight. Same shape
+   * as `w12HeatmapLoading` above.
+   */
+  readonly meterLoading = input<boolean>(false);
+  /**
+   * Same contract as `meterLoading`, for the W3/Bilateral cards (reporting status donut,
+   * categories radar, and center × category heatmap) — closes the gap `w12HeatmapLoading`'s
+   * docstring used to record here ("the parent has no equivalent bilateral-loading signal today").
+   */
+  readonly bilateralLoading = input<boolean>(false);
 
   /**
    * Theory-of-Change map model (`changes/overview-toc-map`, TCM-T-3) — built by the parent's
