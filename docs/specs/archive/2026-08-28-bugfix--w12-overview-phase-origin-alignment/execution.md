@@ -52,3 +52,23 @@
 ### Hotfix under W12-T-2 scope — summaries cache reactivity (in flight, attempt 2)
 - Real, separate gap found while chasing the empty card (Reviewer's attempt-1 advisory): nothing in `dashboard-lab` reads `reportingPhaseVersion()`, so a phase landing/switching after the load could orphan the versioned cache key. Attempt 1: dedicated `effect()` + `refreshSelectedSummaries()` (not folded into the selection effect — that one resets filter state); RED/GREEN recorded. Reviewer FAIL (2 items): computeds must also read the signal (cache-HIT phase switch served memoized old matrix — W12-R-2 BUT clause), and the effect's signal read had zero test coverage (mocks lacked `reportingPhaseVersion`). Attempt 2 in progress.
 - **ADVISORY (recorded):** `loadBilateralRows` has the identical structural gap (agy's W3 code, effect doesn't read `reportingPhaseVersion()`) → own quick for the owner.
+
+### Hotfix attempt 2 — landed (2026-08-28)
+
+- Both computeds read `reportingPhaseVersion()` (cache-HIT phase switch fixed — W12-R-2 BUT clause); effect coverage added (mocks gain the signal; bump-and-flush test asserts the corrected refetch). 23/23 scoped tests, lint clean.
+- **Review waiver (owner):** the Implementer's session died at completion (token limit); the Leader verified the leftovers scoped-green and landed them at the owner's direction ("finish commit and merge"). The attempt-2 diff did NOT pass an independent Reviewer — recorded as an owner-approved waiver, offered a posthumous review, owner chose archive.
+
+### SQL-comment placeholder hotfix (Leader inline, 2026-08-28)
+
+- Live 500 root-caused by an authenticated probe: a `?` inside the SQL comment in `getIndicatorContributionSummaryByProgram` was consumed by mysql2 as a 3rd positional placeholder (comments are not skipped) → `QueryFailedError`; the client's error handler cached `[]` → empty card. Unit mocks of `query` could not see it.
+- Fix: `?` removed from the comment; regression test added (SQL `?` count === params length; would have been red pre-fix). **Leader-inline exception to the no-code rule**, owner-directed ("ven soluciona esto y haces el commit") — recorded.
+- **Live verification:** endpoint HTTP 200 → SP04 `{editing: 10, submitted: 1, total: 11}` — equals the Results tab. Original 24/23 fully explained by the DB breakdown (recorded above).
+
+## W12-T-3 — CLOSURE
+
+- **W12-AC-4:** endpoint-level verification recorded (SP04: meter population = matrix = Results tab = 11 via authenticated probe + DB); owner validated the fixes landing in dev via CI (visual re-check available to the owner any time — the two documented residuals [Discontinued in meter; result_level join asymmetry] are the only legitimate divergence sources).
+- All tasks `[x]`. Budget 3 tasks/~220 LOC/1 round → actual 3 tasks + 3 hotfixes (~420 LOC), 2 rework rounds (T-2, T-3) + 1 waived review. Pushed to `qa-development-2026` and `performance-refactor` @ `dd2d2c282`.
+
+## 3. Summary
+
+Complete: W12-T-1 ✅ (attempt 1) · W12-T-2 ✅ (attempt 2) · W12-T-3 ✅ (attempt 2) + 3 hotfixes (phase-reactivity ×2, SQL-comment placeholder). SP04 Overview W1/W2 = 11 = Results tab, verified live. Ready for /akili-archive.

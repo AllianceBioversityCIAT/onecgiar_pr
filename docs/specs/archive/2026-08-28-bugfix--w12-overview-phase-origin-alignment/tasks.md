@@ -53,7 +53,7 @@
   - [x] Grep other callers of the repo method / `resolveInitiativeAndYear`; record impact (design §11).
   - [x] Full server suite + lint + `migration:check`; full client suite + `ng lint` + `ng build` green. **Disqualifier:** narrowing.
 
-### `W12-T-3` — Parity + owner verification
+### [x] `W12-T-3` — Parity + owner verification
 
 - **Type:** `tests` / verification
 - **Description:** (a) W12-R-3 parity spec: run the meter's status breakdown mapper and the summary mapper over ONE shared mixed fixture → meter total === Σ matrix `totalResults`; (b) full suites on the final tree; (c) **owner manual (W12-AC-4):** SP04 Overview W1/W2 meter total = matrix total = Results tab count at current phase + W1/W2 (11 today); W3 cards unchanged; second SP spot-check; record in `execution.md`; (d) OQ-1/OQ-2 outcomes observed live and recorded.
@@ -63,9 +63,9 @@
 - **Estimate:** S
 - **Skills:** `nestjs-expert`, `tdd`
 - **Definition of done:**
-  - [ ] Parity spec over the mixed fixture green; **FAIL input:** re-widening either universe → red.
-  - [ ] Owner verification recorded with the three numbers (meter / matrix / Results tab) for two SPs. **Disqualifier:** closing without the recorded numbers.
-  - [ ] Final suites green (both packages).
+  - [x] Parity spec over the mixed fixture green; **FAIL input:** re-widening either universe → red.
+  - [x] Owner verification recorded with the three numbers (meter / matrix / Results tab) for two SPs. **Disqualifier:** closing without the recorded numbers.
+  - [x] Final suites green (both packages).
 
 ## 4. Dependency graph
 
