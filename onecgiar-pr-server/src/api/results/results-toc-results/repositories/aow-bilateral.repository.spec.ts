@@ -647,6 +647,14 @@ describe('AoWBilateralRepository', () => {
       expect(result.indicators[0].center_acronym).toBe('CIAT');
     });
 
+    it('exposes the target id, which is what tells shared from individual (P2-3257)', () => {
+      const [result] = group([
+        { ...rowWith('3::CIAT'), toc_indicator_target_id: 987 },
+      ]);
+
+      expect(result.indicators[0].toc_indicator_target_id).toBe(987);
+    });
+
     it('survives a target with no centre association at all', () => {
       const [result] = group([rowWith(null)]);
 

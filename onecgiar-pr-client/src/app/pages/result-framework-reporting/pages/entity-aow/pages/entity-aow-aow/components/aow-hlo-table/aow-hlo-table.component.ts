@@ -176,14 +176,14 @@ export class AowHloTableComponent {
     return 'Not started';
   }
 
-  openReportResultModal(item: any, currentItemId: string | null, centerId?: number | null) {
+  openReportResultModal(item: any, currentItemId: string | null, targetId?: number | null) {
     const selectedCurrentItem = currentItemId
       ? {
           ...item,
           indicators: item.indicators.filter(
             (indicator: any) =>
               indicator.indicator_id === currentItemId &&
-              (centerId == null || indicator.center_id === centerId)
+              (targetId == null || indicator.toc_indicator_target_id === targetId)
           )
         }
       : {
@@ -195,13 +195,13 @@ export class AowHloTableComponent {
     this.entityAowService.currentResultToReport.set(selectedCurrentItem);
   }
 
-  openViewResultDrawer(item: any, currentItemId: string, centerId?: number | null) {
+  openViewResultDrawer(item: any, currentItemId: string, targetId?: number | null) {
     const selectedCurrentItem = {
       ...item,
       indicators: item.indicators.filter(
         (indicator: any) =>
           indicator.indicator_id === currentItemId &&
-          (centerId == null || indicator.center_id === centerId)
+          (targetId == null || indicator.toc_indicator_target_id === targetId)
       )
     };
 
@@ -228,6 +228,14 @@ export class AowHloTableComponent {
       return indicator.center_id;
     }
 
+    // P2-3257: the twin of the server-side guard in `assignIndicatorCenterContext`. A target held
+    // by several centres arrives with `center_id: null` on purpose, and the year+value fallback
+    // below cannot tell those centres apart — it would preselect an arbitrary one in the Target
+    // details drawer. Null means "no centre preselected", which is correct for a shared target.
+    if (Array.isArray(indicator?.centers) && indicator.centers.length > 1) {
+      return null;
+    }
+
     const reportingYear = String(this.entityAowService.reportingPhaseYear ?? '').trim();
     const targetValue = indicator?.target_value_sum ?? indicator?.target_value;
 
@@ -249,10 +257,17 @@ export class AowHloTableComponent {
     return matchedCenter?.center_id ?? null;
   }
 
-  hasTargets(item: any, indicatorId: string, centerId?: number | null): boolean {
+  /**
+   * P2-3257. Narrowed by the TARGET, not the centre. Since P2-3255 one target is one row, so a
+   * shared target carries `center_id: null` and this filter used to degrade to "every row of this
+   * indicator" — pulling unrelated targets into the modal. The target id is the row's identity now
+   * and narrows correctly in both scenarios: one row for a shared target, one row per centre when
+   * each has its own.
+   */
+  hasTargets(item: any, indicatorId: string, targetId?: number | null): boolean {
     const indicator = item.indicators?.find(
       (ind: any) =>
-        ind.indicator_id === indicatorId && (centerId == null || ind.center_id === centerId)
+        ind.indicator_id === indicatorId && (targetId == null || ind.toc_indicator_target_id === targetId)
     );
     return indicator?.targets_by_center?.centers?.length > 0;
   }

@@ -1029,4 +1029,79 @@ describe('AowHloTableComponent', () => {
       expect(component.hasTargets(mockItem, 'indicator-1')).toBe(false);
     });
   });
+
+  /**
+   * P2-3257. Since P2-3255 a target shared by several centres is ONE row carrying `centers[]`, with
+   * `center_id` deliberately null. Two things had to follow from that: the row is narrowed by the
+   * target's id rather than the centre's, and the Target-details centre must not be guessed.
+   */
+  describe('shared vs individual targets (P2-3257)', () => {
+    const sharedRow = {
+      indicator_id: 'IND-1',
+      toc_indicator_target_id: 900,
+      center_id: null,
+      centers: [
+        { center_id: 2, center_acronym: 'BIOVERSITY' },
+        { center_id: 3, center_acronym: 'CIAT' },
+      ],
+      targets_by_center: {
+        centers: [
+          { center_id: 2, targets: [{ year: '2026', target_value: '1' }] },
+          { center_id: 3, targets: [{ year: '2026', target_value: '1' }] },
+        ],
+      },
+      target_value_sum: 1,
+    };
+    const ownRow = {
+      indicator_id: 'IND-1',
+      toc_indicator_target_id: 901,
+      center_id: 15,
+      centers: [{ center_id: 15, center_acronym: 'IWMI' }],
+      target_value_sum: 4,
+    };
+    const item = { indicators: [sharedRow, ownRow] };
+
+    it('narrows to the shared target, not to every row of the indicator', () => {
+      component.openViewResultDrawer(item, 'IND-1', 900);
+
+      const passed = (component as any).entityAowService.currentResultToView();
+      expect(passed.indicators).toEqual([sharedRow]);
+    });
+
+    it('narrows the Report-result modal to the clicked target too', () => {
+      // Found by mutation: only the View drawer was covered, so reverting this method to filter by
+      // centre passed unnoticed.
+      component.openReportResultModal(item, 'IND-1', 900);
+
+      const passed = (component as any).entityAowService.currentResultToReport();
+      expect(passed.indicators).toEqual([sharedRow]);
+    });
+
+    it('narrows to the individual target when that row is the one clicked', () => {
+      component.openViewResultDrawer(item, 'IND-1', 901);
+
+      const passed = (component as any).entityAowService.currentResultToView();
+      expect(passed.indicators).toEqual([ownRow]);
+    });
+
+    it('hasTargets answers per target, not per indicator', () => {
+      const withTargets = { indicators: [{ ...sharedRow }, { ...ownRow, targets_by_center: null }] };
+
+      expect(component.hasTargets(withTargets, 'IND-1', 900)).toBe(true);
+      expect(component.hasTargets(withTargets, 'IND-1', 901)).toBe(false);
+    });
+
+    it('does not guess a centre for the Target details drawer when the target is shared', () => {
+      const resolved = (component as any).resolveTargetDetailsCenterId(sharedRow);
+
+      expect(resolved).toBeNull();
+    });
+
+    it('still resolves the centre when one centre holds the target', () => {
+      const resolved = (component as any).resolveTargetDetailsCenterId(ownRow);
+
+      expect(resolved).toBe(15);
+    });
+  });
+
 });

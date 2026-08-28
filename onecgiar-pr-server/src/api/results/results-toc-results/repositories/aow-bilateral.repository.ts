@@ -31,6 +31,8 @@ interface TocResultRow {
   center_acronym?: string | null;
   /** P2-3255: `id::acronym` pairs joined by `||`, one target = one row. Null when unassociated. */
   centers_concat?: string | null;
+  /** P2-3257: the target's own id — what tells a shared target from individual ones. */
+  toc_indicator_target_id?: number | null;
 }
 
 export interface TocResultResponse {
@@ -70,6 +72,12 @@ export interface TocResultResponse {
     centers: Array<{ center_id: number; center_acronym: string | null }>;
     center_id?: number | null;
     center_acronym?: string | null;
+    /**
+     * P2-3257: identity of the target this row represents. Two centres carrying the SAME id share
+     * one target; different ids mean each centre has its own. Without it the client cannot tell
+     * the two apart, which is the whole ask of that ticket.
+     */
+    toc_indicator_target_id?: number | null;
   }>;
 }
 
@@ -591,6 +599,7 @@ export class AoWBilateralRepository {
           result_level_id: row.result_level_id ?? null,
           result_type_id: row.result_type_id ?? null,
           result_type_name: row.result_type_name ?? null,
+          toc_indicator_target_id: row.toc_indicator_target_id ?? null,
           ...this.centreFieldsOf(row),
         };
 
