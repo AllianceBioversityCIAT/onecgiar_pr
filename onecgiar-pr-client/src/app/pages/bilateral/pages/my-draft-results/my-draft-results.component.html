@@ -5,16 +5,46 @@
     <h2 class="mdr-title">My AI Draft Results</h2>
     <p class="mdr-subtitle">
       @if (bilateralAiService.isDraftListLoaded()) {
-        {{ hasDrafts ? drafts.length + ' draft' + (drafts.length !== 1 ? 's' : '') + ' ready for review' : 'No drafts yet' }}
+        {{ subtitle() }}
       } @else {
         Loading drafts...
       }
     </p>
   </div>
 
-  @if (hasDrafts) {
+  <!-- P2-3319 — filter by project. Only the projects that actually appear in this centre's drafts
+       are offered, so picking one can never empty the page by accident. -->
+  @if (bilateralAiService.isDraftListLoaded() && hasAnyDrafts()) {
+    <div class="mb-[20px] flex flex-wrap items-center gap-[12px]" role="search" aria-label="Draft filters">
+      <div class="mdr-filter w-[260px] flex-none" aria-label="Filter by project">
+        <app-pr-filter-select
+          [options]="projectFilterOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Project"
+          [ngModel]="selectValue(filter.selectedProjectId())"
+          (changed)="onProjectFilterChange($event)"></app-pr-filter-select>
+      </div>
+
+      @if (filter.hasActiveFilters()) {
+        <span class="pr-chip mdr-filter-chip">
+          Project: {{ selectedProjectLabel() }}
+          <button
+            type="button"
+            class="pr-chip-remove material-icons-round border-0 bg-transparent p-0"
+            aria-label="Clear project filter"
+            (click)="clearFilters()"
+          >
+            close
+          </button>
+        </span>
+      }
+    </div>
+  }
+
+  @if (hasDrafts()) {
     <div class="mdr-list">
-      @for (draft of drafts; track draft.id) {
+      @for (draft of drafts(); track draft.id) {
         <div class="mdr-card">
           <div class="mdr-card-main">
             <div class="mdr-card-header">
@@ -105,6 +135,18 @@
           </div>
         </div>
       }
+    </div>
+  } @else if (isFilteredEmpty()) {
+    <div class="mdr-empty mdr-empty--filtered">
+      <div class="mdr-empty-icon">
+        <i class="material-icons-round">filter_alt_off</i>
+      </div>
+      <h3 class="mdr-empty-title">No drafts for this project</h3>
+      <p class="mdr-empty-text">None of your drafts belong to {{ selectedProjectLabel() }}. Clear the filter to see them all again.</p>
+      <button type="button" class="mdr-empty-cta cursor-pointer border-0" (click)="clearFilters()">
+        <i class="material-icons-round">filter_alt_off</i>
+        Clear filter
+      </button>
     </div>
   } @else if (bilateralAiService.isDraftListLoaded()) {
     <div class="mdr-empty">
