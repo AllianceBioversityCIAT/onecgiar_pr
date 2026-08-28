@@ -184,13 +184,34 @@ export class ResultsFrameworkReportingController {
     required: true,
     description: 'Program identifier (e.g. SP01).',
   })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional phase/version identifier. Defaults to the active reporting phase when absent.',
+  })
   @ApiOkResponse({
     description:
       'Indicator contribution summary retrieved for the requested program.',
   })
-  getProgramIndicatorContributionSummary(@Query('program') program: string) {
+  getProgramIndicatorContributionSummary(
+    @Query('program') program: string,
+    @Query('versionId') versionId?: string,
+  ) {
+    const parsedVersion =
+      versionId !== undefined && versionId !== null
+        ? Number(versionId)
+        : undefined;
+
+    const normalizedVersion =
+      typeof parsedVersion === 'number' && Number.isFinite(parsedVersion)
+        ? parsedVersion
+        : undefined;
+
     return this.resultsFrameworkReportingService.getProgramIndicatorContributionSummary(
       program,
+      normalizedVersion,
     );
   }
 

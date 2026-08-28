@@ -470,9 +470,12 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
   it('W1/W2 heatmap: keeps the one row with a nonzero cell, maps cells to [editing,qualityAssessed,submitted,others], and makes the Other cell non-navigable', async () => {
     const component = await createComponent();
     component.summariesByCode.set(
+      // W12-R-2: `summariesByCode` is now keyed by `code::versionId` (this fixture's PROGRAM has
+      // no versions and the DataControlService mock has no `reportingCurrentPhase`, so the
+      // resolved key is `SP02::default` — see `summaryCacheKey`/`groupedSummaries`).
       new Map([
         [
-          'SP02',
+          'SP02::default',
           [
             {
               resultTypeId: 6,
@@ -514,7 +517,8 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
   it('W1/W2 heatmap: returns an empty-rows model (not null) when nothing survives the all-zero filter', async () => {
     const component = await createComponent();
     component.summariesByCode.set(
-      new Map([['SP02', [{ resultTypeId: 7, resultTypeName: 'Innovation development', editing: 0, qualityAssessed: 0, submitted: 0, others: 0, totalResults: 0 }]]])
+      // Same `code::default` key as above — see note there.
+      new Map([['SP02::default', [{ resultTypeId: 7, resultTypeName: 'Innovation development', editing: 0, qualityAssessed: 0, submitted: 0, others: 0, totalResults: 0 }]]])
     );
 
     const heatmap = component.overviewW12Heatmap();
@@ -582,5 +586,163 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
 
     expect(heatmap.rows.length).toBe(2);
     expect(heatmap.shownOf).toBeUndefined();
+  });
+});
+
+/**
+ * SECOND spec block for `DashboardLabComponent`, scoped to `W12-T-2` (`docs/specs/bugfix/
+ * w12-overview-phase-origin-alignment`): `loadSummaries()`/`summariesByCode` must resolve
+ * `versionId` exactly like `loadBilateralRows` (W12-R-4) and key the cache by `code + version`
+ * (W12-R-2 §"Cache is phase-keyed", W12-DD-5) — a code-only key would serve a stale matrix
+ * across a phase switch. Uses its own `createComponent()` (independent of the RES-T-2 block
+ * above) because these tests need a real `ApiService.resultsSE.GET_IndicatorContributionSummary`
+ * mock and a `DataControlService.reportingCurrentPhase` fallback, neither of which the RES-T-2
+ * helper wires up. `loadSummaries` is private — invoked via `(component as any)` — but the cache
+ * it writes (`summariesByCode`) is a public signal, so assertions read the real public state.
+ */
+describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12-R-2 / W12-R-4)', () => {
+  const PROGRAM: SPProgress = {
+    initiativeId: 4,
+    initiativeCode: 'SP04',
+    initiativeName: 'Science Program 04',
+    initiativeShortName: 'SP04',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P25',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: [
+      { versionId: 10, phaseName: 'Reporting 2025', phaseYear: 2025, totalResults: 0, statuses: [] },
+      { versionId: 20, phaseName: 'Reporting 2026', phaseYear: 2026, totalResults: 0, statuses: [] }
+    ]
+  };
+
+  async function createComponent(getIndicatorContributionSummary: jest.Mock) {
+    await TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: signal([]),
+            otherSPsList: signal([PROGRAM]),
+            otherProjectsList: signal([])
+          }
+        },
+        {
+          provide: ApiService,
+          useValue: {
+            resultsSE: { GET_IndicatorContributionSummary: getIndicatorContributionSummary }
+          }
+        },
+        {
+          provide: DataControlService,
+          useValue: {
+            focusMode: signal(false),
+            slimNav: signal(false),
+            reportingCurrentPhase: { phaseId: null, phaseYear: null, phaseName: null, portfolioAcronym: null, portfolioId: null }
+          }
+        },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: {} },
+        { provide: ActivatedRoute, useValue: { data: of({}), snapshot: { data: {} } } },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined } },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    })
+      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(DashboardLabComponent);
+    const component = fixture.componentInstance;
+    component.selectedId.set(PROGRAM.initiativeId);
+    return component;
+  }
+
+  it('passes the resolved versionId through to GET_IndicatorContributionSummary', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [] } }));
+    const component = await createComponent(getSummary);
+
+    (component as any).loadSummaries('SP04', 10);
+
+    expect(getSummary).toHaveBeenCalledWith('SP04', 10);
+  });
+
+  it('caches the summary under a version-qualified key, not the code alone', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [{ resultTypeId: 1, resultTypeName: 'Outcome' }] } }));
+    const component = await createComponent(getSummary);
+
+    (component as any).loadSummaries('SP04', 10);
+
+    const cache = component.summariesByCode();
+    expect(cache.has('SP04::10')).toBe(true);
+    expect(cache.has('SP04')).toBe(false);
+  });
+
+  // FAIL input this regression closes: a cache keyed by `code` alone would already have an
+  // entry for 'SP04' after the V1 fetch above and would short-circuit the V2 fetch below,
+  // serving V1's matrix under V2 (the exact bug W12-R-2's "Cache is phase-keyed" scenario names).
+  it('refetches on a phase switch (V1 cached does not block a V2 fetch)', async () => {
+    const getSummary = jest
+      .fn()
+      .mockReturnValueOnce(of({ response: { totalsByType: [{ resultTypeId: 1, resultTypeName: 'V1 type' }] } }))
+      .mockReturnValueOnce(of({ response: { totalsByType: [{ resultTypeId: 2, resultTypeName: 'V2 type' }] } }));
+    const component = await createComponent(getSummary);
+
+    (component as any).loadSummaries('SP04', 10);
+    (component as any).loadSummaries('SP04', 20);
+
+    expect(getSummary).toHaveBeenCalledTimes(2);
+    expect(getSummary).toHaveBeenNthCalledWith(1, 'SP04', 10);
+    expect(getSummary).toHaveBeenNthCalledWith(2, 'SP04', 20);
+
+    const cache = component.summariesByCode();
+    expect(cache.get('SP04::10')).toEqual([{ resultTypeId: 1, resultTypeName: 'V1 type' }]);
+    expect(cache.get('SP04::20')).toEqual([{ resultTypeId: 2, resultTypeName: 'V2 type' }]);
+  });
+
+  it('does not refetch the same code + version pair (cache hit)', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [] } }));
+    const component = await createComponent(getSummary);
+
+    (component as any).loadSummaries('SP04', 10);
+    (component as any).loadSummaries('SP04', 10);
+
+    expect(getSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it('groupedSummaries reads the version-qualified key for the selected program', async () => {
+    const getSummary = jest.fn().mockReturnValue(of({ response: { totalsByType: [] } }));
+    const component = await createComponent(getSummary);
+
+    // No current-phase hint is stubbed, so `latestVersion()` falls back to the highest
+    // `phaseYear` in the fixture — versionId 20 (phaseYear 2026) — same resolution
+    // `loadSummaries` itself would use; the key below MUST match it, not the code alone.
+    const resolvedVersionId = component.latestVersion(component.selected())?.versionId;
+    expect(resolvedVersionId).toBe(20);
+
+    component.summariesByCode.set(
+      new Map([
+        [
+          `SP04::${resolvedVersionId}`,
+          [
+            {
+              resultTypeId: 1,
+              resultTypeName: 'Knowledge product',
+              editing: 1,
+              submitted: 0,
+              qualityAssessed: 0,
+              others: 0,
+              totalResults: 1
+            } as any
+          ]
+        ]
+      ])
+    );
+
+    expect(component.groupedSummaries().outputs.length).toBe(1);
   });
 });

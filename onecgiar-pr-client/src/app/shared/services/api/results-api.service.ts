@@ -1425,8 +1425,12 @@ export class ResultsApiService {
     );
   }
 
-  GET_IndicatorContributionSummary(entityId: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=${entityId}`);
+  GET_IndicatorContributionSummary(entityId: string, versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=${entityId}`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `&versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<any>(url);
   }
 
   GET_2030Outcomes(entityId: string) {

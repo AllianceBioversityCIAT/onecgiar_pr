@@ -353,15 +353,26 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   });
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
 
-  /** Indicator categories cached by program code + active Outputs/Outcomes tab. */
+  /** Indicator categories cached by program code + version (W12-R-2: phase-keyed, not code-only). */
   readonly summariesByCode = signal<Map<string, IndicatorCategory[]>>(new Map());
   private readonly loadingSummaryCodes = signal<Set<string>>(new Set());
   readonly categoryTab = signal<'outputs' | 'outcomes'>('outputs');
 
+  /**
+   * Single key builder for `summariesByCode` (W12-R-2 §12 DD-5): every reader/writer of the
+   * map goes through this, so a phase switch (different `versionId`) never serves a stale
+   * cached matrix under the same program code.
+   */
+  private summaryCacheKey(code: string, versionId: number | null | undefined): string {
+    return `${code}::${versionId ?? 'default'}`;
+  }
+
   /** Selected program's categories, split into outputs / outcomes. */
   readonly groupedSummaries = computed(() => {
-    const code = this.selected()?.initiativeCode;
-    const all = (code ? this.summariesByCode().get(code) : []) ?? [];
+    const sp = this.selected();
+    const code = sp?.initiativeCode;
+    const versionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    const all = (code ? this.summariesByCode().get(this.summaryCacheKey(code, versionId)) : []) ?? [];
     const summaries = all.filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
     return {
       outputs: summaries.filter(item => OUTPUT_NAMES.includes(item?.resultTypeName)),
@@ -369,8 +380,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     };
   });
   readonly loadingSummaries = computed(() => {
-    const code = this.selected()?.initiativeCode;
-    return !!code && this.loadingSummaryCodes().has(code) && !this.summariesByCode().has(code);
+    const sp = this.selected();
+    const code = sp?.initiativeCode;
+    if (!code) return false;
+    const versionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    const key = this.summaryCacheKey(code, versionId);
+    return this.loadingSummaryCodes().has(key) && !this.summariesByCode().has(key);
   });
 
   /**
@@ -673,10 +688,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   constructor() {
     // Load the selected program's Areas of Work + indicator categories on selection change.
     effect(() => {
-      const code = this.selected()?.initiativeCode;
+      const sp = this.selected();
+      const code = sp?.initiativeCode;
       if (code) {
         this.loadAows(code);
-        this.loadSummaries(code);
+        const summariesVersionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+        this.loadSummaries(code, summariesVersionId ?? undefined);
         // Warm the legacy modals' context here, not on click: `canReportResults()` needs an async
         // phase check and would otherwise hide the submit button on a cold open.
         this.primeEntityAowContext();
@@ -1627,21 +1644,26 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Fetch (and cache) the indicator-contribution summary (result-type categories). */
-  private loadSummaries(code: string): void {
-    if (this.summariesByCode().has(code) || this.loadingSummaryCodes().has(code)) return;
-    this.loadingSummaryCodes.update(set => new Set(set).add(code));
-    this.api.resultsSE.GET_IndicatorContributionSummary(code).subscribe({
-      next: (res: { response?: { totalsByType?: IndicatorCategory[] } }) => this.cacheSummaries(code, res?.response?.totalsByType ?? []),
-      error: () => this.cacheSummaries(code, [])
+  /**
+   * Fetch (and cache) the indicator-contribution summary (result-type categories).
+   * `versionId` resolved EXACTLY like `loadBilateralRows` (W12-R-4): the phase-preferring
+   * `latestVersion()` id, falling back to the reporting shell's current phase.
+   */
+  private loadSummaries(code: string, versionId?: number): void {
+    const key = this.summaryCacheKey(code, versionId);
+    if (this.summariesByCode().has(key) || this.loadingSummaryCodes().has(key)) return;
+    this.loadingSummaryCodes.update(set => new Set(set).add(key));
+    this.api.resultsSE.GET_IndicatorContributionSummary(code, versionId).subscribe({
+      next: (res: { response?: { totalsByType?: IndicatorCategory[] } }) => this.cacheSummaries(key, res?.response?.totalsByType ?? []),
+      error: () => this.cacheSummaries(key, [])
     });
   }
 
-  private cacheSummaries(code: string, items: IndicatorCategory[]): void {
-    this.summariesByCode.update(map => new Map(map).set(code, items));
+  private cacheSummaries(key: string, items: IndicatorCategory[]): void {
+    this.summariesByCode.update(map => new Map(map).set(key, items));
     this.loadingSummaryCodes.update(set => {
       const next = new Set(set);
-      next.delete(code);
+      next.delete(key);
       return next;
     });
   }

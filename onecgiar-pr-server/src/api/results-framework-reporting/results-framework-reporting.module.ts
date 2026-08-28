@@ -33,10 +33,12 @@ import { ExistingResultContributorsLoaderService } from './application/queries/g
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
 import { TocResultsModule } from '../../toc/toc-results/toc-results.module';
 import { NotificationModule } from '../notification/notification.module';
+import { VersioningModule } from '../versioning/versioning.module';
 
 @Module({
   imports: [
     ResultsModule,
+    VersioningModule,
     ResultsKnowledgeProductsModule,
     TocResultsModule,
     ResultsTocResultsModule,

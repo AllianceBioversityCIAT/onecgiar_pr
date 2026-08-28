@@ -35,7 +35,7 @@
   - [x] Grep: no other caller of the progress method changes behaviour unexpectedly (record).
   - [x] Full server suite `npx jest --silent --reporters=summary --forceExit` green; `npx eslint "{src,apps,libs,test}/**/*.ts" --quiet` clean; `npm run migration:check` clean. **Disqualifier:** path-pattern narrowing.
 
-### `W12-T-2` — Matrix: origin + role + versionId + universe (server) · client passes the phase + versioned cache
+### [x] `W12-T-2` — Matrix: origin + role + versionId + universe (server) · client passes the phase + versioned cache
 
 - **Type:** `server` + `client`
 - **Description:** Per design §2.1 rows 2–6 and W12-DD-2..5: (server) `getIndicatorContributionSummaryByProgram(initiativeId, versionId)` SQL predicates (`r.source = 'Result'`, `rbi.initiative_role_id = 1`, `r.version_id = ?`, `status_id != 4`, `result_type_id NOT IN (10, 11)`; verify `result_level_id IN (3,4)` against the meter's base query and record); service accepts optional `versionId`, defaults to `$_findActivePhase(REPORTING)` (inject `VersioningService` if absent), stops using `activeYearValue` for this call; controller `@Query('versionId')` numeric-parsed + `@ApiQuery`. (client) `GET_IndicatorContributionSummary(program, versionId?)` appends the param (mirror `GET_ResultToReview`); `loadSummaries` resolves the version like `loadBilateralRows` and passes it; `summariesByCode` keyed `${code}::${versionId ?? 'default'}` with all readers updated. **Regression tests first (red):** server mapping/SQL specs with the mixed fixture; client api + cache specs.
@@ -47,11 +47,11 @@
 - **Estimate:** M (~160 LOC incl. specs)
 - **Skills:** `nestjs-expert`, `angular-developer`, `api-design-principles`, `tdd`, `systematic-debugging`
 - **Definition of done:**
-  - [ ] Server regression specs **red before / green after** (recorded) for each excluded class: `source='API'`, role 2, other version, plus `others` bucket receiving a status ∉ {1,2,3}. **FAIL input:** removing any one predicate → its class's assertion red. **Disqualifier:** one combined "total = 11" assertion without per-class assertions (cannot tell which predicate broke).
-  - [ ] Default resolution spec: absent/non-numeric `versionId` → `$_findActivePhase(REPORTING)` id used; explicit numeric honored. **FAIL input:** falling back to `year.active` → red.
-  - [ ] Client: URL contains `versionId=NN` when given, absent otherwise; cache spec V1→V2 refetch. **FAIL input:** code-only cache key → red.
-  - [ ] Grep other callers of the repo method / `resolveInitiativeAndYear`; record impact (design §11).
-  - [ ] Full server suite + lint + `migration:check`; full client suite + `ng lint` + `ng build` green. **Disqualifier:** narrowing.
+  - [x] Server regression specs **red before / green after** (recorded) for each excluded class: `source='API'`, role 2, other version, plus `others` bucket receiving a status ∉ {1,2,3}. **FAIL input:** removing any one predicate → its class's assertion red. **Disqualifier:** one combined "total = 11" assertion without per-class assertions (cannot tell which predicate broke).
+  - [x] Default resolution spec: absent/non-numeric `versionId` → `$_findActivePhase(REPORTING)` id used; explicit numeric honored. **FAIL input:** falling back to `year.active` → red.
+  - [x] Client: URL contains `versionId=NN` when given, absent otherwise; cache spec V1→V2 refetch. **FAIL input:** code-only cache key → red.
+  - [x] Grep other callers of the repo method / `resolveInitiativeAndYear`; record impact (design §11).
+  - [x] Full server suite + lint + `migration:check`; full client suite + `ng lint` + `ng build` green. **Disqualifier:** narrowing.
 
 ### `W12-T-3` — Parity + owner verification
 

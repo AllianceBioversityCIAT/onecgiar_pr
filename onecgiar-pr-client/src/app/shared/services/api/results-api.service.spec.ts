@@ -5183,4 +5183,48 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  // W12-R-2 / W12-R-4: the Overview matrix must be scoped to the same phase as the
+  // Results tab (`GET_ResultToReview`'s versionId pattern, results-api.service.ts:1505).
+  describe('GET_IndicatorContributionSummary — versionId query param (W12-R-2 / W12-R-4)', () => {
+    it('should omit versionId from the URL when not provided', done => {
+      service.GET_IndicatorContributionSummary('SP04').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=SP04`
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.urlWithParams).not.toContain('versionId');
+      req.flush(mockResponse);
+    });
+
+    it('should append versionId to the URL when provided as a finite number', done => {
+      service.GET_IndicatorContributionSummary('SP04', 12).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=SP04&versionId=12`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should omit versionId when given a non-finite value (FAIL input)', done => {
+      service.GET_IndicatorContributionSummary('SP04', Number('not-a-number')).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=SP04`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
 });

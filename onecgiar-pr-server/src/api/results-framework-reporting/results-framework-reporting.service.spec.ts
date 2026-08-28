@@ -29,6 +29,8 @@ import { GetExistingResultContributorsToIndicatorsHandler } from './application/
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
 import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
+import { VersioningService } from '../versioning/versioning.service';
+import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -157,6 +159,12 @@ const mockDataSource = {
   query: jest.fn(),
 };
 
+// W12-R-2: default versionId resolution goes through VersioningService.$_findActivePhase
+// (AppModuleIdEnum.REPORTING), never YearRepository/`year.active` — see resolveIndicatorSummaryVersionId.
+const mockVersioningService = {
+  $_findActivePhase: jest.fn(),
+};
+
 describe('ResultsFrameworkReportingService', () => {
   let service: ResultsFrameworkReportingService;
 
@@ -210,6 +218,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ResultRepository,
           useValue: mockResultRepository,
+        },
+        {
+          provide: VersioningService,
+          useValue: mockVersioningService,
         },
         { provide: ResultsService, useValue: mockResultsService },
         {
@@ -1178,17 +1190,24 @@ describe('ResultsFrameworkReportingService', () => {
 
   describe('getProgramIndicatorContributionSummary', () => {
     beforeEach(() => {
-      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
+      // W12-R-2: default resolution goes through VersioningService.$_findActivePhase, not
+      // YearRepository — no default stub here on purpose, so a spec that forgets to mock
+      // $_findActivePhase fails loudly instead of silently reusing a stale year fixture.
+      mockVersioningService.$_findActivePhase.mockReset();
       mockResultRepository.getIndicatorContributionSummaryByProgram.mockReset();
       mockResultRepository.getActiveResultTypes.mockReset();
     });
 
-    it('should aggregate indicator contribution summaries for the program', async () => {
+    it('should aggregate indicator contribution summaries for the program, scoped by the active reporting phase', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
         id: 15,
         official_code: 'SP05',
         name: 'Sample Program',
       });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 2025,
+      } as any);
 
       mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
         { id: 1, name: 'Outcome' },
@@ -1222,10 +1241,10 @@ describe('ResultsFrameworkReportingService', () => {
       const result: any =
         await service.getProgramIndicatorContributionSummary('sp05');
 
-      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
-        where: { active: true },
-        select: ['year'],
-      });
+      expect(mockVersioningService.$_findActivePhase).toHaveBeenCalledWith(
+        AppModuleIdEnum.REPORTING,
+      );
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
       expect(
         mockResultRepository.getIndicatorContributionSummaryByProgram,
       ).toHaveBeenCalledWith(15, 2025);
@@ -1274,12 +1293,88 @@ describe('ResultsFrameworkReportingService', () => {
       });
     });
 
+    // Reviewer remediation (W12-T-2 rework attempt 2): the repo predicate widened from
+    // `status_id IN (1,2,3)` to `!= 4` (proven at the repo layer, red-before/green-after —
+    // see result.repository.spec.ts), which means rows with status_id outside {1,2,3} (e.g.
+    // 5 Pending Review, 7 Rejected) can now legitimately reach this mapper for the first time.
+    // This case observes the CONSEQUENCE of that widening: the mapper's pre-existing `default:`
+    // branch (results-framework-reporting.service.ts:~658-661), previously structurally dead
+    // for this endpoint, now routes such rows into `others` (design §12 reversion challenge (a)).
+    // Green-only by construction: the mapper's switch/default was already there and is UNCHANGED
+    // by this fix, so there is no pre-fix/post-fix behavior difference to redden here — the
+    // red-before evidence for the underlying predicate change lives in result.repository.spec.ts.
+    it('routes a status_id outside {1,2,3} (5, 7) into the others bucket (W12-DD-2 reversion challenge (a))', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 2025,
+      } as any);
+
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
+        { id: 1, name: 'Outcome' },
+      ]);
+
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 1,
+            total_results: '1',
+          },
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 5,
+            total_results: '2',
+          },
+          {
+            result_type_id: 1,
+            result_type_name: 'Outcome',
+            status_id: 7,
+            total_results: '3',
+          },
+        ],
+      );
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp05');
+
+      expect(result.status).toBe(200);
+      expect(result.response.totalsByType).toEqual([
+        {
+          resultTypeId: 1,
+          resultTypeName: 'Outcome',
+          totalResults: 6,
+          editing: 1,
+          qualityAssessed: 0,
+          submitted: 0,
+          others: 5,
+        },
+      ]);
+      expect(result.response.statusTotals).toEqual({
+        editing: 1,
+        qualityAssessed: 0,
+        submitted: 0,
+        others: 5,
+        total: 6,
+      });
+    });
+
     it('should return zeroed totals when no indicator-linked results are found', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
         id: 99,
         official_code: 'SP99',
         name: 'Program 99',
       });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 2025,
+      } as any);
 
       mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([
         { id: 1, name: 'Outcome' },
@@ -1377,6 +1472,109 @@ describe('ResultsFrameworkReportingService', () => {
         mockResultRepository.getIndicatorContributionSummaryByProgram,
       ).not.toHaveBeenCalled();
       expect(mockResultRepository.getActiveResultTypes).not.toHaveBeenCalled();
+    });
+
+    // W12-R-2 / W12-DD-3: default resolution must go through $_findActivePhase, never
+    // resolveInitiativeAndYear's `year.active` fallback.
+    it('should honor an explicit, finite versionId without consulting the active phase', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [],
+      );
+
+      const result: any = await service.getProgramIndicatorContributionSummary(
+        'sp05',
+        12,
+      );
+
+      expect(mockVersioningService.$_findActivePhase).not.toHaveBeenCalled();
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).toHaveBeenCalledWith(15, 12);
+      expect(result.status).toBe(200);
+    });
+
+    it('should default to the active REPORTING phase when versionId is absent (FAIL input for a year.active fallback)', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 77,
+      } as any);
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [],
+      );
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp05');
+
+      expect(mockVersioningService.$_findActivePhase).toHaveBeenCalledWith(
+        AppModuleIdEnum.REPORTING,
+      );
+      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).toHaveBeenCalledWith(15, 77);
+      expect(result.status).toBe(200);
+    });
+
+    it('should default to the active REPORTING phase when versionId is non-numeric', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce({
+        id: 77,
+      } as any);
+      mockResultRepository.getActiveResultTypes.mockResolvedValueOnce([]);
+      mockResultRepository.getIndicatorContributionSummaryByProgram.mockResolvedValueOnce(
+        [],
+      );
+
+      const result: any = await service.getProgramIndicatorContributionSummary(
+        'sp05',
+        Number('not-a-number'),
+      );
+
+      expect(mockVersioningService.$_findActivePhase).toHaveBeenCalledWith(
+        AppModuleIdEnum.REPORTING,
+      );
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).toHaveBeenCalledWith(15, 77);
+      expect(result.status).toBe(200);
+    });
+
+    it('should return a handler error when no active reporting phase is found and versionId is absent', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 15,
+        official_code: 'SP05',
+        name: 'Sample Program',
+      });
+
+      mockVersioningService.$_findActivePhase.mockResolvedValueOnce(null);
+
+      const result: any =
+        await service.getProgramIndicatorContributionSummary('sp05');
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+      expect(
+        mockResultRepository.getIndicatorContributionSummaryByProgram,
+      ).not.toHaveBeenCalled();
     });
   });
 

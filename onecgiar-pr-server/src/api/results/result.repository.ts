@@ -2613,8 +2613,13 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
   async getIndicatorContributionSummaryByProgram(
     initiativeId: number,
-    reportingYear: number,
+    versionId: number,
   ) {
+    // W12-R-2: origin (source='Result'), ownership (initiative_role_id=1), phase
+    // (r.version_id, not the year-COALESCE) and universe (status != 4, type NOT IN
+    // (10, 11)) are reconciled with the meter's AllResultsByRoleUserAndInitiativeFiltered
+    // base query (result.repository.ts:~627-712), which applies no result_level_id
+    // predicate — so that filter is dropped here too (W12-DD-2, parity with W12-R-3).
     const query = `
       SELECT
         r.result_type_id,
@@ -2626,16 +2631,20 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ON rbi.result_id = r.id
         AND rbi.inititiative_id = ?
         AND rbi.is_active = 1
+        AND rbi.initiative_role_id = 1
+      -- Kept deliberately though \`v\` is otherwise unreferenced (the r.version_id = ?
+      -- predicate below already does the scoping): it enforces that r.version_id points
+      -- at a real \`version\` row, mirroring the meter's own join (result.repository.ts:~692).
       INNER JOIN \`version\` v
         ON v.id = r.version_id
       INNER JOIN result_type rt
         ON rt.id = r.result_type_id
       WHERE
         r.is_active = 1
-        AND r.status_id IN (1, 2, 3)
-        AND r.result_level_id IN (3, 4)
-        AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
-        AND COALESCE(r.reported_year_id, v.phase_year) = ?
+        AND r.source = 'Result'
+        AND r.status_id != 4
+        AND r.result_type_id NOT IN (10, 11)
+        AND r.version_id = ?
       GROUP BY
         r.result_type_id,
         rt.name,
@@ -2646,7 +2655,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     `;
 
     try {
-      return await this.query(query, [initiativeId, reportingYear]);
+      return await this.query(query, [initiativeId, versionId]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

@@ -101,7 +101,7 @@ describe('ResultsFrameworkReportingController', () => {
   });
 
   describe('getProgramIndicatorContributionSummary', () => {
-    it('should delegate to reporting service', () => {
+    it('should delegate to reporting service with undefined versionId when not provided', () => {
       reportingService.getProgramIndicatorContributionSummary.mockResolvedValueOnce(
         {} as any,
       );
@@ -110,7 +110,31 @@ describe('ResultsFrameworkReportingController', () => {
 
       expect(
         reportingService.getProgramIndicatorContributionSummary,
-      ).toHaveBeenCalledWith('SP05');
+      ).toHaveBeenCalledWith('SP05', undefined);
+    });
+
+    it('should normalize a numeric versionId query param to a number (W12-R-2)', () => {
+      reportingService.getProgramIndicatorContributionSummary.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getProgramIndicatorContributionSummary('SP05', '12');
+
+      expect(
+        reportingService.getProgramIndicatorContributionSummary,
+      ).toHaveBeenCalledWith('SP05', 12);
+    });
+
+    it('should pass undefined for a non-numeric versionId query param (W12-R-2)', () => {
+      reportingService.getProgramIndicatorContributionSummary.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getProgramIndicatorContributionSummary('SP05', 'not-a-number');
+
+      expect(
+        reportingService.getProgramIndicatorContributionSummary,
+      ).toHaveBeenCalledWith('SP05', undefined);
     });
   });
 
