@@ -17,6 +17,8 @@ import { InnovationUseResultsService } from '../../../../../../shared/services/g
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 
 /**
  * P2-3322 — zoneless change detection regression guard for the Lead center / Lead partner selects.
@@ -371,5 +373,249 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
       'International Livestock Research Institute',
       'Other(s) CGIAR Centers'
     ]);
+  });
+});
+
+/**
+ * P2-3249 — the "Contributing CGIAR Centers" mandatory marker must actually reach the mandatory-field scan.
+ *
+ * 🛑 `[required]` is NOT what makes a field mandatory on this screen. `DataControlService`
+ * `.someMandatoryFieldIncompleteResultDetail()` reads two CSS selectors out of the live DOM and nothing else,
+ * and `pr-multi-select` — the component behind every centres dropdown here — emits NEITHER of them
+ * (`custom-fields/pr-multi-select/CLAUDE.md`). So these tests render the REAL template, run the REAL scan over
+ * the REAL DOM, and assert on the feedback list the user sees in the bottom bar. Asserting on the component's
+ * getters would pass even if the marker were missing from the template altogether.
+ */
+describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mandatory marker in the DOM (P2-3249)', () => {
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+  let dataControl: DataControlService;
+  let is2026: ReturnType<typeof signal<boolean>>;
+
+  const CATALOG = [
+    { code: 'AAA', name: 'Alliance', full_name: 'Alliance of Bioversity and CIAT', acronym: 'ABC', institutionId: 11 },
+    { code: 'BBB', name: 'IRRI', full_name: 'International Rice Research Institute', acronym: 'IRRI', institutionId: 22 },
+    { code: 'ZZZ', name: 'Other Center', full_name: 'A Center the ToC never mentioned', acronym: 'OTH', institutionId: 99 }
+  ];
+
+  const TOC_LABEL = 'Contributing CGIAR Centers (at least one from the ToC)';
+  const PLAIN_LABEL = 'Contributing CGIAR Centers';
+
+  /** The hidden `appFeedbackValidation` host, and the `.pr-field.mandatory` node the scan actually reads. */
+  const markerEl = () => fixture.nativeElement.querySelector('[data-testid="cp-centers-mandatory-marker"]');
+  const markerFieldEl = () => markerEl()?.querySelector('.pr-field.mandatory') ?? null;
+  const validationNoteText = () =>
+    fixture.nativeElement.querySelector('[data-testid="cp-centers-validation"] p')?.textContent?.trim() ?? null;
+
+  /** Run the production scan over the rendered section and return the labels it collected. */
+  const scan = (): { incomplete: boolean; labels: string[] } => {
+    const incomplete = dataControl.someMandatoryFieldIncompleteResultDetail('.section_container');
+    return { incomplete, labels: dataControl.fieldFeedbackList() };
+  };
+
+  const repaint = async () => {
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    is2026 = signal(true);
+
+    const currentResult = {
+      id: 3249,
+      result_code: 'R-3249',
+      version_id: 1,
+      portfolio: 'P26',
+      initiative_id: 5,
+      initiative_official_code: 'INIT-05',
+      status: null
+    };
+
+    const apiMock = {
+      dataControlSE: {
+        currentResult,
+        currentResultSignal: signal(currentResult),
+        currentResultSectionName: signal(''),
+        findClassTenSeconds: jest.fn().mockResolvedValue(true),
+        isKnowledgeProduct: false,
+        showPartnersRequest: false
+      },
+      resultsSE: {
+        GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] })),
+        PATCH_ContributorsPartners: jest.fn().mockReturnValue(of({}))
+      },
+      rolesSE: { readOnly: false, isAdmin: false, platformIsClosed: false }
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [CommonModule, FormsModule, HttpClientTestingModule, TermPipe, CustomFieldsModule, FeedbackValidationDirectiveModule],
+      providers: [
+        provideZonelessChangeDetection(),
+        RdContributorsAndPartnersService,
+        { provide: ApiService, useValue: apiMock },
+        { provide: RolesService, useValue: { readOnly: false } },
+        {
+          provide: InstitutionsService,
+          useValue: { loadedInstitutions: new BehaviorSubject<boolean>(false), institutionsList: [], institutionsWithoutCentersList: [] }
+        },
+        { provide: CentersService, useValue: { centersList: CATALOG, centers: signal<any[]>(CATALOG), loadedCenters: new BehaviorSubject(true) } },
+        { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+        { provide: ResultLevelService, useValue: { currentResultLevelId: 2 } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        {
+          provide: FieldsManagerService,
+          useValue: {
+            isContributorsPartners2026: () => is2026(),
+            isP25: () => false,
+            activeIndicatorsLength: () => 0,
+            hasSelectedIndicator: () => false
+          }
+        }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    jest.spyOn(rdPartnersSE, 'getSectionInformation').mockImplementation(() => undefined as any);
+    jest.spyOn(rdPartnersSE, 'loadFilteredBilateralProjects').mockImplementation(() => undefined as any);
+
+    dataControl = new DataControlService({ setTitle: jest.fn() } as any, { GET_versioning: jest.fn() } as any);
+
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    // The production scan targets `.section_container`, which belongs to the result-detail shell above this
+    // component. Stamping it on the fixture host exercises the real selector instead of a stand-in.
+    fixture.nativeElement.classList.add('section_container');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // ⚠️ AFTER the first detectChanges, never before: `ngOnInit` calls `resetState()`, which sets
+    // `sectionHydratedFromToc` back to false (`service.ts:156`). Set too early, the flag is wiped and the ToC
+    // preselection effect quietly fills `contributing_center` for us — the tests then assert on a field the
+    // component populated, not on the selection they set.
+    rdPartnersSE.sectionHydratedFromToc.set(true);
+    rdPartnersSE.tocSelectionTouched.set(false);
+  });
+
+  it('emits a scannable `.pr-field.mandatory` — the dropdown itself emits none, which is why the marker exists', async () => {
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
+    await repaint();
+
+    expect(markerFieldEl()).toBeTruthy();
+
+    // The trap this guards: neither centres dropdown contributes a scannable node of its own.
+    const dropdown = fixture.nativeElement.querySelector('[data-testid="cp-field-contributing_center"]');
+    expect(dropdown).toBeTruthy();
+    expect(dropdown.querySelector('.pr-field.mandatory')).toBeNull();
+  });
+
+  it('lists the field as missing, naming the ToC condition, when the ToC brought centres and none is selected', async () => {
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
+    rdPartnersSE.partnersBody.contributing_center = [];
+    await repaint();
+
+    expect(markerFieldEl().classList.contains('complete')).toBe(false);
+    const { incomplete, labels } = scan();
+    expect(incomplete).toBe(true);
+    expect(labels).toContain(TOC_LABEL);
+    expect(validationNoteText()).toContain('Theory of Change');
+  });
+
+  it('drops the field from the missing list once a ToC centre is selected', async () => {
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
+    rdPartnersSE.partnersBody.contributing_center = [CATALOG[0]] as any;
+    await repaint();
+
+    expect(markerFieldEl().classList.contains('complete')).toBe(true);
+    expect(scan().labels).not.toContain(TOC_LABEL);
+    expect(validationNoteText()).toBeNull();
+  });
+
+  // THE ticket: "Other(s)" centres cannot satisfy the minimum on their own.
+  it('keeps listing the field when every ToC centre is replaced by "Other(s)" centres', async () => {
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
+    rdPartnersSE.partnersBody.contributing_center = [{ code: fixture.componentInstance.OTHER_CENTERS_CODE } as any];
+    rdPartnersSE.otherCentersSelected = [CATALOG[2]] as any;
+    await repaint();
+
+    // The user really did pick a centre — it just is not a ToC one.
+    expect(rdPartnersSE.otherCentersSelected.length).toBe(1);
+    expect(markerFieldEl().classList.contains('complete')).toBe(false);
+    expect(scan().labels).toContain(TOC_LABEL);
+  });
+
+  it('accepts an "Other(s)" centre alone when the ToC brought no centres at all (P2-3324 / P2-3326 branch)', async () => {
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([]);
+    await repaint();
+    expect(fixture.componentInstance.hasReferenceCenters()).toBe(false);
+
+    // Empty: still mandatory, but under the plain label — nothing from the ToC can be demanded here.
+    expect(markerFieldEl().classList.contains('complete')).toBe(false);
+    expect(scan().labels).toContain(PLAIN_LABEL);
+    expect(validationNoteText()).not.toContain('Theory of Change');
+
+    rdPartnersSE.otherCentersSelected = [CATALOG[2]] as any;
+    await repaint();
+    expect(markerFieldEl().classList.contains('complete')).toBe(true);
+    expect(scan().labels).not.toContain(PLAIN_LABEL);
+  });
+
+  /**
+   * The visible requiredness marker — the red asterisk `app-pr-field-header` paints from `.pr_label.required`
+   * (`pr-field-header.component.scss:1`). It is a THIRD, purely visual layer: it is not what the scan reads
+   * (`src/CLAUDE.md` §21.5), so it needs its own assertion or flipping `[required]` back to false goes unnoticed.
+   */
+  describe('the requiredness asterisk', () => {
+    const isRequired = (testid: string) => {
+      const host = fixture.nativeElement.querySelector(`[data-testid="${testid}"]`);
+      expect(host).toBeTruthy();
+      return host.querySelector('.pr_label')?.classList.contains('required') ?? false;
+    };
+
+    it('marks the ToC dropdown required, and leaves the optional "Other(s)" one unmarked', async () => {
+      rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
+      // Opt into "Other(s)" so the second dropdown is painted alongside the first.
+      rdPartnersSE.partnersBody.contributing_center = [{ code: fixture.componentInstance.OTHER_CENTERS_CODE } as any];
+      await repaint();
+
+      expect(isRequired('cp-field-contributing_center')).toBe(true);
+      expect(isRequired('toc-other-centers')).toBe(false);
+    });
+
+    it('marks the "Other(s)" dropdown required when it IS the field (no ToC centres)', async () => {
+      rdPartnersSE.tocReferenceCenterInstitutionIds.set([]);
+      await repaint();
+
+      expect(isRequired('toc-other-centers')).toBe(true);
+    });
+
+    it('marks the flat pre-2026 dropdown required', async () => {
+      is2026.set(false);
+      await repaint();
+
+      expect(isRequired('cp-field-contributing_center~flat')).toBe(true);
+    });
+  });
+
+  // ⚠️ Two code paths render this dropdown; a rule added to only one silently misses the other.
+  it('emits the same marker on the flat pre-2026 path, without the ToC condition', async () => {
+    is2026.set(false);
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 22]);
+    rdPartnersSE.partnersBody.contributing_center = [];
+    await repaint();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="cp-field-contributing_center~flat"]')).toBeTruthy();
+    expect(markerFieldEl()).toBeTruthy();
+    expect(scan().labels).toContain(PLAIN_LABEL);
+
+    rdPartnersSE.partnersBody.contributing_center = [CATALOG[0]] as any;
+    await repaint();
+    expect(markerFieldEl().classList.contains('complete')).toBe(true);
+    expect(scan().labels).not.toContain(PLAIN_LABEL);
   });
 });

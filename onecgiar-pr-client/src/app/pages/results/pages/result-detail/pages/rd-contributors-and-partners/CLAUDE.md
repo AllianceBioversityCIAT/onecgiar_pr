@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-27 · branch performance-refactor · dab9ea9dc
+**Verified:** 2026-08-28 · branch p2-3249-toc-center-mandatory · 8d67570c8
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -63,6 +63,24 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   no contiene ninguna variante de la frase (verificado con `pdftotext` el 25-ago-2026). El texto
   tampoco existe en `onecgiar-pr-server`.
 
+- ⚠️ **`appFeedbackValidation` congela `labelText`.** La directiva escribe el texto en el DOM UNA vez, en
+  `ngOnInit` (`shared/directives/feedback-validation.directive.ts:16-19`); `ngDoCheck` sólo sincroniza
+  `.complete`. Un `[labelText]="getter"` se queda con el valor del primer render — aquí siempre el que NO
+  menciona la ToC, porque los ids de la ToC resuelven después de construir la vista. Por eso "Contributing
+  CGIAR Centers" lleva **dos** marcadores con label estático bajo un `@if` (`html:210-222`), no uno con binding.
+  🛑 Sólo `[isComplete]` es bindeable.
+
+- **P2-3249 — "Contributing CGIAR Centers" es obligatorio, con DOS reglas de precondición disjunta**
+  (decisión registrada en el ticket el 28-ago-2026; resuelve la contradicción aparente con P2-3324/P2-3326):
+  la ToC **trae** centros → tiene que quedar ≥1 del bucket ToC y los de "Other(s)" **no** cuentan; la ToC **no**
+  trae ninguno (o camino plano pre-2026) → cualquier centro vale. Todo sale de `contributingCentersComplete`
+  (`component.ts:200-203`), leído desde UN solo punto del template para que aplique a los **dos** caminos.
+  ⚠️ `results_center.from_toc` es `NOT NULL DEFAULT 0`, así que un resultado guardado antes del split 2026
+  carga TODOS sus centros en "Other(s)" y **sí** dispara la regla: es deliberado (un `0` no se distingue de
+  "el usuario dejó sólo Other(s)", que es justo lo que el ticket persigue). No bloquea el Save draft — es
+  feedback de capa 1, no un gate. El green check del backend **no** se tocó: sigue exigiendo ≥1 centro
+  cualquiera (`results-validation-module.repository.ts:415-424`), sin filtro `from_toc`.
+
 - El escaneo de "N fields missing" del piso depende de la clase global `.section_container`
   — ver [`../../CLAUDE.md`](../../CLAUDE.md).
 
@@ -72,7 +90,11 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
 | `components/` | Chips y bloques de contribuidores/socios | Los dropdowns agrupados de admin tienen comportamiento propio: validar antes de cambiar bindings |
 
 ## Tests
-Tres suites: `*.component.spec.ts` (50 casos), `*.service.spec.ts` y `*.zoneless.spec.ts`.
+Tres suites: `*.component.spec.ts`, `*.service.spec.ts` y `*.zoneless.spec.ts` (160 casos en total).
+La regla de P2-3249 se prueba en dos niveles a propósito: la lógica pura en `*.component.spec.ts` (plantilla
+vaciada) y el **contrato DOM** en `*.zoneless.spec.ts`, donde se corre el escaneo real de
+`DataControlService.someMandatoryFieldIncompleteResultDetail('.section_container')` sobre el template real.
+Sin esa segunda mitad, borrar el marcador del HTML dejaría los tests en verde.
 Además, E2E: `cypress/e2e/result-detail/contributors-and-partners.cy.ts`, `save-validation.cy.ts`
 y `save-contract.cy.ts`.
 ⚠️ Los controles del template llevan `data-testid="cp-field-<ruta en el payload>"` (por ejemplo
