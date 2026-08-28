@@ -60,3 +60,22 @@
 - **Verification (isolated tree):** FULL suite 483/6962 green; lint clean; `ng build` exit 0.
 - **Forward pointers → TCM-T-4 (HITL):** (1) section-filter behavior of the map card (hidden under W1/W2·Bilateral filters) — owner sees it live; (2) AoW tooltip "N indicators (all tiers)" vs output-tier progress denominator wording; (3) root fill = brand primary (design named no token for the hub); (4) reconcile the ±1 foreign test count at the static gate.
 - **ADVISORY (recorded, die here):** loading-gap tick between AoW settle and `loadAllTocs` fire (empty-state flash); permanent-loading if `loadToc`'s error path ever leaves a key dangling (pre-existing trap); empty-state string hard-coded English (matches siblings).
+
+## TCM-T-4 — Closure: gates + HITL layout decision
+
+- **Status:** `[~]` in progress — automated gates (a)+(b) green; awaiting owner HITL (TCM-AC-3) · 2026-08-28
+
+### (a) Full re-run — isolated ToC-map tree (= the committed tree, foreign hunks excluded)
+- FULL suite → **483 suites / 6962 tests / 1 snapshot green** (74.7s); `ng lint --quiet` clean; `ng build` exit 0.
+- Test-count reconciliation (T-2/T-3 Reviewer note): the isolated tree count equals the combined-tree count → the concurrent session's hunks carry zero tests in the spec's files; the earlier ±1 discrepancies live in `programme-results/**`, outside this spec's scope. Reconciled.
+
+### (b) Static gates (spec commits `66abcb0be`, `cab43109e`, `d233f85f5`)
+- Scope: exactly `pr-viz-chart` (registration + count assertion) + `dashboard-lab/**` (12 files) — TCM-AC-2 boundary. ✅
+- New hex: **0**. `package.json`: **0 diff**. ✅
+
+### (c) HITL — PENDING OWNER (TCM-AC-3, SP02 @ 1280/1024px)
+1. Radial legible (labels/espaciado, 5+ AoWs × ~6–10 hojas); decidir **radial kept** vs **fallback circular** (TCM-R-7) + OQ-1 (labels de hojas off) con el render vivo.
+2. Encoding de progreso legible (cuartiles del ramp violeta; hub = primary — el design no nombró token para el root, confirmarlo).
+3. Tooltips correctos; look-at: nodo AoW muestra "N indicators" (todas las tiers) junto a progreso done/total (solo output tier) — correcto por diseño, ¿confunde?
+4. Click en AoW aterriza en su página entity-aow.
+5. Comportamiento con el filtro de secciones: el mapa vive dentro del gate `aow` (se oculta al filtrar W1/W2·Bilateral) — decisión de gap-fill del Implementer, confirmar en vivo.
