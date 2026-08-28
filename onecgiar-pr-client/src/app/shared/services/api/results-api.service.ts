@@ -1399,8 +1399,12 @@ export class ResultsApiService {
   GET_impactAreasScoresComponentsAll() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/impact-areas-scores-components/all`);
   }
-  GET_ScienceProgramsProgress() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`);
+  GET_ScienceProgramsProgress(versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `?versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<any>(url);
   }
 
   GET_RecentActivity() {
@@ -1413,11 +1417,14 @@ export class ResultsApiService {
     );
   }
 
-  GET_TocResultsByAowId(entityId: string, aowId?: string | null, year?: string) {
+  GET_TocResultsByAowId(entityId: string, aowId?: string | null, year?: string, versionId?: number) {
     const queryParams: string[] = [`program=${entityId}`];
 
     if (aowId) queryParams.push(`areaOfWork=${aowId}`);
     if (year) queryParams.push(`year=${year}`);
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      queryParams.push(`versionId=${encodeURIComponent(String(versionId))}`);
+    }
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
     return this.http.get<{ message: string; response: any; status: boolean }>(
@@ -1433,12 +1440,20 @@ export class ResultsApiService {
     return this.http.get<any>(url);
   }
 
-  GET_2030Outcomes(entityId: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=${entityId}`);
+  GET_2030Outcomes(entityId: string, versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=${entityId}`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `&versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<any>(url);
   }
 
-  GET_IntermediateOutcomes(entityId: string) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=${entityId}`);
+  GET_IntermediateOutcomes(entityId: string, versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=${entityId}`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `&versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<any>(url);
   }
 
   GET_W3BilateralProjects(tocResultId: string) {

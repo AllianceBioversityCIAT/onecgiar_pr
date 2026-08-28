@@ -33,7 +33,7 @@ OPF-T-2 (client API wrappers) ───┼──▶ OPF-T-3 (resolver + loaders)
 
 ## OPF-T-2 — Client: `versionId` on the four API wrappers
 
-- **Status:** `[ ]` · **Size:** S (~60 LOC) · **Depends:** none (∥ T-1, disjoint package)
+- **Status:** `[x]` · **Size:** S (~60 LOC) · **Depends:** none (∥ T-1, disjoint package)
 - **Requirements:** OPF-R-6 (client emission), OPF-R-3 (absent ⇒ no param emitted)
 - **Design:** design.md §6, §8 (loaders)
 - **Skills:** `angular-developer`

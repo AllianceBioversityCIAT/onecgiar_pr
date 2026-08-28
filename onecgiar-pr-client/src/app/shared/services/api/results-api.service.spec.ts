@@ -3712,6 +3712,29 @@ describe('ResultsApiService', () => {
 
       req.flush(mockResponse);
     });
+
+    it('should append versionId to the URL when provided as a finite number', done => {
+      service.GET_ScienceProgramsProgress(34).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress?versionId=34`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should omit versionId when given a non-finite value (FAIL input)', done => {
+      service.GET_ScienceProgramsProgress(Number('not-a-number')).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.urlWithParams).not.toContain('versionId');
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_RecentActivity', () => {
@@ -4774,6 +4797,31 @@ describe('ResultsApiService', () => {
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
+
+    it('should append versionId to the URL when provided as a finite number', done => {
+      service.GET_TocResultsByAowId('entity1', 'aow1', '2024', 34).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/toc-results?program=entity1&areaOfWork=aow1&year=2024&versionId=34`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should omit versionId when given a non-finite value (FAIL input)', done => {
+      service.GET_TocResultsByAowId('entity1', 'aow1', undefined, Number('not-a-number')).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results?program=entity1&areaOfWork=aow1`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.urlWithParams).not.toContain('versionId');
+      req.flush(mockResponse);
+    });
   });
 
   describe('GET_IndicatorContributionSummary', () => {
@@ -4798,6 +4846,67 @@ describe('ResultsApiService', () => {
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=entity1`);
       expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should append versionId to the URL when provided as a finite number', done => {
+      service.GET_2030Outcomes('entity1', 34).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=entity1&versionId=34`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should omit versionId when given a non-finite value (FAIL input)', done => {
+      service.GET_2030Outcomes('entity1', Number('not-a-number')).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=entity1`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.urlWithParams).not.toContain('versionId');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_IntermediateOutcomes', () => {
+    it('should call GET_IntermediateOutcomes and return expected data', done => {
+      service.GET_IntermediateOutcomes('entity1').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=entity1`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should append versionId to the URL when provided as a finite number', done => {
+      service.GET_IntermediateOutcomes('entity1', 34).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=entity1&versionId=34`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should omit versionId when given a non-finite value (FAIL input)', done => {
+      service.GET_IntermediateOutcomes('entity1', Number('not-a-number')).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/intermediate-outcomes?programId=entity1`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.urlWithParams).not.toContain('versionId');
       req.flush(mockResponse);
     });
   });
