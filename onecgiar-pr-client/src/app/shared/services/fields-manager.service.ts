@@ -38,6 +38,26 @@ export class FieldsManagerService {
     return typeof year === 'number' && year >= ReportingDesignYear.InnovationDevFormReduction;
   });
   /**
+   * True when the open result's reporting phase is 2026+ → the Innovation Use 2030 block is titled
+   * "2030 Use Projection" and shows the projection tooltip (P2-3295, epic P2-3243). 2025 and earlier
+   * keep the legacy long title verbatim and no tooltip.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isInnovationUse2030Projection2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof year === 'number' && year >= ReportingDesignYear.InnovationUse2030Projection;
+  });
+  /**
+   * Tooltip shown next to the "2030 Use Projection" title (P2-3295). Empty for phases <= 2025, which
+   * never showed it — `app-field-card` only paints the ⓘ button when it receives a non-empty string.
+   * Lives here, not in `fields()`, because `preventFieldRender()` only mirrors label/description/required.
+   */
+  innovationUse2030ProjectionTooltip = computed(() =>
+    this.isInnovationUse2030Projection2026()
+      ? "This projection informs CGIAR's investment case and impact modeling. It must be reviewed and, if necessary, revised annually based on current evidence."
+      : ''
+  );
+  /**
    * True when the open result's reporting phase is 2026+ → new Geographic location
    * "location of benefit" wording (P2-3036 AC9) for P25 Innovation results. 2025 keeps the legacy wording.
    * Threshold is centralized in {@link ReportingDesignYear}.
@@ -207,7 +227,9 @@ export class FieldsManagerService {
         required: true
       },
       '[innovation-use-form]-2030-to-be-determined': {
-        label: 'Specify the targeted innovation use of the core innovation by end of 2030, supported by projections or evidence where available',
+        label: this.isInnovationUse2030Projection2026()
+          ? '2030 Use Projection'
+          : 'Specify the targeted innovation use of the core innovation by end of 2030, supported by projections or evidence where available',
         hide: this.isP22(),
         required: true,
         description: `<ul>

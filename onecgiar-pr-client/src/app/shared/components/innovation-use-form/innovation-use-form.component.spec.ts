@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { InnovationUseFormComponent } from './innovation-use-form.component';
 import { ApiService } from '../../services/api/api.service';
 import { of } from 'rxjs';
@@ -15,6 +16,10 @@ import { TerminologyService } from '../../../internationalization/terminology.se
 import { FieldsManagerService } from '../../services/fields-manager.service';
 import { InnovationControlListService } from '../../services/global/innovation-control-list.service';
 import { InnovationUseResultsService } from '../../services/global/innovation-use-results.service';
+
+/** P2-3295 — verbatim tooltip from the SIDS revision; must match `FieldsManagerService` character for character. */
+const TOOLTIP_2030 =
+  "This projection informs CGIAR's investment case and impact modeling. It must be reviewed and, if necessary, revised annually based on current evidence.";
 
 describe('InnovationUseFormComponent', () => {
   let component: InnovationUseFormComponent;
@@ -46,7 +51,8 @@ describe('InnovationUseFormComponent', () => {
     };
 
     fieldsManagerServiceMock = {
-      isP25: jest.fn().mockReturnValue(false)
+      isP25: jest.fn().mockReturnValue(false),
+      innovationUse2030ProjectionTooltip: jest.fn().mockReturnValue('')
     };
 
     innovationControlListServiceMock = {
@@ -798,6 +804,43 @@ describe('InnovationUseFormComponent', () => {
       component.body.innovation_use_level_id = 7;
 
       expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(true);
+    });
+  });
+
+  /**
+   * P2-3295 — the 2030 block gets the projection tooltip from the 2026 phase on. The string itself lives on
+   * `FieldsManagerService`, because `preventFieldRender()` only mirrors label/description/required and would
+   * drop a tooltip carried in `fields()`; what this asserts is that the template forwards it to the radio.
+   */
+  describe('2030 Use Projection tooltip binding', () => {
+    /** The 2030 block only exists on the P25 branch, which is picked on the first render. */
+    const renderP25With = (tooltip: string) => {
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      fieldsManagerServiceMock.innovationUse2030ProjectionTooltip.mockReturnValue(tooltip);
+      fixture = TestBed.createComponent(InnovationUseFormComponent);
+      component = fixture.componentInstance;
+      component.body = new IpsrStep1Body();
+      component.saving = false;
+      // Refresh this view only: `fixture.detectChanges()` runs the app-wide checkNoChanges pass, which the
+      // P25 branch trips on its own (`getUseLevelIndex()` settles from -1 on the second pass) — unrelated to P2-3295.
+      fixture.changeDetectorRef.detectChanges();
+      return fixture.debugElement
+        .queryAll(By.css('app-pr-radio-button'))
+        .find(de => de.nativeElement.getAttribute('fieldRef') === '[innovation-use-form]-2030-to-be-determined');
+    };
+
+    it('forwards the projection tooltip to the 2030 radio for a 2026-phase result', () => {
+      const radio = renderP25With(TOOLTIP_2030);
+
+      expect(radio).toBeTruthy();
+      expect(radio.nativeElement.tooltip).toBe(TOOLTIP_2030);
+    });
+
+    it('forwards an empty tooltip for a 2025-phase result, so no \u24d8 button is painted', () => {
+      const radio = renderP25With('');
+
+      expect(radio).toBeTruthy();
+      expect(radio.nativeElement.tooltip).toBe('');
     });
   });
 });

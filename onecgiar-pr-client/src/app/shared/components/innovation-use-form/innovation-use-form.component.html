@@ -354,6 +354,7 @@
   <app-pr-radio-button
     [readOnly]="saving"
     fieldRef="[innovation-use-form]-2030-to-be-determined"
+    [tooltip]="this.fieldsManagerSE.innovationUse2030ProjectionTooltip()"
     [options]="[{ value: true, label: 'This is yet to be determined' }]"
     optionLabel="label"
     [(ngModel)]="body.innov_use_2030_to_be_determined"
