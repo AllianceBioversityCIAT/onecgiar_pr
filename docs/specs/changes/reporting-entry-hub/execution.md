@@ -51,7 +51,13 @@ _(entries appended below, evidence before checkbox)_
 - Reviewer verified conformant: inputs/outputs per design §6.2; all W3 states; slice/Show all; counters; default expansion; REH-R-12; localStorage try/catch; disabled Create result title; disabled Report with `title`; a11y structure; tokens checked against `colors.scss` and the exemplar — no new hex, no new SCSS class; `@akili-spec`.
 - ADVISORY (recorded): `Show all N` label uses `center.matching` while rows come from `center.projects` (can differ under the 300 cap); toggle during search announces without visible effect (Leader folded this one-liner into attempt 2); `laneSubtitle`/`activePhaseNote` render "in ." when the year is unknown; `visibleCenters` naming; `aria-controls` dangles while collapsed; (c)/(d) assert via method not DOM.
 
-**Attempt 2** — in progress (issue 2 only + the announce-during-search one-liner).
+**Attempt 2** (effort high)
+- Files: `hub-copy.ts` (+`w3.searchAnnouncement`, `centerToggleAnnouncement`, `showAllAnnouncement`, `homeLinkSeparator`, `allocationValue`), `reporting-entry-hub.component.{ts,html}` (use the copy functions; no live announcement while searching), `.spec.ts` (+1 test → 23).
+- Verification: 23/23 passed; `npx ng lint --quiet` clean; template grep: no literal text nodes outside HTML comments.
+- Reviewer verdict (scoped): **PASS** — issue 2 resolved, argument order checked, strings byte-identical, advisory fix behavioural with a real test; issue 1 closed by spec amendment. Reviewer doc note applied by Leader: REH-AC-4 / TEST-3(e) reworded to "non-matching centers render collapsed while the query is active; pre-search state restored on clear" (matches the code).
+
+**Final:** PASS · attempts 2 · covers REH-R-1/2/2.1/3.x/4.1–4.6/5/6(note)/9.1/12, REH-AC-1,3,4,6,7,8,9,10,13,14 (unit level) · gate: auto-approved (pre-approved mode).
+- Surviving advisories (follow-ups, not tasks): `Show all N` / announcement use `center.matching` which may exceed rendered rows under the 300 cap; `aria-controls` dangles while collapsed.
 
 ### `REH-T-2` — Server: controller endpoint
 

@@ -1,0 +1,351 @@
+<!--
+  "Where to report" hub — REH-R-1. Visual reference: mockup/Main.dc.html (Variant A). Tokens reused
+  verbatim from program-overview.component.html (design §6.3) — no new hex values.
+  ⚠️ html is 12px — arbitrary px values only.
+-->
+<section
+  class="rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[639px]:p-[16px]"
+  aria-labelledby="hub-title">
+  <div class="mb-[16px] flex items-start justify-between gap-[12px]">
+    <div>
+      <h2 id="hub-title" class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+        {{ copy.title }}
+      </h2>
+      <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">{{ copy.subtitle }}</p>
+    </div>
+    <button
+      type="button"
+      (click)="toggleCollapse()"
+      [attr.aria-expanded]="!collapsed()"
+      aria-controls="hub-body"
+      class="inline-flex h-[28px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-text-secondary)] transition-colors duration-150 hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+      <ng-icon [name]="collapsed() ? 'lucideChevronDown' : 'lucideChevronUp'" class="text-[14px]" />
+      <span>{{ collapsed() ? copy.expand : copy.collapse }}</span>
+    </button>
+  </div>
+
+  @if (collapsed()) {
+    <p id="hub-body" class="m-0 text-[13px] text-[var(--pr-text-secondary)]">{{ collapsedSummary() }}</p>
+  } @else {
+    <div id="hub-body" class="grid grid-cols-2 gap-[16px] max-[1279px]:grid-cols-1">
+      <!-- ══════════ Lane W1/W2 · Pooled funding ══════════ -->
+      <section
+        aria-labelledby="hub-w12-title"
+        class="flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[inset_4px_0_0_var(--pr-color-primary-300)]">
+        <div class="mb-[14px] flex items-start justify-between gap-[12px]">
+          <div>
+            <h3 id="hub-w12-title" class="m-0 text-[15px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+              {{ copy.w12.laneTitle }}
+            </h3>
+            <p class="mt-[2px] text-[12.5px] font-normal text-[var(--pr-text-muted)]">
+              {{ copy.w12.laneSubtitle(phaseLabel()) }}
+            </p>
+          </div>
+          <span
+            class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-[var(--pr-color-primary-50)] px-[9px] text-[11px] font-semibold text-[var(--pr-color-primary-700)]">
+            {{ copy.w12.laneBadge }}
+          </span>
+        </div>
+
+        <div class="flex flex-col gap-[8px]">
+          @for (row of aowRows(); track row.code) {
+            <div
+              class="flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] bg-[var(--pr-surface-ground)] px-[16px] py-[12px]">
+              <div class="flex min-w-0 flex-1 items-center gap-[12px]">
+                <span
+                  class="inline-flex shrink-0 items-center justify-center rounded-[6px] border border-purple-200/70 bg-purple-100/80 px-[8px] py-[2px] font-mono text-[11px] font-bold text-purple-800">
+                  {{ row.code }}
+                </span>
+                <span class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text-heading)]">
+                  {{ row.name }}
+                </span>
+              </div>
+              <div class="flex shrink-0 items-center gap-[12px]">
+                <span
+                  class="h-[7px] w-[110px] overflow-hidden rounded-full bg-[var(--pr-border)]/60 max-[899px]:hidden"
+                  aria-hidden="true">
+                  <span
+                    class="block h-full rounded-full bg-gradient-to-r from-[var(--pr-color-primary-500)] to-[var(--pr-color-primary-400)]"
+                    [style.width.%]="percentOf(row)"></span>
+                </span>
+                <span class="w-[56px] text-right text-[12.5px] font-medium tabular-nums text-[var(--pr-text-secondary)]">
+                  <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.done }}</strong
+                  ><span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                </span>
+                <button
+                  type="button"
+                  (click)="onReportAow(row)"
+                  [attr.aria-disabled]="!canReportW1W2() ? 'true' : null"
+                  [attr.title]="!canReportW1W2() ? copy.w12.noRightsTooltip : null"
+                  [ngClass]="
+                    canReportW1W2()
+                      ? 'cursor-pointer bg-[var(--pr-color-primary-300)] text-white hover:bg-[var(--pr-color-primary-400)]'
+                      : 'cursor-not-allowed border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-muted)]'
+                  "
+                  class="inline-flex h-[30px] items-center gap-[6px] whitespace-nowrap rounded-[8px] px-[12px] text-[12.5px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                  <span>{{ copy.w12.reportAction }}</span>
+                  <ng-icon name="lucideArrowRight" class="text-[14px]" />
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="my-[12px] flex items-center gap-[10px]">
+          <span class="shrink-0 text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)]">
+            {{ copy.w12.programLevelHeading }}
+          </span>
+          <span class="h-px flex-1 bg-[var(--pr-border)]"></span>
+        </div>
+
+        @if (programLevelRows().length === 0) {
+          <p class="m-0 text-[12.5px] font-normal text-[var(--pr-text-muted)]">{{ copy.w12.noProgramLevel }}</p>
+        } @else {
+          <div class="flex flex-col gap-[8px]">
+            @for (row of programLevelRows(); track row.kind) {
+              <div
+                class="flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] bg-[var(--pr-surface-ground)] px-[16px] py-[12px]">
+                <div class="flex min-w-0 flex-1 items-center gap-[12px]">
+                  <span
+                    class="inline-flex h-[22px] shrink-0 items-center rounded-full border border-blue-200 bg-blue-50 px-[8px] text-[10.5px] font-bold text-blue-700">
+                    {{ copy.w12.outcomeBadge }}
+                  </span>
+                  <span class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text-heading)]">
+                    {{ row.name }}
+                  </span>
+                </div>
+                <div class="flex shrink-0 items-center gap-[12px]">
+                  <span
+                    class="h-[7px] w-[110px] overflow-hidden rounded-full bg-[var(--pr-border)]/60 max-[899px]:hidden"
+                    aria-hidden="true">
+                    <span
+                      class="block h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                      [style.width.%]="percentOf(row)"></span>
+                  </span>
+                  <span class="w-[56px] text-right text-[12.5px] font-medium tabular-nums text-[var(--pr-text-secondary)]">
+                    <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.done }}</strong
+                    ><span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                  </span>
+                  <button
+                    type="button"
+                    (click)="onReportProgramLevel(row)"
+                    [attr.aria-disabled]="!canReportW1W2() ? 'true' : null"
+                    [attr.title]="!canReportW1W2() ? copy.w12.noRightsTooltip : null"
+                    [ngClass]="
+                      canReportW1W2()
+                        ? 'cursor-pointer bg-[var(--pr-color-primary-300)] text-white hover:bg-[var(--pr-color-primary-400)]'
+                        : 'cursor-not-allowed border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-muted)]'
+                    "
+                    class="inline-flex h-[30px] items-center gap-[6px] whitespace-nowrap rounded-[8px] px-[12px] text-[12.5px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                    <span>{{ copy.w12.reportAction }}</span>
+                    <ng-icon name="lucideArrowRight" class="text-[14px]" />
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (!canReportW1W2()) {
+          <p class="mt-[10px] text-[12px] font-normal text-[var(--pr-text-secondary)]">
+            {{ copy.w12.noRightsLine(programCode()) }}
+          </p>
+        }
+
+        <p class="mt-[14px] text-[12px] font-normal text-[var(--pr-text-muted)]">
+          {{ copy.w12.footerPrefix }}<strong class="text-[var(--pr-color-primary-500)]">{{ copy.w12.footerAction }}</strong
+          >{{ copy.w12.footerSuffix }}
+        </p>
+      </section>
+
+      <!-- ══════════ Lane W3 · Bilateral projects ══════════ -->
+      <section
+        aria-labelledby="reporting-entry-hub-w3"
+        class="flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[16px] shadow-[inset_4px_0_0_var(--pr-status-approved-fg)]">
+        <div class="mb-[12px] flex items-start justify-between gap-[12px]">
+          <div>
+            <h3
+              id="reporting-entry-hub-w3"
+              tabindex="-1"
+              class="m-0 text-[15px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)] focus-visible:outline-none">
+              {{ copy.w3.laneTitle }}
+            </h3>
+            <p class="mt-[2px] text-[12.5px] font-normal text-[var(--pr-text-muted)]">
+              {{ copy.w3.laneSubtitle(programCode(), w3Data()?.activeYear ?? activeYear() ?? '') }}
+            </p>
+          </div>
+          <span
+            class="inline-flex h-[24px] shrink-0 items-center whitespace-nowrap rounded-full bg-emerald-50 px-[9px] text-[11px] font-semibold text-emerald-700">
+            {{ copy.w3.totalsBadge(totalMatchingProjects(), centersWithMatching()) }}
+          </span>
+        </div>
+
+        @switch (w3State().status) {
+          @case ('loading') {
+            <div class="flex flex-col gap-[8px]" aria-hidden="true">
+              @for (i of [0, 1, 2]; track i) {
+                <div class="h-[52px] animate-pulse rounded-[10px] bg-[var(--pr-surface-ground)]"></div>
+              }
+            </div>
+          }
+          @case ('no-centers') {
+            <div class="flex flex-col items-start gap-[8px] rounded-[10px] border border-dashed border-[var(--pr-border)] px-[16px] py-[20px]">
+              <p class="m-0 text-[13px] font-normal text-[var(--pr-text-secondary)]">{{ copy.w3.noCentersBody }}</p>
+              <a
+                [href]="requestAccessHref()"
+                class="text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline">
+                {{ copy.requestAccess }}
+              </a>
+            </div>
+          }
+          @case ('error') {
+            <div
+              class="flex flex-col items-start gap-[10px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-danger-bg)] px-[16px] py-[16px]">
+              <p class="m-0 text-[13px] font-normal text-[var(--pr-danger)]">{{ copy.w3.errorMessage }}</p>
+              <button
+                type="button"
+                (click)="onRetry()"
+                class="inline-flex h-[30px] cursor-pointer items-center rounded-[8px] border border-[var(--pr-color-primary-200)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                {{ copy.w3.retry }}
+              </button>
+            </div>
+          }
+          @case ('ready') {
+            <div
+              class="mb-[12px] flex h-[38px] items-center gap-[8px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px]">
+              <ng-icon name="lucideSearch" class="shrink-0 text-[16px] text-[var(--pr-text-muted)]" />
+              <label for="hub-w3-search" class="sr-only">{{ copy.w3.searchLabel }}</label>
+              <input
+                id="hub-w3-search"
+                type="search"
+                [value]="searchQuery()"
+                (input)="onSearchInput($any($event.target).value)"
+                [attr.placeholder]="copy.w3.searchPlaceholder"
+                class="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[var(--pr-text-heading)] outline-none placeholder:text-[var(--pr-text-muted)]" />
+              <span
+                class="shrink-0 rounded-[4px] border border-[var(--pr-border)] px-[6px] py-[1px] text-[11px] font-semibold text-[var(--pr-text-muted)]">
+                {{ copy.w3.matchCounter(filteredMatchCount(), totalMatchingProjects()) }}
+              </span>
+            </div>
+
+            @if (w3Data()?.truncated) {
+              <p class="mb-[10px] text-[11.5px] font-normal text-[var(--pr-text-secondary)]">
+                {{ copy.w3.truncatedNotice }}
+              </p>
+            }
+
+            @if (!isActivePhase()) {
+              <p class="mb-[10px] text-[11.5px] font-normal text-[var(--pr-text-secondary)]">
+                {{ copy.w3.activePhaseNote(w3Data()?.activeYear ?? activeYear() ?? '') }}
+              </p>
+            }
+
+            @if (noneFunding()) {
+              <p class="mb-[10px] text-[12.5px] font-normal text-[var(--pr-text-secondary)]">
+                {{ copy.w3.noneFunding(programCode(), phaseLabel()) }}
+              </p>
+            }
+
+            <div class="flex flex-col gap-[10px]">
+              @for (center of visibleCenters(); track center.code) {
+                @if (center.error) {
+                  <div
+                    class="rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-danger-bg)] px-[12px] py-[10px] text-[12.5px] font-medium text-[var(--pr-danger)]">
+                    {{ copy.w3.centerErrorMessage(center.name) }}
+                  </div>
+                } @else if (center.matching === 0) {
+                  <div
+                    class="flex flex-wrap items-center justify-between gap-[10px] rounded-[10px] border border-dashed border-[var(--pr-border)] px-[12px] py-[10px]">
+                    <span class="text-[12.5px] font-semibold text-[var(--pr-text-secondary)]">{{ center.name }}</span>
+                    <span class="whitespace-nowrap text-[12px] text-[var(--pr-text-muted)]">
+                      {{ copy.w3.projectsOf(center.matching, center.total, programCode()) }}
+                      @if (center.acronym) {
+                        {{ copy.w3.homeLinkSeparator }}
+                        <a
+                          [routerLink]="['/bilateral', center.acronym, 'home']"
+                          class="font-semibold text-[var(--pr-color-primary-500)] hover:underline">
+                          {{ copy.w3.openCenterHome }}
+                        </a>
+                      }
+                    </span>
+                  </div>
+                } @else {
+                  <div class="overflow-hidden rounded-[10px] border border-[var(--pr-border)]">
+                    <button
+                      type="button"
+                      (click)="toggleCenterExpanded(center)"
+                      [attr.aria-expanded]="isCenterExpanded(center)"
+                      [attr.aria-controls]="'hub-w3-group-' + center.code"
+                      class="flex w-full cursor-pointer items-center justify-between gap-[10px] bg-[var(--pr-surface-ground)] px-[12px] py-[10px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                      <span
+                        class="flex min-w-0 items-center gap-[8px] text-[12px] font-bold uppercase tracking-[0.04em] text-[var(--pr-text-secondary)]">
+                        <ng-icon [name]="isCenterExpanded(center) ? 'lucideChevronUp' : 'lucideChevronDown'" class="shrink-0 text-[14px]" />
+                        <span class="min-w-0 truncate normal-case">{{ center.name }}</span>
+                      </span>
+                      <span class="whitespace-nowrap text-[12px] text-[var(--pr-text-muted)]">
+                        {{ copy.w3.projectsOf(center.matching, center.total, programCode()) }}
+                      </span>
+                    </button>
+
+                    @if (isCenterExpanded(center)) {
+                      <div [id]="'hub-w3-group-' + center.code" class="flex flex-col gap-[6px] px-[12px] py-[10px]">
+                        @for (project of visibleProjectsFor(center); track project.id) {
+                          <div
+                            class="flex flex-wrap items-center justify-between gap-[10px] rounded-[8px] bg-[var(--pr-surface-card)] px-[12px] py-[8px]">
+                            <div class="flex min-w-0 flex-1 items-center gap-[10px]">
+                              <span class="shrink-0 font-mono text-[12px] font-semibold text-[var(--pr-text-heading)]">
+                                {{ project.shortName }}
+                              </span>
+                              <span class="min-w-0 truncate text-[12.5px] font-normal text-[var(--pr-text-secondary)]">
+                                {{ project.fullName }}
+                              </span>
+                              <span
+                                class="inline-flex shrink-0 items-center gap-[4px] whitespace-nowrap rounded-full border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-50)] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-500)]">
+                                {{ programCode() }} <em class="font-bold not-italic">{{ copy.w3.allocationValue(project.allocation) }}</em>
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              (click)="onCreateResult(project, center)"
+                              [attr.aria-disabled]="!center.acronym ? 'true' : null"
+                              [attr.title]="!center.acronym ? copy.w3.createResultDisabledTitle : null"
+                              [ngClass]="
+                                center.acronym
+                                  ? 'cursor-pointer bg-[var(--pr-color-primary-300)] text-white hover:bg-[var(--pr-color-primary-400)]'
+                                  : 'cursor-not-allowed border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-muted)]'
+                              "
+                              class="inline-flex h-[30px] shrink-0 items-center whitespace-nowrap rounded-[8px] px-[12px] text-[12.5px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                              {{ copy.w3.createResult }}
+                            </button>
+                          </div>
+                        }
+
+                        @if (!isSearching() && matchingProjectsFor(center).length > 3) {
+                          <button
+                            type="button"
+                            (click)="toggleShowAll(center)"
+                            class="self-start cursor-pointer text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                            {{ isCenterShowAll(center) ? copy.w3.showLess : copy.w3.showAll(center.matching) }}
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              }
+            </div>
+          }
+        }
+
+        <div class="mt-[14px] flex flex-wrap items-center justify-between gap-[12px] border-t border-[var(--pr-border)] pt-[10px]">
+          <p class="m-0 text-[12px] font-normal text-[var(--pr-text-muted)]">{{ copy.notSeeingCenter }}</p>
+          <a [href]="requestAccessHref()" class="text-[12px] font-semibold text-[var(--pr-color-primary-500)] hover:underline">
+            {{ copy.requestAccess }}
+          </a>
+        </div>
+      </section>
+    </div>
+  }
+
+  <div aria-live="polite" class="sr-only">{{ liveMessage() }}</div>
+</section>

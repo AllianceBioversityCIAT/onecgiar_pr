@@ -1,4 +1,6 @@
 export const lucideChevronDown = {};
+export const lucideChevronUp = {};
+export const lucideArrowRight = {};
 export const lucideCheck = {};
 export const lucideEllipsis = {};
 export const lucideInfo = {};
