@@ -1,9 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import {
+  buildCategoryFilterOptions,
   buildStatusCounts,
+  isStandardRfCategory,
+  matchesProgrammeResultCategory,
   matchesProgrammeResultFilters,
   matchesProgrammeResultSearch,
-  ProgrammeResultsFilterService
+  PROGRAMME_RESULTS_OTHER_CATEGORY,
+  ProgrammeResultsFilterService,
+  STANDARD_RF_CATEGORIES
 } from './programme-results-filter.service';
 import { ProgrammeResultRow } from './programme-results.service';
 
@@ -348,6 +353,100 @@ describe('ProgrammeResultsFilterService', () => {
         { statusId: 1, statusName: 'Editing', count: 1 },
         { statusId: 1, statusName: 'Submitted', count: 1 }
       ]);
+    });
+  });
+  // ── P2-3312 ───────────────────────────────────────────────────────────────────────────────
+  // End-user feedback (Nicoleta, via Santiago): the Category dropdown must offer the Results
+  // Framework categories only, with everything else collapsed into one "Other" bucket. These
+  // lock BOTH halves — the options that are built, and the rows the bucket then selects.
+  describe('standard RF categories (P2-3312)', () => {
+    /** Every non-RF `result_type` this endpoint can return (ids 3, 4, 8, 9). */
+    const NON_RF = ['Capacity change', 'Other outcome', 'Other output', 'Impact contribution'];
+
+    it('recognises the five RF result types and nothing else', () => {
+      for (const name of STANDARD_RF_CATEGORIES) expect(isStandardRfCategory(name)).toBe(true);
+      for (const name of NON_RF) expect(isStandardRfCategory(name)).toBe(false);
+      expect(isStandardRfCategory('')).toBe(false);
+      expect(isStandardRfCategory(null)).toBe(false);
+      // Case- and whitespace-insensitive: the payload's casing must not decide this.
+      expect(isStandardRfCategory('  knowledge PRODUCT ')).toBe(true);
+    });
+
+    it('offers only the RF categories present, in RF order, plus one Other bucket', () => {
+      const present = ['Capacity change', 'Capacity sharing for development', 'Innovation development', 'Knowledge product', 'Other output'];
+
+      expect(buildCategoryFilterOptions(present, null)).toEqual([
+        { value: 'Innovation development', label: 'Innovation development' },
+        { value: 'Knowledge product', label: 'Knowledge product' },
+        { value: 'Capacity sharing for development', label: 'Capacity sharing for development' },
+        { value: PROGRAMME_RESULTS_OTHER_CATEGORY, label: 'Other' }
+      ]);
+    });
+
+    it('never lists a non-RF category as its own option', () => {
+      const options = buildCategoryFilterOptions([...STANDARD_RF_CATEGORIES, ...NON_RF], null);
+      for (const name of NON_RF) expect(options.some(option => option.value === name)).toBe(false);
+      expect(options).toHaveLength(STANDARD_RF_CATEGORIES.length + 1);
+    });
+
+    it('omits the Other bucket when the programme reported RF categories only', () => {
+      const options = buildCategoryFilterOptions(['Knowledge product', 'Policy change'], null);
+      expect(options.some(option => option.value === PROGRAMME_RESULTS_OTHER_CATEGORY)).toBe(false);
+      expect(options).toEqual([
+        { value: 'Knowledge product', label: 'Knowledge product' },
+        { value: 'Policy change', label: 'Policy change' }
+      ]);
+    });
+
+    it('never offers a category no row actually has', () => {
+      expect(buildCategoryFilterOptions(['Knowledge product'], null)).toEqual([{ value: 'Knowledge product', label: 'Knowledge product' }]);
+      expect(buildCategoryFilterOptions([], null)).toEqual([]);
+      expect(buildCategoryFilterOptions(null as unknown as string[], null)).toEqual([]);
+    });
+
+    it('keeps a deep-linked non-RF category selectable so the pill is not left blank', () => {
+      // The Overview tab links here with an exact `category=<result_type>`, non-RF ones included.
+      const options = buildCategoryFilterOptions(['Knowledge product', 'Other output'], 'Other output');
+      expect(options).toEqual([
+        { value: 'Knowledge product', label: 'Knowledge product' },
+        { value: 'Other output', label: 'Other output' },
+        { value: PROGRAMME_RESULTS_OTHER_CATEGORY, label: 'Other' }
+      ]);
+    });
+
+    it('the Other bucket selects every non-RF row and no RF row', () => {
+      for (const name of NON_RF) {
+        expect(matchesProgrammeResultCategory(row({ category: name }), PROGRAMME_RESULTS_OTHER_CATEGORY)).toBe(true);
+      }
+      for (const name of STANDARD_RF_CATEGORIES) {
+        expect(matchesProgrammeResultCategory(row({ category: name }), PROGRAMME_RESULTS_OTHER_CATEGORY)).toBe(false);
+      }
+    });
+
+    it('still matches an exact category, and passes everything when nothing is picked', () => {
+      expect(matchesProgrammeResultCategory(row({ category: 'Other output' }), 'Other output')).toBe(true);
+      expect(matchesProgrammeResultCategory(row({ category: 'Other output' }), 'Knowledge product')).toBe(false);
+      expect(matchesProgrammeResultCategory(row({ category: 'Other output' }), null)).toBe(true);
+    });
+
+    it('filters rows through the whole predicate when the bucket is selected', () => {
+      const rows = [
+        row({ code: '1', category: 'Knowledge product' }),
+        row({ code: '2', category: 'Other output' }),
+        row({ code: '3', category: 'Capacity change' })
+      ];
+      service.selectedCategory.set(PROGRAMME_RESULTS_OTHER_CATEGORY);
+
+      expect(service.filterRows(rows).map(r => r.code)).toEqual(['2', '3']);
+      expect(matchesProgrammeResultFilters(rows[0], service.state())).toBe(false);
+    });
+
+    it('labels the bucket chip "Other" instead of leaking the sentinel', () => {
+      service.selectedCategory.set(PROGRAMME_RESULTS_OTHER_CATEGORY);
+
+      expect(service.activeChips()).toEqual([{ label: 'Category: Other', dimension: 'category', value: PROGRAMME_RESULTS_OTHER_CATEGORY }]);
+      service.clearChip(service.activeChips()[0]);
+      expect(service.selectedCategory()).toBeNull();
     });
   });
 });
