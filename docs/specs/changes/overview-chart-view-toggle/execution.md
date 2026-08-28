@@ -35,3 +35,27 @@
 - **Issues:** Reviewer's verdict initially not delivered to the Leader (idle without report); recovered via direct message — no work lost, no attempt consumed.
 - **Final verification:** full suite green (482/6888), lint clean.
 - **Gate:** auto-advanced to CVT-T-2 per the user's fast directive (see Document Control).
+
+## CVT-T-2 — Toggle state, segmented control, mode-aware bindings
+
+- **Status:** PASS (attempt 1 of max 3) · **Date:** 2026-08-27
+- **Implements:** CVT-R-1 (switching, defaults, pinned headings), CVT-R-2 (empty model, component side), CVT-R-4 (a11y: tableModel identity, real buttons, single host)
+- **Skills assigned:** `angular-developer`, `ui-ux-pro-max` · effort medium
+
+### Attempt 1
+
+- **Files changed:** `program-overview.component.ts` (+54/−17 lines w/ renames), `.html` (+75), `.spec.ts` (+125) — diff confined to these three.
+- **What:** `ChartViewMode` type; independent `w12ViewMode`/`bilateralViewMode` signals (default `'heatmap'`) + setters; option computeds renamed per design §2.1 to `w12ChartOption`/`bilateralChartOption`, mode-aware (heatmap vs `stackedBarOption` over same model/ramp; rename verified complete — zero stale references); click handlers route `barLinkFromClick`/`cellLinkFromClick` by mode into unchanged null-swallowing `emitLink`; segmented control per card (2 real buttons, `aria-pressed`, status-pill tokens `--pr-color-primary-50/400`, `--pr-text-secondary`, `--pr-border`, `focus-visible:shadow-[var(--pr-focus-ring)]` — CVT-DD-6), outside the chart `@if` so it stays in the empty state; `<h2>` wrapped in flex row with margins conserved — heading text/order byte-identical, pinned 8-heading order assertion untouched in diff and green. Specs: init shape, independence, host-count + `tableModel` reference identity, empty-model both modes, aria-pressed flip, bars-mode click emit/no-emit.
+- **Implementer verification:** FULL suite → **482 suites / 6898 tests passed**; `ng lint --quiet` clean; `ng build` succeeded (pre-existing warnings only). No hex, no `package.json`.
+- **Reviewer verdict:** **STATUS: PASS** — all 6 DoD items confirmed against the diff; tokens resolve to existing `colors.scss` declarations (no new token); requirements/tasks "empty model" wording adjudicated consistent (no divergence *by mode*); null link structurally cannot emit (only `emitLink` emits).
+
+### ADVISORY (4R, non-gating — recorded, not tasked)
+
+1. **RELIABILITY:** host-count assertion is global (=3) rather than per-card (=1); catches the stated FAIL input but would pass a compensating add/remove across cards. Suggested: scope per `<section>`.
+2. **RISK (a11y beyond spec):** toggle group lacks `role="group"` + accessible name tying each Heatmap/Bars pair to its card; `aria-pressed` (all §6.2 requires) present. Two-attribute improvement — **surfaced to the user at the CVT-T-3 gate for a decision; not self-tasked** (advisory-never-grows-scope).
+3. **READABILITY:** `gap-0.5` renders 1.5px at the 12px root amid otherwise arbitrary-px utilities; `gap-[2px]` would match intent (style, not violation).
+
+- **Decisions:** none beyond adjudications above.
+- **Issues:** concurrent foreign session active in this shared worktree (`kp-cgspace-browse/**` quick) — CVT-T-1's commit initially swept its staged files in twice; corrected by `--only` pathspec commits; CVT-T-2 committed the same way. Convention reminder: one AKILI session per checkout.
+- **Final verification:** full suite green (482/6898), lint clean, build clean.
+- **Gate:** auto-advanced to CVT-T-3 per the user's fast directive; CVT-T-3's HITL stops for the user regardless.

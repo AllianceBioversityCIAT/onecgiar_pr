@@ -62,13 +62,43 @@
   <!-- 3 · W1/W2 results by category and status (heatmap) · span 6 -->
   <section
     class="col-span-6 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px] max-[1180px]:col-span-12">
-    <h2 class="m-0 mb-[16px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
-      W1/W2 results by category and status
-    </h2>
+    <div class="mb-[16px] flex items-center justify-between gap-[12px]">
+      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+        W1/W2 results by category and status
+      </h2>
+      <!-- Heatmap↔Bars toggle (CVT-R-1/CVT-DD-6) — status-pill styling, right-aligned, present
+           even when the card is empty (toggle-dependent divergence is out of scope). -->
+      <div class="flex shrink-0 items-center gap-0.5 rounded-[8px] border border-[var(--pr-border)] p-[2px]">
+        <button
+          type="button"
+          (click)="setW12ViewMode('heatmap')"
+          [attr.aria-pressed]="w12ViewMode() === 'heatmap'"
+          [class]="
+            w12ViewMode() === 'heatmap'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
+              : 'bg-transparent text-[var(--pr-text-secondary)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Heatmap
+        </button>
+        <button
+          type="button"
+          (click)="setW12ViewMode('bars')"
+          [attr.aria-pressed]="w12ViewMode() === 'bars'"
+          [class]="
+            w12ViewMode() === 'bars'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
+              : 'bg-transparent text-[var(--pr-text-secondary)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Bars
+        </button>
+      </div>
+    </div>
 
     @if (w12Heatmap()?.rows?.length || w12HeatmapLoading()) {
       <app-pr-viz-chart
-        [options]="w12HeatmapOption()"
+        [options]="w12ChartOption()"
         [tableModel]="w12HeatmapTable()"
         [chartTitle]="'W1/W2 results by category and status'"
         height="240px"
@@ -237,9 +267,38 @@
   <!-- 7 · W3/Bilateral results by center and category (heatmap) · span 12 (full width: 7 abbreviated columns breathe) -->
   <section
     class="col-span-12 flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-    <h2 class="m-0 mb-[6px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
-      W3/Bilateral results by center and category
-    </h2>
+    <div class="mb-[6px] flex items-center justify-between gap-[12px]">
+      <h2 class="m-0 text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">
+        W3/Bilateral results by center and category
+      </h2>
+      <!-- Heatmap↔Bars toggle (CVT-R-1/CVT-DD-6) — independent from the W1/W2 card's toggle. -->
+      <div class="flex shrink-0 items-center gap-0.5 rounded-[8px] border border-[var(--pr-border)] p-[2px]">
+        <button
+          type="button"
+          (click)="setBilateralViewMode('heatmap')"
+          [attr.aria-pressed]="bilateralViewMode() === 'heatmap'"
+          [class]="
+            bilateralViewMode() === 'heatmap'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
+              : 'bg-transparent text-[var(--pr-text-secondary)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Heatmap
+        </button>
+        <button
+          type="button"
+          (click)="setBilateralViewMode('bars')"
+          [attr.aria-pressed]="bilateralViewMode() === 'bars'"
+          [class]="
+            bilateralViewMode() === 'bars'
+              ? 'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-400)]'
+              : 'bg-transparent text-[var(--pr-text-secondary)]'
+          "
+          class="cursor-pointer rounded-[6px] border-0 px-[10px] py-[4px] text-[12px] font-semibold transition-colors duration-150 focus-visible:shadow-[var(--pr-focus-ring)] focus-visible:outline-none">
+          Bars
+        </button>
+      </div>
+    </div>
 
     @if (bilateralHeatmap()?.rows?.length) {
       <span class="mb-[16px] text-[13px] font-normal text-[var(--pr-text-muted)]">
@@ -251,7 +310,7 @@
         </span>
       }
       <app-pr-viz-chart
-        [options]="bilateralHeatmapOption()"
+        [options]="bilateralChartOption()"
         [tableModel]="bilateralHeatmapTable()"
         [chartTitle]="'W3/Bilateral results by center and category'"
         height="240px"

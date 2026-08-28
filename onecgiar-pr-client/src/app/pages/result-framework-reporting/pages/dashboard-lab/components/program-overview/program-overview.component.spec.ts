@@ -549,4 +549,129 @@ describe('ProgramOverviewComponent', () => {
       expect(emitSpy).not.toHaveBeenCalled();
     });
   });
+
+  /**
+   * `CVT-T-2`: per-card view toggle (`CVT-R-1`), mode-aware options (`CVT-R-2`), navigation
+   * parity in bars mode (`CVT-R-3`), and the a11y/host invariants (`CVT-R-4`).
+   */
+  describe('matrix view toggle (CVT-R-1 / CVT-R-4)', () => {
+    /** FAIL input: defaulting either signal to `'bars'` turns this red. */
+    it('defaults both matrix cards to a heatmap-shaped option on init', () => {
+      expect(component.w12ViewMode()).toBe('heatmap');
+      expect(component.bilateralViewMode()).toBe('heatmap');
+
+      const w12Option = component.w12ChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
+      const bilateralOption = component.bilateralChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
+      expect(w12Option?.series?.[0]?.type).toBe('heatmap');
+      expect(w12Option?.visualMap).toBeTruthy();
+      expect(bilateralOption?.series?.[0]?.type).toBe('heatmap');
+      expect(bilateralOption?.visualMap).toBeTruthy();
+    });
+
+    /** FAIL input: sharing one signal between the two cards turns this red. */
+    it('toggling the W1/W2 card to bars leaves the bilateral card in heatmap (independence)', () => {
+      component.setW12ViewMode('bars');
+      fixture.detectChanges();
+
+      const w12Option = component.w12ChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
+      expect(component.w12ViewMode()).toBe('bars');
+      expect(w12Option?.series?.[0]?.type).toBe('bar');
+      expect(w12Option?.visualMap).toBeUndefined();
+
+      const bilateralOption = component.bilateralChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
+      expect(component.bilateralViewMode()).toBe('heatmap');
+      expect(bilateralOption?.series?.[0]?.type).toBe('heatmap');
+    });
+
+    /** FAIL input: a second chart host per card, or a table rebuilt on toggle, turns this red. */
+    it('keeps exactly one app-pr-viz-chart host per card and the same tableModel reference across the switch', () => {
+      const beforeHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
+      expect(beforeHosts.length).toBe(3);
+      const w12TableBefore = component.w12HeatmapTable();
+      const bilateralTableBefore = component.bilateralHeatmapTable();
+
+      component.setW12ViewMode('bars');
+      component.setBilateralViewMode('bars');
+      fixture.detectChanges();
+
+      const afterHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
+      expect(afterHosts.length).toBe(3);
+      expect(component.w12HeatmapTable()).toBe(w12TableBefore);
+      expect(component.bilateralHeatmapTable()).toBe(bilateralTableBefore);
+    });
+
+    /** FAIL input: dropping the toggle when the model is empty (instead of only the chart) turns this red. */
+    it('keeps the toggle present (but no chart) when a matrix card has no rows, in both modes', () => {
+      fixture.componentRef.setInput('w12Heatmap', { rows: [], cols: [], cells: [], caption: 'W1/W2 results by category and status' });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain('No W1/W2 results reported yet.');
+      const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
+      expect(buttons.some(b => b.textContent?.trim() === 'Heatmap')).toBe(true);
+      expect(buttons.some(b => b.textContent?.trim() === 'Bars')).toBe(true);
+
+      component.setW12ViewMode('bars');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('No W1/W2 results reported yet.');
+      expect(component.w12ChartOption()).toBeNull();
+    });
+
+    describe('toggle controls', () => {
+      /** FAIL input: missing a button, or defaulting `aria-pressed` wrong, turns this red. */
+      it('renders a Heatmap/Bars toggle (2 buttons) per matrix card, Heatmap pressed by default', () => {
+        const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
+        const heatmapButtons = buttons.filter(b => b.textContent?.trim() === 'Heatmap');
+        const barsButtons = buttons.filter(b => b.textContent?.trim() === 'Bars');
+
+        expect(heatmapButtons.length).toBe(2);
+        expect(barsButtons.length).toBe(2);
+        heatmapButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('true'));
+        barsButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('false'));
+      });
+
+      /** FAIL input: one shared signal driving both cards' buttons turns this red. */
+      it('flips aria-pressed and the mode signal for only the clicked card', () => {
+        const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
+        // DOM order follows the template: W1/W2 heatmap card's toggle renders before the
+        // bilateral heatmap card's toggle.
+        const [w12BarsButton] = buttons.filter(b => b.textContent?.trim() === 'Bars');
+
+        w12BarsButton.click();
+        fixture.detectChanges();
+
+        expect(component.w12ViewMode()).toBe('bars');
+        expect(component.bilateralViewMode()).toBe('heatmap');
+        expect(w12BarsButton.getAttribute('aria-pressed')).toBe('true');
+      });
+    });
+
+    /** Segment click resolution in bars mode must agree with the heatmap resolver (`CVT-R-3`). */
+    describe('bars-mode click resolution', () => {
+      beforeEach(() => {
+        component.setW12ViewMode('bars');
+        fixture.detectChanges();
+      });
+
+      it('emits the stored link when a navigable bars-mode segment is activated', () => {
+        const emitted: OverviewLink[] = [];
+        const sub = component.openResults.subscribe(link => emitted.push(link));
+
+        // seriesIndex 0 = "Editing" column, dataIndex 0 = "Knowledge product" row.
+        component.onW12HeatmapClick({ seriesIndex: 0, dataIndex: 0 } as unknown as ECElementEvent);
+
+        expect(emitted).toEqual([{ category: 'Knowledge product', status: 'Editing' }]);
+        sub.unsubscribe();
+      });
+
+      /** FAIL input: a bars-mode resolver bypassing the null-link check turns this red. */
+      it('emits nothing when the Other-column bars-mode segment (link: null) is activated', () => {
+        const emitSpy = jest.spyOn(component.openResults, 'emit');
+
+        // seriesIndex 3 = "Other" column — its cell's link is null.
+        component.onW12HeatmapClick({ seriesIndex: 3, dataIndex: 0 } as unknown as ECElementEvent);
+
+        expect(emitSpy).not.toHaveBeenCalled();
+      });
+    });
+  });
 });

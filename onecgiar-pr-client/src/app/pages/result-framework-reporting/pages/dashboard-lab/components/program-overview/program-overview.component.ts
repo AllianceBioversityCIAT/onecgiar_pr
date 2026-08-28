@@ -1,8 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { PrVizChartComponent, EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
-import { heatmapOption, heatmapTable, cellLinkFromClick, donutOption, donutTable, sectorLinkFromClick } from './program-overview.charts';
+import {
+  heatmapOption,
+  heatmapTable,
+  cellLinkFromClick,
+  stackedBarOption,
+  barLinkFromClick,
+  donutOption,
+  donutTable,
+  sectorLinkFromClick
+} from './program-overview.charts';
 import type { ECElementEvent } from 'echarts/core';
+
+/** A matrix card's view mode (`CVT-R-1`): default `'heatmap'`, session-local, per-card. */
+export type ChartViewMode = 'heatmap' | 'bars';
 
 /**
  * Typed navigation intent for the Results tab (`OVW-R-5` emission contract). Only the defined
@@ -137,9 +149,27 @@ export class ProgramOverviewComponent {
    */
   private readonly heatmapRamp = computed(() => [...resolveChartTokens().ramp].reverse());
 
-  readonly w12HeatmapOption = computed<EChartsOption | null>(() => {
+  /**
+   * Per-card view mode (`CVT-R-1`/`CVT-DD-1`): independent, session-local, default `'heatmap'`.
+   * Owned here (not the parent) because it is a pure view preference over data the parent already
+   * supplies — the parent owns data/links, this component owns geometry.
+   */
+  readonly w12ViewMode = signal<ChartViewMode>('heatmap');
+  readonly bilateralViewMode = signal<ChartViewMode>('heatmap');
+
+  setW12ViewMode(mode: ChartViewMode): void {
+    this.w12ViewMode.set(mode);
+  }
+
+  setBilateralViewMode(mode: ChartViewMode): void {
+    this.bilateralViewMode.set(mode);
+  }
+
+  /** Mode-aware options (`CVT-DD-2`): one host per card, the computed swaps builders on toggle. */
+  readonly w12ChartOption = computed<EChartsOption | null>(() => {
     const model = this.w12Heatmap();
-    return model && model.rows.length ? heatmapOption(model, this.heatmapRamp()) : null;
+    if (!model || !model.rows.length) return null;
+    return this.w12ViewMode() === 'bars' ? stackedBarOption(model, this.heatmapRamp()) : heatmapOption(model, this.heatmapRamp());
   });
 
   readonly w12HeatmapTable = computed<VizChartTableModel | null>(() => {
@@ -147,9 +177,10 @@ export class ProgramOverviewComponent {
     return model && model.rows.length ? heatmapTable(model) : null;
   });
 
-  readonly bilateralHeatmapOption = computed<EChartsOption | null>(() => {
+  readonly bilateralChartOption = computed<EChartsOption | null>(() => {
     const model = this.bilateralHeatmap();
-    return model && model.rows.length ? heatmapOption(model, this.heatmapRamp()) : null;
+    if (!model || !model.rows.length) return null;
+    return this.bilateralViewMode() === 'bars' ? stackedBarOption(model, this.heatmapRamp()) : heatmapOption(model, this.heatmapRamp());
   });
 
   readonly bilateralHeatmapTable = computed<VizChartTableModel | null>(() => {
@@ -157,17 +188,22 @@ export class ProgramOverviewComponent {
     return model && model.rows.length ? heatmapTable(model) : null;
   });
 
-  /** Resolves the clicked cell back to its `OverviewLink` and emits (or swallows a `null`). */
+  /**
+   * Resolves the clicked cell/segment back to its `OverviewLink` and emits (or swallows a
+   * `null`) — the mode decides which resolver reads the event (`CVT-R-3` parity).
+   */
   onW12HeatmapClick(event: ECElementEvent): void {
     const model = this.w12Heatmap();
     if (!model) return;
-    this.emitLink(cellLinkFromClick(event, model));
+    const link = this.w12ViewMode() === 'bars' ? barLinkFromClick(event, model) : cellLinkFromClick(event, model);
+    this.emitLink(link);
   }
 
   onBilateralHeatmapClick(event: ECElementEvent): void {
     const model = this.bilateralHeatmap();
     if (!model) return;
-    this.emitLink(cellLinkFromClick(event, model));
+    const link = this.bilateralViewMode() === 'bars' ? barLinkFromClick(event, model) : cellLinkFromClick(event, model);
+    this.emitLink(link);
   }
 
   /**

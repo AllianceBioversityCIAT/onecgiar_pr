@@ -40,7 +40,7 @@
   - [x] Shared ids: both builders' series/dataset ids equal for the same model; `universalTransition` enabled. **FAIL input:** divergent ids → equality red. **What this cannot prove:** that the morph *renders* well — CVT-AC-3 (T6), with the CVT-R-5 fallback pre-approved.
   - [x] Full suite `cd onecgiar-pr-client && npx jest --silent --reporters=summary --no-coverage` green; `npx ng lint --quiet` clean. **Disqualifier:** `--testPathPattern` narrowing.
 
-### `CVT-T-2` — Toggle state, segmented control, mode-aware bindings
+### [x] `CVT-T-2` — Toggle state, segmented control, mode-aware bindings
 
 - **Type:** `client`
 - **Description:** In `program-overview.component.ts`: `w12ViewMode` / `bilateralViewMode` signals (default `'heatmap'`), setters, mode-aware option computeds (`w12ChartOption()` → heatmap or bars builder over the same model/ramp), click handlers routing through the mode's resolver into `emitLink`. In the template: segmented control (two `<button type="button">`, labels "Heatmap"/"Bars", `[attr.aria-pressed]`, status-pill styling + `focus-visible:shadow-[var(--pr-focus-ring)]` — CVT-DD-6) right-aligned in each matrix card's heading row; `[options]` bound to the mode-aware computed; `tableModel`/`chartTitle`/`height`/`(chartClick)` unchanged. Extend `program-overview.component.spec.ts`.
@@ -53,12 +53,12 @@
 - **Estimate:** M (~140 LOC incl. spec)
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
 - **Definition of done:**
-  - [ ] Init spec: both cards heatmap by default (options shape = heatmap builder output). **FAIL input:** defaulting to `'bars'` → red.
-  - [ ] Independence spec: toggle W1/W2 → its options switch, bilateral's unchanged. **FAIL input:** one shared signal → red.
-  - [ ] Host/table spec: `app-pr-viz-chart` count per card = 1 before and after the switch; `tableModel` reference identical across the switch. **FAIL input:** second host or table rebuild → red.
-  - [ ] Pinned `<h2>` order assertion **unmodified** in the diff and green. **FAIL input:** any heading edit.
-  - [ ] Bars-mode click: `Other` segment event → no emission; navigable segment → the cell's link (via `openResults.subscribe`). **FAIL input:** resolver bypassing the null check → red.
-  - [ ] Full suite + lint + `ng build` green (same disqualifier). **Presence caveat:** `aria-pressed` + classes prove markup; pressed-state *visibility* and control affordance are CVT-AC-3 (T6).
+  - [x] Init spec: both cards heatmap by default (options shape = heatmap builder output). **FAIL input:** defaulting to `'bars'` → red.
+  - [x] Independence spec: toggle W1/W2 → its options switch, bilateral's unchanged. **FAIL input:** one shared signal → red.
+  - [x] Host/table spec: `app-pr-viz-chart` count per card = 1 before and after the switch; `tableModel` reference identical across the switch. **FAIL input:** second host or table rebuild → red.
+  - [x] Pinned `<h2>` order assertion **unmodified** in the diff and green. **FAIL input:** any heading edit.
+  - [x] Bars-mode click: `Other` segment event → no emission; navigable segment → the cell's link (via `openResults.subscribe`). **FAIL input:** resolver bypassing the null check → red.
+  - [x] Full suite + lint + `ng build` green (same disqualifier). **Presence caveat:** `aria-pressed` + classes prove markup; pressed-state *visibility* and control affordance are CVT-AC-3 (T6).
 
 ### `CVT-T-3` — Morph verification + HITL decision record
 
