@@ -124,6 +124,9 @@ export class ReportingEntryHubComponent {
   readonly w3State = input<HubW3State>({ status: 'loading' });
   readonly myCentersCount = input<number>(0);
 
+  /** Header CTA gate mirrored here — false renders the footer mention as plain text. @akili-spec changes/reporting-entry-hub */
+  readonly canReportEmerging = input<boolean>(true);
+  readonly reportEmerging = output<void>();
   readonly reportAow = output<string>();
   readonly reportProgramLevel = output<HubProgramLevelKind>();
   readonly createResult = output<HubCreateResultEvent>();

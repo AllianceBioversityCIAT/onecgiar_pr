@@ -80,6 +80,7 @@ describe('ReportingEntryHubComponent', () => {
     fixture.componentRef.setInput('activeYear', overrides['activeYear'] ?? 2026);
     fixture.componentRef.setInput('aowRows', overrides['aowRows'] ?? aowRows);
     fixture.componentRef.setInput('w1w2Loading', overrides['w1w2Loading'] ?? false);
+    fixture.componentRef.setInput('canReportEmerging', overrides['canReportEmerging'] ?? true);
     fixture.componentRef.setInput('programLevelRows', overrides['programLevelRows'] ?? programLevelRows);
     fixture.componentRef.setInput('canReportW1W2', overrides['canReportW1W2'] ?? true);
     fixture.componentRef.setInput('w3State', overrides['w3State'] ?? readyState);
@@ -122,7 +123,10 @@ describe('ReportingEntryHubComponent', () => {
     await setup({ canReportW1W2: false });
     const reportButtons = fixture.debugElement
       .queryAll(By.css('button'))
-      .filter(el => (el.nativeElement as HTMLElement).textContent?.trim().startsWith('Report'));
+      .filter(el => {
+        const n = el.nativeElement as HTMLElement;
+        return n.textContent?.trim().startsWith('Report') && !n.classList.contains('hub-footer-action');
+      });
     expect(reportButtons.length).toBeGreaterThan(0);
     for (const btn of reportButtons) {
       const el = btn.nativeElement as HTMLElement;
@@ -345,7 +349,7 @@ describe('ReportingEntryHubComponent', () => {
       const lane = (fixture.nativeElement as HTMLElement).querySelector('section[aria-labelledby="hub-w12-title"]') as HTMLElement;
       expect(lane.querySelectorAll('.animate-pulse').length).toBe(3);
       expect(lane.textContent).not.toContain('AOW01');
-      expect(lane.querySelectorAll('button').length).toBe(0);
+      expect(lane.querySelectorAll('button:not(.hub-footer-action)').length).toBe(0);
     });
 
     it('renders the AoW rows and no skeleton when w1w2Loading is false', async () => {
@@ -353,6 +357,27 @@ describe('ReportingEntryHubComponent', () => {
       const lane = (fixture.nativeElement as HTMLElement).querySelector('section[aria-labelledby="hub-w12-title"]') as HTMLElement;
       expect(lane.querySelectorAll('.animate-pulse').length).toBe(0);
       expect(lane.textContent).toContain('AOW01');
+    });
+  });
+
+  describe('footer emerging-result mention', () => {
+    it('is a button that emits reportEmerging when the user can report emerging results', async () => {
+      await setup({});
+      const emitted: boolean[] = [];
+      component.reportEmerging.subscribe(() => emitted.push(true));
+      const btns = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+        .filter(b => (b.textContent ?? '').includes('Report emerging result'));
+      expect(btns.length).toBe(1);
+      btns[0].click();
+      expect(emitted.length).toBe(1);
+    });
+
+    it('renders as plain text when canReportEmerging is false', async () => {
+      await setup({ canReportEmerging: false });
+      const lane = (fixture.nativeElement as HTMLElement).querySelector('section[aria-labelledby="hub-w12-title"]') as HTMLElement;
+      const btns = Array.from(lane.querySelectorAll('button')).filter(b => (b.textContent ?? '').includes('Report emerging result'));
+      expect(btns.length).toBe(0);
+      expect(lane.textContent).toContain('Report emerging result');
     });
   });
 });

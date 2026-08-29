@@ -1208,6 +1208,8 @@
           [canReportW1W2]="entityAowService.canReportResults()"
           [w3State]="w3State()"
           [myCentersCount]="myCenters().length"
+          [canReportEmerging]="canReportEmerging()"
+          (reportEmerging)="openReportModal()"
           (reportAow)="onOpenAow($event)"
           (reportProgramLevel)="onReportProgramLevel($event)"
           (createResult)="onHubCreateResult($event)"

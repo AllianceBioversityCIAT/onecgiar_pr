@@ -165,8 +165,16 @@
         }
 
         <p class="mt-[14px] text-[12px] font-normal text-[var(--pr-text-muted)]">
-          {{ copy.w12.footerPrefix }}<strong class="text-[var(--pr-color-primary-500)]">{{ copy.w12.footerAction }}</strong
-          >{{ copy.w12.footerSuffix }}
+          {{ copy.w12.footerPrefix
+          }}@if (canReportEmerging()) {
+            <button
+              type="button"
+              (click)="reportEmerging.emit()"
+              class="hub-footer-action cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-[var(--pr-color-primary-500)] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+              {{ copy.w12.footerAction }}</button>
+          } @else {
+            <strong class="text-[var(--pr-color-primary-500)]">{{ copy.w12.footerAction }}</strong>
+          }{{ copy.w12.footerSuffix }}
         </p>
       </section>
 

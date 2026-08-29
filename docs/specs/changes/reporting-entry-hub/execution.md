@@ -157,3 +157,9 @@ Verification totals: server 10+3+20 targeted tests green, client 23+102+66 targe
 - Owner asked for a tooltip on AoW titles that render truncated. Applied `[prTooltip]="row.name"` (the page family's styled tooltip, `PrTooltipDirectiveModule` — same pattern as `reporting-aow-table`) to the four truncated title sites: hub W1/W2 AoW rows, hub program-level rows, "Progress by area of work" AoW rows and its cross-cutting rows. Leader-inline (explicit user request, ~15 LOC).
 - Note: `PrTooltipDirective` is hover/click-only (KZ `target-tooltip-1`) — acceptable here because the tooltip is supplementary (the full name is not otherwise actionable); no requirement claims keyboard reachability for it.
 - Verification: `npx jest …/reporting-entry-hub …/program-overview.component.spec.ts --no-coverage` → 86 passed; `npx ng lint --quiet` clean; `npx ng build --configuration development` OK.
+
+### Addendum (user request, 2026-08-29) — footer "Report emerging result" is clickable
+
+- Owner asked that the W1/W2 lane footer mention act like the header button. The mention is now a `<button class="hub-footer-action">` emitting a new `reportEmerging` output; the host binds `(reportEmerging)="openReportModal()"` and mirrors the header gate with `[canReportEmerging]="canReportEmerging()"` — when false (AVISA/SGP-02) it renders as the previous plain text. Two existing tests scoped their button selectors to exclude `.hub-footer-action` (their original intent was the row Report buttons). +2 tests (emits; plain text when gated). Leader-inline (explicit user request, ~25 LOC).
+- Note: REH-OQ-2 ("Report emerging result behaviour → unchanged") stands — this adds a second *entry point* to the same modal, it does not change the modal or the header button.
+- Verification: 32/32 targeted tests green (`reporting-entry-hub` + `dashboard-lab.hub.spec.ts`); `npx ng lint --quiet` clean.
