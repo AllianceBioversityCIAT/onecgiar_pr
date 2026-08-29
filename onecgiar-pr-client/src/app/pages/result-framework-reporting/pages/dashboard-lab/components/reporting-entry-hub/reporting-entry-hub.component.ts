@@ -116,6 +116,8 @@ export class ReportingEntryHubComponent {
   readonly isActivePhase = input<boolean>(true);
   readonly activeYear = input<number | null>(null);
   readonly aowRows = input<HubAowRow[]>([]);
+  /** REH-R-4.5 — the W1/W2 lane skeletons while the page's AoW progress is still loading. @akili-spec changes/reporting-entry-hub */
+  readonly w1w2Loading = input<boolean>(false);
   readonly programLevelRows = input<HubProgramLevelRow[]>([]);
   readonly canReportW1W2 = input<boolean>(true);
   readonly w3State = input<HubW3State>({ status: 'loading' });

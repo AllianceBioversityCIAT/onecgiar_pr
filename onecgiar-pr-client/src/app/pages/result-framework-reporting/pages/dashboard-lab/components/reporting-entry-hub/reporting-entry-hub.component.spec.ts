@@ -79,6 +79,7 @@ describe('ReportingEntryHubComponent', () => {
     fixture.componentRef.setInput('isActivePhase', overrides['isActivePhase'] ?? true);
     fixture.componentRef.setInput('activeYear', overrides['activeYear'] ?? 2026);
     fixture.componentRef.setInput('aowRows', overrides['aowRows'] ?? aowRows);
+    fixture.componentRef.setInput('w1w2Loading', overrides['w1w2Loading'] ?? false);
     fixture.componentRef.setInput('programLevelRows', overrides['programLevelRows'] ?? programLevelRows);
     fixture.componentRef.setInput('canReportW1W2', overrides['canReportW1W2'] ?? true);
     fixture.componentRef.setInput('w3State', overrides['w3State'] ?? readyState);
@@ -336,5 +337,22 @@ describe('ReportingEntryHubComponent', () => {
     await setup();
     expect(() => component.toggleCollapse()).not.toThrow();
     spy.mockRestore();
+  });
+
+  describe('W1/W2 lane loading skeleton (REH-R-4.5)', () => {
+    it('renders 3 skeleton rows and hides AoW/program-level rows while w1w2Loading is true', async () => {
+      await setup({ w1w2Loading: true });
+      const lane = (fixture.nativeElement as HTMLElement).querySelector('section[aria-labelledby="hub-w12-title"]') as HTMLElement;
+      expect(lane.querySelectorAll('.animate-pulse').length).toBe(3);
+      expect(lane.textContent).not.toContain('AOW01');
+      expect(lane.querySelectorAll('button').length).toBe(0);
+    });
+
+    it('renders the AoW rows and no skeleton when w1w2Loading is false', async () => {
+      await setup({ w1w2Loading: false });
+      const lane = (fixture.nativeElement as HTMLElement).querySelector('section[aria-labelledby="hub-w12-title"]') as HTMLElement;
+      expect(lane.querySelectorAll('.animate-pulse').length).toBe(0);
+      expect(lane.textContent).toContain('AOW01');
+    });
   });
 });

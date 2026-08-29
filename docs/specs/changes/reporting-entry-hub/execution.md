@@ -145,3 +145,9 @@ _(entries appended below, evidence before checkbox)_
 | REH-T-7 manual browser pass | `[~]` blocked on human-authenticated session | — | `e289f04ca` (checklist) |
 
 Verification totals: server 10+3+20 targeted tests green, client 23+102+66 targeted tests green, `npx ng lint --quiet` and server eslint clean, no migration touched. Budget tripwire recorded (size overrun, no scope change). Next: run the T-7 checklist from a logged-in browser, then `/akili-archive changes/reporting-entry-hub` (pending items already queued in this log: guide syncs, ADR follow-ups, kaizen candidates from the advisories).
+
+### Addendum (user request, 2026-08-29) — W1/W2 lane loading skeleton
+
+- Owner asked to add the loader/skeleton to **both** lanes of "Where to report". REH-R-4.5 already mandated it for each lane; the implementation only covered W3 — this closes the conformance gap. Leader-inline (explicit user request, ~20 LOC + 2 tests; no triad spawned).
+- Files: `reporting-entry-hub.component.ts` (+`w1w2Loading` input), `.html` (W1/W2 lane body — AoW list + program-level group — swaps to 3 `animate-pulse` rows, same style as W3's), `.spec.ts` (+2 tests: skeleton shown/hidden), `dashboard-lab.component.html` (`[w1w2Loading]="loadingAows()"`).
+- Verification: `npx jest …/reporting-entry-hub …/dashboard-lab.hub.spec.ts --no-coverage` → 2 suites / 30 passed; `npx ng lint --quiet` → clean.
