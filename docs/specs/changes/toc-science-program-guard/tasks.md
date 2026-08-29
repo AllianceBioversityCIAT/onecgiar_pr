@@ -53,7 +53,7 @@
   - AND IT MUST count `otherScienceSelected` toward the real total even when the sentinel (not a real chip) is what's being deleted (`TOC-SP-DD-2` cascade case) — a test that only deletes real chips does not exercise this branch.
 - **What the test suite CANNOT verify (accepted, per design §10):** no visual/rendered-output defect class exists in this change (no new markup); nothing is deferred to a human/T6 check.
 - **Definition of done:**
-  - [~] Code merged via the project commit convention (`🔧 fix(rd-contributors-and-partners): <description>` — Change track, but this is a defect-class fix in spirit; `fix` emoji/type matches existing sibling commits `c56be9d79`, `860667baa`, `6687adbf1` in this same folder). *(Implemented and Reviewer-PASSed; not yet committed — pending explicit user go-ahead.)*
+  - [x] Code merged via the project commit convention (`🔧 fix(rd-contributors-and-partners): <description>` — Change track, but this is a defect-class fix in spirit; `fix` emoji/type matches existing sibling commits `c56be9d79`, `860667baa`, `6687adbf1` in this same folder). Original guard shipped `7bee37dec`; corrections committed `64d072490`, pushed to `qa-development-2026-ss`.
   - [x] Lint clean (`npx ng lint --quiet`).
   - [x] All 5 test cases above pass (`npx jest --silent --reporters=summary --no-coverage -- --testPathPattern="rd-contributors-and-partners.component.spec"`).
   - [x] No secret/token leaked in logs or messages.

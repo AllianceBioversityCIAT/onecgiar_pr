@@ -56,7 +56,7 @@
   - AND IT MUST produce the same block/allow outcome in the flat/unmapped UI as in the split UI (`TOC-C-AC-6`) — a test suite that only exercises the split UI (as the twin Science Program spec's suite does, since that field has no flat variant) would leave this asymmetry uncovered.
 - **What the test suite CANNOT verify (accepted, per design §10):** no visual/rendered-output defect class exists in this change (no new markup); nothing is deferred to a human/T6 check.
 - **Definition of done:**
-  - [~] Code merged via the project commit convention (`🔧 fix(rd-contributors-and-partners): <description>` — matches sibling commits `7bee37dec`, `c56be9d79`, `860667baa`, `6687adbf1` in this same folder). Implemented and reviewed; commit pending explicit user go-ahead (see `execution.md`).
+  - [x] Code merged via the project commit convention (`🔧 fix(rd-contributors-and-partners): <description>` — matches sibling commits `7bee37dec`, `c56be9d79`, `860667baa`, `6687adbf1` in this same folder). Committed `64d072490`, pushed to `qa-development-2026-ss`.
   - [x] Lint clean (`npx ng lint --quiet`).
   - [x] All 6 test cases above pass (`npx jest --silent --reporters=summary --no-coverage -- --testPathPattern="rd-contributors-and-partners.component.spec"`) — 77/77 passed.
   - [x] No secret/token leaked in logs or messages.
