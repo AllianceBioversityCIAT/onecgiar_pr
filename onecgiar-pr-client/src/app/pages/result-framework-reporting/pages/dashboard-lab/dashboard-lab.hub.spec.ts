@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DashboardLabComponent, buildAowBannerStats } from './dashboard-lab.component';
+import { DashboardLabComponent, buildAowBannerStats, splitIndicatorsByTier } from './dashboard-lab.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -288,6 +288,15 @@ describe('buildAowBannerStats (By-AOW context banner)', () => {
 
   it('returns 0% for an empty list instead of NaN', () => {
     expect(buildAowBannerStats([])).toEqual({ total: 0, done: 0, pct: 0 });
+  });
+});
+
+describe('splitIndicatorsByTier (By-AOW tier sections)', () => {
+  it('separates outcome-tier indicators from everything else', () => {
+    const inds = [{ __tier: 'output' }, { __tier: 'outcome' }, {}, { __tier: 'outcome' }];
+    const { outputs, outcomes } = splitIndicatorsByTier(inds);
+    expect(outputs.length).toBe(2);
+    expect(outcomes.length).toBe(2);
   });
 });
 });

@@ -1274,7 +1274,7 @@
             (toggleExpandAll)="toggleReportingExpandAll()"
             (searchChange)="plannedSearch.set($event)"
             (statusChange)="reportingStatusFilter.set($event)"
-            (aowChange)="reportingAowFilter.set($event)"
+            (aowChange)="onSectionFilterChange($event)"
             (typeChange)="reportingTypeFilter.set($event)"
             (typologyChange)="reportingTypologyFilter.set($event)"
             (viewModeChange)="reportingViewMode.set($event)" />
@@ -1388,10 +1388,15 @@
                 @for (s of [1, 2, 3]; track s) {
                   <div class="mb-1 h-12 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
                 }
-              } @else if (!plannedHloGroups().length) {
-                <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No High-Level Outputs match the current filters for this Area of Work.</p>
+              } @else if (!plannedByAowSections().length) {
+                <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No indicators match the current filters for this Area of Work.</p>
               } @else {
-                @for (hlo of plannedHloGroups(); track hlo.title) {
+                @for (sec of plannedByAowSections(); track sec.label) {
+                <div class="flex items-center gap-[8px] pt-1">
+                  <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">{{ sec.label }}</span>
+                  <span class="font-mono text-[11px] font-semibold text-[var(--pr-color-accents-4)]">{{ sec.kpis }} KPIs</span>
+                </div>
+                @for (hlo of sec.groups; track hlo.title) {
                   <section class="overflow-hidden rounded-xl border border-[rgba(30,32,47,0.07)] bg-white">
                     <button
                       type="button"
@@ -1481,6 +1486,7 @@
                       </div>
                     }
                   </section>
+                }
                 }
               }
             } @else {

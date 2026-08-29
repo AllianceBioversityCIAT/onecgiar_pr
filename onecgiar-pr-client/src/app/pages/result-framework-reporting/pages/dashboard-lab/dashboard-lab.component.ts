@@ -2230,7 +2230,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const code = this.plannedHloAowCode();
     if (!code) return null;
     const name = this.aows().find(a => a.code === code)?.name ?? '';
-    const inds = (this.indicatorsForAow(code)?.indicators ?? []).filter(i => i?.__tier === 'output');
+    const inds = this.indicatorsForAow(code)?.indicators ?? [];
     return { code, name, ...buildAowBannerStats(inds) };
   });
 
@@ -2681,6 +2681,40 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (typeSet.size) inds = inds.filter(i => typeSet.has(i?.type_name));
     return this.rankPlannedHloGroups(this.groupIndicatorsByHlo(inds), parsed);
   });
+
+  /**
+   * By-AOW view sections — outputs (HLOs) and outcomes, mirroring the grouped table's tier split.
+   * Same type/search filters as `plannedHloGroups`. @akili-spec changes/reporting-entry-hub
+   */
+  readonly plannedByAowSections = computed(() => {
+    const code = this.plannedHloAowCode();
+    if (!code) return [];
+    const typeSet = new Set(this.plannedTypeFilter().map(t => t?.name).filter(Boolean));
+    const parsed = parsePlannedSearch(this.plannedSearch());
+    const { outputs, outcomes } = splitIndicatorsByTier(this.indicatorsForAow(code)?.indicators ?? []);
+    const build = (label: string, inds: any[]) => {
+      const filtered = typeSet.size ? inds.filter(i => typeSet.has(i?.type_name)) : inds;
+      return { label, kpis: filtered.length, groups: this.rankPlannedHloGroups(this.groupIndicatorsByHlo(filtered), parsed) };
+    };
+    return [build('High Level Outputs', outputs), build('Outcomes', outcomes)].filter(sec => sec.groups.length > 0);
+  });
+
+  /**
+   * Section filter — in the grouped view it narrows the visible cards (`reportingGroups`); in the
+   * By-AOW view it acts as the AoW switcher (the view shows exactly one AoW).
+   * @akili-spec changes/reporting-entry-hub
+   */
+  onSectionFilterChange(codes: string[]): void {
+    this.reportingAowFilter.set(codes);
+    if (this.plannedBrowseView() !== 'byAow' || codes.length === 0) return;
+    const aowCodes = codes.filter(c => c !== INTERMEDIATE_OUTCOMES_CODE && c !== OUTCOMES_2030_CODE);
+    if (aowCodes.length > 0) {
+      if (!aowCodes.includes(this.plannedHloAowCode() ?? '')) this.setPlannedHloAow(aowCodes[0]);
+    } else {
+      // Only programme-level buckets selected — they render in the grouped view.
+      this.setPlannedBrowseView('aows');
+    }
+  }
 
   /** Flat indicators for Indicators mode — typology + ranked text search. */
   readonly plannedFilteredIndicators = computed(() => {
@@ -3143,4 +3177,11 @@ export function buildAowBannerStats(inds: Array<{ actual_achieved_value_sum?: un
   const total = inds.length;
   const done = inds.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
   return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
+}
+
+/** Tier split for the By-AOW view — outputs (HLO tier) vs outcomes. @akili-spec changes/reporting-entry-hub */
+export function splitIndicatorsByTier<T extends { __tier?: unknown }>(inds: T[]): { outputs: T[]; outcomes: T[] } {
+  const outcomes = inds.filter(i => i?.__tier === 'outcome');
+  const outputs = inds.filter(i => i?.__tier !== 'outcome');
+  return { outputs, outcomes };
 }
