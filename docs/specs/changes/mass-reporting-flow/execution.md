@@ -88,3 +88,17 @@
 - Reviewer verdict: **PASS** — force/no-delete, per-AoW feeds, onLoaded on all six paths, snapshot independence and edge detection verified against source; all four Leader adjudications accepted, incl. the **control experiment** (it.each cached/in-flight × forced/non-forced) judged strictly stronger than a one-off red.
 - ADVISORY (recorded): force-error path overwrites a good AoW dataset with empties (consider force-only error keep); fast double-close can double-count within one fetch window; note/pill/button render untested in jsdom → T-8 rows.
 - **Final:** PASS · covers MRF-R-3, MRF-R-3.1 (action By-AOW-only, adjudicated conformant), MRF-R-4, MRF-AC-3 · gate auto-approved (pre-approved mode).
+
+### `MRF-T-7` — AI narrative panel on the By-AOW banner
+
+- **Date:** 2026-08-29 · Implementer **opus** (effort high) · Reviewer **Fable** · Skills: `angular-developer`, `ui-ux-pro-max`, `tdd`
+- **Attempt 1** — Files: new `components/narrative-panel/{component.ts,html,spec.ts,narrative-copy.ts}`; host `dashboard-lab.component.{ts,html}` (double gate, button + panel under the banner), `dashboard-lab.hub.spec.ts` (gate tests). Verification: 2 suites/69 + bounded folder 18 suites/584 green; lint; dev build. Honest disclosures: impl-then-spec TDD order (spec drove 3 real fixes); MRF-AC-7's DOM evidence one step removed (mirrored fragment) — Reviewer eyeballed the real template: exactly two guarded sites, no third path.
+- Reviewer verdict: **FAIL** — one real defect: `regenerate()` bypasses the consent step (`run(cached=true)` → `init` downloads on a cold cache when `isModelCached` rejected, e.g. private browsing; no progress state). Remediation: route regenerate through `start()` + one new spec (rejects → error → retry → init still gated). All four judgment calls ACCEPTED (auto-check on open; DEFAULT_NARRATIVE_PROMPT fallback doesn't weaken the gate; flat hlos; method-not-computed gate).
+- ADVISORY: redundant `engine.init` per regenerate (VRAM reload — follow-up, not now); `justCopied` revert timer (folded into attempt 2).
+
+**Attempt 2** (effort high)
+- Files: `narrative-panel.component.{ts,spec.ts}` only — `regenerate()` = interrupt → resetCopied → `await start()` (docstring records both bypass paths); `COPY_FEEDBACK_MS` revert timer with full cleanup; +3 specs (probe-rejection consent regate; consented-download-died-midway; copy-label revert). Mutation evidence: old body restored → exactly the 2 consent specs red (2/34), green after restore.
+- Verification: 2 suites / 72 green; bounded folder 18 suites / 587; lint; dev build.
+- Reviewer verdict (scoped): **PASS** — `run()`'s `init` reachable only via `start()` warm branch or `acceptDownload()` (whole file greped); supersede/timer/interrupt-order sound; the re-ask-on-dead-download behaviour pinned deliberately.
+
+**Final:** PASS · attempts 2 · covers MRF-R-8, MRF-R-9.x, MRF-R-12, MRF-AC-7/8/9 (unit; real-generation + banner render → T-8) · gate auto-approved (pre-approved mode). `dashboard-lab/CLAUDE.md` child rows + re-stamp applied in the same commit (folder-doc convention).

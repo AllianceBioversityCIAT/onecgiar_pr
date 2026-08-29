@@ -89,7 +89,7 @@
 
 ### `MRF-T-7` — Narrative panel on the By-AOW banner
 
-- **Status:** `[ ]` · **Type:** `client` · **Estimate:** L · **Depends on:** T-3, T-4, T-5, T-6 · **Blocks:** T-8
+- **Status:** `[x]` · **Type:** `client` · **Estimate:** L · **Depends on:** T-3, T-4, T-5, T-6 · **Blocks:** T-8
 - **Description:** `NarrativePanelComponent` per design §6: engine via `inject(ASSISTANT_ENGINE)` + `DeviceCapabilityService`; own state enum `idle·checking·needs-optin·downloading·generating·ready·error·unsupported` (sources per MRF-R-9.2); **in-panel consent step owns the model download** (`init(tier, onProgress)` only after the user accepts — MRF-R-9.4); completion via `complete(messages, {narrative:string} schema)` + `JSON.parse`, unparseable ⇒ error state; facts from `plannedAowBanner()` + `plannedByAowSections()`; prompt interpolation text-only; caption, Copy (CDK Clipboard), Regenerate (interrupt-first), collapsible "Data used" (MRF-R-12); labelled region + `aria-live` on completion; banner button **absent from the DOM** when EITHER gate (`environment.aiAssistant.enabled`, `ai_narrative_enabled`) is off; `interrupt()` on AoW switch/close/destroy.
 - **Implements:** MRF-R-8, MRF-R-9, MRF-R-9.1, MRF-R-9.2, MRF-R-9.3, MRF-R-12, MRF-AC-7, MRF-AC-8 (incl. **BUT** no persistence), MRF-AC-9.
 - **Skills:** `angular-developer`, `ui-ux-pro-max`, `tdd`.

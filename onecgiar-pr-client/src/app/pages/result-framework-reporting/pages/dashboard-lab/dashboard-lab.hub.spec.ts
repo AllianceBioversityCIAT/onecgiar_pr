@@ -13,6 +13,10 @@ import { ResultLevelService } from '../../../results/pages/result-creator/servic
 import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
 import { SPProgress } from '../../../../shared/interfaces/SP-progress.interface';
 import { HubCenterProjects, HubProject } from './components/reporting-entry-hub/reporting-entry-hub.component';
+// @akili-spec changes/mass-reporting-flow
+import { GlobalVariables } from '../../../../shared/services/global-variables.service';
+import { environment } from '../../../../../environments/environment';
+import { NARRATIVE_COPY } from './components/narrative-panel/narrative-copy';
 
 // Same mock set as `dashboard-lab.component.spec.ts` — `DashboardLabComponent` imports
 // `ProgramOverviewComponent`, which imports the real `PrVizChartComponent` → real `echarts/core`,
@@ -96,13 +100,15 @@ describe('DashboardLabComponent — Reporting Entry Hub wiring (REH-TEST-4 b-f)'
         ),
         ...overrides
       },
-      rolesSE: { getMyCenters: jest.fn().mockReturnValue([]) }
+      rolesSE: { getMyCenters: jest.fn().mockReturnValue([]) },
+      // @akili-spec changes/mass-reporting-flow — MRF-R-8's admin-managed half of the double gate.
+      globalVariablesSE: { get: {} as GlobalVariables }
     };
   }
 
   async function createComponent(
     api: ReturnType<typeof apiMock>,
-    opts: { navigate?: jest.Mock; selectProject?: jest.Mock; otherPrograms?: SPProgress[] } = {}
+    opts: { navigate?: jest.Mock; selectProject?: jest.Mock; otherPrograms?: SPProgress[]; template?: string } = {}
   ) {
     const navigate = opts.navigate ?? jest.fn().mockResolvedValue(true);
     const selectProject = opts.selectProject ?? jest.fn();
@@ -140,13 +146,13 @@ describe('DashboardLabComponent — Reporting Entry Hub wiring (REH-TEST-4 b-f)'
         { provide: BilateralCreationService, useValue: { selectProject } }
       ]
     })
-      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .overrideComponent(DashboardLabComponent, { set: { template: opts.template ?? '' } })
       .compileComponents();
 
     const fixture = TestBed.createComponent(DashboardLabComponent);
     const component = fixture.componentInstance;
     component.selectedId.set(PROGRAM.initiativeId);
-    return { component, navigate, selectProject };
+    return { fixture, component, navigate, selectProject };
   }
 
   const PROJECT: HubProject = {
@@ -645,6 +651,131 @@ describe('band controls — Only pending / sort pipeline (MRF-T-2)', () => {
       expect(component.onlyPending()).toBe(true);
       expect(component.burndownSort()).toBe('remaining');
     });
+  });
+});
+
+// ── MRF-T-7 — the host's half of the narrative feature: the MRF-R-8 double gate ──────────────
+//
+// MRF-AC-7 is a DOM claim ("no Generate narrative control exists"), and this file renders
+// `DashboardLabComponent` with `template: ''` because the real 1.8k-line template drags in
+// PrimeNG/ECharts children jsdom cannot mount. The gate is therefore asserted twice: once on the
+// accessor both gates funnel through (`narrativeGateOpen()`), and once through Angular's real
+// `@if` on a fragment that mirrors the banner block in `dashboard-lab.component.html` — enough to
+// prove ABSENT-not-disabled. The panel's own behaviour lives in
+// `components/narrative-panel/narrative-panel.component.spec.ts`.
+//
+// @akili-spec changes/mass-reporting-flow
+describe('narrative gate on the By-AOW banner (MRF-T-7 / MRF-AC-7)', () => {
+  const BANNER_FRAGMENT = `
+    @if (narrativeGateOpen()) {
+      <button type="button" data-testid="narrative-trigger" (click)="toggleNarrativePanel()">{{ narrativeCopy.trigger }}</button>
+    }`;
+
+  let envEnabled: boolean;
+
+  beforeEach(() => {
+    envEnabled = environment.aiAssistant.enabled;
+  });
+
+  afterEach(() => {
+    environment.aiAssistant.enabled = envEnabled;
+  });
+
+  async function gateComponent(opts: { env: boolean; flag: unknown }) {
+    environment.aiAssistant.enabled = opts.env;
+    const api = apiMock();
+    api.globalVariablesSE.get = { ai_narrative_enabled: opts.flag as boolean | undefined };
+    const { fixture, component } = await createComponent(api, { template: BANNER_FRAGMENT });
+    fixture.detectChanges();
+    return { fixture, component };
+  }
+
+  it('renders the control only when BOTH gates are on', async () => {
+    const { fixture, component } = await gateComponent({ env: true, flag: true });
+
+    expect(component.narrativeGateOpen()).toBe(true);
+    const trigger = fixture.nativeElement.querySelector('[data-testid="narrative-trigger"]');
+    expect(trigger).not.toBeNull();
+    expect(trigger.textContent.trim()).toBe(NARRATIVE_COPY.trigger);
+  });
+
+  it('removes the control from the DOM — not merely disables it — when the environment gate is off', async () => {
+    const { fixture, component } = await gateComponent({ env: false, flag: true });
+
+    expect(component.narrativeGateOpen()).toBe(false);
+    expect(fixture.nativeElement.querySelector('[data-testid="narrative-trigger"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button[disabled]')).toBeNull();
+  });
+
+  it('removes the control from the DOM when the ai_narrative_enabled parameter is off', async () => {
+    const { fixture, component } = await gateComponent({ env: true, flag: false });
+
+    expect(component.narrativeGateOpen()).toBe(false);
+    expect(fixture.nativeElement.querySelector('[data-testid="narrative-trigger"]')).toBeNull();
+  });
+
+  it('treats a missing ai_narrative_enabled parameter as off (pre-migration environments)', async () => {
+    const { fixture, component } = await gateComponent({ env: true, flag: undefined });
+
+    expect(component.narrativeGateOpen()).toBe(false);
+    expect(fixture.nativeElement.querySelector('[data-testid="narrative-trigger"]')).toBeNull();
+  });
+
+  it('the trigger toggles the panel open and closed, and closing never persists anything', async () => {
+    const { fixture, component } = await gateComponent({ env: true, flag: true });
+    const trigger = fixture.nativeElement.querySelector('[data-testid="narrative-trigger"]');
+
+    expect(component.narrativePanelOpen()).toBe(false);
+    trigger.click();
+    expect(component.narrativePanelOpen()).toBe(true);
+    trigger.click();
+    expect(component.narrativePanelOpen()).toBe(false);
+
+    component.narrativePanelOpen.set(true);
+    component.closeNarrativePanel();
+    expect(component.narrativePanelOpen()).toBe(false);
+  });
+
+  // MRF-AC-8 "facts fed = the page's own stats": the panel inputs are derived from the SAME
+  // computeds the banner and the By-AOW sections render, never from a second data path.
+  it('feeds the panel the banner numbers and the per-HLO pending counts the view is showing', async () => {
+    const { component } = await gateComponent({ env: true, flag: true });
+    (component as any).plannedAowBanner = () => ({ code: 'AoW1', name: 'Breeding', total: 8, done: 3, pct: 38, zeroTarget: 2 });
+    (component as any).plannedByAowSections = () => [
+      {
+        label: 'High Level Outputs',
+        kpis: 3,
+        groups: [
+          {
+            title: 'HLO 1',
+            indicators: [
+              { indicator_id: 1, actual_achieved_value_sum: 2, target_value_sum: 2 },
+              { indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: 4 },
+              { indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: 0 }
+            ]
+          }
+        ]
+      }
+    ];
+
+    expect(component.narrativeStats()).toEqual({ total: 8, done: 3, pct: 38, zeroTarget: 2 });
+    // 3 indicators, but the zero-target one is excluded from pending (MRF-R-7).
+    expect(component.narrativeHlos()).toEqual([{ section: 'High Level Outputs', title: 'HLO 1', total: 3, pending: 1 }]);
+  });
+
+  it('feeds zeroed stats rather than nulls when no AoW banner is resolved yet', async () => {
+    const { component } = await gateComponent({ env: true, flag: true });
+    (component as any).plannedAowBanner = () => null;
+
+    expect(component.narrativeStats()).toEqual({ total: 0, done: 0, pct: 0, zeroTarget: 0 });
+  });
+
+  it('passes the admin-managed prompt template straight through, empty when unset', async () => {
+    const { component } = await gateComponent({ env: true, flag: true });
+    expect(component.narrativePromptTemplate()).toBe('');
+
+    component['api'].globalVariablesSE.get.ai_narrative_prompt = 'Draft for {{aow}}';
+    expect(component.narrativePromptTemplate()).toBe('Draft for {{aow}}');
   });
 });
 });

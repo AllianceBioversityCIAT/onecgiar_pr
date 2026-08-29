@@ -1366,13 +1366,28 @@
                         {{ banner.name }}
                       </h3>
                     </div>
-                    <button
-                      type="button"
-                      (click)="setPlannedBrowseView('aows')"
-                      class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-                      <span class="material-icons-round text-[16px]" aria-hidden="true">grid_view</span>
-                      All Areas of Work
-                    </button>
+                    <div class="flex shrink-0 items-center gap-[8px]">
+                      <!-- @akili-spec changes/mass-reporting-flow — MRF-R-8: double-gated. When
+                           either gate is off the control is ABSENT here, never rendered disabled. -->
+                      @if (narrativeGateOpen()) {
+                        <button
+                          type="button"
+                          (click)="toggleNarrativePanel()"
+                          [attr.aria-expanded]="narrativePanelOpen()"
+                          data-testid="narrative-trigger"
+                          class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors duration-150 hover:bg-[var(--pr-color-primary-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                          <span class="material-icons-round text-[16px]" aria-hidden="true">auto_awesome</span>
+                          {{ narrativeCopy.trigger }}
+                        </button>
+                      }
+                      <button
+                        type="button"
+                        (click)="setPlannedBrowseView('aows')"
+                        class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                        <span class="material-icons-round text-[16px]" aria-hidden="true">grid_view</span>
+                        All Areas of Work
+                      </button>
+                    </div>
                   </div>
                   <!-- @akili-spec changes/mass-reporting-flow — MRF-R-4: the session counter joins the
                        tiles row as a 4th tile, and only once something has been reported this session. -->
@@ -1416,6 +1431,16 @@
                     }
                   </div>
                 </section>
+                <!-- @akili-spec changes/mass-reporting-flow — MRF-R-9: same double gate; the panel
+                     runs in-browser and writes nothing, so closing it discards the draft. -->
+                @if (narrativeGateOpen() && narrativePanelOpen()) {
+                  <app-narrative-panel
+                    [aow]="{ code: banner.code, name: banner.name }"
+                    [stats]="narrativeStats()"
+                    [hlos]="narrativeHlos()"
+                    [promptTemplate]="narrativePromptTemplate()"
+                    (closed)="closeNarrativePanel()" />
+                }
               }
               @if (!plannedHloAowCode()) {
                 <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">Select an Area of Work to browse HLOs.</p>

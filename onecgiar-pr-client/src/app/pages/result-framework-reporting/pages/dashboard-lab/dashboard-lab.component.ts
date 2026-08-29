@@ -60,6 +60,14 @@ import {
 import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
 import { BilateralProject } from '../../../bilateral/services/bilateral-creation.interfaces';
 import { buildRatio, countNewlyReported, groupPendingCount, nextPendingAfter, pendingOf, sortRemainingFirst } from './reporting-burndown';
+// @akili-spec changes/mass-reporting-flow
+import { environment } from '../../../../../environments/environment';
+import {
+  NarrativePanelComponent,
+  NarrativeHloFact,
+  NarrativeStatsFact
+} from './components/narrative-panel/narrative-panel.component';
+import { NARRATIVE_COPY } from './components/narrative-panel/narrative-copy';
 
 /**
  * Reporting-status meter — the reference's five canonical states, in this exact order.
@@ -256,6 +264,7 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     ReportingProgramBandComponent,
     ProgramOverviewComponent,
     ReportingEntryHubComponent,
+    NarrativePanelComponent,
     PrTooltipDirectiveModule,
     HlmButton,
     // Legacy reporting surfaces reused VERBATIM — the drawer/guided copies stay in the tree but are
@@ -2364,6 +2373,61 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   indicatorsForAow(code: string) {
     return this.indicatorsByAow().find(x => x.aow.code === code) ?? null;
   }
+
+  // ── AI narrative (MRF-R-8 / MRF-R-9) ─────────────────────────────────────────────────────
+  // @akili-spec changes/mass-reporting-flow
+
+  readonly narrativeCopy = NARRATIVE_COPY;
+
+  /** Open state of the By-AOW narrative panel. Nothing is persisted — closing discards the draft. */
+  readonly narrativePanelOpen = signal(false);
+
+  /**
+   * MRF-R-8's double gate: the app-wide AI kill-switch AND the admin-managed parameter. Both must
+   * be on or the control is ABSENT from the DOM (the template's `@if`), never rendered disabled —
+   * a disabled button advertises a feature this environment has not enabled.
+   *
+   * Not a `computed`: `globalVariablesSE.get` is a plain bootstrap object, not a signal.
+   */
+  narrativeGateOpen(): boolean {
+    return environment.aiAssistant?.enabled === true && this.api.globalVariablesSE.get?.ai_narrative_enabled === true;
+  }
+
+  /** `ai_narrative_prompt`; the panel falls back to its own default when this is empty. */
+  narrativePromptTemplate(): string {
+    return this.api.globalVariablesSE.get?.ai_narrative_prompt ?? '';
+  }
+
+  toggleNarrativePanel(): void {
+    this.narrativePanelOpen.update(open => !open);
+  }
+
+  closeNarrativePanel(): void {
+    this.narrativePanelOpen.set(false);
+  }
+
+  /** The banner's KPI half, verbatim — the panel is fed the numbers the user is looking at. */
+  readonly narrativeStats = computed<NarrativeStatsFact>(() => {
+    const banner = this.plannedAowBanner();
+    return {
+      total: banner?.total ?? 0,
+      done: banner?.done ?? 0,
+      pct: banner?.pct ?? 0,
+      zeroTarget: banner?.zeroTarget ?? 0
+    };
+  });
+
+  /** Per-HLO counts from the SAME sections the By-AOW view renders (filters/sort included). */
+  readonly narrativeHlos = computed<NarrativeHloFact[]>(() =>
+    this.plannedByAowSections().flatMap(sec =>
+      sec.groups.map(group => ({
+        section: sec.label,
+        title: group.title,
+        total: (group.indicators ?? []).length,
+        pending: groupPendingCount(group)
+      }))
+    )
+  );
 
   // ── Copy link + Read more (MRF-R-5 / MRF-R-5.1) ──────────────────────────────────────────
   // @akili-spec changes/mass-reporting-flow

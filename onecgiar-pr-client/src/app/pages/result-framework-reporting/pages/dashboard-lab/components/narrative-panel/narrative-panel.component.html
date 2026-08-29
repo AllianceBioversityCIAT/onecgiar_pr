@@ -1,0 +1,194 @@
+<!--
+  AI narrative panel — MRF-R-9.x / MRF-R-12. Tokens reused verbatim from the By-AOW banner and
+  `reporting-entry-hub.component.html` (design §6.3): no new hex values, violet accents only.
+  ⚠️ html is 12px — arbitrary px values only.
+  @akili-spec changes/mass-reporting-flow
+-->
+<section
+  role="region"
+  [attr.aria-label]="copy.panelLabel"
+  data-testid="narrative-panel"
+  class="mb-2 rounded-[12px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] p-[16px] shadow-[inset_4px_0_0_var(--pr-color-primary-400)]">
+  <div class="mb-[10px] flex items-start justify-between gap-[12px]">
+    <div class="flex min-w-0 items-center gap-[8px]">
+      <ng-icon name="lucideSparkles" class="shrink-0 text-[16px] text-[var(--pr-color-primary-500)]" aria-hidden="true" />
+      <h4 class="m-0 truncate text-[14px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]">{{ copy.panelLabel }}</h4>
+    </div>
+    <button
+      type="button"
+      (click)="close()"
+      [attr.aria-label]="copy.close"
+      data-testid="narrative-close"
+      class="inline-flex h-[26px] w-[26px] shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-[var(--pr-border)] text-[var(--pr-text-secondary)] transition-colors duration-150 hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+      <ng-icon name="lucideX" class="text-[14px]" aria-hidden="true" />
+    </button>
+  </div>
+
+  <!-- The draft itself + every transient state announce politely: the user activated a control and
+       then waits, so completion must reach a screen reader without stealing focus (MRF-R-9.1). -->
+  <div aria-live="polite" data-testid="narrative-live">
+    @switch (state()) {
+      @case ('checking') {
+        <p class="m-0 text-[13px] font-semibold text-[var(--pr-text-heading)]">{{ copy.checkingTitle }}</p>
+        <p class="m-0 mt-[2px] text-[12.5px] text-[var(--pr-text-muted)]">{{ copy.checkingBody }}</p>
+      }
+
+      @case ('needs-optin') {
+        <!-- MRF-R-9.4 — the opt-in step OWNS the download; `init` runs only from Accept. -->
+        <div data-testid="narrative-consent" class="rounded-[10px] bg-[var(--pr-surface-ground)] p-[12px]">
+          <p class="m-0 text-[13px] font-semibold text-[var(--pr-text-heading)]">{{ copy.consentTitle }}</p>
+          <p class="m-0 mt-[4px] text-[12.5px] leading-[1.55] text-[var(--pr-text-secondary)]">{{ copy.consentBody(downloadMB()) }}</p>
+          <div class="mt-[10px] flex flex-wrap items-center gap-[8px]">
+            <button
+              type="button"
+              (click)="acceptDownload()"
+              data-testid="narrative-consent-accept"
+              class="inline-flex h-[30px] cursor-pointer items-center gap-[6px] rounded-[8px] bg-[var(--pr-color-primary-500)] px-[12px] text-[12.5px] font-semibold text-white transition-colors duration-150 hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+              <ng-icon name="lucideDownload" class="text-[14px]" aria-hidden="true" />
+              {{ copy.consentAccept }}
+            </button>
+            <button
+              type="button"
+              (click)="declineDownload()"
+              data-testid="narrative-consent-decline"
+              class="inline-flex h-[30px] cursor-pointer items-center rounded-[8px] border border-[var(--pr-border)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-text-secondary)] transition-colors duration-150 hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+              {{ copy.consentDecline }}
+            </button>
+          </div>
+        </div>
+      }
+
+      @case ('downloading') {
+        <p class="m-0 text-[13px] font-semibold text-[var(--pr-text-heading)]">{{ copy.downloadingTitle }}</p>
+        <div class="mt-[8px] flex items-center gap-[8px]">
+          <span
+            class="h-[7px] flex-1 overflow-hidden rounded-full bg-[var(--pr-border)]/60"
+            role="progressbar"
+            data-testid="narrative-progress"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            [attr.aria-valuenow]="progressPct()"
+            [attr.aria-label]="copy.downloadingTitle">
+            <span
+              class="block h-full rounded-full bg-gradient-to-r from-[var(--pr-color-primary-500)] to-[var(--pr-color-primary-400)] transition-[width] duration-200"
+              [style.width.%]="progressPct()"></span>
+          </span>
+          <span class="text-[12px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">{{ progressPct() }}%</span>
+        </div>
+        <p class="m-0 mt-[4px] text-[12px] text-[var(--pr-text-muted)]">{{ progress()?.text || copy.downloadingHint }}</p>
+      }
+
+      @case ('generating') {
+        <p class="m-0 text-[13px] font-semibold text-[var(--pr-text-heading)]">{{ copy.generatingTitle }}</p>
+        <div class="mt-[8px] space-y-[6px]" aria-hidden="true">
+          <div class="h-[10px] w-full animate-pulse rounded-full bg-[var(--pr-surface-ground)]"></div>
+          <div class="h-[10px] w-[82%] animate-pulse rounded-full bg-[var(--pr-surface-ground)]"></div>
+          <div class="h-[10px] w-[64%] animate-pulse rounded-full bg-[var(--pr-surface-ground)]"></div>
+        </div>
+        <p class="m-0 mt-[6px] text-[12px] text-[var(--pr-text-muted)]">{{ copy.generatingHint }}</p>
+      }
+
+      @case ('ready') {
+        <p
+          data-testid="narrative-text"
+          class="m-0 whitespace-pre-line text-[13px] leading-[1.6] text-[var(--pr-text-heading)]">{{ narrative() }}</p>
+      }
+
+      @case ('unsupported') {
+        <div data-testid="narrative-unsupported" class="flex items-start gap-[8px]">
+          <ng-icon name="lucideCircleAlert" class="mt-[2px] shrink-0 text-[15px] text-[var(--pr-text-muted)]" aria-hidden="true" />
+          <div>
+            <p class="m-0 text-[13px] font-semibold text-[var(--pr-text-heading)]">{{ copy.unsupportedTitle }}</p>
+            <p class="m-0 mt-[2px] text-[12.5px] text-[var(--pr-text-secondary)]">{{ errorMessage() || copy.unsupportedBody }}</p>
+          </div>
+        </div>
+      }
+
+      @case ('error') {
+        <div data-testid="narrative-error" class="flex items-start gap-[8px]">
+          <ng-icon name="lucideCircleAlert" class="mt-[2px] shrink-0 text-[15px] text-[var(--pr-status-not-started-fg)]" aria-hidden="true" />
+          <div>
+            <p class="m-0 text-[13px] font-semibold text-[var(--pr-text-heading)]">{{ copy.errorTitle }}</p>
+            <p class="m-0 mt-[2px] text-[12.5px] text-[var(--pr-text-secondary)]">{{ errorMessage() }}</p>
+            <button
+              type="button"
+              (click)="regenerate()"
+              data-testid="narrative-retry"
+              class="mt-[8px] inline-flex h-[28px] cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors duration-150 hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+              <ng-icon name="lucideRefreshCw" class="text-[13px]" aria-hidden="true" />
+              {{ copy.retry }}
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  @if (state() === 'ready') {
+    <!-- MRF-R-9.1 — caption is mandatory and verbatim; Copy/Regenerate never write anywhere. -->
+    <div class="mt-[10px] flex flex-wrap items-center justify-between gap-[8px] border-t border-[var(--pr-border)] pt-[8px]">
+      <p data-testid="narrative-caption" class="m-0 text-[11.5px] font-semibold uppercase tracking-[0.04em] text-[var(--pr-text-muted)]">
+        {{ copy.caption }}
+      </p>
+      <div class="flex items-center gap-[8px]">
+        <button
+          type="button"
+          (click)="copyNarrative()"
+          data-testid="narrative-copy"
+          class="inline-flex h-[28px] cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-text-secondary)] transition-colors duration-150 hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+          <ng-icon name="lucideCopy" class="text-[13px]" aria-hidden="true" />
+          {{ justCopied() ? copy.copied : copy.copy }}
+        </button>
+        <button
+          type="button"
+          (click)="regenerate()"
+          data-testid="narrative-regenerate"
+          class="inline-flex h-[28px] cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors duration-150 hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+          <ng-icon name="lucideRefreshCw" class="text-[13px]" aria-hidden="true" />
+          {{ copy.regenerate }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- MRF-R-12 — the exact facts the model was given, collapsed by default. -->
+  <div class="mt-[8px] border-t border-[var(--pr-border)] pt-[8px]">
+    <button
+      type="button"
+      (click)="toggleDataUsed()"
+      [attr.aria-expanded]="dataUsedOpen()"
+      aria-controls="narrative-data-used"
+      data-testid="narrative-data-used-toggle"
+      class="inline-flex h-[26px] cursor-pointer items-center gap-[6px] rounded-[8px] px-[6px] text-[12px] font-semibold text-[var(--pr-text-secondary)] transition-colors duration-150 hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+      <ng-icon [name]="dataUsedOpen() ? 'lucideChevronUp' : 'lucideChevronDown'" class="text-[13px]" aria-hidden="true" />
+      {{ copy.dataUsed }}
+    </button>
+    @if (dataUsedOpen()) {
+      <div id="narrative-data-used" data-testid="narrative-data-used" class="mt-[6px] rounded-[10px] bg-[var(--pr-surface-ground)] p-[10px]">
+        <p class="m-0 mb-[6px] text-[11.5px] text-[var(--pr-text-muted)]">{{ copy.dataUsedHint }}</p>
+        <dl class="m-0 grid gap-[6px]">
+          <div>
+            <dt class="m-0 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{ copy.dataUsedAow }}</dt>
+            <dd class="m-0 text-[12.5px] text-[var(--pr-text-heading)]">{{ aowFact() }}</dd>
+          </div>
+          <div>
+            <dt class="m-0 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{ copy.dataUsedProgress }}</dt>
+            <dd class="m-0 text-[12.5px] text-[var(--pr-text-heading)]">{{ statsFact() }}</dd>
+          </div>
+          <div>
+            <dt class="m-0 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{ copy.dataUsedHlos }}</dt>
+            <dd class="m-0 whitespace-pre-line text-[12.5px] text-[var(--pr-text-heading)]">{{ hlosFact() }}</dd>
+          </div>
+          <div>
+            <dt class="m-0 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">{{ copy.dataUsedPrompt }}</dt>
+            <!-- Text node only — the admin-managed template is never HTML (MRF-T-7 fail input). -->
+            <dd
+              data-testid="narrative-prompt"
+              class="m-0 max-h-[180px] overflow-auto whitespace-pre-wrap break-words font-mono text-[11.5px] leading-[1.5] text-[var(--pr-text-secondary)]"
+              [textContent]="interpolatedPrompt()"></dd>
+          </div>
+        </dl>
+      </div>
+    }
+  </div>
+</section>
