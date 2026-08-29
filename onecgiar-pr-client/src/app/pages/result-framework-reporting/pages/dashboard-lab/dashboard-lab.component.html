@@ -1326,6 +1326,62 @@
               <!-- Intermediate Outcomes + 2030 Outcomes are top-level cards inside the table
                    (siblings of AoWs). The old "open 2030 detail" jump button is gone. -->
             } @else if (plannedBrowseView() === 'byAow') {
+              <!-- @akili-spec changes/reporting-entry-hub — context banner: which AoW you are reporting in -->
+              @if (plannedAowBanner(); as banner) {
+                <section
+                  aria-label="Area of Work context"
+                  class="mb-2 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[14px] shadow-[inset_4px_0_0_var(--pr-color-primary-300)]">
+                  <div class="flex flex-wrap items-center justify-between gap-[12px]">
+                    <div class="flex min-w-0 flex-1 items-center gap-[12px]">
+                      <span
+                        class="inline-flex shrink-0 items-center justify-center rounded-[6px] border border-purple-200/70 bg-purple-100/80 px-[8px] py-[2px] font-mono text-[12px] font-bold text-purple-800">
+                        {{ banner.code }}
+                      </span>
+                      <h3
+                        class="m-0 min-w-0 truncate text-[15px] font-bold tracking-[-0.01em] text-[var(--pr-text-heading)]"
+                        [prTooltip]="banner.name">
+                        {{ banner.name }}
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="setPlannedBrowseView('aows')"
+                      class="inline-flex h-[30px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                      <span class="material-icons-round text-[16px]" aria-hidden="true">grid_view</span>
+                      All Areas of Work
+                    </button>
+                  </div>
+                  <div class="mt-[10px] grid grid-cols-3 gap-[10px] max-[640px]:grid-cols-1">
+                    @if (plannedHloLoading()) {
+                      @for (i of [0, 1, 2]; track i) {
+                        <div class="h-[56px] animate-pulse rounded-[10px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
+                      }
+                    } @else {
+                      <div class="rounded-[10px] bg-[var(--pr-surface-ground)] px-[12px] py-[8px]">
+                        <p class="m-0 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">KPIs</p>
+                        <p class="m-0 text-[18px] font-extrabold tabular-nums text-[var(--pr-text-heading)]">{{ banner.total }}</p>
+                      </div>
+                      <div class="rounded-[10px] bg-[var(--pr-surface-ground)] px-[12px] py-[8px]">
+                        <p class="m-0 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">Reported</p>
+                        <p class="m-0 text-[18px] font-extrabold tabular-nums text-[var(--pr-text-heading)]">
+                          {{ banner.done }}<span class="text-[12px] font-medium text-[var(--pr-text-muted)]">/{{ banner.total }}</span>
+                        </p>
+                      </div>
+                      <div class="rounded-[10px] bg-[var(--pr-surface-ground)] px-[12px] py-[8px]">
+                        <p class="m-0 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">Progress</p>
+                        <div class="flex items-center gap-[8px]">
+                          <p class="m-0 text-[18px] font-extrabold tabular-nums text-[var(--pr-text-heading)]">{{ banner.pct }}%</p>
+                          <span class="h-[7px] w-[90px] overflow-hidden rounded-full bg-[var(--pr-border)]/60" aria-hidden="true">
+                            <span
+                              class="block h-full rounded-full bg-gradient-to-r from-[var(--pr-color-primary-500)] to-[var(--pr-color-primary-400)]"
+                              [style.width.%]="banner.pct"></span>
+                          </span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
               @if (!plannedHloAowCode()) {
                 <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">Select an Area of Work to browse HLOs.</p>
               } @else if (plannedHloLoading()) {

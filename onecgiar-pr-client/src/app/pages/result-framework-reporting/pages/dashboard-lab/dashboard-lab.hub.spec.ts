@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DashboardLabComponent } from './dashboard-lab.component';
+import { DashboardLabComponent, buildAowBannerStats } from './dashboard-lab.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -274,4 +274,20 @@ describe('DashboardLabComponent — Reporting Entry Hub wiring (REH-TEST-4 b-f)'
       jest.useRealTimers();
     }
   });
+
+describe('buildAowBannerStats (By-AOW context banner)', () => {
+  it('counts total, reported and pct from output indicators', () => {
+    const stats = buildAowBannerStats([
+      { actual_achieved_value_sum: 3 },
+      { actual_achieved_value_sum: 0 },
+      { actual_achieved_value_sum: '2' },
+      { actual_achieved_value_sum: null }
+    ]);
+    expect(stats).toEqual({ total: 4, done: 2, pct: 50 });
+  });
+
+  it('returns 0% for an empty list instead of NaN', () => {
+    expect(buildAowBannerStats([])).toEqual({ total: 0, done: 0, pct: 0 });
+  });
+});
 });

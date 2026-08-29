@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -251,6 +252,7 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     ReportingProgramBandComponent,
     ProgramOverviewComponent,
     ReportingEntryHubComponent,
+    PrTooltipDirectiveModule,
     HlmButton,
     // Legacy reporting surfaces reused VERBATIM — the drawer/guided copies stay in the tree but are
     // no longer the ones users reach (see `openLegacyReportModal` / `openReportModal`).
@@ -2219,6 +2221,19 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /** The {aow, indicators, count, loading} bundle for a single AoW code (from indicatorsByAow). */
+  /**
+   * Context banner for the "By AOW" browse view — which AoW the user is working in
+   * plus its KPI stats (output tier only, same rule as the Reporting table ratio).
+   * @akili-spec changes/reporting-entry-hub
+   */
+  readonly plannedAowBanner = computed(() => {
+    const code = this.plannedHloAowCode();
+    if (!code) return null;
+    const name = this.aows().find(a => a.code === code)?.name ?? '';
+    const inds = (this.indicatorsForAow(code)?.indicators ?? []).filter(i => i?.__tier === 'output');
+    return { code, name, ...buildAowBannerStats(inds) };
+  });
+
   indicatorsForAow(code: string) {
     return this.indicatorsByAow().find(x => x.aow.code === code) ?? null;
   }
@@ -3114,4 +3129,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
     return `#${clamp(r).toString(16).padStart(2, '0')}${clamp(g).toString(16).padStart(2, '0')}${clamp(b).toString(16).padStart(2, '0')}`;
   }
+}
+
+/**
+ * Pure stats for the By-AOW context banner. `done` = KPIs with something reported;
+ * `total` = planned output indicators (mirrors `overviewAowProgress`). @akili-spec changes/reporting-entry-hub
+ */
+export function buildAowBannerStats(inds: Array<{ actual_achieved_value_sum?: unknown }>): {
+  total: number;
+  done: number;
+  pct: number;
+} {
+  const total = inds.length;
+  const done = inds.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
+  return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
 }
