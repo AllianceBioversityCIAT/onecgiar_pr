@@ -292,6 +292,55 @@
     </div>
     }
 
+    <!-- Only pending + Sort — band controls (MRF-R-1/R-2). Visible in BOTH reporting modes
+         (grouped table + By-AOW), unlike Type/Category/Status above, so rendered outside the
+         `compactFilters` gate. @akili-spec changes/mass-reporting-flow -->
+    <button
+      type="button"
+      role="switch"
+      [attr.aria-checked]="onlyPending()"
+      class="flex h-[36px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border px-[12px] text-[14px] font-medium transition-colors"
+      [class]="
+        onlyPending()
+          ? 'border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] font-semibold text-[var(--pr-color-primary-400)]'
+          : 'border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)]'
+      "
+      (click)="onlyPendingChange.emit(!onlyPending())">
+      Only pending
+    </button>
+
+    <div
+      role="tablist"
+      aria-label="Sort"
+      class="flex h-[36px] shrink-0 items-center gap-[2px] rounded-[8px] bg-[var(--pr-border-divider)] p-[3px]">
+      <button
+        type="button"
+        role="tab"
+        class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
+        [class]="
+          burndownSort() === 'catalogue'
+            ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
+            : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+        "
+        [attr.aria-selected]="burndownSort() === 'catalogue'"
+        (click)="burndownSortChange.emit('catalogue')">
+        Catalogue
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="h-[30px] rounded-[6px] border-0 px-[12px] text-[14px] font-medium transition-colors"
+        [class]="
+          burndownSort() === 'remaining'
+            ? 'bg-[var(--pr-surface-card)] font-semibold text-[var(--pr-color-primary-400)]'
+            : 'bg-transparent text-[var(--pr-text-secondary)] hover:text-[var(--pr-text-heading)]'
+        "
+        [attr.aria-selected]="burndownSort() === 'remaining'"
+        (click)="burndownSortChange.emit('remaining')">
+        Remaining work
+      </button>
+    </div>
+
     <!-- Clear filters — visible only while something is filtering. @akili-spec changes/reporting-entry-hub -->
     @if (filtersActive()) {
       <button

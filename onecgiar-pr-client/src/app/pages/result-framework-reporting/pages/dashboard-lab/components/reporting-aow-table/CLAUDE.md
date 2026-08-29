@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-08-26 · branch qa-development-2026 · 617f54f91
+**Verified:** 2026-08-29 · branch qa-development-2026 · 08aaaced1
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -11,7 +11,7 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
 - Inputs: `groups` (requerido), `search`, `statusFilter`, `filtersActive`, `viewMode`
   (`'grouped' | 'flat'`), `canReport`, `expandAll`, `expandAllNonce`, `scopeKey`.
 - Outputs: `openRow`, `reportRow`, `openTarget`, `openAchieved`, `openAow`, `allOpenChange`,
-  `clearFilters`.
+  `clearFilters`, `copyLink`.
 - Estado: el host (`dashboard-lab`) es dueño de los datos y de los cinco filtros. Este componente
   solo posee su **disclosure** (`overrides`), los títulos expandidos, y qué overlay está abierto
   (`openMenuKey`, `openInfoKey`).
@@ -48,9 +48,14 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
 - 🛑 **No toques la barra de progreso ni su métrica.** `ratioOf` cuenta KPIs con ALGO reportado, no
   KPIs al 100%. Es pregunta abierta de producto en P2-3405 (P2-2276 quitó una barra de % en 2025).
 - `—` vs `0` son hechos distintos: `—` = nunca se reportó, `0` = se reportó cero. No los unifiques.
-- El menú `⋯` es local. Sus dos items vivos re-emiten `openAchieved` / `openTarget`; no abren
-  superficie propia. `Copy indicator code` va **visible pero deshabilitado** (`Coming soon`): el
-  payload no trae ningún código de indicador visible para el usuario (P2-3405).
+- El menú `⋯` es local. Sus tres items vivos re-emiten `openAchieved` / `openTarget` / `copyLink`
+  (MRF-R-5, host arma la URL y copia); no abren superficie propia. `Copy indicator code` va
+  **visible pero deshabilitado** (`Coming soon`): el payload no trae ningún código de indicador
+  visible para el usuario (P2-3405). `Copy link` también va deshabilitado (con `title`) para filas
+  de Intermediate Outcomes / 2030 Outcomes — no tienen AoW propio al que `tocAow=` pueda resolver
+  (`canCopyLink(row)`, que **duplica** — no importa — los códigos sentinel de
+  `dashboard-lab.component.ts`'s `INTERMEDIATE_OUTCOMES_CODE`/`OUTCOMES_2030_CODE` para evitar un
+  import circular).
 
 ## Pendiente / Coming soon
 - Cuerpo del popover ⓘ (falta descripción de AoW en el backend) → P2-3405, aviso a Ángel.

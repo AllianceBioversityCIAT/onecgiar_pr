@@ -12,6 +12,15 @@ import {
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
 
+/**
+ * `__aowCode` values for the two program-level buckets (Intermediate Outcomes / 2030 Outcomes) —
+ * mirrors `INTERMEDIATE_OUTCOMES_CODE` / `OUTCOMES_2030_CODE` in `dashboard-lab.component.ts`.
+ * Duplicated (not imported) because the host is not exported and importing it here would create a
+ * circular dependency (the host already imports `ReportingIndicator`/`ReportingAowGroup` from this
+ * file). Keep both lists in sync if either sentinel value ever changes.
+ */
+const COPY_LINK_UNSUPPORTED_AOW_CODES: ReadonlySet<string> = new Set(['intermediate-outcomes', '2030-outcomes']);
+
 /** One indicator row, as `dashboard-lab.indicatorsByAow()` already produces it. */
 export interface ReportingIndicator {
   indicator_id: number;
@@ -191,6 +200,9 @@ export class ReportingAowTableComponent {
   readonly reportRow = output<ReportingIndicator>();
   readonly openTarget = output<ReportingIndicator>();
   readonly openAchieved = output<ReportingIndicator>();
+  /** "Copy link" row-menu action (MRF-R-5) — the host builds/copies the composite URL, this
+   * component only tells it which row. @akili-spec changes/mass-reporting-flow */
+  readonly copyLink = output<ReportingIndicator>();
   /**
    * Emitted by the empty state's `Clear filters` control. The host owns all five filter signals, so
    * resetting them is its job — this component only asks.
@@ -714,6 +726,15 @@ export class ReportingAowTableComponent {
     ev.stopPropagation();
     this.openMenuKey.set(null);
     emitter.emit(value);
+  }
+
+  /**
+   * `Copy link` is visible-but-disabled for Intermediate Outcomes / 2030 Outcomes rows — those
+   * buckets have no owning AoW for `tocAow=` to resolve back to, so the host's `kpiLink()` returns
+   * `''` for them (MRF review finding). Mirrors the `Copy indicator code` disabled pattern above.
+   */
+  canCopyLink(row: ReportingIndicator): boolean {
+    return !COPY_LINK_UNSUPPORTED_AOW_CODES.has(row.__aowCode ?? '');
   }
 
   // ── Card info popover ─────────────────────────────────────────────────────

@@ -36,3 +36,34 @@
 - ADVISORY (pre-existing, recorded): the success patch reads the current field value, not the sent one — bounded by the disabled Save during isLoading; no action.
 
 **Final:** PASS · attempts 2 · covers MRF-R-10/11/11.1, MRF-AC-10 (unit), AC-11 owed to T-8's manual round-trip · gate auto-approved (pre-approved mode).
+
+### `MRF-T-2` — Band controls + filtered/sorted pipelines
+
+- **Date:** 2026-08-29 · Implementer sonnet (effort high) · Reviewer opus · Skills: `angular-developer`, `tdd`
+- **Attempt 1** — Files: `reporting-burndown.{ts,spec.ts}` (+`zeroTargetLast` option per Leader decision), band `{ts,html,spec.ts}` (controls inside `showToolbar`, outside `compactFilters`), `dashboard-lab.component.{ts,html}` (`onlyPending`/`burndownSort` + `pr.burndown.*` storage; `applyBurndownFilterAndSort`; `reportingGroupsForTable` layered so `bandPlannedResultsCount`/`overviewXcutProgress` stay unfiltered; `plannedByAowSections` filtered), `dashboard-lab.hub.spec.ts` (+16). Verification: 5 suites / 171 green (table pinned suite untouched), lint, dev build.
+- Reviewer verdict: **FAIL** — two silent-default-change leaks with the toggle OFF: (1) `count` overwritten unconditionally (breaks the deliberate pre-Category `count` when Category filter active); (2) By-AOW `kpis` moves under search (was pre-search `filtered.length`). Remediations prescribed. Verified accurate: the `ratioOf` transitional state is real/confined/recorded → stands as the T-5 handoff.
+- ADVISORY: "Indicators" browse mode renders the controls inert (pre-existing pattern; T-8 checklist row); **Leader adoption:** T-5 will read the unfiltered set from a `__allIndicators` side-channel written by `applyBurndownFilterAndSort` (folded into attempt 2); MRF spec block sits inside the REH describe (comment added).
+
+**Attempt 2** (effort high)
+- Files: `dashboard-lab.component.ts` (`count: onlyPending ? sorted.length : g.count`; `kpis` toggled between pre-search `filtered.length` and post-filter sum; `__allIndicators` written only under Only-pending), `dashboard-lab.hub.spec.ts` (+7 behavioural tests with invariant-violating fixtures).
+- Verification: 5 suites / 178 green (table pinned suite untouched); lint; dev build.
+- Reviewer verdict (scoped): **PASS** — both fixes at the right seam; **truth for T-5 pinned by the Reviewer: `__allIndicators` is POST-Category / PRE-Only-pending — the exact set `ratioOf` reads today; read it as `group.__allIndicators ?? group.indicators`, and the table needs a local cast (the intersection type is erased at the `computed<ReportingAowGroup[]>` binding).**
+- ADVISORY → folded into T-5's brief: clarify/rename the side-channel comment (Section/Type/Category baked in; Only-pending not) + tighten the `applyBurndownFilterAndSort` docstring line.
+
+**Final:** PASS · attempts 2 · covers MRF-R-1, MRF-R-2, MRF-AC-1, MRF-AC-2 · gate auto-approved (pre-approved mode). Commit deferred to land jointly with MRF-T-3 (shared `dashboard-lab.component.{ts,html}` hunks).
+
+### `MRF-T-3` — Copy link + `?kpi=` restore + Read more
+
+- **Date:** 2026-08-29 · Implementer sonnet (effort high) · Reviewer opus · Skills: `angular-developer`, `tdd`
+- **Attempt 1** — Files: `dashboard-lab.component.{ts,html}` (`kpiLink`/`copyKpiLink` CDK Clipboard + toast; `pendingKpi` in the three read sites; restore effect scoped to the owning AoW; highlight + param strip; Read more), `reporting-aow-table.component.{ts,html}` (menu Copy link, additive), new `dashboard-lab.mrf-kpi-link.spec.ts` (12). Verification: 4 suites / 120 green; lint; dev build.
+- Reviewer verdict: **FAIL** — (1) bucket-sentinel rows (Intermediate/2030) emit `tocAow=<sentinel>` → restore lands on `list[0]` (wrong AoW; possible wrong-KPI highlight) — remediate by empty link + disabled menu item for sentinels; (2) `reporting-aow-table/CLAUDE.md` not updated in the same change (outputs list + menu-items sentence + Verified stamp) — client CLAUDE.md §10; (3) "Read more toggles the clamp class" untestable in this harness (templates nulled) and unrecorded — record gap + T-8 row.
+- Core verified sound: param spread, absolute URL (`origin` + `serializeUrl` + `<base href="/">`), per-AoW dedupe, no mirror/strip ping-pong, cold-load survival real (loading true in the same flush).
+- ADVISORY folded into attempt 2: unconditional signal reads in the restore effect (dependency-set truncation) + always-run highlight clear. Recorded, not folded: `needsKpiReadMore` width-blind heuristic (matches `needsShowMore` precedent — T-8 row); `pendingPlannedAow` stays non-null on no-match (pre-existing).
+
+**Attempt 2** (effort high; first worker lost to a provider session limit — replacement audited the partial diff and completed)
+- Files: `dashboard-lab.component.ts` (sentinel guard in `kpiLink`; unconditional signal reads in the restore effect; highlight clear always scheduled), `reporting-aow-table.component.{ts,html}` (`canCopyLink` + disabled/aria-disabled/title on both menu items; local `COPY_LINK_UNSUPPORTED_AOW_CODES` duplicated to avoid a value-import cycle), `reporting-aow-table/CLAUDE.md` (outputs, menu items, sentinel rule, Verified re-stamped), `dashboard-lab.mrf-kpi-link.spec.ts` (+`it.each` sentinels).
+- Verification: 4 suites / 129 green; lint; dev build.
+- Reviewer verdict (scoped): **PASS** — duplicated constants adjudicated acceptable (fail-safe: worst case an inert menu item, never a wrong link; documented at both ends).
+- **Recorded gap:** `[class.line-clamp-2]` Read-more binding untestable in jsdom (all dashboard-lab suites null the template) → T-8 manual row. Follow-up candidate: extract `reporting-toc-codes.ts` (host, table and `programme-results` each hold the two codes).
+
+**Final:** PASS · attempts 2 · covers MRF-R-5, MRF-R-5.1, MRF-AC-4 (unit; scroll/highlight visuals + clamp → T-8) · gate auto-approved (pre-approved mode).

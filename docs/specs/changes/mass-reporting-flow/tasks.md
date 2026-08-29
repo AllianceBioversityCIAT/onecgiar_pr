@@ -29,7 +29,7 @@
 
 ### `MRF-T-2` — Band controls + filtered/sorted pipelines in both views
 
-- **Status:** `[ ]` · **Type:** `client` · **Estimate:** M · **Depends on:** T-1 · **Blocks:** T-4
+- **Status:** `[x]` · **Type:** `client` · **Estimate:** M · **Depends on:** T-1 · **Blocks:** T-4
 - **Description:** Band: `Only pending` toggle + `Sort: Catalogue|Remaining` segmented (new inputs/outputs, visible in both modes, style per shipped recipes). Dashboard-lab: `onlyPending`/`burndownSort` persisted as two scalar keys `pr.burndown.onlyPending`/`pr.burndown.sort` (setItem/getItem in try/catch); thread through `plannedByAowSections` AND `reportingGroups` so both views filter/hide/sort via T-1 helpers; visible counts recompute; groups with zero visible KPIs hidden while filtering.
 - **Implements:** MRF-R-1 (incl. **BUT** in-progress visible), MRF-R-2, MRF-AC-1, MRF-AC-2 (incl. catalogue restore).
 - **Skills:** `angular-developer`, `tdd`.
@@ -41,7 +41,7 @@
 
 ### `MRF-T-3` — Copy link + `?kpi=` restore
 
-- **Status:** `[ ]` · **Type:** `client` · **Estimate:** M · **Depends on:** T-1 · **Blocks:** T-7
+- **Status:** `[x]` · **Type:** `client` · **Estimate:** M · **Depends on:** T-1 · **Blocks:** T-7
 - **Description:** Copy-link icon on By-AOW cards and grouped-table rows using **CDK `@angular/cdk/clipboard`** (repo precedent `pdf-export.service.ts`); the copied URL carries the composite `tocView=byAow&tocAow=<owning __aowCode>&kpi=<indicator_id>` (id NOT unique across AoWs; grouped rows emit their own `__aowCode`). Restore beside the existing `tocAow` restore: `?kpi=` sets `pendingKpi`, which SURVIVES until the owning ToC resolves (cold-load/new-tab path through `pendingPlannedAow`), then expand/scroll/highlight (outline class + `scrollIntoView`, reduced-motion aware) and consume the param. Plus **Read more** on the By-AOW cards toggling the description clamp in place (MRF-R-5.1).
 - **Implements:** MRF-R-5, MRF-AC-4.
 - **Skills:** `angular-developer`, `tdd`.

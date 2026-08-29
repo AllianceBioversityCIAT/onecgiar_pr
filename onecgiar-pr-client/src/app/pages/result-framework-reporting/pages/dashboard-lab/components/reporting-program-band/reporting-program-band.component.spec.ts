@@ -452,4 +452,72 @@ describe('ReportingProgramBandComponent', () => {
       expect(el.querySelector('[aria-label="Filter by section"], .pr-band-filter')).not.toBeNull();
     });
   });
+
+  // ── MRF-T-2 · band controls (Only pending + Sort) ─────────────────────────
+  describe('band controls (Only pending + Sort)', () => {
+    const onlyPendingBtn = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        b => b.textContent?.trim() === 'Only pending'
+      ) as HTMLButtonElement;
+    const sortTab = (label: string) =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[aria-label="Sort"] button')).find(
+        b => b.textContent?.trim() === label
+      ) as HTMLButtonElement;
+
+    it('renders Only pending unchecked and Catalogue selected by default', async () => {
+      await build({ showToolbar: true, activeTab: 'reporting' });
+
+      expect(onlyPendingBtn().getAttribute('aria-checked')).toBe('false');
+      expect(sortTab('Catalogue').getAttribute('aria-selected')).toBe('true');
+      expect(sortTab('Remaining work').getAttribute('aria-selected')).toBe('false');
+    });
+
+    it('emits onlyPendingChange with the flipped value on click', async () => {
+      await build({ showToolbar: true, activeTab: 'reporting', onlyPending: false });
+      const emitted: boolean[] = [];
+      component.onlyPendingChange.subscribe(v => emitted.push(v));
+
+      onlyPendingBtn().click();
+
+      expect(emitted).toEqual([true]);
+    });
+
+    it('reflects onlyPending=true as checked', async () => {
+      await build({ showToolbar: true, activeTab: 'reporting', onlyPending: true });
+
+      expect(onlyPendingBtn().getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('emits burndownSortChange with the clicked segment', async () => {
+      await build({ showToolbar: true, activeTab: 'reporting' });
+      const emitted: string[] = [];
+      component.burndownSortChange.subscribe(v => emitted.push(v));
+
+      sortTab('Remaining work').click();
+
+      expect(emitted).toEqual(['remaining']);
+    });
+
+    it('marks Remaining work selected when burndownSort is remaining', async () => {
+      await build({ showToolbar: true, activeTab: 'reporting', burndownSort: 'remaining' });
+
+      expect(sortTab('Remaining work').getAttribute('aria-selected')).toBe('true');
+      expect(sortTab('Catalogue').getAttribute('aria-selected')).toBe('false');
+    });
+
+    it('stays visible in By-AOW mode (compactFilters), unlike Type/Category/Status', async () => {
+      await build({ showToolbar: true, activeTab: 'reporting', compactFilters: true });
+
+      expect(onlyPendingBtn()).toBeTruthy();
+      expect(sortTab('Catalogue')).toBeTruthy();
+      expect(sortTab('Remaining work')).toBeTruthy();
+    });
+
+    it('is absent on Overview, where there is no toolbar at all', async () => {
+      await build({ showToolbar: false });
+
+      expect(onlyPendingBtn()).toBeUndefined();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Sort"]')).toBeNull();
+    });
+  });
 });

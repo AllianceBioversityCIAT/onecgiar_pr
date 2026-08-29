@@ -316,4 +316,335 @@ describe('buildIndicatorCardMeta (By-AOW indicator card)', () => {
     expect(buildIndicatorCardMeta(2, 0).state).toBe('in-progress');
   });
 });
+
+// ── MRF-T-2 — band controls: Only-pending filter + Remaining-work/Catalogue sort ─────────────
+//
+// `reportingGroupsForTable`/`plannedByAowSections` both depend on heavy async ToC-loading state
+// (`aows`, `indicatorsByAow`, `tocByKey`, ...) that isn't worth re-wiring here. Both funnel through
+// the SAME private `applyBurndownFilterAndSort` — exercised at that seam by monkey-patching the
+// one upstream read each consumer makes (`reportingGroups` / `indicatorsForAow`), which is the
+// project's own established idiom in this file for reaching past async setup ((component as
+// any).fetchW3Projects above). Every fixture below asserts by `indicator_id` — a length-only
+// assertion cannot distinguish "hid the right cards" from "hid the wrong ones" (Leader disqualifier).
+describe('band controls — Only pending / sort pipeline (MRF-T-2)', () => {
+  afterEach(() => {
+    try {
+      sessionStorage.clear();
+    } catch {
+      // ignore
+    }
+    jest.restoreAllMocks();
+  });
+
+  // Card-level fixture for reportingGroupsForTable: 2 AoW cards.
+  //  AOW1: 1 complete, 1 zero-target, 1 in-progress  -> pending = 1 (in-progress only)
+  //  AOW2: 2 not-started                              -> pending = 2
+  const complete = (id: number) => ({ indicator_id: id, target_value_sum: 5, actual_achieved_value_sum: 5 });
+  const zeroTarget = (id: number) => ({ indicator_id: id, target_value_sum: 0, actual_achieved_value_sum: 0 });
+  const inProgress = (id: number) => ({ indicator_id: id, target_value_sum: 5, actual_achieved_value_sum: 2 });
+  const notStarted = (id: number) => ({ indicator_id: id, target_value_sum: 5, actual_achieved_value_sum: 0 });
+
+  const cardsFixture = () => [
+    {
+      aow: { code: 'AOW1', name: 'Area One' },
+      indicators: [complete(1), zeroTarget(2), inProgress(3)],
+      count: 3,
+      loading: false,
+      kind: 'aow' as const
+    },
+    {
+      aow: { code: 'AOW2', name: 'Area Two' },
+      indicators: [notStarted(4), notStarted(5)],
+      count: 2,
+      loading: false,
+      kind: 'aow' as const
+    }
+  ];
+
+  describe('reportingGroupsForTable (grouped table pipeline)', () => {
+    it('passes cards through unchanged when Only-pending is off and sort is Catalogue (default)', async () => {
+      const { component } = await createComponent(apiMock());
+      const fixture = cardsFixture();
+      (component as any).reportingGroups = () => fixture;
+
+      expect(component.reportingGroupsForTable()).toEqual(fixture);
+    });
+
+    it('never mutates reportingGroups() itself — Overview reads it unfiltered (bandPlannedResultsCount, overviewXcutProgress)', async () => {
+      const { component } = await createComponent(apiMock());
+      const fixture = cardsFixture();
+      (component as any).reportingGroups = () => fixture;
+      component.setOnlyPending(true);
+      component.setBurndownSort('remaining');
+
+      expect((component as any).reportingGroups()).toEqual(fixture);
+    });
+
+    it('Only-pending hides complete AND zero-target KPIs, recomputing count (MRF-AC-1)', async () => {
+      const { component } = await createComponent(apiMock());
+      (component as any).reportingGroups = cardsFixture;
+      component.setOnlyPending(true);
+
+      const groups = component.reportingGroupsForTable();
+      const aow1 = groups.find((g: any) => g.aow.code === 'AOW1');
+      expect(aow1.indicators.map((i: any) => i.indicator_id)).toEqual([3]);
+      expect(aow1.count).toBe(1);
+      const aow2 = groups.find((g: any) => g.aow.code === 'AOW2');
+      expect(aow2.indicators.map((i: any) => i.indicator_id)).toEqual([4, 5]);
+      expect(aow2.count).toBe(2);
+    });
+
+    it('hides a card whose KPIs are ALL hidden by Only-pending (MRF-R-1)', async () => {
+      const { component } = await createComponent(apiMock());
+      const fixture = [
+        {
+          aow: { code: 'AOW3', name: 'All complete' },
+          indicators: [complete(10), zeroTarget(11)],
+          count: 2,
+          loading: false,
+          kind: 'aow' as const
+        },
+        ...cardsFixture()
+      ];
+      (component as any).reportingGroups = () => fixture;
+      component.setOnlyPending(true);
+
+      const codes = component.reportingGroupsForTable().map((g: any) => g.aow.code);
+      expect(codes).not.toContain('AOW3');
+      expect(codes).toEqual(['AOW1', 'AOW2']);
+    });
+
+    it('keeps a still-loading card visible under Only-pending even with 0 indicators so far', async () => {
+      const { component } = await createComponent(apiMock());
+      const fixture = [{ aow: { code: 'AOW4', name: 'Loading' }, indicators: [], count: 0, loading: true, kind: 'aow' as const }];
+      (component as any).reportingGroups = () => fixture;
+      component.setOnlyPending(true);
+
+      expect(component.reportingGroupsForTable().map((g: any) => g.aow.code)).toEqual(['AOW4']);
+    });
+
+    it('Remaining-work sort orders KPIs not-started -> in-progress -> complete -> zero-target-last within a card, and cards by pending count desc (MRF-AC-2)', async () => {
+      const { component } = await createComponent(apiMock());
+      (component as any).reportingGroups = cardsFixture;
+      component.setBurndownSort('remaining');
+
+      const groups = component.reportingGroupsForTable();
+      // AOW2 (pending 2) ranks before AOW1 (pending 1).
+      expect(groups.map((g: any) => g.aow.code)).toEqual(['AOW2', 'AOW1']);
+      const aow1 = groups.find((g: any) => g.aow.code === 'AOW1');
+      // in-progress(3) -> complete(1) -> zero-target(2) last.
+      expect(aow1.indicators.map((i: any) => i.indicator_id)).toEqual([3, 1, 2]);
+    });
+
+    it('switching sort back to Catalogue restores the exact original order (deep-equal against the untouched fixture)', async () => {
+      const { component } = await createComponent(apiMock());
+      const fixture = cardsFixture();
+      (component as any).reportingGroups = () => fixture;
+
+      component.setBurndownSort('remaining');
+      expect(component.reportingGroupsForTable()).not.toEqual(fixture);
+
+      component.setBurndownSort('catalogue');
+      expect(component.reportingGroupsForTable()).toEqual(fixture);
+    });
+
+    // Reviewer fix (attempt 2, remediation 1): `reportingGroups()` deliberately keeps `count` at
+    // the pre-Category size while `indicators` is already post-Category-filtered — a card CAN
+    // arrive here with `count !== indicators.length`. With Only-pending off this must be a true
+    // no-op: `count` is NOT allowed to silently move (MRF-R-1/R-2 "no silent default change").
+    it('leaves a pre-Category count untouched when Only-pending is off (Catalogue)', async () => {
+      const { component } = await createComponent(apiMock());
+      const fixture = [
+        { aow: { code: 'AOW5', name: 'Category-filtered' }, indicators: [inProgress(3)], count: 3, loading: false, kind: 'aow' as const }
+      ];
+      (component as any).reportingGroups = () => fixture;
+
+      const groups = component.reportingGroupsForTable();
+      expect(groups[0].indicators.map((i: any) => i.indicator_id)).toEqual([3]);
+      expect(groups[0].count).toBe(3);
+    });
+
+    it('leaves a pre-Category count untouched under Remaining-work sort too, as long as Only-pending is off', async () => {
+      const { component } = await createComponent(apiMock());
+      const fixture = [
+        { aow: { code: 'AOW5', name: 'Category-filtered' }, indicators: [inProgress(3)], count: 3, loading: false, kind: 'aow' as const }
+      ];
+      (component as any).reportingGroups = () => fixture;
+      component.setBurndownSort('remaining');
+
+      expect(component.reportingGroupsForTable()[0].count).toBe(3);
+    });
+
+    it('DOES recompute count from the pre-Category size once Only-pending actually narrows it', async () => {
+      const { component } = await createComponent(apiMock());
+      const fixture = [
+        { aow: { code: 'AOW5', name: 'Category-filtered' }, indicators: [inProgress(3), complete(30)], count: 5, loading: false, kind: 'aow' as const }
+      ];
+      (component as any).reportingGroups = () => fixture;
+      component.setOnlyPending(true);
+
+      const groups = component.reportingGroupsForTable();
+      expect(groups[0].indicators.map((i: any) => i.indicator_id)).toEqual([3]);
+      expect(groups[0].count).toBe(1);
+    });
+
+    // Leader addition (T-5 handoff): a side-channel snapshot of the pre-filter array, so T-5 can
+    // rewire `ratioOf` to source its "unfiltered" set from here instead of the (now Only-pending-
+    // filtered) `indicators` this pipeline hands to `reporting-aow-table`.
+    describe('__allIndicators side-channel (T-5 handoff)', () => {
+      it('carries the pre-filter snapshot when Only-pending is on', async () => {
+        const { component } = await createComponent(apiMock());
+        const fixture = cardsFixture();
+        (component as any).reportingGroups = () => fixture;
+        component.setOnlyPending(true);
+
+        const aow1 = component.reportingGroupsForTable().find((g: any) => g.aow.code === 'AOW1') as any;
+        expect(aow1.__allIndicators.map((i: any) => i.indicator_id)).toEqual([1, 2, 3]);
+      });
+
+      it('is absent when Only-pending is off', async () => {
+        const { component } = await createComponent(apiMock());
+        const fixture = cardsFixture();
+        (component as any).reportingGroups = () => fixture;
+
+        const aow1 = component.reportingGroupsForTable().find((g: any) => g.aow.code === 'AOW1') as any;
+        expect(aow1.__allIndicators).toBeUndefined();
+      });
+    });
+  });
+
+  describe('plannedByAowSections (By-AOW HLO groups)', () => {
+    // H1: complete(1) + zero-target(2) + in-progress(3) -> pending 1
+    // H2: not-started(4) + not-started(5)                -> pending 2
+    // H3: complete(6) only                                -> pending 0 (hidden entirely under Only-pending)
+    const hloFixture = () => [
+      { ...complete(1), __hlo: 'H1' },
+      { ...zeroTarget(2), __hlo: 'H1' },
+      { ...inProgress(3), __hlo: 'H1' },
+      { ...notStarted(4), __hlo: 'H2' },
+      { ...notStarted(5), __hlo: 'H2' },
+      { ...complete(6), __hlo: 'H3' }
+    ];
+
+    async function buildWithHlo() {
+      const { component } = await createComponent(apiMock());
+      component.plannedHloAowCode.set('AOW1');
+      (component as any).indicatorsForAow = () => ({ indicators: hloFixture() });
+      return component;
+    }
+
+    it('recomputes each HLO group + the section KPI count under Only-pending, and hides an all-hidden group', async () => {
+      const component = await buildWithHlo();
+      component.setOnlyPending(true);
+
+      const sections = component.plannedByAowSections();
+      const section = sections.find((s: any) => s.label === 'High Level Outputs');
+      const titles = section.groups.map((g: any) => g.title);
+      expect(titles).toEqual(['H1', 'H2']);
+      expect(titles).not.toContain('H3');
+      const h1 = section.groups.find((g: any) => g.title === 'H1');
+      expect(h1.indicators.map((i: any) => i.indicator_id)).toEqual([3]);
+      expect(h1.count).toBe(1);
+      expect(section.kpis).toBe(3); // 1 (H1) + 2 (H2), H3 dropped entirely
+    });
+
+    it('Remaining-work sort reorders HLO groups by pending count desc (H2 before H1)', async () => {
+      const component = await buildWithHlo();
+      component.setBurndownSort('remaining');
+
+      const section = component.plannedByAowSections().find((s: any) => s.label === 'High Level Outputs');
+      expect(section.groups.map((g: any) => g.title)).toEqual(['H2', 'H1', 'H3']);
+    });
+
+    it('Catalogue (default) keeps the original HLO group order and full KPI count', async () => {
+      const component = await buildWithHlo();
+
+      const section = component.plannedByAowSections().find((s: any) => s.label === 'High Level Outputs');
+      expect(section.groups.map((g: any) => g.title)).toEqual(['H1', 'H2', 'H3']);
+      expect(section.kpis).toBe(6);
+    });
+
+    // Reviewer fix (attempt 2, remediation 2): a search phrase that only H1's KPI #3 matches
+    // ("banana") drops H2/H3 from `groups` (rankPlannedHloGroups' own pre-existing behaviour), but
+    // `kpis` must NOT silently move to the post-search count while Only-pending stays off — it has
+    // to keep reading today's pre-search total ("progress must not move when you search").
+    describe('kpis scoping under an active search', () => {
+      const hloFixtureWithDescriptions = () => [
+        { ...complete(1), __hlo: 'H1', indicator_description: 'apple' },
+        { ...zeroTarget(2), __hlo: 'H1', indicator_description: 'apple' },
+        { ...inProgress(3), __hlo: 'H1', indicator_description: 'banana harvest' },
+        { ...notStarted(4), __hlo: 'H2', indicator_description: 'apple' },
+        { ...notStarted(5), __hlo: 'H2', indicator_description: 'apple' },
+        { ...complete(6), __hlo: 'H3', indicator_description: 'apple' }
+      ];
+
+      async function buildWithHloSearch() {
+        const { component } = await createComponent(apiMock());
+        component.plannedHloAowCode.set('AOW1');
+        (component as any).indicatorsForAow = () => ({ indicators: hloFixtureWithDescriptions() });
+        return component;
+      }
+
+      it('with Only-pending OFF, kpis stays at the pre-search total even though search hides groups/KPIs', async () => {
+        const component = await buildWithHloSearch();
+        component.plannedSearch.set('banana');
+
+        const section = component.plannedByAowSections().find((s: any) => s.label === 'High Level Outputs');
+        // Search narrows what's rendered (H2/H3 dropped, only KPI #3 survives in H1)...
+        expect(section.groups.map((g: any) => g.title)).toEqual(['H1']);
+        expect(section.groups[0].indicators.map((i: any) => i.indicator_id)).toEqual([3]);
+        // ...but the published count does not move with the toggle off.
+        expect(section.kpis).toBe(6);
+      });
+
+      it('with Only-pending ON, kpis IS the post-search-and-filter sum', async () => {
+        const component = await buildWithHloSearch();
+        component.plannedSearch.set('banana');
+        component.setOnlyPending(true);
+
+        const section = component.plannedByAowSections().find((s: any) => s.label === 'High Level Outputs');
+        expect(section.groups.map((g: any) => g.title)).toEqual(['H1']);
+        expect(section.groups[0].indicators.map((i: any) => i.indicator_id)).toEqual([3]);
+        expect(section.kpis).toBe(1);
+      });
+    });
+  });
+
+  describe('sessionStorage persistence (setItem/getItem in try/catch)', () => {
+    it('persists onlyPending and burndownSort across a fresh component (in-tab reload)', async () => {
+      const { component: first } = await createComponent(apiMock());
+      first.setOnlyPending(true);
+      first.setBurndownSort('remaining');
+
+      TestBed.resetTestingModule();
+      const { component: second } = await createComponent(apiMock());
+
+      expect(second.onlyPending()).toBe(true);
+      expect(second.burndownSort()).toBe('remaining');
+    });
+
+    it('defaults to off/Catalogue, with no thrown error, when sessionStorage.getItem throws', async () => {
+      jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('storage blocked');
+      });
+
+      const { component } = await createComponent(apiMock());
+
+      expect(component.onlyPending()).toBe(false);
+      expect(component.burndownSort()).toBe('catalogue');
+    });
+
+    it('still updates the in-memory signal, with no thrown error, when sessionStorage.setItem throws', async () => {
+      const { component } = await createComponent(apiMock());
+      jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('storage blocked');
+      });
+
+      expect(() => component.setOnlyPending(true)).not.toThrow();
+      expect(() => component.setBurndownSort('remaining')).not.toThrow();
+      expect(component.onlyPending()).toBe(true);
+      expect(component.burndownSort()).toBe('remaining');
+    });
+  });
+});
 });

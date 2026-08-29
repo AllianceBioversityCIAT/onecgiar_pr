@@ -26,6 +26,20 @@ export interface BurndownGroup {
 type BurndownState = 'complete' | 'in-progress' | 'not-started';
 
 const STATE_RANK: Record<BurndownState, number> = { 'not-started': 0, 'in-progress': 1, complete: 2 };
+/** One rank past `complete` — only reachable via `zeroTargetLast` (never assigned by `STATE_RANK`). */
+const ZERO_TARGET_LAST_RANK = 3;
+
+/** Options for `sortRemainingFirst`. */
+export interface SortRemainingFirstOptions {
+  /**
+   * Leader decision (MRF-T-2, T-1 review): in Remaining-work order, a zero-target KPI
+   * (`target = 0 AND achieved = 0`) ranks LAST — after `complete` — instead of alongside
+   * `not-started` (its raw achieved/target reading). Only meaningful when the list can still
+   * contain zero-target KPIs; under Only-pending they are already excluded (`pendingOf`), so this
+   * is a no-op there. Defaults to `false` to keep every existing caller byte-identical.
+   */
+  zeroTargetLast?: boolean;
+}
 
 function achievedOf(ind: BurndownIndicator | null | undefined): number {
   return Number(ind?.actual_achieved_value_sum ?? 0) || 0;
@@ -82,11 +96,19 @@ export function pendingOf<T extends BurndownIndicator>(inds: T[]): T[] {
  * Remaining-work order (MRF-R-2): `not-started` → `in-progress` → `complete`, stable within each
  * state. Does not mutate `inds`.
  *
+ * `options.zeroTargetLast` (MRF-T-2 Leader decision): rank a zero-target KPI last instead of with
+ * `not-started` — see `SortRemainingFirstOptions`.
+ *
  * @akili-spec changes/mass-reporting-flow
  */
-export function sortRemainingFirst<T extends BurndownIndicator>(inds: T[]): T[] {
+export function sortRemainingFirst<T extends BurndownIndicator>(inds: T[], options?: SortRemainingFirstOptions): T[] {
+  const zeroTargetLast = options?.zeroTargetLast ?? false;
   return inds
-    .map((ind, index) => ({ ind, index, rank: STATE_RANK[stateOf(ind)] }))
+    .map((ind, index) => ({
+      ind,
+      index,
+      rank: zeroTargetLast && isZeroTarget(ind) ? ZERO_TARGET_LAST_RANK : STATE_RANK[stateOf(ind)]
+    }))
     .sort((a, b) => a.rank - b.rank || a.index - b.index)
     .map(entry => entry.ind);
 }

@@ -94,6 +94,17 @@ export class ReportingProgramBandComponent {
   readonly compactFilters = input<boolean>(false);
   /** Any reporting filter active — shows the Clear-filters button. @akili-spec changes/reporting-entry-hub */
   readonly filtersActive = input<boolean>(false);
+  /**
+   * Only-pending toggle (MRF-R-1): hides `complete` and zero-target KPIs. Visible in BOTH
+   * reporting modes (grouped table + By-AOW), unlike Type/Category/Status — rendered outside the
+   * `compactFilters` gate. @akili-spec changes/mass-reporting-flow
+   */
+  readonly onlyPending = input<boolean>(false);
+  /**
+   * Remaining-work | Catalogue sort (MRF-R-2). Default `catalogue` — no silent default change.
+   * Same visibility as `onlyPending`. @akili-spec changes/mass-reporting-flow
+   */
+  readonly burndownSort = input<'catalogue' | 'remaining'>('catalogue');
   /** By-AOW mode: the active AoW + flat options for the single-select switcher (a multiselect is meaningless when exactly one AoW renders). @akili-spec changes/reporting-entry-hub */
   readonly activeAowCode = input<string | null>(null);
   readonly aowSingleOptions = input<{ label: string; value: string }[]>([]);
@@ -125,6 +136,10 @@ export class ReportingProgramBandComponent {
   readonly typologyChange = output<string>();
   readonly typeChange = output<string>();
   readonly aowChange = output<string[]>();
+  /** @akili-spec changes/mass-reporting-flow */
+  readonly onlyPendingChange = output<boolean>();
+  /** @akili-spec changes/mass-reporting-flow */
+  readonly burndownSortChange = output<'catalogue' | 'remaining'>();
   readonly viewModeChange = output<'grouped' | 'flat'>();
   readonly clearAllFilters = output<void>();
   readonly aowSwitch = output<string>();

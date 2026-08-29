@@ -190,6 +190,21 @@
                   <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openTarget, row, $event)">
                     Target details
                   </button>
+                  <!-- MRF-R-5: `tocView=byAow&tocAow=<row.__aowCode>&kpi=<row.indicator_id>` — the
+                       host owns the URL/clipboard, this only tells it which row. Disabled for
+                       Intermediate Outcomes / 2030 Outcomes rows — they have no owning AoW to link
+                       back to (the host's `kpiLink()` returns '' for them). -->
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="pr-row-menu_item"
+                    [class.pr-row-menu_item--disabled]="!canCopyLink(row)"
+                    [disabled]="!canCopyLink(row)"
+                    [attr.aria-disabled]="!canCopyLink(row) ? 'true' : null"
+                    [attr.title]="!canCopyLink(row) ? 'Link is not available for program-level buckets' : null"
+                    (click)="runFromMenu(copyLink, row, $event)">
+                    Copy link
+                  </button>
                   <button
                     type="button"
                     role="menuitem"
@@ -558,6 +573,21 @@
           </button>
           <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openTarget, row, $event)">
             Target details
+          </button>
+          <!-- MRF-R-5: `tocView=byAow&tocAow=<row.__aowCode>&kpi=<row.indicator_id>` — the host
+               owns the URL/clipboard, this only tells it which row. Disabled for Intermediate
+               Outcomes / 2030 Outcomes rows — they have no owning AoW to link back to (the host's
+               `kpiLink()` returns '' for them). -->
+          <button
+            type="button"
+            role="menuitem"
+            class="pr-row-menu_item"
+            [class.pr-row-menu_item--disabled]="!canCopyLink(row)"
+            [disabled]="!canCopyLink(row)"
+            [attr.aria-disabled]="!canCopyLink(row) ? 'true' : null"
+            [attr.title]="!canCopyLink(row) ? 'Link is not available for program-level buckets' : null"
+            (click)="runFromMenu(copyLink, row, $event)">
+            Copy link
           </button>
           <!-- The payload carries no user-facing indicator code — `indicator_id` is an internal key
                that is never shown anywhere in the UI, so "copying the code" would hand the user a

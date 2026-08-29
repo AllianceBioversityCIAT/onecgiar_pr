@@ -89,6 +89,40 @@ describe('sortRemainingFirst', () => {
 
     expect(catalogue).toEqual(copy);
   });
+
+  // MRF-T-2 Leader decision (T-1 review, binding): a zero-target KPI ranks with `not-started` by
+  // default (its raw achieved/target reading), but LAST — after `complete` — when the caller opts
+  // into `zeroTargetLast` (Only-pending off, sort = Remaining work).
+  describe('zeroTargetLast option', () => {
+    const zeroTarget = (id: string) => ({ indicator_id: id, target_value_sum: 0, actual_achieved_value_sum: 0 });
+    const notStarted = (id: string) => ({ indicator_id: id, target_value_sum: 5, actual_achieved_value_sum: 0 });
+    const inProgress = (id: string) => ({ indicator_id: id, target_value_sum: 5, actual_achieved_value_sum: 2 });
+    const complete = (id: string) => ({ indicator_id: id, target_value_sum: 5, actual_achieved_value_sum: 5 });
+
+    it('without the option, ranks a zero-target KPI with not-started (its raw reading)', () => {
+      const catalogue = [complete('A'), zeroTarget('B'), inProgress('C'), notStarted('D')];
+
+      const sorted = sortRemainingFirst(catalogue);
+
+      expect(sorted.map(i => i.indicator_id)).toEqual(['B', 'D', 'C', 'A']);
+    });
+
+    it('with zeroTargetLast, ranks a zero-target KPI after complete instead of with not-started', () => {
+      const catalogue = [complete('A'), zeroTarget('B'), inProgress('C'), notStarted('D')];
+
+      const sorted = sortRemainingFirst(catalogue, { zeroTargetLast: true });
+
+      expect(sorted.map(i => i.indicator_id)).toEqual(['D', 'C', 'A', 'B']);
+    });
+
+    it('keeps multiple zero-target KPIs stable relative to each other, both last', () => {
+      const catalogue = [zeroTarget('B1'), notStarted('D'), zeroTarget('B2')];
+
+      const sorted = sortRemainingFirst(catalogue, { zeroTargetLast: true });
+
+      expect(sorted.map(i => i.indicator_id)).toEqual(['D', 'B1', 'B2']);
+    });
+  });
 });
 
 describe('groupPendingCount', () => {

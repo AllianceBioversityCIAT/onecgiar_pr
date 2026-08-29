@@ -1283,7 +1283,11 @@
             (aowChange)="onSectionFilterChange($event)"
             (typeChange)="reportingTypeFilter.set($event)"
             (typologyChange)="reportingTypologyFilter.set($event)"
-            (viewModeChange)="reportingViewMode.set($event)" />
+            (viewModeChange)="reportingViewMode.set($event)"
+            [onlyPending]="onlyPending()"
+            [burndownSort]="burndownSort()"
+            (onlyPendingChange)="setOnlyPending($event)"
+            (burndownSortChange)="setBurndownSort($event)" />
 
           <!-- The old filter strip (72 lines: its own search plus the AoW / typology selects)
                was removed — the band above now owns search, filters and the grouping toggle,
@@ -1313,7 +1317,7 @@
                    programme they do not belong to, must not be offered a Report CTA that opens a modal
                    with no way to submit. -->
               <app-reporting-aow-table
-                [groups]="reportingGroups()"
+                [groups]="reportingGroupsForTable()"
                 [search]="plannedSearch()"
                 [statusFilter]="reportingStatusFilter()"
                 [viewMode]="reportingViewMode()"
@@ -1328,7 +1332,8 @@
                 (openTarget)="onReportingOpenTarget($event)"
                 (openAchieved)="onReportingOpenAchieved($event)"
                 (allOpenChange)="reportingAllOpen.set($event)"
-                (openAow)="openAow($event)" />
+                (openAow)="openAow($event)"
+                (copyLink)="copyKpiLink($event)" />
               <!-- Intermediate Outcomes + 2030 Outcomes are top-level cards inside the table
                    (siblings of AoWs). The old "open 2030 detail" jump button is gone. -->
             } @else if (plannedBrowseView() === 'byAow') {
@@ -1464,13 +1469,29 @@
                             <!-- @akili-spec changes/reporting-entry-hub — By-AOW indicator card: labelled progress + state -->
                             @for (ind of hlo.indicators; track ind.indicator_id) {
                               @if (indicatorCardMeta(ind); as meta) {
+                                <!-- @akili-spec changes/mass-reporting-flow — copy-link anchor + restore highlight (MRF-R-5) -->
                                 <div
+                                  [id]="kpiDomId(ind)"
+                                  [ngClass]="{
+                                    'outline outline-2 outline-offset-2 outline-[var(--pr-color-primary-300)]': highlightedKpiId() === kpiKey(ind)
+                                  }"
                                   class="flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[14px] py-[10px] transition-colors hover:border-[var(--pr-color-primary-200)]">
                                   <div class="flex min-w-0 flex-1 flex-col gap-[6px]">
                                     <p
-                                      class="m-0 line-clamp-2 text-[12.5px] font-semibold leading-snug text-[var(--pr-text-heading)]"
+                                      class="m-0 text-[12.5px] font-semibold leading-snug text-[var(--pr-text-heading)]"
+                                      [class.line-clamp-2]="!isKpiDescriptionExpanded(ind)"
                                       [title]="ind.indicator_description"
                                       [innerHTML]="ind.indicator_description | highlightSearch: plannedSearch()"></p>
+                                    <!-- MRF-R-5.1 — Read more toggles the clamp in place, restoring the approved proposal item. -->
+                                    @if (needsKpiReadMore(ind)) {
+                                      <button
+                                        type="button"
+                                        class="self-start border-0 bg-transparent p-0 text-left text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:underline"
+                                        [attr.aria-expanded]="isKpiDescriptionExpanded(ind)"
+                                        (click)="toggleKpiDescription(ind, $event)">
+                                        {{ isKpiDescriptionExpanded(ind) ? 'Read less' : 'Read more' }}
+                                      </button>
+                                    }
                                     <div class="flex flex-wrap items-center gap-[8px]">
                                       @switch (meta.state) {
                                         @case ('complete') {
@@ -1508,12 +1529,23 @@
                                       </span>
                                     </div>
                                   </div>
-                                  <button
-                                    type="button"
-                                    (click)="openLegacyReportModal(ind)"
-                                    class="inline-flex h-[30px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-                                    <span class="material-icons-round text-[14px]" aria-hidden="true">edit_note</span> Report
-                                  </button>
+                                  <div class="flex shrink-0 items-center gap-[6px]">
+                                    <!-- MRF-R-5 — composite `tocView=byAow&tocAow=<owning AoW>&kpi=<id>` link. -->
+                                    <button
+                                      type="button"
+                                      (click)="copyKpiLink(ind)"
+                                      class="inline-flex h-[30px] w-[30px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+                                      aria-label="Copy link to this KPI"
+                                      title="Copy link">
+                                      <span class="material-icons-round text-[14px]" aria-hidden="true">link</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      (click)="openLegacyReportModal(ind)"
+                                      class="inline-flex h-[30px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                                      <span class="material-icons-round text-[14px]" aria-hidden="true">edit_note</span> Report
+                                    </button>
+                                  </div>
                                 </div>
                               }
                             }

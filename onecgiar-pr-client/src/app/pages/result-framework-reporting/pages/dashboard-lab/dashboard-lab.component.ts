@@ -3,6 +3,7 @@ import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-toolt
 import { toSignal } from '@angular/core/rxjs-interop';
 import {DecimalPipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { Subscription } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
@@ -29,6 +30,7 @@ import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
+import { PrToastService } from '../../../../shared/components/pr-toast';
 import { isAvisaInitiative } from '../../../../shared/utils/avisa-initiative.util';
 import {
   ProgramOverviewComponent,
@@ -57,7 +59,7 @@ import {
 } from './components/reporting-entry-hub/reporting-entry-hub.component';
 import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
 import { BilateralProject } from '../../../bilateral/services/bilateral-creation.interfaces';
-import { applyZeroTargetRule } from './reporting-burndown';
+import { applyZeroTargetRule, groupPendingCount, pendingOf, sortRemainingFirst } from './reporting-burndown';
 
 /**
  * Reporting-status meter — the reference's five canonical states, in this exact order.
@@ -275,6 +277,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly phasesSE = inject(PhasesService);
+  /** Copy-link (MRF-R-5): CDK clipboard + the shared toast host every page mounts. */
+  private readonly clipboard = inject(Clipboard);
+  private readonly toastSE = inject(PrToastService);
   /**
    * Public: the template reads `showReportResultModal()` to mount the legacy report modal, which has
    * ZERO inputs/outputs and is driven entirely by this root-scoped service.
@@ -326,6 +331,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   private pendingFilters: { typ: string | null; st: string | null; q: string } | null = null;
   /** Planned By AOW selection from `?tocAow=`, applied once the AoW list is ready. */
   private pendingPlannedAow: string | null = null;
+  /**
+   * KPI id from `?kpi=` (MRF-R-5), read alongside `pendingPlannedAow` above. Survives until the
+   * OWNING AoW's ToC has resolved (cold-load/new-tab: the param can arrive well before the AoW
+   * list, let alone that AoW's indicators) — the constructor effect below waits for both.
+   */
+  private pendingKpi: string | null = null;
   /** Skip echoing Planned URL params while hydrating from the query string. */
   private restoringPlannedUrl = false;
 
@@ -826,6 +837,40 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       if (!active || !list.some(a => a.code === active)) {
         this.setPlannedHloAow(list[0].code);
       }
+    });
+
+    /**
+     * Restore `?kpi=` (MRF-R-5), read alongside `?tocAow=` above. Survives until the OWNING AoW's
+     * ToC has resolved: the effect above can land `plannedHloAowCode` on the right AoW well before
+     * that AoW's indicators arrive (cold-load/new-tab — `indicatorsForAow(code)` is still
+     * `loading`), so this effect keeps re-checking every time either signal changes, and only acts
+     * once the bundle stops loading. At that point it expands the owning HLO group, scrolls to and
+     * highlights the card, and — either way, match or not — clears `pendingKpi` and strips `kpi`
+     * from the URL: an unknown id is a silent no-op (MRF-AC-4), not a param stuck there forever.
+     */
+    effect(() => {
+      // Read every signal this effect depends on UNCONDITIONALLY, before the `pendingKpi` early
+      // return — `pendingKpi` is a plain field, not a signal, so it drives no reactivity of its
+      // own. If `plannedHloAowCode()`/`indicatorsForAow(code)` were only read once `kpiId` is
+      // already truthy, a run that started with `kpiId` still null would never subscribe to them,
+      // and a later change to just the AoW's ToC bundle (e.g. it finishes loading) would not
+      // re-trigger this effect even after `pendingKpi` gets set elsewhere.
+      const view = this.plannedBrowseView();
+      const code = this.plannedHloAowCode();
+      const bundle = code ? this.indicatorsForAow(code) : null;
+      if (view !== 'byAow') return;
+      const kpiId = this.pendingKpi;
+      if (!kpiId) return;
+      if (!code) return;
+      if (!bundle || bundle.loading) return;
+      this.pendingKpi = null;
+      const match = bundle.indicators.find(i => String(i?.indicator_id ?? '') === kpiId);
+      if (match) {
+        this.expandedPlannedHlos.update(set => new Set(set).add((match as { __hlo?: string }).__hlo || 'Other'));
+        this.highlightedKpiId.set(this.kpiKey(match));
+        setTimeout(() => this.scrollToHighlightedKpi(match), 0);
+      }
+      this.consumeKpiQueryParam();
     });
 
     // Reporting + Overview both need every AoW's ToC (and Intermediate / 2030 buckets).
@@ -1965,6 +2010,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           this.plannedSearch.set('');
           if (view === 'byAow') {
             this.pendingPlannedAow = qp.get('tocAow');
+            // MRF-R-5: read beside `tocAow` — consumed by the constructor effect once the owning
+            // AoW's ToC resolves, not here (the ToC has not even started loading yet at this point).
+            this.pendingKpi = qp.get('kpi');
           } else if (view === 'indicators') {
             this.loadAllTocs();
           }
@@ -1975,6 +2023,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           const tocAow = qp.get('tocAow');
           if (tocAow && tocAow !== this.plannedHloAowCode()) {
             this.pendingPlannedAow = tocAow;
+            this.pendingKpi = qp.get('kpi');
             const list = this.aows();
             if (list.some(a => a.code === tocAow)) {
               this.pendingPlannedAow = null;
@@ -2034,6 +2083,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.plannedSearch.set('');
     if (view === 'byAow') {
       this.pendingPlannedAow = qp.get('tocAow');
+      // MRF-R-5: `?kpi=` restore — consumed by the constructor effect once the owning AoW's ToC
+      // resolves (cold-load/new-tab: this runs before `aows()` has even loaded).
+      this.pendingKpi = qp.get('kpi');
     } else if (view === 'indicators') {
       queueMicrotask(() => this.loadAllTocs());
     }
@@ -2245,6 +2297,98 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return this.indicatorsByAow().find(x => x.aow.code === code) ?? null;
   }
 
+  // ── Copy link + Read more (MRF-R-5 / MRF-R-5.1) ──────────────────────────────────────────
+  // @akili-spec changes/mass-reporting-flow
+
+  /** Composite key for a KPI — `indicator_id` alone is NOT unique across AoWs (MRF-R-5). */
+  kpiKey(ind: { indicator_id?: unknown; __aowCode?: string } | null | undefined): string {
+    return `${ind?.__aowCode ?? ''}::${ind?.indicator_id ?? ''}`;
+  }
+
+  /** DOM anchor id for the scroll-into-view restore. Kept in sync with `kpiKey`. */
+  kpiDomId(ind: { indicator_id?: unknown; __aowCode?: string } | null | undefined): string {
+    return `kpi-card-${this.kpiKey(ind).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  }
+
+  /**
+   * Composite Copy-link URL (MRF-R-5 / MRF-AC-4): `tocView=byAow&tocAow=<owning AoW>&kpi=<id>`,
+   * layered on top of whatever else is already on the URL (search/typology/etc.) — the fail case
+   * this guards is dropping those other params when `kpi=` is appended.
+   */
+  kpiLink(ind: { indicator_id?: unknown; __aowCode?: string } | null | undefined): string {
+    const aowCode = ind?.__aowCode;
+    if (!aowCode || ind?.indicator_id === undefined || ind?.indicator_id === null) return '';
+    // Intermediate Outcomes / 2030 Outcomes are program-level buckets, not real AoWs — `tocAow=`
+    // can't resolve back to one of them (MRF review finding), so no link is offered.
+    if (aowCode === INTERMEDIATE_OUTCOMES_CODE || aowCode === OUTCOMES_2030_CODE) return '';
+    const queryParams = {
+      ...this.route.snapshot.queryParams,
+      tocView: 'byAow',
+      tocAow: aowCode,
+      kpi: String(ind.indicator_id)
+    };
+    const tree = this.router.createUrlTree([], { relativeTo: this.route, queryParams });
+    return `${window.location.origin}${this.router.serializeUrl(tree)}`;
+  }
+
+  /** Clipboard + toast — same key every host mounts (`app.component.html`'s `globalUserNotification`). */
+  copyKpiLink(ind: { indicator_id?: unknown; __aowCode?: string } | null | undefined): void {
+    const link = this.kpiLink(ind);
+    if (!link) return;
+    this.clipboard.copy(link);
+    this.toastSE.add({ key: 'globalUserNotification', severity: 'success', summary: 'KPI link copied' });
+  }
+
+  /** "Read more" (MRF-R-5.1) only offered when the description actually overflows the 2-line clamp
+   *  (~110 chars at this card's size — same heuristic `reporting-aow-table.needsShowMore` uses). */
+  needsKpiReadMore(ind: { indicator_description?: string } | null | undefined): boolean {
+    return (ind?.indicator_description ?? '').trim().length > 110;
+  }
+
+  isKpiDescriptionExpanded(ind: { indicator_id?: unknown; __aowCode?: string } | null | undefined): boolean {
+    return this.expandedKpiDescriptions().has(this.kpiKey(ind));
+  }
+
+  toggleKpiDescription(ind: { indicator_id?: unknown; __aowCode?: string } | null | undefined, event?: Event): void {
+    event?.stopPropagation();
+    const key = this.kpiKey(ind);
+    this.expandedKpiDescriptions.update(set => {
+      const next = new Set(set);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+
+  /**
+   * Scroll-into-view + temporary highlight for the `?kpi=` restore (MRF-R-5) — reduced-motion
+   * aware, same idiom as `onFocusHub`. The highlight auto-clears; it is a "you are here" cue, not
+   * permanent state.
+   */
+  private scrollToHighlightedKpi(ind: { indicator_id?: unknown; __aowCode?: string }): void {
+    const key = this.kpiKey(ind);
+    const el = document.getElementById(this.kpiDomId(ind));
+    if (el) {
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      el.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+    // Clear the highlight either way — a missing element (card not yet rendered/collapsed away)
+    // must not leave `highlightedKpiId` set forever as a "you are here" cue with nothing to show it on.
+    setTimeout(() => {
+      if (this.highlightedKpiId() === key) this.highlightedKpiId.set(null);
+    }, 2600);
+  }
+
+  /** Strips `kpi` from the URL once the `?kpi=` restore resolves — same merge + replaceUrl pattern
+   *  as the mirror effect below, so the two never fight over the URL. */
+  private consumeKpiQueryParam(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { kpi: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
   /**
    * Feed for the Reporting tab table (`app-reporting-aow-table`).
    *
@@ -2347,6 +2491,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return [...aowCards, ...(intermediateCard ? [intermediateCard] : []), ...(o30Card ? [o30Card] : [])];
   });
 
+  /**
+   * `reportingGroups()` feeds the Overview tab too (`bandPlannedResultsCount`, `overviewXcutProgress`
+   * — Reporting-tab-only rule, MRF-R-7 §3 Out), so the Only-pending/sort reshaping (MRF-R-1/R-2)
+   * happens HERE, one level down, strictly for `app-reporting-aow-table`'s `[groups]` input — never
+   * on `reportingGroups()` itself.
+   * @akili-spec changes/mass-reporting-flow
+   */
+  readonly reportingGroupsForTable = computed<ReportingAowGroup[]>(() => this.applyBurndownFilterAndSort(this.reportingGroups()));
+
   /** Flatten a program-level ToC list (`tocResults`) into reporting indicator rows. */
   private flattenBucketIndicators(
     groups: any[] | undefined,
@@ -2373,6 +2526,103 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly reportingStatusFilter = signal<string>('all');
   readonly reportingViewMode = signal<'grouped' | 'flat'>('grouped');
+  /**
+   * Band controls (MRF-R-1/R-2): Only-pending toggle + Remaining-work/Catalogue sort, shared by
+   * the grouped table (`reportingGroupsForTable`) and the By-AOW view (`plannedByAowSections`) via
+   * `applyBurndownFilterAndSort`. Two scalar `sessionStorage` keys, `setItem`/`getItem` wrapped in
+   * try/catch (repo convention — see `reporting-entry-hub.component.ts`'s
+   * `readStoredCollapsed`/`persistCollapsed`). Off/Catalogue by default — no silent default change.
+   * @akili-spec changes/mass-reporting-flow
+   */
+  private static readonly ONLY_PENDING_STORAGE_KEY = 'pr.burndown.onlyPending';
+  private static readonly BURNDOWN_SORT_STORAGE_KEY = 'pr.burndown.sort';
+
+  readonly onlyPending = signal<boolean>(this.readStoredOnlyPending());
+  readonly burndownSort = signal<'catalogue' | 'remaining'>(this.readStoredBurndownSort());
+
+  private readStoredOnlyPending(): boolean {
+    try {
+      return sessionStorage.getItem(DashboardLabComponent.ONLY_PENDING_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  private readStoredBurndownSort(): 'catalogue' | 'remaining' {
+    try {
+      return sessionStorage.getItem(DashboardLabComponent.BURNDOWN_SORT_STORAGE_KEY) === 'remaining' ? 'remaining' : 'catalogue';
+    } catch {
+      return 'catalogue';
+    }
+  }
+
+  setOnlyPending(value: boolean): void {
+    this.onlyPending.set(value);
+    try {
+      sessionStorage.setItem(DashboardLabComponent.ONLY_PENDING_STORAGE_KEY, value ? '1' : '0');
+    } catch {
+      // Storage may be unavailable (private mode / blocked) — the toggle still works for the session.
+    }
+  }
+
+  setBurndownSort(value: 'catalogue' | 'remaining'): void {
+    this.burndownSort.set(value);
+    try {
+      sessionStorage.setItem(DashboardLabComponent.BURNDOWN_SORT_STORAGE_KEY, value);
+    } catch {
+      // Storage may be unavailable — sort still works for the session.
+    }
+  }
+
+  /**
+   * Applies the Only-pending filter and Remaining-work sort (MRF-R-1/R-2) to any list of
+   * `{indicators, count}` group-like objects: `ReportingAowGroup` cards (AoW / Intermediate /
+   * 2030) for the grouped table, or the By-AOW view's HLO sub-groups. Per-object `indicators`/
+   * `count` recompute; a group whose KPIs are all hidden by Only-pending drops out entirely;
+   * groups reorder by pending count (desc) when the sort is Remaining work — Catalogue makes this
+   * a no-op so switching back restores the exact original order.
+   *
+   * Deliberately does NOT touch `reporting-aow-table`'s `ratioOf` — that reads `group.indicators`
+   * directly on whatever this returns. T-5 owns rewiring it to source an unfiltered set; T-2's
+   * scope is this pipeline only (Leader-scoped consumption points).
+   *
+   * @akili-spec changes/mass-reporting-flow
+   */
+  private applyBurndownFilterAndSort<G extends { indicators: any[]; count: number }>(
+    groups: G[]
+  ): (G & { __allIndicators?: any[] })[] {
+    const onlyPending = this.onlyPending();
+    const remaining = this.burndownSort() === 'remaining';
+    const shaped = groups.map(g => {
+      const rows = g.indicators ?? [];
+      const effective = onlyPending ? pendingOf(rows) : rows;
+      const sorted = remaining ? sortRemainingFirst(effective, { zeroTargetLast: true }) : effective;
+      return {
+        ...g,
+        indicators: sorted,
+        // Reviewer fix (attempt 2): `count` on the incoming group can ALREADY differ from
+        // `indicators.length` (e.g. `reportingGroups()` deliberately keeps `count` at the
+        // pre-Category size while `indicators` is post-Category) — recompute it ONLY when
+        // Only-pending is actually narrowing the set; Catalogue-off/Only-pending-off must be a
+        // byte-identical no-op ("no silent default change").
+        count: onlyPending ? sorted.length : g.count,
+        // Leader addition (T-5 handoff): the pre-filter snapshot, so T-5 can source `ratioOf`'s
+        // "unfiltered" set from here instead of `indicators` once Only-pending narrows it. Not on
+        // `ReportingAowGroup`'s own interface — an optional side-channel field only, absent when
+        // Only-pending is off.
+        ...(onlyPending ? { __allIndicators: rows } : {})
+      };
+    });
+    // A card still `loading` has an indeterminate KPI count — hiding it would make it vanish the
+    // instant its data starts arriving. Only a SETTLED empty group is dropped by Only-pending.
+    const visible = onlyPending ? shaped.filter(g => g.indicators.length > 0 || (g as { loading?: boolean }).loading) : shaped;
+    if (!remaining) return visible;
+    return visible
+      .map((g, index) => ({ g, index, pending: groupPendingCount(g) }))
+      .sort((a, b) => b.pending - a.pending || a.index - b.index)
+      .map(e => e.g);
+  }
+
   /**
    * Global disclosure switch of the Reporting tab (P2-3252). `false` = the collapsed reading state
    * every programme opens in (P2-3251); the toolbar's single control flips it and the grouped table
@@ -2541,6 +2791,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     { id: 'indicators' as const, label: 'Indicators', icon: 'insights' }
   ];
   readonly expandedPlannedHlos = signal<Set<string>>(new Set());
+  /** Composite `kpiKey()` of the By-AOW card currently highlighted by a `?kpi=` restore (MRF-R-5). */
+  readonly highlightedKpiId = signal<string | null>(null);
+  /** Composite `kpiKey()`s of By-AOW cards with their description expanded in place (MRF-R-5.1). */
+  readonly expandedKpiDescriptions = signal<ReadonlySet<string>>(new Set());
   /** Layout for By AOW / Indicators lists on the planned surface. */
   readonly plannedLayout = signal<'cards' | 'table'>('cards');
   /** Selected AOW code for the By AOW browse mode. */
@@ -2701,7 +2955,15 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const { outputs, outcomes } = splitIndicatorsByTier(this.indicatorsForAow(code)?.indicators ?? []);
     const build = (label: string, inds: any[]) => {
       const filtered = typeSet.size ? inds.filter(i => typeSet.has(i?.type_name)) : inds;
-      return { label, kpis: filtered.length, groups: this.rankPlannedHloGroups(this.groupIndicatorsByHlo(filtered), parsed) };
+      // MRF-R-1: Only-pending/sort reshape the HLO groups here — "groups" in the By-AOW view MEANS
+      // these HLO sub-groups (unlike the grouped table, where a "group" is a top-level AoW card).
+      const groups = this.applyBurndownFilterAndSort(this.rankPlannedHloGroups(this.groupIndicatorsByHlo(filtered), parsed));
+      // Reviewer fix (attempt 2): `filtered.length` is the pre-search count today (Only-pending
+      // off) — recompute from the shaped groups ONLY when Only-pending is actually narrowing the
+      // set, so an active search with the toggle off still reads the untouched number ("progress
+      // must not move when you search").
+      const kpis = this.onlyPending() ? groups.reduce((n, g) => n + g.indicators.length, 0) : filtered.length;
+      return { label, kpis, groups };
     };
     return [build('High Level Outputs', outputs), build('Outcomes', outcomes)].filter(sec => sec.groups.length > 0);
   });
