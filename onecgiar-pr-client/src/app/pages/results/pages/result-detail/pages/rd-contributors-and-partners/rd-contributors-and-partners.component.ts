@@ -217,6 +217,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     if (this.rdPartnersSE.leadCenterCode === removed?.code) {
       this.rdPartnersSE.leadCenterCode = null;
     }
+    // LC-DD-4: a manual delete of the auto-added entry must not leave a stale reference behind — a later
+    // Lead Center change would otherwise mis-fire the swap logic against a center that no longer exists.
+    if (this.rdPartnersSE.autoAddedLeadCenterCode === removed?.code) {
+      this.rdPartnersSE.autoAddedLeadCenterCode = null;
+    }
     // Recompute lead-center eligibility now that an "Other" center is gone.
     this.rdPartnersSE.setPossibleLeadCenters(true);
   }

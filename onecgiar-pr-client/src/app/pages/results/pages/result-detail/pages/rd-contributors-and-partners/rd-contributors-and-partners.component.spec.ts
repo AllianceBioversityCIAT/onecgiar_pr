@@ -59,6 +59,11 @@ describe('RdContributorsAndPartnersComponent', () => {
             ]
           })
         ),
+        // GET_AllInitiatives is called unconditionally by ngOnInit right after GET_AllWithoutResults
+        // (P2-2929 Science Programs list) — without a mock it throws inside the subscribe's `next`, and
+        // that throw surfaces asynchronously (RxJS reports it via a deferred task), occasionally
+        // attributing an unrelated failure to whichever test/task happens to be running when it lands.
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
         PATCH_ContributorsPartners: jest.fn().mockReturnValue(of({})),
         PATCH_resyncKnowledgeProducts: jest.fn().mockReturnValue(of({}))
       }
@@ -212,6 +217,41 @@ describe('RdContributorsAndPartnersComponent', () => {
   });
 
   /**
+   * LC-T-4 (docs/specs/bugfix/lead-center-full-catalog, LC-DD-4): a manual delete of the "Other(s)" chip
+   * must clear `autoAddedLeadCenterCode` when the removed entry was the one `onLeadCenterSelected`
+   * auto-added — otherwise a stale reference could mis-fire the swap logic against a center that no
+   * longer exists.
+   */
+  describe('deleteOtherCenter', () => {
+    beforeEach(() => {
+      mockRdPartnersSE.otherCentersSelected = [{ code: 'C1', name: 'Center One' }];
+      mockRdPartnersSE.autoAddedLeadCenterCode = 'C1';
+    });
+
+    it('clears autoAddedLeadCenterCode when the removed "Other" center is the one that was auto-added', () => {
+      component.deleteOtherCenter(0);
+      expect(mockRdPartnersSE.autoAddedLeadCenterCode).toBeNull();
+    });
+
+    it('leaves autoAddedLeadCenterCode untouched when the removed "Other" center is a different one', () => {
+      mockRdPartnersSE.otherCentersSelected = [
+        { code: 'C1', name: 'Center One' },
+        { code: 'C2', name: 'Center Two' }
+      ];
+      mockRdPartnersSE.autoAddedLeadCenterCode = 'C1';
+
+      component.deleteOtherCenter(1); // removes C2, not the auto-added C1
+
+      expect(mockRdPartnersSE.autoAddedLeadCenterCode).toBe('C1');
+    });
+
+    it('still recomputes lead-center eligibility after the delete', () => {
+      component.deleteOtherCenter(0);
+      expect(mockRdPartnersSE.setPossibleLeadCenters).toHaveBeenCalledWith(true);
+    });
+  });
+
+  /**
    * The "Other(s)" dropdown is the ONLY way to add a center when the ToC brought none (P2-2998 AC4).
    * Without this wiring the required "Lead center" select stayed empty until a Save draft reloaded the section.
    */
@@ -313,11 +353,13 @@ describe('RdContributorsAndPartnersComponent', () => {
     it('should call getSectionInformation after successful save', () => {
       component.onSaveSection();
       expect(mockApiService.resultsSE.PATCH_ContributorsPartners).toHaveBeenCalled();
-      // The getSectionInformation is called in the subscribe callback
-      // We need to wait for the observable to complete
-      setTimeout(() => {
-        expect(mockRdPartnersSE.getSectionInformation).toHaveBeenCalledWith(null, true);
-      }, 0);
+      // `PATCH_ContributorsPartners` is mocked with `of({})`, which emits synchronously, so the
+      // subscribe callback (and its `getSectionInformation(null, true)` call) already ran by the time
+      // `onSaveSection()` returns above — no `setTimeout` needed. A fire-and-forget `setTimeout(..., 0)`
+      // assertion here doesn't fail this test on a regression (Jest doesn't wait for it); worse, if it
+      // ever throws, that throw surfaces as an uncaught exception attributed to whatever OTHER test
+      // happens to be running when the timer fires.
+      expect(mockRdPartnersSE.getSectionInformation).toHaveBeenCalledWith(null, true);
     });
   });
 
@@ -523,6 +565,13 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
     { code: 'C2', institutionId: 22, full_name: 'Center Two' }
   ];
 
+  const SCIENCE_CATALOG = [
+    { id: 1, official_code: 'SP01' },
+    { id: 3, official_code: 'SP03' },
+    { id: 4, official_code: 'SP04' },
+    { id: 7, official_code: 'SP07' }
+  ];
+
   beforeEach(async () => {
     TestBed.resetTestingModule();
     svc = {
@@ -559,7 +608,14 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
               currentResultSectionName: signal(''),
               findClassTenSeconds: jest.fn().mockResolvedValue(true)
             },
-            resultsSE: { GET_resultById: jest.fn().mockReturnValue(of({ response: {} })) }
+            resultsSE: {
+              GET_resultById: jest.fn().mockReturnValue(of({ response: {} })),
+              GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
+              // Matches the catalog seeded on `component.allScienceProgramsList` below — ngOnInit's real
+              // GET_AllInitiatives() call (previously uncalled only because the missing GET_AllWithoutResults
+              // mock above threw first) must not wipe out this suite's fixture data.
+              GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: SCIENCE_CATALOG }))
+            }
           }
         },
         { provide: RdContributorsAndPartnersService, useValue: svc },
@@ -580,12 +636,7 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
 
     fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
     component = fixture.componentInstance;
-    component.allScienceProgramsList.set([
-      { id: 1, official_code: 'SP01' },
-      { id: 3, official_code: 'SP03' },
-      { id: 4, official_code: 'SP04' },
-      { id: 7, official_code: 'SP07' }
-    ]);
+    component.allScienceProgramsList.set(SCIENCE_CATALOG);
   });
 
   const flush = () => fixture.detectChanges();
@@ -660,6 +711,171 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
     svc.tocSelectionTouched.set(true);
     flush();
     expect(svc.scienceSelected).toBe(userEdited);
+  });
+});
+
+/**
+ * LC-T-2 (docs/specs/bugfix/lead-center-full-catalog): the stale "Please select at least one
+ * contributing center to choose a lead center" note and its guiding `@if
+ * (!possibleLeadCenters?.length)` condition were removed from the template — that condition became
+ * unreachable once LC-T-1 made `possibleLeadCenters` always the full CLARISA catalog. These tests
+ * render the REAL `RdContributorsAndPartnersService` (through the real `setPossibleLeadCenters()`,
+ * not a mock) so the assertion actually exercises the shared fix, per the task's disqualifying
+ * clause: a source-string grep would not prove the rendered DOM never shows the note.
+ */
+describe('RdContributorsAndPartnersComponent — Lead center full catalog rendering (LC-T-2)', () => {
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+  let centersMock: { loadedCenters: BehaviorSubject<boolean>; centersList: any[]; centers: ReturnType<typeof signal<any[]>> };
+
+  const CENTERS_CATALOG = [
+    { code: 'C1', name: 'Center 1', full_name: 'Center One', institutionId: 11 },
+    { code: 'C2', name: 'Center 2', full_name: 'Center Two', institutionId: 22 },
+    { code: 'C3', name: 'Center 3', full_name: 'Center Three', institutionId: 33 }
+  ];
+
+  const leadCenterSelectEl = () => fixture.nativeElement.querySelector('app-pr-select[label="Lead center"]');
+
+  beforeEach(async () => {
+    const currentResult = {
+      id: 1,
+      result_code: 'R-1',
+      version_id: 1,
+      portfolio: 'P25',
+      initiative_id: 5,
+      initiative_official_code: 'INIT-05',
+      status: null
+    };
+
+    const apiMock = {
+      dataControlSE: {
+        currentResult,
+        currentResultSignal: signal(currentResult),
+        currentResultSectionName: signal(''),
+        findClassTenSeconds: jest.fn().mockResolvedValue(true),
+        isKnowledgeProduct: false,
+        showPartnersRequest: false
+      },
+      resultsSE: {
+        GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      rolesSE: { readOnly: false, isAdmin: false, platformIsClosed: false }
+    };
+
+    // The CLARISA catalogue has NOT resolved yet when the component is created — mirrors the real
+    // startup sequence and the P2-3190 fixture pattern in rd-contributors-and-partners.zoneless.spec.ts.
+    centersMock = { loadedCenters: new BehaviorSubject<boolean>(false), centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) };
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [CommonModule, FormsModule, HttpClientTestingModule, TermPipe, CustomFieldsModule],
+      providers: [
+        RdContributorsAndPartnersService,
+        { provide: ApiService, useValue: apiMock },
+        { provide: RolesService, useValue: { readOnly: false } },
+        {
+          provide: InstitutionsService,
+          useValue: { loadedInstitutions: new BehaviorSubject<boolean>(false), institutionsList: [], institutionsWithoutCentersList: [] }
+        },
+        { provide: CentersService, useValue: centersMock },
+        { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+        { provide: ResultLevelService, useValue: { currentResultLevelId: 2 } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        {
+          provide: FieldsManagerService,
+          useValue: { isContributorsPartners2026: () => false, isP25: () => true, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+        }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    jest.spyOn(rdPartnersSE, 'getSectionInformation').mockImplementation(() => undefined as any);
+    jest.spyOn(rdPartnersSE, 'loadFilteredBilateralProjects').mockImplementation(() => undefined as any);
+
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    fixture.detectChanges();
+  });
+
+  it('LC-TEST-6: never renders the stale "select a contributing center first" note with 0 Contributing Centers', () => {
+    // Precondition: 0 Contributing Centers (ContributorsAndPartnersBody().contributing_center is unset by resetState()).
+    expect(rdPartnersSE.partnersBody.contributing_center?.length ?? 0).toBe(0);
+
+    expect(fixture.nativeElement.textContent).not.toContain('Please select at least one contributing center to choose a lead center');
+    expect(fixture.nativeElement.querySelector('.pr-message p')?.textContent).not.toContain('contributing center');
+  });
+
+  it('LC-TEST-7: the Lead center select receives a non-empty [options] binding with 0 Contributing Centers (full catalog present)', async () => {
+    expect(rdPartnersSE.partnersBody.contributing_center?.length ?? 0).toBe(0);
+    // Before the CLARISA catalogue resolves, `possibleLeadCenters` is still empty (post `ngOnInit`'s `resetState()`).
+    expect(rdPartnersSE.possibleLeadCenters?.length ?? 0).toBe(0);
+
+    // The CLARISA catalogue lands now — this is the REAL `RdContributorsAndPartnersService` constructor's
+    // `centersSE.loadedCenters` subscription firing the REAL `setPossibleLeadCenters(true)` (LC-DD-1), with
+    // 0 Contributing Centers and 0 otherCentersSelected: exactly the case the note used to gate on.
+    centersMock.loadedCenters.next(true);
+    await fixture.whenStable();
+    // `setPossibleLeadCenters(true)` also raises `updatingLeadData` and clears it again after a 25ms
+    // `setTimeout` (P2-3322) — wait that out so the select re-appears, matching the production flow.
+    await new Promise(resolve => setTimeout(resolve, 30));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(rdPartnersSE.updatingLeadData).toBe(false);
+    expect(rdPartnersSE.possibleLeadCenters?.length).toBe(CENTERS_CATALOG.length);
+
+    const selectEl = leadCenterSelectEl();
+    expect(selectEl).toBeTruthy();
+  });
+
+  /**
+   * LC-T-4 (docs/specs/bugfix/lead-center-full-catalog, LC-DD-4): the template wires the Lead center
+   * `app-pr-select`'s `(selectOptionEvent)` to `rdPartnersSE.onLeadCenterSelected($event?.code ?? null)`
+   * — this proves the extraction against the REAL emitted shape (the full option object, or `null` on
+   * clear), not a stubbed handler.
+   */
+  describe('LC-T-4: Lead center (selectOptionEvent) wiring', () => {
+    beforeEach(async () => {
+      // Let the select re-appear (same sequencing as LC-TEST-7) before dispatching its output.
+      centersMock.loadedCenters.next(true);
+      await fixture.whenStable();
+      await new Promise(resolve => setTimeout(resolve, 30));
+      await fixture.whenStable();
+      fixture.detectChanges();
+    });
+
+    it('extracts the code from the emitted option object and forwards it to onLeadCenterSelected', () => {
+      const spy = jest.spyOn(rdPartnersSE, 'onLeadCenterSelected');
+      const selectDebugEl = fixture.debugElement.query(By.css('app-pr-select[label="Lead center"]'));
+
+      selectDebugEl.triggerEventHandler('selectOptionEvent', { code: 'C1', full_name: 'Center One' });
+
+      expect(spy).toHaveBeenCalledWith('C1');
+    });
+
+    it('forwards null when the selection is cleared (showClear emits null)', () => {
+      const spy = jest.spyOn(rdPartnersSE, 'onLeadCenterSelected');
+      const selectDebugEl = fixture.debugElement.query(By.css('app-pr-select[label="Lead center"]'));
+
+      selectDebugEl.triggerEventHandler('selectOptionEvent', null);
+
+      expect(spy).toHaveBeenCalledWith(null);
+    });
+
+    it('LC-TEST-9 end-to-end: selecting a Lead Center with 0 Contributing Centers auto-adds it via the real service (LC-DD-5: this fixture is flat/unmapped — isContributorsPartners2026() is false — so the target field is contributing_center directly, not otherCentersSelected)', () => {
+      expect(rdPartnersSE.otherCentersSelected).toEqual([]);
+      expect(rdPartnersSE.partnersBody.contributing_center ?? []).toEqual([]);
+      const selectDebugEl = fixture.debugElement.query(By.css('app-pr-select[label="Lead center"]'));
+
+      selectDebugEl.triggerEventHandler('selectOptionEvent', { code: 'C1', full_name: 'Center One' });
+
+      expect(rdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
+      expect(rdPartnersSE.otherCentersSelected).toEqual([]);
+      expect(rdPartnersSE.autoAddedLeadCenterCode).toBe('C1');
+    });
   });
 });
 

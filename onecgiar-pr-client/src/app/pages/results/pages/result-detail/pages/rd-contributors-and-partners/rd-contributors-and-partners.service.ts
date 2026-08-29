@@ -59,6 +59,25 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   }
   disableLeadPartner: boolean = false;
 
+  // LC-DD-4 (docs/specs/bugfix/lead-center-full-catalog): tracks the Contributing-Centers entry that
+  // `onLeadCenterSelected` auto-added on behalf of the user (see below). Session-only UX bookkeeping —
+  // never persisted, reset per result in `resetState()`. Public via the getter/setter pair below so
+  // `rd-contributors-and-partners.component.ts#deleteOtherCenter` can clear it on a manual delete.
+  private _autoAddedLeadCenterCode: string | null = null;
+  get autoAddedLeadCenterCode(): string | null {
+    return this._autoAddedLeadCenterCode;
+  }
+  set autoAddedLeadCenterCode(value: string | null) {
+    this._autoAddedLeadCenterCode = value;
+  }
+
+  // LC-DD-5 (docs/specs/bugfix/lead-center-full-catalog): tracks whether the CURRENT "Other(s) CGIAR
+  // Centers" sentinel in `contributing_center` was added by `onLeadCenterSelected` itself (vs. the user
+  // manually checking "Other(s)"). Only a sentinel this flag tracks may be auto-removed later — a
+  // manually-checked one must survive even if the auto-added entry it happens to share the dropdown with
+  // gets swapped/removed. Session-only, reset in `resetState()`.
+  private _autoAddedSentinel = false;
+
   // P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split in two dropdowns.
   // `tocReferenceCenterInstitutionIds` = institutionIds derived from the selected TOC node
   // (toc_partners ∪ toc_target_center_ids), fed by multiple-wps-content. The first dropdown shows
@@ -157,6 +176,10 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.tocSelectionTouched.set(false);
     // P2-3001 (2026): reset the by-program cache marker so another result refetches its SP list.
     this.loadedBilateralProgramId = null;
+    // LC-DD-4/LC-DD-5: no auto-added Lead center (or a sentinel it may have added) should survive into
+    // the next result.
+    this._autoAddedLeadCenterCode = null;
+    this._autoAddedSentinel = false;
   }
 
   loadClarisaProjects() {
@@ -425,11 +448,15 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       !!c?.from_cgspace || (c?.from_toc == null ? this.tocReferenceCenterInstitutionIds().includes(c?.institutionId) : !!c?.from_toc);
     const tocCenters = centers.filter((c: any) => isCenterFromToc(c));
     const otherCenters = centers.filter((c: any) => !isCenterFromToc(c));
-    if (otherCenters.length) {
-      this.otherCentersSelected = otherCenters;
+    this.otherCentersSelected = otherCenters;
+    // LC-DD-5 (fixes a pre-existing bug, not introduced by this spec): the sentinel only needs to exist to
+    // force dropdown 1 to reveal dropdown 2 when there ARE real ToC-derived centers AND the user also
+    // picked some non-ToC ones. When there are no ToC centers, dropdown 2 already auto-activates on its
+    // own via `!hasReferenceCenters()` (component template) — re-adding the sentinel there only produced a
+    // stray "Other(s)" chip with no dropdown 1 to meaningfully attach it to.
+    if (tocCenters.length > 0 && otherCenters.length > 0) {
       this.partnersBody.contributing_center = [...tocCenters, this.buildOtherCentersSentinel()];
     } else {
-      this.otherCentersSelected = [];
       this.partnersBody.contributing_center = tocCenters;
     }
 
@@ -539,23 +566,13 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       this.updatingLeadData = true;
     }
 
-    // The "Other(s)" dropdown (2026 split) feeds `otherCentersSelected`, which is ALSO lead-eligible below.
-    // Gating only on `contributing_center` skipped the rebuild whenever the section had no ToC centers
-    // (P2-2998 AC4: dropdown 1 is not even rendered), so the Lead center list stayed empty until a save
-    // reloaded the section. `?.some` keeps the filter safe when the GET has not hydrated the array yet.
-    if (this.partnersBody.contributing_center?.length > -1 || this.otherCentersSelected?.length > 0) {
-      //('center has changes');
-      this.possibleLeadCenters = this.centersSE.centersList.filter(center => {
-        // P2-2998 (2026): an "Other(s)" center (in otherCentersSelected) is also lead-eligible.
-        return this.partnersBody.contributing_center?.some(c => c?.code === center.code) || this.otherCentersSelected?.some(c => c?.code === center.code);
-      });
-
-      this.possibleLeadCenters = this.possibleLeadCenters.map(center => {
-        return { ...center, selected: false, disabled: false };
-      });
-
-      //('possibleLeadCenters', this.possibleLeadCenters);
-    }
+    // LC-DD-1 (docs/specs/bugfix/lead-center-full-catalog): possibleLeadCenters is always the full
+    // CLARISA centers catalog, independent of Contributing CGIAR Centers (contributing_center /
+    // otherCentersSelected) state. Filtering it down to that subset left the required Lead center
+    // dropdown empty whenever Contributing Centers was empty (fresh/ToC-less result), blocking save.
+    this.possibleLeadCenters = this.centersSE.centersList.map(center => {
+      return { ...center, selected: false, disabled: false };
+    });
 
     if (autoAssign) {
       this.tryAutoAssignLeadCenter();
@@ -565,6 +582,88 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       setTimeout(() => {
         this.updatingLeadData = false;
       }, 25);
+    }
+  }
+
+  // LC-DD-2 (docs/specs/bugfix/lead-center-full-catalog): once possibleLeadCenters is always the full
+  // catalog, its length can no longer signal "exactly one Contributing Center selected". The
+  // de-duplicated union (by `code`) of contributing_center and otherCentersSelected is the source
+  // of truth for that check instead.
+  private getContributingCentersUnion(): CenterDto[] {
+    const contributing = this.partnersBody.contributing_center || [];
+    const other = this.otherCentersSelected || [];
+    const byCode = new Map<string, CenterDto>();
+    [...contributing, ...other].forEach((center: CenterDto) => {
+      if (center?.code) {
+        byCode.set(center.code, center);
+      }
+    });
+    return Array.from(byCode.values());
+  }
+
+  // LC-DD-5 (docs/specs/bugfix/lead-center-full-catalog, supersedes LC-DD-4's targeting rule): a
+  // flat/unmapped result has no ToC/Other(s) split at all — the single Contributing Centers dropdown is
+  // bound directly to `contributing_center`. Routing an auto-add through `otherCentersSelected` there
+  // produced a confusing second, identically-labeled field. This decides which array the auto-add targets.
+  private isUnmappedOrFlat(): boolean {
+    return !this.fieldsManagerSE.isContributorsPartners2026() || this.partnersBody.result_toc_result?.planned_result === false;
+  }
+
+  // LC-DD-5 (docs/specs/bugfix/lead-center-full-catalog, resolves LC-GAP-1, supersedes LC-DD-4): a Lead
+  // Center chosen while it is not already a Contributing Center never persists — `onSaveSection` only
+  // stamps `is_leading_result` on entries already inside `contributing_center` / `otherCentersSelected`.
+  // Reconcile the UI selection to that fact instead of leaving an inconsistent state:
+  //   1. No-op (LC-R-17) if `code` is already a member of the Contributing Centers union.
+  //   2. Otherwise, remove the previously auto-added entry (if any is still present) from wherever it
+  //      lives — `contributing_center` or `otherCentersSelected` — and, if that removal empties
+  //      `otherCentersSelected` and the "Other(s)" sentinel was itself auto-added, strip the sentinel too.
+  //   3. Auto-add the new `code` (LC-R-15): straight into `contributing_center` when the flat/unmapped UI
+  //      is active, otherwise into `otherCentersSelected` (+ the "Other(s)" sentinel, if not already
+  //      present, tracked via `_autoAddedSentinel` so a later removal only strips a sentinel THIS
+  //      mechanism added, never one the user checked manually).
+  onLeadCenterSelected(code: string | null): void {
+    const union = this.getContributingCentersUnion();
+
+    if (code && union.some(c => c.code === code)) {
+      return;
+    }
+
+    let changed = false;
+
+    if (this._autoAddedLeadCenterCode && union.some(c => c.code === this._autoAddedLeadCenterCode)) {
+      const staleCode = this._autoAddedLeadCenterCode;
+      this.partnersBody.contributing_center = (this.partnersBody.contributing_center || []).filter((c: any) => c?.code !== staleCode);
+      this.otherCentersSelected = (this.otherCentersSelected || []).filter(c => c?.code !== staleCode);
+      if (this.otherCentersSelected.length === 0 && this._autoAddedSentinel) {
+        this.partnersBody.contributing_center = (this.partnersBody.contributing_center || []).filter(
+          (c: any) => c?.code !== this.OTHER_CENTERS_CODE
+        );
+        this._autoAddedSentinel = false;
+      }
+      this._autoAddedLeadCenterCode = null;
+      changed = true;
+    }
+
+    if (code) {
+      const center = this.centersSE.centersList?.find(c => c.code === code);
+      if (center) {
+        if (this.isUnmappedOrFlat()) {
+          this.partnersBody.contributing_center = [...(this.partnersBody.contributing_center || []), { ...center }] as any[];
+        } else {
+          this.otherCentersSelected = [...(this.otherCentersSelected || []), { ...center }];
+          const hasSentinel = (this.partnersBody.contributing_center || []).some((c: any) => c?.code === this.OTHER_CENTERS_CODE);
+          if (!hasSentinel) {
+            this.partnersBody.contributing_center = [...(this.partnersBody.contributing_center || []), this.buildOtherCentersSentinel()] as any[];
+            this._autoAddedSentinel = true;
+          }
+        }
+        this._autoAddedLeadCenterCode = code;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.setPossibleLeadCenters(true);
     }
   }
 
@@ -589,10 +688,11 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     if (this.partnersBody.is_lead_by_partner) {
       return;
     }
-    if (this.possibleLeadCenters.length !== 1) {
+    const contributingCentersUnion = this.getContributingCentersUnion();
+    if (contributingCentersUnion.length !== 1) {
       return;
     }
-    const onlyCenter = this.possibleLeadCenters[0];
+    const onlyCenter = contributingCentersUnion[0];
     const leadIsValid = this.leadCenterCode && this.possibleLeadCenters.some(c => c.code === this.leadCenterCode);
     if (!leadIsValid) {
       this.leadCenterCode = onlyCenter.code;

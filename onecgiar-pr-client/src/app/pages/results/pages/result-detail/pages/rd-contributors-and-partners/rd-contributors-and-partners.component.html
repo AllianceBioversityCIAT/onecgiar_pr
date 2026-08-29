@@ -451,19 +451,12 @@
   </div>
   <ng-template #selectLeadCenter>
     @if (!this.rdPartnersSE.updatingLeadData) {
-      <!-- Legitimate empty state: no contributing center picked yet. Without this the generic
-           "There are no items available for this list" reads like a dead end on a required field. -->
-      @if (!this.rdPartnersSE.possibleLeadCenters?.length) {
-        <div class="pr-message">
-          <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
-          <p>{{ noLeadCentersNote }}</p>
-        </div>
-      }
       <app-pr-select
         label="Lead center"
         [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
         [options]="this.rdPartnersSE.possibleLeadCenters"
         [(ngModel)]="this.rdPartnersSE.leadCenterCode"
+        (selectOptionEvent)="this.rdPartnersSE.onLeadCenterSelected($event?.code ?? null)"
         optionLabel="full_name"
         optionValue="code"
         placeholder="Select a lead center..."
