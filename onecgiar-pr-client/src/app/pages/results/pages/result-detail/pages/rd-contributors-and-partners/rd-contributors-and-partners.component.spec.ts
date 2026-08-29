@@ -79,7 +79,11 @@ describe('RdContributorsAndPartnersComponent', () => {
       contributingInitiativeNew: [],
       leadPartnerId: null,
       leadCenterCode: null,
-      updatingLeadData: false
+      updatingLeadData: false,
+      otherCentersSelected: [],
+      // Defaults to "no ToC-planned Centers" so pre-existing deleteContributingCenter/deleteOtherCenter
+      // tests that don't set up ToC data keep exercising unrestricted deletion (TOC-C-T-1 guard).
+      tocReferenceCenterInstitutionIds: signal<number[]>([])
     };
 
     mockCustomizedAlertsFeSE = {
@@ -338,7 +342,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
     });
 
-    it('TOC-SP-AC-4: combined count governs the guard — deleting the "Other" one leaves 1 (from ToC), no alert', () => {
+    it('TOC-SP-AC-4: deleting an Other entry never consults the guard — deleting the "Other" one leaves 1 (from ToC), no alert', () => {
       mockRdPartnersSE.scienceSelected = [SP01];
       mockRdPartnersSE.otherScienceSelected = [OTHER_SP];
       mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]);
@@ -350,20 +354,223 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
     });
 
-    it('sentinel-cascade: deleting the OTHER_SP_CODE sentinel is blocked when it is the only thing keeping the real count above zero', () => {
+    it('TOC-SP-AC-5 (TOC-SP-DD-4): 2 ToC-origin SPs + 1 Other SP — delete SP1 succeeds, delete SP2 (last ToC-origin) is blocked', () => {
+      const SP02 = { id: 2, official_code: 'SP02', short_name: 'Science Program 2' };
+      const SENTINEL = { id: component.OTHER_SP_CODE };
+      // Sentinel present alongside the ToC-origin SPs — the split UI shape when Other(s) has entries.
+      mockRdPartnersSE.scienceSelected = [SP01, SP02, SENTINEL];
+      mockRdPartnersSE.otherScienceSelected = [OTHER_SP];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1, 2]);
+
+      // Delete SP1 (ToC-origin): succeeds, no alert.
+      component.deleteScience(0);
+      expect(mockRdPartnersSE.scienceSelected).toEqual([SP02, SENTINEL]);
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+
+      // Delete SP2 (now index 0, the last remaining ToC-origin SP): blocked, even though an
+      // "Other" SP is still selected — the old combined-count formula (1 ToC + 1 Other = 2,
+      // 2-1=1>0) would have wrongly allowed this.
+      component.deleteScience(0);
+      expect(mockRdPartnersSE.scienceSelected).toEqual([SP02, SENTINEL]);
+      expect(mockRdPartnersSE.otherScienceSelected).toEqual([OTHER_SP]);
+      expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
+      const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
+      expect(alertConfig.id).toBe('toc-science-program-min');
+    });
+
+    it('TOC-SP-AC-6 (TOC-SP-DD-4): 0 ToC-origin edge state — deleting the Other SP always succeeds', () => {
+      // scienceSelected holds only the sentinel (0 real ToC-origin entries); otherScienceSelected
+      // holds one real "Other" SP. Under the old combined formula (0 ToC + 1 Other = 1, 1-1=0)
+      // this would have been blocked; deleteOtherScience never consults the guard at all.
+      mockRdPartnersSE.scienceSelected = [{ id: component.OTHER_SP_CODE }];
+      mockRdPartnersSE.otherScienceSelected = [OTHER_SP];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]); // guard active
+
+      component.deleteOtherScience(0);
+
+      expect(mockRdPartnersSE.otherScienceSelected).toEqual([]);
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+    });
+
+    it('TOC-SP-DD-3: deleting the OTHER_SP_CODE sentinel ALWAYS succeeds, even when its cascade would bring the real count to zero', () => {
       // scienceSelected holds only the "Other(s)" sentinel chip (no real ToC-origin SP); the one real
-      // SP lives in otherScienceSelected, which the sentinel's deletion would cascade-clear.
+      // SP lives in otherScienceSelected, which the sentinel's deletion cascades to clear. Per
+      // TOC-SP-DD-3 (supersedes TOC-SP-DD-2's cascade-blocking), the sentinel is a UI-shape control,
+      // not itself a Contributing Science Program — its removal is never guarded, regardless of the
+      // cascade's effect on the real count.
       mockRdPartnersSE.scienceSelected = [{ id: component.OTHER_SP_CODE }];
       mockRdPartnersSE.otherScienceSelected = [OTHER_SP];
       mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]); // ToC guard active
 
       component.deleteScience(0);
 
-      // AND IT MUST count otherScienceSelected toward the real total even when the sentinel (not a
-      // real chip) is what's being deleted — the block proves the cascade was actually counted.
+      // The sentinel deletion succeeds unconditionally: no alert, scienceSelected loses the sentinel,
+      // and the cascade (existing behavior) clears otherScienceSelected.
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+      expect(mockRdPartnersSE.scienceSelected).toEqual([]);
+      expect(mockRdPartnersSE.otherScienceSelected).toEqual([]);
+    });
+  });
+
+  /**
+   * TOC-C-T-1 (docs/specs/changes/toc-center-guard): block removing the last real Contributing
+   * CGIAR Center (combined across `contributing_center` minus the `OTHER_CENTERS_CODE` sentinel,
+   * and `otherCentersSelected`) while the result's ToC has planned Centers. Mirrors TOC-SP-T-1's
+   * guard shape exactly, substituting Centers-specific signals.
+   */
+  describe('TOC-C-T-1 — minimum Contributing CGIAR Center guard', () => {
+    const C1 = { code: 'C1', name: 'Center 1' };
+    const C2 = { code: 'C2', name: 'Center 2' };
+    const C3 = { code: 'C3', name: 'Center 3' };
+    const OTHER_C = { code: 'OC1', name: 'Other Center' };
+    const OTHER_C2 = { code: 'OC2', name: 'Other Center 2' };
+
+    beforeEach(() => {
+      mockRdPartnersSE.partnersBody.result_toc_result = { planned_result: true };
+      mockRdPartnersSE.partnersBody.contributing_center = [];
+      mockRdPartnersSE.otherCentersSelected = [];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds = signal<number[]>([]);
+    });
+
+    it('TOC-C-AC-1: deletes down to 1 remaining across two sequential deletes, no alert', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [C1, C2, C3];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1, 2, 3]);
+
+      component.deleteContributingCenter(1); // removes C2
+      expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1', 'C3']);
+
+      component.deleteContributingCenter(1); // removes C3
+      expect(mockRdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
+
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+    });
+
+    it('TOC-C-AC-2: blocks deleting the last remaining ToC-planned Center and shows the alert', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [C1];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
+
+      component.deleteContributingCenter(0);
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C1]);
       expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
-      expect(mockRdPartnersSE.scienceSelected).toEqual([{ id: component.OTHER_SP_CODE }]);
-      expect(mockRdPartnersSE.otherScienceSelected).toEqual([OTHER_SP]);
+      const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
+      expect(alertConfig.id).toBe('toc-center-min');
+      expect(alertConfig.status).toBe('warning');
+      expect(alertConfig.confirmText).toBeUndefined();
+    });
+
+    it('TOC-C-AC-3: no ToC-planned Centers — deletes all chips unrestricted, guard never fires even at zero remaining', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [C1];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([]); // no ToC-planned Centers
+
+      component.deleteContributingCenter(0);
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([]);
+      // BUT the guard must NOT fire when hasTocPlannedCenter is false, even at zero remaining chips.
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+    });
+
+    it('TOC-C-AC-3b: also unrestricted when planned_result === false, even with ToC reference ids present', () => {
+      mockRdPartnersSE.partnersBody.result_toc_result = { planned_result: false };
+      mockRdPartnersSE.partnersBody.contributing_center = [C1];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
+
+      component.deleteContributingCenter(0);
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([]);
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+    });
+
+    it('TOC-C-AC-4: deleting an Other entry never consults the guard — deleting the "Other" one leaves 1 (from ToC), no alert', () => {
+      mockRdPartnersSE.partnersBody.contributing_center = [C1];
+      mockRdPartnersSE.otherCentersSelected = [OTHER_C];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
+
+      component.deleteOtherCenter(0);
+
+      expect(mockRdPartnersSE.otherCentersSelected).toEqual([]);
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C1]);
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+    });
+
+    it('TOC-C-AC-7 (TOC-C-DD-5): 2 ToC-origin Centers + 1 Other Center — delete C1 succeeds, delete C2 (last ToC-origin) is blocked', () => {
+      const SENTINEL = { code: component.OTHER_CENTERS_CODE };
+      // Sentinel present alongside the ToC-origin Centers — the split UI shape when Other(s) has entries.
+      mockRdPartnersSE.partnersBody.contributing_center = [C1, C2, SENTINEL];
+      mockRdPartnersSE.otherCentersSelected = [OTHER_C];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1, 2]);
+
+      // Delete C1 (ToC-origin): succeeds, no alert.
+      component.deleteContributingCenter(0);
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C2, SENTINEL]);
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+
+      // Delete C2 (now index 0, the last remaining ToC-origin Center): blocked, even though an
+      // "Other" Center is still selected — the old combined-count formula (1 ToC + 1 Other = 2,
+      // 2-1=1>0) would have wrongly allowed this.
+      component.deleteContributingCenter(0);
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C2, SENTINEL]);
+      expect(mockRdPartnersSE.otherCentersSelected).toEqual([OTHER_C]);
+      expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
+      const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
+      expect(alertConfig.id).toBe('toc-center-min');
+    });
+
+    it('TOC-C-AC-8 (TOC-C-DD-5): 0 ToC-origin edge state — deleting the Other Center always succeeds', () => {
+      // contributing_center holds only the sentinel (0 real ToC-origin entries); otherCentersSelected
+      // holds one real "Other" Center. Under the old combined formula (0 ToC + 1 Other = 1, 1-1=0)
+      // this would have been blocked; deleteOtherCenter never consults the guard at all.
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
+      mockRdPartnersSE.otherCentersSelected = [OTHER_C];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]); // guard active
+
+      component.deleteOtherCenter(0);
+
+      expect(mockRdPartnersSE.otherCentersSelected).toEqual([]);
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+    });
+
+    it('TOC-C-AC-5 (TOC-C-DD-4): deleting the OTHER_CENTERS_CODE sentinel ALWAYS succeeds, even when its cascade would bring the real count to zero', () => {
+      // contributing_center holds only the "Other(s)" sentinel chip (no real ToC-origin Center); the
+      // TWO real Centers live in otherCentersSelected, which the sentinel's deletion cascades to clear.
+      // Per TOC-C-DD-4 (supersedes TOC-C-DD-3's cascade-blocking), the sentinel is a UI-shape control,
+      // not itself a Contributing CGIAR Center — its removal is never guarded, regardless of the
+      // cascade's effect on the real count.
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: component.OTHER_CENTERS_CODE }];
+      mockRdPartnersSE.otherCentersSelected = [OTHER_C, OTHER_C2];
+      mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]); // ToC guard active
+
+      component.deleteContributingCenter(0);
+
+      // The sentinel deletion succeeds unconditionally: no alert, contributing_center loses the
+      // sentinel, and the cascade (existing behavior) clears otherCentersSelected.
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+      expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([]);
+      expect(mockRdPartnersSE.otherCentersSelected).toEqual([]);
+    });
+
+    describe('TOC-C-AC-6 (flat/unmapped UI parity) — only contributing_center populated, no split', () => {
+      it('allows deleting down to 1 remaining, no alert', () => {
+        mockRdPartnersSE.partnersBody.contributing_center = [C1, C2];
+        mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1, 2]);
+
+        component.deleteContributingCenter(1); // removes C2
+
+        expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C1]);
+        expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+      });
+
+      it('blocks deleting the last remaining Center', () => {
+        mockRdPartnersSE.partnersBody.contributing_center = [C1];
+        mockRdPartnersSE.tocReferenceCenterInstitutionIds.set([1]);
+
+        component.deleteContributingCenter(0);
+
+        expect(mockRdPartnersSE.partnersBody.contributing_center).toEqual([C1]);
+        expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
+        const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
+        expect(alertConfig.id).toBe('toc-center-min');
+      });
     });
   });
 

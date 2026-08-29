@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-29 · branch qa-development-2026-ss · c56be9d79 (TOC-SP-T-1)
+**Verified:** 2026-08-29 · branch qa-development-2026-ss · pending commit (TOC-C-T-3, TOC-SP-T-3)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -175,6 +175,59 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   precedent of this file's sibling notes (`contributingScienceInfoNote`, `noScienceProgramsNote`).
   Does not touch `applyTocMappingOnLoad`, `onScienceSelect`, `buildOtherScienceSentinel`, or any
   Contributing-Centers logic — those are a separate array/catalog with no code coupling.
+
+- ⚠️ **`TOC-SP-DD-3` (2026-08-29, correction, supersedes `TOC-SP-DD-2`'s cascade-blocking): the
+  `OTHER_SP_CODE` sentinel chip is now ALWAYS deletable, never blocked by the guard.** The sentinel
+  is a UI-shape control (toggles the Other(s) dropdown), not itself a Contributing Science Program —
+  `deleteScience` no longer calls `blockIfLastScience(...)` when the removed chip is the sentinel; it
+  proceeds straight to the existing cascade (clearing `otherScienceSelected`). The guard is unchanged
+  for real-chip removal (`deleteScience` on a non-sentinel chip, and `deleteOtherScience`).
+
+- ⚠️ **Contributing CGIAR Center now has a minimum-count guard too (2026-08-29,
+  `docs/specs/changes/toc-center-guard`, `TOC-C-DD-1`/`TOC-C-DD-2`/`TOC-C-DD-3`) — same shape as the
+  Science Program guard above, substituting "Center" for "Science".** `deleteContributingCenter` /
+  `deleteOtherCenter` (`component.ts`) used to unconditionally filter-and-reassign — a user could
+  empty every Contributing CGIAR Center even when the linked ToC had planned some, silently
+  discarding required data. Fix: both handlers now call `blockIfLastCenter(willRemoveCount)` first
+  and `return` early when it's `true`. `hasTocPlannedCenter` reuses the exact
+  `result_toc_result.planned_result !== false` condition already used by this file's other `@if`
+  branches (`bugfix/toc-unmapped-orange-notes`), combined with
+  `tocReferenceCenterInstitutionIds().length > 0` (the same signal already read by
+  `hasReferenceCenters`, `:146`). `getRealCenterCount()` excludes the `OTHER_CENTERS_CODE` sentinel
+  from `contributing_center` and adds `otherCentersSelected.length` (`TOC-C-DD-2`: fresh
+  standalone helpers on the component — deliberately NOT reusing the service's
+  `getContributingCentersUnion()` / `isUnmappedOrFlat()`, since the union doesn't exclude the
+  sentinel and would under-count). `TOC-C-DD-3`: deleting the sentinel chip itself cascades to clear
+  `otherCentersSelected` (see the existing `if (!this.showOtherCenters) otherCentersSelected = []`
+  line, `:428`), so `deleteContributingCenter` computes `willRemoveCount` as
+  `otherCentersSelected.length` when the removed chip IS the sentinel, not `1`. Alert reuses
+  `customizedAlertsFeSE.show(...)` with a stable `id: 'toc-center-min'`, `status: 'warning'`, no
+  `confirmText` — a plain hardcoded string (no new `TermKey`), matching the precedent of this
+  file's sibling notes. The guard applies identically in both UI shapes this field renders as
+  (flat/unmapped single dropdown vs. split CP2026 ToC/Other(s)) since both mutate the same two
+  underlying arrays. Does not touch `applyTocMappingOnLoad`, `preselectCentersEffect`,
+  `onContributingCenterSelect`, `onOtherCenterSelect`, `onLeadCenterSelected`,
+  `getContributingCentersUnion`, `isUnmappedOrFlat`, `setPossibleLeadCenters`, or any Contributing
+  Science Program logic — those are separate arrays/catalogs with no code coupling.
+
+- ⚠️ **`TOC-C-DD-4` (2026-08-29, correction, supersedes `TOC-C-DD-3`'s cascade-blocking): the
+  `OTHER_CENTERS_CODE` sentinel chip is now ALWAYS deletable, never blocked by the guard** — same
+  correction as `TOC-SP-DD-3` above, for the twin field. `deleteContributingCenter` no longer calls
+  `blockIfLastCenter(...)` when the removed chip is the sentinel; it proceeds straight to the
+  existing cascade (clearing `otherCentersSelected`). The guard is unchanged for real-chip removal
+  (`deleteContributingCenter` on a non-sentinel chip, and `deleteOtherCenter`).
+
+- ⚠️ **`TOC-C-DD-5` / `TOC-SP-DD-4` (2026-08-29, second correction, same day): the minimum-count
+  floor is now scoped to the ToC-origin array ONLY (`contributing_center` / `scienceSelected`),
+  ignoring the "Other" array entirely.** `getRealCenterCount()` / `getRealScienceCount()` no longer
+  add `otherCentersSelected.length` / `otherScienceSelected.length` — they count only non-sentinel
+  entries in the ToC-origin array. Concretely: 2 ToC-origin entries + 1 "Other" entry now only
+  allows deleting 1 of the 2 ToC-origin ones (deleting the 2nd is blocked), even though an "Other"
+  entry is still selected — the old combined-count formula wrongly allowed emptying every
+  ToC-origin entry as long as enough "Other" ones existed. `deleteOtherCenter` / `deleteOtherScience`
+  no longer call `blockIfLastCenter`/`blockIfLastScience` at all — deleting an "Other" entry never
+  consults the guard, regardless of the ToC-origin count (including the 0-ToC-origin edge state).
+  The sentinel-chip exemption from `TOC-C-DD-4`/`TOC-SP-DD-3` is unaffected.
 
 ## Hijos sin archivo propio
 | Componente | Qué hace | Trampa |
