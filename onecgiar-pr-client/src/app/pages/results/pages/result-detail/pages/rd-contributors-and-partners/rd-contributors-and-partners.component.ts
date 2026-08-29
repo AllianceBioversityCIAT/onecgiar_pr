@@ -311,14 +311,54 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
   }
 
+  // ----- TOC-SP-T-1: guard against removing the last ToC-planned Contributing Science Program -----
+
+  // Real (non-sentinel) Science Program count, combined across both arrays (TOC-SP-DD-2).
+  private getRealScienceCount(): number {
+    const realScienceSelected = (this.rdPartnersSE.scienceSelected || []).filter((sp: any) => sp?.id !== this.OTHER_SP_CODE);
+    return realScienceSelected.length + (this.rdPartnersSE.otherScienceSelected || []).length;
+  }
+
+  // Same `planned_result !== false` guard already used in this file's @if branches (bugfix/toc-unmapped-orange-notes),
+  // combined with the live ToC synergy-id set already exposed by the service.
+  private get hasTocPlannedScience(): boolean {
+    return (
+      this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result !== false &&
+      this.rdPartnersSE.tocReferenceSynergyInitiativeIds().length > 0
+    );
+  }
+
+  // Returns true (and shows the blocking alert) when the deletion must be blocked.
+  private blockIfLastScience(willRemoveCount: number): boolean {
+    if (!this.hasTocPlannedScience) return false;
+    if (this.getRealScienceCount() - willRemoveCount > 0) return false;
+
+    this.customizedAlertsFeSE.show({
+      id: 'toc-science-program-min',
+      title: 'Indicator with Science Programs mapped in ToC',
+      description: 'At least one Contributing Science Program is required for this result.',
+      status: 'warning'
+    });
+    return true;
+  }
+
   deleteScience(index: number) {
+    const current = this.rdPartnersSE.scienceSelected || [];
+    // Removing the "Other(s)" sentinel itself cascades to clear otherScienceSelected (see below), so its
+    // real-SP impact is the size of that array, not 1 (TOC-SP-DD-2).
+    const isRemovingOtherSentinel = current[index]?.id === this.OTHER_SP_CODE;
+    const willRemoveCount = isRemovingOtherSentinel ? (this.rdPartnersSE.otherScienceSelected || []).length : 1;
+    if (this.blockIfLastScience(willRemoveCount)) return;
+
     // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
     // Reassign a NEW array reference (not splice in place) so the multi-select ngModel refreshes and the chip stays removed.
-    this.rdPartnersSE.scienceSelected = (this.rdPartnersSE.scienceSelected || []).filter((_: any, i: number) => i !== index);
+    this.rdPartnersSE.scienceSelected = current.filter((_: any, i: number) => i !== index);
     if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
   }
 
   deleteOtherScience(index: number) {
+    if (this.blockIfLastScience(1)) return;
+
     this.rdPartnersSE.otherScienceSelected = (this.rdPartnersSE.otherScienceSelected || []).filter((_: any, i: number) => i !== index);
   }
 

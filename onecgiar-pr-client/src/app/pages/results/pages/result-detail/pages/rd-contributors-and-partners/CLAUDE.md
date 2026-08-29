@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-29 · branch qa-development-2026-ss · f0de49978 (LC-T-5)
+**Verified:** 2026-08-29 · branch qa-development-2026-ss · c56be9d79 (TOC-SP-T-1)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -156,6 +156,25 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
 
 - El escaneo de "N fields missing" del piso depende de la clase global `.section_container`
   — ver [`../../CLAUDE.md`](../../CLAUDE.md).
+
+- ⚠️ **Contributing Science Program now has a minimum-count guard (2026-08-29,
+  `docs/specs/changes/toc-science-program-guard`, `TOC-SP-DD-1`/`TOC-SP-DD-2`).** `deleteScience` /
+  `deleteOtherScience` (`component.ts`) used to unconditionally filter-and-reassign — a user could
+  empty every Contributing Science Program even when the linked ToC had planned some, silently
+  discarding required data. Fix: both handlers now call `blockIfLastScience(willRemoveCount)` first
+  and `return` early when it's `true`. `hasTocPlannedScience` reuses the exact
+  `result_toc_result.planned_result !== false` condition already used by this file's other `@if`
+  branches (`bugfix/toc-unmapped-orange-notes`), combined with
+  `tocReferenceSynergyInitiativeIds().length > 0`. `getRealScienceCount()` excludes the
+  `OTHER_SP_CODE` sentinel from `scienceSelected` and adds `otherScienceSelected.length` —
+  `TOC-SP-DD-2`: deleting the sentinel chip itself cascades to clear `otherScienceSelected` (see the
+  existing `if (!this.showOtherScience) otherScienceSelected = []` line), so `deleteScience` computes
+  `willRemoveCount` as `otherScienceSelected.length` when the removed chip IS the sentinel, not `1`.
+  Alert reuses `customizedAlertsFeSE.show(...)` with a stable `id: 'toc-science-program-min'`,
+  `status: 'warning'`, no `confirmText` — a plain hardcoded string (no new `TermKey`), matching the
+  precedent of this file's sibling notes (`contributingScienceInfoNote`, `noScienceProgramsNote`).
+  Does not touch `applyTocMappingOnLoad`, `onScienceSelect`, `buildOtherScienceSentinel`, or any
+  Contributing-Centers logic — those are a separate array/catalog with no code coupling.
 
 ## Hijos sin archivo propio
 | Componente | Qué hace | Trampa |

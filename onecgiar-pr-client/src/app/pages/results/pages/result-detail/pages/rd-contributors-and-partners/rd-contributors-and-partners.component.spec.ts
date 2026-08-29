@@ -271,6 +271,102 @@ describe('RdContributorsAndPartnersComponent', () => {
     });
   });
 
+  /**
+   * TOC-SP-T-1 (docs/specs/changes/toc-science-program-guard): block removing the last real
+   * Contributing Science Program (combined across `scienceSelected` minus the `OTHER_SP_CODE`
+   * sentinel, and `otherScienceSelected`) while the result's ToC has planned Science Programs.
+   */
+  describe('TOC-SP-T-1 — minimum Science Program guard', () => {
+    const SP01 = { id: 1, official_code: 'SP01' };
+    const SP02 = { id: 2, official_code: 'SP02' };
+    const SP03 = { id: 3, official_code: 'SP03' };
+    const OTHER_SP = { id: 101, official_code: 'OTHER01' };
+
+    beforeEach(() => {
+      mockRdPartnersSE.partnersBody.result_toc_result = { planned_result: true };
+      mockRdPartnersSE.scienceSelected = [];
+      mockRdPartnersSE.otherScienceSelected = [];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds = signal<number[]>([]);
+    });
+
+    it('TOC-SP-AC-1: deletes down to 1 remaining across two sequential deletes, no alert', () => {
+      mockRdPartnersSE.scienceSelected = [SP01, SP02, SP03];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1, 2, 3]);
+
+      component.deleteScience(1); // removes SP02
+      expect(mockRdPartnersSE.scienceSelected.map((sp: any) => sp.id)).toEqual([1, 3]);
+
+      component.deleteScience(1); // removes SP03
+      expect(mockRdPartnersSE.scienceSelected.map((sp: any) => sp.id)).toEqual([1]);
+
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+    });
+
+    it('TOC-SP-AC-2: blocks deleting the last remaining ToC-planned Science Program and shows the alert', () => {
+      mockRdPartnersSE.scienceSelected = [SP01];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]);
+
+      component.deleteScience(0);
+
+      expect(mockRdPartnersSE.scienceSelected).toEqual([SP01]);
+      expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
+      const alertConfig = mockCustomizedAlertsFeSE.show.mock.calls[0][0];
+      expect(alertConfig.id).toBe('toc-science-program-min');
+      expect(alertConfig.status).toBe('warning');
+      expect(alertConfig.confirmText).toBeUndefined();
+    });
+
+    it('TOC-SP-AC-3: no ToC-planned Science Programs — deletes all chips unrestricted, guard never fires even at zero remaining', () => {
+      mockRdPartnersSE.scienceSelected = [SP01];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([]); // no ToC-planned Science Programs
+
+      component.deleteScience(0);
+
+      expect(mockRdPartnersSE.scienceSelected).toEqual([]);
+      // BUT the guard must NOT fire when hasTocPlannedScience is false, even at zero remaining chips.
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+    });
+
+    it('TOC-SP-AC-3b: also unrestricted when planned_result === false, even with ToC reference ids present', () => {
+      mockRdPartnersSE.partnersBody.result_toc_result = { planned_result: false };
+      mockRdPartnersSE.scienceSelected = [SP01];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]);
+
+      component.deleteScience(0);
+
+      expect(mockRdPartnersSE.scienceSelected).toEqual([]);
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+    });
+
+    it('TOC-SP-AC-4: combined count governs the guard — deleting the "Other" one leaves 1 (from ToC), no alert', () => {
+      mockRdPartnersSE.scienceSelected = [SP01];
+      mockRdPartnersSE.otherScienceSelected = [OTHER_SP];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]);
+
+      component.deleteOtherScience(0);
+
+      expect(mockRdPartnersSE.otherScienceSelected).toEqual([]);
+      expect(mockRdPartnersSE.scienceSelected).toEqual([SP01]);
+      expect(mockCustomizedAlertsFeSE.show).not.toHaveBeenCalled();
+    });
+
+    it('sentinel-cascade: deleting the OTHER_SP_CODE sentinel is blocked when it is the only thing keeping the real count above zero', () => {
+      // scienceSelected holds only the "Other(s)" sentinel chip (no real ToC-origin SP); the one real
+      // SP lives in otherScienceSelected, which the sentinel's deletion would cascade-clear.
+      mockRdPartnersSE.scienceSelected = [{ id: component.OTHER_SP_CODE }];
+      mockRdPartnersSE.otherScienceSelected = [OTHER_SP];
+      mockRdPartnersSE.tocReferenceSynergyInitiativeIds.set([1]); // ToC guard active
+
+      component.deleteScience(0);
+
+      // AND IT MUST count otherScienceSelected toward the real total even when the sentinel (not a
+      // real chip) is what's being deleted — the block proves the cascade was actually counted.
+      expect(mockCustomizedAlertsFeSE.show).toHaveBeenCalledTimes(1);
+      expect(mockRdPartnersSE.scienceSelected).toEqual([{ id: component.OTHER_SP_CODE }]);
+      expect(mockRdPartnersSE.otherScienceSelected).toEqual([OTHER_SP]);
+    });
+  });
+
   describe('validateGranTitle', () => {
     it('should return true if duplicate grant titles exist', () => {
       mockRdPartnersSE.partnersBody.contributing_np_projects = [{ grant_title: 'Grant 1' }, { grant_title: 'Grant 1' }, { grant_title: 'Grant 2' }];
