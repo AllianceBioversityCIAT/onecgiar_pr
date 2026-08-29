@@ -30,7 +30,7 @@
       [isComplete]="!!this.institutionsNoSentinel.length || !!this.rdPartnersSE.otherPartnersSelected?.length"></div>
 
     <!-- P2-3066 (2026): External Partners split into "from ToC" + "Other(s)". 2025 keeps the single legacy dropdown. -->
-    @if (isCP2026() && !dataControlSE.isKnowledgeProduct) {
+    @if (isCP2026() && !dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.result_toc_result?.planned_result !== false) {
       @if (hasReferencePartners()) {
         <app-pr-multi-select
           [options]="dropdown1OptionsPartners()"
@@ -129,7 +129,9 @@
     </div>
 
     <!-- P2-3066 (2026): "Other(s)" External Partners dropdown — appears when "Other" is picked or (AC4) when the ToC had none. -->
-    @if (isCP2026() && !dataControlSE.isKnowledgeProduct && showOtherPartners) {
+    <!-- TOC-T-2 rework: same planned_result guard as L33 — on the "No" path (unmapped) this block must not compete
+         with the flat dropdown rendered by the L54 @else with a second, differently-bound multi-select. -->
+    @if (isCP2026() && !dataControlSE.isKnowledgeProduct && showOtherPartners && this.rdPartnersSE.partnersBody.result_toc_result?.planned_result !== false) {
       <div
         appFeedbackValidation
         [labelText]="hasReferencePartners() ? 'Other(s) External Partners' : 'External partners'"
