@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { NgClass } from '@angular/common';
 import { PrVizChartComponent, EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
@@ -120,7 +121,7 @@ export interface HeatmapModel {
 @Component({
   selector: 'app-program-overview',
   standalone: true,
-  imports: [NgClass, PrVizChartComponent],
+  imports: [NgClass, PrVizChartComponent, PrTooltipDirectiveModule],
   templateUrl: './program-overview.component.html',
   styleUrls: ['./program-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

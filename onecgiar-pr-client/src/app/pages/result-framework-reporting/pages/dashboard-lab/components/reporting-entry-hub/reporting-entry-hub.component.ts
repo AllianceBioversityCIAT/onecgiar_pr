@@ -1,5 +1,6 @@
 // @akili-spec changes/reporting-entry-hub
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -100,7 +101,7 @@ const COLLAPSE_STORAGE_KEY = 'pr.hub.collapsed';
 @Component({
   selector: 'app-reporting-entry-hub',
   standalone: true,
-  imports: [NgClass, RouterLink, NgIcon],
+  imports: [NgClass, RouterLink, NgIcon, PrTooltipDirectiveModule],
   templateUrl: './reporting-entry-hub.component.html',
   styleUrl: './reporting-entry-hub.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

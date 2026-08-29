@@ -151,3 +151,9 @@ Verification totals: server 10+3+20 targeted tests green, client 23+102+66 targe
 - Owner asked to add the loader/skeleton to **both** lanes of "Where to report". REH-R-4.5 already mandated it for each lane; the implementation only covered W3 — this closes the conformance gap. Leader-inline (explicit user request, ~20 LOC + 2 tests; no triad spawned).
 - Files: `reporting-entry-hub.component.ts` (+`w1w2Loading` input), `.html` (W1/W2 lane body — AoW list + program-level group — swaps to 3 `animate-pulse` rows, same style as W3's), `.spec.ts` (+2 tests: skeleton shown/hidden), `dashboard-lab.component.html` (`[w1w2Loading]="loadingAows()"`).
 - Verification: `npx jest …/reporting-entry-hub …/dashboard-lab.hub.spec.ts --no-coverage` → 2 suites / 30 passed; `npx ng lint --quiet` → clean.
+
+### Addendum (user request, 2026-08-29) — tooltip with the full AoW title on truncated names
+
+- Owner asked for a tooltip on AoW titles that render truncated. Applied `[prTooltip]="row.name"` (the page family's styled tooltip, `PrTooltipDirectiveModule` — same pattern as `reporting-aow-table`) to the four truncated title sites: hub W1/W2 AoW rows, hub program-level rows, "Progress by area of work" AoW rows and its cross-cutting rows. Leader-inline (explicit user request, ~15 LOC).
+- Note: `PrTooltipDirective` is hover/click-only (KZ `target-tooltip-1`) — acceptable here because the tooltip is supplementary (the full name is not otherwise actionable); no requirement claims keyboard reachability for it.
+- Verification: `npx jest …/reporting-entry-hub …/program-overview.component.spec.ts --no-coverage` → 86 passed; `npx ng lint --quiet` clean; `npx ng build --configuration development` OK.

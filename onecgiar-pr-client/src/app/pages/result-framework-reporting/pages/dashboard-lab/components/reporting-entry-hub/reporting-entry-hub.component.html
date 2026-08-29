@@ -63,7 +63,9 @@
                   class="inline-flex shrink-0 items-center justify-center rounded-[6px] border border-purple-200/70 bg-purple-100/80 px-[8px] py-[2px] font-mono text-[11px] font-bold text-purple-800">
                   {{ row.code }}
                 </span>
-                <span class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text-heading)]">
+                <span
+                  class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text-heading)]"
+                  [prTooltip]="row.name">
                   {{ row.name }}
                 </span>
               </div>
@@ -117,7 +119,9 @@
                     class="inline-flex h-[22px] shrink-0 items-center rounded-full border border-blue-200 bg-blue-50 px-[8px] text-[10.5px] font-bold text-blue-700">
                     {{ copy.w12.outcomeBadge }}
                   </span>
-                  <span class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text-heading)]">
+                  <span
+                    class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text-heading)]"
+                    [prTooltip]="row.name">
                     {{ row.name }}
                   </span>
                 </div>

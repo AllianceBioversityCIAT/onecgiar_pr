@@ -681,7 +681,9 @@
               <span class="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-purple-100/80 px-[8px] py-[2px] font-mono text-[11px] font-bold text-purple-800 border border-purple-200/70 group-hover:bg-purple-200/80 transition-colors">
                 {{ row.code }}
               </span>
-              <span class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+              <span
+                class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors"
+                [prTooltip]="row.name">
                 {{ row.name }}
               </span>
             </div>
@@ -757,7 +759,9 @@
               <span class="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-blue-50 px-[7px] py-[2px] text-[10.5px] font-bold text-blue-700 border border-blue-200">
                 Outcome
               </span>
-              <span class="min-w-0 truncate text-[13.5px] font-medium text-[var(--pr-text-heading)]">
+              <span
+                class="min-w-0 truncate text-[13.5px] font-medium text-[var(--pr-text-heading)]"
+                [prTooltip]="row.name">
                 {{ row.name }}
               </span>
             </div>
