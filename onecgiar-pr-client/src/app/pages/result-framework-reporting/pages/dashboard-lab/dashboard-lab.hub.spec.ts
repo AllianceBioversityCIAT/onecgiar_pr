@@ -778,4 +778,13 @@ describe('narrative gate on the By-AOW banner (MRF-T-7 / MRF-AC-7)', () => {
     expect(component.narrativePromptTemplate()).toBe('Draft for {{aow}}');
   });
 });
+
+describe('bannerZeroTargetTitle (MRF-R-7 banner surface)', () => {
+  it('names the exclusion count and pluralizes; null when none', () => {
+    const c: any = Object.create((require('./dashboard-lab.component') as any).DashboardLabComponent.prototype);
+    expect(c.bannerZeroTargetTitle(0)).toBeNull();
+    expect(c.bannerZeroTargetTitle(1)).toBe('excludes 1 zero-target KPI');
+    expect(c.bannerZeroTargetTitle(4)).toBe('excludes 4 zero-target KPIs');
+  });
+});
 });

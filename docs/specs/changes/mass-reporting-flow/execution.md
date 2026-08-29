@@ -130,3 +130,13 @@
 | MRF-T-8 manual pass | `[~]` blocked | — | auth + disposable DB; 9-row checklist recorded |
 
 Totals: **non-test LOC 1 816 / test LOC 2 339** (`git diff --numstat 4cdddae6d..HEAD`, src only) — **budget tripwire (1 500 non-test) exceeded**; cause is the same class as the previous spec (state-rich templates + the panel's 8-state machine + defensive specs demanded by the single-review-round rule), no scope growth; carried to the owner in the final report rather than stopping a finished run. Reviewer model degraded to Fable for opus-authored tasks after the sonnet weekly cap (recorded above). Commits `22b70548b…5d7453199`.
+
+### T-8 field fixes (2026-08-30, live pass on dev via the authenticated Orca browser)
+
+1. **Banner zero-target `title` missing** (MRF-R-7 gap: the grouped table had it, the By-AOW banner didn't) → `bannerZeroTargetTitle()` on the KPIS and REPORTED tiles + unit test. Verified live: "excludes 4 zero-target KPIs" on both tiles.
+2. **`?kpi=` cold-load restore broken in the real browser** despite green units — root-caused live with temporary sessionStorage tracing (removed):
+   - Symptom: param consumed, no expansion. Trace showed the restore effect DID match and expand; the expansion was then wiped.
+   - Wiper chain: the "load AoWs on selection" effect fires on every `selected()` IDENTITY change (3× during a cold load: program list → version → overlays) and unconditionally nulled `plannedHloAowCode` → re-selection wiped `expandedPlannedHlos`.
+   - Fixes (three guards, each with its reason in a comment): (a) empty-but-not-loading bundle no longer consumes `pendingKpi` (waits for data; regression test pins the empty flush — the harness's own comment explains why the arrival half is covered by the existing cold-load test); (b) `setPlannedHloAow` no-ops on the same code; (c) the selection effect resets planned-view state only when the PROGRAM CODE actually changes (`lastPlannedResetProgram`).
+   - Verified live post-fix: cold-load in a fresh tab expands "1.2: Benchmarking…", card visible, param consumed; highlight transient per its 2.6 s timer. Folder suites 18/589 green; lint clean.
+   - Kaizen signal: three unit-green/browser-red defects in one feature — the jsdom harness models signal-effect interleaving optimistically; candidate lesson at archive.

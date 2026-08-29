@@ -1401,12 +1401,12 @@
                     } @else {
                       <div class="rounded-[10px] bg-[var(--pr-surface-ground)] px-[12px] py-[8px]">
                         <p class="m-0 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">KPIs</p>
-                        <p class="m-0 text-[18px] font-extrabold tabular-nums text-[var(--pr-text-heading)]">{{ banner.total }}</p>
+                        <p class="m-0 text-[18px] font-extrabold tabular-nums text-[var(--pr-text-heading)]" [attr.title]="bannerZeroTargetTitle(banner.zeroTarget)">{{ banner.total }}</p>
                       </div>
                       <div class="rounded-[10px] bg-[var(--pr-surface-ground)] px-[12px] py-[8px]">
                         <p class="m-0 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">Reported</p>
                         <p class="m-0 text-[18px] font-extrabold tabular-nums text-[var(--pr-text-heading)]">
-                          {{ banner.done }}<span class="text-[12px] font-medium text-[var(--pr-text-muted)]">/{{ banner.total }}</span>
+                          <span [attr.title]="bannerZeroTargetTitle(banner.zeroTarget)">{{ banner.done }}<span class="text-[12px] font-medium text-[var(--pr-text-muted)]">/{{ banner.total }}</span></span>
                         </p>
                       </div>
                       <div class="rounded-[10px] bg-[var(--pr-surface-ground)] px-[12px] py-[8px]">

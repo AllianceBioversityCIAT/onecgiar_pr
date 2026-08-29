@@ -817,6 +817,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         // Warm the legacy modals' context here, not on click: `canReportResults()` needs an async
         // phase check and would otherwise hide the submit button on a cold open.
         this.primeEntityAowContext();
+        // T-8 field finding: `selected()` changes identity several times during a cold load
+        // (program list → version → overlays) while the PROGRAM stays the same. Resetting the
+        // planned-view state on every identity change wiped the ?kpi= restore's expansion; the
+        // reset belongs to an actual program switch. @akili-spec changes/mass-reporting-flow
+        if (code === this.lastPlannedResetProgram) return;
+        this.lastPlannedResetProgram = code;
         this.plannedHloAowCode.set(null);
         this.plannedTypeFilter.set([]);
         this.plannedSearch.set('');
@@ -902,6 +908,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       if (!kpiId) return;
       if (!code) return;
       if (!bundle || bundle.loading) return;
+      // T-8 field finding: on a cold load there is a flush where the bundle exists with
+      // `loading: false` but `indicators: []` (the ToC response not yet cached). Consuming
+      // there turns every shared link into a silent no-op. An EMPTY bundle waits; only a
+      // loaded, non-empty bundle may match-or-consume. @akili-spec changes/mass-reporting-flow
+      if (bundle.indicators.length === 0) return;
       this.pendingKpi = null;
       const match = bundle.indicators.find(i => String(i?.indicator_id ?? '') === kpiId);
       if (match) {
@@ -2357,6 +2368,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * plus its KPI stats (output tier only, same rule as the Reporting table ratio).
    * @akili-spec changes/reporting-entry-hub
    */
+  /** MRF-R-7: every affected % surface states the zero-target exclusion. @akili-spec changes/mass-reporting-flow */
+  bannerZeroTargetTitle(zeroTarget: number): string | null {
+    if (!zeroTarget) return null;
+    return `excludes ${zeroTarget} zero-target ${zeroTarget === 1 ? 'KPI' : 'KPIs'}`;
+  }
+
   readonly plannedAowBanner = computed(() => {
     const code = this.plannedHloAowCode();
     if (!code) return null;
@@ -2934,6 +2951,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly plannedLayout = signal<'cards' | 'table'>('cards');
   /** Selected AOW code for the By AOW browse mode. */
   readonly plannedHloAowCode = signal<string | null>(null);
+  /** Last program whose planned-view state was reset — see the T-8 guard in the selection effect. */
+  private lastPlannedResetProgram: string | null = null;
   /**
    * Multiselect of indicator typologies (`type_name`).
    * Bound to `app-pr-multi-select` as `{ name }[]`. Empty = all.
@@ -2994,6 +3013,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   setPlannedHloAow(code: string | null): void {
+    // T-8 field finding: the byAow selection effect can re-invoke this with the SAME code on a
+    // later flush (e.g. after the version key settles). Re-selecting the current AoW must be a
+    // no-op — the unconditional reset below was wiping the ?kpi= restore's group expansion
+    // right after it happened. @akili-spec changes/mass-reporting-flow
+    if (code === this.plannedHloAowCode()) return;
     this.plannedHloAowCode.set(code);
     this.expandedPlannedHlos.set(new Set());
     this.plannedTypeFilter.set([]);

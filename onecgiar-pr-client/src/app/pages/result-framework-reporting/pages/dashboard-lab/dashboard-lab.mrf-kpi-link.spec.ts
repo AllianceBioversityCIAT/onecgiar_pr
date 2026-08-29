@@ -283,6 +283,27 @@ describe('DashboardLabComponent — Copy link + Read more (MRF-TEST-3)', () => {
       return { component, router, aowsSubject, tocSubjectFor };
     }
 
+    it('does not consume ?kpi= on an empty-but-not-loading bundle flush (T-8 field race)', async () => {
+      const { component, aowsSubject, tocSubjectFor } = await createRestoreComponent();
+      component.plannedBrowseView.set('byAow');
+      (component as any).pendingPlannedAow = 'AOW01';
+      (component as any).pendingKpi = '3';
+      aowsSubject.next({ response: { units: [AOW01, AOW02] } });
+      TestBed.tick();
+
+      // The field race: the ToC response lands EMPTY (loading=false, indicators=[]) — the real
+      // browser hit this flush and the old guard consumed the param as an "unknown id" no-op.
+      tocSubjectFor('AOW01').next({ response: { tocResultsOutputs: [], tocResultsOutcomes: [] } });
+      TestBed.tick();
+      expect((component as any).pendingKpi).toBe('3'); // survives — an empty bundle waits
+      expect(component.highlightedKpiId()).toBeNull();
+
+      // The "data later arrives → consume" half is already pinned by the cold-load ordering
+      // test below (data as the FIRST emission). A second Subject emission re-dirties the
+      // harness's AoW-selection machinery (see createRestoreComponent's comment), so this test
+      // pins only the field bug itself: the empty flush must NOT consume.
+    });
+
     it('survives a cold-load ordering (param arrives before the ToC) and fires only after the owning AoW loads', async () => {
       const { component, router, aowsSubject, tocSubjectFor } = await createRestoreComponent();
       component.plannedBrowseView.set('byAow');
