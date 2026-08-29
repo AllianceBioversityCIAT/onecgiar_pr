@@ -141,6 +141,24 @@ No defect class in this spec is a visual/rendered-output class (no new markup, r
 - **Alternatives considered:** Ignoring the sentinel-cascade case entirely (treat sentinel removal as `willRemoveCount = 0`) — rejected, it would let a user empty the field to zero by deleting only the sentinel chip when it was the sole thing gating `otherScienceSelected`'s visibility, defeating the guard's purpose.
 - **Consequences:** `deleteScience` carries slightly more branching than a plain filter, but the alternative silently reopens the exact gap this spec exists to close.
 
+### `TOC-SP-DD-3` — SUPERSEDES `TOC-SP-DD-2`'s sentinel-cascade blocking: the sentinel chip is always deletable
+
+- **Context (Pivot, 2026-08-29, post-ship correction — already committed in `7bee37dec`):** The user clarified that in both this field and its twin (Contributing CGIAR Centers, `docs/specs/changes/toc-center-guard`), the "Other(s)" sentinel chip must always remain deletable — including when its cascade (clearing `otherScienceSelected`) would bring the real combined count to zero. `TOC-SP-DD-2`'s original reasoning (count the sentinel's cascade as if it were a real-chip deletion) is explicitly overridden: the sentinel is a UI-shape control, not itself a Contributing Science Program, and the product decision is that toggling it off must never be blocked.
+- **Decision:** `deleteScience(index)` no longer calls `blockIfLastScience(...)` at all when the removed chip is the `OTHER_SP_CODE` sentinel — that branch proceeds directly to the existing filter/cascade logic unconditionally. The guard (`blockIfLastScience`) still applies, unchanged, to: (a) removing a real (non-sentinel) chip from `scienceSelected`, and (b) `deleteOtherScience` (removing an individual "Other" chip).
+- **Alternatives considered:** Same as `TOC-C-DD-4`'s twin decision — a conditional half-measure was rejected; the user was explicit and unconditional.
+- **Consequences:** Same acceptance as `TOC-C-DD-4`: a user can reach zero real Contributing Science Programs via a single sentinel-chip deletion. Accepted, explicit product decision. See `tasks.md` `TOC-SP-T-2` for the corrective task (this fix lands as a new commit on top of the already-shipped `7bee37dec`).
+
+### `TOC-SP-DD-4` — SUPERSEDES `TOC-SP-DD-2`'s combined-count formula: the floor is scoped to ToC-origin (`scienceSelected`) only
+
+- **Context (Pivot, 2026-08-29, second post-ship correction, same day as `TOC-SP-DD-3`):** Same clarification as the twin `TOC-C-DD-5` for Centers: if there are 2 Science Programs from the ToC AND the user additionally selected an "Other" Science Program, the guard must still allow deleting only 1 of the 2 ToC-origin ones — not both — even though a manually-added "Other" exists. `TOC-SP-DD-2`'s combined-count formula let a user delete every ToC-origin Science Program as long as enough "Other" ones existed, defeating AC-6's actual intent.
+- **Decision:**
+  - `getRealScienceCount()` now counts **only** non-sentinel entries in `scienceSelected` — `otherScienceSelected.length` is no longer added.
+  - `deleteScience`'s guard call for a real (non-sentinel) chip stays `blockIfLastScience(1)` (unchanged shape; the count source changed).
+  - `deleteOtherScience` **no longer calls `blockIfLastScience` at all** — removing an "Other" Science Program never affects the ToC-origin floor. `TOC-SP-R-4` codifies this.
+  - The sentinel-chip exemption from `TOC-SP-DD-3` is unaffected.
+- **Alternatives considered:** Same as `TOC-C-DD-5`'s twin decision — rejected weighting/partial-N schemes as unneeded complexity.
+- **Consequences:** Same as `TOC-C-DD-5`: `TOC-SP-AC-4`'s justification is revised (outcome unchanged, reasoning corrected); new discriminating test `TOC-SP-AC-5` catches a regression to the old combined formula.
+
 ### Reversion challenge (Step 2.3)
 
 This design **reverts already-shipped behavior**: today, every Science Program chip (in either array) is unconditionally deletable. Challenge: *what does removing this unconditional deletability break?*

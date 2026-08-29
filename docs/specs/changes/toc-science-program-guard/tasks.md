@@ -64,10 +64,49 @@
 
 ---
 
+### `TOC-SP-T-2` — Correction: sentinel chip is always deletable (supersedes part of `TOC-SP-T-1`, post-ship)
+
+- **Type:** `client`
+- **Status:** `[x]`
+- **Description:** Per `TOC-SP-DD-3` (Pivot, 2026-08-29, corrective fix on top of already-shipped `7bee37dec`): remove the `blockIfLastScience(...)` call from the sentinel-removal branch of `deleteScience` — deleting the `OTHER_SP_CODE` chip must always succeed, regardless of the cascade on `otherScienceSelected`. The guard stays unchanged for real-chip removal (`deleteScience` on a non-sentinel chip, and `deleteOtherScience`).
+- **Implements:** Corrects the sentinel-cascade behavior implied by `TOC-SP-DD-2` / the design §10 sentinel-cascade test.
+- **Files (expected):**
+  - `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component.ts`
+  - `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component.spec.ts` — invert the sentinel-cascade test (now asserts the delete succeeds and no alert fires).
+- **Depends on:** `TOC-SP-T-1` (already shipped, `7bee37dec`)
+- **Scope (out — do NOT touch):** `deleteOtherScience`'s guard, `getRealScienceCount()`, `hasTocPlannedScience`, any other requirement's behavior.
+- **Definition of done:**
+  - [x] `deleteScience` skips the guard entirely when removing the sentinel chip.
+  - [x] Sentinel-cascade test inverted and passing (sentinel deletion always succeeds, no alert).
+  - [x] All other existing tests (`TOC-SP-AC-1..4`) still pass unchanged.
+  - [x] Lint clean.
+
+---
+
+### `TOC-SP-T-3` — Correction: floor scoped to ToC-origin count only (supersedes `TOC-SP-DD-2`'s combined formula)
+
+- **Type:** `client`
+- **Status:** `[x]`
+- **Description:** Per `TOC-SP-DD-4` (Pivot, 2026-08-29): `getRealScienceCount()` must count only non-sentinel entries in `scienceSelected` (drop `+ otherScienceSelected.length`). `deleteOtherScience` must no longer call `blockIfLastScience` at all. `deleteScience`'s real-chip guard call stays `blockIfLastScience(1)` (unchanged shape).
+- **Implements:** `TOC-SP-R-1` (revised), `TOC-SP-R-4` (new), `TOC-SP-AC-4` (revised reasoning), `TOC-SP-AC-5` (new), `TOC-SP-AC-6` (new)
+- **Files (expected):**
+  - `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component.ts`
+  - `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component.spec.ts` — add `TOC-SP-AC-5` and `TOC-SP-AC-6`.
+- **Depends on:** `TOC-SP-T-2`
+- **Scope (out — do NOT touch):** the sentinel-exemption logic from `TOC-SP-T-2`, `hasTocPlannedScience`, `blockIfLastScience`'s internal formula/alert shape.
+- **Definition of done:**
+  - [x] `getRealScienceCount()` no longer references `otherScienceSelected`.
+  - [x] `deleteOtherScience` has no `blockIfLastScience` call.
+  - [x] `TOC-SP-AC-5` and `TOC-SP-AC-6` tests added and passing.
+  - [x] All prior tests still pass.
+  - [x] Lint clean.
+
+---
+
 ## 4. Dependency graph
 
 ```
-TOC-SP-T-1  (single task — no dependencies, nothing blocks on it)
+TOC-SP-T-1 (shipped, 7bee37dec)  →  TOC-SP-T-2  →  TOC-SP-T-3  (two corrections, both Pivot 2026-08-29)
 ```
 
 ---
