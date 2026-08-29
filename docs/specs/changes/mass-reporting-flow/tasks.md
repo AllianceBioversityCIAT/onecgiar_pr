@@ -4,7 +4,7 @@
 
 ## 1. Scope
 
-- **Module:** `results` / `mass-reporting-flow` · **Linked:** `requirements.md` + `design.md` · **Status:** `not-started`
+- **Module:** `results` / `mass-reporting-flow` · **Linked:** `requirements.md` + `design.md` · **Status:** `in-progress` (T-1..T-7 done, T-8 blocked on auth+DB)
 - ⚠️ Worktree note: unrelated uncommitted changes may exist under `pages/bilateral/` (other sessions) — never stage them.
 
 ## 2. Pre-flight
@@ -101,7 +101,7 @@
 
 ### `MRF-T-8` — Verification: manual pass + execution record
 
-- **Status:** `[ ]` · **Type:** `tests` · **Estimate:** S · **Depends on:** T-3, T-4, T-5, T-7
+- **Status:** `[~]` (blocked: human-authenticated session + disposable DB — checklist in execution.md) · **Type:** `tests` · **Estimate:** S · **Depends on:** T-3, T-4, T-5, T-7
 - **Description:** On a running stack with a logged-in session: burn-down round (filter+sort+report+next-pending+counter); `?kpi=` link shared to a new tab (expand/scroll/highlight); grouped ratio = banner numbers; admin card round-trip (flag off → button gone; prompt edit reflected on next generate); real WebLLM generation on a capable device incl. consent/download step and Regenerate/interrupt; **migration run/revert round-trip on a disposable local DB** (rows appear in `platform_global_variables` category, revert removes exactly them — per MRF-AC-11); keyboard/focus pass on all new controls + panel `aria-live`; reduced-motion check. Record PASS/FAIL/NOT-RUN + screenshots in `execution.md` — NOT-RUN is never passed. Full-suite coverage remains CI's gate (owner rule: no full client runs here — accepted risk).
 - **Implements:** the jsdom-blind halves (requirements §8 manual rows).
 - **DoD:** checklist recorded; FAILs become fixes or accepted gaps.

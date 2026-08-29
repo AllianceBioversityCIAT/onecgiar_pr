@@ -102,3 +102,16 @@
 - Reviewer verdict (scoped): **PASS** — `run()`'s `init` reachable only via `start()` warm branch or `acceptDownload()` (whole file greped); supersede/timer/interrupt-order sound; the re-ask-on-dead-download behaviour pinned deliberately.
 
 **Final:** PASS · attempts 2 · covers MRF-R-8, MRF-R-9.x, MRF-R-12, MRF-AC-7/8/9 (unit; real-generation + banner render → T-8) · gate auto-approved (pre-approved mode). `dashboard-lab/CLAUDE.md` child rows + re-stamp applied in the same commit (folder-doc convention).
+
+### `MRF-T-8` — Verification: manual pass — `[~]` blocked on human-authenticated session + disposable DB
+
+- Same blockers as the previous spec's T-7 (recorded 2026-08-29): agents cannot authenticate (Cognito rejects the embedded-browser origin; credentials prohibited) and no disposable MySQL is reachable. **Checklist owed (PASS/FAIL/NOT-RUN per row, screenshots):**
+  1. Burn-down round: Only pending ON → completes+zero-target hidden, counts match; sort Remaining ⇄ Catalogue restores order; report a KPI → modal close → counter +1 → Next pending scrolls/highlights; all-done note when none.
+  2. `?kpi=` link pasted in a NEW tab: expands the owning group, scrolls + outlines the KPI, param consumed; sentinel rows (Intermediate/2030) show the disabled Copy link with title.
+  3. Read more releases/re-applies the 2-line clamp (jsdom-blind binding).
+  4. Grouped header ratio = By-AOW banner numbers for the same AoW; zero-target `title` on both when applicable.
+  5. Session counter pill visible in the grouped view; 4th banner tile appears only when non-zero.
+  6. Admin card: flag OFF → Generate narrative absent; ON (with env flag on) → present; prompt edit reflected on next generation; non-admin PUT → 403.
+  7. Narrative end-to-end on a capable device: consent step with size → download progress → draft + caption; Regenerate re-asks consent only on cold cache; Copy reverts after ~1.5 s; unsupported device message.
+  8. Migration round-trip on a DISPOSABLE local DB (infrastructure.md §6): run → 2 rows in `platform_global_variables`, `migration:check` green; revert → rows gone, check reports 1 pending.
+  9. Keyboard/focus pass on all new controls (toggle, sort, copy link, Read more, Next pending, narrative panel) + `aria-live` announcements; reduced-motion check.
