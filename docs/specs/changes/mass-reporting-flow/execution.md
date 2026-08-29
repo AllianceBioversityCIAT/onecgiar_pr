@@ -140,3 +140,20 @@ Totals: **non-test LOC 1 816 / test LOC 2 339** (`git diff --numstat 4cdddae6d..
    - Fixes (three guards, each with its reason in a comment): (a) empty-but-not-loading bundle no longer consumes `pendingKpi` (waits for data; regression test pins the empty flush — the harness's own comment explains why the arrival half is covered by the existing cold-load test); (b) `setPlannedHloAow` no-ops on the same code; (c) the selection effect resets planned-view state only when the PROGRAM CODE actually changes (`lastPlannedResetProgram`).
    - Verified live post-fix: cold-load in a fresh tab expands "1.2: Benchmarking…", card visible, param consumed; highlight transient per its 2.6 s timer. Folder suites 18/589 green; lint clean.
    - Kaizen signal: three unit-green/browser-red defects in one feature — the jsdom harness models signal-effect interleaving optimistically; candidate lesson at archive.
+
+### T-8 — manual checklist results (2026-08-30, dev via authenticated Orca browser) — VERDICT: PASS
+
+| # | Row | Result |
+|---|---|---|
+| 1 | Compact filters + Only-pending recompute (OUTCOMES 16→12) + banner zero-target (KPIS 65, REPORTED 1/65, title ×2) | **PASS** (earlier live pass) |
+| 2 | Remaining-work sort toggle + exact catalogue-order restore | **PASS** (earlier live pass) |
+| 3 | Read more clamp true→false | **PASS** (earlier live pass) |
+| 4 | Copy link emits composite URL (`tocView=byAow&tocAow=AOW01&kpi=7437`); replay restores (match+expand+highlight) | **PASS** |
+| 5 | Cold-load `?kpi=` deep link in a fresh tab (post field-fixes) | **PASS** — expands "1.2: Benchmarking…", card visible, param consumed; highlight transient by its 2.6s timer |
+| 6 | Grouped view coherence: AOW01 header `1 of 65 · 2%` == banner; zero-target titles on group headers ("excludes 4/1 zero-target KPI(s)") | **PASS** |
+| 7 | Admin card round-trip: flip `ai_narrative_enabled` '0'→'1' via UI (pr-yes-or-not + Save → success toast, PUT ok, DB row `'1'`); cold-load By-AOW shows **Generate narrative**; panel state machine reaches `needs-optin` (explicit ~900 MB consent + "Not now") **without downloading**; flip back '1'→'0' (toast, DB `'0'`, button gone on fresh load). Dev left exactly as found | **PASS** |
+| 8 | Keyboard / aria: Only-pending `role="switch"` + `aria-checked`; copy-link `aria-label="Copy link to this KPI"` + `focus-visible` ring; Clear filters + sort focus rings present. Minor note: the burndown sort segmented control exposes state via `aria-selected` on plain buttons (outside a tablist) — cosmetic, recorded, not fixed | **PASS** (minor note) |
+| 9 | REH-carried hub rows: hub first block on Overview with W1/W2 lane (AoW cards + Report) and W3 lane ("34 projects · 4 centers", search, per-center groups); **Create result** on project C-A565 navigates to `/bilateral/CIAT (Alliance)/create` with REPORTING PROJECT preselected (C-A565 — IU-Ibaraki…), nothing saved | **PASS** |
+| 10 | Session counter / next-pending after actually reporting a result | **NOT-RUN** — reporting writes a real result to the shared dev DB (owner's no-damage condition); the behaviour is pinned by the `dashboard-lab.mrf-burndown-session.spec.ts` unit suite |
+
+Migration row (from T-6/AC-11): run→green+rows verified on dev (`migration:check` green, both rows present in `platform_global_variables`); revert deliberately **NOT executed on dev** per the owner's no-delete condition — `down()` verified by review (deletes exactly the two seeded names).
