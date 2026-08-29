@@ -419,4 +419,16 @@ describe('ReportingProgramBandComponent', () => {
       expect(component.eyebrowCycle()).toBe('· Reporting cycle 2026 · P25');
     });
   });
+
+  describe('compactFilters (By-AOW mode)', () => {
+    it('hides Type/Category/Status and the grouping toggle, keeping Search and Section', async () => {
+      await build({ showToolbar: true, activeTab: 'reporting', compactFilters: true });
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[aria-label="Filter by type"]')).toBeNull();
+      expect(el.querySelector('[aria-label="Filter by category"]')).toBeNull();
+      expect(el.querySelector('[aria-label="Filter by status"]')).toBeNull();
+      expect(el.querySelector('[aria-label="Grouping"]')).toBeNull();
+      expect(el.querySelector('[aria-label="Filter by section"], .pr-band-filter')).not.toBeNull();
+    });
+  });
 });

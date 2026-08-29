@@ -192,3 +192,8 @@ Verification totals: server 10+3+20 targeted tests green, client 23+102+66 targe
 
 - Owner: the expanded HLO card was a wall of text with an unlabelled "0/1". The card layout now shows: description (2-line clamp, full text on title), a **state chip** (Complete / In progress / Not started — emerald / violet / gray), the type chip, a **mini progress bar** and the labelled count "**x of y reported**"; Report button restyled to the secondary recipe (edit_note icon). Pure `buildIndicatorCardMeta(achieved, target)` exported + tested (+2 tests: states, pct cap at 100, zero-target never NaN, achieved-without-target → in-progress). `NgClass` added to dashboard-lab imports. Table layout untouched. Leader-inline, ~70 LOC.
 - Verification: 50/50 dashboard-lab targeted tests; `npx ng build --configuration development` 0 errors; `npx ng lint --quiet` clean.
+
+### Addendum (user request, 2026-08-29) — hide dead filters on the By-AOW view
+
+- Owner: Type, Category, Status and the Grouped/All-indicators toggle appear on By-AOW but only filter the grouped view (dead controls there). New band input `compactFilters` hides those four; Search (works via `plannedHloGroups` ranking) and Section (the AoW switcher) stay. Host binds `[compactFilters]="plannedBrowseView() === 'byAow'"`. Band spec +1 test via its `build` helper. Leader-inline, ~25 LOC.
+- Verification: 37/37 reporting-program-band tests; `npx ng lint --quiet` clean; dev build 0 errors.

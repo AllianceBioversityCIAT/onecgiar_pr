@@ -90,6 +90,8 @@ export class ReportingProgramBandComponent {
   readonly aowValue = input<string[]>([]);
   readonly aowOptions = input<BandFilterGroup[]>([]);
   readonly viewMode = input<'grouped' | 'flat'>('grouped');
+  /** By-AOW mode: only Search + Section apply there — Type/Category/Status and the grouping toggle are grouped-view filters. @akili-spec changes/reporting-entry-hub */
+  readonly compactFilters = input<boolean>(false);
   /**
    * State of the global disclosure switch (P2-3252): `true` once every AoW / HLO is open, which is
    * what turns `Expand all` into `Collapse all`. The band only renders and announces it — the

@@ -1271,6 +1271,7 @@
             [viewMode]="reportingViewMode()"
             [allExpanded]="reportingAllOpen()"
             [canExpandAll]="plannedBrowseView() === 'aows'"
+            [compactFilters]="plannedBrowseView() === 'byAow'"
             (toggleExpandAll)="toggleReportingExpandAll()"
             (searchChange)="plannedSearch.set($event)"
             (statusChange)="reportingStatusFilter.set($event)"

@@ -245,6 +245,7 @@
     </div>
 
     <!-- Type (HLO / Outcome / Intermediate / 2030) — CURRENT selType -->
+    @if (!compactFilters()) {
     <div class="pr-band-filter w-[130px]" aria-label="Filter by type">
       <app-pr-filter-select
         [options]="typeOptions"
@@ -276,6 +277,7 @@
         [ngModel]="statusValue()"
         (changed)="statusChange.emit($event)"></app-pr-filter-select>
     </div>
+    }
 
     <!-- Right-hand controls. The auto margin lives on the wrapper so the Expand all button and the
          segmented switch stay glued together at the end of the row (two `ml-auto` siblings would
@@ -297,6 +299,7 @@
       }
 
       <!-- Segmented: Grouped | All indicators (CURRENT :1001) -->
+      @if (!compactFilters()) {
       <div
         role="tablist"
         aria-label="Grouping"
@@ -328,6 +331,7 @@
           All indicators
         </button>
       </div>
+      }
     </div>
   </div>
 }
