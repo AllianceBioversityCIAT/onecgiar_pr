@@ -53,7 +53,7 @@
 
 ### `MRF-T-4` — Next pending + session counter (modal-close refresh)
 
-- **Status:** `[ ]` · **Type:** `client` · **Estimate:** M · **Depends on:** T-2 · **Blocks:** T-7
+- **Status:** `[x]` · **Type:** `client` · **Estimate:** M · **Depends on:** T-2 · **Blocks:** T-7
 - **Description:** Dashboard-lab: record `lastReportKpiId` AND the reported row's own `__aowCode` in `openLegacyReportModal`; effect on `entityAowService.showReportResultModal` true→false ⇒ force-refresh `loadToc(program, <that captured AoW>)` — `force` skips BOTH early-out guards (`tocByKey.has` and `loadingTocKeys.has`) WITHOUT deleting the cache entry (overwrite on arrival; deleting flips the view to its skeleton); `sessionReported` += `countNewlyReported(prev, next)`; the last-reported card shows **Next pending** → scroll+highlight next per active filter/sort (`nextPendingAfter`), or an "all done" note when none. Counter rendered in the By-AOW banner + grouped header pill.
 - **Implements:** MRF-R-3, MRF-R-3.1, MRF-R-4, MRF-AC-3 (incl. **BUT** none-remaining note).
 - **Skills:** `angular-developer`, `tdd`.
@@ -65,7 +65,7 @@
 
 ### `MRF-T-5` — Grouped AoW header tiles (stat coherence)
 
-- **Status:** `[ ]` · **Type:** `client` · **Estimate:** S · **Depends on:** T-1 · **Blocks:** T-7
+- **Status:** `[x]` · **Type:** `client` · **Estimate:** S · **Depends on:** T-1 · **Blocks:** T-7
 - **Description:** Rewire the table's EXISTING `ratioOf()` (already rendering `x of y` + % in the AoW header) to delegate to the shared T-1 helper — no second chip, no new markup beyond the zero-target `title`. The ratio stays over the UNFILTERED set (pinned contract kept). Pinned tests **expected to change where the new denominator changes values**: the `describe('AoW ratio')` cases and the header-content case (`'1 of 1'`) — update their expected numbers; the "unfiltered under search" and "no divide-by-zero" cases stay green unchanged.
 - **Implements:** MRF-R-6, MRF-AC-5, MRF-AC-6 (tile surface).
 - **Skills:** `angular-developer`.

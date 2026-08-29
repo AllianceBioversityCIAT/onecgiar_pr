@@ -331,7 +331,7 @@
                grows for a longer ratio rather than wrapping. Without it the bar's left edge moved
                between 1155 and 1171px depending on how long the text was, giving seven stacked
                rows a ragged edge. -->
-          <span class="flex shrink-0 items-center gap-[12px]">
+          <span class="flex shrink-0 items-center gap-[12px]" [attr.title]="ratioTitle(group) || null">
             <span class="h-[8px] w-[120px] shrink-0 overflow-hidden rounded-[4px] bg-[var(--pr-border)]">
               <span
                 class="block h-[8px] rounded-[4px] bg-[var(--pr-color-primary-300)]"

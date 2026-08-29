@@ -67,3 +67,24 @@
 - **Recorded gap:** `[class.line-clamp-2]` Read-more binding untestable in jsdom (all dashboard-lab suites null the template) → T-8 manual row. Follow-up candidate: extract `reporting-toc-codes.ts` (host, table and `programme-results` each hold the two codes).
 
 **Final:** PASS · attempts 2 · covers MRF-R-5, MRF-R-5.1, MRF-AC-4 (unit; scroll/highlight visuals + clamp → T-8) · gate auto-approved (pre-approved mode).
+
+### Runtime note (2026-08-29) — Implementer tier degraded for the rest of the run
+
+- Both wave-3 Implementers (sonnet) died simultaneously: "You've hit your weekly limit · resets Aug 31 12pm (America/Bogota)". Per the runtime-failure fallback: one retry, resumed on **opus** (reviewers had been running on opus without hitting the cap). To preserve **author ≠ auditor**, the Reviewers for opus-authored tasks run on the session model (Fable) instead of opus. Recorded here so the model routing deviation is auditable; the registry is unchanged.
+
+### `MRF-T-5` — Grouped header ratio rewired to the shared rule
+
+- **Date:** 2026-08-29 · Implementer sonnet→**opus** (resumed after weekly-limit death; effort high) · Reviewer **Fable** (author ≠ auditor preserved under the degradation) · Skills: `angular-developer`, `tdd`
+- **Attempts:** 1 (single review round). Files: `reporting-burndown.ts` (`buildRatio` — single home of the rule), `reporting-aow-table.component.{ts,html,spec.ts}` (`ratioOf`/`ratioTitle` delegate via `ratioBase` = `__allIndicators ?? indicators ?? []`; `title` "excludes N zero-target KPI(s)" only when N>0), `reporting-aow-table/CLAUDE.md` (rule + side-channel trap, re-stamped), `dashboard-lab.component.ts` (banner delegation + the two tightened comments only).
+- Evidence quality note: the Implementer verified its three new tests RED against the pre-rewire body before going green; discovery — the spec's predicted pinned-test value changes were unnecessary (no existing fixture had target 0 & achieved 0); Reviewer audited every fixture and confirmed the maths, not a masked regression.
+- Reviewer verdict: **PASS** — one home of the rule confirmed; scope clean; judgment calls (singular via `countLabel`, `ratioBase` dedupe) accepted. The 1 red in the wider run is T-4's in-flight stub, not chargeable.
+- ADVISORY (follow-up): hoist the thrice-pasted echarts `jest.mock` block into `tests/mocks/` + `moduleNameMapper`.
+- **Final:** PASS · covers MRF-R-6, MRF-R-7 (ratio surface), MRF-AC-5, MRF-AC-6 · gate auto-approved (pre-approved mode). Commit deferred to land jointly with MRF-T-4 (shared `dashboard-lab.component.ts`).
+
+### `MRF-T-4` — Next pending + session counter
+
+- **Date:** 2026-08-29 · Implementer sonnet→**opus** (resumed; effort high) · Reviewer **Fable** · Skills: `angular-developer`, `tdd`
+- **Attempts:** 1 (single review round). Files: `dashboard-lab.component.{ts,html}` (capture with the row's own `__aowCode`; false-edge effect with `untracked` body — a real reactive-context bug found and fixed by the resumer; `loadToc {force, onLoaded}` skipping both guards without cache delete; `sessionReported`; Next-pending + all-done note on By-AOW cards; counter tile + grouped strip pill), new `dashboard-lab.mrf-burndown-session.spec.ts` (15), mock-widening in 3 sibling specs (additive).
+- Reviewer verdict: **PASS** — force/no-delete, per-AoW feeds, onLoaded on all six paths, snapshot independence and edge detection verified against source; all four Leader adjudications accepted, incl. the **control experiment** (it.each cached/in-flight × forced/non-forced) judged strictly stronger than a one-off red.
+- ADVISORY (recorded): force-error path overwrites a good AoW dataset with empties (consider force-only error keep); fast double-close can double-count within one fetch window; note/pill/button render untested in jsdom → T-8 rows.
+- **Final:** PASS · covers MRF-R-3, MRF-R-3.1 (action By-AOW-only, adjudicated conformant), MRF-R-4, MRF-AC-3 · gate auto-approved (pre-approved mode).

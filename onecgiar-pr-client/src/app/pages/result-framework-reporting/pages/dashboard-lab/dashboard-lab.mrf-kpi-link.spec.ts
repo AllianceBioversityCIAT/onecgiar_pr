@@ -77,7 +77,7 @@ describe('DashboardLabComponent — Copy link + Read more (MRF-TEST-3)', () => {
           }
         },
         { provide: PhasesService, useValue: { phases: { reporting: [] } } },
-        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false) } },
         { provide: ResultLevelService, useValue: {} }
       ]
     })
@@ -268,7 +268,7 @@ describe('DashboardLabComponent — Copy link + Read more (MRF-TEST-3)', () => {
           { provide: PhasesService, useValue: { phases: { reporting: [] } } },
           {
             provide: EntityAowService,
-            useValue: { onCloseReportResultModal: () => undefined, entityId: signal(''), getAllDetailsData: jest.fn() }
+            useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false), entityId: signal(''), getAllDetailsData: jest.fn() }
           },
           { provide: ResultLevelService, useValue: {} }
         ]

@@ -134,7 +134,7 @@ describe('DashboardLabComponent — Reporting Entry Hub wiring (REH-TEST-4 b-f)'
         { provide: PhasesService, useValue: { phases: { reporting: [] } } },
         {
           provide: EntityAowService,
-          useValue: { onCloseReportResultModal: () => undefined, entityId: signal(''), getAllDetailsData: jest.fn(), canReportResults: () => true }
+          useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false), entityId: signal(''), getAllDetailsData: jest.fn(), canReportResults: () => true }
         },
         { provide: ResultLevelService, useValue: {} },
         { provide: BilateralCreationService, useValue: { selectProject } }

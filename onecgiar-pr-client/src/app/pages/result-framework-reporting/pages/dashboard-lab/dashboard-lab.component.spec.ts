@@ -113,7 +113,7 @@ describe('DashboardLabComponent — indicatorsByAow() / fromTier stamping (RES-T
         { provide: ActivatedRoute, useValue: { data: of({}), snapshot: { data: {} } } },
         { provide: PhasesService, useValue: { phases: { reporting: [] } } },
         // `onCloseReportResultModal()` is likewise called unconditionally from `ngOnDestroy()`.
-        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false) } },
         { provide: ResultLevelService, useValue: {} }
       ]
     })
@@ -260,7 +260,7 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
         { provide: Router, useValue: { navigate } },
         { provide: ActivatedRoute, useValue: { data: of({}), snapshot: { data: {} } } },
         { provide: PhasesService, useValue: { phases: { reporting: [] } } },
-        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false) } },
         { provide: ResultLevelService, useValue: {} }
       ]
     })
@@ -486,7 +486,7 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
         { provide: Router, useValue: { navigate: jest.fn() } },
         { provide: ActivatedRoute, useValue: { data: of({}), snapshot: { data: {} } } },
         { provide: PhasesService, useValue: { phases: { reporting: [] } } },
-        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false) } },
         { provide: ResultLevelService, useValue: {} }
       ]
     })
@@ -699,7 +699,7 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
         {
           provide: EntityAowService,
           useValue: {
-            onCloseReportResultModal: () => undefined,
+            onCloseReportResultModal: () => undefined, showReportResultModal: signal(false),
             // Needed once effects are flushed: `primeEntityAowContext()` (called from the same
             // effect as `loadAows`) reads/writes `entityId` and calls `getAllDetailsData`.
             entityId: signal(''),
@@ -993,7 +993,7 @@ describe('DashboardLabComponent — phase filter resolver + loaders (OPF-T-3)', 
         { provide: PhasesService, useValue: { phases: { reporting: [] } } },
         {
           provide: EntityAowService,
-          useValue: { onCloseReportResultModal: () => undefined, entityId: signal(''), getAllDetailsData: jest.fn() }
+          useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false), entityId: signal(''), getAllDetailsData: jest.fn() }
         },
         { provide: ResultLevelService, useValue: {} }
       ]
@@ -1311,7 +1311,7 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
         { provide: PhasesService, useValue: { phases: { reporting: phases } } },
         {
           provide: EntityAowService,
-          useValue: { onCloseReportResultModal: () => undefined, entityId: signal(''), getAllDetailsData: jest.fn() }
+          useValue: { onCloseReportResultModal: () => undefined, showReportResultModal: signal(false), entityId: signal(''), getAllDetailsData: jest.fn() }
         },
         { provide: ResultLevelService, useValue: {} }
       ]

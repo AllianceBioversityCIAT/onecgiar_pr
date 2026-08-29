@@ -11,6 +11,7 @@ import {
   PrTableBodyDirective,
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
+import { buildRatio } from '../../reporting-burndown';
 
 /**
  * `__aowCode` values for the two program-level buckets (Intermediate Outcomes / 2030 Outcomes) —
@@ -541,13 +542,41 @@ export class ReportingAowTableComponent {
    * completely useless, since almost nothing is ever at 100% mid-cycle.
    *
    * Counted over the UNFILTERED set on purpose: a progress figure that moves when you type in a
-   * search box is not progress, it is a coincidence.
+   * search box is not progress, it is a coincidence. `group.indicators` is that unfiltered set —
+   * EXCEPT when the host's Only-pending toggle is on, in which case it has already been narrowed
+   * and the host stashes the pre-toggle set on `__allIndicators` (see
+   * `dashboard-lab.applyBurndownFilterAndSort`); prefer that side-channel field when present.
+   *
+   * Delegates to `buildRatio` (`reporting-burndown.ts`) so this and the By-AOW banner's
+   * `buildAowBannerStats` apply the zero-target rule identically (MRF-R-6/R-7, MRF-AC-5/AC-6).
+   *
+   * @akili-spec changes/mass-reporting-flow
    */
   ratioOf(group: ReportingAowGroup): { done: number; total: number; percent: number } {
-    const all = group.indicators ?? [];
-    const done = all.filter(r => Number(r?.actual_achieved_value_sum ?? 0) > 0).length;
-    const total = all.length;
-    return { done, total, percent: total ? Math.round((done / total) * 100) : 0 };
+    const { done, total, percent } = buildRatio(this.ratioBase(group));
+    return { done, total, percent };
+  }
+
+  /**
+   * `title` for the header ratio when the zero-target rule (MRF-R-7) actually excluded KPIs from
+   * its denominator — `''` renders no `title` attribute at all.
+   *
+   * @akili-spec changes/mass-reporting-flow
+   */
+  ratioTitle(group: ReportingAowGroup): string {
+    const { zeroTarget } = buildRatio(this.ratioBase(group));
+    return zeroTarget > 0 ? `excludes ${this.countLabel(zeroTarget, 'zero-target KPI')}` : '';
+  }
+
+  /**
+   * The set both ratio readings count over. `__allIndicators` is a side-channel field the host adds
+   * ONLY while Only-pending is on (`dashboard-lab.applyBurndownFilterAndSort`) — it is not on
+   * `ReportingAowGroup`'s own interface, so it is read through a local cast rather than declared.
+   *
+   * @akili-spec changes/mass-reporting-flow
+   */
+  private ratioBase(group: ReportingAowGroup): ReportingIndicator[] {
+    return (group as { __allIndicators?: ReportingIndicator[] }).__allIndicators ?? group.indicators ?? [];
   }
 
   countLabel(n: number, noun = 'KPI'): string {

@@ -3,6 +3,39 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ReportingAowTableComponent, ReportingAowGroup, ReportingIndicator } from './reporting-aow-table.component';
 import { PrTooltipDirective } from '../../../../../../shared/directives/pr-tooltip.directive';
+import { buildAowBannerStats } from '../../dashboard-lab.component';
+
+// Same mock set as `dashboard-lab.hub.spec.ts` / `dashboard-lab.component.spec.ts` — importing
+// `buildAowBannerStats` pulls in the whole `dashboard-lab.component.ts` module, which imports
+// `ProgramOverviewComponent` → the real `PrVizChartComponent` → real `echarts/core`, an ESM
+// package Jest cannot parse without a transform. `buildAowBannerStats` is a free function never
+// instantiated here, so these mocks only need to satisfy module resolution.
+jest.mock('echarts/core', () => ({
+  use: jest.fn(),
+  init: jest.fn(() => ({
+    setOption: jest.fn(),
+    resize: jest.fn(),
+    clear: jest.fn(),
+    dispose: jest.fn(),
+    isDisposed: jest.fn(() => false),
+    on: jest.fn()
+  }))
+}));
+jest.mock('echarts/charts', () => ({
+  BarChart: class BarChart {},
+  PieChart: class PieChart {},
+  HeatmapChart: class HeatmapChart {}
+}));
+jest.mock('echarts/components', () => ({
+  TitleComponent: class TitleComponent {},
+  TooltipComponent: class TooltipComponent {},
+  GridComponent: class GridComponent {},
+  DatasetComponent: class DatasetComponent {},
+  LegendComponent: class LegendComponent {},
+  VisualMapComponent: class VisualMapComponent {}
+}));
+jest.mock('echarts/renderers', () => ({ SVGRenderer: class SVGRenderer {} }));
+jest.mock('echarts/features', () => ({ UniversalTransition: class UniversalTransition {} }));
 
 /**
  * Stand-in for the real page: the toolbar label is rendered BEFORE the table, exactly as in
@@ -294,6 +327,56 @@ describe('ReportingAowTableComponent', () => {
       const g = group([]);
       await build([g]);
       expect(component.ratioOf(g)).toEqual({ done: 0, total: 0, percent: 0 });
+    });
+
+    // MRF-AC-6 / MRF-R-6: the grouped header ratio and the By-AOW banner MUST agree, including
+    // when the zero-target rule (MRF-R-7) excludes a KPI from the denominator.
+    it('agrees with buildAowBannerStats on a shared fixture, incl. a zero-target KPI', async () => {
+      const inds = [
+        row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
+        row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '4' }),
+        // Zero-target (target = 0 AND achieved = 0): excluded from the denominator (MRF-R-7).
+        row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '0' })
+      ];
+      const g = group(inds);
+      await build([g]);
+      const banner = buildAowBannerStats(inds);
+      const ratio = component.ratioOf(g);
+      expect(ratio).toEqual({ done: banner.done, total: banner.total, percent: banner.pct });
+      // Denominator excludes the one zero-target KPI: 2 counted, 1 reported.
+      expect(ratio).toEqual({ done: 1, total: 2, percent: 50 });
+    });
+
+    // MRF-AC-5: Only-pending narrows `indicators`, so the host stashes the pre-toggle set on
+    // `__allIndicators`. The ratio must read THAT, or the header moves every time the toggle flips.
+    it('reads __allIndicators over the narrowed indicators while Only-pending is on', async () => {
+      const all = [
+        row({ indicator_id: 1, actual_achieved_value_sum: 4, target_value_sum: '4' }), // complete
+        row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '4' }) // pending
+      ];
+      // What Only-pending leaves behind, plus the pre-toggle set on the side-channel field.
+      const g = { ...group([all[1]]), __allIndicators: all } as ReportingAowGroup;
+      await build([g]);
+      // Over `indicators` alone this would read 0 of 1 · 0%.
+      expect(component.ratioOf(g)).toEqual({ done: 1, total: 2, percent: 50 });
+    });
+
+    // MRF-AC-6: every % surface must SAY it dropped KPIs from its denominator.
+    it('titles the header ratio with the zero-target exclusion count, and only when there is one', async () => {
+      const withZeros = group([
+        row({ indicator_id: 1, actual_achieved_value_sum: 5, target_value_sum: '10' }),
+        row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '0' }),
+        row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '0' })
+      ]);
+      await build([withZeros]);
+      expect(component.ratioTitle(withZeros)).toBe('excludes 2 zero-target KPIs');
+      const titled = (fixture.nativeElement as HTMLElement).querySelector('[title="excludes 2 zero-target KPIs"]');
+      expect(titled).not.toBeNull();
+
+      // Singular reads as one KPI, and a card with none carries no title attribute at all.
+      const one = group([row({ indicator_id: 1, actual_achieved_value_sum: 0, target_value_sum: '0' })]);
+      expect(component.ratioTitle(one)).toBe('excludes 1 zero-target KPI');
+      expect(component.ratioTitle(group([row()]))).toBe('');
     });
   });
 

@@ -82,6 +82,23 @@ export function applyZeroTargetRule<T extends BurndownIndicator>(inds: T[]): { c
 }
 
 /**
+ * The ratio rule shared by `buildAowBannerStats` (By-AOW banner) and the grouped header's
+ * `ratioOf` — one function, so both surfaces produce identical numbers under the zero-target rule
+ * (MRF-R-6, MRF-AC-5, MRF-AC-6). **Reported** = `achieved > 0`, a different predicate from
+ * **Complete** (`achieved >= target`, the burn-down states above) — never conflate the two.
+ *
+ * @akili-spec changes/mass-reporting-flow
+ */
+export function buildRatio<T extends BurndownIndicator>(
+  inds: T[]
+): { done: number; total: number; percent: number; zeroTarget: number } {
+  const { counted, zeroTarget } = applyZeroTargetRule(inds);
+  const total = counted.length;
+  const done = counted.filter(ind => achievedOf(ind) > 0).length;
+  return { done, total, percent: total > 0 ? Math.round((done / total) * 100) : 0, zeroTarget };
+}
+
+/**
  * The KPIs an "Only pending" toggle keeps visible: the zero-target rule's `counted` set, minus
  * `complete` KPIs (MRF-R-1 — visible == counted; a zero-target KPI is excluded even though its raw
  * achieved/target reads as `not-started`).

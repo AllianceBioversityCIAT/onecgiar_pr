@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-08-29 · branch qa-development-2026 · 08aaaced1
+**Verified:** 2026-08-29 · branch qa-development-2026 · 3662f00d7
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -45,8 +45,21 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   `-Infinity`, para que esas filas se agrupen en un extremo y no se hagan pasar por 0.
 - 🛑 **No toques `statusOf` / `progressOf` / `figure` / `ratioOf`.** `aow-hlo-table` y
   `program-overview` leen las mismas derivaciones; cualquier cambio las descuadra en silencio.
-- 🛑 **No toques la barra de progreso ni su métrica.** `ratioOf` cuenta KPIs con ALGO reportado, no
-  KPIs al 100%. Es pregunta abierta de producto en P2-3405 (P2-2276 quitó una barra de % en 2025).
+- 🛑 **No toques la barra de progreso ni su métrica.** La regla vive en UN solo sitio:
+  `reporting-burndown.ts`'s `buildRatio`, del que `ratioOf` y el banner By-AOW
+  (`dashboard-lab.buildAowBannerStats`) son ambos delegados — por eso dan números idénticos
+  (MRF-R-6, MRF-AC-5/AC-6). Dice: **Reported** = `achieved > 0` (NO KPIs al 100%, que es
+  **Complete** = `achieved >= target`; nunca las confundas), y los KPIs con `target = 0 AND
+  achieved = 0` quedan **fuera del denominador** (regla zero-target, MRF-R-7) — `ratioTitle`
+  lo declara en un `title` "excludes N zero-target KPIs". Si recomputas la regla aquí en vez de
+  delegar, las dos superficies se descuadran en silencio. Es pregunta abierta de producto en
+  P2-3405 (P2-2276 quitó una barra de % en 2025).
+- ⚠️ **El ratio NO se cuenta sobre `group.indicators` a secas.** Cuando el toggle **Only pending**
+  del host está activo, `indicators` ya viene recortado y el host deja el set previo en
+  `__allIndicators` (campo lateral, ausente con el toggle apagado; lo escribe
+  `dashboard-lab.applyBurndownFilterAndSort`, que tiene Section/Type/Category ya aplicados pero
+  NO Only-pending). `ratioBase` prefiere ese campo — si no, la cabecera se movería cada vez que
+  alguien toca el toggle, y eso no es progreso, es una coincidencia.
 - `—` vs `0` son hechos distintos: `—` = nunca se reportó, `0` = se reportó cero. No los unifiques.
 - El menú `⋯` es local. Sus tres items vivos re-emiten `openAchieved` / `openTarget` / `copyLink`
   (MRF-R-5, host arma la URL y copia); no abren superficie propia. `Copy indicator code` va

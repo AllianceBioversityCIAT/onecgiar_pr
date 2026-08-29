@@ -1303,6 +1303,18 @@
                 <div class="h-14 animate-pulse rounded-xl bg-[var(--pr-color-accents-1)]"></div>
               }
             } @else if (plannedBrowseView() === 'aows') {
+              <!-- @akili-spec changes/mass-reporting-flow — MRF-R-4: the grouped view's counterpart of
+                   the By-AOW banner tile. A header strip above the cards, present only once something
+                   has been reported this session. -->
+              @if (sessionReported() > 0) {
+                <div class="flex items-center justify-end">
+                  <span
+                    class="inline-flex items-center gap-[6px] rounded-full border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] px-[10px] py-[3px] text-[11.5px] font-semibold text-[var(--pr-color-primary-500)]">
+                    <span class="material-icons-round text-[13px]" aria-hidden="true">task_alt</span>
+                    <span class="tabular-nums">{{ sessionReported() }}</span> reported this session
+                  </span>
+                </div>
+              }
               @if (!plannedFilteredAows().length) {
                 <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No Areas of Work match your search.</p>
               }
@@ -1362,7 +1374,11 @@
                       All Areas of Work
                     </button>
                   </div>
-                  <div class="mt-[10px] grid grid-cols-3 gap-[10px] max-[640px]:grid-cols-1">
+                  <!-- @akili-spec changes/mass-reporting-flow — MRF-R-4: the session counter joins the
+                       tiles row as a 4th tile, and only once something has been reported this session. -->
+                  <div
+                    class="mt-[10px] grid gap-[10px] max-[640px]:grid-cols-1"
+                    [ngClass]="sessionReported() > 0 ? 'grid-cols-4 max-[899px]:grid-cols-2' : 'grid-cols-3'">
                     @if (plannedHloLoading()) {
                       @for (i of [0, 1, 2]; track i) {
                         <div class="h-[56px] animate-pulse rounded-[10px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></div>
@@ -1389,6 +1405,14 @@
                           </span>
                         </div>
                       </div>
+                      @if (sessionReported() > 0) {
+                        <div class="rounded-[10px] bg-[var(--pr-surface-ground)] px-[12px] py-[8px]">
+                          <p class="m-0 text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)]">This session</p>
+                          <p class="m-0 text-[18px] font-extrabold tabular-nums text-[var(--pr-color-primary-500)]">
+                            {{ sessionReported() }}<span class="text-[12px] font-medium text-[var(--pr-text-muted)]"> reported</span>
+                          </p>
+                        </div>
+                      }
                     }
                   </div>
                 </section>
@@ -1530,6 +1554,26 @@
                                     </div>
                                   </div>
                                   <div class="flex shrink-0 items-center gap-[6px]">
+                                    <!-- MRF-R-3.1 / MRF-AC-3 — offered on the ONE card whose report modal just
+                                         closed. When the AoW has no pending KPI left it says so instead of
+                                         pointing nowhere (the AC's BUT clause). -->
+                                    @if (isLastReportedKpi(ind)) {
+                                      @if (nextPendingKpi(); as next) {
+                                        <button
+                                          type="button"
+                                          (click)="goToNextPendingKpi()"
+                                          class="inline-flex h-[30px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+                                          [prTooltip]="next.indicator_description"
+                                          aria-label="Go to the next pending KPI">
+                                          <span class="material-icons-round text-[14px]" aria-hidden="true">arrow_downward</span> Next pending
+                                        </button>
+                                      } @else {
+                                        <span class="inline-flex h-[30px] shrink-0 items-center gap-[6px] rounded-[8px] bg-emerald-50 px-[12px] text-[11.5px] font-semibold text-emerald-700">
+                                          <span class="material-icons-round text-[14px]" aria-hidden="true">check_circle</span>
+                                          All KPIs reported in this Area of Work
+                                        </span>
+                                      }
+                                    }
                                     <!-- MRF-R-5 — composite `tocView=byAow&tocAow=<owning AoW>&kpi=<id>` link. -->
                                     <button
                                       type="button"

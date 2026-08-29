@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal, untracked } from '@angular/core';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {DecimalPipe, NgClass } from '@angular/common';
@@ -59,7 +59,7 @@ import {
 } from './components/reporting-entry-hub/reporting-entry-hub.component';
 import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
 import { BilateralProject } from '../../../bilateral/services/bilateral-creation.interfaces';
-import { applyZeroTargetRule, groupPendingCount, pendingOf, sortRemainingFirst } from './reporting-burndown';
+import { buildRatio, countNewlyReported, groupPendingCount, nextPendingAfter, pendingOf, sortRemainingFirst } from './reporting-burndown';
 
 /**
  * Reporting-status meter — the reference's five canonical states, in this exact order.
@@ -340,6 +340,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /** Skip echoing Planned URL params while hydrating from the query string. */
   private restoringPlannedUrl = false;
 
+  // ── Next pending + session counter (MRF-R-3/R-3.1/R-4) ───────────────────────────────────
+  // @akili-spec changes/mass-reporting-flow
+
+  /**
+   * `{id, aowCode}` of the KPI whose "Report" was last opened via `openLegacyReportModal`,
+   * captured there and consumed by the modal-close effect below (which force-refreshes that
+   * AoW's ToC and — either way — publishes `lastReportedKpi` so the card can offer "Next
+   * pending" once the modal closes, MRF-R-3.1).
+   */
+  private lastReportKpi: { id: unknown; aowCode: string } | null = null;
+  /** Previous value of `entityAowService.showReportResultModal()` — effects get no "previous" value for free. */
+  private reportModalWasOpen = false;
+  /**
+   * The last-reported KPI, published once its modal closes (true→false edge) — drives the
+   * By-AOW card's "Next pending" action (MRF-R-3.1). `null` until the first report of the session.
+   */
+  readonly lastReportedKpi = signal<{ id: unknown; aowCode: string } | null>(null);
+  /**
+   * In-memory count of KPIs whose `achieved` rose during this session (MRF-R-4) — never
+   * persisted, resets on reload. Incremented from the modal-close force-refresh's `onLoaded`
+   * callback once the diff against the pre-reload snapshot is known.
+   */
+  readonly sessionReported = signal<number>(0);
+
   /**
    * Always on a program surface. Lands on the user's first My Program when the
    * list loads (unless `?sp=` already points at one).
@@ -580,13 +604,19 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
     const raw = row as unknown as Record<string, unknown>;
     const tocNode = (node ?? raw['__hloNode']) as Record<string, unknown> | null | undefined;
+    const aowCode = String(raw['__aowCode'] ?? this.activeAowCode() ?? '');
     // `entityAows` + `aowId` feed `currentAowSelected()`, the `AOW01 - name` line in the modal
     // header. For the Intermediate / 2030 buckets `__aowCode` is a sentinel that matches no unit,
     // so the computed stays undefined and the header line hides itself — same as the old pages.
     this.entityAowService.entityAows.set(this.aows());
-    this.entityAowService.aowId.set(String(raw['__aowCode'] ?? this.activeAowCode() ?? ''));
+    this.entityAowService.aowId.set(aowCode);
     this.entityAowService.currentResultToReport.set(buildReportModalNode(tocNode, raw));
     this.entityAowService.showReportResultModal.set(true);
+    // MRF-R-3/R-3.1: captured here (the REPORTED row's own AoW, not the currently open one — a
+    // grouped-view row can belong to a different AoW than `activeAowCode()`), consumed by the
+    // modal-close effect to force-refresh that AoW's ToC and publish "Next pending" on this card.
+    const indicatorId = (raw['indicator_id'] as unknown) ?? null;
+    this.lastReportKpi = indicatorId !== null && aowCode ? { id: indicatorId, aowCode } : null;
   }
 
   // ---- Emerging result (legacy `app-report-result-form` in a pr-dialog) ----
@@ -871,6 +901,44 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         setTimeout(() => this.scrollToHighlightedKpi(match), 0);
       }
       this.consumeKpiQueryParam();
+    });
+
+    /**
+     * Modal-close force-refresh + session counter (MRF-R-3/R-3.1/R-4, design.md MRF-DD-3):
+     * `EntityAowService` exposes only `showReportResultModal` + `onCloseReportResultModal()` —
+     * close is not save, so the ONLY way to detect a report is to force-refresh the reported
+     * row's own AoW (captured in `openLegacyReportModal`, which may differ from
+     * `activeAowCode()`) and diff its indicators before/after. `force` bypasses both `loadToc`
+     * early-out guards so the just-closed report is never served from the stale cache.
+     */
+    effect(() => {
+      const open = this.entityAowService.showReportResultModal();
+      // `showReportResultModal` is the ONLY dependency this effect may have. Everything below
+      // reads `selected`/`indicatorsByAow`/`tocByKey` and writes `loadingTocKeys`; tracked, the
+      // forced reload's own `cacheToc` would re-enter the effect — hence `untracked`.
+      untracked(() => {
+        const wasOpen = this.reportModalWasOpen;
+        this.reportModalWasOpen = open;
+        if (!wasOpen || open) return; // only the true→false edge
+        const captured = this.lastReportKpi;
+        this.lastReportKpi = null;
+        if (!captured) return;
+        const program = this.selected()?.initiativeCode;
+        if (!program) return;
+        // Snapshot BEFORE the forced reload — a distinct array from whatever `indicatorsForAow`
+        // returns after `tocByKey` is overwritten (countNewlyReported needs two independent
+        // snapshots, not the same reference re-read).
+        const prevIndicators = this.indicatorsForAow(captured.aowCode)?.indicators ?? [];
+        this.lastReportedKpi.set(captured);
+        this.loadToc(program, captured.aowCode, {
+          force: true,
+          onLoaded: () => {
+            const nextIndicators = this.indicatorsForAow(captured.aowCode)?.indicators ?? [];
+            const delta = countNewlyReported(prevIndicators, nextIndicators);
+            if (delta > 0) this.sessionReported.update(n => n + delta);
+          }
+        });
+      });
     });
 
     // Reporting + Overview both need every AoW's ToC (and Intermediate / 2030 buckets).
@@ -2578,13 +2646,16 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * Applies the Only-pending filter and Remaining-work sort (MRF-R-1/R-2) to any list of
    * `{indicators, count}` group-like objects: `ReportingAowGroup` cards (AoW / Intermediate /
    * 2030) for the grouped table, or the By-AOW view's HLO sub-groups. Per-object `indicators`/
-   * `count` recompute; a group whose KPIs are all hidden by Only-pending drops out entirely;
-   * groups reorder by pending count (desc) when the sort is Remaining work — Catalogue makes this
-   * a no-op so switching back restores the exact original order.
+   * `count` recompute applies ONLY under Only-pending — with the toggle off this is a
+   * byte-identical no-op ("no silent default change"); a group whose KPIs are all hidden by
+   * Only-pending drops out entirely; groups reorder by pending count (desc) when the sort is
+   * Remaining work — Catalogue makes this a no-op so switching back restores the exact original
+   * order.
    *
-   * Deliberately does NOT touch `reporting-aow-table`'s `ratioOf` — that reads `group.indicators`
-   * directly on whatever this returns. T-5 owns rewiring it to source an unfiltered set; T-2's
-   * scope is this pipeline only (Leader-scoped consumption points).
+   * `reporting-aow-table`'s `ratioOf` reads `__allIndicators` (below) when Only-pending narrows
+   * the set, falling back to `indicators` otherwise — so the header ratio stays over the
+   * pre-Only-pending set (MRF-R-6) without this pipeline mutating `indicators` itself for that
+   * purpose (T-5).
    *
    * @akili-spec changes/mass-reporting-flow
    */
@@ -2606,10 +2677,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         // Only-pending is actually narrowing the set; Catalogue-off/Only-pending-off must be a
         // byte-identical no-op ("no silent default change").
         count: onlyPending ? sorted.length : g.count,
-        // Leader addition (T-5 handoff): the pre-filter snapshot, so T-5 can source `ratioOf`'s
-        // "unfiltered" set from here instead of `indicators` once Only-pending narrows it. Not on
-        // `ReportingAowGroup`'s own interface — an optional side-channel field only, absent when
-        // Only-pending is off.
+        // `rows` (= `g.indicators`) already has Section/Type/Category baked in; Only-pending not —
+        // so this is the set `ratioOf` needs for its "unfiltered" (pre-Only-pending) reading (T-5
+        // handoff). Not on `ReportingAowGroup`'s own interface — an optional side-channel field
+        // only, absent when Only-pending is off.
         ...(onlyPending ? { __allIndicators: rows } : {})
       };
     });
@@ -2968,6 +3039,44 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return [build('High Level Outputs', outputs), build('Outcomes', outcomes)].filter(sec => sec.groups.length > 0);
   });
 
+  // ── Next pending (By-AOW card, MRF-R-3.1) ────────────────────────────────────────────────
+  // @akili-spec changes/mass-reporting-flow
+
+  /**
+   * The last-reported KPI's owning AoW, flattened in its CURRENT By-AOW filter+sort order
+   * (`plannedByAowSections()`'s HLO groups, in display order) — `nextPendingAfter` walks exactly
+   * what the card user sees, honouring Only-pending/sort (MRF-R-3.1).
+   */
+  private orderedByAowIndicators(aowCode: string): ReportingIndicator[] {
+    if (this.plannedHloAowCode() !== aowCode) return [];
+    return this.plannedByAowSections().flatMap(sec => sec.groups.flatMap(g => g.indicators ?? []));
+  }
+
+  /** True for the ONE By-AOW card that just closed its report modal (MRF-R-3.1). */
+  isLastReportedKpi(ind: { indicator_id?: unknown; __aowCode?: string } | null | undefined): boolean {
+    const last = this.lastReportedKpi();
+    return !!last && last.aowCode === ind?.__aowCode && String(last.id) === String(ind?.indicator_id ?? '');
+  }
+
+  /**
+   * Next pending KPI after the last-reported one, per the active filter/sort — `null` once every
+   * pending KPI in the AoW is reported (MRF-AC-3 BUT clause; the template renders the "all done"
+   * note instead of the button in that case).
+   */
+  readonly nextPendingKpi = computed<ReportingIndicator | null>(() => {
+    const last = this.lastReportedKpi();
+    if (!last) return null;
+    return nextPendingAfter(last.id as number | string, this.orderedByAowIndicators(last.aowCode));
+  });
+
+  /** Activates "Next pending" — scroll+highlight, reusing the `?kpi=` restore's own mechanism (MRF-R-3.1). */
+  goToNextPendingKpi(): void {
+    const next = this.nextPendingKpi();
+    if (!next) return;
+    this.highlightedKpiId.set(this.kpiKey(next));
+    setTimeout(() => this.scrollToHighlightedKpi(next), 0);
+  }
+
   /**
    * Section filter — in the grouped view it narrows the visible cards (`reportingGroups`); in the
    * By-AOW view it acts as the AoW switcher (the view shows exactly one AoW).
@@ -3153,40 +3262,62 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * `versionId` passed to the ToC family ONLY when the viewer explicitly picked a phase
    * (`tocVersionForKey`, design.md DD-1/DD-4) — with the selector untouched this omits the
    * param exactly as before this spec (OPF-N-1).
+   *
+   * `options.force` (MRF-R-3, design.md §6): skips BOTH early-out guards below (`tocByKey.has`
+   * AND `loadingTocKeys.has`) WITHOUT deleting the existing cache entry first — the response
+   * still lands through `cacheToc`'s overwrite, so the view never drops to its skeleton while the
+   * forced request is in flight. `options.onLoaded` fires once the response (or error) has been
+   * cached, letting a caller read the FRESH `indicatorsForAow` state synchronously.
    */
-  private loadToc(program: string, aow: string): void {
+  private loadToc(program: string, aow: string, options?: { force?: boolean; onLoaded?: () => void }): void {
+    const force = options?.force ?? false;
     const versionId = this.tocVersionForKey();
     const key = this.tocCacheKey(program, aow);
-    if (this.tocByKey().has(key) || this.loadingTocKeys().has(key)) return;
+    if (!force && (this.tocByKey().has(key) || this.loadingTocKeys().has(key))) return;
     this.loadingTocKeys.update(s => new Set(s).add(key));
 
     // Program-level buckets have their own endpoints and return ONE flat `tocResults` list
     // (no outputs/outcomes split), so they land in `outputs` and the AoW tabs hide.
     if (aow === OUTCOMES_2030_CODE) {
       this.api.resultsSE.GET_2030Outcomes(program, versionId ?? undefined).subscribe({
-        next: (res: { response?: { tocResults?: any[] } }) =>
-          this.cacheToc(key, { outputs: res?.response?.tocResults ?? [], outcomes: [] }),
-        error: () => this.cacheToc(key, { outputs: [], outcomes: [] })
+        next: (res: { response?: { tocResults?: any[] } }) => {
+          this.cacheToc(key, { outputs: res?.response?.tocResults ?? [], outcomes: [] });
+          options?.onLoaded?.();
+        },
+        error: () => {
+          this.cacheToc(key, { outputs: [], outcomes: [] });
+          options?.onLoaded?.();
+        }
       });
       return;
     }
 
     if (aow === INTERMEDIATE_OUTCOMES_CODE) {
       this.api.resultsSE.GET_IntermediateOutcomes(program, versionId ?? undefined).subscribe({
-        next: (res: { response?: { tocResults?: any[] } }) =>
-          this.cacheToc(key, { outputs: res?.response?.tocResults ?? [], outcomes: [] }),
-        error: () => this.cacheToc(key, { outputs: [], outcomes: [] })
+        next: (res: { response?: { tocResults?: any[] } }) => {
+          this.cacheToc(key, { outputs: res?.response?.tocResults ?? [], outcomes: [] });
+          options?.onLoaded?.();
+        },
+        error: () => {
+          this.cacheToc(key, { outputs: [], outcomes: [] });
+          options?.onLoaded?.();
+        }
       });
       return;
     }
 
     this.api.resultsSE.GET_TocResultsByAowId(program, aow, undefined, versionId ?? undefined).subscribe({
-      next: (res: { response?: { tocResultsOutputs?: any[]; tocResultsOutcomes?: any[] } }) =>
+      next: (res: { response?: { tocResultsOutputs?: any[]; tocResultsOutcomes?: any[] } }) => {
         this.cacheToc(key, {
           outputs: res?.response?.tocResultsOutputs ?? [],
           outcomes: res?.response?.tocResultsOutcomes ?? []
-        }),
-      error: () => this.cacheToc(key, { outputs: [], outcomes: [] })
+        });
+        options?.onLoaded?.();
+      },
+      error: () => {
+        this.cacheToc(key, { outputs: [], outcomes: [] });
+        options?.onLoaded?.();
+      }
     });
   }
 
@@ -3449,10 +3580,8 @@ export function buildAowBannerStats(
   pct: number;
   zeroTarget: number;
 } {
-  const { counted, zeroTarget } = applyZeroTargetRule(inds);
-  const total = counted.length;
-  const done = counted.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
-  return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0, zeroTarget };
+  const { done, total, percent, zeroTarget } = buildRatio(inds);
+  return { total, done, pct: percent, zeroTarget };
 }
 
 /** Tier split for the By-AOW view — outputs (HLO tier) vs outcomes. @akili-spec changes/reporting-entry-hub */
