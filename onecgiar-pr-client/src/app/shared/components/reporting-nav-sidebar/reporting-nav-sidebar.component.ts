@@ -178,7 +178,9 @@ export class ReportingNavSidebarComponent {
     { name: 'Tickets dashboard', path: '/admin-module/tickets-dashboard', icon: 'lucideTicket' },
     { name: 'Phase management', path: '/admin-module/phase-management', icon: 'lucideLayers' },
     { name: 'Knowledge products', path: '/admin-module/knowledge-products', icon: 'lucideBookOpen' },
-    { name: 'User management', path: '/admin-module/user-management', icon: 'lucideUserCog' }
+    { name: 'User management', path: '/admin-module/user-management', icon: 'lucideUserCog' },
+    // @akili-spec changes/mass-reporting-flow
+    { name: 'AI narrative', path: '/admin-module/ai-narrative', icon: 'lucideSparkles' }
   ];
 
   /**

@@ -771,6 +771,11 @@ export class ResultsApiService {
     return this.http.put<any>(`${environment.apiBaseUrl}api/global-parameters/update/variable`, body);
   }
 
+  // @akili-spec changes/mass-reporting-flow
+  PUT_updateGlobalVariable(body: { name: string; value: string }) {
+    return this.http.put<any>(`${environment.apiBaseUrl}api/global-parameters/update/variable`, body);
+  }
+
   PATCH_updateRequest(body, isP25: boolean = false) {
     return this.http.patch<any>(`${isP25 ? this.apiBaseUrlV2 : this.apiBaseUrl}request/update`, body);
   }

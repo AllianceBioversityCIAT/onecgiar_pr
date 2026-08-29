@@ -77,7 +77,7 @@
 
 ### `MRF-T-6` — AI narrative: migration + typing + admin card
 
-- **Status:** `[ ]` · **Type:** `db+client` · **Estimate:** M · **Depends on:** — (parallel-safe vs T-1..T-5) · **Blocks:** T-7
+- **Status:** `[x]` · **Type:** `db+client` · **Estimate:** M · **Depends on:** — (parallel-safe vs T-1..T-5) · **Blocks:** T-7
 - **Description:** (a) Server migration `<ts>-MRF-seed-ai-narrative-parameters.ts` per design §3 — category via `(SELECT id FROM global_parameter_categories WHERE name='platform_global_variables')`, names UNPREFIXED, default prompt MUST contain `{{aow}} {{stats}} {{hlos}}`; reversible `down()` deleting exactly the two names. (b) `GlobalVariables` typing + (c) admin card `admin-section/pages/ai-narrative/` (toggle + textarea + Save → generic `PUT_updateGlobalVariable({name, value})`, flag as `'1'/'0'` strings; local `globalVariablesSE.get` updated in place; route + menu entry per the `knowledge-products` pattern, **inserted BEFORE the `**` catch-all** in `adminModuleRouting`).
 - **Implements:** MRF-R-10, MRF-R-11, MRF-R-11.1, MRF-AC-10, MRF-AC-11.
 - **Skills:** `angular-developer`, `nestjs-expert` (migration).

@@ -206,6 +206,12 @@ export const adminModuleRouting: PrRoute[] = [
     path: 'user-management',
     loadComponent: () => import('../../pages/admin-section/pages/user-management/user-management.component')
   },
+  {
+    // @akili-spec changes/mass-reporting-flow
+    prName: 'AI Narrative',
+    path: 'ai-narrative',
+    loadChildren: () => import('../../pages/admin-section/pages/ai-narrative/ai-narrative.module').then(m => m.AiNarrativeModule)
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'tickets-dashboard' }
 ];
 
