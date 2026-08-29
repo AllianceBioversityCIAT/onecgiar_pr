@@ -276,18 +276,21 @@ describe('DashboardLabComponent — Reporting Entry Hub wiring (REH-TEST-4 b-f)'
   });
 
 describe('buildAowBannerStats (By-AOW context banner)', () => {
-  it('counts total, reported and pct from output indicators', () => {
+  // MRF-DD-5: with no `target_value_sum` on any indicator, the two KPIs that reported 0/null
+  // achieved are now zero-target (target=0 AND achieved=0) and excluded from the denominator —
+  // intentionally different from the pre-MRF-T-1 `{4, 2, 50%}` reading of this same fixture.
+  it('counts total, reported and pct from output indicators, excluding zero-target KPIs (MRF-R-7)', () => {
     const stats = buildAowBannerStats([
       { actual_achieved_value_sum: 3 },
       { actual_achieved_value_sum: 0 },
       { actual_achieved_value_sum: '2' },
       { actual_achieved_value_sum: null }
     ]);
-    expect(stats).toEqual({ total: 4, done: 2, pct: 50 });
+    expect(stats).toEqual({ total: 2, done: 2, pct: 100, zeroTarget: 2 });
   });
 
   it('returns 0% for an empty list instead of NaN', () => {
-    expect(buildAowBannerStats([])).toEqual({ total: 0, done: 0, pct: 0 });
+    expect(buildAowBannerStats([])).toEqual({ total: 0, done: 0, pct: 0, zeroTarget: 0 });
   });
 });
 

@@ -17,7 +17,7 @@
 
 ### `MRF-T-1` — Pure burn-down helpers + zero-target rule centralisation
 
-- **Status:** `[ ]` · **Type:** `client` · **Estimate:** M · **Depends on:** — · **Blocks:** T-2, T-3, T-4, T-5
+- **Status:** `[x]` · **Type:** `client` · **Estimate:** M · **Depends on:** — · **Blocks:** T-2, T-3, T-4, T-5
 - **Description:** New `dashboard-lab/reporting-burndown.ts` exporting `applyZeroTargetRule`, `pendingOf`, `sortRemainingFirst`, `groupPendingCount`, `nextPendingAfter`, `countNewlyReported` (design §6 row 1). Rewire `buildAowBannerStats` — **signature change**: its parameter type gains `target_value_sum` (all call sites updated) — to delegate the zero-target rule; edit `dashboard-lab.hub.spec.ts`'s existing fixture to the intended new values stated in MRF-DD-5 (`{total:2, done:2, pct:100, zeroTarget:2}`). `pendingOf` operates on `applyZeroTargetRule(inds).counted` (visible == counted — MRF-R-1/R-7 precedence) — pinned by a fixture where a zero-target KPI would otherwise stay visible. Scope: Reporting-tab surfaces only (Overview keeps today's rule — do NOT touch `overviewAowProgress`/`overviewXcutProgress`/toc-map).
 - **Implements:** MRF-R-2 (order core), MRF-R-7, MRF-AC-6 (incl. **AND IT MUST** identical everywhere).
 - **Skills:** `angular-developer`, `tdd`.

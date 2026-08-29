@@ -57,6 +57,7 @@ import {
 } from './components/reporting-entry-hub/reporting-entry-hub.component';
 import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
 import { BilateralProject } from '../../../bilateral/services/bilateral-creation.interfaces';
+import { applyZeroTargetRule } from './reporting-burndown';
 
 /**
  * Reporting-status meter — the reference's five canonical states, in this exact order.
@@ -3172,17 +3173,24 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 }
 
 /**
- * Pure stats for the By-AOW context banner. `done` = KPIs with something reported;
- * `total` = planned output indicators (mirrors `overviewAowProgress`). @akili-spec changes/reporting-entry-hub
+ * Pure stats for the By-AOW context banner. `done` = KPIs with something reported; `total` =
+ * counted output indicators after the zero-target rule (MRF-R-7); `zeroTarget` = how many were
+ * excluded, for the "excludes N zero-target KPIs" title (MRF-AC-6).
+ * @akili-spec changes/reporting-entry-hub
+ * @akili-spec changes/mass-reporting-flow
  */
-export function buildAowBannerStats(inds: Array<{ actual_achieved_value_sum?: unknown }>): {
+export function buildAowBannerStats(
+  inds: Array<{ actual_achieved_value_sum?: unknown; target_value_sum?: unknown }>
+): {
   total: number;
   done: number;
   pct: number;
+  zeroTarget: number;
 } {
-  const total = inds.length;
-  const done = inds.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
-  return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
+  const { counted, zeroTarget } = applyZeroTargetRule(inds);
+  const total = counted.length;
+  const done = counted.filter(i => Number(i?.actual_achieved_value_sum ?? 0) > 0).length;
+  return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0, zeroTarget };
 }
 
 /** Tier split for the By-AOW view — outputs (HLO tier) vs outcomes. @akili-spec changes/reporting-entry-hub */
