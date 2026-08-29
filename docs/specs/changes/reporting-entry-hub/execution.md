@@ -168,3 +168,9 @@ Verification totals: server 10+3+20 targeted tests green, client 23+102+66 targe
 
 - `[prTooltip]` added to the W3 lane's truncated texts: project `fullName` on each project row and `center.name` on the group header (same directive/pattern as the AoW titles addendum). Leader-inline, ~6 LOC.
 - Verification: 27/27 hub tests green; `npx ng lint --quiet` clean.
+
+### Addendum (user request, 2026-08-29) — loading skeletons inside the KPI cards
+
+- Owner reported the KPI cards render empty/zero figures while their data loads (the "Contributing Centers" card most visibly). Cards 1–3 now swap the figure + subline for `animate-pulse` placeholders while their source loads: card "W1/W2 Results" keys on `meterLoading()` (white/25 pulses on the gradient), cards "W3 / Bilateral" and "Contributing Centers" on `bilateralLoading()` — both inputs already existed and were already bound by the host (`loadingMeter()` / `loadingBilateral()`); no new wiring. +1 test (pulses present, `.pr-figure` absent, scoped to the three `button.col-span-3` cards). Leader-inline, ~30 LOC.
+- Card 4 ("Areas of Work") untouched: no per-card loading input exists for `aowProgress` today and the user's ask named W1/2, W3 and the centers card.
+- Verification: 62/62 program-overview tests green; `npx ng lint --quiet` clean.

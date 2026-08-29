@@ -966,4 +966,21 @@ describe('ProgramOverviewComponent', () => {
       expect(component.reportingTrendChartOption()).toBeDefined();
     });
   });
+
+  describe('KPI card loading skeletons', () => {
+    it('shows pulse placeholders instead of the figures while meter and bilateral data load', () => {
+      fixture.componentRef.setInput('meterLoading', true);
+      fixture.componentRef.setInput('bilateralLoading', true);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      const cards = Array.from(el.querySelectorAll('button.col-span-3')).filter(b =>
+        /W1\/W2 Results|W3 \/ Bilateral|Contributing Centers/.test(b.textContent ?? '')
+      );
+      expect(cards.length).toBe(3);
+      for (const card of cards) {
+        expect(card.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+        expect(card.querySelector('.pr-figure')).toBeNull();
+      }
+    });
+  });
 });
