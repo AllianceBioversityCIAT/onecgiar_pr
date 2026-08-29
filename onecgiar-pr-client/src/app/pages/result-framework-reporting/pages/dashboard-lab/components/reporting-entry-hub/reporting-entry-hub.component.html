@@ -300,7 +300,7 @@
                       <span
                         class="flex min-w-0 items-center gap-[8px] text-[12px] font-bold uppercase tracking-[0.04em] text-[var(--pr-text-secondary)]">
                         <ng-icon [name]="isCenterExpanded(center) ? 'lucideChevronUp' : 'lucideChevronDown'" class="shrink-0 text-[14px]" />
-                        <span class="min-w-0 truncate normal-case">{{ center.name }}</span>
+                        <span class="min-w-0 truncate normal-case" [prTooltip]="center.name">{{ center.name }}</span>
                       </span>
                       <span class="whitespace-nowrap text-[12px] text-[var(--pr-text-muted)]">
                         {{ copy.w3.projectsOf(center.matching, center.total, programCode()) }}
@@ -316,7 +316,9 @@
                               <span class="shrink-0 font-mono text-[12px] font-semibold text-[var(--pr-text-heading)]">
                                 {{ project.shortName }}
                               </span>
-                              <span class="min-w-0 truncate text-[12.5px] font-normal text-[var(--pr-text-secondary)]">
+                              <span
+                                class="min-w-0 truncate text-[12.5px] font-normal text-[var(--pr-text-secondary)]"
+                                [prTooltip]="project.fullName">
                                 {{ project.fullName }}
                               </span>
                               <span

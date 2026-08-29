@@ -163,3 +163,8 @@ Verification totals: server 10+3+20 targeted tests green, client 23+102+66 targe
 - Owner asked that the W1/W2 lane footer mention act like the header button. The mention is now a `<button class="hub-footer-action">` emitting a new `reportEmerging` output; the host binds `(reportEmerging)="openReportModal()"` and mirrors the header gate with `[canReportEmerging]="canReportEmerging()"` — when false (AVISA/SGP-02) it renders as the previous plain text. Two existing tests scoped their button selectors to exclude `.hub-footer-action` (their original intent was the row Report buttons). +2 tests (emits; plain text when gated). Leader-inline (explicit user request, ~25 LOC).
 - Note: REH-OQ-2 ("Report emerging result behaviour → unchanged") stands — this adds a second *entry point* to the same modal, it does not change the modal or the header button.
 - Verification: 32/32 targeted tests green (`reporting-entry-hub` + `dashboard-lab.hub.spec.ts`); `npx ng lint --quiet` clean.
+
+### Addendum (user request, 2026-08-29) — W3 tooltips on truncated project and center names
+
+- `[prTooltip]` added to the W3 lane's truncated texts: project `fullName` on each project row and `center.name` on the group header (same directive/pattern as the AoW titles addendum). Leader-inline, ~6 LOC.
+- Verification: 27/27 hub tests green; `npx ng lint --quiet` clean.
