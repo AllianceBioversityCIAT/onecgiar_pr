@@ -129,3 +129,19 @@ _(entries appended below, evidence before checkbox)_
   7. Layout at 1440 / 1100 / 800 px; keyboard pass (Tab order, Enter/Space, visible focus ring).
   8. Carried from T-5 review: KPI card "W3 / Bilateral" click → W3 lane scrolls into view and its heading takes focus.
 - Note: if the client points at a backend without the new endpoint, the W3 lane must show the REH-R-4.4 error state with Retry (itself a valid check).
+
+- **T-7 addendum (2026-08-29):** SSO attempt from the Orca embedded browser fails upstream — Cognito responds `error=invalid_request` (redirect URI of the local client does not admit the `orca.localhost` origin), and the external-user path is a credentials form the agent must not fill. T-7 is executable only from a human-authenticated browser (the user's normal session, or Chrome with the Claude extension connected). Checklist stands as recorded.
+
+## 3. Summary
+
+| Task | Result | Attempts | Commit |
+|---|---|---|---|
+| REH-T-1 service | PASS | 2 (fixture gates) | `2914f7a24` |
+| REH-T-2 controller | PASS | 1 | `150645b6a` |
+| REH-T-3 hub component | PASS | 2 (spec inconsistency adjudicated + copy map) | `9f4703835` |
+| REH-T-4 wiring + deep-link fix | PASS | 1 | `cc7fc66f7` |
+| REH-T-5 KPI focus + inline Report | PASS | 2 (a11y disabled pattern) | `e14ac5f94` |
+| REH-T-6 recently-used sort | deferred (budget gate: 1311 > 700 non-test LOC) | — | — |
+| REH-T-7 manual browser pass | `[~]` blocked on human-authenticated session | — | `e289f04ca` (checklist) |
+
+Verification totals: server 10+3+20 targeted tests green, client 23+102+66 targeted tests green, `npx ng lint --quiet` and server eslint clean, no migration touched. Budget tripwire recorded (size overrun, no scope change). Next: run the T-7 checklist from a logged-in browser, then `/akili-archive changes/reporting-entry-hub` (pending items already queued in this log: guide syncs, ADR follow-ups, kaizen candidates from the advisories).
