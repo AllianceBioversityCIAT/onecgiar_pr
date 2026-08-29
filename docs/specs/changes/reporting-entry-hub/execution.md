@@ -114,3 +114,18 @@ _(entries appended below, evidence before checkbox)_
 ### `REH-T-6` — deferred (budget)
 
 - The task's own gate: skip when non-test LOC after REH-T-4 exceeds 700. Measured: **1 311** (see Budget tripwire block). Status set to `deferred (budget)`; REH-R-11 (SHOULD) intentionally unimplemented. Gate: auto-approved (pre-approved mode).
+
+### `REH-T-7` — Verification: manual browser pass — `[~]` blocked on authenticated session
+
+- **Date:** 2026-08-29 · Leader-inline verification attempt (browser pass is a puntual check; no code).
+- Environment pre-check: `http://qa-development-2026.orca.localhost:58758/` responds 200 (dev client for this worktree, hot-reload includes REH-T-3/4/5). Chrome extension not connected; Orca embedded browser reachable — but a fresh tab redirects to `/login` and entering credentials is outside the agent's permissions (hard rule). **Manual checks NOT RUN — recorded as NOT-RUN, never as passed.**
+- Checklist owed (from tasks.md T-7 + carried items from T-5 review), to run in a logged-in session:
+  1. Hub is the first Overview block; both lanes render (SP02).
+  2. Report on `AOW03` → lands on By-AOW view for `AOW03` (`?tocView=byAow&tocAow=AOW03`).
+  3. Program-level Report → grouped view (`?tocView=aows`).
+  4. Create result on a project → `/bilateral/<acronym>/create` with the project preselected (REH-AC-5 e2e).
+  5. User without center → REH-R-4.1 empty state with mailto.
+  6. Collapse persists SP02 → SP05 and across reload.
+  7. Layout at 1440 / 1100 / 800 px; keyboard pass (Tab order, Enter/Space, visible focus ring).
+  8. Carried from T-5 review: KPI card "W3 / Bilateral" click → W3 lane scrolls into view and its heading takes focus.
+- Note: if the client points at a backend without the new endpoint, the W3 lane must show the REH-R-4.4 error state with Retry (itself a valid check).

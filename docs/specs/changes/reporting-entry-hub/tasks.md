@@ -7,7 +7,7 @@
 - **Module / feature:** `results` / `reporting-entry-hub` (`changes/reporting-entry-hub`)
 - **Linked spec:** `requirements.md` + `design.md` (same folder); mockup `mockup/Main.dc.html`.
 - **Owner / driver:** j.cadavid@cgiar.org
-- **Status:** `not-started`
+- **Status:** `in-progress` (T-1..T-5 done, T-6 deferred, T-7 blocked on auth)
 - **Budget (design §14):** 7 tasks · ~650 LOC · ≤ 1 review round/task. Tripwire: > 9 tasks or > 900 LOC → stop and escalate.
 
 ---
@@ -153,7 +153,7 @@
 
 ### `REH-T-7` — Verification: manual browser pass + execution record
 
-- **Status:** `[ ]`
+- **Status:** `[~]` (blocked: needs an authenticated browser session — checklist in execution.md)
 - **Type:** `tests`
 - **Description:** With the local or QA stack (`docs/infrastructure.md` §6), open `entity-details/SP02/overview` as (1) a user with a center that funds SP02 and (2) a user without a center. Check: hub is first block; both lanes; Report on `AOW03` lands on By-AOW view for `AOW03`; program-level Report lands on the grouped view scrolled to Intermediate; Create result opens the creator with the project preselected (`REH-AC-5` end-to-end); empty state (2); collapse persists across SP02 → SP05; layout at 1440 / 1100 / 800 px; keyboard pass (Tab order, Enter/Space, focus ring visible); contrast by token reuse only. Record results with screenshots in `execution.md`. If no environment is reachable, record "manual check not run" — never mark it passed.
 - **Implements:** `REH-AC-5` (end-to-end), `REH-AC-14` (focus visibility), NFR Responsive; substitutes for the defect classes with no automated gate (requirements §8 table).
