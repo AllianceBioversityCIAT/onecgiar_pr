@@ -115,3 +115,18 @@
   7. Narrative end-to-end on a capable device: consent step with size → download progress → draft + caption; Regenerate re-asks consent only on cold cache; Copy reverts after ~1.5 s; unsupported device message.
   8. Migration round-trip on a DISPOSABLE local DB (infrastructure.md §6): run → 2 rows in `platform_global_variables`, `migration:check` green; revert → rows gone, check reports 1 pending.
   9. Keyboard/focus pass on all new controls (toggle, sort, copy link, Read more, Next pending, narrative panel) + `aria-live` announcements; reduced-motion check.
+
+## 3. Summary
+
+| Task | Result | Attempts | Notes |
+|---|---|---|---|
+| MRF-T-1 helpers | PASS | 1 | zero-target rule centralised |
+| MRF-T-2 band + pipelines | PASS | 2 | two silent-default leaks fixed; `__allIndicators` side-channel |
+| MRF-T-3 copy link + ?kpi= | PASS | 2 | sentinel guard; worker lost to session limit mid-attempt-2, resumed |
+| MRF-T-4 next-pending + counter | PASS | 1 | resumed on opus after weekly limit; `untracked` bug found by resumer |
+| MRF-T-5 ratioOf rewire | PASS | 1 | resumed on opus; pinned-value predictions proven unnecessary |
+| MRF-T-6 migration + admin card | PASS | 2 | menu entry + editable controls |
+| MRF-T-7 narrative panel | PASS | 2 | consent-owns-init closed with mutation evidence |
+| MRF-T-8 manual pass | `[~]` blocked | — | auth + disposable DB; 9-row checklist recorded |
+
+Totals: **non-test LOC 1 816 / test LOC 2 339** (`git diff --numstat 4cdddae6d..HEAD`, src only) — **budget tripwire (1 500 non-test) exceeded**; cause is the same class as the previous spec (state-rich templates + the panel's 8-state machine + defensive specs demanded by the single-review-round rule), no scope growth; carried to the owner in the final report rather than stopping a finished run. Reviewer model degraded to Fable for opus-authored tasks after the sonnet weekly cap (recorded above). Commits `22b70548b…5d7453199`.
