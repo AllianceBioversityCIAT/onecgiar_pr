@@ -1454,32 +1454,62 @@
                             </table>
                           </div>
                         } @else {
-                          <div class="flex flex-col gap-1.5">
+                          <div class="flex flex-col gap-[8px]">
+                            <!-- @akili-spec changes/reporting-entry-hub — By-AOW indicator card: labelled progress + state -->
                             @for (ind of hlo.indicators; track ind.indicator_id) {
-                              <div class="flex flex-col gap-1.5 rounded-lg border border-[rgba(30,32,47,0.07)] bg-[var(--pr-color-accents-1)]/50 px-2.5 py-2">
-                                <p
-                                  class="m-0 line-clamp-2 text-[11.5px] font-semibold leading-snug text-[var(--pr-color-secondary-400)]"
-                                  [title]="ind.indicator_description"
-                                  [innerHTML]="ind.indicator_description | highlightSearch: plannedSearch()"></p>
-                                <div class="flex flex-wrap items-center justify-between gap-1.5">
-                                  <div class="flex flex-wrap items-center gap-1">
-                                    @if (ind.type_name) {
-                                      <span
-                                        class="rounded-full bg-[#6b46e51f] px-1.5 py-px text-[10px] font-semibold text-[var(--pr-color-primary-400)]"
-                                        [innerHTML]="ind.type_name | highlightSearch: plannedSearch()"></span>
-                                    }
-                                    <span class="text-[10px] text-[var(--pr-color-accents-6)]"
-                                      >{{ ind.actual_achieved_value_sum ?? 0 }}/{{ ind.target_value_sum ?? 0 }}</span
-                                    >
+                              @if (indicatorCardMeta(ind); as meta) {
+                                <div
+                                  class="flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[14px] py-[10px] transition-colors hover:border-[var(--pr-color-primary-200)]">
+                                  <div class="flex min-w-0 flex-1 flex-col gap-[6px]">
+                                    <p
+                                      class="m-0 line-clamp-2 text-[12.5px] font-semibold leading-snug text-[var(--pr-text-heading)]"
+                                      [title]="ind.indicator_description"
+                                      [innerHTML]="ind.indicator_description | highlightSearch: plannedSearch()"></p>
+                                    <div class="flex flex-wrap items-center gap-[8px]">
+                                      @switch (meta.state) {
+                                        @case ('complete') {
+                                          <span class="inline-flex items-center gap-[4px] rounded-full border border-emerald-200 bg-emerald-50 px-[8px] py-px text-[10.5px] font-semibold text-emerald-700">
+                                            <span class="h-[6px] w-[6px] rounded-full bg-emerald-500" aria-hidden="true"></span>Complete
+                                          </span>
+                                        }
+                                        @case ('in-progress') {
+                                          <span class="inline-flex items-center gap-[4px] rounded-full border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-50)] px-[8px] py-px text-[10.5px] font-semibold text-[var(--pr-color-primary-500)]">
+                                            <span class="h-[6px] w-[6px] rounded-full bg-[var(--pr-color-primary-300)]" aria-hidden="true"></span>In progress
+                                          </span>
+                                        }
+                                        @default {
+                                          <span class="inline-flex items-center gap-[4px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[8px] py-px text-[10.5px] font-semibold text-[var(--pr-text-muted)]">
+                                            <span class="h-[6px] w-[6px] rounded-full bg-[var(--pr-text-subtle)]" aria-hidden="true"></span>Not started
+                                          </span>
+                                        }
+                                      }
+                                      @if (ind.type_name) {
+                                        <span
+                                          class="rounded-full bg-[#6b46e51f] px-[8px] py-px text-[10.5px] font-semibold text-[var(--pr-color-primary-400)]"
+                                          [innerHTML]="ind.type_name | highlightSearch: plannedSearch()"></span>
+                                      }
+                                      <span class="inline-flex items-center gap-[6px] text-[11px] text-[var(--pr-text-secondary)]">
+                                        <span class="h-[6px] w-[90px] overflow-hidden rounded-full bg-[var(--pr-border)]/60 max-[899px]:hidden" aria-hidden="true">
+                                          <span
+                                            class="block h-full rounded-full"
+                                            [ngClass]="meta.state === 'complete' ? 'bg-emerald-500' : 'bg-gradient-to-r from-[var(--pr-color-primary-500)] to-[var(--pr-color-primary-400)]'"
+                                            [style.width.%]="meta.pct"></span>
+                                        </span>
+                                        <span class="tabular-nums"
+                                          ><strong class="font-bold text-[var(--pr-text-heading)]">{{ meta.achieved }}</strong
+                                          ><span class="text-[var(--pr-text-muted)]"> of {{ meta.target }} reported</span></span
+                                        >
+                                      </span>
+                                    </div>
                                   </div>
                                   <button
                                     type="button"
                                     (click)="openLegacyReportModal(ind)"
-                                    class="flex appearance-none items-center gap-0.5 rounded-md border border-[var(--pr-color-primary-300)] bg-white px-2 py-0.5 text-[10.5px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
-                                    <span class="material-icons-round text-[12px]">edit_note</span> Report
+                                    class="inline-flex h-[30px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                                    <span class="material-icons-round text-[14px]" aria-hidden="true">edit_note</span> Report
                                   </button>
                                 </div>
-                              </div>
+                              }
                             }
                           </div>
                         }

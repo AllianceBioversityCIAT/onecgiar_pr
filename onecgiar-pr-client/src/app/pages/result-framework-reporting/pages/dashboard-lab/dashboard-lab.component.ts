@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { DecimalPipe } from '@angular/common';
+import {DecimalPipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -245,6 +245,7 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     RouterLink,
     CustomFieldsModule,
     DecimalPipe,
+    NgClass,
     GuidedCreationComponent,
     IndicatorDrawerComponent,
     HighlightSearchPipe,
@@ -2234,6 +2235,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return { code, name, ...buildAowBannerStats(inds) };
   });
 
+  /** Per-indicator meta for the By-AOW cards (labelled progress + state). @akili-spec changes/reporting-entry-hub */
+  indicatorCardMeta(ind: { actual_achieved_value_sum?: unknown; target_value_sum?: unknown }) {
+    return buildIndicatorCardMeta(ind?.actual_achieved_value_sum, ind?.target_value_sum);
+  }
+
   indicatorsForAow(code: string) {
     return this.indicatorsByAow().find(x => x.aow.code === code) ?? null;
   }
@@ -3184,4 +3190,16 @@ export function splitIndicatorsByTier<T extends { __tier?: unknown }>(inds: T[])
   const outcomes = inds.filter(i => i?.__tier === 'outcome');
   const outputs = inds.filter(i => i?.__tier !== 'outcome');
   return { outputs, outcomes };
+}
+
+/** Pure meta for one indicator card: labelled achieved/target, pct and state. @akili-spec changes/reporting-entry-hub */
+export function buildIndicatorCardMeta(
+  achievedRaw: unknown,
+  targetRaw: unknown
+): { achieved: number; target: number; pct: number; state: 'complete' | 'in-progress' | 'not-started' } {
+  const achieved = Number(achievedRaw ?? 0) || 0;
+  const target = Number(targetRaw ?? 0) || 0;
+  const pct = target > 0 ? Math.min(100, Math.round((achieved / target) * 100)) : achieved > 0 ? 100 : 0;
+  const state = target > 0 && achieved >= target ? 'complete' : achieved > 0 ? 'in-progress' : 'not-started';
+  return { achieved, target, pct, state };
 }

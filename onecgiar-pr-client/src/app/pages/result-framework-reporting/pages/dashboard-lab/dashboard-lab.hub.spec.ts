@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DashboardLabComponent, buildAowBannerStats, splitIndicatorsByTier } from './dashboard-lab.component';
+import { DashboardLabComponent, buildAowBannerStats, splitIndicatorsByTier, buildIndicatorCardMeta } from './dashboard-lab.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -297,6 +297,20 @@ describe('splitIndicatorsByTier (By-AOW tier sections)', () => {
     const { outputs, outcomes } = splitIndicatorsByTier(inds);
     expect(outputs.length).toBe(2);
     expect(outcomes.length).toBe(2);
+  });
+});
+
+describe('buildIndicatorCardMeta (By-AOW indicator card)', () => {
+  it('labels complete / in-progress / not-started from achieved vs target', () => {
+    expect(buildIndicatorCardMeta(3, 3)).toEqual({ achieved: 3, target: 3, pct: 100, state: 'complete' });
+    expect(buildIndicatorCardMeta('1', '4')).toEqual({ achieved: 1, target: 4, pct: 25, state: 'in-progress' });
+    expect(buildIndicatorCardMeta(0, 2)).toEqual({ achieved: 0, target: 2, pct: 0, state: 'not-started' });
+  });
+
+  it('caps pct at 100 and never yields NaN on a zero target', () => {
+    expect(buildIndicatorCardMeta(5, 2).pct).toBe(100);
+    expect(buildIndicatorCardMeta(0, 0)).toEqual({ achieved: 0, target: 0, pct: 0, state: 'not-started' });
+    expect(buildIndicatorCardMeta(2, 0).state).toBe('in-progress');
   });
 });
 });
