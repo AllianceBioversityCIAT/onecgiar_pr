@@ -94,6 +94,9 @@ export class ReportingProgramBandComponent {
   readonly compactFilters = input<boolean>(false);
   /** Any reporting filter active — shows the Clear-filters button. @akili-spec changes/reporting-entry-hub */
   readonly filtersActive = input<boolean>(false);
+  /** By-AOW mode: the active AoW + flat options for the single-select switcher (a multiselect is meaningless when exactly one AoW renders). @akili-spec changes/reporting-entry-hub */
+  readonly activeAowCode = input<string | null>(null);
+  readonly aowSingleOptions = input<{ label: string; value: string }[]>([]);
   /**
    * State of the global disclosure switch (P2-3252): `true` once every AoW / HLO is open, which is
    * what turns `Expand all` into `Collapse all`. The band only renders and announces it — the
@@ -124,6 +127,7 @@ export class ReportingProgramBandComponent {
   readonly aowChange = output<string[]>();
   readonly viewModeChange = output<'grouped' | 'flat'>();
   readonly clearAllFilters = output<void>();
+  readonly aowSwitch = output<string>();
   /** Expand all / Collapse all was pressed. The host flips the switch; the band stays stateless. */
   readonly toggleExpandAll = output<void>();
   /**

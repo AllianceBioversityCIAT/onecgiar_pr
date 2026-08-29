@@ -447,6 +447,8 @@ describe('ReportingProgramBandComponent', () => {
       expect(el.querySelector('[aria-label="Filter by category"]')).toBeNull();
       expect(el.querySelector('[aria-label="Filter by status"]')).toBeNull();
       expect(el.querySelector('[aria-label="Grouping"]')).toBeNull();
+      expect(el.querySelector('app-pr-filter-multiselect')).toBeNull();
+      expect(el.querySelector('[aria-label="Switch Area of Work"] app-pr-filter-select')).not.toBeNull();
       expect(el.querySelector('[aria-label="Filter by section"], .pr-band-filter')).not.toBeNull();
     });
   });

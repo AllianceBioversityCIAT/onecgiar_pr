@@ -203,3 +203,8 @@ Verification totals: server 10+3+20 targeted tests green, client 23+102+66 targe
 - Section multiselect panel restyled (scoped from the band via the accepted `::ng-deep` exception, KPB-DD-8 — affects only `.pr-band-filter` wrappers): rounded panel with border/shadow and 300px min width, uppercase muted group labels, divider between "Areas of work" and "Programme-level", option rows with hover, top-aligned checkboxes with `accent-color` primary, snug 12px labels.
 - New band button **Clear filters** (`filter_alt_off` icon), visible only while `filtersActive` — wired to the pre-existing `reportingFiltersActive()` / `clearReportingFilters()` (same reset the empty state uses: search, section, type, category, status). Works in both grouped and By-AOW modes. Band spec +1 test (hidden when inactive, emits on click). Leader-inline, ~90 LOC (mostly SCSS).
 - Verification: 38/38 band tests; `npx ng lint --quiet` clean; dev build 0 errors.
+
+### Addendum (user request, 2026-08-29) — By-AOW Section control is a single-select switcher
+
+- Owner: a multiselect with checkboxes is meaningless when exactly one AoW renders. In `compactFilters` mode the band now renders `app-pr-filter-select` (flat `plannedAowSelectOptions()`, value = `plannedHloAowCode()`) emitting a new `aowSwitch` output → host `setPlannedHloAow($event)`; it never writes `reportingAowFilter`, so returning to the grouped view keeps its own filter state untouched. The grouped view keeps the multiselect unchanged. Band test extended (multiselect absent + single select present in compact mode). Leader-inline, ~40 LOC.
+- Verification: 38/38 band tests; dev build 0 errors; lint clean.

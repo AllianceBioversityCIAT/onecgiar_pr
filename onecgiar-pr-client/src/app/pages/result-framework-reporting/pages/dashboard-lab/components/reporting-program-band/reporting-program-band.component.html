@@ -230,6 +230,18 @@
 
     <!-- Section (AoW + Intermediate + 2030) — MULTI, grouped into "Areas of work" /
          "Programme-level" exactly like the reference `selSection`. -->
+    @if (compactFilters()) {
+      <!-- By-AOW: exactly one AoW renders, so Section is a single-select AoW switcher (never writes the grouped view's filter). -->
+      <div class="pr-band-filter w-[230px]" aria-label="Switch Area of Work">
+        <app-pr-filter-select
+          [options]="aowSingleOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Area of Work"
+          [ngModel]="activeAowCode()"
+          (changed)="aowSwitch.emit($event)"></app-pr-filter-select>
+      </div>
+    } @else {
     <div class="pr-band-filter w-[170px]" aria-label="Filter by section">
       <app-pr-filter-multiselect
         [options]="aowOptions()"
@@ -243,6 +255,7 @@
         [ngModel]="aowValue()"
         (changed)="aowChange.emit($event)"></app-pr-filter-multiselect>
     </div>
+    }
 
     <!-- Type (HLO / Outcome / Intermediate / 2030) — CURRENT selType -->
     @if (!compactFilters()) {
