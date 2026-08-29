@@ -97,7 +97,7 @@
   }
 
   <!-- P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split into "from ToC" + "Other(s)". SAVE NOT ADDRESSED YET. -->
-  @if (isCP2026()) {
+  @if (isCP2026() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
     @if (hasReferenceCenters()) {
       <app-alert-status [description]="contributingCentersInfoNote"></app-alert-status>
 
@@ -159,8 +159,13 @@
   </div>
 
   <!-- P2-2998 (2026): the "Other(s)" dropdown appears AFTER the selected-centers chips (chips stay pinned under dropdown 1).
-       AC4: it auto-activates when the ToC returned no reference centers, even without the user picking "Other". -->
-  @if (isCP2026() && (showOtherCenters || !hasReferenceCenters())) {
+       AC4: it auto-activates when the ToC returned no reference centers, even without the user picking "Other".
+       TOC-T-1 (attempt 3): the AC4 auto-activation clause now ALSO requires planned_result !== false — in the unmapped
+       state, this block would otherwise duplicate the newly-reachable flat dropdown (~L128) since !hasReferenceCenters()
+       is unconditionally true there too. A third clause keeps this block visible in the unmapped state ONLY when
+       LC-DD-4's onLeadCenterSelected has auto-added a center into otherCentersSelected (service.ts) — so that auto-added
+       chip stays shown and removable instead of being silently hidden with no escape hatch. -->
+  @if (isCP2026() && (showOtherCenters || (!hasReferenceCenters() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) || (this.rdPartnersSE.otherCentersSelected?.length ?? 0) > 0)) {
     <app-pr-multi-select
       data-testid="toc-other-centers"
       [options]="otherCentersList()"
@@ -300,7 +305,13 @@
   }
 
   @if (isCP2026()) {
-    @if (hasReferenceScience()) {
+    <!-- TOC-DD-1 / TOC-T-1 rework: the "reference" branch (dropdown pre-seeded from the ToC + its note) only
+         applies when the result is actually mapped (planned_result !== false). When unmapped, no ToC node was
+         ever selected, so hasReferenceScience() is already false and this falls into the @else below — which
+         must NOT show the "not found" note (see the nested @if there) but MUST still leave the Science section
+         reachable: the Other(s) full-catalog dropdown at the bottom of this block auto-activates whenever
+         hasReferenceScience() is false, mapped or not. -->
+    @if (hasReferenceScience() && this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
       <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
 
       <!-- Node with Science Programs from the ToC: main dropdown with the pre-selected SP + the "Other(s)" option. -->
@@ -319,11 +330,15 @@
       <!-- P2-2929 empty state — ALIGNED WITH Centers AC4 (per Santi 2026-07-03): ToC returned no Science Programs →
            show the orange note and auto-activate the "Other(s)" dropdown below (no need to pick "Other" first).
            OTV-R-2: the field-header that used to duplicate the dropdown's own label was removed — the dropdown
-           below now carries "Contributing Science Program/Accelerator" itself via its conditional [label]. -->
-      <div class="pr-message">
-        <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
-        <p>{{ noScienceProgramsNote }}</p>
-      </div>
+           below now carries "Contributing Science Program/Accelerator" itself via its conditional [label].
+           TOC-DD-1: the note itself is suppressed when the result was never mapped to a ToC node
+           (planned_result === false) — there is nothing "not found" to report when nothing was ever looked up. -->
+      @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== false) {
+        <div class="pr-message">
+          <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+          <p>{{ noScienceProgramsNote }}</p>
+        </div>
+      }
     }
 
     <div class="medal_selector selected_container">

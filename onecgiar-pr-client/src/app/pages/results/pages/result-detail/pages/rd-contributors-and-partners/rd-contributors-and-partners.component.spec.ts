@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChangeDetectorRef, NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { RdContributorsAndPartnersComponent } from './rd-contributors-and-partners.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
@@ -658,5 +660,172 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
     svc.tocSelectionTouched.set(true);
     flush();
     expect(svc.scienceSelected).toBe(userEdited);
+  });
+});
+
+/**
+ * TOC-T-1 (docs/specs/bugfix/toc-unmapped-orange-notes/tasks.md): the Centers (~L100) and Science
+ * Program (~L302) gates only checked `isCP2026()`, not whether the result was actually mapped to a
+ * ToC node — so answering **No** ("Can this result be mapped to a ToC KPI?", `planned_result ===
+ * false`) fired the "not found" orange note unconditionally, even though no node was ever selected.
+ * Fix (design.md §6.2 / TOC-DD-1): extend both gates with
+ * `&& partnersBody.result_toc_result.planned_result !== false`.
+ *
+ * Renders through the REAL `RdContributorsAndPartnersService` (like LC-T-2) so the assertions
+ * exercise the actual rendered DOM, not a mocked condition.
+ */
+describe('RdContributorsAndPartnersComponent — Suppress ToC "not found" notes on unmapped results (TOC-T-1)', () => {
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let rdPartnersSE: RdContributorsAndPartnersService;
+
+  const CENTERS_CATALOG = [
+    { code: 'C1', name: 'Center 1', full_name: 'Center One', institutionId: 11 },
+    { code: 'C2', name: 'Center 2', full_name: 'Center Two', institutionId: 22 }
+  ];
+
+  const SCIENCE_CATALOG = [
+    { id: 1, official_code: 'SP01', full_name: 'Science Program One' },
+    { id: 2, official_code: 'SP02', full_name: 'Science Program Two' }
+  ];
+
+  beforeEach(async () => {
+    const currentResult = {
+      id: 1,
+      result_code: 'R-1',
+      version_id: 1,
+      portfolio: 'P25',
+      initiative_id: 5,
+      initiative_official_code: 'INIT-05',
+      status: null
+    };
+
+    const apiMock = {
+      dataControlSE: {
+        currentResult,
+        currentResultSignal: signal(currentResult),
+        currentResultSectionName: signal(''),
+        findClassTenSeconds: jest.fn().mockResolvedValue(true),
+        isKnowledgeProduct: false,
+        showPartnersRequest: false
+      },
+      resultsSE: {
+        GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: SCIENCE_CATALOG })),
+        GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      rolesSE: { readOnly: false, isAdmin: false, platformIsClosed: false }
+    };
+
+    const centersMock = { loadedCenters: new BehaviorSubject<boolean>(true), centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) };
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [CommonModule, FormsModule, HttpClientTestingModule, TermPipe, CustomFieldsModule],
+      providers: [
+        RdContributorsAndPartnersService,
+        { provide: ApiService, useValue: apiMock },
+        { provide: RolesService, useValue: { readOnly: false } },
+        {
+          provide: InstitutionsService,
+          useValue: { loadedInstitutions: new BehaviorSubject<boolean>(false), institutionsList: [], institutionsWithoutCentersList: [] }
+        },
+        { provide: CentersService, useValue: centersMock },
+        { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+        { provide: ResultLevelService, useValue: { currentResultLevelId: 2 } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        {
+          provide: FieldsManagerService,
+          useValue: { isContributorsPartners2026: () => true, isP25: () => true, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+        }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    rdPartnersSE = TestBed.inject(RdContributorsAndPartnersService);
+    jest.spyOn(rdPartnersSE, 'getSectionInformation').mockImplementation(() => undefined as any);
+    jest.spyOn(rdPartnersSE, 'loadFilteredBilateralProjects').mockImplementation(() => undefined as any);
+
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    fixture.detectChanges();
+  });
+
+  const messageTexts = () => Array.from(fixture.nativeElement.querySelectorAll('.pr-message')).map((el: any) => el.textContent as string);
+
+  it('TOC-AC-1: planned_result = false — no "not found" notes for Centers or Science, both fall back to their full-catalog dropdown', () => {
+    rdPartnersSE.partnersBody.result_toc_result.planned_result = false;
+    fixture.detectChanges();
+
+    const messages = messageTexts();
+    expect(messages.some(m => m.includes('No CGIAR Centers related'))).toBe(false);
+    expect(messages.some(m => m.includes('No Science Programs related'))).toBe(false);
+
+    // Centers: falls through to the pre-existing flat/full-catalog branch (the real @else of the
+    // modified gate), bound to `centersSE.centers()` — never the empty reference-filtered dropdown.
+    // Assert the bound [options] too, not just presence: a wrong/empty catalog binding would still
+    // pass a truthy-element check.
+    const flatCenters = fixture.debugElement.query(By.css('app-pr-multi-select[data-testid="cp-field-contributing_center~flat"]'));
+    expect(flatCenters).toBeTruthy();
+    expect(flatCenters.componentInstance.options()).toEqual(CENTERS_CATALOG);
+    expect(fixture.nativeElement.querySelector('app-pr-multi-select[data-testid="cp-field-contributing_center"]')).toBeFalsy();
+
+    // TOC-T-1 (attempt 3): the sibling "Other(s)" auto-activation block (~L163) previously fired
+    // whenever !hasReferenceCenters() — which is now also true in the unmapped state — duplicating
+    // this same "Contributing CGIAR Centers" control bound to a different model (otherCentersSelected).
+    // With otherCentersSelected empty, exactly ONE Centers control must render.
+    expect(rdPartnersSE.otherCentersSelected).toEqual([]);
+    expect(fixture.nativeElement.querySelector('app-pr-multi-select[data-testid="toc-other-centers"]')).toBeFalsy();
+    expect(fixture.debugElement.queryAll(By.css('app-pr-multi-select[data-testid^="cp-field-contributing_center"], app-pr-multi-select[data-testid="toc-other-centers"]')).length).toBe(1);
+
+    // Science (TOC-T-1 rework, attempt 2 — reviewer FAIL on attempt 1): the reference/note branch now
+    // also requires planned_result !== false, so on unmapped it falls into the @else — whose note is
+    // itself gated on planned_result !== false and therefore suppressed. But the section must stay
+    // reachable: the Other(s) full-catalog dropdown auto-activates because hasReferenceScience() is
+    // false (no ToC node was ever selected to populate it), rendering with the PRIMARY label (not
+    // "Other(s) Science Program(s)") and bound to the full catalog (otherScienceList() excludes
+    // nothing when there are no reference ids to filter out).
+    const otherScience = fixture.debugElement.query(By.css('app-pr-multi-select[data-testid="toc-other-science"]'));
+    expect(otherScience).toBeTruthy();
+    expect(otherScience.componentInstance.options()).toEqual(SCIENCE_CATALOG);
+    expect(fixture.nativeElement.textContent).toContain('Contributing Science Program/Accelerator');
+  });
+
+  it('TOC-T-1 (attempt 3): unmapped + otherCentersSelected populated (LC-DD-4 auto-add) — BOTH the flat dropdown AND toc-other-centers render, chip visible and removable', () => {
+    rdPartnersSE.partnersBody.result_toc_result.planned_result = false;
+    // Simulates RdContributorsAndPartnersService.onLeadCenterSelected auto-adding a picked Lead Center
+    // into otherCentersSelected when the contributing-centers union is empty (CLAUDE.md LC-DD-4).
+    rdPartnersSE.otherCentersSelected = [{ ...CENTERS_CATALOG[0] }] as any;
+    fixture.detectChanges();
+
+    const flatCenters = fixture.debugElement.query(By.css('app-pr-multi-select[data-testid="cp-field-contributing_center~flat"]'));
+    expect(flatCenters).toBeTruthy();
+
+    // The block (and its dropdown) must stay reachable so the auto-added Lead Center is visible.
+    expect(fixture.debugElement.query(By.css('app-pr-multi-select[data-testid="toc-other-centers"]'))).toBeTruthy();
+
+    // The chip is rendered from a DIRECT *ngFor over rdPartnersSE.otherCentersSelected (html:184),
+    // independent of the multi-select's internal CVA value — this is the "visible and removable"
+    // contract the fix must preserve. Confirms the chip text AND its remove ("cancel" icon) affordance.
+    // contributing_center is empty in this scenario (nothing was ToC-mapped or manually added there),
+    // so the only chip rendered by either *ngFor is this one, sourced from otherCentersSelected.
+    const chips = fixture.debugElement.queryAll(By.css('.medal_selector .centers.chips_container .center'));
+    expect(chips.length).toBe(1);
+    expect(chips[0].nativeElement.textContent).toContain('Center 1');
+    expect(chips[0].query(By.css('i.material-icons-round'))).toBeTruthy();
+  });
+
+  it('TOC-AC-2 (AC4 regression guard): planned_result = true with empty ToC reference ids still shows both "not found" notes', () => {
+    rdPartnersSE.partnersBody.result_toc_result.planned_result = true;
+    // tocReferenceCenterInstitutionIds() / tocReferenceSynergyInitiativeIds() default to [] — genuinely
+    // mapped result whose ToC node brought back no centers/programs.
+    fixture.detectChanges();
+
+    const messages = messageTexts();
+    expect(messages.some(m => m.includes('No CGIAR Centers related'))).toBe(true);
+    expect(messages.some(m => m.includes('No Science Programs related'))).toBe(true);
+
+    // TOC-T-1 (attempt 3): mapped + genuinely empty refs is unaffected by the new planned_result
+    // clause on the Centers "Other(s)" block — AC4 auto-activation must still fire here.
+    expect(fixture.nativeElement.querySelector('app-pr-multi-select[data-testid="toc-other-centers"]')).toBeTruthy();
   });
 });
