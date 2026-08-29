@@ -197,3 +197,9 @@ Verification totals: server 10+3+20 targeted tests green, client 23+102+66 targe
 
 - Owner: Type, Category, Status and the Grouped/All-indicators toggle appear on By-AOW but only filter the grouped view (dead controls there). New band input `compactFilters` hides those four; Search (works via `plannedHloGroups` ranking) and Section (the AoW switcher) stay. Host binds `[compactFilters]="plannedBrowseView() === 'byAow'"`. Band spec +1 test via its `build` helper. Leader-inline, ~25 LOC.
 - Verification: 37/37 reporting-program-band tests; `npx ng lint --quiet` clean; dev build 0 errors.
+
+### Addendum (user request, 2026-08-29) — Section dropdown polish + Clear filters button
+
+- Section multiselect panel restyled (scoped from the band via the accepted `::ng-deep` exception, KPB-DD-8 — affects only `.pr-band-filter` wrappers): rounded panel with border/shadow and 300px min width, uppercase muted group labels, divider between "Areas of work" and "Programme-level", option rows with hover, top-aligned checkboxes with `accent-color` primary, snug 12px labels.
+- New band button **Clear filters** (`filter_alt_off` icon), visible only while `filtersActive` — wired to the pre-existing `reportingFiltersActive()` / `clearReportingFilters()` (same reset the empty state uses: search, section, type, category, status). Works in both grouped and By-AOW modes. Band spec +1 test (hidden when inactive, emits on click). Leader-inline, ~90 LOC (mostly SCSS).
+- Verification: 38/38 band tests; `npx ng lint --quiet` clean; dev build 0 errors.

@@ -279,6 +279,17 @@
     </div>
     }
 
+    <!-- Clear filters — visible only while something is filtering. @akili-spec changes/reporting-entry-hub -->
+    @if (filtersActive()) {
+      <button
+        type="button"
+        (click)="clearAllFilters.emit()"
+        class="flex h-[36px] shrink-0 cursor-pointer items-center gap-[4px] rounded-[8px] border-0 bg-transparent px-[8px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] transition-colors hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+        <span class="material-icons-round text-[15px]" aria-hidden="true">filter_alt_off</span>
+        Clear filters
+      </button>
+    }
+
     <!-- Right-hand controls. The auto margin lives on the wrapper so the Expand all button and the
          segmented switch stay glued together at the end of the row (two `ml-auto` siblings would
          split the leftover space between them and drift apart). -->

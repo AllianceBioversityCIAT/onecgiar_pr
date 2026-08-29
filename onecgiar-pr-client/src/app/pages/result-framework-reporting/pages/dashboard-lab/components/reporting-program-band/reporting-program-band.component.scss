@@ -113,3 +113,55 @@
     }
   }
 }
+
+/* Section multiselect panel polish — scoped to the band's own filter wrappers only.
+   ::ng-deep is the accepted exception for projected third-party/shared-component DOM
+   (docs/ux-ui/design.md §12 / KPB-DD-8). @akili-spec changes/reporting-entry-hub */
+.pr-band-filter ::ng-deep .pr-filter-ms {
+  .options {
+    min-width: 300px;
+    border-radius: 10px;
+    border: 1px solid var(--pr-border);
+    box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
+    padding: 6px;
+  }
+
+  .pr-ms-group + .pr-ms-group {
+    margin-top: 6px;
+    border-top: 1px solid var(--pr-border-divider);
+    padding-top: 6px;
+  }
+
+  .pr-ms-group-label {
+    padding: 6px 10px 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--pr-text-muted);
+  }
+
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border-radius: 6px;
+    padding: 7px 10px;
+
+    &:hover {
+      background: var(--pr-color-primary-25);
+    }
+
+    .pr-native-check {
+      margin-top: 2px;
+      flex-shrink: 0;
+      accent-color: var(--pr-color-primary-300);
+    }
+
+    .label {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--pr-text);
+    }
+  }
+}

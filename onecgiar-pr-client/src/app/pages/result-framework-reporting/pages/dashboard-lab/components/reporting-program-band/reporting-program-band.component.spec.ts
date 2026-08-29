@@ -420,6 +420,25 @@ describe('ReportingProgramBandComponent', () => {
     });
   });
 
+  describe('clearAllFilters', () => {
+    it('shows the button only while filters are active and emits on click', async () => {
+      await build({ showToolbar: true, activeTab: 'reporting', filtersActive: false });
+      const find = () =>
+        Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b =>
+          (b.textContent ?? '').includes('Clear filters')
+        );
+      expect(find()).toBeUndefined();
+      fixture.componentRef.setInput('filtersActive', true);
+      fixture.detectChanges();
+      const emitted: boolean[] = [];
+      component.clearAllFilters.subscribe(() => emitted.push(true));
+      const btn = find();
+      expect(btn).toBeDefined();
+      btn!.click();
+      expect(emitted.length).toBe(1);
+    });
+  });
+
   describe('compactFilters (By-AOW mode)', () => {
     it('hides Type/Category/Status and the grouping toggle, keeping Search and Section', async () => {
       await build({ showToolbar: true, activeTab: 'reporting', compactFilters: true });
