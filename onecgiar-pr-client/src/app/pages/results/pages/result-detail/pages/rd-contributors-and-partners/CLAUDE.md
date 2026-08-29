@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-29 · branch qa-development-2026-ss · pending commit (TOC-C-T-3, TOC-SP-T-3)
+**Verified:** 2026-08-29 · branch qa-development-2026-ss · 64d072490 (TOC-C-T-1, TOC-C-T-2, TOC-C-T-3, TOC-SP-T-2, TOC-SP-T-3)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
