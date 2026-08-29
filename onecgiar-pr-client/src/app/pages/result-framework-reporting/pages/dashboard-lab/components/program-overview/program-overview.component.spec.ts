@@ -891,6 +891,72 @@ describe('ProgramOverviewComponent', () => {
     });
   });
 
+  /**
+   * `REH-TEST-5` (`changes/reporting-entry-hub`, REH-T-5): KPI cards 2/3 focus the reporting
+   * hub, and the "Progress by area of work" rows get an inline Report button.
+   */
+  // @akili-spec changes/reporting-entry-hub
+  describe('reporting-entry-hub focus + inline Report (REH-R-7 / REH-R-8 / REH-AC-15)', () => {
+    it('(a) clicking KPI card 2 (W3/Bilateral) emits focusHub("w3") and still sets activeSection to "bilateral"', () => {
+      const emitted: string[] = [];
+      component.focusHub.subscribe(code => emitted.push(code));
+      const kpiButtons = fixture.debugElement.queryAll(By.css('button.col-span-3'));
+
+      kpiButtons[1].nativeElement.click(); // KPI 2: W3 / Bilateral
+      fixture.detectChanges();
+
+      expect(emitted).toEqual(['w3']);
+      expect(component.activeSection()).toBe('bilateral');
+    });
+
+    it('(a-cont) clicking KPI card 3 (Contributing Centers) also emits focusHub("w3") and sets activeSection to "bilateral"', () => {
+      const emitted: string[] = [];
+      component.focusHub.subscribe(code => emitted.push(code));
+      const kpiButtons = fixture.debugElement.queryAll(By.css('button.col-span-3'));
+
+      kpiButtons[2].nativeElement.click(); // KPI 3: Contributing Centers
+      fixture.detectChanges();
+
+      expect(emitted).toEqual(['w3']);
+      expect(component.activeSection()).toBe('bilateral');
+    });
+
+    it('(b) clicking a row\'s Report button yields exactly one openAow("AOW02") emission — the row\'s own click must not ALSO fire', () => {
+      fixture.componentRef.setInput('aowProgress', [{ code: 'AOW02', name: 'Genetic Innovation', done: 1, total: 4 }]);
+      fixture.detectChanges();
+
+      const emitted: string[] = [];
+      component.openAow.subscribe(code => emitted.push(code));
+
+      const rowReportButton = fixture.debugElement
+        .queryAll(By.css('button'))
+        .find(btn => btn.nativeElement.textContent.trim() === 'Report' && !btn.nativeElement.hasAttribute('aria-disabled'));
+      expect(rowReportButton).toBeTruthy();
+
+      rowReportButton!.nativeElement.click();
+      fixture.detectChanges();
+
+      expect(emitted).toEqual(['AOW02']);
+    });
+
+    it('(c) canReportW1W2=false → the row Report button is aria-disabled with the exact tooltip title, and stays keyboard-reachable', () => {
+      fixture.componentRef.setInput('aowProgress', [{ code: 'AOW02', name: 'Genetic Innovation', done: 1, total: 4 }]);
+      fixture.componentRef.setInput('canReportW1W2', false);
+      fixture.detectChanges();
+
+      const rowReportButton = fixture.debugElement
+        .queryAll(By.css('button'))
+        .find(btn => btn.nativeElement.textContent.trim() === 'Report');
+      expect(rowReportButton).toBeTruthy();
+      expect(rowReportButton!.nativeElement.getAttribute('aria-disabled')).toBe('true');
+      expect(rowReportButton!.nativeElement.getAttribute('title')).toBe('You do not have reporting rights on this program');
+      // NFR Accessibility: a native `disabled` attribute would drop the control from the tab
+      // order — it must stay reachable so a keyboard/screen-reader user can hit it and hear `title`.
+      expect(rowReportButton!.nativeElement.hasAttribute('disabled')).toBe(false);
+      expect(rowReportButton!.nativeElement.tabIndex).not.toBe(-1);
+    });
+  });
+
   describe('Reporting progress velocity trendline', () => {
     it('computes reporting trend option and displays trendline in reporting status card header', () => {
       const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));

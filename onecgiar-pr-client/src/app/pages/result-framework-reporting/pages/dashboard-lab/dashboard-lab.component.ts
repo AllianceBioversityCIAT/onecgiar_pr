@@ -1667,6 +1667,21 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * `REH-R-7`/`REH-R-8`: `program-overview`'s KPI cards 2/3 emit `focusHub('w3')` — scrolls the
+   * reporting-entry-hub's W3 lane heading (`#reporting-entry-hub-w3`, rendered with
+   * `tabindex="-1"` by `ReportingEntryHubComponent`) into view and moves focus to it. Expanding a
+   * collapsed hub is out of scope here (REH-T-5) — this only scrolls/focuses what's rendered.
+   */
+  // @akili-spec changes/reporting-entry-hub
+  onFocusHub(_target: 'w3'): void {
+    const heading = document.getElementById('reporting-entry-hub-w3');
+    if (!heading) return;
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    heading.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+    heading.focus({ preventScroll: true });
+  }
+
+  /**
    * Fetch (and cache) the programme's bilateral rows. Overview only — the other tabs do not use
    * them. `versionId` resolved via `effectiveVersionId()` (design.md DD-1 — the single resolver);
    * cached per phase (design.md DD-4) so a phase switch never serves a stale key.

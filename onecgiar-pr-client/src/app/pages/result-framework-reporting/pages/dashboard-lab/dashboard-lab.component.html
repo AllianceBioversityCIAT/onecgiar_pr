@@ -1229,8 +1229,10 @@
           [tocMapLoading]="overviewTocMapLoading()"
           [programResults]="overviewProgramResults()"
           [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
+          [canReportW1W2]="entityAowService.canReportResults()"
           (openResults)="onOverviewLink($event)"
-          (openAow)="onOpenAow($event)" />
+          (openAow)="onOpenAow($event)"
+          (focusHub)="onFocusHub($event)" />
       </article>
       }
 

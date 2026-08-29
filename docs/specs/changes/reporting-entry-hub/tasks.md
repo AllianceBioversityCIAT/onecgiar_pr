@@ -113,7 +113,7 @@
 
 ### `REH-T-5` — Client: KPI cards focus the hub + inline Report on AoW progress rows
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Type:** `client`
 - **Description:** In `ProgramOverviewComponent`: new output `focusHub` emitted by KPI cards 2 and 3 after `setActiveSection('bilateral')`; host (`DashboardLabComponent`) scrolls `#reporting-entry-hub-w3` into view (`scrollIntoView({block:'start'})`, respecting `prefers-reduced-motion`) and focuses its heading (`tabindex="-1"`). In the "Progress by area of work" rows: add a **Report** button (right of the percent badge, secondary style from design §6.3, `(click)` with `stopPropagation`, emits the existing `openAow` output with `row.code`); disabled with `title` when `!canReportW1W2` (new input).
 - **Implements:** `REH-R-7`, `REH-R-8`, `REH-AC-15`; NFR Accessibility (focus move).
@@ -133,7 +133,7 @@
 
 ### `REH-T-6` — Client: sort "recently used first" (SHOULD) — *budget-gated*
 
-- **Status:** `[ ]`
+- **Status:** `deferred (budget — 1311 non-test LOC after REH-T-4 > 700; see execution.md)`
 - **Type:** `client`
 - **Description:** On `createResult`, store `{projectId, at}` in `localStorage['pr.hub.recentProjects']` (max 5, try/catch); the hub sorts rows by allocation tier then recency. **Skip** if actual non-test LOC after `REH-T-4` exceeds 700 (this threshold gates only this SHOULD task; the spec-wide escalation tripwire stays at 900, design §14) — record `deferred (budget)` in `execution.md`.
 - **Implements:** `REH-R-11`.

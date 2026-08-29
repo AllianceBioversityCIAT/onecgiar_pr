@@ -28,6 +28,8 @@ import {
 } from './program-overview.charts';
 import type { TocMapModel } from '../../dashboard-lab.toc-map';
 import type { ECElementEvent } from 'echarts/core';
+// @akili-spec changes/reporting-entry-hub — reuse the hub's centralised copy for the Report button's tooltip text.
+import { HUB_COPY } from '../reporting-entry-hub/hub-copy';
 
 /** A matrix card's view mode: default 'vertical-bar', then 'horizontal-bar', then 'heatmap'. */
 export type ChartViewMode = 'vertical-bar' | 'horizontal-bar' | 'heatmap';
@@ -161,6 +163,15 @@ export class ProgramOverviewComponent {
    */
   readonly bilateralLoading = input<boolean>(false);
 
+  // @akili-spec changes/reporting-entry-hub
+  /** REH-R-8: whether the current user can report W1/W2 results — gates the inline Report
+   * button on each "Progress by area of work" row (disabled + tooltip when false). */
+  readonly canReportW1W2 = input<boolean>(true);
+
+  /** Reuses `ReportingEntryHubComponent`'s centralised copy for the Report button's tooltip. */
+  // @akili-spec changes/reporting-entry-hub
+  readonly copy = HUB_COPY;
+
   /**
    * Theory-of-Change map model (`changes/overview-toc-map`, TCM-T-3) — built by the parent's
    * `overviewTocMap` computed (`buildTocMapModel`, TCM-T-1) from the SAME `tocByKey`/units data the
@@ -190,6 +201,14 @@ export class ProgramOverviewComponent {
    * output is the single non-null gate the parent (`dashboard-lab`) can trust for navigation.
    */
   readonly openAow = output<string>();
+
+  /**
+   * `REH-R-7`: emitted with `'w3'` by KPI cards 2 ("W3 / Bilateral") and 3 ("Contributing
+   * Centers"), in addition to their existing `setActiveSection('bilateral')` — the host
+   * (`DashboardLabComponent`) scrolls the reporting-entry-hub's W3 lane into view and focuses it.
+   */
+  // @akili-spec changes/reporting-entry-hub
+  readonly focusHub = output<'w3'>();
 
   /** `null` (no destination — `Other`/`Not specified`/zero-count) is swallowed, never emitted. */
   emitLink(link: OverviewLink | null): void {
@@ -416,6 +435,17 @@ export class ProgramOverviewComponent {
 
   percentOf(row: AowProgressRow): number {
     return row.total ? Math.round((row.done / row.total) * 100) : 0;
+  }
+
+  /**
+   * `REH-R-7`/`REH-AC-15`: the row's inline Report button. Stops propagation so the row's own
+   * `(click)="openAow.emit(row.code)"` does not ALSO fire — otherwise every click emits twice.
+   */
+  // @akili-spec changes/reporting-entry-hub
+  onReportAowRow(row: AowProgressRow, event: Event): void {
+    event.stopPropagation();
+    if (!this.canReportW1W2()) return;
+    if (row.code) this.openAow.emit(row.code);
   }
 
   /**
