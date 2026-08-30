@@ -421,6 +421,71 @@ describe('ReportingAowTableComponent', () => {
   });
 
   // ── Intermediate Outcome Target tooltip (RES-R-1, RES-R-2, RES-AC-1, RES-AC-2) ─────────────
+  // ── Next pending + copy link, inherited from the By-AOW cards (MRF-R-3.1/R-5) ──
+  describe('next pending (grouped view)', () => {
+    const threeRows = () => [
+      row({ indicator_id: 1, actual_achieved_value_sum: 3, target_value_sum: '3' }), // reported
+      row({ indicator_id: 2, actual_achieved_value_sum: 0, target_value_sum: '2' }), // pending
+      row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '1' }) // pending
+    ];
+
+    it('offers Next pending only on the last-reported row, matched by id AND AoW', async () => {
+      await build([group(threeRows())], { lastReported: { id: 1, aowCode: 'AOW01' } });
+      expect(component.isLastReportedRow(threeRows()[0])).toBe(true);
+      expect(component.isLastReportedRow(row({ indicator_id: 1, __aowCode: 'AOW02' }))).toBe(false);
+      expect(component.isLastReportedRow(threeRows()[1])).toBe(false);
+    });
+
+    it('walks the visible order to the next pending row and wraps around', async () => {
+      await build([group(threeRows())], { lastReported: { id: 3, aowCode: 'AOW01' } });
+      // after row 3 (pending itself, but the just-reported one is skipped) wraps to row 2
+      expect(component.nextPendingRow()?.indicator_id).toBe(2);
+    });
+
+    it('skips reported and zero-target rows', async () => {
+      const rows = [
+        row({ indicator_id: 1, actual_achieved_value_sum: 1, target_value_sum: '1' }),
+        row({ indicator_id: 2, actual_achieved_value_sum: 2, target_value_sum: '2' }), // reported
+        row({ indicator_id: 3, actual_achieved_value_sum: 0, target_value_sum: '0' }), // zero-target
+        row({ indicator_id: 4, actual_achieved_value_sum: 0, target_value_sum: '5' }) // the answer
+      ];
+      await build([group(rows)], { lastReported: { id: 1, aowCode: 'AOW01' } });
+      expect(component.nextPendingRow()?.indicator_id).toBe(4);
+    });
+
+    it('is null when nothing pending remains (the row shows the all-reported note)', async () => {
+      const rows = [
+        row({ indicator_id: 1, actual_achieved_value_sum: 1, target_value_sum: '1' }),
+        row({ indicator_id: 2, actual_achieved_value_sum: 2, target_value_sum: '2' })
+      ];
+      await build([group(rows)], { lastReported: { id: 1, aowCode: 'AOW01' } });
+      expect(component.nextPendingRow()).toBeNull();
+    });
+
+    it('goToNextPending opens the target card + sub-group and sets the transient highlight', async () => {
+      jest.useFakeTimers();
+      try {
+        await build([group(threeRows())], { lastReported: { id: 1, aowCode: 'AOW01' } });
+        expect(component.isOpen('aow::AOW01', component.isDefaultOpenAow())).toBe(false);
+        component.goToNextPending(new Event('click'));
+        expect(component.isOpen('aow::AOW01', component.isDefaultOpenAow())).toBe(true);
+        const target = component.nextPendingRow();
+        expect(component.highlightedRowKey()).toBe(component.rowKey(target!));
+        jest.advanceTimersByTime(2700);
+        expect(component.highlightedRowKey()).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('renders the visible copy-link icon on AoW rows but not on bucket rows', async () => {
+      await build([group(threeRows())], { canReport: true, expandAll: true });
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelectorAll('button[aria-label="Copy link to this KPI"]').length).toBe(3);
+      expect(component.canCopyLink(row({ __aowCode: 'intermediate-outcomes' }))).toBe(false);
+    });
+  });
+
   describe('Intermediate Outcome Target tooltip', () => {
     it('isIntermediateRow matches only the intermediate bucket kind', async () => {
       await build([group([row()])]);
@@ -437,7 +502,7 @@ describe('ReportingAowTableComponent', () => {
      * `isIntermediateRow` helper (tasks.md disqualifier).
      */
     const targetTooltipText = (): string => {
-      const targetButton = fixture.debugElement.query(By.css('.pr-reporting-row .relative.text-right button'));
+      const targetButton = fixture.debugElement.query(By.css('.pr-reporting-row .relative button'));
       return targetButton.injector.get(PrTooltipDirective).text;
     };
 
@@ -465,7 +530,7 @@ describe('ReportingAowTableComponent', () => {
     });
 
     const targetTooltipText = (): string => {
-      const targetButton = fixture.debugElement.query(By.css('.pr-reporting-row .relative.text-right button'));
+      const targetButton = fixture.debugElement.query(By.css('.pr-reporting-row .relative button'));
       return targetButton.injector.get(PrTooltipDirective).text;
     };
 

@@ -1,7 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, HostListener, computed, effect, input, linkedSignal, output, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideX } from '@ng-icons/lucide';
+import { lucideArrowDown, lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideLink, lucideX } from '@ng-icons/lucide';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import {
   PrTableComponent,
@@ -11,7 +11,7 @@ import {
   PrTableBodyDirective,
   PrTableEmptyDirective
 } from '../../../../../../shared/components/pr-table';
-import { buildRatio } from '../../reporting-burndown';
+import { buildRatio, pendingOf } from '../../reporting-burndown';
 
 /**
  * `__aowCode` values for the two program-level buckets (Intermediate Outcomes / 2030 Outcomes) —
@@ -145,7 +145,7 @@ interface IndicatorBand {
   templateUrl: './reporting-aow-table.component.html',
   styleUrls: ['./reporting-aow-table.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [provideIcons({ lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideX })]
+  providers: [provideIcons({ lucideArrowDown, lucideChevronDown, lucideCheck, lucideEllipsis, lucideInfo, lucideLink, lucideX })]
 })
 export class ReportingAowTableComponent {
   readonly groups = input.required<ReportingAowGroup[]>();
@@ -195,6 +195,12 @@ export class ReportingAowTableComponent {
    * override-reset key, so a press always re-seeds the list from the level default.
    */
   readonly expandAllNonce = input<number>(0);
+  /**
+   * The KPI whose report surface (drawer or legacy modal) just closed, published by the host —
+   * inherited from the By-AOW cards (MRF-R-3.1): that row offers "Next pending" until the next
+   * report. `null` before the session's first report.
+   */
+  readonly lastReported = input<{ id: unknown; aowCode: string } | null>(null);
 
   readonly openAow = output<string>();
   readonly openRow = output<ReportingIndicator>();
@@ -352,11 +358,21 @@ export class ReportingAowTableComponent {
     return row?.type_name || row?.result_type_name || 'Not provided';
   }
 
+  /**
+   * Sanitises the AoW code for display: returns null for program-level outcome buckets
+   * ('intermediate-outcomes', '2030-outcomes') so they render as clean dashes instead of long labels.
+   */
+  aowCodeOf(row: ReportingIndicator): string | null {
+    const code = row?.__aowCode?.trim();
+    if (!code || COPY_LINK_UNSUPPORTED_AOW_CODES.has(code)) return null;
+    return code;
+  }
+
   /** Meta under the title — the indicator name; in flat view the AoW code prefixes it. */
   metaLine(row: ReportingIndicator, showAow = false): string {
     const name = this.indicatorNameOf(row);
     if (!showAow) return name;
-    const aow = row.__aowCode?.trim();
+    const aow = this.aowCodeOf(row);
     return aow ? `${aow} · ${name}` : name;
   }
 
@@ -518,12 +534,105 @@ export class ReportingAowTableComponent {
     return 'bg-[var(--pr-color-primary-100)] text-[var(--pr-color-primary-400)]';
   }
 
-  /** Rows surviving the toolbar filters. */
+  /** Local breakdown filter by Center per AoW / bucket group key. */
+  private readonly localCenterFilter = signal<Record<string, string>>({});
+  /** Local breakdown filter by Result Type per AoW / bucket group key. */
+  private readonly localTypeFilter = signal<Record<string, string>>({});
+
+  groupKey(group: ReportingAowGroup): string {
+    return group?.aow?.code ?? '';
+  }
+
+  selectedCenterOf(group: ReportingAowGroup): string | null {
+    return this.localCenterFilter()[this.groupKey(group)] ?? null;
+  }
+
+  setCenterFilter(group: ReportingAowGroup, center: string | null): void {
+    const key = this.groupKey(group);
+    const curr = this.localCenterFilter();
+    if (!center || curr[key] === center) {
+      const copy = { ...curr };
+      delete copy[key];
+      this.localCenterFilter.set(copy);
+    } else {
+      this.localCenterFilter.set({ ...curr, [key]: center });
+    }
+  }
+
+  selectedTypeOf(group: ReportingAowGroup): string | null {
+    return this.localTypeFilter()[this.groupKey(group)] ?? null;
+  }
+
+  setTypeFilter(group: ReportingAowGroup, type: string | null): void {
+    const key = this.groupKey(group);
+    const curr = this.localTypeFilter();
+    if (!type || curr[key] === type) {
+      const copy = { ...curr };
+      delete copy[key];
+      this.localTypeFilter.set(copy);
+    } else {
+      this.localTypeFilter.set({ ...curr, [key]: type });
+    }
+  }
+
+  centerCountsOf(group: ReportingAowGroup): { center: string; count: number }[] {
+    const map = new Map<string, number>();
+    for (const ind of group.indicators ?? []) {
+      const c = ind.center_acronym?.trim();
+      if (c && c !== '—') {
+        map.set(c, (map.get(c) ?? 0) + 1);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([center, count]) => ({ center, count }))
+      .sort((a, b) => b.count - a.count || a.center.localeCompare(b.center));
+  }
+
+  typeCountsOf(group: ReportingAowGroup): { type: string; count: number }[] {
+    const map = new Map<string, number>();
+    for (const ind of group.indicators ?? []) {
+      const t = ind.result_type_name?.trim();
+      if (t && t !== '—') {
+        map.set(t, (map.get(t) ?? 0) + 1);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
+  }
+
+  hloJumpList(group: ReportingAowGroup): { key: string; name: string; count: number }[] {
+    const bands = this.bandsOf(group);
+    const list: { key: string; name: string; count: number }[] = [];
+    for (const band of bands) {
+      for (const g of band.groups) {
+        list.push({ key: g.key, name: g.name, count: g.rows.length });
+      }
+    }
+    return list;
+  }
+
+  jumpToHlo(hloKey: string): void {
+    if (!this.isOpen(hloKey, this.isDefaultOpenHlo())) {
+      this.toggle(hloKey, this.isDefaultOpenHlo());
+    }
+    setTimeout(() => {
+      const el = document.getElementById(`hlo-group-${hloKey}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }
+
+  /** Rows surviving the toolbar filters + optional in-card breakdown filters. */
   visibleRows(group: ReportingAowGroup): ReportingIndicator[] {
     const q = this.search().trim().toLowerCase();
     const status = this.statusFilter();
+    const selCenter = this.selectedCenterOf(group);
+    const selType = this.selectedTypeOf(group);
+
     return (group.indicators ?? []).filter(row => {
       if (status !== 'all' && this.statusOf(row) !== status) return false;
+      if (selCenter && row.center_acronym?.trim() !== selCenter) return false;
+      if (selType && row.result_type_name?.trim() !== selType) return false;
       if (!q) return true;
       // Both name fields are searched: the visible meta line is the indicator name now, but users
       // still type categories ("innovation use"), which only live in `result_type_name`.
@@ -693,8 +802,10 @@ export class ReportingAowTableComponent {
   readonly flatTableRows = computed<ReportingFlatRow[]>(() =>
     this.flatRows().map(row => {
       const status = this.statusOf(row);
+      const aow = this.aowCodeOf(row);
       return {
         ...row,
+        __aowCode: aow ?? undefined,
         __sortTarget: this.sortNumber(row.target_value_sum),
         __sortAchieved: this.sortNumber(row.actual_achieved_value_sum),
         __sortStatus: ReportingAowTableComponent.STATUS_RANK[status],
@@ -721,6 +832,86 @@ export class ReportingAowTableComponent {
       default:
         return 'bg-[var(--pr-status-not-started-bg)] text-[var(--pr-status-not-started-fg)]';
     }
+  }
+
+  // ── Next pending (inherited from the By-AOW cards, MRF-R-3.1) ─────────────
+  /** Transient marker for the row "Next pending" just jumped to — cleared after ~2.6s. */
+  readonly highlightedRowKey = signal<string | null>(null);
+  private highlightTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** True for the ONE row whose report surface just closed — that row offers "Next pending". */
+  isLastReportedRow(row: ReportingIndicator): boolean {
+    const last = this.lastReported();
+    return !!last && String(last.id) === String(row.indicator_id) && (last.aowCode ?? '') === (row.__aowCode ?? '');
+  }
+
+  /**
+   * Every row the user can currently SEE, in display order — grouped mode walks the cards/bands
+   * exactly as rendered, flat mode reuses `flatRows`. `nextPendingRow` walks this list, so "next"
+   * always means "next on screen", honouring every active filter (same contract as the By-AOW
+   * card's `orderedByAowIndicators`).
+   */
+  private orderedVisibleRows(): ReportingIndicator[] {
+    if (this.viewMode() === 'flat') return this.flatRows();
+    return this.visibleGroups().flatMap(g => this.hloGroupsOf(g).flatMap(h => h.rows));
+  }
+
+  /**
+   * Next pending row after the last-reported one, wrapping once around the visible list; `null`
+   * when nothing pending is left (the template renders the "all reported" note instead, mirroring
+   * MRF-AC-3's BUT clause). Matched by id+AoW — indicator ids repeat across AoWs (MRF C-8).
+   */
+  readonly nextPendingRow = computed<ReportingIndicator | null>(() => {
+    const last = this.lastReported();
+    if (!last) return null;
+    const rows = this.orderedVisibleRows();
+    const total = rows.length;
+    if (!total) return null;
+    const isLast = (r: ReportingIndicator) =>
+      String(r.indicator_id) === String(last.id) && (r.__aowCode ?? '') === (last.aowCode ?? '');
+    const idx = rows.findIndex(isLast);
+    const start = idx === -1 ? 0 : idx + 1;
+    for (let offset = 0; offset < total; offset++) {
+      const candidate = rows[(start + offset) % total];
+      if (candidate && !isLast(candidate) && pendingOf([candidate]).length > 0) return candidate;
+    }
+    return null;
+  });
+
+  /**
+   * Jump to the next pending row: open its card + sub-group if collapsed (rows are matched by
+   * `rowKey`, never identity — the bucket bands clone their rows), then scroll + highlight, the
+   * same affordance the `?kpi=` restore gives on the By-AOW cards.
+   */
+  goToNextPending(ev: Event): void {
+    ev.stopPropagation();
+    const target = this.nextPendingRow();
+    if (!target) return;
+    const targetKey = this.rowKey(target);
+    if (this.viewMode() === 'grouped') {
+      const group = this.visibleGroups().find(g => this.visibleRows(g).some(r => this.rowKey(r) === targetKey));
+      if (group) {
+        const aowKey = `aow::${group.aow.code}`;
+        if (!this.isOpen(aowKey, this.isDefaultOpenAow())) this.toggle(aowKey, this.isDefaultOpenAow());
+        const hlo = this.hloGroupsOf(group).find(h => h.rows.some(r => this.rowKey(r) === targetKey));
+        if (hlo && !this.isOpen(hlo.key, this.isDefaultOpenHlo())) this.toggle(hlo.key, this.isDefaultOpenHlo());
+      }
+    }
+    this.highlightedRowKey.set(targetKey);
+    if (this.highlightTimer) clearTimeout(this.highlightTimer);
+    this.highlightTimer = setTimeout(() => {
+      this.highlightTimer = null;
+      this.highlightedRowKey.set(null);
+    }, 2600);
+    // Waits for the card's 280ms disclosure animation to FINISH before scrolling — firing earlier
+    // scrolls to a position the expanding card is still pushing around (verified live: 60ms landed
+    // off-viewport).
+    setTimeout(() => {
+      // `CSS.escape` guarded — jsdom (the unit harness) does not implement the CSS global.
+      const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(targetKey) : targetKey.replace(/"/g, '\\"');
+      const el = document.querySelector(`[data-row-key="${escaped}"]`);
+      el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }, 320);
   }
 
   // ── Row overflow menu ─────────────────────────────────────────────────────

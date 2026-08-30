@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-08-29 · branch qa-development-2026 · 3662f00d7
+**Verified:** 2026-08-30 · branch qa-development-2026 · 3366453bc
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -9,7 +9,8 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
 
 ## Contrato
 - Inputs: `groups` (requerido), `search`, `statusFilter`, `filtersActive`, `viewMode`
-  (`'grouped' | 'flat'`), `canReport`, `expandAll`, `expandAllNonce`, `scopeKey`.
+  (`'grouped' | 'flat'`), `canReport`, `expandAll`, `expandAllNonce`, `scopeKey`, `lastReported`
+  (el KPI cuyo report se acaba de cerrar — publica el host; enciende "Next pending" en esa fila).
 - Outputs: `openRow`, `reportRow`, `openTarget`, `openAchieved`, `openAow`, `allOpenChange`,
   `clearFilters`, `copyLink`.
 - Estado: el host (`dashboard-lab`) es dueño de los datos y de los cinco filtros. Este componente
@@ -61,6 +62,14 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   NO Only-pending). `ratioBase` prefiere ese campo — si no, la cabecera se movería cada vez que
   alguien toca el toggle, y eso no es progreso, es una coincidencia.
 - `—` vs `0` son hechos distintos: `—` = nunca se reportó, `0` = se reportó cero. No los unifiques.
+- **Next pending + Copy link heredados de las tarjetas By-AOW (MRF-R-3.1/R-5).** La fila cuyo
+  report se acaba de cerrar (`lastReported`, match por id+AoW — los ids se repiten entre AoWs)
+  ofrece "Next pending": recorre `orderedVisibleRows()` (el orden EN PANTALLA, filtros incluidos),
+  salta reportados y zero-target (`pendingOf`), da la vuelta, y al saltar abre tarjeta+subgrupo
+  (match por `rowKey`, nunca identidad — las bandas bucket CLONAN sus filas), scrollea a los 320ms
+  (la animación de apertura dura 280ms; a 60ms aterrizaba fuera del viewport — verificado en vivo)
+  y resalta ~2.6s. El icono de link visible re-emite el mismo `copyLink` del menú `⋯`; la columna
+  action del grid pasó de 96px a 136px (y la pista flat de 104 a 140) para alojarlo.
 - El menú `⋯` es local. Sus tres items vivos re-emiten `openAchieved` / `openTarget` / `copyLink`
   (MRF-R-5, host arma la URL y copia); no abren superficie propia. `Copy indicator code` va
   **visible pero deshabilitado** (`Coming soon`): el payload no trae ningún código de indicador

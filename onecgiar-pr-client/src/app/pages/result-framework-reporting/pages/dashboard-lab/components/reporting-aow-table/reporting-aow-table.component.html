@@ -28,26 +28,44 @@
     <app-pr-table [value]="flatTableRows()" styleClass="pr-flat-table">
       <ng-template prTableHeader>
         <tr class="pr-flat-row pr-flat-head">
-          <th class="pr-flat-cell pr-flat-sticky-l1" scope="col" aria-hidden="true"></th>
-          <th class="pr-flat-cell pr-flat-sticky-l2" scope="col" prSortableColumn="indicator_description">
-            Indicator <pr-sort-icon field="indicator_description" />
+          <th class="pr-flat-cell" scope="col" prSortableColumn="indicator_description">
+            <span class="inline-flex items-center gap-[4px] cursor-pointer">
+              Indicator <pr-sort-icon field="indicator_description" />
+            </span>
           </th>
-          <th class="pr-flat-cell" scope="col" prSortableColumn="__aowCode">AoW <pr-sort-icon field="__aowCode" /></th>
-          <th class="pr-flat-cell" scope="col" prSortableColumn="__typeLabel">Type <pr-sort-icon field="__typeLabel" /></th>
-          <th class="pr-flat-cell" scope="col" prSortableColumn="__centerLabel">
-            Center <pr-sort-icon field="__centerLabel" />
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__aowCode">
+            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
+              AoW <pr-sort-icon field="__aowCode" />
+            </span>
           </th>
-          <th class="pr-flat-cell pr-flat-num" scope="col" prSortableColumn="__sortTarget">
-            Target <pr-sort-icon field="__sortTarget" />
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__typeLabel">
+            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
+              Type <pr-sort-icon field="__typeLabel" />
+            </span>
           </th>
-          <th class="pr-flat-cell pr-flat-num" scope="col" prSortableColumn="__sortAchieved">
-            Achieved <pr-sort-icon field="__sortAchieved" />
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__centerLabel">
+            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
+              Center <pr-sort-icon field="__centerLabel" />
+            </span>
           </th>
-          <th class="pr-flat-cell" scope="col" prSortableColumn="__sortStatus">
-            Status <pr-sort-icon field="__sortStatus" />
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__sortTarget">
+            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
+              Target <pr-sort-icon field="__sortTarget" />
+            </span>
           </th>
-          <th class="pr-flat-cell pr-flat-sticky-r1" scope="col" aria-hidden="true"></th>
-          <th class="pr-flat-cell pr-flat-sticky-r2" scope="col" aria-hidden="true"></th>
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__sortAchieved">
+            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
+              Achieved <pr-sort-icon field="__sortAchieved" />
+            </span>
+          </th>
+          <th class="pr-flat-cell text-center" scope="col" prSortableColumn="__sortStatus">
+            <span class="inline-flex items-center justify-center gap-[4px] w-full cursor-pointer">
+              Status <pr-sort-icon field="__sortStatus" />
+            </span>
+          </th>
+          <th class="pr-flat-cell text-center" scope="col" aria-hidden="true">
+            <span class="inline-flex items-center justify-center w-full">Actions</span>
+          </th>
         </tr>
       </ng-template>
 
@@ -56,131 +74,157 @@
           class="pr-flat-row pr-flat-body"
           role="button"
           tabindex="0"
+          [attr.data-row-key]="rowKey(row)"
+          [class]="highlightedRowKey() === rowKey(row) ? 'ring-2 ring-inset ring-[var(--pr-color-primary-300)]' : ''"
           [attr.aria-label]="row.indicator_description"
           (click)="openRow.emit(row)"
           (keydown.enter)="openRow.emit(row)">
-          <!-- 1 — bullseye, pinned left -->
-          <td class="pr-flat-cell pr-flat-sticky-l1">
-            <span class="pr-status-mark" [prTooltip]="row.__statusText" [attr.aria-label]="row.__statusText">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.75" />
-                <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.75" />
-                <circle cx="12" cy="12" r="1.1" fill="currentColor" />
-              </svg>
-            </span>
-          </td>
-
-          <!-- 2 — indicator + its name, pinned left -->
-          <td class="pr-flat-cell pr-flat-sticky-l2">
+          <!-- 1 — indicator + its name -->
+          <td class="pr-flat-cell">
             <div class="flex min-w-0 flex-col">
               <p
-                class="m-0 text-[15px] font-semibold leading-[1.45] text-[var(--pr-text-heading)] [text-wrap:pretty]"
+                class="m-0 text-[13.5px] font-semibold leading-[1.45] text-[var(--pr-text-heading)] [text-wrap:pretty]"
                 [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)">
                 {{ row.indicator_description }}
               </p>
               @if (needsShowMore(row)) {
                 <button
                   type="button"
-                  class="mt-[2px] self-start border-0 bg-transparent p-0 text-left text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:text-[var(--pr-color-primary-400)] hover:underline"
+                  class="mt-[2px] self-start border-0 bg-transparent p-0 text-left text-[11.5px] font-medium text-[var(--pr-color-primary-500)] hover:text-[var(--pr-color-primary-600)] hover:underline cursor-pointer"
                   [attr.aria-expanded]="isTitleExpanded(row.indicator_id)"
                   (click)="toggleTitle(row.indicator_id, $event)">
                   {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
                 </button>
               }
               <span
-                class="pr-clamp-1 mt-[6px] text-[13px] font-normal leading-[17px] text-[var(--pr-text-secondary)]"
+                class="pr-clamp-1 mt-[4px] text-[12px] font-normal leading-[16px] text-[var(--pr-text-secondary)]"
                 [title]="indicatorNameOf(row)">
                 {{ indicatorNameOf(row) }}
               </span>
             </div>
           </td>
 
-          <!-- 3 — AoW code chip, or an em dash for a programme-level bucket -->
-          <td class="pr-flat-cell">
+          <!-- 2 — AoW code chip -->
+          <td class="pr-flat-cell flex items-center justify-center">
             @if (row.__aowCode) {
               <span
-                class="pr-code inline-block rounded-[6px] bg-[var(--pr-color-primary-100)] px-[8px] py-[2px] text-[12px] font-medium text-[var(--pr-color-primary-400)]">
+                class="pr-code inline-flex items-center justify-center rounded-[5px] bg-[var(--pr-color-primary-100)] px-[7px] py-[2px] text-[11.5px] font-bold text-[var(--pr-color-primary-700)]">
                 {{ row.__aowCode }}
               </span>
             } @else {
-              <span class="pr-figure-sm text-[14px] font-medium text-[var(--pr-text-subtle)]">—</span>
+              <span class="pr-figure-sm text-[13px] font-medium text-[var(--pr-text-subtle)]">—</span>
             }
           </td>
 
-          <!-- 4 — category chip -->
-          <td class="pr-flat-cell">
+          <!-- 3 — category chip -->
+          <td class="pr-flat-cell flex items-center justify-center min-w-0">
             <span
-              class="inline-block whitespace-nowrap rounded-[6px] bg-[var(--pr-surface-subtle)] px-[8px] py-[2px] text-[12px] font-medium text-[var(--pr-text-secondary)]">
+              class="inline-block max-w-[130px] truncate rounded-[6px] bg-[var(--pr-surface-ground)] px-[7px] py-[2px] text-[11px] font-medium text-[var(--pr-text-secondary)] border border-[var(--pr-border)]"
+              [title]="row.__typeLabel">
               {{ row.__typeLabel }}
             </span>
           </td>
 
-          <!-- 5 — centre -->
-          <td class="pr-flat-cell">
-            <span class="pr-clamp-1 text-[13px] text-[var(--pr-text)]" [title]="row.__centerLabel">
-              {{ row.__centerLabel }}
-            </span>
+          <!-- 4 — centre -->
+          <td class="pr-flat-cell flex items-center justify-center min-w-0">
+            @if (row.__centerLabel && row.__centerLabel !== '—') {
+              <span
+                class="inline-flex items-center justify-center rounded-[5px] bg-slate-100 px-[6px] py-[2px] text-[11px] font-medium text-slate-700 border border-slate-200"
+                [title]="row.__centerLabel">
+                {{ row.__centerLabel }}
+              </span>
+            } @else {
+              <span class="text-[13px] text-[var(--pr-text-subtle)]">—</span>
+            }
           </td>
 
-          <!-- 6 — Target -->
-          <td class="pr-flat-cell pr-flat-num">
+          <!-- 5 — Target -->
+          <td class="pr-flat-cell flex items-center justify-center">
             <button
               type="button"
-              class="block w-full border-0 bg-transparent p-0 text-right"
+              class="block border-0 bg-transparent p-0 text-center cursor-pointer group/tgt"
               (click)="emitAndStop(openTarget, row, $event)">
               <span
-                class="pr-figure block text-[18px] font-medium tabular-nums text-[var(--pr-text-heading)] hover:underline hover:decoration-dotted hover:underline-offset-[3px]">
+                class="pr-figure block text-[15px] font-bold tabular-nums text-[var(--pr-text-heading)] group-hover/tgt:text-[var(--pr-color-primary-600)] transition-colors">
                 {{ targetText(row) }}
               </span>
-              <span class="mt-[2px] block text-[11px] font-medium text-[var(--pr-text-subtle)]">Target</span>
+              <span class="block text-[9.5px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-muted)]">Target</span>
             </button>
           </td>
 
-          <!-- 7 — Achieved. `—` = nothing reported; `0` = a reported zero. -->
-          <td class="pr-flat-cell pr-flat-num">
+          <!-- 6 — Achieved -->
+          <td class="pr-flat-cell flex items-center justify-center">
             <button
               type="button"
-              class="block w-full border-0 bg-transparent p-0 text-right"
+              class="block border-0 bg-transparent p-0 text-center cursor-pointer group/ach"
               [prTooltip]="achievedTooltip(row)"
               (click)="emitAndStop(openAchieved, row, $event)">
               <span
-                class="pr-figure block text-[18px] font-medium tabular-nums hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
-                [class]="achievedIsEmpty(row) ? 'text-[var(--pr-text-subtle)]' : 'text-[var(--pr-text-heading)]'">
+                class="pr-figure block text-[15px] font-bold tabular-nums group-hover/ach:text-[var(--pr-color-primary-600)] transition-colors"
+                [class]="achievedIsEmpty(row) ? 'text-[var(--pr-text-muted)]' : 'text-[var(--pr-text-heading)]'">
                 {{ achievedText(row) }}
               </span>
-              <span class="mt-[2px] block text-[11px] font-medium text-[var(--pr-text-subtle)]">Achieved</span>
+              <span class="block text-[9.5px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-muted)]">Achieved</span>
             </button>
           </td>
 
-          <!-- 8 — status pill with its dot -->
-          <td class="pr-flat-cell">
+          <!-- 7 — status pill (semáforo) -->
+          <td class="pr-flat-cell flex items-center justify-center">
             <span
-              class="inline-flex items-center gap-[6px] whitespace-nowrap rounded-full px-[9px] py-[3px] text-[12px] font-medium"
-              [class]="statusPillClass(row.__statusKey)">
+              class="inline-flex items-center gap-[5px] whitespace-nowrap rounded-full px-[8px] py-[2px] text-[11px] font-medium"
+              [class]="statusPillClass(row.__statusKey)"
+              [prTooltip]="row.__statusText">
               <span class="h-[6px] w-[6px] rounded-full bg-current"></span>
               {{ row.__statusText }}
             </span>
           </td>
 
-          <!-- 9 — Report / Continue, pinned right -->
-          <td class="pr-flat-cell pr-flat-sticky-r1">
+          <!-- 8 — Actions: Next pending (last-reported row) + Copy link + Report + Menu -->
+          <td class="pr-flat-cell flex flex-wrap items-center justify-center gap-[4px]">
+            @if (isLastReportedRow(row)) {
+              @if (nextPendingRow(); as next) {
+                <button
+                  type="button"
+                  class="inline-flex h-[26px] shrink-0 cursor-pointer appearance-none items-center gap-[3px] rounded-[6px] border border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] px-[6px] text-[11px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+                  [prTooltip]="next.indicator_description"
+                  aria-label="Go to the next pending KPI"
+                  (click)="goToNextPending($event)">
+                  <ng-icon name="lucideArrowDown" class="text-[12px]" aria-hidden="true" /> Next pending
+                </button>
+              } @else {
+                <span
+                  class="inline-flex h-[26px] shrink-0 items-center rounded-[6px] bg-emerald-50 px-[6px] text-[10.5px] font-semibold text-emerald-700"
+                  title="All pending KPIs reported">
+                  <ng-icon name="lucideCheck" class="text-[12px]" aria-hidden="true" />
+                </span>
+              }
+            }
+            @if (canCopyLink(row)) {
+              <button
+                type="button"
+                class="inline-flex h-[26px] w-[26px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+                aria-label="Copy link to this KPI"
+                title="Copy link"
+                (click)="emitAndStop(copyLink, row, $event)">
+                <ng-icon name="lucideLink" class="text-[12px]" aria-hidden="true" />
+              </button>
+            }
             @if (canReport() && actionLabel(row)) {
-              <button type="button" class="pr-row-action" (click)="emitAndStop(reportRow, row, $event)">
+              <button
+                type="button"
+                class="pr-row-action inline-flex h-[28px] items-center justify-center rounded-[6px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] px-[10px] text-[11.5px] font-semibold text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-100)] hover:border-[var(--pr-color-primary-300)] cursor-pointer transition-colors"
+                (click)="emitAndStop(reportRow, row, $event)">
                 {{ actionLabel(row) }}
               </button>
             }
-          </td>
-
-          <!-- 10 — overflow ···, pinned right -->
-          <td class="pr-flat-cell pr-flat-sticky-r2">
             <div class="relative">
               <button
                 type="button"
-                class="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)]"
+                class="flex h-[28px] w-[28px] items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)] cursor-pointer"
                 aria-label="More actions"
                 [attr.aria-expanded]="isRowMenuOpen(row)"
                 (click)="toggleRowMenu(row, $event)">
-                <ng-icon name="lucideEllipsis" class="text-[16px]" />
+                <ng-icon name="lucideEllipsis" class="text-[15px]" />
               </button>
               @if (isRowMenuOpen(row)) {
                 <div class="pr-row-menu" role="menu" (click)="$event.stopPropagation()">
@@ -190,10 +234,6 @@
                   <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openTarget, row, $event)">
                     Target details
                   </button>
-                  <!-- MRF-R-5: `tocView=byAow&tocAow=<row.__aowCode>&kpi=<row.indicator_id>` — the
-                       host owns the URL/clipboard, this only tells it which row. Disabled for
-                       Intermediate Outcomes / 2030 Outcomes rows — they have no owning AoW to link
-                       back to (the host's `kpiLink()` returns '' for them). -->
                   <button
                     type="button"
                     role="menuitem"
@@ -354,13 +394,74 @@
             @if (group.loading) {
               <div class="px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">Loading indicators…</div>
             } @else {
+              <!-- ── In-Card Quick Breakdown & Jump-to Toolbar ── -->
+              @let centers = centerCountsOf(group);
+              @let types = typeCountsOf(group);
+              @let hlos = hloJumpList(group);
+              @let selCenter = selectedCenterOf(group);
+              @let selType = selectedTypeOf(group);
+
+              @if (centers.length > 1 || types.length > 1 || hlos.length > 1) {
+                <div class="flex flex-col gap-[8px] border-b border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] px-[24px] py-[10px]">
+                  <!-- Centers Row -->
+                  @if (centers.length > 1) {
+                    <div class="flex flex-wrap items-center gap-[5px]">
+                      <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
+                        Centers:
+                      </span>
+                      <button
+                        type="button"
+                        class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                        [class]="!selCenter ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                        (click)="setCenterFilter(group, null)">
+                        All <span class="opacity-75 tabular-nums">({{ group.indicators.length }})</span>
+                      </button>
+                      @for (c of centers; track c.center) {
+                        <button
+                          type="button"
+                          class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                          [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          (click)="setCenterFilter(group, c.center)">
+                          {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
+                        </button>
+                      }
+                    </div>
+                  }
+
+                  <!-- Types Row -->
+                  @if (types.length > 1) {
+                    <div class="flex flex-wrap items-center gap-[5px]">
+                      <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
+                        Types:
+                      </span>
+                      <button
+                        type="button"
+                        class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                        [class]="!selType ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                        (click)="setTypeFilter(group, null)">
+                        All Types
+                      </button>
+                      @for (t of types; track t.type) {
+                        <button
+                          type="button"
+                          class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                          [class]="selType === t.type ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          (click)="setTypeFilter(group, t.type)">
+                          {{ t.type }} <span class="opacity-75 tabular-nums">({{ t.count }})</span>
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
               @let bands = bandsOf(group);
 
               @if (!bands.length) {
                 <div class="flex flex-col items-start gap-[10px] px-[24px] py-[20px] text-[13px] text-[var(--pr-text-secondary)]">
-                  @if (filtersActive()) {
+                  @if (filtersActive() || selCenter || selType) {
                     <p class="m-0">No indicators match the current filters.</p>
-                    <button type="button" class="pr-clear-filters" (click)="clearFilters.emit()">Clear filters</button>
+                    <button type="button" class="pr-clear-filters" (click)="setCenterFilter(group, null); setTypeFilter(group, null); clearFilters.emit()">Clear filters</button>
                   } @else if (isBucket(group)) {
                     <p class="m-0">No indicators in this bucket yet.</p>
                   } @else {
@@ -390,26 +491,27 @@
                   <!-- Sub-groups are seeded OPEN in the reference, so an expanded card shows rows. -->
                   @let defaultOpen = isDefaultOpenHlo();
                   <button
+                    [id]="'hlo-group-' + hlo.key"
                     type="button"
-                    class="flex h-[44px] w-full items-center gap-[8px] border-t border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] py-0 pl-[36px] pr-[24px] text-left hover:bg-[var(--pr-surface-subtle-hover)]"
+                    class="flex h-[40px] w-full items-center gap-[8px] border-t border-[var(--pr-border-divider)] bg-[var(--pr-surface-subtle)] py-0 pl-[32px] pr-[20px] text-left hover:bg-[var(--pr-surface-subtle-hover)] cursor-pointer transition-colors"
                     [attr.aria-expanded]="isOpen(hlo.key, defaultOpen)"
                     (click)="toggle(hlo.key, defaultOpen)">
                     <span
-                      class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[6px] text-[var(--pr-text-secondary)]">
+                      class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] text-[var(--pr-text-secondary)]">
                       <ng-icon
                         name="lucideChevronDown"
-                        class="text-[16px] transition-transform duration-200"
+                        class="text-[15px] transition-transform duration-200"
                         [class.rotate-180]="isOpen(hlo.key, defaultOpen)" />
                     </span>
 
-                    <!-- Group name: 13px / 500 (medium, not semibold/bold) -->
+                    <!-- Group name -->
                     <span
-                      class="min-w-0 max-w-[620px] flex-1 truncate text-[13px] font-[500] text-[var(--pr-text)]"
+                      class="min-w-0 max-w-[620px] flex-1 truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)]"
                       [title]="hlo.name">
                       {{ hlo.name }}
                     </span>
 
-                    <span class="pr-figure-sm shrink-0 text-[12px] font-normal text-[var(--pr-text-subtle)]">
+                    <span class="rounded-full bg-[var(--pr-surface-card)] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-text-secondary)] border border-[var(--pr-border)] tabular-nums">
                       {{ countLabel(hlo.rows.length) }}
                     </span>
                   </button>
@@ -419,6 +521,17 @@
                     [class.is-open]="isOpen(hlo.key, defaultOpen)"
                     [attr.aria-hidden]="!isOpen(hlo.key, defaultOpen)">
                     <div class="pr-collapse-inner">
+                      @if (hlo.rows.length) {
+                        <div class="pr-hlo-head" aria-hidden="true">
+                          <span></span>
+                          <span>Indicator</span>
+                          <span class="text-center">Target</span>
+                          <span class="text-center">Achieved</span>
+                          <span class="text-center">Status</span>
+                          <span class="text-center">Action</span>
+                          <span></span>
+                        </div>
+                      }
                       @for (row of hlo.rows; track row.indicator_id + '::' + (row.center_id ?? '')) {
                         <ng-container
                           *ngTemplateOutlet="indicatorRow; context: { $implicit: row, showAow: false, bucketKind: group.kind }" />
@@ -453,14 +566,16 @@
 <!-- Shared indicator row. Status mark = the concentric bullseye (18px violet target). -->
 <ng-template #indicatorRow let-row let-showAow="showAow" let-bucketKind="bucketKind">
   <div
-    class="pr-reporting-row"
+    class="pr-reporting-row group"
     role="button"
     tabindex="0"
+    [attr.data-row-key]="rowKey(row)"
+    [class]="highlightedRowKey() === rowKey(row) ? 'ring-2 ring-inset ring-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)]' : ''"
     [attr.aria-label]="row.indicator_description"
     (click)="openRow.emit(row)"
     (keydown.enter)="openRow.emit(row)"
     (keydown.space)="openRow.emit(row)">
-    <!-- 1 — concentric bullseye — outer + mid ring + filled centre -->
+    <!-- 1 — concentric bullseye -->
     <span
       class="pr-status-mark"
       [class]="'pr-status-mark--' + statusOf(row)"
@@ -474,93 +589,148 @@
     </span>
 
     <!-- 2 — title + optional Show more + indicator-name meta -->
-    <div class="flex min-w-0 max-w-[900px] flex-col">
+    <div class="flex min-w-0 flex-col">
       <p
-        class="m-0 text-[15px] font-semibold leading-[1.45] text-[var(--pr-text-heading)] [text-wrap:pretty]"
+        class="m-0 text-[13.5px] font-semibold leading-[1.4] text-[var(--pr-text-heading)] [text-wrap:pretty] group-hover:text-[var(--pr-color-primary-600)] transition-colors"
         [class.pr-clamp-2]="!isTitleExpanded(row.indicator_id)">
         {{ row.indicator_description }}
       </p>
-      <!--
-        Show more lives OUTSIDE the clamped <p> on purpose. The reference truncates the string in JS
-        and appends the control inline; we clamp in CSS, and `-webkit-line-clamp` + `overflow:hidden`
-        clip anything past line 2 — an inline button inside the paragraph was rendered but invisible,
-        i.e. a long title had no way out. Self-aligned so it stays a link-sized target, not a block.
-      -->
       @if (needsShowMore(row)) {
         <button
           type="button"
-          class="mt-[2px] self-start border-0 bg-transparent p-0 text-left text-[13px] font-medium text-[var(--pr-color-primary-300)] hover:underline hover:text-[var(--pr-color-primary-400)]"
+          class="mt-[2px] self-start border-0 bg-transparent p-0 text-left text-[11.5px] font-medium text-[var(--pr-color-primary-500)] hover:text-[var(--pr-color-primary-700)] hover:underline cursor-pointer"
           [attr.aria-expanded]="isTitleExpanded(row.indicator_id)"
           (click)="toggleTitle(row.indicator_id, $event)">
           {{ isTitleExpanded(row.indicator_id) ? 'Show less' : 'Show more' }}
         </button>
       }
-      <span
-        class="pr-clamp-1 mt-[6px] text-[13px] font-normal leading-[17px] text-[var(--pr-text-secondary)]"
-        [title]="metaLine(row, showAow)">
-        {{ metaLine(row, showAow) }}
-      </span>
+      <div class="mt-[6px] flex flex-wrap items-center gap-[6px]">
+        @if (aowCodeOf(row) && showAow) {
+          <span
+            class="inline-flex h-[20px] items-center rounded-[5px] bg-[var(--pr-color-primary-50)] px-[6px] font-mono text-[11px] font-bold text-[var(--pr-color-primary-700)] border border-[var(--pr-color-primary-100)]">
+            {{ aowCodeOf(row) }}
+          </span>
+        }
+        @if (indicatorNameOf(row)) {
+          <span
+            class="inline-flex max-w-[280px] items-center rounded-[5px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[7px] py-[1px] text-[11px] font-medium text-[var(--pr-text-secondary)] truncate"
+            [title]="indicatorNameOf(row)">
+            {{ indicatorNameOf(row) }}
+          </span>
+        }
+        @if (row.center_acronym) {
+          <span
+            class="inline-flex items-center rounded-[5px] bg-slate-100 px-[6px] py-[1px] text-[11px] font-medium text-slate-700 border border-slate-200">
+            {{ row.center_acronym }}
+          </span>
+        }
+      </div>
     </div>
 
-    <!-- 3 — spacer 48px (row grid) -->
-    <span></span>
-
-    <!-- 4 — Target -->
-    <div class="relative text-right">
+    <!-- 3 — Target -->
+    <div class="relative text-center flex justify-center">
       <button
         type="button"
-        class="block w-full border-0 bg-transparent p-0 text-right"
+        class="block w-full border-0 bg-transparent p-0 text-center cursor-pointer group/target"
         [prTooltip]="(isIntermediateRow(bucketKind) || isCrossCuttingIntermediate(row)) ? intermediateTargetTooltip : ''"
         (click)="emitAndStop(openTarget, row, $event)">
         <span
-          class="pr-figure block text-[18px] font-medium tabular-nums text-[var(--pr-text-heading)] hover:underline hover:decoration-dotted hover:underline-offset-[3px]">
+          class="pr-figure block text-[15px] font-bold tabular-nums text-[var(--pr-text-heading)] group-hover/target:text-[var(--pr-color-primary-600)] transition-colors">
           {{ targetText(row) }}
         </span>
-        <span class="mt-[2px] block text-[11px] font-medium text-[var(--pr-text-subtle)]">Target</span>
+        <span class="block text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-muted)]">Target</span>
       </button>
     </div>
 
-    <!-- 5 — spacer 20px -->
-    <span></span>
-
-    <!-- 6 — Achieved. `—` = nothing reported; `0` = a reported zero. Two different facts. -->
-    <div class="relative text-right">
+    <!-- 4 — Achieved -->
+    <div class="relative text-center flex justify-center">
       <button
         type="button"
-        class="block w-full border-0 bg-transparent p-0 text-right"
+        class="block w-full border-0 bg-transparent p-0 text-center cursor-pointer group/achieved"
         [prTooltip]="achievedTooltip(row)"
         (click)="emitAndStop(openAchieved, row, $event)">
         <span
-          class="pr-figure block text-[18px] font-medium tabular-nums hover:underline hover:decoration-dotted hover:underline-offset-[3px]"
-          [class]="achievedIsEmpty(row) ? 'text-[var(--pr-text-subtle)]' : 'text-[var(--pr-text-heading)]'">
+          class="pr-figure block text-[15px] font-bold tabular-nums group-hover/achieved:text-[var(--pr-color-primary-600)] transition-colors"
+          [class]="achievedIsEmpty(row) ? 'text-[var(--pr-text-muted)]' : 'text-[var(--pr-text-heading)]'">
           {{ achievedText(row) }}
         </span>
-        <span class="mt-[2px] block text-[11px] font-medium text-[var(--pr-text-subtle)]">Achieved</span>
+        <span class="block text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-muted)]">Achieved</span>
       </button>
     </div>
 
-    <!-- 7 — spacer 56px -->
-    <span></span>
+    <!-- 5 — Status Badge -->
+    <div class="flex items-center justify-center">
+      @switch (statusOf(row)) {
+        @case ('overachieved') {
+          <span class="inline-flex items-center gap-[4px] rounded-full border border-purple-200 bg-purple-50 px-[8px] py-[2px] text-[11px] font-semibold text-purple-700">
+            <span class="h-[6px] w-[6px] rounded-full bg-purple-500" aria-hidden="true"></span>
+            Overachieved
+          </span>
+        }
+        @case ('achieved') {
+          <span class="inline-flex items-center gap-[4px] rounded-full border border-emerald-200 bg-emerald-50 px-[8px] py-[2px] text-[11px] font-semibold text-emerald-700">
+            <span class="h-[6px] w-[6px] rounded-full bg-emerald-500" aria-hidden="true"></span>
+            Achieved
+          </span>
+        }
+        @case ('in-progress') {
+          <span class="inline-flex items-center gap-[4px] rounded-full border border-[var(--pr-color-primary-100)] bg-[var(--pr-color-primary-50)] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-600)]">
+            <span class="h-[6px] w-[6px] rounded-full bg-[var(--pr-color-primary-500)]" aria-hidden="true"></span>
+            In progress
+          </span>
+        }
+        @default {
+          <span class="inline-flex items-center gap-[4px] rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-text-muted)]">
+            <span class="h-[6px] w-[6px] rounded-full bg-[var(--pr-text-subtle)]" aria-hidden="true"></span>
+            Not started
+          </span>
+        }
+      }
+    </div>
 
-    <!-- 8 — Report / Continue -->
-    <div>
+    <!-- 6 — Report / Continue (+ Copy link icon; Next pending wraps above on the one row that has it) -->
+    <div class="flex flex-wrap items-center justify-end gap-[6px]">
+      @if (isLastReportedRow(row)) {
+        @if (nextPendingRow(); as next) {
+          <button
+            type="button"
+            class="inline-flex h-[28px] shrink-0 cursor-pointer appearance-none items-center gap-[4px] rounded-[7px] border border-[var(--pr-color-primary-300)] bg-[var(--pr-color-primary-50)] px-[8px] text-[11.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-100)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+            [prTooltip]="next.indicator_description"
+            aria-label="Go to the next pending KPI"
+            (click)="goToNextPending($event)">
+            <ng-icon name="lucideArrowDown" class="text-[13px]" aria-hidden="true" /> Next pending
+          </button>
+        } @else {
+          <span class="inline-flex h-[28px] shrink-0 items-center gap-[4px] rounded-[7px] bg-emerald-50 px-[8px] text-[11px] font-semibold text-emerald-700">
+            <ng-icon name="lucideCheck" class="text-[13px]" aria-hidden="true" /> All pending KPIs reported
+          </span>
+        }
+      }
+      @if (canCopyLink(row)) {
+        <button
+          type="button"
+          class="inline-flex h-[28px] w-[28px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          aria-label="Copy link to this KPI"
+          title="Copy link"
+          (click)="emitAndStop(copyLink, row, $event)">
+          <ng-icon name="lucideLink" class="text-[13px]" aria-hidden="true" />
+        </button>
+      }
       @if (canReport() && actionLabel(row)) {
-        <button type="button" class="pr-row-action" (click)="emitAndStop(reportRow, row, $event)">
+        <button
+          type="button"
+          class="pr-row-action inline-flex h-[32px] items-center justify-center rounded-[7px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-color-primary-50)] px-[12px] text-[12px] font-semibold text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-100)] hover:border-[var(--pr-color-primary-300)] cursor-pointer transition-colors shadow-2xs"
+          (click)="emitAndStop(reportRow, row, $event)">
           {{ actionLabel(row) }}
         </button>
       }
     </div>
 
-    <!-- 9 — spacer 8px -->
-    <span></span>
-
-    <!-- 10 — overflow ··· . Was inert: it emitted `openRowMenu`, which the host never bound
-         (P2-3405). The menu is owned here now, and its live items reuse the SAME outputs the Target
-         and Achieved cells emit, so there is no second path to the drawer. -->
-    <div class="relative">
+    <!-- 7 — overflow ··· -->
+    <div class="relative flex items-center justify-center">
       <button
         type="button"
-        class="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] border-0 bg-transparent text-[var(--pr-text-subtle)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)]"
+        class="flex h-[32px] w-[32px] items-center justify-center rounded-[7px] border border-transparent text-[var(--pr-text-muted)] hover:border-[var(--pr-border)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] cursor-pointer transition-colors"
         aria-label="More actions"
         [attr.aria-expanded]="isRowMenuOpen(row)"
         (click)="toggleRowMenu(row, $event)">
@@ -574,10 +744,6 @@
           <button type="button" role="menuitem" class="pr-row-menu_item" (click)="runFromMenu(openTarget, row, $event)">
             Target details
           </button>
-          <!-- MRF-R-5: `tocView=byAow&tocAow=<row.__aowCode>&kpi=<row.indicator_id>` — the host
-               owns the URL/clipboard, this only tells it which row. Disabled for Intermediate
-               Outcomes / 2030 Outcomes rows — they have no owning AoW to link back to (the host's
-               `kpiLink()` returns '' for them). -->
           <button
             type="button"
             role="menuitem"
@@ -589,10 +755,6 @@
             (click)="runFromMenu(copyLink, row, $event)">
             Copy link
           </button>
-          <!-- The payload carries no user-facing indicator code — `indicator_id` is an internal key
-               that is never shown anywhere in the UI, so "copying the code" would hand the user a
-               number they have never seen. Visible but disabled, per the house rule, and tracked on
-               P2-3405 rather than silently dropped. -->
           <button
             type="button"
             role="menuitem"

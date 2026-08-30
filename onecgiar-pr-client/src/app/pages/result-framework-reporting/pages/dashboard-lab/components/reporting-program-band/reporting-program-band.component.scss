@@ -40,6 +40,12 @@
  */
 .pr-band-filter {
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+
+  &:focus-within {
+    z-index: 35;
+  }
 
   // Same treatment the Results Center toolbar applies to these pills (`results-list-filters.scss`):
   // plain 40px white field, muted chevron, no purple dropdown bar.
@@ -109,6 +115,7 @@
         box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
         overflow: hidden;
         transform-origin: top center;
+        z-index: 50;
       }
     }
   }
@@ -124,6 +131,7 @@
     border: 1px solid var(--pr-border);
     box-shadow: 0 8px 24px rgba(25, 21, 36, 0.1);
     padding: 6px;
+    z-index: 50;
   }
 
   .pr-ms-group + .pr-ms-group {

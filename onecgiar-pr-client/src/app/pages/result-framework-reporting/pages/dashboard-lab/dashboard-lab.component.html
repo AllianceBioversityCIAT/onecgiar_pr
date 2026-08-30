@@ -1340,6 +1340,7 @@
                 [filtersActive]="reportingFiltersActive()"
                 (clearFilters)="clearReportingFilters()"
                 (openRow)="onReportingRowOpen($event)"
+                [lastReported]="lastReportedKpi()"
                 (reportRow)="onReportingRowReport($event)"
                 (openTarget)="onReportingOpenTarget($event)"
                 (openAchieved)="onReportingOpenAchieved($event)"
@@ -1431,6 +1432,67 @@
                     }
                   </div>
                 </section>
+
+                <!-- In-card Breakdown Filters by Center and Result Type for By-AoW mode -->
+                @let centers = byAowCenterCounts();
+                @let types = byAowTypeCounts();
+                @let selCenter = byAowSelectedCenter();
+                @let selType = byAowSelectedType();
+
+                @if (centers.length > 1 || types.length > 1) {
+                  <div class="flex flex-col gap-[8px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[12px] shadow-xs">
+                    <!-- Centers Row -->
+                    @if (centers.length > 1) {
+                      <div class="flex flex-wrap items-center gap-[5px]">
+                        <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
+                          Centers:
+                        </span>
+                        <button
+                          type="button"
+                          class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                          [class]="!selCenter ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          (click)="setByAowCenterFilter(null)">
+                          All <span class="opacity-75 tabular-nums">({{ banner.total }})</span>
+                        </button>
+                        @for (c of centers; track c.center) {
+                          <button
+                            type="button"
+                            class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                            [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                            (click)="setByAowCenterFilter(c.center)">
+                            {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
+                          </button>
+                        }
+                      </div>
+                    }
+
+                    <!-- Types Row -->
+                    @if (types.length > 1) {
+                      <div class="flex flex-wrap items-center gap-[5px]">
+                        <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
+                          Types:
+                        </span>
+                        <button
+                          type="button"
+                          class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                          [class]="!selType ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                          (click)="setByAowTypeFilter(null)">
+                          All Types
+                        </button>
+                        @for (t of types; track t.type) {
+                          <button
+                            type="button"
+                            class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                            [class]="selType === t.type ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                            (click)="setByAowTypeFilter(t.type)">
+                            {{ t.type }} <span class="opacity-75 tabular-nums">({{ t.count }})</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+
                 <!-- @akili-spec changes/mass-reporting-flow — MRF-R-9: same double gate; the panel
                      runs in-browser and writes nothing, so closing it discards the draft. -->
                 @if (narrativeGateOpen() && narrativePanelOpen()) {

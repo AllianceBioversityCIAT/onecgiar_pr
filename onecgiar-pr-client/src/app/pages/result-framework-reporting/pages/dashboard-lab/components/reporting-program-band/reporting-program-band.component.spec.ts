@@ -140,8 +140,8 @@ describe('ReportingProgramBandComponent', () => {
       // One strip serves both shapes, so the third tab has to survive the collapse.
       expect(nav.textContent).toContain('Results');
       expect(nav.textContent).toContain('Report emerging result');
-      // dot + name row and the 32px CTA — both fade in.
-      expect(collapsedParts().length).toBe(2);
+      // dot + name row, the back button, and the 32px CTA — all fade in.
+      expect(collapsedParts().length).toBe(3);
     });
 
     it('condenses on Overview too, where the toolbar is hidden', async () => {
@@ -242,8 +242,8 @@ describe('ReportingProgramBandComponent', () => {
       scrollTo(200);
 
       expect(text()).not.toContain('Report emerging result');
-      // Only the dot + name row fades in now.
-      expect(collapsedParts().length).toBe(1);
+      // The dot + name row and the right actions container (holding the back button) fade in.
+      expect(collapsedParts().length).toBe(2);
     });
   });
 
@@ -518,6 +518,46 @@ describe('ReportingProgramBandComponent', () => {
 
       expect(onlyPendingBtn()).toBeUndefined();
       expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Sort"]')).toBeNull();
+    });
+  });
+
+  // ── Smart Back Button ──────────────────────────────────────────────────
+  describe('smart back button', () => {
+    it('renders the smart back button with dynamic label in expanded view', async () => {
+      await build({ showToolbar: true, programCode: 'SP02' });
+
+      const backBtn = root().querySelector('[data-testid="program-band-back-btn"]') as HTMLButtonElement;
+      expect(backBtn).toBeTruthy();
+      expect(backBtn.textContent).toContain('Back to Science programs');
+    });
+
+    it('calls goBack() on click in expanded view', async () => {
+      await build({ showToolbar: true, programCode: 'SP02' });
+      const spy = jest.spyOn(component, 'goBack');
+
+      const backBtn = root().querySelector('[data-testid="program-band-back-btn"]') as HTMLButtonElement;
+      backBtn.click();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders the back button in collapsed view and triggers navigation on click', async () => {
+      await build({ showToolbar: true, programCode: 'SP02' });
+      const spy = jest.spyOn(component, 'goBack');
+      scrollTo(200);
+
+      const collapsedBackBtn = root().querySelector('[data-testid="program-band-back-btn-collapsed"]') as HTMLButtonElement;
+      expect(collapsedBackBtn).toBeTruthy();
+      collapsedBackBtn.click();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('respects backLabelOverride when provided', async () => {
+      await build({ showToolbar: true, backLabelOverride: 'Back to Custom Page' });
+
+      const backBtn = root().querySelector('[data-testid="program-band-back-btn"]') as HTMLButtonElement;
+      expect(backBtn.textContent).toContain('Back to Custom Page');
     });
   });
 });

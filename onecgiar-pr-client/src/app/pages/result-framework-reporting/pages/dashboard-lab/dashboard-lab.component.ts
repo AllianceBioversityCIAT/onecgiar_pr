@@ -359,6 +359,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * pending" once the modal closes, MRF-R-3.1).
    */
   private lastReportKpi: { id: unknown; aowCode: string } | null = null;
+  /**
+   * Same capture for the DRAWER report path (grouped table's "Report" → the aside): set by
+   * `onReportingRowReport`, consumed by `closeManage()` so the grouped rows inherit "Next
+   * pending" + session counter from the By-AOW cards (MRF-R-3.1/R-4).
+   */
+  private drawerReportKpi: { id: unknown; aowCode: string } | null = null;
   /** Previous value of `entityAowService.showReportResultModal()` — effects get no "previous" value for free. */
   private reportModalWasOpen = false;
   /**
@@ -576,6 +582,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   closeManage(): void {
     this.managed.set(null);
+    const captured = this.drawerReportKpi;
+    this.drawerReportKpi = null;
+    if (captured) this.publishReportedKpi(captured);
   }
 
   // ---- Legacy report surfaces (the ones the users actually get) ----
@@ -943,21 +952,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         const captured = this.lastReportKpi;
         this.lastReportKpi = null;
         if (!captured) return;
-        const program = this.selected()?.initiativeCode;
-        if (!program) return;
-        // Snapshot BEFORE the forced reload — a distinct array from whatever `indicatorsForAow`
-        // returns after `tocByKey` is overwritten (countNewlyReported needs two independent
-        // snapshots, not the same reference re-read).
-        const prevIndicators = this.indicatorsForAow(captured.aowCode)?.indicators ?? [];
-        this.lastReportedKpi.set(captured);
-        this.loadToc(program, captured.aowCode, {
-          force: true,
-          onLoaded: () => {
-            const nextIndicators = this.indicatorsForAow(captured.aowCode)?.indicators ?? [];
-            const delta = countNewlyReported(prevIndicators, nextIndicators);
-            if (delta > 0) this.sessionReported.update(n => n + delta);
-          }
-        });
+        this.publishReportedKpi(captured);
       });
     });
 
@@ -2912,6 +2907,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   onReportingRowReport(row: ReportingIndicator): void {
     this.primeEntityAowContext();
+    // Captured like `openLegacyReportModal` does for the modal path — `closeManage()` publishes it
+    // when the drawer closes, so the grouped row can offer "Next pending" (MRF-R-3.1 inherited).
+    this.drawerReportKpi = { id: row.indicator_id, aowCode: row.__aowCode ?? '' };
     const raw = row as unknown as Record<string, unknown>;
     this.manageIndicator(row, row.__hlo ?? '', 'report', raw['__hloNode']);
   }
@@ -3022,6 +3020,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.expandedPlannedHlos.set(new Set());
     this.plannedTypeFilter.set([]);
     this.plannedSearch.set('');
+    this.byAowSelectedCenter.set(null);
+    this.byAowSelectedType.set(null);
     const sp = this.selected()?.initiativeCode;
     if (sp && code) this.loadToc(sp, code);
   }
@@ -3102,6 +3102,59 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return this.rankPlannedHloGroups(this.groupIndicatorsByHlo(inds), parsed);
   });
 
+  /** Local breakdown filter for By-AoW view: selected center. */
+  readonly byAowSelectedCenter = signal<string | null>(null);
+  /** Local breakdown filter for By-AoW view: selected result type. */
+  readonly byAowSelectedType = signal<string | null>(null);
+
+  readonly byAowCenterCounts = computed<{ center: string; count: number }[]>(() => {
+    const code = this.plannedHloAowCode();
+    if (!code) return [];
+    const inds = this.indicatorsForAow(code)?.indicators ?? [];
+    const map = new Map<string, number>();
+    for (const ind of inds) {
+      const c = ind.center_acronym?.trim();
+      if (c && c !== '—') {
+        map.set(c, (map.get(c) ?? 0) + 1);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([center, count]) => ({ center, count }))
+      .sort((a, b) => b.count - a.count || a.center.localeCompare(b.center));
+  });
+
+  readonly byAowTypeCounts = computed<{ type: string; count: number }[]>(() => {
+    const code = this.plannedHloAowCode();
+    if (!code) return [];
+    const inds = this.indicatorsForAow(code)?.indicators ?? [];
+    const map = new Map<string, number>();
+    for (const ind of inds) {
+      const t = ind.result_type_name?.trim();
+      if (t && t !== '—') {
+        map.set(t, (map.get(t) ?? 0) + 1);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
+  });
+
+  setByAowCenterFilter(center: string | null): void {
+    if (this.byAowSelectedCenter() === center) {
+      this.byAowSelectedCenter.set(null);
+    } else {
+      this.byAowSelectedCenter.set(center);
+    }
+  }
+
+  setByAowTypeFilter(type: string | null): void {
+    if (this.byAowSelectedType() === type) {
+      this.byAowSelectedType.set(null);
+    } else {
+      this.byAowSelectedType.set(type);
+    }
+  }
+
   /**
    * By-AOW view sections — outputs (HLOs) and outcomes, mirroring the grouped table's tier split.
    * Same type/search filters as `plannedHloGroups`. @akili-spec changes/reporting-entry-hub
@@ -3111,7 +3164,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (!code) return [];
     const typeSet = new Set(this.plannedTypeFilter().map(t => t?.name).filter(Boolean));
     const parsed = parsePlannedSearch(this.plannedSearch());
-    const { outputs, outcomes } = splitIndicatorsByTier(this.indicatorsForAow(code)?.indicators ?? []);
+    const selCenter = this.byAowSelectedCenter();
+    const selType = this.byAowSelectedType();
+
+    let allInds = this.indicatorsForAow(code)?.indicators ?? [];
+    if (selCenter) {
+      allInds = allInds.filter(i => i?.center_acronym?.trim() === selCenter);
+    }
+    if (selType) {
+      allInds = allInds.filter(i => (i?.result_type_name?.trim() || i?.type_name?.trim()) === selType);
+    }
+
+    const { outputs, outcomes } = splitIndicatorsByTier(allInds);
     const build = (label: string, inds: any[]) => {
       const filtered = typeSet.size ? inds.filter(i => typeSet.has(i?.type_name)) : inds;
       // MRF-R-1: Only-pending/sort reshape the HLO groups here — "groups" in the By-AOW view MEANS
@@ -3156,6 +3220,31 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (!last) return null;
     return nextPendingAfter(last.id as number | string, this.orderedByAowIndicators(last.aowCode));
   });
+
+  /**
+   * Publish a just-closed report (modal or drawer): expose it as `lastReportedKpi` (which offers
+   * "Next pending" on the By-AOW card AND the grouped-table row), then force-refresh the KPI's own
+   * AoW and diff before/after for the session counter (MRF-R-3.1/R-4, design MRF-DD-3). Bucket
+   * rows (Intermediate / 2030) have no per-AoW ToC to force-refresh — they publish only.
+   */
+  private publishReportedKpi(captured: { id: unknown; aowCode: string }): void {
+    const program = this.selected()?.initiativeCode;
+    if (!program) return;
+    // Snapshot BEFORE the forced reload — a distinct array from whatever `indicatorsForAow`
+    // returns after `tocByKey` is overwritten (countNewlyReported needs two independent
+    // snapshots, not the same reference re-read).
+    const prevIndicators = this.indicatorsForAow(captured.aowCode)?.indicators ?? [];
+    this.lastReportedKpi.set(captured);
+    if (captured.aowCode === INTERMEDIATE_OUTCOMES_CODE || captured.aowCode === OUTCOMES_2030_CODE) return;
+    this.loadToc(program, captured.aowCode, {
+      force: true,
+      onLoaded: () => {
+        const nextIndicators = this.indicatorsForAow(captured.aowCode)?.indicators ?? [];
+        const delta = countNewlyReported(prevIndicators, nextIndicators);
+        if (delta > 0) this.sessionReported.update(n => n + delta);
+      }
+    });
+  }
 
   /** Activates "Next pending" — scroll+highlight, reusing the `?kpi=` restore's own mechanism (MRF-R-3.1). */
   goToNextPendingKpi(): void {

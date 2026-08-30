@@ -50,7 +50,7 @@
     </div>
 
     <!-- Title row + ⓘ popover (reference :343-358). Click, not hover. -->
-    <div class="relative flex min-w-0 items-center gap-[8px] pr-[220px]">
+    <div class="relative flex min-w-0 items-center gap-[8px] pr-[420px]">
       <h1
         class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-[1.35] tracking-[-0.02em] text-[var(--pr-text-heading)]">
         {{ programName() }}
@@ -104,18 +104,28 @@
       }
     </div>
 
-    <!-- Single brand CTA. Absolute — reference pins it at right:32 / top:68 of the identity box.
-         It opens the legacy emerging-result modal on the host instead of navigating away: the
-         separate `/emerging` route was a second surface for the same job. -->
-    @if (canReport()) {
+    <!-- Top-right actions: Smart Back Button + Report emerging result CTA -->
+    <div class="absolute right-[32px] top-[68px] z-[22] flex -translate-y-1/2 items-center gap-[10px]">
       <button
         type="button"
-        class="absolute right-[32px] top-[68px] z-[22] flex h-[36px] shrink-0 -translate-y-1/2 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
-        (click)="reportEmerging.emit()">
-        <ng-icon name="lucideZap" class="text-[16px]" />
-        Report emerging result
+        class="flex h-[36px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[13px] text-[13px] font-semibold text-[var(--pr-text-heading)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+        [attr.aria-label]="backLabel()"
+        data-testid="program-band-back-btn"
+        (click)="goBack()">
+        <ng-icon name="lucideArrowLeft" class="text-[15px]" />
+        <span>{{ backLabel() }}</span>
       </button>
-    }
+
+      @if (canReport()) {
+        <button
+          type="button"
+          class="flex h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          (click)="reportEmerging.emit()">
+          <ng-icon name="lucideZap" class="text-[16px]" />
+          Report emerging result
+        </button>
+      }
+    </div>
   </div>
 
   <!-- ── Tabs: 48px + full-width hairline. Active tab paints a 2px violet line that
@@ -177,16 +187,28 @@
          variant (:439-443), this nav is shared by the expanded and condensed band, so a tab added
          here appears in both. -->
 
-    @if (bandCollapsed() && canReport()) {
-      <!-- The 36px CTA of the identity block is clipped away with it, so the collapsed bar carries
-           its own 32px copy pinned right (reference :396-399). Same action, same label. -->
-      <button
-        type="button"
-        class="pr-band-fade ml-auto flex h-[32px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] self-center rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
-        (click)="reportEmerging.emit()">
-        <ng-icon name="lucideZap" class="text-[16px]" />
-        Report emerging result
-      </button>
+    @if (bandCollapsed()) {
+      <div class="ml-auto flex items-center gap-[8px] self-center">
+        <button
+          type="button"
+          class="pr-band-fade flex h-[32px] shrink-0 cursor-pointer items-center gap-[5px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[10px] text-[12.5px] font-semibold text-[var(--pr-text-heading)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          [attr.aria-label]="backLabel()"
+          data-testid="program-band-back-btn-collapsed"
+          (click)="goBack()">
+          <ng-icon name="lucideArrowLeft" class="text-[14px]" />
+          <span>{{ backLabel() }}</span>
+        </button>
+
+        @if (canReport()) {
+          <button
+            type="button"
+            class="pr-band-fade flex h-[32px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
+            (click)="reportEmerging.emit()">
+            <ng-icon name="lucideZap" class="text-[16px]" />
+            Report emerging result
+          </button>
+        }
+      </div>
     }
   </nav>
 </div>
@@ -207,7 +229,7 @@
   </h2>
 
   <div
-    class="flex flex-wrap items-center gap-[12px] px-[32px] pb-[24px]"
+    class="relative z-20 flex flex-wrap items-center gap-[12px] px-[32px] pb-[24px]"
     role="search"
     aria-label="Reporting filters">
     <!-- Search: 320×36 -->

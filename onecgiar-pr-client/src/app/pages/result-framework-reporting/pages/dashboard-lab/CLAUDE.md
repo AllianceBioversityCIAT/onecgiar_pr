@@ -1,6 +1,6 @@
 # dashboard-lab
 
-**Verified:** 2026-08-29 · branch qa-development-2026 · 625fc64fb
+**Verified:** 2026-08-30 · branch qa-development-2026 · 3366453bc
 
 ## Qué es
 El shell de un Science Program. Un solo componente que sirve varias vistas según `rfrView`, y que es
@@ -63,7 +63,7 @@ de TS): trátalo como host, no como pantalla.
 - `components/reporting-entry-hub/` — hub "Where to report" (lanes W1/W2 + W3; strings en `hub-copy.ts`).
 - `components/narrative-panel/` — panel de narrativa IA in-browser (WebLLM vía `ASSISTANT_ENGINE`); doble gate `environment.aiAssistant.enabled` && `ai_narrative_enabled` (global parameter); el consentimiento del panel es la ÚNICA puerta a `engine.init` (descarga del modelo).
 - `reporting-burndown.ts` — helpers puros del burn-down; `buildRatio` es el ÚNICO hogar de la regla zero-target (banner + `ratioOf` de la tabla delegan). ⚠️ `__allIndicators` (side-channel escrito solo con Only-pending ON) trae Section/Type/Category ya aplicados, Only-pending no.
-- Deep-link `?kpi=` (siempre con `tocAow`; los ids de indicador se repiten entre AoWs) + contador de sesión + Next pending (solo tarjetas By-AOW).
+- Deep-link `?kpi=` (siempre con `tocAow`; los ids de indicador se repiten entre AoWs) + contador de sesión + Next pending (tarjetas By-AOW **y** filas de la tabla agrupada/flat — `lastReportedKpi` lo publican AMBOS cierres: el modal legacy (`openLegacyReportModal`+efecto) y el drawer (`onReportingRowReport` captura → `closeManage` publica vía `publishReportedKpi`; filas bucket publican sin force-refresh).
 
 ## Trampa nueva (2026-08-26)
 - ⚠️ **Dos convenciones opuestas para `is_aow` ausente.** `indicatorsByAow()`'s `fromTier` (~línea
