@@ -157,3 +157,14 @@ Totals: **non-test LOC 1 816 / test LOC 2 339** (`git diff --numstat 4cdddae6d..
 | 10 | Session counter / next-pending after actually reporting a result | **NOT-RUN** — reporting writes a real result to the shared dev DB (owner's no-damage condition); the behaviour is pinned by the `dashboard-lab.mrf-burndown-session.spec.ts` unit suite |
 
 Migration row (from T-6/AC-11): run→green+rows verified on dev (`migration:check` green, both rows present in `platform_global_variables`); revert deliberately **NOT executed on dev** per the owner's no-delete condition — `down()` verified by review (deletes exactly the two seeded names).
+
+### Post-T-8 field bug (2026-08-30): "The draft could not be generated" on every generation after the first
+
+- **Report:** owner screenshot — panel error state, "Try again" also failing.
+- **Reproduced live** (embedded browser, model cached): fresh panel → `ready`; any path through `engine.interrupt()` (Regenerate, close+reopen, AoW switch) → next completion **always** `error`.
+- **Root cause (two layers), captured by runtime-wrapping the engine:** raw error `Error: Message error should not be 0` (WebLLM `Conversation.finishReply` on an empty conversation).
+  1. WebLLM's `interruptGenerate()` sets a sticky `interruptSignal`; the **non-streaming** `chatCompletion` checks it BEFORE `_generate` (which is what clears it), so any prior interrupt — even on an idle engine — makes the next completion skip generation and die in `finishReply`.
+  2. `WebLlmEngineService.init()` was also non-idempotent: every regenerate created a second `WebWorkerMLCEngine` client over the same Worker (two clients, one message port).
+- **Fixes (`web-llm-engine.service.ts`):** (a) `complete()` now uses a **streaming** completion accumulating deltas — the streaming generator resets `interruptSignal` on entry, immunizing every completion against prior interrupts; (b) `init()` is idempotent — same model already loaded short-circuits (progress 1, fromCache), model change disposes worker+engine and rebuilds, failed init disposes; (c) `narrative-panel.fail()` now `console.error`s the raw engine error — it was swallowed, which is why the field report carried no diagnostics.
+- **Live verification (dev, cached model):** fresh generate → `ready`; Regenerate → `ready`; close + reopen → `ready` (same draft quality). Targeted suites: dashboard-lab 18/593 green, ai-assistant green; `tsc --noEmit -p tsconfig.app.json` clean; lint clean.
+- **Kaizen note:** unit fakes model `interrupt()` as free — the sticky-flag semantics of the real engine were only observable in the browser. Same family as the three T-8 field bugs (jsdom-green/browser-red).

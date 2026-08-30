@@ -329,6 +329,9 @@ export class NarrativePanelComponent implements OnInit {
   /** Generation failure never breaks the banner — it only paints this panel (MRF-R-9.2). */
   private fail(token: number, err: unknown): void {
     if (token !== this.runToken) return;
+    // The panel renders a friendly message; the raw engine error must still reach the console or
+    // field failures are undiagnosable (this is how the init-idempotency bug stayed invisible).
+    console.error('[narrative-panel] generation failed', err);
     const kind: EngineErrorKind = classifyEngineError(err).kind;
     this.state.set(kind === 'unsupported' ? 'unsupported' : 'error');
     this.errorMessage.set(this.copy.errorByKind[kind]);
