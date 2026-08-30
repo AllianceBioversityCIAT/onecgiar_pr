@@ -70,6 +70,13 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   (la animación de apertura dura 280ms; a 60ms aterrizaba fuera del viewport — verificado en vivo)
   y resalta ~2.6s. El icono de link visible re-emite el mismo `copyLink` del menú `⋯`; la columna
   action del grid pasó de 96px a 136px (y la pista flat de 104 a 140) para alojarlo.
+- **Alineación de vistas (2026-08-30):** el header de cada tarjeta AoW real lleva un botón "By AOW"
+  (nested-control con `emitAndStop`) que emite `openAow` → el host salta a la vista enfocada
+  (`openAowFocused`); los buckets no lo muestran. El chip de categoría es violeta (misma entidad,
+  mismo color que la tarjeta By-AOW), y los botones link/Next-pending usan los MISMOS glifos
+  material y medidas (30px agrupada / 28px flat) que la tarjeta By-AOW. ⚠️ La celda de acciones
+  flat fue reconstruida una vez desde una copia pre-commit y perdió estos controles — si editas esa
+  celda, parte del working tree, no de una copia vieja.
 - El menú `⋯` es local. Sus tres items vivos re-emiten `openAchieved` / `openTarget` / `copyLink`
   (MRF-R-5, host arma la URL y copia); no abren superficie propia. `Copy indicator code` va
   **visible pero deshabilitado** (`Coming soon`): el payload no trae ningún código de indicador

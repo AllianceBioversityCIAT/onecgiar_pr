@@ -65,6 +65,13 @@ de TS): trátalo como host, no como pantalla.
 - `reporting-burndown.ts` — helpers puros del burn-down; `buildRatio` es el ÚNICO hogar de la regla zero-target (banner + `ratioOf` de la tabla delegan). ⚠️ `__allIndicators` (side-channel escrito solo con Only-pending ON) trae Section/Type/Category ya aplicados, Only-pending no.
 - Deep-link `?kpi=` (siempre con `tocAow`; los ids de indicador se repiten entre AoWs) + contador de sesión + Next pending (tarjetas By-AOW **y** filas de la tabla agrupada/flat — `lastReportedKpi` lo publican AMBOS cierres: el modal legacy (`openLegacyReportModal`+efecto) y el drawer (`onReportingRowReport` captura → `closeManage` publica vía `publishReportedKpi`; filas bucket publican sin force-refresh).
 
+## Alineación de vistas (2026-08-30)
+- Las vistas agrupada (`aows`) y enfocada (`byAow`) son los mismos datos a dos zooms y navegan entre
+  sí: header de tarjeta "By AOW" → `openAowFocused(code)` (no-op para buckets) ↔ banner "All Areas
+  of Work" → `setPlannedBrowseView('aows')`. Recetas compartidas: Report = `.pr-row-action`
+  (32px/14px/borde -300, la desviación WCAG), link 30×30 material `link`, categoría violeta
+  `#6b46e51f`, chip de centro neutro, "Show more" (regla UI §4.16 — nunca "Read more").
+
 ## Trampa nueva (2026-08-26)
 - ⚠️ **Dos convenciones opuestas para `is_aow` ausente.** `indicatorsByAow()`'s `fromTier` (~línea
   1418) trata un `is_aow` faltante como cross-cutting (`!== true`), mientras que

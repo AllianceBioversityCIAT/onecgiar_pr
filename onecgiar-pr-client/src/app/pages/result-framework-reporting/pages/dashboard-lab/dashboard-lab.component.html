@@ -1345,7 +1345,7 @@
                 (openTarget)="onReportingOpenTarget($event)"
                 (openAchieved)="onReportingOpenAchieved($event)"
                 (allOpenChange)="reportingAllOpen.set($event)"
-                (openAow)="openAow($event)"
+                (openAow)="openAowFocused($event)"
                 (copyLink)="copyKpiLink($event)" />
               <!-- Intermediate Outcomes + 2030 Outcomes are top-level cards inside the table
                    (siblings of AoWs). The old "open 2030 detail" jump button is gone. -->
@@ -1440,53 +1440,85 @@
                 @let selType = byAowSelectedType();
 
                 @if (centers.length > 1 || types.length > 1) {
-                  <div class="flex flex-col gap-[8px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[12px] shadow-xs">
-                    <!-- Centers Row -->
-                    @if (centers.length > 1) {
-                      <div class="flex flex-wrap items-center gap-[5px]">
-                        <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
-                          Centers:
+                  <div class="flex flex-col rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[20px] py-[8px] shadow-xs">
+                    <!-- Collapsible toggle header -->
+                    <button
+                      type="button"
+                      class="flex h-[32px] w-full items-center justify-between bg-transparent border-0 p-0 text-left cursor-pointer hover:text-[var(--pr-color-primary-600)] transition-colors group/bhead"
+                      [attr.aria-expanded]="byAowBreakdownOpen()"
+                      (click)="toggleByAowBreakdown()">
+                      <div class="flex items-center gap-[6px]">
+                        <span
+                          class="material-icons-round text-[18px] text-[var(--pr-text-secondary)] transition-transform duration-200 group-hover/bhead:text-[var(--pr-color-primary-600)]"
+                          [class.rotate-180]="byAowBreakdownOpen()"
+                          aria-hidden="true"
+                          >expand_more</span
+                        >
+                        <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-text-secondary)] group-hover/bhead:text-[var(--pr-color-primary-600)]">
+                          Filters by Center & Type
                         </span>
-                        <button
-                          type="button"
-                          class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                          [class]="!selCenter ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                          (click)="setByAowCenterFilter(null)">
-                          All <span class="opacity-75 tabular-nums">({{ banner.total }})</span>
-                        </button>
-                        @for (c of centers; track c.center) {
-                          <button
-                            type="button"
-                            class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                            [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                            (click)="setByAowCenterFilter(c.center)">
-                            {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
-                          </button>
+                        @if (selCenter || selType) {
+                          <span class="ml-[4px] inline-flex items-center gap-[4px] rounded-full bg-[var(--pr-color-primary-100)] px-[8px] py-[1px] text-[10.5px] font-semibold text-[var(--pr-color-primary-700)]">
+                            {{ selCenter ? selCenter : '' }}{{ selCenter && selType ? ' · ' : '' }}{{ selType ? selType : '' }}
+                          </span>
                         }
                       </div>
-                    }
+                      <span class="text-[11px] font-medium text-[var(--pr-text-subtle)] group-hover/bhead:text-[var(--pr-color-primary-600)]">
+                        {{ byAowBreakdownOpen() ? 'Hide filters' : 'Show filters' }}
+                      </span>
+                    </button>
 
-                    <!-- Types Row -->
-                    @if (types.length > 1) {
-                      <div class="flex flex-wrap items-center gap-[5px]">
-                        <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
-                          Types:
-                        </span>
-                        <button
-                          type="button"
-                          class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                          [class]="!selType ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                          (click)="setByAowTypeFilter(null)">
-                          All Types
-                        </button>
-                        @for (t of types; track t.type) {
-                          <button
-                            type="button"
-                            class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
-                            [class]="selType === t.type ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
-                            (click)="setByAowTypeFilter(t.type)">
-                            {{ t.type }} <span class="opacity-75 tabular-nums">({{ t.count }})</span>
-                          </button>
+                    <!-- Filter Pills Content -->
+                    @if (byAowBreakdownOpen()) {
+                      <div class="flex flex-col gap-[8px] pb-[6px] pt-[6px] border-t border-[var(--pr-border-divider)] mt-[4px]">
+                        <!-- Centers Row -->
+                        @if (centers.length > 1) {
+                          <div class="flex flex-wrap items-center gap-[5px]">
+                            <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
+                              Centers:
+                            </span>
+                            <button
+                              type="button"
+                              class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                              [class]="!selCenter ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                              (click)="setByAowCenterFilter(null)">
+                              All <span class="opacity-75 tabular-nums">({{ banner.total }})</span>
+                            </button>
+                            @for (c of centers; track c.center) {
+                              <button
+                                type="button"
+                                class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                                [class]="selCenter === c.center ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                                (click)="setByAowCenterFilter(c.center)">
+                                {{ c.center }} <span class="opacity-75 tabular-nums">({{ c.count }})</span>
+                              </button>
+                            }
+                          </div>
+                        }
+
+                        <!-- Types Row -->
+                        @if (types.length > 1) {
+                          <div class="flex flex-wrap items-center gap-[5px]">
+                            <span class="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-secondary)] mr-[4px]">
+                              Types:
+                            </span>
+                            <button
+                              type="button"
+                              class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                              [class]="!selType ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                              (click)="setByAowTypeFilter(null)">
+                              All Types
+                            </button>
+                            @for (t of types; track t.type) {
+                              <button
+                                type="button"
+                                class="inline-flex h-[23px] items-center gap-[3px] rounded-[5px] px-[7px] text-[11px] font-medium transition-colors cursor-pointer border"
+                                [class]="selType === t.type ? 'bg-[var(--pr-color-primary-500)] text-white border-transparent shadow-xs font-semibold' : 'bg-white text-slate-700 border-[var(--pr-border)] hover:bg-slate-50'"
+                                (click)="setByAowTypeFilter(t.type)">
+                                {{ t.type }} <span class="opacity-75 tabular-nums">({{ t.count }})</span>
+                              </button>
+                            }
+                          </div>
                         }
                       </div>
                     }
@@ -1600,7 +1632,7 @@
                                         class="self-start border-0 bg-transparent p-0 text-left text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:underline"
                                         [attr.aria-expanded]="isKpiDescriptionExpanded(ind)"
                                         (click)="toggleKpiDescription(ind, $event)">
-                                        {{ isKpiDescriptionExpanded(ind) ? 'Read less' : 'Read more' }}
+                                        {{ isKpiDescriptionExpanded(ind) ? 'Show less' : 'Show more' }}
                                       </button>
                                     }
                                     <div class="flex flex-wrap items-center gap-[8px]">
@@ -1625,6 +1657,14 @@
                                         <span
                                           class="rounded-full bg-[#6b46e51f] px-[8px] py-px text-[10.5px] font-semibold text-[var(--pr-color-primary-400)]"
                                           [innerHTML]="ind.type_name | highlightSearch: plannedSearch()"></span>
+                                      }
+                                      <!-- Centre chip — the grouped table shows it; the card dropped the fact. -->
+                                      @if (ind.center_acronym) {
+                                        <span
+                                          class="rounded-[5px] border border-slate-200 bg-slate-100 px-[6px] py-px text-[10.5px] font-medium text-slate-700"
+                                          [title]="ind.center_name || ind.center_acronym">
+                                          {{ ind.center_acronym }}
+                                        </span>
                                       }
                                       <span class="inline-flex items-center gap-[6px] text-[11px] text-[var(--pr-text-secondary)]">
                                         <span class="h-[6px] w-[90px] overflow-hidden rounded-full bg-[var(--pr-border)]/60 max-[899px]:hidden" aria-hidden="true">
@@ -1670,11 +1710,14 @@
                                       title="Copy link">
                                       <span class="material-icons-round text-[14px]" aria-hidden="true">link</span>
                                     </button>
+                                    <!-- Same recipe as the grouped table's `.pr-row-action` (design-verbatim
+                                         32px, 14px/500, border -300 per the WCAG 1.4.11 deviation) so the two
+                                         views read as one product. -->
                                     <button
                                       type="button"
                                       (click)="openLegacyReportModal(ind)"
-                                      class="inline-flex h-[30px] shrink-0 cursor-pointer appearance-none items-center gap-[6px] rounded-[8px] border border-[var(--pr-color-primary-200)] bg-[var(--pr-surface-card)] px-[12px] text-[12.5px] font-semibold text-[var(--pr-color-primary-500)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-                                      <span class="material-icons-round text-[14px]" aria-hidden="true">edit_note</span> Report
+                                      class="inline-flex h-[32px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[8px] border border-[var(--pr-color-primary-300)] bg-[var(--pr-surface-card)] px-[14px] text-[14px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:border-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                                      Report
                                     </button>
                                   </div>
                                 </div>

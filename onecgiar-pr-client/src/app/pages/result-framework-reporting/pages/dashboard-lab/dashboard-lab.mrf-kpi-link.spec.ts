@@ -177,6 +177,27 @@ describe('DashboardLabComponent — Copy link + Read more (MRF-TEST-3)', () => {
     );
   });
 
+  // ── View alignment: grouped card → focused By-AOW view (owner request 2026-08-30) ─────────
+  describe('openAowFocused', () => {
+    it('switches to the By-AOW view of the given AoW', async () => {
+      const component = await createComponent();
+      // The focused view's ToC fetch is out of scope here — the harness's api stub has no ToC surface.
+      jest.spyOn(component as never as { loadToc: () => void }, 'loadToc').mockImplementation(() => undefined);
+      component.plannedBrowseView.set('aows');
+      component.openAowFocused('AOW02');
+      expect(component.plannedBrowseView()).toBe('byAow');
+      expect(component.plannedHloAowCode()).toBe('AOW02');
+    });
+
+    it('is a no-op for the program-level buckets (no By-AOW view exists for them)', async () => {
+      const component = await createComponent();
+      component.plannedBrowseView.set('aows');
+      component.openAowFocused('intermediate-outcomes');
+      component.openAowFocused('2030-outcomes');
+      expect(component.plannedBrowseView()).toBe('aows');
+    });
+  });
+
   // ── Read more (MRF-R-5.1) ─────────────────────────────────────────────────────────────────
   describe('Read more', () => {
     it('needsKpiReadMore is false for a short description and true past the clamp threshold', async () => {

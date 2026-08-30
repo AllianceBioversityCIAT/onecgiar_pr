@@ -538,9 +538,23 @@ export class ReportingAowTableComponent {
   private readonly localCenterFilter = signal<Record<string, string>>({});
   /** Local breakdown filter by Result Type per AoW / bucket group key. */
   private readonly localTypeFilter = signal<Record<string, string>>({});
+  /** Controls collapsible state of the in-card Centers/Types filter bar per AoW. */
+  private readonly breakdownOpenMap = signal<Record<string, boolean>>({});
 
   groupKey(group: ReportingAowGroup): string {
     return group?.aow?.code ?? '';
+  }
+
+  isBreakdownOpen(group: ReportingAowGroup): boolean {
+    const key = this.groupKey(group);
+    return this.breakdownOpenMap()[key] ?? (!!this.selectedCenterOf(group) || !!this.selectedTypeOf(group) || true);
+  }
+
+  toggleBreakdown(group: ReportingAowGroup, event?: Event): void {
+    event?.stopPropagation();
+    const key = this.groupKey(group);
+    const curr = this.isBreakdownOpen(group);
+    this.breakdownOpenMap.update(map => ({ ...map, [key]: !curr }));
   }
 
   selectedCenterOf(group: ReportingAowGroup): string | null {

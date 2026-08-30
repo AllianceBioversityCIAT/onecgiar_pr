@@ -2994,6 +2994,18 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.plannedTypeFilter.set([]);
   }
 
+  /**
+   * Grouped card header's "By AOW" control → the focused By-AOW view of that Area of Work.
+   * The two views are the same data at two zoom levels, so jumping between them is a first-class
+   * affordance (owner request, 2026-08-30): this is the inverse of the banner's "All Areas of
+   * Work" button. Buckets (Intermediate / 2030) have no By-AOW view — the table hides the control.
+   */
+  openAowFocused(code: string): void {
+    if (!code || code === INTERMEDIATE_OUTCOMES_CODE || code === OUTCOMES_2030_CODE) return;
+    this.setPlannedBrowseView('byAow');
+    this.setPlannedHloAow(code);
+  }
+
   setPlannedBrowseView(view: PlannedBrowseView): void {
     this.plannedBrowseView.set(view);
     this.plannedTypeFilter.set([]);
@@ -3138,6 +3150,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       .map(([type, count]) => ({ type, count }))
       .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
   });
+
+  readonly byAowBreakdownOpen = signal<boolean>(true);
+
+  toggleByAowBreakdown(): void {
+    this.byAowBreakdownOpen.update(v => !v);
+  }
 
   setByAowCenterFilter(center: string | null): void {
     if (this.byAowSelectedCenter() === center) {

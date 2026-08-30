@@ -421,6 +421,24 @@ describe('ReportingAowTableComponent', () => {
   });
 
   // ── Intermediate Outcome Target tooltip (RES-R-1, RES-R-2, RES-AC-1, RES-AC-2) ─────────────
+  // ── Grouped card ↔ By-AOW view alignment (owner request 2026-08-30) ──
+  describe('By AOW header jump', () => {
+    it('renders on real AoW cards and emits the code, but never on buckets', async () => {
+      const bucket = group([row({ __aowCode: 'intermediate-outcomes' })], {
+        aow: { id: 99, code: 'intermediate-outcomes', name: 'Intermediate outcomes', progress: 0 },
+        kind: 'intermediate'
+      } as never);
+      await build([group([row()]), bucket]);
+      const el: HTMLElement = fixture.nativeElement;
+      const jumps = el.querySelectorAll('[aria-label="Open this Area of Work in the By-AOW view"]');
+      expect(jumps.length).toBe(1);
+      const emitted: string[] = [];
+      component.openAow.subscribe(code => emitted.push(code));
+      (jumps[0] as HTMLElement).click();
+      expect(emitted).toEqual(['AOW01']);
+    });
+  });
+
   // ── Next pending + copy link, inherited from the By-AOW cards (MRF-R-3.1/R-5) ──
   describe('next pending (grouped view)', () => {
     const threeRows = () => [
