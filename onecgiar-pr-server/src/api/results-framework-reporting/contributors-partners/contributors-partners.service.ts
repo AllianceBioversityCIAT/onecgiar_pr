@@ -425,8 +425,13 @@ export class ContributorsPartnersService {
       (await this._linkedResultRepository.getActiveLinkedResultIds(resultId)) ??
       [];
 
-    const finalHasInnovationLink =
-      requestedHasInnovationLink && persistedLinkedIds.length > 0;
+    // An explicit answer must survive the save. Deriving the stored flag from the persisted links
+    // turned a "Yes" with no result picked yet into "No" (the picker only renders for P25, so on
+    // every other portfolio the user's Yes was silently downgraded on every save). Only infer the
+    // flag from the links when the client did not send `has_innovation_link` at all.
+    const finalHasInnovationLink = hasInnovationLinkProp
+      ? requestedHasInnovationLink
+      : requestedHasInnovationLink && persistedLinkedIds.length > 0;
 
     await this.updateInnovationSummaryLink(
       resultTypeId,

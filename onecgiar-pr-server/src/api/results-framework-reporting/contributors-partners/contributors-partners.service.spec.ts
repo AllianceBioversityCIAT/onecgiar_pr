@@ -647,5 +647,125 @@ describe('ContributorsPartnersService', () => {
         status: HttpStatus.OK,
       });
     });
+
+    it('should persist an explicit "Yes" to the linked/bundled question even when no linked result was picked', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 88,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const payload: UpdateContributorsPartnersDto = {
+        has_innovation_link: true,
+        linked_results: [],
+      };
+      const user = { id: 4 } as TokenDto;
+
+      const result = await service.updateContributorsAndPartners(
+        88,
+        payload,
+        user,
+      );
+
+      expect(resultRepository.update).toHaveBeenCalledWith(88, {
+        has_innovation_link: true,
+        last_updated_by: user.id,
+      });
+      expect(result.response).toEqual({
+        has_innovation_link: true,
+        linked_results: [],
+      });
+    });
+
+    it('should persist an explicit "Yes" for innovation results with no linked result picked', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 89,
+        result_type_id: ResultTypeEnum.INNOVATION_USE,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([]);
+      resultsInnovationsUseRepository.query = jest
+        .fn()
+        .mockImplementation(async (sql: string) => {
+          if (sql.includes('SELECT result_innovation_use_id')) {
+            return [{ result_innovation_use_id: 700 }];
+          }
+          return [];
+        });
+
+      const payload: UpdateContributorsPartnersDto = {
+        has_innovation_link: true,
+        linked_results: [],
+      };
+      const user = { id: 6 } as TokenDto;
+
+      await service.updateContributorsAndPartners(89, payload, user);
+
+      expect(resultsInnovationsUseRepository.query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE results_innovations_use'),
+        [1, user.id, 700],
+      );
+      expect(resultRepository.update).toHaveBeenCalledWith(89, {
+        has_innovation_link: true,
+        last_updated_by: user.id,
+      });
+    });
+
+    it('should still store "No" when the client answers No', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 90,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const payload: UpdateContributorsPartnersDto = {
+        has_innovation_link: false,
+        linked_results: [123],
+      };
+      const user = { id: 7 } as TokenDto;
+
+      const result = await service.updateContributorsAndPartners(
+        90,
+        payload,
+        user,
+      );
+
+      expect(linkedResultsService.createForInnovationUse).toHaveBeenCalledWith(
+        90,
+        [],
+        user,
+      );
+      expect(resultRepository.update).toHaveBeenCalledWith(90, {
+        has_innovation_link: false,
+        last_updated_by: user.id,
+      });
+      expect(result.response).toEqual({
+        has_innovation_link: false,
+        linked_results: [],
+      });
+    });
+
+    it('should keep inferring the flag from the links when the client omits has_innovation_link', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 91,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+      (resultRepository.query as jest.Mock).mockResolvedValue([]);
+
+      const payload: UpdateContributorsPartnersDto = {
+        linked_results: [],
+      };
+      const user = { id: 8 } as TokenDto;
+
+      await service.updateContributorsAndPartners(91, payload, user);
+
+      expect(resultRepository.update).toHaveBeenCalledWith(91, {
+        has_innovation_link: false,
+        last_updated_by: user.id,
+      });
+    });
   });
 });
