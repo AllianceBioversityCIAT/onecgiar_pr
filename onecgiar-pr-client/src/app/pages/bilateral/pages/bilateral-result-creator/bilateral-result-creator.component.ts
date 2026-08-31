@@ -392,6 +392,22 @@ export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
           });
         }
 
+        // The server resolves the lead centre from the selected project, falling back to
+        // `source_center_acronym` when CLARISA left `organization_code` null. When even that
+        // fails the result is still created — blocking creation would be worse — but it must
+        // not fail quietly: with no lead centre the Contributors & Partners green check can
+        // never turn green, and the person would have no way to find out why.
+        if (response.lead_center_resolved === false) {
+          this.api.alertsFe.show({
+            id: 'bilateralCreateNoLeadCenter',
+            title: 'Result created without a lead center',
+            description:
+              'The selected project has no center on record, so section 3 cannot be completed yet. Please report it so the project can be corrected.',
+            status: 'warning',
+            closeIn: 8000
+          });
+        }
+
         this.router.navigate(['/bilateral', this.ctx.centerAcronym(), 'result', hasResultCode ? resultCode : response.id], {
           queryParams: hasResultCode && response.version_id ? { phase: response.version_id } : {}
         });

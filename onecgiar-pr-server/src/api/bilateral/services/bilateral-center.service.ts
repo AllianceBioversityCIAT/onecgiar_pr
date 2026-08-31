@@ -145,13 +145,38 @@ export class BilateralCenterService {
       }
     }
 
-    if (dto.lead_center) {
+    // The lead centre is resolved server-side rather than trusted from the payload.
+    // The client builds `lead_center` from `obj_organization`, a join on the project's
+    // `organization_code` — which CLARISA's W3 sync leaves NULL for the Alliance-descended
+    // centres. When it is null the client sends nothing, and the result used to be created
+    // with no lead centre and no warning, leaving the Contributors & Partners green check
+    // permanently red. `resolveProjectLeadCenter` applies the same acronym fallback that
+    // `getProjectsByCenter` already uses to list those very projects.
+    const leadCenter =
+      dto.lead_center ??
+      (dto.project_id
+        ? await this.bilateralProjectsService.resolveProjectLeadCenter(
+            Number(dto.project_id),
+          )
+        : null);
+
+    if (leadCenter) {
       await this.bilateralService.handleLeadCenter(
         result.id,
-        dto.lead_center,
+        leadCenter,
         user.id,
       );
+    } else {
+      // Deliberately louder than handleLeadCenter's debug line: this is the state that
+      // blocks the section's green check, and it has to be visible to whoever supports it.
+      this.logger.warn(
+        `Result ${result.id} created without a lead centre` +
+          (dto.project_id
+            ? ` — project ${dto.project_id} has no resolvable centre`
+            : ' — no project selected'),
+      );
     }
+    const leadCenterResolved = Boolean(leadCenter);
 
     if (dto.project_id) {
       await this.resultsByProjectsRepository.save({
@@ -203,6 +228,10 @@ export class BilateralCenterService {
         result_type_id: result.result_type_id,
         source: result.source,
         status_id: result.status_id,
+        // False when neither the payload nor the project yielded a centre. Surfaced so the
+        // client can say so: without a lead centre the Contributors & Partners green check
+        // can never turn green, and a silent failure there is unsupportable.
+        lead_center_resolved: leadCenterResolved,
       },
     };
   }
