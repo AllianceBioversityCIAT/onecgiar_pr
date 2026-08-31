@@ -12,8 +12,17 @@ export class StudiesLinkComponent implements OnInit {
   @Input() disabled: boolean = false;
   constructor(public api: ApiService) {}
 
+  /**
+   * P2-3426: seeding one empty row is what gives an editable list its first "Add link" input — but
+   * it must NOT happen when the list is read-only. In `disabled` mode that empty string would paint
+   * a phantom blank row the user cannot fill in, and worse, it would ride along in the PATCH body
+   * and be persisted as a stored study URL.
+   */
   ngOnInit() {
-    if (!this.body.scaling_studies_urls || this.body.scaling_studies_urls.length === 0) {
+    if (!Array.isArray(this.body.scaling_studies_urls)) {
+      this.body.scaling_studies_urls = [];
+    }
+    if (!this.disabled && this.body.scaling_studies_urls.length === 0) {
       this.body.scaling_studies_urls = [''];
     }
   }
