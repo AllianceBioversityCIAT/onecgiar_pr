@@ -222,7 +222,7 @@ export class BilateralAiService implements OnDestroy {
       },
       error: () => {
         this.isPromoting.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to promote draft' });
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create the result' });
       },
     });
   }

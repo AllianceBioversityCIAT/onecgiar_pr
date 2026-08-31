@@ -39,153 +39,638 @@
     }
 
     @if (hasFigures()) {
-      <!-- ── Results in this phase ─────────────────────────────────────────────────────────── -->
-      <!-- The counters are READ-ONLY. The design makes each one a drill-down, but no surface lists
-           the WHOLE portfolio filtered by status, so any destination here would be invented. Raised
-           on P2-3304 rather than shipped as a dead control. -->
+      <!-- ── Top Deck 4 Executive KPI Cards (POV-R-1) ────────────────────────────────────── -->
+      <div class="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-4">
+        <!-- KPI 1: Total Results (Hero Highlight Card with diffused purple gradient) -->
+        <button
+          type="button"
+          (click)="navigateToResultsCenter('all')"
+          class="po-card group relative overflow-hidden flex flex-col justify-between gap-[12px] rounded-[12px] border border-purple-500/30 bg-gradient-to-br from-[#4a1d96] via-[#5c24b8] to-[#793ce8] p-[18px] text-left transition-all duration-200 cursor-pointer shadow-md hover:border-purple-300 hover:shadow-xl hover:shadow-purple-950/30 hover:-translate-y-0.5">
+          <!-- Diffused background glow effect -->
+          <div class="pointer-events-none absolute -right-[24px] -top-[24px] h-[110px] w-[110px] rounded-full bg-white/15 blur-[20px]"></div>
+          <div class="pointer-events-none absolute -left-[20px] -bottom-[20px] h-[90px] w-[90px] rounded-full bg-purple-900/40 blur-[18px]"></div>
+
+          <div class="relative z-10 flex items-center justify-between gap-[8px] w-full">
+            <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-purple-200">
+              Total portfolio results
+            </span>
+            <span class="inline-flex h-[24px] max-w-[150px] shrink-0 items-center truncate rounded-full bg-white/15 px-[9px] text-[11px] font-semibold text-white backdrop-blur-xs border border-white/20" [title]="kpis().phaseLabel">
+              {{ kpis().phaseLabel || 'Reporting 2026' }}
+            </span>
+          </div>
+          <div class="relative z-10 flex items-baseline gap-[8px]">
+            <span class="pr-figure text-[30px] font-extrabold leading-none text-white tabular-nums drop-shadow-xs">
+              {{ kpis().totalResults }}
+            </span>
+            <span class="text-[13px] font-medium text-purple-200">results</span>
+          </div>
+          <div class="relative z-10 flex items-center justify-between text-[12px] w-full">
+            <div class="flex items-center gap-[6px] text-purple-100 font-medium">
+              <span>{{ kpis().w1w2Count }} W1/W2</span>
+              <span class="text-purple-300">·</span>
+              <span>{{ kpis().bilateralCount }} W3/Bilateral</span>
+            </div>
+            <span class="text-[11px] font-bold text-white opacity-90 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
+              Results Center &rarr;
+            </span>
+          </div>
+        </button>
+
+        <!-- KPI 2: W1/W2 Results -->
+        <button
+          type="button"
+          (click)="navigateToResultsCenter('w1w2')"
+          class="po-card group flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-200 cursor-pointer hover:border-[var(--pr-color-primary-400)] hover:shadow-md hover:-translate-y-0.5">
+          <div class="flex items-center justify-between gap-[8px] w-full">
+            <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] group-hover:text-[var(--pr-color-primary-600)] transition-colors">
+              W1/W2 results
+            </span>
+            <span class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-[var(--pr-color-primary-50)] px-[8px] text-[11px] font-semibold text-[var(--pr-color-primary-600)]">
+              {{ kpis().w1w2SubmittedPercent }}% submitted / QA
+            </span>
+          </div>
+          <div class="flex items-baseline gap-[8px]">
+            <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+              {{ kpis().w1w2Count }}
+            </span>
+            <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
+          </div>
+          <div class="flex items-center justify-between text-[12px] text-[var(--pr-text-secondary)] w-full">
+            <span>Across {{ kpis().w1w2CategoriesCount }} result categories</span>
+            <span class="text-[11px] font-semibold text-[var(--pr-color-primary-600)] opacity-0 group-hover:opacity-100 transition-opacity">
+              Results Center &rarr;
+            </span>
+          </div>
+        </button>
+
+        <!-- KPI 3: W3/Bilateral Results -->
+        <button
+          type="button"
+          (click)="navigateToResultsCenter('bilateral')"
+          class="po-card group flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-200 cursor-pointer hover:border-[var(--pr-color-primary-400)] hover:shadow-md hover:-translate-y-0.5">
+          <div class="flex items-center justify-between gap-[8px] w-full">
+            <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] group-hover:text-[var(--pr-color-primary-600)] transition-colors">
+              W3/Bilateral results
+            </span>
+            <span class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-purple-50 px-[8px] text-[11px] font-semibold text-purple-700">
+              {{ kpis().bilateralApprovedPercent }}% approved
+            </span>
+          </div>
+          <div class="flex items-baseline gap-[8px]">
+            <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+              {{ kpis().bilateralCount }}
+            </span>
+            <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">results</span>
+          </div>
+          <div class="flex items-center justify-between text-[12px] text-[var(--pr-text-secondary)] w-full">
+            <span>Reported across {{ kpis().activeProgramsCount }} science programs</span>
+            <span class="text-[11px] font-semibold text-purple-700 opacity-0 group-hover:opacity-100 transition-opacity">
+              Bilateral &rarr;
+            </span>
+          </div>
+        </button>
+
+        <!-- KPI 4: Science Programs -->
+        <button
+          type="button"
+          (click)="scrollToMatrixSection()"
+          class="po-card group flex flex-col justify-between gap-[12px] rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[18px] text-left transition-all duration-200 cursor-pointer hover:border-[var(--pr-color-primary-400)] hover:shadow-md hover:-translate-y-0.5">
+          <div class="flex items-center justify-between gap-[8px] w-full">
+            <span class="text-[11px] font-bold uppercase tracking-[0.05em] text-[var(--pr-text-muted)] group-hover:text-[var(--pr-color-primary-600)] transition-colors">
+              Science programs
+            </span>
+            <span class="inline-flex h-[24px] shrink-0 items-center rounded-full bg-emerald-50 px-[8px] text-[11px] font-semibold text-emerald-700">
+              Active reporting
+            </span>
+          </div>
+          <div class="flex items-baseline gap-[8px]">
+            <span class="pr-figure text-[28px] font-extrabold leading-none text-[var(--pr-text-heading)] tabular-nums group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+              {{ kpis().activeProgramsCount }} / {{ kpis().activeProgramsCount }}
+            </span>
+            <span class="text-[13px] font-medium text-[var(--pr-text-muted)]">programs</span>
+          </div>
+          <div class="flex items-center justify-between text-[12px] text-[var(--pr-text-secondary)] w-full">
+            <span>{{ kpis().portfolioProgressPercent }}% portfolio progress</span>
+            <span class="text-[11px] font-semibold text-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity">
+              View Matrix &darr;
+            </span>
+          </div>
+        </button>
+      </div>
+
+      <!-- ── Portfolio reporting status (POV-R-2) ─────────────────────────────────────────── -->
       <div class="po-card rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-        <h2 class="mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Results in this phase</h2>
-        <div class="flex flex-wrap">
-          @for (total of data.totals(); track total.label; let first = $first) {
-            <div
-              class="flex flex-col gap-[4px] rounded-[8px]"
-              [class]="first ? '' : 'ml-[20px] border-l border-[var(--pr-border)] pl-[20px]'">
-              <span class="flex items-center gap-[6px] text-[13px] font-normal text-[var(--pr-text-muted)]">
-                @if (total.dot) {
-                  <span class="size-[8px] flex-none rounded-full" [style.background]="total.dot" aria-hidden="true"></span>
-                }
-                {{ total.label }}
-              </span>
-              <span class="font-mono text-[30px] font-bold leading-[1.1] text-[var(--pr-text)]">{{ total.n }}</span>
-            </div>
-          }
-        </div>
-      </div>
-
-      <div class="grid grid-cols-12 gap-[16px]">
-        <!-- ── Results by indicator category ──────────────────────────────────────────────── -->
-        <!-- Read-only for the same reason as the counters — see P2-3304. -->
-        <div class="po-card col-span-7 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-          <h2 class="mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Results by indicator category</h2>
-          @for (bar of data.categoryBars(); track bar.name) {
-            <div class="flex min-h-[36px] items-center gap-[12px] rounded-[8px] px-[6px]">
-              <span class="max-w-[180px] flex-none truncate text-[13px] font-normal text-[var(--pr-text)]" [title]="bar.name">{{ bar.name }}</span>
-              <span class="h-[8px] min-w-[64px] flex-1 rounded-full bg-[var(--pr-border-divider)]">
-                <span class="block h-[8px] rounded-full bg-[var(--pr-color-primary-300)]" [style.width]="bar.width"></span>
-              </span>
-              <span class="min-w-[32px] flex-none text-right font-mono text-[14px] font-semibold text-[var(--pr-text)]">{{ bar.n }}</span>
-            </div>
-          }
+        <div class="mb-[20px]">
+          <h2 class="text-[18px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Portfolio reporting status</h2>
+          <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+            Aggregate progress across all Science Programs in this cycle
+          </p>
         </div>
 
-        <!-- ── Bilateral results ──────────────────────────────────────────────────────────── -->
-        <div class="po-card col-span-5 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
-          <h2 class="mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Bilateral results</h2>
-          <div class="flex flex-col gap-[4px]">
-            <span class="text-[13px] font-normal text-[var(--pr-text-muted)]">Bilateral results in this phase</span>
-            <span class="font-mono text-[30px] font-bold leading-[1.1] text-[var(--pr-text)]">{{ data.bilateralTotal() }}</span>
+        <div class="grid grid-cols-1 items-center gap-[24px] lg:grid-cols-12">
+          <!-- Donut chart (using violet scale palette with separated slices and visible values) -->
+          <div class="lg:col-span-4 flex items-center justify-center">
+            <div class="w-[240px] h-[220px] shrink-0">
+              <app-pr-viz-chart
+                class="w-full h-full block cursor-pointer"
+                [options]="statusDonutOption()"
+                [tableModel]="statusDonutTable()"
+                (chartClick)="onStatusChartClick($event)"
+                chartTitle="Portfolio reporting status"
+                height="220px" />
+            </div>
           </div>
 
-          <div class="mt-[16px] border-t border-[var(--pr-border-divider)] pt-[8px]">
-            @for (bar of bilateralRows(); track bar.code) {
-              <button
-                type="button"
-                class="flex min-h-[40px] w-full items-center gap-[12px] rounded-[8px] border-0 bg-transparent px-[6px] text-left transition-colors hover:bg-[var(--pr-surface-app)]"
-                [attr.aria-label]="'Open the Results tab of ' + bar.name"
-                (click)="openProgramme(bar.code)">
-                <span class="flex-none font-mono text-[12px] font-semibold text-[var(--pr-color-primary-400)]">{{ bar.code }}</span>
-                <span class="max-w-[180px] flex-none truncate text-[14px] font-normal text-[var(--pr-text)]" [title]="bar.name">{{ bar.name }}</span>
-                <span class="h-[8px] min-w-[56px] flex-1 rounded-full bg-[var(--pr-border-divider)]">
-                  <!-- NON-TEXT graphic: 3.52:1 on this track, clears WCAG 1.4.11 (DESIGN-DEVIATIONS §8). -->
-                  <span class="block h-[8px] rounded-full bg-[var(--pr-chart-2-muted)]" [style.width]="bar.width"></span>
-                </span>
-                <span class="min-w-[32px] flex-none text-right font-mono text-[14px] font-semibold text-[var(--pr-text)]">{{ bar.n }}</span>
-              </button>
-            }
+          <!-- Progress meter + Dynamic Interactive Status Metric Grid -->
+          <div class="flex flex-col gap-[14px] lg:col-span-8">
+            <!-- Dynamic ECharts Status Pipeline Bar -->
+            <div class="w-full h-[28px]">
+              <app-pr-viz-chart
+                class="w-full h-full block cursor-pointer"
+                [options]="statusPipelineOption()"
+                (chartClick)="onStatusChartClick($event)"
+                chartTitle="Status Pipeline"
+                height="28px" />
+            </div>
 
-            @if (bilateralHasMore()) {
-              <button
-                type="button"
-                class="flex min-h-[36px] w-full items-center rounded-[8px] border-0 bg-transparent px-[6px] text-left text-[13px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:bg-[var(--pr-color-primary-50)]"
-                (click)="toggleBilateral()">
-                {{ bilateralExpanded() ? 'Show less' : 'View all' }}
-              </button>
-            }
-          </div>
-        </div>
-      </div>
+            <!-- Dynamic interactive status metric tiles with mini progress indicators -->
+            <div class="grid grid-cols-2 gap-[10px] sm:grid-cols-3">
+              @for (segment of statusSegments(); track segment.key) {
+                <button
+                  type="button"
+                  (click)="toggleStatusFilter(segment.key)"
+                  class="group relative flex flex-col justify-between rounded-[10px] border px-[12px] py-[9px] text-left transition-all duration-200 cursor-pointer overflow-hidden"
+                  [class]="selectedStatusFilter() === segment.key
+                    ? 'border-[var(--pr-color-primary-600)] bg-[var(--pr-color-primary-50)] shadow-xs ring-2 ring-[var(--pr-color-primary-500)]/30'
+                    : 'border-[var(--pr-border)] bg-[var(--pr-surface-ground)] hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs hover:-translate-y-0.5'">
+                  
+                  <div class="flex items-center justify-between gap-[8px] w-full mb-[6px]">
+                    <div class="flex min-w-0 items-center gap-[8px]">
+                      <span
+                        class="h-[9px] w-[9px] shrink-0 rounded-full transition-transform group-hover:scale-125"
+                        [style.background]="segment.fg"></span>
+                      <span class="truncate text-[12.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors">
+                        {{ segment.label }}
+                      </span>
+                    </div>
+                    <div class="flex shrink-0 items-baseline gap-[3px]">
+                      <span class="pr-figure-sm text-[14px] font-bold text-[var(--pr-text-heading)] tabular-nums">
+                        {{ segment.count }}
+                      </span>
+                      <span class="text-[11px] font-medium text-[var(--pr-text-muted)] tabular-nums">
+                        ({{ segment.percent }}%)
+                      </span>
+                    </div>
+                  </div>
 
-      <!-- ── Progress by science program ───────────────────────────────────────────────────── -->
-      <!-- Column order is the design's: programme, TOTAL, then one column per category. -->
-      <div class="po-card rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-[20px]">
-        <h2 class="mx-[20px] mb-[20px] text-[20px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Progress by science program</h2>
-
-        <div class="overflow-x-auto">
-          <table class="w-full border-collapse">
-            <thead>
-              <tr class="h-[40px] bg-[var(--pr-surface-app)]">
-                @for (column of columns(); track column.label; let first = $first) {
-                  <th
-                    scope="col"
-                    class="whitespace-nowrap border-b border-[var(--pr-border)] px-[10px] text-[11px] font-semibold uppercase tracking-[0.08em]"
-                    [class]="first ? 'pl-[20px] text-left' : 'text-right'"
-                    [attr.aria-sort]="isSorted(column) ? (sortAsc() ? 'ascending' : 'descending') : 'none'">
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-[4px] border-0 bg-transparent p-0 text-inherit uppercase tracking-[inherit]"
-                      [style.color]="isSorted(column) ? 'var(--pr-text)' : 'var(--pr-text-secondary)'"
-                      (click)="sortBy(column)">
-                      {{ column.label }}
-                      @if (isSorted(column)) {
-                        <ng-icon
-                          name="lucideChevronDown"
-                          size="10px"
-                          strokeWidth="2"
-                          class="text-[var(--pr-color-primary-400)]"
-                          [style.transform]="sortAsc() ? 'rotate(180deg)' : 'none'" />
-                      }
-                    </button>
-                  </th>
-                }
-              </tr>
-            </thead>
-
-            <tbody>
-              @for (row of rows(); track row.code) {
-                <tr class="min-h-[48px] border-b border-[var(--pr-border-divider)] transition-colors hover:bg-[var(--pr-surface-app)]">
-                  <td class="py-[8px] pl-[20px] pr-[10px]">
-                    <button
-                      type="button"
-                      class="flex items-center gap-[8px] border-0 bg-transparent p-0 text-left"
-                      [attr.aria-label]="'Open the Results tab of ' + row.name"
-                      (click)="openProgramme(row.code)">
-                      <span class="font-mono text-[12px] font-semibold text-[var(--pr-color-primary-400)]">{{ row.code }}</span>
-                      <span class="text-[14px] font-normal text-[var(--pr-text)]">{{ row.name }}</span>
-                    </button>
-                  </td>
-                  <td class="whitespace-nowrap px-[10px] py-[8px] text-right font-mono text-[14px] font-semibold text-[var(--pr-text)]">{{ row.total }}</td>
-                  @for (cell of row.cells; track $index) {
-                    <td
-                      class="whitespace-nowrap px-[10px] py-[8px] text-right font-mono text-[14px] font-medium"
-                      [style.color]="cell ? 'var(--pr-text)' : 'var(--pr-text-disabled)'">
-                      {{ cell }}
-                    </td>
-                  }
-                </tr>
+                  <!-- Mini progress bar on each card -->
+                  <div class="h-[3.5px] w-full overflow-hidden rounded-full bg-[var(--pr-border-divider)]">
+                    <div
+                      class="h-full rounded-full transition-all duration-500 ease-out"
+                      [style.width.%]="segment.percent"
+                      [style.background]="segment.fg"></div>
+                  </div>
+                </button>
               }
+            </div>
 
-              <!-- The closing row. Not clickable, per the design. -->
-              <tr class="min-h-[48px] bg-[var(--pr-surface-app)]">
-                <td class="py-[8px] pl-[20px] pr-[10px] text-[14px] font-semibold text-[var(--pr-text)]">All programs</td>
-                <td class="whitespace-nowrap px-[10px] py-[8px] text-right font-mono text-[14px] font-semibold text-[var(--pr-text)]">{{ data.footer().total }}</td>
-                @for (cell of data.footer().cells; track $index) {
-                  <td class="whitespace-nowrap px-[10px] py-[8px] text-right font-mono text-[14px] font-semibold text-[var(--pr-text)]">{{ cell }}</td>
-                }
-              </tr>
-            </tbody>
-          </table>
+            @if (selectedStatusFilter()) {
+              <div class="flex items-center justify-between rounded-[8px] bg-[var(--pr-color-primary-50)] px-[14px] py-[8px] border border-[var(--pr-color-primary-200)]">
+                <span class="text-[12px] font-medium text-[var(--pr-color-primary-800)]">
+                  Active filter: <strong class="font-bold capitalize">{{ selectedStatusFilter() }}</strong>
+                </span>
+                <div class="flex items-center gap-[12px]">
+                  <button
+                    type="button"
+                    (click)="navigateToResultsCenter('all', { status: selectedStatusFilter()! })"
+                    class="text-[12px] font-bold text-[var(--pr-color-primary-700)] hover:underline cursor-pointer border-0 bg-transparent">
+                    View in Results Center &rarr;
+                  </button>
+                  <button
+                    type="button"
+                    (click)="toggleStatusFilter(selectedStatusFilter()!)"
+                    class="text-[11.5px] font-semibold text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)] cursor-pointer border-0 bg-transparent"
+                    aria-label="Clear status filter">
+                    Clear filter &times;
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
         </div>
       </div>
-    }
-  </div>
-</section>
+
+      <!-- ── Science Programs Output Ranking & Analysis ───────────────────────────────── -->
+      <div class="po-card rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[20px]">
+        <div class="mb-[20px] flex flex-wrap items-center justify-between gap-[16px]">
+          <div>
+            <h2 class="text-[18px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Science Programs output ranking</h2>
+            <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+              Comparative volume, reporting status, and indicator distribution across Science Programs
+            </p>
+          </div>
+
+          <!-- View Mode Switcher: Vertical Bar | Horizontal Bar | Heatmap -->
+          <div class="inline-flex items-center rounded-[8px] bg-[var(--pr-surface-ground)] p-[3px] border border-[var(--pr-border)]">
+            <button
+              type="button"
+              (click)="setAnalysisViewMode('vertical')"
+              class="px-[12px] py-[5px] rounded-[6px] text-[12px] font-semibold transition-all cursor-pointer border-0"
+              [class]="analysisViewMode() === 'vertical' ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
+              Vertical Bar
+            </button>
+            <button
+              type="button"
+              (click)="setAnalysisViewMode('horizontal')"
+              class="px-[12px] py-[5px] rounded-[6px] text-[12px] font-semibold transition-all cursor-pointer border-0"
+              [class]="analysisViewMode() === 'horizontal' ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
+              Horizontal Bar
+            </button>
+            <button
+              type="button"
+              (click)="setAnalysisViewMode('heatmap')"
+              class="px-[12px] py-[5px] rounded-[6px] text-[12px] font-semibold transition-all cursor-pointer border-0"
+              [class]="analysisViewMode() === 'heatmap' ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
+              Heatmap
+            </button>
+          </div>
+        </div>
+
+        <app-pr-viz-chart
+          class="cursor-pointer"
+          [options]="activeAnalysisOption()"
+          [tableModel]="activeAnalysisTable()"
+          (chartClick)="onRankingChartClick($event)"
+          chartTitle="Science Programs output ranking"
+          [height]="analysisViewMode() === 'heatmap' ? '380px' : '320px'" />
+      </div>
+
+        <!-- ── Card 4: Progress by Science Program Matrix Table & Chart (POV-R-6) ────────── -->
+        <div id="progress-by-science-program" class="po-card col-span-12 rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] py-[20px]">
+          <div class="mx-[20px] mb-[16px] flex flex-wrap items-center justify-between gap-[12px]">
+            <div>
+              <h2 class="text-[18px] font-bold tracking-[-0.01em] text-[var(--pr-text)]">Progress by science program</h2>
+              <p class="mt-[2px] text-[13px] font-normal text-[var(--pr-text-muted)]">
+                Detailed breakdown of reported results by indicator category for each Science Program
+              </p>
+            </div>
+
+            <!-- View Switcher (Table | Chart) + Export Excel Button -->
+            <div class="flex flex-wrap items-center gap-[10px]">
+              <div class="inline-flex items-center rounded-[8px] bg-[var(--pr-surface-ground)] p-[3px] border border-[var(--pr-border)]">
+                <button
+                  type="button"
+                  (click)="setMatrixViewMode('table')"
+                  class="px-[12px] py-[5px] rounded-[6px] text-[12px] font-semibold transition-all cursor-pointer border-0"
+                  [class]="matrixViewMode() === 'table' ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
+                  Table View
+                </button>
+                <button
+                  type="button"
+                  (click)="setMatrixViewMode('chart')"
+                  class="px-[12px] py-[5px] rounded-[6px] text-[12px] font-semibold transition-all cursor-pointer border-0"
+                  [class]="matrixViewMode() === 'chart' ? 'bg-white text-[var(--pr-color-primary-700)] shadow-xs font-bold' : 'bg-transparent text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)]'">
+                  Chart View
+                </button>
+              </div>
+
+              <!-- Export to Excel Button -->
+              <button
+                type="button"
+                (click)="exportToExcel()"
+                [disabled]="isExporting() || totalFilteredRows() === 0"
+                class="inline-flex h-[34px] items-center gap-[6px] rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[12px] text-[12px] font-semibold text-[var(--pr-text-heading)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-color-primary-600)] transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed">
+                <ng-icon name="lucideDownload" size="14px" class="text-[var(--pr-color-primary-600)]" />
+                <span>{{ isExporting() ? 'Exporting…' : 'Export Excel' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Table Controls Toolbar (Search + SP Filter + Indicator Filter + Columns + Rows Per Page + Count) -->
+          <div class="flex flex-wrap items-center justify-between gap-[12px] px-[20px] pb-[16px]">
+            <div class="flex flex-wrap items-center gap-[10px] w-full lg:w-auto">
+              <!-- Search box -->
+              <div class="relative w-full sm:w-[220px]">
+                <ng-icon name="lucideSearch" size="15px" class="absolute left-[12px] top-1/2 -translate-y-1/2 text-[var(--pr-text-muted)] pointer-events-none" />
+                <input
+                  type="text"
+                  [value]="searchQuery()"
+                  (input)="onSearchInput($event)"
+                  placeholder="Search program…"
+                  class="h-[34px] w-full rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] pl-[34px] pr-[30px] text-[12.5px] text-[var(--pr-text-heading)] placeholder:text-[var(--pr-text-muted)] focus:border-[var(--pr-color-primary-500)] focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-500)]" />
+                @if (searchQuery()) {
+                  <button
+                    type="button"
+                    (click)="clearSearch()"
+                    class="absolute right-[8px] top-1/2 -translate-y-1/2 p-[3px] text-[var(--pr-text-muted)] hover:text-[var(--pr-text-heading)] cursor-pointer"
+                    aria-label="Clear search">
+                    <ng-icon name="lucideX" size="13px" />
+                  </button>
+                }
+              </div>
+
+              <!-- Science Program Filter -->
+              <div class="flex items-center gap-[6px]">
+                <select
+                  [value]="selectedProgramFilter()"
+                  (change)="setProgramFilter($any($event.target).value)"
+                  class="h-[34px] rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[10px] text-[12px] font-medium text-[var(--pr-text-heading)] focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-500)] cursor-pointer max-w-[180px] truncate"
+                  aria-label="Filter by Science Program">
+                  <option value="all">All Science Programs</option>
+                  @for (prog of availablePrograms(); track prog.code) {
+                    <option [value]="prog.code">{{ prog.code }} - {{ prog.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Indicator Type Filter -->
+              <div class="flex items-center gap-[6px]">
+                <select
+                  [value]="selectedIndicatorFilter()"
+                  (change)="setIndicatorFilter($any($event.target).value)"
+                  class="h-[34px] rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[10px] text-[12px] font-medium text-[var(--pr-text-heading)] focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-500)] cursor-pointer max-w-[180px] truncate"
+                  aria-label="Filter by Indicator Type">
+                  <option value="all">All Indicator Types</option>
+                  @for (cat of availableCategories(); track cat) {
+                    <option [value]="cat">{{ cat }}</option>
+                  }
+                </select>
+              </div>
+
+              @if (hasActiveFilters()) {
+                <button
+                  type="button"
+                  (click)="resetFilters()"
+                  class="inline-flex h-[32px] items-center gap-[4px] rounded-[6px] border border-dashed border-[var(--pr-border)] bg-transparent px-[8px] text-[11.5px] font-medium text-[var(--pr-color-primary-600)] hover:bg-[var(--pr-color-primary-50)] cursor-pointer transition-colors">
+                  <ng-icon name="lucideX" size="12px" />
+                  <span>Reset filters</span>
+                </button>
+              }
+            </div>
+
+            <div class="flex flex-wrap items-center gap-[10px]">
+              <!-- Column Customization Dropdown -->
+              <div class="relative">
+                <button
+                  type="button"
+                  (click)="toggleColumnPicker()"
+                  class="inline-flex h-[34px] items-center gap-[6px] rounded-[7px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[11px] text-[12px] font-semibold text-[var(--pr-text-heading)] hover:bg-[var(--pr-surface-ground)] cursor-pointer shadow-xs transition-colors">
+                  <ng-icon name="lucideCog" size="14px" class="text-[var(--pr-text-muted)]" />
+                  <span>Columns ({{ selectedCategories().length }}/{{ availableCategories().length }})</span>
+                  <ng-icon name="lucideChevronDown" size="12px" class="text-[var(--pr-text-muted)]" />
+                </button>
+
+                @if (isColumnPickerOpen()) {
+                  <div class="fixed inset-0 z-20" (click)="isColumnPickerOpen.set(false)"></div>
+                  <div class="absolute right-0 top-[40px] z-30 w-[280px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[12px] shadow-lg">
+                    <div class="mb-[8px] flex items-center justify-between border-b border-[var(--pr-border)] pb-[8px]">
+                      <span class="text-[11.5px] font-bold uppercase tracking-wider text-[var(--pr-text-muted)]">Indicator Columns</span>
+                      <div class="flex items-center gap-[8px]">
+                        <button
+                          type="button"
+                          (click)="selectAllCategories()"
+                          class="border-0 bg-transparent text-[11.5px] font-semibold text-[var(--pr-color-primary-600)] hover:underline cursor-pointer">
+                          All
+                        </button>
+                        <span class="text-[11px] text-[var(--pr-text-muted)]">·</span>
+                        <button
+                          type="button"
+                          (click)="deselectAllCategories()"
+                          class="border-0 bg-transparent text-[11.5px] font-medium text-[var(--pr-text-muted)] hover:underline cursor-pointer">
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="flex max-h-[220px] flex-col gap-[4px] overflow-y-auto">
+                      @for (cat of availableCategories(); track cat) {
+                        <label
+                          class="flex cursor-pointer items-center gap-[8px] rounded-[6px] px-[6px] py-[4px] text-[12px] text-[var(--pr-text-heading)] hover:bg-[var(--pr-surface-ground)] transition-colors">
+                          <input
+                            type="checkbox"
+                            [checked]="isCategorySelected(cat)"
+                            (change)="toggleCategory(cat)"
+                            class="h-[14px] w-[14px] rounded border-[var(--pr-border)] text-[var(--pr-color-primary-600)] focus:ring-[var(--pr-color-primary-500)] cursor-pointer" />
+                          <span class="truncate">{{ cat }}</span>
+                        </label>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Rows per page selector -->
+              <div class="flex items-center gap-[6px]">
+                <span class="text-[12px] text-[var(--pr-text-muted)]">Rows:</span>
+                <select
+                  [value]="pageSize()"
+                  (change)="setPageSize($any($event.target).value)"
+                  class="h-[32px] rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[8px] text-[12px] font-medium text-[var(--pr-text-heading)] focus:outline-none focus:ring-1 focus:ring-[var(--pr-color-primary-500)] cursor-pointer">
+                  <option [value]="5">5</option>
+                  <option [value]="10">10</option>
+                  <option [value]="14">14</option>
+                  <option [value]="20">20</option>
+                  <option [value]="0">All</option>
+                </select>
+              </div>
+
+              <span class="rounded-full bg-[var(--pr-color-primary-50)] px-[10px] py-[3px] text-[11.5px] font-bold text-[var(--pr-color-primary-700)] tabular-nums">
+                {{ totalFilteredRows() }} programs
+              </span>
+            </div>
+          </div>
+
+          @if (matrixViewMode() === 'chart') {
+            <!-- Chart View for Progress by Science Program -->
+            <div class="px-[20px] pt-[8px]">
+              <app-pr-viz-chart
+                class="cursor-pointer"
+                [options]="matrixChartOption()"
+                [tableModel]="matrixChartTable()"
+                (chartClick)="onMatrixChartClick($event)"
+                chartTitle="Progress by Science Program Breakdown"
+                height="420px" />
+            </div>
+          } @else {
+            <div class="overflow-x-auto">
+              <table class="w-full border-collapse" [class.select-none]="isResizing()">
+                <thead>
+                  <tr class="h-[42px] bg-[var(--pr-surface-app)]">
+                    @for (column of columns(); track column.label; let first = $first; let index = $index) {
+                      <th
+                        scope="col"
+                        class="relative whitespace-nowrap border-y border-[var(--pr-border)] px-[8px] text-[11px] font-semibold uppercase tracking-[0.06em] select-none"
+                        [class]="first ? 'pl-[20px] pr-[14px] text-left sticky left-0 bg-[var(--pr-surface-app)] z-10 border-r border-[var(--pr-border-divider)]' : 'text-center'"
+                        [style.width.px]="getColumnWidth(column)"
+                        [style.minWidth.px]="getColumnWidth(column)"
+                        [style.maxWidth.px]="getColumnWidth(column)"
+                        [attr.aria-sort]="isSorted(column) ? (sortAsc() ? 'ascending' : 'descending') : 'none'">
+                        <button
+                          type="button"
+                          class="inline-flex items-center gap-[4px] border-0 bg-transparent p-0 text-inherit uppercase tracking-[inherit] cursor-pointer hover:text-[var(--pr-color-primary-600)]"
+                          [class.justify-center]="!first"
+                          [class.w-full]="!first"
+                          [style.color]="isSorted(column) ? 'var(--pr-text-heading)' : 'var(--pr-text-secondary)'"
+                          (click)="sortBy(column)"
+                          [title]="column.label">
+                          <span>{{ column.shortLabel }}</span>
+                          @if (isSorted(column)) {
+                            <ng-icon
+                              name="lucideChevronDown"
+                              size="12px"
+                              strokeWidth="2.5"
+                              class="text-[var(--pr-color-primary-500)]"
+                              [style.transform]="sortAsc() ? 'rotate(180deg)' : 'none'" />
+                          }
+                        </button>
+
+                        <!-- Column Resizer Handle (Draggable on all columns including first) -->
+                        <div
+                          class="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[var(--pr-color-primary-400)] active:bg-[var(--pr-color-primary-600)] transition-colors z-30 flex items-center justify-center group"
+                          (mousedown)="onResizeStart($event, column)"
+                          [title]="'Resize ' + column.label + ' column'">
+                          <div class="w-[1.5px] h-[16px] bg-[var(--pr-border)] group-hover:bg-[var(--pr-color-primary-500)] transition-colors"></div>
+                        </div>
+                      </th>
+                    }
+                  </tr>
+                </thead>
+
+                <tbody>
+                  @if (paginatedRows().length === 0) {
+                    <tr>
+                      <td [attr.colspan]="columns().length" class="py-[32px] text-center text-[13px] text-[var(--pr-text-muted)]">
+                        No science programs found matching "{{ searchQuery() }}".
+                      </td>
+                    </tr>
+                  }
+                  @for (row of paginatedRows(); track row.code) {
+                    <tr class="min-h-[48px] border-b border-[var(--pr-border-divider)] transition-colors hover:bg-[var(--pr-surface-ground)]">
+                      <!-- Improved First Column (Science Program) with dynamic resizing -->
+                      <td
+                        class="py-[10px] pl-[20px] pr-[14px] sticky left-0 bg-[var(--pr-surface-card)] z-10 border-r border-[var(--pr-border-divider)] overflow-hidden"
+                        [style.width.px]="getColumnWidth(columns()[0])"
+                        [style.minWidth.px]="getColumnWidth(columns()[0])"
+                        [style.maxWidth.px]="getColumnWidth(columns()[0])">
+                        <button
+                          type="button"
+                          class="group flex items-center gap-[10px] border-0 bg-transparent p-0 text-left cursor-pointer w-full min-w-0"
+                          [attr.aria-label]="'Open the Results tab of ' + row.name"
+                          (click)="openProgramme(row.code)">
+                          <span class="inline-flex h-[24px] min-w-[48px] items-center justify-center rounded-[6px] bg-[var(--pr-color-primary-50)] px-[6px] font-mono text-[11.5px] font-bold text-[var(--pr-color-primary-700)] border border-[var(--pr-color-primary-100)] shrink-0 transition-all group-hover:bg-[var(--pr-color-primary-100)] group-hover:border-[var(--pr-color-primary-300)]">
+                            {{ row.code }}
+                          </span>
+                          <span class="text-[13px] font-semibold text-[var(--pr-text-heading)] leading-snug group-hover:text-[var(--pr-color-primary-600)] transition-colors truncate">
+                            {{ row.name }}
+                          </span>
+                          <ng-icon name="lucideChevronRight" size="13px" class="opacity-0 group-hover:opacity-100 text-[var(--pr-color-primary-500)] ml-auto shrink-0 transition-opacity" />
+                        </button>
+                      </td>
+                      <td class="whitespace-nowrap px-[10px] py-[10px] text-center font-mono text-[14px] font-bold text-[var(--pr-text-heading)]">
+                        <button
+                          type="button"
+                          (click)="navigateToResultsCenter('all', { program: row.code })"
+                          class="border-0 bg-transparent font-mono text-[14px] font-bold text-[var(--pr-text-heading)] hover:text-[var(--pr-color-primary-600)] hover:underline cursor-pointer"
+                          [title]="'Filter Results Center for ' + row.name">
+                          {{ row.total }}
+                        </button>
+                      </td>
+                      @for (column of columns(); track column.label) {
+                        @if (column.key === 'category') {
+                          <td class="whitespace-nowrap px-[8px] py-[10px] text-center">
+                            @if (row.cells[column.cellIndex] > 0) {
+                              <button
+                                type="button"
+                                (click)="onCategoryCellClick(row, column)"
+                                class="inline-flex min-w-[32px] items-center justify-center rounded-[6px] px-[8px] py-[2px] font-mono text-[13px] font-semibold text-[var(--pr-text-heading)] transition-all cursor-pointer border-0 hover:scale-110 hover:shadow-xs hover:ring-2 hover:ring-[var(--pr-color-primary-500)]/40"
+                                [style.background]="'rgba(107, 70, 229, ' + (cellIntensity(row.cells[column.cellIndex]) * 0.22 + 0.06) + ')'"
+                                [title]="'Filter Results Center for ' + row.name + ' - ' + column.label">
+                                {{ row.cells[column.cellIndex] }}
+                              </button>
+                            } @else {
+                              <span class="font-mono text-[13px] text-[var(--pr-text-disabled)]">0</span>
+                            }
+                          </td>
+                        }
+                      }
+                    </tr>
+                  }
+
+                  <!-- The closing summary row -->
+                  <tr class="min-h-[48px] bg-[var(--pr-surface-ground)] font-bold">
+                    <td
+                      class="py-[12px] pl-[20px] pr-[14px] text-[13px] font-bold text-[var(--pr-text-heading)] sticky left-0 bg-[var(--pr-surface-ground)] z-10 border-r border-[var(--pr-border-divider)] overflow-hidden"
+                      [style.width.px]="getColumnWidth(columns()[0])"
+                      [style.minWidth.px]="getColumnWidth(columns()[0])"
+                      [style.maxWidth.px]="getColumnWidth(columns()[0])">
+                      All programs (Total)
+                    </td>
+                    <td class="whitespace-nowrap px-[10px] py-[12px] text-center font-mono text-[14px] font-bold text-[var(--pr-text-heading)]">
+                      <button
+                        type="button"
+                        (click)="navigateToResultsCenter('all')"
+                        class="border-0 bg-transparent font-mono text-[14px] font-bold text-[var(--pr-text-heading)] hover:text-[var(--pr-color-primary-600)] hover:underline cursor-pointer"
+                        title="View all portfolio results in Results Center">
+                        {{ data.footer().total }}
+                      </button>
+                    </td>
+                    @for (column of columns(); track column.label) {
+                      @if (column.key === 'category') {
+                        <td class="whitespace-nowrap px-[8px] py-[12px] text-center font-mono text-[13.5px] font-bold text-[var(--pr-text-heading)]">
+                          <button
+                            type="button"
+                            (click)="navigateToResultsCenter('all', { category: column.label })"
+                            class="border-0 bg-transparent font-mono text-[13.5px] font-bold text-[var(--pr-text-heading)] hover:text-[var(--pr-color-primary-600)] hover:underline cursor-pointer"
+                            [title]="'Filter Results Center for ' + column.label">
+                            {{ data.footer().cells[column.cellIndex] }}
+                          </button>
+                        </td>
+                      }
+                    }
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination Footer Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-[16px] border-t border-[var(--pr-border)] px-[20px] pt-[14px]">
+              <span class="text-[12px] text-[var(--pr-text-muted)]">
+                Showing {{ paginationStart() }}-{{ paginationEnd() }} of {{ totalFilteredRows() }} programs
+              </span>
+              @if (totalPages() > 1) {
+                <div class="flex items-center gap-[4px]">
+                  <button
+                    type="button"
+                    (click)="prevPage()"
+                    [disabled]="currentPage() === 1"
+                    class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-ground)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    aria-label="Previous page">
+                    <ng-icon name="lucideChevronLeft" size="14px" />
+                  </button>
+                  @for (p of [].constructor(totalPages()); track $index) {
+                    <button
+                      type="button"
+                      (click)="setPage($index + 1)"
+                      class="inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-[6px] px-[8px] text-[12px] font-semibold transition-colors cursor-pointer"
+                      [class]="currentPage() === ($index + 1)
+                        ? 'bg-[var(--pr-color-primary-500)] text-white font-bold shadow-xs'
+                        : 'border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-heading)] hover:bg-[var(--pr-surface-ground)]'">
+                      {{ $index + 1 }}
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    (click)="nextPage()"
+                    [disabled]="currentPage() === totalPages()"
+                    class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-[6px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-ground)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    aria-label="Next page">
+                    <ng-icon name="lucideChevronRight" size="14px" />
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </section>

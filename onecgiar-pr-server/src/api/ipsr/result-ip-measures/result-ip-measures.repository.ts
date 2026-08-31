@@ -33,7 +33,8 @@ export class ResultIpMeasureRepository
           unit_of_measure,
           ${config.new_ipsr_id} AS result_ip_id,
           quantity,
-          ${config.new_result_id} AS result_id
+          ${config.new_result_id} AS result_id,
+          section_id
       FROM
           result_ip_measure
       WHERE
@@ -51,7 +52,8 @@ export class ResultIpMeasureRepository
               unit_of_measure,
               quantity,
               result_ip_id,
-              result_id
+              result_id,
+              section_id
           )
       SELECT
           is_active,
@@ -62,7 +64,8 @@ export class ResultIpMeasureRepository
           unit_of_measure,
           quantity,
           ${resultIpIdValue}
-          ${config.new_result_id} AS result_id
+          ${config.new_result_id} AS result_id,
+          section_id
       FROM
           result_ip_measure
       WHERE

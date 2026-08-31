@@ -9,7 +9,7 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { PrTableComponent } from '../../../../../../shared/components/pr-table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 import { ResultsListFilterService } from './services/results-list-filter.service';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   BilateralResultsService,
   REVIEW_RESULT_ID_QUERY_PARAM,
@@ -86,6 +86,7 @@ function defaultColumnVisibility(): Record<string, boolean> {
 })
 export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   router = inject(Router);
+  activatedRoute = inject(ActivatedRoute, { optional: true });
   bilateralResultsService = inject(BilateralResultsService);
 
   private readonly resultRouteCache = new Map<string, ResultRoute>();
@@ -323,6 +324,39 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     this.shareRequestModalSE.inNotifications = false;
     this.api.dataControlSE.getCurrentPhases();
+
+    if (this.activatedRoute) {
+      this.activatedRoute.queryParams.subscribe(params => {
+        if (!params) return;
+
+        if (params['funding']) {
+          if (params['funding'] === 'w1w2') {
+            this.resultsListFilterSE.selectedFundingSource.set([{ id: 1, name: 'W1/W2' }]);
+          } else if (params['funding'] === 'bilateral' || params['funding'] === 'w3') {
+            this.resultsListFilterSE.selectedFundingSource.set([{ id: 2, name: 'W3/Bilaterals' }]);
+          }
+        }
+
+        if (params['status']) {
+          const statusId = Number(params['status']);
+          if (!isNaN(statusId)) {
+            this.resultsListFilterSE.selectedStatus.set([{ status_id: statusId }]);
+          }
+        }
+
+        if (params['search']) {
+          this.resultsListFilterSE.text_to_search.set(params['search']);
+        }
+
+        if (params['category']) {
+          this.resultsListFilterSE.text_to_search.set(params['category']);
+        }
+
+        if (params['program']) {
+          this.resultsListFilterSE.text_to_search.set(params['program']);
+        }
+      });
+    }
   }
 
   ngAfterViewInit(): void {

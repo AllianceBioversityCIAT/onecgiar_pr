@@ -194,3 +194,101 @@ describe('ResultQuestionsService — responsibleInnovationAndScalingV2 slot mapp
     });
   });
 });
+
+/**
+ * Regression guard for the P25 "Intellectual property rights" slots (P2-3272).
+ *
+ * Same defect as parent 77: `q1`…`q4` were filled by array position over a `find()` with no
+ * `ORDER BY`, so the first child row added under parent 100 shifted every later slot and the
+ * client painted the wrong question in the wrong component — for every P25 result, phase-2025
+ * ones included. The slots are now pinned to `result_question_id` (101, 102, 103, 138),
+ * verified live against prtest on 28 Aug 2026.
+ */
+describe('ResultQuestionsService — intellectualPropertyRightsV2 slot mapping', () => {
+  let service: ResultQuestionsService;
+  let questionRepo: { find: jest.Mock; findOne: jest.Mock; query: jest.Mock };
+  let answerRepo: { find: jest.Mock };
+
+  const TOP_LEVEL = {
+    result_question_id: '100',
+    question_text: 'Intellectual property rights',
+    question_level: '1',
+    parent_question_id: null,
+    version: 'P25',
+  };
+
+  const child = (id: number) => ({
+    result_question_id: String(id),
+    question_text: `question ${id}`,
+    question_level: '2',
+    parent_question_id: '100',
+    version: 'P25',
+  });
+
+  /** level 1 (the 100 row) → level 2 children → nothing below (options are not under test). */
+  const wireRepository = (children: any[]) => {
+    questionRepo.find.mockImplementation(({ where }: any) => {
+      if (where?.question_level === 1) return Promise.resolve([TOP_LEVEL]);
+      if (where?.question_level === 2) return Promise.resolve(children);
+      return Promise.resolve([]);
+    });
+    answerRepo.find.mockResolvedValue([]);
+  };
+
+  beforeEach(async () => {
+    questionRepo = { find: jest.fn(), findOne: jest.fn(), query: jest.fn() };
+    answerRepo = { find: jest.fn() };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ResultQuestionsService,
+        { provide: HandlersError, useValue: { returnErrorRes: jest.fn() } },
+        { provide: ResultQuestionsRepository, useValue: questionRepo },
+        { provide: ResultAnswerRepository, useValue: answerRepo },
+      ],
+    }).compile();
+
+    service = module.get<ResultQuestionsService>(ResultQuestionsService);
+  });
+
+  it('maps the four live P25 questions onto their own slot', async () => {
+    wireRepository([child(101), child(102), child(103), child(138)]);
+
+    const [section] = (await service.intellectualPropertyRightsV2(1)) as any[];
+
+    expect(section.q1.result_question_id).toBe('101');
+    expect(section.q2.result_question_id).toBe('102');
+    expect(section.q3.result_question_id).toBe('103');
+    expect(section.q4.result_question_id).toBe('138');
+  });
+
+  it('does NOT shift the slots when a new child of 100 comes back first', async () => {
+    // The consolidation (P2-3513) adds a child under 100. With the old positional mapping 200
+    // would have taken q1 and pushed 101/102/103 one component to the right.
+    wireRepository([
+      child(200),
+      child(101),
+      child(102),
+      child(103),
+      child(138),
+    ]);
+
+    const [section] = (await service.intellectualPropertyRightsV2(1)) as any[];
+
+    expect(section.q1.result_question_id).toBe('101');
+    expect(section.q2.result_question_id).toBe('102');
+    expect(section.q3.result_question_id).toBe('103');
+    expect(section.q4.result_question_id).toBe('138');
+  });
+
+  it('leaves q4 undefined when 138 is absent and keeps q1..q3 correct', async () => {
+    wireRepository([child(101), child(102), child(103)]);
+
+    const [section] = (await service.intellectualPropertyRightsV2(1)) as any[];
+
+    expect(section.q1.result_question_id).toBe('101');
+    expect(section.q2.result_question_id).toBe('102');
+    expect(section.q3.result_question_id).toBe('103');
+    expect(section.q4).toBeUndefined();
+  });
+});

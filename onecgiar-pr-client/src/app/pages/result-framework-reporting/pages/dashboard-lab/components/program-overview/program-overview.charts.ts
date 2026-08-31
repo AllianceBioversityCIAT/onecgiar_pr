@@ -183,6 +183,17 @@ export function stackedBarOption(model: HeatmapModel, ramp: string[], totalLabel
     // second shape"), instead of ECharts drawing a zero-height sliver.
     data: rows.map((_, r) => valueAt(r, c) || null),
     itemStyle: { color: ramp[c % (ramp.length || 1)] ?? '' },
+    label: {
+      show: true,
+      position: 'inside',
+      formatter: (params: unknown) => {
+        const payload = params as { value?: number };
+        return payload?.value && payload.value > 0 ? String(payload.value) : '';
+      },
+      fontSize: 11,
+      fontWeight: 700,
+      color: '#ffffff'
+    },
     universalTransition: { enabled: true }
   }));
 
@@ -199,6 +210,7 @@ export function stackedBarOption(model: HeatmapModel, ramp: string[], totalLabel
             show: true,
             position: 'right',
             color: totalLabelColor,
+            fontWeight: 700,
             formatter: (params: unknown) => {
               const payload = params as { dataIndex?: number };
               const r = payload?.dataIndex;
@@ -236,6 +248,87 @@ export function stackedBarOption(model: HeatmapModel, ramp: string[], totalLabel
       inverse: true,
       axisLabel: { interval: 0, formatter: abbreviateAxisLabel }
     },
+    series: [...columnSeries, ...totalsSeries]
+  } as EChartsOption;
+}
+
+/**
+ * Builds vertical stacked-bars option for a `HeatmapModel`.
+ */
+export function stackedBarVerticalOption(model: HeatmapModel, ramp: string[], totalLabelColor: string): EChartsOption {
+  const { rows, cols, cells } = model;
+  const seriesIds = datasetIdsFor(model);
+  const valueAt = (r: number, c: number): number => cells.find(cell => cell.r === r && cell.c === c)?.value ?? 0;
+  const linkAt = (r: number, c: number): OverviewLink | null => cells.find(cell => cell.r === r && cell.c === c)?.link ?? null;
+  const rowTotal = (r: number): number => cols.reduce((sum, _col, c) => sum + valueAt(r, c), 0);
+
+  const columnSeries = cols.map((colName, c) => ({
+    type: 'bar',
+    id: seriesIds[c],
+    name: colName,
+    stack: 'total',
+    data: rows.map((_, r) => valueAt(r, c) || null),
+    itemStyle: { color: ramp[c % (ramp.length || 1)] ?? '' },
+    label: {
+      show: true,
+      position: 'inside',
+      formatter: (params: unknown) => {
+        const payload = params as { value?: number };
+        return payload?.value && payload.value > 0 ? String(payload.value) : '';
+      },
+      fontSize: 11,
+      fontWeight: 700,
+      color: '#ffffff'
+    },
+    universalTransition: { enabled: true }
+  }));
+
+  const totalsSeries = rows.length
+    ? [
+        {
+          type: 'bar',
+          stack: 'total',
+          silent: true,
+          barWidth: 0,
+          itemStyle: { color: 'transparent' },
+          data: rows.map(() => 0),
+          label: {
+            show: true,
+            position: 'top',
+            color: totalLabelColor,
+            fontWeight: 700,
+            formatter: (params: unknown) => {
+              const payload = params as { dataIndex?: number };
+              const r = payload?.dataIndex;
+              return typeof r === 'number' ? String(rowTotal(r)) : '';
+            }
+          }
+        }
+      ]
+    : [];
+
+  return {
+    tooltip: {
+      formatter: (params: unknown) => {
+        const payload = params as { seriesIndex?: number; dataIndex?: number; seriesName?: string };
+        const c = payload?.seriesIndex;
+        const r = payload?.dataIndex;
+        const rowName = typeof r === 'number' ? (rows[r] ?? '') : '';
+        const colName = payload?.seriesName ?? (typeof c === 'number' ? (cols[c] ?? '') : '');
+        const value = typeof r === 'number' && typeof c === 'number' ? valueAt(r, c) : 0;
+        const navigable = typeof r === 'number' && typeof c === 'number' ? Boolean(linkAt(r, c)) : false;
+        const note = navigable ? '' : ' (not navigable)';
+        return `${rowName} × ${colName}: ${value}${note}`;
+      }
+    },
+    grid: { left: 48, right: 24, top: 28, bottom: 44, containLabel: true },
+    legend: { show: false },
+    xAxis: {
+      type: 'category',
+      data: rows,
+      axisLabel: { interval: 0, rotate: 18, formatter: abbreviateAxisLabel }
+    },
+    yAxis: { type: 'value' },
     series: [...columnSeries, ...totalsSeries]
   } as EChartsOption;
 }
@@ -352,7 +445,7 @@ export function singleBarLinkFromClick(event: { dataIndex?: number }, bars: Sing
  * Each category in `bars` becomes an axis on the radar polygon.
  * Abbreviates axis names for neat polygon rendering.
  */
-export function radarOption(bars: SingleBarRow[], color: string, labelColor: string): EChartsOption {
+export function radarOption(bars: SingleBarRow[], color: string, labelColor: string, isDarkTheme = false): EChartsOption {
   const maxCount = bars.length ? Math.max(...bars.map(bar => bar.count)) : 0;
   const max = Math.ceil(maxCount * 1.15) || 10;
 
@@ -386,17 +479,19 @@ export function radarOption(bars: SingleBarRow[], color: string, labelColor: str
       axisName: {
         color: labelColor,
         fontSize: 12,
-        fontWeight: 500
+        fontWeight: isDarkTheme ? 600 : 500
       },
       splitLine: {
         lineStyle: {
-          color: 'rgba(0, 0, 0, 0.08)'
+          color: isDarkTheme ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.08)'
         }
       },
       splitArea: {
         show: true,
         areaStyle: {
-          color: ['rgba(250, 250, 250, 0.3)', 'rgba(235, 235, 235, 0.15)']
+          color: isDarkTheme
+            ? ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.12)']
+            : ['rgba(250, 250, 250, 0.3)', 'rgba(235, 235, 235, 0.15)']
         }
       }
     },
@@ -411,13 +506,15 @@ export function radarOption(bars: SingleBarRow[], color: string, labelColor: str
             symbol: 'circle',
             symbolSize: 6,
             itemStyle: { color },
-            lineStyle: { color, width: 2 },
+            lineStyle: { color, width: 2.5 },
             areaStyle: {
-              color: color.startsWith('#')
-                ? `${color}33`
-                : color.startsWith('rgb(')
-                  ? color.replace('rgb(', 'rgba(').replace(')', ', 0.25)')
-                  : 'rgba(124, 58, 237, 0.25)'
+              color: isDarkTheme
+                ? 'rgba(255, 255, 255, 0.3)'
+                : color.startsWith('#')
+                  ? `${color}33`
+                  : color.startsWith('rgb(')
+                    ? color.replace('rgb(', 'rgba(').replace(')', ', 0.25)')
+                    : 'rgba(124, 58, 237, 0.25)'
             },
             label: {
               show: true,
@@ -473,7 +570,12 @@ export function donutOption(segments: StatusSegment[], palette: string[]): EChar
     .map((segment, index) => ({
       name: segment.label,
       value: segment.count,
-      itemStyle: { color: palette[index % (palette.length || 1)] ?? '' }
+      itemStyle: {
+        color: palette[index % (palette.length || 1)] || segment.fg || '',
+        borderRadius: 4,
+        borderColor: '#ffffff',
+        borderWidth: 2
+      }
     }));
 
   return {
@@ -482,18 +584,54 @@ export function donutOption(segments: StatusSegment[], palette: string[]): EChar
       subtext: 'results',
       left: 'center',
       top: 'center',
-      textStyle: { fontSize: 20, fontWeight: 700 },
-      subtextStyle: { fontSize: 12 }
+      textStyle: { fontSize: 22, fontWeight: 800, color: '#2B2838' },
+      subtextStyle: { fontSize: 12, fontWeight: 500, color: '#6B6580' }
     },
-    tooltip: { trigger: 'item' },
+    tooltip: {
+      trigger: 'item',
+      confine: true,
+      formatter: (params: unknown) => {
+        const payload = params as { name?: string; value?: number; percent?: number };
+        return `<strong>${payload.name ?? ''}</strong>: ${payload.value ?? 0} (${payload.percent ?? 0}%)`;
+      }
+    },
     legend: { show: false },
     series: [
       {
         type: 'pie',
-        radius: ['62%', '88%'],
-        avoidLabelOverlap: false,
-        label: { show: false },
-        labelLine: { show: false },
+        radius: ['52%', '74%'],
+        center: ['50%', '50%'],
+        avoidLabelOverlap: true,
+        minAngle: 12,
+        padAngle: 3,
+        itemStyle: {
+          borderRadius: 4,
+          borderColor: '#ffffff',
+          borderWidth: 2
+        },
+        label: {
+          show: true,
+          position: 'outside',
+          formatter: '{c}',
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#3B0764',
+          distanceToLabelLine: 4
+        },
+        labelLine: {
+          show: true,
+          length: 6,
+          length2: 6,
+          lineStyle: { color: '#A78BFA', width: 1.2 }
+        },
+        emphasis: {
+          scale: true,
+          scaleSize: 4,
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(91, 33, 182, 0.3)'
+          }
+        },
         data
       }
     ]
@@ -854,4 +992,239 @@ export function tocMapAowFromClick(event: { data?: unknown }, model: TocMapModel
   const payload = data?.tocMapPayload;
   if (!payload || payload.kind !== 'aow' || !payload.aowCode) return null;
   return model.branches.some(branch => branch.kind === 'aow' && branch.code === payload.aowCode) ? payload.aowCode : null;
+}
+
+export interface TrendPoint {
+  label: string;
+  date: string;
+  cumulative: number;
+  newCount: number;
+}
+
+export interface ReportingTrendModel {
+  points: TrendPoint[];
+  totalReported: number;
+  recentCount: number;
+  paceLabel: string;
+}
+
+/** Formats a timestamp into a short month/day label like 'Jan 15'. */
+function formatShortDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+}
+
+/**
+ * Computes a cumulative reporting trendline model from individual result timestamps.
+ */
+export function computeReportingTrendModel(
+  rows: any[],
+  cycleYear: number,
+  totalFromStatuses: number
+): ReportingTrendModel {
+  const targetYear = cycleYear || new Date().getFullYear();
+  const validTimestamps: Date[] = [];
+
+  for (const row of rows || []) {
+    const rawDate = row?.created_date || row?.created_at || row?.last_updated_date || row?.updated_date;
+    if (!rawDate) continue;
+    const parsed = new Date(rawDate);
+    if (isNaN(parsed.getTime())) continue;
+
+    // If phaseYear matches or is within target cycle
+    const phaseYear = Number(row?.phase_year);
+    if (!isNaN(phaseYear) && phaseYear > 0) {
+      if (phaseYear === targetYear) {
+        validTimestamps.push(parsed);
+      }
+    } else {
+      validTimestamps.push(parsed);
+    }
+  }
+
+  const now = Date.now();
+  const fourteenDaysAgo = now - 14 * 24 * 60 * 60 * 1000;
+  const recentCount = validTimestamps.filter(d => d.getTime() >= fourteenDaysAgo).length;
+
+  if (validTimestamps.length > 0) {
+    validTimestamps.sort((a, b) => a.getTime() - b.getTime());
+    const totalReported = validTimestamps.length;
+
+    // Pick 4 to 6 representative sample milestone points across the timeline
+    const minTime = validTimestamps[0].getTime();
+    const maxTime = Math.max(now, validTimestamps[validTimestamps.length - 1].getTime());
+    const numBuckets = Math.min(6, Math.max(3, validTimestamps.length));
+    const stepDuration = (maxTime - minTime) / (numBuckets - 1 || 1);
+
+    const points: TrendPoint[] = [];
+    let prevCount = 0;
+
+    for (let i = 0; i < numBuckets; i++) {
+      const pointTime = i === numBuckets - 1 ? maxTime : minTime + i * stepDuration;
+      const pointDate = new Date(pointTime);
+      const cumCount = validTimestamps.filter(d => d.getTime() <= pointTime).length;
+      const newInPeriod = Math.max(0, cumCount - prevCount);
+      prevCount = cumCount;
+
+      points.push({
+        label: formatShortDate(pointDate),
+        date: pointDate.toISOString().split('T')[0],
+        cumulative: cumCount,
+        newCount: newInPeriod
+      });
+    }
+
+    // Ensure the last point reflects 100% of the total reported
+    if (points.length > 0) {
+      points[points.length - 1].cumulative = totalReported;
+    }
+
+    const paceLabel = recentCount > 0 ? `+${recentCount} in last 14 days` : `${totalReported} results reported`;
+
+    return {
+      points,
+      totalReported,
+      recentCount,
+      paceLabel
+    };
+  }
+
+  // Fallback: If no timestamped items are loaded yet but status total exists
+  const total = totalFromStatuses || 0;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const curMonthIdx = new Date().getMonth();
+  const samplePoints: TrendPoint[] = [];
+
+  const pointsCount = Math.min(4, Math.max(2, curMonthIdx + 1));
+  for (let i = 0; i < pointsCount; i++) {
+    const mIdx = Math.max(0, curMonthIdx - pointsCount + 1 + i);
+    const fraction = (i + 1) / pointsCount;
+    const cum = Math.round(total * fraction);
+    samplePoints.push({
+      label: months[mIdx % 12],
+      date: `${targetYear}-0${(mIdx % 12) + 1}-01`,
+      cumulative: cum,
+      newCount: i === 0 ? cum : Math.max(0, cum - Math.round(total * (i / pointsCount)))
+    });
+  }
+
+  return {
+    points: samplePoints,
+    totalReported: total,
+    recentCount: 0,
+    paceLabel: total > 0 ? `${total} results reported` : 'No results reported yet'
+  };
+}
+
+/**
+ * Builds a smooth sparkline area option for reporting progress velocity.
+ */
+export function reportingTrendOption(model: ReportingTrendModel, color = '#7c3aed'): EChartsOption {
+  const xData = model.points.map(p => p.label);
+  const yData = model.points.map(p => p.cumulative);
+  const maxVal = yData.length ? Math.max(...yData) : 0;
+  const max = Math.max(5, Math.ceil(maxVal * 1.15));
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      backgroundColor: 'rgba(255, 255, 255, 0.98)',
+      borderColor: '#e5e7eb',
+      borderWidth: 1,
+      padding: [8, 12],
+      textStyle: { color: '#111827' },
+      formatter: (params: unknown) => {
+        const items = Array.isArray(params) ? params : [params];
+        const item = items[0] as { dataIndex?: number };
+        const idx = item?.dataIndex ?? 0;
+        const pt = model.points[idx];
+        if (!pt) return '';
+        const header = `<div style="font-weight:700;font-size:12px;margin-bottom:4px;color:#111827;">${pt.label}</div>`;
+        const cumLine = `<div style="display:flex;justify-content:space-between;gap:14px;font-size:11.5px;line-height:1.6;"><span style="color:#6b7280;">Cumulative results:</span><strong style="color:${color};font-weight:700;">${pt.cumulative}</strong></div>`;
+        const newLine = pt.newCount > 0
+          ? `<div style="font-size:11px;color:#059669;margin-top:2px;font-weight:600;">+${pt.newCount} reported in this period</div>`
+          : '';
+        return `${header}${cumLine}${newLine}`;
+      }
+    },
+    grid: {
+      top: 8,
+      right: 12,
+      bottom: 20,
+      left: 26,
+      containLabel: false
+    },
+    xAxis: {
+      type: 'category',
+      data: xData,
+      boundaryGap: false,
+      axisLine: {
+        lineStyle: { color: 'rgba(0, 0, 0, 0.1)' }
+      },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#9ca3af',
+        fontSize: 10,
+        interval: 'auto',
+        showMaxLabel: true
+      }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: max,
+      minInterval: 1,
+      splitLine: {
+        lineStyle: { color: 'rgba(0, 0, 0, 0.05)', type: 'dashed' }
+      },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#9ca3af',
+        fontSize: 10,
+        margin: 4
+      }
+    },
+    series: [
+      {
+        name: 'Reported results',
+        type: 'line',
+        smooth: 0.35,
+        showSymbol: yData.length <= 6,
+        symbol: 'circle',
+        symbolSize: 6,
+        itemStyle: {
+          color: color,
+          borderColor: '#ffffff',
+          borderWidth: 1.5
+        },
+        lineStyle: {
+          color: color,
+          width: 2.5
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(124, 58, 237, 0.25)' },
+              { offset: 1, color: 'rgba(124, 58, 237, 0.01)' }
+            ]
+          }
+        },
+        data: yData
+      }
+    ]
+  };
+}
+
+export function reportingTrendTable(model: ReportingTrendModel): VizChartTableModel {
+  return {
+    caption: 'Reporting progress velocity',
+    headers: ['Date / Period', 'Cumulative Results', 'New in Period'],
+    rows: model.points.map(p => [p.label, p.cumulative, p.newCount])
+  };
 }

@@ -8,6 +8,8 @@ import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-ch
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 jest.useFakeTimers();
 
@@ -176,6 +178,94 @@ describe('CPMultipleWPsContentComponent', () => {
       buildComponent(false);
 
       expect(component.indicatorTypologyTooltip()).toBe('');
+    });
+  });
+  // P2-3235: the ToC alignment written by the Results Framework module is reflected here read-only.
+  describe('tocAlignmentReadOnly (P2-3235)', () => {
+    const alignedTab = { toc_level_id: 2, toc_result_id: 'toc-77' };
+
+    it('should lock the alignment when the tab already carries a level and a node', () => {
+      buildComponent(true);
+      component.activeTabSignal.set(alignedTab);
+
+      expect(component.tocAlignmentReadOnly()).toBe(true);
+    });
+
+    // Ángel widened the ask past Intermediate Outcomes (level 2) on 28-Aug: HLO and 2030 Outcomes lock too.
+    it.each([
+      ['HLO / output', 1],
+      ['Intermediate Outcome', 2],
+      ['2030 Outcome / EOI', 3]
+    ])('should lock every ToC level — %s', (_label, tocLevelId) => {
+      buildComponent(true);
+      component.activeTabSignal.set({ toc_level_id: tocLevelId, toc_result_id: 'toc-77' });
+
+      expect(component.tocAlignmentReadOnly()).toBe(true);
+    });
+
+    // Locking an empty tab would leave the result unable to be aligned at all.
+    it('should stay editable when no node has been selected yet', () => {
+      buildComponent(true);
+      component.activeTabSignal.set({ toc_level_id: 2, toc_result_id: null });
+
+      expect(component.tocAlignmentReadOnly()).toBe(false);
+    });
+
+    it('should stay editable when the level is missing', () => {
+      buildComponent(true);
+      component.activeTabSignal.set({ toc_level_id: null, toc_result_id: 'toc-77' });
+
+      expect(component.tocAlignmentReadOnly()).toBe(false);
+    });
+
+    // An empty string is what a cleared dropdown writes back, and it is not an alignment.
+    it('should treat an empty string as no selection', () => {
+      buildComponent(true);
+      component.activeTabSignal.set({ toc_level_id: 2, toc_result_id: '' });
+
+      expect(component.tocAlignmentReadOnly()).toBe(false);
+    });
+
+    // The gate is the PHASE YEAR (isCP2026), never the portfolio flag (isP25).
+    it('should not lock anything outside the 2026 phase', () => {
+      buildComponent(false);
+      component.activeTabSignal.set(alignedTab);
+
+      expect(component.tocAlignmentReadOnly()).toBe(false);
+    });
+
+    it('should not lock the unplanned (No) scenario', () => {
+      buildComponent(true);
+      component.isUnplanned = true;
+      component.activeTabSignal.set(alignedTab);
+
+      expect(component.tocAlignmentReadOnly()).toBe(false);
+    });
+
+    it('should fall back to the plain activeTab when the signal has not been set', () => {
+      buildComponent(true);
+      component.activeTabSignal.set(null);
+      component.activeTab = alignedTab;
+
+      expect(component.tocAlignmentReadOnly()).toBe(true);
+    });
+  });
+
+  // P2-3235: the requirement is level-generic. A new @switch branch that forgets the lock would
+  // silently reopen Section 2 as a second writer for that level, and no class-level test would see it.
+  describe('template wiring (P2-3235)', () => {
+    const template = readFileSync(join(__dirname, 'multiple-wps-content.component.html'), 'utf8');
+
+    it('should bind readOnly on every node select and on the Level select', () => {
+      const selects = template.match(/<app-pr-select[\s\S]*?<\/app-pr-select>/g) ?? [];
+      const nodeSelects = selects.filter(block => /\[\(ngModel\)\]="activeTab\.(toc_level_id|toc_result_id)"/.test(block));
+
+      // Level + the three per-level node dropdowns.
+      expect(nodeSelects).toHaveLength(4);
+      nodeSelects.forEach(block => {
+        expect(block).toContain('[readOnly]="tocAlignmentReadOnly()"');
+        expect(block).toContain('tocAlignmentReadOnly()');
+      });
     });
   });
 });

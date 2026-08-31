@@ -5,16 +5,46 @@
     <h2 class="mdr-title">My AI Draft Results</h2>
     <p class="mdr-subtitle">
       @if (bilateralAiService.isDraftListLoaded()) {
-        {{ hasDrafts ? drafts.length + ' draft' + (drafts.length !== 1 ? 's' : '') + ' ready for review' : 'No drafts yet' }}
+        {{ subtitle() }}
       } @else {
         Loading drafts...
       }
     </p>
   </div>
 
-  @if (hasDrafts) {
+  <!-- P2-3319 — filter by project. Only the projects that actually appear in this centre's drafts
+       are offered, so picking one can never empty the page by accident. -->
+  @if (bilateralAiService.isDraftListLoaded() && hasAnyDrafts()) {
+    <div class="mb-[20px] flex flex-wrap items-center gap-[12px]" role="search" aria-label="Draft filters">
+      <div class="mdr-filter w-[260px] flex-none" aria-label="Filter by project">
+        <app-pr-filter-select
+          [options]="projectFilterOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Project"
+          [ngModel]="selectValue(filter.selectedProjectId())"
+          (changed)="onProjectFilterChange($event)"></app-pr-filter-select>
+      </div>
+
+      @if (filter.hasActiveFilters()) {
+        <span class="pr-chip mdr-filter-chip">
+          Project: {{ selectedProjectLabel() }}
+          <button
+            type="button"
+            class="pr-chip-remove material-icons-round border-0 bg-transparent p-0"
+            aria-label="Clear project filter"
+            (click)="clearFilters()"
+          >
+            close
+          </button>
+        </span>
+      }
+    </div>
+  }
+
+  @if (hasDrafts()) {
     <div class="mdr-list">
-      @for (draft of drafts; track draft.id) {
+      @for (draft of drafts(); track draft.id) {
         <div class="mdr-card">
           <div class="mdr-card-main">
             <div class="mdr-card-header">
@@ -89,7 +119,7 @@
                 (click)="onPromoteClick(draft)"
               >
                 <i class="material-icons-round">arrow_upward</i>
-                Promote
+                Create Result
               </button>
               <button
                 type="button"
@@ -105,6 +135,18 @@
           </div>
         </div>
       }
+    </div>
+  } @else if (isFilteredEmpty()) {
+    <div class="mdr-empty mdr-empty--filtered">
+      <div class="mdr-empty-icon">
+        <i class="material-icons-round">filter_alt_off</i>
+      </div>
+      <h3 class="mdr-empty-title">No drafts for this project</h3>
+      <p class="mdr-empty-text">None of your drafts belong to {{ selectedProjectLabel() }}. Clear the filter to see them all again.</p>
+      <button type="button" class="mdr-empty-cta cursor-pointer border-0" (click)="clearFilters()">
+        <i class="material-icons-round">filter_alt_off</i>
+        Clear filter
+      </button>
     </div>
   } @else if (bilateralAiService.isDraftListLoaded()) {
     <div class="mdr-empty">
@@ -146,7 +188,7 @@
     <div class="mdr-aside-footer">
       <button type="button" class="mdr-btn mdr-btn--promote mdr-btn--wide" (click)="onPromoteClick(draft)">
         <i class="material-icons-round">arrow_upward</i>
-        Promote to Result
+        Create Result
       </button>
       <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscardClick(draft)">
         <i class="material-icons-round">delete_outline</i>
@@ -160,7 +202,7 @@
   <div class="mdr-promote-overlay">
     <div class="mdr-promote-overlay-card">
       <div class="mdr-promote-overlay-spinner"></div>
-      <span class="mdr-promote-overlay-text">Promoting result…</span>
+      <span class="mdr-promote-overlay-text">Creating result…</span>
     </div>
   </div>
 }
@@ -177,11 +219,11 @@
     <span class="pr-dialog-header-icon pr-dialog-header-icon--promote">
       <i class="material-icons-round">rocket_launch</i>
     </span>
-    <span class="pr-dialog-header-title">Promote Draft</span>
+    <span class="pr-dialog-header-title">Create Result</span>
   </div>
   @if (promoteTarget(); as target) {
     <div class="pr-dialog-body">
-      <p class="pr-dialog-text">Promote <strong>{{ getDraftTitle(target) }}</strong> as a bilateral result?</p>
+      <p class="pr-dialog-text">Create <strong>{{ getDraftTitle(target) }}</strong> as a bilateral result?</p>
       <div class="pr-dialog-meta">
         <div class="pr-dialog-meta-item">
           <span class="pr-dialog-meta-label">Science Program</span>
@@ -212,7 +254,7 @@
   }
   <div pr-dialog-footer class="pr-dialog-footer">
     <button hlmBtn variant="outline" (click)="onPromoteCancel()">Cancel</button>
-    <button hlmBtn (click)="onPromoteConfirm()">Promote</button>
+    <button hlmBtn (click)="onPromoteConfirm()">Create Result</button>
   </div>
 </app-pr-dialog>
 

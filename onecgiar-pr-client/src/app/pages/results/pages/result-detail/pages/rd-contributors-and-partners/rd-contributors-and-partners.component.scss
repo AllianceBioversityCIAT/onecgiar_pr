@@ -97,3 +97,16 @@ i {
     margin: 0;
   }
 }
+
+// P2-3249: danger variant of the note above, for the "Contributing CGIAR Centers" mandatory rule.
+// Same box so the section keeps one note shape; only the tint and the icon colour change.
+// Uses the declared danger family (--pr-danger / --pr-danger-bg), NOT --pr-color-red-300: colors.scss
+// keeps the legacy PRMS red separate on purpose so a required-field notice never reads as an error banner.
+.pr-message--error {
+  background-color: var(--pr-danger-bg);
+
+  i {
+    font-size: 20px;
+    color: var(--pr-danger);
+  }
+}

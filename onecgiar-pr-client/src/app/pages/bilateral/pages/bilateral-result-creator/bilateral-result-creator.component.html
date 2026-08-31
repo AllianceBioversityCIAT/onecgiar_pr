@@ -207,7 +207,10 @@
 
     <div id="bcr-accordions">
       <div id="bcr-section-zero">
-        <app-section-zero-dashboard [isSubmitting]="isSubmitting()" (submitRequested)="submitResult()"></app-section-zero-dashboard>
+        <app-section-zero-dashboard
+          [isSubmitting]="isSubmitting()"
+          [readOnly]="isFormReadOnly()"
+          (submitRequested)="submitResult()"></app-section-zero-dashboard>
       </div>
 
       <app-bilateral-accordion

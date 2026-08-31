@@ -108,7 +108,7 @@
         selectedLabel="Center(s) selected"
         optionLabel="full_name"
         optionValue="code"
-        [required]="false"
+        [required]="true"
         [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
         placeholder="Select center(s)"
         [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
@@ -132,7 +132,7 @@
       selectedLabel="Center(s) selected"
       optionLabel="full_name"
       optionValue="code"
-      [required]="false"
+      [required]="true"
       [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
       placeholder="Select center(s)"
       [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
@@ -173,7 +173,7 @@
       selectedLabel="Center(s) selected"
       optionLabel="full_name"
       optionValue="code"
-      [required]="false"
+      [required]="!hasReferenceCenters()"
       [(ngModel)]="this.rdPartnersSE.otherCentersSelected"
       placeholder="Select other center(s)"
       (selectOptionEvent)="onOtherCenterSelect($event)">
@@ -194,11 +194,44 @@
     </div>
   }
 
+  <!-- P2-3249: ONE mandatory marker for "Contributing CGIAR Centers", placed OUTSIDE both branches on purpose.
+       There are two code paths for this field (the 2026/ToC split above and the flat pre-2026 dropdown), and a
+       rule added to only one of them silently does not apply to the other — so both read the same getter.
+       ⚠️ pr-multi-select emits NO `.pr-field.mandatory`, so `[required]` on it only paints the asterisk; this
+       hidden marker is what actually reaches `someMandatoryFieldIncompleteResultDetail` (src/CLAUDE.md §21.5).
+       🛑 Keep it a SIBLING of the dropdowns, never nested inside an `app-pr-multi-select`: `mandatoryFieldLabel`
+       walks up to the nearest labelled field host first and would report the dropdown's label instead of this one.
+       ⚠️ TWO markers with STATIC labels, not one with `[labelText]`: the directive writes `labelText` into the DOM
+       ONCE, in `ngOnInit` (`feedback-validation.directive.ts:16-19`), and `ngDoCheck` only syncs `.complete`. A bound
+       label therefore freezes at whatever it evaluated to on the first render — here always the non-ToC wording,
+       because the ToC ids resolve after the view is built. `@if` gives each wording its own directive instance.
+       Only `[isComplete]` may be bound. -->
+  @if (!contributingCentersComplete) {
+    <div class="pr-message pr-message--error" data-testid="cp-centers-validation">
+      <i class="material-icons-round" aria-hidden="true">error_outline</i>
+      <p role="alert">{{ contributingCentersValidationMessage }}</p>
+    </div>
+  }
+  @if (requiresTocCenter) {
+    <div
+      appFeedbackValidation
+      data-testid="cp-centers-mandatory-marker"
+      labelText="Contributing CGIAR Centers (at least one from the ToC)"
+      [isComplete]="contributingCentersComplete"></div>
+  } @else {
+    <div
+      appFeedbackValidation
+      data-testid="cp-centers-mandatory-marker"
+      labelText="Contributing CGIAR Centers"
+      [isComplete]="contributingCentersComplete"></div>
+  }
+
   <!-- LCD-DD-1 rework (2026-08-31): Lead center moved up, directly under the Contributing
-       CGIAR Centers dropdown(s), above "Contributing W3 and/or bilateral projects" — per QA
-       (Santi). Wrapped in its own stacking context (z-index higher than the sibling blocks
-       below, which already use z-index: 1/2 locally) so the open dropdown list isn't painted
-       under later positioned siblings (bilateral-projects loading overlay, Science Program note). -->
+       CGIAR Centers dropdown(s) (and its P2-3249 mandatory markers above), above "Contributing
+       W3 and/or bilateral projects" — per QA (Santi). Wrapped in its own stacking context
+       (z-index higher than the sibling blocks below, which already use z-index: 1/2 locally) so
+       the open dropdown list isn't painted under later positioned siblings (bilateral-projects
+       loading overlay, Science Program note). -->
   <div class="mt-16" style="position: relative; z-index: 3">
     <app-alert-status [description]="getMessageLeadCenter()"></app-alert-status>
     @if (!this.rdPartnersSE.updatingLeadData) {

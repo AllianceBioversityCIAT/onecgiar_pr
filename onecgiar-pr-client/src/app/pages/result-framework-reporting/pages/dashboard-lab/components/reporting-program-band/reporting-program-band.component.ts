@@ -67,6 +67,15 @@ export class ReportingProgramBandComponent {
 
   readonly cycleYear = input<string | number | null>(null);
   readonly cyclePhase = input<string>('');
+  /**
+   * `changes/overview-phase-filter` OPF-T-4 (Leader remediation): when provided, REPLACES the
+   * `cycleYear`/`cyclePhase`-derived tail in `eyebrowCycle` below — the Overview host wires this
+   * to its own `effectiveVersionId()`-derived `phaseLabel()` so the eyebrow follows an explicit
+   * phase selection instead of always reading the global `reportingCurrentPhase`. Absent (default
+   * `''`) keeps `eyebrowCycle`'s original `cycleYear`/`cyclePhase` behavior byte-identical for
+   * every other consumer of this band.
+   */
+  readonly phaseLabelOverride = input<string>('');
   /** Which tab is active. Overview, Reporting and Results are separate routes, not local state. */
   readonly activeTab = input<'overview' | 'reporting' | 'results'>('reporting');
   readonly programDotColor = input<string>('var(--pr-color-primary-300)');
@@ -193,11 +202,16 @@ export class ReportingProgramBandComponent {
    * in JetBrains Mono while the rest of the eyebrow is Manrope (PRMS-Shell.dc.html:338-339).
    */
   readonly eyebrowCycle = computed(() => {
+    const tail = this.phaseLabelOverride()?.trim() || this.defaultCycleTail();
+    return this.programCode() && tail ? `· ${tail}` : tail;
+  });
+
+  /** Original `cycleYear`/`cyclePhase`-derived tail — the fallback when no override is provided. */
+  private readonly defaultCycleTail = computed(() => {
     const parts: string[] = [];
     if (this.cycleYear()) parts.push(`Reporting cycle ${this.cycleYear()}`);
     if (this.cyclePhase()) parts.push(this.cyclePhase());
-    const tail = parts.join(' · ');
-    return this.programCode() && tail ? `· ${tail}` : tail;
+    return parts.join(' · ');
   });
 
   /**

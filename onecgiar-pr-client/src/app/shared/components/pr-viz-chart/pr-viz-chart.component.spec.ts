@@ -115,10 +115,11 @@ describe('PrVizChartComponent', () => {
   });
 
   describe('Module Registration & Initialization', () => {
-    it('registers exactly the 14 declared modules', () => {
+    it('registers exactly the 15 declared modules', () => {
       // 13 → 14: additive `TreeChart` registration for the ToC map (`changes/overview-toc-map`,
-      // TCM-T-1) — no existing module removed.
-      expect(REGISTERED_ECHARTS_MODULES.length).toBe(14);
+      // TCM-T-1); 14 → 15: additive `LineChart` for the reporting-trend card — no existing
+      // module removed.
+      expect(REGISTERED_ECHARTS_MODULES.length).toBe(15);
     });
 
     it('initializes echarts with SVG renderer and emits chartInit', () => {

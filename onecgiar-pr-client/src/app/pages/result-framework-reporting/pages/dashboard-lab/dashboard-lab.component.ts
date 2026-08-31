@@ -276,10 +276,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   /**
    * Reporting phases with their start / end dates.
    *
-   * ⚠️ CURRENTLY WRITTEN BUT NEVER READ. Its only consumer was the Overview's Reporting-pace
-   * card, removed by P2-3298. The plumbing (and its ngOnInit subscription) is kept deliberately
-   * so this change stays out of `ngOnInit`/`ngOnDestroy`, which a parallel workflow is editing.
-   * Delete it — and `phasesSE`, `Phases`, `phasesSub` with it — when nothing else claims it.
+   * Claimed by `phaseSelectorOptions` below (`changes/overview-phase-filter` OPF-T-4, Reviewer
+   * remediation): `sp.versions` from the shared default payload carries only ONE row per program
+   * (the server pins `filters.versionId` to the effective phase before querying — `results.service.ts`
+   * ~:1818-1823), so it can never list a program's other phases. This catalogue — already fetched
+   * app-wide by `PhasesService`, filtered here to the selected program's own portfolio — is the
+   * only source that actually has every phase.
    */
   private readonly reportingPhases = signal<Phases[]>(this.phasesSE.phases.reporting ?? []);
 
@@ -317,6 +319,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** Currently selected program id; null until My Programs (or `?sp=`) resolve. */
   readonly selectedId = signal<number | null>(null);
+  /**
+   * Overview phase selector (`OPF-R-2`/`OPF-R-4`, `changes/overview-phase-filter`). `null` = follow
+   * the Open phase (today's behavior, unchanged). Reset to `null` on program change and on init
+   * (design.md DD-5) — see the "Load the selected program's Areas of Work" effect below.
+   */
+  readonly selectedVersionId = signal<number | null>(null);
   /** Free-text filter for the sidebar list. */
   readonly query = signal<string>('');
   /** The rail's search is collapsed to an icon; this opens the floating input. */
@@ -367,21 +375,16 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return `${code}::${versionId ?? 'default'}`;
   }
 
-  /** Selected program's categories, split into outputs / outcomes. */
+  /**
+   * Selected program's categories, split into outputs / outcomes. `versionId` comes from
+   * `effectiveVersionId()` (design.md DD-1) — this computed no longer re-resolves phase itself;
+   * `effectiveVersionId()` already carries the tracked `reportingPhaseVersion()` read that makes
+   * a late-arriving active phase (or a return to an already-cached phase) re-evaluate this memo.
+   */
   readonly groupedSummaries = computed(() => {
-    // Tracked read, otherwise unused: `reportingCurrentPhase` is a plain mutable object (not a
-    // signal), so mutating it alone never busts this computed's memo. Without reading the
-    // signal here, a phase switch whose corrected key is ALREADY cached (e.g. flipping back to
-    // a previously-seen phase) would keep serving the OLD key's matrix forever — this computed
-    // would never re-run to notice the phase changed, since neither `selected()` nor
-    // `summariesByCode()` (its other dependencies) changed either. Reading the version bump
-    // here forces a fresh evaluation, which re-reads `reportingCurrentPhase` at its CURRENT
-    // value (live-regression fix, W12; see the constructor effect for the "not yet cached" half
-    // of this same bug).
-    this.dataControlSE?.reportingPhaseVersion?.();
+    const versionId = this.effectiveVersionId();
     const sp = this.selected();
     const code = sp?.initiativeCode;
-    const versionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
     const all = (code ? this.summariesByCode().get(this.summaryCacheKey(code, versionId)) : []) ?? [];
     const summaries = all.filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
     return {
@@ -389,15 +392,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       outcomes: summaries.filter(item => OUTCOME_NAMES.includes(item?.resultTypeName))
     };
   });
+  /**
+   * HOTFIX (`changes/overview-phase-filter`, owner HITL): the OLD implementation required
+   * `loadingSummaryCodes().has(key)`, and that set is populated INSIDE the constructor `effect()`
+   * that calls `refreshSelectedSummaries()` — which runs asynchronously relative to the
+   * `selectedVersionId.set(...)` write that triggers it (Angular flushes `effect()` callbacks
+   * after the signal write, never in the same synchronous turn a click handler runs in). In that
+   * window, `groupedSummaries()` already reads the NEW (empty) cache key while the loading set
+   * still only knows the OLD key — the card fell through to its empty state for a frame/tick
+   * instead of showing a skeleton (verified red: `loadingSummaries()` read `false` immediately
+   * after `.set()`, before any effect flush). Fixed by inverting the invariant: a key is loading
+   * whenever it simply has no cache entry yet — independent of the in-flight set's timing.
+   * `refreshSelectedSummaries()`'s effect is unconditional (fires whenever `code` exists,
+   * regardless of tab), so a cache-miss here always means "will be fetched" — never a stuck
+   * loader (OPF-R-5): the `error` handler in `loadSummaries` below still caches `[]`, which
+   * settles this back to `false`. `loadingSummaryCodes` itself stays — `loadSummaries`'s own
+   * de-dup guard (skip a second concurrent fetch for the same key) still needs it.
+   */
   readonly loadingSummaries = computed(() => {
-    // See `groupedSummaries` above for why this tracked (otherwise unused) read is required.
-    this.dataControlSE?.reportingPhaseVersion?.();
+    const versionId = this.effectiveVersionId();
     const sp = this.selected();
     const code = sp?.initiativeCode;
     if (!code) return false;
-    const versionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
     const key = this.summaryCacheKey(code, versionId);
-    return this.loadingSummaryCodes().has(key) && !this.summariesByCode().has(key);
+    return !this.summariesByCode().has(key);
   });
 
   /**
@@ -605,9 +623,28 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    */
   readonly expandedGroups = signal<Set<string>>(new Set());
 
-  /** ToC results (indicator groups) cached by `${program}::${aow}`. */
+  /**
+   * ToC results (indicator groups) cached by `${program}::${aow}::${versionId ?? 'default'}` —
+   * the same `code::versionId` Map pattern as `summaryCacheKey` (design.md DD-4,
+   * `changes/overview-phase-filter`), so a late response for a phase the viewer has since
+   * switched away from lands in ITS OWN key and is never read (OPF-R-4 BUT-clause).
+   */
   readonly tocByKey = signal<Map<string, { outputs: any[]; outcomes: any[] }>>(new Map());
   private readonly loadingTocKeys = signal<Set<string>>(new Set());
+
+  /**
+   * The versionId every ToC cache key is built with. Mirrors `loadToc`'s own resolution: the ToC
+   * family only takes an explicit phase override when the viewer picked one AND is looking at the
+   * Overview tab (`activeSelection()`, design.md DD-1) — with the selector untouched, or while on
+   * a different tab, every key resolves to `'default'`, exactly as before this spec (OPF-N-1).
+   */
+  private tocVersionForKey(): number | null {
+    return this.activeSelection() !== null ? (this.effectiveVersionId() ?? null) : null;
+  }
+
+  private tocCacheKey(program: string | null | undefined, aow: string): string {
+    return `${program}::${aow}::${this.tocVersionForKey() ?? 'default'}`;
+  }
 
   readonly activeAow = computed<Unit | null>(() => {
     const code = this.activeAowCode();
@@ -622,15 +659,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const sp = this.selected();
     const aow = this.activeAowCode();
     if (!sp || !aow) return { outputs: [] as any[], outcomes: [] as any[] };
-    return this.tocByKey().get(`${sp.initiativeCode}::${aow}`) ?? { outputs: [] as any[], outcomes: [] as any[] };
+    return this.tocByKey().get(this.tocCacheKey(sp.initiativeCode, aow)) ?? { outputs: [] as any[], outcomes: [] as any[] };
   });
 
+  /**
+   * HOTFIX (same root cause as `loadingSummaries` above): inverted to cache-presence — a key is
+   * loading whenever it has no `tocByKey` entry yet. `loadingTocKeys` stays — every `loadToc`
+   * call site's own de-dup guard still needs it.
+   */
   readonly loadingToc = computed(() => {
     const sp = this.selected();
     const aow = this.activeAowCode();
     if (!sp || !aow) return false;
-    const key = `${sp.initiativeCode}::${aow}`;
-    return this.loadingTocKeys().has(key) && !this.tocByKey().has(key);
+    const key = this.tocCacheKey(sp.initiativeCode, aow);
+    return !this.tocByKey().has(key);
   });
 
   readonly indicatorCounts = computed(() => {
@@ -715,6 +757,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         this.reportingAllExpanded.set(false);
         this.reportingAllOpen.set(false);
         this.reportingExpandNonce.set(0);
+        // Overview phase selector (design.md DD-5): a program switch always lands back on that
+        // program's Open phase — a phase picked for the PREVIOUS program is not a valid selection
+        // for this one.
+        this.selectedVersionId.set(null);
       }
     });
 
@@ -736,6 +782,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
      * plain object, not a signal, so this effect not depending on `reportingPhaseVersion()` is
      * what silently and permanently orphans the fetch — nothing else re-triggers a re-read), and
      * the card is stuck showing "No W1/W2 results reported yet." with no spinner and no retry.
+     *
+     * `refreshSelectedSummaries()` now resolves its `versionId` from `effectiveVersionId()`
+     * (design.md DD-1, `changes/overview-phase-filter`) instead of re-deriving it — that computed
+     * already carries this same `reportingPhaseVersion()` dependency, and ALSO reacts to the
+     * viewer's own phase selector, so this effect gets phase-switch reactivity for free.
      */
     effect(() => {
       this.dataControlSE.reportingPhaseVersion();
@@ -768,10 +819,28 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     });
 
     // Overview-only: the programme's W3/Bilateral rows (P2-3302). Gated on the view so the other
-    // tabs never pay for a call they do not render.
+    // tabs never pay for a call they do not render. `loadBilateralRows` reads `effectiveVersionId()`
+    // internally, so this effect is ALSO phase-reactive (closes the W12 reactivity gap recorded in
+    // design.md DD-1 — this loader used to resolve `versionId` once and never revisit it).
+    effect(() => {
+      const sp = this.selected();
+      const code = sp?.initiativeCode;
+      const id = sp?.initiativeId;
+      if (this.rfrView() === 'overview') {
+        if (code) this.loadBilateralRows(code);
+        if (id) this.loadProgramResults(id);
+      }
+    });
+
+    // Overview meter (design.md DD-3): `sp.versions` from the shared default payload carries only
+    // ONE version per program (today's effective phase — see design.md §5), so looking back at a
+    // DIFFERENT phase needs its own row, fetched here and overlaid by `latestVersion()`. Gated on
+    // `activeSelection()` (an EXPLICIT selection, Overview tab only) so the default path — and any
+    // other tab — fires zero extra requests (OPF-N-1); it keeps reading the shared payload.
     effect(() => {
       const code = this.selected()?.initiativeCode;
-      if (this.rfrView() === 'overview' && code) this.loadBilateralRows(code);
+      const versionId = this.effectiveVersionId();
+      if (code && this.activeSelection() !== null && versionId != null) this.loadMeterOverlay(code, versionId);
     });
 
     // Only the guided flow claims the whole viewport (focus mode). Inside an open
@@ -901,11 +970,124 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return list.find(sp => sp.initiativeId === id) ?? this.homeSE.mySPsList()[0] ?? null;
   });
 
-  /** Phase chip taken from the first program's latest version. */
+  /**
+   * The viewer's phase selection, honored ONLY while the Overview tab is active — the selector
+   * lives in the Overview header band (design.md DD-6), so a selection made there must not leak
+   * into Planned/Reporting's shared ToC/summary/bilateral loaders just because the viewer switched
+   * tabs without touching the selector again. `selectedVersionId` itself is NOT reset on a tab
+   * switch — DD-5 resets it only on program change / init — so navigating back to Overview
+   * restores the exact same selection. `effectiveVersionId` and `tocVersionForKey` BOTH read this
+   * one computed (never `selectedVersionId()` directly) so the view-gate lives in exactly one
+   * place, per DD-1.
+   */
+  readonly activeSelection = computed<number | null>(() => (this.rfrView() === 'overview' ? this.selectedVersionId() : null));
+
+  /**
+   * THE single phase resolver (design.md DD-1, `changes/overview-phase-filter`): every
+   * phase-scoped loader/computed in this file derives its `versionId` from here — never by
+   * re-resolving `latestVersion()`/`reportingCurrentPhase` on its own (that duplication is what
+   * caused the W12 divergence class, KZ-W12-2).
+   *
+   * Tracked read of `reportingPhaseVersion()`, otherwise unused: `reportingCurrentPhase` is a
+   * plain mutable object (not a signal), so without reading the version bump here, a late-arriving
+   * active phase would never re-trigger this computed once `selectedVersionId()` and `selected()`
+   * are already stable — see `groupedSummaries`' original comment (still applicable) for the full
+   * mechanics. OPF-R-4's "AND IT MUST" clause names this exact convergence.
+   */
+  readonly effectiveVersionId = computed<number | null>(() => {
+    this.dataControlSE?.reportingPhaseVersion?.();
+    const sp = this.selected();
+    return (
+      this.activeSelection() ??
+      this.latestVersion(sp)?.versionId ??
+      this.dataControlSE?.reportingCurrentPhase?.phaseId ??
+      null
+    );
+  });
+
+  /**
+   * Options for the Overview phase selector (`changes/overview-phase-filter` OPF-T-4, OPF-R-1).
+   *
+   * REVIEWER FIX (attempt 2): `sp.versions` can NEVER carry more than the program's single
+   * effective-phase row — the server pins `filters.versionId` to it before querying
+   * (`results.service.ts` ~:1818-1823) — so building options from it renders exactly one row and
+   * no phase can ever be selected in production. The real catalogue is `PhasesService.phases.reporting`
+   * (`reportingPhases()` above), filtered to the SELECTED program's own portfolio
+   * (`sp.portfolioId` vs. each phase's `obj_portfolio.id`) — that filter is what preserves the BUT
+   * clause (a different portfolio's phases, e.g. 2022–2024, never appear). Sorted `phase_year` desc,
+   * labeled "«phase_name» · «phase_year»". `phaseTagLabel`/`phaseTagTone` are read by
+   * `app-pr-select`'s `optionBadgeLabel`/`optionBadgeTone` (a per-option chip): the Open marker is
+   * the phase's own `status` flag (server-authoritative), falling back to `reportingCurrentPhase`
+   * id-equality only on the rare row where `status` itself is missing.
+   */
+  readonly phaseSelectorOptions = computed(() => {
+    const sp = this.selected();
+    if (!sp) return [];
+    const portfolioId = sp.portfolioId;
+    const openPhaseId = this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    return this.reportingPhases()
+      .filter(p => p?.obj_portfolio?.id != null && Number(p.obj_portfolio.id) === Number(portfolioId))
+      .slice()
+      .sort((a, b) => (b.phase_year ?? 0) - (a.phase_year ?? 0))
+      .map(p => {
+        const isOpen = typeof p.status === 'boolean' ? p.status : Number(p.id) === Number(openPhaseId);
+        // `version.id` is a bigint column — TypeORM serializes it as a STRING on the wire ("36").
+        // Every phase-aware wrapper guards with `typeof versionId === 'number'`, so a raw string
+        // here silently drops the param from every URL (the live all-cards-stuck-on-the-open-phase
+        // bug, hotfix h2): normalize at the single origin instead of loosening four guards.
+        return {
+          versionId: Number(p.id),
+          label: `${p.phase_name} · ${p.phase_year}`,
+          phaseTagLabel: isOpen ? 'Open' : '',
+          phaseTagTone: 'open'
+        };
+      });
+  });
+
+  /** Wires the Overview phase selector's `(selectOptionEvent)` to `selectedVersionId` (design.md DD-1). */
+  onPhaseOptionSelected(option: { versionId: number } | null): void {
+    if (option?.versionId != null) this.selectedVersionId.set(option.versionId);
+  }
+
+  /**
+   * HOTFIX (same root cause as `loadingSummaries` above): inverted to cache-presence — a key is
+   * loading whenever it has no `meterOverlayByKey` entry yet. `false` on the default path — the
+   * loading affordance only ever applies to an EXPLICIT phase selection (`activeSelection()`),
+   * same gate the overlay cache itself uses in `loadMeterOverlay`'s effect, so a cache-miss here
+   * always means "will be fetched," never a stuck loader. Once settled (fetch resolved OR
+   * errored — `cacheMeterOverlay` always writes an entry, `null` on error), this is `false` and
+   * `latestVersion()` below renders the meter's zeroed state for the `null` case.
+   * `loadingMeterKeys` stays — `loadMeterOverlay`'s own de-dup guard still needs it.
+   */
+  readonly loadingMeter = computed(() => {
+    const sp = this.selected();
+    const versionId = this.activeSelection();
+    if (!sp?.initiativeCode || versionId === null) return false;
+    const key = this.summaryCacheKey(sp.initiativeCode, versionId);
+    return !this.meterOverlayByKey().has(key);
+  });
+
+  /**
+   * Phase chip for the SELECTED program's effective phase (OPF-T-4 fix, `changes/overview-phase-filter`
+   * ADVISORY (3)) — this used to key off `allPrograms()[0]`, which showed the wrong program's phase
+   * the moment a viewer picked a program other than the first one in the list. `latestVersion()`
+   * already resolves through `activeSelection()`/`effectiveVersionId()`'s same chain, so this stays
+   * in lockstep with an explicit phase selection on the Overview tab.
+   */
   readonly phaseLabel = computed(() => {
-    const v = this.latestVersion(this.allPrograms()[0]);
+    const v = this.latestVersion(this.selected());
     return v ? `${v.phaseName} · ${v.phaseYear}` : '';
   });
+
+  /**
+   * `reporting-program-band`'s `phaseLabelOverride` input (Reviewer fix, attempt 2): bound ONLY
+   * while an EXPLICIT phase is selected on the Overview tab (`activeSelection() !== null`) —
+   * unconditionally binding `phaseLabel()` regressed the Reporting tab's eyebrow (out of scope,
+   * `activeSelection()` is null-gated there so this still resolves `''`) AND the Overview DEFAULT
+   * path (`· Reporting cycle 2026 · P25` → `· Reporting 2026 · 2026`, violating OPF-R-3's
+   * byte-identical default). `''` tells the band to keep its own `cycleYear`/`cyclePhase` tail.
+   */
+  readonly selectedPhaseLabel = computed(() => (this.activeSelection() === null ? '' : this.phaseLabel()));
 
   /** Ordered, colored status breakdown for the selected program's latest version. */
   readonly statusRows = computed<StatusRow[]>(() => {
@@ -1039,12 +1221,56 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   //     P2-3302 asks for "tagged", full stop — the gap is documented, not papered over.
   //  2. `initiative_role_id` and `status_id` arrive as STRINGS ('1', '5'). Compare with
   //     String(...), never `=== 1`.
-  private readonly bilateralRows = signal<ResultToReview[]>([]);
+  /**
+   * Cached by `${code}::${versionId}` — same `code::versionId` Map pattern as `summaryCacheKey`
+   * (design.md DD-4, `changes/overview-phase-filter`): a late response for a phase the viewer has
+   * since switched away from lands in ITS OWN key and is never read (OPF-R-4 BUT-clause).
+   */
+  private readonly bilateralRowsByKey = signal<Map<string, ResultToReview[]>>(new Map());
+  private readonly loadingBilateralKeys = signal<Set<string>>(new Set());
+
+  private readonly programResultsByKey = signal<Map<string, any[]>>(new Map());
+  private readonly loadingProgramResultsKeys = signal<Set<string>>(new Set());
+
+  readonly overviewProgramResults = computed<any[]>(() => {
+    const sp = this.selected();
+    const id = sp?.initiativeId;
+    if (!id) return [];
+    const key = this.summaryCacheKey(String(id), this.effectiveVersionId());
+    return this.programResultsByKey().get(key) ?? [];
+  });
+
+  /** Selected program's bilateral rows for the CURRENT phase key only (design.md DD-4). */
+  private readonly bilateralRows = computed<ResultToReview[]>(() => {
+    const code = this.selected()?.initiativeCode;
+    if (!code) return [];
+    const key = this.summaryCacheKey(code, this.effectiveVersionId());
+    return this.bilateralRowsByKey().get(key) ?? [];
+  });
 
   /** Only the rows where this programme is the primary submitter (role id '1'). */
   private readonly bilateralPrimaryRows = computed(() =>
     this.bilateralRows().filter(r => String(r.initiative_role_id ?? '') === BILATERAL_PRIMARY_ROLE_ID)
   );
+
+  /**
+   * HOTFIX (same root cause as `loadingSummaries` above): inverted to cache-presence — a key is
+   * loading whenever it has no `bilateralRowsByKey` entry yet, independent of the in-flight set's
+   * timing. Gated on `rfrView() === 'overview'`, mirroring the constructor effect that actually
+   * calls `loadBilateralRows` (only fires on Overview) — off that tab this is never fetched, so a
+   * bare cache-miss check would spin forever; the view gate keeps it settled `false` there
+   * (harmless either way since `app-program-overview` — the only consumer — only renders on
+   * Overview, but this keeps the computed correct on its own terms). `loadingBilateralKeys` stays
+   * — `loadBilateralRows`'s own de-dup guard still needs it.
+   */
+  readonly loadingBilateral = computed(() => {
+    const versionId = this.effectiveVersionId();
+    const sp = this.selected();
+    const code = sp?.initiativeCode;
+    if (!code || this.rfrView() !== 'overview') return false;
+    const key = this.summaryCacheKey(code, versionId);
+    return !this.bilateralRowsByKey().has(key);
+  });
 
   /** Centers with reported W3/bilateral results, ranked descending by count with alphabetical tie-breaking. */
   readonly overviewBilateralCenters = computed<OverviewCenterBar[]>(() => {
@@ -1269,14 +1495,21 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * "in flight" once requested and not yet resolved into `tocByKey`). Also true while the AoW list
    * itself hasn't settled (`loadingAows()`), since the map cannot even name its branches yet.
    */
+  // HOTFIX (same root cause as `loadingSummaries` above): inverted to cache-presence — a bucket is
+  // loading whenever it simply has no `tocByKey` entry yet. The `loadAllTocs()` effect (constructor,
+  // gated `rfrView() === 'planned' || 'overview'`) fetches every one of these keys unconditionally
+  // once the SP/AoW list is known, so a cache-miss always means "will be fetched."
   readonly overviewTocMapLoading = computed(() => {
     if (this.loadingAows()) return true;
     const sp = this.selected()?.initiativeCode;
     if (!sp) return false;
-    const keys = [...this.aows().map(aow => `${sp}::${aow.code}`), `${sp}::${INTERMEDIATE_OUTCOMES_CODE}`, `${sp}::${OUTCOMES_2030_CODE}`];
-    const loadingKeys = this.loadingTocKeys();
+    const keys = [
+      ...this.aows().map(aow => this.tocCacheKey(sp, aow.code)),
+      this.tocCacheKey(sp, INTERMEDIATE_OUTCOMES_CODE),
+      this.tocCacheKey(sp, OUTCOMES_2030_CODE)
+    ];
     const map = this.tocByKey();
-    return keys.some(key => loadingKeys.has(key) && !map.has(key));
+    return keys.some(key => !map.has(key));
   });
 
   /**
@@ -1295,7 +1528,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // ToC node shape stays untyped-`any` here same as every other reader of this signal.
     const tocByAow = new Map<string, { outputs: any[]; outcomes: any[] }>();
     this.aows().forEach(aow => {
-      const bucket = map.get(`${spCode}::${aow.code}`);
+      const bucket = map.get(this.tocCacheKey(spCode, aow.code));
       if (bucket) tocByAow.set(aow.code, bucket);
     });
 
@@ -1304,8 +1537,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       spName: sp.initiativeShortName || sp.initiativeName || '',
       aows: this.aows(),
       tocByAow,
-      intermediateOutcomes: map.get(`${spCode}::${INTERMEDIATE_OUTCOMES_CODE}`) ?? null,
-      outcomes2030: map.get(`${spCode}::${OUTCOMES_2030_CODE}`) ?? null,
+      intermediateOutcomes: map.get(this.tocCacheKey(spCode, INTERMEDIATE_OUTCOMES_CODE)) ?? null,
+      outcomes2030: map.get(this.tocCacheKey(spCode, OUTCOMES_2030_CODE)) ?? null,
       parseTitle: title => this.splitGroupTitle(title)
     });
   });
@@ -1320,19 +1553,63 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * `router.navigate` call `onOverviewLink` (below) uses for the sibling 'results' route.
    */
   onOpenAow(code: string): void {
-    const spCode = this.selected()?.initiativeCode;
+    const spCode = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
     if (!spCode) return;
-    this.router.navigate(['/result-framework-reporting/entity-details', spCode, 'aow', code]);
+    this.router.navigate(['/result-framework-reporting/entity-details', spCode], {
+      queryParams: { tocView: 'aows' }
+    });
   }
 
-  /** Fetch the programme's bilateral rows. Overview only — the other tabs do not use them. */
+  /**
+   * Fetch (and cache) the programme's bilateral rows. Overview only — the other tabs do not use
+   * them. `versionId` resolved via `effectiveVersionId()` (design.md DD-1 — the single resolver);
+   * cached per phase (design.md DD-4) so a phase switch never serves a stale key.
+   */
   private loadBilateralRows(code: string): void {
-    const versionId = this.latestVersion(this.selected())?.versionId
-      ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    const versionId = this.effectiveVersionId();
+    const key = this.summaryCacheKey(code, versionId);
+    if (this.bilateralRowsByKey().has(key) || this.loadingBilateralKeys().has(key)) return;
+    this.loadingBilateralKeys.update(set => new Set(set).add(key));
     this.api.resultsSE.GET_ResultToReview(code, undefined, versionId ?? undefined, 'all').subscribe({
       next: (res: { response?: { results?: ResultToReview[] }[] }) =>
-        this.bilateralRows.set((res?.response ?? []).flatMap(g => g.results ?? [])),
-      error: () => this.bilateralRows.set([])
+        this.cacheBilateralRows(key, (res?.response ?? []).flatMap(g => g.results ?? [])),
+      error: () => this.cacheBilateralRows(key, [])
+    });
+  }
+
+  private cacheBilateralRows(key: string, rows: ResultToReview[]): void {
+    this.bilateralRowsByKey.update(map => new Map(map).set(key, rows));
+    this.loadingBilateralKeys.update(set => {
+      const next = new Set(set);
+      next.delete(key);
+      return next;
+    });
+  }
+
+  private loadProgramResults(id: number): void {
+    const userId = this.api.authSE?.localStorageUser?.id;
+    if (!userId || !id) return;
+    const versionId = this.effectiveVersionId();
+    const key = this.summaryCacheKey(String(id), versionId);
+    if (this.programResultsByKey().has(key) || this.loadingProgramResultsKeys().has(key)) return;
+    this.loadingProgramResultsKeys.update(set => new Set(set).add(key));
+    this.api.resultsSE.GET_AllResultsWithUseRole(userId, {
+      submitter_id: String(id),
+      limit: 2000,
+      page: 1
+    }).subscribe({
+      next: (res: any) =>
+        this.cacheProgramResults(key, res?.response?.items ?? []),
+      error: () => this.cacheProgramResults(key, [])
+    });
+  }
+
+  private cacheProgramResults(key: string, rows: any[]): void {
+    this.programResultsByKey.update(map => new Map(map).set(key, rows));
+    this.loadingProgramResultsKeys.update(set => {
+      const next = new Set(set);
+      next.delete(key);
+      return next;
     });
   }
 
@@ -1681,24 +1958,24 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Resolves `versionId` for the selected program EXACTLY like `loadBilateralRows` (W12-R-4)
-   * and (re)loads its indicator-contribution summary. Extracted so it can be called both on
-   * program selection AND on a later phase-context update (see the constructor effect above) —
-   * the resolution and the fetch must always happen together, or the two would each resolve
-   * `versionId` at DIFFERENT moments (see the effect's comment for why that is the bug).
+   * Resolves `versionId` via `effectiveVersionId()` (design.md DD-1 — the single resolver) and
+   * (re)loads the selected program's indicator-contribution summary. Extracted so it can be
+   * called both on program selection AND on a later phase-context update (see the constructor
+   * effect above) — the resolution and the fetch must always happen together, or the two would
+   * each resolve `versionId` at DIFFERENT moments (see the effect's comment for why that is the
+   * bug).
    */
   private refreshSelectedSummaries(): void {
     const sp = this.selected();
     const code = sp?.initiativeCode;
     if (!code) return;
-    const versionId = this.latestVersion(sp)?.versionId ?? this.dataControlSE?.reportingCurrentPhase?.phaseId;
+    const versionId = this.effectiveVersionId();
     this.loadSummaries(code, versionId ?? undefined);
   }
 
   /**
    * Fetch (and cache) the indicator-contribution summary (result-type categories).
-   * `versionId` resolved EXACTLY like `loadBilateralRows` (W12-R-4): the phase-preferring
-   * `latestVersion()` id, falling back to the reporting shell's current phase.
+   * `versionId` resolved by the caller via `effectiveVersionId()` (design.md DD-1).
    */
   private loadSummaries(code: string, versionId?: number): void {
     const key = this.summaryCacheKey(code, versionId);
@@ -1776,7 +2053,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     const map = this.tocByKey();
     const loadingKeys = this.loadingTocKeys();
     return this.aows().map(aow => {
-      const key = `${sp}::${aow.code}`;
+      const key = this.tocCacheKey(sp, aow.code);
       const toc = map.get(key);
       const fromTier = (groups: any[] | undefined, tier: 'output' | 'outcome') =>
         (groups ?? []).flatMap((g: any) =>
@@ -1892,7 +2169,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       : [];
 
     // 2) Intermediate Outcomes — dedicated endpoint, cached under INTERMEDIATE_OUTCOMES_CODE.
-    const ioKey = `${sp}::${INTERMEDIATE_OUTCOMES_CODE}`;
+    const ioKey = this.tocCacheKey(sp, INTERMEDIATE_OUTCOMES_CODE);
     const ioToc = this.tocByKey().get(ioKey);
     const ioLoading = this.loadingTocKeys().has(ioKey);
     const ioAll = this.flattenBucketIndicators(ioToc?.outputs, INTERMEDIATE_OUTCOMES_CODE, 'Intermediate Outcomes');
@@ -1909,7 +2186,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         : null;
 
     // 3) 2030 Outcomes — dedicated endpoint.
-    const o30Key = `${sp}::${OUTCOMES_2030_CODE}`;
+    const o30Key = this.tocCacheKey(sp, OUTCOMES_2030_CODE);
     const o30Toc = this.tocByKey().get(o30Key);
     const o30Loading = this.loadingTocKeys().has(o30Key);
     const o30All = this.flattenBucketIndicators(o30Toc?.outputs, OUTCOMES_2030_CODE, '2030 Outcomes');
@@ -2060,8 +2337,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     for (const g of this.indicatorsByAow()) collect(g.indicators);
     const sp = this.selected()?.initiativeCode;
     const map = this.tocByKey();
-    collect(this.flattenBucketIndicators(map.get(`${sp}::${INTERMEDIATE_OUTCOMES_CODE}`)?.outputs, INTERMEDIATE_OUTCOMES_CODE, 'IO'));
-    collect(this.flattenBucketIndicators(map.get(`${sp}::${OUTCOMES_2030_CODE}`)?.outputs, OUTCOMES_2030_CODE, '2030'));
+    collect(this.flattenBucketIndicators(map.get(this.tocCacheKey(sp, INTERMEDIATE_OUTCOMES_CODE))?.outputs, INTERMEDIATE_OUTCOMES_CODE, 'IO'));
+    collect(this.flattenBucketIndicators(map.get(this.tocCacheKey(sp, OUTCOMES_2030_CODE))?.outputs, OUTCOMES_2030_CODE, '2030'));
     // Leading row resets the pill back to its placeholder (`all` is the band's empty sentinel).
     return [
       { value: 'all', label: 'All categories' },
@@ -2433,15 +2710,21 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return numeric ? { code: numeric[1], name: numeric[2] } : { code: null, name: text };
   }
 
+  /**
+   * `versionId` passed to the ToC family ONLY when the viewer explicitly picked a phase
+   * (`tocVersionForKey`, design.md DD-1/DD-4) — with the selector untouched this omits the
+   * param exactly as before this spec (OPF-N-1).
+   */
   private loadToc(program: string, aow: string): void {
-    const key = `${program}::${aow}`;
+    const versionId = this.tocVersionForKey();
+    const key = this.tocCacheKey(program, aow);
     if (this.tocByKey().has(key) || this.loadingTocKeys().has(key)) return;
     this.loadingTocKeys.update(s => new Set(s).add(key));
 
     // Program-level buckets have their own endpoints and return ONE flat `tocResults` list
     // (no outputs/outcomes split), so they land in `outputs` and the AoW tabs hide.
     if (aow === OUTCOMES_2030_CODE) {
-      this.api.resultsSE.GET_2030Outcomes(program).subscribe({
+      this.api.resultsSE.GET_2030Outcomes(program, versionId ?? undefined).subscribe({
         next: (res: { response?: { tocResults?: any[] } }) =>
           this.cacheToc(key, { outputs: res?.response?.tocResults ?? [], outcomes: [] }),
         error: () => this.cacheToc(key, { outputs: [], outcomes: [] })
@@ -2450,7 +2733,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     }
 
     if (aow === INTERMEDIATE_OUTCOMES_CODE) {
-      this.api.resultsSE.GET_IntermediateOutcomes(program).subscribe({
+      this.api.resultsSE.GET_IntermediateOutcomes(program, versionId ?? undefined).subscribe({
         next: (res: { response?: { tocResults?: any[] } }) =>
           this.cacheToc(key, { outputs: res?.response?.tocResults ?? [], outcomes: [] }),
         error: () => this.cacheToc(key, { outputs: [], outcomes: [] })
@@ -2458,7 +2741,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.api.resultsSE.GET_TocResultsByAowId(program, aow).subscribe({
+    this.api.resultsSE.GET_TocResultsByAowId(program, aow, undefined, versionId ?? undefined).subscribe({
       next: (res: { response?: { tocResultsOutputs?: any[]; tocResultsOutcomes?: any[] } }) =>
         this.cacheToc(key, {
           outputs: res?.response?.tocResultsOutputs ?? [],
@@ -2601,8 +2884,56 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Per-phase overlay for the progress meter (design.md DD-3, `changes/overview-phase-filter`):
+   * `sp.versions` from the shared default payload carries only ONE version per program (today's
+   * effective phase — design.md §5), so a look-back to an explicitly selected phase needs its OWN
+   * row, fetched via `GET_ScienceProgramsProgress(versionId)` and cached here keyed exactly like
+   * `summariesByCode` (`summaryCacheKey`, design.md DD-4).
+   */
+  private readonly meterOverlayByKey = signal<Map<string, Version | null>>(new Map());
+  private readonly loadingMeterKeys = signal<Set<string>>(new Set());
+
+  private loadMeterOverlay(code: string, versionId: number): void {
+    const key = this.summaryCacheKey(code, versionId);
+    if (this.meterOverlayByKey().has(key) || this.loadingMeterKeys().has(key)) return;
+    this.loadingMeterKeys.update(set => new Set(set).add(key));
+    this.api.resultsSE.GET_ScienceProgramsProgress(versionId).subscribe({
+      next: (res: { response?: { mySciencePrograms?: SPProgress[]; otherSciencePrograms?: SPProgress[] } }) => {
+        const all = [...(res?.response?.mySciencePrograms ?? []), ...(res?.response?.otherSciencePrograms ?? [])];
+        const match = all.find(sp => sp.initiativeCode === code) ?? null;
+        this.cacheMeterOverlay(key, match?.versions?.[0] ?? null);
+      },
+      error: () => this.cacheMeterOverlay(key, null)
+    });
+  }
+
+  private cacheMeterOverlay(key: string, version: Version | null): void {
+    this.meterOverlayByKey.update(map => new Map(map).set(key, version));
+    this.loadingMeterKeys.update(set => {
+      const next = new Set(set);
+      next.delete(key);
+      return next;
+    });
+  }
+
   latestVersion(sp: SPProgress | null | undefined): Version | null {
-    if (!sp?.versions?.length) return null;
+    if (!sp) return null;
+    // An EXPLICIT phase selection (Overview only, `activeSelection()`) is served EXCLUSIVELY from
+    // the overlay cache below — it must NEVER fall through to the resolution further down. Falling
+    // through would silently serve the OPEN phase's row under a CLOSED phase selection, which is
+    // exactly the mixed-phase page OPF-R-2 forbids (e.g. Reporting 2026 numbers next to Reporting
+    // 2025 cards). `meterOverlayByKey` holds `undefined` while the fetch has not landed yet
+    // (`loadingMeter()` distinguishes that from a settled `null`) and `null` once it has resolved to
+    // nothing (fetch error / no matching row) — both cases return `null` HERE, so the meter renders
+    // its zeroed/empty state either way (OPF-R-5), never someone else's numbers.
+    // `activeSelection()` (not raw `selectedVersionId()`) so this is honored ONLY on the Overview
+    // tab — same view-gate as `effectiveVersionId`/`tocVersionForKey` (design.md DD-1).
+    const explicitVersionId = this.activeSelection();
+    if (explicitVersionId !== null) {
+      return this.meterOverlayByKey().get(this.summaryCacheKey(sp.initiativeCode, explicitVersionId)) ?? null;
+    }
+    if (!sp.versions?.length) return null;
     const currentPhaseId = this.dataControlSE?.reportingCurrentPhase?.phaseId;
     const currentPhaseYear = this.dataControlSE?.reportingCurrentPhase?.phaseYear;
     if (currentPhaseId != null) {
@@ -2617,7 +2948,14 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   totalResults(sp: SPProgress): number {
-    return this.latestVersion(sp)?.totalResults ?? sp.totalResults ?? 0;
+    const version = this.latestVersion(sp);
+    if (version) return version.totalResults;
+    // No explicit phase selection → `sp.totalResults` is the default/active-phase number (unchanged
+    // pre-spec fallback). An EXPLICIT selection with no resolved version (overlay still loading, or
+    // settled `null`) must NOT borrow it — `sp.totalResults` is the OPEN phase's number, and this
+    // "results this phase" figure would otherwise leak it under a closed-phase selection, the same
+    // mixed-phase class `latestVersion()` above closes for the meter.
+    return this.activeSelection() === null ? (sp.totalResults ?? 0) : 0;
   }
 
   isActive(sp: SPProgress): boolean {

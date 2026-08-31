@@ -11,6 +11,10 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 })
 export class SimilarResultsComponent {
   @Input() options: any[];
+  /** P2-3526: the similarity search failed, so an empty list proves nothing. */
+  @Input() searchFailed = false;
+  /** P2-3526: the exact title is already taken, so "no similarities" would contradict the parent's warning. */
+  @Input() hideNoSimilaritiesMessage = false;
 
   constructor(public api: ApiService, public resultLevelSE: ResultLevelService, private retrieveModalSE: RetrieveModalService) {}
 

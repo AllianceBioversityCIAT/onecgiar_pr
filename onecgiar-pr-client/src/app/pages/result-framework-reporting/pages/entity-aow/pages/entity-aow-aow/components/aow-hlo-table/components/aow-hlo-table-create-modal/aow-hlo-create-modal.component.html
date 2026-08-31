@@ -169,6 +169,42 @@
           [autogenerate]="currentResultIsKnowledgeProduct()">
         </app-pr-input>
 
+        <!-- P2-3420 — link to a QA'd Innovation Development result. Innovation use only, 2026 phase
+             onwards only. Sits directly below "Title of Result", exactly where the story puts it. -->
+        @if (showsInnovationLink()) {
+          <div class="innovation-link-block">
+            <app-pr-radio-button
+              [label]="innovationLinkQuestion"
+              [options]="[
+                { value: true, label: 'Yes' },
+                { value: false, label: 'No' }
+              ]"
+              optionLabel="label"
+              optionValue="value"
+              [isStatic]="true"
+              [required]="true"
+              [ngModel]="hasInnovationLink()"
+              (ngModelChange)="onInnovationLinkChange($event)"
+              [disabled]="creatingResult()">
+            </app-pr-radio-button>
+
+            @if (hasInnovationLink()) {
+              <app-pr-select
+                label="Please select an Innovation Development result"
+                placeholder="Search by Innovation ID or title"
+                [options]="qaInnovationsSE.options()"
+                optionLabel="display"
+                optionValue="id"
+                [isStatic]="true"
+                [required]="true"
+                [ngModel]="linkedResultId()"
+                (ngModelChange)="linkedResultId.set($event)"
+                [disabled]="creatingResult()">
+              </app-pr-select>
+            }
+          </div>
+        }
+
         <div class="separator"></div>
 
         <div>
@@ -276,7 +312,7 @@
             <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
             <app-pr-filter-multiselect
               [options]="dropdown1ScienceOptions()"
-              optionLabel="official_code"
+              optionLabel="sp_label"
               placeholder="Select entity"
               [(ngModel)]="entityAowService.selectedEntities"
               (changed)="onScienceSelect()"
@@ -323,7 +359,7 @@
 
             <app-pr-filter-multiselect
               [options]="otherScienceList()"
-              optionLabel="official_code"
+              optionLabel="sp_label"
               placeholder="Select other entity"
               [ngModel]="otherScienceSelected()"
               (changed)="otherScienceSelected.set($event ?? [])"
@@ -392,7 +428,7 @@
 
         @if (entityAowService.canReportResults()) {
           <div class="report-result-content_left_content_actions" [ngClass]="{ globalDisabled: creatingResult() }">
-            <button hlmBtn type="button" class="pr-body-2" (click)="createResult()" [disabled]="creatingResult()">
+            <button hlmBtn type="button" class="pr-body-2" (click)="createResult()" [disabled]="creatingResult() || !canCreateResult()">
               Create and continue
               @if (creatingResult()) {
                 <i class="pi pi-spinner pi-spin"></i>

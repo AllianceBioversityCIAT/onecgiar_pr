@@ -25,7 +25,7 @@
           (click)="onPromoteClick()"
         >
           <i class="material-icons-round">arrow_upward</i>
-          {{ bilateralAiService.isPromoting() ? 'Promoting…' : 'Promote to Result' }}
+          {{ bilateralAiService.isPromoting() ? 'Creating…' : 'Create Result' }}
         </button>
         <button
           type="button"
@@ -68,7 +68,7 @@
     <span class="pr-dialog-header-icon pr-dialog-header-icon--promote">
       <i class="material-icons-round">arrow_upward</i>
     </span>
-    <span class="pr-dialog-header-title">Promote to Result</span>
+    <span class="pr-dialog-header-title">Create Result</span>
   </div>
   <div class="pr-dialog-body">
     <p class="pr-dialog-text">Convert this AI draft into a bilateral result?</p>
@@ -82,7 +82,7 @@
       [disabled]="bilateralAiService.isPromoting()"
       (click)="onPromoteConfirm()"
     >
-      Promote
+      Create Result
     </button>
   </div>
 </app-pr-dialog>

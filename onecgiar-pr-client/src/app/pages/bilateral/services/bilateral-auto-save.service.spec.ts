@@ -503,4 +503,61 @@ describe('BilateralAutoSaveService', () => {
     tick(800);
     expect(executor).toHaveBeenCalledWith(11, { female_using: 1 });
   }));
+
+  /**
+   * P2-3520 — the form used to stay fully editable after Submit for Review and the autosave kept
+   * writing, so the reviewer could approve content that had changed after it arrived.
+   */
+  describe('read-only lock', () => {
+    it('starts unlocked so the wizard and any consumer that never sets it keep saving', () => {
+      expect(service.isReadOnly()).toBe(false);
+    });
+
+    it('blocks every public write entry point while locked', () => {
+      jest.useFakeTimers();
+      service.setResultId(1);
+      service.setReadOnly(true);
+
+      service.updateField('title', 'edited after submit', 'text');
+      service.updateField('gender_tag_level_id', 2, 'select');
+      service.notifyBlur('title', 'edited after submit');
+      service.updateFieldsBatch({ title: 'edited after submit' });
+      service.schedulePayload('geographic', { regions: [1] });
+      const executor = jest.fn().mockReturnValue(of({}));
+      service.runImmediate('evidence', executor);
+      jest.advanceTimersByTime(2000);
+
+      expect(mockBilateralApi.PATCH_generalInfo).not.toHaveBeenCalled();
+      expect(mockBilateralApi.PATCH_geographic).not.toHaveBeenCalled();
+      expect(executor).not.toHaveBeenCalled();
+    });
+
+    it('blocks the flush that runs when the page is left', async () => {
+      service.setResultId(1);
+      service.updateField('gender_tag_level_id', 2, 'select');
+      mockBilateralApi.PATCH_generalInfo.mockClear();
+
+      service.setReadOnly(true);
+      await service.flush();
+
+      expect(mockBilateralApi.PATCH_generalInfo).not.toHaveBeenCalled();
+    });
+
+    it('saves again once unlocked', () => {
+      service.setResultId(1);
+      service.setReadOnly(true);
+      service.updateField('gender_tag_level_id', 2, 'select');
+      expect(mockBilateralApi.PATCH_generalInfo).not.toHaveBeenCalled();
+
+      service.setReadOnly(false);
+      service.updateField('gender_tag_level_id', 2, 'select');
+      expect(mockBilateralApi.PATCH_generalInfo).toHaveBeenCalledWith(1, { gender_tag_level_id: 2 });
+    });
+
+    it('reset() releases the lock so a locked result does not lock the next one', () => {
+      service.setReadOnly(true);
+      service.reset();
+      expect(service.isReadOnly()).toBe(false);
+    });
+  });
 });

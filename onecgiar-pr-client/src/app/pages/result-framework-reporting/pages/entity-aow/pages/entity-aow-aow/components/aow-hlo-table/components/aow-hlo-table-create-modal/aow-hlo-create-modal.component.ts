@@ -13,6 +13,12 @@ import { CentersService } from '../../../../../../../../../../shared/services/gl
 import { filterOutAvisaInitiatives } from '../../../../../../../../../../shared/utils/avisa-initiative.util';
 import { BrnTabsImports } from '@spartan-ng/brain/tabs';
 import { KpCgspaceBrowseComponent, CgspaceItemDto } from './components/kp-cgspace-browse/kp-cgspace-browse.component';
+import {
+  INNOVATION_LINK_QUESTION,
+  QaInnovationDevelopmentResultsService,
+  innovationLinkAnswerIsComplete,
+  showsInnovationLinkQuestion
+} from '../../../../../../../../../../shared/services/global/qa-innovation-development-results.service';
 
 interface CreateResultBody {
   handler: string;
@@ -20,6 +26,35 @@ interface CreateResultBody {
   toc_progressive_narrative: string;
   result_type_id: number | null;
   contribution_to_indicator_target: number | null;
+}
+
+/**
+ * Display label for a Science Program option: `SP01 - Sustainable Farming`.
+ *
+ * QA 2026-08-28: the two Science Program dropdowns in this modal showed only `official_code`
+ * ("SP01"), while the centre dropdowns beside them show `full_name` and the project one shows
+ * `project_name` — an inconsistency inside a single form, not a decision.
+ *
+ * 🛑 Composed at the single point where the list is loaded, NOT inside the `options` computed.
+ * `pr-filter-multiselect` stores whole option objects in the model when no `optionValue` is given,
+ * and its `sameValue()` compares by key count, so an extra field present on the options but absent
+ * from the preselected values makes preselection silently stop matching. Both derive from the array
+ * normalised here, so their shape stays identical.
+ *
+ * The label is what the dropdown's own search filters on (`pr-filter-multiselect:120`), so this also
+ * makes the fields searchable by code AND by name — before, only by code.
+ */
+type ScienceProgramNameFields = {
+  official_code?: string | null;
+  name?: string | null;
+  initiative_name?: string | null;
+  short_name?: string | null;
+};
+
+export function withScienceProgramLabel<T extends ScienceProgramNameFields>(sp: T): T & { sp_label: string } {
+  const code = `${sp?.official_code ?? ''}`.trim();
+  const name = `${sp?.name ?? sp?.initiative_name ?? sp?.short_name ?? ''}`.trim();
+  return { ...sp, sp_label: code && name ? `${code} - ${name}` : code || name };
 }
 
 @Component({
@@ -38,12 +73,15 @@ interface CreateResultBody {
   styleUrl: './aow-hlo-create-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
+
 export class AowHloCreateModalComponent implements OnInit {
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
   router = inject(Router);
   resultsListFilterSE = inject(ResultsListFilterService);
   centersSE = inject(CentersService);
+  /** P2-3420 — shared catalogue for the link-to-a-QA'd-innovation dropdown (one request, one filter). */
+  qaInnovationsSE = inject(QaInnovationDevelopmentResultsService);
 
   allInitiatives = signal<any[]>([]);
   createResultBody = signal<CreateResultBody>({
@@ -74,6 +112,34 @@ export class AowHloCreateModalComponent implements OnInit {
       this.createResultBody().result_type_id === 6
     );
   });
+
+  // ---- P2-3420: link to a QA'd Innovation Development result --------------------------------
+  innovationLinkQuestion = INNOVATION_LINK_QUESTION;
+  /** Default is NO, per the story. */
+  hasInnovationLink = signal<boolean>(false);
+  linkedResultId = signal<number | null>(null);
+
+  /** The category actually being created — the indicator wins over the picker, as in the payload. */
+  resolvedResultTypeId = computed<number | null>(
+    () => this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id ?? this.createResultBody().result_type_id ?? null
+  );
+
+  /**
+   * 🛑 PHASE-year gate, never `isP25()`: prtest holds 2025-phase results inside the P25 portfolio,
+   * and the epic requires those to render exactly as they do today.
+   */
+  showsInnovationLink = computed(() => showsInnovationLinkQuestion(this.resolvedResultTypeId(), this.phaseYear()));
+
+  /** "Yes" without a chosen innovation blocks "Create and continue"; "No" (the default) never does. */
+  canCreateResult = computed(
+    () => !this.showsInnovationLink() || innovationLinkAnswerIsComplete(this.hasInnovationLink(), this.linkedResultId())
+  );
+
+  /** P2-3420 — answering "No" drops the selection so the payload cannot keep a stale link. */
+  onInnovationLinkChange(value: boolean): void {
+    this.hasInnovationLink.set(value === true);
+    if (value !== true) this.linkedResultId.set(null);
+  }
 
   creatingResult = signal<boolean>(false);
 
@@ -124,7 +190,7 @@ export class AowHloCreateModalComponent implements OnInit {
   // Dropdown 1: the ToC-derived Science Programs + the "Other(s)" sentinel that opens dropdown 2.
   dropdown1ScienceOptions = computed(() => [
     ...this.tocSciencePrograms(),
-    { id: this.OTHER_SP_ID, official_code: 'Other(s)', name: 'Science Program(s)/Accelerator(s)' }
+    { id: this.OTHER_SP_ID, official_code: 'Other(s)', name: 'Science Program(s)/Accelerator(s)', sp_label: 'Other(s)' }
   ]);
 
   // Dropdown 2: every Science Program not derived from the ToC node.
@@ -134,6 +200,8 @@ export class AowHloCreateModalComponent implements OnInit {
   });
 
   ngOnInit() {
+    // P2-3420 — idempotent: the shared service fetches once and every creation surface reuses it.
+    this.qaInnovationsSE.load();
     this.entityAowService.getW3BilateralProjects();
     this.entityAowService.getExistingResultsContributors(
       this.entityAowService.currentResultToReport()?.toc_result_id,
@@ -141,7 +209,9 @@ export class AowHloCreateModalComponent implements OnInit {
     );
     this.api.resultsSE.GET_AllInitiatives('p25').subscribe(({ response }) => {
       // P2-3131: exclude AVISA (SGP-02) from the "Other(s) Science Program" dropdown in the report popup.
-      const all = filterOutAvisaInitiatives(response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id));
+      const all = filterOutAvisaInitiatives(
+        response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id)
+      ).map(withScienceProgramLabel);
       this.allInitiatives.set(all);
       this.preselectTocSciencePrograms(all);
     });
@@ -241,6 +311,10 @@ export class AowHloCreateModalComponent implements OnInit {
       ...this.createResultBody(),
       result_type_id: resultTypeId
     });
+    // P2-3420: the question only exists for Innovation use — drop the answer so a hidden "Yes"
+    // (and its link) cannot travel in the payload of a result of another category.
+    this.hasInnovationLink.set(false);
+    this.linkedResultId.set(null);
   }
 
   getTitleInputLabel() {
@@ -390,6 +464,9 @@ export class AowHloCreateModalComponent implements OnInit {
     });
     this.validatingHandler.set(false);
     this.creatingResult.set(false);
+    // P2-3420: back to the story's default, NO.
+    this.hasInnovationLink.set(false);
+    this.linkedResultId.set(null);
     this.otherCentersSelected.set([]);
     this.otherScienceSelected.set([]);
   }
@@ -400,6 +477,7 @@ export class AowHloCreateModalComponent implements OnInit {
   }
 
   createResult() {
+    if (!this.canCreateResult()) return;
     this.creatingResult.set(true);
 
     const body = {
@@ -438,6 +516,16 @@ export class AowHloCreateModalComponent implements OnInit {
       ],
       bilateral_project: this.entityAowService.selectedW3BilateralProjects()
     };
+
+    // P2-3420 — the answer rides INSIDE the create (the innovation-use PATCH rejects a result with
+    // no use level yet). Only added when the question was actually asked, so every other category
+    // and every phase before 2026 keeps posting exactly the body it posts today.
+    if (this.showsInnovationLink()) {
+      Object.assign(body.result, {
+        has_innovation_link: this.hasInnovationLink() === true,
+        linked_results: this.hasInnovationLink() === true && this.linkedResultId() != null ? [Number(this.linkedResultId())] : []
+      });
+    }
 
     this.api.resultsSE.POST_createResult(body).subscribe({
       next: resp => {

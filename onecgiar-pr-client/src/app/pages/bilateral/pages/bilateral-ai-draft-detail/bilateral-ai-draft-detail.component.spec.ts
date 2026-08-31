@@ -108,6 +108,6 @@ describe('BilateralAiDraftDetailComponent', () => {
 
     expect(promote.disabled).toBe(true);
     expect(discard.disabled).toBe(true);
-    expect(promote.textContent).toContain('Promoting');
+    expect(promote.textContent).toContain('Creating');
   });
 });

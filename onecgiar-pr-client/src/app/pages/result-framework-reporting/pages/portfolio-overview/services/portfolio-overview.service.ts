@@ -12,7 +12,7 @@ import { ApiService } from '../../../../../shared/services/api/api.service';
 export const PORTFOLIO_PAGE_LIMIT = 20000;
 
 /** The raw list item, restricted to the keys this screen reads. Verified live on prtest. */
-interface RawResult {
+export interface RawResult {
   submitter?: string;
   submitter_short_name?: string;
   submitter_name?: string;
@@ -26,8 +26,55 @@ interface RawResult {
   version_id?: number | string;
 }
 
-interface AllResultsEnvelope {
+export interface AllResultsEnvelope {
   response?: { items?: RawResult[]; meta?: { total?: number | string } };
+}
+
+export interface PortfolioKpis {
+  totalResults: number;
+  phaseLabel: string;
+  w1w2Count: number;
+  w1w2SubmittedPercent: number;
+  w1w2CategoriesCount: number;
+  bilateralCount: number;
+  bilateralApprovedPercent: number;
+  bilateralCentersCount: number;
+  activeProgramsCount: number;
+  totalProgramsCount: number;
+  portfolioProgressPercent: number;
+}
+
+export interface PortfolioStatusSegment {
+  key: 'editing' | 'in-qa' | 'submitted' | 'approved' | 'rejected' | 'discontinued';
+  label: string;
+  count: number;
+  percent: number;
+  bg: string;
+  fg: string;
+}
+
+export interface CategoryOriginRow {
+  category: string;
+  w1w2Count: number;
+  bilateralCount: number;
+  total: number;
+}
+
+export interface ProgramRankingRow {
+  code: string;
+  name: string;
+  editing: number;
+  submittedOrQa: number;
+  approved: number;
+  total: number;
+}
+
+export interface CenterDistributionRow {
+  centerId: string;
+  centerName: string;
+  count: number;
+  approvedCount: number;
+  percent: number;
 }
 
 /** A counter in the "Results in this phase" strip. The first one is the total and has no dot. */
@@ -76,6 +123,36 @@ const statusDot = (statusId: unknown): string => STATUS_DOT[String(statusId)] ??
 
 const percent = (n: number, max: number): string => `${max > 0 ? Math.round((n / max) * 100) : 0}%`;
 
+export function resolveStatusSlot(row: RawResult): PortfolioStatusSegment['key'] {
+  const sname = (row.status_name || '').toLowerCase().trim();
+  const sid = Number(row.status_id);
+
+  if (sname.includes('approved') || sid === 6) return 'approved';
+  if (sname.includes('in qa') || sname.includes('quality assessed')) return 'in-qa';
+  if (sname.includes('submitted') || sname.includes('pending review') || sid === 3 || sid === 5) return 'submitted';
+  if (sname.includes('editing') || sname.includes('draft') || sid === 1) return 'editing';
+  if (sname.includes('discontinued') || sid === 4) return 'discontinued';
+  if (sname.includes('rejected') || sid === 7) return 'rejected';
+
+  if (sid === 2) return 'in-qa';
+
+  return 'editing';
+}
+
+const STATUS_SEGMENT_DEFINITIONS: {
+  key: PortfolioStatusSegment['key'];
+  label: string;
+  bg: string;
+  fg: string;
+}[] = [
+  { key: 'editing', label: 'Editing', bg: '#F5F3FF', fg: '#6B46E5' },
+  { key: 'in-qa', label: 'In QA', bg: '#EDE9FE', fg: '#8B7CC4' },
+  { key: 'submitted', label: 'Submitted', bg: '#DDD6FE', fg: '#5733C4' },
+  { key: 'approved', label: 'Approved', bg: '#EEF2FF', fg: '#4338CA' },
+  { key: 'rejected', label: 'Rejected', bg: '#F5F3FF', fg: '#A79BD4' },
+  { key: 'discontinued', label: 'Discontinued', bg: '#F3F4F6', fg: '#9691A8' }
+];
+
 /**
  * Portfolio-wide reporting figures, for the admin-only Portfolio overview screen.
  *
@@ -107,6 +184,199 @@ export class PortfolioOverviewService {
   readonly closedPhase = signal<boolean>(false);
 
   readonly total = computed(() => this.rows().length);
+
+  /**
+   * Executive KPI Summary (POV-R-1)
+   */
+  readonly kpiTotals = computed<PortfolioKpis>(() => {
+    const allRows = this.rows();
+    const totalResults = allRows.length;
+    const phaseLabel = this.phaseName() || 'Active Cycle';
+
+    const w1w2Rows = allRows.filter(r => text(r.source_name) !== 'W3/Bilaterals');
+    const w1w2Count = w1w2Rows.length;
+
+    const w1w2Submitted = w1w2Rows.filter(r => {
+      const sid = Number(r.status_id);
+      const sname = (r.status_name || '').toLowerCase();
+      return (
+        sid === 3 ||
+        sid === 2 ||
+        sname.includes('submitted') ||
+        sname.includes('quality assessed') ||
+        sname.includes('approved')
+      );
+    }).length;
+    const w1w2SubmittedPercent = w1w2Count > 0 ? Math.round((w1w2Submitted / w1w2Count) * 100) : 0;
+
+    const w1w2Categories = new Set(w1w2Rows.map(r => text(r.result_type)).filter(Boolean));
+    const w1w2CategoriesCount = w1w2Categories.size;
+
+    const bilateralRows = allRows.filter(r => text(r.source_name) === 'W3/Bilaterals');
+    const bilateralCount = bilateralRows.length;
+
+    const bilateralApproved = bilateralRows.filter(r => {
+      const sid = Number(r.status_id);
+      const sname = (r.status_name || '').toLowerCase();
+      return sid === 2 || sid === 6 || sname.includes('approved');
+    }).length;
+    const bilateralApprovedPercent = bilateralCount > 0 ? Math.round((bilateralApproved / bilateralCount) * 100) : 0;
+
+    const bilateralCenters = new Set(
+      bilateralRows.map(r => text(r.submitter) || text(r.submitter_short_name)).filter(Boolean)
+    );
+    const bilateralCentersCount = bilateralCenters.size;
+
+    const activePrograms = new Set(allRows.map(r => text(r.submitter)).filter(Boolean));
+    const activeProgramsCount = activePrograms.size;
+    const totalProgramsCount = 13;
+
+    const completedResults = this.rows().filter(r => {
+      const sid = Number(r.status_id);
+      const sname = (r.status_name ?? '').toLowerCase();
+      return (
+        sid === 2 ||
+        sid === 3 ||
+        sid === 6 ||
+        sname.includes('submitted') ||
+        sname.includes('approved') ||
+        sname.includes('quality assessed')
+      );
+    }).length;
+    const portfolioProgressPercent =
+      this.rows().length > 0 ? Math.round((completedResults / this.rows().length) * 100) : 0;
+
+    return {
+      totalResults,
+      phaseLabel,
+      w1w2Count,
+      w1w2SubmittedPercent,
+      w1w2CategoriesCount,
+      bilateralCount,
+      bilateralApprovedPercent,
+      bilateralCentersCount,
+      activeProgramsCount,
+      totalProgramsCount,
+      portfolioProgressPercent
+    };
+  });
+
+  /**
+   * Portfolio Status Distribution (POV-R-2)
+   */
+  readonly statusSegments = computed<PortfolioStatusSegment[]>(() => {
+    const allRows = this.rows();
+    const total = allRows.length;
+    const counts = new Map<PortfolioStatusSegment['key'], number>();
+
+    for (const row of allRows) {
+      const slot = resolveStatusSlot(row);
+      counts.set(slot, (counts.get(slot) ?? 0) + 1);
+    }
+
+    return STATUS_SEGMENT_DEFINITIONS.map(def => {
+      const count = counts.get(def.key) ?? 0;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      return {
+        key: def.key,
+        label: def.label,
+        count,
+        percent: pct,
+        bg: def.bg,
+        fg: def.fg
+      };
+    });
+  });
+
+  /**
+   * Indicator Category Origin Breakdown (POV-R-3)
+   */
+  readonly categoryOriginRows = computed<CategoryOriginRow[]>(() => {
+    const cats = this.categories();
+    const allRows = this.rows();
+
+    return cats.map(category => {
+      const matching = allRows.filter(r => text(r.result_type) === category);
+      const w1w2Count = matching.filter(r => text(r.source_name) !== 'W3/Bilaterals').length;
+      const bilateralCount = matching.filter(r => text(r.source_name) === 'W3/Bilaterals').length;
+      return {
+        category,
+        w1w2Count,
+        bilateralCount,
+        total: w1w2Count + bilateralCount
+      };
+    });
+  });
+
+  /**
+   * Science Programs Output Ranking (POV-R-4)
+   */
+  readonly programRankingRows = computed<ProgramRankingRow[]>(() => {
+    const byProgramme = new Map<string, RawResult[]>();
+    for (const row of this.rows()) {
+      const code = text(row.submitter);
+      if (!code) continue;
+      byProgramme.set(code, [...(byProgramme.get(code) ?? []), row]);
+    }
+
+    return [...byProgramme.entries()]
+      .map(([code, items]) => {
+        let editing = 0;
+        let submittedOrQa = 0;
+        let approved = 0;
+
+        for (const item of items) {
+          const slot = resolveStatusSlot(item);
+          if (slot === 'editing') {
+            editing++;
+          } else if (slot === 'in-qa' || slot === 'submitted') {
+            submittedOrQa++;
+          } else if (slot === 'approved') {
+            approved++;
+          }
+        }
+
+        return {
+          code,
+          name: this.programmeName(code),
+          editing,
+          submittedOrQa,
+          approved,
+          total: items.length
+        };
+      })
+      .sort((a, b) => b.total - a.total || a.code.localeCompare(b.code));
+  });
+
+  /**
+   * Bilateral Center Distribution (POV-R-5)
+   */
+  readonly centerDistributionRows = computed<CenterDistributionRow[]>(() => {
+    const bils = this.bilaterals();
+    const totalBilateral = bils.length;
+    const byCenter = new Map<string, RawResult[]>();
+
+    for (const row of bils) {
+      const code = text(row.submitter) || text(row.submitter_short_name) || text(row.submitter_name);
+      if (!code) continue;
+      byCenter.set(code, [...(byCenter.get(code) ?? []), row]);
+    }
+
+    return [...byCenter.entries()]
+      .map(([centerId, items]) => {
+        const count = items.length;
+        const approvedCount = items.filter(r => resolveStatusSlot(r) === 'approved').length;
+        const pct = totalBilateral > 0 ? Math.round((count / totalBilateral) * 100) : 0;
+        return {
+          centerId,
+          centerName: this.programmeName(centerId),
+          count,
+          approvedCount,
+          percent: pct
+        };
+      })
+      .sort((a, b) => b.count - a.count || a.centerName.localeCompare(b.centerName) || a.centerId.localeCompare(b.centerId));
+  });
 
   /**
    * The status strip: the total first (no dot), then one counter per status PRESENT, biggest

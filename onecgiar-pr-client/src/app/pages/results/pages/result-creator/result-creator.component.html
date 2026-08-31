@@ -140,9 +140,35 @@
           </div>
         }
 
+        <!--
+          P2-3526: the uniqueness answer was computed and thrown away — never bound here — so the screen
+          said the title was free and Save then refused it. Both outcomes of that call are shown now.
+        -->
+        @if (!isKnowledgeProduct && !loadingDepthSearch() && exactTitleFound) {
+          <div
+            class="flex items-start gap-2 py-2 text-[var(--pr-color-red-300)]"
+            role="alert"
+            aria-live="assertive">
+            <span class="material-icons-round text-[16px]">error_outline</span>
+            <span class="pr-body-2 font-weight-500">
+              A result with this exact title already exists. Change the title before saving, or find the existing result below and map it to your
+              ToC.
+            </span>
+          </div>
+        }
+
+        @if (!isKnowledgeProduct && !loadingDepthSearch() && titleCheckFailed) {
+          <div class="flex items-start gap-2 py-2 text-[var(--pr-color-accents-5)]" role="status" aria-live="polite">
+            <span class="material-icons-round text-[16px]">info</span>
+            <span class="pr-body-2">We could not verify whether this title is already taken. Saving may still be rejected.</span>
+          </div>
+        }
+
         <app-similar-results
           *ngIf="resultLevelSE.resultBody.result_type_id != 6 && this.resultLevelSE.resultBody.result_type_id"
-          [options]="this.depthSearchList">
+          [options]="this.depthSearchList"
+          [searchFailed]="depthSearchFailed"
+          [hideNoSimilaritiesMessage]="exactTitleFound">
         </app-similar-results>
       </div>
     </div>

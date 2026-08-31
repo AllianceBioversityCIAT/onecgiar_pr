@@ -2954,9 +2954,104 @@ export class ResultsService {
           error,
         );
       }
+
+      await this._persistInnovationLinkOnCreate(
+        createResultDto,
+        (result.response as Result).id,
+        user,
+      );
     }
 
     return result;
+  }
+
+  /**
+   * P2-3420 / P2-3421 — persists the "link to a QA'd Innovation Development result" answer taken on
+   * the two W1/W2 creation surfaces (ToC-linked form and emergent-result modal).
+   *
+   * 🛑 Inside the create, NOT as a chained call from the client: the innovation-use PATCH rejects a
+   * body without a valid `innovation_use_level_id`, and a result that has just been created has no
+   * use level yet (`innovation-use.service.ts`).
+   *
+   * 🛑 Delegated to `ContributorsPartnersService` on purpose — Yeck's decision (31-ago-2026): the
+   * link is saved and later edited through the question that ALREADY exists in Contributors and
+   * partners, so there is exactly one writer for `results_innovations_use.has_innovation_link` and
+   * the `linked_result` table. Duplicating that writer here is what broke the links once before
+   * (P2-3199).
+   *
+   * Non-fatal: the result itself is already created, so a failure here must not turn a successful
+   * creation into an error the user cannot recover from. It is logged and the link is re-editable
+   * in Contributors and partners.
+   */
+  private async _persistInnovationLinkOnCreate(
+    createResultDto: CreateResultDto,
+    createdResultId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    const hasAnswer = Object.prototype.hasOwnProperty.call(
+      createResultDto ?? {},
+      'has_innovation_link',
+    );
+    const linkedResults = Array.isArray(createResultDto?.linked_results)
+      ? createResultDto.linked_results
+      : [];
+
+    // "No" (the default) writes nothing: an untouched result must stay exactly as it is today.
+    if (!hasAnswer || createResultDto.has_innovation_link !== true) return;
+    if (!linkedResults.length) return;
+
+    if (!this._contributorsPartnersService) {
+      this._logger.warn(
+        `ContributorsPartnersService not available _persistInnovationLinkOnCreate. resultId=${createdResultId}`,
+      );
+      return;
+    }
+
+    try {
+      await this._contributorsPartnersService.updateContributorsAndPartners(
+        createdResultId,
+        {
+          has_innovation_link: true,
+          linked_results: linkedResults,
+        } as any,
+        user,
+      );
+    } catch (error) {
+      this._logger.error(
+        `Failed to persist the innovation link for result ${createdResultId}`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * P2-3420 / P2-3421 — catalogue for the "link to a QA'd Innovation Development result" dropdown.
+   * ONE endpoint for the two W1/W2 creation surfaces (ToC-linked form + emergent modal) so the
+   * filter can never drift between them; the filter itself lives in
+   * `QA_LINKABLE_INNOVATION_STATUS_IDS` (result.repository.ts).
+   */
+  async getQaInnovationDevelopmentResults() {
+    try {
+      const activePhase = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      // "Past phases" is measured against the OPEN reporting phase, never a hardcoded year.
+      const currentPhaseYear =
+        Number(activePhase?.phase_year) || new Date().getFullYear();
+
+      const results =
+        await this._resultRepository.getQaEdInnovationDevelopmentResults(
+          currentPhaseYear,
+        );
+
+      return {
+        response: results,
+        message: 'Results retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 
   async getAllResultsForInnovUse() {
@@ -3189,8 +3284,7 @@ export class ResultsService {
         environmental_biodiversity_tag_level_description:
           result.obj_environmental_biodiversity_tag_level?.description || null,
         environmental_biodiversity_impact_area_impact_area:
-          result.obj_environmental_biodiversity_impact_area?.name ||
-          null,
+          result.obj_environmental_biodiversity_impact_area?.name || null,
         poverty_tag_level_description:
           result.obj_poverty_tag_level_id?.description || null,
         poverty_impact_area_impact_area:

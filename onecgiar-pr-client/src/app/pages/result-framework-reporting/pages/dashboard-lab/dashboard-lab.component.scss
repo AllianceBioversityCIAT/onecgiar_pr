@@ -130,6 +130,35 @@
   box-sizing: border-box;
 }
 
+// Overview phase selector (changes/overview-phase-filter, OPF-T-4, design.md §8). `app-pr-select`'s
+// shared `.custom_select .field` chrome (custom-fields.scss) is a boxy 8px/10px legacy control;
+// this scopes it down to the compact chip the redesign band's toolbar filters already use
+// (`app-pr-filter-select` in `reporting-program-band`), without touching that shared stylesheet.
+// The options panel is NOT portaled to body (`overlayToBody` left false), so it stays a DOM
+// descendant of `.opf-phase-select` and these rules reach it.
+:host ::ng-deep .opf-phase-select {
+  .custom_select .field {
+    height: 34px;
+    padding: 0 10px;
+    border-color: var(--pr-border);
+    border-radius: 8px;
+    background-color: var(--pr-surface-card);
+    transition: border-color 120ms ease-out;
+
+    &:focus-within {
+      border-color: var(--pr-color-primary-300);
+    }
+  }
+
+  // The Open-phase row's chip — violet tint, matches the band's accent (hard rule §7: "Violet is
+  // navigation and actions"). Every other option carries an empty `phaseTagLabel`, so `app-pr-select`
+  // renders no badge for them at all (see `pr-select.component.html`'s `@if` guard).
+  .pr-select-option-badge--open {
+    background: var(--pr-color-primary-50);
+    color: var(--pr-color-primary-400);
+  }
+}
+
 // Planned ToC — keep typology multiselect panel wide + above scrolled list content.
 :host ::ng-deep .planned-type-filter {
   .custom_select .field {

@@ -17,6 +17,8 @@ describe('ResultsFrameworkReportingController', () => {
           useValue: {
             getGlobalUnitsByProgram: jest.fn(),
             getWorkPackagesByProgramAndArea: jest.fn(),
+            getIntermediateOutcomes: jest.fn(),
+            getToc2030Outcomes: jest.fn(),
             getProgramIndicatorContributionSummary: jest.fn(),
             createResultFromFramework: jest.fn(),
             getExistingResultContributorsToIndicators: jest.fn(),
@@ -87,7 +89,7 @@ describe('ResultsFrameworkReportingController', () => {
   });
 
   describe('getTocWorkPackages', () => {
-    it('should delegate to reporting service with supplied filters', () => {
+    it('should delegate to reporting service with supplied filters and undefined versionId when not provided (OPF-R-3)', () => {
       reportingService.getWorkPackagesByProgramAndArea.mockResolvedValueOnce(
         {} as any,
       );
@@ -96,7 +98,102 @@ describe('ResultsFrameworkReportingController', () => {
 
       expect(
         reportingService.getWorkPackagesByProgramAndArea,
-      ).toHaveBeenCalledWith('SP01', 'AOW01', '2024');
+      ).toHaveBeenCalledWith('SP01', 'AOW01', '2024', undefined);
+    });
+
+    it('should normalize a numeric versionId query param to a number (OPF-R-6)', () => {
+      reportingService.getWorkPackagesByProgramAndArea.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getTocWorkPackages('SP01', 'AOW01', '2024', '34');
+
+      expect(
+        reportingService.getWorkPackagesByProgramAndArea,
+      ).toHaveBeenCalledWith('SP01', 'AOW01', '2024', 34);
+    });
+
+    it('should pass NaN through for a non-numeric versionId so the service can reject it with a 4xx (OPF-R-6)', () => {
+      reportingService.getWorkPackagesByProgramAndArea.mockResolvedValueOnce(
+        {} as any,
+      );
+
+      controller.getTocWorkPackages('SP01', 'AOW01', '2024', 'not-a-number');
+
+      const call =
+        reportingService.getWorkPackagesByProgramAndArea.mock.calls[0];
+      expect(call[0]).toBe('SP01');
+      expect(call[1]).toBe('AOW01');
+      expect(call[2]).toBe('2024');
+      expect(call[3]).toBeNaN();
+    });
+  });
+
+  describe('getIntermediateOutcomes', () => {
+    it('should delegate to reporting service with undefined versionId when not provided (OPF-R-3)', () => {
+      reportingService.getIntermediateOutcomes.mockResolvedValueOnce({} as any);
+
+      controller.getIntermediateOutcomes('SP01');
+
+      expect(reportingService.getIntermediateOutcomes).toHaveBeenCalledWith(
+        'SP01',
+        undefined,
+      );
+    });
+
+    it('should normalize a numeric versionId query param to a number (OPF-R-6)', () => {
+      reportingService.getIntermediateOutcomes.mockResolvedValueOnce({} as any);
+
+      controller.getIntermediateOutcomes('SP01', '34');
+
+      expect(reportingService.getIntermediateOutcomes).toHaveBeenCalledWith(
+        'SP01',
+        34,
+      );
+    });
+
+    it('should pass NaN through for a non-numeric versionId (OPF-R-6)', () => {
+      reportingService.getIntermediateOutcomes.mockResolvedValueOnce({} as any);
+
+      controller.getIntermediateOutcomes('SP01', 'not-a-number');
+
+      const call = reportingService.getIntermediateOutcomes.mock.calls[0];
+      expect(call[0]).toBe('SP01');
+      expect(call[1]).toBeNaN();
+    });
+  });
+
+  describe('getToc2030Outcomes', () => {
+    it('should delegate to reporting service with undefined versionId when not provided (OPF-R-3)', () => {
+      reportingService.getToc2030Outcomes.mockResolvedValueOnce({} as any);
+
+      controller.getToc2030Outcomes('SP01');
+
+      expect(reportingService.getToc2030Outcomes).toHaveBeenCalledWith(
+        'SP01',
+        undefined,
+      );
+    });
+
+    it('should normalize a numeric versionId query param to a number (OPF-R-6)', () => {
+      reportingService.getToc2030Outcomes.mockResolvedValueOnce({} as any);
+
+      controller.getToc2030Outcomes('SP01', '34');
+
+      expect(reportingService.getToc2030Outcomes).toHaveBeenCalledWith(
+        'SP01',
+        34,
+      );
+    });
+
+    it('should pass NaN through for a non-numeric versionId (OPF-R-6)', () => {
+      reportingService.getToc2030Outcomes.mockResolvedValueOnce({} as any);
+
+      controller.getToc2030Outcomes('SP01', 'not-a-number');
+
+      const call = reportingService.getToc2030Outcomes.mock.calls[0];
+      expect(call[0]).toBe('SP01');
+      expect(call[1]).toBeNaN();
     });
   });
 

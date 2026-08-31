@@ -21,6 +21,25 @@ import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
 import { ReportParametersDto } from './dto/report-parameters.dto';
 import { BasicReportFiltersNormalized } from './dto/basic-report-filters.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+
+/**
+ * P2-3420 / P2-3421 — THE ONE PLACE that decides which Innovation Development results may be
+ * linked from an Innovation Use result. Both W1/W2 creation surfaces (the ToC-linked form and the
+ * emergent-result modal) read this list through the same endpoint, so the two can never drift.
+ *
+ * 🛑 PENDING BUSINESS ANSWER (Ángel, asked 26-ago-2026 on P2-3420 and restated on P2-3421): the
+ * story asks for "Status = QA'd" AND "Status != Discontinued". A result carries ONE status, so the
+ * second clause is either redundant (this reading) or points at the Annual-updating
+ * continued/discontinued answer, which is a different field. Until that is answered we start with
+ * exactly the states the module already uses for the same question in bilateral
+ * (`type-innovation-use.component.ts`, QUALITY_ASSESSED_STATUS_ID = 2). Change THIS constant — and
+ * nothing else — when the answer arrives; the audit's alternative reading is
+ * `[QualityAssessed, Approved]` plus an `is_discontinued = 0` clause.
+ */
+export const QA_LINKABLE_INNOVATION_STATUS_IDS: number[] = [
+  2, // ResultStatusData.QualityAssessed
+];
 
 @Injectable()
 export class ResultRepository
@@ -2679,6 +2698,80 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
     try {
       return await this.query(query);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * P2-3420 / P2-3421 — Innovation Development results a W1/W2 Innovation Use result may be linked
+   * to: QA'd (see `QA_LINKABLE_INNOVATION_STATUS_IDS`), from a PAST reporting phase, and from any
+   * Science Program / Accelerator (portfolio-wide, no P/A restriction on purpose).
+   *
+   * 🛑 A NEW method on purpose. `getResultsForInnovUse()` above still feeds the wider Contributors
+   * & Partners multi-select and the bilateral section, and it hardcodes `phase_name = 'Reporting
+   * 2025'`; widening it in place would silently change those two screens.
+   *
+   * ⚠️ ONE ROW PER INNOVATION. PRMS replicates a result into every phase keeping the same
+   * `result_code` and title, so a plain phase filter returns the same innovation once per phase
+   * with a label the user cannot tell apart (verified in prtest: `result_code` 41 has QA'd rows in
+   * 2022, 2023 and 2024; 79 of 868 codes are duplicated). The `NOT EXISTS` collapses each
+   * `result_code` to its MOST RECENT QA'd past phase, so the link always points at the latest
+   * traceable row instead of an arbitrary one.
+   *
+   * @param currentPhaseYear year of the OPEN reporting phase — everything strictly older than it
+   * counts as a past phase. Resolved by the caller from the active version, never hardcoded.
+   */
+  async getQaEdInnovationDevelopmentResults(currentPhaseYear: number) {
+    const statusPlaceholders = QA_LINKABLE_INNOVATION_STATUS_IDS.map(
+      () => '?',
+    ).join(', ');
+
+    const query = `
+    SELECT
+      r.id,
+      r.result_code,
+      r.title,
+      r.status_id,
+      v.phase_year,
+      cp.acronym
+    FROM result r
+    INNER JOIN version v ON v.id = r.version_id
+      AND v.is_active = TRUE
+    LEFT JOIN clarisa_portfolios cp ON cp.id = v.portfolio_id
+    WHERE r.is_active = TRUE
+      AND r.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
+      AND v.phase_year < ?
+      AND r.status_id IN (${statusPlaceholders})
+      AND NOT EXISTS (
+        SELECT 1
+        FROM result newer
+        INNER JOIN version newer_v ON newer_v.id = newer.version_id
+          AND newer_v.is_active = TRUE
+        WHERE newer.result_code = r.result_code
+          AND newer.is_active = TRUE
+          AND newer.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
+          AND newer_v.phase_year < ?
+          AND newer.status_id IN (${statusPlaceholders})
+          AND (
+            newer_v.phase_year > v.phase_year
+            OR (newer_v.phase_year = v.phase_year AND newer.id > r.id)
+          )
+      )
+    ORDER BY r.result_code DESC;
+    `;
+
+    try {
+      return await this.query(query, [
+        currentPhaseYear,
+        ...QA_LINKABLE_INNOVATION_STATUS_IDS,
+        currentPhaseYear,
+        ...QA_LINKABLE_INNOVATION_STATUS_IDS,
+      ]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

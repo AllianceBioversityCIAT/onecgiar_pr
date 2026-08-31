@@ -1,6 +1,6 @@
 # result-creator
 
-**Verified:** 2026-08-25 · branch performance-refactor · bc25304fb
+**Verified:** 2026-08-31 · branch performance-refactor · b224c27e4
 
 ## Qué es
 La pantalla de **Report new result** del flujo Pool Funding (W1/W2): elegir nivel, escribir el
@@ -67,3 +67,23 @@ lee un documento y propone resultados candidatos — hoy solo los propone (ver T
   24-ago). Bloqueado por definición: nadie ha dicho qué endpoint persiste un resultado sugerido por
   la IA ni cómo mapea el payload de la IA sobre ese body. La orden de trabajo del 26-ago sí pide
   garantizar creación «by manual form and by artificial intelligence».
+
+## P2-3421 — link to a QA'd Innovation Development result (English, per the repo rule)
+`report-result-form` renders TWO surfaces: the standalone legacy creator (its own route) and the
+**emergent (non-ToC) modal** hosted by `result-framework-reporting`. The link question belongs to
+the emergent one ONLY, so it is opt-in via `@Input() showInnovationLinkQuestion`
+(`entity-details.component.html:198` passes `true`). Default `false` — never make it default `true`.
+
+- Three gates, all of them load-bearing: the surface opt-in · `result_type_id === 2` (Innovation
+  use) · **phase year ≥ 2026**. 🛑 The year gate is `showsInnovationLinkQuestion()` from
+  `shared/services/global/qa-innovation-development-results.service.ts`, never `isP25()`: prtest
+  holds 2025-phase results inside the P25 portfolio and those must render exactly as they do today.
+- The answer travels **inside** `POST_resultCreateHeader`. ⚠️ Do NOT "fix" this by chaining
+  `PATCH_innovationUseP25` after the create: that endpoint rejects a body without a valid
+  `innovation_use_level_id`, which a result created a second ago does not have.
+- The dropdown reads `QaInnovationDevelopmentResultsService` — the single client-side owner of the
+  catalogue, shared with the two ToC creation surfaces. Do not fetch it here.
+- ⚠️ `dashboard-lab.component.html:1643` hosts this same component as ITS emergent modal and does
+  **not** pass the flag yet — out of scope of P2-3421, reported. Add the input there when the
+  story that owns that surface says so.
+

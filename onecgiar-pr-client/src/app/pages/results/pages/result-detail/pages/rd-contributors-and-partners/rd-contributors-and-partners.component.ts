@@ -147,6 +147,72 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   noCentersNote = 'No CGIAR Centers related to the established HLO/Outcomes were found';
   noLeadCentersNote = 'Please select at least one contributing center to choose a lead center';
 
+  // ----- P2-3249: "Contributing CGIAR Centers" is mandatory, and under the 2026 ToC split at least one
+  //                selected centre must keep coming FROM the ToC -----
+  /**
+   * TWO rules with DISJOINT preconditions. This is the decision recorded on P2-3249 (2026-08-28) that
+   * resolves the apparent contradiction with P2-3324 / P2-3326 — 🛑 do not re-litigate it here:
+   *
+   * | precondition                            | rule                                                          |
+   * |-----------------------------------------|---------------------------------------------------------------|
+   * | 2026 split AND the ToC brings centres   | ≥1 centre must stay in the ToC bucket. "Other(s)" picks may be |
+   * |                                         | added but can NEVER satisfy the minimum on their own.         |
+   * | 2026 split AND the ToC brings none      | dropdown 1 is not even painted and the "Other(s)" selector     |
+   * |                                         | carries the "Contributing CGIAR Centers" label, so ANY centre |
+   * |                                         | satisfies it (P2-3324 / P2-3326 branch).                      |
+   * | pre-2026 flat dropdown (`html:128-140`) | no ToC bucket exists → ANY centre satisfies it.               |
+   *
+   * ⚠️ Origin is read from the SAME bucketing the user sees on screen — `applyTocMappingOnLoad`
+   * (`rd-contributors-and-partners.service.ts:417-435`), i.e. the persisted `from_toc` flag. That column
+   * is `NOT NULL DEFAULT 0` (`1782418095648-AddFromTocToContributorsPartners.ts:10`), so a result saved
+   * before the 2026 split shipped carries `from_toc = 0` on every centre and they all load into
+   * "Other(s)". Those results DO fail this rule, on purpose: `from_toc = 0` is indistinguishable from
+   * "the user deliberately kept only Other(s) centres", which is exactly the state the ticket exists to
+   * catch, so a legacy exemption would switch the rule off for its own use case. Nothing is silently
+   * blocked — this is the section's client-side mandatory-field FEEDBACK (see `src/CLAUDE.md` §21.5
+   * layer 1: it feeds "N fields missing" and the "Section complete" indicator), NOT a hard gate on
+   * Save draft. The PATCH still goes through, so no result that used to save stops saving.
+   */
+  readonly contributingCentersRequiredNote =
+    'At least one Contributing CGIAR Center coming from the Theory of Change must remain selected. Centers added through "Other(s)" do not satisfy this on their own.';
+  readonly contributingCentersEmptyNote = 'Please select at least one Contributing CGIAR Center.';
+
+  /** Real centres in the ToC bucket (dropdown 1), i.e. `contributing_center` minus the UI-only "Other(s)" sentinel. */
+  get tocCentersSelectedCount(): number {
+    return (this.rdPartnersSE.partnersBody?.contributing_center || []).filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE).length;
+  }
+
+  /** Centres picked in the "Other(s)" dropdown (dropdown 2). Never counts towards the ToC minimum. */
+  get otherCentersSelectedCount(): number {
+    return (this.rdPartnersSE.otherCentersSelected || []).length;
+  }
+
+  /** True when the ToC minimum applies, i.e. only in the 2026 split AND only when the ToC actually brought centres. */
+  get requiresTocCenter(): boolean {
+    return this.isCP2026() && this.hasReferenceCenters();
+  }
+
+  /**
+   * The single completeness expression for the field, covering BOTH template paths (2026/ToC and the flat
+   * pre-2026 one). ⚠️ A rule added to only one of them silently does not apply to the other, which is why
+   * this getter is bound from ONE marker placed outside both branches.
+   */
+  get contributingCentersComplete(): boolean {
+    if (this.requiresTocCenter) return this.tocCentersSelectedCount > 0;
+    return this.tocCentersSelectedCount + this.otherCentersSelectedCount > 0;
+  }
+
+  /**
+   * Inline validation message under the dropdowns (P2-3249 AC: "display a clear validation message").
+   *
+   * ⚠️ The companion label for the bottom bar's "Still missing" list is NOT a getter: `appFeedbackValidation`
+   * writes `labelText` into the DOM once in `ngOnInit` and never again, so a bound label freezes on first render.
+   * The template carries the two wordings as static attributes on two `@if`-branched markers instead.
+   */
+  get contributingCentersValidationMessage(): string {
+    return this.requiresTocCenter ? this.contributingCentersRequiredNote : this.contributingCentersEmptyNote;
+  }
+
   // "Other(s) CGIAR Centers" is a special item at the END of the first dropdown's list (per Excel), not an outside
   // checkbox. Selecting it toggles the second dropdown; it is never persisted as a real center.
   readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';

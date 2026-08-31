@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { AowHloCreateModalComponent } from './aow-hlo-create-modal.component';
+import { AowHloCreateModalComponent, withScienceProgramLabel } from './aow-hlo-create-modal.component';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
@@ -343,6 +343,15 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       },
       resultsSE: {
         GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
+        // P2-3420 — catalogue for the link-to-a-QA'd-innovation dropdown, loaded on init.
+        GET_qaInnovationDevelopmentResults: jest.fn().mockReturnValue(
+          of({
+            response: [
+              { id: 501, result_code: 5501, title: 'Drought-tolerant bean variety', status_id: 2, phase_year: 2025, acronym: 'P25' },
+              { id: 502, result_code: 5502, title: 'Solar-powered irrigation kit', status_id: 2, phase_year: 2024, acronym: 'P22' }
+            ]
+          })
+        ),
         GET_mqapValidation: jest.fn().mockReturnValue(
           of({
             response: {
@@ -660,6 +669,31 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
     });
   });
 
+  /**
+   * Guards the WIRING, not the helper. Removing `.map(withScienceProgramLabel)` from the load in
+   * `ngOnInit` left every helper unit test green while the dropdowns went back to showing "SP01",
+   * so the composition has to be asserted on what the options actually carry.
+   */
+  describe('Science Program label wiring (QA 2026-08-28)', () => {
+    it('labels the options the two Science Program dropdowns read', () => {
+      (component.api.resultsSE.GET_AllInitiatives as jest.Mock).mockReturnValue(
+        of({ response: [{ id: 11, initiative_id: 11, official_code: 'SP01', name: 'Sustainable Farming' }] })
+      );
+
+      component.ngOnInit();
+
+      expect(component.allInitiatives()[0].sp_label).toBe('SP01 - Sustainable Farming');
+      expect(component.otherScienceList()[0].sp_label).toBe('SP01 - Sustainable Farming');
+    });
+
+    it('keeps the "Other(s)" sentinel readable in dropdown 1', () => {
+      const sentinel = component.dropdown1ScienceOptions().find((o: any) => o.id === component.OTHER_SP_ID);
+
+      // Without its own sp_label the sentinel row would render blank once optionLabel moved.
+      expect(sentinel.sp_label).toBe('Other(s)');
+    });
+  });
+
   describe('Helper Getters and Computed Signals (phaseYear, isAdmin)', () => {
     it('should compute phaseYear from api.dataControlSE.reportingCurrentPhase', () => {
       expect(component.phaseYear()).toBe(2026);
@@ -766,5 +800,134 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       const scienceLabelEl = scienceHeaderEl.query(By.css('.pr_label'));
       expect(scienceLabelEl.nativeElement.textContent.trim()).toContain('Other(s) Science Program(s)/Accelerator(s)');
     });
+  });
+
+
+  /**
+   * P2-3420 — link to a QA'd Innovation Development result on the ToC-linked create modal.
+   * The gate is the PHASE year (2026 in this fixture), never `isP25()`.
+   */
+  describe("P2-3420: link to a QA'd Innovation Development result", () => {
+    const INNOVATION_USE = 2;
+
+    function armInnovationUse() {
+      mockEntityAowService.currentResultToReport.set({
+        toc_result_id: 'TOC-100',
+        result_level_id: 3,
+        indicators: [{ type_name: 'Number of innovations used', result_type_id: INNOVATION_USE, result_level_id: 3 }]
+      });
+      fixture.detectChanges();
+    }
+
+    it('defaults the answer to NO, as the story requires', () => {
+      armInnovationUse();
+
+      expect(component.hasInnovationLink()).toBe(false);
+      expect(component.linkedResultId()).toBeNull();
+    });
+
+    it('shows the question for an Innovation use indicator in the open (2026) phase', () => {
+      armInnovationUse();
+
+      expect(component.showsInnovationLink()).toBe(true);
+    });
+
+    it('never shows it for any other indicator category', () => {
+      fixture.detectChanges();
+
+      expect(component.showsInnovationLink()).toBe(false);
+    });
+
+    it('loads the shared catalogue on init — one request for every creation surface', () => {
+      fixture.detectChanges();
+
+      expect(mockApiService.resultsSE.GET_qaInnovationDevelopmentResults).toHaveBeenCalled();
+    });
+
+    it('blocks "Create and continue" while the answer is YES with no innovation chosen', () => {
+      armInnovationUse();
+      component.onInnovationLinkChange(true);
+
+      expect(component.canCreateResult()).toBe(false);
+
+      component.createResult();
+      expect(mockApiService.resultsSE.POST_createResult).not.toHaveBeenCalled();
+    });
+
+    it('unblocks it once an innovation is chosen, and sends it INSIDE the create body', () => {
+      armInnovationUse();
+      component.onInnovationLinkChange(true);
+      component.linkedResultId.set(501);
+      component.createResultBody.set({ ...component.createResultBody(), result_name: 'An innovation use result' });
+
+      expect(component.canCreateResult()).toBe(true);
+
+      component.createResult();
+
+      const body = mockApiService.resultsSE.POST_createResult.mock.calls.at(-1)[0];
+      expect(body.result.has_innovation_link).toBe(true);
+      expect(body.result.linked_results).toEqual([501]);
+    });
+
+    it('drops the selection when the user switches back to NO', () => {
+      armInnovationUse();
+      component.onInnovationLinkChange(true);
+      component.linkedResultId.set(501);
+
+      component.onInnovationLinkChange(false);
+
+      expect(component.linkedResultId()).toBeNull();
+    });
+
+    it('🛑 leaves the create body untouched for a category that never asks the question', () => {
+      mockEntityAowService.currentResultToReport.set({
+        toc_result_id: 'TOC-100',
+        result_level_id: 3,
+        indicators: [{ type_name: 'Number of innovations', result_type_id: 7, result_level_id: 3 }]
+      });
+      fixture.detectChanges();
+      component.createResultBody.set({ ...component.createResultBody(), result_name: 'An innovation development result' });
+
+      component.createResult();
+
+      const body = mockApiService.resultsSE.POST_createResult.mock.calls.at(-1)[0];
+      expect(body.result).not.toHaveProperty('has_innovation_link');
+      expect(body.result).not.toHaveProperty('linked_results');
+    });
+  });
+
+});
+
+/**
+ * QA 2026-08-28. The dropdowns showed "SP01" with no name, while the centre and project fields
+ * in the same modal show a name. The label is composed at load time rather than in the options
+ * computed, because `pr-filter-multiselect` keeps whole objects in the model and compares them by
+ * key count — see the doc comment on the helper.
+ */
+describe('Science Program display label (QA 2026-08-28)', () => {
+  it('composes code and name', () => {
+    expect(withScienceProgramLabel({ official_code: 'SP01', name: 'Sustainable Farming' }).sp_label).toBe(
+      'SP01 - Sustainable Farming'
+    );
+  });
+
+  it('falls back to the other name fields the payload may carry', () => {
+    expect(withScienceProgramLabel({ official_code: 'SP02', initiative_name: 'Nutrition' }).sp_label).toBe('SP02 - Nutrition');
+    expect(withScienceProgramLabel({ official_code: 'SP03', short_name: 'Climate' }).sp_label).toBe('SP03 - Climate');
+  });
+
+  it('degrades to whichever half exists instead of printing a dangling dash', () => {
+    expect(withScienceProgramLabel({ official_code: 'SP04' }).sp_label).toBe('SP04');
+    expect(withScienceProgramLabel({ name: 'Only a name' }).sp_label).toBe('Only a name');
+    expect(withScienceProgramLabel({}).sp_label).toBe('');
+  });
+
+  it('keeps every original field, so the model shape the dropdown compares stays intact', () => {
+    const original = { id: 7, official_code: 'SP05', name: 'Genetic Innovation', from_toc: true };
+    const labelled = withScienceProgramLabel(original);
+
+    expect(labelled).toEqual({ ...original, sp_label: 'SP05 - Genetic Innovation' });
+    // The helper must not mutate: preselection spreads the same source array.
+    expect((original as any).sp_label).toBeUndefined();
   });
 });

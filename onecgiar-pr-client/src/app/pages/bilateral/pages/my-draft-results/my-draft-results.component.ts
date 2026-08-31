@@ -1,8 +1,10 @@
-import { Component, inject, OnInit, OnDestroy, signal, effect } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { HlmButton } from '@spartan/button';
 import { PrDialogComponent } from '../../../../shared/components/pr-dialog/pr-dialog.component';
+import { PrFilterSelectComponent } from '../../../../shared/components/pr-filter-select/pr-filter-select.component';
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralAiDraft } from '../../services/bilateral-ai.interfaces';
@@ -11,6 +13,11 @@ import { BILATERAL_STATUS } from '../../services/bilateral-creation.service';
 import { BilateralPageHeaderComponent } from '../../components/bilateral-page-header/bilateral-page-header.component';
 import { DraftResultCardComponent } from '../bilateral-ai-draft-detail/components/draft-result-card/draft-result-card.component';
 import { DraftEvidenceListComponent } from '../bilateral-ai-draft-detail/components/draft-evidence-list/draft-evidence-list.component';
+import {
+  DraftProjectFilterOption,
+  MyDraftResultsFilterService,
+  normalizeProjectId,
+} from './services/my-draft-results-filter.service';
 
 /**
  * P2-3169 AC2 — the `result` relation the drafts endpoint returns next to every draft.
@@ -70,27 +77,35 @@ const DRAFT_STATUS_MODIFIERS: Record<number, string> = {
   selector: 'app-my-draft-results',
   imports: [
     CommonModule,
+    FormsModule,
     RouterModule,
     HlmButton,
     PrDialogComponent,
+    PrFilterSelectComponent,
     BilateralPageHeaderComponent,
     DraftResultCardComponent,
     DraftEvidenceListComponent,
     PrTooltipDirectiveModule,
   ],
+  // P2-3319 — the filter is per-visit: provided here so it resets on leaving the tab or switching
+  // centre, never in root (project ids are meaningless across centres).
+  providers: [MyDraftResultsFilterService],
   templateUrl: './my-draft-results.component.html',
   styleUrl: './my-draft-results.component.scss',
 })
 export class MyDraftResultsComponent implements OnInit, OnDestroy {
   readonly bilateralAiService = inject(BilateralAiService);
   readonly ctx = inject(BilateralContextService);
+  readonly filter = inject(MyDraftResultsFilterService);
 
   /**
    * P2-3316: plain-language notes for the three card actions. End users could not tell
    * Review / Promote / Delete apart from the labels alone, so each one states what happens
-   * to the draft after the click. Wording matches the real behaviour, not the button name:
-   * Review only opens the read-only preview aside, Promote creates the actual result and
-   * navigates to it, Delete removes the draft for good.
+   * to the draft after the click. The middle button was renamed Promote -> Create Result
+   * (Yeck, 31-Aug-2026, on Nicoleta's request); only the visible label changed, the
+   * promote* handlers and the endpoint keep their name. Review only opens the read-only
+   * preview aside, Create Result creates the actual result and navigates to it, Delete
+   * removes the draft for good.
    */
   readonly reviewTooltip =
     'Preview everything the AI extracted from your files, next to the source evidence it used. Nothing is saved or created — the draft stays in this list.';
@@ -113,12 +128,70 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
     this.bilateralAiService.loadAllDrafts();
   }
 
-  get drafts(): BilateralAiDraft[] {
-    return this.bilateralAiService.draftList();
+  // ── P2-3319 · Filter by project ───────────────────────────────────────
+  /**
+   * Every draft the centre has, filter ignored. Kept apart from `drafts` so the page can tell
+   * "this centre has no drafts" (empty state + CTA) from "the filter hid them all" (clear button).
+   */
+  readonly allDrafts = computed<BilateralAiDraft[]>(() => this.bilateralAiService.draftList());
+
+  /** What the list actually renders. */
+  readonly drafts = computed<BilateralAiDraft[]>(() => this.filter.filterDrafts(this.allDrafts()));
+
+  readonly hasAnyDrafts = computed<boolean>(() => this.allDrafts().length > 0);
+  readonly hasDrafts = computed<boolean>(() => this.drafts().length > 0);
+
+  /** The centre has drafts, but none of them belong to the selected project. */
+  readonly isFilteredEmpty = computed<boolean>(() => this.hasAnyDrafts() && !this.hasDrafts());
+
+  /**
+   * One option per project that actually appears in this centre's drafts — building it from the
+   * loaded list rather than from the full CLARISA catalogue means the dropdown can never offer a
+   * project that would empty the page. Labelled through `projectNameMap()` (the same lookup the
+   * card and the promote dialog use) and falling back to the raw id while the names are still
+   * loading, so the pill is never blank. Sorted by label for a stable, scannable order.
+   */
+  readonly projectFilterOptions = computed<DraftProjectFilterOption[]>(() => {
+    const nameMap = this.bilateralAiService.projectNameMap();
+    const byId = new Map<string, DraftProjectFilterOption>();
+
+    for (const draft of this.allDrafts()) {
+      const value = normalizeProjectId(draft?.job?.project_id);
+      if (!value || byId.has(value)) continue;
+      byId.set(value, { value, label: nameMap[Number(value)] ?? value });
+    }
+
+    return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
+  });
+
+  /** Label of the active project, for the chip. `''` when no project is selected. */
+  readonly selectedProjectLabel = computed<string>(() => {
+    const selected = normalizeProjectId(this.filter.selectedProjectId());
+    if (!selected) return '';
+    return this.projectFilterOptions().find(option => option.value === selected)?.label ?? selected;
+  });
+
+  /** The count line under the title — says how much of the list the filter is hiding. */
+  readonly subtitle = computed<string>(() => {
+    const total = this.allDrafts().length;
+    if (total === 0) return 'No drafts yet';
+
+    const shown = this.drafts().length;
+    if (this.filter.hasActiveFilters()) return `Showing ${shown} of ${total} draft${total !== 1 ? 's' : ''}`;
+    return `${total} draft${total !== 1 ? 's' : ''} ready for review`;
+  });
+
+  /** `app-pr-filter-select`'s empty sentinel is `'all'`; the filter service's is `null`. */
+  selectValue(value: string | null): string {
+    return value ?? 'all';
   }
 
-  get hasDrafts(): boolean {
-    return this.drafts.length > 0;
+  onProjectFilterChange(value: unknown): void {
+    this.filter.selectProject(value);
+  }
+
+  clearFilters(): void {
+    this.filter.clearAll();
   }
 
   getDraftTitle(draft: BilateralAiDraft): string {

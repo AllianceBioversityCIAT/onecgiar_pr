@@ -59,6 +59,9 @@ describe('BilateralResultCreatorComponent', () => {
       isW3Bilateral: signal(false) as any,
       // P2-3352: status badge in the header.
       resultStatusId: signal(null) as any,
+      // P2-3520: the read-only gate the editor now consumes. Writable here so a test can flip the
+      // result out of Editing and assert the lock.
+      isEditableByCenterUser: signal(true) as any,
       resultTitle: signal('') as any,
       isLoadingResult: signal(false) as any,
       // Signals the editor sections read once they mount.
@@ -101,6 +104,7 @@ describe('BilateralResultCreatorComponent', () => {
       hasPendingSaves: signal(false),
       globalSaveState: signal('idle'),
       setResultId: jest.fn(),
+      setReadOnly: jest.fn(),
       registerField: jest.fn(),
       updateField: jest.fn(),
       updateFieldsBatch: jest.fn(),
@@ -467,5 +471,39 @@ describe('BilateralResultCreatorComponent', () => {
     component.selectedReportingWay.set('manual');
     component.onProjectSelected({} as any);
     expect(component.selectedReportingWay()).toBeNull();
+  });
+
+  /**
+   * P2-3520 — `isEditableByCenterUser()` already existed and nothing read it, so after Submit for
+   * Review the form stayed open and the autosave kept writing while the Science Program reviewed.
+   */
+  describe('read-only gate once the result leaves Editing', () => {
+    it('leaves the form open while the result is still editable', () => {
+      creationService.isEditableByCenterUser.set(true);
+      fixture.detectChanges();
+
+      expect(component.isFormReadOnly()).toBe(false);
+      expect(autoSaveService.setReadOnly).toHaveBeenCalledWith(false);
+    });
+
+    it('locks the autosave as soon as the result stops being editable', () => {
+      autoSaveService.setReadOnly.mockClear();
+      creationService.isEditableByCenterUser.set(false);
+      fixture.detectChanges();
+
+      expect(component.isFormReadOnly()).toBe(true);
+      expect(autoSaveService.setReadOnly).toHaveBeenCalledWith(true);
+    });
+
+    it('refuses a second submission of a result that already left the centre', () => {
+      creationService.isEditableByCenterUser.set(false);
+      fixture.detectChanges();
+      component.resultId.set(42);
+      creationService.submitResult.mockClear();
+
+      component.submitResult();
+
+      expect(creationService.submitResult).not.toHaveBeenCalled();
+    });
   });
 });

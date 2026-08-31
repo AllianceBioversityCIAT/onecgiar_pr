@@ -647,6 +647,10 @@ export class IpsrPathwayStepFourService {
           institutions_expected_investment,
           is_result_ip_published: result_ip.is_result_ip_published,
           ipsr_pdf_report: result_ip.ipsr_pdf_report,
+          // P2-3426 green-check guard: the NULL -> false coercion must stay.
+          // validation_ipsr_step_four_P25 returns FALSE while has_scaling_studies IS NULL
+          // (migrations/1769532691577-CreatIPSRGreen.ts:615), so returning null here would
+          // leave every package with the hidden question permanently un-greenable.
           has_scaling_studies: result_ip.has_scaling_studies ?? false,
           scaling_studies_urls,
         },

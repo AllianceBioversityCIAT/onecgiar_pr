@@ -23,6 +23,7 @@ export interface Phases {
   can_be_deleted: boolean;
   selected: boolean;
   obj_portfolio?: {
+    id?: number;
     acronym?: string;
   };
 }

@@ -19,7 +19,18 @@
 
 <app-step-n4-reference-material-links [body]="this.ipsrStep4Body"></app-step-n4-reference-material-links>
 
-@if (this.api.fieldsManagerSE.isP25() && !isScalingStudiesQuestionHiddenByLevel()) {
+<!-- P2-3426: the "Have any studies been conducted (...)" question is RETIRED from the 2026 phase
+     onwards — closed for writing, but not deleted. Inside the existing P25 gate:
+       · phase <= 2025 -> `isScalingStudiesRetired()` is false: rendered and fully editable,
+         byte-for-byte the behaviour that shipped before this ticket.
+       · phase >= 2026 -> rendered ONLY when a stored answer exists, and always read-only.
+     Read-only is not a new component: `[readOnly]` on app-pr-radio-button paints `block-field` and
+     disables the radios, `[disabled]` on app-studies-link disables the inputs and drops the delete
+     and "Add another study link" controls.
+     ⚠️ `[(ngModel)]` stays bound in read-only mode ON PURPOSE: the value must keep round-tripping
+     into the PATCH body, because the server deactivates every stored study link of the package when
+     `has_scaling_studies` arrives falsy (ipsr-pathway-step-four.service.ts:104-109). -->
+@if (this.api.fieldsManagerSE.isP25() && (!isScalingStudiesRetired() || showScalingStudiesReadOnly())) {
   <app-pr-radio-button
     fieldRef="[innovation-use-form]-has-studies-links"
     [options]="[
@@ -28,9 +39,13 @@
     ]"
     optionLabel="label"
     [(ngModel)]="ipsrStep4Body.has_scaling_studies"
-    optionValue="value">
+    optionValue="value"
+    [readOnly]="isScalingStudiesRetired()">
   </app-pr-radio-button>
-  <app-studies-link *ngIf="ipsrStep4Body.has_scaling_studies" [body]="ipsrStep4Body"></app-studies-link>
+  <app-studies-link
+    *ngIf="ipsrStep4Body.has_scaling_studies"
+    [body]="ipsrStep4Body"
+    [disabled]="isScalingStudiesRetired()"></app-studies-link>
 }
 
 <div class="toggle_change_step" style="margin-top: 60px">

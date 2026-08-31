@@ -8,6 +8,7 @@ import {
   sectorLinkFromClick,
   abbreviateAxisLabel,
   stackedBarOption,
+  stackedBarVerticalOption,
   barLinkFromClick,
   datasetIdsFor,
   singleBarOption,
@@ -18,7 +19,9 @@ import {
   radarLinkFromClick,
   tocMapOption,
   tocMapTable,
-  tocMapAowFromClick
+  tocMapAowFromClick,
+  computeReportingTrendModel,
+  reportingTrendOption
 } from './program-overview.charts';
 import { HeatmapModel, OverviewLink, StatusSegment } from './program-overview.component';
 import type { TocBranch, TocLeaf, TocMapModel } from '../../dashboard-lab.toc-map';
@@ -212,14 +215,14 @@ describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)'
       expect(option.xAxis.type).toBe('value');
     });
 
-    it('hides the legend but shows no label on the COLUMN series themselves (CVT-DD-5a)', () => {
+    it('hides the legend and shows inside labels for numbers on the column series', () => {
       const option = stackedBarOption(barModel, ramp, totalLabelColor) as {
         legend: { show: boolean };
         series: { label?: { show?: boolean } }[];
       };
       expect(option.legend.show).toBe(false);
       const columnSeries = option.series.slice(0, barModel.cols.length);
-      columnSeries.forEach(s => expect(s.label?.show).not.toBe(true));
+      columnSeries.forEach(s => expect(s.label?.show).toBe(true));
     });
 
     it('tooltip names row × full column and flags a non-navigable segment, mirroring heatmapOption', () => {
@@ -316,6 +319,20 @@ describe('program-overview.charts stackedBarOption / barLinkFromClick (CVT-T-1)'
     /** FAIL input: a resolver that matches the totals artifact's index to a real cell turns this red. */
     it('resolves the totals-artifact seriesIndex (one past the last real column) to null — CVT-A-2 click-parity guard', () => {
       expect(barLinkFromClick({ seriesIndex: barModel.cols.length, dataIndex: 0 }, barModel)).toBeNull();
+    });
+  });
+
+  describe('stackedBarVerticalOption', () => {
+    it('builds vertical stacked bar with category xAxis and value yAxis', () => {
+      const option = stackedBarVerticalOption(barModel, ramp, totalLabelColor) as {
+        xAxis: { type: string; data: string[] };
+        yAxis: { type: string };
+        series: { type: string; stack: string }[];
+      };
+      expect(option.xAxis.type).toBe('category');
+      expect(option.xAxis.data).toEqual(barModel.rows);
+      expect(option.yAxis.type).toBe('value');
+      expect(option.series.length).toBe(barModel.cols.length + 1);
     });
   });
 });
@@ -511,11 +528,12 @@ describe('program-overview.charts donut (OVW-T-4)', () => {
       expect(series.data.map(d => d.itemStyle.color)).toEqual(['V1', 'V2', 'V1']);
     });
 
-    it('uses radius [62%, 88%], hides sector labels and the legend, and centers the total in the title', () => {
+    it('uses radius [52%, 74%], shows separated slices and sector labels, and centers the total in the title', () => {
       const option = donutOption(segments, palette);
-      const series = (option.series as { radius: string[]; label: { show: boolean } }[])[0];
-      expect(series.radius).toEqual(['62%', '88%']);
-      expect(series.label.show).toBe(false);
+      const series = (option.series as { radius: string[]; label: { show: boolean }; padAngle: number }[])[0];
+      expect(series.radius).toEqual(['52%', '74%']);
+      expect(series.padAngle).toBe(3);
+      expect(series.label.show).toBe(true);
       expect((option.legend as { show: boolean }).show).toBe(false);
       expect((option.title as { text: string; subtext: string }).text).toBe('7');
       expect((option.title as { text: string; subtext: string }).subtext).toBe('results');
@@ -1011,6 +1029,57 @@ describe('program-overview.charts — Theory-of-Change map (TCM-T-2)', () => {
 
       const branchRow = table.rows.find(row => row[0] === 'Area of Work 1' && row[1] === 'AOW01')!;
       expect(branchRow).toEqual(['Area of Work 1', 'AOW01', 'Area of Work 1', 'AoW', 2, 15, 4, '1/2']);
+    });
+  });
+});
+
+describe('program-overview.charts computeReportingTrendModel & reportingTrendOption', () => {
+  const sampleResults = [
+    { id: 1, result_code: 'R1', created_date: '2026-01-15T10:00:00Z', phase_year: 2026 },
+    { id: 2, result_code: 'R2', created_date: '2026-01-28T14:30:00Z', phase_year: 2026 },
+    { id: 3, result_code: 'R3', created_date: '2026-02-10T09:00:00Z', phase_year: 2026 },
+    { id: 4, result_code: 'R4', created_date: '2026-02-25T11:00:00Z', phase_year: 2026 },
+    { id: 5, result_code: 'R5', created_date: '2026-03-01T15:00:00Z', phase_year: 2026 }
+  ];
+
+  describe('computeReportingTrendModel', () => {
+    it('computes cumulative progress points across the reporting cycle', () => {
+      const model = computeReportingTrendModel(sampleResults, 2026, 5);
+      expect(model.points.length).toBeGreaterThanOrEqual(3);
+      expect(model.totalReported).toBe(5);
+      expect(model.points[model.points.length - 1].cumulative).toBe(5);
+    });
+
+    it('falls back gracefully when results array is empty but status total exists', () => {
+      const model = computeReportingTrendModel([], 2026, 11);
+      expect(model.totalReported).toBe(11);
+      expect(model.points.length).toBeGreaterThanOrEqual(2);
+      expect(model.paceLabel).toBe('11 results reported');
+    });
+
+    it('returns empty model when both results and status total are 0', () => {
+      const model = computeReportingTrendModel([], 2026, 0);
+      expect(model.totalReported).toBe(0);
+      expect(model.paceLabel).toBe('No results reported yet');
+    });
+  });
+
+  describe('reportingTrendOption', () => {
+    it('builds an ECharts smooth line chart with gradient areaStyle and tooltip', () => {
+      const model = computeReportingTrendModel(sampleResults, 2026, 5);
+      const option = reportingTrendOption(model, '#7c3aed') as {
+        xAxis: { data: string[] };
+        series: { type: string; smooth: number; data: number[] }[];
+        tooltip: { formatter: (params: unknown) => string };
+      };
+
+      expect(option.series[0].type).toBe('line');
+      expect(option.series[0].smooth).toBe(0.35);
+      expect(option.series[0].data.length).toBe(model.points.length);
+      expect(option.xAxis.data.length).toBe(model.points.length);
+
+      const tooltipHtml = option.tooltip.formatter({ dataIndex: 0 });
+      expect(tooltipHtml).toContain('Cumulative results:');
     });
   });
 });

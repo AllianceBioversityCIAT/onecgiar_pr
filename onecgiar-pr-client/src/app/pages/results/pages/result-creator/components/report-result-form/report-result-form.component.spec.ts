@@ -65,7 +65,15 @@ describe('ReportResultFormComponent', () => {
         GET_checkTitleUniqueness: jest.fn(() => of({ response: { isUnique: true, existing: null } })),
         POST_resultCreateHeader: jest.fn(() => of({ response: { result_code: 'R001', version_id: 1 } })),
         POST_createWithHandle: jest.fn(() => of({ response: { result_code: 'R001', version_id: 1 } })),
-        GET_mqapValidation: jest.fn(() => of({ response: { title: 'Test Title' } }))
+        GET_mqapValidation: jest.fn(() => of({ response: { title: 'Test Title' } })),
+        // P2-3421 — catalogue behind the link-to-a-QA'd-innovation dropdown.
+        GET_qaInnovationDevelopmentResults: jest.fn(() =>
+          of({
+            response: [
+              { id: 501, result_code: 5501, title: 'Drought-tolerant bean variety', status_id: 2, phase_year: 2025, acronym: 'P25' }
+            ]
+          })
+        )
       },
       updateUserData: jest.fn(callback => callback())
     };
@@ -841,6 +849,142 @@ describe('ReportResultFormComponent', () => {
       expect(text).not.toContain('null');
       expect(text).not.toContain('NaN');
       expect(text).toContain(`<strong>${new Date().getFullYear()}</strong>`);
+    });
+  });
+  /**
+   * P2-3421 — link to a QA'd Innovation Development result, EMERGENT (non-ToC) pathway only.
+   * The same component also renders the standalone legacy creator, so every test here pins one of
+   * the three gates: the surface opt-in, the indicator category, and the 2026 PHASE year.
+   */
+  describe('P2-3421: link to a QA\'d Innovation Development result', () => {
+    const INNOVATION_USE = 2;
+
+    function armEmergentInnovationUse() {
+      component.showInnovationLinkQuestion = true;
+      mockResultLevelService.resultBody.result_type_id = INNOVATION_USE;
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2026;
+    }
+
+    it('defaults the answer to NO, as the story requires', () => {
+      expect(component.hasInnovationLink).toBe(false);
+      expect(component.linkedResultId).toBeNull();
+    });
+
+    it('shows the question on the emergent pathway for Innovation use in 2026', () => {
+      armEmergentInnovationUse();
+
+      expect(component.showsInnovationLink).toBe(true);
+    });
+
+    it('🛑 never shows it on the standalone legacy creator, which renders this very component', () => {
+      armEmergentInnovationUse();
+      component.showInnovationLinkQuestion = false;
+
+      expect(component.showsInnovationLink).toBe(false);
+    });
+
+    it('🛑 never shows it for a 2025 phase — earlier phases must look exactly as they do today', () => {
+      armEmergentInnovationUse();
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2025;
+
+      expect(component.showsInnovationLink).toBe(false);
+    });
+
+    it('never shows it for any other indicator category', () => {
+      armEmergentInnovationUse();
+      mockResultLevelService.resultBody.result_type_id = 7;
+
+      expect(component.showsInnovationLink).toBe(false);
+    });
+
+    it('loads the shared catalogue on init only when the surface opted in', () => {
+      component.showInnovationLinkQuestion = true;
+      component.ngOnInit();
+
+      expect(mockApiService.resultsSE.GET_qaInnovationDevelopmentResults).toHaveBeenCalled();
+    });
+
+    it('blocks "Save and continue" while the answer is YES with no innovation chosen', () => {
+      armEmergentInnovationUse();
+      component.hasInnovationLink = true;
+      component.linkedResultId = null;
+
+      expect(component.innovationLinkIncomplete).toBe(true);
+    });
+
+    it('unblocks it once an innovation is chosen', () => {
+      armEmergentInnovationUse();
+      component.hasInnovationLink = true;
+      component.linkedResultId = 501;
+
+      expect(component.innovationLinkIncomplete).toBe(false);
+    });
+
+    it('never blocks on the default NO', () => {
+      armEmergentInnovationUse();
+
+      expect(component.innovationLinkIncomplete).toBe(false);
+    });
+
+    it('drops the selection when the user switches back to NO', () => {
+      armEmergentInnovationUse();
+      component.hasInnovationLink = true;
+      component.linkedResultId = 501;
+
+      component.hasInnovationLink = false;
+      component.onInnovationLinkChange();
+
+      expect(component.linkedResultId).toBeNull();
+    });
+
+    it('resets the answer when the indicator category changes', () => {
+      armEmergentInnovationUse();
+      component.hasInnovationLink = true;
+      component.linkedResultId = 501;
+
+      component.clean();
+
+      expect(component.hasInnovationLink).toBe(false);
+      expect(component.linkedResultId).toBeNull();
+    });
+
+    it('sends the answer INSIDE the create body, not as a chained PATCH', () => {
+      armEmergentInnovationUse();
+      mockResultLevelService.resultBody.initiative_id = 1;
+      mockResultLevelService.resultBody.result_name = 'An innovation use result';
+      component.hasInnovationLink = true;
+      component.linkedResultId = 501;
+
+      component.onSaveSection();
+
+      const body = mockApiService.resultsSE.POST_resultCreateHeader.mock.calls.at(-1)[0];
+      expect(body.has_innovation_link).toBe(true);
+      expect(body.linked_results).toEqual([501]);
+    });
+
+    it('sends has_innovation_link=false and no links when the user leaves the default NO', () => {
+      armEmergentInnovationUse();
+      mockResultLevelService.resultBody.initiative_id = 1;
+      mockResultLevelService.resultBody.result_name = 'An innovation use result';
+
+      component.onSaveSection();
+
+      const body = mockApiService.resultsSE.POST_resultCreateHeader.mock.calls.at(-1)[0];
+      expect(body.has_innovation_link).toBe(false);
+      expect(body.linked_results).toEqual([]);
+    });
+
+    it('🛑 leaves the create body untouched when the question was never shown (2025 phase)', () => {
+      armEmergentInnovationUse();
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2025;
+      mockResultLevelService.resultBody.initiative_id = 1;
+      mockResultLevelService.resultBody.result_name = 'A 2025 result';
+
+      component.onSaveSection();
+
+      const body = mockApiService.resultsSE.POST_resultCreateHeader.mock.calls.at(-1)[0];
+      expect(body).not.toHaveProperty('has_innovation_link');
+      expect(body).not.toHaveProperty('linked_results');
     });
   });
 });

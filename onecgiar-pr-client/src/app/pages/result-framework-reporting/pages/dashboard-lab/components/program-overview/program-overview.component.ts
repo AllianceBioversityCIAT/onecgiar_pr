@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { PrVizChartComponent, EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
 import {
@@ -6,6 +7,7 @@ import {
   heatmapTable,
   cellLinkFromClick,
   stackedBarOption,
+  stackedBarVerticalOption,
   barLinkFromClick,
   singleBarOption,
   singleBarTable,
@@ -18,13 +20,17 @@ import {
   sectorLinkFromClick,
   tocMapOption,
   tocMapTable,
-  tocMapAowFromClick
+  tocMapAowFromClick,
+  computeReportingTrendModel,
+  reportingTrendOption,
+  reportingTrendTable,
+  ReportingTrendModel
 } from './program-overview.charts';
 import type { TocMapModel } from '../../dashboard-lab.toc-map';
 import type { ECElementEvent } from 'echarts/core';
 
-/** A matrix card's view mode (`CVT-R-1`): default `'bars'` (`CVT-A-1`), session-local, per-card. */
-export type ChartViewMode = 'heatmap' | 'bars';
+/** A matrix card's view mode: default 'vertical-bar', then 'horizontal-bar', then 'heatmap'. */
+export type ChartViewMode = 'vertical-bar' | 'horizontal-bar' | 'heatmap';
 
 /**
  * Typed navigation intent for the Results tab (`OVW-R-5` emission contract). Only the defined
@@ -112,7 +118,7 @@ export interface HeatmapModel {
 @Component({
   selector: 'app-program-overview',
   standalone: true,
-  imports: [PrVizChartComponent],
+  imports: [NgClass, PrVizChartComponent],
   templateUrl: './program-overview.component.html',
   styleUrls: ['./program-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -138,10 +144,22 @@ export class ProgramOverviewComponent {
   readonly bilateralHeatmap = input<HeatmapModel | null>(null);
   /**
    * `OVW-R-6` (SHOULD): wrapper loading skeleton while the parent's source signal is still
-   * loading. Bound only to `w12Heatmap` — the parent has no equivalent bilateral-loading signal
-   * today (design §13 open gap), so `bilateralHeatmap`'s card has no loading input to bind.
+   * loading.
    */
   readonly w12HeatmapLoading = input<boolean>(false);
+  /**
+   * `changes/overview-phase-filter` OPF-T-4 (Leader remediation, OPF-R-2 "AND IT MUST show a
+   * loading state on each card"): wrapper loading skeleton for the "Reporting status" (W1/W2
+   * meter) card, while an explicit phase selection's meter overlay fetch is in flight. Same shape
+   * as `w12HeatmapLoading` above.
+   */
+  readonly meterLoading = input<boolean>(false);
+  /**
+   * Same contract as `meterLoading`, for the W3/Bilateral cards (reporting status donut,
+   * categories radar, and center × category heatmap) — closes the gap `w12HeatmapLoading`'s
+   * docstring used to record here ("the parent has no equivalent bilateral-loading signal today").
+   */
+  readonly bilateralLoading = input<boolean>(false);
 
   /**
    * Theory-of-Change map model (`changes/overview-toc-map`, TCM-T-3) — built by the parent's
@@ -153,6 +171,11 @@ export class ProgramOverviewComponent {
   readonly tocMap = input<TocMapModel | null>(null);
   /** True while any ToC bucket the map needs is still in flight for the current SP (TCM-R-1). */
   readonly tocMapLoading = input<boolean>(false);
+
+  /** Individual result rows for computing reporting trend / velocity */
+  readonly programResults = input<any[]>([]);
+  /** Active cycle year (e.g. 2026) */
+  readonly cycleYear = input<number>(new Date().getFullYear());
 
   /**
    * Typed navigation intent (`OVW-R-5`). Rows, status meter segments, legend items and heatmap
@@ -221,8 +244,8 @@ export class ProgramOverviewComponent {
    * a pure view preference over data the parent already supplies — the parent owns data/links,
    * this component owns geometry.
    */
-  readonly w12ViewMode = signal<ChartViewMode>('bars');
-  readonly bilateralViewMode = signal<ChartViewMode>('bars');
+  readonly w12ViewMode = signal<ChartViewMode>('horizontal-bar');
+  readonly bilateralViewMode = signal<ChartViewMode>('horizontal-bar');
 
   setW12ViewMode(mode: ChartViewMode): void {
     this.w12ViewMode.set(mode);
@@ -232,13 +255,18 @@ export class ProgramOverviewComponent {
     this.bilateralViewMode.set(mode);
   }
 
-  /** Mode-aware options (`CVT-DD-2`): one host per card, the computed swaps builders on toggle. */
+  /** Mode-aware options: vertical bar (default), horizontal bar, or heatmap. */
   readonly w12ChartOption = computed<EChartsOption | null>(() => {
     const model = this.w12Heatmap();
     if (!model || !model.rows.length) return null;
-    return this.w12ViewMode() === 'bars'
-      ? stackedBarOption(model, this.heatmapRamp(), this.totalLabelColor())
-      : heatmapOption(model, this.heatmapRamp());
+    const mode = this.w12ViewMode();
+    if (mode === 'vertical-bar') {
+      return stackedBarVerticalOption(model, this.heatmapRamp(), this.totalLabelColor());
+    } else if (mode === 'horizontal-bar') {
+      return stackedBarOption(model, this.heatmapRamp(), this.totalLabelColor());
+    } else {
+      return heatmapOption(model, this.heatmapRamp());
+    }
   });
 
   readonly w12HeatmapTable = computed<VizChartTableModel | null>(() => {
@@ -249,9 +277,14 @@ export class ProgramOverviewComponent {
   readonly bilateralChartOption = computed<EChartsOption | null>(() => {
     const model = this.bilateralHeatmap();
     if (!model || !model.rows.length) return null;
-    return this.bilateralViewMode() === 'bars'
-      ? stackedBarOption(model, this.heatmapRamp(), this.totalLabelColor())
-      : heatmapOption(model, this.heatmapRamp());
+    const mode = this.bilateralViewMode();
+    if (mode === 'vertical-bar') {
+      return stackedBarVerticalOption(model, this.heatmapRamp(), this.totalLabelColor());
+    } else if (mode === 'horizontal-bar') {
+      return stackedBarOption(model, this.heatmapRamp(), this.totalLabelColor());
+    } else {
+      return heatmapOption(model, this.heatmapRamp());
+    }
   });
 
   readonly bilateralHeatmapTable = computed<VizChartTableModel | null>(() => {
@@ -266,14 +299,14 @@ export class ProgramOverviewComponent {
   onW12HeatmapClick(event: ECElementEvent): void {
     const model = this.w12Heatmap();
     if (!model) return;
-    const link = this.w12ViewMode() === 'bars' ? barLinkFromClick(event, model) : cellLinkFromClick(event, model);
+    const link = this.w12ViewMode() === 'heatmap' ? cellLinkFromClick(event, model) : barLinkFromClick(event, model);
     this.emitLink(link);
   }
 
   onBilateralHeatmapClick(event: ECElementEvent): void {
     const model = this.bilateralHeatmap();
     if (!model) return;
-    const link = this.bilateralViewMode() === 'bars' ? barLinkFromClick(event, model) : cellLinkFromClick(event, model);
+    const link = this.bilateralViewMode() === 'heatmap' ? cellLinkFromClick(event, model) : barLinkFromClick(event, model);
     this.emitLink(link);
   }
 
@@ -313,6 +346,23 @@ export class ProgramOverviewComponent {
   });
 
   readonly statusTotal = computed(() => this.statusSegments().reduce((sum, s) => sum + s.count, 0));
+
+  readonly reportingTrendModel = computed<ReportingTrendModel>(() =>
+    computeReportingTrendModel(this.programResults(), this.cycleYear(), this.statusTotal())
+  );
+
+  readonly reportingTrendChartOption = computed<EChartsOption>(() =>
+    reportingTrendOption(this.reportingTrendModel(), this.totalLabelColor())
+  );
+
+  readonly reportingTrendTable = computed<VizChartTableModel>(() =>
+    reportingTrendTable(this.reportingTrendModel())
+  );
+
+  segmentPercent(segment: StatusSegment): number {
+    const total = this.statusTotal();
+    return total ? Math.round((segment.count / total) * 100) : 0;
+  }
 
   segmentWidth(segment: StatusSegment): number {
     const total = this.statusTotal();

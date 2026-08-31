@@ -70,6 +70,23 @@ export class BilateralAutoSaveService {
   fieldStatus = signal<Record<string, FieldStatus>>({});
   hasPendingSaves = signal(false);
 
+  /**
+   * P2-3520 — the real lock. Disabling the inputs is the visible half; this is the half that keeps
+   * edits out of the database once the result has left the centre's hands.
+   *
+   * Every public write entry point checks it and returns early, so a control that somehow stays
+   * interactive (a stale template, a keyboard path, a section that saves from an effect) still cannot
+   * persist. It guards `flush()` too, which is what runs when the page is left.
+   *
+   * Set from the editor out of `BilateralCreationService.isEditableByCenterUser()`; defaults to false
+   * so the wizard and any consumer that never sets it keep saving as before.
+   */
+  readonly isReadOnly = signal(false);
+
+  setReadOnly(readOnly: boolean): void {
+    this.isReadOnly.set(readOnly);
+  }
+
   globalSaveState = computed<GlobalSaveState>(() => {
     const statuses = Object.values(this.fieldStatus());
     if (statuses.includes('saving')) return 'saving';
@@ -89,6 +106,8 @@ export class BilateralAutoSaveService {
   }
 
   updateField(fieldPath: string, value: unknown, fieldType: FieldType = 'text'): void {
+    if (this.isReadOnly()) return;
+
     this.fieldStatus.update(s => ({ ...s, [fieldPath]: 'saving' }));
 
     if (fieldType === 'text') {
@@ -104,6 +123,8 @@ export class BilateralAutoSaveService {
   }
 
   notifyBlur(fieldPath: string, value: unknown): void {
+    if (this.isReadOnly()) return;
+
     const existing = this._debounceTimers.get(fieldPath);
     if (existing) clearTimeout(existing);
     this._blurSubject.next({ fieldPath, value });
@@ -119,6 +140,8 @@ export class BilateralAutoSaveService {
     body: Record<string, unknown>,
     options?: { debounceMs?: number; statusKey?: string | string[]; executor?: PayloadExecutor }
   ): void {
+    if (this.isReadOnly()) return;
+
     const statusKeys = this.normalizeStatusKeys(endpointKey, options?.statusKey);
     const debounceMs = options?.debounceMs ?? 0;
 
@@ -147,6 +170,8 @@ export class BilateralAutoSaveService {
    * Run an arbitrary request immediately while tracking field status (evidence / type-specific).
    */
   runImmediate(statusKey: string, requestFn: () => Observable<unknown>): void {
+    if (this.isReadOnly()) return;
+
     const generation = this._generation;
     this.fieldStatus.update(s => ({ ...s, [statusKey]: 'saving' }));
     requestFn().subscribe({
@@ -164,6 +189,8 @@ export class BilateralAutoSaveService {
   }
 
   async flush(): Promise<void> {
+    if (this.isReadOnly()) return;
+
     this._debounceTimers.forEach(t => clearTimeout(t));
     this._debounceTimers.clear();
     this._payloadDebounceTimers.forEach(t => clearTimeout(t));
@@ -200,6 +227,8 @@ export class BilateralAutoSaveService {
   }
 
   updateFieldsBatch(updates: Record<string, unknown>): void {
+    if (this.isReadOnly()) return;
+
     for (const [fieldPath, value] of Object.entries(updates)) {
       this.fieldStatus.update(s => ({ ...s, [fieldPath]: 'saving' }));
       this._pendingFields.set(fieldPath, { fieldPath, value, fieldType: 'select' });
@@ -223,6 +252,9 @@ export class BilateralAutoSaveService {
     this.fieldStatus.set({});
     this.hasPendingSaves.set(false);
     this._currentResultId.set(null);
+    // reset() also runs between results in the same visit: a locked result must not leave the next
+    // one locked.
+    this.isReadOnly.set(false);
   }
 
   private readonly _currentResultId = signal<number | null>(null);

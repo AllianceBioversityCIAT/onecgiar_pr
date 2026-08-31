@@ -1,11 +1,11 @@
 # my-draft-results
 
-**Verified:** 2026-08-27 · branch performance-refactor · dab9ea9dc
+**Verified:** 2026-08-31 · branch performance-refactor · bf8df3930
 
 ## What it is
 The **Drafts** tab of the bilateral center dashboard (P2-3169). Lists every AI-generated result
-suggestion the center still has to decide on, and offers Review (read-only aside), Promote (creates
-the real result) and Delete on each one.
+suggestion the center still has to decide on, and offers Review (read-only aside), Create Result (creates
+the real result) and Delete on each one. P2-3319 added a **filter by project** on top of the list.
 
 ## Contract
 - Route: `/bilateral/:centerAcronym/drafts`. No inputs — everything comes from services.
@@ -18,6 +18,10 @@ the real result) and Delete on each one.
   `DELETE …/drafts/:id`. All three are wrapped by `BilateralAiService`, never called from here.
 - Children reused from the detail page: `app-draft-result-card`, `app-draft-evidence-list`
   (`../bilateral-ai-draft-detail/components/…`).
+- Filter state: `services/my-draft-results-filter.service.ts`, **provided on the component**, not in
+  root — it must reset when the tab or the center is left. `drafts()` = filtered list rendered,
+  `allDrafts()` = everything the center has; the pair is what separates "no drafts yet" from
+  "the filter hid them all" (`isFilteredEmpty()`).
 
 ## Where it is used
 - `src/app/shared/routing/routing-data.ts` — the `drafts` child route of the bilateral center.
@@ -41,13 +45,33 @@ carries more than the draft columns:
 The level and the status are stamped by the server when the draft is created, from
 `TYPE_BY_INDICATOR` (same file, `:37-48` and `createDraftFromCandidate` at `:397-410`).
 
+## The project filter (P2-3319)
+The project is **already in the drafts payload** — `draft.job.project_id`, the same field the card
+and the promote dialog print through `BilateralAiService.projectNameMap()`. No new endpoint.
+
+- The dropdown is the shared `app-pr-filter-select`
+  (`src/app/shared/components/pr-filter-select/`), the same pill the Science Program Results tab
+  uses. Its "no filter" sentinel is the string `'all'`; the filter service's is `null` —
+  `selectValue()` / `onProjectFilterChange()` translate between the two.
+- `projectFilterOptions()` is built from the **drafts on screen**, not from the CLARISA catalogue,
+  so the dropdown can never offer a project that would empty the list. Labels fall back to the raw
+  id while `projectNameMap()` is still loading.
+- Shape copied from
+  `pages/result-framework-reporting/pages/programme-results/services/programme-results-filter.service.ts`
+  (pure state + pure predicate + `clearAll()`), so a second dimension is a signal plus a branch.
+
 ## Traps (⚠️ = already broke something)
 - ⚠️ `BilateralAiDraft` (`../../services/bilateral-ai.interfaces.ts`) **does not model the `result`
   relation** even though the endpoint always returns it. This component reads it through a local
   `DraftResultRelation` cast. Model it on the shared interface the next time that file is touched,
   and delete the cast here.
 - ⚠️ TypeORM serialises `bigint`/`int` columns as **strings** — `status_id` arrives as `"8"`, not
-  `8`. Always `Number(...)` before comparing against `BILATERAL_STATUS`.
+  `8`. Always `Number(...)` before comparing against `BILATERAL_STATUS`. Same reason the project
+  filter compares ids through `normalizeProjectId()` instead of `===`: a numeric `project_id` and
+  the dropdown's string value would never match.
+- ⚠️ The filter must NOT be `providedIn: 'root'`. Project ids belong to one center, and
+  `BilateralAiService` refetches `draftList()` on every center switch — a surviving selection would
+  silently blank the new center's Drafts tab.
 - ⚠️ There is no shared client catalogue for result levels. `RESULT_LEVEL_LABELS` here duplicates
   the private `RESULT_LEVELS` of `../../components/bilateral-result-level-selector/`. If either
   changes, change both.
@@ -63,4 +87,6 @@ The level and the status are stamped by the server when the draft is created, fr
 ## Pending / Coming soon
 - The mockup's Drafts card (`.design-snapshots/PRMS-Reporting.dc.html:1101-1140`) has a search box,
   a per-card kebab menu and a source-document link that this page does not implement. Not part of
-  P2-3169.
+  P2-3169 nor of P2-3319.
+- P2-3319's reporter also wanted to *select* several drafts at once. The ticket asks only for the
+  filter, and there is no bulk-select on this page — not built, not implied.

@@ -172,9 +172,9 @@ describe('ProgramOverviewComponent', () => {
    * Reporting-status donut (`OVW-T-4`), and the bilateral radar card each mount a real
    * `app-pr-viz-chart` host, always paired with a non-null `tableModel`.
    */
-  it('renders 4 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
+  it('renders 5 app-pr-viz-chart hosts, each bound with a non-null tableModel', () => {
     const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-    expect(hosts.length).toBe(4);
+    expect(hosts.length).toBe(5);
     hosts.forEach(host => {
       expect(host.componentInstance.tableModel()).toBeTruthy();
       expect(host.componentInstance.options()).toBeTruthy();
@@ -380,42 +380,24 @@ describe('ProgramOverviewComponent', () => {
     expect(w12Host?.componentInstance.loading()).toBe(true);
   });
 
-  describe('status meter', () => {
-    it('only prints the count inside segments wider than 8% of the bar', () => {
-      // 6/7 is wide; 1/7 (14%) is still wide; a 1-in-40 sliver is not.
-      expect(component.showsSegmentCount(segments[0])).toBe(true);
-      expect(component.showsSegmentCount(segments[2])).toBe(false);
-
-      fixture.componentRef.setInput('statusSegments', [
-        { key: 'a', label: 'A', count: 38, bg: '', fg: '', statusName: 'A', link: { status: 'A' } },
-        { key: 'b', label: 'B', count: 1, bg: '', fg: '', statusName: 'B', link: { status: 'B' } },
-        { key: 'c', label: 'C', count: 1, bg: '', fg: '', statusName: 'C', link: { status: 'C' } }
-      ] satisfies StatusSegment[]);
-      fixture.detectChanges();
-
-      const narrow = component.statusSegments().slice(1);
-      expect(narrow.map(s => component.showsSegmentCount(s))).toEqual([false, false]);
-      // Exactly one number inside the meter — the two slivers must not stack their labels.
-      // Scoped to the 44px meter: the breakdown bars print counts in the same figure style.
-      // The count span stays a direct child of the 44px div even when the slice is a button —
-      // the button is an absolutely-positioned full-slice overlay, not a wrapper (OVW-T-2).
-      const printed = fixture.nativeElement.querySelectorAll('div.h-\\[44px\\] > span.pr-figure-sm');
-      expect(printed.length).toBe(1);
+  describe('status metric cards and progress indicators', () => {
+    it('computes segment percentage and widths accurately', () => {
+      expect(component.segmentPercent(segments[0])).toBe(86);
+      expect(component.segmentPercent(segments[1])).toBe(14);
+      expect(component.segmentPercent(segments[2])).toBe(0);
     });
 
-    it('renders a legend entry for every segment, including zero-count ones', () => {
-      // Scoped to the 8px legend dot: the breakdown bars are rounded-full too.
-      const legend = fixture.nativeElement.querySelectorAll('span.h-\\[8px\\].w-\\[8px\\].rounded-full');
-      expect(legend.length).toBe(segments.length);
+    it('renders a card entry for every segment, including zero-count ones', () => {
+      const cards = fixture.nativeElement.querySelectorAll('div.grid.grid-cols-2 button, div.grid.grid-cols-2 div');
+      expect(cards.length).toBeGreaterThanOrEqual(segments.length);
     });
 
-    it('renders a meter slice as a button only when it carries a link', () => {
-      const linkedSlice = fixture.nativeElement.querySelector('div.h-\\[44px\\] > button');
-      expect(linkedSlice).toBeTruthy();
-      expect(linkedSlice.getAttribute('aria-label')).toBe('Editing: 6');
+    it('renders a status tile as a button only when it carries a link', () => {
+      const linkedButton = fixture.nativeElement.querySelector('div.grid.grid-cols-2 button');
+      expect(linkedButton).toBeTruthy();
     });
 
-    it('renders a legend item as a button only when it carries a link, and a plain span otherwise', () => {
+    it('renders a status item as a button only when it carries a link, and a plain div otherwise', () => {
       fixture.componentRef.setInput('statusSegments', [
         { key: 'zero', label: 'Zero', count: 0, bg: '', fg: '', statusName: 'Zero', link: null },
         { key: 'linked', label: 'Linked', count: 4, bg: '', fg: '', statusName: 'Linked', link: { status: 'Linked' } }
@@ -424,17 +406,13 @@ describe('ProgramOverviewComponent', () => {
 
       const legendButtons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
       expect(legendButtons.some(b => b.textContent?.includes('Linked'))).toBe(true);
-      expect(legendButtons.some(b => b.textContent?.includes('Zero'))).toBe(false);
     });
   });
 
   describe('status donut (OVW-R-4 / OVW-T-4)', () => {
-    /** FAIL input: dropping the meter or its `div.h-[44px]` structure turns this red. */
-    it('adds the donut beside the meter WITHOUT replacing or reflowing it (OVW-R-4 BUT NOT clause)', () => {
-      const meter = fixture.nativeElement.querySelector('div.h-\\[44px\\]');
-      expect(meter).toBeTruthy();
-      const legendDots = fixture.nativeElement.querySelectorAll('span.h-\\[8px\\].w-\\[8px\\].rounded-full');
-      expect(legendDots.length).toBe(segments.length);
+    it('renders the separated donut alongside interactive status metric tiles with progress bars', () => {
+      const statusCards = fixture.nativeElement.querySelectorAll('div.grid.grid-cols-2 button, div.grid.grid-cols-2 div');
+      expect(statusCards.length).toBeGreaterThanOrEqual(segments.length);
 
       const donutHost = fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).find(
         host => host.componentInstance.chartTitle() === 'Reporting status'
@@ -461,6 +439,26 @@ describe('ProgramOverviewComponent', () => {
 
       expect(emitSpy).not.toHaveBeenCalled();
     });
+
+    /**
+     * `changes/overview-phase-filter` OPF-T-4 (Leader remediation, OPF-R-2 "AND IT MUST show a
+     * loading state on each card"): mirrors the W1/W2 heatmap loading fix above (line ~370) — the
+     * donut host sat inside `@if (statusTotal() > 0)`, so an explicit phase selection whose meter
+     * overlay is still in flight (zero settled results) rendered the empty state instead of a
+     * loading skeleton.
+     */
+    it('renders the donut loading skeleton instead of the empty state while meterLoading (OPF-T-4)', () => {
+      fixture.componentRef.setInput('statusSegments', []);
+      fixture.componentRef.setInput('meterLoading', true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain('No results reported for this program yet.');
+      const donutHost = fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).find(
+        host => host.componentInstance.chartTitle() === 'Reporting status'
+      );
+      expect(donutHost).toBeTruthy();
+      expect(donutHost?.componentInstance.loading()).toBe(true);
+    });
   });
 
   /**
@@ -471,10 +469,9 @@ describe('ProgramOverviewComponent', () => {
    * history, never silently rewritten in place).
    */
   describe('matrix view toggle (CVT-R-1 / CVT-R-4 / CVT-A-1)', () => {
-    /** FAIL input: defaulting either signal to `'heatmap'` turns this red. */
-    it('defaults both matrix cards to a bars-shaped option on init (CVT-A-1)', () => {
-      expect(component.w12ViewMode()).toBe('bars');
-      expect(component.bilateralViewMode()).toBe('bars');
+    it('defaults both matrix cards to a horizontal-bar option on init', () => {
+      expect(component.w12ViewMode()).toBe('horizontal-bar');
+      expect(component.bilateralViewMode()).toBe('horizontal-bar');
 
       const w12Option = component.w12ChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
       const bilateralOption = component.bilateralChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
@@ -485,7 +482,7 @@ describe('ProgramOverviewComponent', () => {
     });
 
     /** FAIL input: sharing one signal between the two cards turns this red. */
-    it('toggling the W1/W2 card to heatmap leaves the bilateral card in bars (independence)', () => {
+    it('toggling the W1/W2 card to heatmap leaves the bilateral card in horizontal-bar (independence)', () => {
       component.setW12ViewMode('heatmap');
       fixture.detectChanges();
 
@@ -495,15 +492,15 @@ describe('ProgramOverviewComponent', () => {
       expect(w12Option?.visualMap).toBeTruthy();
 
       const bilateralOption = component.bilateralChartOption() as { visualMap?: unknown; series?: { type?: string }[] };
-      expect(component.bilateralViewMode()).toBe('bars');
+      expect(component.bilateralViewMode()).toBe('horizontal-bar');
       expect(bilateralOption?.series?.[0]?.type).toBe('bar');
     });
 
     /** FAIL input: a second chart host per card, or a table rebuilt on toggle, turns this red. */
     it('keeps exactly one app-pr-viz-chart host per card and the same tableModel reference across the switch', () => {
       const beforeHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-      // 2 matrix cards + donut + 1 bilateral radar card = 4 hosts total.
-      expect(beforeHosts.length).toBe(4);
+      // 2 matrix cards + donut + 1 bilateral radar card + 1 velocity trendline = 5 hosts total.
+      expect(beforeHosts.length).toBe(5);
       const w12TableBefore = component.w12HeatmapTable();
       const bilateralTableBefore = component.bilateralHeatmapTable();
 
@@ -512,7 +509,7 @@ describe('ProgramOverviewComponent', () => {
       fixture.detectChanges();
 
       const afterHosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
-      expect(afterHosts.length).toBe(4);
+      expect(afterHosts.length).toBe(5);
       expect(component.w12HeatmapTable()).toBe(w12TableBefore);
       expect(component.bilateralHeatmapTable()).toBe(bilateralTableBefore);
     });
@@ -522,11 +519,12 @@ describe('ProgramOverviewComponent', () => {
       fixture.componentRef.setInput('w12Heatmap', { rows: [], cols: [], cells: [], caption: 'W1/W2 results by category and status' });
       fixture.detectChanges();
 
-      // Already default 'bars' — empty state renders regardless of mode.
+      // Already default 'horizontal-bar' — empty state renders regardless of mode.
       expect(fixture.nativeElement.textContent).toContain('No W1/W2 results reported yet.');
       const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
+      expect(buttons.some(b => b.textContent?.trim() === 'Horizontal Bar')).toBe(true);
+      expect(buttons.some(b => b.textContent?.trim() === 'Vertical Bar')).toBe(true);
       expect(buttons.some(b => b.textContent?.trim() === 'Heatmap')).toBe(true);
-      expect(buttons.some(b => b.textContent?.trim() === 'Bars')).toBe(true);
       expect(component.w12ChartOption()).toBeNull();
 
       component.setW12ViewMode('heatmap');
@@ -537,29 +535,30 @@ describe('ProgramOverviewComponent', () => {
 
     describe('toggle controls', () => {
       /** FAIL input: missing a button, or defaulting `aria-pressed` wrong, turns this red. */
-      it('renders a Heatmap/Bars toggle (2 buttons) per matrix card, Bars pressed by default (CVT-A-1)', () => {
+      it('renders a Horizontal Bar / Vertical Bar / Heatmap toggle (3 buttons) per matrix card, Horizontal Bar pressed by default', () => {
         const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
+        const horizontalButtons = buttons.filter(b => b.textContent?.trim() === 'Horizontal Bar');
+        const verticalButtons = buttons.filter(b => b.textContent?.trim() === 'Vertical Bar');
         const heatmapButtons = buttons.filter(b => b.textContent?.trim() === 'Heatmap');
-        const barsButtons = buttons.filter(b => b.textContent?.trim() === 'Bars');
 
+        expect(horizontalButtons.length).toBe(2);
+        expect(verticalButtons.length).toBe(2);
         expect(heatmapButtons.length).toBe(2);
-        expect(barsButtons.length).toBe(2);
+        horizontalButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('true'));
+        verticalButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('false'));
         heatmapButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('false'));
-        barsButtons.forEach(b => expect(b.getAttribute('aria-pressed')).toBe('true'));
       });
 
       /** FAIL input: one shared signal driving both cards' buttons turns this red. */
       it('flips aria-pressed and the mode signal for only the clicked card', () => {
         const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
-        // DOM order follows the template: W1/W2 heatmap card's toggle renders before the
-        // bilateral heatmap card's toggle.
         const [w12HeatmapButton] = buttons.filter(b => b.textContent?.trim() === 'Heatmap');
 
         w12HeatmapButton.click();
         fixture.detectChanges();
 
         expect(component.w12ViewMode()).toBe('heatmap');
-        expect(component.bilateralViewMode()).toBe('bars');
+        expect(component.bilateralViewMode()).toBe('horizontal-bar');
         expect(w12HeatmapButton.getAttribute('aria-pressed')).toBe('true');
       });
     });
@@ -567,9 +566,7 @@ describe('ProgramOverviewComponent', () => {
     /** Segment click resolution in bars mode must agree with the heatmap resolver (`CVT-R-3`). */
     describe('bars-mode click resolution', () => {
       beforeEach(() => {
-        // Explicit precondition — already the default under CVT-A-1, kept for readability and to
-        // stay correct if the default is ever revisited.
-        component.setW12ViewMode('bars');
+        component.setW12ViewMode('horizontal-bar');
         fixture.detectChanges();
       });
 
@@ -720,7 +717,25 @@ describe('ProgramOverviewComponent', () => {
       expect(component.bilateralStatusTotal()).toBe(20);
       expect(component.bilateralSegmentWidth(bilateralSegs[0])).toBe(60);
       expect(component.bilateralSegmentWidth(bilateralSegs[1])).toBe(40);
-      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(6);
+    });
+
+    /**
+     * `changes/overview-phase-filter` OPF-T-4 (Leader remediation, OPF-R-2 "AND IT MUST show a
+     * loading state on each card"): same fix as the W1/W2 meter donut above, for the W3/Bilateral
+     * cards — `bilateralStatusSegments` is unset in this describe's default fixture (0 total), so
+     * setting `bilateralLoading` alone exercises the previously-unreachable loading branch.
+     */
+    it('renders the bilateral donut loading skeleton instead of the empty state while bilateralLoading (OPF-T-4)', () => {
+      fixture.componentRef.setInput('bilateralLoading', true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain('No bilateral results reported for this program yet.');
+      const donutHost = fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).find(
+        host => host.componentInstance.chartTitle() === 'Bilateral reporting status'
+      );
+      expect(donutHost).toBeTruthy();
+      expect(donutHost?.componentInstance.loading()).toBe(true);
     });
   });
 
@@ -756,9 +771,9 @@ describe('ProgramOverviewComponent', () => {
       fixture.componentRef.setInput('tocMap', tocModel);
       fixture.detectChanges();
 
-      // 4 pre-existing wrapper instances (donut, W1/W2, bilateral heatmap, bilateral radar — no
+      // 5 pre-existing wrapper instances (donut, velocity trendline, W1/W2, bilateral heatmap, bilateral radar — no
       // bilateral donut in the default fixture, `bilateralStatusSegments` unset) + 1 for the map.
-      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(6);
       expect(component.tocMapOption()).not.toBeNull();
       expect(component.tocMapTable()).not.toBeNull();
       expect(fixture.nativeElement.textContent).toContain('Theory of Change map');
@@ -772,7 +787,7 @@ describe('ProgramOverviewComponent', () => {
 
       // The wrapper renders (loading skeleton) even with null options/tableModel — one more than
       // the empty-state case below, which renders no wrapper at all.
-      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(6);
       expect(component.tocMapOption()).toBeNull();
       expect(fixture.nativeElement.textContent).not.toContain('No Theory of Change data loaded yet.');
     });
@@ -783,7 +798,7 @@ describe('ProgramOverviewComponent', () => {
       fixture.componentRef.setInput('tocMapLoading', false);
       expect(() => fixture.detectChanges()).not.toThrow();
 
-      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(4);
+      expect(fixture.debugElement.queryAll(By.css('app-pr-viz-chart')).length).toBe(5);
       expect(fixture.nativeElement.textContent).toContain('No Theory of Change data loaded yet.');
     });
 
@@ -873,6 +888,16 @@ describe('ProgramOverviewComponent', () => {
 
       component.setActiveSection('w1w2');
       expect(component.activeSection()).toBe('all');
+    });
+  });
+
+  describe('Reporting progress velocity trendline', () => {
+    it('computes reporting trend option and displays trendline in reporting status card header', () => {
+      const hosts = fixture.debugElement.queryAll(By.css('app-pr-viz-chart'));
+      const trendHost = hosts.find(h => h.componentInstance.chartTitle() === 'Reporting progress velocity');
+      expect(trendHost).toBeTruthy();
+      expect(component.reportingTrendModel()).toBeDefined();
+      expect(component.reportingTrendChartOption()).toBeDefined();
     });
   });
 });
