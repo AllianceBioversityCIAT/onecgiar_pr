@@ -4576,10 +4576,23 @@ export class ResultsService {
       case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT: // 5
         if (this._summaryService) {
           await this._ensureCapacityDevRecord(resultId, user.id);
+          const reviewerPayload = reviewUpdateDto.resultTypeResponse as any;
+
+          // The reviewer's payload only carries the data-standards block, so anything it does not
+          // mention must be READ BACK, never assumed. `is_attending_for_organization` used to be
+          // hardcoded to false here, which wiped the reporter's answer every time a reviewer pressed
+          // "Save changes" — and the green check requires it, so the section stopped being green.
+          // `institutions` is left out of the DTO on purpose: `saveCapacityDevelopents` only rewrites
+          // them behind `if (institutions?.length)`, so omitting them preserves what is stored.
+          const storedAttending =
+            await this._readStoredAttendingForOrganization(resultId);
+
           const capdevDto: CapdevDto = {
-            ...(reviewUpdateDto.resultTypeResponse as any),
-            institutions: [],
-            is_attending_for_organization: false,
+            ...reviewerPayload,
+            is_attending_for_organization:
+              reviewerPayload?.is_attending_for_organization ??
+              storedAttending ??
+              false,
           };
           await this._summaryService.saveCapacityDevelopents(
             capdevDto,
@@ -4634,6 +4647,24 @@ export class ResultsService {
         );
         break;
     }
+  }
+
+  /**
+   * Reads back the reporter's answer to "Were the trainees attending on behalf of an organization?".
+   *
+   * The reviewer drawer posts only the data-standards fields, so this value has to come from what is
+   * stored: writing a default over it loses an answer the reporter gave and that the completion check
+   * requires. Returns null when there is nothing stored yet, so the caller can fall back explicitly.
+   */
+  private async _readStoredAttendingForOrganization(
+    resultId: number,
+  ): Promise<boolean | null> {
+    const repo = this._dataSource.getRepository(ResultsCapacityDevelopments);
+    const stored = await repo.findOne({
+      where: { result_object: { id: resultId } },
+    });
+
+    return stored?.is_attending_for_organization ?? null;
   }
 
   private async _ensureCapacityDevRecord(

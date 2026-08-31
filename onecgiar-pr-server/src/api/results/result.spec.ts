@@ -2051,6 +2051,113 @@ describe('ResultsService (unit, pure mocks)', () => {
       ).toHaveBeenCalled();
     });
 
+    /**
+     * 🛑 THE REVIEWER MUST NOT WIPE THE REPORTER'S ANSWER. `is_attending_for_organization` used to be
+     * hardcoded to false in the Capacity Sharing branch, so every "Save changes" a reviewer pressed
+     * erased an answer the reporter had given — and the completion check requires it, so the section
+     * stopped being green with nothing on screen to explain why.
+     */
+    describe('Capacity Sharing review must preserve what the reporter answered', () => {
+      const capdevReview = {
+        commonFields: {
+          id: 100,
+          result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        },
+        resultTypeResponse: { female_using: 4, male_using: 6 },
+      } as unknown as ReviewUpdateDto;
+
+      const withStoredAttending = (stored: boolean | null) => {
+        const repo = {
+          findOne: jest
+            .fn()
+            .mockResolvedValue(
+              stored === null
+                ? null
+                : { is_attending_for_organization: stored },
+            ),
+          save: jest.fn(),
+          create: jest.fn(),
+        };
+        (resultService as any)._dataSource = {
+          ...mockDataSource,
+          getRepository: jest.fn().mockReturnValue(repo),
+        };
+        return repo;
+      };
+
+      beforeEach(() => {
+        (mockSummaryService.saveCapacityDevelopents as jest.Mock).mockClear();
+      });
+
+      it('keeps a stored "Yes" instead of overwriting it with false', async () => {
+        withStoredAttending(true);
+
+        await (resultService as any)._handleResultTypeUpdate(
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          100,
+          capdevReview,
+          userTest,
+        );
+
+        const [dto] = (mockSummaryService.saveCapacityDevelopents as jest.Mock)
+          .mock.calls[0];
+        expect(dto.is_attending_for_organization).toBe(true);
+      });
+
+      it('does not blank the organizations: institutions never reaches the DTO', async () => {
+        withStoredAttending(true);
+
+        await (resultService as any)._handleResultTypeUpdate(
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          100,
+          capdevReview,
+          userTest,
+        );
+
+        const [dto] = (mockSummaryService.saveCapacityDevelopents as jest.Mock)
+          .mock.calls[0];
+        // An empty array would be harmless today (the writer is guarded by institutions?.length),
+        // but sending nothing is what actually states the intent: the reviewer does not touch them.
+        expect(dto.institutions).toBeUndefined();
+      });
+
+      it("lets the reviewer's own answer win when the payload carries one", async () => {
+        withStoredAttending(true);
+
+        await (resultService as any)._handleResultTypeUpdate(
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          100,
+          {
+            ...capdevReview,
+            resultTypeResponse: {
+              female_using: 4,
+              is_attending_for_organization: false,
+            },
+          } as unknown as ReviewUpdateDto,
+          userTest,
+        );
+
+        const [dto] = (mockSummaryService.saveCapacityDevelopents as jest.Mock)
+          .mock.calls[0];
+        expect(dto.is_attending_for_organization).toBe(false);
+      });
+
+      it('falls back to false when nothing is stored yet', async () => {
+        withStoredAttending(null);
+
+        await (resultService as any)._handleResultTypeUpdate(
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          100,
+          capdevReview,
+          userTest,
+        );
+
+        const [dto] = (mockSummaryService.saveCapacityDevelopents as jest.Mock)
+          .mock.calls[0];
+        expect(dto.is_attending_for_organization).toBe(false);
+      });
+    });
+
     it('should successfully update evidence', async () => {
       const reviewUpdateDto: ReviewUpdateDto = {
         commonFields: {
