@@ -3,7 +3,10 @@
     <div class="title">
       <strong>Annual updating</strong>
       <div class="header">
-        <app-pr-field-header label="Please indicate if the investment for this innovation was continued or discontinued"> </app-pr-field-header>
+        <!-- P2-3292: the 2026 wording is a question, so it must not be followed by a colon
+             (repo convention: every question-shaped label passes [useColon]="false").
+             The 2025-and-earlier label keeps its colon verbatim, as epic P2-3243 demands. -->
+        <app-pr-field-header [label]="headerLabel" [useColon]="!usesStatusTriggerWording"> </app-pr-field-header>
       </div>
     </div>
 
