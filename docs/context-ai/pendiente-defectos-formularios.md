@@ -67,21 +67,44 @@ líneas de test y el `CLAUDE.md` de la carpeta actualizado.
 
 🛑 **Esa zona es de Santi.** No entrar sin hablar con él.
 
-## 🔴 LOTE 4 — Geographic Location y Evidence (front, nuestro)
+## LOTE 4 — Geographic y Evidence · verificado uno por uno el 31-ago
 
-Archivos: `…/rd-geographic-location/**`, `…/rd-evidences/**`, `pages/bilateral/components/section-evidence/**`
-⚠️ Otro agente commiteó el 31-ago en `evidences.service` (`c5de758a9`). Releer antes de tocar.
+### ✅ Arreglado y pusheado
 
-1. **Al cambiar el foco geográfico a Global, el alcance extra y sus regiones quedan huérfanos**: la
-   pantalla los oculta pero siguen guardados. Hay precedente en ese mismo componente (los países sí se
-   limpian) — reusarlo.
-2. **Un texto que no es URL se guarda como evidencia y cuenta para la completitud.** El barrido del
-   28-ago verificó que en otro caso el botón sí se deshabilita: averiguar por qué esta ruta no valida,
-   sin duplicar validación.
-3. **En la evidencia bilateral nunca se pregunta si el archivo puede compartirse públicamente**, y en
-   el formulario normal sí.
-4. 🟡 Dos mensajes que mienten: "The evidence was saved" antes de intentar guardar; y al editar un
-   archivo guardado como público, la pregunta aparece sin respuesta marcada.
+**El alcance geográfico extra quedaba huérfano al volver el foco principal a Global** o a "yet to be
+determined": el bloque desaparece de pantalla (el `@if` del template lo condiciona a eso) pero sus
+regiones y países seguían guardándose. Commit **`2fd226a4f`**, 24/24 en el spec, dos de ellos fallan
+contra el código anterior.
+
+De paso: el mock del spec **no tenía `PATCH_geographicSectionp25`**, así que la ruta de guardado de
+P25 no tenía ninguna cobertura. Ahora sí.
+
+### ❌ RETIRADO — "un texto que no es URL se guarda como evidencia"
+
+**No se sostiene.** La validación existe: `evidence-item.component.ts:120 isInvalidLink()` alimenta la
+entrada de completitud *"Invalid URL provided."* (`evidence-item.component.html:22`), así que un texto
+como "pendiente de subir" deja la sección incompleta. Y el barrido del 28-ago ya había verificado en
+pantalla que el botón se deshabilita con un no-URL. El hallazgo describía un comportamiento que no
+ocurre.
+
+⚠️ Único apunte que sí queda, y es de nombre, no de comportamiento: `isInvalidLink()` devuelve **true
+cuando el link ES válido**. El nombre dice lo contrario de lo que hace y ya confundió a un auditor.
+No se renombró: es una función usada desde el template y renombrarla no arregla nada para el usuario.
+
+### ⏸ REAL, pero necesita una decisión — la evidencia bilateral no pregunta si el archivo es público
+
+Verificado en el código:
+
+- **Formulario normal:** la pregunta existe — `evidence-item.component.html:42`,
+  *"Can this evidence be shared publicly?"*, ligada a `is_public_file`, con avisos que cambian según
+  la respuesta.
+- **Bilateral:** `is_public_file` está declarado en `section-evidence.model.ts:7` y **nunca se
+  pregunta, nunca se asigna, nunca se muestra**. El archivo se sube (`onFileSelected`,
+  `section-evidence.component.ts:304`) sin que nadie decida su visibilidad.
+
+🛑 **No se desarrolló:** añadir un control obligatorio a un formulario es decisión de producto, y
+**ningún ticket lo pide**. Falta definir el valor por defecto, si bloquea el guardado, y qué pasa con
+los archivos ya subidos sin respuesta. Llevado a decisión.
 
 ## 🔴 LOTE 5 — Capacity Sharing, Policy Change y Knowledge Product
 
