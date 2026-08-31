@@ -499,6 +499,13 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       this.rdPartnersSE.otherPartnersSelected = [];
     }
 
+    // @akili-spec changes/lead-center-decouple
+    // LCD-DD-3: center and partner/mqap leadership stamping are independent — a center's
+    // is_leading_result is no longer force-zeroed when a partner is lead, and vice versa.
+    this.rdPartnersSE.partnersBody.contributing_center?.forEach(center => {
+      center.is_leading_result = this.rdPartnersSE.leadCenterCode === center.code;
+    });
+
     if (this.rdPartnersSE.partnersBody.is_lead_by_partner) {
       this.rdPartnersSE.partnersBody.mqap_institutions?.forEach(mqap => {
         mqap.is_leading_result = this.rdPartnersSE.leadPartnerId === mqap.institutions_id;
@@ -506,11 +513,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       this.rdPartnersSE.partnersBody.institutions?.forEach(i => {
         i.is_leading_result = this.rdPartnersSE.leadPartnerId === i.institutions_id;
       });
-      this.rdPartnersSE.partnersBody.contributing_center?.forEach(center => (center.is_leading_result = false));
     } else {
-      this.rdPartnersSE.partnersBody.contributing_center?.forEach(center => {
-        center.is_leading_result = this.rdPartnersSE.leadCenterCode === center.code;
-      });
       this.rdPartnersSE.partnersBody.mqap_institutions?.forEach(mqap => {
         mqap.is_leading_result = false;
       });
@@ -607,9 +610,12 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     item.is_active = !item.is_active;
   }
 
-  getMessageLead() {
-    const entity = this.rdPartnersSE.partnersBody.is_lead_by_partner ? 'partner' : 'CG Center';
-    return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
+  getMessageLeadCenter() {
+    return `Please select the CG Center leading this result.`;
+  }
+
+  getMessageLeadPartner() {
+    return `Please select the partner leading this result. <b>Only partners already added in this section can be selected as the result lead.</b>`;
   }
 
   onPlannedResultChange(item: any) {

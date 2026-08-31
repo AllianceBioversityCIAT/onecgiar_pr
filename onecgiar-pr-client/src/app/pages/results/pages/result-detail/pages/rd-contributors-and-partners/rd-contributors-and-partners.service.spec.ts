@@ -124,11 +124,17 @@ describe('RdContributorsAndPartnersService', () => {
       expect(service.leadCenterCode).toBe('C1');
     });
 
-    it('should skip when led by partner', () => {
+    /**
+     * LCD-T-4 (docs/specs/changes/lead-center-decouple, LCD-DD-2): inverted from the old "should
+     * skip when led by partner" — that assertion WAS the exclusivity rule this spec removes.
+     * `tryAutoAssignLeadCenter`'s `if (is_lead_by_partner) return;` guard is gone, so Lead Center
+     * auto-assign now runs regardless of the toggle.
+     */
+    it('LCD-AC-4/LCD-DD-2: auto-assigns even when led by partner — the toggle no longer gates Lead Center auto-assign', () => {
       service.partnersBody.is_lead_by_partner = true;
       service.leadCenterCode = null;
       service.tryAutoAssignLeadCenter();
-      expect(service.leadCenterCode).toBeNull();
+      expect(service.leadCenterCode).toBe('C1');
     });
   });
 
@@ -174,7 +180,14 @@ describe('RdContributorsAndPartnersService', () => {
       expect(service.leadCenterCode).toBe('C1');
     });
 
-    it('should auto-assign lead partner when switching to partner-led with one partner', () => {
+    /**
+     * LCD-T-4 (docs/specs/changes/lead-center-decouple, LCD-AC-4/LCD-DD-2): the old assertion
+     * expected `leadCenterCode` to become `null` here — that WAS the mutual-exclusivity rule this
+     * spec reverses. `onLeadByPartnerChange`'s `leadCenterCode = null` line in the `isPartnerLed`
+     * branch was removed, so a previously-set Lead Center now survives a toggle flip to "Yes".
+     * Lead Partner's own auto-assign is unaffected and still fires.
+     */
+    it('LCD-AC-4: switching to partner-led PRESERVES leadCenterCode (no longer nulled) and still auto-assigns lead partner', () => {
       service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' } as any];
       service.partnersBody.institutions = [{ institutions_id: 10 } as any];
       service.partnersBody.is_lead_by_partner = false;
@@ -182,8 +195,22 @@ describe('RdContributorsAndPartnersService', () => {
 
       service.onLeadByPartnerChange(true);
 
-      expect(service.leadCenterCode).toBeNull();
+      expect(service.leadCenterCode).toBe('C1');
       expect(service.leadPartnerId).toBe(10);
+    });
+
+    it('LCD-AC-4 (isolated): a previously-set leadCenterCode survives the toggle even with 2 centers, where auto-assign cannot mask the fix', () => {
+      service.partnersBody.contributing_center = [
+        { code: 'C1', name: 'Center One' } as any,
+        { code: 'C2', name: 'Center Two' } as any
+      ];
+      service.partnersBody.institutions = [];
+      service.partnersBody.is_lead_by_partner = false;
+      service.leadCenterCode = 'C1';
+
+      service.onLeadByPartnerChange(true);
+
+      expect(service.leadCenterCode).toBe('C1');
     });
   });
 

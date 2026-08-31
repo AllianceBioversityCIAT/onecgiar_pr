@@ -59,7 +59,30 @@ import {
  * They are still covered: if they are rendered, mandatory and filled, their key must be in the
  * payload — the assertion that matters. Only the write is skipped.
  */
-const NEVER_EDIT = new Set(['changePrimaryInit', 'is_lead_by_partner', 'result_toc_result.planned_result', 'has_innovation_link']);
+const NEVER_EDIT = new Set([
+  'changePrimaryInit',
+  'is_lead_by_partner',
+  'result_toc_result.planned_result',
+  'has_innovation_link'
+]);
+
+// LCD-T-4 (docs/specs/changes/lead-center-decouple): the two Lead selects
+// (`cp-field-contributing_center~lead` / `cp-field-institutions~lead`) resolve to the SAME array
+// paths (`contributing_center`, `institutions`) as the pre-existing multiselects on this section,
+// after `discover()` strips the `~` suffix from `path` (`:131`) — but `path`-keyed exclusion is too
+// wide: the pre-existing hooks `cp-field-contributing_center` / `cp-field-contributing_center~flat`
+// are `kind: 'multiselect'` and take the array-length branch in `assertPayloadCovers` (`:401-407`),
+// which never performs a scalar comparison, so they have no false-negative problem and must keep
+// their generic-edit coverage. Only the two new hooks are `kind: 'select'`: their payload value is
+// not the scalar the hidden input shows, it is a FLAG on one row of the shared array, so letting the
+// generic editAll/assertPayloadCovers pipeline "edit" them would compare that array (via
+// `String(sent)`) against the scalar DOM value at `:421` and fail for a reason that has nothing to
+// do with the feature — a false negative, not a defect. So the exclusion is keyed on the full
+// `testid` (`discover()` sets `testid` to the raw `data-testid` attribute at `:128`, unstripped),
+// not on `path`, and lists only these two hooks. The combined-lead PATCH shape gets its own
+// dedicated assertion below instead (LCD-AC-2). Mandatory-field COVERAGE for Lead center is
+// unaffected: it is checked by presence, not equality, and does not require editing.
+const NEVER_EDIT_TESTID = new Set(['cp-field-contributing_center~lead', 'cp-field-institutions~lead']);
 
 const E2E_SUFFIX = '(e2e)';
 
@@ -415,7 +438,7 @@ function assertPayloadCovers(
  */
 function editAll(hooks: Hook[], edited: Map<string, string>, expected: Map<string, string>): void {
   hooks
-    .filter(hook => !NEVER_EDIT.has(hook.path) && hook.kind !== 'unknown' && !edited.has(hook.testid))
+    .filter(hook => !NEVER_EDIT.has(hook.path) && !NEVER_EDIT_TESTID.has(hook.testid) && hook.kind !== 'unknown' && !edited.has(hook.testid))
     .forEach(hook => {
       cy.get('body').then($body => {
         if (!$body.find(`[data-testid="${hook.testid}"]`).length) return;
@@ -588,5 +611,84 @@ describeWithToken('Result Detail — save contract (what the form shows is what 
         assertRoundTrip(hook, expectedValue);
       });
     });
+  });
+
+  /**
+   * LCD-AC-2 (docs/specs/changes/lead-center-decouple): a Lead Center and a Lead Partner can be
+   * saved as leading in the SAME PATCH — the old code force-zeroed whichever side lost the
+   * `is_lead_by_partner` branch. This is a dedicated assertion rather than a fold into the generic
+   * loop above, because `cp-field-contributing_center~lead` / `cp-field-institutions~lead` resolve
+   * (via the `~` strip) to the SAME array paths as the pre-existing Contributing Centers / External
+   * Partners hooks — their payload value is a per-row FLAG, not the scalar the hidden input shows,
+   * so the generic per-hook scalar-equality check does not apply to them (see the `NEVER_EDIT`
+   * comment above).
+   *
+   * Deliberately does NOT drive `is_lead_by_partner` itself — that toggle is excluded from the
+   * generic `editAll` pass for a documented reason (flipping it once left the shared record with an
+   * empty Lead partner and took the sibling spec down with it, see `NEVER_EDIT`'s own comment). If
+   * the record is not already partner-led with a Lead Partner selected, this test has nothing to
+   * combine and skips — pending, never a silent pass.
+   */
+  it('Contributors & partners: a Lead Center and a Lead Partner can both be saved as leading in the same PATCH (LCD-AC-2)', function () {
+    const contributorsUrl = sectionUrl(generalInformationUrl, 'contributor-partners');
+    const leadCenterHook = '[data-testid="cp-field-contributing_center~lead"]';
+    const leadPartnerHook = '[data-testid="cp-field-institutions~lead"]';
+
+    cy.intercept('PATCH', SAVE_ENDPOINTS.contributorsPartners).as('saveCombinedLead');
+    openContributorsPartners(contributorsUrl);
+
+    cy.get('body').then($body => {
+      const leadCenterField = $body.find(leadCenterHook);
+      const leadPartnerField = $body.find(leadPartnerHook);
+      const isPartnerLed = $body.find('[data-testid="cp-field-is_lead_by_partner"] .choice.yes').length > 0;
+      const partnerHasValue = !!String(leadPartnerField.find('input[type="text"][hidden]').val() ?? '').trim();
+      const centerIsEditable = leadCenterField.find('.custom_select a.field').length > 0;
+
+      if (!leadCenterField.length || !leadPartnerField.length || !isPartnerLed || !partnerHasValue || !centerIsEditable) {
+        this.skip();
+      }
+    });
+
+    let selectedPartnerId = '';
+    cy.get(`${leadPartnerHook} input[type="text"][hidden]`)
+      .invoke('val')
+      .then(v => {
+        selectedPartnerId = String(v ?? '');
+      });
+
+    // Prefer an option that is not the current one so the value really moves.
+    openDropdown(leadCenterHook);
+    cy.get(`${leadCenterHook} .options .option:not(.disabled):not(.labelGroup)`).then($options => {
+      const target = $options.toArray().find(o => !o.classList.contains('selected')) ?? $options[0];
+      cy.wrap(target).find('.label').click({ force: true });
+    });
+
+    let selectedCenterCode = '';
+    cy.get(`${leadCenterHook} input[type="text"][hidden]`)
+      .invoke('val')
+      .then(v => {
+        selectedCenterCode = String(v ?? '');
+        expect(selectedCenterCode, 'a Lead Center is selected before saving').not.to.equal('');
+      });
+
+    cy.then(() => {
+      cy.get(BOTTOM_BAR.save).should('not.be.disabled').click();
+    });
+
+    cy.wait('@saveCombinedLead', { timeout: 90000 }).then(interception => {
+      expect(interception.response?.statusCode, 'save response').to.be.oneOf([200, 201]);
+      const body = interception.request.body;
+
+      const leadingCenter = (body.contributing_center || []).find((c: any) => c.code === selectedCenterCode);
+      const leadingPartner = (body.institutions || []).find((i: any) => String(i.institutions_id) === selectedPartnerId);
+
+      expect(leadingCenter, `PATCH body must contain the selected Lead Center "${selectedCenterCode}"`).to.exist;
+      expect(leadingCenter.is_leading_result, 'the selected Lead Center row must carry is_leading_result: true').to.equal(true);
+
+      expect(leadingPartner, `PATCH body must contain the selected Lead Partner "${selectedPartnerId}"`).to.exist;
+      expect(leadingPartner.is_leading_result, 'the selected Lead Partner row must carry is_leading_result: true').to.equal(true);
+    });
+
+    cy.get(BOTTOM_BAR.save, { timeout: 60000 }).should('not.contain.text', SAVING_LABEL);
   });
 });

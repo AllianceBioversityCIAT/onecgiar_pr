@@ -194,6 +194,30 @@
     </div>
   }
 
+  <!-- LCD-DD-1 rework (2026-08-31): Lead center moved up, directly under the Contributing
+       CGIAR Centers dropdown(s), above "Contributing W3 and/or bilateral projects" — per QA
+       (Santi). Wrapped in its own stacking context (z-index higher than the sibling blocks
+       below, which already use z-index: 1/2 locally) so the open dropdown list isn't painted
+       under later positioned siblings (bilateral-projects loading overlay, Science Program note). -->
+  <div class="mt-16" style="position: relative; z-index: 3">
+    <app-alert-status [description]="getMessageLeadCenter()"></app-alert-status>
+    @if (!this.rdPartnersSE.updatingLeadData) {
+      <app-pr-select
+        data-testid="cp-field-contributing_center~lead"
+        label="Lead center"
+        [required]="true"
+        [options]="this.rdPartnersSE.possibleLeadCenters"
+        [(ngModel)]="this.rdPartnersSE.leadCenterCode"
+        (selectOptionEvent)="this.rdPartnersSE.onLeadCenterSelected($event?.code ?? null)"
+        optionLabel="full_name"
+        optionValue="code"
+        placeholder="Select a lead center..."
+        [showClear]="true"
+        [readOnly]="this.api.rolesSE.readOnly">
+      </app-pr-select>
+    }
+  </div>
+
   <div style="position: relative">
     <app-pr-multi-select
       data-testid="cp-field-bilateral_projects"
@@ -436,9 +460,10 @@
     (selectOptionEvent)="this.rdPartnersSE.onLeadByPartnerChange($event)"
     [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
   </app-pr-yes-or-not>
-  <app-alert-status [description]="getMessageLead()"></app-alert-status>
-  <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner; else selectLeadCenter">
+  <app-alert-status *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner" [description]="getMessageLeadPartner()"></app-alert-status>
+  <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner">
     <app-pr-select
+      data-testid="cp-field-institutions~lead"
       label="Lead partner"
       [options]="this.rdPartnersSE.possibleLeadPartners"
       optionLabel="full_name"
@@ -449,22 +474,6 @@
       *ngIf="!this.rdPartnersSE.updatingLeadData">
     </app-pr-select>
   </div>
-  <ng-template #selectLeadCenter>
-    @if (!this.rdPartnersSE.updatingLeadData) {
-      <app-pr-select
-        label="Lead center"
-        [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
-        [options]="this.rdPartnersSE.possibleLeadCenters"
-        [(ngModel)]="this.rdPartnersSE.leadCenterCode"
-        (selectOptionEvent)="this.rdPartnersSE.onLeadCenterSelected($event?.code ?? null)"
-        optionLabel="full_name"
-        optionValue="code"
-        placeholder="Select a lead center..."
-        [showClear]="true"
-        [readOnly]="this.api.rolesSE.readOnly">
-      </app-pr-select>
-    }
-  </ng-template>
 
   <!-- P2-3112: the linked/bundled question shows for Innovation Use/Dev (all phases) AND, in 2026+, for every other result type. -->
   @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7 || isCP2026()) {

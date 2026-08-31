@@ -669,9 +669,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
 
   onLeadByPartnerChange(isPartnerLed: boolean) {
     this.partnersBody.is_lead_by_partner = isPartnerLed;
-    if (isPartnerLed) {
-      this.leadCenterCode = null;
-    } else {
+    if (!isPartnerLed) {
       this.leadPartnerId = null;
     }
     this.setPossibleLeadCenters(true, false);
@@ -685,9 +683,6 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   }
 
   tryAutoAssignLeadCenter() {
-    if (this.partnersBody.is_lead_by_partner) {
-      return;
-    }
     const contributingCentersUnion = this.getContributingCentersUnion();
     if (contributingCentersUnion.length !== 1) {
       return;

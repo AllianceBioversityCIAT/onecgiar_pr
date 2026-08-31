@@ -653,6 +653,75 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(callArgs.contributing_initiatives.pending_contributing_initiatives).toContainEqual({ id: 1, name: 'New Initiative' });
     });
 
+    /**
+     * LCD-T-4 (docs/specs/changes/lead-center-decouple, LCD-DD-3): the single most important new
+     * test in this task. `onSaveSection()` must stamp BOTH a leading center and a leading partner
+     * in ONE call — the old `if (is_lead_by_partner) {...} else {...}` force-zeroed whichever side
+     * lost the branch.
+     *
+     * LCD-AC-2 TOC-ORIGIN PROOF: the leading center here MUST reach the payload through the
+     * `isCP2026` `tocCenters` array (component.ts's bare `{ ...c, from_toc: true }` spread), never
+     * through `otherCentersSelected`/`otherCenters`. Per `design.md` §12 LCD-DD-3's corrected
+     * table, `otherCenters` computes its own `is_leading_result` independently and would have
+     * passed this assertion even BEFORE this spec's change — it proves nothing about the fix.
+     * `tocCenters` inherits its flag from the unconditional stamping loop at the top of
+     * `onSaveSection()`, which is exactly what `LCD-DD-3` rewrote. `otherCentersSelected` is left
+     * empty below and the fixture's `contributing_center` rows are asserted to carry `from_toc:
+     * true`, which only happens via the `tocCenters` spread — that assertion is the proof.
+     */
+    it('LCD-AC-2: stamps a ToC-origin leading center AND a leading partner in one call (LCD-R-4/R-5/R-6)', () => {
+      (component as any).fieldsManagerSE = { isContributorsPartners2026: () => true };
+      mockRdPartnersSE.partnersBody.is_lead_by_partner = true;
+      mockRdPartnersSE.leadCenterCode = 'C1';
+      mockRdPartnersSE.leadPartnerId = 1;
+      // ToC-origin centers: routed to the payload via the `tocCenters` bare spread, NOT
+      // `otherCentersSelected` — load-bearing per LCD-DD-3's corrected table.
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: 'C1' }, { code: 'C2' }];
+      mockRdPartnersSE.otherCentersSelected = [];
+      mockRdPartnersSE.partnersBody.institutions = [{ institutions_id: 1 }, { institutions_id: 2 }];
+      mockRdPartnersSE.otherPartnersSelected = [];
+      mockRdPartnersSE.scienceSelected = [];
+      mockRdPartnersSE.otherScienceSelected = [];
+      mockRdPartnersSE.loadedAcceptedScienceIds = new Set<number>();
+      mockRdPartnersSE.loadedPendingScience = [];
+      mockRdPartnersSE.OTHER_PARTNERS_CODE = -999999;
+      mockRdPartnersSE.partnersBody.contributing_initiatives = { pending_contributing_initiatives: [], accepted_contributing_initiatives: [] };
+
+      component.onSaveSection();
+
+      const callArgs = mockApiService.resultsSE.PATCH_ContributorsPartners.mock.calls[0][0];
+      const leadingCenter = callArgs.contributing_center.find((c: any) => c.code === 'C1');
+      const otherCenter = callArgs.contributing_center.find((c: any) => c.code === 'C2');
+      const leadingPartner = callArgs.institutions.find((i: any) => i.institutions_id === 1);
+      const otherPartner = callArgs.institutions.find((i: any) => i.institutions_id === 2);
+
+      // Both leads present in the SAME payload — the whole point of LCD-R-6.
+      expect(leadingCenter.is_leading_result).toBe(true);
+      expect(leadingPartner.is_leading_result).toBe(true);
+      // Proof this center traveled via `tocCenters`, not `otherCentersSelected`.
+      expect(leadingCenter.from_toc).toBe(true);
+      // Neither non-selected row is also marked leading.
+      expect(otherCenter.is_leading_result).toBe(false);
+      expect(otherPartner.is_leading_result).toBe(false);
+    });
+
+    /**
+     * LCD-AC-3: the required-field scan blocks save with no Lead Center selected. `onSaveSection()`
+     * itself never throws or refuses on a null `leadCenterCode` — the actual blocking mechanism is
+     * the `.pr-field.mandatory`/`complete` DOM scan (src/CLAUDE.md §21.5), covered by the
+     * render-level LCD-AC-1/AC-3 tests below. This assertion pins the payload-side half of the
+     * contract: with no Lead Center, no `contributing_center` row is ever marked leading — so even
+     * if a save slipped past the scan, it would not silently fabricate a lead.
+     */
+    it('LCD-AC-3 (save-side half): with no Lead Center selected, no contributing_center row is stamped leading', () => {
+      mockRdPartnersSE.leadCenterCode = null;
+      mockRdPartnersSE.partnersBody.contributing_center = [{ code: 'C1' }, { code: 'C2' }];
+
+      component.onSaveSection();
+
+      expect(mockRdPartnersSE.partnersBody.contributing_center.every((c: any) => c.is_leading_result === false)).toBe(true);
+    });
+
     it('should call getSectionInformation after successful save', () => {
       component.onSaveSection();
       expect(mockApiService.resultsSE.PATCH_ContributorsPartners).toHaveBeenCalled();
@@ -694,19 +763,25 @@ describe('RdContributorsAndPartnersComponent', () => {
     });
   });
 
-  describe('getMessageLead', () => {
-    it('should return message for partner when is_lead_by_partner is true', () => {
-      mockRdPartnersSE.partnersBody.is_lead_by_partner = true;
-      const message = component.getMessageLead();
-      expect(message).toContain('partner');
-      expect(message).toContain('Only partners');
+  /**
+   * LCD-T-4 (docs/specs/changes/lead-center-decouple): `getMessageLead()` was replaced by two
+   * independent methods (`LCD-DD-4`) once Lead Center and Lead Partner stopped sharing a toggle
+   * branch. Retargeted from the old `describe('getMessageLead', ...)`, which called a method that
+   * no longer exists — these assert `LCD-R-7`/`LCD-AC-5` explicitly: the center message must NOT
+   * claim the catalog is limited to "already added in this section" (stale since LC-DD-1 made
+   * `possibleLeadCenters` the full CLARISA catalog); the partner message must still say so.
+   */
+  describe('getMessageLeadCenter / getMessageLeadPartner (LCD-R-7 / LCD-AC-5)', () => {
+    it('getMessageLeadCenter never claims centers are limited to ones already added in this section', () => {
+      const message = component.getMessageLeadCenter();
+      expect(message.toLowerCase()).not.toContain('already added in this section');
+      expect(message).toContain('CG Center');
     });
 
-    it('should return message for CG Center when is_lead_by_partner is false', () => {
-      mockRdPartnersSE.partnersBody.is_lead_by_partner = false;
-      const message = component.getMessageLead();
-      expect(message).toContain('CG Center');
-      expect(message).toContain('Only CG Centers');
+    it('getMessageLeadPartner still limits partners to ones already added in this section', () => {
+      const message = component.getMessageLeadPartner();
+      expect(message).toContain('partner');
+      expect(message).toContain('Only partners already added in this section can be selected');
     });
   });
 
@@ -1177,6 +1252,110 @@ describe('RdContributorsAndPartnersComponent — Lead center full catalog render
 
       expect(rdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
       expect(rdPartnersSE.otherCentersSelected).toEqual([]);
+      expect(rdPartnersSE.autoAddedLeadCenterCode).toBe('C1');
+    });
+  });
+
+  /**
+   * LCD-T-4 (docs/specs/changes/lead-center-decouple): Lead Center renders and is `required`
+   * regardless of `is_lead_by_partner` (LCD-R-1, LCD-R-2, LCD-AC-1), and the required-field scan's
+   * own signal — `.pr-field.mandatory`/`complete` (src/CLAUDE.md §21.5) — reflects "no Lead Center
+   * selected" as incomplete (LCD-AC-3). Renders through the REAL service (same rig as LC-T-2), so
+   * the assertions exercise the actual template rather than a mocked condition.
+   */
+  describe('LCD-T-4: Lead Center is unconditionally rendered and required (LCD-AC-1, LCD-AC-3)', () => {
+    beforeEach(async () => {
+      centersMock.loadedCenters.next(true);
+      await fixture.whenStable();
+      await new Promise(resolve => setTimeout(resolve, 30));
+      await fixture.whenStable();
+      fixture.detectChanges();
+    });
+
+    /**
+     * These four tests read `fixture.changeDetectorRef.detectChanges()` — NOT the usual
+     * `fixture.detectChanges()` — deliberately. This app's `ComponentFixture` is `zonelessEnabled`
+     * (no explicit zone.js CD provider in this spec's TestBed), and in that mode
+     * `fixture.detectChanges()` always routes through `ApplicationRef.tick()`, whose own internal
+     * `checkNoChanges` pass is NOT the same one `detectChanges(false)`'s escape hatch stubs out
+     * (that stub only patches `componentRef.changeDetectorRef.checkNoChanges`, which
+     * `ApplicationRef.tick()` never calls) — so `detectChanges(false)` cannot suppress it here, and
+     * a genuine first-ever write to `is_lead_by_partner` / `leadCenterCode` (both start `undefined`,
+     * `ContributorsAndPartnersBody` has no initializer) trips NG0100 no matter how many times
+     * `fixture.detectChanges()` is called afterward. `fixture.changeDetectorRef.detectChanges()`
+     * calls the component's own `ChangeDetectorRef` directly, applying the write to the DOM without
+     * going through `ApplicationRef.tick()`'s automatic re-check.
+     */
+    it('LCD-AC-1: renders and is marked mandatory when is_lead_by_partner is false', () => {
+      rdPartnersSE.partnersBody.is_lead_by_partner = false;
+      fixture.changeDetectorRef.detectChanges();
+
+      const selectEl = leadCenterSelectEl();
+      expect(selectEl).toBeTruthy();
+      expect(selectEl.querySelector('.pr-field.mandatory')).toBeTruthy();
+    });
+
+    it('LCD-AC-1: renders and is STILL marked mandatory when is_lead_by_partner is true (no longer gated by the toggle)', () => {
+      rdPartnersSE.partnersBody.is_lead_by_partner = true;
+      fixture.changeDetectorRef.detectChanges();
+
+      const selectEl = leadCenterSelectEl();
+      expect(selectEl).toBeTruthy();
+      expect(selectEl.querySelector('.pr-field.mandatory')).toBeTruthy();
+    });
+
+    it('LCD-AC-3: with no Lead Center selected, the field is mandatory AND incomplete — what the save-blocking scan reads', () => {
+      rdPartnersSE.leadCenterCode = null;
+      fixture.changeDetectorRef.detectChanges();
+
+      const fieldEl = leadCenterSelectEl().querySelector('.pr-field');
+      expect(fieldEl.classList.contains('mandatory')).toBe(true);
+      expect(fieldEl.classList.contains('complete')).toBe(false);
+    });
+
+    it('LCD-AC-3 (contrast): once a Lead Center is selected the field reads complete', () => {
+      // Writes straight through the control's own ControlValueAccessor (`writeValue`), the same
+      // technique this codebase already uses to drive a value into a bound custom-field in tests
+      // (see `pr-radio-button.component.spec.ts`) — mutating `rdPartnersSE.leadCenterCode` and
+      // relying on the `[(ngModel)]` model→view sync to reach the child is unreliable in this
+      // zoneless test harness (the write lands, but the child's internal signal — and therefore its
+      // rendered `.text`/`complete` class — never observably updates within a `detectChanges()`
+      // call here); `writeValue` sets that internal signal directly, matching what NgModel would do.
+      const selectDebugEl = fixture.debugElement.query(By.css('app-pr-select[label="Lead center"]'));
+      (selectDebugEl.componentInstance as { writeValue: (v: any) => void }).writeValue('C1');
+      fixture.detectChanges();
+
+      const fieldEl = leadCenterSelectEl().querySelector('.pr-field');
+      expect(fieldEl.classList.contains('complete')).toBe(true);
+    });
+  });
+
+  /**
+   * LCD-AC-6 (docs/specs/changes/lead-center-decouple): regression guard — `LC-DD-5`'s
+   * auto-add-to-Contributing-Centers on `onLeadCenterSelected` must keep firing now that Lead
+   * Center no longer depends on `is_lead_by_partner`. Added ALONGSIDE the existing `LC-T-4`
+   * describe above, which stays unmodified per this task's brief.
+   */
+  describe('LCD-T-4: onLeadCenterSelected auto-add still fires with is_lead_by_partner = true (LCD-AC-6)', () => {
+    beforeEach(async () => {
+      centersMock.loadedCenters.next(true);
+      await fixture.whenStable();
+      await new Promise(resolve => setTimeout(resolve, 30));
+      await fixture.whenStable();
+      fixture.detectChanges();
+    });
+
+    it('auto-adds the selected Lead Center to Contributing CGIAR Centers even when is_lead_by_partner is true', () => {
+      rdPartnersSE.partnersBody.is_lead_by_partner = true;
+      // See the LCD-AC-1 tests above for why this uses `fixture.changeDetectorRef.detectChanges()`.
+      fixture.changeDetectorRef.detectChanges();
+
+      expect(rdPartnersSE.otherCentersSelected).toEqual([]);
+      expect(rdPartnersSE.partnersBody.contributing_center ?? []).toEqual([]);
+
+      rdPartnersSE.onLeadCenterSelected('C1');
+
+      expect(rdPartnersSE.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
       expect(rdPartnersSE.autoAddedLeadCenterCode).toBe('C1');
     });
   });

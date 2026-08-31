@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-29 · branch qa-development-2026-ss · 64d072490 (TOC-C-T-1, TOC-C-T-2, TOC-C-T-3, TOC-SP-T-2, TOC-SP-T-3)
+**Verified:** 2026-08-31 · branch qa-development-2026-ss · <PENDING: re-stamp with the landing commit hash> (LCD-T-2, LCD-T-3, LCD-T-4)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -228,6 +228,69 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   no longer call `blockIfLastCenter`/`blockIfLastScience` at all — deleting an "Other" entry never
   consults the guard, regardless of the ToC-origin count (including the 0-ToC-origin edge state).
   The sentinel-chip exemption from `TOC-C-DD-4`/`TOC-SP-DD-3` is unaffected.
+
+- ⚠️ **`LCD-DD-1..4` (2026-08-31, `docs/specs/changes/lead-center-decouple`): Lead Center and Lead
+  Partner are NO LONGER MUTUALLY EXCLUSIVE.** This supersedes every mutual-exclusivity reading of
+  `is_lead_by_partner` above (the `LC-DD-*` entries here describe Lead Center's dropdown *catalog*
+  decoupling, a different concern, and are still accurate) and the parent guide's "Lead fields
+  (P2-2960)" table row (`../../CLAUDE.md` §21.5), which still describes the pre-spec toggle as an
+  either/or between `leadCenterCode` and `leadPartnerId` — that row is now stale but out of this
+  task's file scope to edit. Lead Center is now an unconditional, always-visible, always-required
+  field, independent of the toggle.
+  1. **`LCD-DD-1` (markup):** Lead center moved under Contributing CGIAR Centers, rendered
+     unconditionally — no `is_lead_by_partner` gate — with `[required]="true"` as a literal. The
+     old `#selectLeadCenter` `ng-template` gated by the toggle is gone.
+     🛑 **`quick/lead-center-reposition` (2026-08-31):** moved again, this time up the page —
+     directly below the Contributing CGIAR Centers dropdown(s)/chips and above "Contributing W3
+     and/or bilateral projects" (was: after "Other contributors", right before "Contributing
+     Centers end"). Wrapped in its own `<div style="position: relative; z-index: 3">` so the open
+     option list isn't painted under later positioned siblings (the bilateral-projects loading
+     overlay uses `z-index: 2` locally, the ToC multi-WPs wrapper uses `z-index: 1`). If you touch
+     this block, re-check those z-index values still nest correctly underneath it.
+  2. **`LCD-DD-2` (auto-assign no longer toggle-gated):** `onLeadByPartnerChange`
+     (`service.ts:670-678`) no longer nulls `leadCenterCode` when switching to "Yes" — only
+     `leadPartnerId` is nulled, and only when switching to "No". `tryAutoAssignLeadCenter`'s old
+     `if (is_lead_by_partner) return;` guard is gone (`service.ts:685-695`), so Lead Center
+     auto-assign now runs on every `runAutoAssignLeads()` call regardless of the toggle, including
+     on section load (`getSectionInformation` → `:376`).
+  3. **`LCD-DD-3` (save — read before touching `onSaveSection`):** `onSaveSection()`
+     (`component.ts:496-599`) stamps `is_leading_result` on `contributing_center` UNCONDITIONALLY
+     from `leadCenterCode` (`:505-507`), while `institutions`/`mqap_institutions` are stamped from
+     `leadPartnerId` ONLY when `is_lead_by_partner` is true (`:509-523`) — centers and
+     partners/mqap leadership are independent now, not an either/or.
+     🛑 **Trap:** in the `isCP2026` branch (`:542-584`), `tocCenters` (`:543-545`) is a bare
+     `{ ...c, from_toc: true }` spread and therefore **inherits** `is_leading_result` from the
+     unconditional stamping loop at `:505-507` — it does NOT recompute it. Contrast with
+     `otherCenters` (`:546-550`), `tocPartners` (`:555-557`) and `otherPartners` (`:558-562`),
+     which each recompute their own `is_leading_result` inline. A future change to that
+     top-of-method stamping loop silently changes what ToC-origin centers save as their leading
+     flag — a reader touching it must know `tocCenters` rides on it.
+  4. **`LCD-DD-4` (messages):** `getMessageLead()` was split. `getMessageLeadCenter()`
+     (`component.ts:613-615`) makes NO "already added in this section" claim — false for centers
+     since `LC-DD-1` made the Lead Center dropdown the full CLARISA catalog, not a subset of
+     Contributing Centers. `getMessageLeadPartner()` (`:617-619`) keeps the claim — still true for
+     partners.
+  Two new hooks: `data-testid="cp-field-contributing_center~lead"` (`html:426`) and
+  `data-testid="cp-field-institutions~lead"` (`html:459`).
+  🛑 **`save-contract.cy.ts` trap:** both hooks resolve, after the `~` strip at `discover():131`, to
+  the SAME payload paths (`contributing_center`, `institutions`) as pre-existing multiselect hooks
+  — but their payload value is a per-row FLAG (`is_leading_result`), not the scalar the generic
+  `editAll`/`assertPayloadCovers` pipeline compares, which would false-negative if driven through
+  it. Excluded via a **testid-keyed** `NEVER_EDIT_TESTID` set (`save-contract.cy.ts:85`), NOT the
+  existing path-keyed `NEVER_EDIT` — using `NEVER_EDIT` there would also silence the pre-existing
+  `cp-field-contributing_center` / `cp-field-contributing_center~flat` hooks, which must stay
+  exercised.
+  `LC-DD-5`'s auto-add on `onLeadCenterSelected` is UNCHANGED by this spec and still fires.
+  **Known gap (frontend-only spec, not closed here):** the server's
+  `validation_contributor_partner_P25` function
+  (`onecgiar-pr-server/src/migrations/1762866499786-updatepartnersContributors.ts:157-158`) only
+  checks `center_count_leading` when `lead_by_partner = 0` — it never requires a leading center
+  when `lead_by_partner = 1`. So the UI now hard-requires a Lead Center (`[required]="true"`,
+  always visible) that the server's own completeness/green-check function does not. Closing this
+  is a server change, out of scope here.
+  🛑 **Not yet verified in a real browser** — this spec's E2E/manual walkthrough is an outstanding
+  human gate (local stack + auth token + a real ToC-mapped P25 result are all required and were not
+  available at doc-update time).
 
 ## Hijos sin archivo propio
 | Componente | Qué hace | Trampa |
