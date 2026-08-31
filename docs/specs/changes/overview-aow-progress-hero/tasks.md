@@ -8,7 +8,7 @@
 ## 2. Tasks
 
 ### `OAH-T-1` — Host: rich rows + CTA navigation
-- **Status:** `[ ]` · client · **M** · Depends: — · Blocks: T-2, T-3, T-4
+- **Status:** `[x]` · client · **M** · Depends: — · Blocks: T-2, T-3, T-4
 - **Scope:** `overviewAowProgressRich` computed (helper-`stateOf` splits; invariant; zeroTarget count; remaining-DESC/code-ASC sort; output tier); `continueReporting()` = `setOnlyPending(true)` + `router.navigate(reporting route, {queryParams:{tocView:'aows'}})`. NO new outputs/glue beyond this (DD-6). Skills: `angular-developer`, `tdd`.
 - **Covers:** R-1 coherence AND-clauses + invariant (logic), R-1 CTA scenario incl. storage AND + `reportingViewMode` BUT, R-3 sort + zero-target AND + no-recompute BUT (logic), R-6 `!toc` AND (flag reuse).
 - **Tests (OAH-TEST-1):** fixture with a `target=0∧achieved>0` KPI proves the partition is total (the C-2 orphan lands in `inProgress`); zero-target excluded+counted; rail sum == rows sum; sort exact incl. tie; CTA: navigate spy receives the reporting route + `tocView:'aows'` AND `setOnlyPending` (the persisting setter, not `.set`) was called; `reportingViewMode` untouched.

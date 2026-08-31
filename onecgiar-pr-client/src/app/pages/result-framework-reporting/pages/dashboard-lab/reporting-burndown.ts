@@ -54,7 +54,7 @@ function isZeroTarget(ind: BurndownIndicator | null | undefined): boolean {
   return targetOf(ind) === 0 && achievedOf(ind) === 0;
 }
 
-function stateOf(ind: BurndownIndicator | null | undefined): BurndownState {
+export function stateOf(ind: BurndownIndicator | null | undefined): BurndownState {
   const achieved = achievedOf(ind);
   const target = targetOf(ind);
   return target > 0 && achieved >= target ? 'complete' : achieved > 0 ? 'in-progress' : 'not-started';

@@ -59,7 +59,7 @@ import {
 } from './components/reporting-entry-hub/reporting-entry-hub.component';
 import { BilateralCreationService } from '../../../bilateral/services/bilateral-creation.service';
 import { BilateralProject } from '../../../bilateral/services/bilateral-creation.interfaces';
-import { buildRatio, countNewlyReported, groupPendingCount, nextPendingAfter, pendingOf, sortRemainingFirst } from './reporting-burndown';
+import { applyZeroTargetRule, buildRatio, countNewlyReported, groupPendingCount, nextPendingAfter, pendingOf, sortRemainingFirst, stateOf } from './reporting-burndown';
 // @akili-spec changes/mass-reporting-flow
 import { environment } from '../../../../../environments/environment';
 import {
@@ -189,6 +189,24 @@ interface AowProgressRow {
   editing: number;
   submitted: number;
   total: number;
+}
+
+/**
+ * Rich per-AoW row for the Overview hero section (`changes/overview-aow-progress-hero`, design.md
+ * §5). Counts partition the zero-target-filtered set: `complete + inProgress + notStarted = total`
+ * (glossary invariant); `reported = complete + inProgress`; `remaining = total - reported`.
+ * @akili-spec changes/overview-aow-progress-hero
+ */
+export interface OverviewAowProgressRowRich {
+  code: string;
+  name: string;
+  complete: number;
+  inProgress: number;
+  notStarted: number;
+  zeroTarget: number;
+  reported: number;
+  total: number;
+  remaining: number;
 }
 
 /**
@@ -1372,6 +1390,66 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       })
       .filter(r => r.total > 0);
   });
+
+  /**
+   * Rich per-AoW rows for the Overview hero section (OAH-R-1 coherence, OAH-R-3 sort/segments).
+   * Row basis = output tier only (`__tier !== 'outcome'`, design DD-3 — same filter as
+   * `overviewAowProgress` above). Splits delegate to `reporting-burndown`'s `stateOf` +
+   * `applyZeroTargetRule` — NEVER recomputed locally (OAH-R-3 BUT, single-home rule: the glossary
+   * partition IS that helper's own `stateOf`) — so this section's numbers can never drift from the
+   * Reporting-tab surfaces that already call the same functions. `target = 0 && achieved > 0` is
+   * NOT zero-target (achieved > 0), so `stateOf` correctly lands it in `in-progress` (the C-2
+   * orphan — the partition stays total). Sort: remaining DESC, tie code ASC (OAH-R-3). Loading
+   * reuses `loadingAows()` — no new aggregate computed (design B-16).
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  readonly overviewAowProgressRich = computed<OverviewAowProgressRowRich[]>(() => {
+    return this.indicatorsByAow()
+      .map(b => {
+        const inds = (b.indicators ?? []).filter(i => i?.__tier !== 'outcome');
+        const { counted, zeroTarget } = applyZeroTargetRule(inds);
+        let complete = 0;
+        let inProgress = 0;
+        let notStarted = 0;
+        for (const ind of counted) {
+          const state = stateOf(ind);
+          if (state === 'complete') complete++;
+          else if (state === 'in-progress') inProgress++;
+          else notStarted++;
+        }
+        const total = counted.length;
+        const reported = complete + inProgress;
+        return {
+          code: b.aow.code,
+          name: b.aow.name,
+          complete,
+          inProgress,
+          notStarted,
+          zeroTarget,
+          reported,
+          total,
+          remaining: total - reported
+        };
+      })
+      .filter(r => r.total > 0 || !this.loadingAows())
+      .sort((a, b) => b.remaining - a.remaining || a.code.localeCompare(b.code));
+  });
+
+  /**
+   * OAH-R-1 Continue-reporting CTA: persists Only-pending via its storage-backed setter (never a
+   * bare `.set()` — Overview and Reporting are separate routes (design.md C-1) and this component
+   * is destroyed on navigation, so a bare `.set()` would not survive the switch), then navigates to
+   * this program's Reporting route with `tocView=aows` — the same grouped-view route shape
+   * `onOpenAow` already uses for its non-AoW-code branch. `reportingViewMode` (grouped/flat) is
+   * left untouched; Only-pending (`tocView`/`plannedBrowseView`) is the one pinned concept here.
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  continueReporting(): void {
+    const spCode = this.selected()?.initiativeCode || this.route?.snapshot?.paramMap?.get('entityId');
+    if (!spCode) return;
+    this.setOnlyPending(true);
+    this.router.navigate(['/result-framework-reporting/entity-details', spCode], { queryParams: { tocView: 'aows' } });
+  }
 
   // ── Reporting Entry Hub (`changes/reporting-entry-hub`) ───────────────────
   //
