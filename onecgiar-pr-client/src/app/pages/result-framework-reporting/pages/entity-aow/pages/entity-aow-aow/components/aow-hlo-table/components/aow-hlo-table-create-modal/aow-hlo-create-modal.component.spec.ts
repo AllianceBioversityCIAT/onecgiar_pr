@@ -832,6 +832,31 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       expect(component.showsInnovationLink()).toBe(true);
     });
 
+    /**
+     * 🛑 The epic's hard rule: 2026 onwards gets the new question, every earlier phase must render
+     * and post exactly what it renders and posts today. The gate is `phase_year`, NEVER `isP25()` —
+     * prtest holds 2025-phase results inside the P25 portfolio, so a portfolio gate would switch the
+     * question ON for them. These two tests are the lock; do not relax them.
+     */
+    it('🛑 never shows it for a 2025 phase — earlier phases must look exactly as they do today', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2025;
+      armInnovationUse();
+
+      expect(component.showsInnovationLink()).toBe(false);
+    });
+
+    it('🛑 leaves the create body untouched in a 2025 phase — no new keys reach the server', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2025;
+      armInnovationUse();
+      component.createResultBody.set({ ...component.createResultBody(), result_name: 'An innovation use result' });
+
+      component.createResult();
+
+      const body = mockApiService.resultsSE.POST_createResult.mock.calls.at(-1)[0];
+      expect(body.result).not.toHaveProperty('has_innovation_link');
+      expect(body.result).not.toHaveProperty('linked_results');
+    });
+
     it('never shows it for any other indicator category', () => {
       fixture.detectChanges();
 

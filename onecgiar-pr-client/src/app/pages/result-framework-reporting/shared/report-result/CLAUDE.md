@@ -1,6 +1,6 @@
 # report-result
 
-**Verified:** 2026-08-31 · branch performance-refactor · b224c27e4
+**Verified:** 2026-08-31 · branch performance-refactor · 9abc99972
 
 ## Qué es
 Las piezas puras que comparten las tres superficies que crean un resultado contra un indicador del
@@ -66,4 +66,17 @@ one is not `null`, spreads `has_innovation_link` + `linked_results` **inside `re
 - The id is normalised to a number: `pr-select` hands back the catalogue value as a string.
 - ⚠️ `aow-hlo-create-modal` still builds its body inline (see "Pendiente"), so it repeats these two
   keys itself. If you change the shape here, change it there too until it migrates.
+
+### 🛑 The phase gate is inviolable
+2026 onwards gets the question; **every earlier phase must render and post exactly what it does
+today**. The single gate is `showsInnovationLinkQuestion(resultTypeId, phaseYear)` in
+`shared/services/global/qa-innovation-development-results.service.ts` — `phase_year >= 2026`,
+**never `isP25()`**: prtest holds 2025-phase results inside the P25 portfolio, so a portfolio gate
+would switch the question ON for them and break the epic's backward-compatibility rule.
+
+Locked by a test in each of the three creation surfaces — `report-result-form`, `lab-report-form`
+and `aow-hlo-create-modal` — each asserting that a 2025 phase neither shows the question nor adds
+the two keys to the create body. The server is the second lock: `_persistInnovationLinkOnCreate`
+writes only when `has_innovation_link === true` **and** a linked result travels with it, so a
+pre-2026 create can never reach the writer. Do not relax either lock.
 
