@@ -290,6 +290,40 @@ describe('ReportingAowTableComponent', () => {
       await build([group([row()])]);
       expect(text().toLowerCase()).toContain('high level outputs');
     });
+
+    it('toggles all HLO groups inside a band with toggleBand', async () => {
+      const g = group([
+        row({ indicator_id: 1, __hlo: 'HLO 1' }),
+        row({ indicator_id: 2, __hlo: 'HLO 2' })
+      ]);
+      await build([g]);
+      const bands = component.bandsOf(g);
+      const outputBand = bands[0];
+      expect(outputBand.groups.length).toBe(2);
+
+      // Initially open (default)
+      expect(component.isBandAllOpen(outputBand.groups)).toBe(true);
+
+      // Collapse all in band
+      component.toggleBand(outputBand.groups);
+      expect(component.isBandAllOpen(outputBand.groups)).toBe(false);
+
+      // Expand all in band
+      component.toggleBand(outputBand.groups);
+      expect(component.isBandAllOpen(outputBand.groups)).toBe(true);
+    });
+
+    it('sums target and achieved values for an HLO group', async () => {
+      const g = group([
+        row({ indicator_id: 1, __hlo: 'HLO 1', target_value_sum: '5', actual_achieved_value_sum: '12' }),
+        row({ indicator_id: 2, __hlo: 'HLO 1', target_value_sum: '3.5', actual_achieved_value_sum: '8.5' })
+      ]);
+      await build([g]);
+      const bands = component.bandsOf(g);
+      const hloGroup = bands[0].groups[0];
+      expect(component.hloTargetSum(hloGroup)).toBe('8.5');
+      expect(component.hloAchievedSum(hloGroup)).toBe('20.5');
+    });
   });
 
   // ── ratio ─────────────────────────────────────────────────────────────────

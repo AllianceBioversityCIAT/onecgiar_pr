@@ -360,6 +360,18 @@
             }
           </span>
 
+          @if (group.loading) {
+            <!-- The count and the ratio are computed over the ToC that has not arrived yet —
+                 painting "0 KPIs · 0 of 0 · 0%" and letting it jump is worse than a skeleton
+                 (owner field report 2026-08-31). -->
+            <span class="h-[16px] w-[56px] shrink-0 animate-pulse rounded-full bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+            <span class="flex-1"></span>
+            <span class="flex shrink-0 items-center gap-[12px]" aria-hidden="true">
+              <span class="h-[8px] w-[120px] shrink-0 animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
+              <span class="h-[16px] w-[76px] shrink-0 animate-pulse rounded-full bg-[var(--pr-surface-ground)]"></span>
+              <span class="h-[16px] w-[44px] shrink-0 animate-pulse rounded-full bg-[var(--pr-surface-ground)]"></span>
+            </span>
+          } @else {
           <span class="shrink-0 whitespace-nowrap text-[13px] text-[var(--pr-text-subtle)]">
             {{ countLabel(group.count) }}
           </span>
@@ -386,6 +398,7 @@
               {{ ratio.percent }}%
             </span>
           </span>
+          }
 
           <!-- Jump to the focused By-AOW view — the inverse of that view's "All Areas of Work"
                button (same recipe). Real AoWs only: buckets have no By-AOW view. Nested-control
@@ -519,17 +532,31 @@
               <!-- Structure: AoW → band (HIGH LEVEL OUTPUTS / OUTCOMES) → group (name only) → rows -->
               @for (band of bands; track band.key; let bandIndex = $index) {
                 @if (band.hasEyebrow) {
-                  <!-- 36px band label — a label, not a control: nothing here is clickable -->
+                  <!-- 36px band label -->
                   <div
-                    class="flex h-[36px] items-center gap-[10px] px-[24px]"
+                    class="flex h-[36px] items-center justify-between px-[24px]"
                     [class.mt-[20px]]="bandIndex > 0">
-                    <span
-                      class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
-                      {{ band.eyebrow }}
-                    </span>
-                    <span class="pr-figure-sm text-[12px] font-medium text-[var(--pr-text-subtle)]">
-                      {{ countLabel(bandKpiCount(band)) }}
-                    </span>
+                    <div class="flex items-center gap-[10px]">
+                      <span
+                        class="text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-[var(--pr-text-subtle)]">
+                        {{ band.eyebrow }}
+                      </span>
+                      <span class="pr-figure-sm text-[12px] font-medium text-[var(--pr-text-subtle)]">
+                        {{ countLabel(bandKpiCount(band)) }}
+                      </span>
+                    </div>
+                    @if (band.groups.length > 0) {
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-[4px] text-[11px] font-semibold text-[var(--pr-color-primary-600)] hover:text-[var(--pr-color-primary-700)] cursor-pointer bg-transparent border-0 p-0 transition-colors"
+                        [attr.aria-expanded]="isBandAllOpen(band.groups)"
+                        (click)="toggleBand(band.groups)">
+                        <span class="material-icons-round text-[15px]" aria-hidden="true">
+                          {{ isBandAllOpen(band.groups) ? 'unfold_less' : 'unfold_more' }}
+                        </span>
+                        <span>{{ isBandAllOpen(band.groups) ? 'Collapse all' : 'Expand all' }}</span>
+                      </button>
+                    }
                   </div>
                 }
 
@@ -557,9 +584,19 @@
                       {{ hlo.name }}
                     </span>
 
-                    <span class="rounded-full bg-[var(--pr-surface-card)] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-text-secondary)] border border-[var(--pr-border)] tabular-nums">
-                      {{ countLabel(hlo.rows.length) }}
-                    </span>
+                    <div class="flex items-center gap-[12px] shrink-0">
+                      <span class="text-[11px] text-[var(--pr-text-secondary)]">
+                        <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Target:</span>
+                        <span class="ml-1 font-bold tabular-nums text-[var(--pr-text-heading)]">{{ hloTargetSum(hlo) }}</span>
+                      </span>
+                      <span class="text-[11px] text-[var(--pr-text-secondary)]">
+                        <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Achieved:</span>
+                        <span class="ml-1 font-bold tabular-nums text-emerald-700">{{ hloAchievedSum(hlo) }}</span>
+                      </span>
+                      <span class="rounded-full bg-[var(--pr-surface-card)] px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-text-secondary)] border border-[var(--pr-border)] tabular-nums">
+                        {{ countLabel(hlo.rows.length) }}
+                      </span>
+                    </div>
                   </button>
 
                   <div

@@ -413,7 +413,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   });
   readonly loadingAows = computed(() => {
     const code = this.selected()?.initiativeCode;
-    return !!code && this.loadingCodes().has(code) && !this.aowsByCode().has(code);
+    // "Not cached yet" counts as loading even before the request STARTS — the gap between
+    // selection and the load effect's first run rendered as loaded-and-empty (field, 2026-08-31;
+    // same not-yet-started≠loading class as the ?kpi= restore race).
+    return !!code && !this.aowsByCode().has(code);
   });
 
   /** Sidebar hover flyout (interactive): hovered program, its AOWs, vertical anchor. */
@@ -1906,6 +1909,12 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return { count: list.length, avgProgress: Math.round(sum / list.length), active };
   });
 
+  /**
+   * True while the AoW list or any group's ToC is still loading — the stats card and the group
+   * headers show skeletons instead of partial sums that jump as ToCs stream in (field, 2026-08-31).
+   */
+  readonly plannedReportingStatsLoading = computed(() => this.loadingAows() || this.reportingGroups().some(g => g.loading));
+
   /** Summary stats for the top reporting overview card (PROGRAMS, AOWs, TOTAL KPIs, KPIs WITH EVIDENCE). */
   readonly plannedReportingSummaryStats = computed(() => {
     const aowsCount = this.aows().length;
@@ -2330,7 +2339,6 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   readonly indicatorsByAow = computed(() => {
     const sp = this.selected()?.initiativeCode;
     const map = this.tocByKey();
-    const loadingKeys = this.loadingTocKeys();
     return this.aows().map(aow => {
       const key = this.tocCacheKey(sp, aow.code);
       const toc = map.get(key);
@@ -2348,7 +2356,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           }))
         );
       const indicators = [...fromTier(toc?.outputs, 'output'), ...fromTier(toc?.outcomes, 'outcome')];
-      return { aow, indicators, count: indicators.length, loading: !toc && loadingKeys.has(key) };
+      // `!toc` alone, NOT "key is in loadingTocKeys": before `loadToc` runs for this key the set
+      // does not contain it, and that gap painted "0 KPIs · 0 of 0 · 0%" headers that then jumped
+      // (field, 2026-08-31). `loadToc` ALWAYS caches — an errored fetch caches an empty ToC — so a
+      // missing entry can only mean not-loaded-yet.
+      return { aow, indicators, count: indicators.length, loading: !toc };
     });
   });
 
@@ -2621,7 +2633,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // 2) Intermediate Outcomes — dedicated endpoint, cached under INTERMEDIATE_OUTCOMES_CODE.
     const ioKey = this.tocCacheKey(sp, INTERMEDIATE_OUTCOMES_CODE);
     const ioToc = this.tocByKey().get(ioKey);
-    const ioLoading = this.loadingTocKeys().has(ioKey);
+    const ioLoading = !ioToc; // no cached ToC = loading (loadToc always caches, error included)
     const ioAll = this.flattenBucketIndicators(ioToc?.outputs, INTERMEDIATE_OUTCOMES_CODE, 'Intermediate Outcomes');
     const intermediateCard: ReportingAowGroup | null =
       wantIo && sectionIsIo && (ioAll.length || ioLoading)
@@ -2638,7 +2650,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     // 3) 2030 Outcomes — dedicated endpoint.
     const o30Key = this.tocCacheKey(sp, OUTCOMES_2030_CODE);
     const o30Toc = this.tocByKey().get(o30Key);
-    const o30Loading = this.loadingTocKeys().has(o30Key);
+    const o30Loading = !o30Toc; // same rule as the intermediate bucket
     const o30All = this.flattenBucketIndicators(o30Toc?.outputs, OUTCOMES_2030_CODE, '2030 Outcomes');
     const o30Card: ReportingAowGroup | null =
       wantO30 && sectionIsO30 && (o30All.length || o30Loading)
@@ -3384,6 +3396,40 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
       next.has(title) ? next.delete(title) : next.add(title);
       return next;
     });
+  }
+
+  /** Check if all HLO groups within a By-AoW section (Outputs / Outcomes) are expanded. */
+  isByAowSectionAllExpanded(sec: { label: string; groups: { title: string }[] }): boolean {
+    if (!sec.groups?.length) return false;
+    return sec.groups.every(g => this.isPlannedHloExpanded(g.title));
+  }
+
+  /** Toggle all HLO groups within a By-AoW section (Outputs / Outcomes). */
+  toggleByAowSection(sec: { label: string; groups: { title: string }[] }): void {
+    const allOpen = this.isByAowSectionAllExpanded(sec);
+    this.expandedPlannedHlos.update(set => {
+      const next = new Set(set);
+      for (const g of sec.groups) {
+        if (allOpen) {
+          next.delete(g.title);
+        } else {
+          next.add(g.title);
+        }
+      }
+      return next;
+    });
+  }
+
+  /** Sum of target values across an HLO's indicators. */
+  hloTargetSum(hlo: { indicators?: any[] }): string {
+    const sum = (hlo.indicators ?? []).reduce((acc, ind) => acc + (parseFloat(String(ind?.target_value_sum ?? 0)) || 0), 0);
+    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
+  }
+
+  /** Sum of achieved values across an HLO's indicators. */
+  hloAchievedSum(hlo: { indicators?: any[] }): string {
+    const sum = (hlo.indicators ?? []).reduce((acc, ind) => acc + (parseFloat(String(ind?.actual_achieved_value_sum ?? 0)) || 0), 0);
+    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
   }
 
   setIndicatorTab(tab: 'outputs' | 'outcomes'): void {

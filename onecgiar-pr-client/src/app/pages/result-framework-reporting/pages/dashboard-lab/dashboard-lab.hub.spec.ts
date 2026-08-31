@@ -787,4 +787,41 @@ describe('bannerZeroTargetTitle (MRF-R-7 banner surface)', () => {
     expect(c.bannerZeroTargetTitle(4)).toBe('excludes 4 zero-target KPIs');
   });
 });
+
+describe('By-AoW section collapse/expand', () => {
+  it('checks if section is all expanded and toggles all groups', async () => {
+    const { component } = await createComponent(apiMock());
+    const sec = {
+      label: 'High Level Outputs',
+      groups: [{ title: 'HLO 1' }, { title: 'HLO 2' }]
+    };
+
+    // Initially none are in expandedPlannedHlos
+    expect(component.isByAowSectionAllExpanded(sec)).toBe(false);
+
+    // Expand all in section
+    component.toggleByAowSection(sec);
+    expect(component.isByAowSectionAllExpanded(sec)).toBe(true);
+    expect(component.isPlannedHloExpanded('HLO 1')).toBe(true);
+    expect(component.isPlannedHloExpanded('HLO 2')).toBe(true);
+
+    // Collapse all in section
+    component.toggleByAowSection(sec);
+    expect(component.isByAowSectionAllExpanded(sec)).toBe(false);
+    expect(component.isPlannedHloExpanded('HLO 1')).toBe(false);
+    expect(component.isPlannedHloExpanded('HLO 2')).toBe(false);
+  });
+
+  it('aggregates target and achieved sums for an HLO', async () => {
+    const { component } = await createComponent(apiMock());
+    const hlo = {
+      indicators: [
+        { target_value_sum: '10', actual_achieved_value_sum: '5' },
+        { target_value_sum: '2.5', actual_achieved_value_sum: '7.5' }
+      ]
+    };
+    expect(component.hloTargetSum(hlo)).toBe('12.5');
+    expect(component.hloAchievedSum(hlo)).toBe('12.5');
+  });
+});
 });

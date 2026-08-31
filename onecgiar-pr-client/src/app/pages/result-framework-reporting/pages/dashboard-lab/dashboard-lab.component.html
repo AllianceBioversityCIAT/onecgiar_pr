@@ -1252,7 +1252,8 @@
           <app-reporting-program-band
             [programCode]="selected()?.initiativeCode || ''"
             [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
-            [summaryStats]="plannedReportingSummaryStats()"
+            [summaryStats]="plannedBrowseView() === 'aows' ? plannedReportingSummaryStats() : null"
+            [statsLoading]="plannedReportingStatsLoading()"
             [aowCount]="aows().length"
             [plannedResultsCount]="bandPlannedResultsCount()"
             [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
@@ -1547,9 +1548,23 @@
                 <p class="m-0 py-8 text-center text-[12.5px] text-[var(--pr-color-accents-5)]">No indicators match the current filters for this Area of Work.</p>
               } @else {
                 @for (sec of plannedByAowSections(); track sec.label) {
-                <div class="flex items-center gap-[8px] pt-1">
-                  <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">{{ sec.label }}</span>
-                  <span class="font-mono text-[11px] font-semibold text-[var(--pr-color-accents-4)]">{{ sec.kpis }} KPIs</span>
+                <div class="flex items-center justify-between gap-[8px] pt-2 pb-1">
+                  <div class="flex items-center gap-[8px]">
+                    <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--pr-color-accents-5)]">{{ sec.label }}</span>
+                    <span class="font-mono text-[11px] font-semibold text-[var(--pr-color-accents-4)]">{{ sec.kpis }} KPIs</span>
+                  </div>
+                  @if (sec.groups.length > 0) {
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-[4px] rounded-[6px] border border-transparent bg-transparent px-[8px] py-[2px] text-[11px] font-semibold text-[var(--pr-color-primary-600)] transition-colors hover:bg-[var(--pr-color-primary-50)] hover:text-[var(--pr-color-primary-700)] cursor-pointer"
+                      [attr.aria-expanded]="isByAowSectionAllExpanded(sec)"
+                      (click)="toggleByAowSection(sec)">
+                      <span class="material-icons-round text-[15px]" aria-hidden="true">
+                        {{ isByAowSectionAllExpanded(sec) ? 'unfold_less' : 'unfold_more' }}
+                      </span>
+                      <span>{{ isByAowSectionAllExpanded(sec) ? 'Collapse all' : 'Expand all' }}</span>
+                    </button>
+                  }
                 </div>
                 @for (hlo of sec.groups; track hlo.title) {
                   <section class="overflow-hidden rounded-xl border border-[rgba(30,32,47,0.07)] bg-white">
@@ -1557,14 +1572,14 @@
                       type="button"
                       (click)="togglePlannedHlo(hlo.title)"
                       [attr.aria-expanded]="isPlannedHloExpanded(hlo.title)"
-                      class="flex w-full items-center gap-2 px-2.5 py-2 text-left hover:bg-[var(--pr-color-accents-1)]">
+                      class="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-[var(--pr-color-accents-1)] transition-colors cursor-pointer">
                       <span
                         class="material-icons-round text-[18px] text-[var(--pr-color-accents-4)] transition-transform"
                         [class.rotate-90]="isPlannedHloExpanded(hlo.title)"
                         aria-hidden="true"
                         >chevron_right</span
                       >
-                      <span class="min-w-0 flex-1 truncate text-[12px] font-semibold text-[var(--pr-color-secondary-400)]">
+                      <span class="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-[var(--pr-color-secondary-400)]">
                         @if (hlo.split.code) {
                           <span class="font-extrabold text-[var(--pr-color-primary-400)]" [innerHTML]="hlo.split.code | highlightSearch: plannedSearch()"></span>
                           <span class="mx-1 font-normal text-[var(--pr-color-accents-3)]">·</span>
@@ -1573,7 +1588,19 @@
                           <span [innerHTML]="hlo.split.name | highlightSearch: plannedSearch()"></span>
                         }
                       </span>
-                      <span class="shrink-0 rounded-full bg-[var(--pr-color-accents-1)] px-1.5 py-px text-[10px] font-bold tabular-nums">{{ hlo.count }}</span>
+                      <div class="flex items-center gap-3 shrink-0">
+                        <span class="text-[11px] text-[var(--pr-text-secondary)]">
+                          <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Target:</span>
+                          <span class="ml-1 font-bold tabular-nums text-[var(--pr-text-heading)]">{{ hloTargetSum(hlo) }}</span>
+                        </span>
+                        <span class="text-[11px] text-[var(--pr-text-secondary)]">
+                          <span class="font-semibold uppercase tracking-wider text-[9.5px] text-slate-400">Achieved:</span>
+                          <span class="ml-1 font-bold tabular-nums text-emerald-700">{{ hloAchievedSum(hlo) }}</span>
+                        </span>
+                        <span class="shrink-0 rounded-full border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--pr-text-secondary)] tabular-nums">
+                          {{ hlo.count }} KPI{{ hlo.count === 1 ? '' : 's' }}
+                        </span>
+                      </div>
                     </button>
                     @if (isPlannedHloExpanded(hlo.title)) {
                       <div class="border-t border-[rgba(30,32,47,0.06)] px-2.5 py-2">

@@ -227,9 +227,13 @@
               <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">account_tree</span>
               <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Programs/Accelerators</span>
             </div>
-            <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
-              {{ stats.programsCount }}
-            </span>
+            @if (statsLoading()) {
+              <span class="mt-1 inline-block h-[28px] w-[72px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+            } @else {
+              <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
+                {{ stats.programsCount }}
+              </span>
+            }
           </div>
 
           <!-- Areas of Work -->
@@ -238,9 +242,13 @@
               <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">layers</span>
               <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Areas of Work</span>
             </div>
-            <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
-              {{ stats.aowsCount }}
-            </span>
+            @if (statsLoading()) {
+              <span class="mt-1 inline-block h-[28px] w-[72px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+            } @else {
+              <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
+                {{ stats.aowsCount }}
+              </span>
+            }
           </div>
 
           <!-- Total KPIs -->
@@ -249,9 +257,13 @@
               <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">checklist</span>
               <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Total KPIs</span>
             </div>
-            <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
-              {{ stats.totalKpis }}
-            </span>
+            @if (statsLoading()) {
+              <span class="mt-1 inline-block h-[28px] w-[72px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+            } @else {
+              <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
+                {{ stats.totalKpis }}
+              </span>
+            }
           </div>
 
           <!-- KPIs with Evidence -->
@@ -260,9 +272,13 @@
               <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">assignment_turned_in</span>
               <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">KPIs with Evidence</span>
             </div>
-            <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
-              {{ stats.reportedKpis }} of {{ stats.totalKpis }}
-            </span>
+            @if (statsLoading()) {
+              <span class="mt-1 inline-block h-[28px] w-[72px] animate-pulse rounded-[8px] bg-[var(--pr-surface-ground)]" aria-hidden="true"></span>
+            } @else {
+              <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
+                {{ stats.reportedKpis }} of {{ stats.totalKpis }}
+              </span>
+            }
           </div>
         </div>
       </div>

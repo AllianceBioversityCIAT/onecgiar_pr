@@ -67,6 +67,12 @@ export class ReportingProgramBandComponent {
   /** Summary statistics banner above reporting heading (PROGRAMS, AOWs, TOTAL KPIs, EVIDENCE). */
   readonly summaryStats = input<ReportingSummaryStats | null>(null);
   /**
+   * True while any AoW ToC is still loading. The stats are SUMS over whatever has arrived, so
+   * painting them mid-stream shows numbers that then change — a skeleton is honest, a moving
+   * figure is not (owner field report 2026-08-31).
+   */
+  readonly statsLoading = input<boolean>(false);
+  /**
    * Long copy for the ⓘ popover body. Empty → fall back to a short placeholder built from the
    * name (the SP list payload still has no description field — NEEDS-BACKEND).
    */

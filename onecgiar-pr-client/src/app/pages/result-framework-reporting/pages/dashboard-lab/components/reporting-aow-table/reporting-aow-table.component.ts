@@ -615,6 +615,18 @@ export class ReportingAowTableComponent {
       .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
   }
 
+  /** Sum of target values across an HLO's rows. */
+  hloTargetSum(hlo: { rows?: ReportingIndicator[] }): string {
+    const sum = (hlo.rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.target_value_sum ?? 0)) || 0), 0);
+    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
+  }
+
+  /** Sum of achieved values across an HLO's rows. */
+  hloAchievedSum(hlo: { rows?: ReportingIndicator[] }): string {
+    const sum = (hlo.rows ?? []).reduce((acc, row) => acc + (parseFloat(String(row?.actual_achieved_value_sum ?? 0)) || 0), 0);
+    return Number.isInteger(sum) ? String(sum) : sum.toFixed(1);
+  }
+
   hloJumpList(group: ReportingAowGroup): { key: string; name: string; count: number }[] {
     const bands = this.bandsOf(group);
     const list: { key: string; name: string; count: number }[] = [];
@@ -748,6 +760,24 @@ export class ReportingAowTableComponent {
   toggle(key: string, defaultOpen = false): void {
     const now = this.isOpen(key, defaultOpen);
     this.overrides.update(map => new Map(map).set(key, !now));
+  }
+
+  /** Check if all HLO sub-groups in a band are expanded. */
+  isBandAllOpen(groups: { key: string }[]): boolean {
+    if (!groups?.length) return false;
+    return groups.every(hlo => this.isOpen(hlo.key, this.isDefaultOpenHlo()));
+  }
+
+  /** Toggle all HLO sub-groups in a band. */
+  toggleBand(groups: { key: string }[]): void {
+    const allOpen = this.isBandAllOpen(groups);
+    this.overrides.update(map => {
+      const next = new Map(map);
+      for (const hlo of groups) {
+        next.set(hlo.key, !allOpen);
+      }
+      return next;
+    });
   }
 
   /**
