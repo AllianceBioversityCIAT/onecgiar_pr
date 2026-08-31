@@ -385,15 +385,28 @@ export class EvidencesService {
         evidenceSharepoint.is_public_file != evidence.is_public_file ||
         replaceFile
       ) {
+        const documentId = sp_document_id ?? evidenceSharepoint.document_id;
         const data: any = await this._sharePointService.addFileAccess(
-          sp_document_id ?? evidenceSharepoint.document_id,
+          documentId,
           evidence.is_public_file ?? evidenceSharepoint.is_public_file,
         );
-        if (data.link.webUrl) {
-          await this._evidencesRepository.update(newEvidenceId, {
-            link: data.link.webUrl,
-          });
+        // SharePointService.addFileAccess swallows its own HTTP/permission
+        // errors and resolves with the raw Error instead of rejecting (see
+        // share-point.service.ts). Without this guard `data.link.webUrl`
+        // throws an opaque TypeError here, which still aborts the request
+        // (create()/createV2() catch it) but hides the real SharePoint
+        // failure behind "Cannot read properties of undefined" and skips
+        // persisting the evidence_sharepoint row below silently.
+        if (!data?.link?.webUrl) {
+          throw new Error(
+            `SharePoint addFileAccess failed for document ${documentId}: ${
+              data?.message || JSON.stringify(data) || 'unknown error'
+            }`,
+          );
         }
+        await this._evidencesRepository.update(newEvidenceId, {
+          link: data.link.webUrl,
+        });
       }
 
       evidenceSharepoint.folder_path =
