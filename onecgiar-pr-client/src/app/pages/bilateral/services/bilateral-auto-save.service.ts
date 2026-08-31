@@ -64,6 +64,12 @@ export class BilateralAutoSaveService {
   >();
   private readonly _blurSubject = new Subject<{ fieldPath: string; value: unknown }>();
   private _generation = 0;
+  /**
+   * True only once a request has actually come back OK. `registerField` seeds every field as
+   * `idle`, so without this the chip read "All changes saved" on a freshly opened result before
+   * anything had been typed, let alone saved.
+   */
+  private readonly _hasSavedOnce = signal(false);
 
   readonly manualSave$ = new Subject<void>();
 
@@ -91,7 +97,8 @@ export class BilateralAutoSaveService {
     const statuses = Object.values(this.fieldStatus());
     if (statuses.includes('saving')) return 'saving';
     if (statuses.includes('error')) return 'error';
-    if (statuses.length > 0 && statuses.every(s => s === 'idle' || s === 'saved')) return 'saved';
+    if (this._hasSavedOnce() && statuses.length > 0 && statuses.every(s => s === 'idle' || s === 'saved'))
+      return 'saved';
     return 'idle';
   });
 
@@ -251,6 +258,7 @@ export class BilateralAutoSaveService {
     this._inFlight.clear();
     this.fieldStatus.set({});
     this.hasPendingSaves.set(false);
+    this._hasSavedOnce.set(false);
     this._currentResultId.set(null);
     // reset() also runs between results in the same visit: a locked result must not leave the next
     // one locked.
@@ -292,7 +300,18 @@ export class BilateralAutoSaveService {
     executor?: PayloadExecutor
   ): void {
     if (this._inFlight.get(endpointKey)) {
-      this._queuedPayloads.set(endpointKey, { body, statusKeys, executor });
+      // ⚠️ MERGE, never replace. `flush()` empties `_pendingFields` as it builds each body, so once a
+      // field's value is in here it exists nowhere else. Two edits landing on the same endpoint while
+      // a request is in flight (score two Impact Areas in a row, or type the description and
+      // immediately touch another field) used to overwrite the first queued body with the second and
+      // the first edit was silently dropped. Later keys win per field, so the newest value of any
+      // given field is still the one that goes out.
+      const queued = this._queuedPayloads.get(endpointKey);
+      this._queuedPayloads.set(endpointKey, {
+        body: queued ? { ...queued.body, ...body } : body,
+        statusKeys: queued ? Array.from(new Set([...queued.statusKeys, ...statusKeys])) : statusKeys,
+        executor: executor ?? queued?.executor,
+      });
       this.setFieldStatuses(statusKeys, 'saving');
       this.hasPendingSaves.set(true);
       return;
@@ -374,6 +393,7 @@ export class BilateralAutoSaveService {
   }
 
   private markFieldsSavedThenIdle(fields: string[]): void {
+    this._hasSavedOnce.set(true);
     this.setFieldStatuses(fields, 'saved');
     for (const field of fields) {
       this.scheduleSavedToIdle(field);
