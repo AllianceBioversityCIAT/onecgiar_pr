@@ -18,13 +18,21 @@ import { signal } from '@angular/core';
 
 const OUTPUT_LEVEL = 4;
 
-function makeApiMock() {
+/** `phaseYear` drives the 2026 gate of P2-3420. Left undefined it falls back to the calendar year. */
+function makeApiMock(phaseYear?: number) {
   return {
+    dataControlSE: phaseYear == null ? undefined : { reportingCurrentPhase: { phaseYear } },
     resultsSE: {
       GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
       GET_W3BilateralProjectsByProgram: jest.fn().mockReturnValue(of({ response: [] })),
       GET_mqapValidation: jest.fn().mockReturnValue(of({ response: { title: 'Retrieved title', metadata: [{ source: 'CGSpace' }] } })),
-      POST_createResult: jest.fn().mockReturnValue(of({ response: { result: { result_code: 'R-1', version_id: 9 } } }))
+      POST_createResult: jest.fn().mockReturnValue(of({ response: { result: { result_code: 'R-1', version_id: 9 } } })),
+      // P2-3420 — catalogue behind the link-to-a-QA'd-innovation dropdown.
+      GET_qaInnovationDevelopmentResults: jest.fn().mockReturnValue(
+        of({
+          response: [{ id: 501, result_code: 5501, title: 'Drought-tolerant bean variety', status_id: 2, phase_year: 2025, acronym: 'P25' }]
+        })
+      )
     },
     alertsFe: { show: jest.fn() }
   };
@@ -36,8 +44,8 @@ describe('LabReportFormComponent', () => {
   let api: ReturnType<typeof makeApiMock>;
   let resultLevelSig: ReturnType<typeof signal<any[]>>;
 
-  async function setup(inputs: Record<string, any> = {}) {
-    api = makeApiMock();
+  async function setup(inputs: Record<string, any> = {}, phaseYear?: number) {
+    api = makeApiMock(phaseYear);
     resultLevelSig = signal<any[]>([]);
 
     await TestBed.configureTestingModule({
@@ -334,6 +342,104 @@ describe('LabReportFormComponent', () => {
 
       expect(component.createResultBody().handler).toBe(item.itemUrl);
       expect(api.resultsSE.GET_mqapValidation).toHaveBeenCalledWith(item.itemUrl);
+    });
+  });
+
+  /**
+   * P2-3420 — link to a QA'd Innovation Development result on the ToC-linked create form.
+   * The gate is the PHASE year, never `isP25()`: prtest holds 2025-phase results inside P25.
+   */
+  describe("P2-3420: link to a QA'd Innovation Development result", () => {
+    const INNOVATION_USE = 2;
+
+    it('defaults the answer to NO, as the story requires', async () => {
+      await setup({ indicator: indicator({ result_type_id: INNOVATION_USE }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+
+      expect(component.hasInnovationLink()).toBe(false);
+      expect(component.linkedResultId()).toBeNull();
+    });
+
+    it('shows the question for an Innovation use indicator in the open (2026) phase', async () => {
+      await setup({ indicator: indicator({ result_type_id: INNOVATION_USE }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+
+      expect(component.showsInnovationLink()).toBe(true);
+    });
+
+    it('never shows it for any other indicator category', async () => {
+      await setup({ indicator: indicator({ result_type_id: 7 }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+
+      expect(component.showsInnovationLink()).toBe(false);
+    });
+
+    it('🛑 never shows it for a 2025 phase — earlier phases must look exactly as they do today', async () => {
+      await setup({ indicator: indicator({ result_type_id: INNOVATION_USE }), tocNode: { result_level_id: OUTPUT_LEVEL } }, 2025);
+
+      expect(component.showsInnovationLink()).toBe(false);
+      expect(api.resultsSE.GET_qaInnovationDevelopmentResults).not.toHaveBeenCalled();
+    });
+
+    it('loads the shared catalogue once the question is on screen', async () => {
+      await setup({ indicator: indicator({ result_type_id: INNOVATION_USE }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+
+      expect(api.resultsSE.GET_qaInnovationDevelopmentResults).toHaveBeenCalled();
+    });
+
+    it('counts YES-with-no-selection as a missing field, which is what blocks "Create and continue"', async () => {
+      await setup({ indicator: indicator({ result_type_id: INNOVATION_USE }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+      component.onInnovationLinkChange(true);
+
+      expect(component.missingFields()).toContain('Linked Innovation Development result');
+      expect(component.canSave()).toBe(false);
+    });
+
+    it('stops counting it once an innovation is chosen', async () => {
+      await setup({ indicator: indicator({ result_type_id: INNOVATION_USE }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+      component.onInnovationLinkChange(true);
+      component.linkedResultId.set(501);
+
+      expect(component.missingFields()).not.toContain('Linked Innovation Development result');
+    });
+
+    it('never counts it on the default NO', async () => {
+      await setup({ indicator: indicator({ result_type_id: INNOVATION_USE }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+
+      expect(component.missingFields()).not.toContain('Linked Innovation Development result');
+    });
+
+    it('drops the selection when the user switches back to NO', async () => {
+      await setup({ indicator: indicator({ result_type_id: INNOVATION_USE }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+      component.onInnovationLinkChange(true);
+      component.linkedResultId.set(501);
+
+      component.onInnovationLinkChange(false);
+
+      expect(component.linkedResultId()).toBeNull();
+    });
+
+    it('sends the answer INSIDE the create body, not as a chained PATCH', async () => {
+      await setup({ indicator: indicator({ result_type_id: INNOVATION_USE }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+      component.patch('result_name', 'An innovation use result');
+      component.patch('contribution_to_indicator_target', 5);
+      component.onInnovationLinkChange(true);
+      component.linkedResultId.set(501);
+
+      component.createResult();
+
+      const body = api.resultsSE.POST_createResult.mock.calls.at(-1)[0];
+      expect(body.result.has_innovation_link).toBe(true);
+      expect(body.result.linked_results).toEqual([501]);
+    });
+
+    it('🛑 leaves the create body untouched for a category that never asks the question', async () => {
+      await setup({ indicator: indicator({ result_type_id: 7 }), tocNode: { result_level_id: OUTPUT_LEVEL } });
+      component.patch('result_name', 'An innovation development result');
+      component.patch('contribution_to_indicator_target', 5);
+
+      component.createResult();
+
+      const body = api.resultsSE.POST_createResult.mock.calls.at(-1)[0];
+      expect(body.result).not.toHaveProperty('has_innovation_link');
+      expect(body.result).not.toHaveProperty('linked_results');
     });
   });
 });

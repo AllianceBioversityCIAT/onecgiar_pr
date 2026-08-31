@@ -343,6 +343,15 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       },
       resultsSE: {
         GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
+        // P2-3420 — catalogue for the link-to-a-QA'd-innovation dropdown, loaded on init.
+        GET_qaInnovationDevelopmentResults: jest.fn().mockReturnValue(
+          of({
+            response: [
+              { id: 501, result_code: 5501, title: 'Drought-tolerant bean variety', status_id: 2, phase_year: 2025, acronym: 'P25' },
+              { id: 502, result_code: 5502, title: 'Solar-powered irrigation kit', status_id: 2, phase_year: 2024, acronym: 'P22' }
+            ]
+          })
+        ),
         GET_mqapValidation: jest.fn().mockReturnValue(
           of({
             response: {
@@ -790,6 +799,100 @@ describe('AowHloCreateModalComponent - Component Integration Tests (KPB-T-7)', (
       expect(scienceHeaderEl).toBeTruthy();
       const scienceLabelEl = scienceHeaderEl.query(By.css('.pr_label'));
       expect(scienceLabelEl.nativeElement.textContent.trim()).toContain('Other(s) Science Program(s)/Accelerator(s)');
+    });
+  });
+
+
+  /**
+   * P2-3420 — link to a QA'd Innovation Development result on the ToC-linked create modal.
+   * The gate is the PHASE year (2026 in this fixture), never `isP25()`.
+   */
+  describe("P2-3420: link to a QA'd Innovation Development result", () => {
+    const INNOVATION_USE = 2;
+
+    function armInnovationUse() {
+      mockEntityAowService.currentResultToReport.set({
+        toc_result_id: 'TOC-100',
+        result_level_id: 3,
+        indicators: [{ type_name: 'Number of innovations used', result_type_id: INNOVATION_USE, result_level_id: 3 }]
+      });
+      fixture.detectChanges();
+    }
+
+    it('defaults the answer to NO, as the story requires', () => {
+      armInnovationUse();
+
+      expect(component.hasInnovationLink()).toBe(false);
+      expect(component.linkedResultId()).toBeNull();
+    });
+
+    it('shows the question for an Innovation use indicator in the open (2026) phase', () => {
+      armInnovationUse();
+
+      expect(component.showsInnovationLink()).toBe(true);
+    });
+
+    it('never shows it for any other indicator category', () => {
+      fixture.detectChanges();
+
+      expect(component.showsInnovationLink()).toBe(false);
+    });
+
+    it('loads the shared catalogue on init — one request for every creation surface', () => {
+      fixture.detectChanges();
+
+      expect(mockApiService.resultsSE.GET_qaInnovationDevelopmentResults).toHaveBeenCalled();
+    });
+
+    it('blocks "Create and continue" while the answer is YES with no innovation chosen', () => {
+      armInnovationUse();
+      component.onInnovationLinkChange(true);
+
+      expect(component.canCreateResult()).toBe(false);
+
+      component.createResult();
+      expect(mockApiService.resultsSE.POST_createResult).not.toHaveBeenCalled();
+    });
+
+    it('unblocks it once an innovation is chosen, and sends it INSIDE the create body', () => {
+      armInnovationUse();
+      component.onInnovationLinkChange(true);
+      component.linkedResultId.set(501);
+      component.createResultBody.set({ ...component.createResultBody(), result_name: 'An innovation use result' });
+
+      expect(component.canCreateResult()).toBe(true);
+
+      component.createResult();
+
+      const body = mockApiService.resultsSE.POST_createResult.mock.calls.at(-1)[0];
+      expect(body.result.has_innovation_link).toBe(true);
+      expect(body.result.linked_results).toEqual([501]);
+    });
+
+    it('drops the selection when the user switches back to NO', () => {
+      armInnovationUse();
+      component.onInnovationLinkChange(true);
+      component.linkedResultId.set(501);
+
+      component.onInnovationLinkChange(false);
+
+      expect(component.linkedResultId()).toBeNull();
+    });
+
+    it('🛑 leaves the create body untouched for a category that never asks the question', () => {
+      mockEntityAowService.currentResultToReport.set({
+        toc_result_id: 'TOC-100',
+        result_level_id: 3,
+        indicators: [{ type_name: 'Number of innovations', result_type_id: 7, result_level_id: 3 }]
+      });
+      fixture.detectChanges();
+      component.createResultBody.set({ ...component.createResultBody(), result_name: 'An innovation development result' });
+
+      component.createResult();
+
+      const body = mockApiService.resultsSE.POST_createResult.mock.calls.at(-1)[0];
+      expect(body.result).not.toHaveProperty('has_innovation_link');
+      expect(body.result).not.toHaveProperty('linked_results');
     });
   });
 

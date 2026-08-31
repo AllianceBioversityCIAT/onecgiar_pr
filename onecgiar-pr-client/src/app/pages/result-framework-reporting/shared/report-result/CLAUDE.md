@@ -1,6 +1,6 @@
 # report-result
 
-**Verified:** 2026-08-21 · branch performance-refactor · eed5bb706
+**Verified:** 2026-08-31 · branch performance-refactor · b224c27e4
 
 ## Qué es
 Las piezas puras que comparten las tres superficies que crean un resultado contra un indicador del
@@ -52,3 +52,18 @@ Una sola bifurcación en todo el formulario: **Knowledge product vs todo lo dem�
 ## Pendiente / Coming soon
 - Migrar el modal y `guided-creation` a `buildCreateResultPayload()` — solo después de verificar el
   aside en navegador. Hasta entonces conviven 3 copias, no 4: el aside ya no tiene la suya.
+
+## P2-3420 — innovation-link keys in the payload (English, per the repo rule)
+`buildCreateResultPayload` accepts `hasInnovationLink` / `linkedResultId` and, ONLY when the first
+one is not `null`, spreads `has_innovation_link` + `linked_results` **inside `result`**.
+
+- ⚠️ They sit inside `result` on purpose: `POST /results-framework-reporting/create` forwards
+  `payload.result` to `ResultsService.createOwnerResultV2`, which is where the link is persisted.
+  Putting them at the top level would silently drop them.
+- ⚠️ `hasInnovationLink: null` (the default) means "the question was never asked" and the keys are
+  omitted entirely — that is what keeps every other category and every pre-2026 phase posting the
+  exact body they post today.
+- The id is normalised to a number: `pr-select` hands back the catalogue value as a string.
+- ⚠️ `aow-hlo-create-modal` still builds its body inline (see "Pendiente"), so it repeats these two
+  keys itself. If you change the shape here, change it there too until it migrates.
+

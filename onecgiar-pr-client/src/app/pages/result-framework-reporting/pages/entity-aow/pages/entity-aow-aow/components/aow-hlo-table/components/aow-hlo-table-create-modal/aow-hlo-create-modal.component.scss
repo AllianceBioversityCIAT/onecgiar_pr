@@ -281,3 +281,10 @@ p {
     margin: 0;
   }
 }
+
+/* P2-3420 — the link-to-a-QA'd-innovation question, between the title and the target contribution. */
+.innovation-link-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

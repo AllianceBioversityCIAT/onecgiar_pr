@@ -710,6 +710,18 @@ export class ResultsController {
   }
 
   @Version('2')
+  @Get('get/qa-innovation-development-results')
+  @ApiOperation({
+    summary: "Get QA'd Innovation Development results from past phases",
+    description:
+      "P2-3420 / P2-3421 — single catalogue backing the 'link to a QA'd Innovation Development result' dropdown on both W1/W2 creation surfaces. Portfolio-wide: no Science Program / Accelerator restriction.",
+  })
+  @ApiOkResponse({ description: 'Linkable Innovation Development results.' })
+  getQaInnovationDevelopmentResults() {
+    return this.resultsService.getQaInnovationDevelopmentResults();
+  }
+
+  @Version('2')
   @Get('ai/context')
   @ApiOperation({
     summary: 'Get AI context',

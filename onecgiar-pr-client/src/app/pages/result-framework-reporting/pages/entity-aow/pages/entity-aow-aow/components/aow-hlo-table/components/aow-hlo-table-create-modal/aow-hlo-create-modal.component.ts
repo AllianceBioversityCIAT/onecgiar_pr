@@ -13,6 +13,12 @@ import { CentersService } from '../../../../../../../../../../shared/services/gl
 import { filterOutAvisaInitiatives } from '../../../../../../../../../../shared/utils/avisa-initiative.util';
 import { BrnTabsImports } from '@spartan-ng/brain/tabs';
 import { KpCgspaceBrowseComponent, CgspaceItemDto } from './components/kp-cgspace-browse/kp-cgspace-browse.component';
+import {
+  INNOVATION_LINK_QUESTION,
+  QaInnovationDevelopmentResultsService,
+  innovationLinkAnswerIsComplete,
+  showsInnovationLinkQuestion
+} from '../../../../../../../../../../shared/services/global/qa-innovation-development-results.service';
 
 interface CreateResultBody {
   handler: string;
@@ -74,6 +80,8 @@ export class AowHloCreateModalComponent implements OnInit {
   router = inject(Router);
   resultsListFilterSE = inject(ResultsListFilterService);
   centersSE = inject(CentersService);
+  /** P2-3420 — shared catalogue for the link-to-a-QA'd-innovation dropdown (one request, one filter). */
+  qaInnovationsSE = inject(QaInnovationDevelopmentResultsService);
 
   allInitiatives = signal<any[]>([]);
   createResultBody = signal<CreateResultBody>({
@@ -104,6 +112,34 @@ export class AowHloCreateModalComponent implements OnInit {
       this.createResultBody().result_type_id === 6
     );
   });
+
+  // ---- P2-3420: link to a QA'd Innovation Development result --------------------------------
+  innovationLinkQuestion = INNOVATION_LINK_QUESTION;
+  /** Default is NO, per the story. */
+  hasInnovationLink = signal<boolean>(false);
+  linkedResultId = signal<number | null>(null);
+
+  /** The category actually being created — the indicator wins over the picker, as in the payload. */
+  resolvedResultTypeId = computed<number | null>(
+    () => this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id ?? this.createResultBody().result_type_id ?? null
+  );
+
+  /**
+   * 🛑 PHASE-year gate, never `isP25()`: prtest holds 2025-phase results inside the P25 portfolio,
+   * and the epic requires those to render exactly as they do today.
+   */
+  showsInnovationLink = computed(() => showsInnovationLinkQuestion(this.resolvedResultTypeId(), this.phaseYear()));
+
+  /** "Yes" without a chosen innovation blocks "Create and continue"; "No" (the default) never does. */
+  canCreateResult = computed(
+    () => !this.showsInnovationLink() || innovationLinkAnswerIsComplete(this.hasInnovationLink(), this.linkedResultId())
+  );
+
+  /** P2-3420 — answering "No" drops the selection so the payload cannot keep a stale link. */
+  onInnovationLinkChange(value: boolean): void {
+    this.hasInnovationLink.set(value === true);
+    if (value !== true) this.linkedResultId.set(null);
+  }
 
   creatingResult = signal<boolean>(false);
 
@@ -164,6 +200,8 @@ export class AowHloCreateModalComponent implements OnInit {
   });
 
   ngOnInit() {
+    // P2-3420 — idempotent: the shared service fetches once and every creation surface reuses it.
+    this.qaInnovationsSE.load();
     this.entityAowService.getW3BilateralProjects();
     this.entityAowService.getExistingResultsContributors(
       this.entityAowService.currentResultToReport()?.toc_result_id,
@@ -273,6 +311,10 @@ export class AowHloCreateModalComponent implements OnInit {
       ...this.createResultBody(),
       result_type_id: resultTypeId
     });
+    // P2-3420: the question only exists for Innovation use — drop the answer so a hidden "Yes"
+    // (and its link) cannot travel in the payload of a result of another category.
+    this.hasInnovationLink.set(false);
+    this.linkedResultId.set(null);
   }
 
   getTitleInputLabel() {
@@ -422,6 +464,9 @@ export class AowHloCreateModalComponent implements OnInit {
     });
     this.validatingHandler.set(false);
     this.creatingResult.set(false);
+    // P2-3420: back to the story's default, NO.
+    this.hasInnovationLink.set(false);
+    this.linkedResultId.set(null);
     this.otherCentersSelected.set([]);
     this.otherScienceSelected.set([]);
   }
@@ -432,6 +477,7 @@ export class AowHloCreateModalComponent implements OnInit {
   }
 
   createResult() {
+    if (!this.canCreateResult()) return;
     this.creatingResult.set(true);
 
     const body = {
@@ -470,6 +516,16 @@ export class AowHloCreateModalComponent implements OnInit {
       ],
       bilateral_project: this.entityAowService.selectedW3BilateralProjects()
     };
+
+    // P2-3420 — the answer rides INSIDE the create (the innovation-use PATCH rejects a result with
+    // no use level yet). Only added when the question was actually asked, so every other category
+    // and every phase before 2026 keeps posting exactly the body it posts today.
+    if (this.showsInnovationLink()) {
+      Object.assign(body.result, {
+        has_innovation_link: this.hasInnovationLink() === true,
+        linked_results: this.hasInnovationLink() === true && this.linkedResultId() != null ? [Number(this.linkedResultId())] : []
+      });
+    }
 
     this.api.resultsSE.POST_createResult(body).subscribe({
       next: resp => {
