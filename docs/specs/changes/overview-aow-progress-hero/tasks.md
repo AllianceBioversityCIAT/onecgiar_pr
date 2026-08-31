@@ -2,76 +2,84 @@
 
 ## 1. Document Control
 
-- **Status:** `pending` · Depth Standard · Approval: pre-approved (owner mandate; ≤1 Reviewer round, targeted jest only, no full client suite)
-- **Budget:** 5 tasks · ~700 non-test LOC · ≤1 review round/task (design §8)
+- **Status:** `pending` · Depth Standard · Judged APPROVED (fix round 1) · Approval: pre-approved (≤1 Reviewer round, targeted jest only, never the full client suite)
+- **Budget:** 6 tasks · ~650 non-test LOC · ≤1 review round/task (design §8)
 
 ## 2. Tasks
 
-### `OAH-T-1` — Host: rich rows + loading + glue methods
-- **Status:** `[ ]` · **Type:** client · **Estimate:** M · **Depends on:** — · **Blocks:** T-2, T-3
-- **Scope:** `overviewAowProgressRich` computed (glossary splits via shared helpers; invariant complete+partial+notStarted=total; zeroTarget count; remaining-DESC/code-ASC sort), `overviewAowProgressLoading` (`!toc` aggregation), `openAowReporting(code)` and `continueReporting()` glue (tab switch + `openAowFocused` / grouped+Only-pending). Skills: `angular-developer`, `tdd`.
-- **Covers:** R-1 coherence AND-clause (single home), R-3 sort + zero-target AND-clause + no-local-recompute BUT, R-4 destination scenario groundwork, R-6 loading AND-clause (`!toc`), R-1 CTA scenario (state side).
-- **Tests (OAH-TEST-1):** fixtures incl. zero-target rows and an unresolved ToC; equality of rail totals with `buildRatio` on a shared fixture (R-1 AND); sort order exact; `continueReporting()` flips tab+view+Only-pending; `openAowReporting` never sets legacy `viewMode 'aow'` (R-4 BUT).
-- **Verification:** `npx jest .../dashboard-lab --no-coverage --silent --reporters=summary` targeted. **Fails if:** the coherence fixture diverges from `buildRatio` by even one KPI, or sort ties break non-deterministically. A green run with the coherence test skipped is NOT evidence.
-- **DoD:** computed + glue landed, tests green, no thin-row (`hub`) behavior change (hub spec still green).
+### `OAH-T-1` — Host: rich rows + CTA navigation
+- **Status:** `[ ]` · client · **M** · Depends: — · Blocks: T-2, T-3, T-4
+- **Scope:** `overviewAowProgressRich` computed (helper-`stateOf` splits; invariant; zeroTarget count; remaining-DESC/code-ASC sort; output tier); `continueReporting()` = `setOnlyPending(true)` + `router.navigate(reporting route, {queryParams:{tocView:'aows'}})`. NO new outputs/glue beyond this (DD-6). Skills: `angular-developer`, `tdd`.
+- **Covers:** R-1 coherence AND-clauses + invariant (logic), R-1 CTA scenario incl. storage AND + `reportingViewMode` BUT, R-3 sort + zero-target AND + no-recompute BUT (logic), R-6 `!toc` AND (flag reuse).
+- **Tests (OAH-TEST-1):** fixture with a `target=0∧achieved>0` KPI proves the partition is total (the C-2 orphan lands in `inProgress`); zero-target excluded+counted; rail sum == rows sum; sort exact incl. tie; CTA: navigate spy receives the reporting route + `tocView:'aows'` AND `setOnlyPending` (the persisting setter, not `.set`) was called; `reportingViewMode` untouched.
+- **Verification:** targeted jest. **Fails if:** the orphan fixture breaks the invariant, or the CTA test passes with a bare `onlyPending.set` (assert the storage write). **Disqualifier:** a coherence test where both sides call the same function on the same array proves nothing — the fixture must pre-compute expected numbers BY HAND in the test.
+- **DoD:** green; hub/thin-row consumers untouched (their specs green).
 
-### `OAH-T-2` — Section rebuild: rail + placement + footer chips + skeletons
-- **Status:** `[ ]` · **Type:** client · **Estimate:** L · **Depends on:** T-1 · **Blocks:** T-4
-- **Scope:** `program-overview` §8 → Option A anatomy (rail with ring/figures/splits/CTA; section moved above W1/W2 status; outcomes chips + legend footer; rail+row skeletons per `RowStates.dc.html`); widened input interface (DD-4). Skills: `angular-developer`.
-- **Covers:** R-1 both scenarios (render side incl. skeleton BUT), R-2 scenario + reflow BUT, R-5 scenario + no-actions BUT, R-6 both clauses (render side).
-- **Tests (OAH-TEST-2):** DOM — section order assertion (About → hero → W1/W2 status); rail renders `1% · 2 of 392` from fixture and skeletons when loading; chips carry `0/7`/`0/5` and NO buttons (R-5 BUT); no other section's markup touched (snapshot-free: assert untouched sections' anchors still present in order).
-- **Verification:** targeted jest + `design-tokens.spec.ts` green. **Fails if:** any `var(--pr-*)` in the new markup is undefined (the sweep catches it), or the order assertion finds the hero below W1/W2 status. Presence-assertions here (classes) do NOT prove rendered look — that is T-5's live row, recorded as the gate per requirements §8.
-- **DoD:** tests green; lint green; note in execution.md that visual fidelity is deferred to T-5.
+### `OAH-T-2` — Section move + pinned-test edits (deliberate)
+- **Status:** `[ ]` · client · **S** · Depends: T-1 · Blocks: T-3
+- **Scope:** Move §8 above the W1/W2 status cards, preserving the `activeSection()` gate (R-2 AND). Update, as DELIBERATE edits with the original comments preserved, exactly these pinned assertions: `program-overview.component.spec.ts:141-158` (8-heading `toEqual` order), `:681-684` (`headings.length===8` + adjacency), and any order-index assertions the move shifts (map 8→7). Skills: `angular-developer`.
+- **Covers:** R-2 scenario + `activeSection` AND + reflow BUT (order half), C-4 ownership.
+- **Verification:** targeted jest on the program-overview spec. **Fails if:** the order test still lists the hero below W1/W2 status, or the `aow`-filter view loses the section. **Guard for the Implementer:** a red order test is fixed by EDITING THE TEST to the new approved order — never by reverting the move (the C-4 trap, named here on purpose).
+- **DoD:** all four pinned areas updated-or-proven-unaffected, enumerated in execution.md.
 
-### `OAH-T-3` — Rows: segmented bar + figures + actions
-- **Status:** `[ ]` · **Type:** client · **Estimate:** M · **Depends on:** T-1 · **Blocks:** T-4
-- **Scope:** row grid (identity, remaining subline, segmented bar with title disclosure, mono figures, Report/open actions wired to `openAowReporting`; complete-state variant with View results + emerald treatment). Skills: `angular-developer`.
-- **Covers:** R-3 scenario (all clauses render-side incl. counts-not-percent AND + title disclosure), R-4 scenario + legacy BUT (binding side), R-6 row-skeleton clause.
-- **Tests (OAH-TEST-3):** DOM — segment widths derive from counts (1/137 fixture ⇒ style width ≈0.73%, emerald first); `title` lists three counts + zero-target note when >0; complete fixture swaps Report→View results; action click calls `openAowReporting('AOW03')` (host stubbed) and never the legacy handler.
-- **Verification:** targeted jest. **Fails if:** widths are computed from percentages-of-percent (fixture with zero-target rows would then disagree), or the legacy handler spy fires. A width assertion passing via string-match on the template (not computed style/binding) is a presence-assertion — not acceptable evidence for the counts clause.
-- **DoD:** tests green; folder suites green.
+### `OAH-T-3` — Section rebuild: rail + chips + skeletons + empty
+- **Status:** `[ ]` · client · **L** · Depends: T-2 · Blocks: T-5
+- **Scope:** Rail (ring/figures/splits/CTA), outcomes chips + legend (keeping the old rows' `openAow` click-through, R-5), rail+row skeletons, existing empty treatment kept, new `richRows` input (DD-4). Skills: `angular-developer`.
+- **Covers:** R-1 render scenarios incl. skeleton BUT + title disclosure, R-5 both clauses, R-6 all clauses (render side incl. empty program), R-1 focus/no-reload AND (assert the CTA is a router navigation, not location.href).
+- **Tests (OAH-TEST-3):** rail figures from a HAND-computed fixture; skeletons when loading; chips carry figures, no Report label, and emit `openAow` with bucket codes; empty-program fixture renders the existing empty block; thin-input consumers (card 4 fixture numbers) unchanged.
+- **Verification:** targeted jest + `design-tokens.spec.ts`. **Fails if:** any undefined `var(--pr-*)` or any `.pr-row-action`/cross-component class reference appears (grep assertion in the test), or card 4's number moved. **Presence caveat:** anchor-order assertions prove order only — restyle/reflow is T-6's live row (recorded).
+- **DoD:** green; lint green; visual fidelity explicitly deferred to T-6.
 
-### `OAH-T-4` — A11y + docs + integration polish
-- **Status:** `[ ]` · **Type:** client · **Estimate:** S · **Depends on:** T-2, T-3
-- **Scope:** aria-labels/focus rings on all controls, bar text alternative, `program-overview`/`dashboard-lab` CLAUDE.md updates (same-commit rule), kill dead code from the old §8 rows. Skills: `angular-developer`.
-- **Covers:** N-1 (attribute side), N-2 (no new HTTP — assert via code review note), R-2 reflow BUT (final check).
-- **Tests:** DOM assertions for aria attrs. **Verification:** targeted jest + lint. **Fails if:** any new interactive control lacks an accessible name (test enumerates buttons). Contrast is NOT provable here (jsdom) — explicitly deferred to T-5.
-- **DoD:** attrs asserted; folder docs re-stamped in the same commit.
+### `OAH-T-4` — Rows: segmented bar + figures + actions
+- **Status:** `[ ]` · client · **M** · Depends: T-1 · Blocks: T-5
+- **Scope:** Row grid (mockup tracks — NOT the table's, A-13), identity + remaining subline, segmented bar (TS-computed widths; tokens only), mono figures, Report + open icon + View-results swap, all emitting the EXISTING `openAow`; `canReportW1W2` gate preserved verbatim. Skills: `angular-developer`.
+- **Covers:** R-3 render clauses (counts-not-percent AND, disclosure title, subline), R-4 all clauses (single-output BUT, permission AND, complete-swap), N-1 rows-stay-clickable.
+- **Tests (OAH-TEST-4):** width binding computed from counts (fixture with zero-target rows disagrees under percent-of-percent — that IS the failing input); title lists three counts + zero-target; complete fixture swaps the button; `openAow` spy receives the code from row, button and icon; disabled state matches the pinned `canReportW1W2` test (kept green, not rewritten).
+- **Verification:** targeted jest. **Fails if:** widths come from template arithmetic/percents, a second output appears, or the permission test breaks.
+- **DoD:** green; folder suites green.
 
-### `OAH-T-5` — Verification: live pass + record
-- **Status:** `[ ]` · **Type:** tests · **Estimate:** S · **Depends on:** T-1..T-4
-- **Scope:** On dev via the embedded browser: cold-load skeleton trace (no jumping sums — poll during load), rail vs Reporting-tab grouped totals equality on SP01, remaining-first order, segmented bar renders visibly at 1% data, Report/open land on the focused By-AOW view, CTA lands on grouped+Only-pending, complete-state row (simulate via signal if no complete AoW on dev), visual/contrast sanity (T6-class check), reduced-motion note. Record PASS/FAIL/NOT-RUN per row in `execution.md` — NOT-RUN is never a PASS.
-- **Covers:** every jsdom-blind clause routed here by requirements §8 (rendered layout, skeleton visibility, contrast), R-1/R-3/R-4 scenarios end-to-end.
-- **Verification:** the recorded checklist itself. **Fails if:** any polled load tick shows a partial sum that later changes, or the bar is invisible at SP01 data. **Disqualifier:** a single-tick observation proves nothing about jumping sums — the trace must span the load window; if the dev server rebuild races the trace, rerun; an unreproducible tick is reported as inconclusive, not PASS.
-- **DoD:** checklist recorded; FAILs become fixes or accepted gaps.
+### `OAH-T-5` — A11y + docstring + docs
+- **Status:** `[ ]` · client · **S** · Depends: T-3, T-4
+- **Scope:** Accessible names/focus rings on all new controls; bar text alternative; `reporting-burndown.ts` scope docstring amended (Overview hero now a sanctioned caller — B-14); folder `CLAUDE.md`s re-stamped same-commit; dead code from old §8 rows removed. Skills: `angular-developer`.
+- **Covers:** N-1 attribute side, N-2 (no new HTTP — reviewer note), R-3 docstring BUT-half.
+- **Verification:** targeted jest (enumerate new buttons → each has an accessible name) + lint. **Fails if:** any new control lacks a name. Contrast NOT provable here — T-6's row.
+- **DoD:** attrs asserted; docs stamped.
+
+### `OAH-T-6` — Verification: live pass + record
+- **Status:** `[ ]` · tests · **S** · Depends: T-1..T-5
+- **Scope:** On dev (embedded browser): cold-load skeleton trace spanning the load window (no partial sums); rail == sum of rows on SP01; remaining-first order; bar visible at 1% data (tolerance: computed widths, NOT the mockup's rounded ints — A-18); row/button/chip navigation lands on `?tocView=byAow&tocAow=` (buckets → `?tocView=aows`); CTA lands on Reporting with Only-pending restored ON; R-2 visual reflow check of neighbouring cards (the presence-assertion gap, B-10); contrast sanity (T6-class); complete-state: FIRST check dev for a fully-reported AoW — if none exists, record NOT-RUN (unit OAH-TEST-4 owns the behavior; no signal simulation — B-11). Record every row PASS/FAIL/NOT-RUN in `execution.md`.
+- **Covers:** every jsdom-blind clause routed here (requirements §8), R-1/R-3/R-4 end-to-end, R-1 focus/no-reload live half.
+- **Verification:** the recorded checklist. **Fails if:** any polled tick shows a sum that later changes, or the bar is invisible at SP01 data. **Disqualifier:** a single-tick observation is not a trace; a rebuild race invalidates the run — rerun; unreproducible = inconclusive, never PASS.
+- **DoD:** checklist recorded; FAILs → fixes or accepted gaps.
 
 ## 3. Coverage closure (clause level)
 
 | Clause | Owner |
 |---|---|
-| R-1 figures+ring+splits+CTA render / skeleton BUT | T-2 |
-| R-1 coherence AND (single home) | T-1 (logic) + T-5 (live equality) |
-| R-1 CTA destination scenario | T-1 (state) + T-5 (live) |
-| R-2 order scenario / reflow BUT | T-2 (+T-4 final check) |
+| R-1 rail render + skeleton BUT + disclosure | T-3 (+T-6 live) |
+| R-1 internal-coherence ANDs + invariant | T-1 (+T-6 live sum) |
+| R-1 CTA: storage AND, `tocView=aows`, `reportingViewMode` BUT | T-1 (+T-6 live) |
+| R-1 focus/no-reload AND | T-3 (router assertion) + T-6 (live) |
+| R-2 order + `activeSection` AND + pinned-test ownership | T-2 |
+| R-2 reflow/restyle BUT | T-3 (data untouched) + T-6 (visual half) |
 | R-3 sort, zero-target AND, no-recompute BUT | T-1 |
-| R-3 counts-not-percent AND, title disclosure, remaining subline | T-3 |
-| R-4 destination scenario / legacy BUT | T-1 (glue) + T-3 (binding) + T-5 (live) |
-| R-4 complete-state swap | T-3 |
-| R-5 chips scenario / no-actions BUT | T-2 |
-| R-6 skeletons, `!toc` AND, no-jumping BUT | T-1 (flag) + T-2/T-3 (render) + T-5 (live trace) |
-| N-1 | T-4 (attrs) + T-5 (contrast) |
-| N-2 | T-1/T-4 |
-| N-3 | trivially satisfied (hard-coded EN, consistent) |
+| R-3 counts-not-percent AND, title, subline | T-4 |
+| R-3 docstring amendment | T-5 |
+| R-4 all clauses (single output, permission gate, swap) | T-4 (+T-6 live destination) |
+| R-5 chips + click-through + no-Report | T-3 |
+| R-6 skeletons/`!toc`/no-jumping/empty | T-1 (flag) + T-3 (render+empty) + T-6 (trace) |
+| N-1 (rows clickable, names, bar alt / contrast) | T-4 + T-5 / T-6 |
+| N-2 · N-3 | T-1/T-5 · trivially satisfied |
 
 ## 4. Dependency graph
 
-T-1 ──► T-2 ──► T-4 ──► T-5
-  └───► T-3 ──┘
+T-1 ──► T-2 ──► T-3 ──► T-5 ──► T-6
+  └────────────► T-4 ──┘
 
 ## 5. PR strategy
 
-~700 LOC, one surface, sequential tasks → **single PR** against `qa-development-2026` (this branch), commits per task with `[SPEC:changes/overview-aow-progress-hero]`.
+~650 LOC, one surface → single PR on `qa-development-2026`, commits per task `[SPEC:changes/overview-aow-progress-hero]`.
 
 ## 6. Accepted risks
 
-Full-suite coverage stays CI's gate (owner rule). Contrast/rendered-layout classes gated only by T-5's live/T6 pass. Concurrency with the parallel session (KZ-MRF-3): every commit preceded by a `git diff HEAD` regression glance on shared files.
+Full suite stays CI's gate. Contrast/rendered layout gated only by T-6. Complete-state live row may land NOT-RUN (unit owns it). Concurrency (KZ-MRF-3): `git diff HEAD` glance before every commit on shared files.

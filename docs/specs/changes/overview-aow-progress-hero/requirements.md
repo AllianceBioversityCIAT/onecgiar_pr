@@ -5,113 +5,117 @@
 | Field | Value |
 |---|---|
 | Spec | `changes/overview-aow-progress-hero` · Type: Change · Depth: **Standard** |
-| Status | Draft → judged (one pass, fix-only) · Approval Mode: pre-approved (owner mandate; gates logged as auto-approved) |
-| Baseline | `docs/prd.md` (G2 reporting efficiency, AC-2), `docs/ux-ui/design.md` §7 tokens / §8 components, `docs/trd/trd.md` frontend module W1 |
-| Consumes | Archived `changes/mass-reporting-flow` (zero-target rule MRF-R-7, `openAowFocused`, skeleton discipline), `changes/reporting-entry-hub` (Overview hub), `changes/overview-toc-map` (TCM-R-1 placement — superseded clause, see R-2) |
-| Visual | `mockup/` canvas (Option A approved) + https://claude.ai/code/artifact/c426b8a5-0f28-46c6-ad66-6706faf6ef1d |
+| Status | Judged — APPROVED after fix round 1 (see `judgment.md`) · Approval Mode: pre-approved (owner mandate; gates logged as auto-approved) |
+| Baseline | `docs/prd.md` (G2, AC-2), `docs/ux-ui/design.md` §7/§8, `docs/trd/trd.md` frontend module W1 |
+| Consumes | Archived `changes/mass-reporting-flow` (zero-target rule, skeleton discipline), `changes/reporting-entry-hub` (REH-R-8 permission gate, REH-R-10 row destination), `changes/overview-toc-map` (TCM-R-1 adjacency — superseded, R-2) |
+| Visual | `mockup/` canvas (Option A, corrected post-judgment) + https://claude.ai/code/artifact/c426b8a5-0f28-46c6-ad66-6706faf6ef1d |
 
 ## 2. Executive Summary
 
-Promote "Progress by area of work" to the hero position of the SP Overview and make it answer *how are we doing / where do I act next*: summary rail (overall ring, split counts, Continue-reporting CTA), AoW rows sorted by remaining work with segmented status bars and per-row actions, outcomes as footer chips. Client-only; all data already loaded.
+Promote "Progress by area of work" to the hero position of the SP Overview: summary rail (overall ring, split counts, Continue-reporting CTA), AoW rows sorted by remaining work with segmented status bars, outcomes as footer chips. Client-only; all data already loaded; every cross-tab action is a router navigation with query params (the tabs are separate routes).
 
-## 3. Glossary (pins the MRF vocabulary — do not invent new terms)
+## 3. Glossary — pins the `reporting-burndown` helper's OWN partition (`stateOf`); no other taxonomy anywhere (labels, code, mockup)
 
 | Term | Definition |
 |---|---|
-| **Reported** | KPI with `achieved > 0` (`buildRatio`'s numerator) |
-| **Complete** | `achieved ≥ target` (target > 0) |
-| **Partial** | `0 < achieved < target` |
-| **Not started** | `achieved = 0` (and not zero-target) |
-| **Zero-target** | `target = 0 AND achieved = 0` — excluded from denominators (MRF-R-7) |
-| **Remaining** | `total − reported` over the zero-target-filtered set |
+| **Zero-target** | `target = 0 AND achieved = 0` — excluded from every denominator and segment (MRF-R-7), disclosed via `title` when N > 0 |
+| **Complete** | `target > 0 AND achieved ≥ target` |
+| **In progress** | `achieved > 0 AND NOT Complete` (this bucket also holds `target = 0 AND achieved > 0` — the set partitions) |
+| **Not started** | `achieved = 0` (non-zero-target) |
+| **Reported** | Complete + In progress (`buildRatio`'s numerator) |
+| **Remaining** | `total − Reported` over the zero-target-filtered set |
+
+Invariant (testable): `Complete + In progress + Not started = total` for every row and for the rail.
 
 ## 4. System Context & Scope
 
-In: `program-overview` §8 redesign + promotion, host row enrichment, navigation glue to the Reporting tab. Out: server, other Overview cards' internals, Reporting tab, dark mode, per-HLO drill-down.
+In: `program-overview` §8 redesign + promotion, one new rich-rows input, host derivation + CTA navigation, expected-to-change updates to the four pinned tests the move touches. Out: server, other Overview cards' data or styling, the Reporting tab, dark mode, the thin `aowProgress` input and everything it feeds (KPI card 4, tab badge, hub).
 
 ## 5. Personas
 
-Reporting focal point (acts), PMU lead (reads). Both land on Overview first (PRD flows).
+Reporting focal point (acts), PMU lead (reads).
 
 ## 6. Functional Requirements
 
 ### OAH-R-1 — Summary rail
-The section SHALL open with a summary rail showing: an overall ring + the Reported percentage and `X of Y` in mono figures (Y under the zero-target rule), three split counts (Complete / Partial / Not started), and one primary **Continue reporting** CTA.
+The section SHALL open with a summary rail: overall ring + Reported percentage + `X of Y` mono figures (Y zero-target-filtered), the three split counts (Complete / In progress / Not started), and a **Continue reporting** CTA.
 
-#### Scenario: overall coherence
-- GIVEN SP01 with 392 counted KPIs of which 2 are Reported
-- WHEN the Overview renders
-- THEN the rail shows `1%` and `2 of 392`, and the three split counts sum to 392
-- AND IT MUST equal the Reporting tab's grouped totals for the same program (single home: the shared `buildRatio`/`applyZeroTargetRule` helpers — MRF-AC-5 parity extended to this surface)
-- BUT it must NOT render any number while any AoW ToC is still loading (skeleton instead — KZ-MRF-1)
+#### Scenario: internal coherence (single home)
+- GIVEN the fixture rows
+- WHEN the rail renders
+- THEN its `X of Y` equals the SUM of its own rows' `reported/total` (same computed, one derivation site delegating to `buildRatio`/`applyZeroTargetRule`)
+- AND the three split counts sum to Y (glossary invariant)
+- AND the zero-target exclusion is disclosed via a `title` ("excludes N zero-target KPIs") when N > 0
+- BUT it must NOT render any figure while any AoW ToC is still loading (skeleton — KZ-MRF-1)
+- *(Recorded divergence, not a gate: Reporting-tab cards include the outcome tier and program buckets, so their totals legitimately differ from this HLO-tier rail — same class as the C-5 divergence note.)*
 
 #### Scenario: Continue reporting
 - WHEN the CTA is activated
-- THEN the app switches to the **Reporting** tab, grouped view, with **Only pending** ON
-- AND focus lands on the reporting surface (no full page reload)
+- THEN Only-pending is persisted via its storage-backed setter and the app NAVIGATES (router) to this program's Reporting route with `?tocView=aows`
+- AND the re-created Reporting surface restores Only-pending ON from storage
+- BUT it must NOT touch `reportingViewMode` (grouped/flat) — `tocView` (`plannedBrowseView`) is the pinned concept
 
 ### OAH-R-2 — Hero placement
-The section SHALL render as the FIRST program-overview section after "About this program" (i.e. above the W1/W2 status cards). This supersedes TCM-R-1's "directly below Progress by area of work" adjacency for the ToC map: the ToC map keeps its current absolute position (before §9's old neighbours), and the superseding note is recorded in design DD-2.
+The section SHALL render as the first section after "About this program" (above the W1/W2 status cards). The ToC map (§9 today) stays LAST in the flow — its heading index shifts; TCM-R-1's "directly below" adjacency is superseded (design DD-2).
 
 #### Scenario
-- GIVEN the Overview tab
-- WHEN it renders
-- THEN the order is: hub ("Where to report") → About → **Progress by area of work (hero)** → W1/W2 status → … → ToC map
-- BUT it must NOT reflow or restyle any other card beyond its position in the flow
+- WHEN the Overview renders (section filter `all`)
+- THEN the order is: hub → About → **Progress by area of work** → W1/W2 status → … → ToC map (last)
+- AND IT MUST keep §8's existing `activeSection()` gate (renders on `all` and `aow` filter views, as today)
+- BUT it must NOT change any other card's data, inputs, or styling (the four pinned tests the MOVE breaks are updated as deliberate edits — owned by name in tasks)
 
 ### OAH-R-3 — AoW rows: segmented bar + remaining-first sort
-Each AoW row SHALL show: code chip + name, a "N KPIs remaining" subline, a segmented bar whose segments are the **counts** of Complete (emerald) / Partial (violet) / Not started (track grey) KPIs, mono `reported/total` + `%`, and the rows SHALL be ordered by **remaining descending** (tie: code ascending). HLO-tier KPIs only (today's row basis, unchanged).
+Each AoW row SHALL show: code chip + name, `N KPIs remaining` subline, a segmented bar whose segments are the **counts** of Complete (green token) / In progress (violet token) on the neutral track (Not started), mono `reported/total` + `%`, ordered by remaining DESC (tie: code ASC). Row basis: the output tier (`__tier !== 'outcome'`), as today.
 
 #### Scenario: honest at 1%
-- GIVEN AOW02 with 137 counted KPIs, 1 Complete, 0 Partial
-- WHEN the row renders
-- THEN the bar paints a 1/137-wide emerald segment on the grey track and the figures read `1/137 · 1%`
-- AND the subline reads `136 KPIs remaining`
-- AND IT MUST derive every segment from KPI counts (never percent-of-percent), with zero-target KPIs excluded from track and figures and disclosed via a `title` ("excludes N zero-target KPIs") when N > 0
-- BUT it must NOT recompute the Reported rule locally — it delegates to the shared helpers (🛑 single-home rule)
+- GIVEN AOW02 with 137 counted KPIs, 1 In progress
+- THEN the bar paints a 1/137-width violet segment on the grey track; figures `1/137 · 1%`; subline `136 KPIs remaining`
+- AND IT MUST derive every segment width from KPI counts (never percent-of-percent), zero-target excluded and disclosed
+- BUT it must NOT recompute Reported/Complete locally — it delegates to the shared helpers (🛑 single-home rule; the helpers' Reporting-tab-only scope docstring is amended in the same change)
 
 ### OAH-R-4 — Row actions
-Each row SHALL offer **Report** (switches to the Reporting tab and opens that AoW's focused By-AOW view) and an **open** icon action (same destination). A row whose KPIs are all Reported SHALL replace Report with **View results** (same destination) and show the quiet complete treatment (emerald 100%, "All planned KPIs reported").
+Rows KEEP today's navigation contract: the row and its actions emit the existing `openAow` output, whose host handler already navigates to the focused By-AOW view (`?tocView=byAow&tocAow=<code>` — REH-R-10). Added: an explicit **Report** button and an **open** icon per row (same destination); a fully-Reported row swaps Report for **View results** (same destination) with the quiet complete treatment.
 
 #### Scenario
-- WHEN Report is activated on AOW03
-- THEN the app shows Reporting → By-AOW for AOW03 (reusing `openAowFocused` semantics; bucket rows do not exist on this surface)
-- BUT it must NOT open the legacy AoW page (`viewMode 'aow'`) — that is the pre-hub destination this section currently uses
+- WHEN Report (or the row, or the icon) is activated on AOW03
+- THEN the host receives `openAow('AOW03')` and navigates with `?tocView=byAow&tocAow=AOW03`
+- AND IT MUST preserve the `canReportW1W2` permission gate exactly as delivered (disabled-but-focusable Report, `aria-disabled="true"`, title "You do not have reporting rights on this program" — REH-R-8; the pinned test stays green)
+- BUT it must NOT add a new output or duplicate the `onOpenAow` handler (C-5/C-6), and must NOT alter the ToC map's use of the same output
 
 ### OAH-R-5 — Outcomes footer chips
-Intermediate outcomes and 2030 outcomes SHALL render as compact footer chips (`label + reported/total` mono), replacing the two full rows, plus the segment legend.
+Intermediate and 2030 outcomes SHALL render as compact footer chips (`label + reported/total` mono) + the segment legend, replacing the two full rows. Chips keep the rows' existing click-through (`openAow` with their bucket codes → grouped view), rendered as chips, not buttons with Report labels.
 
 #### Scenario
-- GIVEN 0/7 intermediate and 0/5 2030 outcomes
-- THEN two chips render with those figures
-- BUT they must NOT render Report actions (program-level buckets have no focused view — MRF C-8 precedent)
+- GIVEN 0/7 and 0/5
+- THEN two chips render with those figures and no Report action
+- AND clicking a chip navigates exactly as the old outcome row did
 
 ### OAH-R-6 — Loading and empty states
-While the AoW list or any ToC is loading, the rail figures and every pending row SHALL render pulse skeletons (`--pr-surface-ground`); numbers appear only when final. An empty program (no AoWs after load) renders the existing empty treatment.
+While loading, the rail figures and pending rows SHALL render pulse skeletons (`--pr-surface-ground`); numbers appear only when final. An empty program (no AoWs after load) SHALL render the section's existing empty treatment.
 
 #### Scenario: no jumping sums
 - GIVEN a cold load where 4 of 5 ToCs have resolved
-- THEN the rail still shows skeletons (its sums are not final) and the unresolved row shows a row skeleton
-- AND IT MUST use the `!toc` loading definition (not "request in flight" — KZ-MRF-1)
+- THEN the rail still shows skeletons and the unresolved row a row-skeleton
+- AND IT MUST use the `!toc` loading definition (KZ-MRF-1)
 - BUT it must NOT ever paint a partial sum that later changes
 
 ## 7. Non-Functional Requirements
 
-- **A11y (OAH-N-1):** rows are not click-targets themselves; buttons carry visible focus rings and `aria-label`s; the segmented bar carries a text alternative (`title`/`aria-label` with the three counts); contrast per tokens (§7 design.md).
-- **Performance (OAH-N-2):** pure derivation from already-loaded signals; no new HTTP calls; no layout thrash (single computed per row set).
-- **i18n (OAH-N-3):** strings hard-coded English like the rest of the redesign surfaces (P22/P25 vocabulary not affected) — consistent with dashboard-lab precedent.
+- **OAH-N-1 (a11y):** rows keep their existing click-target role (no behavior removal); all buttons carry accessible names + visible focus rings; the segmented bar carries a text alternative listing the three counts; contrast per tokens.
+- **OAH-N-2 (perf):** pure derivation from loaded signals; no new HTTP; one computed for the row set.
+- **OAH-N-3 (i18n):** hard-coded English, consistent with the redesign surfaces.
 
 ## 8. Defect classes → gates
 
 | Class | Gate |
 |---|---|
-| Count/sort/split logic wrong | Jest on the enrichment computed + helpers (exact fixtures incl. zero-target) |
-| Coherence drift vs Reporting tab | Jest asserting equality with `buildRatio` outputs on one shared fixture |
-| Rendered layout/visual (jsdom-blind) | **Live browser pass (T-5 manual rows)** — jsdom cannot see it; accepted as the substitute gate |
-| Phantom token / invisible skeleton | `design-tokens.spec.ts` module sweep (exists) + live skeleton observation |
-| Loading gap / jumping sums | Unit (loading fixtures) + live cold-load trace |
-| Contrast/visual a11y | Manual/T6 check at T-5 (axe-in-jsdom cannot measure rendered contrast — accepted) |
+| Split/sort/invariant logic | Jest fixtures incl. zero-target AND `target=0∧achieved>0` (the C-2 orphan) |
+| Cross-card regression from the move | The four pinned tests, updated by name as deliberate edits (T-2) + reflow BUT assertions |
+| Rendered layout/visual (jsdom-blind) | Live browser pass (T-6) — accepted substitute |
+| Phantom token / scoped-class no-op | `design-tokens.spec.ts` sweep + NO cross-component class references (inlined recipes only) + live skeleton observation |
+| Loading gap / jumping sums | Unit fixtures + live cold-load trace |
+| Contrast | Manual/T6 at T-6 (jsdom cannot measure — accepted) |
 
 ## 9. Requirement Index
 
-OAH-R-1..R-6, OAH-N-1..N-3. Coverage closure at scenario/clause level in `tasks.md` §3.
+OAH-R-1..R-6, OAH-N-1..N-3 · closure at clause level in `tasks.md` §3.
