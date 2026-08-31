@@ -329,13 +329,14 @@
   </app-pr-textarea>
 
   <!-- Innovation Links Component -->
-  <!-- P2-3294: from the 2026 phase on, this question (and its link list) drop out once the
-       Innovation Use Level reaches 6+ — confirmed by Angel Jarrín (PO) on 26-Aug-2026.
-       isScalingStudiesQuestionHiddenByLevel() carries that extra condition; it never fires for
-       phases <= 2025, which keep showing the question exactly as before. -->
+  <!-- P2-3535: from the 2026 phase on, this question (and its link list) are retired from the
+       Innovation Use form at EVERY use level — requested by Angel Jarrín (PO) on 28-Aug-2026,
+       superseding the partial P2-3294 rule (level 6+ only). isScalingStudiesQuestionHidden()
+       carries that condition; it never fires for phases <= 2025, which keep showing the question
+       exactly as before, and it keeps the old level-6 rule for IPSR step 1 ([isIpsr]="true"). -->
   <app-pr-radio-button
     [readOnly]="saving"
-    *ngIf="getUseLevelIndex() >= 5 && !isScalingStudiesQuestionHiddenByLevel()"
+    *ngIf="getUseLevelIndex() >= 5 && !isScalingStudiesQuestionHidden()"
     fieldRef="[innovation-use-form]-has-studies-links"
     [options]="[
       { value: true, label: 'Yes' },
@@ -347,7 +348,7 @@
   </app-pr-radio-button>
   <!-- Studies Links Component -->
   <app-studies-link
-    *ngIf="body.has_scaling_studies && getUseLevelIndex() >= 6 && !isScalingStudiesQuestionHiddenByLevel()"
+    *ngIf="body.has_scaling_studies && getUseLevelIndex() >= 6 && !isScalingStudiesQuestionHidden()"
     [disabled]="saving"
     [body]="bodyAsAny"></app-studies-link>
 

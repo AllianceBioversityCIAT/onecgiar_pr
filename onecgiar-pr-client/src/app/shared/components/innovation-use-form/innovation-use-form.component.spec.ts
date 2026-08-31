@@ -748,10 +748,12 @@ describe('InnovationUseFormComponent', () => {
     });
   });
 
-  // P2-3294: "Have any studies been conducted to inform the innovation scaling strategy design
-  // (...)" hides from the 2026 phase on once the Innovation Use Level reaches 6+ (confirmed by
-  // Angel Jarrín, 26-Aug-2026). Earlier phases (<= 2025) keep showing it regardless of level.
-  describe('isScalingStudiesQuestionHiddenByLevel', () => {
+  // P2-3535: "Have any studies been conducted to inform the innovation scaling strategy design
+  // (...)" is retired from the Innovation Use form at EVERY use level from the 2026 phase on
+  // (Angel Jarrín, 28-Aug-2026), superseding P2-3294's partial level-6 rule. Phases <= 2025 keep
+  // showing it exactly as before, and IPSR step 1 ([isIpsr]="true") stays on the level-6 rule
+  // until P2-3426 is republished.
+  describe('isScalingStudiesQuestionHidden', () => {
     beforeEach(() => {
       innovationControlListServiceMock.useLevelsList = [
         { id: 5, level: 5 },
@@ -762,32 +764,27 @@ describe('InnovationUseFormComponent', () => {
       ];
     });
 
-    it('keeps the question visible at level 5 in a 2026 phase', () => {
-      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
-      component.body.innovation_use_level_id = 5;
-
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
-    });
-
-    it.each([6, 7, 8, 9])('hides the question at level %i in a 2026 phase', level => {
+    it.each([5, 6, 7, 8, 9])('hides the question at level %i in a 2026 phase', level => {
       apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
       component.body.innovation_use_level_id = level;
 
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(true);
+      expect(component.isScalingStudiesQuestionHidden()).toBe(true);
     });
 
-    it('always keeps the question visible in a 2025 phase, even at level 9', () => {
-      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2025 });
-      component.body.innovation_use_level_id = 9;
-
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
-    });
-
-    it('keeps the question visible (fails open) when no level has been chosen yet, even in a 2026 phase', () => {
+    it('hides the question in a 2026 phase even before a use level has been chosen', () => {
       apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
       component.body.innovation_use_level_id = null;
 
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
+      expect(component.isScalingStudiesQuestionHidden()).toBe(true);
+    });
+
+    // Backwards-compatibility lock for the whole P2-3243 epic: a 2025-phase result must look
+    // EXACTLY as it does today, at every use level where the question used to show (5..9).
+    it.each([5, 6, 7, 8, 9])('keeps the question visible at level %i in a 2025 phase', level => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2025 });
+      component.body.innovation_use_level_id = level;
+
+      expect(component.isScalingStudiesQuestionHidden()).toBe(false);
     });
 
     it('keeps the question visible (fails open) when phase_year is not available', () => {
@@ -795,7 +792,7 @@ describe('InnovationUseFormComponent', () => {
       apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: null };
       component.body.innovation_use_level_id = 9;
 
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
+      expect(component.isScalingStudiesQuestionHidden()).toBe(false);
     });
 
     it('falls back to reportingCurrentPhase.phaseYear when currentResultSignal has no phase_year', () => {
@@ -803,7 +800,35 @@ describe('InnovationUseFormComponent', () => {
       apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: 2026 };
       component.body.innovation_use_level_id = 7;
 
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(true);
+      expect(component.isScalingStudiesQuestionHidden()).toBe(true);
+    });
+
+    // Scope lock (Yeck, 31-Aug-2026): P2-3535 covers the Innovation Use section only. IPSR
+    // Innovation Package step 1 reuses this template with [isIpsr]="true" and must keep the
+    // previous P2-3294 behaviour until P2-3426 is republished by Ángel.
+    describe('IPSR step 1 host ([isIpsr] = true)', () => {
+      beforeEach(() => {
+        component.isIpsr = true;
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: 2026 });
+      });
+
+      it('keeps the question visible at level 5', () => {
+        component.body.innovation_use_level_id = 5;
+
+        expect(component.isScalingStudiesQuestionHidden()).toBe(false);
+      });
+
+      it.each([6, 7, 8, 9])('still hides the question at level %i', level => {
+        component.body.innovation_use_level_id = level;
+
+        expect(component.isScalingStudiesQuestionHidden()).toBe(true);
+      });
+
+      it('keeps the question visible (fails open) when no level has been chosen yet', () => {
+        component.body.innovation_use_level_id = null;
+
+        expect(component.isScalingStudiesQuestionHidden()).toBe(false);
+      });
     });
   });
 

@@ -355,10 +355,15 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   }
 
   /**
-   * P2-3294: the 2026 phase drops the "Have any studies been conducted to inform the innovation
-   * scaling strategy design (...)" question (and its follow-up link list) once the Innovation Use
-   * Level reaches 6+. Confirmed by Angel Jarrín (PO), 26-Aug-2026. Phases <= 2025 keep the
-   * question exactly as it behaved before this ticket, regardless of level.
+   * P2-3535: from the 2026 phase on, the Innovation Use form retires the "Have any studies been
+   * conducted to inform the innovation scaling strategy design (...)" question (and its follow-up
+   * link list) at EVERY use level. Requested by Angel Jarrín (PO), 28-Aug-2026; it supersedes the
+   * partial P2-3294 rule, which only dropped the question from use level 6 upwards.
+   *
+   * Scope (Yeck, 31-Aug-2026): the retirement covers the Innovation Use section only. This template
+   * is shared with IPSR Innovation Package step 1 (`[isIpsr]="true"`), which stays on the previous
+   * P2-3294 behaviour (hidden from level 6 on) until Ángel republishes P2-3426 stating where else
+   * the question has to go. Bilateral's own `type-innovation-use` component is untouched too.
    *
    * Gated on `phase_year`, never on `isP25()`/portfolio — per the epic P2-3243 rule (reporting/
    * CLAUDE.md rule 9): prtest holds 2025-phase results inside the P25 portfolio, and a portfolio
@@ -367,18 +372,19 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
    * kept local here rather than added to the shared `ReportingDesignYear` enum/service because
    * this ticket's file scope is `innovation-use-form/**` only.
    *
-   * Fails OPEN (returns false, i.e. "don't hide") when `phase_year` or the resolved use level
-   * aren't available yet — an in-flight load, or a host (like IPSR step-n1) that never wires up
-   * `innovation_use_level_id`/`phase_year` — must never hide a question by mistake; it just keeps
-   * whatever the pre-existing `getUseLevelIndex() >= 5` gate already decided.
+   * Fails OPEN (returns false, i.e. "don't hide") when `phase_year` isn't resolved yet — an
+   * in-flight load must never hide a question by mistake; it just keeps whatever the pre-existing
+   * `getUseLevelIndex() >= 5` gate already decided. Same fail-open on the IPSR branch while the
+   * use level is still unresolved.
    */
   private static readonly SCALING_STUDIES_QUESTION_HIDE_YEAR = 2026;
 
-  isScalingStudiesQuestionHiddenByLevel(): boolean {
+  isScalingStudiesQuestionHidden(): boolean {
     const phaseYear = this.api?.dataControlSE?.currentResultSignal?.()?.phase_year ?? this.api?.dataControlSE?.reportingCurrentPhase?.phaseYear;
     if (typeof phaseYear !== 'number' || phaseYear < InnovationUseFormComponent.SCALING_STUDIES_QUESTION_HIDE_YEAR) {
       return false;
     }
+    if (!this.isIpsr) return true;
     const level = this.getUseLevelIndex();
     if (level < 0) return false;
     return level >= 6;
