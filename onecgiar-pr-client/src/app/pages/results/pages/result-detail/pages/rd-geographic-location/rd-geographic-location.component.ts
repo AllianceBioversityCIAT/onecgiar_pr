@@ -188,6 +188,16 @@ export class RdGeographicLocationComponent {
 
   onSaveSection() {
     if (this.fieldsManagerSE.isP25()) {
+      // The extra geographic scope block is only on screen while the MAIN focus is neither Global nor
+      // "yet to be determined" (see the `@if` guarding it in the template). When the reporter switches
+      // the main focus back to one of those, the block disappears — but its answers stayed in the body
+      // and kept being saved, so the result carried an extra scope with its regions and countries that
+      // nobody could see or reach any more. Those values are dropped here, mirroring what
+      // `resetExtraScope()` already does when the extra scope itself changes.
+      const mainFocusHidesExtraScope =
+        this.geographicLocationBody.geo_scope_id === GeoScopeEnum.GLOBAL ||
+        this.geographicLocationBody.geo_scope_id === GeoScopeEnum.DETERMINED;
+
       this.api.resultsSE
         .PATCH_geographicSectionp25({
           has_countries: this.geographicLocationBody.has_countries,
@@ -195,12 +205,12 @@ export class RdGeographicLocationComponent {
           regions: this.geographicLocationBody.regions,
           countries: this.geographicLocationBody.countries,
           geo_scope_id: this.geographicLocationBody.geo_scope_id,
-          extra_geo_scope_id: this.extraGeographicLocationBody.geo_scope_id,
-          extra_regions: this.extraGeographicLocationBody.regions,
-          extra_countries: this.extraGeographicLocationBody.countries,
-          has_extra_countries: this.extraGeographicLocationBody.has_countries,
-          has_extra_regions: this.extraGeographicLocationBody.has_regions,
-          has_extra_geo_scope: this.extraGeographicLocationBody.has_extra_geo_scope
+          extra_geo_scope_id: mainFocusHidesExtraScope ? null : this.extraGeographicLocationBody.geo_scope_id,
+          extra_regions: mainFocusHidesExtraScope ? [] : this.extraGeographicLocationBody.regions,
+          extra_countries: mainFocusHidesExtraScope ? [] : this.extraGeographicLocationBody.countries,
+          has_extra_countries: mainFocusHidesExtraScope ? false : this.extraGeographicLocationBody.has_countries,
+          has_extra_regions: mainFocusHidesExtraScope ? false : this.extraGeographicLocationBody.has_regions,
+          has_extra_geo_scope: mainFocusHidesExtraScope ? false : this.extraGeographicLocationBody.has_extra_geo_scope
         })
         .subscribe(() => {
           this.getSectionInformationp25();

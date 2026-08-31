@@ -26,6 +26,7 @@ describe('RdGeographicLocationComponent', () => {
       resultsSE: {
         GET_geographicSection: () => of({}),
         PATCH_geographicSection: () => of({}),
+        PATCH_geographicSectionp25: (_payload?: any) => of({}),
         PATCH_resyncKnowledgeProducts: () => of({}),
         GET_TypeByResultLevel: () => of({}),
         GET_AllCLARISARegions: () => of({}),
@@ -113,6 +114,55 @@ describe('RdGeographicLocationComponent', () => {
 
       expect(spy).toHaveBeenCalled();
       expect(spyGetSectionInformation).toHaveBeenCalled();
+    });
+
+    /**
+     * 🛑 The extra geographic scope block is only on screen while the MAIN focus is neither Global nor
+     * "yet to be determined". Switching the main focus back to one of those hides the block, and its
+     * answers used to keep being saved: the result carried an extra scope with regions and countries
+     * that nobody could see or reach any more.
+     */
+    describe('extra geographic scope, when the main focus hides it', () => {
+      const withMainFocus = (geoScopeId: number) => {
+        (component.fieldsManagerSE as any).isP25 = () => true;
+        component.geographicLocationBody.geo_scope_id = geoScopeId;
+        component.extraGeographicLocationBody.has_extra_geo_scope = true;
+        component.extraGeographicLocationBody.geo_scope_id = GeoScopeEnum.REGIONAL;
+        component.extraGeographicLocationBody.regions = [{ id: 7 }] as any;
+        component.extraGeographicLocationBody.countries = [{ id: 9 }] as any;
+        component.extraGeographicLocationBody.has_regions = true;
+        component.extraGeographicLocationBody.has_countries = true;
+      };
+
+      it.each([
+        ['Global', GeoScopeEnum.GLOBAL],
+        ['yet to be determined', GeoScopeEnum.DETERMINED]
+      ])('drops the orphaned extra scope when the main focus is %s', (_label, scopeId) => {
+        const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_geographicSectionp25');
+        withMainFocus(scopeId as number);
+
+        component.onSaveSection();
+
+        const [payload] = spy.mock.calls[spy.mock.calls.length - 1];
+        expect(payload.has_extra_geo_scope).toBe(false);
+        expect(payload.extra_geo_scope_id).toBeNull();
+        expect(payload.extra_regions).toEqual([]);
+        expect(payload.extra_countries).toEqual([]);
+        expect(payload.has_extra_regions).toBe(false);
+        expect(payload.has_extra_countries).toBe(false);
+      });
+
+      it('keeps the extra scope untouched while the block is still on screen', () => {
+        const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_geographicSectionp25');
+        withMainFocus(GeoScopeEnum.COUNTRY);
+
+        component.onSaveSection();
+
+        const [payload] = spy.mock.calls[spy.mock.calls.length - 1];
+        expect(payload.has_extra_geo_scope).toBe(true);
+        expect(payload.extra_geo_scope_id).toBe(GeoScopeEnum.REGIONAL);
+        expect(payload.extra_regions).toEqual([{ id: 7 }]);
+      });
     });
   });
 
