@@ -1,0 +1,38 @@
+<div class="pr-tab-intro rounded-[12px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] p-[14px] shadow-xs" role="region" [attr.aria-label]="title()">
+  <div
+    class="flex items-center justify-between cursor-pointer select-none gap-2"
+    (click)="toggle()"
+    role="button"
+    tabindex="0"
+    [attr.aria-expanded]="isOpen()"
+    (keydown.enter)="toggle()"
+    (keydown.space)="toggle(); $event.preventDefault()">
+    <div class="flex items-center gap-[10px] min-w-0">
+      <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[6px] bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-600)]" aria-hidden="true">
+        <span class="material-icons-round text-[16px]">{{ icon() }}</span>
+      </span>
+      <span class="text-[13.5px] font-bold text-[var(--pr-text-heading)] truncate">
+        {{ title() }}
+      </span>
+    </div>
+
+    <button
+      type="button"
+      class="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[6px] border-0 bg-transparent text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-ground)] hover:text-[var(--pr-text-heading)] cursor-pointer transition-colors"
+      [attr.aria-label]="isOpen() ? 'Collapse explanation' : 'Expand explanation'"
+      [attr.aria-expanded]="isOpen()">
+      <span
+        class="material-icons-round text-[18px] transition-transform duration-200"
+        [class.rotate-180]="isOpen()"
+        aria-hidden="true">
+        expand_more
+      </span>
+    </button>
+  </div>
+
+  @if (isOpen()) {
+    <div class="mt-[10px] border-t border-[var(--pr-border-divider)] pt-[10px] text-[13px] leading-[1.55] text-[var(--pr-text-secondary)]">
+      {{ description() }}
+    </div>
+  }
+</div>

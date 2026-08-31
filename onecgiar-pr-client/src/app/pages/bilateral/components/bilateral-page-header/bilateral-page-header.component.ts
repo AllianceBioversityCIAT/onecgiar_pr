@@ -1,19 +1,25 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideArrowLeft } from '@ng-icons/lucide';
+import { SmartNavigationService } from '../../../../shared/services/smart-navigation.service';
 import { BilateralAiService } from '../../services/bilateral-ai.service';
 import { BilateralContextService } from '../../services/bilateral-context.service';
 
 @Component({
   selector: 'app-bilateral-page-header',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, NgIcon],
   templateUrl: './bilateral-page-header.component.html',
   styleUrl: './bilateral-page-header.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [provideIcons({ lucideArrowLeft })]
 })
 export class BilateralPageHeaderComponent {
+  private readonly router = inject(Router);
   readonly ctx = inject(BilateralContextService);
   readonly bilateralAiService = inject(BilateralAiService);
+  readonly navSE = inject(SmartNavigationService);
 
   /** Which center section is active. Omit (e.g. on the create-result wizard) to hide the tab bar and CTA. */
   readonly activeTab = input<'overview' | 'results' | 'drafts' | null>(null);
@@ -72,4 +78,32 @@ export class BilateralPageHeaderComponent {
   readonly reportCtaLabel = computed(() =>
     this.activeTab() === 'overview' ? 'Report emerging result' : 'Report emerging result',
   );
+
+  /** Optional explicit override for the back button label. */
+  readonly backLabelOverride = input<string>('');
+
+  /** Dynamic context-aware back button label derived from navigation history. */
+  readonly backLabel = computed(() => {
+    const override = this.backLabelOverride()?.trim();
+    if (override) return override;
+    const url = this.router.url;
+    const isCreateOrDetail = !!this.pageTitle();
+    const effectiveUrl =
+      isCreateOrDetail && !url.includes('/create') && !url.includes('/result/')
+        ? `/bilateral/${encodeURIComponent(this.ctx.centerAcronym() || '')}/create`
+        : url;
+    return this.navSE.getBackTarget(effectiveUrl, this.ctx.centerAcronym() ?? undefined).label;
+  });
+
+  /** Navigates back intelligently to the previous surface or logical parent. */
+  goBack(): void {
+    const url = this.router.url;
+    const isCreateOrDetail = !!this.pageTitle();
+    const effectiveUrl =
+      isCreateOrDetail && !url.includes('/create') && !url.includes('/result/')
+        ? `/bilateral/${encodeURIComponent(this.ctx.centerAcronym() || '')}/create`
+        : url;
+    const target = this.navSE.getBackTarget(effectiveUrl, this.ctx.centerAcronym() ?? undefined);
+    this.navSE.back(target.url, this.ctx.centerAcronym() ?? undefined);
+  }
 }

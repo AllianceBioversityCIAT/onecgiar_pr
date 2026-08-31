@@ -118,10 +118,12 @@ export interface HeatmapModel {
  *
  * ⚠️ px only — `html` is 12px (UI-RULES §1.3).
  */
+import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
+
 @Component({
   selector: 'app-program-overview',
   standalone: true,
-  imports: [NgClass, PrVizChartComponent, PrTooltipDirectiveModule],
+  imports: [NgClass, PrVizChartComponent, PrTooltipDirectiveModule, PrTabIntroComponent],
   templateUrl: './program-overview.component.html',
   styleUrls: ['./program-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

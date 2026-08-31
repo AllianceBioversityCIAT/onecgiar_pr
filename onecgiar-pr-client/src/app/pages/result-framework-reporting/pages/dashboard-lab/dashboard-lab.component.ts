@@ -249,6 +249,8 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
  * at runtime from each program's icon (dominant vibrant color). Consumes the
  * REAL Science Programs API through the existing home service — no new endpoints.
  */
+import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
+
 @Component({
   selector: 'app-dashboard-lab',
   standalone: true,
@@ -267,6 +269,7 @@ export type RfrView = 'dashboard' | 'overview' | 'planned' | 'emerging' | 'cente
     NarrativePanelComponent,
     PrTooltipDirectiveModule,
     HlmButton,
+    PrTabIntroComponent,
     // Legacy reporting surfaces reused VERBATIM — the drawer/guided copies stay in the tree but are
     // no longer the ones users reach (see `openLegacyReportModal` / `openReportModal`).
     AowHloCreateModalComponent,

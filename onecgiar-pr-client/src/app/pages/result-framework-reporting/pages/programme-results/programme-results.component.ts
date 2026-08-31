@@ -139,6 +139,8 @@ function formatDate(value: string): string {
  * ⚠️ `html` is 12px, so rem-based Tailwind type/size utilities land 25% short of the mockup —
  * every measurement in the template is an arbitrary px value (client `CLAUDE.md` §5, UI-RULES §1.3).
  */
+import { PrTabIntroComponent } from '../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
+
 @Component({
   selector: 'app-programme-results',
   standalone: true,
@@ -156,7 +158,8 @@ function formatDate(value: string): string {
     PrSortableColumnDirective,
     PrFilterSelectComponent,
     PrFilterMultiselectModule,
-    ChangePhaseModalModule
+    ChangePhaseModalModule,
+    PrTabIntroComponent
   ],
   providers: [
     ProgrammeResultsService,

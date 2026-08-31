@@ -216,9 +216,13 @@
 <!-- ═══ TOOLBAR — first thing in the 32px content pad (CURRENT :895-1002) ═══
      Search · Section · Type · Category · Status  ……  Grouped | All indicators  -->
 @if (showToolbar()) {
-  @if (summaryStats(); as stats) {
-    <!-- Top Page Statistics Summary Card -->
-    <div class="px-[32px] pt-[24px]">
+  <div class="px-[32px] pt-[24px] flex flex-col gap-[20px]">
+    <app-pr-tab-intro
+      title="What does this tab show?"
+      description="The Theory of Change reporting framework for your Science Program. Browse planned Indicators and High-Level Outputs by Area of Work, track progress against targets, and submit new or continuing result reports for the current cycle." />
+
+    @if (summaryStats(); as stats) {
+      <!-- Top Page Statistics Summary Card -->
       <div class="rounded-2xl border border-[rgba(30,32,47,0.09)] bg-white px-8 py-5 shadow-xs">
         <div class="grid grid-cols-4 gap-8 max-lg:grid-cols-2 max-sm:grid-cols-1">
           <!-- Programs/Accelerators -->
@@ -282,8 +286,8 @@
           </div>
         </div>
       </div>
-    </div>
-  }
+    }
+  </div>
 
   <!--
     Section heading — reference :1102, 20px/700, tracking -.01em (= -0.2px at 20px), 16px under it.

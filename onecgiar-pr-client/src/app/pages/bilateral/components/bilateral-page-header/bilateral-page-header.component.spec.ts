@@ -213,4 +213,37 @@ describe('BilateralPageHeaderComponent', () => {
     );
     expect(draftsTab?.nativeElement.getAttribute('href')).toBe('/bilateral/SMO/drafts');
   });
+
+  describe('smart back button', () => {
+    it('renders the smart back button in the header', () => {
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      fixture.componentRef.setInput('pageTitle', 'Report New Bilateral Result');
+      fixture.detectChanges();
+
+      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
+      expect(backBtn).toBeTruthy();
+      expect(backBtn.nativeElement.textContent).toContain('Back to Center overview');
+    });
+
+    it('calls goBack() on click', () => {
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      fixture.componentRef.setInput('pageTitle', 'Report New Bilateral Result');
+      fixture.detectChanges();
+
+      const spy = jest.spyOn(component, 'goBack');
+      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
+      backBtn.nativeElement.click();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('respects backLabelOverride when supplied', () => {
+      ctx.setCenter('SMO', 'CGIAR System Organization');
+      fixture.componentRef.setInput('backLabelOverride', 'Back to Custom Destination');
+      fixture.detectChanges();
+
+      const backBtn = fixture.debugElement.query(By.css('[data-testid="bilateral-header-back-btn"]'));
+      expect(backBtn.nativeElement.textContent).toContain('Back to Custom Destination');
+    });
+  });
 });

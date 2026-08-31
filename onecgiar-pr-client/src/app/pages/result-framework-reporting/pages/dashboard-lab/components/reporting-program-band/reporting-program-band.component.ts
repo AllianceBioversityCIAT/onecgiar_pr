@@ -48,10 +48,12 @@ export interface ReportingSummaryStats {
  * Info popover (`ⓘ` next to the title): reference :345-358 — click (not hover), "About this
  * program", body = program description, footer = "N areas of work · M planned results".
  */
+import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-intro/pr-tab-intro.component';
+
 @Component({
   selector: 'app-reporting-program-band',
   standalone: true,
-  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent],
+  imports: [RouterLink, NgIcon, FormsModule, PrFilterMultiselectModule, PrFilterSelectComponent, PrTabIntroComponent],
   templateUrl: './reporting-program-band.component.html',
   styleUrls: ['./reporting-program-band.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

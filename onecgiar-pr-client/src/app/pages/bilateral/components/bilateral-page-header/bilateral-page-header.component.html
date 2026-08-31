@@ -14,7 +14,7 @@
           </ol>
         </nav>
 
-        <div class="min-w-0 pr-[220px]">
+        <div class="min-w-0 pr-[420px]">
           <h1
             class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
             {{ title }}
@@ -22,7 +22,7 @@
         </div>
 
         @if (hasIdentityStrip()) {
-          <div class="flex min-w-0 flex-wrap items-center gap-[8px] pr-[220px]">
+          <div class="flex min-w-0 flex-wrap items-center gap-[8px] pr-[420px]">
             @if (resultCode() != null) {
               <span class="font-mono text-[12px] font-medium text-[var(--pr-text-secondary)]">{{ resultCode() }}</span>
             }
@@ -54,7 +54,7 @@
           </span>
         </div>
 
-        <div class="min-w-0 pr-[220px]">
+        <div class="min-w-0 pr-[420px]">
           <h1
             class="m-0 min-w-0 truncate text-[30px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pr-text-heading)]">
             {{ ctx.centerAcronym() }}
@@ -68,14 +68,26 @@
         </div>
       }
 
-      @if (activeTab()) {
-        <a
-          class="absolute right-[32px] top-[68px] z-[22] flex h-[36px] shrink-0 -translate-y-1/2 items-center gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
-          [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']">
-          <i class="pi pi-bolt text-[14px]"></i>
-          {{ reportCtaLabel() }}
-        </a>
-      }
+      <div class="absolute right-[32px] top-[68px] z-[22] flex -translate-y-1/2 items-center gap-[10px]">
+        <button
+          type="button"
+          class="flex h-[36px] shrink-0 cursor-pointer items-center gap-[6px] rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[13px] text-[13px] font-semibold text-[var(--pr-text-heading)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-app)] hover:text-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          [attr.aria-label]="backLabel()"
+          data-testid="bilateral-header-back-btn"
+          (click)="goBack()">
+          <ng-icon name="lucideArrowLeft" class="text-[15px]" />
+          <span>{{ backLabel() }}</span>
+        </button>
+
+        @if (activeTab()) {
+          <a
+            class="flex h-[36px] shrink-0 items-center gap-[8px] rounded-[8px] bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
+            [routerLink]="['/bilateral', ctx.centerAcronym(), 'create']">
+            <i class="pi pi-bolt text-[14px]"></i>
+            {{ reportCtaLabel() }}
+          </a>
+        }
+      </div>
     </div>
 
     @if (activeTab()) {
