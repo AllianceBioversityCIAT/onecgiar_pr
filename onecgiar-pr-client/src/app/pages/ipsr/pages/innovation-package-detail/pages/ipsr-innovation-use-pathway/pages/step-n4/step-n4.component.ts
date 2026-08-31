@@ -1,9 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { IpsrStep4Body } from './model/Ipsr-step-4-body.model';
 import { Router } from '@angular/router';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { InnovationControlListService } from '../../../../../../../../shared/services/global/innovation-control-list.service';
 
 @Component({
   selector: 'app-step-n4',
@@ -14,37 +13,24 @@ import { InnovationControlListService } from '../../../../../../../../shared/ser
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();
   disabledOptionsPartners = [];
-  innovationControlListSE = inject(InnovationControlListService);
 
   /**
-   * P2-3426: numeric (0-9) "Innovation use level evidence-based" of the Core innovation,
-   * captured in Step 3 → Evidence-based assessment → Core innovation
-   * (`result_ip_result_core.use_level_evidence_based`). Step 4's own GET endpoints
-   * (`GETInnovationPathwayStepFourByRiId`, both P22 and P25) do not expose this value, so it is
-   * fetched here via the same step-three endpoint step-n3 already calls
-   * (`GETInnovationPathwayByRiId` — portfolio-agnostic on the server, confirmed live against
-   * prtest for both a P22 and a P25 result). null while unset or not yet loaded.
-   */
-  coreInnovationUseLevel: number = null;
-
-  /**
-   * P2-3426: from the 2026 phase onwards, hide the "Have any studies been conducted to inform
-   * the innovation scaling strategy design (...)" question (and its study-links list) once the
-   * Core innovation's evidence-based use level reaches 6+. Confirmed by Angel Jarrín (PO),
-   * 26-Aug-2026. Phases <= 2025 keep the question exactly as it behaved before this ticket,
-   * regardless of level.
+   * P2-3426: from the 2026 phase onwards the "Have any studies been conducted to inform the
+   * innovation scaling strategy design (...)" question is RETIRED — closed for writing. It is not
+   * deleted: a package that already carries an answer keeps showing it read-only (see
+   * `showScalingStudiesReadOnly`), and a package with no stored answer renders nothing at all, so
+   * the last question of Step 4 becomes the estimated $ investment one.
    *
    * Gated on `phase_year`, never on `isP25()`/portfolio — per reporting/CLAUDE.md rule 9: prtest
-   * holds 2025-phase results inside the P25 portfolio, and a portfolio gate would strip the
-   * question from those too. Mirrors the local-constant pattern already used for the sibling rule
-   * on the Innovation Development side (`innovation-use-form.component.ts`, P2-3294/P2-3265)
-   * rather than the shared `ReportingDesignYear` enum, since this ticket's file scope is
-   * `step-n4/**` only.
+   * holds 2025-phase results INSIDE the P25 portfolio, and a portfolio gate would retire the
+   * question for those too, breaking the epic's "2025 and earlier stay exactly as today" rule.
+   * The ticket's own "Phase threshold - RESOLVED" section claims `isP25()` is sufficient; that is
+   * factually wrong (P25 starts in 2025) and is already flagged on the activity.
    *
-   * Fails OPEN (returns false, i.e. "don't hide") when `phase_year` or the resolved use level
-   * aren't available yet — an in-flight load must never hide the question by mistake.
+   * Fails OPEN (returns false, i.e. "not retired, stay editable") when `phase_year` is not
+   * available yet — an in-flight load must never lock or hide the question by mistake.
    */
-  private static readonly SCALING_STUDIES_QUESTION_HIDE_YEAR = 2026;
+  private static readonly SCALING_STUDIES_RETIRED_FROM_YEAR = 2026;
 
   constructor(
     public ipsrDataControlSE: IpsrDataControlService,
@@ -55,7 +41,6 @@ export class StepN4Component implements OnInit {
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Step 4');
     this.getSectionInformation();
-    this.getCoreInnovationUseLevel();
     this.api.dataControlSE.findClassTenSeconds('alert-event-3').then(resp => {
       try {
         document.querySelector('.alert-event-3').addEventListener('click', e => {
@@ -68,44 +53,67 @@ export class StepN4Component implements OnInit {
   }
 
   /**
-   * P2-3426: fetches the Core innovation's evidence-based use level catalogue id (Step 3) and
-   * resolves it to `coreInnovationUseLevel`. Re-runs on every `ngOnInit`, so navigating back into
-   * Step 4 after changing the level in Step 3 picks up the new value without an app reload (the
-   * default Angular route-reuse strategy re-creates this component on a step-3 → step-4
-   * navigation — verified against `PrmsRouteReuseStrategy`, which only special-cases
-   * `result-detail/:id`).
+   * P2-3426: true from the 2026 phase onwards. False for 2025 and earlier, where the question keeps
+   * behaving exactly as it did before this ticket (fully editable).
+   *
+   * The ONLY source is `currentResultSignal().phase_year` — the phase of the Innovation Package
+   * currently open. `api/ipsr/innovation-package-detail/:id` selects `v.phase_year` from the
+   * package's own `version` row (`ipsr.repository.ts:282`) and `ApiService.GETInnovationPackageDetail`
+   * (`api.service.ts:126`) sets it into the signal, so on this screen it is always populated.
+   *
+   * ⚠️ There is deliberately NO fallback. It used to read
+   * `dataControlSE.reportingCurrentPhase.phaseYear`, which is the open phase of the REPORTING
+   * module — a different module and, worse, a different thing: the OPEN phase, not the phase of the
+   * package being viewed. Opening a 2025 package while reporting 2026 is open would have retired the
+   * question for it, breaking the epic's "2025 and earlier look exactly as today" rule.
+   * `dataControlSE.IPSRCurrentPhase.phaseYear` is IPSR's own equivalent and has the same defect
+   * (open phase ≠ viewed package's phase), so it is not used either.
+   *
+   * With no phase year available we fail OPEN (return false: not retired, stay editable) rather than
+   * guess — an in-flight load must never hide or lock the question by mistake.
    */
-  getCoreInnovationUseLevel() {
-    this.api.resultsSE.GETInnovationPathwayByRiId().subscribe({
-      next: ({ response }) => {
-        this.coreInnovationUseLevel = this.resolveUseLevel(response?.result_ip_result_core?.use_level_evidence_based);
-      },
-      error: err => console.error(err)
-    });
+  isScalingStudiesRetired(): boolean {
+    const phaseYear = this.api?.dataControlSE?.currentResultSignal?.()?.phase_year;
+    if (typeof phaseYear !== 'number') return false;
+    return phaseYear >= StepN4Component.SCALING_STUDIES_RETIRED_FROM_YEAR;
   }
 
   /**
-   * P2-3426: resolves a `clarisa_innovation_use_levels` row id to its numeric `level` (0-9).
-   * `id` is NOT the level: `id` is an auto-increment catalogue row identifier (1..10) while
-   * `level` runs 0-9, so id and level are systematically off by one (verified live against
-   * prtest: id 1 -> level 0 ... id 10 -> level 9). Resolving through the catalogue's `level`
-   * field — never through the row's array position/index — is what AC5 of P2-3426 requires.
+   * P2-3426. This is the single place that decides what counts as "a stored answer exists". Change
+   * this one function to change the rule; nothing else depends on the criterion.
+   *
+   * A stored `true` IS the criterion, on its own. `true` is unambiguous: neither the server nor
+   * `IpsrStep4Body` ever writes it by itself, so it can only have come from a person clicking "Yes".
+   * Case 1 of the ticket ("Innovation Package with a stored answer → the question and its answer are
+   * displayed in read-only mode") therefore applies, and nothing else may be demanded of it.
+   *
+   * ⚠️ Do NOT re-add "…and at least one non-blank link". It hid data the ticket orders shown, and the
+   * case is reachable: `syncScalingStudyUrls` puts the empty string into `urlsToCreate`
+   * (`ipsr-pathway-step-four.service.ts:194-196`) and the GET returns the rows verbatim (`:625`), so
+   * anyone who ticked "Yes" and saved without typing the URL — the seed row `app-studies-link` used
+   * to add — ends up stored as `true` + `['']` and would stop seeing their own answer.
+   *
+   * ⚠️ PENDING CONFIRMATION BY THE PO (asked to Ángel Jarrín, 31-Aug-2026) — for `false` ONLY. The
+   * server coerces NULL to false before the value reaches the client
+   * (`ipsr-pathway-step-four.service.ts:654`, `has_scaling_studies: result_ip.has_scaling_studies ?? false`),
+   * a coercion that keeps the Step 4 green check reachable and must not be removed here (that is
+   * P2-3494, owned by Juan David Delgado). So a "No" written by the platform itself is
+   * indistinguishable from a "No" a person actually gave, and showing it would put a read-only "No"
+   * in front of users who never answered. Until the PO rules, `false` is treated as "no answer". If
+   * an automatic "No" is declared to count too, this becomes
+   * `this.ipsrStep4Body?.has_scaling_studies !== null && ... !== undefined` — one line.
    */
-  resolveUseLevel(catalogId: any): number {
-    if (catalogId === null || catalogId === undefined) return null;
-    const list = this.innovationControlListSE?.useLevelsList || [];
-    const match = list.find((item: any) => String(item?.id) === String(catalogId));
-    const level = Number(match?.level);
-    return Number.isFinite(level) ? level : null;
+  hasStoredScalingStudiesAnswer(): boolean {
+    return this.ipsrStep4Body?.has_scaling_studies === true;
   }
 
-  isScalingStudiesQuestionHiddenByLevel(): boolean {
-    const phaseYear = this.api?.dataControlSE?.currentResultSignal?.()?.phase_year ?? this.api?.dataControlSE?.reportingCurrentPhase?.phaseYear;
-    if (typeof phaseYear !== 'number' || phaseYear < StepN4Component.SCALING_STUDIES_QUESTION_HIDE_YEAR) {
-      return false;
-    }
-    if (this.coreInnovationUseLevel === null || this.coreInnovationUseLevel === undefined) return false;
-    return this.coreInnovationUseLevel >= 6;
+  /**
+   * P2-3426: renders the retired question in read-only mode. Read-only reuses what already exists —
+   * `[readOnly]` on `app-pr-radio-button` (paints `block-field` and disables the radios) and
+   * `[disabled]` on `app-studies-link` (disables the inputs, hides delete and add).
+   */
+  showScalingStudiesReadOnly(): boolean {
+    return this.isScalingStudiesRetired() && this.hasStoredScalingStudiesAnswer();
   }
 
   getSectionInformation() {

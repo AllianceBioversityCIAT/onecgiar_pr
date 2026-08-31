@@ -46,6 +46,14 @@ export interface CreateResultPayloadOptions {
   /** Dropdown 2 — science programs the user added on top. */
   otherScienceSelected?: any[];
   bilateralProjects?: any[];
+  /**
+   * P2-3420 — answer to "Are you reporting the use of an innovation that has already been reported
+   * and quality assessed?". Only ever set for an Innovation Use result from the 2026 phase onwards;
+   * left undefined everywhere else so earlier phases post exactly the body they post today.
+   */
+  hasInnovationLink?: boolean | null;
+  /** The single Innovation Development result picked when the answer is "Yes". */
+  linkedResultId?: number | null;
 }
 
 /**
@@ -88,6 +96,17 @@ function mergeContributors<T extends Record<string, any>>(fromToc: T[], added: T
   return [...(fromToc ?? []).filter(item => !isSentinel(item)).map(item => ({ ...item, from_toc: true })), ...(added ?? []).map(item => ({ ...item, from_toc: false }))];
 }
 
+/**
+ * Only spreads the two link keys when the caller actually asked the question. A form that never
+ * shows it (any category but Innovation use, or any phase before 2026) posts the exact same body
+ * it posts today — the epic's hard rule.
+ */
+function resolveInnovationLink(options: CreateResultPayloadOptions): Record<string, any> {
+  if (options.hasInnovationLink == null) return {};
+  const linked = options.hasInnovationLink === true && options.linkedResultId != null ? [Number(options.linkedResultId)] : [];
+  return { has_innovation_link: options.hasInnovationLink === true, linked_results: linked };
+}
+
 export function buildCreateResultPayload(options: CreateResultPayloadOptions): Record<string, any> {
   const resultTypeId = resolveResultTypeId(options);
   const indicator = options.indicator;
@@ -98,7 +117,12 @@ export function buildCreateResultPayload(options: CreateResultPayloadOptions): R
       result_level_id: resolveResultLevelId(options),
       initiative_id: options.initiativeId,
       result_name: options.body.result_name,
-      handler: resolveHandler(options, resultTypeId)
+      handler: resolveHandler(options, resultTypeId),
+      // P2-3420 — the answer rides INSIDE the create. Chaining the innovation-use PATCH afterwards
+      // does not work: it rejects a body without a valid `innovation_use_level_id`, which a result
+      // created a moment ago does not have yet. The server stores it where Contributors and
+      // partners already keeps it, so the user sees the answer ticked there.
+      ...resolveInnovationLink(options)
     },
     number_target: indicator?.['number_target'],
     target_date: indicator?.['target_date'],

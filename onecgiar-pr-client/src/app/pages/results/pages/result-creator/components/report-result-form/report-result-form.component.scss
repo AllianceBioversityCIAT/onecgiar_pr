@@ -163,3 +163,10 @@ p {
   padding: 0px 16px 10px;
   border-bottom: 1px solid var(--pr-color-accents-2);
 }
+
+/* P2-3421 — the link-to-a-QA'd-innovation question sits between the title block and the actions. */
+.innovation-link-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

@@ -51,5 +51,15 @@ export const ReportingDesignYear = {
    * and the two are not interchangeable — the test environment holds 2025-phase results inside the
    * P25 portfolio, which a portfolio gate would strip the section from.
    */
-  InnovationDevFormReduction: 2026
+  InnovationDevFormReduction: 2026,
+
+  /**
+   * SIDS revision (P2-3295): from the 2026 cycle the Innovation Use 2030 block is titled
+   * "2030 Use Projection" and carries the projection tooltip. Phases <= 2025 keep the legacy
+   * long title verbatim — backward compatibility is absolute for this epic.
+   *
+   * Gated on the reporting phase YEAR, not on the portfolio: prtest holds 2025-phase results
+   * inside the P25 portfolio, and `isP25()` would rename the section for those too.
+   */
+  InnovationUse2030Projection: 2026
 } as const;

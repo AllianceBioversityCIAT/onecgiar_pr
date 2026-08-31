@@ -10,6 +10,12 @@ import { filterOutAvisaInitiatives } from '../../../../../../shared/utils/avisa-
 import { buildCreateResultPayload, OTHER_CENTERS_CODE, OTHER_SP_ID, ReportResultFormBody } from '../../../../shared/report-result/create-result-payload.util';
 import { KP_HANDLE_NO_ERROR, KpHandleError, validateKpHandle } from '../../../../shared/report-result/kp-handle.validator';
 import {
+  INNOVATION_LINK_QUESTION,
+  QaInnovationDevelopmentResultsService,
+  innovationLinkAnswerIsComplete,
+  showsInnovationLinkQuestion
+} from '../../../../../../shared/services/global/qa-innovation-development-results.service';
+import {
   KpCgspaceBrowseComponent,
   CgspaceItemDto
 } from '../../../entity-aow/pages/entity-aow-aow/components/aow-hlo-table/components/aow-hlo-table-create-modal/components/kp-cgspace-browse/kp-cgspace-browse.component';
@@ -57,6 +63,8 @@ export class LabReportFormComponent {
    *     no longer depends on some other screen having instantiated it first.
    */
   private readonly resultLevelSE = inject(ResultLevelService);
+  /** P2-3420 — shared catalogue for the link-to-a-QA'd-innovation dropdown (one request, one filter). */
+  readonly qaInnovationsSE = inject(QaInnovationDevelopmentResultsService);
 
   /** The ToC node (HLO group) holding the indicator. Null for an emerging result. */
   readonly tocNode = input<any>(null);
@@ -201,6 +209,23 @@ export class LabReportFormComponent {
       this.emergingCategory()?.id === KNOWLEDGE_PRODUCT_TYPE_ID
   );
 
+  // ---- P2-3420: link to a QA'd Innovation Development result --------------------------------
+  readonly innovationLinkQuestion = INNOVATION_LINK_QUESTION;
+  /** Default is NO, per the story. */
+  readonly hasInnovationLink = signal(false);
+  readonly linkedResultId = signal<number | null>(null);
+
+  /** The category actually being created — the indicator wins, then the entry card, then the picker. */
+  readonly resolvedResultTypeId = computed<number | null>(
+    () => this.indicator()?.result_type_id ?? this.emergingCategory()?.id ?? this.createResultBody().result_type_id ?? null
+  );
+
+  /**
+   * 🛑 PHASE-year gate, never `isP25()`: prtest holds 2025-phase results inside the P25 portfolio,
+   * and the epic requires those to render exactly as they do today.
+   */
+  readonly showsInnovationLink = computed(() => showsInnovationLinkQuestion(this.resolvedResultTypeId(), this.phaseYear()));
+
   // ---- Contributing CGIAR Centers: ToC split + "Other(s)" ------------------
   readonly OTHER_CENTERS_CODE = OTHER_CENTERS_CODE;
   readonly otherCentersSentinel = {
@@ -259,6 +284,19 @@ export class LabReportFormComponent {
         this.createResultBody.update(b => ({ ...b, result_type_id: emerging.id }));
       }
     });
+
+    // P2-3420 — fetch the linkable-innovation catalogue only once the question is actually on
+    // screen. The service is idempotent, so the three creation surfaces share a single request.
+    effect(() => {
+      if (this.showsInnovationLink()) this.qaInnovationsSE.load();
+    });
+  }
+
+  /** P2-3420 — answering "No" drops the selection so the payload cannot keep a stale link. */
+  onInnovationLinkChange(value: boolean): void {
+    this.hasInnovationLink.set(value === true);
+    if (value !== true) this.linkedResultId.set(null);
+    this.markDirty();
   }
 
   private resetForm(): void {
@@ -272,6 +310,9 @@ export class LabReportFormComponent {
     this.mqapUrlError.set({ ...KP_HANDLE_NO_ERROR });
     this.kpEntryMode.set('browse');
     this.handleSource.set('browse');
+    // P2-3420: back to the story's default, NO.
+    this.hasInnovationLink.set(false);
+    this.linkedResultId.set(null);
     this.contributingCenters.set([]);
     this.otherCentersSelected.set([]);
     this.selectedScience.set([]);
@@ -336,6 +377,10 @@ export class LabReportFormComponent {
   onCategoryChange(resultTypeId: number | null): void {
     const wasKnowledgeProduct = this.currentResultIsKnowledgeProduct();
     this.patch('result_type_id', resultTypeId);
+    // P2-3420: the question only exists for Innovation use — dropping the answer keeps a hidden
+    // "Yes" (and its link) from travelling in the payload of a result of another category.
+    this.hasInnovationLink.set(false);
+    this.linkedResultId.set(null);
     if (wasKnowledgeProduct && resultTypeId !== KNOWLEDGE_PRODUCT_TYPE_ID) {
       this.mqapJson.set(null);
       this.mqapUrlError.set({ ...KP_HANDLE_NO_ERROR });
@@ -477,6 +522,10 @@ export class LabReportFormComponent {
     if (this.currentResultIsKnowledgeProduct() && !this.mqapJson()) missing.push('Repository link/handle');
     if (body.contribution_to_indicator_target == null || `${body.contribution_to_indicator_target}`.trim() === '')
       missing.push('Contribution to indicator target');
+    // P2-3420: "Yes" is only a complete answer once an innovation has been picked. "No" (the
+    // default) always is, which is what makes the field mandatory yet never blocking on its own.
+    if (this.showsInnovationLink() && !innovationLinkAnswerIsComplete(this.hasInnovationLink(), this.linkedResultId()))
+      missing.push('Linked Innovation Development result');
     return missing;
   });
 
@@ -501,7 +550,9 @@ export class LabReportFormComponent {
       otherCentersSelected: this.otherCentersSelected(),
       tocScienceSelected: this.selectedScience(),
       otherScienceSelected: this.otherScienceSelected(),
-      bilateralProjects: this.selectedBilateral()
+      bilateralProjects: this.selectedBilateral(),
+      hasInnovationLink: this.showsInnovationLink() ? this.hasInnovationLink() : null,
+      linkedResultId: this.linkedResultId()
     });
 
     this.api.resultsSE.POST_createResult(body).subscribe({

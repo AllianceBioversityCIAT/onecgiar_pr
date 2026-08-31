@@ -111,28 +111,28 @@ export class RdEvidencesComponent implements OnInit, OnDestroy {
   /** Part 2 only. Split out so the stage-dependent branch is testable on its own. */
   private policyChangeSpecificGuidance(): string {
     return `<p><strong>Policy change evidence</strong></p>
-    <p>Evidence is required for all stages to validate the specific claims made as to the relationship between CGIAR's research and any reported policy outcome (i.e. that there was a meaningful contribution of CGIAR). Evidence supporting the CGIAR contribution does not need to be public — it may be kept out of the public domain. In some cases, the contribution could be explicitly mentioned in a policy strategy or impact assessment study; in others it may only appear in emails or verbally.</p>
+    <p>Evidence is required for all stages to validate the specific claims made as to the relationship between CGIAR's research and any reported policy outcome for all stages (i.e. that there was a meaningful contribution of the CGIAR). Note that evidence supporting the CGIAR contribution to the policy change does not need to be made public, it may be submitted and kept out of the public domain. In some cases, the CGIAR contribution could be explicitly mentioned in a policy strategy or described well in an impact assessment study; but in others it may only be mentioned in emails or verbally.</p>
     ${this.stageSpecificRequirements()}
     <p><strong>Examples per evidence type</strong></p>
     <p><strong>CGIAR contribution to an outcome (Stages 1, 2 and 3)</strong></p>
     <ul>
-    <li>Citation of CGIAR outputs in the document used as evidence</li>
-    <li>Acknowledgement of the CGIAR contribution</li>
-    <li>Third-party evaluations describing the CGIAR contribution</li>
-    <li>Documents co-authored by, or quoting, the organization with the policy outcome</li>
-    <li>Media stories announcing the outcome that mention CGIAR</li>
-    <li>Emails from the organization acknowledging the contribution</li>
+    <li>Citation of CGIAR outputs used in the document used as evidence of an outcome.</li>
+    <li>Acknowledgement of the CGIAR contribution in the document used as evidence of an outcome.</li>
+    <li>Third party evaluations of the policy outcome that describes the CGIAR contribution (collected or confirmed through interviews with policy makers or others involved in the policy process).</li>
+    <li>Documents that mention the CGIAR contribution to a policy contribution that (1) are co-authored by the organization with the policy outcome or (2) includes quotes from persons at the organization with the policy outcome.</li>
+    <li>Media stories that announce the policy outcome and mention CGIAR contribution.</li>
+    <li>Emails from persons at the organizations with the policy outcome acknowledging the CGIAR contribution.</li>
     </ul>
     <p><strong>Evidence that a policy outcome has taken place (Stage 2)</strong></p>
     <ul>
-    <li>A link to the new or revised policy document (strategy, law, regulation, program, investment)</li>
-    <li>If unavailable, a digital copy stored for review</li>
-    <li>A link to the policy organization's website announcing the outcome</li>
-    <li>A link to a media story announcing it</li>
+    <li>A link to the new or revised policy document – a strategy, policy, law, regulations, program, investment.</li>
+    <li>If the above is not available, then a digital copy that can be stored in a folder for review.</li>
+    <li>A link to the policy making organizational website page announcing the new or revised policy outcome.</li>
+    <li>A link to a media story announcing the new or revised policy.</li>
     </ul>
     <p><strong>Evidence of impact of a policy (Stage 3)</strong></p>
     <ul>
-    <li>Strong evidence such as a peer-reviewed publication or an external evaluation is required.</li>
+    <li>Strong evidence, such as a peer-reviewed publication or external evaluation is required.</li>
     </ul>`;
   }
 

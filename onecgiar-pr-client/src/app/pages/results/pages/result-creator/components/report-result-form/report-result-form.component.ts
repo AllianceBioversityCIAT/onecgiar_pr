@@ -11,6 +11,12 @@ import {
   filterOutAvisaFromGroupedInitiativeOptions,
   filterOutAvisaInitiatives
 } from '../../../../../../shared/utils/avisa-initiative.util';
+import {
+  INNOVATION_LINK_QUESTION,
+  QaInnovationDevelopmentResultsService,
+  innovationLinkAnswerIsComplete,
+  showsInnovationLinkQuestion
+} from '../../../../../../shared/services/global/qa-innovation-development-results.service';
 
 type TitleSearchEvent =
   | {
@@ -38,6 +44,14 @@ export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
   private readonly titleSearchDebounceMs = 500;
   mqapJson: {};
   validating = false;
+
+  // ---- P2-3421: link to a QA'd Innovation Development result -------------------------------
+  /** Shared catalogue — one request, one filter, shared with the ToC-linked creation surfaces. */
+  readonly qaInnovationsSE = inject(QaInnovationDevelopmentResultsService);
+  readonly innovationLinkQuestion = INNOVATION_LINK_QUESTION;
+  /** Default is NO, per the story. `null` would leave the mandatory field unanswered. */
+  hasInnovationLink: boolean = false;
+  linkedResultId: number | null = null;
   /**
    * Years used by the knowledge-product guidance. `reportingCurrentPhase` / `previousReportingPhase` are PLAIN
    * objects, so the computed depends on `reportingPhaseVersion()` — bumped by `getCurrentPhases()` — to re-render
@@ -70,6 +84,13 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
   @Output() resultCreated = new EventEmitter<any>();
   @Input() disableInitiativeSelect: boolean = false;
+  /**
+   * P2-3421 — SURFACE gate. The link-to-a-QA'd-innovation question belongs to the EMERGENT
+   * (non-ToC) reporting pathway only, so the host that opens this form as the emergent modal opts
+   * in. Defaults to false so the standalone legacy creator, which renders the very same component,
+   * cannot inherit it by accident.
+   */
+  @Input() showInnovationLinkQuestion: boolean = false;
   private _selectedInitiativeId: number | string | null = null;
   @Input() set selectedInitiativeId(value: number | string | null | undefined) {
     this._selectedInitiativeId = value ?? null;
@@ -87,6 +108,8 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
   ngOnInit(): void {
     this.setupTitleSearch();
+    // Idempotent: the shared service fetches once and every surface reuses the cached list.
+    if (this.showInnovationLinkQuestion) this.qaInnovationsSE.load();
     this.api.dataControlSE.getCurrentPhases().subscribe(() => {
       this.api.rolesSE.validateReadOnly().then(() => {
         this.GET_AllInitiatives();
@@ -192,6 +215,30 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     return this.resultLevelSE.resultBody.result_type_id == 6;
   }
 
+  /**
+   * P2-3421 — visible only on the emergent pathway, only for Innovation use, and only from the
+   * 2026 phase onwards. The year gate is a PHASE gate on purpose: `isP25()` would switch the
+   * question on for 2025-phase results, which the epic requires to render exactly as they do today.
+   */
+  get showsInnovationLink(): boolean {
+    if (!this.showInnovationLinkQuestion) return false;
+    return showsInnovationLinkQuestion(
+      this.resultLevelSE.resultBody.result_type_id,
+      this.api.dataControlSE?.reportingCurrentPhase?.phaseYear
+    );
+  }
+
+  /** "Yes" without a chosen innovation is an incomplete answer, so it blocks "Save and continue". */
+  get innovationLinkIncomplete(): boolean {
+    if (!this.showsInnovationLink) return false;
+    return !innovationLinkAnswerIsComplete(this.hasInnovationLink, this.linkedResultId);
+  }
+
+  /** Answering "No" drops the selection so the payload can never carry a stale link. */
+  onInnovationLinkChange(): void {
+    if (this.hasInnovationLink !== true) this.linkedResultId = null;
+  }
+
   get selectableInitiatives() {
     return filterOutAvisaInitiatives(this.api.dataControlSE.myInitiativesListReportingByPortfolio);
   }
@@ -211,6 +258,10 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   clean() {
+    // P2-3421: the question only exists for Innovation use, so changing category drops the answer
+    // instead of leaving a hidden "Yes" (and its link) travelling in the payload.
+    this.hasInnovationLink = false;
+    this.linkedResultId = null;
     if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
     else this.onTitleChange(this.resultLevelSE.resultBody.result_name);
   }
@@ -282,7 +333,16 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     let request$;
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
-      request$ = this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody, true);
+      // P2-3421 — the answer travels INSIDE the create. Chaining the innovation-use PATCH here does
+      // not work: it rejects a body without a valid `innovation_use_level_id`, which a result that
+      // does not exist yet cannot have. The server persists it where Contributors and partners
+      // already stores it, so the user finds the answer ticked there.
+      const createBody: any = { ...this.resultLevelSE.resultBody };
+      if (this.showsInnovationLink) {
+        createBody.has_innovation_link = this.hasInnovationLink === true;
+        createBody.linked_results = this.hasInnovationLink === true && this.linkedResultId != null ? [Number(this.linkedResultId)] : [];
+      }
+      request$ = this.api.resultsSE.POST_resultCreateHeader(createBody, true);
     } else {
       request$ = this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
     }

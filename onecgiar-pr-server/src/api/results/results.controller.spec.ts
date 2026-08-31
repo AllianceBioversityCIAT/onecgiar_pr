@@ -57,6 +57,9 @@ describe('ResultsController', () => {
     getScienceProgramProgress: jest
       .fn()
       .mockResolvedValue({ status: 200, response: {} }),
+    getQaInnovationDevelopmentResults: jest
+      .fn()
+      .mockResolvedValue({ status: 200, response: [] }),
   } as unknown as jest.Mocked<ResultsService>;
 
   const mockReportingFullMetadataExportService = {
@@ -282,5 +285,14 @@ describe('ResultsController', () => {
       user,
       undefined,
     );
+  });
+  /**
+   * P2-3420 / P2-3421 — the single catalogue route behind the "link to a QA'd Innovation
+   * Development result" dropdown. Both W1/W2 creation surfaces consume THIS one.
+   */
+  it("exposes the QA'd Innovation Development catalogue without touching the legacy innov-use route", async () => {
+    await controller.getQaInnovationDevelopmentResults();
+
+    expect(mockService.getQaInnovationDevelopmentResults).toHaveBeenCalled();
   });
 });

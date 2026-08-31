@@ -286,6 +286,41 @@ Push the SQL into [`result.repository.ts`](./result.repository.ts) (or the sub-m
 
 ---
 
+## 9b. P2-3420 / P2-3421 — link to a QA'd Innovation Development result
+
+**Verified:** 2026-08-31 · branch performance-refactor · b224c27e4
+
+Both W1/W2 Innovation Use creation surfaces (the ToC-linked form and the emergent-result modal) ask
+"Are you reporting the use of an innovation that has already been reported and quality assessed?".
+
+- **One catalogue, one filter.** `GET /v2/api/results/get/qa-innovation-development-results` →
+  `ResultsService.getQaInnovationDevelopmentResults` → `ResultRepository.getQaEdInnovationDevelopmentResults`.
+  🛑 Do NOT widen `getResultsForInnovUse()` instead: it still feeds the Contributors & Partners
+  multi-select and the bilateral section, and it hardcodes `phase_name = 'Reporting 2025'`.
+- **The state filter is `QA_LINKABLE_INNOVATION_STATUS_IDS`** (`result.repository.ts`), one exported
+  constant, on purpose: the exact set is still pending a business answer (the story asks for both
+  `Status = QA'd` and `Status != Discontinued`, which cannot both bite on a single column). Change
+  that constant and nothing else when the answer lands.
+- **"Past phases" is resolved from the ACTIVE version** (`$_findActivePhase(REPORTING).phase_year`),
+  never a literal year. Portfolio-wide: no Science Program / Accelerator restriction, by design.
+- **The answer is persisted INSIDE the create**, in `ResultsService.createOwnerResultV2` →
+  `_persistInnovationLinkOnCreate`, which both entry points reach (`POST /v2/create/header` and the
+  framework create, whose `CreateFrameworkResultEntityService` calls the same method). The two keys
+  ride on `CreateResultDto` (`has_innovation_link`, `linked_results`).
+  - ⚠️ **Never chain `PATCH /v2/api/innovation-use/create/result/:id` after a create.** It rejects a
+    body without a valid `innovation_use_level_id`, and a brand-new result has no use level yet
+    (`results-framework-reporting/innovation-use/innovation-use.service.ts`).
+  - 🛑 The write is delegated to `ContributorsPartnersService.updateContributorsAndPartners` — the
+    single writer of `results_innovations_use.has_innovation_link` and the `linked_result` table.
+    A second writer is what wiped stored links before P2-3199. It is already injected here via
+    `forwardRef`, so no new module wiring was needed.
+  - It is non-fatal: the result is already created, so a failure is logged and the user can still
+    set the link from Contributors and partners.
+- **No migration and no green check touched**: both columns exist and `createValidtionP25` already
+  handles `has_innovation_link`.
+
+---
+
 ## 10. Quick reference paths
 
 - Controller (entry): [`./results.controller.ts`](./results.controller.ts)

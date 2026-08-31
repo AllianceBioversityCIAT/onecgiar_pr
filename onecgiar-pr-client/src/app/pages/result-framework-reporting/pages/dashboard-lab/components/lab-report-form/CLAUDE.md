@@ -1,6 +1,6 @@
 # lab-report-form
 
-**Verified:** 2026-08-26 · branch performance-refactor · 75d56f2cd
+**Verified:** 2026-08-31 · branch performance-refactor · b224c27e4
 
 ## Qué es
 El formulario de creación de resultado que vive **dentro del aside** (`indicator-drawer`). Copia
@@ -81,3 +81,21 @@ muestra su selección como chips con `×` debajo del control**. Footer sticky co
   `find/by-handle`. Ya especificado en **P2-3231** (épica **P2-3230**). **No abrir ticket nuevo.**
 - `fundingSource` existe pero solo vale `'w1w2'`: es el hueco para las secciones bilaterales
   (P2-3352 / P2-3341 / P2-3353). No añadir `Contribution %` ni `Primary contributing SP` aquí.
+
+## P2-3420 — link to a QA'd Innovation Development result (English, per the repo rule)
+Shown only for an **Innovation use** category (`result_type_id === 2`) from the **2026 phase**
+onwards, directly below the result title. 🛑 The gate is `showsInnovationLinkQuestion()`
+(`shared/services/global/qa-innovation-development-results.service.ts`) — a PHASE-year threshold,
+never `isP25()`.
+
+- `missingFields()` stays the requiredness contract: a "Yes" with no innovation chosen adds
+  `Linked Innovation Development result`, which is what blocks `Create and continue`. "No" (the
+  default) never blocks.
+- The answer goes into `buildCreateResultPayload({ hasInnovationLink, linkedResultId })` and lands
+  **inside** `result` in the body, because the server persists it during the create. ⚠️ Chaining
+  the innovation-use PATCH afterwards does not work (it needs an `innovation_use_level_id` the new
+  result has not got yet).
+- Options come from `QaInnovationDevelopmentResultsService`; the `display` field
+  (`[Result ID] - [Result Title]`) is precomputed because `pr-select` only searches `optionLabel`.
+- Changing category and re-arming the form both reset the answer to the default "No".
+

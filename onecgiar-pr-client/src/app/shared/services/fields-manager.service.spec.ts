@@ -222,6 +222,70 @@ describe('FieldsManagerService', () => {
     });
   });
 
+  /**
+   * P2-3295 (epic P2-3243). The Innovation Use 2030 block is renamed "2030 Use Projection" and gains the
+   * projection tooltip from 2026 on. The gate is the reporting phase YEAR, not the portfolio: the test
+   * environment holds 2025-phase results inside the P25 portfolio, which a portfolio gate would rename too.
+   */
+  describe('isInnovationUse2030Projection2026', () => {
+    it('is true for a 2026-phase result', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);
+      expect(service.isInnovationUse2030Projection2026()).toBe(true);
+    });
+
+    it('is true for a 2026-phase P22 result — the rename follows the phase, not the portfolio', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P22', phase_year: 2026 } as any);
+      expect(service.isInnovationUse2030Projection2026()).toBe(true);
+    });
+
+    it('is false for a 2025-phase result even inside the P25 portfolio — the case a portfolio gate would break', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 } as any);
+      expect(service.isP25()).toBe(true);
+      expect(service.isInnovationUse2030Projection2026()).toBe(false);
+    });
+
+    it("is false when phase_year arrives as a string, since '2026' >= 2026 would be a coercion", () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: '2026' } as any);
+      expect(service.isInnovationUse2030Projection2026()).toBe(false);
+    });
+
+    it('is false when neither the result nor the open phase carries a year', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = undefined as any;
+      expect(service.isInnovationUse2030Projection2026()).toBe(false);
+    });
+
+    it('falls back to the open reporting phase when the result carries no year', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+      expect(service.isInnovationUse2030Projection2026()).toBe(true);
+    });
+
+    it('renames the 2030 block title from the 2026 phase on', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);
+      expect(service.fields()['[innovation-use-form]-2030-to-be-determined'].label).toBe('2030 Use Projection');
+    });
+
+    it('keeps the legacy 2030 block title verbatim for a 2025-phase result', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 } as any);
+      expect(service.fields()['[innovation-use-form]-2030-to-be-determined'].label).toBe(
+        'Specify the targeted innovation use of the core innovation by end of 2030, supported by projections or evidence where available'
+      );
+    });
+
+    it('exposes the projection tooltip verbatim from the 2026 phase on', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);
+      expect(service.innovationUse2030ProjectionTooltip()).toBe(
+        "This projection informs CGIAR's investment case and impact modeling. It must be reviewed and, if necessary, revised annually based on current evidence."
+      );
+    });
+
+    it('exposes no tooltip for a 2025-phase result, so the \u24d8 button is not painted', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 } as any);
+      expect(service.innovationUse2030ProjectionTooltip()).toBe('');
+    });
+  });
+
   describe('isLeadContactPersonMandatory2026', () => {
     it('is true for a P25 result from the 2026 phase on', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);

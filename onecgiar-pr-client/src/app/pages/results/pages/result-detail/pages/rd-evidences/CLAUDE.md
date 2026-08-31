@@ -1,6 +1,6 @@
 # rd-evidences
 
-**Verified:** 2026-08-27 · branch performance-refactor · dab9ea9dc
+**Verified:** 2026-08-28 · branch performance-refactor · ccdc8b597
 
 ## Qué es
 Sección 4 (última) del detalle de resultado: la lista de evidencias (links o ficheros subidos a
@@ -29,6 +29,10 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
   section mounts, and changes again on a phase switch); `ngOnDestroy` clears it. The stage-specific
   paragraph needs `policy_stage_id`, which lives in another section, so this one calls
   `GET_policyChanges()` — once per result, only when the gate is true.
+  The copy inside `policyChangeSpecificGuidance()` is **verbatim from the requirement document**
+  (restored 28-Aug-2026): the note paragraph and the 11 bullets are quoted, not paraphrased. Only the
+  four `<strong>` group headings are the code's own. Do not "tidy" the wording, the commas or the en
+  dash — `rd-evidences.component.spec.ts` locks one bullet per group and the note paragraph.
 
 ## Dónde se usa
 - `src/app/shared/routing/routing-data.ts:411` — ruta `evidences`, sin `portfolioAcronym`, así que

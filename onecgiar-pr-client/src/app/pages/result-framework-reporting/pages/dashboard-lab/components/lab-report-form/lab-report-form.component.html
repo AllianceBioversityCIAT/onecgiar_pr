@@ -178,6 +178,48 @@
       name="resultName" />
   </div>
 
+  <!-- P2-3420 — link to a QA'd Innovation Development result. Innovation use only, 2026 phase
+       onwards only. Sits directly below the title, exactly where the story puts it. -->
+  @if (showsInnovationLink()) {
+    <div>
+      <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">
+        {{ innovationLinkQuestion }} <span class="text-[var(--pr-color-red-300)]">*</span>
+      </p>
+      <app-pr-radio-button
+        [options]="[
+          { value: true, label: 'Yes' },
+          { value: false, label: 'No' }
+        ]"
+        optionLabel="label"
+        optionValue="value"
+        [isStatic]="true"
+        [required]="true"
+        [ngModel]="hasInnovationLink()"
+        [ngModelOptions]="{ standalone: true }"
+        (ngModelChange)="onInnovationLinkChange($event)"
+        [disabled]="creatingResult()"
+        name="hasInnovationLink">
+      </app-pr-radio-button>
+
+      @if (hasInnovationLink()) {
+        <app-pr-select
+          label="Please select an Innovation Development result"
+          placeholder="Search by Innovation ID or title"
+          [options]="qaInnovationsSE.options()"
+          optionLabel="display"
+          optionValue="id"
+          [isStatic]="true"
+          [required]="true"
+          [ngModel]="linkedResultId()"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="linkedResultId.set($event)"
+          [disabled]="creatingResult()"
+          name="linkedResultId">
+        </app-pr-select>
+      }
+    </div>
+  }
+
   <!-- contribution to the indicator target -->
   <div>
     <p class="m-0 mb-2 flex items-center gap-1.5 text-[14.5px] font-semibold text-[var(--pr-color-secondary-400)]">

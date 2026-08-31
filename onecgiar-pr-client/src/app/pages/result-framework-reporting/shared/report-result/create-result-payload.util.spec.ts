@@ -226,3 +226,54 @@ describe('buildCreateResultPayload — level and table noise', () => {
     expect(payload['target_date']).toBe('2026-12-31');
   });
 });
+
+/**
+ * P2-3420 — "link to a QA'd Innovation Development result" on the ToC-linked creation form.
+ *
+ * The keys ride inside `result` because the server persists them INSIDE the create: the
+ * innovation-use PATCH rejects a body with no valid `innovation_use_level_id`, and a result that
+ * has just been created has no use level yet.
+ */
+describe('buildCreateResultPayload — innovation link (P2-3420)', () => {
+  it('omits both keys entirely when the question was never asked (any category but Innovation use, or a phase before 2026)', () => {
+    const payload = buildCreateResultPayload(options({ indicator: indicatorOfType(7) }));
+
+    expect(payload['result']).not.toHaveProperty('has_innovation_link');
+    expect(payload['result']).not.toHaveProperty('linked_results');
+  });
+
+  it('sends has_innovation_link=false and an empty list when the user leaves the default "No"', () => {
+    const payload = buildCreateResultPayload(
+      options({ indicator: indicatorOfType(2), hasInnovationLink: false, linkedResultId: null })
+    );
+
+    expect(payload['result'].has_innovation_link).toBe(false);
+    expect(payload['result'].linked_results).toEqual([]);
+  });
+
+  it('sends the single chosen innovation as a list when the user answers "Yes"', () => {
+    const payload = buildCreateResultPayload(
+      options({ indicator: indicatorOfType(2), hasInnovationLink: true, linkedResultId: 501 })
+    );
+
+    expect(payload['result'].has_innovation_link).toBe(true);
+    expect(payload['result'].linked_results).toEqual([501]);
+  });
+
+  it('normalises the id to a number — pr-select hands back the raw catalogue value as a string', () => {
+    const payload = buildCreateResultPayload(
+      options({ indicator: indicatorOfType(2), hasInnovationLink: true, linkedResultId: '501' as any })
+    );
+
+    expect(payload['result'].linked_results).toEqual([501]);
+  });
+
+  it('drops a stale selection when the answer is "No" — a hidden link must never travel', () => {
+    const payload = buildCreateResultPayload(
+      options({ indicator: indicatorOfType(2), hasInnovationLink: false, linkedResultId: 501 })
+    );
+
+    expect(payload['result'].has_innovation_link).toBe(false);
+    expect(payload['result'].linked_results).toEqual([]);
+  });
+});

@@ -60,6 +60,19 @@ export class ResultQuestionsService {
     ['q4', 137],
   ];
 
+  /** P25 'Intellectual property rights' (parent 100). Ids verified against prtest 28 Aug 2026
+   *  (GET /v2/api/results/questions/innovation-development/{8927,9142}): 101, 102, 103, 138.
+   *  Pinned by id so that adding or removing a child of 100 (P2-3272 / P2-3513) cannot shift the
+   *  other slots for phase-2025 results. */
+  private static readonly INTELLECTUAL_PROPERTY_RIGHTS_P25_SLOTS: ReadonlyArray<
+    readonly [slot: 'q1' | 'q2' | 'q3' | 'q4', questionId: number]
+  > = [
+    ['q1', 101],
+    ['q2', 102],
+    ['q3', 103],
+    ['q4', 138],
+  ];
+
   /** Pins `q1`…`q4` to `result_question_id` so a removed question cannot shift the other slots. */
   private assignQuestionSlotsById(
     questions: any[],
@@ -621,10 +634,10 @@ export class ResultQuestionsService {
 
           return {
             ...topLevelQuestion,
-            q1: questionsWithOptions[0],
-            q2: questionsWithOptions[1],
-            q3: questionsWithOptions[2],
-            q4: questionsWithOptions[3],
+            ...this.assignQuestionSlotsById(
+              questionsWithOptions,
+              ResultQuestionsService.INTELLECTUAL_PROPERTY_RIGHTS_P25_SLOTS,
+            ),
           };
         }),
       );

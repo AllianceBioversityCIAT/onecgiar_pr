@@ -81,3 +81,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Local snapshots of the live Claude Design file, for session-start diffing (see CLAUDE.md)
 .design-snapshots/
+
+# Source documents downloaded from SharePoint (never committed)
+.local-docs/

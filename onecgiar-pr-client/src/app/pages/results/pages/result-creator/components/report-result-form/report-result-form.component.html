@@ -112,6 +112,42 @@
         </div>
       </div>
 
+      <!--
+        P2-3421 — link to a QA'd Innovation Development result. Emergent (non-ToC) pathway only,
+        Innovation use only, 2026 phase onwards only. Sits directly below the title block, exactly
+        where the story puts it.
+      -->
+      @if (showsInnovationLink) {
+        <div class="innovation-link-block">
+          <app-pr-radio-button
+            [label]="innovationLinkQuestion"
+            [isStatic]="true"
+            [options]="[
+              { value: true, label: 'Yes' },
+              { value: false, label: 'No' }
+            ]"
+            optionLabel="label"
+            optionValue="value"
+            [required]="true"
+            [(ngModel)]="hasInnovationLink"
+            (ngModelChange)="onInnovationLinkChange()">
+          </app-pr-radio-button>
+
+          @if (hasInnovationLink === true) {
+            <app-pr-select
+              label="Please select an Innovation Development result"
+              placeholder="Search by Innovation ID or title"
+              [isStatic]="true"
+              [options]="qaInnovationsSE.options()"
+              optionLabel="display"
+              optionValue="id"
+              [required]="true"
+              [(ngModel)]="linkedResultId">
+            </app-pr-select>
+          }
+        </div>
+      }
+
       @if (this.entityAowService?.canReportResults()) {
         <div class="report-result-content_left_content_actions">
           <app-save-button
@@ -121,7 +157,8 @@
               !this.resultLevelSE.resultBody.initiative_id ||
               !this.resultLevelSE.resultBody.result_name?.trim() ||
               blockingExactTitleFound() ||
-              loadingDepthSearch()
+              loadingDepthSearch() ||
+              innovationLinkIncomplete
             "
             text="Save and continue">
           </app-save-button>

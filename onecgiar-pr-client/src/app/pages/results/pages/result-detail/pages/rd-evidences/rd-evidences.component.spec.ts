@@ -200,6 +200,20 @@ describe('RdEvidencesComponent', () => {
         expect(text).toContain('Evidence of impact of a policy (Stage 3)');
       });
 
+      it('keeps the note paragraph verbatim, not the condensed rewrite', () => {
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('does not need to be made public, it may be submitted and kept out of the public domain');
+      });
+
+      it('keeps one verbatim bullet per evidence-type group, so a future condensation is caught', () => {
+        const text = component.policyChangeEvidenceGuidance();
+
+        expect(text).toContain('Third party evaluations of the policy outcome that describes the CGIAR contribution');
+        expect(text).toContain('If the above is not available, then a digital copy that can be stored in a folder for review.');
+        expect(text).toContain('Strong evidence, such as a peer-reviewed publication or external evaluation is required.');
+      });
+
       it('shows ONLY the Stage 2 requirement when the result is at stage 2 (CLARISA id 7)', () => {
         component.policyStageId = 7;
 

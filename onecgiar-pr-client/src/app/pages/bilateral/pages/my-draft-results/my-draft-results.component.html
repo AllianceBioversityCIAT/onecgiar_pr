@@ -119,7 +119,7 @@
                 (click)="onPromoteClick(draft)"
               >
                 <i class="material-icons-round">arrow_upward</i>
-                Promote
+                Create Result
               </button>
               <button
                 type="button"
@@ -188,7 +188,7 @@
     <div class="mdr-aside-footer">
       <button type="button" class="mdr-btn mdr-btn--promote mdr-btn--wide" (click)="onPromoteClick(draft)">
         <i class="material-icons-round">arrow_upward</i>
-        Promote to Result
+        Create Result
       </button>
       <button type="button" class="mdr-btn mdr-btn--discard" (click)="onDiscardClick(draft)">
         <i class="material-icons-round">delete_outline</i>
@@ -202,7 +202,7 @@
   <div class="mdr-promote-overlay">
     <div class="mdr-promote-overlay-card">
       <div class="mdr-promote-overlay-spinner"></div>
-      <span class="mdr-promote-overlay-text">Promoting result…</span>
+      <span class="mdr-promote-overlay-text">Creating result…</span>
     </div>
   </div>
 }
@@ -219,11 +219,11 @@
     <span class="pr-dialog-header-icon pr-dialog-header-icon--promote">
       <i class="material-icons-round">rocket_launch</i>
     </span>
-    <span class="pr-dialog-header-title">Promote Draft</span>
+    <span class="pr-dialog-header-title">Create Result</span>
   </div>
   @if (promoteTarget(); as target) {
     <div class="pr-dialog-body">
-      <p class="pr-dialog-text">Promote <strong>{{ getDraftTitle(target) }}</strong> as a bilateral result?</p>
+      <p class="pr-dialog-text">Create <strong>{{ getDraftTitle(target) }}</strong> as a bilateral result?</p>
       <div class="pr-dialog-meta">
         <div class="pr-dialog-meta-item">
           <span class="pr-dialog-meta-label">Science Program</span>
@@ -254,7 +254,7 @@
   }
   <div pr-dialog-footer class="pr-dialog-footer">
     <button hlmBtn variant="outline" (click)="onPromoteCancel()">Cancel</button>
-    <button hlmBtn (click)="onPromoteConfirm()">Promote</button>
+    <button hlmBtn (click)="onPromoteConfirm()">Create Result</button>
   </div>
 </app-pr-dialog>
 

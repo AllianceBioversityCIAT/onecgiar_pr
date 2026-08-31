@@ -489,6 +489,16 @@ export class ResultsApiService {
   GET_innovationUseResults() {
     return this.http.get<any>(`${this.apiBaseUrlV2}get/innov-use-linked-results`);
   }
+
+  /**
+   * P2-3420 / P2-3421 — QA'd Innovation Development results from past phases, portfolio-wide.
+   * Only `QaInnovationDevelopmentResultsService` calls this: one catalogue for the three W1/W2
+   * creation surfaces. Do NOT reuse `GET_innovationUseResults` here — that one feeds the wider
+   * Contributors & Partners multi-select and carries no status.
+   */
+  GET_qaInnovationDevelopmentResults() {
+    return this.http.get<any>(`${this.apiBaseUrlV2}get/qa-innovation-development-results`);
+  }
   GET_innovationUseP25() {
     return this.http
       .get<any>(`${this.baseApiBaseUrlV2}innovation-use/get/result/${this.currentResultId}`)

@@ -27,7 +27,10 @@ describe('StepN4Component', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [HttpClientTestingModule, FormsModule, TermPipe],
-      declarations: [StepN4Component, LabelNamePipe],
+      // PrRadioButtonComponent is declared for real (not stubbed by NO_ERRORS_SCHEMA) because the
+      // scaling-studies question binds [(ngModel)] to it: without its ControlValueAccessor, rendering
+      // the template throws NG01203 "No value accessor for form control".
+      declarations: [StepN4Component, LabelNamePipe, PrRadioButtonComponent],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
@@ -82,149 +85,291 @@ describe('StepN4Component', () => {
     }, 1100);
   });
 
-  // P2-3426: Step 4 hides "Have any studies been conducted to inform the innovation scaling
-  // strategy design (...)" (and its study-links list) once the Core innovation's "Innovation use
-  // level evidence-based" (Step 3) reaches 6+, from the 2026 phase onwards only.
-  describe('resolveUseLevel', () => {
-    it('resolves the catalogue id to its numeric level, never to the array position', () => {
-      // Deliberately out of id order, and id != level, to prove it is not reading position/index.
-      component.innovationControlListSE.useLevelsList = [
-        { id: 3, level: 2 },
-        { id: 1, level: 0 },
-        { id: 2, level: 1 }
-      ];
+  // P2-3426: from the 2026 phase onwards the "Have any studies been conducted to inform the
+  // innovation scaling strategy design (...)" question is RETIRED — read-only when the package
+  // already carries an answer, not rendered at all otherwise. The Core innovation's use level
+  // (Step 3) has no influence whatsoever: implementation note 6 of the ticket says that framing is
+  // superseded and must NOT be implemented.
+  describe('isScalingStudiesRetired', () => {
+    it.each([2026, 2027, 2030])('retires the question in a %i phase', year => {
+      component.api.dataControlSE.currentResultSignal.set({ phase_year: year } as any);
 
-      expect(component.resolveUseLevel(1)).toBe(0);
-      expect(component.resolveUseLevel(3)).toBe(2);
+      expect(component.isScalingStudiesRetired()).toBe(true);
     });
 
-    it('returns null when catalogId is null or undefined', () => {
-      component.innovationControlListSE.useLevelsList = [{ id: 1, level: 0 }];
+    it.each([2022, 2024, 2025])('leaves the question editable in a %i phase', year => {
+      component.api.dataControlSE.currentResultSignal.set({ phase_year: year } as any);
 
-      expect(component.resolveUseLevel(null)).toBeNull();
-      expect(component.resolveUseLevel(undefined)).toBeNull();
+      expect(component.isScalingStudiesRetired()).toBe(false);
     });
 
-    it('returns null when the catalogue list is empty', () => {
-      component.innovationControlListSE.useLevelsList = [];
-
-      expect(component.resolveUseLevel(1)).toBeNull();
-    });
-
-    it('returns null when the id is not found in the catalogue', () => {
-      component.innovationControlListSE.useLevelsList = [{ id: 1, level: 0 }];
-
-      expect(component.resolveUseLevel(99)).toBeNull();
-    });
-
-    it('returns null when the matched level is not a finite number', () => {
-      component.innovationControlListSE.useLevelsList = [{ id: 1, level: 'abc' }];
-
-      expect(component.resolveUseLevel(1)).toBeNull();
-    });
-  });
-
-  describe('getCoreInnovationUseLevel', () => {
-    it('fetches the step-three body and resolves the Core innovation use level from it', () => {
-      component.innovationControlListSE.useLevelsList = [
-        { id: 7, level: 6 },
-        { id: 1, level: 0 }
-      ];
-      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId').mockReturnValue(
-        of({ response: { result_ip_result_core: { use_level_evidence_based: 7 } } }) as any
-      );
-
-      component.getCoreInnovationUseLevel();
-
-      expect(component.coreInnovationUseLevel).toBe(6);
-    });
-
-    it('leaves coreInnovationUseLevel null when no level has been selected in Step 3 yet', () => {
-      jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId').mockReturnValue(
-        of({ response: { result_ip_result_core: { use_level_evidence_based: null } } }) as any
-      );
-
-      component.getCoreInnovationUseLevel();
-
-      expect(component.coreInnovationUseLevel).toBeNull();
-    });
-  });
-
-  describe('isScalingStudiesQuestionHiddenByLevel', () => {
-    it('keeps the question visible at level 5 in a 2026 phase', () => {
-      component.api.dataControlSE.currentResultSignal.set({ phase_year: 2026 } as any);
-      component.coreInnovationUseLevel = 5;
-
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
-    });
-
-    it.each([6, 7, 8, 9])('hides the question at level %i in a 2026 phase', level => {
-      component.api.dataControlSE.currentResultSignal.set({ phase_year: 2026 } as any);
-      component.coreInnovationUseLevel = level;
-
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(true);
-    });
-
-    it('always keeps the question visible in a 2025 phase, even at level 9', () => {
-      component.api.dataControlSE.currentResultSignal.set({ phase_year: 2025 } as any);
-      component.coreInnovationUseLevel = 9;
-
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
-    });
-
-    it('keeps the question visible (fails open) when no level has been chosen yet, even in a 2026 phase', () => {
-      component.api.dataControlSE.currentResultSignal.set({ phase_year: 2026 } as any);
-      component.coreInnovationUseLevel = null;
-
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
-    });
-
-    it('keeps the question visible (fails open) when phase_year is not available', () => {
-      component.api.dataControlSE.currentResultSignal.set({} as any);
-      component.api.dataControlSE.reportingCurrentPhase = { ...component.api.dataControlSE.reportingCurrentPhase, phaseYear: null };
-      component.coreInnovationUseLevel = 9;
-
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
-    });
-
-    it('falls back to reportingCurrentPhase.phaseYear when currentResultSignal has no phase_year', () => {
+    // 🛑 The phase year of the PACKAGE BEING VIEWED is the only admissible source. Neither the
+    // reporting module's open phase nor IPSR's own open phase may stand in for it: a 2025 package
+    // opened while 2026 is the open phase would be retired by mistake, breaking the epic's "2025 and
+    // earlier look exactly as today" rule.
+    it('ignores the reporting module open phase — it is another module, and the OPEN phase, not this package\'s', () => {
       component.api.dataControlSE.currentResultSignal.set({} as any);
       component.api.dataControlSE.reportingCurrentPhase = { ...component.api.dataControlSE.reportingCurrentPhase, phaseYear: 2026 };
-      component.coreInnovationUseLevel = 7;
 
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(true);
+      expect(component.isScalingStudiesRetired()).toBe(false);
     });
 
-    // AC4: the rule reacts to the value stored in Step 3 without an app reload — re-running
-    // ngOnInit (what happens when Angular re-creates this component navigating step-3 -> step-4)
-    // re-fetches the level, so a later Step 3 save flips the computed visibility.
-    it('reacts to a level change on the next ngOnInit (Step 3 -> Step 4 navigation), without a reload', () => {
+    it('ignores the IPSR open phase too (open phase !== the viewed package phase)', () => {
+      component.api.dataControlSE.currentResultSignal.set({} as any);
+      component.api.dataControlSE.IPSRCurrentPhase = { ...component.api.dataControlSE.IPSRCurrentPhase, phaseYear: 2026 };
+
+      expect(component.isScalingStudiesRetired()).toBe(false);
+    });
+
+    it('keeps retiring a 2026 package even when the reporting open phase is still 2025', () => {
       component.api.dataControlSE.currentResultSignal.set({ phase_year: 2026 } as any);
-      component.innovationControlListSE.useLevelsList = [
-        { id: 5, level: 4 },
-        { id: 8, level: 7 }
-      ];
-      const stepThreeSpy = jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId');
+      component.api.dataControlSE.reportingCurrentPhase = { ...component.api.dataControlSE.reportingCurrentPhase, phaseYear: 2025 };
 
-      stepThreeSpy.mockReturnValueOnce(of({ response: { result_ip_result_core: { use_level_evidence_based: 5 } } }) as any);
-      component.getCoreInnovationUseLevel();
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(false);
+      expect(component.isScalingStudiesRetired()).toBe(true);
+    });
 
-      stepThreeSpy.mockReturnValueOnce(of({ response: { result_ip_result_core: { use_level_evidence_based: 8 } } }) as any);
-      component.getCoreInnovationUseLevel();
-      expect(component.isScalingStudiesQuestionHiddenByLevel()).toBe(true);
+    it('fails open (stays editable) when no phase year is available at all', () => {
+      component.api.dataControlSE.currentResultSignal.set({} as any);
+
+      expect(component.isScalingStudiesRetired()).toBe(false);
+    });
+  });
+
+  // A stored `true` is the whole criterion: nothing but a person clicking "Yes" writes it, so Case 1
+  // of the ticket ("stored answer -> shown read-only") applies unconditionally. Only `false` is
+  // ambiguous (the server coerces NULL to false), and only that half is pending the PO's answer.
+  describe('hasStoredScalingStudiesAnswer', () => {
+    it('treats a stored "Yes" with at least one real link as an answer', () => {
+      component.ipsrStep4Body = { has_scaling_studies: true, scaling_studies_urls: ['https://a.org/study'] } as any;
+
+      expect(component.hasStoredScalingStudiesAnswer()).toBe(true);
+    });
+
+    it('does not treat a stored "No" as an answer (the server coerces NULL to false, so it is indistinguishable)', () => {
+      component.ipsrStep4Body = { has_scaling_studies: false, scaling_studies_urls: [] } as any;
+
+      expect(component.hasStoredScalingStudiesAnswer()).toBe(false);
+    });
+
+    // 🛑 REGRESSION LOCK. Demanding a non-blank link on top of the `true` hid an answer the ticket
+    // orders shown. Never re-add that condition.
+    it('treats "Yes" with no links at all as an answer — true is unambiguous', () => {
+      component.ipsrStep4Body = { has_scaling_studies: true, scaling_studies_urls: [] } as any;
+
+      expect(component.hasStoredScalingStudiesAnswer()).toBe(true);
+    });
+
+    // Exactly what lands in the database when someone ticks "Yes" and saves without typing the URL:
+    // `syncScalingStudyUrls` creates a row for the empty seed string
+    // (`ipsr-pathway-step-four.service.ts:194-196`) and the GET returns it verbatim (`:625`).
+    it('treats "Yes" whose only stored link is the blank seed as an answer', () => {
+      component.ipsrStep4Body = { has_scaling_studies: true, scaling_studies_urls: ['', '   '] } as any;
+
+      expect(component.hasStoredScalingStudiesAnswer()).toBe(true);
+    });
+
+    it('survives a body with no scaling_studies_urls key at all', () => {
+      component.ipsrStep4Body = { has_scaling_studies: true } as any;
+
+      expect(component.hasStoredScalingStudiesAnswer()).toBe(true);
+    });
+
+    it('does not treat an absent flag as an answer', () => {
+      component.ipsrStep4Body = {} as any;
+
+      expect(component.hasStoredScalingStudiesAnswer()).toBe(false);
+    });
+  });
+
+  describe('showScalingStudiesReadOnly', () => {
+    it('paints the read-only block for a 2026 package that stored a Yes with links', () => {
+      component.api.dataControlSE.currentResultSignal.set({ phase_year: 2026 } as any);
+      component.ipsrStep4Body = { has_scaling_studies: true, scaling_studies_urls: ['https://a.org/study'] } as any;
+
+      expect(component.showScalingStudiesReadOnly()).toBe(true);
+    });
+
+    it('paints the read-only block for a 2026 package whose stored Yes has only the blank seed link', () => {
+      component.api.dataControlSE.currentResultSignal.set({ phase_year: 2026 } as any);
+      component.ipsrStep4Body = { has_scaling_studies: true, scaling_studies_urls: [''] } as any;
+
+      expect(component.showScalingStudiesReadOnly()).toBe(true);
+    });
+
+    it('paints nothing for a 2026 package nobody ever answered', () => {
+      component.api.dataControlSE.currentResultSignal.set({ phase_year: 2026 } as any);
+      component.ipsrStep4Body = { has_scaling_studies: false, scaling_studies_urls: [] } as any;
+
+      expect(component.showScalingStudiesReadOnly()).toBe(false);
+    });
+
+    // The epic's governing rule: 2025 and earlier must look EXACTLY as they do today. The block is
+    // rendered by the legacy editable branch there, never by the read-only one.
+    it('never takes over the 2025 phase, even with a stored Yes and links', () => {
+      component.api.dataControlSE.currentResultSignal.set({ phase_year: 2025 } as any);
+      component.ipsrStep4Body = { has_scaling_studies: true, scaling_studies_urls: ['https://a.org/study'] } as any;
+
+      expect(component.showScalingStudiesReadOnly()).toBe(false);
+      expect(component.isScalingStudiesRetired()).toBe(false);
+    });
+  });
+
+  // Renders the real template, so the three cases are asserted on the DOM and not only on the
+  // predicates. `app-studies-link` / `app-pr-radio-button` stay unknown elements (NO_ERRORS_SCHEMA),
+  // which is enough: what the acceptance criteria turn on is whether the block is in the DOM at all.
+  describe('template', () => {
+    // `await whenStable()` matters: `[disabled]` on an `[(ngModel)]` input is consumed by NgModel,
+    // which disables the control on a microtask, so the DOM `disabled` flag is not set on the first
+    // synchronous change-detection pass.
+    const render = async (phaseYear: number, body: any) => {
+      jest.spyOn(component.api.fieldsManagerSE, 'isP25').mockReturnValue(true);
+      // A user with write access — RolesService.readOnly would grey the group out on its own and
+      // hide the difference the read-only branch is supposed to make.
+      component.api.rolesSE.readOnly = false;
+      jest.spyOn(component, 'getSectionInformation').mockImplementation();
+      jest.spyOn(component.api.dataControlSE, 'findClassTenSeconds').mockResolvedValue(undefined as any);
+      component.api.dataControlSE.currentResultSignal.set({ phase_year: phaseYear } as any);
+      component.ipsrStep4Body = body;
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    it('2026 with a stored Yes + links: the question and the links list are both rendered', async () => {
+      const el = await render(2026, {
+        has_scaling_studies: true,
+        scaling_studies_urls: ['https://a.org/study'],
+        institutions_expected_investment: []
+      });
+
+      expect(el.querySelectorAll('app-pr-radio-button').length).toBe(1);
+      expect(el.querySelectorAll('app-studies-link').length).toBe(1);
+      // The read-only affordance itself: `block-field` is what pr-radio-button paints for a
+      // non-editable group, and every native radio comes out disabled.
+      expect(el.querySelector('.radioButtonList.block-field')).toBeTruthy();
+      const radios = Array.from(el.querySelectorAll<HTMLInputElement>('input[type="radio"]'));
+      expect(radios.length).toBeGreaterThan(0);
+      expect(radios.every(radio => radio.disabled)).toBe(true);
+    });
+
+    // 🛑 THE CASE THAT WAS BROKEN. `true` + `['']` is what the database holds for anyone who ticked
+    // "Yes" and saved without typing the link, and it must be shown read-only like any other stored
+    // answer (AC Case 1) — not hidden.
+    it('2026 with a stored Yes whose only link is blank: the question and its answer are still rendered read-only', async () => {
+      const el = await render(2026, {
+        has_scaling_studies: true,
+        scaling_studies_urls: [''],
+        institutions_expected_investment: []
+      });
+
+      expect(el.querySelectorAll('app-pr-radio-button').length).toBe(1);
+      expect(el.querySelectorAll('app-studies-link').length).toBe(1);
+      expect(el.querySelector('.radioButtonList.block-field')).toBeTruthy();
+      const radios = Array.from(el.querySelectorAll<HTMLInputElement>('input[type="radio"]'));
+      expect(radios.length).toBeGreaterThan(0);
+      expect(radios.every(radio => radio.disabled)).toBe(true);
+    });
+
+    // AC Case 2: "No placeholder, no empty read-only block, no label." The last question of Step 4
+    // then becomes the estimated $ investment one.
+    it('2026 with no stored answer: nothing at all is rendered', async () => {
+      const el = await render(2026, {
+        has_scaling_studies: false,
+        scaling_studies_urls: [],
+        institutions_expected_investment: []
+      });
+
+      expect(el.querySelectorAll('app-pr-radio-button').length).toBe(0);
+      expect(el.querySelectorAll('app-studies-link').length).toBe(0);
+    });
+
+    it('2025 keeps the editable block exactly as today', async () => {
+      const el = await render(2025, {
+        has_scaling_studies: true,
+        scaling_studies_urls: ['https://a.org/study'],
+        institutions_expected_investment: []
+      });
+
+      expect(el.querySelectorAll('app-pr-radio-button').length).toBe(1);
+      expect(el.querySelectorAll('app-studies-link').length).toBe(1);
+      expect(el.querySelector('.radioButtonList.block-field')).toBeNull();
+      const radios = Array.from(el.querySelectorAll<HTMLInputElement>('input[type="radio"]'));
+      expect(radios.length).toBeGreaterThan(0);
+      expect(radios.some(radio => radio.disabled)).toBe(false);
+    });
+
+    it('2025 with a stored No still renders the editable question (unchanged legacy behaviour)', async () => {
+      const el = await render(2025, {
+        has_scaling_studies: false,
+        scaling_studies_urls: [],
+        institutions_expected_investment: []
+      });
+
+      expect(el.querySelectorAll('app-pr-radio-button').length).toBe(1);
+      expect(el.querySelectorAll('app-studies-link').length).toBe(0);
+    });
+  });
+
+  // 🛑 REGRESSION LOCK — implementation note 3 of P2-3426, "the highest-risk regression in the
+  // ticket". `ipsr-pathway-step-four.service.ts:104-109` deactivates EVERY stored study link of the
+  // package when `has_scaling_studies` arrives falsy or absent. The read-only block is not an
+  // editable field any more, so the temptation is to strip it from the payload — doing so would
+  // silently wipe a user's stored studies. The component must keep round-tripping both fields.
+  describe('onSaveSection — stored scaling studies must survive a save', () => {
+    it('sends has_scaling_studies and scaling_studies_urls back untouched', () => {
+      const stored = {
+        has_scaling_studies: true,
+        scaling_studies_urls: ['https://a.org/study-1', 'https://b.org/study-2'],
+        institutions_expected_investment: []
+      };
+      component.ipsrStep4Body = { ...stored } as any;
+      component.api.dataControlSE.currentResultSignal.set({ phase_year: 2026 } as any);
+
+      const patchSpy = jest
+        .spyOn(component.api.resultsSE, 'PATCHInnovationPathwayStepFourByRiId')
+        .mockReturnValue(of({ response: {} }) as any);
+      jest.spyOn(component, 'getSectionInformation').mockImplementation();
+
+      component.onSaveSection();
+
+      const sentBody: any = patchSpy.mock.calls[0][0];
+      expect(sentBody.has_scaling_studies).toBe(true);
+      expect(sentBody.scaling_studies_urls).toEqual(['https://a.org/study-1', 'https://b.org/study-2']);
+    });
+
+    it('keeps them on the "Save & go to previous step" path too', () => {
+      component.api.rolesSE.readOnly = false;
+      component.ipsrStep4Body = {
+        has_scaling_studies: true,
+        scaling_studies_urls: ['https://a.org/study-1']
+      } as any;
+
+      const patchSpy = jest
+        .spyOn(component.api.resultsSE, 'PATCHInnovationPathwayStepFourByRiIdPrevious')
+        .mockReturnValue(of({ response: {} }) as any);
+      jest.spyOn(component, 'getSectionInformation').mockImplementation();
+      jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      component.onSavePrevious('previous');
+
+      const sentBody: any = patchSpy.mock.calls[0][0];
+      expect(sentBody.has_scaling_studies).toBe(true);
+      expect(sentBody.scaling_studies_urls).toEqual(['https://a.org/study-1']);
     });
   });
 
   describe('ngOnInit', () => {
-    it('fetches the Core innovation use level alongside the step-four section', () => {
+    // The use-level plumbing this component used to carry is gone (ticket note 6), and with it the
+    // extra GETInnovationPathwayByRiId round-trip that ran on every entry into Step 4.
+    it('does not fetch the step-three body any more', () => {
       jest.spyOn(component, 'getSectionInformation').mockImplementation();
-      const getLevelSpy = jest.spyOn(component, 'getCoreInnovationUseLevel').mockImplementation();
+      const stepThreeSpy = jest.spyOn(component.api.resultsSE, 'GETInnovationPathwayByRiId');
       jest.spyOn(component.api.dataControlSE, 'findClassTenSeconds').mockResolvedValue(undefined as any);
 
       component.ngOnInit();
 
-      expect(getLevelSpy).toHaveBeenCalled();
+      expect(stepThreeSpy).not.toHaveBeenCalled();
     });
   });
 });

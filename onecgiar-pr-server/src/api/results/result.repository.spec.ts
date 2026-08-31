@@ -1,6 +1,9 @@
 import { HttpStatus } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { ResultRepository } from './result.repository';
+import {
+  QA_LINKABLE_INNOVATION_STATUS_IDS,
+  ResultRepository,
+} from './result.repository';
 
 describe('ResultRepository (unit)', () => {
   let repo: ResultRepository;
@@ -226,6 +229,119 @@ describe('ResultRepository (unit)', () => {
 
       const [sql] = queryMock.mock.calls[0];
       expect(sql).not.toContain('result_level_id');
+    });
+  });
+  /**
+   * P2-3420 / P2-3421 — the catalogue behind the "link to a QA'd Innovation Development result"
+   * dropdown. These pin the three things the story is explicit about and the one that is still
+   * pending business confirmation.
+   */
+  describe('getQaEdInnovationDevelopmentResults (P2-3420 / P2-3421)', () => {
+    it('asks only for Innovation Development results (result_type_id = 7)', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2026);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).toContain('r.result_type_id = 7');
+    });
+
+    it('asks only for PAST phases, measured against the open phase the caller resolved', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2026);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('v.phase_year < ?');
+      expect(params[0]).toBe(2026);
+      // 🛑 never the literal the legacy catalogue hardcodes.
+      expect(sql).not.toContain('Reporting 2025');
+    });
+
+    it('filters by the states listed in QA_LINKABLE_INNOVATION_STATUS_IDS and nothing else', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2026);
+
+      const [sql, params] = queryMock.mock.calls[0];
+      expect(sql).toContain('r.status_id IN (');
+      // The status list is bound twice: once for the catalogue, once for the de-duplication
+      // sub-query that picks the most recent QA'd phase of the same innovation.
+      expect(params).toEqual([
+        2026,
+        ...QA_LINKABLE_INNOVATION_STATUS_IDS,
+        2026,
+        ...QA_LINKABLE_INNOVATION_STATUS_IDS,
+      ]);
+    });
+
+    it('is portfolio-wide: no Science Program / Accelerator restriction, by design', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2026);
+
+      const [sql] = queryMock.mock.calls[0];
+      expect(sql).not.toContain('initiative');
+      // The only portfolio reference is the join that reads its acronym for display; nothing filters on it.
+      expect(sql).not.toMatch(/WHERE[\s\S]*cp\.id\s*=/);
+    });
+
+    /**
+     * ⚠️ THE DUPLICATE-INNOVATION GUARD. PRMS carries a result forward into every phase keeping the
+     * same `result_code` and title, so without this clause the dropdown offers the SAME innovation
+     * once per phase with an identical, indistinguishable label. Real prtest case pinned here:
+     * `result_code` 41 ("Rice breeding network in Easte…") has three QA'd rows — id 41 / 2022,
+     * id 7031 / 2023 and id 7706 / 2024 — and only the 2024 one may reach the user.
+     */
+    it("collapses the three phases of the same result_code to the most recent QA'd one", async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2026);
+
+      const [sql] = queryMock.mock.calls[0];
+      const normalized = sql.replace(/\s+/g, ' ');
+
+      // Correlated on the innovation identity, not on the row id.
+      expect(normalized).toContain('NOT EXISTS');
+      expect(normalized).toContain('newer.result_code = r.result_code');
+      // Discards a row whenever a NEWER phase of the same innovation exists.
+      expect(normalized).toContain('newer_v.phase_year > v.phase_year');
+      // …and the newer candidate must itself be an eligible catalogue row: active, Innovation
+      // Development, a past phase and QA'd. Otherwise 2024 could be hidden by a draft 2025 copy.
+      expect(normalized).toContain('newer.is_active = TRUE');
+      expect(normalized).toContain('newer_v.is_active = TRUE');
+      expect(normalized).toContain('newer.result_type_id = 7');
+      expect(normalized).toContain('newer_v.phase_year < ?');
+      expect(normalized).toContain('newer.status_id IN (');
+    });
+
+    it('breaks a phase_year tie deterministically, so one code can never yield two rows', async () => {
+      queryMock.mockResolvedValueOnce([]);
+
+      await repo.getQaEdInnovationDevelopmentResults(2026);
+
+      const [sql] = queryMock.mock.calls[0];
+      const normalized = sql.replace(/\s+/g, ' ');
+      expect(normalized).toContain(
+        'newer_v.phase_year = v.phase_year AND newer.id > r.id',
+      );
+    });
+
+    it('returns the id, code, title and status the dropdown needs', async () => {
+      const rows = [
+        {
+          id: 501,
+          result_code: 5501,
+          title: 'Bean variety',
+          status_id: 2,
+          phase_year: 2025,
+        },
+      ];
+      queryMock.mockResolvedValueOnce(rows);
+
+      await expect(
+        repo.getQaEdInnovationDevelopmentResults(2026),
+      ).resolves.toEqual(rows);
     });
   });
 });
