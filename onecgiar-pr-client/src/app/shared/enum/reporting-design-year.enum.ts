@@ -11,6 +11,11 @@
  * share the 2026 cycle, which a real enum can express neither as duplicate literals
  * (S6578) nor as a cross-member reference (S6550). A const map has neither restriction
  * and keeps both named thresholds for readability and future divergence.
+ *
+ * 🛑 Phase year is NOT the portfolio. `isP25()` is true for the 2025 phase too — both live in the
+ * P25 portfolio — so a portfolio gate cannot separate "what is new in 2026" from what came before.
+ * Full audit, the inventory of every gate in the app and the known gaps:
+ * `docs/context-ai/fase-vs-portafolio.md`.
  */
 export const ReportingDesignYear = {
   /**

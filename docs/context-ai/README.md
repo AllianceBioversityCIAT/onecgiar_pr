@@ -1,6 +1,6 @@
 # context-ai — contexto vivo del trabajo en curso
 
-**Verified:** 2026-08-24 · branch `performance-refactor` · `4a0e39f2b`
+**Verified:** 2026-08-31 · branch `performance-refactor` · `d380a8e4d`
 **Ticket espejo en Jira:** [P2-3432](https://cgiarmel.atlassian.net/browse/P2-3432) — Context AI. Su comentario del 24-ago es el índice de preguntas abiertas y por dónde revisar.
 
 ## Qué es esta carpeta
@@ -81,3 +81,4 @@ Si un disparador debería haber funcionado y no lo hizo, se arregla en el mismo 
 | `conceptos.md` | El modelo mental del dominio: pool funding vs bilateral, tipos de resultado, manual vs IA |
 | `mds.md` | Minimum Data Standards en detalle: quién declara qué, y por qué cliente y server no coinciden |
 | `decisiones-y-contradicciones.md` | Lo decidido y lo que necesita respuesta humana |
+| `fase-vs-portafolio.md` | Qué fase es la nueva, los 11 gates que existen y por qué `isP25()` no sirve para separarlas |
