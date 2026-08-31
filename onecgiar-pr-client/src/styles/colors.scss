@@ -184,6 +184,12 @@
   --pr-surface-app: #f7f7f9; // content background — NEUTRAL, not tinted
   --pr-surface-card: #ffffff;
   --pr-surface-subtle: #f7f7f9; // HLO / outcome group headers
+  // Row/list ground + skeleton bars. This token was referenced ~50 times across the reporting
+  // module but never DEFINED — an undefined var() paints transparent, which made every loading
+  // skeleton (hub lanes, By-AOW banner, table) invisible: the page looked loaded-and-empty
+  // while fetching (field report 2026-08-31). Slightly darker than --pr-surface-subtle so a
+  // skeleton bar reads on a white card.
+  --pr-surface-ground: #efeef3;
   // Hover for a --pr-surface-subtle band (the Reporting tab's HLO sub-group header).
   --pr-surface-subtle-hover: #efeef3;
 

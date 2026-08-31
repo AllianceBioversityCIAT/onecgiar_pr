@@ -72,6 +72,13 @@ de TS): trátalo como host, no como pantalla.
   (32px/14px/borde -300, la desviación WCAG), link 30×30 material `link`, categoría violeta
   `#6b46e51f`, chip de centro neutro, "Show more" (regla UI §4.16 — nunca "Read more").
 
+## Trampa: tokens fantasma (2026-08-31)
+- ⚠️ **Un `var(--pr-*)` sin definición pinta transparente sin ningún error** — `--pr-surface-ground`
+  se usó ~50 veces (todas las barras de skeleton del hub/banner/tabla) sin existir en
+  `colors.scss`: la página parecía cargada-y-vacía mientras cargaba. Ahora está definido
+  (`#efeef3`) y `design-tokens.spec.ts` barre el módulo entero y falla si aparece otro token
+  usado-pero-no-definido. Si añades un token, decláralo en `src/styles/colors.scss` PRIMERO.
+
 ## Trampa nueva (2026-08-26)
 - ⚠️ **Dos convenciones opuestas para `is_aow` ausente.** `indicatorsByAow()`'s `fromTier` (~línea
   1418) trata un `is_aow` faltante como cross-cutting (`!== true`), mientras que
