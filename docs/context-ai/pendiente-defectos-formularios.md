@@ -102,9 +102,23 @@ Verificado en el código:
   pregunta, nunca se asigna, nunca se muestra**. El archivo se sube (`onFileSelected`,
   `section-evidence.component.ts:304`) sin que nadie decida su visibilidad.
 
-🛑 **No se desarrolló:** añadir un control obligatorio a un formulario es decisión de producto, y
-**ningún ticket lo pide**. Falta definir el valor por defecto, si bloquea el guardado, y qué pasa con
-los archivos ya subidos sin respuesta. Llevado a decisión.
+**Qué hace el servidor cuando el campo llega vacío — verificado, y baja mucho la gravedad:**
+
+- La columna es `tinyint NOT NULL DEFAULT '0'` (migración `1699540561734`), o sea **el archivo entra
+  como PRIVADO**.
+- En `evidences.service.ts:384-391` la llamada que otorga acceso público (`addFileAccess`) está detrás
+  de `if (evidenceSharepoint.is_public_file != evidence.is_public_file || replaceFile)`. Para una
+  evidencia nueva ambos lados son `undefined`, así que la condición es falsa y **el acceso público no
+  se otorga nunca**.
+
+**Conclusión: no hay fuga de privacidad.** El archivo bilateral queda privado por defecto en la base y
+en SharePoint. Lo que falta es la **capacidad**: en bilateral el reportante **no puede** marcar un
+archivo como público aunque quiera, mientras en el formulario normal sí.
+
+🛑 **No se desarrolla.** Es una capacidad ausente que ningún ticket pide, no un defecto que pierda ni
+exponga datos. Si alguien la reclama, el control ya existe en `evidence-item.component.html:42` y se
+replica; y el valor por defecto ya está decidido por la base de datos, así que la única pregunta
+abierta sería si debe bloquear el guardado.
 
 ## 🔴 LOTE 5 — Capacity Sharing, Policy Change y Knowledge Product
 
