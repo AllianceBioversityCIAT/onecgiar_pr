@@ -2726,7 +2726,18 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
    * @param currentPhaseYear year of the OPEN reporting phase — everything strictly older than it
    * counts as a past phase. Resolved by the caller from the active version, never hardcoded.
    */
-  async getQaEdInnovationDevelopmentResults(currentPhaseYear: number) {
+  /**
+   * P2-3420 / P2-3421 — Innovation Development results the W1/W2 dropdown may offer.
+   *
+   * Scope closed by Ángel Jarrín on 31-Aug-2026 (Nicoleta confirmed): **the previous reporting phase,
+   * singular**, across all portfolios / Science Programs. His earlier "previous phases" (plural) was
+   * retracted the same morning, so this filter is `= previousPhaseYear`, never `< currentPhaseYear`.
+   *
+   * The de-duplication stays: a phase year holds one version per portfolio, so the same
+   * `result_code` can still appear more than once inside a single year. Without it the reporter sees
+   * the same innovation twice with an identical label and cannot tell which to pick.
+   */
+  async getQaEdInnovationDevelopmentResults(previousPhaseYear: number) {
     const statusPlaceholders = QA_LINKABLE_INNOVATION_STATUS_IDS.map(
       () => '?',
     ).join(', ');
@@ -2745,7 +2756,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     LEFT JOIN clarisa_portfolios cp ON cp.id = v.portfolio_id
     WHERE r.is_active = TRUE
       AND r.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
-      AND v.phase_year < ?
+      AND v.phase_year = ?
       AND r.status_id IN (${statusPlaceholders})
       AND NOT EXISTS (
         SELECT 1
@@ -2755,21 +2766,18 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         WHERE newer.result_code = r.result_code
           AND newer.is_active = TRUE
           AND newer.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
-          AND newer_v.phase_year < ?
+          AND newer_v.phase_year = ?
           AND newer.status_id IN (${statusPlaceholders})
-          AND (
-            newer_v.phase_year > v.phase_year
-            OR (newer_v.phase_year = v.phase_year AND newer.id > r.id)
-          )
+          AND newer.id > r.id
       )
     ORDER BY r.result_code DESC;
     `;
 
     try {
       return await this.query(query, [
-        currentPhaseYear,
+        previousPhaseYear,
         ...QA_LINKABLE_INNOVATION_STATUS_IDS,
-        currentPhaseYear,
+        previousPhaseYear,
         ...QA_LINKABLE_INNOVATION_STATUS_IDS,
       ]);
     } catch (error) {

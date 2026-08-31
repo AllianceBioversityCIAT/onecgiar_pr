@@ -246,16 +246,25 @@ describe('ResultRepository (unit)', () => {
       expect(sql).toContain('r.result_type_id = 7');
     });
 
-    it('asks only for PAST phases, measured against the open phase the caller resolved', async () => {
+    /**
+     * 🛑 THE PHASE RULE, and it is singular. Ángel Jarrín closed the scope on 31-Aug-2026 after
+     * Nicoleta confirmed it: "QA-ed in the previous reporting phase". He had written "previous
+     * phases" (plural) that same morning and retracted it 39 minutes later, so a `<` here is the
+     * WRONG rule, not a looser one — it would offer innovations from 2022-2024 that the business
+     * excluded.
+     */
+    it('asks for the PREVIOUS phase only, exactly the year the caller resolved', async () => {
       queryMock.mockResolvedValueOnce([]);
 
-      await repo.getQaEdInnovationDevelopmentResults(2026);
+      await repo.getQaEdInnovationDevelopmentResults(2025);
 
       const [sql, params] = queryMock.mock.calls[0];
-      expect(sql).toContain('v.phase_year < ?');
-      expect(params[0]).toBe(2026);
-      // 🛑 never the literal the legacy catalogue hardcodes.
+      expect(sql).toContain('v.phase_year = ?');
+      expect(sql).not.toContain('v.phase_year < ?');
+      expect(params[0]).toBe(2025);
+      // 🛑 never a hardcoded year: "the rule should remain generic" (Ángel, 31-Aug-2026).
       expect(sql).not.toContain('Reporting 2025');
+      expect(sql).not.toMatch(/phase_year\s*=\s*20\d\d/);
     });
 
     it('filters by the states listed in QA_LINKABLE_INNOVATION_STATUS_IDS and nothing else', async () => {
@@ -273,6 +282,10 @@ describe('ResultRepository (unit)', () => {
         2026,
         ...QA_LINKABLE_INNOVATION_STATUS_IDS,
       ]);
+      // Both bindings carry the SAME year: the catalogue and its de-duplication look at one phase.
+      expect(params[0]).toBe(
+        params[1 + QA_LINKABLE_INNOVATION_STATUS_IDS.length],
+      );
     });
 
     it('is portfolio-wide: no Science Program / Accelerator restriction, by design', async () => {
@@ -287,16 +300,15 @@ describe('ResultRepository (unit)', () => {
     });
 
     /**
-     * ⚠️ THE DUPLICATE-INNOVATION GUARD. PRMS carries a result forward into every phase keeping the
-     * same `result_code` and title, so without this clause the dropdown offers the SAME innovation
-     * once per phase with an identical, indistinguishable label. Real prtest case pinned here:
-     * `result_code` 41 ("Rice breeding network in Easte…") has three QA'd rows — id 41 / 2022,
-     * id 7031 / 2023 and id 7706 / 2024 — and only the 2024 one may reach the user.
+     * ⚠️ THE DUPLICATE-INNOVATION GUARD, still needed after narrowing to one phase. A phase year
+     * holds ONE VERSION PER PORTFOLIO, so the same `result_code` can appear more than once inside
+     * the same year. Without this clause the reporter sees the same innovation twice with an
+     * identical, indistinguishable label and cannot tell which to pick.
      */
-    it("collapses the three phases of the same result_code to the most recent QA'd one", async () => {
+    it('collapses rows sharing a result_code inside the previous phase to a single one', async () => {
       queryMock.mockResolvedValueOnce([]);
 
-      await repo.getQaEdInnovationDevelopmentResults(2026);
+      await repo.getQaEdInnovationDevelopmentResults(2025);
 
       const [sql] = queryMock.mock.calls[0];
       const normalized = sql.replace(/\s+/g, ' ');
@@ -304,27 +316,26 @@ describe('ResultRepository (unit)', () => {
       // Correlated on the innovation identity, not on the row id.
       expect(normalized).toContain('NOT EXISTS');
       expect(normalized).toContain('newer.result_code = r.result_code');
-      // Discards a row whenever a NEWER phase of the same innovation exists.
-      expect(normalized).toContain('newer_v.phase_year > v.phase_year');
-      // …and the newer candidate must itself be an eligible catalogue row: active, Innovation
-      // Development, a past phase and QA'd. Otherwise 2024 could be hidden by a draft 2025 copy.
+      // Scoped to the SAME phase now — a cross-phase comparison would resurrect the old rule.
+      expect(normalized).toContain('newer_v.phase_year = ?');
+      expect(normalized).not.toContain('newer_v.phase_year > v.phase_year');
+      expect(normalized).not.toContain('newer_v.phase_year < ?');
+      // The surviving candidate must itself be an eligible catalogue row.
       expect(normalized).toContain('newer.is_active = TRUE');
       expect(normalized).toContain('newer_v.is_active = TRUE');
       expect(normalized).toContain('newer.result_type_id = 7');
-      expect(normalized).toContain('newer_v.phase_year < ?');
       expect(normalized).toContain('newer.status_id IN (');
     });
 
-    it('breaks a phase_year tie deterministically, so one code can never yield two rows', async () => {
+    it('breaks a tie deterministically, so one code can never yield two rows', async () => {
       queryMock.mockResolvedValueOnce([]);
 
-      await repo.getQaEdInnovationDevelopmentResults(2026);
+      await repo.getQaEdInnovationDevelopmentResults(2025);
 
       const [sql] = queryMock.mock.calls[0];
       const normalized = sql.replace(/\s+/g, ' ');
-      expect(normalized).toContain(
-        'newer_v.phase_year = v.phase_year AND newer.id > r.id',
-      );
+      // Inside a single phase the row id is the only tie-breaker left, and it is total.
+      expect(normalized).toContain('newer.id > r.id');
     });
 
     it('returns the id, code, title and status the dropdown needs', async () => {

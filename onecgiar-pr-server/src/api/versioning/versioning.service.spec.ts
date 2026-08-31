@@ -76,6 +76,7 @@ import { ResultAnswerRepository } from '../results/result-questions/repository/r
 import { MQAPService } from '../m-qap/m-qap.service';
 import { MQAPModule } from '../m-qap/m-qap.module';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { AppModuleIdEnum } from 'src/shared/constants/role-type.enum';
 
 describe('VersioningService', () => {
   let service: VersioningService;
@@ -625,6 +626,78 @@ describe('VersioningService', () => {
       }),
     );
   });
+  /**
+   * P2-3420 / P2-3421 — the dropdown must offer the PREVIOUS reporting phase, singular. Ángel Jarrín
+   * closed the scope on 31-Aug-2026 asking for the rule to "remain generic and always refer to the
+   * previous reporting phase", so this resolver reads `version.previous_phase` and only falls back to
+   * `openYear - 1` when that link is missing. A hardcoded year here is the failure mode these tests
+   * exist to catch.
+   */
+  describe('$_findPreviousPhaseYear (P2-3420 / P2-3421)', () => {
+    it('follows previous_phase and returns that phase year', async () => {
+      const findOne = jest
+        .fn()
+        .mockResolvedValueOnce({ id: 36, phase_year: 2026, previous_phase: 12 })
+        .mockResolvedValueOnce({ id: 12, phase_year: 2025 });
+      (service as any)._versionRepository = { findOne };
+
+      const year = await service.$_findPreviousPhaseYear(
+        AppModuleIdEnum.REPORTING,
+      );
+
+      expect(year).toBe(2025);
+      expect(findOne).toHaveBeenNthCalledWith(2, { where: { id: 12 } });
+    });
+
+    it('does not assume the previous phase is one calendar year back', async () => {
+      // A phase link that skips a year must be honoured, not "corrected" to openYear - 1.
+      const findOne = jest
+        .fn()
+        .mockResolvedValueOnce({ id: 40, phase_year: 2026, previous_phase: 9 })
+        .mockResolvedValueOnce({ id: 9, phase_year: 2023 });
+      (service as any)._versionRepository = { findOne };
+
+      await expect(
+        service.$_findPreviousPhaseYear(AppModuleIdEnum.REPORTING),
+      ).resolves.toBe(2023);
+    });
+
+    it('falls back to the year before the open phase when there is no previous_phase link', async () => {
+      const findOne = jest.fn().mockResolvedValueOnce({
+        id: 36,
+        phase_year: 2026,
+        previous_phase: null,
+      });
+      (service as any)._versionRepository = { findOne };
+
+      await expect(
+        service.$_findPreviousPhaseYear(AppModuleIdEnum.REPORTING),
+      ).resolves.toBe(2025);
+      expect(findOne).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back when the linked previous phase carries no usable year', async () => {
+      const findOne = jest
+        .fn()
+        .mockResolvedValueOnce({ id: 36, phase_year: 2026, previous_phase: 12 })
+        .mockResolvedValueOnce({ id: 12, phase_year: null });
+      (service as any)._versionRepository = { findOne };
+
+      await expect(
+        service.$_findPreviousPhaseYear(AppModuleIdEnum.REPORTING),
+      ).resolves.toBe(2025);
+    });
+
+    it('returns null when there is no open reporting phase at all', async () => {
+      const findOne = jest.fn().mockResolvedValueOnce(null);
+      (service as any)._versionRepository = { findOne };
+
+      await expect(
+        service.$_findPreviousPhaseYear(AppModuleIdEnum.REPORTING),
+      ).resolves.toBeNull();
+    });
+  });
+
   describe('$_refreshIpsrTitleFromCoreInnovation', () => {
     const buildManager = (overrides: {
       coreLink?: { result_id: number } | null;

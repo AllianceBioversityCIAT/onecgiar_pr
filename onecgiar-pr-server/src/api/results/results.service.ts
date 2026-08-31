@@ -3027,21 +3027,35 @@ export class ResultsService {
   /**
    * P2-3420 / P2-3421 — catalogue for the "link to a QA'd Innovation Development result" dropdown.
    * ONE endpoint for the two W1/W2 creation surfaces (ToC-linked form + emergent modal) so the
-   * filter can never drift between them; the filter itself lives in
+   * filter can never drift between them; the status filter itself lives in
    * `QA_LINKABLE_INNOVATION_STATUS_IDS` (result.repository.ts).
+   *
+   * Scope closed by Ángel Jarrín on 31-Aug-2026, after Nicoleta confirmed it: the dropdown offers the
+   * Innovation Development results QA'd in **the previous reporting phase** — singular. He had first
+   * written "previous phases" and retracted it 39 minutes later; the plural is NOT the rule.
+   *
+   * "The rule should remain generic and always refer to the previous reporting phase", so the year is
+   * never hardcoded: it comes from `version.previous_phase` of the open reporting phase, and only
+   * falls back to `openYear - 1` when that link is missing. Filtering by YEAR and not by version id is
+   * deliberate — the same phase year holds one version per portfolio, and the rule says "all
+   * portfolios / Science Programs in the previous phase".
    */
   async getQaInnovationDevelopmentResults() {
     try {
       const activePhase = await this._versioningService.$_findActivePhase(
         AppModuleIdEnum.REPORTING,
       );
-      // "Past phases" is measured against the OPEN reporting phase, never a hardcoded year.
-      const currentPhaseYear =
+      const openPhaseYear =
         Number(activePhase?.phase_year) || new Date().getFullYear();
+
+      const previousPhaseYear =
+        (await this._versioningService.$_findPreviousPhaseYear(
+          AppModuleIdEnum.REPORTING,
+        )) ?? openPhaseYear - 1;
 
       const results =
         await this._resultRepository.getQaEdInnovationDevelopmentResults(
-          currentPhaseYear,
+          previousPhaseYear,
         );
 
       return {
