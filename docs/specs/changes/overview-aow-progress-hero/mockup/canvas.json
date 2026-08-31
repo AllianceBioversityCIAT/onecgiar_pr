@@ -1,0 +1,12 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1280, "h": 640, "title": "Option A · Mission control (recommended)" },
+    { "file": "RowStates.dc.html", "x": 1400, "y": 0, "w": 1120, "h": 660, "title": "Row anatomy & states" },
+    { "file": "DirectionB.dc.html", "x": 0, "y": 800, "w": 1280, "h": 560, "title": "Option B · Data-first chart" },
+    { "file": "DirectionC.dc.html", "x": 1400, "y": 800, "w": 1280, "h": 560, "title": "Option C · Amplified rows" }
+  ],
+  "annotations": [
+    { "id": "brief", "x": 0, "y": -170, "w": 420, "text": "Brief: give 'Progress by area of work' hero prominence on the SP Overview (owner, 2026-08-31).\nOption A is the recommendation: summary rail + actionable rows sorted by remaining work, segmented status bars (true KPI counts), Report/open actions per row, outcomes as footer chips.\nAll values are sample data from SP01; status splits need the host to enrich AowProgressRow." }
+  ],
+  "launch": { "view": "canvas" }
+}

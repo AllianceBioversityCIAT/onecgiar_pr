@@ -1,0 +1,209 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: #2b2838; }
+    a { color: #6b46e5; } a:hover { color: #5936c4; }
+    .mono { font-family: 'JetBrains Mono', 'SFMono-Regular', monospace; font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+<div style="width: 1280px; background: #f7f7f9; padding: 28px 32px 36px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+
+  <div style="display: flex; align-items: baseline; gap: 10px">
+    <span style="font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: #6b46e5">OPTION A · MISSION CONTROL (RECOMMENDED)</span>
+    <span style="font-size: 12px; color: #706b80">Overview tab · section promoted directly under "Where to report"</span>
+  </div>
+
+  <!-- ═══ The hero card ═══ -->
+  <div style="display: flex; gap: 0; border: 1px solid #e3e3e8; border-radius: 14px; background: #ffffff; overflow: hidden">
+
+    <!-- Left summary rail — the only tinted surface (program band violet) -->
+    <div style="width: 300px; flex: none; background: #f7f4fd; border-right: 1px solid #e4e0ef; padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.01em; color: #191524">Progress by Area of Work</span>
+        <span style="font-size: 12.5px; color: #706b80; line-height: 1.45">Reporting cycle 2026 · against planned KPIs</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 16px">
+        <!-- Overall ring -->
+        <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true">
+          <circle cx="46" cy="46" r="40" fill="none" stroke="#e4e0ef" stroke-width="9"></circle>
+          <circle cx="46" cy="46" r="40" fill="none" stroke="#6b46e5" stroke-width="9" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="248.8" transform="rotate(-90 46 46)"></circle>
+        </svg>
+        <div style="display: flex; flex-direction: column; gap: 1px">
+          <span class="mono" style="font-size: 32px; font-weight: 700; line-height: 1; color: #191524">1%</span>
+          <span class="mono" style="font-size: 13px; font-weight: 600; color: #514b66">2 of 392</span>
+          <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #8d87a0">KPIs reported</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #e4e0ef; padding-top: 14px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <span style="font-size: 12.5px; color: #514b66">With evidence</span>
+          <span class="mono" style="font-size: 13px; font-weight: 700; color: #191524">2 of 392</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <span style="font-size: 12.5px; color: #514b66">In progress</span>
+          <span class="mono" style="font-size: 13px; font-weight: 700; color: #191524">6</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <span style="font-size: 12.5px; color: #514b66">Not started</span>
+          <span class="mono" style="font-size: 13px; font-weight: 700; color: #191524">384</span>
+        </div>
+      </div>
+
+      <button style="margin-top: auto; height: 36px; border: 0; border-radius: 8px; background: #6b46e5; color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        Continue reporting
+      </button>
+      <span style="font-size: 11px; color: #8d87a0; text-align: center">Opens Reporting with Only-pending on</span>
+    </div>
+
+    <!-- AoW rows — sorted by remaining work, segmented status bar -->
+    <div style="flex: 1; display: flex; flex-direction: column">
+      <div style="display: grid; grid-template-columns: 1fr 260px 120px 170px; gap: 16px; align-items: center; height: 34px; padding: 0 24px; background: #f7f7f9; border-bottom: 1px solid #eeeef1; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #706b80">
+        <span>Area of Work</span><span>Reported · In progress · Not started</span><span style="text-align: right">Reported</span><span style="text-align: right">Actions</span>
+      </div>
+
+      <!-- Row: AOW02 (most remaining) -->
+      <div style="display: grid; grid-template-columns: 1fr 260px 120px 170px; gap: 16px; align-items: center; min-height: 62px; padding: 10px 24px; border-bottom: 1px solid #eeeef1; box-sizing: border-box">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+          <span class="mono" style="flex: none; border-radius: 6px; background: #f1edfc; border: 1px solid #e0d8f8; color: #5936c4; font-size: 12px; font-weight: 600; padding: 3px 8px">AOW02</span>
+          <div style="display: flex; flex-direction: column; min-width: 0">
+            <span style="font-size: 14.5px; font-weight: 700; color: #191524; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Accelerated Breeding</span>
+            <span style="font-size: 11.5px; color: #8d87a0">136 KPIs remaining · most pending work</span>
+          </div>
+        </div>
+        <div style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #eeeef1">
+          <span style="width: 1%; background: #19ae58" title="1 reported"></span>
+          <span style="width: 2%; background: #6b46e5" title="3 in progress"></span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end">
+          <span class="mono" style="font-size: 16px; font-weight: 700; color: #191524">1<span style="color: #8d87a0; font-weight: 600">/137</span></span>
+          <span class="mono" style="font-size: 11.5px; font-weight: 600; color: #514b66">1%</span>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 6px">
+          <button style="height: 32px; padding: 0 14px; border: 1px solid #6b46e5; border-radius: 8px; background: #ffffff; color: #5936c4; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer">Report</button>
+          <button style="height: 32px; width: 32px; border: 1px solid #e3e3e8; border-radius: 8px; background: #ffffff; color: #514b66; cursor: pointer; display: flex; align-items: center; justify-content: center" title="Open this Area of Work">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Row: AOW03 -->
+      <div style="display: grid; grid-template-columns: 1fr 260px 120px 170px; gap: 16px; align-items: center; min-height: 62px; padding: 10px 24px; border-bottom: 1px solid #eeeef1; box-sizing: border-box">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+          <span class="mono" style="flex: none; border-radius: 6px; background: #f1edfc; border: 1px solid #e0d8f8; color: #5936c4; font-size: 12px; font-weight: 600; padding: 3px 8px">AOW03</span>
+          <div style="display: flex; flex-direction: column; min-width: 0">
+            <span style="font-size: 14.5px; font-weight: 700; color: #191524; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Inclusive Delivery</span>
+            <span style="font-size: 11.5px; color: #8d87a0">95 KPIs remaining</span>
+          </div>
+        </div>
+        <div style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #eeeef1">
+          <span style="width: 2%; background: #6b46e5" title="2 in progress"></span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end">
+          <span class="mono" style="font-size: 16px; font-weight: 700; color: #191524">0<span style="color: #8d87a0; font-weight: 600">/95</span></span>
+          <span class="mono" style="font-size: 11.5px; font-weight: 600; color: #514b66">0%</span>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 6px">
+          <button style="height: 32px; padding: 0 14px; border: 1px solid #6b46e5; border-radius: 8px; background: #ffffff; color: #5936c4; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer">Report</button>
+          <button style="height: 32px; width: 32px; border: 1px solid #e3e3e8; border-radius: 8px; background: #ffffff; color: #514b66; cursor: pointer; display: flex; align-items: center; justify-content: center" title="Open this Area of Work">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Row: AOW05 -->
+      <div style="display: grid; grid-template-columns: 1fr 260px 120px 170px; gap: 16px; align-items: center; min-height: 62px; padding: 10px 24px; border-bottom: 1px solid #eeeef1; box-sizing: border-box">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+          <span class="mono" style="flex: none; border-radius: 6px; background: #f1edfc; border: 1px solid #e0d8f8; color: #5936c4; font-size: 12px; font-weight: 600; padding: 3px 8px">AOW05</span>
+          <div style="display: flex; flex-direction: column; min-width: 0">
+            <span style="font-size: 14.5px; font-weight: 700; color: #191524">Enable</span>
+            <span style="font-size: 11.5px; color: #8d87a0">72 KPIs remaining</span>
+          </div>
+        </div>
+        <div style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #eeeef1"><span style="width: 1%; background: #6b46e5"></span></div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end">
+          <span class="mono" style="font-size: 16px; font-weight: 700; color: #191524">0<span style="color: #8d87a0; font-weight: 600">/72</span></span>
+          <span class="mono" style="font-size: 11.5px; font-weight: 600; color: #514b66">0%</span>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 6px">
+          <button style="height: 32px; padding: 0 14px; border: 1px solid #6b46e5; border-radius: 8px; background: #ffffff; color: #5936c4; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer">Report</button>
+          <button style="height: 32px; width: 32px; border: 1px solid #e3e3e8; border-radius: 8px; background: #ffffff; color: #514b66; cursor: pointer; display: flex; align-items: center; justify-content: center" title="Open this Area of Work">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Row: AOW04 -->
+      <div style="display: grid; grid-template-columns: 1fr 260px 120px 170px; gap: 16px; align-items: center; min-height: 62px; padding: 10px 24px; border-bottom: 1px solid #eeeef1; box-sizing: border-box">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+          <span class="mono" style="flex: none; border-radius: 6px; background: #f1edfc; border: 1px solid #e0d8f8; color: #5936c4; font-size: 12px; font-weight: 600; padding: 3px 8px">AOW04</span>
+          <div style="display: flex; flex-direction: column; min-width: 0">
+            <span style="font-size: 14.5px; font-weight: 700; color: #191524">Breeding Resources</span>
+            <span style="font-size: 11.5px; color: #8d87a0">66 KPIs remaining</span>
+          </div>
+        </div>
+        <div style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #eeeef1"></div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end">
+          <span class="mono" style="font-size: 16px; font-weight: 700; color: #191524">0<span style="color: #8d87a0; font-weight: 600">/66</span></span>
+          <span class="mono" style="font-size: 11.5px; font-weight: 600; color: #514b66">0%</span>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 6px">
+          <button style="height: 32px; padding: 0 14px; border: 1px solid #6b46e5; border-radius: 8px; background: #ffffff; color: #5936c4; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer">Report</button>
+          <button style="height: 32px; width: 32px; border: 1px solid #e3e3e8; border-radius: 8px; background: #ffffff; color: #514b66; cursor: pointer; display: flex; align-items: center; justify-content: center" title="Open this Area of Work">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Row: AOW01 (least remaining, best %) -->
+      <div style="display: grid; grid-template-columns: 1fr 260px 120px 170px; gap: 16px; align-items: center; min-height: 62px; padding: 10px 24px; border-bottom: 1px solid #eeeef1; box-sizing: border-box">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+          <span class="mono" style="flex: none; border-radius: 6px; background: #f1edfc; border: 1px solid #e0d8f8; color: #5936c4; font-size: 12px; font-weight: 600; padding: 3px 8px">AOW01</span>
+          <div style="display: flex; flex-direction: column; min-width: 0">
+            <span style="font-size: 14.5px; font-weight: 700; color: #191524">Market Intelligence</span>
+            <span style="font-size: 11.5px; color: #8d87a0">21 KPIs remaining · leading</span>
+          </div>
+        </div>
+        <div style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #eeeef1">
+          <span style="width: 5%; background: #19ae58"></span>
+          <span style="width: 4%; background: #6b46e5"></span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end">
+          <span class="mono" style="font-size: 16px; font-weight: 700; color: #191524">1<span style="color: #8d87a0; font-weight: 600">/22</span></span>
+          <span class="mono" style="font-size: 11.5px; font-weight: 600; color: #514b66">5%</span>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 6px">
+          <button style="height: 32px; padding: 0 14px; border: 1px solid #6b46e5; border-radius: 8px; background: #ffffff; color: #5936c4; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer">Report</button>
+          <button style="height: 32px; width: 32px; border: 1px solid #e3e3e8; border-radius: 8px; background: #ffffff; color: #514b66; cursor: pointer; display: flex; align-items: center; justify-content: center" title="Open this Area of Work">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Strategic outcomes footer — compact chips instead of two more full rows -->
+      <div style="display: flex; align-items: center; gap: 12px; padding: 14px 24px; background: #fbfbfc">
+        <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #706b80">Strategic outcomes</span>
+        <span style="display: inline-flex; align-items: center; gap: 8px; border: 1px solid #e3e3e8; border-radius: 999px; background: #ffffff; padding: 5px 12px; font-size: 12.5px; color: #2b2838">Intermediate outcomes <span class="mono" style="font-weight: 700">0/7</span></span>
+        <span style="display: inline-flex; align-items: center; gap: 8px; border: 1px solid #e3e3e8; border-radius: 999px; background: #ffffff; padding: 5px 12px; font-size: 12.5px; color: #2b2838">2030 outcomes <span class="mono" style="font-weight: 700">0/5</span></span>
+        <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #706b80">
+          <span style="width: 9px; height: 9px; border-radius: 2px; background: #19ae58"></span> Reported
+          <span style="width: 9px; height: 9px; border-radius: 2px; background: #6b46e5; margin-left: 8px"></span> In progress
+          <span style="width: 9px; height: 9px; border-radius: 2px; background: #eeeef1; margin-left: 8px"></span> Not started
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

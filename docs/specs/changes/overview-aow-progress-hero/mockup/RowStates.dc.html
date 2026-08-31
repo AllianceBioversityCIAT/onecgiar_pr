@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: #2b2838; }
+    a { color: #6b46e5; } a:hover { color: #5936c4; }
+    .mono { font-family: 'JetBrains Mono', 'SFMono-Regular', monospace; font-variant-numeric: tabular-nums; }
+    @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.45 } }
+    .skel { animation: pulse 1.6s ease-in-out infinite; background: #efeef3; border-radius: 6px; }
+  </style>
+</helmet>
+<div style="width: 1120px; background: #f7f7f9; padding: 28px 32px 36px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px">
+  <span style="font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: #6b46e5">ROW ANATOMY &amp; STATES (Option A)</span>
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #706b80">Loading — skeleton until numbers are FINAL (never partial sums that jump · KZ-MRF-1)</span>
+    <div style="display: grid; grid-template-columns: 1fr 260px 120px 170px; gap: 16px; align-items: center; min-height: 62px; padding: 10px 24px; border: 1px solid #e3e3e8; border-radius: 10px; background: #ffffff; box-sizing: border-box">
+      <div style="display: flex; align-items: center; gap: 10px"><span class="skel" style="width: 58px; height: 24px"></span><span class="skel" style="width: 190px; height: 16px"></span></div>
+      <span class="skel" style="height: 12px"></span>
+      <span class="skel" style="height: 16px; width: 76px; justify-self: end"></span>
+      <span class="skel" style="height: 32px; width: 118px; justify-self: end"></span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #706b80">Loaded — segmented bar = true KPI counts (Reported · In progress · Not started)</span>
+    <div style="display: grid; grid-template-columns: 1fr 260px 120px 170px; gap: 16px; align-items: center; min-height: 62px; padding: 10px 24px; border: 1px solid #e3e3e8; border-radius: 10px; background: #ffffff; box-sizing: border-box">
+      <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+        <span class="mono" style="flex: none; border-radius: 6px; background: #f1edfc; border: 1px solid #e0d8f8; color: #5936c4; font-size: 12px; font-weight: 600; padding: 3px 8px">AOW02</span>
+        <div style="display: flex; flex-direction: column">
+          <span style="font-size: 14.5px; font-weight: 700; color: #191524">Accelerated Breeding</span>
+          <span style="font-size: 11.5px; color: #8d87a0">136 KPIs remaining · most pending work</span>
+        </div>
+      </div>
+      <div style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #eeeef1">
+        <span style="width: 12%; background: #19ae58"></span><span style="width: 9%; background: #6b46e5"></span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end">
+        <span class="mono" style="font-size: 16px; font-weight: 700; color: #191524">16<span style="color: #8d87a0; font-weight: 600">/137</span></span>
+        <span class="mono" style="font-size: 11.5px; font-weight: 600; color: #514b66">12%</span>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 6px">
+        <button style="height: 32px; padding: 0 14px; border: 1px solid #6b46e5; border-radius: 8px; background: #ffffff; color: #5936c4; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer">Report</button>
+        <button style="height: 32px; width: 32px; border: 1px solid #e3e3e8; border-radius: 8px; background: #ffffff; color: #514b66; cursor: pointer; display: flex; align-items: center; justify-content: center" title="Open this Area of Work">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+        </button>
+      </div>
+    </div>
+    <span style="font-size: 11.5px; color: #8d87a0">Notes: zero-target KPIs excluded from the denominator (`buildRatio`, MRF-R-7) with the "excludes N zero-target KPIs" title · Report → Reporting tab By-AOW focused view (`openAowFocused`) · numbers are sample values.</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #706b80">Complete — quiet emerald, action becomes View</span>
+    <div style="display: grid; grid-template-columns: 1fr 260px 120px 170px; gap: 16px; align-items: center; min-height: 62px; padding: 10px 24px; border: 1px solid #e3e3e8; border-radius: 10px; background: #ffffff; box-sizing: border-box">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span class="mono" style="flex: none; border-radius: 6px; background: #f1edfc; border: 1px solid #e0d8f8; color: #5936c4; font-size: 12px; font-weight: 600; padding: 3px 8px">AOW01</span>
+        <div style="display: flex; flex-direction: column">
+          <span style="font-size: 14.5px; font-weight: 700; color: #191524">Market Intelligence</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #0f7a3d">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+            All planned KPIs reported
+          </span>
+        </div>
+      </div>
+      <div style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #eeeef1"><span style="width: 100%; background: #19ae58"></span></div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end">
+        <span class="mono" style="font-size: 16px; font-weight: 700; color: #191524">22<span style="color: #8d87a0; font-weight: 600">/22</span></span>
+        <span class="mono" style="font-size: 11.5px; font-weight: 600; color: #0f7a3d">100%</span>
+      </div>
+      <div style="display: flex; justify-content: flex-end">
+        <button style="height: 32px; padding: 0 14px; border: 1px solid #e3e3e8; border-radius: 8px; background: #ffffff; color: #514b66; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer">View results</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
