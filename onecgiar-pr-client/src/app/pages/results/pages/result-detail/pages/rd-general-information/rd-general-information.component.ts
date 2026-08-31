@@ -299,6 +299,17 @@ export class RdGeneralInformationComponent implements OnInit {
   onSaveSection() {
     const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
 
+    // ⚠️ KNOWN DEFECT, deliberately NOT fixed here — pending a decision.
+    //
+    // On P25 this guard is skipped, so a name typed without picking anyone from the list goes out in
+    // the payload with no `lead_contact_person_data`: the server drops it AND clears the contact that
+    // was already stored. Silent data loss.
+    //
+    // It is not fixed by simply removing `!isP25` because the exception was added on purpose
+    // (c64baefb8, 23-Jan-2026) with no reason recorded in the commit, and the spec that pins it came
+    // from a coverage sweep rather than from a rule. Reverting someone's decision blind could break a
+    // P25 flow nobody documented. Raised for a decision instead; see the form-defect backlog in
+    // docs/context-ai/pendiente-defectos-formularios.md.
     if (this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser && !isP25) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = true;
@@ -349,7 +360,13 @@ export class RdGeneralInformationComponent implements OnInit {
       },
       error: err => {
         console.error(err);
-        this.getSectionInformation();
+        // 🛑 DO NOT reload the section when the save was rejected.
+        //
+        // `getSectionInformation()` overwrites `generalInfoBody` with what the server still holds, so
+        // reloading here threw away everything the user had just typed — title, description and the
+        // Impact Area scores — leaving them staring at the old content with no idea their work was
+        // gone. The rejected values stay on screen so the person can fix what the error complains
+        // about and press Save again. The interceptor already surfaces the error message.
       }
     });
   }

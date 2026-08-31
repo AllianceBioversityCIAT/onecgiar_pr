@@ -709,8 +709,25 @@ describe('RdGeneralInformationComponent', () => {
       expect(spyDiscontinuedOptionsToIds).toHaveBeenCalled();
       expect(spyPATCH_generalInformation).toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalledWith(errorResponse);
-      expect(spyGetSectionInformation).toHaveBeenCalled();
+      // 🛑 The section must NOT reload when the save was rejected: reloading overwrites
+      // `generalInfoBody` with the server copy and throws away everything the user just typed.
+      expect(spyGetSectionInformation).not.toHaveBeenCalled();
     });
+
+    it('keeps what the user typed on screen when the save is rejected', () => {
+      mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+      mockUserSearchService.searchQuery = mockUserSearchResponse.response[0].displayName;
+      component.generalInfoBody.result_title = 'A title the user just typed';
+      component.generalInfoBody.result_description = 'And a description';
+      spyPATCH_generalInformation.mockReturnValue(throwError(() => 'rejected'));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      component.onSaveSection();
+
+      expect(component.generalInfoBody.result_title).toBe('A title the user just typed');
+      expect(component.generalInfoBody.result_description).toBe('And a description');
+    });
+
   });
 
   describe('descriptionTextInfo', () => {
