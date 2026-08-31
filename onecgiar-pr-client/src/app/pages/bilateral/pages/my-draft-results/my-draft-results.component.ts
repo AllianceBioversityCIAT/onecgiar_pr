@@ -101,9 +101,11 @@ export class MyDraftResultsComponent implements OnInit, OnDestroy {
   /**
    * P2-3316: plain-language notes for the three card actions. End users could not tell
    * Review / Promote / Delete apart from the labels alone, so each one states what happens
-   * to the draft after the click. Wording matches the real behaviour, not the button name:
-   * Review only opens the read-only preview aside, Promote creates the actual result and
-   * navigates to it, Delete removes the draft for good.
+   * to the draft after the click. The middle button was renamed Promote -> Create Result
+   * (Yeck, 31-Aug-2026, on Nicoleta's request); only the visible label changed, the
+   * promote* handlers and the endpoint keep their name. Review only opens the read-only
+   * preview aside, Create Result creates the actual result and navigates to it, Delete
+   * removes the draft for good.
    */
   readonly reviewTooltip =
     'Preview everything the AI extracted from your files, next to the source evidence it used. Nothing is saved or created — the draft stays in this list.';

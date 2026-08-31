@@ -1,11 +1,11 @@
 # bilateral-ai-draft-detail
 
-**Verified:** 2026-08-25 · branch performance-refactor · bc25304fb
+**Verified:** 2026-08-31 · branch performance-refactor · bf8df3930
 
 ## Qué es
 Ficha de un borrador generado por IA: muestra lo que el modelo extrajo
 (`draft-result-card`) y los materiales fuente del job (`draft-evidence-list`),
-y ofrece las dos acciones terminales — **Promote to Result** y **Discard**.
+y ofrece las dos acciones terminales — **Create Result** y **Discard**.
 
 ## Contrato
 - Ruta: `bilateral/:acronym/drafts/:draftId`
@@ -36,7 +36,7 @@ y ofrece las dos acciones terminales — **Promote to Result** y **Discard**.
   mismo centro (`assertCenterEntitlement`). Un compañero de centro abre la ficha
   pero **no puede descargar ninguna fuente**: todas quedan en "Generating link…".
 - El error de promote/discard se traga el mensaje del servidor y muestra un
-  toast genérico ("Failed to promote draft"). El 400 real —"Only document
+  toast genérico ("Failed to create the result"). El 400 real —"Only document
   sources can become formal evidence"— no llega al usuario. Vive en
   `../../services/bilateral-ai.service.ts:223-226`.
 - `getDraftTitle()` está duplicado aquí y en `draft-result-card`. Si cambia la

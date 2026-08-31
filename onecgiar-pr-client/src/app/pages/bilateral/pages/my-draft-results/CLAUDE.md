@@ -1,10 +1,10 @@
 # my-draft-results
 
-**Verified:** 2026-08-28 · branch performance-refactor · 15cb2753b
+**Verified:** 2026-08-31 · branch performance-refactor · bf8df3930
 
 ## What it is
 The **Drafts** tab of the bilateral center dashboard (P2-3169). Lists every AI-generated result
-suggestion the center still has to decide on, and offers Review (read-only aside), Promote (creates
+suggestion the center still has to decide on, and offers Review (read-only aside), Create Result (creates
 the real result) and Delete on each one. P2-3319 added a **filter by project** on top of the list.
 
 ## Contract

@@ -81,7 +81,7 @@ describe('MyDraftResultsComponent', () => {
       expect(text).toContain('Nothing is saved or created');
     });
 
-    it('tells the user Promote turns the draft into a real result', () => {
+    it('tells the user Create Result turns the draft into a real result', () => {
       const text = tooltipFor('.mdr-btn--promote').text;
       expect(text).toBe(component.promoteTooltip);
       expect(text).toContain('real bilateral result');
