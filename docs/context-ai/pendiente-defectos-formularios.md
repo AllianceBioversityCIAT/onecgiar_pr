@@ -49,18 +49,23 @@ Impact Areas, se pierde lo escrito, y el mensaje de error no dice qué falta (`:
 `:667-676`, `:683-692`, `:704-716`, `:727-736`). Arreglo mínimo: que el mensaje nombre el Impact Area
 que falta. **No cambiar la regla de obligatoriedad** — eso es decisión de negocio.
 
-## 🔴 LOTE 3 — Contributors & Partners (front, nuestro)
+## ❌ LOTE 3 — RETIRADO: los dos hallazgos de Contributors & Partners no se sostienen
 
-Archivos: `…/rd-contributors-and-partners/**`
-⚠️ Ojo: otro agente commiteó ahí el 31-ago (`268cbc622`, desacoplar Lead Center del toggle de socios
-externos). Releer el estado actual antes de tocar.
+Verificado en el código el 31-ago por la tarde, después de que **Santi** avisara de que ya había
+trabajado esa zona:
 
-1. **El rol de socio (Scaling / Demand / Innovation) se contagia entre resultados**: se marca sobre el
-   objeto compartido del catálogo en vez de sobre la fila del resultado, y reaparece en otros
-   resultados. Arreglo: clonar el objeto al agregarlo.
-2. **El botón de borrar de External partners elimina el socio equivocado** cuando está activo
-   "Other(s) External Partners" en fase 2026: los índices de la lista visible y la real no coinciden.
-   Arreglo: borrar por identidad, no por índice.
+- **"El rol de socio (Scaling / Demand / Innovation) se contagia entre resultados"** — esos campos
+  **no existen** en `rd-contributors-and-partners/`. El auditor los confundió con
+  `is_leading_result`, que es otra cosa.
+- **"El botón de borrar elimina el socio equivocado"** — los `splice` por índice de esa carpeta son
+  de proyectos no-pooled y de iniciativas contribuyentes, **no de External partners**.
+
+**Lo que sí había ahí ya lo arregló Santi** en `268cbc622` (31-ago 12:10, ticket **P2-3326**):
+desacopló el liderazgo de centro del de socio — antes marcar un socio como líder **forzaba a cero**
+el liderazgo de todos los centros, y al revés — y separó el mensaje compartido en dos. Con 201
+líneas de test y el `CLAUDE.md` de la carpeta actualizado.
+
+🛑 **Esa zona es de Santi.** No entrar sin hablar con él.
 
 ## 🔴 LOTE 4 — Geographic Location y Evidence (front, nuestro)
 
