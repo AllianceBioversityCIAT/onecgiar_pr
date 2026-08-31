@@ -112,6 +112,12 @@ export class PrTableComponent {
       if (av == null && bv == null) return 0;
       if (av == null) return -1 * order;
       if (bv == null) return 1 * order;
+      if (typeof av === 'string' && typeof bv === 'string') {
+        return av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' }) * order;
+      }
+      if (typeof av === 'number' && typeof bv === 'number') {
+        return (av - bv) * order;
+      }
       if (av < bv) return -1 * order;
       if (av > bv) return 1 * order;
       return 0;

@@ -11,12 +11,18 @@ import { PR_TABLE_HOST } from './pr-table.host';
   template: `<i class="material-icons-round pr-sort-icon" [class.pr-sort-icon--active]="state() !== 0">{{ icon() }}</i>`,
   styles: [
     `.pr-sort-icon {
-      font-size: 14px;
+      font-size: 15px;
       vertical-align: middle;
-      color: rgba(var(--pr-color-white-rgb), 0.6);
+      color: currentColor;
+      opacity: 0.5;
+      transition: opacity 0.15s ease, color 0.15s ease;
+    }
+    .pr-sort-icon:hover {
+      opacity: 0.85;
     }
     .pr-sort-icon--active {
-      color: var(--pr-color-white);
+      opacity: 1;
+      color: var(--pr-color-primary-500, #7c3aed);
     }`
   ]
 })
