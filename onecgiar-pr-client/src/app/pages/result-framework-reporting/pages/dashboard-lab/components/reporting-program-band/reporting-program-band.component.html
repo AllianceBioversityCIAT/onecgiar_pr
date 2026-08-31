@@ -216,6 +216,59 @@
 <!-- ═══ TOOLBAR — first thing in the 32px content pad (CURRENT :895-1002) ═══
      Search · Section · Type · Category · Status  ……  Grouped | All indicators  -->
 @if (showToolbar()) {
+  @if (summaryStats(); as stats) {
+    <!-- Top Page Statistics Summary Card -->
+    <div class="px-[32px] pt-[24px]">
+      <div class="rounded-2xl border border-[rgba(30,32,47,0.09)] bg-white px-8 py-5 shadow-xs">
+        <div class="grid grid-cols-4 gap-8 max-lg:grid-cols-2 max-sm:grid-cols-1">
+          <!-- Programs/Accelerators -->
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2">
+              <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">account_tree</span>
+              <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Programs/Accelerators</span>
+            </div>
+            <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
+              {{ stats.programsCount }}
+            </span>
+          </div>
+
+          <!-- Areas of Work -->
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2">
+              <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">layers</span>
+              <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Areas of Work</span>
+            </div>
+            <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
+              {{ stats.aowsCount }}
+            </span>
+          </div>
+
+          <!-- Total KPIs -->
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2">
+              <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">checklist</span>
+              <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">Total KPIs</span>
+            </div>
+            <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
+              {{ stats.totalKpis }}
+            </span>
+          </div>
+
+          <!-- KPIs with Evidence -->
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-2">
+              <span class="material-icons-round text-[16px] text-emerald-600" aria-hidden="true">assignment_turned_in</span>
+              <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">KPIs with Evidence</span>
+            </div>
+            <span class="pr-figure mt-1 text-[28px] font-extrabold leading-none text-emerald-800 tabular-nums">
+              {{ stats.reportedKpis }} of {{ stats.totalKpis }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
   <!--
     Section heading — reference :1102, 20px/700, tracking -.01em (= -0.2px at 20px), 16px under it.
     `<h2>`, not the reference's `<h1>`: the band already owns the page `<h1>` (the programme name),
@@ -224,7 +277,9 @@
     top margin would collapse. 32px above = the same content pad the toolbar used to carry.
   -->
   <h2
-    class="m-0 px-[32px] pb-[16px] pt-[32px] text-[20px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]">
+    class="m-0 px-[32px] pb-[16px] text-[20px] font-bold leading-[1.35] tracking-[-0.01em] text-[var(--pr-text-heading)]"
+    [class.pt-[24px]]="summaryStats()"
+    [class.pt-[32px]]="!summaryStats()">
     {{ reportingHeading() }}
   </h2>
 

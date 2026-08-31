@@ -560,4 +560,25 @@ describe('ReportingProgramBandComponent', () => {
       expect(backBtn.textContent).toContain('Back to Custom Page');
     });
   });
+
+  describe('summary stats card', () => {
+    it('renders summary stats card above reporting heading when summaryStats is provided', async () => {
+      await build({
+        showToolbar: true,
+        summaryStats: {
+          programsCount: 1,
+          aowsCount: 5,
+          totalKpis: 41,
+          reportedKpis: 0
+        }
+      });
+
+      const text = root().textContent || '';
+      expect(text).toContain('Programs/Accelerators');
+      expect(text).toContain('Areas of Work');
+      expect(text).toContain('Total KPIs');
+      expect(text).toContain('KPIs with Evidence');
+      expect(text).toContain('0 of 41');
+    });
+  });
 });

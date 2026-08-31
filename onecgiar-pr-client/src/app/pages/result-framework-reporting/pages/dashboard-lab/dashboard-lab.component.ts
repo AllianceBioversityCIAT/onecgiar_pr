@@ -1906,6 +1906,25 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     return { count: list.length, avgProgress: Math.round(sum / list.length), active };
   });
 
+  /** Summary stats for the top reporting overview card (PROGRAMS, AOWs, TOTAL KPIs, KPIs WITH EVIDENCE). */
+  readonly plannedReportingSummaryStats = computed(() => {
+    const aowsCount = this.aows().length;
+    const groups = this.reportingGroups();
+    const allIndicators = groups.flatMap(g => g.indicators ?? []);
+    const totalKpis = allIndicators.length;
+    const reportedKpis = allIndicators.filter(i => {
+      const pct = Number(i.progress_percentage ?? 0);
+      const achieved = Number(i.actual_achieved_value_sum ?? 0);
+      return pct > 0 || achieved > 0;
+    }).length;
+    return {
+      programsCount: this.selected() ? 1 : 0,
+      aowsCount,
+      totalKpis,
+      reportedKpis
+    };
+  });
+
   /** Top AoWs by progress for the Dashboard leadership overview (cap 8). */
   readonly aowProgressRows = computed<AowProgressRow[]>(() => {
     return [...this.aows()]

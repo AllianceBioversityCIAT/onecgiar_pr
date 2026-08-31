@@ -29,6 +29,13 @@ export interface BandFilterGroup {
   items: BandFilterOption[];
 }
 
+export interface ReportingSummaryStats {
+  programsCount: number;
+  aowsCount: number;
+  totalKpis: number;
+  reportedKpis: number;
+}
+
 /**
  * Program band + tabs + Reporting toolbar.
  *
@@ -57,6 +64,8 @@ export class ReportingProgramBandComponent {
 
   readonly programCode = input<string>('');
   readonly programName = input<string>('');
+  /** Summary statistics banner above reporting heading (PROGRAMS, AOWs, TOTAL KPIs, EVIDENCE). */
+  readonly summaryStats = input<ReportingSummaryStats | null>(null);
   /**
    * Long copy for the ⓘ popover body. Empty → fall back to a short placeholder built from the
    * name (the SP list payload still has no description field — NEEDS-BACKEND).

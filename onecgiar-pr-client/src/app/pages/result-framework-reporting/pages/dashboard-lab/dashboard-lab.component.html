@@ -1252,6 +1252,7 @@
           <app-reporting-program-band
             [programCode]="selected()?.initiativeCode || ''"
             [programName]="selected()?.initiativeShortName || selected()?.initiativeName || ''"
+            [summaryStats]="plannedReportingSummaryStats()"
             [aowCount]="aows().length"
             [plannedResultsCount]="bandPlannedResultsCount()"
             [cycleYear]="dataControlSE.reportingCurrentPhase.phaseYear"
