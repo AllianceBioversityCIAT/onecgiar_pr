@@ -30,3 +30,12 @@
 - **Adjudicated:** KPI summary cards + filter tabs (chrome, not sections) stay above the hero — R-2's "first section after About" satisfied; the requirements' "hub" is `app-reporting-entry-hub` in the parent, untouched.
 - **Verification:** program-overview 2/142 green; folder 20/629 green.
 - Gate auto-approved (pre-approved mode) → continue to OAH-T-3.
+
+### OAH-T-3 — Section rebuild: rail + chips + skeletons + empty — **PASS** (2026-09-01, attempt 1/1 + one Leader-adjudicated remainder closed pre-review)
+
+- **Files:** `program-overview.component.{ts,html}` (rail with single `richStats` computed, chips + legend, skeletons, empty kept; `richRows`/`richLoading` inputs + `continueReporting` output; `import type` from the host — no runtime cycle), `program-overview.component.spec.ts` (2 pinned Report-button tests re-fixtured to richRows, assertions byte-identical, documented), `program-overview.oah-hero.spec.ts` (new, 9 tests, hand-written literals), `dashboard-lab.component.html` (3 bindings).
+- **Remainder adjudicated pre-review (scope owed, not review round):** Implementer's coarse `richLoading=loadingAows()` violated R-6's no-jumping BUT (list loads before ToCs stream). Fixed to `plannedReportingStatsLoading()` (ToC-aware, host:1997) + a pinning test citing the source. Closed before the Reviewer spawn — the single-review-round mandate stayed intact.
+- **Reviewer verdict: PASS.** R-1 sum-of-rows in one computed with literal expectations; title disclosure + N=0 omission exact; R-5 chips keep thin `xcutProgress` + `openAow` bucket click-through, no Report label; R-6 gates rail AND rows incl. populated-but-loading; tokens all defined, no hex, no cross-component class (grep test pins both); DD-4 thin sources byte-untouched with card-4 pinned at fixture values.
+- **ADVISORY (recorded):** (1) all-rows skeleton during partial load satisfies the stronger BUT (no per-row flag exists by design B-16) — check at T-6's cold-load trace; (2) **forward pointer to T-4:** the two re-fixtured pinned tests must stay UNTOUCHED in the row rebuild (a second rewrite erodes the pin); (3) **forward pointer to T-5:** `percentOf()` now dead — owned there already; (4) `OverviewAowProgressRowRich` may deserve a sibling model file if a third consumer appears — future decision, not a defect.
+- **Verification:** folder 21/638 green; design-tokens sweep green; tsc clean; full dev `ng build` clean (template typecheck).
+- Gate auto-approved (pre-approved mode) → continue to OAH-T-4.

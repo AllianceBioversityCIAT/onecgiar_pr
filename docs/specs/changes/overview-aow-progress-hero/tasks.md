@@ -23,7 +23,7 @@
 - **DoD:** all four pinned areas updated-or-proven-unaffected, enumerated in execution.md.
 
 ### `OAH-T-3` — Section rebuild: rail + chips + skeletons + empty
-- **Status:** `[ ]` · client · **L** · Depends: T-2 · Blocks: T-5
+- **Status:** `[x]` · client · **L** · Depends: T-2 · Blocks: T-5
 - **Scope:** Rail (ring/figures/splits/CTA), outcomes chips + legend (keeping the old rows' `openAow` click-through, R-5), rail+row skeletons, existing empty treatment kept, new `richRows` input (DD-4). Skills: `angular-developer`.
 - **Covers:** R-1 render scenarios incl. skeleton BUT + title disclosure, R-5 both clauses, R-6 all clauses (render side incl. empty program), R-1 focus/no-reload AND (assert the CTA is a router navigation, not location.href).
 - **Tests (OAH-TEST-3):** rail figures from a HAND-computed fixture; skeletons when loading; chips carry figures, no Report label, and emit `openAow` with bucket codes; empty-program fixture renders the existing empty block; thin-input consumers (card 4 fixture numbers) unchanged.

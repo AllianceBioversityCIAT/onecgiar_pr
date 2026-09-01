@@ -929,7 +929,12 @@ describe('ProgramOverviewComponent', () => {
     });
 
     it('(b) clicking a row\'s Report button yields exactly one openAow("AOW02") emission — the row\'s own click must not ALSO fire', () => {
-      fixture.componentRef.setInput('aowProgress', [{ code: 'AOW02', name: 'Genetic Innovation', done: 1, total: 4 }]);
+      // @akili-spec changes/overview-aow-progress-hero — OAH-T-3 deliberate edit: the hero row is
+      // now fed by `richRows` (design DD-4), not the thin `aowProgress` input, which stays wired
+      // only to KPI card 4 / the section badge / `aowStats` and no longer drives this row.
+      fixture.componentRef.setInput('richRows', [
+        { code: 'AOW02', name: 'Genetic Innovation', complete: 0, inProgress: 1, notStarted: 3, zeroTarget: 0, reported: 1, total: 4, remaining: 3 }
+      ]);
       fixture.detectChanges();
 
       const emitted: string[] = [];
@@ -947,7 +952,10 @@ describe('ProgramOverviewComponent', () => {
     });
 
     it('(c) canReportW1W2=false → the row Report button is aria-disabled with the exact tooltip title, and stays keyboard-reachable', () => {
-      fixture.componentRef.setInput('aowProgress', [{ code: 'AOW02', name: 'Genetic Innovation', done: 1, total: 4 }]);
+      // @akili-spec changes/overview-aow-progress-hero — OAH-T-3 deliberate edit, same reason as (b) above.
+      fixture.componentRef.setInput('richRows', [
+        { code: 'AOW02', name: 'Genetic Innovation', complete: 0, inProgress: 1, notStarted: 3, zeroTarget: 0, reported: 1, total: 4, remaining: 3 }
+      ]);
       fixture.componentRef.setInput('canReportW1W2', false);
       fixture.detectChanges();
 

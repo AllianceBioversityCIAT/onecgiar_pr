@@ -28,6 +28,8 @@ import {
   ReportingTrendModel
 } from './program-overview.charts';
 import type { TocMapModel } from '../../dashboard-lab.toc-map';
+// @akili-spec changes/overview-aow-progress-hero — the host exports this interface (design.md §3).
+import type { OverviewAowProgressRowRich } from '../../dashboard-lab.component';
 import type { ECElementEvent } from 'echarts/core';
 // @akili-spec changes/reporting-entry-hub — reuse the hub's centralised copy for the Report button's tooltip text.
 import { HUB_COPY } from '../reporting-entry-hub/hub-copy';
@@ -137,6 +139,33 @@ export class ProgramOverviewComponent {
   readonly aowProgress = input<AowProgressRow[]>([]);
   /** Cross-cutting buckets (Intermediate / 2030) under the AoW list. */
   readonly xcutProgress = input<AowProgressRow[]>([]);
+
+  /**
+   * Rich per-AoW rows for the promoted hero section (`changes/overview-aow-progress-hero`,
+   * design.md §3/§6). Feeds the summary rail (`richStats` below — the rail's OWN sum of these
+   * rows, OAH-R-1 "internal coherence") and, for now, the pre-existing row markup (the segmented-
+   * bar row anatomy is OAH-T-4's rebuild — this task keeps the existing row fed from the rich
+   * rows' `code`/`name`/`reported`/`total`). The thin `aowProgress`/`xcutProgress` inputs above
+   * stay UNTOUCHED (design DD-4) — they keep feeding KPI card 4, the section-tab badge and
+   * `aowStats`; their numbers do not move.
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  readonly richRows = input<OverviewAowProgressRowRich[]>([]);
+  /**
+   * True while any AoW's ToC is still loading — bound by the host to its existing `loadingAows()`
+   * (OAH-R-6 `!toc` reuse, design B-16: no new aggregate). Gates the rail figures and the row list
+   * behind pulse skeletons so no partial sum is ever painted (OAH-R-1/R-6 BUT).
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  readonly richLoading = input<boolean>(false);
+  /**
+   * OAH-R-1 "Continue reporting" CTA. This component only emits the intent — the actual
+   * `setOnlyPending(true)` + router navigation lives in the HOST's `continueReporting()`
+   * (design.md §3, C-1: Overview/Reporting are separate routes, so the navigation must survive
+   * this component being destroyed).
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  readonly continueReporting = output<void>();
   /** W3/Bilateral results by category, primary-role only (P2-3302). */
   readonly bilateralCategories = input<CategoryBar[]>([]);
   /** W3/Bilateral results reporting status segments. */
@@ -232,6 +261,47 @@ export class ProgramOverviewComponent {
     const pct = totalPlanned ? Math.round((totalDone / totalPlanned) * 100) : 0;
     return { totalPlanned, totalDone, pct, count: rows.length };
   });
+
+  /**
+   * Rail figures — the SUM of the hero's own `richRows` (OAH-R-1 "internal coherence" scenario:
+   * same derivation site as the rows themselves, never a different source — the requirement's
+   * single-home rule). `pct` rounds `reported/total` the same way `aowStats.pct` above does.
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  readonly richStats = computed(() => {
+    const rows = this.richRows();
+    const complete = rows.reduce((sum, r) => sum + r.complete, 0);
+    const inProgress = rows.reduce((sum, r) => sum + r.inProgress, 0);
+    const notStarted = rows.reduce((sum, r) => sum + r.notStarted, 0);
+    const zeroTarget = rows.reduce((sum, r) => sum + r.zeroTarget, 0);
+    const total = rows.reduce((sum, r) => sum + r.total, 0);
+    const reported = complete + inProgress;
+    const pct = total ? Math.round((reported / total) * 100) : 0;
+    return { complete, inProgress, notStarted, zeroTarget, total, reported, pct };
+  });
+
+  /** Rail `title` disclosure for the zero-target exclusion (OAH-R-1) — `null` omits the attribute. */
+  readonly zeroTargetTitle = computed(() => {
+    const n = this.richStats().zeroTarget;
+    return n > 0 ? `excludes ${n} zero-target KPIs` : null;
+  });
+
+  /** SVG ring geometry — `r=40` circle (mockup's dasharray/dashoffset pair, design.md §6). */
+  readonly ringCircumference = 2 * Math.PI * 40;
+  readonly ringDashoffset = computed(() => this.ringCircumference * (1 - this.richStats().pct / 100));
+
+  /** Stable placeholder arrays for the skeleton `@for` loops (fixed identity across renders). */
+  readonly skeletonRowPlaceholders = [0, 1, 2];
+  readonly skeletonSplitPlaceholders = [0, 1, 2];
+
+  /**
+   * Row percent from the rich counts (`reported/total`) — feeds the pre-existing row's bar/percent
+   * badge until OAH-T-4 replaces them with the segmented-bar anatomy.
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  percentOfRich(row: OverviewAowProgressRowRich): number {
+    return row.total ? Math.round((row.reported / row.total) * 100) : 0;
+  }
 
   readonly contributingCentersCount = computed(() => {
     const centers = this.bilateralCenters();
@@ -443,9 +513,11 @@ export class ProgramOverviewComponent {
   /**
    * `REH-R-7`/`REH-AC-15`: the row's inline Report button. Stops propagation so the row's own
    * `(click)="openAow.emit(row.code)"` does not ALSO fire — otherwise every click emits twice.
+   * Typed to the minimal shape both `AowProgressRow` and `OverviewAowProgressRowRich` satisfy
+   * (`changes/overview-aow-progress-hero` OAH-T-3: the hero row now iterates `richRows`).
    */
   // @akili-spec changes/reporting-entry-hub
-  onReportAowRow(row: AowProgressRow, event: Event): void {
+  onReportAowRow(row: { code: string }, event: Event): void {
     event.stopPropagation();
     if (!this.canReportW1W2()) return;
     if (row.code) this.openAow.emit(row.code);

@@ -1221,6 +1221,8 @@
           [bilateralStatusSegments]="overviewBilateralStatusSegments()"
           [aowProgress]="overviewAowProgress()"
           [xcutProgress]="overviewXcutProgress()"
+          [richRows]="overviewAowProgressRich()"
+          [richLoading]="plannedReportingStatsLoading()"
           [bilateralCategories]="overviewBilateralCategories()"
           [bilateralCenters]="overviewBilateralCenters()"
           [w12Heatmap]="overviewW12Heatmap()"
@@ -1235,7 +1237,8 @@
           [canReportW1W2]="entityAowService.canReportResults()"
           (openResults)="onOverviewLink($event)"
           (openAow)="onOpenAow($event)"
-          (focusHub)="onFocusHub($event)" />
+          (focusHub)="onFocusHub($event)"
+          (continueReporting)="continueReporting()" />
       </article>
       }
 
