@@ -146,7 +146,7 @@ export class AowHloTableComponent {
   // P2-3053: agreed nomenclature + dynamic phase year ("<year> target") instead of hardcoded "2025".
   // P2-3133: the 2030 Outcomes view shows a cumulative "2030 target"; "Achieved value" replaces "Achieved target" globally.
   columnOrder = computed<ColumnOrder[]>(() => [
-    { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
+    { title: 'KPI statement', attr: 'indicator_description', width: '27%' },
     { title: 'Indicator typology', attr: 'type_name', width: '10%' },
     {
       title: this.tableType === '2030-outcomes' ? '2030 target' : `${this.entityAowService.reportingPhaseYear} target`.trim(),
@@ -154,15 +154,54 @@ export class AowHloTableComponent {
       width: '10%'
     },
     { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
+    // P2-3296: the two bars. Not sortable — it renders two figures, so there is no single
+    // value to sort by, and the numeric columns beside it already cover that need.
+    { title: 'Progress', attr: 'progress_bars', hideSortIcon: true, width: '13%' },
     { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
 
   isKnowledgeProduct = signal<boolean>(true);
 
   getProgress(value: string): number {
-    const progress = value.split('%')[0];
+    // Defensive: the preliminary field is new, so a payload from an older server — or a row
+    // that never had contributions — can arrive without it. `split` on undefined throws and
+    // takes the whole table down with it.
+    const progress = (value ?? '0%').split('%')[0];
 
-    return Number(progress);
+    return Number(progress) || 0;
+  }
+
+  /**
+   * P2-3296. Two bars, not one stacked bar.
+   *
+   * Preliminary (Submitted + Approved) and QA (QAed + Approved) *overlap* on Approved, so they
+   * are not additive: stacking them would double-count every approved W3/Bilateral result and
+   * show a total nobody can reconcile. They are two independent readings of the same target,
+   * so they get one track each.
+   */
+  getPreliminaryProgress(result: any): number {
+    return this.getProgress(result?.preliminary_progress_percentage);
+  }
+
+  /**
+   * Width of the filled part, clamped to 100. The label keeps the real number — Nicoleta
+   * confirmed over-achievement is shown, not capped — but a 500% bar has nowhere to go.
+   */
+  barWidth(percentage: number): number {
+    if (!Number.isFinite(percentage) || percentage <= 0) return 0;
+
+    return Math.min(percentage, 100);
+  }
+
+  progressTooltip(result: any): string {
+    const qa = result?.progress_percentage ?? '0%';
+    const preliminary = result?.preliminary_progress_percentage ?? '0%';
+
+    return (
+      `QA ${qa} — results that passed quality review (QAed or Approved). ` +
+      `Preliminary ${preliminary} — results submitted but not yet reviewed, plus Approved ones. ` +
+      'Approved results count towards both.'
+    );
   }
 
   getStatusLabel(progressPercentage: string): string {

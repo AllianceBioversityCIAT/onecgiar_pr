@@ -111,6 +111,28 @@
           </td>
           <td style="text-align: center">{{ result.target_value_sum }}</td>
           <td style="text-align: center">{{ result.actual_achieved_value_sum }}</td>
+          <!-- P2-3296: two tracks, not one stacked bar. Preliminary and QA overlap on Approved,
+               so stacking them would double-count every approved W3/Bilateral result. -->
+          <td>
+            <div class="progress-cell" [prTooltip]="progressTooltip(result)">
+              <div class="progress-cell_row">
+                <span class="progress-cell_label">QA</span>
+                <span class="progress-cell_track">
+                  <span class="progress-cell_fill progress-cell_fill--qa" [style.width.%]="barWidth(getProgress(result.progress_percentage))"></span>
+                </span>
+                <span class="progress-cell_value">{{ result.progress_percentage || '0%' }}</span>
+              </div>
+              <div class="progress-cell_row">
+                <span class="progress-cell_label">Prel.</span>
+                <span class="progress-cell_track">
+                  <span
+                    class="progress-cell_fill progress-cell_fill--preliminary"
+                    [style.width.%]="barWidth(getPreliminaryProgress(result))"></span>
+                </span>
+                <span class="progress-cell_value">{{ result.preliminary_progress_percentage || '0%' }}</span>
+              </div>
+            </div>
+          </td>
           <td>
             <div
               class="tab-content_chip"

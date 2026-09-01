@@ -291,15 +291,21 @@ describe('AoWBilateralRepository', () => {
       expect.stringContaining('SELECT'),
       [2025, 2025, 'SP01', 'PHASE-1', 2025, 2025, 'SP01', 'PHASE-1'],
     );
+    // P2-3296 widened the row: the QA pair is unchanged, the preliminary pair is new and
+    // reads 0 / '0%' when the fixture carries no preliminary column.
     expect(result.get(1)).toEqual({
       actual_achieved_value_sum: 15,
       progress_percentage: '75%',
+      preliminary_achieved_value_sum: 0,
+      preliminary_progress_percentage: '0%',
       target_value_sum: 20,
       work_package_acronym: null,
     });
     expect(result.get(2)).toEqual({
       actual_achieved_value_sum: 10,
       progress_percentage: '40%',
+      preliminary_achieved_value_sum: 0,
+      preliminary_progress_percentage: '0%',
       target_value_sum: 25,
       work_package_acronym: null,
     });
@@ -320,9 +326,15 @@ describe('AoWBilateralRepository', () => {
       defaultContext,
     );
 
+    // ⚠️ target 0 does NOT produce a ratio: calculateProgressPercentage falls back to
+    // `achieved * 100`, so 15 reads as 1500%. Pinned as current behaviour, not endorsed —
+    // 53 indicators sit at target 0 today, and once these figures feed an average a single
+    // mistyped value can move a whole HLO. Awaiting the PO's call before touching it.
     expect(result.get(1)).toEqual({
       actual_achieved_value_sum: 15,
       progress_percentage: '1500%',
+      preliminary_achieved_value_sum: 0,
+      preliminary_progress_percentage: '0%',
       target_value_sum: 0,
       work_package_acronym: null,
     });
@@ -660,6 +672,138 @@ describe('AoWBilateralRepository', () => {
 
       expect(result.indicators[0].centers).toEqual([]);
       expect(result.indicators[0].center_id).toBeNull();
+    });
+  });
+
+  /**
+   * P2-3296. The status sets were settled by Nicoleta Trifa (1-Sep-2026) and confirmed by the
+   * PO: Preliminary is Submitted + Approved — Editing is a draft and does not count until it is
+   * submitted — and Final stays QualityAssessed + Approved, the pair P2-2841 fixed. Approved
+   * deliberately counts in BOTH, because W3/Bilateral results are tagged to P/A AoW HLO targets.
+   */
+  describe('P2-3296 — preliminary and QA progress', () => {
+    it('splits the achieved sum by status inside a single pass', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await repository.getIndicatorContributions('SP01', defaultContext);
+
+      const [query] = dataSourceQueryMock.mock.calls[0];
+
+      // QA / Final keeps the production pair.
+      expect(query).toContain(
+        'SUM(CASE WHEN r.status_id IN (2, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END)',
+      );
+      // Preliminary: Submitted + Approved, no Editing.
+      expect(query).toContain(
+        'SUM(CASE WHEN r.status_id IN (3, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END)',
+      );
+      // One subquery, not two — the filter lets the union through and CASE does the split.
+      expect(query).toContain('AND r.status_id IN (2, 3, 6)');
+      expect(
+        query.match(/COALESCE\(SUM\(CASE WHEN r\.status_id/g),
+      ).toHaveLength(2);
+    });
+
+    it('never lets Editing, PendingReview, Rejected or Draft into either bar', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+
+      await repository.getIndicatorContributions('SP01', defaultContext);
+
+      const [query] = dataSourceQueryMock.mock.calls[0];
+      const statusSets = query.match(/status_id IN \(([^)]*)\)/g) ?? [];
+
+      expect(statusSets.length).toBeGreaterThan(0);
+      for (const set of statusSets) {
+        const ids = set
+          .replace(/.*\(/, '')
+          .replace(/\)/, '')
+          .split(',')
+          .map((n: string) => Number(n.trim()));
+        // 1 Editing · 5 PendingReview · 7 Rejected · 8 Draft
+        expect(ids).not.toContain(1);
+        expect(ids).not.toContain(5);
+        expect(ids).not.toContain(7);
+        expect(ids).not.toContain(8);
+      }
+    });
+
+    it('returns both figures and both percentages per indicator', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 11,
+          toc_result_indicator_id: 'node-11',
+          target_value_sum: 100,
+          actual_achieved_value_sum: 40,
+          preliminary_achieved_value_sum: 75,
+          work_package_acronym: 'AOW01',
+        },
+      ]);
+
+      const map = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+
+      expect(map.get(11)).toEqual({
+        target_value_sum: 100,
+        actual_achieved_value_sum: 40,
+        preliminary_achieved_value_sum: 75,
+        work_package_acronym: 'AOW01',
+        progress_percentage: '40%',
+        preliminary_progress_percentage: '75%',
+      });
+    });
+
+    // Nicoleta: "for exceeding the target, pls show what's above 100%" — target 10, reported 50
+    // is 500%, not a capped 100%.
+    it('does not cap either bar at 100%', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 12,
+          toc_result_indicator_id: 'node-12',
+          target_value_sum: 10,
+          actual_achieved_value_sum: 50,
+          preliminary_achieved_value_sum: 30,
+          work_package_acronym: null,
+        },
+      ]);
+
+      const map = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+
+      expect(map.get(12)?.progress_percentage).toBe('500%');
+      expect(map.get(12)?.preliminary_progress_percentage).toBe('300%');
+    });
+
+    // The QA pair is what production already shows. A row that predates this change — no
+    // preliminary column — must still read exactly as before rather than blowing up.
+    it('keeps the QA figures unchanged when the preliminary column is absent', async () => {
+      mockResolveContext();
+      dataSourceQueryMock.mockResolvedValueOnce([
+        {
+          indicator_id: 13,
+          toc_result_indicator_id: 'node-13',
+          target_value_sum: 200,
+          actual_achieved_value_sum: 50,
+          work_package_acronym: 'AOW02',
+        },
+      ]);
+
+      const map = await repository.getIndicatorContributions(
+        'SP01',
+        defaultContext,
+      );
+
+      expect(map.get(13)?.actual_achieved_value_sum).toBe(50);
+      expect(map.get(13)?.progress_percentage).toBe('25%');
+      expect(map.get(13)?.preliminary_achieved_value_sum).toBe(0);
+      expect(map.get(13)?.preliminary_progress_percentage).toBe('0%');
     });
   });
 });
