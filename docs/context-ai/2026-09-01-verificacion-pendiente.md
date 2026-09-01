@@ -6,8 +6,16 @@ visto en pantalla.** Son 17 commits de cuatro sesiones distintas. Este documento
 hay que mirarlos cuando el ambiente vuelva, para no dar vueltas ni abrir el resultado equivocado.
 
 **Antes de nada — ¿estás mirando el build correcto?** El sello del sidebar debe leer **v16 o
-superior**. Si lee menos, lo que sigue no está desplegado todavía y cualquier fallo que veas es de la
-versión vieja, no del cambio. (Detalle de la cadena de despliegue en `como-validar-un-despliegue-en-prtest.md`.)
+superior**, y **se lee del bundle servido** (`curl <host>/main.js | grep APP_VERSION`), nunca del
+sidebar renderizado. (Cadena de despliegue en `como-validar-un-despliegue-en-prtest.md`.)
+
+🛑 **Pero el 1-sep el sello dejó de ser suficiente, y conviene saberlo:** el artefacto servido decía
+**16** y sin embargo **no contenía el commit `7c0359753`, anterior al bump**. Eso es imposible en un
+checkout lineal, así que lo que servía prtest era **un artefacto ensamblado a mano** — sello de un
+commit, código de otro momento. **Consecuencia: no deducir por horas.** Que un cambio sea anterior al
+bump NO prueba que esté desplegado. Si una entrada sale negativa, antes de reportarla hay que
+distinguir *"el cambio está y falla"* de *"el cambio no está en este build"*, buscando una cadena
+literal suya dentro del chunk servido.
 
 ---
 
@@ -28,16 +36,47 @@ No hace falta crear ninguno. **Casi todo lo de hoy es un gate de fase, así que 
 abrir uno de 2025 y uno de 2026 y comparar** — la lectura del código no basta porque los dos ejes se
 leen igual.
 
+🛑 **CORREGIDO el 1-sep tras verificar contra la API. Los códigos que traía este documento estaban
+mal**, copiados de `estado-2026-08-27.md`, que se equivoca: decía que `8916` era Policy change de
+2026 y en realidad es **Innovation Development de fase 2025**; y que `8501` era de 2025 cuando es
+**Policy change de fase 2026**. 🛑 **No volver a ese documento a por códigos.**
+
 | Para qué | Fase 2026 | Fase 2025 |
 |---|---|---|
-| Policy change | `8916` | `8501` |
-| Innovation Development | `8927`, `8928`, `8929`, `8933` | `8548`, `8869` |
+| Policy change | `8501`, `8580`, `8594` | `6550`, `6598`, `6475` |
+| Innovation Development | `8560`, `8562`, `8563`, `8565` | `5921`, `6069`, `17` |
 | Bilateral creado a mano | `8967` | — |
 | Promovido desde borrador de IA | `8884` | — |
 | SP08, Reporting 2026, en *Editing* | `8842` | — |
 
 ⚠️ Los de Policy change e Innovation Development de 2025 **están dentro del portafolio P25**. Ese es
 justamente el caso que rompen los gates mal hechos, así que son los que hay que abrir.
+
+### 🥇 Cómo se abre un resultado — sin esto se pierde una hora
+
+**La URL del detalle NO funciona sin `?phase=<id>`.** Sin él la app pide
+`get/transform/<code>?phase=null`, recibe un 404 y **te devuelve a la lista de resultados sin decir
+nada**: parece que el resultado no existe.
+
+```
+https://prtest.ciat.cgiar.org/result/result-detail/<code>/<seccion>?phase=<id>
+                       Reporting 2026 → phase=36   ·   Reporting 2025 → phase=34
+```
+Secciones: `policy-change1-info` · `innovation-dev-info` · `general-information`.
+
+**No hace falta inyectar el token**: el navegador de Playwright conserva la sesión entre sesiones de
+agente. Compruébalo antes con `localStorage.getItem('token')` — y **si ya hay sesión, no la inyectes**,
+porque escribir la credencial en una llamada la deja en claro en la transcripción.
+
+### 🛑 Dos endpoints que producen falsos negativos (medidos el 1-sep)
+
+- **`api/results/get/<code>` puede devolver una versión de OTRA fase.** Consultado `8565` devolvió un
+  *Lead contact person* poblado mientras la pantalla, en fase 36, lo mostraba vacío. No era un fallo
+  de la app: era otra versión del mismo código. **Se distingue abriendo General Information de esa
+  misma fase**, o consultando por el **id interno**, no por el código.
+- **`api/results/get/transform/<code>?phase=` NO devuelve el resultado: devuelve solo el id interno**
+  (`"11033"`). Un bucle preguntándole por un campo da "vacío" para todos los códigos **porque esa
+  clave no existe en su respuesta**. Parece un patrón y no es nada.
 
 ---
 
