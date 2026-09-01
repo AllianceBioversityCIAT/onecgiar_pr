@@ -580,6 +580,93 @@ describe('ReportingAowTableComponent', () => {
       });
     });
 
+    // ── P2-3251 · the seven acceptance criteria, driven through the REAL control ─────────────
+    // Every other disclosure test above calls `component.toggle()` directly, so the header
+    // BUTTON is never pressed: dropping its `(click)` binding or its `aria-expanded` would
+    // leave the whole suite green while the screen stopped opening. These press the DOM.
+    describe('collapsed by default, through the header button', () => {
+      const twoCards = (): ReportingAowGroup[] => [
+        group([row({ indicator_id: 1 })]),
+        { ...group([row({ indicator_id: 2 })]), aow: { id: 2, code: 'AOW02', name: 'Breeding Pipelines' } }
+      ];
+
+      /** The card headers: direct children of each card `<section>` (the ⓘ button sits deeper). */
+      const headers = () =>
+        Array.from(
+          (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('section > button[aria-expanded]')
+        );
+      const headerFor = (code: string) => headers().find(b => b.textContent?.includes(code))!;
+      const panelOf = (btn: HTMLButtonElement) => btn.parentElement!.querySelector('.pr-collapse--card')!;
+      const press = (code: string) => {
+        headerFor(code).click();
+        fixture.detectChanges();
+      };
+
+      // AC1 + AC2 — arriving collapsed must not cost the header's information.
+      it('arrives with every card closed while code, name and KPI count stay on screen', async () => {
+        await build(twoCards());
+
+        expect(headers().length).toBe(2);
+        headers().forEach(btn => {
+          expect(btn.getAttribute('aria-expanded')).toBe('false');
+          expect(panelOf(btn).classList.contains('is-open')).toBe(false);
+          expect(panelOf(btn).getAttribute('aria-hidden')).toBe('true');
+        });
+        expect(rows().length).toBe(0);
+
+        const first = headerFor('AOW01').textContent ?? '';
+        expect(first).toContain('AOW01');
+        expect(first).toContain('Market Intelligence');
+        expect(first).toContain('1 KPI');
+      });
+
+      // AC3 + AC4 — the control opens the card and its indicators render.
+      it('opens the card and renders its indicators when the header is pressed', async () => {
+        await build(twoCards());
+        press('AOW01');
+
+        expect(headerFor('AOW01').getAttribute('aria-expanded')).toBe('true');
+        expect(panelOf(headerFor('AOW01')).classList.contains('is-open')).toBe(true);
+        expect(rows().length).toBe(1);
+        expect(text()).toContain('Number of knowledge products published');
+      });
+
+      // AC5 — and closes it again.
+      it('closes an open card on a second press', async () => {
+        await build(twoCards());
+        press('AOW01');
+        press('AOW01');
+
+        expect(headerFor('AOW01').getAttribute('aria-expanded')).toBe('false');
+        expect(rows().length).toBe(0);
+      });
+
+      // AC6 — the sibling is untouched.
+      it('leaves the other cards exactly as they were', async () => {
+        await build(twoCards());
+        press('AOW01');
+
+        expect(headerFor('AOW02').getAttribute('aria-expanded')).toBe('false');
+        expect(panelOf(headerFor('AOW02')).classList.contains('is-open')).toBe(false);
+        // Only AOW01's row is visible — AOW02's stays hidden.
+        expect(rows().length).toBe(1);
+      });
+
+      // AC7 — same on the next Science Program. AoW codes repeat between programmes, so without the
+      // `scopeKey` reset a card opened here reopened itself there (fixed with P2-3252).
+      it('starts closed again on the next Science Program', async () => {
+        await build(twoCards(), { scopeKey: 'SP06' });
+        press('AOW01');
+        expect(headerFor('AOW01').getAttribute('aria-expanded')).toBe('true');
+
+        fixture.componentRef.setInput('scopeKey', 'SP09');
+        fixture.detectChanges();
+
+        headers().forEach(btn => expect(btn.getAttribute('aria-expanded')).toBe('false'));
+        expect(rows().length).toBe(0);
+      });
+    });
+
     // P22 — the chip is the short tag (reference :4248). The group's full name renders beside it,
     // so repeating it there printed "Intermediate outcomes │ Intermediate outcomes".
     it('tags the program-level buckets without repeating their name', async () => {
