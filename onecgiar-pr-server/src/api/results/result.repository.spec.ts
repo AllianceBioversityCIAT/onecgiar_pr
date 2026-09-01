@@ -375,4 +375,45 @@ describe('ResultRepository (unit)', () => {
       ).resolves.toEqual(rows);
     });
   });
+
+  /**
+   * Form-defect sweep of 31-Aug-2026, LOTE 5 #3: a reviewer opening a bilateral Capacity Sharing
+   * result saw "Length of training" — and in fact every field of the section — as unanswered, even
+   * when the reporter had answered. Both catalogue FKs are nullable, and the query INNER JOINed
+   * them, so one missing answer dropped the whole row and the drawer received `[]`.
+   *
+   * The SQL text is the behaviour here, so that is what is asserted: there is no query builder to
+   * inspect and no database in a unit test.
+   */
+  describe('getCapacitySharingBilateralResultById — nullable catalogues must LEFT JOIN', () => {
+    const sqlOf = () =>
+      (queryMock.mock.calls[0][0] as string).replace(/\s+/g, ' ');
+
+    beforeEach(() => {
+      queryMock.mockResolvedValue([]);
+    });
+
+    it('LEFT JOINs both nullable catalogues, so a half-answered row still comes back', async () => {
+      await repo.getCapacitySharingBilateralResultById(123);
+
+      const sql = sqlOf();
+      expect(sql).toContain('LEFT JOIN capdevs_delivery_methods');
+      expect(sql).toContain('LEFT JOIN capdevs_term');
+      // The INNER form is what dropped the row. Catch it however it is spelled.
+      expect(sql).not.toMatch(/(?<!LEFT )(?<!OUTER )JOIN capdevs_term/);
+      expect(sql).not.toMatch(
+        /(?<!LEFT )(?<!OUTER )JOIN capdevs_delivery_methods/,
+      );
+    });
+
+    it('still INNER JOINs the capacity-development row itself, which is not optional', async () => {
+      await repo.getCapacitySharingBilateralResultById(123);
+
+      const sql = sqlOf();
+      // No capdev record means there is genuinely nothing to show; that join must NOT be relaxed.
+      expect(sql).toMatch(/JOIN results_capacity_developments/);
+      expect(sql).not.toContain('LEFT JOIN results_capacity_developments');
+      expect(queryMock).toHaveBeenCalledWith(expect.any(String), [123]);
+    });
+  });
 });

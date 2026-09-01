@@ -3136,6 +3136,15 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * LEFT JOINs the two catalogues on purpose. Both FKs are nullable
+   * (`ResultsCapacityDevelopments.capdev_delivery_method_id` and `.capdev_term_id`), so the INNER
+   * JOINs this used to have dropped the whole row whenever the reporter had answered one of the two
+   * and not the other. The review drawer then received an empty array and rendered EVERY Capacity
+   * Sharing field blank — including the answers that were stored — so the reviewer read them as
+   * unanswered. `getInnovationDevBilateralResultById` below already LEFT JOINs its catalogues; this
+   * one is now the same shape.
+   */
   async getCapacitySharingBilateralResultById(
     resultId: number,
   ): Promise<any[]> {
@@ -3154,9 +3163,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       FROM result r
       JOIN results_capacity_developments rcd 
         ON r.id = rcd.result_id
-      JOIN capdevs_delivery_methods cdm
+      LEFT JOIN capdevs_delivery_methods cdm
         ON rcd.capdev_delivery_method_id = cdm.capdev_delivery_method_id
-      JOIN capdevs_term ct
+      LEFT JOIN capdevs_term ct
         ON rcd.capdev_term_id = ct.capdev_term_id
       WHERE
         r.id = ?
