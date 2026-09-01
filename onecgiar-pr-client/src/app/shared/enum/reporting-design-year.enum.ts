@@ -66,5 +66,16 @@ export const ReportingDesignYear = {
    * Gated on the reporting phase YEAR, not on the portfolio: prtest holds 2025-phase results
    * inside the P25 portfolio, and `isP25()` would rename the section for those too.
    */
-  InnovationUse2030Projection: 2026
+  InnovationUse2030Projection: 2026,
+
+  /**
+   * SIDS revision (P2-3272 Part 4): from the 2026 cycle the "Innovation Developer" field of
+   * Innovation Development is pre-filled from the Lead contact person captured in General
+   * Information, and its long guidance note is dropped. Phases <= 2025 keep the empty field and
+   * the note verbatim.
+   *
+   * Gated on the reporting phase YEAR, not on the portfolio: prtest holds 2025-phase results
+   * inside the P25 portfolio, and `isP25()` would pre-fill and strip the note for those too.
+   */
+  InnovationDeveloperAutoFill: 2026
 } as const;

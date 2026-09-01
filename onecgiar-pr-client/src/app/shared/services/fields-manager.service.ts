@@ -58,6 +58,16 @@ export class FieldsManagerService {
       : ''
   );
   /**
+   * True when the open result's reporting phase is 2026+ → the Innovation Development "Innovation
+   * Developer" field is pre-filled from the Lead contact person and drops its guidance note
+   * (P2-3272 Part 4, epic P2-3243). 2025 and earlier keep the empty field and the note verbatim.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isInnovationDeveloperAutoFilled2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof year === 'number' && year >= ReportingDesignYear.InnovationDeveloperAutoFill;
+  });
+  /**
    * True when the open result's reporting phase is 2026+ → new Geographic location
    * "location of benefit" wording (P2-3036 AC9) for P25 Innovation results. 2025 keeps the legacy wording.
    * Threshold is centralized in {@link ReportingDesignYear}.

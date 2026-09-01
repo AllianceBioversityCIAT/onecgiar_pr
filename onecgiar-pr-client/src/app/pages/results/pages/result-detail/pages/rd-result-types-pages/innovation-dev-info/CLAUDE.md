@@ -1,6 +1,6 @@
 # innovation-dev-info
 
-**Verified:** 2026-08-27 · branch performance-refactor · dab9ea9dc
+**Verified:** 2026-09-01 · branch performance-refactor · 181caa352
 
 ## What it is
 The "Innovation Development" section of the result detail. It mixes **two sources** that are easy to
@@ -60,17 +60,15 @@ on the database side, inside `validation_innovation_dev_P25` — reword one, cha
   `stage-assessment.component.html` are what hold that up: **do not remove them.** Pinned by
   `innovation-dev-info.component.spec.ts` ("2026 payload with an empty scaling slot") and by
   `stage-assessment.component.spec.ts` ("missing slot") — deleting a guard turns those red.
-- ⚠️ **`stage-assessment/` was delivered by P2-3467 (commit `a3b02520b`), not by P2-3290.** The
-  front-end half of the GESI/risk replacement shipped inside the backend ticket's commit — do not go
-  looking for it under P2-3290, and do not rebuild it there.
+- ⚠️ **`stage-assessment/` was delivered by P2-3467 (commit `a3b02520b`), not by P2-3290** — the
+  front-end half shipped inside the backend ticket's commit. Do not rebuild it under P2-3290.
 - 🛑 **Two endpoints of this module LIE about the phase — never use them to tell which phase you are
   looking at.** `GET /v2/api/results/get/general-information/result/{id}` returns `phase_year: 2025`
   for a result the screen shows in Reporting 2026, even with `?phase=36`; and
   `GET /v2/api/results/questions/innovation-development/{id}` answers with the pre-2026 question set
-  for that same result. A result exists in **several phases at once** (result 8501 shows two chips,
-  2025 Closed and 2026 Open) and both endpoints answer for a different version than the one on
-  screen. The truth is the **phase chip in the UI** / the Results Center list. Verified 27 Aug 2026
-  against 8933 (2026 Open) and 8548 (2025 Closed).
+  for that same result. A result exists in **several phases at once** and both endpoints answer for a
+  different version than the one on screen: the truth is the **phase chip in the UI**. Verified
+  27 Aug 2026 against 8933 (2026 Open) and 8548 (2025 Closed).
 - 🛑 **`showScalingStudiesQuestion()` (P2-3265) — off-by-one; never use `id` or the array index.**
   `readinessLevelsList` (`clarisa/innovation-readiness-levels/get/all`) has an autoincrement `id`
   (starts at 11, verified in prtest 26 Aug 2026) and a string `level` ('0'..'9') which is the real
@@ -81,9 +79,8 @@ on the database side, inside `validation_innovation_dev_P25` — reword one, cha
   Gates both the `app-pr-radio-button` (`fieldRef="[innovation-use-form]-has-studies-links"`) and the
   `app-studies-link` that depends on `has_scaling_studies`.
 - ⚠️ **Orphan data in 2026, unmigrated by design:** `has_scaling_studies` / `scaling_studies_urls`
-  are neither cleared nor migrated — the section only stops rendering the control, and the field is
-  still sent in the PATCH unfiltered. Consistent with the PO instruction ("Remove never means delete
-  the data"), but the green-check AC then depends entirely on the server-side SQL function.
+  are neither cleared nor migrated and still travel in the PATCH — per the PO ("Remove never means
+  delete the data"), so the green-check AC depends entirely on the server-side SQL function.
 - ⚠️ **The fieldRef `[innovation-use-form]-has-studies-links` is shared by 4 surfaces** (IPSR Steps 1
   and 4, this section, Innovation Use) — its `required`/`label` config was deliberately left alone.
 - 🛑 **`isP25()` is NOT the phase, it is the PORTFOLIO** (`fields-manager.service.ts:19`). For
@@ -92,8 +89,8 @@ on the database side, inside `validation_innovation_dev_P25` — reword one, cha
   from them and break the governing rule of epic P2-3243. Two gates with different meanings coexist
   in this template: `assumptions-examination` still uses only `isP25()`, and
   `partners-policies-safeguards` carries both.
-- ⚠️ **The remaining ungated blocks** are unprotected: hiding one "for 2026" without wrapping it
-  also removes it from earlier phases.
+- ⚠️ **The remaining ungated blocks**: hiding one "for 2026" without wrapping it also removes it from
+  earlier phases.
 - ⚠️ **Questions ARE versioned by phase even though the HTML is not:** `result_questions.version` is `enum('P22','P25')` (`result-question.entity.ts:62-67`) and the `…V2` service methods filter
   `version: 'P25'`. Adding/removing a 2026 question = **a migration over P25 rows**, never a global
   `UPDATE`. Text is edited by migration (`1762401252487-ChangeSomeRowsQuestionsP25.ts`); no admin
@@ -109,11 +106,14 @@ on the database side, inside `validation_innovation_dev_P25` — reword one, cha
   (P2-3467) blocks are wrapped in `IF (COALESCE(result_phase_year, 0) < 2026)` instead of deleted.
 - `bilateral.service.ts` reads the same questionnaire: a question change hits bilateral results too.
 - ⚠️ **`innovation-team-diversity`, `gesi-innovation-assessment` and `scale-impact-analysis` are the
-  ONLY three consumers of `checkboxConfig` in the whole app** — touching that branch of
-  `custom-fields/pr-radio-button` (P2-3291) affects those three and nobody else. See
-  `custom-fields/pr-radio-button/CLAUDE.md`. All three already serve the hierarchy P2-3291 asked for
-  **in the data** (question 112: 3 level-2 options, the 6 diversity ones as level 3 under the
-  affirmative) — no synthetic "Yes" needs building.
+  ONLY three consumers of `checkboxConfig` in the whole app** (P2-3291) — see
+  `custom-fields/pr-radio-button/CLAUDE.md`. All three already serve that hierarchy **in the data**
+  (question 112), so no synthetic "Yes" needs building.
+- ⚠️ **`innovation_developers` is pre-filled, not owned, from 2026 on (P2-3272 Part 4).**
+  `applyInnovationDeveloperAutoFill()` copies `currentResult.lead_contact_person` **only into an
+  empty field**, after every section GET, gated on `isInnovationDeveloperAutoFilled2026()`. It is not
+  read by `validation_innovation_dev_P25`, so it can never block a green check; it only persists when
+  the section is saved, so clearing it without saving brings the value back on reload.
 
 ## Pending / Coming soon
 - Epic P2-3243 (SIDS forms update) touches almost every block here. Read each ticket's

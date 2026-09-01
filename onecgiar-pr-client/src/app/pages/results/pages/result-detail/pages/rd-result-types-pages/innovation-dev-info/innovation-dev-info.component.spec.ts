@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { InnovationDevInfoComponent } from './innovation-dev-info.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { InnovationLinksComponent } from './components/innovation-links/innovation-links.component';
@@ -347,6 +348,8 @@ describe('InnovationDevInfoComponent', () => {
       // P2-3263 / P2-3264: the template gates two blocks on this. Default false = the pre-2026 form,
       // which is what the rest of this suite assumes.
       isInnovationDevFormReduced2026: jest.fn(() => false),
+      // P2-3272 Part 4: same default — the pre-2026 form keeps the guidance note and pre-fills nothing.
+      isInnovationDeveloperAutoFilled2026: jest.fn(() => false),
       // `pr-input` / `pr-radio-button` resolve their label and required flag through this when a
       // `fieldRef` is set. An empty map is enough: no field in this section uses one.
       fields: jest.fn(() => ({}))
@@ -1143,6 +1146,99 @@ describe('InnovationDevInfoComponent', () => {
 
       expect(() => component.getSectionInformationp25()).not.toThrow();
       expect(payload.megatrends.radioButtonValue).toBe('140');
+    });
+  });
+  /**
+   * P2-3272 Part 4 (epic P2-3243) — from the 2026 phase on, "Innovation Developer" starts pre-filled
+   * with the Lead contact person of General Information and loses its long guidance note. 2025 and
+   * earlier keep an empty field and the note verbatim, which is the epic's governing rule.
+   */
+  describe('Innovation Developer auto-fill (P2-3272 Part 4)', () => {
+    const gate = (on: boolean) => jest.spyOn(component.fieldsManagerSE, 'isInnovationDeveloperAutoFilled2026').mockReturnValue(on as any);
+
+    const withLeadContact = (name: any) =>
+      (component.dataControlSE.currentResultSignal as any).set({ portfolio: 'P25', lead_contact_person: name });
+
+    beforeEach(() => {
+      component.innovationDevInfoBody = { ...mockGET_innovationDevResponse, innovation_developers: '' } as any;
+      mockApiService.resultsSE.GET_innovationDevP25 = () => of({ response: { ...mockGET_innovationDevResponse, innovation_developers: '' } });
+      mockApiService.resultsSE.GET_innovationDev = () => of({ response: { ...mockGET_innovationDevResponse, innovation_developers: '' } });
+    });
+
+    describe('2026 phase onward', () => {
+      beforeEach(() => gate(true));
+
+      it('pre-fills the empty field with the Lead contact person when the section loads', () => {
+        withLeadContact('Arouna Dissa');
+        component.getSectionInformationp25();
+        expect(component.innovationDevInfoBody.innovation_developers).toBe('Arouna Dissa');
+      });
+
+      it('pre-fills on the pre-P25 load path too — the gate is the phase year, not the portfolio', () => {
+        withLeadContact('Arouna Dissa');
+        component.getSectionInformation();
+        expect(component.innovationDevInfoBody.innovation_developers).toBe('Arouna Dissa');
+      });
+
+      it('never overwrites a name the reporter already typed', () => {
+        withLeadContact('Arouna Dissa');
+        mockApiService.resultsSE.GET_innovationDevP25 = () =>
+          of({ response: { ...mockGET_innovationDevResponse, innovation_developers: 'Someone Else (s.else@cgiar.org)' } });
+        component.getSectionInformationp25();
+        expect(component.innovationDevInfoBody.innovation_developers).toBe('Someone Else (s.else@cgiar.org)');
+      });
+
+      // A stored value of only spaces is "empty" to the reporter, so it must be treated as empty here.
+      it('treats a whitespace-only stored value as empty', () => {
+        withLeadContact('Arouna Dissa');
+        mockApiService.resultsSE.GET_innovationDevP25 = () =>
+          of({ response: { ...mockGET_innovationDevResponse, innovation_developers: '   ' } });
+        component.getSectionInformationp25();
+        expect(component.innovationDevInfoBody.innovation_developers).toBe('Arouna Dissa');
+      });
+
+      it.each([null, undefined, '', '   '])('leaves the field empty when the Lead contact person is %p', contact => {
+        withLeadContact(contact);
+        component.getSectionInformationp25();
+        expect(component.innovationDevInfoBody.innovation_developers).toBe('');
+      });
+    });
+
+    describe('phase 2025 and earlier', () => {
+      beforeEach(() => gate(false));
+
+      it('pre-fills nothing, even with a Lead contact person on the result', () => {
+        withLeadContact('Arouna Dissa');
+        component.getSectionInformationp25();
+        expect(component.innovationDevInfoBody.innovation_developers).toBe('');
+      });
+    });
+
+    /**
+     * These two go through the rendered template, not the class field: the guidance used to be a
+     * static `description="…"` attribute, so only a test that resolves what the child field actually
+     * receives can catch the binding being dropped. (`app-field-card` renders no chrome in this
+     * TestBed — `RolesService.readOnly` is true — so the assertion reads the resolved input.)
+     */
+    describe('guidance note in the rendered form', () => {
+      const developerFieldDescription = (): string | undefined => {
+        const field = fixture.debugElement
+          .queryAll(By.css('app-pr-textarea'))
+          .find(node => node.nativeElement.getAttribute('label') === 'Innovation Developer');
+        return field?.componentInstance?.effectiveDescription();
+      };
+
+      it('prints the legacy guidance on a pre-2026 phase', () => {
+        gate(false);
+        fixture.detectChanges();
+        expect(developerFieldDescription()).toContain('will be first author of the Innovation Profile document');
+      });
+
+      it('drops the guidance from the 2026 phase on', () => {
+        gate(true);
+        fixture.detectChanges();
+        expect(developerFieldDescription()).toBe('');
+      });
     });
   });
 });

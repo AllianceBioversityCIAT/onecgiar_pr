@@ -223,6 +223,41 @@ describe('FieldsManagerService', () => {
   });
 
   /**
+   * P2-3272 Part 4 (epic P2-3243). "Innovation Developer" is pre-filled from the Lead contact person
+   * and loses its guidance note from 2026 on. The gate is the reporting phase YEAR, not the portfolio:
+   * prtest holds 2025-phase results inside P25, which a portfolio gate would pre-fill too.
+   */
+  describe('isInnovationDeveloperAutoFilled2026', () => {
+    it('is true for a 2026-phase result', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);
+      expect(service.isInnovationDeveloperAutoFilled2026()).toBe(true);
+    });
+
+    it('is false for a 2025-phase result even inside the P25 portfolio — the case a portfolio gate would break', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025 } as any);
+      expect(service.isP25()).toBe(true);
+      expect(service.isInnovationDeveloperAutoFilled2026()).toBe(false);
+    });
+
+    it("is false when phase_year arrives as a string, since '2026' >= 2026 would be a coercion", () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: '2026' } as any);
+      expect(service.isInnovationDeveloperAutoFilled2026()).toBe(false);
+    });
+
+    it('falls back to the open reporting phase when the result carries no year', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+      expect(service.isInnovationDeveloperAutoFilled2026()).toBe(true);
+    });
+
+    it('is false when neither the result nor the open phase carries a year', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = undefined as any;
+      expect(service.isInnovationDeveloperAutoFilled2026()).toBe(false);
+    });
+  });
+
+  /**
    * P2-3295 (epic P2-3243). The Innovation Use 2030 block is renamed "2030 Use Projection" and gains the
    * projection tooltip from 2026 on. The gate is the reporting phase YEAR, not the portfolio: the test
    * environment holds 2025-phase results inside the P25 portfolio, which a portfolio gate would rename too.
