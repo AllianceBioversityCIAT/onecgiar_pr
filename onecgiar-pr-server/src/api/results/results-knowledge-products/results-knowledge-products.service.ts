@@ -1937,7 +1937,11 @@ export class ResultsKnowledgeProductsService {
       if (!sectionSevenData.isMeliaProduct) {
         sectionSevenData.ostSubmitted = null;
         sectionSevenData.ostMeliaId = null;
-        sectionSevenData.tocMeliaStudyId = undefined;
+        // `null`, not `undefined`. TypeORM's `update()` omits undefined properties from the SQL, so
+        // this used to leave the chosen MELIA study in the row for ever: the reporter answered "No"
+        // to "Is this knowledge product a MELIA Product?", the field vanished from the form, and the
+        // study stayed stored with nothing on screen to show it or remove it.
+        sectionSevenData.tocMeliaStudyId = null;
         sectionSevenData.clarisaMeliaTypeId = null;
       }
 
@@ -1958,7 +1962,12 @@ export class ResultsKnowledgeProductsService {
           melia_previous_submitted: sectionSevenData.ostSubmitted,
           melia_type_id: sectionSevenData.clarisaMeliaTypeId,
           ost_melia_study_id: sectionSevenData.ostMeliaId,
-          toc_melia_study_id: sectionSevenData.tocMeliaStudyId ?? undefined,
+          // Passed straight through so the three states stay distinguishable: `undefined` means the
+          // caller did not mention the field and TypeORM leaves the column alone (the P22 form has
+          // no ToC MELIA study picker at all), `null` clears it, a value sets it. The previous
+          // `?? undefined` collapsed null into undefined, which is why clearing the dropdown did not
+          // persist either.
+          toc_melia_study_id: sectionSevenData.tocMeliaStudyId,
         },
       );
 
