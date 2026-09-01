@@ -220,13 +220,42 @@ Arreglo: `LEFT JOIN` de los catálogos, manteniendo el `INNER` de `results_capac
 `getInnovationDevBilateralResultById` dos funciones más abajo. Commit **`4b07debbe`**, 23/23 en el
 spec del repositorio, uno de ellos falla contra la consulta anterior. Documentado en **P2-3547**.
 
-⚠️ **Gemelo idéntico, NO desarrollado:** `getPolicyChangeBilateralResultById`, en el mismo archivo,
-tiene el mismo `INNER JOIN` sobre `clarisa_policy_stage` y `clarisa_policy_type`, con la misma
-consecuencia para el bloque de Policy Change del cajón. Mismo arreglo de una palabra. No era el
-defecto reportado y no amplío alcance por iniciativa propia (regla 6): queda planteado.
-⚠️ Y ninguna de las cinco `get*BilateralResultById` filtra `is_active` de la tabla del tipo salvo la
-de Knowledge Product — puede devolver una fila desactivada. Eso **sí** cambia comportamiento, así que
-menos aún se toca sin pedirlo.
+### ✅ 3-bis — Arreglado el gemelo: lo mismo en Policy Change
+
+Salió verificando el punto 3, se dejó **planteado** en vez de tomado (no era el defecto reportado), y
+se autorizó como arreglo aparte. `getPolicyChangeBilateralResultById`, una función más abajo, hacía
+`INNER JOIN` de `clarisa_policy_stage` y `clarisa_policy_type`, los dos FKs opcionales
+(`nullable: true` en `ResultsPolicyChanges.policy_stage_id` y `.policy_type_id`).
+
+**Y ahí es peor que en Capacity Sharing:** las *implementing organizations* llegan al cajón por
+`LEFT JOIN results_by_institution` sobre el **mismo** result set, así que desaparecen también, aunque
+no tengan nada que ver con esas dos preguntas de lista.
+
+Commit **`8079a5037`**, 25/25 en el spec, uno falla contra la consulta anterior. Documentado en
+**P2-3549**, enlazado con P2-3547.
+
+✅ **Frontera comprobada antes de tocar**, porque Policy Change tiene su propia función de validación:
+`validation_policy_change_P25` (`1762528725798-createValidtionP25.ts:1414-1428`) lee `policy_type_id`
+y `policy_stage_id` **directo de `results_policy_changes`**, con su propio `LEFT JOIN` y su propio
+`is_active`, y **nunca une los catálogos**. Son dos caminos separados —una función MySQL y esta
+consulta del repositorio— sin ningún join compartido: el green check no se ve afectado.
+
+### ⏸ Lo del `is_active`: NO se desarrolla, es regla de negocio
+
+Medido, no estimado. **Filtra** `is_active` de la tabla del tipo: solo
+`getKnowledgeProductBilateralResultById` (`rkp.is_active`). **No filtran**: las de Capacity Sharing,
+Innovation Development, Policy Change e Innovation Use. Se desactiva un registro por el
+`logicalDelete(resultId)` de su repositorio, que usa el módulo `delete-recover-data`.
+
+Las dos salidas, en lo que el revisor **ve**: *(A) añadiendo el filtro a las cuatro* → un resultado
+con el registro del tipo desactivado le sale con el bloque **vacío**, como si nunca se hubiera
+reportado; si el resultado cambió de tipo, eso es lo correcto. *(B) dejándolas como están* → sigue
+viendo esas respuestas **como si fueran vigentes**.
+
+🛑 *"¿Debe el revisor ver una fila desactivada?"* es **regla de negocio**, no criterio técnico — puede
+que la respuesta correcta sea que sí, para no perder historia. No se desarrolla y **no se pregunta en
+Jira**: va por Yeck. ⚠️ Y ojo con la asimetría actual: Knowledge Product ya se comporta como (A) y los
+otros cuatro como (B), así que **el mismo revisor ve dos comportamientos distintos según el tipo**.
 
 ### ✅ 4 — Arreglado: el estudio MELIA elegido no se podía quitar nunca
 
