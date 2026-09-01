@@ -12,10 +12,12 @@ import { DetailSectionTitleComponent } from '../../../../../../custom-fields/det
 import { signal } from '@angular/core';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { SharePointUploadService } from '../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 
 jest.useFakeTimers();
 
 describe('RdEvidencesComponent', () => {
+  const mockSharePointUploadService = { uploadPending: jest.fn().mockResolvedValue([]) };
   let component: RdEvidencesComponent;
   let fixture: ComponentFixture<RdEvidencesComponent>;
   let mockApiService: any;
@@ -81,6 +83,12 @@ describe('RdEvidencesComponent', () => {
       declarations: [RdEvidencesComponent, NoDataTextComponent, AlertStatusComponent, SaveButtonComponent, DetailSectionTitleComponent],
       imports: [HttpClientTestingModule],
       providers: [
+        {
+          // P2-3220: the upload sequence moved to the shared service, which owns its own spec.
+          // Here we only care that this section delegates to it with the right options.
+          provide: SharePointUploadService,
+          useValue: mockSharePointUploadService
+        },
         {
           provide: ApiService,
           useValue: mockApiService
@@ -329,107 +337,58 @@ describe('RdEvidencesComponent', () => {
     });
   });
 
-  describe('getAndCalculateFilePercentage', () => {
-    it('should calculate file percentage and update evidenceIterator', () => {
-      const response = {
-        nextExpectedRanges: ['0-1024']
-      };
-      const evidenceIterator = {
-        percentage: 0
-      };
-      component.getAndCalculateFilePercentage(response, evidenceIterator);
-
-      expect(evidenceIterator.percentage).toBe('0');
-    });
-
-    it('should not update percentage if totalBytes is zero', () => {
-      const response = {
-        nextExpectedRanges: ['0-0']
-      };
-      const evidenceIterator = {
-        percentage: 50
-      };
-
-      component.getAndCalculateFilePercentage(response, evidenceIterator);
-
-      expect(evidenceIterator.percentage).toBe(50);
-    });
-
-    it('should calculate file percentage and update evidenceIterator', () => {
-      const response = {
-        nextExpectedRanges: ['0-']
-      };
-      const evidenceIterator = {
-        percentage: 0
-      };
-
-      component.getAndCalculateFilePercentage(response, evidenceIterator);
-
-      expect(evidenceIterator.percentage).toBe(0);
-    });
-
-    it('should handle null or undefined nextRange', () => {
-      const response = { nextExpectedRanges: [null] };
-      const evidenceIterator = { percentage: 50 };
-      component.getAndCalculateFilePercentage(response, evidenceIterator);
-      expect(evidenceIterator.percentage).toBe(50);
-    });
-  });
-
-  describe('endLoadFile', () => {
-    it('should clear the interval and set the percentage to 100', () => {
-      const spy = jest.spyOn(global, 'clearInterval');
-      const intervalId = setInterval(() => {}, 100);
-      const evidenceIterator = { percentage: 50 };
-
-      component.endLoadFile(intervalId, evidenceIterator);
-
-      expect(spy).toHaveBeenCalledWith(intervalId);
-      expect(evidenceIterator.percentage).toBe(100);
-    });
-  });
-
-  describe('loadAllFiles', () => {
-    it('should load files and update evidence properties', async () => {
-      const mockEvidences = [{ file: new File([], 'file1.pdf') }, { file: new File([], 'file2.pdf') }, { file: undefined }];
-      component.evidencesBody.evidences = mockEvidences;
-      const spyEndLoadFile = jest.spyOn(component, 'endLoadFile');
-      const spyPOST_createUploadSession = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession');
-      const spyPUT_loadFileInUploadSession = jest.spyOn(mockApiService.resultsSE, 'PUT_loadFileInUploadSession');
-
-      await component.loadAllFiles();
-
-      jest.advanceTimersByTime(2000);
-      jest.runOnlyPendingTimers();
-
-      expect(spyPOST_createUploadSession).toHaveBeenCalled();
-      expect(spyPUT_loadFileInUploadSession).toHaveBeenCalled();
-      expect(spyEndLoadFile).toHaveBeenCalled();
+  describe('loadAllFiles — delegates to the shared SharePoint service (P2-3220)', () => {
+    beforeEach(() => {
+      mockSharePointUploadService.uploadPending.mockClear();
+      mockSharePointUploadService.uploadPending.mockResolvedValue([]);
     });
 
     /**
-     * P2-3220: a failed upload must be REPORTABLE, not just logged. This used to assert the exact
-     * console.error argument, which broke the moment the message got a prefix and told us nothing
-     * about behaviour. Now it asserts what the caller can act on: the list of files that failed.
+     * The point of the refactor: this section must not know which upload session endpoint to use.
+     * Two of the three evidence surfaces used `POST_createUploadSession` and the third
+     * `POST_createUploadSessionP25`, which is why "every upload goes through the shared flow" was
+     * not something the code could enforce.
      */
-    it('returns the names of the files whose upload failed, so the caller can warn the user', async () => {
-      const mockEvidences = [{ file: new File([], 'file1.pdf') }, { file: new File([], 'file2.pdf') }, { file: undefined }];
-      component.evidencesBody.evidences = mockEvidences;
-      jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession').mockRejectedValue('Error from POST_createUploadSession');
+    it('asks the service for the evidences flow and never touches the session endpoints', async () => {
+      const spySession = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession');
+      const spyPut = jest.spyOn(mockApiService.resultsSE, 'PUT_loadFileInUploadSession');
+      component.evidencesBody.evidences = [{ file: new File([], 'a.pdf') }] as any;
+      component.evidencesBody.result_id = 77 as any;
 
-      const failed = await component.loadAllFiles();
+      await component.loadAllFiles();
 
-      expect(failed).toEqual(['file1.pdf', 'file2.pdf']);
+      expect(mockSharePointUploadService.uploadPending).toHaveBeenCalledWith(component.evidencesBody.evidences, {
+        resultId: 77,
+        flow: 'evidences',
+        skipAlreadyUploaded: false,
+        trackProgress: true,
+        logLabel: 'rd-evidences'
+      });
+      expect(spySession).not.toHaveBeenCalled();
+      expect(spyPut).not.toHaveBeenCalled();
+    });
+
+    /**
+     * `skipAlreadyUploaded: false` is this section's own behaviour, not a default: it re-uploads an
+     * evidence that already carries a `link`. The other surfaces skip those, which is exactly why
+     * the option exists rather than being hardcoded in the service.
+     */
+    it('keeps re-uploading evidences that already have a link', async () => {
+      component.evidencesBody.evidences = [{ file: new File([], 'a.pdf'), link: 'http://sp/already' }] as any;
+
+      await component.loadAllFiles();
+
+      expect(mockSharePointUploadService.uploadPending.mock.calls[0][1].skipAlreadyUploaded).toBe(false);
+    });
+
+    it('passes the failed file names straight through, so the caller can warn the user', async () => {
+      mockSharePointUploadService.uploadPending.mockResolvedValue(['file1.pdf', 'file2.pdf']);
+
+      await expect(component.loadAllFiles()).resolves.toEqual(['file1.pdf', 'file2.pdf']);
     });
 
     it('returns an empty list when every upload succeeds', async () => {
-      component.evidencesBody.evidences = [{ file: new File([], 'ok.pdf') }] as any;
-      jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession').mockResolvedValue({ response: 'http://upload/' } as any);
-      jest.spyOn(mockApiService.resultsSE, 'PUT_loadFileInUploadSession').mockResolvedValue({ webUrl: 'http://sp/f', id: 'd1', name: 'ok.pdf' } as any);
-
-      const failed = await component.loadAllFiles();
-
-      expect(failed).toEqual([]);
+      await expect(component.loadAllFiles()).resolves.toEqual([]);
     });
   });
 

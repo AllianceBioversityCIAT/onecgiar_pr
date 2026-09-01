@@ -1,6 +1,6 @@
 # rd-evidences
 
-**Verified:** 2026-08-28 · branch performance-refactor · ccdc8b597
+**Verified:** 2026-09-01 · branch performance-refactor · a0024ade8
 
 ## Qué es
 Sección 4 (última) del detalle de resultado: la lista de evidencias (links o ficheros subidos a
@@ -49,12 +49,18 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
   verified live 27-Aug-2026). Deliberate: injecting `PolicyControlListService` here would fire two
   CLARISA GETs for EVERY result type, since this section renders for all of them. If CLARISA ever
   renumbers the stages, the tooltip silently falls back to listing both stage requirements.
-- ⚠️ **`POST_createUploadSession` resuelve con el SOBRE, no con la URL.** El servidor devuelve
-  `{ response: uploadUrl, message, status }` (`share-point.service.ts`, `ReturnResponseUtil.format`),
-  así que hay que desestructurar `{ response: uploadUrl }`. Sin eso el PUT recibe un objeto
-  convertido a string y **la subida falla siempre**. Le pasó al gemelo bilateral
-  (`section-evidence.component.ts`) y estuvo invisible porque su spec mockeaba la cadena pelada.
-  Corregido el 27-ago-2026 (P2-3220), con test que lo bloquea.
+- 🥇 **La subida a SharePoint ya NO vive aquí: la hace `SharePointUploadService`**
+  (`shared/services/sharepoint-upload/`, P2-3220). `loadAllFiles()` es ahora una llamada al servicio
+  con las opciones de esta sección (`skipAlreadyUploaded: false` porque aquí sí se re-sube lo que ya
+  tiene `link`, y `trackProgress: true` porque hay barra). **No vuelvas a llamar a
+  `POST_createUploadSession` / `PUT_loadFileInUploadSession` desde un componente**: el servicio existe
+  para que un formulario nuevo no pueda elegir la puerta equivocada — había dos
+  (`POST_createUploadSession` y `POST_createUploadSessionP25`).
+- ⚠️ **`POST_createUploadSession` resuelve con el SOBRE, no con la URL** (`{ response, message,
+  status }`, `share-point.service.ts` → `ReturnResponseUtil.format`). Sin desestructurar, el PUT
+  recibe un objeto convertido a string y **la subida falla siempre**. Le pasó al gemelo bilateral y
+  estuvo invisible porque su spec mockeaba la cadena pelada. **Ahora lo resuelve el servicio y su
+  spec lo bloquea para las tres superficies a la vez** — ya no hay que acordarse en cada una.
 - ⚠️ **`loadAllFiles()` NO se traga los errores: devuelve los nombres de los ficheros que fallaron**
   (P2-3220). `onSaveSection` los convierte en una alerta explícita. La sección **sí** se guarda igual
   —el fichero también viaja en el multipart de `POST_evidences`— pero una evidencia sin `link` ni
@@ -68,8 +74,6 @@ ese tipo no tiene página propia en `rd-result-types-pages/`.
   `deleteEvidenceWithConfirm()` llaman a `onSaveSection()`. Si el POST falla, la tarjeta ya está
   pintada en la lista (se hizo `unshift` antes de guardar) y parece guardada; sólo la avisa un toast
   de error que dura medio segundo. Al recargar, desaparece.
-- ⚠️ **`loadAllFiles()` se traga los errores de subida** (`catch { console.error }`). Si falla la
-  subida a SharePoint, la evidencia se envía igualmente al POST sin `link`. No hay aviso al usuario.
 - **Dependencia con General information:** un Impact Area con score 2 obliga a una evidencia
   etiquetada con ese tag; el aviso lo pinta `validateCheckBoxes()`. Si el usuario baja el score, el
   aviso desaparece pero el tag ya puesto en la evidencia **se queda** — no se limpia.
