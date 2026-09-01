@@ -45,13 +45,66 @@ justamente el caso que rompen los gates mal hechos, así que son los que hay que
 
 ### §1 · El botón Save podía no existir · `03ae798eb`
 
-- **Dónde:** cualquier resultado abierto en modo edición → la barra inferior de la sección.
-- **Con qué probar:** `8842` (SP08, Reporting 2026, estado *Editing*), con un usuario que tenga
-  permiso de edición sobre él.
-- **Bien:** al entrar en la sección, el botón **Save** está ahí desde el primer momento.
-- **Mal:** la barra aparece sin botón, y solo se materializa después de tocar algo que provoque una
-  llamada al servidor. Se reportó como "intermitente"; en realidad era eso.
-- ⚠️ Probarlo **entrando en frío** (recarga completa de la página), no navegando desde otra sección.
+🛑 **Esta entrada estaba mal planteada y se reescribió el 1-sep-2026. Son DOS comprobaciones
+distintas, y solo la primera prueba el arreglo.** La redacción anterior pedía abrir el resultado "en
+frío, sin que ocurra ninguna otra petición" y dar por bueno el arreglo si el botón aparecía.
+
+**Por qué eso no vale, y es la razón que impide que alguien lo revierta por comodidad:**
+`shared/interceptors/general-interceptor.service.ts:26` llama a `viewRefreshSE.schedule()` en el
+`finalize` de **toda** petición HTTP, y abrir un resultado dispara decenas. Ese repintado global es
+justo lo que hacía el defecto intermitente. Así que **ver el botón no distingue "arreglado" de
+"tapado por el interceptor"**: la prueba saldría verde con el bug presente. El estado que la
+redacción pedía —una carga sin ninguna otra petición— **no existe en la aplicación real**.
+
+**(a) ¿Está el arreglo en el build que sirve el ambiente?** — es lo que prueba el arreglo.
+Se comprueba en el artefacto servido, con la técnica de abajo. Debe aparecer, textual:
+```js
+get readOnly() {  return this._readOnly();  }
+set readOnly(value) {  this._readOnly.set(value);  }
+```
+Si en su lugar hay un campo plano (`readOnly = !0`) y ningún getter, el arreglo **no** está
+desplegado y no tiene sentido mirar la pantalla.
+✅ Verificado el 1-sep-2026 sobre el build **v16**, en `chunk-QO6CGUC7.js`.
+
+**(b) ¿Sigue funcionando la pantalla?** — es **no-regresión**, no es la prueba del arreglo.
+Abrir un resultado en modo edición (`8842`, SP08, Reporting 2026, *Editing*) con un usuario con
+permiso, comprobar que el botón **Save** aparece y que **guarda**. Esto vale porque el cambio tocó un
+servicio global que leen 206 plantillas; no vale como confirmación de que el defecto se arregló.
+
+---
+
+### 🔧 Técnica reutilizable · verificar en el ARTEFACTO qué código hay desplegado
+
+Nació de §1 y sirve para cualquier cambio de cliente. **El sello `APP_VERSION` dice qué build es;
+esto dice qué código lleva dentro** — que es la pregunta que de verdad importa y que el sello no
+responde. No depende de horas de commit ni de bumps.
+
+1. `curl https://prtest.ciat.cgiar.org/main.js` y sacar los chunks: `grep -oE 'chunk-[A-Z0-9]+\.js'`.
+2. Bajarlos todos (son estáticos del front: **no** cuentan para el rate limit de la API).
+3. Localizar el chunk por **una cadena literal del archivo**, que la minificación no borra — un
+   mensaje, una descripción, un texto de UI. Ej.: `"Change lead and co-lead"` lleva a `RolesService`.
+4. Dentro, buscar la forma del cambio. **Los nombres de propiedades y métodos públicos no se
+   minifican** (las plantillas los usan), así que `get readOnly()`, `showScalingStudies` o
+   `_updatingLeadData` se leen tal cual.
+
+⚠️ **Y distingue entre servicios gemelos.** `updatingLeadData` existe en dos: el getter que aparece
+en `chunk-SJKKGG6Z.js` es de `_RdContributorsAndPartnersService` (P25 + IPSR), no del `RdPartnersService`
+de P22. Buscar el nombre a secas da un falso positivo; hay que mirar **de qué clase** es.
+
+---
+
+### 📌 Qué contiene realmente el build v16 (medido, 1-sep-2026)
+
+Estar commiteado antes del bump del sello **no** significa estar en el build. Medido por artefacto:
+
+| Commit | Hora | ¿En v16? | Cómo se comprobó |
+|---|---|---|---|
+| `03ae798eb` botón Save | 08:36 | ✅ **sí** | `get readOnly()` en `chunk-QO6CGUC7.js` |
+| `7c0359753` §6 escalamiento bilateral | 09:09 | ❌ **no** | `showScalingStudies` no aparece en ningún chunk |
+| `491835a59` §7 `rd-partners` | 09:19 | ❌ **no** | el servicio P22 sigue con campo plano; el único getter es del gemelo |
+
+👉 **El build v16 de Cristian se cortó entre las 08:37 y las 09:09.** §6 y §7 **no se pueden verificar
+todavía** — hay que esperar al v17.
 
 ### §2 · El Lead contact person se borraba solo al guardar · `54d52b365`
 
