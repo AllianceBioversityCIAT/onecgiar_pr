@@ -78,6 +78,26 @@
           class="pi pi-question-circle entity-details_card_header_info"
           prTooltip="Report results as planned theory of change"
           prTooltipPosition="top"></i>
+
+        <!--
+          P2-3296 AC4 — the whole Science Program, averaged over its Areas of Work. Supplementary
+          by design: it renders only once loaded, and the cards below stand on their own without it.
+        -->
+        @if (entityAowService.programProgress()) {
+          <div class="program-progress" [prTooltip]="programProgressTooltip()" prTooltipPosition="top">
+            <span class="program-progress_pair">
+              <span class="program-progress_label">QA</span>
+              <span class="program-progress_value">{{ programProgressLabel() }}</span>
+            </span>
+            <span class="program-progress_pair">
+              <span class="program-progress_label">Prel.</span>
+              <span class="program-progress_value">{{ programPreliminaryLabel() }}</span>
+            </span>
+            @if (programCoverage()) {
+              <span class="program-progress_coverage">{{ programCoverage() }}</span>
+            }
+          </div>
+        }
       </div>
 
       <div class="entity-details_card_content">

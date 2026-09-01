@@ -1450,6 +1450,20 @@ export class ResultsApiService {
     return this.http.get<any>(url);
   }
 
+  /**
+   * P2-3296 AC4 — the Science Program's ToC achievement, rolled up over its Areas of Work.
+   *
+   * Not the same as the science-program progress endpoint used elsewhere, which counts
+   * reported results by status. This one answers how far along the ToC commitments are.
+   */
+  GET_ScienceProgramTocProgress(entityId: string, versionId?: number) {
+    let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/program-progress?programId=${entityId}`;
+    if (typeof versionId === 'number' && Number.isFinite(versionId)) {
+      url += `&versionId=${encodeURIComponent(String(versionId))}`;
+    }
+    return this.http.get<any>(url);
+  }
+
   GET_2030Outcomes(entityId: string, versionId?: number) {
     let url = `${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=${entityId}`;
     if (typeof versionId === 'number' && Number.isFinite(versionId)) {

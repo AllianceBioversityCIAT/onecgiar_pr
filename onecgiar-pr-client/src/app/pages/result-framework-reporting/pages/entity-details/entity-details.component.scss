@@ -372,3 +372,37 @@ p {
   color: var(--pr-color-primary-300);
   font-size: 12px;
 }
+
+// P2-3296 AC4 — the Science Program's rolled-up number, in the ToC card header.
+.program-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.program-progress_pair {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.program-progress_label {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5);
+}
+
+.program-progress_value {
+  @include fonts.pr-typography('body-1');
+  color: var(--pr-color-accents-7);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+// Kept out of the tooltip on purpose: the denominator is what stops a program percentage
+// averaged over a handful of indicators from being read as if it covered them all.
+.program-progress_coverage {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5);
+}

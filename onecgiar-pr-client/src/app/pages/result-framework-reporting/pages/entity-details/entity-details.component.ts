@@ -221,6 +221,43 @@ export class EntityDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
     };
   });
 
+  /**
+   * P2-3296 AC4 — the Science Program's number, averaged over its Areas of Work.
+   *
+   * A dash, never 0%, when nothing measurable rolled up: zero would claim the program made no
+   * progress, when the truth is there was nothing to measure it against.
+   */
+  programProgressLabel = computed(() => this.entityAowService.programProgress()?.progress_percentage ?? '—');
+
+  programPreliminaryLabel = computed(
+    () => this.entityAowService.programProgress()?.preliminary_progress_percentage ?? '—'
+  );
+
+  programCoverage = computed(() => {
+    const progress = this.entityAowService.programProgress();
+    const counted = progress?.indicators_counted;
+    const total = progress?.indicators_total;
+
+    if (!Number.isFinite(counted) || !Number.isFinite(total) || total === 0) return '';
+
+    return counted === total ? `${total} indicators` : `${counted} of ${total} indicators`;
+  });
+
+  programProgressTooltip = computed(() => {
+    const progress = this.entityAowService.programProgress();
+
+    if (!progress || (progress.total ?? 0) === 0) return 'This program has no Areas of Work yet.';
+    if ((progress.counted ?? 0) === 0) {
+      return `None of the ${progress.indicators_total ?? 0} indicators in this program has a target set, so no percentage can be calculated.`;
+    }
+
+    return (
+      `Averaged over ${progress.counted} of ${progress.total} Areas of Work, ` +
+      `covering ${progress.indicators_counted} of ${progress.indicators_total} indicators. ` +
+      'Indicators with no target set are excluded.'
+    );
+  });
+
   ngOnInit() {
     this.initChart();
     this.route.params.subscribe(params => {
@@ -230,6 +267,8 @@ export class EntityDetailsComponent implements OnInit, AfterViewInit, OnDestroy 
       if (entityId) {
         this.entityAowService.getAllDetailsData(entityId);
         this.entityAowService.getDashboardData();
+        // P2-3296 AC4. Supplementary: the page renders its Areas of Work with or without it.
+        this.entityAowService.getScienceProgramTocProgress(entityId);
       }
     });
   }
