@@ -354,7 +354,13 @@
       @if (richLoading()) {
         <div class="flex flex-col gap-[8px] p-[20px]" aria-hidden="true">
           @for (i of skeletonRowPlaceholders; track i) {
-            <div class="grid grid-cols-[1fr_260px_120px_170px] items-center gap-[16px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[12px]">
+            <!-- T-6 live finding (2026-09-01, field measurement at 1398px viewport): the fixed
+                 `1fr 260px 120px 170px` tracks starved the identity column to ~99px / the AoW
+                 NAME to ~38px inside the ~732px real row area. Responsive tracks protect the name
+                 first (`minmax(0,1fr)`) and let the bar flex within a range (`minmax(120px,240px)`)
+                 before figures/actions size to their content — same column ORDER, deliberately NOT
+                 the mockup's literal px (design.md §6 assumed a 1280px canvas). -->
+            <div class="grid grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content] items-center gap-[16px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[16px] py-[12px]">
               <div class="flex items-center gap-[10px]">
                 <span class="h-[24px] w-[58px] animate-pulse rounded-[6px] bg-[var(--pr-surface-ground)]"></span>
                 <span class="h-[16px] w-[190px] animate-pulse rounded-[4px] bg-[var(--pr-surface-ground)]"></span>
@@ -366,14 +372,21 @@
           }
         </div>
       } @else if (richRows().length) {
-        <!-- OAH-T-4 row rebuild (Option A anatomy, mockup/Main.dc.html + RowStates.dc.html):
-             mockup grid tracks — deliberately NOT reporting-aow-table's (design.md §6, A-13). -->
+        <!-- OAH-T-4 row rebuild (Option A anatomy, mockup/Main.dc.html + RowStates.dc.html): the
+             SAME column order as the mockup (identity · bar · figures · actions), but the tracks
+             are responsive, not the mockup's literal px (design.md §6, A-13 — "NOT the
+             reporting-aow-table's" still holds; this is neither grid). T-6 live finding
+             (2026-09-01): the fixed `1fr 260px 120px 170px` set starved the identity column to
+             ~99px / the AoW name to ~38px inside the real ~732px row area at a 1398px viewport —
+             the mockup's 1280px-canvas assumption doesn't survive the actual layout. `minmax(0,1fr)`
+             protects the name first; the bar flexes inside `minmax(120px,240px)` before the name
+             gives up any space; figures/actions size to their own content. -->
         <!-- @akili-spec changes/overview-aow-progress-hero -->
         <div class="flex flex-col gap-[8px] p-[20px]">
           @for (row of richRows(); track row.code) {
             <div
               (click)="row.code ? openAow.emit(row.code) : null"
-              class="group grid grid-cols-[1fr_260px_120px_170px] items-center gap-[16px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[16px] py-[12px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs"
+              class="group grid grid-cols-[minmax(0,1fr)_minmax(120px,240px)_max-content_max-content] items-center gap-[16px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[16px] py-[12px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs"
               [class.cursor-pointer]="!!row.code">
 
               <!-- Identity: AoW code chip + name + "N KPIs remaining" subline -->

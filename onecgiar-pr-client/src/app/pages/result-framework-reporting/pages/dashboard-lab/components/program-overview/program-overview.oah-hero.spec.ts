@@ -380,7 +380,12 @@ describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + 
     fixture.componentRef.setInput('richRows', [honestAt1Percent]);
     fixture.detectChanges();
 
-    const rowEl = fixture.nativeElement.querySelector('.grid.grid-cols-\\[1fr_260px_120px_170px\\]') as HTMLElement;
+    // Deliberate edit (T-6 live finding, 2026-09-01): the fixed `1fr 260px 120px 170px` tracks
+    // starved the row's identity column in the real layout — replaced with responsive tracks that
+    // protect the name first (program-overview.component.html row grid). Selected by `.group.grid`
+    // (unique to this row) rather than the arbitrary-value class, whose brackets/commas/parens
+    // would need brittle CSS-selector escaping.
+    const rowEl = fixture.nativeElement.querySelector('.group.grid') as HTMLElement;
     const buttons = fixture.debugElement.queryAll(By.css('button'));
     const reportButton = buttons.find(b => b.nativeElement.textContent.trim() === 'Report');
     const iconButton = buttons.find(b => b.nativeElement.getAttribute('aria-label') === 'Open this Area of Work');

@@ -65,3 +65,23 @@
 - Not attributable to this spec: T-1..T-5 touched no data path; the failure is upstream of the component entirely.
 - **Pending checklist (unchanged, from tasks.md):** cold-load skeleton trace; rail == sum of rows (SP01); remaining-first order; 1%-visible bars; three-path navigation; CTA + Only-pending restore; R-2 visual reflow; contrast; complete-state (dev-data check first); all-zero-target row edge (T-4 advisory).
 - Awaiting user: restore DB connectivity (VPN?), then the Leader re-runs the full pass.
+
+### OAH-T-6 — Verification: live pass — **PASS** (2026-09-01, unblocked after VPN restore; 9 PASS / 1 NOT-RUN accepted)
+
+Environment note: first attempt blocked on dev-DB ETIMEDOUT (VPN); a mid-window 200 was a fluke — consistent 10s-timeout 500s until the user restored the VPN (endpoint then 200 @ 416ms).
+
+| # | Row | Result |
+|---|---|---|
+| 1 | Cold-load skeleton trace (tight-poll) | **PASS** — 21 pulse blocks with ZERO figures → everything lands at once ("2 of 352"); no intermediate partial state across the whole window |
+| 2 | Rail == sum of rows (SP01) | **PASS** — host rows sum {reported 2, total 352, complete 2, inProgress 0, notStarted 350, zeroTarget 40} == DOM "2 of 352"; per-row invariant holds |
+| 3 | Remaining-first order | **PASS** — AOW02:109 → AOW03:93 → AOW05:70 → AOW04:61 → AOW01:17 |
+| 4 | Bars visible at ~1% data | **PASS** — computed non-rounded width 0.909091% (=1/110) painted; AOW01's emerald segment clearly visible at 1/18 in the screenshot; zero-target disclosure "excludes 40 zero-target KPIs" on the rail |
+| 5 | Three-path navigation | **PASS** — Report → `?tocView=byAow&tocAow=AOW02`; outcome chip → `?tocView=aows`; single `openAow` path |
+| 6 | CTA + Only-pending restore | **PASS** — storage cleared pre-click; CTA → `?tocView=aows`, `plannedBrowseView 'aows'`, `onlyPending true`, `sessionStorage='1'` written by the setter and RESTORED across the route change |
+| 7 | R-2 visual reflow of neighbours | **PASS** (screenshot) — W1/W2 separator + Reporting status + charts flow cleanly below the promoted hero; **one FAIL found & fixed in-pass:** fixed grid tracks starved the identity column at real widths (name 38px → "Acc…"); fix `minmax(0,1fr)_minmax(120px,240px)_max-content_max-content` on data + skeleton rows (skeleton too — prevents a layout jump when richLoading flips); re-measured: identity 242px, name fully visible; selector-based test updated as deliberate edit citing this finding |
+| 8 | Contrast sanity (T6-class, screenshots) | **PASS** — token pairs read correctly (emerald on grey track, violet CTA/white, muted greys on white) |
+| 9 | Complete-state row | **NOT-RUN (accepted per task)** — dev-data check done first: max program progress on ALL of dev is 4.2% (SP01); no complete AoW exists this cycle; behavior owned by unit OAH-TEST-4 (swap + emit pinned) |
+| 10 | All-zero-target row edge (T-4 advisory) | Observed-not-present on SP01 (all rows total>0); NaN guard pinned by the T-5 zero-total assertions |
+
+- **Fix verification:** program-overview 3 suites/156 green (pinned tests verified present + green by enumeration), lint clean, tsc clean.
+- Budget close: 6/6 tasks · 1 review-round consumed (T-5) + 1 in-pass field fix (T-6) · LOC within ~650.
