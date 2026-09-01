@@ -34,8 +34,8 @@ export class TawkComponent implements OnInit {
       var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
       Tawk_API.customStyle = {
         visibility: {
-          desktop: { position: 'br', xOffset: 20, yOffset: 60 },
-          mobile: { position: 'br', xOffset: 10, yOffset: 60 }
+          desktop: { position: 'br', xOffset: 24, yOffset: 130 },
+          mobile: { position: 'br', xOffset: 24, yOffset: 130 }
         }
       };
       (function(){
