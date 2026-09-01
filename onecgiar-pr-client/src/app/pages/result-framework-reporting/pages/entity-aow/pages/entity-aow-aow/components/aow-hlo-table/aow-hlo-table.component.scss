@@ -122,3 +122,63 @@ p {
     white-space: normal;
   }
 }
+
+// P2-3296 — the two progress tracks on the indicator row.
+// Deliberately two separate tracks rather than one stacked bar: Preliminary (Submitted +
+// Approved) and QA (QAed + Approved) share the Approved results, so they cannot be added.
+.progress-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.progress-cell_row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-cell_label {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5);
+  // Fixed so both tracks start at the same x — otherwise "QA" and "Prel." misalign the bars
+  // and the two rows stop reading as a pair.
+  flex: 0 0 26px;
+}
+
+.progress-cell_track {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--pr-color-neutral-100);
+  overflow: hidden;
+}
+
+.progress-cell_fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  // Width is clamped to 100 in the component; the printed value keeps the real figure.
+  transition: width 0.2s ease;
+}
+
+.progress-cell_fill--qa {
+  background: var(--pr-color-green-500);
+}
+
+// Lighter than the QA track on purpose: preliminary is not confirmed yet, and the two must be
+// distinguishable at a glance without relying on the label alone.
+.progress-cell_fill--preliminary {
+  background: var(--pr-color-secondary-400);
+  opacity: 0.55;
+}
+
+.progress-cell_value {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-6);
+  flex: 0 0 auto;
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

@@ -237,10 +237,11 @@ describe('AowHloTableComponent', () => {
   describe('Component Initialization', () => {
     it('should initialize with default values', () => {
       expect(component.columnOrder()).toEqual([
-        { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
+        { title: 'KPI statement', attr: 'indicator_description', width: '27%' },
         { title: 'Indicator typology', attr: 'type_name', width: '10%' },
         { title: '2026 target', attr: 'target_value_sum', width: '10%' },
         { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
+        { title: 'Progress', attr: 'progress_bars', hideSortIcon: true, width: '13%' },
         { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
       ]);
     });
@@ -255,11 +256,11 @@ describe('AowHloTableComponent', () => {
     it('should have correct column order structure', () => {
       const columns = component.columnOrder();
 
-      expect(columns).toHaveLength(5);
+      expect(columns).toHaveLength(6);
       expect(columns[0]).toEqual({
         title: 'KPI statement',
         attr: 'indicator_description',
-        width: '30%'
+        width: '27%'
       });
       expect(columns[1]).toEqual({
         title: 'Indicator typology',
@@ -276,7 +277,14 @@ describe('AowHloTableComponent', () => {
         attr: 'actual_achieved_value_sum',
         width: '10%'
       });
+      // P2-3296: the two-bar cell sits between the numbers and the status chip.
       expect(columns[4]).toEqual({
+        title: 'Progress',
+        attr: 'progress_bars',
+        hideSortIcon: true,
+        width: '13%'
+      });
+      expect(columns[5]).toEqual({
         title: 'Status',
         attr: 'status',
         hideSortIcon: true,
@@ -286,7 +294,7 @@ describe('AowHloTableComponent', () => {
 
     it('should have all required column attributes', () => {
       const columns = component.columnOrder();
-      const requiredAttrs = ['indicator_description', 'type_name', 'target_value_sum', 'actual_achieved_value_sum', 'status'];
+      const requiredAttrs = ['indicator_description', 'type_name', 'target_value_sum', 'actual_achieved_value_sum', 'progress_bars', 'status'];
 
       columns.forEach(column => {
         expect(requiredAttrs).toContain(column.attr);
@@ -1104,4 +1112,45 @@ describe('AowHloTableComponent', () => {
     });
   });
 
+
+  /**
+   * P2-3296. Two tracks, not one stacked bar: Preliminary (Submitted + Approved) and QA
+   * (QAed + Approved) share the Approved results, so adding them would double-count.
+   */
+  describe('P2-3296 — the two progress tracks', () => {
+    it('reads the preliminary percentage off the row', () => {
+      expect(component.getPreliminaryProgress({ preliminary_progress_percentage: '75%' })).toBe(75);
+    });
+
+    it('survives a row with no preliminary field instead of throwing', () => {
+      // An older server payload, or an indicator with no contributions at all. `split` on
+      // undefined would take the whole table down.
+      expect(() => component.getPreliminaryProgress({})).not.toThrow();
+      expect(component.getPreliminaryProgress({})).toBe(0);
+      expect(component.getPreliminaryProgress(null)).toBe(0);
+      expect(component.getProgress(undefined as any)).toBe(0);
+    });
+
+    it('clamps the bar width at 100 while the label keeps the real figure', () => {
+      // Nicoleta confirmed over-achievement is shown, not capped — but a 500% bar has
+      // nowhere to go, so only the fill is clamped.
+      expect(component.barWidth(500)).toBe(100);
+      expect(component.barWidth(100)).toBe(100);
+      expect(component.barWidth(40)).toBe(40);
+      expect(component.barWidth(0)).toBe(0);
+      expect(component.barWidth(-10)).toBe(0);
+      expect(component.barWidth(NaN)).toBe(0);
+    });
+
+    it('names both figures in the tooltip, and says Approved counts twice', () => {
+      const tooltip = component.progressTooltip({
+        progress_percentage: '40%',
+        preliminary_progress_percentage: '75%'
+      });
+
+      expect(tooltip).toContain('QA 40%');
+      expect(tooltip).toContain('Preliminary 75%');
+      expect(tooltip).toContain('Approved results count towards both');
+    });
+  });
 });
