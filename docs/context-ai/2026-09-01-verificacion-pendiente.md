@@ -194,6 +194,13 @@ dejarte entrar: el front son ficheros estáticos que se sirven por otra ruta. **
 > (ya no da `000`), pero la capa que está delante rechaza todo, incluido un endpoint conocido-bueno
 > con credencial válida. **El front carga y no hay login ni guardado.** Sigue siendo de Cristian/IT.
 
+🛑 **Y el ambiente es INTERMITENTE, no está recuperándose.** Medido a lo largo de la mañana: `000`
+(caído del todo) → `403` (servidor detrás, proxy cerrado) → `000` otra vez, front incluido, en menos
+de veinte minutos y desde tres redes distintas. **Por eso una sola sonda en 200 no basta:** hace
+falta **200 confirmado dos veces, separadas por unos minutos**, antes de dar la salida. Si se
+verifica en la ventana buena y el ambiente se cae a mitad, un corte se lee como un fallo del código
+— y ese es el peor resultado posible de esta ronda.
+
 ⚠️ **Van dos falsos positivos en un día**, así que conviene desconfiar de la sonda fácil: éste
 (`prtest = 200` con la API cerrada) y el de la mañana, en que `prms.cgiar.org` daba `000`
 simplemente porque **ese dominio no existe**, no porque estuviera caído.
