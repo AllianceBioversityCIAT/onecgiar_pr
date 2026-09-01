@@ -31,7 +31,7 @@
 - **DoD:** green; lint green; visual fidelity explicitly deferred to T-6.
 
 ### `OAH-T-4` — Rows: segmented bar + figures + actions
-- **Status:** `[ ]` · client · **M** · Depends: T-1 · Blocks: T-5
+- **Status:** `[x]` · client · **M** · Depends: T-1 · Blocks: T-5
 - **Scope:** Row grid (mockup tracks — NOT the table's, A-13), identity + remaining subline, segmented bar (TS-computed widths; tokens only), mono figures, Report + open icon + View-results swap, all emitting the EXISTING `openAow`; `canReportW1W2` gate preserved verbatim. Skills: `angular-developer`.
 - **Covers:** R-3 render clauses (counts-not-percent AND, disclosure title, subline), R-4 all clauses (single-output BUT, permission AND, complete-swap), N-1 rows-stay-clickable.
 - **Tests (OAH-TEST-4):** width binding computed from counts (fixture with zero-target rows disagrees under percent-of-percent — that IS the failing input); title lists three counts + zero-target; complete fixture swaps the button; `openAow` spy receives the code from row, button and icon; disabled state matches the pinned `canReportW1W2` test (kept green, not rewritten).

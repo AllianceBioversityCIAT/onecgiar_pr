@@ -366,73 +366,99 @@
           }
         </div>
       } @else if (richRows().length) {
+        <!-- OAH-T-4 row rebuild (Option A anatomy, mockup/Main.dc.html + RowStates.dc.html):
+             mockup grid tracks — deliberately NOT reporting-aow-table's (design.md §6, A-13). -->
+        <!-- @akili-spec changes/overview-aow-progress-hero -->
         <div class="flex flex-col gap-[8px] p-[20px]">
           @for (row of richRows(); track row.code) {
             <div
               (click)="row.code ? openAow.emit(row.code) : null"
-              class="group flex flex-wrap items-center justify-between gap-[12px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[16px] py-[12px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs"
+              class="group grid grid-cols-[1fr_260px_120px_170px] items-center gap-[16px] rounded-[10px] border border-[var(--pr-border)] bg-[var(--pr-surface-ground)] px-[16px] py-[12px] text-left transition-all duration-150 hover:border-[var(--pr-color-primary-300)] hover:bg-[var(--pr-surface-card)] hover:shadow-xs"
               [class.cursor-pointer]="!!row.code">
 
-              <!-- Left: AoW Code Badge + Name -->
-              <div class="flex min-w-0 flex-1 items-center gap-[12px]">
+              <!-- Identity: AoW code chip + name + "N KPIs remaining" subline -->
+              <div class="flex min-w-0 items-center gap-[10px]">
                 <span class="inline-flex shrink-0 items-center justify-center rounded-[6px] bg-purple-100/80 px-[8px] py-[2px] font-mono text-[11px] font-bold text-purple-800 border border-purple-200/70 group-hover:bg-purple-200/80 transition-colors">
                   {{ row.code }}
                 </span>
-                <span
-                  class="min-w-0 truncate text-[13.5px] font-semibold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors"
-                  [prTooltip]="row.name">
-                  {{ row.name }}
-                </span>
-              </div>
-
-              <!-- Right: Progress Bar + Targets + Percent Badge (segmented-bar/actions anatomy is
-                   OAH-T-4's rebuild — kept as the pre-existing bar/badge for now, re-fed from the
-                   rich row's `reported`/`total`). -->
-              <div class="flex shrink-0 items-center gap-[16px]">
-                <span class="h-[7px] w-[140px] overflow-hidden rounded-full bg-[var(--pr-border)]/60" aria-hidden="true">
+                <div class="flex min-w-0 flex-col">
                   <span
-                    class="block h-full rounded-full transition-all duration-500"
-                    [style.width.%]="percentOfRich(row)"
-                    [ngClass]="percentOfRich(row) >= 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-[var(--pr-color-primary-500)] to-[var(--pr-color-primary-400)]'"></span>
-                </span>
-
-                <!-- KPIs Metric -->
-                <div class="w-[72px] text-right font-medium tabular-nums text-[12.5px] text-[var(--pr-text-secondary)]">
-                  <strong class="font-bold text-[var(--pr-text-heading)]">{{ row.reported }}</strong>
-                  <span class="text-[var(--pr-text-muted)]">/{{ row.total }}</span>
-                  <span class="ml-1 text-[11px] text-[var(--pr-text-muted)]">KPIs</span>
+                    class="min-w-0 truncate text-[14.5px] font-bold text-[var(--pr-text-heading)] group-hover:text-[var(--pr-color-primary-700)] transition-colors"
+                    [prTooltip]="row.name">
+                    {{ row.name }}
+                  </span>
+                  @if (isRowComplete(row)) {
+                    <span class="inline-flex items-center gap-[5px] text-[11.5px] font-semibold text-emerald-700">
+                      <span class="material-icons-round text-[12px]" aria-hidden="true">check</span>
+                      {{ rowSubline(row) }}
+                    </span>
+                  } @else {
+                    <span class="text-[11.5px] text-[var(--pr-text-muted)]">{{ rowSubline(row) }}</span>
+                  }
                 </div>
-
-                <!-- Percent Badge -->
-                <div
-                  class="inline-flex w-[48px] justify-center rounded-[6px] px-[6px] py-[2px] text-[11.5px] font-bold tabular-nums"
-                  [ngClass]="{
-                    'bg-emerald-50 text-emerald-700 border border-emerald-200': percentOfRich(row) >= 100,
-                    'bg-[var(--pr-color-primary-50)] text-[var(--pr-color-primary-700)] border border-[var(--pr-color-primary-200)]': percentOfRich(row) > 0 && percentOfRich(row) < 100,
-                    'bg-gray-100 text-gray-500 border border-gray-200': percentOfRich(row) === 0
-                  }">
-                  {{ percentOfRich(row) }}%
-                </div>
-
-                <!-- Report (REH-R-7/REH-AC-15): inline reporting entry point, right of the percent
-                     badge. No native `disabled` — a natively disabled button drops out of the tab
-                     order, so a keyboard/screen-reader user could not reach it or hear the `title`
-                     explaining why it is inert. `onReportAowRow` guards the no-rights case itself. -->
-                <!-- @akili-spec changes/reporting-entry-hub -->
-                <button
-                  type="button"
-                  (click)="onReportAowRow(row, $event)"
-                  [attr.aria-disabled]="!canReportW1W2() ? 'true' : null"
-                  [attr.title]="!canReportW1W2() ? copy.w12.noRightsTooltip : null"
-                  [ngClass]="
-                    canReportW1W2()
-                      ? 'cursor-pointer border-[var(--pr-color-primary-200)] text-[var(--pr-color-primary-500)]'
-                      : 'cursor-not-allowed border-[var(--pr-border)] text-[var(--pr-text-muted)]'
-                  "
-                  class="inline-flex h-[30px] shrink-0 items-center rounded-[8px] border px-[12px] text-[12.5px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
-                  Report
-                </button>
               </div>
+
+              <!-- Segmented status bar: widths COMPUTED IN TS from KPI counts (never template
+                   arithmetic, never percent-of-percent — OAH-R-3 "honest at 1%"). -->
+              <span
+                class="flex h-[12px] overflow-hidden rounded-[6px] bg-[var(--pr-border)]"
+                [attr.title]="rowBarTitle(row)"
+                [attr.aria-label]="rowBarTitle(row)">
+                <span class="block h-full bg-[var(--pr-color-green-500)]" [style.width.%]="completeSegmentWidth(row)"></span>
+                <span class="block h-full bg-[var(--pr-color-primary-300)]" [style.width.%]="inProgressSegmentWidth(row)"></span>
+              </span>
+
+              <!-- Mono figures: reported/total + % -->
+              <div class="flex flex-col items-end">
+                <span class="pr-figure text-[16px] font-bold text-[var(--pr-text-heading)]">
+                  {{ row.reported }}<span class="font-semibold text-[var(--pr-text-muted)]">/{{ row.total }}</span>
+                </span>
+                <span class="pr-figure-sm font-semibold text-[var(--pr-text-secondary)]">{{ percentOfRich(row) }}%</span>
+              </div>
+
+              <!-- Actions: Report + open icon, both emitting the EXISTING `openAow` output
+                   (single path, DD-6). A fully-reported row swaps to the quiet "View results"
+                   treatment (RowStates.dc.html "Complete" block). -->
+              @if (isRowComplete(row)) {
+                <div class="flex justify-end">
+                  <button
+                    type="button"
+                    (click)="onOpenAowRowAction(row, $event)"
+                    class="inline-flex h-[32px] shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] px-[14px] text-[14px] font-medium text-[var(--pr-text-secondary)] transition-colors hover:border-[var(--pr-color-primary-300)] hover:text-[var(--pr-text-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                    View results
+                  </button>
+                </div>
+              } @else {
+                <div class="flex justify-end gap-[6px]">
+                  <!-- Report (REH-R-7/REH-AC-15): inline reporting entry point. No native
+                       `disabled` — a natively disabled button drops out of the tab order, so a
+                       keyboard/screen-reader user could not reach it or hear the `title`
+                       explaining why it is inert. `onReportAowRow` guards the no-rights case
+                       itself, `canReportW1W2` preserved verbatim (REH-R-8). -->
+                  <!-- @akili-spec changes/reporting-entry-hub -->
+                  <button
+                    type="button"
+                    (click)="onReportAowRow(row, $event)"
+                    [attr.aria-disabled]="!canReportW1W2() ? 'true' : null"
+                    [attr.title]="!canReportW1W2() ? copy.w12.noRightsTooltip : null"
+                    [ngClass]="
+                      canReportW1W2()
+                        ? 'cursor-pointer border-[var(--pr-color-primary-300)] text-[var(--pr-color-primary-400)] hover:border-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]'
+                        : 'cursor-not-allowed border-[var(--pr-border)] text-[var(--pr-text-muted)]'
+                    "
+                    class="inline-flex h-[32px] shrink-0 items-center justify-center rounded-[8px] border bg-[var(--pr-surface-card)] px-[14px] text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                    Report
+                  </button>
+                  <button
+                    type="button"
+                    (click)="onOpenAowRowAction(row, $event)"
+                    aria-label="Open this Area of Work"
+                    title="Open this Area of Work"
+                    class="inline-flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-[var(--pr-border)] bg-[var(--pr-surface-card)] text-[var(--pr-text-secondary)] hover:bg-[var(--pr-surface-subtle)] hover:text-[var(--pr-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
+                    <span class="material-icons-round text-[15px]" aria-hidden="true">arrow_forward</span>
+                  </button>
+                </div>
+              }
             </div>
           }
         </div>

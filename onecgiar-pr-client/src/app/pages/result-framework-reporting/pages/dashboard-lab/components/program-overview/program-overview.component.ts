@@ -295,12 +295,65 @@ export class ProgramOverviewComponent {
   readonly skeletonSplitPlaceholders = [0, 1, 2];
 
   /**
-   * Row percent from the rich counts (`reported/total`) — feeds the pre-existing row's bar/percent
-   * badge until OAH-T-4 replaces them with the segmented-bar anatomy.
+   * Row percent from the rich counts (`reported/total`) — feeds the mono `reported/total · N%`
+   * figure (design.md §6 "Mono figures"). Rounded ONLY for that display; the segmented-bar
+   * SEGMENT WIDTHS below are never derived from this rounded value (OAH-R-3 "never
+   * percent-of-percent").
    * @akili-spec changes/overview-aow-progress-hero
    */
   percentOfRich(row: OverviewAowProgressRowRich): number {
     return row.total ? Math.round((row.reported / row.total) * 100) : 0;
+  }
+
+  /**
+   * Segmented-bar segment widths (OAH-T-4, design.md §6 "Segmented bar") — each is `count/total*100`
+   * computed HERE from the raw KPI counts, never from a rounded percent (OAH-R-3 "honest at 1%":
+   * a `target=137, complete=1` fixture must paint ≈0.73%, not the rounded 1% `percentOfRich` would
+   * give). Bound directly via `[style.width.%]` — never re-derived in the template.
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  completeSegmentWidth(row: OverviewAowProgressRowRich): number {
+    return row.total ? (row.complete / row.total) * 100 : 0;
+  }
+
+  inProgressSegmentWidth(row: OverviewAowProgressRowRich): number {
+    return row.total ? (row.inProgress / row.total) * 100 : 0;
+  }
+
+  /**
+   * Text alternative for the segmented bar (OAH-N-1) and its `title` disclosure (OAH-R-3): the
+   * three glossary counts, plus the zero-target exclusion note when any KPI was excluded.
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  rowBarTitle(row: OverviewAowProgressRowRich): string {
+    const base = `${row.complete} Complete, ${row.inProgress} In progress, ${row.notStarted} Not started`;
+    return row.zeroTarget > 0 ? `${base}, excludes ${row.zeroTarget} zero-target KPIs` : base;
+  }
+
+  /** `true` once a row has reported every counted KPI (OAH-R-4 complete swap). */
+  isRowComplete(row: OverviewAowProgressRowRich): boolean {
+    return row.total > 0 && row.remaining === 0;
+  }
+
+  /**
+   * The row's `N KPIs remaining` subline (OAH-R-3), or the quiet complete copy (OAH-R-4,
+   * `RowStates.dc.html` "Complete" block) once nothing remains.
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  rowSubline(row: OverviewAowProgressRowRich): string {
+    return this.isRowComplete(row) ? 'All planned KPIs reported' : `${row.remaining} KPIs remaining`;
+  }
+
+  /**
+   * The row's open icon + (once complete) "View results" button: same single navigation path as
+   * `onReportAowRow` (`openAow`, OAH-R-4/DD-6) but with NO permission gate — `canReportW1W2` only
+   * fences the reporting action, never plain navigation. Stops propagation so the row's own
+   * `(click)="openAow.emit(row.code)"` does not ALSO fire.
+   * @akili-spec changes/overview-aow-progress-hero
+   */
+  onOpenAowRowAction(row: { code: string }, event: Event): void {
+    event.stopPropagation();
+    if (row.code) this.openAow.emit(row.code);
   }
 
   readonly contributingCentersCount = computed(() => {

@@ -208,3 +208,165 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
     expect(html.toLowerCase()).not.toContain('#19ae58');
   });
 });
+
+/**
+ * OAH-TEST-4 (`changes/overview-aow-progress-hero`, tasks.md OAH-T-4) — the per-AoW row rebuild:
+ * segmented-bar widths computed from counts (never percent-of-percent), the `title` disclosure,
+ * mono figures, the Report/open-icon/View-results actions and their single `openAow` path, and the
+ * `canReportW1W2` permission gate preserved on the rebuilt markup.
+ */
+describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + actions)', () => {
+  let fixture: ComponentFixture<ProgramOverviewComponent>;
+  let component: ProgramOverviewComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [ProgramOverviewComponent] }).compileComponents();
+    fixture = TestBed.createComponent(ProgramOverviewComponent);
+    component = fixture.componentInstance;
+  });
+
+  /**
+   * `target=137, complete=0, inProgress=1` — HAND-computed width = 1/137*100 = 0.729927...%.
+   * Percent-of-percent (rounding `reported/total*100` to 1% first, then treating 1% as the width)
+   * would DISAGREE with this value — the disqualifying case OAH-TEST-4 requires (tasks.md).
+   */
+  const honestAt1Percent: OverviewAowProgressRowRich = {
+    code: 'AOW02',
+    name: 'Accelerated Breeding',
+    complete: 0,
+    inProgress: 1,
+    notStarted: 136,
+    zeroTarget: 0,
+    reported: 1,
+    total: 137,
+    remaining: 136
+  };
+
+  it('segment widths are computed from raw KPI counts — never percent-of-percent (OAH-R-3 "honest at 1%")', () => {
+    fixture.componentRef.setInput('richRows', [honestAt1Percent]);
+    fixture.detectChanges();
+
+    // Hand-computed: 1/137*100 = 0.7299270072992700...% — NOT the rounded `percentOfRich` (1%).
+    const expectedInProgressWidth = (1 / 137) * 100;
+    expect(component.inProgressSegmentWidth(honestAt1Percent)).toBeCloseTo(expectedInProgressWidth, 10);
+    expect(component.completeSegmentWidth(honestAt1Percent)).toBe(0);
+    expect(component.percentOfRich(honestAt1Percent)).toBe(1); // the rounded display figure — different value, different site.
+
+    const bar = fixture.nativeElement.querySelector('[title*="In progress"]') as HTMLElement;
+    expect(bar).toBeTruthy();
+    const segments = bar.querySelectorAll('span');
+    const inProgressSegment = segments[1] as HTMLElement;
+    expect(parseFloat(inProgressSegment.style.width)).toBeCloseTo(expectedInProgressWidth, 5);
+  });
+
+  it('the bar title lists the three counts and the zero-target note when N > 0', () => {
+    const rowWithZeroTarget: OverviewAowProgressRowRich = {
+      code: 'AOW01',
+      name: 'Market Intelligence',
+      complete: 2,
+      inProgress: 3,
+      notStarted: 17,
+      zeroTarget: 4,
+      reported: 5,
+      total: 22,
+      remaining: 17
+    };
+    fixture.componentRef.setInput('richRows', [rowWithZeroTarget]);
+    fixture.detectChanges();
+
+    const bar = fixture.nativeElement.querySelector('[title*="Complete"]') as HTMLElement;
+    expect(bar).toBeTruthy();
+    const title = bar.getAttribute('title')!;
+    expect(title).toContain('2 Complete');
+    expect(title).toContain('3 In progress');
+    expect(title).toContain('17 Not started');
+    expect(title).toContain('excludes 4 zero-target KPIs');
+  });
+
+  it('omits the zero-target note from the bar title when N is 0', () => {
+    fixture.componentRef.setInput('richRows', [honestAt1Percent]);
+    fixture.detectChanges();
+
+    const bar = fixture.nativeElement.querySelector('[title*="Complete"]') as HTMLElement;
+    expect(bar.getAttribute('title')).not.toContain('zero-target');
+  });
+
+  it('a row with remaining === 0 && total > 0 swaps Report for View results, keeping the same openAow emit (OAH-R-4 complete swap)', () => {
+    const completeRow: OverviewAowProgressRowRich = {
+      code: 'AOW01',
+      name: 'Market Intelligence',
+      complete: 22,
+      inProgress: 0,
+      notStarted: 0,
+      zeroTarget: 0,
+      reported: 22,
+      total: 22,
+      remaining: 0
+    };
+    fixture.componentRef.setInput('richRows', [completeRow]);
+    fixture.detectChanges();
+
+    expect(component.isRowComplete(completeRow)).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('All planned KPIs reported');
+
+    const buttons = fixture.debugElement.queryAll(By.css('button'));
+    const reportButton = buttons.find(b => b.nativeElement.textContent.trim() === 'Report');
+    const viewResultsButton = buttons.find(b => b.nativeElement.textContent.trim() === 'View results');
+    expect(reportButton).toBeFalsy();
+    expect(viewResultsButton).toBeTruthy();
+
+    const emitted: string[] = [];
+    component.openAow.subscribe(code => emitted.push(code));
+    viewResultsButton!.nativeElement.click();
+    expect(emitted).toEqual(['AOW01']);
+  });
+
+  it('openAow receives the row code from the row click, the Report button, and the open icon — exactly one emission each (OAH-R-4 single output)', () => {
+    fixture.componentRef.setInput('richRows', [honestAt1Percent]);
+    fixture.detectChanges();
+
+    const rowEl = fixture.nativeElement.querySelector('.grid.grid-cols-\\[1fr_260px_120px_170px\\]') as HTMLElement;
+    const buttons = fixture.debugElement.queryAll(By.css('button'));
+    const reportButton = buttons.find(b => b.nativeElement.textContent.trim() === 'Report');
+    const iconButton = buttons.find(b => b.nativeElement.getAttribute('aria-label') === 'Open this Area of Work');
+    expect(rowEl).toBeTruthy();
+    expect(reportButton).toBeTruthy();
+    expect(iconButton).toBeTruthy();
+
+    // Row click.
+    let emitted: string[] = [];
+    let sub = component.openAow.subscribe(code => emitted.push(code));
+    rowEl.click();
+    expect(emitted).toEqual(['AOW02']);
+    sub.unsubscribe();
+
+    // Report button — must not ALSO trigger the row's own click (stopPropagation).
+    emitted = [];
+    sub = component.openAow.subscribe(code => emitted.push(code));
+    reportButton!.nativeElement.click();
+    expect(emitted).toEqual(['AOW02']);
+    sub.unsubscribe();
+
+    // Open icon — same single path.
+    emitted = [];
+    sub = component.openAow.subscribe(code => emitted.push(code));
+    iconButton!.nativeElement.click();
+    expect(emitted).toEqual(['AOW02']);
+    sub.unsubscribe();
+  });
+
+  it('canReportW1W2=false disables the rebuilt Report button with aria-disabled and the exact tooltip, while keeping it keyboard-reachable (REH-R-8, pinned contract)', () => {
+    fixture.componentRef.setInput('richRows', [honestAt1Percent]);
+    fixture.componentRef.setInput('canReportW1W2', false);
+    fixture.detectChanges();
+
+    const reportButton = fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(b => b.nativeElement.textContent.trim() === 'Report');
+    expect(reportButton).toBeTruthy();
+    expect(reportButton!.nativeElement.getAttribute('aria-disabled')).toBe('true');
+    expect(reportButton!.nativeElement.getAttribute('title')).toBe('You do not have reporting rights on this program');
+    expect(reportButton!.nativeElement.hasAttribute('disabled')).toBe(false);
+    expect(reportButton!.nativeElement.tabIndex).not.toBe(-1);
+  });
+});
