@@ -416,4 +416,42 @@ describe('ResultRepository (unit)', () => {
       expect(queryMock).toHaveBeenCalledWith(expect.any(String), [123]);
     });
   });
+
+  /**
+   * The identical defect one function below the Capacity Sharing one, authorised as its own fix after
+   * being raised: same INNER JOIN on nullable catalogue FKs, same blank block in the review drawer.
+   * Here it also takes the implementing organizations down with it, because they hang off the same
+   * result set through a LEFT JOIN.
+   */
+  describe('getPolicyChangeBilateralResultById — nullable catalogues must LEFT JOIN', () => {
+    const sqlOf = () =>
+      (queryMock.mock.calls[0][0] as string).replace(/\s+/g, ' ');
+
+    beforeEach(() => {
+      queryMock.mockResolvedValue([]);
+    });
+
+    it('LEFT JOINs both nullable catalogues, so a half-answered row still comes back', async () => {
+      await repo.getPolicyChangeBilateralResultById(456);
+
+      const sql = sqlOf();
+      expect(sql).toContain('LEFT JOIN clarisa_policy_stage');
+      expect(sql).toContain('LEFT JOIN clarisa_policy_type');
+      expect(sql).not.toMatch(/(?<!LEFT )(?<!OUTER )JOIN clarisa_policy_stage/);
+      expect(sql).not.toMatch(/(?<!LEFT )(?<!OUTER )JOIN clarisa_policy_type/);
+    });
+
+    it('keeps the implementing organizations reachable and the policy-change row itself required', async () => {
+      await repo.getPolicyChangeBilateralResultById(456);
+
+      const sql = sqlOf();
+      // These were collateral damage: the INNER catalogue joins emptied the whole result set.
+      expect(sql).toContain('LEFT JOIN results_by_institution');
+      expect(sql).toContain('LEFT JOIN clarisa_institutions');
+      // No policy-change record means there is genuinely nothing to show; do not relax this one.
+      expect(sql).toMatch(/JOIN results_policy_changes/);
+      expect(sql).not.toContain('LEFT JOIN results_policy_changes');
+      expect(queryMock).toHaveBeenCalledWith(expect.any(String), [456]);
+    });
+  });
 });

@@ -3328,6 +3328,19 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * LEFT JOINs the two catalogues on purpose, same reason as
+   * `getCapacitySharingBilateralResultById` above. Both FKs are nullable
+   * (`ResultsPolicyChanges.policy_stage_id` and `.policy_type_id`), so the INNER JOINs this used to
+   * have dropped every row whenever one of the two was unanswered — taking the implementing
+   * organizations with them, since those hang off the same result set through a LEFT JOIN. The review
+   * drawer received an empty array and rendered the whole Policy Change block blank, answers
+   * included.
+   *
+   * The green check is a separate path and is unaffected: `validation_policy_change_P25`
+   * (`1762528725798-createValidtionP25.ts:1414-1428`) reads `policy_type_id` and `policy_stage_id`
+   * straight off `results_policy_changes` and never joins the catalogues.
+   */
   async getPolicyChangeBilateralResultById(resultId: number): Promise<any[]> {
     const query = `
       SELECT 
@@ -3349,9 +3362,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND rbi.institution_roles_id = 4
       LEFT JOIN clarisa_institutions ci
         ON rbi.institutions_id = ci.id
-      JOIN clarisa_policy_stage cps
+      LEFT JOIN clarisa_policy_stage cps
         ON rpc.policy_stage_id = cps.id
-      JOIN clarisa_policy_type cpt
+      LEFT JOIN clarisa_policy_type cpt
         ON rpc.policy_type_id = cpt.id
       WHERE
         r.id = ?
