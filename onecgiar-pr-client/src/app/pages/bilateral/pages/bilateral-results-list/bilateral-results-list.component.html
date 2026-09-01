@@ -235,6 +235,10 @@
                     <span class="rc-cell-link rc-title" [attr.title]="result.title">
                       <span class="rc-title__text">{{ result.title }}</span>
                     </span>
+                  } @else if (column.attr === 'project_name') {
+                    <span class="rc-cell-link rc-plain" [attr.title]="result.project_name">{{ result.project_name || '-' }}</span>
+                  } @else if (column.attr === 'description') {
+                    <span class="rc-cell-link rc-plain" [attr.title]="result.description">{{ result.description || '-' }}</span>
                   } @else if (column.attr === 'result_type') {
                     <span class="rc-cell-link rc-plain" [attr.title]="result.result_type">{{ result.result_type }}</span>
                   } @else if (column.attr === 'is_leading_result') {

@@ -3705,6 +3705,20 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.id,
         r.result_code,
         r.title,
+        -- P2-3152 AC6: the centre dashboard must list Project name and Description
+        -- alongside Title and Status. A correlated subquery (not a JOIN) keeps the
+        -- project lookup from multiplying rows when a result has several project links.
+        r.description,
+        (
+          SELECT COALESCE(NULLIF(TRIM(cp.full_name), ''), cp.short_name)
+          FROM results_by_projects rbp
+          INNER JOIN clarisa_projects cp
+                  ON cp.id = rbp.project_id
+          WHERE rbp.result_id = r.id
+            AND rbp.is_active = 1
+          ORDER BY rbp.is_lead DESC, rbp.id DESC
+          LIMIT 1
+        ) AS project_name,
         rt.name  AS result_type,
         rs.result_status_id AS status_id,
         rs.status_name,

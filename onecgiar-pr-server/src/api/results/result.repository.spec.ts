@@ -154,6 +154,26 @@ describe('ResultRepository (unit)', () => {
     expect(params).toEqual(['BIO', 'BIO', 36]);
   });
 
+  // P2-3152 AC6 — the centre dashboard must list Project name and Description. Neither was
+  // selected, so the client had nothing to render. The project is resolved with a correlated
+  // subquery on purpose: a LEFT JOIN on results_by_projects would duplicate the result row
+  // once per project link and silently inflate the dashboard list.
+  it('returns the result description and the project name for the bilateral centre dashboard, without multiplying rows', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.description');
+    expect(sql).toContain(
+      "COALESCE(NULLIF(TRIM(cp.full_name), ''), cp.short_name)",
+    );
+    expect(sql).toContain(') AS project_name');
+    expect(sql).not.toContain('LEFT JOIN results_by_projects');
+    // The subquery adds no bound parameter — a stray ? here would shift mysql2's placeholders.
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
+
   // W12-R-2: matrix must count only W1/W2-origin (source='Result'), primary-submitter
   // (initiative_role_id=1) results in the requested version, with the meter's status/type
   // universe (status != 4, type NOT IN (10, 11)) — not the pre-fix bilateral/contributor/
