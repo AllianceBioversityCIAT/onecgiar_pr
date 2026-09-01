@@ -16,7 +16,7 @@
 - **DoD:** green; hub/thin-row consumers untouched (their specs green).
 
 ### `OAH-T-2` — Section move + pinned-test edits (deliberate)
-- **Status:** `[ ]` · client · **S** · Depends: T-1 · Blocks: T-3
+- **Status:** `[x]` · client · **S** · Depends: T-1 · Blocks: T-3
 - **Scope:** Move §8 above the W1/W2 status cards, preserving the `activeSection()` gate (R-2 AND). Update, as DELIBERATE edits with the original comments preserved, exactly these pinned assertions: `program-overview.component.spec.ts:141-158` (8-heading `toEqual` order), `:681-684` (`headings.length===8` + adjacency), and any order-index assertions the move shifts (map 8→7). Skills: `angular-developer`.
 - **Covers:** R-2 scenario + `activeSection` AND + reflow BUT (order half), C-4 ownership.
 - **Verification:** targeted jest on the program-overview spec. **Fails if:** the order test still lists the hero below W1/W2 status, or the `aow`-filter view loses the section. **Guard for the Implementer:** a red order test is fixed by EDITING THE TEST to the new approved order — never by reverting the move (the C-4 trap, named here on purpose).

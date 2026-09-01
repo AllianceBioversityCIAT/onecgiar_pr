@@ -136,23 +136,30 @@ describe('ProgramOverviewComponent', () => {
    * card fully subsume it) — 8 headings drop to 7, deliberately, here.
    * **`TCM-R-1`** (`changes/overview-toc-map`, TCM-T-3, deliberate recorded edit): appends the
    * "Theory of Change map" card directly below "Progress by area of work" — 7 headings become 8.
+   * **`OAH-R-2`/`OAH-T-2`** (`changes/overview-aow-progress-hero`, deliberate recorded edit, C-4):
+   * "Progress by area of work" is promoted to the HERO position — moved from second-to-last to
+   * directly after "About this program" — superseding TCM-R-1's "directly below AoW" adjacency
+   * for the ToC map (design DD-2); the ToC map stays LAST.
    * FAIL input: the append missing (card not rendered, or its `<h2>` renamed/dropped) → red.
    */
-  it('renders the eight Overview cards in the approved design order (CVT-A-3, TCM-R-1)', () => {
+  it('renders the eight Overview cards in the approved design order (CVT-A-3, TCM-R-1, OAH-R-2)', () => {
     const headings = Array.from(fixture.nativeElement.querySelectorAll('h2')).map((h: any) => h.textContent.trim());
 
     // Order amended by CVT-A-3 (2026-08-27, owner, CVT-T-3 gate — supersedes P2-3303's placement
     // decision and quick/overview-card-order's 8-card layout): context → own results by category
     // and status → status headline → bilateral volume + contributors → their cross → plan progress
     // → whole-program ToC map (TCM-R-1, appended 2026-08-28).
+    // Order amended again by OAH-R-2 (`changes/overview-aow-progress-hero`, owner mandate):
+    // "Progress by area of work" promoted to the hero position, directly after "About this
+    // program" — above the W1/W2 and W3/Bilateral status groups. ToC map remains last.
     expect(headings).toEqual([
       'About this program',
+      'Progress by area of work',
       'Reporting status',
       'W1/W2 results by category and status',
       'Reporting status',
       'W3/Bilateral results by indicator category',
       'W3/Bilateral results by center and category',
-      'Progress by area of work',
       'Theory of Change map'
     ]);
   });
