@@ -184,9 +184,22 @@ En los tres siguientes **la prueba es la comparación**. Ver solo el de 2026 no 
 
 ## Lo que NO se puede verificar todavía, y por qué
 
-🛑 **El estado del ambiente NO se mide con la home.** `prtest` puede responder **200** y aun así no
-dejarte entrar: el front son ficheros estáticos que se sirven por otra ruta. **Se mide contra
-`/api/results/get/all` con token** — y hasta que eso devuelva **200**, la verificación no empieza.
+🛑 **El estado del ambiente NO se mide con la home**, y **tampoco con un endpoint de negocio.**
+`prtest` puede responder **200** y aun así no dejarte entrar: el front son ficheros estáticos que se
+sirven por otra ruta. Pero la sonda que elegimos primero —`/api/results/get/all` con token— resultó
+ser **peor**: el 1-sep por la tarde ese endpoint devolvía **500 por un error de SQL** con el ambiente
+perfectamente arriba y el resto del backend respondiendo.
+
+**La sonda buena es un endpoint de CATÁLOGO**, que no depende de ninguna consulta compleja:
+
+```
+curl -s -o /dev/null -w '%{http_code}' -H "auth: $TOKEN" \
+  https://prtest-back.ciat.cgiar.org/clarisa/policy-stages/get/all
+```
+
+**200 ahí = hay ambiente.** La lección, que es lo que hay que recordar y no el endpoint concreto:
+**un endpoint de negocio puede estar roto sin que el ambiente lo esté**, así que un semáforo no se
+pone nunca sobre una consulta que puede fallar por su cuenta.
 
 > Medido el 1-sep a las 10:2x: `prtest` = **200**, `clarisatest-web` = **200**, pero
 > `/api/results/get/all` = **403 con token y sin token**, y el cuerpo es un
