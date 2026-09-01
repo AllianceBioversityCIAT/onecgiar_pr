@@ -8,6 +8,7 @@ import { AlertStatusComponent } from '../../../../../../../custom-fields/alert-s
 import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { LabelNamePipe } from '../../../../../../../custom-fields/pr-select/label-name.pipe';
+import { SectionSkeletonDirective } from '../../../../../../../custom-fields/section-skeleton/section-skeleton.directive';
 import { FormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
@@ -40,6 +41,8 @@ describe('PolicyChangeInfoComponent', () => {
       },
       dataControlSE: {
         currentResultSectionName: signal<string>('Policy change information'),
+        currentResultSignal: signal<any>({}),
+        reportingCurrentPhase: { phaseName: null, phaseYear: null, phaseId: null, portfolioAcronym: null, portfolioId: null },
         findClassTenSeconds: () => {
           return Promise.resolve();
         },
@@ -56,7 +59,8 @@ describe('PolicyChangeInfoComponent', () => {
         AlertStatusComponent,
         SaveButtonComponent,
         DetailSectionTitleComponent,
-        LabelNamePipe
+        LabelNamePipe,
+        SectionSkeletonDirective
       ],
       imports: [HttpClientTestingModule, FormsModule],
       providers: [
@@ -161,19 +165,77 @@ describe('PolicyChangeInfoComponent', () => {
     });
   });
 
-  describe('policyTypeDescriptions()', () => {
-    it('should return the correct HTML string', () => {
-      const expectedHtml = `<strong>Policy type guidance</strong> <ul>
-        <li><strong>Policy or strategy:</strong> Policies are written and formally approved decisions on, or commitments to, a particular course of action by an institution or organization (including but not limited to governments, NGOs, private sector). Strategies are high-level plans outlining how a particular course of action will be carried out. These documents show the intent of an organization or entity. Examples are country growth strategies, country agricultural policies, organization strategic plans or road maps. These documents set the goalposts but then require other instruments for implementation.</li>
-        <li><strong>Legal instrument:</strong> Legal instruments include laws, which are defined as Bills passed into law by the highest elected body (a parliament, congress or equivalent); or regulations, which are defined as rules or norms adopted by a government. These laws and regulations dictate very specifically actions and behaviors that are to be followed or prohibited and often include language on implications of non-compliance.</li>
-        <li><strong>Program, budget or investment:</strong> These are implementing mechanisms that often follow from a strategy, policy or law. There is typically a well-defined set of actions outlined over a specific period of time and with a specific budgetary amount attached. A National Agricultural Investment Plan is an example, the budget within a ministry is another, investments from the private sector fit here, as well as programs launched by multilateral, public, private and NGO sectors.</li>
-      </ul>`;
+  describe('policyTypeDescriptions() — P2-3261 phase gate (epic P2-3243)', () => {
+    const GUIDANCE_2026_SENTENCE = 'Policies are written and formally approved decisions on, or commitments to, a particular course of action';
+    const LEGACY_SENTENCE = 'This could also be observed as information campaigns';
+    const LEGAL_INSTRUMENT_SENTENCE = 'Legal instruments include laws, which are defined as Bills passed into law';
 
-      const result = component.policyTypeDescriptions();
-      const normalizedExpected = expectedHtml.replace(/\s+/g, ' ').trim();
-      const normalizedActual = result.replace(/\s+/g, ' ').trim();
+    /**
+     * Reads what the section actually PAINTS, not what the method returns.
+     * The client runs zoneless change detection: a test that only asserts on the returned string
+     * passes even when the grey box never re-renders. The guidance is the `app-alert-status`
+     * whose `[innerHTML]` carries the "Policy type guidance" heading.
+     */
+    const renderedGuidance = (): string => {
+      fixture.detectChanges();
+      const boxes = Array.from(fixture.nativeElement.querySelectorAll('.alert_text')) as HTMLElement[];
+      const guidance = boxes.find(box => box.textContent?.includes('Policy type guidance'));
+      return guidance?.innerHTML ?? '';
+    };
 
-      expect(normalizedActual).toEqual(normalizedExpected);
+    const openResultOfPhase = (phaseYear: unknown) => {
+      mockApiService.dataControlSE.currentResultSignal.set({ result_type_id: 1, phase_year: phaseYear });
+    };
+
+    it('paints the 2026 wording on a result of the 2026 reporting phase', () => {
+      openResultOfPhase(2026);
+
+      const painted = renderedGuidance();
+
+      expect(painted).toContain(GUIDANCE_2026_SENTENCE);
+      expect(painted).not.toContain(LEGACY_SENTENCE);
+    });
+
+    it('paints the 2026 wording on any later phase', () => {
+      openResultOfPhase(2027);
+
+      expect(renderedGuidance()).toContain(GUIDANCE_2026_SENTENCE);
+    });
+
+    it('keeps the pre-P2-3261 wording on a result of the 2025 phase, which shares the P25 portfolio', () => {
+      openResultOfPhase(2025);
+
+      const painted = renderedGuidance();
+
+      expect(painted).toContain(LEGACY_SENTENCE);
+      expect(painted).not.toContain(GUIDANCE_2026_SENTENCE);
+    });
+
+    it('keeps the pre-P2-3261 wording on the closed P22 phases', () => {
+      openResultOfPhase(2024);
+
+      expect(renderedGuidance()).toContain(LEGACY_SENTENCE);
+    });
+
+    it('treats a phase year arriving as a string as a bad payload and falls back to the legacy wording', () => {
+      openResultOfPhase('2026');
+
+      expect(renderedGuidance()).toContain(LEGACY_SENTENCE);
+    });
+
+    it('falls back to the open reporting phase when the result carries no phase year', () => {
+      mockApiService.dataControlSE.currentResultSignal.set({ result_type_id: 1 });
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2026;
+
+      expect(renderedGuidance()).toContain(GUIDANCE_2026_SENTENCE);
+    });
+
+    it('leaves the "Legal instrument" definition identical in both phases — P2-3261 never touched it', () => {
+      openResultOfPhase(2026);
+      expect(renderedGuidance()).toContain(LEGAL_INSTRUMENT_SENTENCE);
+
+      openResultOfPhase(2025);
+      expect(renderedGuidance()).toContain(LEGAL_INSTRUMENT_SENTENCE);
     });
   });
 
