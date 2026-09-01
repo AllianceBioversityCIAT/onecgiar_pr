@@ -370,12 +370,7 @@ export class AiReviewService {
         .pipe(this.saveButtonSE.isSavingPipe())
         .subscribe({
           next: (response: any) => {
-            // Detectar si estamos en la ruta de general-information
-            const currentUrl = this.router.url;
-            if (currentUrl.includes('general-information') || currentUrl.includes('innovation-dev-info')) {
-              // Incrementar el signal para notificar el cambio
-              this.generalInformationSaved.update(val => val + 1);
-            }
+            this.notifySectionChanged();
             resolve(response);
           },
           error: (error: any) => {
@@ -383,6 +378,21 @@ export class AiReviewService {
           }
         });
     });
+  }
+
+  /**
+   * Tells the open section that the AI dialog changed the result on the server, so it reloads.
+   *
+   * `RdGeneralInformationComponent` reacts to `generalInformationSaved` from an `effect()`. Without
+   * the bump the section keeps the values it loaded before the dialog opened, shows them as if
+   * nothing had been applied, and its own "Save changes" PATCHes the stale copy back over what the
+   * AI review had just written.
+   */
+  private notifySectionChanged() {
+    const currentUrl = this.router.url;
+    if (currentUrl.includes('general-information') || currentUrl.includes('innovation-dev-info')) {
+      this.generalInformationSaved.update(val => val + 1);
+    }
   }
 
   // Save DAC score
@@ -393,6 +403,11 @@ export class AiReviewService {
         .pipe(this.saveButtonSE.isSavingPipe())
         .subscribe({
           next: (response: any) => {
+            // The path the shipped AI Review dialog actually uses: `onSaveDacScore` /
+            // `onValidateAll` both go through here. The bump used to exist only on
+            // `POST_saveSession`, reachable solely from `onApplyProposal`, which no template calls —
+            // so accepting an impact-area recommendation never refreshed the section.
+            this.notifySectionChanged();
             resolve(response);
           },
           error: (error: any) => {

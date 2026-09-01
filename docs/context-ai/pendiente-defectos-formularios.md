@@ -22,17 +22,59 @@ resultado del workflow `forms-defects-and-answers`, y los dos barridos de navega
 
 ---
 
-## 🔴 LOTE 1 — General Information · 3 pérdidas de datos (front, nuestro)
+## LOTE 1 — General Information · verificado uno por uno el 1-sep-2026
 
 Archivos: `onecgiar-pr-client/src/app/pages/results/pages/result-detail/pages/rd-general-information/**`
+· `onecgiar-pr-client/src/app/custom-fields/lead-contact-person-field/**`
+· `onecgiar-pr-client/src/app/shared/services/api/ai-review.service.ts`
 
-1. 💾 **El nombre escrito en "Lead contact person" se descarta Y borra el que ya estaba guardado.**
-   El usuario escribe un nombre sin elegirlo de la lista del buscador y al guardar pierde ambos.
-   Arreglo: conservar lo que había, o impedir guardar y decirlo. Nunca borrar en silencio.
-2. 💾 **Si el guardado es rechazado, la sección se recarga y borra lo que el usuario acababa de
-   escribir.** Título, descripción e Impact Areas: todo se pierde. Arreglo: no recargar al fallar.
-3. 💾 **Tras aceptar una sugerencia del AI Review, la sección sigue mostrando el texto viejo y lo
-   vuelve a guardar encima.** Arreglo: refrescar el estado al aceptar.
+🛑 **Nada de este lote se verificó en navegador: prtest, prtest-back y clarisatest-web estaban
+caídos todo el 1-sep** (todo lo que resuelve a `cerberus.ciat.cgiar.org`). Falta abrirlo en pantalla.
+
+### ✅ Arreglado — 1. el nombre del Lead contact person se descartaba Y borraba el guardado
+
+El defecto era real y el diagnóstico anterior estaba **incompleto**: no bastaba con quitar el
+`!isP25`. La causa última es que el guardado no distinguía un nombre **tecleado** de uno **cargado
+con el resultado**, y el `!isP25` (`c64baefb8`, 23-ene-2026, sin razón escrita) era un parche para eso.
+
+- Un nombre libre sin coincidencia en el directorio es dato legítimo: el vínculo con AD
+  (`lead_contact_person_id`) solo existe desde la migración `1751462633282` (jul-2026), así que **todo
+  resultado anterior** lo guarda como texto libre, igual que lo reportado por la API de W3/Bilateral.
+  Con el guard mirando solo `searchQuery && !selectedUser`, esos resultados **no podían guardar
+  General Information en P22** y encima se les acusaba de un dato que no escribieron.
+- Excluir P25 tapaba eso y abría la pérdida: al teclear, `onSearchInput` pone
+  `lead_contact_person`/`_data` en `null`, y `createResultGeneralInformation` escribe ese `null` tal
+  cual (`results.service.ts:901-902`) — se pierde lo tecleado y se borra lo que había.
+
+Arreglo: el guard usa `queryCameFromHydration`, la misma distinción que el campo ya hacía en
+`onContactBlur`. Tecleado y sin elegir = error en **todos** los portafolios; cargado = se guarda.
+102/102 en el spec de la sección; 3 casos nuevos que fallan contra el código anterior.
+
+### ❌ RETIRADO — 2. el guardado rechazado recargaba y borraba lo tecleado
+
+**Ya estaba arreglado** por Yeck el 31-ago 14:56, commit `034414b2c`. El handler de error ya no llama
+`getSectionInformation()`.
+
+### ✅ Arreglado — 3. tras aceptar una sugerencia del AI Review la sección guardaba el texto viejo
+
+Confirmado, y con un mecanismo concreto: el aviso que refresca la sección
+(`generalInformationSaved`, que `RdGeneralInformationComponent` escucha en un `effect`) vivía **solo**
+en `POST_saveSession`, alcanzable únicamente desde `onApplyProposal` — y **ningún template llama a
+`onApplyProposal`**: es código muerto. La vía que el diálogo usa de verdad
+(`onSaveDacScore` / `onValidateAll` → `PATCH_saveDacScore`) no avisaba a nadie, así que la sección
+seguía con los valores cargados antes de abrir el diálogo y su propio "Save changes" los volvía a
+escribir encima de lo que la IA acababa de guardar.
+
+Arreglo: `PATCH_saveDacScore` emite el mismo aviso (extraído a `notifySectionChanged()`).
+
+⚠️ **Apunte que queda, sin desarrollar:** con `onValidateAll` el aviso sale una vez por área guardada,
+o sea hasta 5 recargas seguidas de la sección. Es correcto pero derrochador. Y el recargar descarta
+ediciones sin guardar que la persona tuviera en la sección — ya pasaba con `POST_saveSession`, no lo
+introduce este arreglo.
+
+⚠️ **También queda, y no es nuestro:** 3 de los 16 casos de
+`lead-contact-person-field.contract.cy.ts` fallan en `performance-refactor` desde antes de tocar nada
+(asertan `.fch_tag` / `fc-done` de `field-card`). Comprobado revirtiendo a HEAD: fallan igual.
 
 ## 🔴 LOTE 2 — El peor de todos, y es bloqueante (backend, nuestro)
 
