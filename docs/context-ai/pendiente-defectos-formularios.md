@@ -82,6 +82,48 @@ introduce este arreglo.
 `lead-contact-person-field.contract.cy.ts` fallan en `performance-refactor` desde antes de tocar nada
 (asertan `.fch_tag` / `fc-done` de `field-card`). Comprobado revirtiendo a HEAD: fallan igual.
 
+## ✅ VERIFICADO EN PANTALLA el 1-sep sobre v17
+
+Build limpio (`APP_VERSION = "17"`, leído del bundle servido con cache-buster, no del sidebar). Las
+cuatro entradas del lote, con el resultado de cada una y **lo que quedó sin observar**.
+
+| Entrada | Arreglo | Resultado | Cómo se probó |
+|---|---|---|---|
+| §4 Capacity Sharing en blanco | `4b07debbe` | ✅ positivo concluyente | API, resultado **11112** preexistente con `term=null`/`delivery=2` |
+| §5 estudio MELIA, 3 casos | `2d84051d4` + `c25fa6a65` | ✅ los tres | resultado **8103** |
+| §2 Lead contact person | `54d52b365` | ✅ las dos mitades | navegador, resultado **11240/8772**, portfolio **P25** |
+| §3 refresco del AI Review | `ebde5d999` | ✅ mecanismo | navegador, mismo resultado |
+
+**§2 — la mitad que es observación pura:** tecleado sin elegir → **0 peticiones** a
+`create/general-information`, mensaje en pantalla, y el texto tecleado **sigue en el campo**. Con el
+código viejo el guard se saltaba en P25 y el PATCH habría borrado el contacto guardado.
+⚠️ La otra mitad (contacto **cargado** de texto libre → sí guarda) se ejerció sobre el componente
+vivo **inyectando el estado**: barridos 14 resultados de fase 2026 y ninguno tenía contacto, y el
+único que lo tiene (11112) es bilateral y no abre en Result Detail.
+
+**§3 — qué se observó exactamente:** el `PATCH_saveDacScore` desplegado llama a
+`notifySectionChanged()` (leído del servicio en ejecución), y al dispararlo el signal pasa de 0 a 1
+y **la sección recarga de verdad** (nueva GET a `get/general-information/result/`). Eso es la cadena
+que estaba muerta: el aviso vivía solo en un método que ningún template llamaba.
+🛑 **Lo que NO se observó:** pulsar *Save changes* dentro del diálogo de AI Review sobre una
+puntuación real. Falta solo ese eslabón — el resto del camino está leído del código desplegado.
+
+📝 **Dato de prueba escrito y dejado puesto** (regla 22): resultado **11240 / code 8772**
+(*"P2-3241 recon test 999"*) quedó con `lead_contact_person = "Consultant Without AD Account"` y sin
+registro de directorio. Escrito por la interfaz, nombre reconociblemente sintético.
+
+⚠️ **Hallazgo del ambiente, no del código: prtest sirve un build de DESARROLLO de Angular**
+(*"Angular is running in development mode"* en consola, y los chunks llegan sin minificar). Va más
+lento y activa comprobaciones que producción no hace, así que **cualquier medida de rendimiento
+tomada ahí está sesgada**. Es de despliegue.
+
+⚠️ Menor y solo en modo desarrollo: `NG0100 ExpressionChangedAfterItHasBeenChecked` en
+`LeadContactPersonFieldComponent` al pintar el error del contacto. No rompe nada.
+
+❌ **Falso positivo evitado:** la consola muestra `GET /api/ad-users/search?query=… → 404` al teclear
+un nombre inventado. **No es un fallo**: con un nombre real (`?query=zuniga`) devuelve **200**. El 404
+es la respuesta a *sin coincidencias*.
+
 ## ✅ LOTE 2 — CERRADO: ya estaba arreglado, y el resto del bloque está cubierto
 
 Arreglado por Yeck el 31-ago 14:47, commit **`ac6532c54`** (+37 en `results.service.ts`, +107 de test):
