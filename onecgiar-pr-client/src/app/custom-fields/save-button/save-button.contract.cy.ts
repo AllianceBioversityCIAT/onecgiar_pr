@@ -76,19 +76,17 @@ describe('SaveButtonComponent — contract', () => {
      * If this does not re-render, an editor never gets a Save button.
      */
     /**
-     * 🛑 SKIPPED — this reproduces a real defect, it is not a stale spec. Do not "fix" it by
-     * relaxing the assert.
+     * ✅ RE-ENABLED (P2-3322, 01-Sep-2026) — this was skipped while `RolesService.readOnly` was a
+     * plain property assigned after an async role resolution: under zoneless change detection that
+     * assignment notified no scheduler, the view never re-rendered, and an editor got no Save button
+     * until something unrelated repainted the screen.
      *
-     * `RolesService.readOnly` is a plain property (`roles.service.ts:10`) assigned after an async
-     * role resolution, and this template reads it directly. Under zoneless change detection that
-     * assignment notifies no scheduler, so the view never re-renders and an editor gets no Save
-     * button until something unrelated happens to repaint. Same family as P2-3322, different
-     * shape — raised there on 26-Aug-2026 with the full reasoning.
-     *
-     * The honest fix is making `readOnly` a signal, which touches every consumer of that service
-     * across the client. Un-skip once that lands.
+     * `readOnly` is now signal-backed behind a getter/setter pair (`roles.service.ts`), so the write
+     * below schedules its own render pass. This asserts on the RENDERED DOM, never on the flag —
+     * asserting the flag passes even with the bug present, which is exactly how the defect stayed
+     * alive. Revert the service and this test must fail again.
      */
-    it.skip('[contract] appears once the role check lowers RolesService.readOnly', () => {
+    it('[contract] appears once the role check lowers RolesService.readOnly', () => {
       mount({ editable: false });
       cy.get('.fixed_button').should('not.exist');
 
@@ -123,9 +121,11 @@ describe('SaveButtonComponent — contract', () => {
     });
 
     /**
-     * 🛑 SKIPPED — same root cause as the skip above (P2-3322 family): lifting `[disabled]` from
-     * outside does not trigger a render pass, so the button stays disabled in the DOM and Cypress
-     * refuses to click it. The gate itself is correct; what is broken is the repaint.
+     * 🛑 STILL SKIPPED — and NOT the same root cause as the one above, despite what the previous
+     * note said. That one was `RolesService.readOnly` and is fixed (P2-3322, 01-Sep-2026). This one
+     * is the host's own `disabled` @Input being assigned as a plain field by the test host, which no
+     * signal on RolesService can reach. Making `readOnly` a signal does not, and cannot, fix it.
+     * Left skipped deliberately; it needs its own change to the input's shape.
      */
     it.skip('[contract] becomes clickable again when the consumer lifts [disabled]', () => {
       mount({ disabled: true });
