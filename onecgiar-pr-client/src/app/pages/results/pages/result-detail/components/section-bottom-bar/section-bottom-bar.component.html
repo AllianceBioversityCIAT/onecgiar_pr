@@ -59,7 +59,7 @@
             (click)="togglePending()"
             data-testid="section-bottom-bar-pending">
             <i class="material-icons-round text-[18px]" aria-hidden="true">error_outline</i>
-            {{ missingFields().length }} field{{ missingFields().length === 1 ? '' : 's' }} missing
+            {{ pendingLabel() }}
           </button>
 
           @if (pendingOpen()) {
@@ -75,11 +75,20 @@
                   <i class="material-icons-round text-[16px]" aria-hidden="true">close</i>
                 </button>
               </div>
-              <ul class="m-0 flex list-disc flex-col gap-[6px] pl-[18px]">
-                <li class="text-[13px] leading-[1.45] text-[var(--pr-text)]" *ngFor="let field of missingFields(); trackBy: trackByField">
-                  {{ field }}
-                </li>
-              </ul>
+              @if (missingFields().length) {
+                <ul class="m-0 flex list-disc flex-col gap-[6px] pl-[18px]">
+                  <li class="text-[13px] leading-[1.45] text-[var(--pr-text)]" *ngFor="let field of missingFields(); trackBy: trackByField">
+                    {{ field }}
+                  </li>
+                </ul>
+              } @else {
+                <!-- P2-3542: the section is red for a requirement no rendered field carries — a
+                     contributing partner or center, or a mandatory field on a ToC tab that is not
+                     the active one. Naming zero fields would contradict the state being shown. -->
+                <p class="m-0 text-[13px] leading-[1.45] text-[var(--pr-text)]">
+                  This section still has pending requirements. Check the contributing partners and centers, and every ToC tab.
+                </p>
+              }
             </div>
           }
         </div>

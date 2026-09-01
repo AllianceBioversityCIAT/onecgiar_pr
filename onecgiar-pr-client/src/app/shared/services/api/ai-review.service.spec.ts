@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { AiReviewService } from './ai-review.service';
 
 describe('AiReviewService', () => {
@@ -82,6 +82,59 @@ describe('AiReviewService', () => {
 
       resolveSave({});
       await retried;
+    });
+  });
+
+  // The dialog's "Save changes" / "Validate all" both go through PATCH_saveDacScore. It used not to
+  // notify the open section, so the section kept the impact-area values it had loaded before the
+  // dialog opened and its own Save PATCHed them back over what the AI review had just written.
+  describe('PATCH_saveDacScore notifies the open section', () => {
+    let httpMock: HttpTestingController;
+
+    const payload = { field_name: 'gender', tag_id: 3, impact_area_id: [1] };
+
+    beforeEach(() => {
+      httpMock = TestBed.inject(HttpTestingController);
+      // `isSavingPipe()` fires the global save alert, which appends into <app-root>.
+      document.body.appendChild(document.createElement('app-root'));
+    });
+
+    afterEach(() => {
+      httpMock.verify();
+      document.querySelector('app-root')?.remove();
+    });
+
+    it('should bump generalInformationSaved when the section is open', async () => {
+      jest.spyOn(service.router, 'url', 'get').mockReturnValue('/result/123/general-information');
+      const before = service.generalInformationSaved();
+
+      const saved = service.PATCH_saveDacScore(123, payload);
+      httpMock.expectOne(req => req.url.includes('ai/dac-scores/123')).flush({ response: {} });
+      await saved;
+
+      expect(service.generalInformationSaved()).toBe(before + 1);
+    });
+
+    it('should not bump it from an unrelated route', async () => {
+      jest.spyOn(service.router, 'url', 'get').mockReturnValue('/result/123/partners');
+      const before = service.generalInformationSaved();
+
+      const saved = service.PATCH_saveDacScore(123, payload);
+      httpMock.expectOne(req => req.url.includes('ai/dac-scores/123')).flush({ response: {} });
+      await saved;
+
+      expect(service.generalInformationSaved()).toBe(before);
+    });
+
+    it('should not bump it when the save is rejected', async () => {
+      jest.spyOn(service.router, 'url', 'get').mockReturnValue('/result/123/general-information');
+      const before = service.generalInformationSaved();
+
+      const saved = service.PATCH_saveDacScore(123, payload).catch(() => undefined);
+      httpMock.expectOne(req => req.url.includes('ai/dac-scores/123')).flush('nope', { status: 500, statusText: 'Server Error' });
+      await saved;
+
+      expect(service.generalInformationSaved()).toBe(before);
     });
   });
 

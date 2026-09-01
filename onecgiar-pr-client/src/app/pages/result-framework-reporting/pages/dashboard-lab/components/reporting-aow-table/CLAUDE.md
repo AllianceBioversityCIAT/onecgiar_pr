@@ -1,6 +1,6 @@
 # reporting-aow-table
 
-**Verified:** 2026-08-30 · branch qa-development-2026 · 3366453bc
+**Verified:** 2026-09-01 · branch qa-development-2026 · 3366453bc (merged with performance-refactor · 181caa352 — disclosure-default contract P2-3251/P2-3252, ToC achievement Progress column P2-3296)
 
 ## Qué es
 El cuerpo de la pestaña **Reporting** del shell de Science Program: las tarjetas colapsables por Area
@@ -19,7 +19,27 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
 - Endpoint: ninguno. Las filas llegan ya construidas por `dashboard-lab.reportingGroups()`.
 
 ## Dónde se usa
-- `dashboard-lab.component.html:1240` — único consumidor, rama `showPlanned()` (pestaña Reporting).
+- `dashboard-lab.component.html:1286` — único consumidor, rama `showPlanned()` (pestaña Reporting),
+  alcanzada desde la ruta `entity-details/:entityId` (`rfrView: 'planned'`, `routing-data.ts:612`).
+
+## Disclosure — the contract QA keeps re-testing (P2-3251 / P2-3252)
+- **Cards arrive COLLAPSED.** `isDefaultOpenAow()` returns `expandAll()`, which the host defaults to
+  `false`; sub-groups inside an opened card default to open (`isDefaultOpenHlo()` → `true`). This is
+  the approved behaviour: the PO confirmed it on P2-3251 (27 Aug 2026, *"Inicialmente vamos con que
+  estén cerradas"*). The ticket's first paragraph describes the situation **before** the change, and
+  reading that as the requirement is the mistake QA made twice.
+- ⚠️ **Overrides are keyed by `scopeKey` + `expandAll` + `expandAllNonce`.** `AOW01` exists in EVERY
+  Science Program, so keying by AoW code alone leaked one programme's open cards into the next.
+  Dropping `scopeKey` from the `linkedSignal` source brings that bug straight back.
+- ⚠️ **`expandAllNonce` is not decoration.** With `expandAll` alone, a user who opened every card by
+  hand asks the host for the value the boolean already holds — the press does nothing while the label
+  flips. The nonce is part of the reset key so a press always re-seeds.
+- ⚠️ **The collapsed panel STAYS MOUNTED** (height animation, no `@if` pop). So "collapsed" is
+  `.pr-collapse` *without* `.is-open` plus `aria-hidden="true"` — never absence of nodes. A DOM test
+  that counts rows must scope to `.pr-collapse.is-open`, as the spec's `rows()` helper does.
+- The five `describe('collapsed by default, through the header button')` tests press the real
+  `section > button[aria-expanded]`. Every other disclosure test calls `component.toggle()` directly,
+  so dropping the header's `(click)` binding left the whole suite green — verified 2026-09-01.
 
 ## Trampas (⚠️ = ya rompió algo)
 - ⚠️ **`filtersActive` NO se puede deducir aquí.** Solo llegan `search` y `statusFilter`; los filtros
@@ -69,7 +89,9 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
   (match por `rowKey`, nunca identidad — las bandas bucket CLONAN sus filas), scrollea a los 320ms
   (la animación de apertura dura 280ms; a 60ms aterrizaba fuera del viewport — verificado en vivo)
   y resalta ~2.6s. El icono de link visible re-emite el mismo `copyLink` del menú `⋯`; la columna
-  action del grid pasó de 96px a 136px (y la pista flat de 104 a 140) para alojarlo.
+  action del grid pasó de 96px a 136px (y la pista flat de 104 a 140) para alojarlo — ahora convive
+  con la pista `Progress` de 132px añadida por P2-3296 (ver `.scss`, `$pr-flat-tracks` /
+  `.pr-reporting-row`'s `grid-template-columns`).
 - **Alineación de vistas (2026-08-30):** el header de cada tarjeta AoW real lleva un botón "By AOW"
   (nested-control con `emitAndStop`) que emite `openAow` → el host salta a la vista enfocada
   (`openAowFocused`); los buckets no lo muestran. El chip de categoría es violeta (misma entidad,
@@ -90,3 +112,6 @@ ordenable. **Presentación pura** — no hace fetch, no inyecta ningún servicio
 - Cuerpo del popover ⓘ (falta descripción de AoW en el backend) → P2-3405, aviso a Ángel.
 - Columna opcional `Parent` de la tabla → P2-3405 (falta campo en el backend; además el trigger de
   `Optional columns` no existe en el mockup).
+- Recordar qué AoW dejó abierto el usuario entre visitas — sugerencia del propio PO en P2-3251,
+  explícitamente **no** incluida en sus criterios de aceptación y **no construida**. Necesita su
+  propio ticket.

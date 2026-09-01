@@ -262,7 +262,10 @@ describe('DashboardLabComponent — Copy link + Read more (MRF-TEST-3)', () => {
           GET_IntermediateOutcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
           GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of({ response: { totalsByType: [] } })),
           GET_ResultToReview: jest.fn().mockReturnValue(of({ response: [] })),
-          GET_ScienceProgramsProgress: jest.fn().mockReturnValue(of({ response: { mySciencePrograms: [], otherSciencePrograms: [] } }))
+          GET_ScienceProgramsProgress: jest.fn().mockReturnValue(of({ response: { mySciencePrograms: [], otherSciencePrograms: [] } })),
+          // P2-3296 — the ToC achievement roll-up, called from `refreshSelectedSummaries`. Empty
+          // response: these tests are about the `?kpi=` restore flow, not achievement.
+          GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } }))
         }
       };
 

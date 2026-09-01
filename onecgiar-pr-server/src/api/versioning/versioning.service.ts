@@ -159,6 +159,43 @@ export class VersioningService {
     return version;
   }
 
+  /**
+   * P2-3420 / P2-3421 — the reporting phase immediately BEFORE the open one, as a year.
+   *
+   * Derived from `version.previous_phase`, never from a hardcoded year: Ángel Jarrín's scope note of
+   * 31-Aug-2026 asks for the rule to "remain generic and always refer to the previous reporting
+   * phase". Falls back to `openYear - 1` only when the open phase carries no `previous_phase` link,
+   * so a missing link degrades to the obvious answer instead of returning nothing.
+   *
+   * Deliberately a NEW method: `$_findActivePhase` is consumed all over the server and loading an
+   * extra relation there would change what every one of those callers receives.
+   */
+  async $_findPreviousPhaseYear(
+    module_id: AppModuleIdEnum,
+  ): Promise<number | null> {
+    const openPhase = await this._versionRepository.findOne({
+      where: {
+        status: true,
+        is_active: true,
+        app_module_id: module_id,
+      },
+    });
+
+    if (!openPhase) return null;
+
+    const openYear = Number(openPhase.phase_year) || null;
+
+    if (openPhase.previous_phase) {
+      const previous = await this._versionRepository.findOne({
+        where: { id: openPhase.previous_phase },
+      });
+      const previousYear = Number(previous?.phase_year);
+      if (previousYear) return previousYear;
+    }
+
+    return openYear ? openYear - 1 : null;
+  }
+
   async setQaStatus(data: UpdateQaResults) {
     if (!data?.results_id?.length) {
       throw ReturnResponseUtil.format({

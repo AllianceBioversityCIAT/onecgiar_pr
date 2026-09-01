@@ -71,6 +71,29 @@ export interface AowProgressRow {
   name: string;
   done: number;
   total: number;
+  /**
+   * P2-3296 AC3 — the ToC achievement of this Area of Work, computed server-side.
+   *
+   * Distinct from `done` / `total`, which count how many KPIs have SOMETHING reported. Both are
+   * shown: "how much of the plan has been touched" and "how far it got against the targets" are
+   * different questions and one is not a substitute for the other.
+   *
+   * Absent until the roll-up call lands, and `progress_percentage` is null when nothing was
+   * measurable — render a dash, never 0%.
+   */
+  achievement?: TocAchievement | null;
+}
+
+/** P2-3296 — the roll-up contract, identical at indicator, HLO, AoW and Science Program level. */
+export interface TocAchievement {
+  progress_percentage: string | null;
+  preliminary_progress_percentage: string | null;
+  progress_value: number | null;
+  preliminary_value: number | null;
+  counted: number;
+  total: number;
+  indicators_counted: number;
+  indicators_total: number;
 }
 
 /** One row of a "count by category" breakdown. Colour is per CARD, not per row, so it is not here. */
@@ -137,6 +160,12 @@ export class ProgramOverviewComponent {
   readonly statusSegments = input<StatusSegment[]>([]);
   /** AoW rows already sorted ascending by completion (least complete first). */
   readonly aowProgress = input<AowProgressRow[]>([]);
+
+  /**
+   * P2-3296 AC4 — the Science Program's own ToC achievement, averaged over its Areas of Work.
+   * Null until the roll-up call lands, or when nothing in the program was measurable.
+   */
+  readonly programAchievement = input<TocAchievement | null>(null);
   /** Cross-cutting buckets (Intermediate / 2030) under the AoW list. */
   readonly xcutProgress = input<AowProgressRow[]>([]);
 
@@ -570,6 +599,55 @@ export class ProgramOverviewComponent {
     event.stopPropagation();
     if (!this.canReportW1W2()) return;
     if (row.code) this.openAow.emit(row.code);
+  }
+
+  /**
+   * P2-3296 — the achievement figures, for an AoW row or for the program band.
+   *
+   * A dash, never 0%: zero claims the work made no progress, when the truth is there was nothing
+   * to measure it against. An indicator with no target (or a target of zero) is excluded from
+   * every average — Nicoleta's ruling is that anything reported against a zero target is
+   * "overachieved", which is a verdict, not a quantity.
+   */
+  achievementLabel(achievement: TocAchievement | null | undefined): string {
+    return achievement?.progress_percentage ?? '—';
+  }
+
+  preliminaryLabel(achievement: TocAchievement | null | undefined): string {
+    return achievement?.preliminary_progress_percentage ?? '—';
+  }
+
+  /**
+   * The denominator, always rendered beside the number and never hidden in a tooltip: a figure
+   * averaged over 2 of 10 indicators must not read like one averaged over all 10, and the visible
+   * fraction is what points the team at the indicators still missing a target.
+   */
+  achievementCoverage(achievement: TocAchievement | null | undefined): string {
+    const counted = achievement?.indicators_counted;
+    const total = achievement?.indicators_total;
+
+    if (!Number.isFinite(counted) || !Number.isFinite(total) || !total) return '';
+
+    return counted === total ? `${total} indicators` : `${counted} of ${total} indicators`;
+  }
+
+  achievementTooltip(achievement: TocAchievement | null | undefined, childNoun = 'Intermediate Outcomes'): string {
+    if (!achievement || !achievement.total) return 'Nothing has been planned here yet.';
+
+    const { counted, total, indicators_counted: withTarget, indicators_total: allIndicators } = achievement;
+
+    if (!counted) {
+      return `None of the ${allIndicators} indicators has a target set, so no achievement percentage can be calculated.`;
+    }
+
+    const excluded = allIndicators - withTarget;
+    const base =
+      `QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryLabel(achievement)}, ` +
+      `averaged over ${counted} of ${total} ${childNoun}, covering ${withTarget} of ${allIndicators} indicators.`;
+
+    return excluded > 0
+      ? `${base} ${excluded} indicator${excluded === 1 ? ' is' : 's are'} excluded for having no target set.`
+      : base;
   }
 
   /**

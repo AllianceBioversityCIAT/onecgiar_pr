@@ -33,6 +33,18 @@ export class EntityAowService {
 
   existingResultsContributors = signal<any[]>([]);
 
+  // P2-3296 AC3 — the Area of Work's own rolled-up number, averaged over its HLOs. The server
+  // sends it alongside the two arrays; keeping only the arrays is why the AoW header had no
+  // number to show.
+  aowProgress = signal<any | null>(null);
+
+  // P2-3296 AC4 — the Science Program's own number plus one per Area of Work, from a single
+  // call. `programProgress` is the program roll-up; `areaProgressByCode` lets each AoW card on
+  // the program page show its own figure without a request per card.
+  programProgress = signal<any | null>(null);
+  areaProgressByCode = signal<Record<string, any>>({});
+  isLoadingProgramProgress = signal<boolean>(false);
+
   tocResultsOutputsByAowId = signal<any[]>([]);
   tocResultsOutcomesByAowId = signal<any[]>([]);
 
@@ -254,12 +266,38 @@ export class EntityAowService {
       next: ({ response }) => {
         this.tocResultsOutputsByAowId.set(response?.tocResultsOutputs ?? []);
         this.tocResultsOutcomesByAowId.set(response?.tocResultsOutcomes ?? []);
+        this.aowProgress.set(response?.progress ?? null);
         this.isLoadingTocResultsByAowId.set(false);
       },
       error: err => {
         this.tocResultsOutputsByAowId.set([]);
         this.tocResultsOutcomesByAowId.set([]);
+        this.aowProgress.set(null);
         this.isLoadingTocResultsByAowId.set(false);
+      }
+    });
+  }
+
+  /**
+   * P2-3296 AC4. Fails soft: this is a supplementary figure on a page that must still render
+   * its Areas of Work without it, so an error clears the numbers rather than blocking the page.
+   */
+  getScienceProgramTocProgress(entityId: string) {
+    if (!entityId) return;
+    this.isLoadingProgramProgress.set(true);
+
+    this.api.resultsSE.GET_ScienceProgramTocProgress(entityId).subscribe({
+      next: ({ response }) => {
+        this.programProgress.set(response?.progress ?? null);
+        this.areaProgressByCode.set(
+          Object.fromEntries((response?.areas ?? []).map((area: any) => [area.code, area.progress]))
+        );
+        this.isLoadingProgramProgress.set(false);
+      },
+      error: () => {
+        this.programProgress.set(null);
+        this.areaProgressByCode.set({});
+        this.isLoadingProgramProgress.set(false);
       }
     });
   }

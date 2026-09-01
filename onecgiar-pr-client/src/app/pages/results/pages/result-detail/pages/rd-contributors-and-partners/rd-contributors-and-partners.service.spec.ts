@@ -35,9 +35,13 @@ describe('RdContributorsAndPartnersService', () => {
       loadedInstitutions: new Subject<boolean>()
     };
     mockCentersSE = {
+      // LC-T-1: 3+ centers so a full-catalog possibleLeadCenters.length and a Contributing-Centers-union
+      // length are distinguishable — a 1-2 element catalog would let a stale `.length === 1` check pass
+      // by coincidence instead of proving the relocation onto the Contributing Centers union (LC-DD-2).
       centersList: [
         { code: 'C1', full_name: 'Center One' },
-        { code: 'C2', full_name: 'Center Two' }
+        { code: 'C2', full_name: 'Center Two' },
+        { code: 'C3', full_name: 'Center Three' }
       ],
       loadedCenters: new Subject<boolean>()
     };
@@ -120,11 +124,17 @@ describe('RdContributorsAndPartnersService', () => {
       expect(service.leadCenterCode).toBe('C1');
     });
 
-    it('should skip when led by partner', () => {
+    /**
+     * LCD-T-4 (docs/specs/changes/lead-center-decouple, LCD-DD-2): inverted from the old "should
+     * skip when led by partner" — that assertion WAS the exclusivity rule this spec removes.
+     * `tryAutoAssignLeadCenter`'s `if (is_lead_by_partner) return;` guard is gone, so Lead Center
+     * auto-assign now runs regardless of the toggle.
+     */
+    it('LCD-AC-4/LCD-DD-2: auto-assigns even when led by partner — the toggle no longer gates Lead Center auto-assign', () => {
       service.partnersBody.is_lead_by_partner = true;
       service.leadCenterCode = null;
       service.tryAutoAssignLeadCenter();
-      expect(service.leadCenterCode).toBeNull();
+      expect(service.leadCenterCode).toBe('C1');
     });
   });
 
@@ -170,7 +180,14 @@ describe('RdContributorsAndPartnersService', () => {
       expect(service.leadCenterCode).toBe('C1');
     });
 
-    it('should auto-assign lead partner when switching to partner-led with one partner', () => {
+    /**
+     * LCD-T-4 (docs/specs/changes/lead-center-decouple, LCD-AC-4/LCD-DD-2): the old assertion
+     * expected `leadCenterCode` to become `null` here — that WAS the mutual-exclusivity rule this
+     * spec reverses. `onLeadByPartnerChange`'s `leadCenterCode = null` line in the `isPartnerLed`
+     * branch was removed, so a previously-set Lead Center now survives a toggle flip to "Yes".
+     * Lead Partner's own auto-assign is unaffected and still fires.
+     */
+    it('LCD-AC-4: switching to partner-led PRESERVES leadCenterCode (no longer nulled) and still auto-assigns lead partner', () => {
       service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' } as any];
       service.partnersBody.institutions = [{ institutions_id: 10 } as any];
       service.partnersBody.is_lead_by_partner = false;
@@ -178,8 +195,22 @@ describe('RdContributorsAndPartnersService', () => {
 
       service.onLeadByPartnerChange(true);
 
-      expect(service.leadCenterCode).toBeNull();
+      expect(service.leadCenterCode).toBe('C1');
       expect(service.leadPartnerId).toBe(10);
+    });
+
+    it('LCD-AC-4 (isolated): a previously-set leadCenterCode survives the toggle even with 2 centers, where auto-assign cannot mask the fix', () => {
+      service.partnersBody.contributing_center = [
+        { code: 'C1', name: 'Center One' } as any,
+        { code: 'C2', name: 'Center Two' } as any
+      ];
+      service.partnersBody.institutions = [];
+      service.partnersBody.is_lead_by_partner = false;
+      service.leadCenterCode = 'C1';
+
+      service.onLeadByPartnerChange(true);
+
+      expect(service.leadCenterCode).toBe('C1');
     });
   });
 
@@ -313,48 +344,87 @@ describe('RdContributorsAndPartnersService', () => {
   });
 
   /**
-   * The Lead center list is a REQUIRED field fed by BOTH center dropdowns. Before the fix it was rebuilt only
-   * when `contributing_center` existed, so a center picked in the 2026 "Other(s)" dropdown never reached it and
-   * the select showed "There are no items available for this list" until a Save draft reloaded the section.
+   * docs/specs/bugfix/lead-center-full-catalog LC-T-1 (LC-DD-1): possibleLeadCenters is ALWAYS the full
+   * CLARISA centers catalog now, independent of Contributing CGIAR Centers (contributing_center /
+   * otherCentersSelected) state. Before the fix, `setPossibleLeadCenters` only rebuilt the list when one of
+   * those two was non-empty, so a fresh/ToC-less result (both empty) left the required Lead center dropdown
+   * empty ("There are no items available for this list") and blocked save — LC-TEST-1 is the regression test
+   * for exactly that case; it must fail against the pre-fix code (guarded on `contributing_center?.length > -1
+   * || otherCentersSelected?.length > 0`, which is false when both are empty, leaving possibleLeadCenters at
+   * its initial `[]`).
    */
-  describe('setPossibleLeadCenters — "Other(s)" centers feed the Lead center list live', () => {
-    it('rebuilds from otherCentersSelected when the ToC brought no contributing centers', () => {
-      service.partnersBody.contributing_center = [];
-      service.otherCentersSelected = [{ code: 'C2' }] as any;
+  describe('setPossibleLeadCenters — full catalog, independent of Contributing Centers (LC-DD-1)', () => {
+    const fullCatalogCodes = ['C1', 'C2', 'C3'];
 
-      service.setPossibleLeadCenters(false, false);
-
-      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(['C2']);
-    });
-
-    it('rebuilds even when contributing_center has not been hydrated yet (undefined)', () => {
-      service.partnersBody.contributing_center = undefined as any;
-      service.otherCentersSelected = [{ code: 'C1' }] as any;
-
-      service.setPossibleLeadCenters(false, false);
-
-      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(['C1']);
-    });
-
-    it('merges both dropdowns', () => {
-      service.partnersBody.contributing_center = [{ code: 'C1' }] as any;
-      service.otherCentersSelected = [{ code: 'C2' }] as any;
-
-      service.setPossibleLeadCenters(false, false);
-
-      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(['C1', 'C2']);
-    });
-
-    it('stays empty when nothing is selected — the legitimate empty state', () => {
+    it('LC-TEST-1: equals the full mapped catalog when contributing_center and otherCentersSelected are both empty (regression)', () => {
       service.partnersBody.contributing_center = [];
       service.otherCentersSelected = [];
 
       service.setPossibleLeadCenters(false, false);
 
-      expect(service.possibleLeadCenters).toEqual([]);
+      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(fullCatalogCodes);
+      expect(service.possibleLeadCenters.every(c => c.selected === false && c.disabled === false)).toBe(true);
     });
 
-    it('auto-assigns the lead when the only eligible center comes from the "Other(s)" dropdown', () => {
+    it('LC-TEST-2: still equals the full catalog (not a subset) when Contributing Centers has entries', () => {
+      service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' }] as any;
+      service.otherCentersSelected = [{ code: 'C2' }] as any;
+
+      service.setPossibleLeadCenters(false, false);
+
+      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(fullCatalogCodes);
+    });
+
+    it('rebuilds the same full catalog even when contributing_center has not been hydrated yet (undefined)', () => {
+      service.partnersBody.contributing_center = undefined as any;
+      service.otherCentersSelected = [];
+
+      service.setPossibleLeadCenters(false, false);
+
+      expect(service.possibleLeadCenters.map(c => c.code)).toEqual(fullCatalogCodes);
+    });
+
+    it('LC-TEST-3: leadCenterCode is not cleared by adding/removing a Contributing Center, as long as it stays in the catalog', () => {
+      service.partnersBody.is_lead_by_partner = false;
+      service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' }] as any;
+      service.leadCenterCode = 'C3'; // valid catalog center, unrelated to the Contributing Centers selection
+
+      // Add a Contributing Center.
+      service.partnersBody.contributing_center.push({ code: 'C2', name: 'Center Two' } as any);
+      service.setPossibleLeadCenters(false, true);
+      expect(service.leadCenterCode).toBe('C3');
+
+      // Remove one back down to a single Contributing Center.
+      service.partnersBody.contributing_center = [{ code: 'C2', name: 'Center Two' }] as any;
+      service.setPossibleLeadCenters(false, true);
+      expect(service.leadCenterCode).toBe('C3');
+
+      // Remove the rest — Contributing Centers is now empty.
+      service.partnersBody.contributing_center = [];
+      service.setPossibleLeadCenters(false, true);
+      expect(service.leadCenterCode).toBe('C3');
+    });
+  });
+
+  /**
+   * LC-DD-2: tryAutoAssignLeadCenter's single-center convenience is relocated off `possibleLeadCenters.length`
+   * (now always the full 3-center catalog) onto the de-duplicated union of `partnersBody.contributing_center`
+   * and `otherCentersSelected`, by `code`.
+   */
+  describe('tryAutoAssignLeadCenter — relocated onto the Contributing Centers union (LC-DD-2)', () => {
+    it('LC-TEST-4a: auto-assigns when exactly one Contributing Center is selected via the ToC/manual dropdown', () => {
+      service.partnersBody.is_lead_by_partner = false;
+      service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' }] as any;
+      service.otherCentersSelected = [];
+      service.leadCenterCode = null;
+
+      service.setPossibleLeadCenters(false, true);
+
+      expect(service.leadCenterCode).toBe('C1');
+    });
+
+    it('LC-TEST-4b: auto-assigns when the single eligible center comes only from the "Other(s)" dropdown', () => {
+      service.partnersBody.is_lead_by_partner = false;
       service.partnersBody.contributing_center = [];
       service.otherCentersSelected = [{ code: 'C2' }] as any;
       service.leadCenterCode = null;
@@ -362,6 +432,259 @@ describe('RdContributorsAndPartnersService', () => {
       service.setPossibleLeadCenters(false, true);
 
       expect(service.leadCenterCode).toBe('C2');
+    });
+
+    it('LC-TEST-4c: the same center in both dropdowns still counts as one (de-duplicated by code) and auto-assigns', () => {
+      service.partnersBody.is_lead_by_partner = false;
+      service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' }] as any;
+      service.otherCentersSelected = [{ code: 'C1' }] as any;
+      service.leadCenterCode = null;
+
+      service.setPossibleLeadCenters(false, true);
+
+      expect(service.leadCenterCode).toBe('C1');
+    });
+
+    it('LC-TEST-5: does NOT auto-assign when two or more distinct Contributing Centers are selected', () => {
+      service.partnersBody.is_lead_by_partner = false;
+      service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' }] as any;
+      service.otherCentersSelected = [{ code: 'C2' }] as any;
+      service.leadCenterCode = null;
+
+      service.setPossibleLeadCenters(false, true);
+
+      expect(service.leadCenterCode).toBeNull();
+    });
+
+    it('does not auto-assign when Contributing Centers is empty, even though the full catalog has 3 entries', () => {
+      service.partnersBody.is_lead_by_partner = false;
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [];
+      service.leadCenterCode = null;
+
+      service.setPossibleLeadCenters(false, true);
+
+      expect(service.leadCenterCode).toBeNull();
+    });
+  });
+
+  /**
+   * docs/specs/bugfix/lead-center-full-catalog LC-T-5 (LC-DD-5, supersedes LC-DD-4's targeting rule):
+   * `onLeadCenterSelected` now fires whenever the picked code is NOT already a Contributing Center —
+   * regardless of union size — and targets `contributing_center` directly in the flat/unmapped UI, or
+   * `otherCentersSelected` (+ the "Other(s)" sentinel) in the CP2026 + ToC-mapped split UI.
+   *
+   * The default `FieldsManagerService` mock in this file (`isContributorsPartners2026: () => false`)
+   * means `isUnmappedOrFlat()` is TRUE by default — so the first block below (no override) exercises the
+   * flat/unmapped target field (LC-AC-8), and the CP2026-mapped block explicitly overrides the mock.
+   */
+  describe('onLeadCenterSelected — target field by active UI + generalized trigger (LC-DD-5, supersedes LC-DD-4)', () => {
+    const setMapped2026 = () => {
+      jest.spyOn((service as any).fieldsManagerSE, 'isContributorsPartners2026').mockReturnValue(true);
+      service.partnersBody.result_toc_result = { planned_result: true } as any;
+    };
+
+    it('LC-TEST-11: flat/unmapped, 0 Contributing Centers — selecting a Lead Center adds it directly to contributing_center, no sentinel (regression: pre-LC-T-5 code always targeted otherCentersSelected)', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [];
+
+      service.onLeadCenterSelected('C1');
+
+      expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
+      expect(service.otherCentersSelected).toEqual([]);
+      expect(service.autoAddedLeadCenterCode).toBe('C1');
+    });
+
+    it('flat/unmapped: swapping to a different Lead Center replaces the auto-added entry (no accumulation)', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [];
+      service.onLeadCenterSelected('C1');
+
+      service.onLeadCenterSelected('C2');
+
+      expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C2']);
+      expect(service.autoAddedLeadCenterCode).toBe('C2');
+    });
+
+    it('flat/unmapped: clearing the Lead Center (falsy code) while auto-added removes the entry and leaves Contributing Centers empty', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [];
+      service.onLeadCenterSelected('C1');
+
+      service.onLeadCenterSelected(null);
+
+      expect(service.partnersBody.contributing_center).toEqual([]);
+      expect(service.autoAddedLeadCenterCode).toBeNull();
+    });
+
+    it("LC-R-14 generalized trigger: auto-adds a NEW code even when Contributing Centers already has 2+ entries (no longer a no-op — that restriction was LC-DD-4's, superseded by LC-DD-5)", () => {
+      service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' }] as any;
+      service.otherCentersSelected = [{ code: 'C2' }] as any;
+
+      service.onLeadCenterSelected('C3');
+
+      expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1', 'C3']);
+      expect(service.otherCentersSelected.map(c => c.code)).toEqual(['C2']); // untouched — only the auto-added entry is ever touched
+      expect(service.autoAddedLeadCenterCode).toBe('C3');
+    });
+
+    it('LC-R-14 generalized trigger: auto-adds even when Contributing Centers has a single real (non-auto-added) entry', () => {
+      service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' }] as any;
+      service.otherCentersSelected = [];
+
+      service.onLeadCenterSelected('C3');
+
+      expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1', 'C3']);
+      expect(service.otherCentersSelected).toEqual([]);
+      expect(service.autoAddedLeadCenterCode).toBe('C3');
+    });
+
+    it('LC-TEST-15: no-op when the selected Lead Center is already in the Contributing Centers union', () => {
+      service.partnersBody.contributing_center = [{ code: 'C1', name: 'Center One' }] as any;
+      service.otherCentersSelected = [{ code: 'C2' }] as any;
+
+      service.onLeadCenterSelected('C2');
+
+      expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1']);
+      expect(service.otherCentersSelected.map(c => c.code)).toEqual(['C2']);
+      expect(service.autoAddedLeadCenterCode).toBeNull();
+    });
+
+    it('ignores a code that is not in the CLARISA catalog', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [];
+
+      service.onLeadCenterSelected('UNKNOWN');
+
+      expect(service.partnersBody.contributing_center).toEqual([]);
+      expect(service.otherCentersSelected).toEqual([]);
+      expect(service.autoAddedLeadCenterCode).toBeNull();
+    });
+
+    it('resetState clears a tracked auto-added Lead Center so it does not leak into the next result', () => {
+      service.partnersBody.contributing_center = [];
+      service.otherCentersSelected = [];
+      service.onLeadCenterSelected('C1');
+      expect(service.autoAddedLeadCenterCode).toBe('C1');
+
+      service.resetState();
+
+      expect(service.autoAddedLeadCenterCode).toBeNull();
+    });
+
+    describe('CP2026 + ToC-mapped — target is otherCentersSelected + sentinel (LC-AC-9)', () => {
+      it('LC-TEST-12: ToC brought a real reference center already in contributing_center; picking a Lead Center NOT among them adds it to otherCentersSelected and the sentinel to contributing_center', () => {
+        setMapped2026();
+        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center' }] as any;
+        service.otherCentersSelected = [];
+
+        service.onLeadCenterSelected('C1');
+
+        expect(service.otherCentersSelected.map(c => c.code)).toEqual(['C1']);
+        expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['TOC1', service.OTHER_CENTERS_CODE]);
+        expect(service.autoAddedLeadCenterCode).toBe('C1');
+      });
+
+      it('LC-TEST-13: the sentinel was already present (user had manually checked "Other(s)") — auto-add does not claim ownership of it', () => {
+        setMapped2026();
+        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center' }, (service as any).buildOtherCentersSentinel()] as any;
+        service.otherCentersSelected = [{ code: 'MANUAL1', name: 'Manual center' }] as any;
+
+        service.onLeadCenterSelected('C1');
+
+        expect(service.otherCentersSelected.map((c: any) => c.code)).toEqual(['MANUAL1', 'C1']);
+        expect(service.partnersBody.contributing_center.filter((c: any) => c.code === service.OTHER_CENTERS_CODE).length).toBe(1);
+        expect(service.autoAddedLeadCenterCode).toBe('C1');
+      });
+
+      it('LC-TEST-14: swap removes ONLY the auto-added entry — real ToC-derived centers untouched; the auto-added sentinel is removed and re-added around the swap', () => {
+        setMapped2026();
+        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center' }] as any;
+        service.otherCentersSelected = [];
+        service.onLeadCenterSelected('C1');
+        expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['TOC1', service.OTHER_CENTERS_CODE]);
+
+        service.onLeadCenterSelected('C2');
+
+        expect(service.otherCentersSelected.map(c => c.code)).toEqual(['C2']);
+        expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['TOC1', service.OTHER_CENTERS_CODE]);
+        expect(service.autoAddedLeadCenterCode).toBe('C2');
+      });
+
+      it('LC-TEST-14b: when the auto-added entry is the only otherCentersSelected item and its sentinel was auto-added, clearing the Lead Center removes both the entry and the sentinel', () => {
+        setMapped2026();
+        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center' }] as any;
+        service.otherCentersSelected = [];
+        service.onLeadCenterSelected('C1');
+
+        service.onLeadCenterSelected(null);
+
+        expect(service.otherCentersSelected).toEqual([]);
+        expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['TOC1']);
+        expect(service.autoAddedLeadCenterCode).toBeNull();
+      });
+
+      it('LC-TEST-14c: when the sentinel was checked manually (not auto-added), removing the auto-added entry leaves the sentinel in place', () => {
+        setMapped2026();
+        service.partnersBody.contributing_center = [{ code: 'TOC1', name: 'ToC Center' }, (service as any).buildOtherCentersSentinel()] as any;
+        service.otherCentersSelected = [];
+        service.onLeadCenterSelected('C1'); // sentinel already present → _autoAddedSentinel stays false
+        expect(service.otherCentersSelected.map((c: any) => c.code)).toEqual(['C1']);
+
+        service.onLeadCenterSelected(null);
+
+        expect(service.otherCentersSelected).toEqual([]);
+        expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['TOC1', service.OTHER_CENTERS_CODE]);
+      });
+    });
+  });
+
+  /**
+   * docs/specs/bugfix/lead-center-full-catalog LC-T-5 (LC-DD-5): pre-existing bug, not introduced by this
+   * spec — `applyTocMappingOnLoad` re-added the "Other(s)" sentinel whenever there were Other(s) centers,
+   * regardless of whether any real ToC-derived centers existed to justify the split view. Fixed to only
+   * add the sentinel for the genuine "mixed" case.
+   */
+  describe('applyTocMappingOnLoad — sentinel reconciliation fix (LC-DD-5)', () => {
+    const set2026 = () => jest.spyOn((service as any).fieldsManagerSE, 'isContributorsPartners2026').mockReturnValue(true);
+
+    it('tocCenters.length === 0 && otherCenters.length > 0: no sentinel is added, contributing_center is empty', () => {
+      set2026();
+      service.partnersBody.contributing_center = [
+        { code: 'O1', from_toc: false },
+        { code: 'O2', from_toc: false }
+      ] as any;
+
+      service.applyTocMappingOnLoad();
+
+      expect(service.otherCentersSelected.map((c: any) => c.code)).toEqual(['O1', 'O2']);
+      expect(service.partnersBody.contributing_center).toEqual([]);
+    });
+
+    it('tocCenters.length > 0 && otherCenters.length > 0: sentinel is added (genuine mixed case, unchanged)', () => {
+      set2026();
+      service.partnersBody.contributing_center = [
+        { code: 'T1', from_toc: true },
+        { code: 'O1', from_toc: false }
+      ] as any;
+
+      service.applyTocMappingOnLoad();
+
+      expect(service.otherCentersSelected.map((c: any) => c.code)).toEqual(['O1']);
+      expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['T1', service.OTHER_CENTERS_CODE]);
+    });
+
+    it('otherCenters.length === 0: unchanged existing behavior — contributing_center is just the ToC centers, no sentinel', () => {
+      set2026();
+      service.partnersBody.contributing_center = [
+        { code: 'T1', from_toc: true },
+        { code: 'T2', from_toc: true }
+      ] as any;
+
+      service.applyTocMappingOnLoad();
+
+      expect(service.otherCentersSelected).toEqual([]);
+      expect(service.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['T1', 'T2']);
     });
   });
 });

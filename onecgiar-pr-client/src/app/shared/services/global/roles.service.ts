@@ -7,7 +7,19 @@ import { DataControlService } from '../data-control.service';
 })
 export class RolesService {
   platformIsClosed = false;
-  readOnly = true;
+  // P2-3322 (2026): signal-backed flag. `readOnly` starts TRUE and is only lowered after the async role
+  // resolution below (`validateApplication` and the three writes inside `validateReadOnly`). Under
+  // zoneless change detection those assignments notify no scheduler, so the 206 template reads of
+  // `rolesSE.readOnly` never got a second render pass. The visible casualty was the save bar
+  // (`custom-fields/save-button/save-button.component.html:1`), which mounts while the flag is still its
+  // default TRUE and left an editor with NO Save button until an unrelated request repainted the view —
+  // which is why it was reported as intermittent rather than as a frozen screen.
+  // Reading the signal from a template makes every write schedule its own render pass. Same shape as
+  // `isAdmin` below and as `RdContributorsAndPartnersService.updatingLeadData`.
+  // The public API stays a plain boolean on purpose: the 206 template reads and the 11 external
+  // assignments (api.service, current-result.service, innovation-package-creator, result-review-drawer)
+  // go through this pair unchanged.
+  private readonly _readOnly = signal<boolean>(true);
   currentInitiativeRole = null;
   roles: any;
   private readonly isAdminState = signal(false);
@@ -37,6 +49,14 @@ export class RolesService {
     private readonly authSE: AuthService,
     private readonly dataControlSE: DataControlService
   ) {}
+
+  get readOnly(): boolean {
+    return this._readOnly();
+  }
+
+  set readOnly(value: boolean) {
+    this._readOnly.set(value);
+  }
 
   get isAdmin(): boolean {
     return this.isAdminState();

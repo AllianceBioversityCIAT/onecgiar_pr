@@ -394,9 +394,44 @@
               {{ ratio.done }} of {{ ratio.total }}
             </span>
             <span
-              class="min-w-[44px] shrink-0 whitespace-nowrap text-right text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+              class="min-w-[44px] shrink-0 whitespace-nowrap text-right text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]"
+              prTooltip="KPIs with something reported against them. This is coverage of the plan, not achievement against the targets."
+              prTooltipPosition="top">
               {{ ratio.percent }}%
             </span>
+
+            <!--
+              P2-3296 AC3 — achievement against the ToC targets, beside the reported-KPI ratio and
+              never instead of it: "how much of the plan has been touched" and "how far it got"
+              are different questions. Indicators with no usable target are excluded from the
+              average, and the coverage line underneath says how many made it in.
+            -->
+            @if (group.achievement) {
+              <span
+                class="flex w-[168px] shrink-0 flex-col items-end border-l border-[var(--pr-border)] pl-[12px] leading-tight"
+                [prTooltip]="achievementTooltip(group.achievement)"
+                prTooltipPosition="top">
+                <span class="flex items-baseline gap-[10px] whitespace-nowrap">
+                  <span class="flex items-baseline gap-[4px]">
+                    <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                    <span class="text-[14px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                      {{ achievementLabel(group.achievement) }}
+                    </span>
+                  </span>
+                  <span class="flex items-baseline gap-[4px]">
+                    <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                    <span class="text-[14px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+                      {{ preliminaryAchievementLabel(group.achievement) }}
+                    </span>
+                  </span>
+                </span>
+                @if (achievementCoverage(group.achievement)) {
+                  <span class="whitespace-nowrap text-[10.5px] font-medium text-[var(--pr-text-muted)]">
+                    {{ achievementCoverage(group.achievement) }}
+                  </span>
+                }
+              </span>
+            }
           </span>
           }
 
@@ -597,6 +632,40 @@
                         {{ countLabel(hlo.rows.length) }}
                       </span>
                     </div>
+
+                    <!--
+                      P2-3296 AC2 — this ToC node's achievement, averaged over its own indicators.
+                      `ml-auto` parks it at the END of the header, after the Target/Achieved sums
+                      and the KPI count, behind its own divider — the achievement figure is a
+                      different question from the counts to its left (OAH note: "one says how much
+                      of the plan has been touched, the other how far it got").
+                      Label before value throughout ("QA 80%", not "80% QA") — the other way round
+                      reads as one number spilling into the next.
+                    -->
+                    @if (hlo.achievement) {
+                      <span
+                        class="ml-auto flex shrink-0 items-baseline gap-[10px] whitespace-nowrap border-l border-[var(--pr-border)] pl-[14px]"
+                        [prTooltip]="achievementTooltip(hlo.achievement, 'indicators')"
+                        prTooltipPosition="top">
+                        <span class="flex items-baseline gap-[4px]">
+                          <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                          <span class="text-[13px] font-bold tabular-nums text-[var(--pr-text-heading)]">
+                            {{ achievementLabel(hlo.achievement) }}
+                          </span>
+                        </span>
+                        <span class="flex items-baseline gap-[4px]">
+                          <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                          <span class="text-[13px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+                            {{ preliminaryAchievementLabel(hlo.achievement) }}
+                          </span>
+                        </span>
+                        @if (achievementCoverage(hlo.achievement)) {
+                          <span class="min-w-[104px] text-right text-[10.5px] font-medium text-[var(--pr-text-muted)]">
+                            {{ achievementCoverage(hlo.achievement) }}
+                          </span>
+                        }
+                      </span>
+                    }
                   </button>
 
                   <div
@@ -611,6 +680,7 @@
                           <span class="text-center">Target</span>
                           <span class="text-center">Achieved</span>
                           <span class="text-center">Status</span>
+                          <span class="text-center">Progress</span>
                           <span class="text-center">Action</span>
                           <span></span>
                         </div>
@@ -772,7 +842,57 @@
       }
     </div>
 
-    <!-- 6 — Report / Continue (+ Copy link icon; Next pending wraps above on the one row that has it) -->
+    <!--
+      6 — P2-3296 AC1 · Progress. Two separate tracks, never a stacked bar: Preliminary
+      (Submitted + Approved) and QA (QAed + Approved) OVERLAP on Approved, so adding them would
+      double-count every approved W3/Bilateral result and show a total that reconciles with
+      neither figure beside it. This is achievement against the ToC targets — a different question
+      from the Status Badge to its left (workflow state) and from Target/Achieved (coverage of the
+      plan): "one says how much of the plan has been touched, the other how far it got."
+    -->
+    <div class="min-w-0">
+      @if (!hasUsableTarget(row)) {
+        <!--
+          No target, so no ratio. The ToC branch that returns `value * 100` here is how a row
+          reached 50,000,000%. Nicoleta's word for this case is "overachieved" — a verdict, not a
+          quantity — and the row stays out of every average above it.
+        -->
+        <span
+          class="block text-[12.5px] font-medium italic text-[var(--pr-text-subtle)]"
+          [prTooltip]="
+            isOverachievedWithoutTarget(row)
+              ? 'No target was set for this indicator, so a percentage cannot be calculated. Results were still reported against it. It is excluded from the averages above.'
+              : 'No target was set for this indicator, so a percentage cannot be calculated. It is excluded from the averages above.'
+          ">
+          {{ isOverachievedWithoutTarget(row) ? 'Overachieved' : 'No target set' }}
+        </span>
+      } @else {
+        <div class="flex flex-col gap-[5px]" [prTooltip]="progressTracksTooltip(row)">
+          <span class="flex items-center gap-[6px]">
+            <span class="w-[26px] shrink-0 text-[10.5px] font-medium text-[var(--pr-text-subtle)]">QA</span>
+            <span class="h-[6px] min-w-0 flex-1 overflow-hidden rounded-[3px] bg-[var(--pr-border)]">
+              <span class="block h-full rounded-[3px] bg-emerald-500" [style.width.%]="barWidth(progressOf(row))"></span>
+            </span>
+            <span class="shrink-0 text-[11px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+              {{ row.progress_percentage || '0%' }}
+            </span>
+          </span>
+          <span class="flex items-center gap-[6px]">
+            <span class="w-[26px] shrink-0 text-[10.5px] font-medium text-[var(--pr-text-subtle)]">Prel.</span>
+            <span class="h-[6px] min-w-0 flex-1 overflow-hidden rounded-[3px] bg-[var(--pr-border)]">
+              <span
+                class="block h-full rounded-[3px] bg-[var(--pr-color-primary-300)] opacity-60"
+                [style.width.%]="barWidth(preliminaryProgressOf(row))"></span>
+            </span>
+            <span class="shrink-0 text-[11px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">
+              {{ row.preliminary_progress_percentage || '0%' }}
+            </span>
+          </span>
+        </div>
+      }
+    </div>
+
+    <!-- 7 — Report / Continue (+ Copy link icon; Next pending wraps above on the one row that has it) -->
     <div class="flex flex-wrap items-center justify-end gap-[6px]">
       @if (isLastReportedRow(row)) {
         @if (nextPendingRow(); as next) {

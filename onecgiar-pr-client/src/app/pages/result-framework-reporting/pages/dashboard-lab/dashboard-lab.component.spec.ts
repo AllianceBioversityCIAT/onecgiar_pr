@@ -669,6 +669,7 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
           provide: ApiService,
           useValue: {
             resultsSE: {
+              GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } })),
               GET_IndicatorContributionSummary: getIndicatorContributionSummary,
               // Needed once effects are actually flushed (see the "flushed effects" tests
               // below): the constructor's OTHER effect calls `loadAows` unconditionally
@@ -941,6 +942,7 @@ describe('DashboardLabComponent — phase filter resolver + loaders (OPF-T-3)', 
     return {
       resultsSE: {
         GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { units: [] } })),
+        GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } })),
         GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of({ response: { totalsByType: [] } })),
         GET_ResultToReview: jest.fn().mockReturnValue(of({ response: [] })),
         GET_2030Outcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
@@ -1268,6 +1270,7 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
     return {
       resultsSE: {
         GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { units: [] } })),
+        GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } })),
         GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of({ response: { totalsByType: [] } })),
         GET_ResultToReview: jest.fn().mockReturnValue(of({ response: [] })),
         GET_2030Outcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
@@ -1493,5 +1496,87 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
 
     expect(component.loadingSummaries()).toBe(false);
     expect(component.groupedSummaries()).toEqual({ outputs: [], outcomes: [] });
+  });
+});
+
+// ── P2-3251 · the Reporting tab opens with its Areas of Work EXPANDED ──────────────────────────
+//
+// This seed is the one thing on P2-3251 that is NOT self-evident from the ticket, so it is locked
+// here rather than left to a reader's judgement:
+//
+//   * the ticket's title and acceptance criteria ask for COLLAPSED;
+//   * the product owner confirmed collapsed in writing on 27 Aug 2026;
+//   * QA asked twice (25 and 28 Aug 2026) for EXPANDED, which is what shipped, decided by Yeck on
+//     1 Sep 2026 — QA's request wins on this screen.
+//
+// Anyone who "fixes" this back to `false` by reading the ticket breaks what was asked for. The test
+// name says whose request it is so the trail survives without this chat.
+describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)', () => {
+  const PROGRAM: SPProgress = {
+    initiativeId: 1,
+    initiativeCode: 'SP02',
+    initiativeName: 'Science Program 02',
+    initiativeShortName: 'SP02',
+    portfolioId: 1,
+    portfolioName: 'Portfolio',
+    portfolioAcronym: 'P25',
+    entityTypeCode: 'SP',
+    entityTypeName: 'Science Program',
+    totalResults: 0,
+    progress: 0,
+    versions: []
+  };
+
+  async function createComponent() {
+    await TestBed.configureTestingModule({
+      imports: [DashboardLabComponent],
+      providers: [
+        {
+          provide: ResultFrameworkReportingHomeService,
+          useValue: {
+            mySPsList: signal([]),
+            otherSPsList: signal([PROGRAM]),
+            otherProjectsList: signal([])
+          }
+        },
+        { provide: ApiService, useValue: {} },
+        { provide: DataControlService, useValue: { focusMode: signal(false), slimNav: signal(false) } },
+        { provide: ReportingGuideService, useValue: {} },
+        { provide: Router, useValue: {} },
+        { provide: ActivatedRoute, useValue: { data: of({}), snapshot: { data: {} } } },
+        { provide: PhasesService, useValue: { phases: { reporting: [] } } },
+        { provide: EntityAowService, useValue: { onCloseReportResultModal: () => undefined } },
+        { provide: ResultLevelService, useValue: {} }
+      ]
+    })
+      .overrideComponent(DashboardLabComponent, { set: { template: '' } })
+      .compileComponents();
+
+    const fixture = TestBed.createComponent(DashboardLabComponent);
+    return fixture.componentInstance;
+  }
+
+  it('seeds the disclosure switch open, so the AoW cards arrive expanded', async () => {
+    const component = await createComponent();
+
+    // This is the value the grouped table receives as `[expandAll]`, and the table uses it as the
+    // level default for both the AoW cards and their HLO sub-groups.
+    expect(component.reportingAllExpanded()).toBe(true);
+    // The toolbar label is written from this one; seeding it `false` while the cards are open made
+    // the first press a dead click (the press asks for the value already on screen).
+    expect(component.reportingAllOpen()).toBe(true);
+  });
+
+  // The seed and the toolbar are one mechanism, so this asserts it from the other side: arriving
+  // expanded means the FIRST press of the single Expand all / Collapse all control must COLLAPSE.
+  // Re-seeding to `false` flips this expectation, which is what makes it a lock and not a restatement.
+  it('makes the first press of the toolbar control collapse, not expand', async () => {
+    const component = await createComponent();
+
+    component.toggleReportingExpandAll();
+
+    expect(component.reportingAllExpanded()).toBe(false);
+    // Every press is a real change for the table, even when the boolean repeats.
+    expect(component.reportingExpandNonce()).toBe(1);
   });
 });

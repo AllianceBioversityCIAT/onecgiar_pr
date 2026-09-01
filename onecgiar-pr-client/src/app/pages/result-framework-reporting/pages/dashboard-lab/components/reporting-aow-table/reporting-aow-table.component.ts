@@ -29,6 +29,13 @@ export interface ReportingIndicator {
   target_value_sum?: string | number;
   actual_achieved_value_sum?: number;
   progress_percentage?: string | number;
+  /**
+   * P2-3296 AC1 — the second reading, already carried by `GET_TocResultsByAowId`.
+   * Preliminary is Submitted + Approved; `progress_percentage` above is QAed + Approved.
+   * They OVERLAP on Approved, so they are not additive and must never be stacked.
+   */
+  preliminary_achieved_value_sum?: number;
+  preliminary_progress_percentage?: string | number;
   unit_messurament?: string;
   result_type_name?: string;
   type_name?: string;
@@ -36,6 +43,8 @@ export interface ReportingIndicator {
   center_acronym?: string;
   toc_result_id?: number;
   __hlo?: string;
+  /** The ToC node this row was flattened from. Carries the node's P2-3296 AC2 roll-up. */
+  __hloNode?: { progress?: TocAchievement | null };
   __tier?: 'output' | 'outcome';
   __aowCode?: string;
   /** Display name of the source AoW — used when Intermediate Outcomes is a top-level sibling. */
@@ -68,6 +77,27 @@ export interface ReportingAowGroup {
   count: number;
   loading: boolean;
   kind?: ReportingGroupKind;
+  /** P2-3296 AC3 — this Area of Work's achievement against its ToC targets. */
+  achievement?: TocAchievement | null;
+}
+
+/**
+ * P2-3296 — the roll-up contract, identical at every level. Computed server-side in
+ * `toc-progress-rollup.ts`, which is the ONLY place that decides whether an indicator may enter
+ * an average (it may when its target is present and greater than zero).
+ *
+ * `progress_percentage` is null when nothing was measurable — the caller must render a dash. 0%
+ * would claim no progress, when the truth is there was nothing to measure against.
+ */
+export interface TocAchievement {
+  progress_percentage: string | null;
+  preliminary_progress_percentage: string | null;
+  progress_value: number | null;
+  preliminary_value: number | null;
+  counted: number;
+  total: number;
+  indicators_counted: number;
+  indicators_total: number;
 }
 
 /** A row's workflow state, as far as the data allows. See `statusOf`. */
@@ -98,6 +128,13 @@ interface HloGroup {
   /** Display title — the design shows the full ToC name only (no HLO + code chrome). */
   name: string;
   rows: ReportingIndicator[];
+  /**
+   * P2-3296 AC2 — this Intermediate Outcome's own achievement, computed server-side and carried
+   * on the ToC node the rows were flattened from. Taken from the node rather than recomputed from
+   * `rows`, which the toolbar filters have already narrowed: the figure describes the outcome,
+   * not the current view.
+   */
+  achievement?: TocAchievement | null;
 }
 
 /**
@@ -469,7 +506,10 @@ export class ReportingAowTableComponent {
       const name = (match?.[2] || raw).trim() || raw;
       const key = `${keyPrefix}::${raw}`;
       if (!byKey.has(key)) {
-        byKey.set(key, { key, name, rows: [] });
+        // Every row of a group comes from the same ToC node, so the first one carries the group's
+        // roll-up. Grouping is by TITLE, so two nodes sharing a title would collapse into one
+        // group — that is pre-existing behaviour, and the first node's figure is used.
+        byKey.set(key, { key, name, rows: [], achievement: row.__hloNode?.progress ?? null });
       }
       byKey.get(key)!.rows.push(row);
     }
@@ -687,6 +727,100 @@ export class ReportingAowTableComponent {
    *
    * @akili-spec changes/mass-reporting-flow
    */
+  /**
+   * P2-3296 — the achievement figures, at any level.
+   *
+   * A dash, never 0%: an indicator with no usable target (absent, or zero) is excluded from every
+   * average, and a level where nothing was measurable has no percentage to state. Nicoleta's
+   * ruling is that anything reported against a zero target is "overachieved" — a verdict, not a
+   * quantity, so it cannot enter an average.
+   */
+  achievementLabel(achievement: TocAchievement | null | undefined): string {
+    return achievement?.progress_percentage ?? '—';
+  }
+
+  preliminaryAchievementLabel(achievement: TocAchievement | null | undefined): string {
+    return achievement?.preliminary_progress_percentage ?? '—';
+  }
+
+  /**
+   * Always rendered next to the number, never tucked into a tooltip: a figure averaged over 2 of
+   * 10 indicators must not read like one averaged over all 10, and the visible fraction is what
+   * shows the team where targets are still missing.
+   */
+  achievementCoverage(achievement: TocAchievement | null | undefined): string {
+    const counted = achievement?.indicators_counted;
+    const total = achievement?.indicators_total;
+
+    if (!Number.isFinite(counted) || !Number.isFinite(total) || !total) return '';
+
+    return counted === total ? `${total} indicators` : `${counted} of ${total} indicators`;
+  }
+
+  achievementTooltip(achievement: TocAchievement | null | undefined, childNoun = 'Intermediate Outcomes'): string {
+    if (!achievement || !achievement.total) return 'Nothing has been planned here yet.';
+
+    const { counted, total, indicators_counted: withTarget, indicators_total: allIndicators } = achievement;
+
+    if (!counted) {
+      return `None of the ${allIndicators} indicators has a target set, so no achievement percentage can be calculated.`;
+    }
+
+    const excluded = allIndicators - withTarget;
+    const base =
+      `QA ${this.achievementLabel(achievement)} and Preliminary ${this.preliminaryAchievementLabel(achievement)}, ` +
+      `averaged over ${counted} of ${total} ${childNoun}, covering ${withTarget} of ${allIndicators} indicators.`;
+
+    return excluded > 0
+      ? `${base} ${excluded} indicator${excluded === 1 ? ' is' : 's are'} excluded for having no target set.`
+      : base;
+  }
+
+  /**
+   * P2-3296 AC1, per indicator row. An indicator whose target is absent or zero has no ratio: the
+   * ToC branch that produced `value * 100` for those is how a row reached 50,000,000%. Such a row
+   * shows the word, not a number, and stays out of every average above it.
+   */
+  hasUsableTarget(row: ReportingIndicator): boolean {
+    const target = Number(row?.target_value_sum);
+
+    return Number.isFinite(target) && target > 0;
+  }
+
+  isOverachievedWithoutTarget(row: ReportingIndicator): boolean {
+    if (this.hasUsableTarget(row)) return false;
+
+    return Number(row?.actual_achieved_value_sum ?? 0) > 0 || Number(row?.preliminary_achieved_value_sum ?? 0) > 0;
+  }
+
+  /** Preliminary as a number, for the bar width. Mirrors `progressOf` for the QA figure. */
+  preliminaryProgressOf(row: ReportingIndicator): number {
+    const raw = row?.preliminary_progress_percentage;
+    const value = typeof raw === 'string' ? Number(raw.replace('%', '')) : Number(raw);
+
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  /**
+   * Names both figures and states the overlap outright. Approved counts in BOTH — Nicoleta asked
+   * for it so W3/Bilateral results tagged to AoW HLO targets are not lost from either reading —
+   * and without saying so the two numbers look like they should add up.
+   */
+  progressTracksTooltip(row: ReportingIndicator): string {
+    return (
+      `QA ${row?.progress_percentage ?? '0%'} — results that passed quality review (QAed or Approved). ` +
+      `Preliminary ${row?.preliminary_progress_percentage ?? '0%'} — results submitted but not yet reviewed, plus Approved ones. ` +
+      'Approved results count towards both, so the two are not additive.'
+    );
+  }
+
+  /** Bar fill, clamped to 100. The printed label keeps the real figure — over-achievement is shown. */
+  barWidth(percent: number): number {
+    if (!Number.isFinite(percent) || percent <= 0) return 0;
+
+    return Math.min(percent, 100);
+  }
+
   ratioOf(group: ReportingAowGroup): { done: number; total: number; percent: number } {
     const { done, total, percent } = buildRatio(this.ratioBase(group));
     return { done, total, percent };

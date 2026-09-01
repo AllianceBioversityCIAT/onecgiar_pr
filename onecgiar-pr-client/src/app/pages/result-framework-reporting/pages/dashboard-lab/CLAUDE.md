@@ -1,6 +1,6 @@
 # dashboard-lab
 
-**Verified:** 2026-09-01 · branch qa-development-2026 · 52ddf00af
+**Verified:** 2026-09-01 · branch qa-development-2026 · 52ddf00af (merged with performance-refactor · 4c2c0c69f — ToC achievement rollup, P2-3296)
 
 ## Qué es
 El shell de un Science Program. Un solo componente que sirve varias vistas según `rfrView`, y que es
@@ -40,6 +40,14 @@ de TS): trátalo como host, no como pantalla.
 ## Trampas (⚠️ = ya rompió algo)
 - ⚠️ **`filtersActive` hay que pasarlo a `reporting-aow-table`.** El hijo no ve tres de los cinco
   filtros; sin ese input su estado vacío miente (P2-3405).
+- 🛑 **`reportingAllExpanded` arranca en `true` A PROPÓSITO, contra lo que dice el ticket.** La
+  pestaña Reporting abre con las Areas of Work **expandidas**. P2-3251 pide en su título y en sus
+  criterios lo contrario, y el PO confirmó "cerradas" por escrito el 27-ago-2026 — pero QA lo pidió
+  expandido dos veces (25 y 28-ago) y Yeck decidió el 1-sep-2026 que en esta pantalla manda QA.
+  **No lo "corrijas" a `false` leyendo el ticket**: lee primero el hilo de comentarios. El seed se
+  aplica en dos sitios que deben moverse juntos — la declaración de la señal y el reset por programa
+  dentro del `constructor`. Candado: `dashboard-lab.component.spec.ts`, describe
+  *"Reporting disclosure seed (P2-3251, per QA)"*; revertir el seed hace fallar sus dos tests.
 - ⚠️ **Un `output()` sin bindear es un control muerto.** `openRowMenu` se emitía y nadie lo escuchaba,
   así que el `⋯` de cada fila no hacía nada en producción. Al añadir un output, bindéalo o no
   renderices el control.

@@ -327,5 +327,65 @@ describe('EvidencesService', () => {
 
       expect(mockEvidenceSharepointRepository.save).not.toHaveBeenCalled();
     });
+
+    it('should save the evidence_sharepoint row and update the evidence link on success', async () => {
+      mockEvidenceSharepointRepository.findOne.mockResolvedValue(undefined);
+      mockSharePointService.addFileAccess.mockResolvedValue({
+        link: { webUrl: 'https://sharepoint.example/doc' },
+      });
+      mockEvidenceSharepointRepository.save.mockResolvedValue(undefined);
+
+      await service.saveSPData(
+        {
+          id: '1',
+          link: '',
+          is_sharepoint: 1,
+          sp_document_id: 'doc-1',
+          sp_file_name: 'file.pdf',
+          sp_folder_path: '/Phase/Result 1',
+          is_public_file: true,
+        } as any,
+        1,
+      );
+
+      expect(mockEvidencesRepository.update).toHaveBeenCalledWith(1, {
+        link: 'https://sharepoint.example/doc',
+      });
+      expect(mockEvidenceSharepointRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document_id: 'doc-1',
+          file_name: 'file.pdf',
+          folder_path: '/Phase/Result 1',
+        }),
+      );
+    });
+
+    it('should throw a clear error and skip persisting the sharepoint row when addFileAccess fails silently', async () => {
+      mockEvidenceSharepointRepository.findOne.mockResolvedValue(undefined);
+      // SharePointService.addFileAccess swallows HTTP errors and resolves
+      // with the raw Error object instead of rejecting (see
+      // share-point.service.ts). This reproduces that shape.
+      mockSharePointService.addFileAccess.mockResolvedValue(
+        new Error('Graph API permission denied'),
+      );
+
+      await expect(
+        service.saveSPData(
+          {
+            id: '1',
+            link: '',
+            is_sharepoint: 1,
+            sp_document_id: 'doc-1',
+            sp_file_name: 'file.pdf',
+            sp_folder_path: '/Phase/Result 1',
+            is_public_file: true,
+          } as any,
+          1,
+        ),
+      ).rejects.toThrow(/addFileAccess failed for document doc-1/);
+
+      expect(mockEvidencesRepository.update).not.toHaveBeenCalled();
+      expect(mockEvidenceSharepointRepository.save).not.toHaveBeenCalled();
+    });
   });
 });

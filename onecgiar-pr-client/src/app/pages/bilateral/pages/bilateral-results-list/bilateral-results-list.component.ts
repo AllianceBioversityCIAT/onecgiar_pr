@@ -37,6 +37,10 @@ export interface BilateralCenterResult {
   id: number;
   result_code: string;
   title: string;
+  /** P2-3152 AC6 — result description, listed next to the title on the centre dashboard. */
+  description?: string | null;
+  /** P2-3152 AC6 — name of the W3/Bilateral project the result was reported under. */
+  project_name?: string | null;
   result_type: string;
   status_id: number;
   status_name: string;
@@ -58,14 +62,18 @@ export interface BilateralColumnDef {
   defaultOn: boolean;
 }
 
-// Versioned so older preferences cannot leave the newly required Result type column hidden.
-const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns.v2';
+// Versioned so older preferences cannot leave a newly required column hidden.
+// v3 — P2-3152 AC6 added Project name and Description.
+const BILATERAL_COLUMN_STORAGE_KEY = 'pr.bilateralResults.visibleColumns.v3';
 
 /** Full column set (order = picker + table order). Kept to the fields BilateralCenterResult actually has. */
 export const BILATERAL_COLUMNS: readonly BilateralColumnDef[] = [
   { key: 'source', title: 'Source', attr: 'source', width: '100px', defaultOn: true },
   { key: 'code', title: 'Code', attr: 'result_code', width: '100px', defaultOn: true },
   { key: 'title', title: 'Title', attr: 'title', width: '280px', defaultOn: true },
+  // P2-3152 AC6 — Project name and Description are required on the centre dashboard.
+  { key: 'project', title: 'Project name', attr: 'project_name', width: '200px', defaultOn: true },
+  { key: 'description', title: 'Description', attr: 'description', width: '260px', defaultOn: true },
   { key: 'type', title: 'Result type', attr: 'result_type', width: '180px', defaultOn: true },
   { key: 'role', title: 'Role', attr: 'is_leading_result', width: '120px', defaultOn: true },
   { key: 'status', title: 'Status', attr: 'status_id', width: '120px', defaultOn: true },
@@ -322,6 +330,10 @@ export class BilateralResultsListComponent implements OnInit {
         return result.result_code;
       case 'title':
         return result.title;
+      case 'project_name':
+        return result.project_name ?? '';
+      case 'description':
+        return result.description ?? '';
       case 'result_type':
         return result.result_type;
       case 'is_leading_result':

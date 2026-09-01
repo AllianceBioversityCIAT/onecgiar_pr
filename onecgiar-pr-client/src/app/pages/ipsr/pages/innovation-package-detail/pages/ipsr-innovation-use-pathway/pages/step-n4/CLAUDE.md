@@ -1,6 +1,6 @@
 # step-n4 — IPSR Innovation Package, "Step 4: Additional information"
 
-**Verified:** 2026-08-31 · branch performance-refactor · bf8df3930
+**Verified:** 2026-09-01 · branch performance-refactor · 1899f4602
 
 ## What it is
 The last step of the Innovation use pathway: expected investment tables (initiative, bilateral,
@@ -32,6 +32,15 @@ question.
   `app-studies-link` disables the inputs and drops the delete and "Add another study link" controls.
 
 ## Traps (⚠️ = already broke something)
+- ⚠️ **The three "Add …" dialogs repaint through a SIGNAL, not a plain flag (P2-3322).** `cleanObject()`
+  toggles `showForm` `false -> setTimeout -> true` to remount the form; as a plain field the delayed
+  write notified nothing, so under zoneless CD the dialog reopened empty until a page reload. Each of
+  `step-n4-add-bilateral`, `step-n4-add-partner` and `step-n4-add-project` keeps a private
+  `_showForm` signal behind the same boolean accessor — **do not "simplify" it back to a field.**
+  Guarded by one `*.zoneless.spec.ts` each: they drive the real `(onHide)` binding and assert on the
+  rendered `.modal_container`. 🛑 Asserting on `component.showForm` is useless here — the flag was
+  always correct, what never happened was the repaint. All three were verified to fail with the fix
+  reverted.
 - ⚠️ **Phase year, never portfolio.** "2026 onwards" is `phase_year >= 2026`, never `isP25()`. prtest
   holds 2025-phase results INSIDE the P25 portfolio (repo rule 9), so a portfolio gate rewrites
   those older forms. The P2-3426 ticket's own "Phase threshold - RESOLVED" section says `isP25()` is

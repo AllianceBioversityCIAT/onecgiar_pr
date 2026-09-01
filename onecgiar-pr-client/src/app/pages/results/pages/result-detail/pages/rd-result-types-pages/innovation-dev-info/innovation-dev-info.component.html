@@ -109,9 +109,7 @@
     placeholder="Contact persons info goes here..."
     [required]="false"
     label="Innovation Developer"
-    description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person
-        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br>
-        Please provide information such as first name, family name, email address and organizational affiliations."
+    [description]="innovationDeveloperDescription()"
     [(ngModel)]="innovationDevInfoBody.innovation_developers">
   </app-pr-textarea>
 

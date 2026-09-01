@@ -11,6 +11,11 @@
  * share the 2026 cycle, which a real enum can express neither as duplicate literals
  * (S6578) nor as a cross-member reference (S6550). A const map has neither restriction
  * and keeps both named thresholds for readability and future divergence.
+ *
+ * 🛑 Phase year is NOT the portfolio. `isP25()` is true for the 2025 phase too — both live in the
+ * P25 portfolio — so a portfolio gate cannot separate "what is new in 2026" from what came before.
+ * Full audit, the inventory of every gate in the app and the known gaps:
+ * `docs/context-ai/fase-vs-portafolio.md`.
  */
 export const ReportingDesignYear = {
   /**
@@ -61,5 +66,16 @@ export const ReportingDesignYear = {
    * Gated on the reporting phase YEAR, not on the portfolio: prtest holds 2025-phase results
    * inside the P25 portfolio, and `isP25()` would rename the section for those too.
    */
-  InnovationUse2030Projection: 2026
+  InnovationUse2030Projection: 2026,
+
+  /**
+   * SIDS revision (P2-3272 Part 4): from the 2026 cycle the "Innovation Developer" field of
+   * Innovation Development is pre-filled from the Lead contact person captured in General
+   * Information, and its long guidance note is dropped. Phases <= 2025 keep the empty field and
+   * the note verbatim.
+   *
+   * Gated on the reporting phase YEAR, not on the portfolio: prtest holds 2025-phase results
+   * inside the P25 portfolio, and `isP25()` would pre-fill and strip the note for those too.
+   */
+  InnovationDeveloperAutoFill: 2026
 } as const;

@@ -119,10 +119,14 @@
       @if (canReport()) {
         <button
           type="button"
-          class="flex h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
+          class="group relative flex h-[36px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[14px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]"
           (click)="reportEmerging.emit()">
           <ng-icon name="lucideZap" class="text-[16px]" />
           Report emerging result
+          <span
+            class="pointer-events-none absolute right-0 top-full z-[30] mt-[8px] w-[220px] rounded-[8px] bg-[var(--pr-color-secondary-400)] px-[12px] py-[8px] text-[12px] font-normal leading-[1.4] text-white opacity-0 shadow-lg transition-opacity delay-150 group-hover:opacity-100">
+            Report achievements that were not originally included in the 2026 Theory of Change, but emerged as valuable results during the year.
+          </span>
         </button>
       }
     </div>
@@ -200,12 +204,18 @@
         </button>
 
         @if (canReport()) {
+          <!-- The 36px CTA of the identity block is clipped away with it, so the collapsed bar
+               carries its own 32px copy (reference :396-399). Same action, same label, same tooltip. -->
           <button
             type="button"
-            class="pr-band-fade flex h-[32px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
+            class="pr-band-fade group relative flex h-[32px] shrink-0 cursor-pointer appearance-none items-center gap-[8px] rounded-[8px] border-0 bg-[var(--pr-color-primary-300)] px-[12px] text-[14px] font-semibold text-white no-underline transition-colors hover:bg-[var(--pr-color-primary-400)]"
             (click)="reportEmerging.emit()">
             <ng-icon name="lucideZap" class="text-[16px]" />
             Report emerging result
+            <span
+              class="pointer-events-none absolute right-0 top-full z-[30] mt-[8px] w-[220px] rounded-[8px] bg-[var(--pr-color-secondary-400)] px-[12px] py-[8px] text-[12px] font-normal leading-[1.4] text-white opacity-0 shadow-lg transition-opacity delay-150 group-hover:opacity-100">
+              Report achievements that were not originally included in the 2026 Theory of Change, but emerged as valuable results during the year.
+            </span>
           </button>
         }
       </div>

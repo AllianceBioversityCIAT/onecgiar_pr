@@ -36,6 +36,7 @@ import {
   ProgramOverviewComponent,
   StatusSegment as OverviewStatusSegment,
   AowProgressRow as OverviewAowProgressRow,
+  TocAchievement,
   CategoryBar as OverviewCategoryBar,
   OverviewCenterBar,
   OverviewLink,
@@ -207,6 +208,8 @@ export interface OverviewAowProgressRowRich {
   reported: number;
   total: number;
   remaining: number;
+  /** P2-3296 AC3 — this Area of Work's ToC achievement, beside the reported-KPI count above. */
+  achievement?: TocAchievement | null;
 }
 
 /**
@@ -859,10 +862,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         this.plannedHloAowCode.set(null);
         this.plannedTypeFilter.set([]);
         this.plannedSearch.set('');
-        // Every programme opens in the collapsed reading state (P2-3251) — the switch is per
-        // programme, not a preference that follows the user from the last SP they browsed.
-        this.reportingAllExpanded.set(false);
-        this.reportingAllOpen.set(false);
+        // Every programme opens with its Areas of Work EXPANDED, at QA's request on P2-3251
+        // (28 Aug 2026). The switch is per programme, not a preference that follows the user from
+        // the last SP they browsed.
+        this.reportingAllExpanded.set(true);
+        this.reportingAllOpen.set(true);
         this.reportingExpandNonce.set(0);
         // Overview phase selector (design.md DD-5): a program switch always lands back on that
         // program's Open phase — a phase picked for the PREVIOUS program is not a valid selection
@@ -1357,6 +1361,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * Progress by AoW — least complete first. `done` = KPIs with something reported;
    * `total` = planned indicators (same rule as the Reporting table ratio).
    */
+  /**
+   * P2-3296 AC3 / AC4 — the ToC achievement roll-up, one call for the whole programme.
+   *
+   * Deliberately NOT recomputed in the client from the loaded indicators: the rule for which
+   * indicator may enter an average (a usable target, i.e. present and greater than zero) lives in
+   * exactly one place, `toc-progress-rollup.ts` on the server. A second copy here would drift the
+   * day one of the two is corrected.
+   */
+  readonly programAchievement = signal<TocAchievement | null>(null);
+  readonly achievementByAowCode = signal<Record<string, TocAchievement>>({});
+
   readonly overviewAowProgress = computed<OverviewAowProgressRow[]>(() => {
     return this.indicatorsByAow()
       .map(b => {
@@ -1366,7 +1381,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           code: b.aow.code,
           name: b.aow.name,
           done,
-          total: inds.length
+          total: inds.length,
+          // P2-3296 AC3 — beside the reported-KPI count, never instead of it.
+          achievement: this.achievementByAowCode()[b.aow.code] ?? null
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
@@ -1428,7 +1445,10 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           zeroTarget,
           reported,
           total,
-          remaining: total - reported
+          remaining: total - reported,
+          // P2-3296 AC3 — beside the reported-KPI count, never instead of it (same source as the
+          // thin `overviewAowProgress` above).
+          achievement: this.achievementByAowCode()[b.aow.code] ?? null
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
@@ -2340,6 +2360,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (!code) return;
     const versionId = this.effectiveVersionId();
     this.loadSummaries(code, versionId ?? undefined);
+    this.loadTocAchievement(code, versionId ?? undefined);
   }
 
   /**
@@ -2353,6 +2374,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.api.resultsSE.GET_IndicatorContributionSummary(code, versionId).subscribe({
       next: (res: { response?: { totalsByType?: IndicatorCategory[] } }) => this.cacheSummaries(key, res?.response?.totalsByType ?? []),
       error: () => this.cacheSummaries(key, [])
+    });
+  }
+
+  /**
+   * P2-3296 AC3 / AC4 — one call gives the programme's achievement and one figure per Area of
+   * Work, so the AoW rows fill without a request each.
+   *
+   * Fails soft: this is a supplementary reading on a page whose job is to show the Areas of Work.
+   * An error clears the figures and the page renders exactly as it did before the ticket.
+   */
+  private loadTocAchievement(code: string, versionId?: number): void {
+    this.api.resultsSE.GET_ScienceProgramTocProgress(code, versionId).subscribe({
+      next: (res: {
+        response?: { progress?: TocAchievement; areas?: Array<{ code: string; progress: TocAchievement }> };
+      }) => {
+        this.programAchievement.set(res?.response?.progress ?? null);
+        this.achievementByAowCode.set(
+          Object.fromEntries((res?.response?.areas ?? []).filter(a => a?.code).map(a => [a.code, a.progress]))
+        );
+      },
+      error: () => {
+        this.programAchievement.set(null);
+        this.achievementByAowCode.set({});
+      }
     });
   }
 
@@ -2706,7 +2751,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
               indicators: rows,
               count: tierRows.length,
               loading: bundle.loading,
-              kind: 'aow' as const
+              kind: 'aow' as const,
+              // P2-3296 AC3. Taken from the roll-up call, not recomputed from `rows`: the figure
+              // describes the Area of Work, not the current filter. A percentage that moved as the
+              // user narrowed the typology or the search box would not be progress.
+              achievement: this.achievementByAowCode()[aow.code] ?? null
             };
           })
       : [];
@@ -2883,17 +2932,23 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Global disclosure switch of the Reporting tab (P2-3252). `false` = the collapsed reading state
-   * every programme opens in (P2-3251); the toolbar's single control flips it and the grouped table
-   * takes it as the level default for BOTH AoW cards and their HLO sub-groups.
+   * Global disclosure switch of the Reporting tab (P2-3252). The toolbar's single control flips it
+   * and the grouped table takes it as the level default for BOTH AoW cards and their HLO sub-groups.
+   *
+   * Seeded `true` — Areas of Work arrive EXPANDED. That is what QA asked for on P2-3251 on
+   * 28 Aug 2026 ("all sections should be fully expanded by default"), and it is the seed the screen
+   * carried before 4ca1b0141. Note that the ticket's own title and acceptance criteria ask for the
+   * opposite, and so did the product owner in writing on 27 Aug ("inicialmente vamos con que estén
+   * cerradas"): this seed is a deliberate override of both, decided by Yeck on 1 Sep 2026. Do not
+   * "correct" it back by reading the ticket — read the comment trail first.
    */
-  readonly reportingAllExpanded = signal(false);
+  readonly reportingAllExpanded = signal(true);
   /**
    * What the table reports back: every visible AoW card is open right now (overrides included).
    * The toolbar label is written from THIS, not from `reportingAllExpanded` — otherwise a user who
    * opened every card by hand got a press that changed nothing and a label that lied (QA: dead click).
    */
-  readonly reportingAllOpen = signal(false);
+  readonly reportingAllOpen = signal(true);
   /**
    * Press counter. `reportingAllExpanded` can legitimately be asked for the value it already holds
    * (everything opened by hand → the press means "collapse", i.e. `false`, which is where it already

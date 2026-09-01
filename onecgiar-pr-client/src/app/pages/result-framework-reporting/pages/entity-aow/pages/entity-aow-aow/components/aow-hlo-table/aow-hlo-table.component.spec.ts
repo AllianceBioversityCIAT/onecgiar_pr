@@ -237,10 +237,11 @@ describe('AowHloTableComponent', () => {
   describe('Component Initialization', () => {
     it('should initialize with default values', () => {
       expect(component.columnOrder()).toEqual([
-        { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
+        { title: 'KPI statement', attr: 'indicator_description', width: '27%' },
         { title: 'Indicator typology', attr: 'type_name', width: '10%' },
         { title: '2026 target', attr: 'target_value_sum', width: '10%' },
         { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
+        { title: 'Progress', attr: 'progress_bars', hideSortIcon: true, width: '13%' },
         { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
       ]);
     });
@@ -255,11 +256,11 @@ describe('AowHloTableComponent', () => {
     it('should have correct column order structure', () => {
       const columns = component.columnOrder();
 
-      expect(columns).toHaveLength(5);
+      expect(columns).toHaveLength(6);
       expect(columns[0]).toEqual({
         title: 'KPI statement',
         attr: 'indicator_description',
-        width: '30%'
+        width: '27%'
       });
       expect(columns[1]).toEqual({
         title: 'Indicator typology',
@@ -276,7 +277,14 @@ describe('AowHloTableComponent', () => {
         attr: 'actual_achieved_value_sum',
         width: '10%'
       });
+      // P2-3296: the two-bar cell sits between the numbers and the status chip.
       expect(columns[4]).toEqual({
+        title: 'Progress',
+        attr: 'progress_bars',
+        hideSortIcon: true,
+        width: '13%'
+      });
+      expect(columns[5]).toEqual({
         title: 'Status',
         attr: 'status',
         hideSortIcon: true,
@@ -286,7 +294,7 @@ describe('AowHloTableComponent', () => {
 
     it('should have all required column attributes', () => {
       const columns = component.columnOrder();
-      const requiredAttrs = ['indicator_description', 'type_name', 'target_value_sum', 'actual_achieved_value_sum', 'status'];
+      const requiredAttrs = ['indicator_description', 'type_name', 'target_value_sum', 'actual_achieved_value_sum', 'progress_bars', 'status'];
 
       columns.forEach(column => {
         expect(requiredAttrs).toContain(column.attr);
@@ -1104,4 +1112,197 @@ describe('AowHloTableComponent', () => {
     });
   });
 
+
+  /**
+   * P2-3296. Two tracks, not one stacked bar: Preliminary (Submitted + Approved) and QA
+   * (QAed + Approved) share the Approved results, so adding them would double-count.
+   */
+  describe('P2-3296 — the two progress tracks', () => {
+    it('reads the preliminary percentage off the row', () => {
+      expect(component.getPreliminaryProgress({ preliminary_progress_percentage: '75%' })).toBe(75);
+    });
+
+    it('survives a row with no preliminary field instead of throwing', () => {
+      // An older server payload, or an indicator with no contributions at all. `split` on
+      // undefined would take the whole table down.
+      expect(() => component.getPreliminaryProgress({})).not.toThrow();
+      expect(component.getPreliminaryProgress({})).toBe(0);
+      expect(component.getPreliminaryProgress(null)).toBe(0);
+      expect(component.getProgress(undefined as any)).toBe(0);
+    });
+
+    it('clamps the bar width at 100 while the label keeps the real figure', () => {
+      // Nicoleta confirmed over-achievement is shown, not capped — but a 500% bar has
+      // nowhere to go, so only the fill is clamped.
+      expect(component.barWidth(500)).toBe(100);
+      expect(component.barWidth(100)).toBe(100);
+      expect(component.barWidth(40)).toBe(40);
+      expect(component.barWidth(0)).toBe(0);
+      expect(component.barWidth(-10)).toBe(0);
+      expect(component.barWidth(NaN)).toBe(0);
+    });
+
+    it('names both figures in the tooltip, and says Approved counts twice', () => {
+      const tooltip = component.progressTooltip({
+        progress_percentage: '40%',
+        preliminary_progress_percentage: '75%'
+      });
+
+      expect(tooltip).toContain('QA 40%');
+      expect(tooltip).toContain('Preliminary 75%');
+      expect(tooltip).toContain('Approved results count towards both');
+    });
+  });
+
+  describe('P2-3296 AC2-AC4 — indicators with no usable target, and the rolled-up level', () => {
+    it('treats a positive target as usable and anything else as not', () => {
+      expect(component.hasUsableTarget({ target_value_sum: 10 })).toBe(true);
+      expect(component.hasUsableTarget({ target_value_sum: 0 })).toBe(false);
+      expect(component.hasUsableTarget({ target_value_sum: null })).toBe(false);
+      expect(component.hasUsableTarget({})).toBe(false);
+      expect(component.hasUsableTarget({ target_value_sum: -5 })).toBe(false);
+    });
+
+    // Nicoleta: "leave the target as is - if anything is reported will be assessed as
+    // 'overachieved'". The row must say the word, never the 50,000,000% the old branch produced.
+    it('calls a no-target row overachieved only when something was reported', () => {
+      expect(
+        component.isOverachievedWithoutTarget({ target_value_sum: 0, actual_achieved_value_sum: 500000 })
+      ).toBe(true);
+      expect(
+        component.isOverachievedWithoutTarget({ target_value_sum: 0, preliminary_achieved_value_sum: 3 })
+      ).toBe(true);
+      expect(
+        component.isOverachievedWithoutTarget({ target_value_sum: 0, actual_achieved_value_sum: 0 })
+      ).toBe(false);
+    });
+
+    it('never labels a row with a real target as overachieved-without-target', () => {
+      expect(
+        component.isOverachievedWithoutTarget({ target_value_sum: 10, actual_achieved_value_sum: 50 })
+      ).toBe(false);
+    });
+
+    it('renders a dash, not 0%, when the level has nothing measurable', () => {
+      expect(component.levelProgress({ progress: { progress_percentage: null } })).toBe('—');
+      expect(component.levelPreliminaryProgress({ progress: { preliminary_progress_percentage: null } })).toBe('—');
+      expect(component.levelProgress({})).toBe('—');
+    });
+
+    it('renders the level percentages when they exist', () => {
+      const item = { progress: { progress_percentage: '45%', preliminary_progress_percentage: '60%' } };
+
+      expect(component.levelProgress(item)).toBe('45%');
+      expect(component.levelPreliminaryProgress(item)).toBe('60%');
+    });
+
+    it('always states the denominator behind the number', () => {
+      expect(component.levelCoverage({ progress: { indicators_counted: 2, indicators_total: 10 } })).toBe('2 of 10 indicators');
+      expect(component.levelCoverage({ progress: { indicators_counted: 10, indicators_total: 10 } })).toBe('10 indicators');
+      expect(component.levelCoverage({ progress: { indicators_counted: 1, indicators_total: 1 } })).toBe('1 indicator');
+      expect(component.levelCoverage({ progress: { indicators_counted: 0, indicators_total: 0 } })).toBe('');
+      expect(component.levelCoverage({})).toBe('');
+    });
+
+    it('spells out in the tooltip how many indicators were left out and why', () => {
+      const tooltip = component.levelTooltip({
+        progress: {
+          progress_percentage: '45%',
+          preliminary_progress_percentage: '60%',
+          indicators_counted: 2,
+          indicators_total: 10
+        }
+      });
+
+      expect(tooltip).toContain('2 of 10 indicators');
+      expect(tooltip).toContain('8 indicators are excluded');
+      expect(tooltip).toContain('no target set');
+    });
+
+    it('says plainly when no indicator of the level has a target', () => {
+      const tooltip = component.levelTooltip({
+        progress: { progress_percentage: null, indicators_counted: 0, indicators_total: 4 }
+      });
+
+      expect(tooltip).toContain('None of the 4 indicators has a target set');
+    });
+
+    it('says plainly when the level has no indicators at all', () => {
+      expect(
+        component.levelTooltip({ progress: { indicators_counted: 0, indicators_total: 0 } })
+      ).toContain('no indicators yet');
+    });
+  });
+
+  /**
+   * `filteredTableData` rebuilds each group as `{ ...group, indicators: subset }`. The spread
+   * carries `progress` through today, but the AC1 defect was exactly this shape of loss one
+   * layer down, so it is pinned rather than assumed.
+   */
+  describe('P2-3296 AC2 — the HLO number survives the table pipeline', () => {
+    const group = (overrides: any = {}) => ({
+      toc_result_id: 1,
+      result_title: 'Outcome 1',
+      progress: {
+        progress_percentage: '45%',
+        preliminary_progress_percentage: '60%',
+        indicators_counted: 2,
+        indicators_total: 10
+      },
+      indicators: [
+        { indicator_id: 10, indicator_description: 'alpha', progress_percentage: '50%' },
+        { indicator_id: 11, indicator_description: 'beta', progress_percentage: '0%' }
+      ],
+      ...overrides
+    });
+
+    beforeEach(() => {
+      // Same path the rest of this spec uses. The pipeline under test — the `{ ...group }`
+      // rebuild inside `filteredTableData` — is identical for every tableType.
+      component.tableType = 'outputs';
+      mockEntityAowService.tocResultsOutputsByAowId.set([group()]);
+      mockEntityAowService.searchText.set('');
+      component.statusFilter.set('all');
+    });
+
+    it('keeps progress on the group when no filter is active', () => {
+      expect(component.filteredTableData()[0].progress?.progress_percentage).toBe('45%');
+    });
+
+    it('keeps progress on the group when a search filter narrows the indicators', () => {
+      mockEntityAowService.searchText.set('alpha');
+
+      const [filtered] = component.filteredTableData();
+      expect(filtered.indicators).toHaveLength(1);
+      // The number describes the Intermediate Outcome, not the current view, so it does not
+      // move as the user types — a percentage that changed with the search box would be
+      // meaningless.
+      expect(filtered.progress?.progress_percentage).toBe('45%');
+      expect(component.levelCoverage(filtered)).toBe('2 of 10 indicators');
+    });
+
+    it('keeps progress on the group when the status chip narrows the indicators', () => {
+      component.statusFilter.set('Not started');
+
+      const [filtered] = component.filteredTableData();
+      expect(filtered.indicators).toHaveLength(1);
+      expect(filtered.progress?.progress_percentage).toBe('45%');
+    });
+
+    it('renders a dash for a group the server could not measure', () => {
+      mockEntityAowService.tocResultsOutputsByAowId.set([
+        group({
+          progress: {
+            progress_percentage: null,
+            preliminary_progress_percentage: null,
+            indicators_counted: 0,
+            indicators_total: 2
+          }
+        })
+      ]);
+
+      const [filtered] = component.filteredTableData();
+      expect(component.levelProgress(filtered)).toBe('—');
+    });
+  });
 });

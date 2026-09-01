@@ -33,6 +33,7 @@ describe('BilateralCenterService', () => {
   let resultByLevelRepository: ResultByLevelRepository;
   let yearRepository: YearRepository;
   let bilateralProjectsService: BilateralProjectsService;
+  let bilateralService: BilateralService;
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
@@ -42,6 +43,7 @@ describe('BilateralCenterService', () => {
           provide: BilateralProjectsService,
           useValue: {
             getProjectsByCenter: jest.fn().mockResolvedValue({ projects: [] }),
+            resolveProjectLeadCenter: jest.fn().mockResolvedValue(null),
           },
         },
         {
@@ -209,6 +211,7 @@ describe('BilateralCenterService', () => {
       ResultByLevelRepository,
     );
     yearRepository = module.get<YearRepository>(YearRepository);
+    bilateralService = module.get<BilateralService>(BilateralService);
     bilateralProjectsService = module.get<BilateralProjectsService>(
       BilateralProjectsService,
     );
@@ -250,6 +253,80 @@ describe('BilateralCenterService', () => {
       expect(saved.external_platform_id).toBeUndefined();
       expect(saved.external_platform_code).toBeUndefined();
       expect(saved.external_reference).toBeUndefined();
+    });
+
+    /**
+     * The client builds `lead_center` from the project's `obj_organization`, a join on
+     * `organization_code` — which CLARISA's W3 sync leaves null for the Alliance-descended
+     * centres, so it sends nothing at all. The server resolves it from the project instead,
+     * rather than trusting the payload to carry it.
+     */
+    it('resolves the lead centre from the project when the payload omits it', async () => {
+      (
+        bilateralProjectsService.resolveProjectLeadCenter as jest.Mock
+      ).mockResolvedValueOnce({
+        name: 'Alliance … Regional Hub',
+        acronym: 'CIAT',
+      });
+
+      const result = await service.createResultHeader(user, {
+        result_level_id: 2,
+        result_type_id: 7,
+        project_id: 1443,
+      } as any);
+
+      expect(
+        bilateralProjectsService.resolveProjectLeadCenter,
+      ).toHaveBeenCalledWith(1443);
+      expect(bilateralService.handleLeadCenter).toHaveBeenCalledWith(
+        99,
+        { name: 'Alliance … Regional Hub', acronym: 'CIAT' },
+        42,
+      );
+      expect(result.response.lead_center_resolved).toBe(true);
+    });
+
+    it('prefers the payload lead_center over the project when both are available', async () => {
+      const payloadCenter = {
+        name: 'International Potato Center',
+        acronym: 'CIP',
+      };
+
+      await service.createResultHeader(user, {
+        result_level_id: 2,
+        result_type_id: 7,
+        project_id: 1443,
+        lead_center: payloadCenter,
+      } as any);
+
+      expect(
+        bilateralProjectsService.resolveProjectLeadCenter,
+      ).not.toHaveBeenCalled();
+      expect(bilateralService.handleLeadCenter).toHaveBeenCalledWith(
+        99,
+        payloadCenter,
+        42,
+      );
+    });
+
+    // Creation is not blocked — that would be worse — but it must not fail quietly either:
+    // with no lead centre the Contributors & Partners green check can never turn green.
+    it('reports lead_center_resolved false and warns when no centre can be resolved', async () => {
+      const logger = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      const result = await service.createResultHeader(user, {
+        result_level_id: 2,
+        result_type_id: 7,
+        project_id: 1443,
+      } as any);
+
+      expect(bilateralService.handleLeadCenter).not.toHaveBeenCalled();
+      expect(result.response.lead_center_resolved).toBe(false);
+      expect(logger).toHaveBeenCalledWith(
+        expect.stringContaining('created without a lead centre'),
+      );
     });
 
     it('should create a result header', async () => {

@@ -33,6 +33,8 @@ describe('BilateralResultsListComponent', () => {
     version_id: 36,
     source: 'API',
     is_leading_result: 1,
+    description: 'Profiles co-developed with the county governments of Kenya.',
+    project_name: 'Accelerating Impacts of CGIAR Climate Research for Africa',
     ...overrides,
   });
 
@@ -94,7 +96,7 @@ describe('BilateralResultsListComponent', () => {
       expect(component.isColumnVisible('type')).toBe(false);
       expect(component.visibleColumns().find(c => c.key === 'type')).toBeUndefined();
 
-      const stored = JSON.parse(localStorage.getItem('pr.bilateralResults.visibleColumns.v2') ?? '{}');
+      const stored = JSON.parse(localStorage.getItem('pr.bilateralResults.visibleColumns.v3') ?? '{}');
       expect(stored.type).toBe(false);
     });
 
@@ -106,6 +108,56 @@ describe('BilateralResultsListComponent', () => {
 
       component.toggleColumn(BILATERAL_COLUMNS[0].key);
       expect(component.visibleColumns().length).toBe(1);
+    });
+  });
+
+  /**
+   * P2-3152 AC6 — the centre dashboard must list Project name and Description next to
+   * Title and Status. Both were absent from BILATERAL_COLUMNS and from the payload, so
+   * the row rendered without them. Asserting on the rendered cells (not on the column
+   * catalog alone) is deliberate: with zoneless change detection a catalog-only check
+   * would pass even if the template never grew a branch for the new attributes.
+   */
+  describe('P2-3152 AC6 — Project name and Description columns', () => {
+    const cellText = (attr: string): string | null => {
+      const cell = fixture.nativeElement.querySelector(`td.rc-td--${attr}`);
+      return cell ? cell.textContent.trim() : null;
+    };
+
+    it('offers both columns, visible by default', () => {
+      const keys = component.visibleColumns().map(c => c.key);
+      expect(keys).toContain('project');
+      expect(keys).toContain('description');
+      expect(BILATERAL_COLUMNS.find(c => c.key === 'project')).toEqual(
+        expect.objectContaining({ title: 'Project name', attr: 'project_name', defaultOn: true }),
+      );
+      expect(BILATERAL_COLUMNS.find(c => c.key === 'description')).toEqual(
+        expect.objectContaining({ title: 'Description', attr: 'description', defaultOn: true }),
+      );
+    });
+
+    it('renders the project name and the description in the row', () => {
+      expect(cellText('project_name')).toBe('Accelerating Impacts of CGIAR Climate Research for Africa');
+      expect(cellText('description')).toBe('Profiles co-developed with the county governments of Kenya.');
+    });
+
+    it('falls back to a dash when the result has no project or description', () => {
+      component.results.set([result({ project_name: null, description: null })]);
+      fixture.detectChanges();
+
+      expect(cellText('project_name')).toBe('-');
+      expect(cellText('description')).toBe('-');
+    });
+
+    // `cellText` is what the CSV export writes for each visible column; without a case for the
+    // new attributes it silently returned '' and the export shipped two empty columns.
+    it('carries both fields into the CSV export', () => {
+      const row = result();
+      const text = (attr: string) => (component as any).cellText(row, attr);
+
+      expect(text('project_name')).toBe('Accelerating Impacts of CGIAR Climate Research for Africa');
+      expect(text('description')).toBe('Profiles co-developed with the county governments of Kenya.');
+      expect((component as any).cellText(result({ project_name: null, description: null }), 'project_name')).toBe('');
     });
   });
 

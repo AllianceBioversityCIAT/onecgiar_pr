@@ -73,6 +73,68 @@ export class BilateralProjectsService {
     return byCode;
   }
 
+  /**
+   * Resolves the lead-centre descriptor for a project, in the shape
+   * `BilateralService.handleLeadCenter` expects.
+   *
+   * A project's lead centre normally lives in `organization_code`. CLARISA's W3 sync
+   * leaves that NULL for the Alliance-descended centres — its `findInstitution()` does an
+   * exact-string match against `clarisa_institutions.acronym`, and W3 publishes the plain
+   * pre-merger acronyms ("CIAT" / "BIOVERSITY") while CLARISA stores the disambiguated
+   * "CIAT (Alliance)" / "Bioversity (Alliance)". Measured on the 2026 phase: 146 of 1211
+   * projects have `organization_code = NULL`, and 145 of those carry
+   * `source_center_acronym = 'CIAT'`.
+   *
+   * `getProjectsByCenter` below already falls back to that acronym so those projects still
+   * appear under the right centre, and `ResultTaggedNotificationService.resolveProjectCenterCode`
+   * does the same for notifications. Result creation was the only caller that did not, so a
+   * result reported against one of those projects was saved with no lead centre at all — and
+   * silently, since `handleLeadCenter` only logs at debug level when it has nothing to store.
+   * That leaves the Contributors & Partners green check permanently red, because
+   * `validation_contributor_partner_P25` counts `is_leading_result = 1` rows.
+   *
+   * Returns null when neither route resolves; the caller decides what to do about it.
+   */
+  async resolveProjectLeadCenter(
+    projectId: number,
+  ): Promise<{ name?: string; acronym?: string } | null> {
+    const project = await this.projectRepo.findOne({
+      where: { id: projectId },
+      relations: { obj_organization: true },
+    });
+    if (!project) {
+      this.logger.warn(
+        `Project ${projectId} not found; no lead centre resolved`,
+      );
+      return null;
+    }
+
+    if (project.obj_organization) {
+      return {
+        name: project.obj_organization.name,
+        acronym: project.obj_organization.acronym,
+      };
+    }
+
+    // organization_code is NULL: fall back to the values the sync preserved for audit.
+    // Only acronyms present in the alias map are usable — a centre whose acronym is not
+    // listed must keep going through the normal institution path, where guessing a code
+    // would silently misattribute the result (see w3-center-alias.constants.ts).
+    const acronym = project.sourceCenterAcronym;
+    if (acronym && W3_CENTER_ACRONYM_TO_CLARISA_CENTER_CODE[acronym]) {
+      this.logger.log(
+        `Project ${projectId} has no organization_code; resolved lead centre from source_center_acronym="${acronym}"`,
+      );
+      return { name: project.sourceCenterName, acronym };
+    }
+
+    this.logger.warn(
+      `Project ${projectId} has no organization_code and no mappable source_center_acronym` +
+        ` (got "${acronym ?? 'null'}") — the result will be created without a lead centre`,
+    );
+    return null;
+  }
+
   async getProjectsByCenter(centerId: number | string) {
     let center = null;
     const centerIdNum = Number(centerId);

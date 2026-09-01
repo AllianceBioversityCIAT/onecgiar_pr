@@ -146,7 +146,7 @@ export class AowHloTableComponent {
   // P2-3053: agreed nomenclature + dynamic phase year ("<year> target") instead of hardcoded "2025".
   // P2-3133: the 2030 Outcomes view shows a cumulative "2030 target"; "Achieved value" replaces "Achieved target" globally.
   columnOrder = computed<ColumnOrder[]>(() => [
-    { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
+    { title: 'KPI statement', attr: 'indicator_description', width: '27%' },
     { title: 'Indicator typology', attr: 'type_name', width: '10%' },
     {
       title: this.tableType === '2030-outcomes' ? '2030 target' : `${this.entityAowService.reportingPhaseYear} target`.trim(),
@@ -154,15 +154,128 @@ export class AowHloTableComponent {
       width: '10%'
     },
     { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
+    // P2-3296: the two bars. Not sortable — it renders two figures, so there is no single
+    // value to sort by, and the numeric columns beside it already cover that need.
+    { title: 'Progress', attr: 'progress_bars', hideSortIcon: true, width: '13%' },
     { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
 
   isKnowledgeProduct = signal<boolean>(true);
 
   getProgress(value: string): number {
-    const progress = value.split('%')[0];
+    // Defensive: the preliminary field is new, so a payload from an older server — or a row
+    // that never had contributions — can arrive without it. `split` on undefined throws and
+    // takes the whole table down with it.
+    const progress = (value ?? '0%').split('%')[0];
 
-    return Number(progress);
+    return Number(progress) || 0;
+  }
+
+  /**
+   * P2-3296. Two bars, not one stacked bar.
+   *
+   * Preliminary (Submitted + Approved) and QA (QAed + Approved) *overlap* on Approved, so they
+   * are not additive: stacking them would double-count every approved W3/Bilateral result and
+   * show a total nobody can reconcile. They are two independent readings of the same target,
+   * so they get one track each.
+   */
+  getPreliminaryProgress(result: any): number {
+    return this.getProgress(result?.preliminary_progress_percentage);
+  }
+
+  /**
+   * P2-3296 AC2-AC4. An indicator whose target is absent or zero has no ratio to show: the
+   * server used to return `value * 100` for it, which is how a row reached 50,000,000%.
+   *
+   * Nicoleta's ruling was "leave the target as is - if anything is reported will be assessed
+   * as 'overachieved'". Overachieved is a verdict, not a quantity — so the row shows the word,
+   * not a number, and the averages above it leave the row out entirely.
+   */
+  hasUsableTarget(result: any): boolean {
+    const target = Number(result?.target_value_sum);
+
+    return Number.isFinite(target) && target > 0;
+  }
+
+  /** True when there is no target but something was still reported against it. */
+  isOverachievedWithoutTarget(result: any): boolean {
+    if (this.hasUsableTarget(result)) return false;
+
+    const qa = Number(result?.actual_achieved_value_sum) || 0;
+    const preliminary = Number(result?.preliminary_achieved_value_sum) || 0;
+
+    return qa > 0 || preliminary > 0;
+  }
+
+  /**
+   * The rolled-up number for a level (HLO here; the AoW and Science Program payloads carry the
+   * same shape). Null means nothing measurable rolled up, and the caller must render a dash —
+   * 0% would claim no progress, when the truth is there was nothing to measure against.
+   */
+  levelProgress(item: any): string {
+    return item?.progress?.progress_percentage ?? '—';
+  }
+
+  levelPreliminaryProgress(item: any): string {
+    return item?.progress?.preliminary_progress_percentage ?? '—';
+  }
+
+  /**
+   * The denominator, always shown beside the number. A 45% averaged over 2 of 10 indicators
+   * must not read like a 45% averaged over 10 of 10 — and a visible "2 of 10" is also what
+   * tells the team which indicators are still missing a target.
+   */
+  levelCoverage(item: any): string {
+    const counted = item?.progress?.indicators_counted;
+    const total = item?.progress?.indicators_total;
+
+    if (!Number.isFinite(counted) || !Number.isFinite(total) || total === 0) {
+      return '';
+    }
+
+    return counted === total
+      ? `${total} indicator${total === 1 ? '' : 's'}`
+      : `${counted} of ${total} indicators`;
+  }
+
+  levelTooltip(item: any): string {
+    const counted = item?.progress?.indicators_counted ?? 0;
+    const total = item?.progress?.indicators_total ?? 0;
+    const excluded = total - counted;
+
+    if (total === 0) return 'This Intermediate Outcome has no indicators yet.';
+    if (counted === 0) {
+      return `None of the ${total} indicators has a target set, so no percentage can be calculated.`;
+    }
+
+    const base =
+      `QA ${this.levelProgress(item)} and Preliminary ${this.levelPreliminaryProgress(item)}, ` +
+      `averaged over ${counted} of ${total} indicators.`;
+
+    return excluded > 0
+      ? `${base} ${excluded} indicator${excluded === 1 ? ' is' : 's are'} excluded for having no target set.`
+      : base;
+  }
+
+  /**
+   * Width of the filled part, clamped to 100. The label keeps the real number — Nicoleta
+   * confirmed over-achievement is shown, not capped — but a 500% bar has nowhere to go.
+   */
+  barWidth(percentage: number): number {
+    if (!Number.isFinite(percentage) || percentage <= 0) return 0;
+
+    return Math.min(percentage, 100);
+  }
+
+  progressTooltip(result: any): string {
+    const qa = result?.progress_percentage ?? '0%';
+    const preliminary = result?.preliminary_progress_percentage ?? '0%';
+
+    return (
+      `QA ${qa} — results that passed quality review (QAed or Approved). ` +
+      `Preliminary ${preliminary} — results submitted but not yet reviewed, plus Approved ones. ` +
+      'Approved results count towards both.'
+    );
   }
 
   getStatusLabel(progressPercentage: string): string {

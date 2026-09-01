@@ -125,7 +125,7 @@
         (ngModelChange)="onFieldChange()">
       </app-pr-textarea>
 
-      @if (isReadyForScalingStudies) {
+      @if (showScalingStudies) {
         <app-pr-radio-button
           [options]="hasScalingStudiesOptions"
           optionLabel="label"

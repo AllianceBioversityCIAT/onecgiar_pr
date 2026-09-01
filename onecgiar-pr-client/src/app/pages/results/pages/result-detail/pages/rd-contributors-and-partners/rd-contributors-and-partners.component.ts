@@ -274,14 +274,55 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     this.rdPartnersSE.setPossibleLeadCenters(true);
   }
 
+  // ----- TOC-C-T-1: guard against removing the last ToC-planned Contributing CGIAR Center -----
+
+  // Real (non-sentinel) Center count — TOC-C-DD-5: scoped to ToC-origin (`contributing_center`)
+  // only. `otherCentersSelected` is deliberately NOT added: the floor is "at least 1 ToC-origin
+  // Center remains", independent of how many "Other" Centers exist.
+  private getRealCenterCount(): number {
+    const realCentersSelected = (this.rdPartnersSE.partnersBody?.contributing_center || []).filter(
+      (c: any) => c?.code !== this.OTHER_CENTERS_CODE
+    );
+    return realCentersSelected.length;
+  }
+
+  // Same `planned_result !== false` guard already used in this file's @if branches (bugfix/toc-unmapped-orange-notes),
+  // combined with the live ToC Center-institution-id set already exposed by the service (see `hasReferenceCenters`, :146).
+  private get hasTocPlannedCenter(): boolean {
+    return (
+      this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result !== false &&
+      this.rdPartnersSE.tocReferenceCenterInstitutionIds().length > 0
+    );
+  }
+
+  // Returns true (and shows the blocking alert) when the deletion must be blocked.
+  private blockIfLastCenter(willRemoveCount: number): boolean {
+    if (!this.hasTocPlannedCenter) return false;
+    if (this.getRealCenterCount() - willRemoveCount > 0) return false;
+
+    this.customizedAlertsFeSE.show({
+      id: 'toc-center-min',
+      title: 'Indicator with Contributing CGIAR Centers mapped in ToC',
+      description: 'At least one Contributing CGIAR Center is required for this result.',
+      status: 'warning'
+    });
+    return true;
+  }
+
   deleteOtherCenter(index: number) {
     // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
     // Parity with deleteScience: reassign a NEW array (not splice) so the multi-select ngModel refreshes and the chip stays removed.
+    // TOC-C-DD-5: removing an "Other" Center never affects the ToC-origin floor — no guard call here at all.
     const removed = (this.rdPartnersSE.otherCentersSelected || [])[index];
     this.rdPartnersSE.otherCentersSelected = (this.rdPartnersSE.otherCentersSelected || []).filter((_: any, i: number) => i !== index);
     // Parity with deleteContributingCenter: if the removed "Other" center was the lead, clear the lead so we don't save an orphaned lead.
     if (this.rdPartnersSE.leadCenterCode === removed?.code) {
       this.rdPartnersSE.leadCenterCode = null;
+    }
+    // LC-DD-4: a manual delete of the auto-added entry must not leave a stale reference behind — a later
+    // Lead Center change would otherwise mis-fire the swap logic against a center that no longer exists.
+    if (this.rdPartnersSE.autoAddedLeadCenterCode === removed?.code) {
+      this.rdPartnersSE.autoAddedLeadCenterCode = null;
     }
     // Recompute lead-center eligibility now that an "Other" center is gone.
     this.rdPartnersSE.setPossibleLeadCenters(true);
@@ -372,14 +413,55 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
   }
 
+  // ----- TOC-SP-T-1: guard against removing the last ToC-planned Contributing Science Program -----
+
+  // Real (non-sentinel) Science Program count — TOC-SP-DD-4: scoped to ToC-origin
+  // (`scienceSelected`) only. `otherScienceSelected` is deliberately NOT added: the floor is
+  // "at least 1 ToC-origin Science Program remains", independent of how many "Other" ones exist.
+  private getRealScienceCount(): number {
+    const realScienceSelected = (this.rdPartnersSE.scienceSelected || []).filter((sp: any) => sp?.id !== this.OTHER_SP_CODE);
+    return realScienceSelected.length;
+  }
+
+  // Same `planned_result !== false` guard already used in this file's @if branches (bugfix/toc-unmapped-orange-notes),
+  // combined with the live ToC synergy-id set already exposed by the service.
+  private get hasTocPlannedScience(): boolean {
+    return (
+      this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result !== false &&
+      this.rdPartnersSE.tocReferenceSynergyInitiativeIds().length > 0
+    );
+  }
+
+  // Returns true (and shows the blocking alert) when the deletion must be blocked.
+  private blockIfLastScience(willRemoveCount: number): boolean {
+    if (!this.hasTocPlannedScience) return false;
+    if (this.getRealScienceCount() - willRemoveCount > 0) return false;
+
+    this.customizedAlertsFeSE.show({
+      id: 'toc-science-program-min',
+      title: 'Indicator with Science Programs mapped in ToC',
+      description: 'At least one Contributing Science Program is required for this result.',
+      status: 'warning'
+    });
+    return true;
+  }
+
   deleteScience(index: number) {
+    const current = this.rdPartnersSE.scienceSelected || [];
+    // TOC-SP-DD-3 (supersedes TOC-SP-DD-2's sentinel-cascade blocking): the "Other(s)" sentinel is a
+    // UI-shape control, not itself a Contributing Science Program, so removing it must always succeed —
+    // the guard only applies to removing a real (non-sentinel) chip.
+    const isRemovingOtherSentinel = current[index]?.id === this.OTHER_SP_CODE;
+    if (!isRemovingOtherSentinel && this.blockIfLastScience(1)) return;
+
     // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
     // Reassign a NEW array reference (not splice in place) so the multi-select ngModel refreshes and the chip stays removed.
-    this.rdPartnersSE.scienceSelected = (this.rdPartnersSE.scienceSelected || []).filter((_: any, i: number) => i !== index);
+    this.rdPartnersSE.scienceSelected = current.filter((_: any, i: number) => i !== index);
     if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
   }
 
   deleteOtherScience(index: number) {
+    // TOC-SP-DD-4: removing an "Other" Science Program never affects the ToC-origin floor — no guard call here at all.
     this.rdPartnersSE.otherScienceSelected = (this.rdPartnersSE.otherScienceSelected || []).filter((_: any, i: number) => i !== index);
   }
 
@@ -432,6 +514,13 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
   deleteContributingCenter(index: number, updateComponent: boolean = false) {
     // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
+    // TOC-C-DD-4 (supersedes TOC-C-DD-3): the "Other(s)" sentinel is a UI-shape control, not itself a
+    // Contributing CGIAR Center, so removing it must always succeed — the guard only applies to removing
+    // a real (non-sentinel) chip.
+    const currentCenters = this.rdPartnersSE.partnersBody?.contributing_center || [];
+    const isRemovingOtherSentinel = currentCenters[index]?.code === this.OTHER_CENTERS_CODE;
+    if (!isRemovingOtherSentinel && this.blockIfLastCenter(1)) return;
+
     if (updateComponent) {
       this.rdPartnersSE.updatingLeadData = true;
     }
@@ -476,6 +565,13 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       this.rdPartnersSE.otherPartnersSelected = [];
     }
 
+    // @akili-spec changes/lead-center-decouple
+    // LCD-DD-3: center and partner/mqap leadership stamping are independent — a center's
+    // is_leading_result is no longer force-zeroed when a partner is lead, and vice versa.
+    this.rdPartnersSE.partnersBody.contributing_center?.forEach(center => {
+      center.is_leading_result = this.rdPartnersSE.leadCenterCode === center.code;
+    });
+
     if (this.rdPartnersSE.partnersBody.is_lead_by_partner) {
       this.rdPartnersSE.partnersBody.mqap_institutions?.forEach(mqap => {
         mqap.is_leading_result = this.rdPartnersSE.leadPartnerId === mqap.institutions_id;
@@ -483,11 +579,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       this.rdPartnersSE.partnersBody.institutions?.forEach(i => {
         i.is_leading_result = this.rdPartnersSE.leadPartnerId === i.institutions_id;
       });
-      this.rdPartnersSE.partnersBody.contributing_center?.forEach(center => (center.is_leading_result = false));
     } else {
-      this.rdPartnersSE.partnersBody.contributing_center?.forEach(center => {
-        center.is_leading_result = this.rdPartnersSE.leadCenterCode === center.code;
-      });
       this.rdPartnersSE.partnersBody.mqap_institutions?.forEach(mqap => {
         mqap.is_leading_result = false;
       });
@@ -584,9 +676,12 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     item.is_active = !item.is_active;
   }
 
-  getMessageLead() {
-    const entity = this.rdPartnersSE.partnersBody.is_lead_by_partner ? 'partner' : 'CG Center';
-    return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
+  getMessageLeadCenter() {
+    return `Please select the CG Center leading this result.`;
+  }
+
+  getMessageLeadPartner() {
+    return `Please select the partner leading this result. <b>Only partners already added in this section can be selected as the result lead.</b>`;
   }
 
   onPlannedResultChange(item: any) {

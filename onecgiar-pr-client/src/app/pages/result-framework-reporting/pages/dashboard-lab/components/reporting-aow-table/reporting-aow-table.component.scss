@@ -49,7 +49,7 @@
 /* ── Subgroup table column header ── */
 .pr-hlo-head {
   display: grid;
-  grid-template-columns: 28px minmax(280px, 1fr) 80px 80px 112px 136px 36px;
+  grid-template-columns: 28px minmax(280px, 1fr) 80px 80px 112px 132px 136px 36px;
   align-items: center;
   gap: 16px;
   height: 30px;
@@ -67,8 +67,14 @@
 /* ── The row. Grid + pad are the design verbatim (spacers keep Target / Achieved / action aligned). ── */
 .pr-reporting-row {
   display: grid;
-  /* status (28px) | title (1fr) | target (80px) | achieved (80px) | status (112px) | action (136px, fits copy-link + Report; Next pending wraps above) | menu (36px) */
-  grid-template-columns: 28px minmax(280px, 1fr) 80px 80px 112px 136px 36px;
+  /* status (28px) | title (1fr) | target (80px) | achieved (80px) | status (112px) | Progress
+     (132px) | action (136px, fits copy-link + Report; Next pending wraps above) | menu (36px)
+     P2-3296: the Progress track is new. It sits after the status figures because it is derived
+     from them, and its 132px is the narrowest width that fits "Overachieved" without wrapping —
+     the label an indicator with no usable target shows in place of a percentage. The action track
+     stays 136px (MRF-R-3.1/R-5: copy-link icon + Report, with "Next pending" wrapping above it) —
+     narrowing it back to 96px would clip that control now that Progress sits beside it. */
+  grid-template-columns: 28px minmax(280px, 1fr) 80px 80px 112px 132px 136px 36px;
   align-items: center;
   gap: 16px;
   min-height: 58px;

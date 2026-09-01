@@ -13,6 +13,7 @@ import { UserSearchService } from './services/user-search-service.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 import { AiReviewService } from '../../../../../../shared/services/api/ai-review.service';
 import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
+import { LeadContactPersonFieldComponent } from '../../../../../../custom-fields/lead-contact-person-field/lead-contact-person-field.component';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 
 @Component({
@@ -23,6 +24,8 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 })
 export class RdGeneralInformationComponent implements OnInit {
   @ViewChild('saveConfirmationModal') saveConfirmationModal!: SaveConfirmationModalComponent;
+  /** Read only to tell a typed contact name from one loaded with the result — see `onSaveSection`. */
+  @ViewChild(LeadContactPersonFieldComponent) leadContactPersonField?: LeadContactPersonFieldComponent;
 
   generalInfoBody = new GeneralInfoBody();
 
@@ -299,7 +302,25 @@ export class RdGeneralInformationComponent implements OnInit {
   onSaveSection() {
     const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
 
-    if (this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser && !isP25) {
+    // The guard blocks a contact name the user TYPED and never picked from the directory list, and
+    // it must not look at the portfolio.
+    //
+    // The `!isP25` it replaces (c64baefb8, 23-Jan-2026, no reason recorded) was a workaround for the
+    // real problem: the guard could not tell a typed name from one hydrated with the result. A
+    // hydrated free-text name is legitimate data — every result created before the AD link existed
+    // (`lead_contact_person_id`, migration 1751462633282) stores the contact that way, as do results
+    // reported through the W3/Bilateral API — and blocking on it accused the user of someone else's
+    // input and left the section unsaveable. Excluding P25 hid that, and opened silent data loss:
+    // typing without picking sends `lead_contact_person: null`, which `createResultGeneralInformation`
+    // writes straight over the stored name and FK (`results.service.ts:901-902`).
+    //
+    // `queryCameFromHydration` is the same distinction the field already makes in `onContactBlur`, so
+    // both halves now agree: typed and unmatched is an error on every portfolio, loaded is not.
+    if (
+      this.userSearchService.searchQuery.trim() &&
+      !this.userSearchService.selectedUser &&
+      !this.leadContactPersonField?.queryCameFromHydration
+    ) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = true;
       return;
@@ -349,7 +370,13 @@ export class RdGeneralInformationComponent implements OnInit {
       },
       error: err => {
         console.error(err);
-        this.getSectionInformation();
+        // 🛑 DO NOT reload the section when the save was rejected.
+        //
+        // `getSectionInformation()` overwrites `generalInfoBody` with what the server still holds, so
+        // reloading here threw away everything the user had just typed — title, description and the
+        // Impact Area scores — leaving them staring at the old content with no idea their work was
+        // gone. The rejected values stay on screen so the person can fix what the error complains
+        // about and press Save again. The interceptor already surfaces the error message.
       }
     });
   }

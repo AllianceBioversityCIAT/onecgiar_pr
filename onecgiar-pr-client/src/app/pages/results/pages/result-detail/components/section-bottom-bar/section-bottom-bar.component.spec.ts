@@ -18,6 +18,12 @@ describe('SectionBottomBarComponent', () => {
   let saveMock: any;
   let dataControlMock: any;
   let rolesMock: any;
+  /**
+   * Green check de la seccion abierta. P2-3542: es la señal AUTORITATIVA de completitud — la
+   * misma que pinta el rail y habilita Submit —, asi que los casos la fijan explicitamente en vez
+   * de deducirla del scan del DOM.
+   */
+  let sectionIsDone = true;
 
   const SECTIONS = [
     { path: 'general-information', prName: 'General information' },
@@ -67,6 +73,7 @@ describe('SectionBottomBarComponent', () => {
       navigableCount: signal(SECTIONS.length),
       currentPosition: signal(index + 1),
       hasCurrentSection: signal(index >= 0),
+      currentSectionIsDone: signal(sectionIsDone),
       sectionLink: (s: any) => `/result/result-detail/1234/${s.path}`,
       sectionQueryParams: () => ({ phase: 7 })
     };
@@ -78,6 +85,7 @@ describe('SectionBottomBarComponent', () => {
     saveMock = { isSaving: signal(false) };
     dataControlMock = { fieldFeedbackList: signal<string[]>([]) };
     rolesMock = { readOnly: false };
+    sectionIsDone = true;
   });
 
   describe('position', () => {
@@ -140,6 +148,7 @@ describe('SectionBottomBarComponent', () => {
     });
 
     it('counts the missing fields instead', async () => {
+      sectionIsDone = false;
       dataControlMock.fieldFeedbackList = signal(['Result title', 'Description']);
       await build();
 
@@ -148,6 +157,7 @@ describe('SectionBottomBarComponent', () => {
     });
 
     it('keeps the count singular for one field', async () => {
+      sectionIsDone = false;
       dataControlMock.fieldFeedbackList = signal(['Result title']);
       await build();
 
@@ -155,6 +165,7 @@ describe('SectionBottomBarComponent', () => {
     });
 
     it('names the missing fields when clicked, and closes again', async () => {
+      sectionIsDone = false;
       dataControlMock.fieldFeedbackList = signal(['Result title', 'Description']);
       await build();
 
@@ -168,6 +179,55 @@ describe('SectionBottomBarComponent', () => {
       component.closePending();
       fixture.detectChanges();
       expect(q('#sbb-pending-list')).toBeNull();
+    });
+
+    /**
+     * P2-3542. El caso que reporto QA: la barra decia "Section complete" mientras el rail estaba
+     * rojo, porque decidia sola escaneando el DOM. El scan solo ve lo renderizado — el tab ToC
+     * activo, y nada de lo que la funcion de validacion exige sin campo en pantalla (partner
+     * contribuyente, centro contribuyente) —, asi que el green check tiene que ganar.
+     */
+    it('trusts the green check over the DOM scan when the scan found nothing (P2-3542)', async () => {
+      sectionIsDone = false;
+      dataControlMock.fieldFeedbackList = signal<string[]>([]);
+      await build();
+
+      expect(q('[data-testid="section-bottom-bar-complete"]')).toBeNull();
+      expect(q('[data-testid="section-bottom-bar-pending"]').textContent).toContain('Section incomplete');
+    });
+
+    it('explains the gap instead of naming zero fields (P2-3542)', async () => {
+      sectionIsDone = false;
+      dataControlMock.fieldFeedbackList = signal<string[]>([]);
+      await build();
+
+      q('[data-testid="section-bottom-bar-pending"]').click();
+      fixture.detectChanges();
+
+      expect(html().querySelectorAll('#sbb-pending-list li')).toHaveLength(0);
+      expect(q('#sbb-pending-list').textContent).toContain('pending requirements');
+    });
+
+    it('stays complete when the green check passes, whatever the DOM scan says (P2-3542)', async () => {
+      sectionIsDone = true;
+      dataControlMock.fieldFeedbackList = signal(['Result title']);
+      await build();
+
+      expect(q('[data-testid="section-bottom-bar-complete"]').textContent).toContain('Section complete');
+      expect(q('[data-testid="section-bottom-bar-pending"]')).toBeNull();
+    });
+
+    /**
+     * La barra se reusa en IPSR y en el result creator, fuera de la lista de secciones de
+     * result-detail: alli no hay green check de seccion que leer y el scan del DOM sigue siendo
+     * lo unico disponible.
+     */
+    it('falls back to the DOM scan on a route outside the section list', async () => {
+      sectionIsDone = false;
+      dataControlMock.fieldFeedbackList = signal<string[]>([]);
+      await build('/result/result-detail/1234/something-else');
+
+      expect(q('[data-testid="section-bottom-bar-complete"]').textContent).toContain('Section complete');
     });
   });
 

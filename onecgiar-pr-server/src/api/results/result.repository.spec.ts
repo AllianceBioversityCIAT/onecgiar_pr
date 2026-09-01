@@ -154,6 +154,26 @@ describe('ResultRepository (unit)', () => {
     expect(params).toEqual(['BIO', 'BIO', 36]);
   });
 
+  // P2-3152 AC6 — the centre dashboard must list Project name and Description. Neither was
+  // selected, so the client had nothing to render. The project is resolved with a correlated
+  // subquery on purpose: a LEFT JOIN on results_by_projects would duplicate the result row
+  // once per project link and silently inflate the dashboard list.
+  it('returns the result description and the project name for the bilateral centre dashboard, without multiplying rows', async () => {
+    queryMock.mockResolvedValueOnce([]);
+
+    await repo.getResultsByBilateralCenter('BIO', 36);
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.description');
+    expect(sql).toContain(
+      "COALESCE(NULLIF(TRIM(cp.full_name), ''), cp.short_name)",
+    );
+    expect(sql).toContain(') AS project_name');
+    expect(sql).not.toContain('LEFT JOIN results_by_projects');
+    // The subquery adds no bound parameter — a stray ? here would shift mysql2's placeholders.
+    expect(params).toEqual(['BIO', 'BIO', 36]);
+  });
+
   // W12-R-2: matrix must count only W1/W2-origin (source='Result'), primary-submitter
   // (initiative_role_id=1) results in the requested version, with the meter's status/type
   // universe (status != 4, type NOT IN (10, 11)) — not the pre-fix bilateral/contributor/
@@ -246,16 +266,25 @@ describe('ResultRepository (unit)', () => {
       expect(sql).toContain('r.result_type_id = 7');
     });
 
-    it('asks only for PAST phases, measured against the open phase the caller resolved', async () => {
+    /**
+     * 🛑 THE PHASE RULE, and it is singular. Ángel Jarrín closed the scope on 31-Aug-2026 after
+     * Nicoleta confirmed it: "QA-ed in the previous reporting phase". He had written "previous
+     * phases" (plural) that same morning and retracted it 39 minutes later, so a `<` here is the
+     * WRONG rule, not a looser one — it would offer innovations from 2022-2024 that the business
+     * excluded.
+     */
+    it('asks for the PREVIOUS phase only, exactly the year the caller resolved', async () => {
       queryMock.mockResolvedValueOnce([]);
 
-      await repo.getQaEdInnovationDevelopmentResults(2026);
+      await repo.getQaEdInnovationDevelopmentResults(2025);
 
       const [sql, params] = queryMock.mock.calls[0];
-      expect(sql).toContain('v.phase_year < ?');
-      expect(params[0]).toBe(2026);
-      // 🛑 never the literal the legacy catalogue hardcodes.
+      expect(sql).toContain('v.phase_year = ?');
+      expect(sql).not.toContain('v.phase_year < ?');
+      expect(params[0]).toBe(2025);
+      // 🛑 never a hardcoded year: "the rule should remain generic" (Ángel, 31-Aug-2026).
       expect(sql).not.toContain('Reporting 2025');
+      expect(sql).not.toMatch(/phase_year\s*=\s*20\d\d/);
     });
 
     it('filters by the states listed in QA_LINKABLE_INNOVATION_STATUS_IDS and nothing else', async () => {
@@ -273,6 +302,10 @@ describe('ResultRepository (unit)', () => {
         2026,
         ...QA_LINKABLE_INNOVATION_STATUS_IDS,
       ]);
+      // Both bindings carry the SAME year: the catalogue and its de-duplication look at one phase.
+      expect(params[0]).toBe(
+        params[1 + QA_LINKABLE_INNOVATION_STATUS_IDS.length],
+      );
     });
 
     it('is portfolio-wide: no Science Program / Accelerator restriction, by design', async () => {
@@ -287,16 +320,15 @@ describe('ResultRepository (unit)', () => {
     });
 
     /**
-     * ⚠️ THE DUPLICATE-INNOVATION GUARD. PRMS carries a result forward into every phase keeping the
-     * same `result_code` and title, so without this clause the dropdown offers the SAME innovation
-     * once per phase with an identical, indistinguishable label. Real prtest case pinned here:
-     * `result_code` 41 ("Rice breeding network in Easte…") has three QA'd rows — id 41 / 2022,
-     * id 7031 / 2023 and id 7706 / 2024 — and only the 2024 one may reach the user.
+     * ⚠️ THE DUPLICATE-INNOVATION GUARD, still needed after narrowing to one phase. A phase year
+     * holds ONE VERSION PER PORTFOLIO, so the same `result_code` can appear more than once inside
+     * the same year. Without this clause the reporter sees the same innovation twice with an
+     * identical, indistinguishable label and cannot tell which to pick.
      */
-    it("collapses the three phases of the same result_code to the most recent QA'd one", async () => {
+    it('collapses rows sharing a result_code inside the previous phase to a single one', async () => {
       queryMock.mockResolvedValueOnce([]);
 
-      await repo.getQaEdInnovationDevelopmentResults(2026);
+      await repo.getQaEdInnovationDevelopmentResults(2025);
 
       const [sql] = queryMock.mock.calls[0];
       const normalized = sql.replace(/\s+/g, ' ');
@@ -304,27 +336,26 @@ describe('ResultRepository (unit)', () => {
       // Correlated on the innovation identity, not on the row id.
       expect(normalized).toContain('NOT EXISTS');
       expect(normalized).toContain('newer.result_code = r.result_code');
-      // Discards a row whenever a NEWER phase of the same innovation exists.
-      expect(normalized).toContain('newer_v.phase_year > v.phase_year');
-      // …and the newer candidate must itself be an eligible catalogue row: active, Innovation
-      // Development, a past phase and QA'd. Otherwise 2024 could be hidden by a draft 2025 copy.
+      // Scoped to the SAME phase now — a cross-phase comparison would resurrect the old rule.
+      expect(normalized).toContain('newer_v.phase_year = ?');
+      expect(normalized).not.toContain('newer_v.phase_year > v.phase_year');
+      expect(normalized).not.toContain('newer_v.phase_year < ?');
+      // The surviving candidate must itself be an eligible catalogue row.
       expect(normalized).toContain('newer.is_active = TRUE');
       expect(normalized).toContain('newer_v.is_active = TRUE');
       expect(normalized).toContain('newer.result_type_id = 7');
-      expect(normalized).toContain('newer_v.phase_year < ?');
       expect(normalized).toContain('newer.status_id IN (');
     });
 
-    it('breaks a phase_year tie deterministically, so one code can never yield two rows', async () => {
+    it('breaks a tie deterministically, so one code can never yield two rows', async () => {
       queryMock.mockResolvedValueOnce([]);
 
-      await repo.getQaEdInnovationDevelopmentResults(2026);
+      await repo.getQaEdInnovationDevelopmentResults(2025);
 
       const [sql] = queryMock.mock.calls[0];
       const normalized = sql.replace(/\s+/g, ' ');
-      expect(normalized).toContain(
-        'newer_v.phase_year = v.phase_year AND newer.id > r.id',
-      );
+      // Inside a single phase the row id is the only tie-breaker left, and it is total.
+      expect(normalized).toContain('newer.id > r.id');
     });
 
     it('returns the id, code, title and status the dropdown needs', async () => {
@@ -342,6 +373,85 @@ describe('ResultRepository (unit)', () => {
       await expect(
         repo.getQaEdInnovationDevelopmentResults(2026),
       ).resolves.toEqual(rows);
+    });
+  });
+
+  /**
+   * Form-defect sweep of 31-Aug-2026, LOTE 5 #3: a reviewer opening a bilateral Capacity Sharing
+   * result saw "Length of training" — and in fact every field of the section — as unanswered, even
+   * when the reporter had answered. Both catalogue FKs are nullable, and the query INNER JOINed
+   * them, so one missing answer dropped the whole row and the drawer received `[]`.
+   *
+   * The SQL text is the behaviour here, so that is what is asserted: there is no query builder to
+   * inspect and no database in a unit test.
+   */
+  describe('getCapacitySharingBilateralResultById — nullable catalogues must LEFT JOIN', () => {
+    const sqlOf = () =>
+      (queryMock.mock.calls[0][0] as string).replace(/\s+/g, ' ');
+
+    beforeEach(() => {
+      queryMock.mockResolvedValue([]);
+    });
+
+    it('LEFT JOINs both nullable catalogues, so a half-answered row still comes back', async () => {
+      await repo.getCapacitySharingBilateralResultById(123);
+
+      const sql = sqlOf();
+      expect(sql).toContain('LEFT JOIN capdevs_delivery_methods');
+      expect(sql).toContain('LEFT JOIN capdevs_term');
+      // The INNER form is what dropped the row. Catch it however it is spelled.
+      expect(sql).not.toMatch(/(?<!LEFT )(?<!OUTER )JOIN capdevs_term/);
+      expect(sql).not.toMatch(
+        /(?<!LEFT )(?<!OUTER )JOIN capdevs_delivery_methods/,
+      );
+    });
+
+    it('still INNER JOINs the capacity-development row itself, which is not optional', async () => {
+      await repo.getCapacitySharingBilateralResultById(123);
+
+      const sql = sqlOf();
+      // No capdev record means there is genuinely nothing to show; that join must NOT be relaxed.
+      expect(sql).toMatch(/JOIN results_capacity_developments/);
+      expect(sql).not.toContain('LEFT JOIN results_capacity_developments');
+      expect(queryMock).toHaveBeenCalledWith(expect.any(String), [123]);
+    });
+  });
+
+  /**
+   * The identical defect one function below the Capacity Sharing one, authorised as its own fix after
+   * being raised: same INNER JOIN on nullable catalogue FKs, same blank block in the review drawer.
+   * Here it also takes the implementing organizations down with it, because they hang off the same
+   * result set through a LEFT JOIN.
+   */
+  describe('getPolicyChangeBilateralResultById — nullable catalogues must LEFT JOIN', () => {
+    const sqlOf = () =>
+      (queryMock.mock.calls[0][0] as string).replace(/\s+/g, ' ');
+
+    beforeEach(() => {
+      queryMock.mockResolvedValue([]);
+    });
+
+    it('LEFT JOINs both nullable catalogues, so a half-answered row still comes back', async () => {
+      await repo.getPolicyChangeBilateralResultById(456);
+
+      const sql = sqlOf();
+      expect(sql).toContain('LEFT JOIN clarisa_policy_stage');
+      expect(sql).toContain('LEFT JOIN clarisa_policy_type');
+      expect(sql).not.toMatch(/(?<!LEFT )(?<!OUTER )JOIN clarisa_policy_stage/);
+      expect(sql).not.toMatch(/(?<!LEFT )(?<!OUTER )JOIN clarisa_policy_type/);
+    });
+
+    it('keeps the implementing organizations reachable and the policy-change row itself required', async () => {
+      await repo.getPolicyChangeBilateralResultById(456);
+
+      const sql = sqlOf();
+      // These were collateral damage: the INNER catalogue joins emptied the whole result set.
+      expect(sql).toContain('LEFT JOIN results_by_institution');
+      expect(sql).toContain('LEFT JOIN clarisa_institutions');
+      // No policy-change record means there is genuinely nothing to show; do not relax this one.
+      expect(sql).toMatch(/JOIN results_policy_changes/);
+      expect(sql).not.toContain('LEFT JOIN results_policy_changes');
+      expect(queryMock).toHaveBeenCalledWith(expect.any(String), [456]);
     });
   });
 });

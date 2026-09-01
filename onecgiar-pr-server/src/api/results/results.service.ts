@@ -3027,21 +3027,35 @@ export class ResultsService {
   /**
    * P2-3420 / P2-3421 — catalogue for the "link to a QA'd Innovation Development result" dropdown.
    * ONE endpoint for the two W1/W2 creation surfaces (ToC-linked form + emergent modal) so the
-   * filter can never drift between them; the filter itself lives in
+   * filter can never drift between them; the status filter itself lives in
    * `QA_LINKABLE_INNOVATION_STATUS_IDS` (result.repository.ts).
+   *
+   * Scope closed by Ángel Jarrín on 31-Aug-2026, after Nicoleta confirmed it: the dropdown offers the
+   * Innovation Development results QA'd in **the previous reporting phase** — singular. He had first
+   * written "previous phases" and retracted it 39 minutes later; the plural is NOT the rule.
+   *
+   * "The rule should remain generic and always refer to the previous reporting phase", so the year is
+   * never hardcoded: it comes from `version.previous_phase` of the open reporting phase, and only
+   * falls back to `openYear - 1` when that link is missing. Filtering by YEAR and not by version id is
+   * deliberate — the same phase year holds one version per portfolio, and the rule says "all
+   * portfolios / Science Programs in the previous phase".
    */
   async getQaInnovationDevelopmentResults() {
     try {
       const activePhase = await this._versioningService.$_findActivePhase(
         AppModuleIdEnum.REPORTING,
       );
-      // "Past phases" is measured against the OPEN reporting phase, never a hardcoded year.
-      const currentPhaseYear =
+      const openPhaseYear =
         Number(activePhase?.phase_year) || new Date().getFullYear();
+
+      const previousPhaseYear =
+        (await this._versioningService.$_findPreviousPhaseYear(
+          AppModuleIdEnum.REPORTING,
+        )) ?? openPhaseYear - 1;
 
       const results =
         await this._resultRepository.getQaEdInnovationDevelopmentResults(
-          currentPhaseYear,
+          previousPhaseYear,
         );
 
       return {
@@ -4562,10 +4576,23 @@ export class ResultsService {
       case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT: // 5
         if (this._summaryService) {
           await this._ensureCapacityDevRecord(resultId, user.id);
+          const reviewerPayload = reviewUpdateDto.resultTypeResponse as any;
+
+          // The reviewer's payload only carries the data-standards block, so anything it does not
+          // mention must be READ BACK, never assumed. `is_attending_for_organization` used to be
+          // hardcoded to false here, which wiped the reporter's answer every time a reviewer pressed
+          // "Save changes" — and the green check requires it, so the section stopped being green.
+          // `institutions` is left out of the DTO on purpose: `saveCapacityDevelopents` only rewrites
+          // them behind `if (institutions?.length)`, so omitting them preserves what is stored.
+          const storedAttending =
+            await this._readStoredAttendingForOrganization(resultId);
+
           const capdevDto: CapdevDto = {
-            ...(reviewUpdateDto.resultTypeResponse as any),
-            institutions: [],
-            is_attending_for_organization: false,
+            ...reviewerPayload,
+            is_attending_for_organization:
+              reviewerPayload?.is_attending_for_organization ??
+              storedAttending ??
+              false,
           };
           await this._summaryService.saveCapacityDevelopents(
             capdevDto,
@@ -4620,6 +4647,24 @@ export class ResultsService {
         );
         break;
     }
+  }
+
+  /**
+   * Reads back the reporter's answer to "Were the trainees attending on behalf of an organization?".
+   *
+   * The reviewer drawer posts only the data-standards fields, so this value has to come from what is
+   * stored: writing a default over it loses an answer the reporter gave and that the completion check
+   * requires. Returns null when there is nothing stored yet, so the caller can fall back explicitly.
+   */
+  private async _readStoredAttendingForOrganization(
+    resultId: number,
+  ): Promise<boolean | null> {
+    const repo = this._dataSource.getRepository(ResultsCapacityDevelopments);
+    const stored = await repo.findOne({
+      where: { result_object: { id: resultId } },
+    });
+
+    return stored?.is_attending_for_organization ?? null;
   }
 
   private async _ensureCapacityDevRecord(

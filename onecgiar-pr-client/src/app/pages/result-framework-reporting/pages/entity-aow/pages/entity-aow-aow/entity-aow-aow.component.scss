@@ -107,3 +107,37 @@ p {
 .aow-non-exclusive-header + .aow-non-exclusive-note + .tab-content {
   padding-top: 15px;
 }
+
+// P2-3296 AC3 — the Area of Work's rolled-up number, in the section header beside the phase.
+.aow-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.aow-progress_pair {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.aow-progress_label {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5);
+}
+
+.aow-progress_value {
+  @include fonts.pr-typography('body-1');
+  color: var(--pr-color-accents-7);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+// Deliberately not tucked into the tooltip: the denominator is what keeps a percentage
+// averaged over 2 of 10 indicators from being read as if it covered all 10.
+.aow-progress_coverage {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5);
+}

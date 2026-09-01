@@ -2726,7 +2726,18 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
    * @param currentPhaseYear year of the OPEN reporting phase — everything strictly older than it
    * counts as a past phase. Resolved by the caller from the active version, never hardcoded.
    */
-  async getQaEdInnovationDevelopmentResults(currentPhaseYear: number) {
+  /**
+   * P2-3420 / P2-3421 — Innovation Development results the W1/W2 dropdown may offer.
+   *
+   * Scope closed by Ángel Jarrín on 31-Aug-2026 (Nicoleta confirmed): **the previous reporting phase,
+   * singular**, across all portfolios / Science Programs. His earlier "previous phases" (plural) was
+   * retracted the same morning, so this filter is `= previousPhaseYear`, never `< currentPhaseYear`.
+   *
+   * The de-duplication stays: a phase year holds one version per portfolio, so the same
+   * `result_code` can still appear more than once inside a single year. Without it the reporter sees
+   * the same innovation twice with an identical label and cannot tell which to pick.
+   */
+  async getQaEdInnovationDevelopmentResults(previousPhaseYear: number) {
     const statusPlaceholders = QA_LINKABLE_INNOVATION_STATUS_IDS.map(
       () => '?',
     ).join(', ');
@@ -2745,7 +2756,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     LEFT JOIN clarisa_portfolios cp ON cp.id = v.portfolio_id
     WHERE r.is_active = TRUE
       AND r.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
-      AND v.phase_year < ?
+      AND v.phase_year = ?
       AND r.status_id IN (${statusPlaceholders})
       AND NOT EXISTS (
         SELECT 1
@@ -2755,21 +2766,18 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         WHERE newer.result_code = r.result_code
           AND newer.is_active = TRUE
           AND newer.result_type_id = ${ResultTypeEnum.INNOVATION_DEVELOPMENT}
-          AND newer_v.phase_year < ?
+          AND newer_v.phase_year = ?
           AND newer.status_id IN (${statusPlaceholders})
-          AND (
-            newer_v.phase_year > v.phase_year
-            OR (newer_v.phase_year = v.phase_year AND newer.id > r.id)
-          )
+          AND newer.id > r.id
       )
     ORDER BY r.result_code DESC;
     `;
 
     try {
       return await this.query(query, [
-        currentPhaseYear,
+        previousPhaseYear,
         ...QA_LINKABLE_INNOVATION_STATUS_IDS,
-        currentPhaseYear,
+        previousPhaseYear,
         ...QA_LINKABLE_INNOVATION_STATUS_IDS,
       ]);
     } catch (error) {
@@ -3128,6 +3136,15 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * LEFT JOINs the two catalogues on purpose. Both FKs are nullable
+   * (`ResultsCapacityDevelopments.capdev_delivery_method_id` and `.capdev_term_id`), so the INNER
+   * JOINs this used to have dropped the whole row whenever the reporter had answered one of the two
+   * and not the other. The review drawer then received an empty array and rendered EVERY Capacity
+   * Sharing field blank — including the answers that were stored — so the reviewer read them as
+   * unanswered. `getInnovationDevBilateralResultById` below already LEFT JOINs its catalogues; this
+   * one is now the same shape.
+   */
   async getCapacitySharingBilateralResultById(
     resultId: number,
   ): Promise<any[]> {
@@ -3146,9 +3163,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       FROM result r
       JOIN results_capacity_developments rcd 
         ON r.id = rcd.result_id
-      JOIN capdevs_delivery_methods cdm
+      LEFT JOIN capdevs_delivery_methods cdm
         ON rcd.capdev_delivery_method_id = cdm.capdev_delivery_method_id
-      JOIN capdevs_term ct
+      LEFT JOIN capdevs_term ct
         ON rcd.capdev_term_id = ct.capdev_term_id
       WHERE
         r.id = ?
@@ -3311,6 +3328,19 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * LEFT JOINs the two catalogues on purpose, same reason as
+   * `getCapacitySharingBilateralResultById` above. Both FKs are nullable
+   * (`ResultsPolicyChanges.policy_stage_id` and `.policy_type_id`), so the INNER JOINs this used to
+   * have dropped every row whenever one of the two was unanswered — taking the implementing
+   * organizations with them, since those hang off the same result set through a LEFT JOIN. The review
+   * drawer received an empty array and rendered the whole Policy Change block blank, answers
+   * included.
+   *
+   * The green check is a separate path and is unaffected: `validation_policy_change_P25`
+   * (`1762528725798-createValidtionP25.ts:1414-1428`) reads `policy_type_id` and `policy_stage_id`
+   * straight off `results_policy_changes` and never joins the catalogues.
+   */
   async getPolicyChangeBilateralResultById(resultId: number): Promise<any[]> {
     const query = `
       SELECT 
@@ -3332,9 +3362,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND rbi.institution_roles_id = 4
       LEFT JOIN clarisa_institutions ci
         ON rbi.institutions_id = ci.id
-      JOIN clarisa_policy_stage cps
+      LEFT JOIN clarisa_policy_stage cps
         ON rpc.policy_stage_id = cps.id
-      JOIN clarisa_policy_type cpt
+      LEFT JOIN clarisa_policy_type cpt
         ON rpc.policy_type_id = cpt.id
       WHERE
         r.id = ?
@@ -3697,6 +3727,20 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.id,
         r.result_code,
         r.title,
+        -- P2-3152 AC6: the centre dashboard must list Project name and Description
+        -- alongside Title and Status. A correlated subquery (not a JOIN) keeps the
+        -- project lookup from multiplying rows when a result has several project links.
+        r.description,
+        (
+          SELECT COALESCE(NULLIF(TRIM(cp.full_name), ''), cp.short_name)
+          FROM results_by_projects rbp
+          INNER JOIN clarisa_projects cp
+                  ON cp.id = rbp.project_id
+          WHERE rbp.result_id = r.id
+            AND rbp.is_active = 1
+          ORDER BY rbp.is_lead DESC, rbp.id DESC
+          LIMIT 1
+        ) AS project_name,
         rt.name  AS result_type,
         rs.result_status_id AS status_id,
         rs.status_name,

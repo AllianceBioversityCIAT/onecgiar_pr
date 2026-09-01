@@ -31,5 +31,20 @@
       <div class="dot" style="background-color: var(--pr-color-blue-300); margin-right: 3px"></div>
       Submitted:<span class="font-weight-600">{{ item?.resultsCount?.submitted }}</span>
     </div>
+
+    <!--
+      P2-3296 AC3 — this Area of Work's ToC achievement. Sits beside the result counts, which
+      answer a different question: those count what was reported, this says how far it got
+      against the targets.
+    -->
+    @if (progress) {
+      <div class="entity-aow-card_progress">
+        <span class="entity-aow-card_progress_item">QA:<span class="font-weight-600">{{ progressLabel }}</span></span>
+        <span class="entity-aow-card_progress_item">Prel.:<span class="font-weight-600">{{ preliminaryLabel }}</span></span>
+        @if (coverage) {
+          <span class="entity-aow-card_progress_coverage">{{ coverage }}</span>
+        }
+      </div>
+    }
   </div>
 </div>

@@ -139,7 +139,9 @@ describe('DashboardLabComponent — overviewAowProgressRich + continueReporting 
       zeroTarget: 1,
       reported: 3,
       total: 4,
-      remaining: 1
+      remaining: 1,
+      // P2-3296 — beside the reported-KPI count; no achievement data seeded by this fixture.
+      achievement: null
     });
     expect(row.complete + row.inProgress + row.notStarted).toBe(row.total);
   });

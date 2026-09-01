@@ -95,6 +95,9 @@ describe('DashboardLabComponent — Reporting Entry Hub wiring (REH-TEST-4 b-f)'
         GET_IntermediateOutcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
         GET_TocResultsByAowId: jest.fn().mockReturnValue(of({ response: { tocResultsOutputs: [], tocResultsOutcomes: [] } })),
         GET_ScienceProgramsProgress: jest.fn().mockReturnValue(of({ response: { mySciencePrograms: [], otherSciencePrograms: [] } })),
+        // P2-3296 — the ToC achievement roll-up, called from `refreshSelectedSummaries`. Empty
+        // response: this suite is about the Reporting Entry Hub wiring, not achievement.
+        GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } })),
         GET_reportingEntryHubProjects: jest.fn().mockReturnValue(
           of({ response: { programCode: 'SP02', activeYear: 2026, truncated: false, centers: [] } })
         ),

@@ -1,54 +1,71 @@
 # policy-change-info
 
-**Verified:** 2026-08-26 · branch performance-refactor · 75d56f2cd
+**Verified:** 2026-09-01 · branch performance-refactor · 1924d9ac4
 
-## Qué es
-Sección 4 del formulario de un resultado **Policy change** (`result_type_id = 1`, nivel Outcome):
-tipo de política, importe en USD, etapa, la pregunta "¿está relacionado con…?" y las organizaciones
-implementadoras. Ruta: `/result/result-detail/<code>/policy-change1-info?phase=<id>`.
+> Rewritten in English on 2026-09-01 (repo rule: every `CLAUDE.md` under `onecgiar_pr/` is English).
 
-## Contrato
-- Estado: **todo vive en el componente**, no hay servicio propio.
+## What it is
+Section 4 of a **Policy change** result form (`result_type_id = 1`, Outcome level): policy type, USD
+amount, stage, the "is this related to…?" question and the implementing organizations.
+Route: `/result/result-detail/<code>/policy-change1-info?phase=<id>`.
+
+## Contract
+- State: **everything lives in the component**, there is no dedicated service.
   - `innovationUseInfoBody` (`model/innovationUseInfoBody.ts`) → `policy_type_id`, `amount`,
     `status_amount`, `policy_stage_id`, `institutions[]`.
-  - `policyChangeQuestions` + `relatedTo` → la pregunta "Is this result related to:" viene del
-    backend como un cuestionario; `relatedTo` guarda el `result_question_id` marcado.
-- Catálogos: `PolicyControlListService.policyTypesList` / `.policyStages` (se cargan en el
-  constructor del servicio, al arrancar la app) e `InstitutionsService.institutionsList`.
+  - `policyChangeQuestions` + `relatedTo` → "Is this result related to:" comes from the backend as a
+    questionnaire; `relatedTo` holds the ticked `result_question_id`.
+- Catalogues: `PolicyControlListService.policyTypesList` / `.policyStages` (loaded in that service's
+  constructor, at app start) and `InstitutionsService.institutionsList`.
 - Endpoints (`ResultsApiService`):
   - `GET_policyChanges()` → `GET /api/results/summary/policy-changes/get/result/<result_id>`
   - `GET_policyChangesQuestions()` → `GET /api/results/questions/policy-change/<result_id>`
   - `PATCH_policyChanges(body)` → `PATCH /api/results/summary/policy-changes/create/result/<result_id>`
-- `sectionLoading` (signal) alimenta `[appSectionSkeleton]`; se libera en `next` **y** en `error`.
-- El green check NO se calcula aquí: lo resuelve el SP `validate_sections_mapped_batch`
-  (sección `policy-change1-info`). Verificado OK para P25 el 26-ago-2026.
+- `sectionLoading` (signal) drives `[appSectionSkeleton]`; released on `next` **and** on `error`.
+- The green check is NOT computed here: the SP `validate_sections_mapped_batch` resolves it
+  (section `policy-change1-info`). Verified OK for P25 on 2026-08-26.
 
-## Dónde se usa
-- `shared/routing/routing-data.ts` — entrada `policy-change1-info` del `resultDetailRouting`.
-- `.../result-detail/components/result-sections-sidebar/result-sections.service.ts` — la sección
-  aparece en el rail sólo para resultados Policy change.
+## Where it is used
+- `shared/routing/routing-data.ts` — the `policy-change1-info` entry of `resultDetailRouting`.
+- `.../result-detail/components/result-sections-sidebar/result-sections.service.ts` — the section
+  shows in the rail only for Policy change results.
 
-## Trampas (⚠️ = ya rompió algo)
-- ⚠️ **`policy_type_id == 1` es "Program, budget or investment"** (CLARISA). Es el ÚNICO tipo que
-  muestra *USD amount* y *Status* (`*ngIf` en el HTML). Al cambiar de tipo esos dos campos
-  desaparecen pero **seguían viajando en el PATCH**: el resultado quedaba con un importe en USD
-  colgado de un instrumento legal, invisible y sin forma de borrarlo, y al volver al tipo 1
-  reaparecía como si el usuario lo hubiera tecleado (P2-3371, reproducido en el resultado 8916).
-  Lo limpia `clearAmountWhenNotApplicable()`, llamada desde el `(ngModelChange)` del select **y**
-  desde `onSaveSection()`. **Si añades otro campo condicionado al tipo, límpialo ahí también.**
-- ⚠️ `getSectionInformation()` hace `this.innovationUseInfoBody = response` — reemplaza la
-  instancia de la clase por el objeto crudo del backend. Las propiedades que el backend no
-  devuelva quedan `undefined`, no con el default de la clase.
-- ⚠️ La descripción del multiselect dice **"Select min 1, max 3 organizations"** pero **el máximo
-  no se valida**: se guardan 5 sin aviso (verificado 26-ago-2026 en 8916). `app-pr-multi-select`
-  no tiene input de tope, así que arreglarlo obliga a tocar `custom-fields/`.
-- `changeAnswerBoolean()` compara con `===` contra `result_question_id`; si el backend cambiara el
-  tipo (string ↔ number) la respuesta dejaría de marcarse sin error visible.
-- `onSaveSection()` refresca sólo `getSectionInformation()`, no las preguntas: `relatedTo` se
-  mantiene en memoria hasta la siguiente carga de la página.
-- El `<app-alert-status>` con `policyTypeDescriptions()` inyecta HTML crudo; el spec compara ese
-  string normalizando espacios, así que reformatear el texto rompe el test.
+## Traps (⚠️ = already broke something)
+- ⚠️ **`policy_type_id == 1` is "Program, budget or investment"** (CLARISA). It is the ONLY type
+  that shows *USD amount* and *Status* (the two `*ngIf` in the template). Switching type hid the
+  pair but the values kept travelling in the PATCH: the result ended up storing a USD amount
+  against a legal instrument — invisible, impossible to clear from the form — and going back to
+  type 1 made the phantom figure reappear as if the user had typed it (P2-3371, reproduced on
+  result 8916). `clearAmountWhenNotApplicable()` cleans it, called from the select's
+  `(ngModelChange)` **and** from `onSaveSection()`. **Any new field conditioned on the type must
+  be cleared there too.**
+- ⚠️ **The policy type guidance is gated on the PHASE YEAR, never on the portfolio** (P2-3261,
+  epic P2-3243). `POLICY_TYPE_GUIDANCE_FROM_PHASE_YEAR = 2026` and `usesPolicyTypeGuidance2026()`
+  pick between `POLICY_TYPE_GUIDANCE_2026` and `LEGACY_POLICY_TYPE_GUIDANCE`. `isP25()` would be
+  wrong: the P25 portfolio starts in **2025**, so phase-2025 results live inside it and a portfolio
+  gate would rewrite the guidance on exactly the results the epic requires to stay untouched.
+  From 2026-08-18 (`f58084fd6`) to 2026-09-01 there was **no gate at all** and every phase read the
+  2026 wording. The threshold is deliberately a **local constant**, not a `ReportingDesignYear`
+  member: that enum holds UI-*redesign* thresholds and this is a guidance-*wording* one — same
+  shape as `rd-annual-updating.component.ts` (P2-3292).
+- ⚠️ `getSectionInformation()` does `this.innovationUseInfoBody = response` — it replaces the class
+  instance with the raw backend object. Properties the backend omits end up `undefined`, not with
+  the class default.
+- ⚠️ The multiselect description says **"Select min 1, max 3 organizations"** but **the maximum is
+  not validated**: 5 save with no warning (verified 2026-08-26 on 8916). `app-pr-multi-select` has
+  no cap input, so fixing it means touching `custom-fields/`.
+- `changeAnswerBoolean()` compares with `===` against `result_question_id`; if the backend flipped
+  the type (string ↔ number) the answer would silently stop being ticked.
+- `onSaveSection()` only refreshes `getSectionInformation()`, not the questions: `relatedTo` stays
+  in memory until the page reloads.
+- ⚠️ The two `<app-alert-status>` boxes inject raw HTML through `[innerHTML]`. The guidance spec
+  reads the **rendered** `.alert_text` (zoneless CD: asserting on the method's return value passes
+  even when the box never re-renders), matching on single sentences rather than the whole string,
+  so reformatting the markup no longer breaks the test.
 
-## Pendiente / Coming soon
-- El bloque comentado `result_related_engagement` en el HTML ("Don't delete this code") sigue
-  esperando decisión de negocio; el campo existe en el modelo y en la BD.
+## Pending / Coming soon
+- The commented `result_related_engagement` block in the HTML ("Don't delete this code") is still
+  waiting on a business decision; the field exists in the model and in the DB.
+- The **bilateral** copy of this guidance (`section-type-specific/type-policy-change`) has no gate
+  either. Left alone on purpose: bilateral is a 2026-only module, and that folder is owned by
+  another workstream.

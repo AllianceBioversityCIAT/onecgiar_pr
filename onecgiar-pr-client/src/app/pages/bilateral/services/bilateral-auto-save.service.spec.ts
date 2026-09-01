@@ -100,9 +100,122 @@ describe('BilateralAutoSaveService', () => {
       expect(service.globalSaveState()).toBe('error');
     });
 
-    it('is saved once every field settled', () => {
+    it('is idle on a freshly opened result, before anything has been saved', () => {
+      // The chip used to read "All changes saved" here: registerField seeds every field as `idle`
+      // and `every(idle|saved)` was enough to claim a save that never happened.
+      service.registerField('title', 'text');
+      service.registerField('description', 'text');
+      expect(service.globalSaveState()).toBe('idle');
+    });
+
+    it('is idle when fields settle back to idle but no request ever succeeded', () => {
       service.fieldStatus.set({ a: 'saved', b: 'idle' });
+      expect(service.globalSaveState()).toBe('idle');
+    });
+
+    it('is saved once a real request came back OK and every field settled', () => {
+      service.setResultId(42);
+      service.registerField('title', 'text');
+      service.updateFieldsBatch({ title: 'Hello' });
+      expect(mockBilateralApi.PATCH_generalInfo).toHaveBeenCalled();
       expect(service.globalSaveState()).toBe('saved');
+    });
+
+    it('goes back to neutral for the next result', () => {
+      service.setResultId(42);
+      service.updateFieldsBatch({ title: 'Hello' });
+      expect(service.globalSaveState()).toBe('saved');
+
+      service.reset();
+      service.registerField('title', 'text');
+      expect(service.globalSaveState()).toBe('idle');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+
+  describe('in-flight queue (no edit may be lost)', () => {
+    /** Holds the first PATCH open so the next edits have to queue behind it. */
+    function gateFirstGeneralInfoPatch(): Subject<unknown> {
+      const gate = new Subject<unknown>();
+      mockBilateralApi.PATCH_generalInfo.mockReturnValueOnce(gate.asObservable() as any).mockReturnValue(
+        of({}) as any
+      );
+      return gate;
+    }
+
+    it('keeps every field edited while a request is in flight (merges, does not replace)', () => {
+      const gate = gateFirstGeneralInfoPatch();
+      service.setResultId(42);
+
+      // 1st edit leaves immediately and stays in flight.
+      service.updateFieldsBatch({ description: 'A long description' });
+      expect(mockBilateralApi.PATCH_generalInfo).toHaveBeenCalledTimes(1);
+
+      // Two more Impact Area scores while that request is still open. Before the fix the second one
+      // overwrote the first in the queue and the gender score never reached the server.
+      service.updateFieldsBatch({ gender_tag_level_id: 2 });
+      service.updateFieldsBatch({ climate_change_tag_level_id: 3 });
+      expect(mockBilateralApi.PATCH_generalInfo).toHaveBeenCalledTimes(1);
+
+      gate.next({});
+      gate.complete();
+
+      expect(mockBilateralApi.PATCH_generalInfo).toHaveBeenCalledTimes(2);
+      expect(mockBilateralApi.PATCH_generalInfo).toHaveBeenLastCalledWith(42, {
+        gender_tag_level_id: 2,
+        climate_change_tag_level_id: 3,
+      });
+      expect(service.fieldStatus()['gender_tag_level_id']).toBe('saved');
+      expect(service.fieldStatus()['climate_change_tag_level_id']).toBe('saved');
+      expect(service.hasPendingSaves()).toBe(false);
+    });
+
+    it('keeps the newest value when the same field is edited twice while in flight', () => {
+      const gate = gateFirstGeneralInfoPatch();
+      service.setResultId(42);
+
+      service.updateFieldsBatch({ title: 'A' });
+      service.updateFieldsBatch({ title: 'B' });
+      service.updateFieldsBatch({ title: 'C' });
+
+      gate.next({});
+      gate.complete();
+
+      expect(mockBilateralApi.PATCH_generalInfo).toHaveBeenLastCalledWith(42, { title: 'C' });
+    });
+
+    it('still queues the pending edits when the in-flight request fails', () => {
+      const gate = gateFirstGeneralInfoPatch();
+      service.setResultId(42);
+
+      service.updateFieldsBatch({ description: 'A long description' });
+      service.updateFieldsBatch({ gender_tag_level_id: 2 });
+      service.updateFieldsBatch({ poverty_tag_level_id: 4 });
+
+      gate.error(new Error('network'));
+
+      expect(mockBilateralApi.PATCH_generalInfo).toHaveBeenLastCalledWith(42, {
+        gender_tag_level_id: 2,
+        poverty_tag_level_id: 4,
+      });
+    });
+
+    it('does not merge across endpoints', () => {
+      const gate = gateFirstGeneralInfoPatch();
+      service.setResultId(42);
+
+      service.updateFieldsBatch({ title: 'A' });
+      service.updateFieldsBatch({ gender_tag_level_id: 2 });
+      service.saveContributors({ contributing_center: [{ institution_id: 9 }] });
+
+      gate.next({});
+      gate.complete();
+
+      expect(mockBilateralApi.PATCH_contributors).toHaveBeenCalledWith(42, {
+        contributing_center: [{ institution_id: 9 }],
+      });
+      expect(mockBilateralApi.PATCH_generalInfo).toHaveBeenLastCalledWith(42, { gender_tag_level_id: 2 });
     });
   });
 

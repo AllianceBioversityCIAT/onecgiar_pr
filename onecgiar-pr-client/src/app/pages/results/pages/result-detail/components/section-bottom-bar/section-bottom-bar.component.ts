@@ -29,9 +29,9 @@ import { SectionBottomBarSlotService } from './section-bottom-bar-slot.service';
  * logic and only the markup changed. `app-save-button` itself is untouched — IPSR, the result
  * creator and the shared "Links to results" section still use it.
  *
- * The completion state reads `DataControlService.fieldFeedbackList()`, the same signal the old
- * floating "N alerts" chip read. That list is produced by scanning the DOM for
- * `.pr-input.mandatory` / `.pr-field.mandatory`, which the field redesign did not touch.
+ * The completion state reads the section's GREEN CHECK, not the DOM (see `isComplete`). The DOM
+ * scan behind `DataControlService.fieldFeedbackList()` — the same signal the old floating
+ * "N alerts" chip read — is kept only to name which fields are missing.
  */
 @Component({
   selector: 'app-section-bottom-bar',
@@ -80,7 +80,39 @@ export class SectionBottomBarComponent implements AfterViewInit, OnDestroy {
   readonly hasNext = computed(() => this.currentIndex() >= 0 && this.currentIndex() < this.total() - 1);
 
   readonly missingFields = computed(() => this.dataControlSE.fieldFeedbackList());
-  readonly isComplete = computed(() => this.missingFields().length === 0);
+
+  /**
+   * Whether the open section is complete.
+   *
+   * P2-3542: this used to be `missingFields().length === 0`, i.e. the bar decided on its own by
+   * scanning the DOM. That scan only ever sees what is rendered, so it disagreed with the sections
+   * rail in two ways. Only the ACTIVE ToC tab is in the DOM (`multiple-wps.component.html` passes
+   * a single `[activeTab]`), so the other tabs' mandatory fields are invisible to it. And the
+   * requirements that live only in the validation function — a contributing partner, a
+   * contributing CGIAR Center — are not marked `.mandatory` anywhere, so the bar announced
+   * "Section complete" on results whose green check was returning red.
+   *
+   * The green check is the single authority: it is what paints the rail and what gates Submit.
+   * The bar now reads that same value, and the DOM scan is demoted to naming WHAT is missing,
+   * never to deciding IF something is.
+   *
+   * The scan stays as the fallback for routes with no green check of their own: this bar is also
+   * used by IPSR and the result creator, outside the result-detail section list, where
+   * `hasCurrentSection()` is false.
+   */
+  readonly isComplete = computed(() =>
+    this.sectionsSE.hasCurrentSection() ? this.sectionsSE.currentSectionIsDone() : this.missingFields().length === 0
+  );
+
+  /**
+   * Label of the "incomplete" button. The count is only honest when the DOM scan is what found the
+   * gap; when the section is red for a requirement the scan cannot see, "0 fields missing" would
+   * read as a contradiction of the very state it is announcing.
+   */
+  readonly pendingLabel = computed(() => {
+    const count = this.missingFields().length;
+    return count ? `${count} field${count === 1 ? '' : 's'} missing` : 'Section incomplete';
+  });
 
   get canSave(): boolean {
     return !this.rolesSE.readOnly || this.editable;

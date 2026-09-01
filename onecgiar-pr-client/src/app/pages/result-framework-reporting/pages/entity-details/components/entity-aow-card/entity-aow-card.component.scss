@@ -103,3 +103,24 @@ p {
   height: 6px;
   border-radius: 50%;
 }
+
+// P2-3296 AC3 — the AoW's ToC achievement on its card, beside the result counts.
+.entity-aow-card_progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.entity-aow-card_progress_item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+// The denominator travels with the number, here as everywhere else in this ticket.
+.entity-aow-card_progress_coverage {
+  color: var(--pr-color-accents-5);
+}

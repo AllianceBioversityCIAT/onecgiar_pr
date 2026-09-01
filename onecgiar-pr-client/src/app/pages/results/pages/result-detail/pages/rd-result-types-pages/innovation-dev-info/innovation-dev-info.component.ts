@@ -10,6 +10,15 @@ import { FieldsManagerService } from '../../../../../../../shared/services/field
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { firstValueFrom } from 'rxjs';
 
+/**
+ * Guidance printed under "Innovation Developer" up to the 2025 phase. Kept verbatim — P2-3272 Part 4
+ * drops it from 2026 on, and epic P2-3243 requires earlier phases to render exactly as they did.
+ * `app-field-card` paints no description block at all when it receives an empty string.
+ */
+const LEGACY_INNOVATION_DEVELOPER_DESCRIPTION = `Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person
+        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br>
+        Please provide information such as first name, family name, email address and organizational affiliations.`;
+
 @Component({
   selector: 'app-innovation-dev-info',
   templateUrl: './innovation-dev-info.component.html',
@@ -49,6 +58,14 @@ export class InnovationDevInfoComponent {
     }
   });
 
+  /**
+   * P2-3272 Part 4 — from the 2026 phase on the field is pre-filled from the Lead contact person,
+   * so its long guidance note is dropped. Phases <= 2025 keep the note verbatim.
+   */
+  innovationDeveloperDescription = computed(() =>
+    this.fieldsManagerSE.isInnovationDeveloperAutoFilled2026() ? '' : LEGACY_INNOVATION_DEVELOPER_DESCRIPTION
+  );
+
   collaboratorsDescription = computed(() => {
     return `Provide the full name(s), email address and organizational affiliation(s)  of other CGIAR and/or partner colleagues that contribute to this innovation
         Names of key contributors will feature as co-authors on the Innovation Profile document in the same order as provided below. <br>
@@ -65,6 +82,7 @@ export class InnovationDevInfoComponent {
         this.innovationDevInfoBody = response;
         this.convertOrganizations(response?.innovatonUse?.organization);
         this.normalizeInnovationDevBooleans();
+        this.applyInnovationDeveloperAutoFill();
         this.savingSection = false;
         this.sectionLoading.set(false);
       },
@@ -112,6 +130,7 @@ export class InnovationDevInfoComponent {
         this.convertOrganizations(response?.innovatonUse?.organization);
         this.innovationDevInfoBody = response;
         this.normalizeInnovationDevBooleans();
+        this.applyInnovationDeveloperAutoFill();
         this.savingSection = false;
         this.sectionLoading.set(false);
       },
@@ -136,6 +155,27 @@ export class InnovationDevInfoComponent {
         item.institution_types_id = item?.parent_institution_type_id;
       }
     });
+  }
+
+  /**
+   * P2-3272 Part 4 — pre-fill "Innovation Developer" with the Lead contact person captured in
+   * General Information, from the 2026 phase on.
+   *
+   * Only when the field is still empty: overwriting would silently discard a name the reporter
+   * typed themselves, and the requirement asks for a starting point, not a locked value. The field
+   * stays editable, and it is not part of the green check (`validation_innovation_dev_P25` does not
+   * read `innovation_developers`), so pre-filling can never block a submission.
+   *
+   * ⚠️ The value is only persisted when the section is saved. A reporter who clears the field and
+   * reloads without saving sees it pre-filled again — that is the cost of "pre-fill when empty",
+   * and the alternative (a stored "was cleared on purpose" flag) needs a column nobody asked for.
+   */
+  private applyInnovationDeveloperAutoFill(): void {
+    if (!this.fieldsManagerSE.isInnovationDeveloperAutoFilled2026()) return;
+    if (this.innovationDevInfoBody?.innovation_developers?.trim()) return;
+    const leadContactPerson = `${this.dataControlSE.currentResultSignal()?.lead_contact_person ?? ''}`.trim();
+    if (!leadContactPerson) return;
+    this.innovationDevInfoBody.innovation_developers = leadContactPerson;
   }
 
   private normalizeInnovationDevBooleans(): void {

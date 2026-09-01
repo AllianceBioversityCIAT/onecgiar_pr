@@ -709,8 +709,25 @@ describe('RdGeneralInformationComponent', () => {
       expect(spyDiscontinuedOptionsToIds).toHaveBeenCalled();
       expect(spyPATCH_generalInformation).toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalledWith(errorResponse);
-      expect(spyGetSectionInformation).toHaveBeenCalled();
+      // 🛑 The section must NOT reload when the save was rejected: reloading overwrites
+      // `generalInfoBody` with the server copy and throws away everything the user just typed.
+      expect(spyGetSectionInformation).not.toHaveBeenCalled();
     });
+
+    it('keeps what the user typed on screen when the save is rejected', () => {
+      mockUserSearchService.selectedUser = mockUserSearchResponse.response[0];
+      mockUserSearchService.searchQuery = mockUserSearchResponse.response[0].displayName;
+      component.generalInfoBody.result_title = 'A title the user just typed';
+      component.generalInfoBody.result_description = 'And a description';
+      spyPATCH_generalInformation.mockReturnValue(throwError(() => 'rejected'));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      component.onSaveSection();
+
+      expect(component.generalInfoBody.result_title).toBe('A title the user just typed');
+      expect(component.generalInfoBody.result_description).toBe('And a description');
+    });
+
   });
 
   describe('descriptionTextInfo', () => {
@@ -1213,17 +1230,58 @@ describe('RdGeneralInformationComponent', () => {
       expect(mockApiService.resultsSE.PATCH_generalInformation).not.toHaveBeenCalled();
     });
 
-    it('should skip contact validation when P25 even if searchQuery has text and no selectedUser', () => {
+    // Was pinned the other way round by a coverage sweep: P25 skipped the guard entirely, so the
+    // PATCH went out with `lead_contact_person: null` and the server wrote that over the stored
+    // name and FK. The portfolio is not what decides — whether the user typed the name is.
+    it('should block the save on P25 too when the name was typed and no one was picked', () => {
       mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
-      mockUserSearchService.searchQuery = 'some text';
+      mockUserSearchService.searchQuery = 'Maria Perez';
       mockUserSearchService.selectedUser = null;
+      mockUserSearchService.hasValidContact = true;
+      mockUserSearchService.showContactError = false;
       component.generalInfoBody.institutions_type = [];
       component.generalInfoBody.discontinued_options = [];
       component.generalInfoBody.is_discontinued = false;
 
       component.onSaveSection();
 
+      expect(mockUserSearchService.hasValidContact).toBe(false);
+      expect(mockUserSearchService.showContactError).toBe(true);
+      expect(mockApiService.resultsSE.PATCH_generalInformation).not.toHaveBeenCalled();
+    });
+
+    // A free-text contact loaded with the result (every result older than the AD link, and anything
+    // reported through the W3/Bilateral API) has no directory match and the user cannot produce one.
+    // Blocking on it made the whole section unsaveable while accusing them of someone else's input.
+    it.each(['P22', 'P25'])('should save a hydrated free-text contact on %s', portfolio => {
+      mockDataControlService.currentResultSignal.set({ portfolio });
+      mockUserSearchService.searchQuery = 'Consultant Without AD Account';
+      mockUserSearchService.selectedUser = null;
+      component.leadContactPersonField = { queryCameFromHydration: true } as any;
+      component.generalInfoBody.institutions_type = [];
+      component.generalInfoBody.discontinued_options = [];
+      component.generalInfoBody.is_discontinued = false;
+
+      component.onSaveSection();
+
+      expect(mockUserSearchService.showContactError).toBeFalsy();
       expect(mockApiService.resultsSE.PATCH_generalInformation).toHaveBeenCalled();
+    });
+
+    it('should block again once the user types over a hydrated name', () => {
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
+      mockUserSearchService.searchQuery = 'Maria';
+      mockUserSearchService.selectedUser = null;
+      // What `onSearchInput` does on the first keystroke: the name is no longer hydrated.
+      component.leadContactPersonField = { queryCameFromHydration: false } as any;
+      component.generalInfoBody.institutions_type = [];
+      component.generalInfoBody.discontinued_options = [];
+      component.generalInfoBody.is_discontinued = false;
+
+      component.onSaveSection();
+
+      expect(mockUserSearchService.showContactError).toBe(true);
+      expect(mockApiService.resultsSE.PATCH_generalInformation).not.toHaveBeenCalled();
     });
   });
 

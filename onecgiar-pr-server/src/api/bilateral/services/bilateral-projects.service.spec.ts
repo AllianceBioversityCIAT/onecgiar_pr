@@ -10,13 +10,16 @@ const CURRENT_YEAR = 2026;
 
 describe('BilateralProjectsService', () => {
   let service: BilateralProjectsService;
-  let projectRepo: { find: jest.Mock };
+  let projectRepo: { find: jest.Mock; findOne: jest.Mock };
   let centerRepo: { findOne: jest.Mock };
   let initiativeRepo: { find: jest.Mock };
   let yearRepo: { findOne: jest.Mock };
 
   beforeEach(async () => {
-    projectRepo = { find: jest.fn().mockResolvedValue([]) };
+    projectRepo = {
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(null),
+    };
     centerRepo = { findOne: jest.fn().mockResolvedValue(null) };
     initiativeRepo = { find: jest.fn().mockResolvedValue([]) };
     yearRepo = {
@@ -313,6 +316,73 @@ describe('BilateralProjectsService', () => {
       await service.getProjectsByCenter(5);
 
       expect(initiativeRepo.find).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * The Alliance-descended centres are the only ones CLARISA cannot match from W3's
+   * acronyms, so their projects arrive with organization_code = NULL. Creation used to
+   * read only `obj_organization` and therefore stored no lead centre at all — silently.
+   */
+  describe('resolveProjectLeadCenter', () => {
+    it('uses the joined organization when organization_code resolved', async () => {
+      projectRepo.findOne.mockResolvedValueOnce({
+        id: 7,
+        obj_organization: {
+          name: 'International Potato Center',
+          acronym: 'CIP',
+        },
+        sourceCenterAcronym: 'IGNORED',
+        sourceCenterName: 'ignored',
+      });
+
+      await expect(service.resolveProjectLeadCenter(7)).resolves.toEqual({
+        name: 'International Potato Center',
+        acronym: 'CIP',
+      });
+    });
+
+    it('falls back to source_center_acronym when organization_code is NULL', async () => {
+      projectRepo.findOne.mockResolvedValueOnce({
+        id: 1443,
+        obj_organization: null,
+        sourceCenterAcronym: 'CIAT',
+        sourceCenterName:
+          'Alliance of Bioversity and CIAT - Regional Hub (Centro Internacional de Agricultura Tropical)',
+      });
+
+      await expect(service.resolveProjectLeadCenter(1443)).resolves.toEqual({
+        name: 'Alliance of Bioversity and CIAT - Regional Hub (Centro Internacional de Agricultura Tropical)',
+        acronym: 'CIAT',
+      });
+    });
+
+    it('returns null for an acronym outside the alias map rather than guessing a centre', async () => {
+      projectRepo.findOne.mockResolvedValueOnce({
+        id: 9,
+        obj_organization: null,
+        sourceCenterAcronym: 'NOT-A-CENTER',
+        sourceCenterName: 'Unknown',
+      });
+
+      await expect(service.resolveProjectLeadCenter(9)).resolves.toBeNull();
+    });
+
+    it('returns null when the project carries no centre information at all', async () => {
+      projectRepo.findOne.mockResolvedValueOnce({
+        id: 10,
+        obj_organization: null,
+        sourceCenterAcronym: null,
+        sourceCenterName: null,
+      });
+
+      await expect(service.resolveProjectLeadCenter(10)).resolves.toBeNull();
+    });
+
+    it('returns null when the project does not exist', async () => {
+      projectRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.resolveProjectLeadCenter(404)).resolves.toBeNull();
     });
   });
 });

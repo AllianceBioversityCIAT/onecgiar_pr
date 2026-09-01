@@ -21,6 +21,7 @@ import { GetExistingResultContributorsToIndicatorsHandler } from './application/
 import { throwServiceError } from '../../shared/utils/service-error.util';
 import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
 import type { TocResultResponse } from '../results/results-toc-results/repositories/aow-bilateral.repository';
+import { rollUpChildren } from '../results/results-toc-results/repositories/toc-progress-rollup';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -408,6 +409,17 @@ export class ResultsFrameworkReportingService {
           year: resolvedYear,
           tocResultsOutcomes,
           tocResultsOutputs,
+          // P2-3296 AC3 — the Area of Work's own number, over EVERY ToC node under it.
+          //
+          // Both tiers, as the AC states outright: "Includes Outputs (HLOs) and Outcomes
+          // (Intermediate Outcomes + 2030 Outcomes)". In this product an HLO is a High Level
+          // OUTPUT, and outputs are the nodes actually scoped to one Area of Work — averaging
+          // outcomes alone gave all five AoWs of a programme the identical figure, because the
+          // outcomes that hang off an AoW are largely programme-level ones repeated under each.
+          progress: rollUpChildren([
+            ...tocResultsOutputs,
+            ...tocResultsOutcomes,
+          ]),
           metadata: {
             total: tocResults.length,
             outcomes: tocResultsOutcomes.length,
@@ -690,6 +702,80 @@ export class ResultsFrameworkReportingService {
         },
         message:
           'Program indicator contribution summary retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * P2-3296 AC4 — the Science Program's ToC achievement, averaged over its Areas of Work,
+   * each of which is itself averaged over its HLOs.
+   *
+   * Not to be confused with `ResultsService.getScienceProgramProgress`, which counts reported
+   * results by status. This one answers "how far along are the ToC commitments".
+   *
+   * The mean is taken over the AoWs' own percentages, so a large AoW does not outvote a small
+   * one — an AoW is one commitment. Areas with nothing measurable are skipped rather than
+   * counted as zero, and `counted` / `total` say how many made it in.
+   */
+  async getScienceProgramTocProgress(programId?: string, versionId?: number) {
+    try {
+      const normalizedProgram = programId?.trim().toUpperCase();
+
+      if (!normalizedProgram) {
+        throwServiceError(
+          'The program identifier is required in the query params.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const tocContext = await this.resolveTocContextForRequest(versionId);
+
+      const workPackages =
+        await this._tocResultsRepository.findWorkPackagesByProgram(
+          normalizedProgram,
+          tocContext,
+        );
+
+      const areas = await Promise.all(
+        (workPackages ?? []).map(async (workPackage) => {
+          const tocResults =
+            await this._tocResultsRepository.findByCompositeCode(
+              normalizedProgram,
+              workPackage.composeCode,
+              tocContext,
+            );
+
+          // Every ToC node under the Area of Work, outputs included — same rule as AC3 above.
+          const nodes = (tocResults ?? []).filter((tocResult) =>
+            ['OUTPUT', 'OUTCOME'].includes(
+              (tocResult.category || '').toUpperCase(),
+            ),
+          );
+
+          return {
+            code: workPackage.code,
+            name: workPackage.name,
+            composeCode: workPackage.composeCode,
+            progress: rollUpChildren(nodes),
+          };
+        }),
+      );
+
+      return {
+        response: {
+          program: normalizedProgram,
+          year: tocContext.reportingYear,
+          progress: rollUpChildren(areas),
+          areas,
+          metadata: {
+            total: areas.length,
+            phaseUuid: tocContext.phaseUuid,
+          },
+        },
+        message: 'Science program ToC progress retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {

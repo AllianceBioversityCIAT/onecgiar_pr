@@ -35,6 +35,27 @@
           <h3>Intermediate Outcomes Indicators</h3>
           <div class="tab-content_header_dot"></div>
           <h3 class="tab-content_header_phase">Reporting Phase {{ entityAowService.reportingPhaseYear }}</h3>
+
+          <!--
+            P2-3296 AC3 — this Area of Work's number, averaged over its Intermediate Outcomes.
+            The coverage line stays visible rather than living in the tooltip: without it a
+            percentage over 2 of 10 indicators is indistinguishable from one over all 10.
+          -->
+          @if (entityAowService.aowProgress()) {
+            <div class="aow-progress" [prTooltip]="aowProgressTooltip()">
+              <span class="aow-progress_pair">
+                <span class="aow-progress_label">QA</span>
+                <span class="aow-progress_value">{{ aowProgressLabel() }}</span>
+              </span>
+              <span class="aow-progress_pair">
+                <span class="aow-progress_label">Prel.</span>
+                <span class="aow-progress_value">{{ aowPreliminaryLabel() }}</span>
+              </span>
+              @if (aowCoverage()) {
+                <span class="aow-progress_coverage">{{ aowCoverage() }}</span>
+              }
+            </div>
+          }
         </div>
 
         <div class="tab-content">
