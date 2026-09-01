@@ -194,6 +194,19 @@ dejarte entrar: el front son ficheros estáticos que se sirven por otra ruta. **
 > (ya no da `000`), pero la capa que está delante rechaza todo, incluido un endpoint conocido-bueno
 > con credencial válida. **El front carga y no hay login ni guardado.** Sigue siendo de Cristian/IT.
 
+✅ **CERRADO el 1-sep por la tarde: era una MIGRACIÓN DE SERVIDOR, no inestabilidad.**
+`cerberus.ciat.cgiar.org` resolvía a **`45.5.186.24`** toda la mañana y pasó a resolver a
+**`45.5.184.24`**. Eso explica los tres estados que se midieron (`000` → `403` de Apache → `000`)
+mucho mejor que cualquier hipótesis de caída, y confirma que **nada de esto lo causamos nosotros**:
+la caída estaba medida antes de las 07:54 y nuestro primer despliegue del día fue a las 08:37.
+**Quien lea mañana los tres estados sin este dato va a concluir que el ambiente es inestable, y no
+lo es.** Lo que sigue debajo se conserva porque describe cómo se midió, no porque siga vigente.
+
+⚠️ **Efecto colateral del cambio de IP, a tener en cuenta:** algunos entornos de shell **no
+alcanzan la IP nueva** aunque el DNS ya la resuelva (conexión al 443 en timeout, con Google y Jira
+respondiendo). Si `curl` da `000` pero el navegador entra, **el ambiente está bien y quien falla es
+la sonda** — medir por navegador y no por `curl`.
+
 🛑 **Y el ambiente es INTERMITENTE, no está recuperándose.** Medido a lo largo de la mañana: `000`
 (caído del todo) → `403` (servidor detrás, proxy cerrado) → `000` otra vez, front incluido, en menos
 de veinte minutos y desde tres redes distintas. **Por eso una sola sonda en 200 no basta:** hace
