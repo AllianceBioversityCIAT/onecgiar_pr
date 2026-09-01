@@ -245,12 +245,32 @@ describe('ResultsKnowledgeProductsService — upsert clears the ToC MELIA study'
     expect(written(update).toc_melia_study_id).toBeUndefined();
   });
 
-  it('stores the chosen study when one is sent', async () => {
+  it('writes null when the TOC-study question is answered No, even though it is still a MELIA product', async () => {
     const { service, update } = build();
 
+    // Third way into the same defect, found while writing the reproduction steps: BOTH study
+    // pickers are gated on this answer, and only `ostMeliaId` was being cleared.
     await service.upsert(1, user, {
       isMeliaProduct: true,
       ostSubmitted: false,
+      ostMeliaId: 55,
+      clarisaMeliaTypeId: 3,
+      tocMeliaStudyId: 'a-study-uuid',
+    } as any);
+
+    expect(written(update).toc_melia_study_id).toBeNull();
+    expect(written(update).ost_melia_study_id).toBeNull();
+  });
+
+  it('stores the chosen study when one is sent in the state that shows the picker', async () => {
+    const { service, update } = build();
+
+    // `ostSubmitted: true` matters: that is the only state where the picker is on screen
+    // (`*ngIf="ostSubmitted === true && isP25()"`). With it false the study is cleared on purpose,
+    // which the case above pins.
+    await service.upsert(1, user, {
+      isMeliaProduct: true,
+      ostSubmitted: true,
       ostMeliaId: null,
       clarisaMeliaTypeId: 3,
       tocMeliaStudyId: 'a-study-uuid',

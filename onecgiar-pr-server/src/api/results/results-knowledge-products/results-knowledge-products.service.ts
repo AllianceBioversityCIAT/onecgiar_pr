@@ -1949,6 +1949,18 @@ export class ResultsKnowledgeProductsService {
         sectionSevenData.clarisaMeliaTypeId = null;
       } else {
         sectionSevenData.ostMeliaId = null;
+        // The P25 twin of `ostMeliaId`. Both study pickers are gated on this same answer
+        // ("Do you have a MELIA study planned in your TOC?" / "Was it planned in your Initiative
+        // proposal?"): `*ngIf="ostSubmitted === true && isP25()"` for this one,
+        // `&& !isP25()` for `ostMeliaId` (`knowledge-product-info.component.html:35,46`). Clearing
+        // only one of the two left a third way into the same defect — answer No here while the
+        // result stays a MELIA product, and the picker disappeared while the study stayed stored.
+        //
+        // Guarded on `!== undefined` so the three-state contract survives: a caller that never
+        // mentions the field still does not have its column written.
+        if (sectionSevenData.tocMeliaStudyId !== undefined) {
+          sectionSevenData.tocMeliaStudyId = null;
+        }
       }
 
       await this._resultsKnowledgeProductRepository.update(
