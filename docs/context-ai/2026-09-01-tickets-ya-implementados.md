@@ -121,3 +121,14 @@ los cuatro casos verificados es lo mismo:
 3. **El estado no es evidencia.** P2-3261 estaba en `To Be Deployed` incompleto y P2-3262 en
    `To Be Reviewed` completo. Antes de planificar sobre un ticket hay que abrir el código —
    hoy eso habría ahorrado tres reconstrucciones.
+4. 🥇 **Y la COPIA del ticket tampoco es evidencia: el ticket vivo manda siempre.** Un enlace
+   pegado en Slack, un mensaje, o un título que alguien te pasa de memoria son **una foto del
+   momento en que se copiaron**. Caso del 1-sep con **P2-3550**: Ángel lo creó a las 09:27 y
+   cambió su título **dos veces** (09:41 y 10:22, verificado en el changelog). El enlace que
+   circuló por Slack a las 09:40 llevaba el título original — que pedía **un estado de solo
+   lectura y una retirada en 2027** — y el ticket vigente no pide ninguna de las dos cosas. Auditar
+   sobre la copia habría planificado dos umbrales de fase inexistentes.
+   **Muerde con más fuerza justo cuando el autor avisa de que lo está editando**, que es cuando más
+   se tiende a fiarse de lo que se acaba de leer. Se abre el ticket por la API, siempre, y si algo
+   se acordó de viva voz y no está en el texto, **se dice en el comentario que hay que actualizar el
+   ticket antes de construirlo**.
