@@ -44,15 +44,23 @@ describe('LabReportFormComponent', () => {
   let api: ReturnType<typeof makeApiMock>;
   let resultLevelSig: ReturnType<typeof signal<any[]>>;
 
-  async function setup(inputs: Record<string, any> = {}, phaseYear?: number) {
-    api = makeApiMock(phaseYear);
+  type SetupOptions = {
+    phaseYear?: number;
+    centersService?: { getData: () => Promise<void>; centersList: any[] };
+  };
+
+  async function setup(inputs: Record<string, any> = {}, phaseYearOrOptions?: number | SetupOptions) {
+    const options: SetupOptions =
+      typeof phaseYearOrOptions === 'number' ? { phaseYear: phaseYearOrOptions } : (phaseYearOrOptions ?? {});
+    api = makeApiMock(options.phaseYear);
     resultLevelSig = signal<any[]>([]);
+    const centersMock = options.centersService ?? { getData: () => Promise.resolve(), centersList: [] };
 
     await TestBed.configureTestingModule({
       imports: [LabReportFormComponent],
       providers: [
         { provide: ApiService, useValue: api },
-        { provide: CentersService, useValue: { getData: () => Promise.resolve(), centersList: [] } },
+        { provide: CentersService, useValue: centersMock },
         { provide: ResultLevelService, useValue: { resultLevelListSig: resultLevelSig } },
         { provide: Router, useValue: { navigate: jest.fn().mockResolvedValue(true) } }
       ]
@@ -332,6 +340,14 @@ describe('LabReportFormComponent', () => {
       expect(template.indexOf('Repository link/handle')).toBeGreaterThan(-1);
     });
 
+    it('shows a section spinner overlay while creatingResult is true', () => {
+      const template = readFileSync(join(__dirname, 'lab-report-form.component.html'), 'utf8');
+
+      expect(template.indexOf('[attr.aria-busy]="creatingResult()"')).toBeGreaterThan(-1);
+      expect(template.indexOf('Creating result…')).toBeGreaterThan(-1);
+      expect(template.indexOf('pi pi-spin pi-spinner')).toBeGreaterThan(-1);
+    });
+
     it('updates handler and calls validateHandle when onCgspaceItemSelected is called', async () => {
       await setup({ indicator: indicator({ result_type_id: 6, type_name: 'Number of knowledge products' }), tocNode: {} });
 
@@ -440,6 +456,104 @@ describe('LabReportFormComponent', () => {
       const body = api.resultsSE.POST_createResult.mock.calls.at(-1)[0];
       expect(body.result).not.toHaveProperty('has_innovation_link');
       expect(body.result).not.toHaveProperty('linked_results');
+    });
+  });
+
+  describe('KPAC — knowledge-product auto-create (KPAC-R-1..R-6)', () => {
+    const kpIndicator = () =>
+      indicator({
+        result_type_id: 6,
+        type_name: 'Number of knowledge products',
+        targets_by_center: { centers: [{ center_acronym: 'ILRI' }] }
+      });
+
+    const ilriCenter = { code: 'ILRI', acronym: 'ILRI', name: 'ILRI', institutionId: 101 };
+
+    async function flushAsync(): Promise<void> {
+      await Promise.resolve();
+      await Promise.resolve();
+      await fixture.whenStable();
+    }
+
+    it('KPAC-TEST-6 — KP indicator arms with contribution 1 and omits it from missingFields', async () => {
+      await setup({ indicator: kpIndicator(), tocNode: { result_level_id: OUTPUT_LEVEL } });
+
+      expect(component.createResultBody().contribution_to_indicator_target).toBe(1);
+      expect(component.missingFields()).not.toContain('Contribution to indicator target');
+    });
+
+    it('KPAC-TEST-3 — browse selection auto-creates via POST_createResult after MQAP success', async () => {
+      await setup(
+        { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL } },
+        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter] } }
+      );
+
+      component.onCgspaceItemSelected({ itemUrl: 'https://hdl.handle.net/10568/128401' });
+      await flushAsync();
+
+      expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
+      const body = api.resultsSE.POST_createResult.mock.calls[0][0];
+      expect(body.contributing_indicator).toBe(1);
+    });
+
+    it('KPAC-TEST-4 — validateHandle auto-creates on valid handle; invalid handle does not POST', async () => {
+      await setup(
+        { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL } },
+        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter] } }
+      );
+
+      component.patch('handler', 'https://hdl.handle.net/10568/128401');
+      component.validateHandle();
+      await flushAsync();
+
+      expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
+      expect(api.resultsSE.POST_createResult.mock.calls[0][0].contributing_indicator).toBe(1);
+
+      api.resultsSE.POST_createResult.mockClear();
+
+      component.patch('handler', 'https://repository.cimmyt.org/items/abc');
+      component.validateHandle();
+
+      expect(api.resultsSE.GET_mqapValidation).toHaveBeenCalledTimes(1);
+      expect(api.resultsSE.POST_createResult).not.toHaveBeenCalled();
+    });
+
+    it('KPAC-TEST-5 (component) — non-KP MQAP success does not auto-create', async () => {
+      await setup({ indicator: indicator(), tocNode: { result_level_id: OUTPUT_LEVEL } });
+
+      component.onCgspaceItemSelected({ itemUrl: 'https://hdl.handle.net/10568/128401' });
+      await flushAsync();
+      expect(api.resultsSE.POST_createResult).not.toHaveBeenCalled();
+
+      component.patch('handler', 'https://hdl.handle.net/10568/128401');
+      component.validateHandle();
+      await flushAsync();
+      expect(api.resultsSE.POST_createResult).not.toHaveBeenCalled();
+    });
+
+    it('KPAC-TEST-2 — auto-create awaits deferred preselectTocCenters before POST', async () => {
+      let resolveGetData!: () => void;
+      const getDataDeferred = new Promise<void>(resolve => {
+        resolveGetData = resolve;
+      });
+
+      await setup(
+        { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL } },
+        { centersService: { getData: () => getDataDeferred, centersList: [ilriCenter] } }
+      );
+
+      component.onCgspaceItemSelected({ itemUrl: 'https://hdl.handle.net/10568/128401' });
+      await flushAsync();
+
+      expect(api.resultsSE.POST_createResult).not.toHaveBeenCalled();
+
+      resolveGetData();
+      await flushAsync();
+
+      expect(api.resultsSE.POST_createResult).toHaveBeenCalledTimes(1);
+      const body = api.resultsSE.POST_createResult.mock.calls[0][0];
+      expect(body.contributing_center.length).toBeGreaterThan(0);
+      expect(body.contributing_center.some((c: { acronym: string }) => c.acronym === 'ILRI')).toBe(true);
     });
   });
 });

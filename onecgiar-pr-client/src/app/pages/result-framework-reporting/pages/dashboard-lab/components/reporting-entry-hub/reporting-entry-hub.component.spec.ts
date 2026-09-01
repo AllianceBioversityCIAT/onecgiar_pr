@@ -85,6 +85,9 @@ describe('ReportingEntryHubComponent', () => {
     fixture.componentRef.setInput('canReportW1W2', overrides['canReportW1W2'] ?? true);
     fixture.componentRef.setInput('w3State', overrides['w3State'] ?? readyState);
     fixture.componentRef.setInput('myCentersCount', overrides['myCentersCount'] ?? 2);
+    if (overrides['collapsed'] !== true && localStorage.getItem(COLLAPSE_KEY) !== 'true') {
+      (component as any).userCollapsed.set(false);
+    }
     fixture.detectChanges();
   }
 
@@ -303,8 +306,8 @@ describe('ReportingEntryHubComponent', () => {
     expect(skeletonRows.length).toBe(3);
   });
 
-  it('defaults to collapsed for a pure viewer (no reporting rights, no centers) with nothing stored', async () => {
-    await setup({ canReportW1W2: false, myCentersCount: 0, w3State: { status: 'no-centers' } });
+  it('defaults to collapsed on initial load', async () => {
+    await setup({ collapsed: true });
     expect(component.collapsed()).toBe(true);
   });
 
@@ -320,10 +323,10 @@ describe('ReportingEntryHubComponent', () => {
   });
 
   it('emits collapsedChange when toggled', async () => {
-    await setup();
+    await setup({ collapsed: true });
     const spy = jest.spyOn(component.collapsedChange, 'emit');
     component.toggleCollapse();
-    expect(spy).toHaveBeenCalledWith(true);
+    expect(spy).toHaveBeenCalledWith(false);
   });
 
   it('does not announce expand/collapse from toggleCenterExpanded while a search is active', async () => {

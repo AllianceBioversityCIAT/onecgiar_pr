@@ -448,6 +448,38 @@ describe('KpCgspaceBrowseComponent', () => {
       fixture.detectChanges();
       expect(useBtn.nativeElement.disabled).toBe(false);
     }));
+
+    it('shows a retrieving overlay on the results list while busy after Use this item', fakeAsync(() => {
+      mockResultsApiService.GET_cgspaceSearch.mockReturnValue(
+        of({
+          response: {
+            items: [sampleItem1],
+            page: { totalElements: 1 }
+          },
+          status: 200
+        })
+      );
+
+      fixture.componentRef.setInput('phaseYear', 2026);
+      fixture.detectChanges();
+
+      component.query.set('maize');
+      component.runSearch(0);
+      tick();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-test="cgspace-retrieving"]')).toBeNull();
+
+      const useBtn = fixture.debugElement.query(By.css('button[aria-label="Use this item: Maize productivity and climate adaptation in Africa"]'));
+      useBtn.nativeElement.click();
+      fixture.componentRef.setInput('busy', true);
+      fixture.detectChanges();
+
+      const overlay = fixture.nativeElement.querySelector('[data-test="cgspace-retrieving"]');
+      expect(overlay).toBeTruthy();
+      expect(overlay.textContent).toContain('Retrieving metadata from CGSpace');
+      expect(useBtn.nativeElement.textContent).toContain('Retrieving');
+    }));
   });
 
   describe('View details and Host Validation (12)', () => {

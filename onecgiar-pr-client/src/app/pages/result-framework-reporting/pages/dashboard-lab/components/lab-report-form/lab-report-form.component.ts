@@ -119,6 +119,9 @@ export class LabReportFormComponent {
   readonly kpEntryMode = signal<KpEntryMode>('browse');
   readonly handleSource = signal<'browse' | 'manual'>('browse');
 
+  /** Stored from the arming effect — auto-create (KPAC-T-2/T-3) awaits this Promise. */
+  preselectCentersP?: Promise<void>;
+
   /**
    * P2-3479 / P2-3231: Browsing CGSpace is now available via KpCgspaceBrowseComponent.
    */
@@ -146,11 +149,12 @@ export class LabReportFormComponent {
     }
 
     this.api.resultsSE.GET_mqapValidation(url).subscribe({
-      next: (resp: any) => {
+      next: async (resp: any) => {
         this.mqapJson.set(resp.response);
         this.patch('handler', url);
         this.patch('result_name', resp.response?.title ?? '');
         this.validatingHandler.set(false);
+        await this.autoCreateIfKnowledgeProduct();
       },
       error: (err: any) => {
         this.validatingHandler.set(false);
@@ -276,9 +280,12 @@ export class LabReportFormComponent {
       const emerging = this.emergingCategory();
       if (!ind && !emerging) return;
       this.resetForm();
+      if (this.currentResultIsKnowledgeProduct()) {
+        this.createResultBody.update(body => ({ ...body, contribution_to_indicator_target: 1 }));
+      }
       this.loadInitiatives();
       this.loadBilateral();
-      this.preselectTocCenters();
+      this.preselectCentersP = this.preselectTocCenters();
       if (emerging) {
         // Emerging: the category is fixed, so lock the result type and skip the picker.
         this.createResultBody.update(b => ({ ...b, result_type_id: emerging.id }));
@@ -342,12 +349,21 @@ export class LabReportFormComponent {
     });
   }
 
+  /** KPAC-T-2/T-3 — after MQAP success, await preselect then auto-create when save-ready. */
+  private async autoCreateIfKnowledgeProduct(): Promise<void> {
+    if (!this.currentResultIsKnowledgeProduct()) return;
+    await Promise.resolve(this.preselectCentersP);
+    if (this.canSave()) {
+      this.createResult();
+    }
+  }
+
   /**
    * Centers mapped in the node's ToC: the union of its partner institutions and the centers
    * carrying a KPI target, deduped. Same rule as the original (P2-2998).
    */
-  private preselectTocCenters(): void {
-    this.centersSE.getData().then(() => {
+  private preselectTocCenters(): Promise<void> {
+    return this.centersSE.getData().then(() => {
       const node = this.tocNode();
       const tocAcronyms = (this.indicator()?.targets_by_center?.centers ?? []).map((c: any) => c?.center_acronym).filter(Boolean);
       const partnerInstitutionIds = new Set(
@@ -443,7 +459,7 @@ export class LabReportFormComponent {
     }
 
     this.api.resultsSE.GET_mqapValidation(handle).subscribe({
-      next: (resp: any) => {
+      next: async (resp: any) => {
         this.mqapJson.set(resp.response);
         this.patch('result_name', resp.response?.title ?? '');
         this.validatingHandler.set(false);
@@ -456,6 +472,7 @@ export class LabReportFormComponent {
             closeIn: 1500
           });
         }
+        await this.autoCreateIfKnowledgeProduct();
       },
       error: (err: any) => {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });

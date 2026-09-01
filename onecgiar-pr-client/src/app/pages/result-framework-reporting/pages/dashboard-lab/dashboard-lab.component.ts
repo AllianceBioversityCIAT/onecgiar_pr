@@ -2999,31 +2999,35 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
   });
 
   /**
-   * Row click opens the read-only indicator context in the drawer; "Report" no longer goes there —
-   * it opens the legacy report modal, the surface this flow has always used to create a result.
+   * Title / row click opens the same Report-result aside as the Report button (Browse CGSpace /
+   * Manual entry). The Target column still uses `info` via `onReportingOpenTarget`.
    */
   onReportingRowOpen(row: ReportingIndicator): void {
-    this.manageIndicator(row, row.__hlo ?? '', 'info');
+    this.onReportingRowReport(row);
   }
 
   /**
-   * KPI "Report" → the ASIDE, not the legacy modal.
+   * KPI "Report" (Reporting table, By AOW, Indicators list) → the ASIDE, not the legacy modal.
    *
    * `primeEntityAowContext()` still runs first: `EntityAowService.canReportResults()` depends on
    * the programme being seeded and on the phase check having resolved, and that flag is what
    * decides whether the form shows a submit affordance at all.
    *
-   * The ToC node is passed EXPLICITLY (`__hloNode`) rather than left to the title match inside
-   * `manageIndicator` — see the note there. Every other entry point in this file still opens the
-   * legacy modal; only this button moved.
+   * The ToC node is passed EXPLICITLY (`node` or `__hloNode`) rather than left to the title match
+   * inside `manageIndicator` — see the note there.
    */
-  onReportingRowReport(row: ReportingIndicator): void {
+  openReportAside(row: ReportingIndicator, node?: unknown): void {
     this.primeEntityAowContext();
     // Captured like `openLegacyReportModal` does for the modal path — `closeManage()` publishes it
-    // when the drawer closes, so the grouped row can offer "Next pending" (MRF-R-3.1 inherited).
-    this.drawerReportKpi = { id: row.indicator_id, aowCode: row.__aowCode ?? '' };
+    // when the drawer closes, so the grouped row / By-AOW card can offer "Next pending".
     const raw = row as unknown as Record<string, unknown>;
-    this.manageIndicator(row, row.__hlo ?? '', 'report', raw['__hloNode']);
+    const aowCode = String(raw['__aowCode'] ?? this.plannedHloAowCode() ?? this.activeAowCode() ?? '');
+    this.drawerReportKpi = { id: row.indicator_id, aowCode };
+    this.manageIndicator(row, row.__hlo ?? '', 'report', node ?? raw['__hloNode']);
+  }
+
+  onReportingRowReport(row: ReportingIndicator): void {
+    this.openReportAside(row);
   }
 
   /**

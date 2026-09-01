@@ -277,3 +277,36 @@ describe('buildCreateResultPayload — innovation link (P2-3420)', () => {
     expect(payload['result'].linked_results).toEqual([]);
   });
 });
+
+describe('buildCreateResultPayload — KPAC knowledge-product contribution (KPAC-R-1, KPAC-R-6)', () => {
+  it('KPAC-TEST-1 — type 6 forces contributing_indicator to 1 when body contribution is null or 0', () => {
+    for (const contribution of [null, 0] as const) {
+      const payload = buildCreateResultPayload(
+        options({
+          indicator: indicatorOfType(6),
+          body: {
+            ...emptyBody,
+            result_name: 'A knowledge product',
+            handler: 'https://hdl.handle.net/10568/128401',
+            contribution_to_indicator_target: contribution
+          }
+        })
+      );
+
+      expect(payload['contributing_indicator']).toBe(1);
+    }
+  });
+
+  it('KPAC-TEST-5 (util) — non-type-6 keeps body contribution without forcing 1', () => {
+    for (const contribution of [3, null] as const) {
+      const payload = buildCreateResultPayload(
+        options({
+          indicator: indicatorOfType(7),
+          body: { ...emptyBody, result_name: 'An innovation', contribution_to_indicator_target: contribution }
+        })
+      );
+
+      expect(payload['contributing_indicator']).toBe(contribution);
+    }
+  });
+});

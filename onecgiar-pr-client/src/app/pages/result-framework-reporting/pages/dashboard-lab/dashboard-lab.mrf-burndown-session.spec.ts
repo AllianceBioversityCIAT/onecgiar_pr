@@ -171,10 +171,22 @@ describe('DashboardLabComponent — Next pending + session counter (MRF-TEST-4)'
     return ctx;
   }
 
-  /** The row shape `openLegacyReportModal` receives from the By-AOW template. */
+  /** The row shape `openLegacyReportModal` / `openReportAside` receive from the By-AOW template. */
   function row(indicatorId: number, aowCode = 'AOW01') {
     return { indicator_id: indicatorId, __aowCode: aowCode } as never;
   }
+
+  it('By-AOW Report opens the aside on the report tab and does not flip the legacy modal', async () => {
+    const { component, entityAowService } = await createLoadedComponent([
+      { indicator_id: 1, indicator_description: 'KPI 1', target_value_sum: 10, actual_achieved_value_sum: 0 }
+    ]);
+
+    component.openReportAside(row(1));
+
+    expect(component.manageTab()).toBe('report');
+    expect(component.managed()?.indicator.indicator_id).toBe(1);
+    expect(entityAowService.showReportResultModal()).toBe(false);
+  });
 
   // ── (a) modal false-edge ⇒ exactly ONE forced reload, cache NOT served ────────────────────
   describe('modal-close force-refresh (MRF-R-3)', () => {

@@ -608,7 +608,7 @@
                                 @if (entityAowService.canReportResults()) {
                                   <button
                                     type="button"
-                                    (click)="openLegacyReportModal(ind, group)"
+                                    (click)="openReportAside(ind, group)"
                                     class="flex appearance-none items-center gap-1 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11.5px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
                                     <span class="material-icons-round text-[13px]">edit_note</span>
                                     Report
@@ -686,7 +686,7 @@
                             <button
                               type="button"
                               [attr.data-guide]="$first ? 'aow-report' : null"
-                              (click)="openLegacyReportModal(ind, group)"
+                                    (click)="openReportAside(ind, group)"
                               class="flex appearance-none items-center gap-1.5 rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-3 py-1.5 text-[12px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">
                               <span class="material-icons-round text-[14px]">edit_note</span>
                               Report result
@@ -1631,7 +1631,7 @@
                                     <td class="px-3 py-2.5 tabular-nums">{{ ind.target_value_sum ?? 0 }}</td>
                                     <td class="px-3 py-2.5 tabular-nums">{{ ind.actual_achieved_value_sum ?? 0 }}</td>
                                     <td class="px-3 py-2.5 text-right">
-                                      <button type="button" (click)="openLegacyReportModal(ind)" class="appearance-none rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
+                                      <button type="button" (click)="openReportAside(ind)" class="appearance-none rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
                                     </td>
                                   </tr>
                                 }
@@ -1746,7 +1746,7 @@
                                          views read as one product. -->
                                     <button
                                       type="button"
-                                      (click)="openLegacyReportModal(ind)"
+                                      (click)="openReportAside(ind)"
                                       class="inline-flex h-[32px] shrink-0 cursor-pointer appearance-none items-center justify-center rounded-[8px] border border-[var(--pr-color-primary-300)] bg-[var(--pr-surface-card)] px-[14px] text-[14px] font-medium text-[var(--pr-color-primary-400)] transition-colors hover:border-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pr-color-primary-300)]">
                                       Report
                                     </button>
@@ -1807,7 +1807,7 @@
                           <td class="px-3 py-2.5 tabular-nums">{{ ind.target_value_sum ?? 0 }}</td>
                           <td class="px-3 py-2.5 tabular-nums">{{ ind.actual_achieved_value_sum ?? 0 }}</td>
                           <td class="px-3 py-2.5 text-right">
-                            <button type="button" (click)="openLegacyReportModal(ind)" class="appearance-none rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
+                            <button type="button" (click)="openReportAside(ind)" class="appearance-none rounded-lg border border-[var(--pr-color-primary-300)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
                           </td>
                         </tr>
                       }
@@ -1834,7 +1834,7 @@
                           <span class="text-[10px] text-[var(--pr-color-accents-5)]">{{ ind.actual_achieved_value_sum ?? 0 }}/{{ ind.target_value_sum ?? 0 }}</span>
                         </div>
                       </div>
-                      <button type="button" (click)="openLegacyReportModal(ind)" class="shrink-0 appearance-none rounded-md border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
+                      <button type="button" (click)="openReportAside(ind)" class="shrink-0 appearance-none rounded-md border border-[var(--pr-color-primary-300)] bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--pr-color-primary-400)] hover:bg-[var(--pr-color-primary-50)]">Report</button>
                     </div>
                   }
                 </div>

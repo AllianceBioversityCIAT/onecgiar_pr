@@ -126,7 +126,7 @@ export function buildCreateResultPayload(options: CreateResultPayloadOptions): R
     },
     number_target: indicator?.['number_target'],
     target_date: indicator?.['target_date'],
-    contributing_indicator: options.body.contribution_to_indicator_target,
+    contributing_indicator: resultTypeId === 6 ? 1 : options.body.contribution_to_indicator_target,
     contributing_center: mergeContributors(options.tocCentersSelected ?? [], options.otherCentersSelected ?? [], center => center?.code === OTHER_CENTERS_CODE),
     knowledge_product: resolveKnowledgeProduct(options, resultTypeId),
     toc_result_id: options.tocNode?.['toc_result_id'],

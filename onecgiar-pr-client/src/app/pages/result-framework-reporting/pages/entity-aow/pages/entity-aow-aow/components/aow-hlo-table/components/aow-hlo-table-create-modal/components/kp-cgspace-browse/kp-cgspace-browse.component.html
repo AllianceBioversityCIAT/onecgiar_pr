@@ -93,7 +93,18 @@
   </div>
 
   <!-- Content area for various states -->
-  <div class="mt-2 min-h-[160px]">
+  <div class="relative mt-2 min-h-[160px]" [attr.aria-busy]="busy()">
+    @if (busy()) {
+      <div
+        class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-lg bg-[color-mix(in_srgb,white_82%,transparent)]"
+        role="status"
+        aria-live="polite"
+        data-test="cgspace-retrieving">
+        <i class="pi pi-spin pi-spinner text-3xl text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
+        <p class="m-0 text-sm font-semibold text-[var(--pr-color-secondary-400)]">Retrieving metadata from CGSpace…</p>
+        <p class="m-0 max-w-[280px] text-center text-xs text-gray-500">Fetching the title and repository details for this item.</p>
+      </div>
+    }
     <!-- Loading State -->
     @if (status() === 'loading') {
       <div class="flex flex-col items-center justify-center py-10 gap-3 text-gray-500" data-test="cgspace-loading">
@@ -198,7 +209,7 @@
                     (click)="onSelect(item)">
                     @if (busy() && selectingItem() === (item.uuid || item.handle)) {
                       <i class="pi pi-spin pi-spinner text-[13px]"></i>
-                      <span>Selecting…</span>
+                      <span>Retrieving…</span>
                     } @else {
                       <span>Use this item</span>
                     }

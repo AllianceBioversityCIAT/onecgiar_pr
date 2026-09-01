@@ -136,8 +136,8 @@ export class ReportingEntryHubComponent {
   /** `null` = no explicit user choice yet (nothing stored) → falls back to `defaultCollapsed`. */
   private readonly userCollapsed = signal<boolean | null>(this.readStoredCollapsed());
 
-  /** `REH-R-12`: collapsed by default for pure viewers (no reporting right AND no center). */
-  private readonly defaultCollapsed = computed(() => !this.canReportW1W2() && this.myCentersCount() === 0);
+  /** Default collapsed for all users by default for now. */
+  private readonly defaultCollapsed = computed(() => true);
 
   readonly collapsed = computed(() => this.userCollapsed() ?? this.defaultCollapsed());
 

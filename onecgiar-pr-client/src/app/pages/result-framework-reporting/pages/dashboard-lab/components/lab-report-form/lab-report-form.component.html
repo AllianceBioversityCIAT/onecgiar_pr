@@ -1,7 +1,16 @@
 <!-- Layout follows the Claude Design "Report result" panel: one section heading, full-width fields
      stacked with generous spacing, every multi-value field showing its selection as removable
      chips underneath, and a sticky footer that counts down what is still missing. -->
-<form class="flex flex-col gap-[22px] flex-1 min-h-0" (ngSubmit)="createResult()">
+<form class="relative flex flex-col gap-[22px] flex-1 min-h-0" (ngSubmit)="createResult()" [attr.aria-busy]="creatingResult()">
+  @if (creatingResult()) {
+    <div
+      class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2.5 bg-[color-mix(in_srgb,white_80%,transparent)]"
+      role="status"
+      aria-live="polite">
+      <i class="pi pi-spin pi-spinner text-[1.75rem] text-[var(--pr-color-primary-300)]" aria-hidden="true"></i>
+      <span class="text-[13.5px] font-semibold text-[var(--pr-color-secondary-400)]">Creating result…</span>
+    </div>
+  }
   @if (!currentResultIsKnowledgeProduct()) {
     <h3 class="m-0 text-[19px] font-bold leading-tight text-[var(--pr-color-secondary-400)]">The result</h3>
   }
@@ -95,6 +104,11 @@
                 <div class="flex items-center gap-2 py-1 text-sm font-semibold text-emerald-800">
                   <i class="pi pi-spin pi-spinner text-emerald-600"></i>
                   <span>Retrieving metadata from CGSpace…</span>
+                </div>
+              } @else if (creatingResult()) {
+                <div class="flex items-center gap-2 py-1 text-sm font-semibold text-emerald-800">
+                  <i class="pi pi-spin pi-spinner text-emerald-600"></i>
+                  <span>Creating result…</span>
                 </div>
               } @else {
                 <h4 class="m-0 text-sm font-bold text-gray-900 leading-snug">
@@ -238,7 +252,7 @@
         [ngModelOptions]="{ standalone: true }"
         (ngModelChange)="patch('contribution_to_indicator_target', $event)"
         [isStatic]="true"
-        [disabled]="creatingResult()"
+        [disabled]="creatingResult() || currentResultIsKnowledgeProduct()"
         name="contribution" />
     </div>
   </div>
@@ -438,7 +452,7 @@
           class="inline-flex appearance-none items-center gap-2 rounded-[10px] border-0 bg-[var(--pr-color-primary-300)] px-5 py-2.5 text-[13.5px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#e7e1fb] disabled:text-[#b3a4e8] cursor-pointer">
           {{ creatingResult() ? 'Creating…' : 'Create and continue' }}
           @if (creatingResult()) {
-            <span class="material-icons-round animate-spin text-[16px]">progress_activity</span>
+            <i class="pi pi-spin pi-spinner text-[16px]" aria-hidden="true"></i>
           }
         </button>
       }
