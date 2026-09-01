@@ -99,12 +99,26 @@ Estar commiteado antes del bump del sello **no** significa estar en el build. Me
 
 | Commit | Hora | ¿En v16? | Cómo se comprobó |
 |---|---|---|---|
-| `03ae798eb` botón Save | 08:36 | ✅ **sí** | `get readOnly()` en `chunk-QO6CGUC7.js` |
-| `7c0359753` §6 escalamiento bilateral | 09:09 | ❌ **no** | `showScalingStudies` no aparece en ningún chunk |
-| `491835a59` §7 `rd-partners` | 09:19 | ❌ **no** | el servicio P22 sigue con campo plano; el único getter es del gemelo |
+| Commit | Hora | ¿Ancestro del sello 16? | ¿En v16? |
+|---|---|---|---|
+| `03ae798eb` botón Save | 08:36 | sí | ✅ **sí** — `get readOnly()` en `chunk-QO6CGUC7.js` |
+| `7c0359753` §6 escalamiento bilateral | 09:09 | **sí** | ❌ **no** — `showScalingStudies` en 0 de 59 chunks |
+| `491835a59` §7 `rd-partners` | 09:19 | **no** | ❌ no, y es lo esperado |
 
-👉 **El build v16 de Cristian se cortó entre las 08:37 y las 09:09.** §6 y §7 **no se pueden verificar
-todavía** — hay que esperar al v17.
+🛑 **La fila del medio es una CONTRADICCIÓN, y es el dato importante.** El sello 16 lo pone
+`7d122002a` (09:16), y `7c0359753` (09:09) **es ancestro suyo** — comprobado con
+`git merge-base --is-ancestor`, no por la hora. Un build limpio marcado 16 **tiene que** contener ese
+código. No lo contiene. 👉 **El artefacto desplegado no corresponde a ningún commit de la rama**:
+lleva el sello de uno y el código de otro momento. Encaja con lo que dijo Cristian, que subió una
+versión a mano para levantar el ambiente.
+
+⚠️ **Que §7 falte NO prueba nada** — no es ancestro del sello, así que su ausencia es exactamente lo
+que se espera de un build correcto. La anomalía es solo §6. Cuidado con apilar las dos ausencias como
+si fueran dos pruebas: es una.
+
+👉 **Sobre este build no vale ninguna deducción por horas de commit**, ni por ancestría. Solo vale
+mirar el artefacto (cliente) o una prueba que solo el código nuevo pueda producir (server). §6 y §7
+quedan sin verificar hasta el v17.
 
 ### §2 · El Lead contact person se borraba solo al guardar · `54d52b365`
 
