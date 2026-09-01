@@ -58,3 +58,10 @@
 - **Files:** program-overview `.ts/.html/.spec.ts/.oah-hero.spec.ts`, `reporting-burndown.ts` (docstring), 2 folder CLAUDE.md re-stamped.
 - **Verification:** folder 21/643 green; lint + tsc clean.
 - Gate auto-approved (pre-approved mode) → continue to OAH-T-6 (Leader-run live pass, MRF T-8 precedent).
+
+### OAH-T-6 — Verification: live pass — **[~] BLOCKED (environment)** (2026-09-01)
+
+- **Pre-check failed:** the local NestJS (port 3400, process up, HTTP 200 on root) returns **500 `connect ETIMEDOUT`** on `GET /api/results-framework-reporting/get/science-programs/progress` — the shared dev MySQL is unreachable from the backend (likely VPN/network; retried after 20s, same). The SP list never loads, `selected()` stays null, `app-program-overview` never mounts — NO checklist row is executable. Diagnosis chain recorded: client served fine → shell renders → programs:0 → endpoint probe with the page's own token → 500 ETIMEDOUT server-side.
+- Not attributable to this spec: T-1..T-5 touched no data path; the failure is upstream of the component entirely.
+- **Pending checklist (unchanged, from tasks.md):** cold-load skeleton trace; rail == sum of rows (SP01); remaining-first order; 1%-visible bars; three-path navigation; CTA + Only-pending restore; R-2 visual reflow; contrast; complete-state (dev-data check first); all-zero-target row edge (T-4 advisory).
+- Awaiting user: restore DB connectivity (VPN?), then the Leader re-runs the full pass.

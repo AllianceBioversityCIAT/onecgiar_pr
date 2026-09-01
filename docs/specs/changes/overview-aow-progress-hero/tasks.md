@@ -46,7 +46,7 @@
 - **DoD:** attrs asserted; docs stamped.
 
 ### `OAH-T-6` — Verification: live pass + record
-- **Status:** `[ ]` · tests · **S** · Depends: T-1..T-5
+- **Status:** `[~]` (blocked: dev DB unreachable from local backend — connect ETIMEDOUT) · tests · **S** · Depends: T-1..T-5
 - **Scope:** On dev (embedded browser): cold-load skeleton trace spanning the load window (no partial sums); rail == sum of rows on SP01; remaining-first order; bar visible at 1% data (tolerance: computed widths, NOT the mockup's rounded ints — A-18); row/button/chip navigation lands on `?tocView=byAow&tocAow=` (buckets → `?tocView=aows`); CTA lands on Reporting with Only-pending restored ON; R-2 visual reflow check of neighbouring cards (the presence-assertion gap, B-10); contrast sanity (T6-class); complete-state: FIRST check dev for a fully-reported AoW — if none exists, record NOT-RUN (unit OAH-TEST-4 owns the behavior; no signal simulation — B-11). Record every row PASS/FAIL/NOT-RUN in `execution.md`.
 - **Covers:** every jsdom-blind clause routed here (requirements §8), R-1/R-3/R-4 end-to-end, R-1 focus/no-reload live half.
 - **Verification:** the recorded checklist. **Fails if:** any polled tick shows a sum that later changes, or the bar is invisible at SP01 data. **Disqualifier:** a single-tick observation is not a trace; a rebuild race invalidates the run — rerun; unreproducible = inconclusive, never PASS.
