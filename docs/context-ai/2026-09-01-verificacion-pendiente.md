@@ -184,6 +184,20 @@ En los tres siguientes **la prueba es la comparación**. Ver solo el de 2026 no 
 
 ## Lo que NO se puede verificar todavía, y por qué
 
+🛑 **El estado del ambiente NO se mide con la home.** `prtest` puede responder **200** y aun así no
+dejarte entrar: el front son ficheros estáticos que se sirven por otra ruta. **Se mide contra
+`/api/results/get/all` con token** — y hasta que eso devuelva **200**, la verificación no empieza.
+
+> Medido el 1-sep a las 10:2x: `prtest` = **200**, `clarisatest-web` = **200**, pero
+> `/api/results/get/all` = **403 con token y sin token**, y el cuerpo es un
+> `<TITLE>403 Forbidden</TITLE>` de **Apache**, no un JSON de Nest. Es decir: hay servidor detrás
+> (ya no da `000`), pero la capa que está delante rechaza todo, incluido un endpoint conocido-bueno
+> con credencial válida. **El front carga y no hay login ni guardado.** Sigue siendo de Cristian/IT.
+
+⚠️ **Van dos falsos positivos en un día**, así que conviene desconfiar de la sonda fácil: éste
+(`prtest = 200` con la API cerrada) y el de la mañana, en que `prms.cgiar.org` daba `000`
+simplemente porque **ese dominio no existe**, no porque estuviera caído.
+
 - **Nada de lo anterior está desplegado.** Todo vive en `performance-refactor`; el sello v16 solo
   llega a prtest cuando esa rama se despliegue.
 - **Lo que depende del backend:** §4 (Capacity Sharing) y §10 (nombre de proyecto) son cambios de
@@ -192,7 +206,9 @@ En los tres siguientes **la prueba es la comparación**. Ver solo el de 2026 no 
   (la regla del desplegable de innovaciones QA-ed va a cambiar). No verificar ni reportar nada de
   ahí.
 - **Dos mediciones que quedaron pendientes por la caída:**
-  - el `in_qa` de *global-parameters*;
+  - el `in_qa` de *global-parameters* — **medirlo con token igualmente**: a nivel de la aplicación
+    el endpoint es público, pero eso es irrelevante mientras el proxy no deje llegar la petición,
+    y sin token no se distingue un rechazo del proxy de una respuesta real;
   - el **404 de `existing-result-contributors`** — se descartó que fuera de rama o de rutas
     (está declarado y montado en las cuatro ramas), así que apunta al build desplegado o a algo de
     ejecución. **Hay que volver a medirlo con el ambiente arriba.**
