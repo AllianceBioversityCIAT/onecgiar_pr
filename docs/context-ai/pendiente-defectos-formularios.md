@@ -188,19 +188,65 @@ exponga datos. Si alguien la reclama, el control ya existe en `evidence-item.com
 replica; y el valor por defecto ya está decidido por la base de datos, así que la única pregunta
 abierta sería si debe bloquear el guardado.
 
-## 🔴 LOTE 5 — Capacity Sharing, Policy Change y Knowledge Product
+## LOTE 5 — Capacity Sharing, Policy Change y Knowledge Product · verificado el 1-sep
 
-Archivos: `pages/bilateral/components/section-type-specific/**` (excepto `type-innovation-use/**`,
-congelado) · `onecgiar-pr-server/src/api/results/results-knowledge-products/**`
+Archivos: `pages/bilateral/components/section-type-specific/**` (🛑 **zona de `bila`, y está dentro
+de ese archivo ahora mismo**) · `onecgiar-pr-server/src/api/results/result.repository.ts` ·
+`onecgiar-pr-server/src/api/results/results-knowledge-products/**`
 
-1. **La sub-pregunta de grado sale sin título en el bilateral de Capacity Sharing**, igual que el
-   defecto ya arreglado en el formulario normal bajo P2-3385. Replicar cómo quedó allí.
-2. **En el bilateral de Policy Change queda un importe en USD colgado de un tipo de política que ya no
-   aplica**: se cambia el tipo y el importe sigue guardado aunque su campo desaparece.
-3. **El revisor ve "Length of training" sin respuesta** en Capacity Sharing que sí están contestados.
-   Confirmar dónde se guarda de verdad antes de tocar el drawer.
-4. **El estudio MELIA elegido no se puede quitar nunca**: se cambia "Is this knowledge product a MELIA
-   Product?" a No y el update descarta el borrado (backend nuestro).
+🛑 Nada de este lote se verificó en navegador: el ambiente seguía caído todo el 1-sep.
+
+### ⏸ 1 y 2 — SIN TOCAR, zona de otra sesión
+
+1. La sub-pregunta de grado sin título en el bilateral de Capacity Sharing (replicar P2-3385).
+2. El importe en USD que queda colgado de un tipo de política que ya no aplica, en el bilateral de
+   Policy Change.
+
+Los dos viven en `section-type-specific/**`, que es de `bila` y está en uso. No se entra.
+
+### ✅ 3 — Arreglado: el revisor veía TODO el bloque de Capacity Sharing en blanco
+
+El reporte era **más estrecho que el defecto**: decía "Length of training sin respuesta", y en
+realidad se vaciaba la sección entera, respuestas incluidas.
+
+`getCapacitySharingBilateralResultById` hacía `INNER JOIN` de los dos catálogos, y los dos FKs son
+opcionales (`nullable: true` en `ResultsCapacityDevelopments.capdev_delivery_method_id` y
+`.capdev_term_id`). Con uno contestado y el otro no, el join tira la fila entera → la consulta
+devuelve `[]` → el cajón recibe un `resultTypeResponse` vacío y `cap-sharing-content` pinta todos los
+campos vacíos. Nada distingue eso de "no contestó nada", que es justo como se leyó.
+
+Arreglo: `LEFT JOIN` de los catálogos, manteniendo el `INNER` de `results_capacity_developments`
+(sin registro de capdev no hay nada que mostrar). Es el patrón que ya usa
+`getInnovationDevBilateralResultById` dos funciones más abajo. Commit **`4b07debbe`**, 23/23 en el
+spec del repositorio, uno de ellos falla contra la consulta anterior. Documentado en **P2-3547**.
+
+⚠️ **Gemelo idéntico, NO desarrollado:** `getPolicyChangeBilateralResultById`, en el mismo archivo,
+tiene el mismo `INNER JOIN` sobre `clarisa_policy_stage` y `clarisa_policy_type`, con la misma
+consecuencia para el bloque de Policy Change del cajón. Mismo arreglo de una palabra. No era el
+defecto reportado y no amplío alcance por iniciativa propia (regla 6): queda planteado.
+⚠️ Y ninguna de las cinco `get*BilateralResultById` filtra `is_active` de la tabla del tipo salvo la
+de Knowledge Product — puede devolver una fila desactivada. Eso **sí** cambia comportamiento, así que
+menos aún se toca sin pedirlo.
+
+### ✅ 4 — Arreglado: el estudio MELIA elegido no se podía quitar nunca
+
+Un `undefined` donde tocaba un `null`. En `ResultsKnowledgeProductsService.upsert`, la rama
+`!isMeliaProduct` limpiaba sus tres hermanos con `null` pero ponía `tocMeliaStudyId = undefined`, y
+el `update()` de TypeORM **omite las propiedades undefined del SQL**: la columna nunca se escribía. Y
+el write hacía `?? undefined`, que colapsa `null` en `undefined`, así que el segundo camino al mismo
+defecto —vaciar el desplegable manteniendo el "Yes"— tampoco persistía.
+
+Arreglo: pasar el valor tal cual, para que los tres estados sigan distinguiéndose — `undefined` = no
+lo mandaron, no tocar la columna (el formulario P22 **no tiene** ese desplegable y nunca manda la
+clave); `null` = borrar; valor = guardar. Un `null` a ciegas habría borrado datos de P22.
+Commit **`2d84051d4`**, 10/10 en el spec, dos casos fallan contra el código anterior y dos son
+candados de regresión. Documentado en **P2-3548**.
+
+✅ **Frontera comprobada antes de tocarlo**, porque el campo se llama "toc": **no es dominio de ToC**.
+Ninguna función de validación lee `toc_melia_study_id` — el green check P25 de esa sección lee
+`is_melia` y `ost_melia_study_id` (`1762528725798-createValidtionP25.ts:1294-1300`) — y no hay
+referencias fuera del módulo de Knowledge Product. Es lógica de servicio sobre un campo de KP cuyas
+opciones vienen de una lista de ToC.
 
 ## 🧊 CONGELADO — Innovation Use (solo reportar, NO tocar)
 
