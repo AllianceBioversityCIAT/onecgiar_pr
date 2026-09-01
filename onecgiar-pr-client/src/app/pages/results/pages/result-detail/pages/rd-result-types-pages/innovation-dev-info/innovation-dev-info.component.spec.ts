@@ -1209,6 +1209,25 @@ describe('InnovationDevInfoComponent', () => {
       });
     });
 
+    /**
+     * 🛑 OPEN DEFECT, seen on prtest 1-Sep-2026 with result 8560 (W-20260901-47) — NOT reproduced here.
+     *
+     * On screen the field stayed EMPTY while `currentResult.lead_contact_person` held a value, the
+     * gate returned true, and calling `applyInnovationDeveloperAutoFill()` by hand filled it
+     * correctly. So the method, the gate and the data are each fine; what fails is WHEN it runs.
+     *
+     * ⚠️ The first guess — "the contact lands after the section GET" — is NOT confirmed. Written as a
+     * test it PASSES against this same broken code, because changing the signal re-runs
+     * `OnChangePortfolio`, which reloads the section and re-applies the fill. A test that passes
+     * against the broken code is a test written to the author's assumption, so it was removed rather
+     * than kept as false comfort.
+     *
+     * Do NOT change the ordering on the strength of that guess. Next step is a browser session with
+     * the contact now stored on 8560: instrument when the GET's `next` fires against when the signal
+     * carries the contact, and only then write the case that reproduces it.
+     */
+
+
     describe('phase 2025 and earlier', () => {
       beforeEach(() => gate(false));
 
