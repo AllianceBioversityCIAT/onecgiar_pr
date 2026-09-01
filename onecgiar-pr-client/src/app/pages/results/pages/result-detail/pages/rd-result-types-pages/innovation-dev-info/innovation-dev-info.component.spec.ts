@@ -1224,7 +1224,17 @@ describe('InnovationDevInfoComponent', () => {
      *
      * Do NOT change the ordering on the strength of that guess. Next step is a browser session with
      * the contact now stored on 8560: instrument when the GET's `next` fires against when the signal
-     * carries the contact, and only then write the case that reproduces it.
+     * carries the contact — and cross-check whether the GATE changes value between load and render,
+     * which is the one of the three that has not been timed yet.
+     *
+     * ⚠️ A SECOND case was written here and also removed, and this is why, so nobody writes it again
+     * in three months and watches it go red: "a section reload must not discard what the reporter
+     * typed". It DOES fail — but against a pre-existing, already-accepted behaviour, not against this
+     * story. Changing `currentResultSignal()` re-runs `OnChangePortfolio`, which reloads the section
+     * and replaces `innovationDevInfoBody` with the server's copy, dropping unsaved edits. That is
+     * the same known side effect recorded for the AI Review reload in
+     * `docs/context-ai/2026-09-01-verificacion-pendiente.md` §3. Keeping it here would have hung
+     * somebody else's defect on this ticket and left CI red for every session.
      */
 
 
