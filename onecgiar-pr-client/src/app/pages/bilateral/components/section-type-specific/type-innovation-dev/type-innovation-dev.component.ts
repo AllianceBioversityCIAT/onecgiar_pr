@@ -8,6 +8,7 @@ import { BilateralExpandableStateService } from '../../../services/bilateral-exp
 import { InnovationControlListService } from '../../../../../shared/services/global/innovation-control-list.service';
 import { CustomFieldsModule } from '../../../../../custom-fields/custom-fields.module';
 import { WordCounterService } from '../../../../../shared/services/word-counter.service';
+import { ReportingDesignYear } from '../../../../../shared/enum/reporting-design-year.enum';
 
 const SECTION_NAME = 'type-specific';
 
@@ -85,6 +86,34 @@ export class TypeInnovationDevComponent implements OnInit {
 
   get isReadyForScalingStudies(): boolean {
     return Number(this.body.innovation_readiness_level_id) >= SCALING_STUDIES_READINESS_THRESHOLD;
+  }
+
+  /**
+   * P2-3265 (epic P2-3243) — whether the "Have any studies been conducted to inform the innovation
+   * scaling strategy design…" question renders on the BILATERAL surface.
+   *
+   * From the 2026 reporting phase the question is dropped **entirely, at every readiness level**, not
+   * only from level 6 up: the ticket's own table pairs "< 6: not applicable (never shown)" with
+   * ">= 6: remove", and the union covers 0-9. Ángel Jarrín confirmed the `>= 6` reading on the ticket
+   * on 26-Aug-2026, and Yeck restated the resulting per-form rule on 27-Aug-2026 ("Innovation
+   * Development, from the 2026 round: every level -> question gone completely").
+   *
+   * ⚠️ Gated on the reporting phase YEAR (`BilateralCreationService.reportingYear`, resolved from the
+   * result's own version), never on `isP25()`: the P25 portfolio also holds 2025-phase results, so a
+   * portfolio gate would strip the question from a 2025 result — which the epic's governing note
+   * (Ángel Jarrín, 23-Aug-2026) forbids absolutely. Same axis and same threshold constant as the
+   * W1/W2 surface's `showScalingStudiesQuestion()`.
+   *
+   * A result whose phase year has not resolved yet is treated as the current phase and the question
+   * stays hidden — the bilateral creator only ever opens results of the running cycle. Same reasoning
+   * as `showInnovationLinkQuestion()` in the sibling `type-innovation-use` component.
+   */
+  get showScalingStudies(): boolean {
+    const year = this.creationService.reportingYear();
+    if (year == null || year >= ReportingDesignYear.InnovationDevFormReduction) {
+      return false;
+    }
+    return this.isReadyForScalingStudies;
   }
 
   ngOnInit(): void {

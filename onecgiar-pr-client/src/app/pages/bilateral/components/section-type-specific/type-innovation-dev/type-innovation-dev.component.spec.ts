@@ -37,7 +37,9 @@ describe('TypeInnovationDevComponent', () => {
       fieldStatus: signal<Record<string, string>>({}),
       schedulePayload: jest.fn()
     };
-    creation = { currentResultId: signal<number | null>(123) };
+    // `showScalingStudies` reads `reportingYear()`; without the key every test in this file fails
+    // as "is not a function". Default 2025 so the pre-2026 behaviour is what the legacy tests assert.
+    creation = { currentResultId: signal<number | null>(123), reportingYear: signal<number | null>(2025) };
     expandableState = {
       getShowAllFields: jest.fn().mockReturnValue(false),
       setShowAllFields: jest.fn()
@@ -213,6 +215,39 @@ describe('TypeInnovationDevComponent', () => {
       expect(component.isReadyForScalingStudies).toBe(false);
       component.body = {};
       expect(component.isReadyForScalingStudies).toBe(false);
+    });
+
+    /**
+     * P2-3265 — the phase gate, on the reporting phase YEAR and never on the portfolio.
+     * `isReadyForScalingStudies` stays the pre-2026 level rule; `showScalingStudies` is what the
+     * template asks.
+     */
+    it('showScalingStudies keeps the level rule for phases up to 2025', () => {
+      build();
+      component.body = { innovation_readiness_level_id: 17 };
+      creation.reportingYear.set(2025);
+      expect(component.showScalingStudies).toBe(true);
+      component.body = { innovation_readiness_level_id: 16 };
+      expect(component.showScalingStudies).toBe(false);
+    });
+
+    it('showScalingStudies is false from the 2026 phase on, at EVERY readiness level', () => {
+      build();
+      creation.reportingYear.set(2026);
+      for (const level of [16, 17, 20]) {
+        component.body = { innovation_readiness_level_id: level };
+        expect(component.showScalingStudies).toBe(false);
+      }
+      creation.reportingYear.set(2027);
+      component.body = { innovation_readiness_level_id: 17 };
+      expect(component.showScalingStudies).toBe(false);
+    });
+
+    it('showScalingStudies treats an unresolved phase year as the current phase and hides it', () => {
+      build();
+      creation.reportingYear.set(null);
+      component.body = { innovation_readiness_level_id: 17 };
+      expect(component.showScalingStudies).toBe(false);
     });
   });
 
@@ -465,6 +500,51 @@ describe('TypeInnovationDevComponent', () => {
       const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
       expect(payload.innovation_collaborators).toBe('Ada Lovelace (ada@x.org)');
       expect(payload.short_title).toBe('Drought tolerant beans');
+    });
+
+    /**
+     * P2-3265 — asserts on the RENDERED question, not on the getter. A getter-only assertion passes
+     * even if the template still reads the old flag, which is exactly how this surface was missed
+     * when the W1/W2 and Innovation Use forms were changed.
+     */
+    it('does NOT render the scaling-studies question for a 2026 result, at a level where 2025 shows it', () => {
+      creation.reportingYear.set(2026);
+      render();
+      component.body = { innovation_readiness_level_id: 17 };
+      toggleButton().click();
+      fixture.detectChanges();
+
+      const scaling = allFields().find(f => typeof f.label === 'string' && f.label.startsWith('Have any studies been conducted'));
+      expect(scaling).toBeUndefined();
+    });
+
+    it('still renders it for a 2025 result at the same level — previous phases are untouched', () => {
+      creation.reportingYear.set(2025);
+      render();
+      component.body = { innovation_readiness_level_id: 17 };
+      toggleButton().click();
+      fixture.detectChanges();
+
+      const scaling = allFields().find(f => typeof f.label === 'string' && f.label.startsWith('Have any studies been conducted'));
+      expect(scaling).toBeDefined();
+    });
+
+    /**
+     * The PO's epic note (Ángel Jarrín, 23-Aug-2026) is explicit: "Remove" never means delete the data.
+     * The question stops being asked, but the stored answer must keep travelling in the payload so a
+     * value written in an earlier phase is never blanked by a save from the 2026 form.
+     */
+    it('keeps the stored scaling answer in the payload even when the question is hidden', () => {
+      creation.reportingYear.set(2026);
+      render();
+      component.body.innovation_readiness_level_id = 17;
+      component.body.has_scaling_studies = true;
+      component.body.scaling_studies_urls = ['https://example.org/study'];
+
+      component.onSave();
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect(payload.has_scaling_studies).toBe(true);
+      expect(payload.scaling_studies_urls).toEqual(['https://example.org/study']);
     });
   });
 });
