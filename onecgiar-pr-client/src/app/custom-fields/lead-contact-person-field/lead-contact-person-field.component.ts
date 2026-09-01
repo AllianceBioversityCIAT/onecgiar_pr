@@ -27,8 +27,16 @@ export class LeadContactPersonFieldComponent implements OnChanges {
    */
   @Input() readOnly = false;
   isContactLocked: boolean = false;
-  /** True while the input still holds a name loaded from the result rather than typed. */
-  private queryCameFromHydration = false;
+  /**
+   * True while the input still holds a name loaded from the result rather than typed.
+   *
+   * Public because the save guard in the consuming section needs the same distinction this field
+   * already makes in `onContactBlur`: only a name the user *typed* can be "not found". A name
+   * hydrated from the result is legitimate data — every result created before the AD link existed
+   * (`lead_contact_person_id`, migration 1751462633282) stores the contact as free text with no
+   * directory match, as do results reported through the W3/Bilateral API.
+   */
+  queryCameFromHydration = false;
 
   private readonly fieldsManager = inject(FieldsManagerService);
 
@@ -116,6 +124,7 @@ export class LeadContactPersonFieldComponent implements OnChanges {
         if (this.userSearchService.selectedUser && this.userSearchService.selectedUser.display_name === this.body.lead_contact_person) {
           this.isContactLocked = true;
           this.userSearchService.hasValidContact = true;
+          this.queryCameFromHydration = true;
         } else {
           this.userSearchService.searchQuery = this.body.lead_contact_person;
           this.isContactLocked = false;
