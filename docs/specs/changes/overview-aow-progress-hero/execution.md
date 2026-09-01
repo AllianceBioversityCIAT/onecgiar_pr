@@ -48,3 +48,13 @@
 - **ADVISORY (recorded):** (1) **forward pointer to T-5:** bar `aria-label` sits on a roleless span — most screen readers ignore it; add `role="img"` when doing N-1's text-alternative clause; (2) **forward pointer to T-6:** all-zero-target row (`total===0`) renders "0 KPIs remaining" + active Report on an empty track — confirm live whether such rows reach the hero; (3) "1 KPIs remaining" pluralization — faithful to the spec string, awkward in field; recorded, dies here; (4) minor: structural param type narrower than call sites — consistent with sibling, recorded.
 - **Verification:** program-overview 3/157 green (pinned incl.); folder 21/644 green; tsc + dev build + lint clean.
 - Gate auto-approved (pre-approved mode) → continue to OAH-T-5.
+
+### OAH-T-5 — A11y + docstring + docs — **PASS** (2026-09-01, attempt 2/2 — the spec's ONE rework round)
+
+- **Attempt 1 → Reviewer FAIL (verbatim in short):** removing dead `percentOf` deleted two tests; the parent-sort deletion was clean (pinned at host) but the zero-total invariant ("0%, never NaN") lost its ONLY regression pin while the replacement comment claimed "honest at 1%" covered it — that fixture never exercises total:0. Violated: T-5 scope (dead code ≠ live invariant's pin) + "a claim in a comment is not coverage".
+- **Attempt 2 (fix-only):** three assertions added inside "honest at 1%" (`{reported:0,total:0}` fixture → `percentOfRich`/`completeSegmentWidth`/`inProgressSegmentWidth` all 0); comment rewritten to point at the real carrier and to state the parent-sort half has no successor here.
+- **Scoped re-review: PASS with mutation evidence** — guard removed ⇒ NaN / NaN / Infinity, all three assertions fail; delta confined to the two spots; the hero spec's 16 tests unchanged in name/order; protected tests intact; everything from round 1 stands (role="img", non-vacuous enumeration, DD-1 docstring caller map verified against the real delegation, CLAUDE.md re-stamps).
+- **ADVISORY (recorded, non-gating):** accessible-name computation counts `aria-hidden` icon text; the mouse-only row `<div>` is preserved deliberately per OAH-N-1.
+- **Files:** program-overview `.ts/.html/.spec.ts/.oah-hero.spec.ts`, `reporting-burndown.ts` (docstring), 2 folder CLAUDE.md re-stamped.
+- **Verification:** folder 21/643 green; lint + tsc clean.
+- Gate auto-approved (pre-approved mode) → continue to OAH-T-6 (Leader-run live pass, MRF T-8 precedent).

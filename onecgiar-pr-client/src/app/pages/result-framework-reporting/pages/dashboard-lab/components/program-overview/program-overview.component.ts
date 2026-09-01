@@ -559,10 +559,6 @@ export class ProgramOverviewComponent {
     return Math.round((approved / total) * 100);
   });
 
-  percentOf(row: AowProgressRow): number {
-    return row.total ? Math.round((row.done / row.total) * 100) : 0;
-  }
-
   /**
    * `REH-R-7`/`REH-AC-15`: the row's inline Report button. Stops propagation so the row's own
    * `(click)="openAow.emit(row.code)"` does not ALSO fire — otherwise every click emits twice.

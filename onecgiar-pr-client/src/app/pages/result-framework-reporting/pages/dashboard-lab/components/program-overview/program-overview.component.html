@@ -399,8 +399,12 @@
               </div>
 
               <!-- Segmented status bar: widths COMPUTED IN TS from KPI counts (never template
-                   arithmetic, never percent-of-percent — OAH-R-3 "honest at 1%"). -->
+                   arithmetic, never percent-of-percent — OAH-R-3 "honest at 1%"). `role="img"`
+                   (OAH-N-1, T-4 Reviewer forward pointer): a roleless `<span>` is not exposed as a
+                   text-alternative-bearing element by most screen readers, so its `aria-label`
+                   would otherwise go unannounced. -->
               <span
+                role="img"
                 class="flex h-[12px] overflow-hidden rounded-[6px] bg-[var(--pr-border)]"
                 [attr.title]="rowBarTitle(row)"
                 [attr.aria-label]="rowBarTitle(row)">

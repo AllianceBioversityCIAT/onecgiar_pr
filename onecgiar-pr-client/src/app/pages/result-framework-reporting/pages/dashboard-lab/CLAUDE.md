@@ -1,6 +1,6 @@
 # dashboard-lab
 
-**Verified:** 2026-08-30 · branch qa-development-2026 · 3366453bc
+**Verified:** 2026-09-01 · branch qa-development-2026 · 52ddf00af
 
 ## Qué es
 El shell de un Science Program. Un solo componente que sirve varias vistas según `rfrView`, y que es
@@ -71,6 +71,13 @@ de TS): trátalo como host, no como pantalla.
   of Work" → `setPlannedBrowseView('aows')`. Recetas compartidas: Report = `.pr-row-action`
   (32px/14px/borde -300, la desviación WCAG), link 30×30 material `link`, categoría violeta
   `#6b46e51f`, chip de centro neutro, "Show more" (regla UI §4.16 — nunca "Read more").
+
+## Añadido 2026-09-01 (spec overview-aow-progress-hero)
+- `program-overview`'s "Progress by area of work" section is now the Overview HERO (moved right
+  after "About this program"). Fed by two NEW host bindings: `[richRows]` (`overviewAowProgressRich`
+  computed) and `[continueReporting]` output (`continueReporting()` = `setOnlyPending(true)` +
+  navigate to Reporting with `?tocView=aows`). The thin `aowProgress`/`xcutProgress` inputs are
+  untouched (DD-4).
 
 ## Trampa: tokens fantasma (2026-08-31)
 - ⚠️ **Un `var(--pr-*)` sin definición pinta transparente sin ningún error** — `--pr-surface-ground`

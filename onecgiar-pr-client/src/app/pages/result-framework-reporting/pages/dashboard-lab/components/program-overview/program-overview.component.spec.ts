@@ -209,14 +209,15 @@ describe('ProgramOverviewComponent', () => {
     expect(component.segmentWidth(component.statusSegments()[0])).toBe(0);
   });
 
-  it('lists areas of work least complete first when parent sorts that way', () => {
-    const percents = component.aowProgress().map(row => component.percentOf(row));
-    expect(percents[0]).toBeLessThanOrEqual(percents[1]);
-  });
-
-  it('treats an area of work with no planned indicators as 0%', () => {
-    expect(component.percentOf({ code: 'AOW09', name: 'Empty', done: 0, total: 0 })).toBe(0);
-  });
+  // `percentOf(row: AowProgressRow)` (the two tests formerly here — parent-sort order and the
+  // zero-total case) was REMOVED as dead code under `changes/overview-aow-progress-hero` OAH-T-5:
+  // the old §8 rows it fed were rebuilt onto `richRows`/`percentOfRich`. The parent-sort order
+  // invariant has no successor test (order itself is asserted at the host, not here). The
+  // zero-total invariant ("no planned indicators reads 0%, not NaN") IS still pinned — on
+  // `percentOfRich`/`completeSegmentWidth`/`inProgressSegmentWidth` — by the zero-total-row
+  // assertions inside `program-overview.oah-hero.spec.ts`'s "honest at 1%" test. The thin
+  // `aowProgress` input itself is untouched (DD-4) — only this now-unreferenced per-row helper is
+  // gone.
 
   // The former "results by indicator category" describe block (W1/W2 own-results single-series
   // card: categoryWidth, its four-item-cap/no-cap coverage, its empty state, its aria-label and

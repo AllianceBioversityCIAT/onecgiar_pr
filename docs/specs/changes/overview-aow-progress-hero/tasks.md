@@ -39,7 +39,7 @@
 - **DoD:** green; folder suites green.
 
 ### `OAH-T-5` — A11y + docstring + docs
-- **Status:** `[ ]` · client · **S** · Depends: T-3, T-4
+- **Status:** `[x]` · client · **S** · Depends: T-3, T-4
 - **Scope:** Accessible names/focus rings on all new controls; bar text alternative; `reporting-burndown.ts` scope docstring amended (Overview hero now a sanctioned caller — B-14); folder `CLAUDE.md`s re-stamped same-commit; dead code from old §8 rows removed. Skills: `angular-developer`.
 - **Covers:** N-1 attribute side, N-2 (no new HTTP — reviewer note), R-3 docstring BUT-half.
 - **Verification:** targeted jest (enumerate new buttons → each has an accessible name) + lint. **Fails if:** any new control lacks a name. Contrast NOT provable here — T-6's row.

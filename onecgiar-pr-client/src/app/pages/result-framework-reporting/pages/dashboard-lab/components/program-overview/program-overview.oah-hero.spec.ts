@@ -201,6 +201,54 @@ describe('ProgramOverviewComponent — OAH hero (rail + chips + skeletons + empt
     expect(emissions).toBe(1);
   });
 
+  /**
+   * OAH-TEST-5 (`changes/overview-aow-progress-hero`, tasks.md OAH-T-5) — every interactive
+   * control the hero renders (CTA, Report, open icon, View results, outcome chips) carries an
+   * accessible name; the segmented bar announces via `role="img"` (T-4 Reviewer forward pointer —
+   * a roleless `<span>`'s `aria-label` is otherwise ignored by most screen readers); the summary
+   * ring SVG stays decorative (`aria-hidden`), its figures exposed as plain text instead.
+   */
+  it('every hero control has an accessible name, the bar announces via role="img", and the ring SVG is aria-hidden (OAH-N-1)', () => {
+    const completeRow: OverviewAowProgressRowRich = {
+      code: 'AOW03',
+      name: 'Inclusive Delivery',
+      complete: 22,
+      inProgress: 0,
+      notStarted: 0,
+      zeroTarget: 0,
+      reported: 22,
+      total: 22,
+      remaining: 0
+    };
+    fixture.componentRef.setInput('richRows', [completeRow, richRows[1]]);
+    fixture.componentRef.setInput('xcutProgress', [
+      { code: 'intermediate-outcomes', name: 'Intermediate outcomes', done: 0, total: 7 }
+    ]);
+    fixture.detectChanges();
+
+    const heading = Array.from(fixture.nativeElement.querySelectorAll('h2')).find(
+      (h: any) => h.textContent.trim() === 'Progress by area of work'
+    ) as HTMLElement;
+    const hero = heading.closest('section') as HTMLElement;
+    expect(hero).toBeTruthy();
+
+    // CTA + View results (AOW03) + Report/open-icon (AOW02) + the outcomes chip.
+    const buttons = Array.from(hero.querySelectorAll('button')) as HTMLButtonElement[];
+    expect(buttons.length).toBeGreaterThanOrEqual(5);
+    buttons.forEach(btn => {
+      const accessibleName = (btn.getAttribute('aria-label') || btn.textContent || '').trim();
+      expect(accessibleName.length).toBeGreaterThan(0);
+    });
+
+    const bar = hero.querySelector('[role="img"]') as HTMLElement | null;
+    expect(bar).toBeTruthy();
+    expect((bar!.getAttribute('aria-label') ?? '').trim().length).toBeGreaterThan(0);
+
+    const ring = hero.querySelector('svg') as SVGElement | null;
+    expect(ring).toBeTruthy();
+    expect(ring!.getAttribute('aria-hidden')).toBe('true');
+  });
+
   /** Fails-if (tasks.md OAH-T-3): a cross-component class reference or a raw hex green literal. */
   it('the rebuilt hero markup references no .pr-row-action class and no raw hex green', () => {
     const html = readFileSync(join(__dirname, 'program-overview.component.html'), 'utf8');
@@ -251,6 +299,13 @@ describe('ProgramOverviewComponent — OAH hero rows (segmented bar + figures + 
     expect(component.inProgressSegmentWidth(honestAt1Percent)).toBeCloseTo(expectedInProgressWidth, 10);
     expect(component.completeSegmentWidth(honestAt1Percent)).toBe(0);
     expect(component.percentOfRich(honestAt1Percent)).toBe(1); // the rounded display figure — different value, different site.
+
+    // Zero-total guard (the invariant the removed `percentOf` used to pin): an AoW with no counted
+    // KPIs reads 0%/0-width, never NaN/Infinity from a `0/0` division.
+    const zeroTotalRow = { ...honestAt1Percent, reported: 0, total: 0 };
+    expect(component.percentOfRich(zeroTotalRow)).toBe(0);
+    expect(component.completeSegmentWidth(zeroTotalRow)).toBe(0);
+    expect(component.inProgressSegmentWidth(zeroTotalRow)).toBe(0);
 
     const bar = fixture.nativeElement.querySelector('[title*="In progress"]') as HTMLElement;
     expect(bar).toBeTruthy();

@@ -1,6 +1,6 @@
 # program-overview
 
-**Verified:** 2026-08-26 · branch performance-refactor · 75d56f2cd
+**Verified:** 2026-09-01 · branch qa-development-2026 · 52ddf00af
 
 **What this owns:** the **Overview** tab of the programme shell — the six cards under
 `entity-details/:entityId/overview`. Purely presentational: every figure arrives as a signal input.
@@ -16,8 +16,16 @@
 - **Card order is asserted, deliberately.** The spec pins all six `<h2>` in order, because the order
   *is* the requirement (P2-3303: "prominent … under about this program"). A reorder must be an
   explicit edit to that assertion, never a silent diff.
-- **This component computes no data, only geometry.** No `inject()`, no HTTP, no service. If a number
-  is wrong, the bug is in `DashboardLabComponent`, not here.
+- **Computes almost nothing — one exception.** No `inject()`, no HTTP, no service; every OTHER
+  figure arrives as a signal input. The exception (`changes/overview-aow-progress-hero`): `richStats`
+  SUMS the `richRows` input itself — the hero rail's own derivation (OAH-R-1 "internal coherence").
+  `richRows: OverviewAowProgressRowRich[]` is a **type-only** import from the host
+  (`dashboard-lab.component.ts`); the row data itself still comes from the parent's
+  `overviewAowProgressRich` computed. `richRows` coexists with the untouched thin
+  `aowProgress`/`xcutProgress` inputs (DD-4) — those keep feeding card 4/`aowStats`/the section-tab
+  badge/the hub under the OLD unfiltered rule, while `richRows` feeds the hero under the
+  zero-target rule (DD-1): two inputs, two rules, on purpose. Any OTHER wrong number is still
+  `DashboardLabComponent`'s bug, not this one's.
 - Bar widths normalise against the **series maximum**, and each card has its own denominator
   (`categoriesMax` / `bilateralCategoriesMax`). The largest bar is always 100%, so the two cards are
   two independent scales — never compare a bar in one against a bar in the other.

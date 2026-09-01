@@ -5,8 +5,12 @@
  * Only-pending (visible == counted — MRF-R-1/R-7 precedence). No Angular imports — pure functions
  * only, testable in isolation and safe to call from any Reporting-tab surface.
  *
- * Scope: Reporting-tab surfaces ONLY. The Overview tab (`overviewAowProgress`,
- * `overviewXcutProgress`) and the ToC map keep today's rule (accepted divergence — MRF-R-7).
+ * Scope: Reporting-tab surfaces, PLUS one sanctioned Overview caller — the hero's
+ * `overviewAowProgressRich` computed (`changes/overview-aow-progress-hero`, OAH-R-3/DD-1), which
+ * delegates to `stateOf`/`applyZeroTargetRule` for its per-AoW glossary counts and zero-target
+ * exclusion. Every OTHER Overview computed — `overviewAowProgress`, `overviewXcutProgress`, and
+ * KPI card 4's `aowStats` — plus the ToC map, keep TODAY'S rule (unfiltered, no zero-target
+ * exclusion): an accepted, disclosed divergence from the hero (MRF-R-7, OAH-DD-1).
  *
  * @akili-spec changes/mass-reporting-flow
  */
