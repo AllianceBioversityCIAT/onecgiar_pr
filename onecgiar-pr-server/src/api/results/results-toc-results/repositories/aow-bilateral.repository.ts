@@ -20,6 +20,9 @@ interface TocResultRow {
   target_value_sum: number | null;
   actual_achieved_value_sum: number | null;
   progress_percentage: string | null;
+  /** P2-3296: Submitted + Approved, alongside the QA pair above. */
+  preliminary_achieved_value_sum?: number | null;
+  preliminary_progress_percentage?: string | null;
   number_target?: string | null;
   target_date?: number | null;
   target_value?: number | null;
@@ -57,6 +60,9 @@ export interface TocResultResponse {
     target_value_sum: number | null;
     actual_achieved_value_sum?: number | null;
     progress_percentage?: string | null;
+    /** P2-3296: Submitted + Approved, alongside the QA pair above. */
+    preliminary_achieved_value_sum?: number | null;
+    preliminary_progress_percentage?: string | null;
     number_target?: string | null;
     target_date?: number | null;
     target_value?: number | null;
@@ -326,6 +332,14 @@ export class AoWBilateralRepository {
         contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
       progress_percentage:
         contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
+      // P2-3296: the second bar. Defaults mirror the QA pair above — an indicator with no
+      // contributions at all reads 0 / '0%', not null, so the client never has to guard.
+      preliminary_achieved_value_sum:
+        contributions.get(row.indicator_id)?.preliminary_achieved_value_sum ??
+        0,
+      preliminary_progress_percentage:
+        contributions.get(row.indicator_id)?.preliminary_progress_percentage ??
+        '0%',
     }));
 
     return this.groupTocRows(enhancedRows);
@@ -687,24 +701,38 @@ export class AoWBilateralRepository {
     return `${progressRounded.toFixed(1)}%`;
   }
 
+  /**
+   * P2-3296: the row now carries two achieved figures instead of one.
+   *
+   * `actual_achieved_value_sum` and `progress_percentage` keep the exact meaning they have
+   * had in production — QualityAssessed + Approved, the pair P2-2841 settled — so every
+   * existing consumer reads the same number it read before. The preliminary pair is added
+   * alongside rather than replacing anything.
+   */
   private mapIndicatorContributionRow(row: {
     indicator_id: number;
     target_value_sum: unknown;
     actual_achieved_value_sum: unknown;
+    preliminary_achieved_value_sum?: unknown;
     work_package_acronym: unknown;
   }) {
     const targetValue = Number(row.target_value_sum) || 0;
     const actualValue = Number(row.actual_achieved_value_sum) || 0;
+    const preliminaryValue = Number(row.preliminary_achieved_value_sum) || 0;
 
     return {
       target_value_sum: targetValue,
       actual_achieved_value_sum: actualValue,
+      preliminary_achieved_value_sum: preliminaryValue,
       work_package_acronym:
         typeof row.work_package_acronym === 'string'
           ? row.work_package_acronym
           : null,
       progress_percentage: this.formatProgressPercentage(
         this.calculateProgressPercentage(targetValue, actualValue),
+      ),
+      preliminary_progress_percentage: this.formatProgressPercentage(
+        this.calculateProgressPercentage(targetValue, preliminaryValue),
       ),
     };
   }
@@ -745,7 +773,8 @@ export class AoWBilateralRepository {
         tgt.toc_result_indicator_id,
         tgt.target_value_sum,
         tgt.work_package_acronym,
-        COALESCE(act.actual_achieved_value_sum, 0) AS actual_achieved_value_sum
+        COALESCE(act.actual_achieved_value_sum, 0) AS actual_achieved_value_sum,
+        COALESCE(act.preliminary_achieved_value_sum, 0) AS preliminary_achieved_value_sum
       FROM (
         SELECT
           tri.id AS indicator_id,
@@ -771,7 +800,11 @@ export class AoWBilateralRepository {
       LEFT JOIN (
         SELECT
           tri.toc_result_indicator_id,
-          COALESCE(SUM(CAST(rit.contributing_indicator AS DECIMAL(15,2))), 0) AS actual_achieved_value_sum
+          -- P2-3296: both figures come out of one pass. Conditional aggregation rather than a
+          -- second subquery, so the join, the date window and the level/type filters can never
+          -- drift apart between the two bars — which is exactly how they would rot.
+          COALESCE(SUM(CASE WHEN r.status_id IN (2, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END), 0) AS actual_achieved_value_sum,
+          COALESCE(SUM(CASE WHEN r.status_id IN (3, 6) THEN CAST(rit.contributing_indicator AS DECIMAL(15,2)) ELSE 0 END), 0) AS preliminary_achieved_value_sum
         FROM ${env.DB_NAME}.result r
         LEFT JOIN ${env.DB_NAME}.results_toc_result rtr ON rtr.results_id = r.id
           AND rtr.is_active = 1
@@ -790,8 +823,17 @@ export class AoWBilateralRepository {
         WHERE
           tr.official_code = ?
           AND r.is_active = 1
-          /* P2-2841: Quality Assessed (2) + Approved (6) only — aligns with View results */
-          AND r.status_id IN (2, 6)
+          /* P2-3296: the union of both bars — the split itself is done by the CASE
+             expressions above, this filter only has to let both sets through.
+               QA / Final  = (2, 6)  QualityAssessed + Approved. The pair P2-2841 fixed to
+                                     align with View results; unchanged, so no number that is
+                                     already on screen moves.
+               Preliminary = (3, 6)  Submitted + Approved, per Nicoleta Trifa (1-Sep-2026):
+                                     Editing is a draft and does not count until submitted, and
+                                     Approved counts in BOTH bars because W3/Bilateral results
+                                     are tagged to P/A AoW HLO targets.
+             PendingReview (5), Rejected (7) and Draft (8) count towards neither. */
+          AND r.status_id IN (2, 3, 6)
           AND r.result_level_id IN (3, 4)
           AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
           ${isCumulative ? '' : 'AND tr.phase = ?'}
@@ -807,8 +849,10 @@ export class AoWBilateralRepository {
         {
           target_value_sum: number;
           actual_achieved_value_sum: number;
+          preliminary_achieved_value_sum: number;
           work_package_acronym: string | null;
           progress_percentage: string;
+          preliminary_progress_percentage: string;
         }
       >();
 
