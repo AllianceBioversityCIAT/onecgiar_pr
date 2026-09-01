@@ -1,5 +1,7 @@
 import {
   compareResultTotal,
+  defaultContributionFor,
+  shouldRejectValue,
   compareWithReportedData,
   deriveAchievedValue,
   deriveCapacityDevelopmentTotal,
@@ -139,8 +141,10 @@ describe('P2-2932 — deriving the contribution from the result’s own data', (
       });
     });
 
-    it('reports a difference for a Knowledge Product contribution other than 1 or 0', () => {
-      expect(compareWithReportedData(kp, 5).status).toBe('DIFFERS');
+    // Superseded by AC1: a Knowledge Product value outside 0/1 is refused, not merely questioned.
+    // See the dedicated describe below.
+    it('refuses a Knowledge Product contribution other than 1 or 0', () => {
+      expect(compareWithReportedData(kp, 5).status).toBe('REJECTED');
       expect(compareWithReportedData(kp, 1).status).toBe('MATCH');
     });
 
@@ -386,6 +390,92 @@ describe('P2-2932 — Innovation Use, and comparing a result as a whole', () => 
           { contributingIndicator: 5 },
         ]).status,
       ).toBe('NOTHING_TO_COMPARE');
+    });
+  });
+});
+
+describe('P2-2932 — AC1 and AC3: the pre-filled default, and the one value that is refused', () => {
+  /**
+   * A DEFAULT, not a derivation. The story header says the system auto-fills nothing while AC1 and
+   * AC3 ask for this; the two reconcile by scope — seeding an empty box on a new result is not
+   * deriving a value over what somebody typed.
+   */
+  describe('the default a new contribution box starts with', () => {
+    it('gives 1 to Knowledge Product and Innovation Development', () => {
+      expect(defaultContributionFor(ResultTypeEnum.KNOWLEDGE_PRODUCT)).toBe(1);
+      expect(
+        defaultContributionFor(ResultTypeEnum.INNOVATION_DEVELOPMENT),
+      ).toBe(1);
+    });
+
+    // Everything else is typed by the user. Seeding CapDev with 1 would put a wrong head count in
+    // front of a reporter as though the system had worked it out.
+    it('gives nothing to the types the user fills in themselves', () => {
+      expect(
+        defaultContributionFor(ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT),
+      ).toBeNull();
+      expect(defaultContributionFor(ResultTypeEnum.INNOVATION_USE)).toBeNull();
+      expect(defaultContributionFor(ResultTypeEnum.POLICY_CHANGE)).toBeNull();
+      expect(defaultContributionFor(999)).toBeNull();
+    });
+  });
+
+  /**
+   * AC6 says the system never blocks, then names exactly one exception: AC1's "if the entered value
+   * is not 0 or 1, the system must reject the value".
+   */
+  describe('the Knowledge Product refusal', () => {
+    const kp = { resultTypeId: ResultTypeEnum.KNOWLEDGE_PRODUCT };
+
+    it('refuses a Knowledge Product value that is neither 0 nor 1', () => {
+      const result = compareWithReportedData(kp, 7);
+
+      expect(result.status).toBe('REJECTED');
+      expect(shouldRejectValue(result)).toBe(true);
+    });
+
+    it('accepts the two values AC1 allows', () => {
+      expect(compareWithReportedData(kp, 1).status).toBe('MATCH');
+      expect(compareWithReportedData(kp, 0).status).toBe('ALLOWED_EXCEPTION');
+      expect(shouldRejectValue(compareWithReportedData(kp, 0))).toBe(false);
+    });
+
+    /**
+     * AC3 shares the default of 1 but NOT the restriction: it says "a different value is only
+     * accepted if the user has explicitly entered other values", which leaves room. Widening the
+     * refusal here would block a value its own criterion permits.
+     */
+    it('warns but does not refuse the same value on Innovation Development', () => {
+      const result = compareWithReportedData(
+        { resultTypeId: ResultTypeEnum.INNOVATION_DEVELOPMENT },
+        7,
+      );
+
+      expect(result.status).toBe('DIFFERS');
+      expect(shouldRejectValue(result)).toBe(false);
+    });
+
+    it('never refuses a type AC6 governs — those only ever warn', () => {
+      const capDev = {
+        resultTypeId: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        capacityDevelopment: { female_using: 120 },
+      };
+
+      expect(compareWithReportedData(capDev, 7).status).toBe('DIFFERS');
+      expect(shouldRejectValue(compareWithReportedData(capDev, 7))).toBe(false);
+    });
+
+    it('surfaces both a warning and a refusal, but only calls one of them a refusal', () => {
+      expect(shouldShowComparison(compareWithReportedData(kp, 7))).toBe(true);
+      expect(shouldShowComparison(compareWithReportedData(kp, 1))).toBe(false);
+    });
+
+    // A refusal needs a value to refuse. An untouched box is still nothing to compare.
+    it('does not refuse an empty box', () => {
+      expect(compareWithReportedData(kp, null).status).toBe(
+        'NOTHING_TO_COMPARE',
+      );
+      expect(compareWithReportedData(kp, '').status).toBe('NOTHING_TO_COMPARE');
     });
   });
 });

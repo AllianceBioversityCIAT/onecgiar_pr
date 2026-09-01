@@ -144,6 +144,31 @@ export interface DerivationInput {
 }
 
 /**
+ * AC1 / AC3 — the value a brand-new contribution box starts with, or null when the user has to
+ * type it themselves.
+ *
+ * Only Knowledge Product and Innovation Development get one, and it is always 1: "a KP is a single
+ * unit (a file, a presentation, etc.) — it cannot be reported as multiple units".
+ *
+ * 🛑 This is a DEFAULT, not a derivation. It fills an empty box on a new result; it must never
+ * overwrite a value the user already entered, and it must never run over already-reported results
+ * — the story is explicit that it "applies only to new results". Everything else in this module
+ * only reads.
+ *
+ * The story header says "the system does not auto-fill any field" while AC1 and AC3 ask for this
+ * pre-fill. The two are reconciled by scope: seeding an empty field on creation is not the same as
+ * deriving a value over what someone typed, which is what the header rules out.
+ */
+export function defaultContributionFor(resultTypeId: number): number | null {
+  const type = Number(resultTypeId);
+
+  return type === ResultTypeEnum.KNOWLEDGE_PRODUCT ||
+    type === ResultTypeEnum.INNOVATION_DEVELOPMENT
+    ? ONE_PER_RESULT
+    : null;
+}
+
+/**
  * The total the result's own type-specific section implies, against which the ToC contribution is
  * compared.
  *
@@ -194,8 +219,16 @@ export function deriveAchievedValue(
 export type ComparisonStatus =
   /** The typed value equals what the data implies. */
   | 'MATCH'
-  /** The typed value disagrees. This is the only status that warrants showing anything. */
+  /** The typed value disagrees. A warning: the user may have a reason the data cannot express. */
   | 'DIFFERS'
+  /**
+   * AC1 — the value is not allowed at all and must be refused, not merely questioned.
+   *
+   * The only case: a Knowledge Product with anything other than 0 or 1. AC6 says the system never
+   * blocks and then names this as its one exception: "if the entered value is not 0 or 1, the
+   * system must reject the value". A KP is one unit; 7 knowledge products is not a thing.
+   */
+  | 'REJECTED'
   /** It disagrees, but the product documents this exact deviation as legitimate. */
   | 'ALLOWED_EXCEPTION'
   /** Nothing to compare — the type has no rule, or the user has not typed anything yet. */
@@ -252,6 +285,10 @@ export function compareWithReportedData(
 
   if (isDocumentedException(input, reported)) {
     return { status: 'ALLOWED_EXCEPTION', expected: derived.value, reported };
+  }
+
+  if (isRefusedValue(input, reported)) {
+    return { status: 'REJECTED', expected: derived.value, reported };
   }
 
   return { status: 'DIFFERS', expected: derived.value, reported };
@@ -358,7 +395,32 @@ export function compareResultTotal(
   return { ...compareWithReportedData(input, reportedTotal), ...counts };
 }
 
-/** Convenience for callers that only need to know whether to show something. */
+/**
+ * AC1's rejection, and only AC1's.
+ *
+ * Scoped to Knowledge Product on purpose. Innovation Development shares the default of 1 (AC3) but
+ * NOT this restriction: AC3 says "a different value is only accepted if the user has explicitly
+ * entered other values in the form", which leaves room for other values. AC1 says flatly that only
+ * 0 or 1 are accepted. Widening this to Innovation Development would refuse a value its own
+ * criterion allows.
+ */
+function isRefusedValue(input: DerivationInput, reported: number): boolean {
+  return (
+    Number(input?.resultTypeId) === ResultTypeEnum.KNOWLEDGE_PRODUCT &&
+    reported !== 0 &&
+    reported !== 1
+  );
+}
+
+/** Whether the caller should surface anything at all — a warning or a refusal. */
 export function shouldShowComparison(result: ComparisonResult): boolean {
-  return result.status === 'DIFFERS';
+  return result.status === 'DIFFERS' || result.status === 'REJECTED';
+}
+
+/**
+ * Whether the caller must refuse the value rather than warn about it. The single place that
+ * distinguishes AC1's block from every other outcome, which AC6 says must never block.
+ */
+export function shouldRejectValue(result: ComparisonResult): boolean {
+  return result.status === 'REJECTED';
 }
