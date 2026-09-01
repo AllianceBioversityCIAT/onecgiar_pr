@@ -183,6 +183,43 @@ export class ResultsFrameworkReportingController {
     );
   }
 
+  @Get('toc-results/program-progress')
+  @ApiOperation({
+    summary: 'Science Program ToC achievement (P2-3296 AC4)',
+    description:
+      "Rolls the ToC achievement up to the Science Program: each Area of Work is averaged over its HLOs, and the program is averaged over its Areas of Work. Indicators with no usable target (target absent or zero) are excluded from every average — 'counted' and 'total' report how many made it in, and the percentage is null when nothing was measurable, which the client must render as a dash rather than 0%. Distinct from 'get/science-programs/progress', which counts reported results by status.",
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g. SP01).',
+  })
+  @ApiQuery({
+    name: 'versionId',
+    type: Number,
+    required: false,
+    description:
+      'Optional phase/version identifier. Defaults to the active reporting phase when absent.',
+  })
+  @ApiOkResponse({
+    description: 'Science program ToC progress retrieved successfully.',
+  })
+  getScienceProgramTocProgress(
+    @Query('programId') programId: string,
+    @Query('versionId') versionId?: string,
+  ) {
+    const parsedVersion =
+      versionId !== undefined && versionId !== null
+        ? Number(versionId)
+        : undefined;
+
+    return this.resultsFrameworkReportingService.getScienceProgramTocProgress(
+      programId,
+      parsedVersion,
+    );
+  }
+
   @Get('toc-results/2030-outcomes')
   @ApiOperation({
     summary: 'List ToC 2030 outcomes by program',

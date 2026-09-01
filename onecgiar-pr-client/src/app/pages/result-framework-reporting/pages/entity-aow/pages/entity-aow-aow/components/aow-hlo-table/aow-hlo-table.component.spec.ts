@@ -1153,4 +1153,84 @@ describe('AowHloTableComponent', () => {
       expect(tooltip).toContain('Approved results count towards both');
     });
   });
+
+  describe('P2-3296 AC2-AC4 — indicators with no usable target, and the rolled-up level', () => {
+    it('treats a positive target as usable and anything else as not', () => {
+      expect(component.hasUsableTarget({ target_value_sum: 10 })).toBe(true);
+      expect(component.hasUsableTarget({ target_value_sum: 0 })).toBe(false);
+      expect(component.hasUsableTarget({ target_value_sum: null })).toBe(false);
+      expect(component.hasUsableTarget({})).toBe(false);
+      expect(component.hasUsableTarget({ target_value_sum: -5 })).toBe(false);
+    });
+
+    // Nicoleta: "leave the target as is - if anything is reported will be assessed as
+    // 'overachieved'". The row must say the word, never the 50,000,000% the old branch produced.
+    it('calls a no-target row overachieved only when something was reported', () => {
+      expect(
+        component.isOverachievedWithoutTarget({ target_value_sum: 0, actual_achieved_value_sum: 500000 })
+      ).toBe(true);
+      expect(
+        component.isOverachievedWithoutTarget({ target_value_sum: 0, preliminary_achieved_value_sum: 3 })
+      ).toBe(true);
+      expect(
+        component.isOverachievedWithoutTarget({ target_value_sum: 0, actual_achieved_value_sum: 0 })
+      ).toBe(false);
+    });
+
+    it('never labels a row with a real target as overachieved-without-target', () => {
+      expect(
+        component.isOverachievedWithoutTarget({ target_value_sum: 10, actual_achieved_value_sum: 50 })
+      ).toBe(false);
+    });
+
+    it('renders a dash, not 0%, when the level has nothing measurable', () => {
+      expect(component.levelProgress({ progress: { progress_percentage: null } })).toBe('—');
+      expect(component.levelPreliminaryProgress({ progress: { preliminary_progress_percentage: null } })).toBe('—');
+      expect(component.levelProgress({})).toBe('—');
+    });
+
+    it('renders the level percentages when they exist', () => {
+      const item = { progress: { progress_percentage: '45%', preliminary_progress_percentage: '60%' } };
+
+      expect(component.levelProgress(item)).toBe('45%');
+      expect(component.levelPreliminaryProgress(item)).toBe('60%');
+    });
+
+    it('always states the denominator behind the number', () => {
+      expect(component.levelCoverage({ progress: { indicators_counted: 2, indicators_total: 10 } })).toBe('2 of 10 indicators');
+      expect(component.levelCoverage({ progress: { indicators_counted: 10, indicators_total: 10 } })).toBe('10 indicators');
+      expect(component.levelCoverage({ progress: { indicators_counted: 1, indicators_total: 1 } })).toBe('1 indicator');
+      expect(component.levelCoverage({ progress: { indicators_counted: 0, indicators_total: 0 } })).toBe('');
+      expect(component.levelCoverage({})).toBe('');
+    });
+
+    it('spells out in the tooltip how many indicators were left out and why', () => {
+      const tooltip = component.levelTooltip({
+        progress: {
+          progress_percentage: '45%',
+          preliminary_progress_percentage: '60%',
+          indicators_counted: 2,
+          indicators_total: 10
+        }
+      });
+
+      expect(tooltip).toContain('2 of 10 indicators');
+      expect(tooltip).toContain('8 indicators are excluded');
+      expect(tooltip).toContain('no target set');
+    });
+
+    it('says plainly when no indicator of the level has a target', () => {
+      const tooltip = component.levelTooltip({
+        progress: { progress_percentage: null, indicators_counted: 0, indicators_total: 4 }
+      });
+
+      expect(tooltip).toContain('None of the 4 indicators has a target set');
+    });
+
+    it('says plainly when the level has no indicators at all', () => {
+      expect(
+        component.levelTooltip({ progress: { indicators_counted: 0, indicators_total: 0 } })
+      ).toContain('no indicators yet');
+    });
+  });
 });

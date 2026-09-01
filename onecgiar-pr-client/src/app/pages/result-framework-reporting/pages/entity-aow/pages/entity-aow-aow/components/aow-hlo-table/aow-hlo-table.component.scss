@@ -182,3 +182,51 @@ p {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+// P2-3296 AC2-AC4 — an indicator with no usable target. It carries a word, not a number,
+// because there is no ratio to state. Deliberately quieter than the two bars: it is a gap in
+// the data, not an achievement, and it must not compete with the rows that do have a figure.
+.progress-cell--no-target {
+  justify-content: center;
+  min-height: 30px;
+}
+
+.progress-cell_no-target {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5);
+  font-style: italic;
+}
+
+// The rolled-up number on the Intermediate Outcome header row.
+.hlo-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.hlo-progress_pair {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.hlo-progress_label {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5);
+}
+
+.hlo-progress_value {
+  @include fonts.pr-typography('body-1');
+  color: var(--pr-color-accents-7);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+// Never hide this behind a tooltip: the denominator is what stops a number averaged over 2 of
+// 10 indicators from being read as if it covered all 10.
+.hlo-progress_coverage {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-accents-5);
+}

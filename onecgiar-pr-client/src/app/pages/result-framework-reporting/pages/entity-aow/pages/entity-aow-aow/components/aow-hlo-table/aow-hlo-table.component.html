@@ -68,6 +68,27 @@
               </span>
             }
           </div>
+
+          <!--
+            P2-3296 AC2 — this Intermediate Outcome's own number, averaged over its indicators.
+            The coverage line is not decoration: a 45% over 2 of 10 indicators must never read
+            like a 45% over 10 of 10, and it points at the indicators still missing a target.
+          -->
+          @if (item.progress) {
+            <div class="hlo-progress" [prTooltip]="levelTooltip(item)">
+              <span class="hlo-progress_pair">
+                <span class="hlo-progress_label">QA</span>
+                <span class="hlo-progress_value">{{ levelProgress(item) }}</span>
+              </span>
+              <span class="hlo-progress_pair">
+                <span class="hlo-progress_label">Prel.</span>
+                <span class="hlo-progress_value">{{ levelPreliminaryProgress(item) }}</span>
+              </span>
+              @if (levelCoverage(item)) {
+                <span class="hlo-progress_coverage">{{ levelCoverage(item) }}</span>
+              }
+            </div>
+          }
         </div>
       </td>
     </tr>
@@ -114,6 +135,22 @@
           <!-- P2-3296: two tracks, not one stacked bar. Preliminary and QA overlap on Approved,
                so stacking them would double-count every approved W3/Bilateral result. -->
           <td>
+            @if (!hasUsableTarget(result)) {
+              <!--
+                P2-3296: no target, so no ratio. Showing `value * 100` here is what produced
+                50,000,000%. Nicoleta's word for this case is "overachieved" — a verdict, not a
+                quantity — and the averages above exclude the row entirely.
+              -->
+              <div
+                class="progress-cell progress-cell--no-target"
+                [prTooltip]="
+                  isOverachievedWithoutTarget(result)
+                    ? 'No target was set for this indicator, so a percentage cannot be calculated. Results were still reported against it. It is excluded from the Intermediate Outcome average.'
+                    : 'No target was set for this indicator, so a percentage cannot be calculated. It is excluded from the Intermediate Outcome average.'
+                ">
+                <span class="progress-cell_no-target">{{ isOverachievedWithoutTarget(result) ? 'Overachieved' : 'No target set' }}</span>
+              </div>
+            } @else {
             <div class="progress-cell" [prTooltip]="progressTooltip(result)">
               <div class="progress-cell_row">
                 <span class="progress-cell_label">QA</span>
@@ -132,6 +169,7 @@
                 <span class="progress-cell_value">{{ result.preliminary_progress_percentage || '0%' }}</span>
               </div>
             </div>
+            }
           </td>
           <td>
             <div

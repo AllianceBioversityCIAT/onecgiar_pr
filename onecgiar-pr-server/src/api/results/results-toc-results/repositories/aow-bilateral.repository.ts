@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { env } from 'node:process';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import type { ReportingTocContext } from '../../../results-framework-reporting/reporting-toc-context/reporting-toc-context.interface';
+import { ProgressRollup, rollUpIndicators } from './toc-progress-rollup';
 
 interface TocResultRow {
   toc_result_id: number;
@@ -48,6 +49,11 @@ export interface TocResultResponse {
   contributing_synergy_program_initiative_ids?: number[];
   /** True when the ToC node is explicitly linked to the queried AOW (wp_id IS NOT NULL and matched). False for program-level nodes that appear under all AOWs. */
   is_aow?: boolean;
+  /**
+   * P2-3296 AC2 — this HLO's own progress, averaged over its indicators. Indicators with no
+   * usable target are excluded, and `indicators_counted` / `indicators_total` say so.
+   */
+  progress?: ProgressRollup;
   indicators: Array<{
     indicator_id: number;
     indicator_description: string | null;
@@ -606,6 +612,12 @@ export class AoWBilateralRepository {
           location: row.location,
           target_value_sum: row.target_value_sum,
           actual_achieved_value_sum: row.actual_achieved_value_sum,
+          // P2-3296: the second bar. This object lists its fields explicitly, so anything the
+          // enhanced row carries but is not named here is dropped before the payload leaves.
+          preliminary_achieved_value_sum:
+            row.preliminary_achieved_value_sum ?? 0,
+          preliminary_progress_percentage:
+            row.preliminary_progress_percentage ?? '0%',
           number_target: row.number_target,
           target_date: row.target_date,
           target_value: row.target_value,
@@ -622,6 +634,11 @@ export class AoWBilateralRepository {
     }
 
     const results = Array.from(grouped.values());
+    // P2-3296 AC2: every node carries its own rolled-up number, so the AoW and Science
+    // Program levels above can average children that already know their own answer.
+    for (const node of results) {
+      node.progress = rollUpIndicators(node.indicators);
+    }
     if (results.some((r) => r.is_aow)) {
       results.sort((a, b) => Number(b.is_aow) - Number(a.is_aow));
     }

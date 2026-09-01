@@ -184,6 +184,80 @@ export class AowHloTableComponent {
   }
 
   /**
+   * P2-3296 AC2-AC4. An indicator whose target is absent or zero has no ratio to show: the
+   * server used to return `value * 100` for it, which is how a row reached 50,000,000%.
+   *
+   * Nicoleta's ruling was "leave the target as is - if anything is reported will be assessed
+   * as 'overachieved'". Overachieved is a verdict, not a quantity — so the row shows the word,
+   * not a number, and the averages above it leave the row out entirely.
+   */
+  hasUsableTarget(result: any): boolean {
+    const target = Number(result?.target_value_sum);
+
+    return Number.isFinite(target) && target > 0;
+  }
+
+  /** True when there is no target but something was still reported against it. */
+  isOverachievedWithoutTarget(result: any): boolean {
+    if (this.hasUsableTarget(result)) return false;
+
+    const qa = Number(result?.actual_achieved_value_sum) || 0;
+    const preliminary = Number(result?.preliminary_achieved_value_sum) || 0;
+
+    return qa > 0 || preliminary > 0;
+  }
+
+  /**
+   * The rolled-up number for a level (HLO here; the AoW and Science Program payloads carry the
+   * same shape). Null means nothing measurable rolled up, and the caller must render a dash —
+   * 0% would claim no progress, when the truth is there was nothing to measure against.
+   */
+  levelProgress(item: any): string {
+    return item?.progress?.progress_percentage ?? '—';
+  }
+
+  levelPreliminaryProgress(item: any): string {
+    return item?.progress?.preliminary_progress_percentage ?? '—';
+  }
+
+  /**
+   * The denominator, always shown beside the number. A 45% averaged over 2 of 10 indicators
+   * must not read like a 45% averaged over 10 of 10 — and a visible "2 of 10" is also what
+   * tells the team which indicators are still missing a target.
+   */
+  levelCoverage(item: any): string {
+    const counted = item?.progress?.indicators_counted;
+    const total = item?.progress?.indicators_total;
+
+    if (!Number.isFinite(counted) || !Number.isFinite(total) || total === 0) {
+      return '';
+    }
+
+    return counted === total
+      ? `${total} indicator${total === 1 ? '' : 's'}`
+      : `${counted} of ${total} indicators`;
+  }
+
+  levelTooltip(item: any): string {
+    const counted = item?.progress?.indicators_counted ?? 0;
+    const total = item?.progress?.indicators_total ?? 0;
+    const excluded = total - counted;
+
+    if (total === 0) return 'This Intermediate Outcome has no indicators yet.';
+    if (counted === 0) {
+      return `None of the ${total} indicators has a target set, so no percentage can be calculated.`;
+    }
+
+    const base =
+      `QA ${this.levelProgress(item)} and Preliminary ${this.levelPreliminaryProgress(item)}, ` +
+      `averaged over ${counted} of ${total} indicators.`;
+
+    return excluded > 0
+      ? `${base} ${excluded} indicator${excluded === 1 ? ' is' : 's are'} excluded for having no target set.`
+      : base;
+  }
+
+  /**
    * Width of the filled part, clamped to 100. The label keeps the real number — Nicoleta
    * confirmed over-achievement is shown, not capped — but a 500% bar has nowhere to go.
    */
