@@ -5,7 +5,6 @@ import { InstitutionMapped } from '../../../../../../shared/interfaces/instituti
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
-import { ViewRefreshService } from '../../../../../../shared/services/view-refresh.service';
 
 @Injectable({
   providedIn: 'root'
@@ -24,7 +23,29 @@ export class RdPartnersService implements OnDestroy {
   leadPartnerId: number = null;
   leadCenterCode: string = null;
 
-  updatingLeadData: boolean = false;
+  /**
+   * P2-3322 — signal-backed flag. Every `setPossibleLead*` / `setLead*OnLoad` raises it and clears it
+   * again inside a `setTimeout(..., 25)`; that second write happens outside any Angular notification,
+   * so under zoneless change detection the Lead partner / Lead center selects stayed hidden behind
+   * `*ngIf="!rdPartnersSE.updatingLeadData"` (`rd-partners.component.html:58,70`).
+   *
+   * This replaces four `viewRefreshSE.schedule()` calls. They DID work — nothing in this page's
+   * ancestor chain is OnPush, so the root `ApplicationRef.tick()` reached this view. Two reasons to
+   * converge on the signal anyway: a root tick skips an OnPush ancestor that is not dirty, so the old
+   * approach fails silently the day one is introduced; and `tick()` cannot be exercised from a
+   * TestBed, so the behaviour could not be pinned by a test. It also matches the twin
+   * `RdContributorsAndPartnersService.updatingLeadData`, which serves the P25 and IPSR pages — the two
+   * services did the same job by different mechanisms.
+   *
+   * Public API stays a plain boolean, so the template and every caller are untouched.
+   */
+  private readonly _updatingLeadData = signal<boolean>(false);
+  get updatingLeadData(): boolean {
+    return this._updatingLeadData();
+  }
+  set updatingLeadData(value: boolean) {
+    this._updatingLeadData.set(value);
+  }
   disableLeadPartner: boolean = false;
 
   /**
@@ -38,8 +59,7 @@ export class RdPartnersService implements OnDestroy {
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
-    public centersSE: CentersService,
-    private readonly viewRefreshSE: ViewRefreshService
+    public centersSE: CentersService
   ) {
     this.institutionsSE?.loadedInstitutions?.subscribe(loaded => {
       if (loaded) {
@@ -170,9 +190,6 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
-        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
-        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
-        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
@@ -198,9 +215,6 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
-        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
-        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
-        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
@@ -222,9 +236,6 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
-        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
-        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
-        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
@@ -241,9 +252,6 @@ export class RdPartnersService implements OnDestroy {
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
-        // Zoneless: a setTimeout no longer triggers a render pass, so without this the Lead
-        // center/partner select stayed hidden behind *ngIf="!updatingLeadData".
-        this.viewRefreshSE.schedule();
       }, 25);
     }
   }
