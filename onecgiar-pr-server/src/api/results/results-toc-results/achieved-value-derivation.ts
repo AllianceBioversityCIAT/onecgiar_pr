@@ -94,19 +94,61 @@ export function deriveCapacityDevelopmentTotal(
   );
 }
 
-export interface DerivationInput {
-  resultTypeId: number;
-  capacityDevelopment?: CapacityDevelopmentCounts | null;
+/**
+ * One row of the actors list on an Innovation Use result (`result_actors`).
+ *
+ * `how_many` is the row's total and the ONLY figure to read. It is filled two ways and both end up
+ * as the total: typed directly when "sex and age disaggregation does not apply", or computed as
+ * `women + men` when it does (`step-n3-current-use.component.ts:113`).
+ *
+ * 🛑 Never sum the four gender columns instead. Youth is a SUBSET of women/men, not a fifth
+ * category — the form enforces it ("the value of Youth cannot be greater than total of Women") and
+ * `women_non_youth` is read-only. Adding them would double-count every young person.
+ */
+export interface InnovationUseActor {
+  how_many?: number | string | null;
 }
 
 /**
- * The value the result's own data implies for one ToC indicator target.
+ * The number of people an Innovation Use result reports, across every actor row.
  *
- * 🛑 The two undecided types return `derivable: false` rather than a guess. Policy Change needs a
- * three-way contribution-type selector that does not exist, and has no "actors influenced" field at
- * all; Innovation Use needs a reporting-option toggle that does not exist, and stores both of its
- * candidate figures as repeatable lists rather than single values. Inventing a number for either
- * would put a fabricated figure into live progress reporting.
+ * The sum, not one row: the PO's rule is that figures across boxes add up rather than repeat
+ * ("si en uno se indica 120 y en otro 80, el resultado impactó a 200 personas"), and the same
+ * arithmetic has to hold on this side or the two totals could never meet. His own example carried
+ * a single actor row, where the sum and the row are the same number.
+ */
+export function deriveInnovationUseTotal(
+  actors: readonly InnovationUseActor[] | null | undefined,
+): number {
+  const rows = Array.isArray(actors) ? actors : [];
+
+  return rows.reduce((total, actor) => {
+    const value = Number(actor?.how_many);
+    return total + (Number.isFinite(value) && value > 0 ? value : 0);
+  }, 0);
+}
+
+export interface DerivationInput {
+  /**
+   * The type the RESULT was created as — not the type of the ToC indicator being compared.
+   *
+   * The PO's rule for mixed results: "se debe priorizar el tipo con el que fue creado el resultado.
+   * La razón es que la Sección 4 contiene únicamente la información correspondiente al tipo
+   * original". A Capacity Sharing result that later picks up an Innovation Development indicator
+   * still compares as Capacity Sharing, because that is the only data its type-specific section
+   * holds.
+   */
+  resultTypeId: number;
+  capacityDevelopment?: CapacityDevelopmentCounts | null;
+  innovationUseActors?: readonly InnovationUseActor[] | null;
+}
+
+/**
+ * The total the result's own type-specific section implies, against which the ToC contribution is
+ * compared.
+ *
+ * Keyed on the result's ORIGINAL type — see `DerivationInput.resultTypeId`. An indicator of some
+ * other type has no counterpart in the type-specific section and simply does not get compared.
  */
 export function deriveAchievedValue(
   input: DerivationInput,
@@ -122,11 +164,17 @@ export function deriveAchievedValue(
         value: deriveCapacityDevelopmentTotal(input.capacityDevelopment),
       };
 
+    case ResultTypeEnum.INNOVATION_USE:
+      return {
+        derivable: true,
+        value: deriveInnovationUseTotal(input.innovationUseActors),
+      };
+
+    // Still undecided, and deliberately so. The rule needs a three-way contribution-type selector
+    // that does not exist in the form, and an "actors influenced" field that does not exist at all.
+    // Inventing a number here would put a fabricated figure in front of a reporter.
     case ResultTypeEnum.POLICY_CHANGE:
       return { derivable: false, reason: 'NO_CONTRIBUTION_TYPE_SELECTOR' };
-
-    case ResultTypeEnum.INNOVATION_USE:
-      return { derivable: false, reason: 'NO_REPORTING_OPTION_SELECTOR' };
 
     default:
       // Every other type — Other outcome, Other output, Impact contribution, IPSR types — has no
@@ -229,6 +277,85 @@ function isDocumentedException(
     type === ResultTypeEnum.INNOVATION_DEVELOPMENT;
 
   return isOnePerResult && reported === 0;
+}
+
+/**
+ * One ToC contribution box, as the user filled it in.
+ *
+ * `indicatorResultTypeId` is the type of the *indicator*, which is not necessarily the type of the
+ * result: nothing in the product restricts the indicator picker to the result's own type — it
+ * filters by LEVEL only (`multiple-wps-content.component.ts:265-281`), and the picker even shows an
+ * "Indicator category" column, so mixed selections are expected rather than exceptional.
+ */
+export interface ContributionBox {
+  contributingIndicator: number | string | null | undefined;
+  indicatorResultTypeId?: number | null;
+}
+
+export interface ResultComparison extends ComparisonResult {
+  /** Boxes that were compared — those matching the result's original type and actually filled in. */
+  boxesCounted: number;
+  /** Boxes present on the result, including the ones excluded below. */
+  boxesTotal: number;
+  /**
+   * Boxes skipped because their indicator is of a different type than the result. The
+   * type-specific section holds nothing to compare them against, so they are left out rather than
+   * counted as a disagreement.
+   */
+  boxesOfAnotherType: number;
+}
+
+/**
+ * Compare a result as a whole: the SUM of its contribution boxes against the total its own
+ * type-specific section implies.
+ *
+ * The sum, not box by box. The PO's rule: "los valores de cada casilla no se reparten ni se
+ * duplican… si en uno se indica que se capacitaron 120 personas y en otro 80, esto significa que el
+ * resultado impactó a 200 personas en total. Ese total debería coincidir con lo que se registra en
+ * la sección". Comparing each box against the full total would flag every result mapped to more
+ * than one indicator.
+ *
+ * Boxes whose indicator is of another type are excluded first, per the same ruling. If that leaves
+ * nothing filled in, there is nothing to compare and the result is silent.
+ */
+export function compareResultTotal(
+  input: DerivationInput,
+  boxes: readonly ContributionBox[] | null | undefined,
+): ResultComparison {
+  const all = Array.isArray(boxes) ? boxes : [];
+  const ownType = Number(input?.resultTypeId);
+
+  const sameType = all.filter(
+    (box) =>
+      box?.indicatorResultTypeId === null ||
+      box?.indicatorResultTypeId === undefined ||
+      Number(box.indicatorResultTypeId) === ownType,
+  );
+
+  const filled = sameType.filter(
+    (box) =>
+      box?.contributingIndicator !== null &&
+      box?.contributingIndicator !== undefined &&
+      String(box.contributingIndicator).trim() !== '' &&
+      Number.isFinite(Number(box.contributingIndicator)),
+  );
+
+  const counts = {
+    boxesCounted: filled.length,
+    boxesTotal: all.length,
+    boxesOfAnotherType: all.length - sameType.length,
+  };
+
+  if (filled.length === 0) {
+    return { ...compareWithReportedData(input, null), ...counts };
+  }
+
+  const reportedTotal = filled.reduce(
+    (sum, box) => sum + Number(box.contributingIndicator),
+    0,
+  );
+
+  return { ...compareWithReportedData(input, reportedTotal), ...counts };
 }
 
 /** Convenience for callers that only need to know whether to show something. */

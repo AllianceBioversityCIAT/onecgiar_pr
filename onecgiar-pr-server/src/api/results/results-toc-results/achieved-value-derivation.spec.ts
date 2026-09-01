@@ -1,7 +1,9 @@
 import {
+  compareResultTotal,
   compareWithReportedData,
   deriveAchievedValue,
   deriveCapacityDevelopmentTotal,
+  deriveInnovationUseTotal,
   shouldShowComparison,
 } from './achieved-value-derivation';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
@@ -84,17 +86,21 @@ describe('P2-2932 — deriving the contribution from the result’s own data', (
    * The point of the whole module. Both rules name a selection the form does not capture, so any
    * number produced for them would be invented — and this figure feeds live progress reporting.
    */
-  describe('the two types whose rule names a field that does not exist', () => {
+  describe('the type whose rule still names a field that does not exist', () => {
+    // Policy Change is the last one left. Its rule needs a three-way contribution-type selector the
+    // form does not have, and an "actors influenced" field that does not exist at all.
     it('refuses to derive Policy Change — no contribution-type selector, no actors-influenced field', () => {
       expect(
         deriveAchievedValue({ resultTypeId: ResultTypeEnum.POLICY_CHANGE }),
       ).toEqual({ derivable: false, reason: 'NO_CONTRIBUTION_TYPE_SELECTOR' });
     });
 
-    it('refuses to derive Innovation Use — no reporting-option toggle, both figures are lists', () => {
+    // Innovation Use used to sit here too. It became derivable once the field question was settled
+    // from the code: `how_many` is the row total either way, so there is no toggle to wait for.
+    it('derives Innovation Use as zero when it has no actor rows, rather than refusing', () => {
       expect(
         deriveAchievedValue({ resultTypeId: ResultTypeEnum.INNOVATION_USE }),
-      ).toEqual({ derivable: false, reason: 'NO_REPORTING_OPTION_SELECTOR' });
+      ).toEqual({ derivable: true, value: 0 });
     });
 
     it('refuses to derive a type the ticket gives no rule for', () => {
@@ -178,12 +184,14 @@ describe('P2-2932 — deriving the contribution from the result’s own data', (
         expected: null,
         reported: null,
       });
+      // Innovation Use is derivable now; with no actor rows it expects 0, so 999 is a real
+      // disagreement rather than silence.
       expect(
         compareWithReportedData(
           { resultTypeId: ResultTypeEnum.INNOVATION_USE },
           999,
         ).status,
-      ).toBe('NOTHING_TO_COMPARE');
+      ).toBe('DIFFERS');
     });
 
     it('stays quiet on an empty box, but still carries what was expected', () => {
@@ -210,6 +218,174 @@ describe('P2-2932 — deriving the contribution from the result’s own data', (
       expect(shouldShowComparison(compareWithReportedData(capDev, null))).toBe(
         false,
       );
+    });
+  });
+});
+
+describe('P2-2932 — Innovation Use, and comparing a result as a whole', () => {
+  describe('the actors list', () => {
+    it('sums how_many across every row', () => {
+      expect(
+        deriveInnovationUseTotal([{ how_many: 203100 }, { how_many: 1900 }]),
+      ).toBe(205000);
+    });
+
+    /**
+     * `how_many` is the row's total either way: typed when "sex and age disaggregation does not
+     * apply", computed as women + men when it does. Youth is a SUBSET of women/men — the form says
+     * "the value of Youth cannot be greater than total of Women" — so summing gender columns here
+     * would double-count every young person. Reading how_many avoids the question entirely.
+     */
+    it('reads only how_many, whichever way the row was filled', () => {
+      expect(
+        deriveInnovationUseTotal([
+          { how_many: 100, women: 60, men: 40, women_youth: 30 } as never,
+        ]),
+      ).toBe(100);
+    });
+
+    it('treats an empty list, nulls and non-numerics as zero', () => {
+      expect(deriveInnovationUseTotal([])).toBe(0);
+      expect(deriveInnovationUseTotal(null)).toBe(0);
+      expect(
+        deriveInnovationUseTotal([{ how_many: null }, { how_many: 'x' }]),
+      ).toBe(0);
+    });
+
+    it('reads the bigint column as a number, not a string', () => {
+      expect(
+        deriveInnovationUseTotal([{ how_many: '120' }, { how_many: '80' }]),
+      ).toBe(200);
+    });
+
+    it('is reachable through deriveAchievedValue', () => {
+      expect(
+        deriveAchievedValue({
+          resultTypeId: ResultTypeEnum.INNOVATION_USE,
+          innovationUseActors: [{ how_many: 203100 }],
+        }),
+      ).toEqual({ derivable: true, value: 203100 });
+    });
+  });
+
+  /**
+   * The PO's rule: boxes add up, they are not repeated. 120 in one and 80 in another means the
+   * result reached 200 people, and 200 is what the type-specific section should say.
+   */
+  describe('comparing the SUM of the boxes, not each box', () => {
+    const capDev = {
+      resultTypeId: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+      capacityDevelopment: { female_using: 120, male_using: 80 },
+    };
+
+    it('matches when the boxes add up to the section total', () => {
+      const result = compareResultTotal(capDev, [
+        { contributingIndicator: 120 },
+        { contributingIndicator: 80 },
+      ]);
+
+      expect(result.status).toBe('MATCH');
+      expect(result.reported).toBe(200);
+      expect(result.boxesCounted).toBe(2);
+    });
+
+    // Comparing box by box would have flagged BOTH of these as differing from 200.
+    it('does not flag each box separately against the full total', () => {
+      expect(
+        compareResultTotal(capDev, [
+          { contributingIndicator: 120 },
+          { contributingIndicator: 80 },
+        ]).status,
+      ).not.toBe('DIFFERS');
+    });
+
+    it('flags a genuine shortfall', () => {
+      const result = compareResultTotal(capDev, [
+        { contributingIndicator: 120 },
+        { contributingIndicator: 30 },
+      ]);
+
+      expect(result.status).toBe('DIFFERS');
+      expect(result.expected).toBe(200);
+      expect(result.reported).toBe(150);
+    });
+
+    /**
+     * The mixed case. Nothing restricts the indicator picker to the result's own type — it filters
+     * by level only — so a Capacity Sharing result can carry an Innovation Development indicator.
+     * Section 4 holds only Capacity Sharing data, so that box has no counterpart.
+     */
+    it('excludes boxes whose indicator is of another type, and says how many', () => {
+      const result = compareResultTotal(capDev, [
+        {
+          contributingIndicator: 120,
+          indicatorResultTypeId:
+            ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        },
+        {
+          contributingIndicator: 80,
+          indicatorResultTypeId:
+            ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        },
+        {
+          contributingIndicator: 999,
+          indicatorResultTypeId: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+        },
+      ]);
+
+      expect(result.status).toBe('MATCH');
+      expect(result.reported).toBe(200);
+      expect(result.boxesCounted).toBe(2);
+      expect(result.boxesTotal).toBe(3);
+      expect(result.boxesOfAnotherType).toBe(1);
+    });
+
+    it('stays quiet when every box belongs to another type', () => {
+      const result = compareResultTotal(capDev, [
+        {
+          contributingIndicator: 999,
+          indicatorResultTypeId: ResultTypeEnum.POLICY_CHANGE,
+        },
+      ]);
+
+      expect(result.status).toBe('NOTHING_TO_COMPARE');
+      expect(result.boxesOfAnotherType).toBe(1);
+    });
+
+    it('stays quiet when no box has been filled in yet', () => {
+      const result = compareResultTotal(capDev, [
+        { contributingIndicator: null },
+        { contributingIndicator: '' },
+      ]);
+
+      expect(result.status).toBe('NOTHING_TO_COMPARE');
+      expect(result.boxesCounted).toBe(0);
+      expect(result.boxesTotal).toBe(2);
+    });
+
+    it('stays quiet on a result with no boxes at all', () => {
+      expect(compareResultTotal(capDev, []).status).toBe('NOTHING_TO_COMPARE');
+      expect(compareResultTotal(capDev, null).status).toBe(
+        'NOTHING_TO_COMPARE',
+      );
+    });
+
+    it('still honours the documented 0 on a Knowledge Product', () => {
+      const result = compareResultTotal(
+        { resultTypeId: ResultTypeEnum.KNOWLEDGE_PRODUCT },
+        [{ contributingIndicator: 0 }],
+      );
+
+      expect(result.status).toBe('ALLOWED_EXCEPTION');
+      expect(shouldShowComparison(result)).toBe(false);
+    });
+
+    it('stays quiet for Policy Change, which still has nothing to compare', () => {
+      expect(
+        compareResultTotal({ resultTypeId: ResultTypeEnum.POLICY_CHANGE }, [
+          { contributingIndicator: 5 },
+        ]).status,
+      ).toBe('NOTHING_TO_COMPARE');
     });
   });
 });
