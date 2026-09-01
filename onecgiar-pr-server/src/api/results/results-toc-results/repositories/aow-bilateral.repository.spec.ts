@@ -681,6 +681,157 @@ describe('AoWBilateralRepository', () => {
    * submitted — and Final stays QualityAssessed + Approved, the pair P2-2841 fixed. Approved
    * deliberately counts in BOTH, because W3/Bilateral results are tagged to P/A AoW HLO targets.
    */
+  /**
+   * The AC1 tests asserted the SQL and the contributions Map, and passed while the two
+   * preliminary fields were being dropped in `groupTocRows` — which builds the indicator from
+   * an explicit field list, so anything not named there never leaves the repository.
+   *
+   * These go through the public method and assert the payload that actually ships, which is the
+   * only place that class of bug is visible.
+   */
+  describe('P2-3296 — what actually leaves the repository', () => {
+    const rowFor = (overrides: Record<string, unknown> = {}) => ({
+      toc_result_id: 1,
+      category: 'OUTCOME',
+      result_title: 'Outcome 1',
+      related_node_id: 'node1',
+      indicator_id: 10,
+      indicator_description: 'Indicator 1',
+      toc_result_indicator_id: 'IND1',
+      indicator_related_node_id: 'ind_node1',
+      unit_messurament: 'Number',
+      type_value: 'Count',
+      type_name: 'Counter',
+      location: 'Global',
+      target_value_sum: 100,
+      number_target: '100',
+      target_date: 2025,
+      result_type_id: 1,
+      result_level_id: 3,
+      ...overrides,
+    });
+
+    const contributionFor = (overrides: Record<string, unknown> = {}) => ({
+      indicator_id: 10,
+      toc_result_indicator_id: 'node-10',
+      target_value_sum: 100,
+      actual_achieved_value_sum: 40,
+      preliminary_achieved_value_sum: 75,
+      work_package_acronym: 'AOW01',
+      ...overrides,
+    });
+
+    it('carries BOTH preliminary fields all the way into the indicator payload', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([rowFor()])
+        .mockResolvedValueOnce([contributionFor()]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      const indicator = result[0].indicators[0];
+      expect(indicator.progress_percentage).toBe('40%');
+      expect(indicator.actual_achieved_value_sum).toBe(40);
+      // The two that were silently dropped.
+      expect(indicator.preliminary_progress_percentage).toBe('75%');
+      expect(indicator.preliminary_achieved_value_sum).toBe(75);
+    });
+
+    it('defaults the preliminary pair rather than omitting it when there are no contributions', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([rowFor()])
+        .mockResolvedValueOnce([]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      const indicator = result[0].indicators[0];
+      expect(indicator.preliminary_achieved_value_sum).toBe(0);
+      expect(indicator.preliminary_progress_percentage).toBe('0%');
+    });
+
+    it('attaches the AC2 roll-up to every node', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([rowFor()])
+        .mockResolvedValueOnce([contributionFor()]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      expect(result[0].progress).toEqual(
+        expect.objectContaining({
+          progress_percentage: '40%',
+          preliminary_progress_percentage: '75%',
+          indicators_counted: 1,
+          indicators_total: 1,
+        }),
+      );
+    });
+
+    it('keeps a zero-target indicator out of the node roll-up but still returns the row', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([
+          rowFor(),
+          rowFor({ indicator_id: 11, target_value_sum: 0 }),
+        ])
+        .mockResolvedValueOnce([
+          contributionFor({ actual_achieved_value_sum: 100 }),
+          contributionFor({
+            indicator_id: 11,
+            target_value_sum: 0,
+            actual_achieved_value_sum: 500000,
+          }),
+        ]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      // Both rows still ship — the user has to see the one missing a target.
+      expect(result[0].indicators).toHaveLength(2);
+      // ...but the node reads 100%, not 25,000,050%.
+      expect(result[0].progress?.progress_percentage).toBe('100%');
+      expect(result[0].progress?.indicators_counted).toBe(1);
+      expect(result[0].progress?.indicators_total).toBe(2);
+    });
+
+    it('reports a null percentage, not 0%, when no indicator of the node has a target', async () => {
+      mockResolveContext();
+      dataSourceQueryMock
+        .mockResolvedValueOnce([rowFor({ target_value_sum: 0 })])
+        .mockResolvedValueOnce([
+          contributionFor({
+            target_value_sum: 0,
+            actual_achieved_value_sum: 5,
+          }),
+        ]);
+
+      const result = await repository.findByCompositeCode(
+        'SP01',
+        'SP01-AOW01',
+        defaultContext,
+      );
+
+      expect(result[0].progress?.progress_percentage).toBeNull();
+      expect(result[0].progress?.indicators_counted).toBe(0);
+    });
+  });
+
   describe('P2-3296 — preliminary and QA progress', () => {
     it('splits the achieved sum by status inside a single pass', async () => {
       mockResolveContext();

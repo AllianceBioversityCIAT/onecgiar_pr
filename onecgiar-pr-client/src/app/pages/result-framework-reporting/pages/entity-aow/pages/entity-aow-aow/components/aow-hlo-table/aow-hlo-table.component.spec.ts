@@ -1233,4 +1233,76 @@ describe('AowHloTableComponent', () => {
       ).toContain('no indicators yet');
     });
   });
+
+  /**
+   * `filteredTableData` rebuilds each group as `{ ...group, indicators: subset }`. The spread
+   * carries `progress` through today, but the AC1 defect was exactly this shape of loss one
+   * layer down, so it is pinned rather than assumed.
+   */
+  describe('P2-3296 AC2 — the HLO number survives the table pipeline', () => {
+    const group = (overrides: any = {}) => ({
+      toc_result_id: 1,
+      result_title: 'Outcome 1',
+      progress: {
+        progress_percentage: '45%',
+        preliminary_progress_percentage: '60%',
+        indicators_counted: 2,
+        indicators_total: 10
+      },
+      indicators: [
+        { indicator_id: 10, indicator_description: 'alpha', progress_percentage: '50%' },
+        { indicator_id: 11, indicator_description: 'beta', progress_percentage: '0%' }
+      ],
+      ...overrides
+    });
+
+    beforeEach(() => {
+      // Same path the rest of this spec uses. The pipeline under test — the `{ ...group }`
+      // rebuild inside `filteredTableData` — is identical for every tableType.
+      component.tableType = 'outputs';
+      mockEntityAowService.tocResultsOutputsByAowId.set([group()]);
+      mockEntityAowService.searchText.set('');
+      component.statusFilter.set('all');
+    });
+
+    it('keeps progress on the group when no filter is active', () => {
+      expect(component.filteredTableData()[0].progress?.progress_percentage).toBe('45%');
+    });
+
+    it('keeps progress on the group when a search filter narrows the indicators', () => {
+      mockEntityAowService.searchText.set('alpha');
+
+      const [filtered] = component.filteredTableData();
+      expect(filtered.indicators).toHaveLength(1);
+      // The number describes the Intermediate Outcome, not the current view, so it does not
+      // move as the user types — a percentage that changed with the search box would be
+      // meaningless.
+      expect(filtered.progress?.progress_percentage).toBe('45%');
+      expect(component.levelCoverage(filtered)).toBe('2 of 10 indicators');
+    });
+
+    it('keeps progress on the group when the status chip narrows the indicators', () => {
+      component.statusFilter.set('Not started');
+
+      const [filtered] = component.filteredTableData();
+      expect(filtered.indicators).toHaveLength(1);
+      expect(filtered.progress?.progress_percentage).toBe('45%');
+    });
+
+    it('renders a dash for a group the server could not measure', () => {
+      mockEntityAowService.tocResultsOutputsByAowId.set([
+        group({
+          progress: {
+            progress_percentage: null,
+            preliminary_progress_percentage: null,
+            indicators_counted: 0,
+            indicators_total: 2
+          }
+        })
+      ]);
+
+      const [filtered] = component.filteredTableData();
+      expect(component.levelProgress(filtered)).toBe('—');
+    });
+  });
 });
