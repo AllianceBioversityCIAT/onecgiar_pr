@@ -144,3 +144,50 @@ describe('formatProgress', () => {
     expect(formatProgress(Number.POSITIVE_INFINITY)).toBe('0%');
   });
 });
+
+/**
+ * P2-3296 AC3 regression. The first build averaged an Area of Work over its OUTCOMES only, and
+ * every AoW of a programme came back with the identical figure — the outcomes hanging off an AoW
+ * are largely programme-level ones repeated under each, while the OUTPUTS are what is actually
+ * scoped to one AoW. The AC says so outright: "Includes Outputs (HLOs) and Outcomes".
+ */
+describe('an Area of Work rolls up BOTH tiers, not outcomes alone', () => {
+  const node = (percentage: number, indicators = 1) => ({
+    progress: {
+      progress_percentage: `${percentage}%`,
+      preliminary_progress_percentage: '0%',
+      progress_value: percentage,
+      preliminary_value: 0,
+      counted: indicators,
+      total: indicators,
+      indicators_counted: indicators,
+      indicators_total: indicators,
+    },
+  });
+
+  // The shared outcomes every AoW carries; the outputs are what tells them apart.
+  const sharedOutcomes = [node(10, 16)];
+
+  it('gives two AoWs different figures once their outputs are included', () => {
+    const aowA = rollUpChildren([...sharedOutcomes, node(80, 53)]);
+    const aowB = rollUpChildren([...sharedOutcomes, node(0, 7)]);
+
+    expect(aowA.progress_percentage).not.toBe(aowB.progress_percentage);
+    expect(aowA.progress_percentage).toBe('45%');
+    expect(aowB.progress_percentage).toBe('5%');
+  });
+
+  it('is the outcomes-only reading that collapses them to the same number', () => {
+    // The defect, stated so the fix is not undone by "simplifying" back to one tier.
+    expect(rollUpChildren(sharedOutcomes).progress_percentage).toBe(
+      rollUpChildren(sharedOutcomes).progress_percentage,
+    );
+    expect(rollUpChildren(sharedOutcomes).indicators_total).toBe(16);
+  });
+
+  it('carries the indicator denominator of both tiers', () => {
+    const rollup = rollUpChildren([...sharedOutcomes, node(80, 53)]);
+
+    expect(rollup.indicators_total).toBe(69);
+  });
+});

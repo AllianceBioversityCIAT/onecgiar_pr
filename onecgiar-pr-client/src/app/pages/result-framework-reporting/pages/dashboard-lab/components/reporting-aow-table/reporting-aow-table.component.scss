@@ -49,8 +49,12 @@
 /* ── The row. Grid + pad are the design verbatim (spacers keep Target / Achieved / action aligned). ── */
 .pr-reporting-row {
   display: grid;
-  /* status | title | gap | Target | gap | Achieved | gap | action | gap | menu */
-  grid-template-columns: 36px minmax(0, 1fr) 48px 100px 20px 100px 56px 110px 8px 40px;
+  /* status | title | gap | Target | gap | Achieved | gap | Progress | gap | action | gap | menu
+     P2-3296: the Progress track is new. It sits after Achieved because it is derived from it, and
+     its 132px is the narrowest width that fits "Overachieved" without wrapping — the label an
+     indicator with no usable target shows in place of a percentage. The trailing spacer that used
+     to be 56px is split so the surrounding rhythm is unchanged. */
+  grid-template-columns: 36px minmax(0, 1fr) 48px 100px 20px 100px 24px 132px 32px 110px 8px 40px;
   align-items: center;
   gap: 0;
   min-height: 96px;

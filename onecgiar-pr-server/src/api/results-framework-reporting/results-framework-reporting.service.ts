@@ -409,10 +409,17 @@ export class ResultsFrameworkReportingService {
           year: resolvedYear,
           tocResultsOutcomes,
           tocResultsOutputs,
-          // P2-3296 AC3 — the Area of Work's own number, averaged over its HLOs (outcomes).
-          // Outputs are excluded: the ticket's hierarchy is Indicator -> HLO -> AoW -> Program,
-          // and an HLO is an outcome.
-          progress: rollUpChildren(tocResultsOutcomes),
+          // P2-3296 AC3 — the Area of Work's own number, over EVERY ToC node under it.
+          //
+          // Both tiers, as the AC states outright: "Includes Outputs (HLOs) and Outcomes
+          // (Intermediate Outcomes + 2030 Outcomes)". In this product an HLO is a High Level
+          // OUTPUT, and outputs are the nodes actually scoped to one Area of Work — averaging
+          // outcomes alone gave all five AoWs of a programme the identical figure, because the
+          // outcomes that hang off an AoW are largely programme-level ones repeated under each.
+          progress: rollUpChildren([
+            ...tocResultsOutputs,
+            ...tocResultsOutcomes,
+          ]),
           metadata: {
             total: tocResults.length,
             outcomes: tocResultsOutcomes.length,
@@ -741,16 +748,18 @@ export class ResultsFrameworkReportingService {
               tocContext,
             );
 
-          const outcomes = (tocResults ?? []).filter(
-            (tocResult) =>
-              (tocResult.category || '').toUpperCase() === 'OUTCOME',
+          // Every ToC node under the Area of Work, outputs included — same rule as AC3 above.
+          const nodes = (tocResults ?? []).filter((tocResult) =>
+            ['OUTPUT', 'OUTCOME'].includes(
+              (tocResult.category || '').toUpperCase(),
+            ),
           );
 
           return {
             code: workPackage.code,
             name: workPackage.name,
             composeCode: workPackage.composeCode,
-            progress: rollUpChildren(outcomes),
+            progress: rollUpChildren(nodes),
           };
         }),
       );

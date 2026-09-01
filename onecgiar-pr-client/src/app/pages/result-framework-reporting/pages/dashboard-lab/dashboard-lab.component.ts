@@ -33,6 +33,7 @@ import {
   ProgramOverviewComponent,
   StatusSegment as OverviewStatusSegment,
   AowProgressRow as OverviewAowProgressRow,
+  TocAchievement,
   CategoryBar as OverviewCategoryBar,
   OverviewCenterBar,
   OverviewLink,
@@ -1176,6 +1177,17 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * Progress by AoW — least complete first. `done` = KPIs with something reported;
    * `total` = planned indicators (same rule as the Reporting table ratio).
    */
+  /**
+   * P2-3296 AC3 / AC4 — the ToC achievement roll-up, one call for the whole programme.
+   *
+   * Deliberately NOT recomputed in the client from the loaded indicators: the rule for which
+   * indicator may enter an average (a usable target, i.e. present and greater than zero) lives in
+   * exactly one place, `toc-progress-rollup.ts` on the server. A second copy here would drift the
+   * day one of the two is corrected.
+   */
+  readonly programAchievement = signal<TocAchievement | null>(null);
+  readonly achievementByAowCode = signal<Record<string, TocAchievement>>({});
+
   readonly overviewAowProgress = computed<OverviewAowProgressRow[]>(() => {
     return this.indicatorsByAow()
       .map(b => {
@@ -1185,7 +1197,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           code: b.aow.code,
           name: b.aow.name,
           done,
-          total: inds.length
+          total: inds.length,
+          // P2-3296 AC3 — beside the reported-KPI count, never instead of it.
+          achievement: this.achievementByAowCode()[b.aow.code] ?? null
         };
       })
       .filter(r => r.total > 0 || !this.loadingAows())
@@ -1972,6 +1986,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     if (!code) return;
     const versionId = this.effectiveVersionId();
     this.loadSummaries(code, versionId ?? undefined);
+    this.loadTocAchievement(code, versionId ?? undefined);
   }
 
   /**
@@ -1985,6 +2000,30 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
     this.api.resultsSE.GET_IndicatorContributionSummary(code, versionId).subscribe({
       next: (res: { response?: { totalsByType?: IndicatorCategory[] } }) => this.cacheSummaries(key, res?.response?.totalsByType ?? []),
       error: () => this.cacheSummaries(key, [])
+    });
+  }
+
+  /**
+   * P2-3296 AC3 / AC4 — one call gives the programme's achievement and one figure per Area of
+   * Work, so the AoW rows fill without a request each.
+   *
+   * Fails soft: this is a supplementary reading on a page whose job is to show the Areas of Work.
+   * An error clears the figures and the page renders exactly as it did before the ticket.
+   */
+  private loadTocAchievement(code: string, versionId?: number): void {
+    this.api.resultsSE.GET_ScienceProgramTocProgress(code, versionId).subscribe({
+      next: (res: {
+        response?: { progress?: TocAchievement; areas?: Array<{ code: string; progress: TocAchievement }> };
+      }) => {
+        this.programAchievement.set(res?.response?.progress ?? null);
+        this.achievementByAowCode.set(
+          Object.fromEntries((res?.response?.areas ?? []).filter(a => a?.code).map(a => [a.code, a.progress]))
+        );
+      },
+      error: () => {
+        this.programAchievement.set(null);
+        this.achievementByAowCode.set({});
+      }
     });
   }
 
@@ -2164,7 +2203,11 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
               indicators: rows,
               count: tierRows.length,
               loading: bundle.loading,
-              kind: 'aow' as const
+              kind: 'aow' as const,
+              // P2-3296 AC3. Taken from the roll-up call, not recomputed from `rows`: the figure
+              // describes the Area of Work, not the current filter. A percentage that moved as the
+              // user narrowed the typology or the search box would not be progress.
+              achievement: this.achievementByAowCode()[aow.code] ?? null
             };
           })
       : [];

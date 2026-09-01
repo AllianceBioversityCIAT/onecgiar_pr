@@ -652,6 +652,7 @@ describe('DashboardLabComponent — loadSummaries() / summariesByCode cache (W12
           provide: ApiService,
           useValue: {
             resultsSE: {
+              GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } })),
               GET_IndicatorContributionSummary: getIndicatorContributionSummary,
               // Needed once effects are actually flushed (see the "flushed effects" tests
               // below): the constructor's OTHER effect calls `loadAows` unconditionally
@@ -924,6 +925,7 @@ describe('DashboardLabComponent — phase filter resolver + loaders (OPF-T-3)', 
     return {
       resultsSE: {
         GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { units: [] } })),
+        GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } })),
         GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of({ response: { totalsByType: [] } })),
         GET_ResultToReview: jest.fn().mockReturnValue(of({ response: [] })),
         GET_2030Outcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),
@@ -1251,6 +1253,7 @@ describe('DashboardLabComponent — phase selector options + meter null/loading 
     return {
       resultsSE: {
         GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: { units: [] } })),
+        GET_ScienceProgramTocProgress: jest.fn().mockReturnValue(of({ response: { progress: null, areas: [] } })),
         GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of({ response: { totalsByType: [] } })),
         GET_ResultToReview: jest.fn().mockReturnValue(of({ response: [] })),
         GET_2030Outcomes: jest.fn().mockReturnValue(of({ response: { tocResults: [] } })),

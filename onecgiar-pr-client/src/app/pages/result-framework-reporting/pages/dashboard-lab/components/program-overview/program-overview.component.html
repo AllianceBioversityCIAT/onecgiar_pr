@@ -657,15 +657,42 @@
         </p>
       </div>
 
-      @if (aowProgress().length) {
-        <div class="flex items-center gap-[8px] rounded-full bg-[var(--pr-color-primary-50)] px-[12px] py-[5px] border border-[var(--pr-color-primary-100)]">
-          <span class="text-[12px] font-medium text-[var(--pr-text-secondary)]">Overall:</span>
-          <span class="text-[13px] font-bold text-[var(--pr-color-primary-700)] tabular-nums">
-            {{ aowStats().pct }}%
-          </span>
-          <span class="text-[11px] font-medium text-[var(--pr-text-muted)]">({{ aowStats().totalDone }}/{{ aowStats().totalPlanned }} KPIs)</span>
-        </div>
-      }
+      <div class="flex flex-wrap items-center gap-[8px]">
+        @if (aowProgress().length) {
+          <div
+            class="flex items-center gap-[8px] rounded-full bg-[var(--pr-color-primary-50)] px-[12px] py-[5px] border border-[var(--pr-color-primary-100)]"
+            prTooltip="How many KPIs have something reported against them. This is coverage of the plan, not achievement against the targets."
+            prTooltipPosition="top">
+            <span class="text-[12px] font-medium text-[var(--pr-text-secondary)]">Reported:</span>
+            <span class="text-[13px] font-bold text-[var(--pr-color-primary-700)] tabular-nums">
+              {{ aowStats().pct }}%
+            </span>
+            <span class="text-[11px] font-medium text-[var(--pr-text-muted)]">({{ aowStats().totalDone }}/{{ aowStats().totalPlanned }} KPIs)</span>
+          </div>
+        }
+
+        <!--
+          P2-3296 AC4 — the Science Program's achievement against its ToC targets, averaged over
+          its Areas of Work. It sits BESIDE the reported-KPI badge rather than replacing it: one
+          says how much of the plan has been touched, the other how far it got. Neither answers
+          the other's question.
+        -->
+        @if (programAchievement()) {
+          <div
+            class="flex items-center gap-[8px] rounded-full bg-emerald-50 px-[12px] py-[5px] border border-emerald-200"
+            [prTooltip]="achievementTooltip(programAchievement(), 'Areas of Work')"
+            prTooltipPosition="top">
+            <span class="text-[12px] font-medium text-[var(--pr-text-secondary)]">Achieved:</span>
+            <span class="text-[11px] font-medium text-[var(--pr-text-muted)]">QA</span>
+            <span class="text-[13px] font-bold text-emerald-700 tabular-nums">{{ achievementLabel(programAchievement()) }}</span>
+            <span class="text-[11px] font-medium text-[var(--pr-text-muted)]">Prel.</span>
+            <span class="text-[13px] font-semibold text-emerald-600/80 tabular-nums">{{ preliminaryLabel(programAchievement()) }}</span>
+            @if (achievementCoverage(programAchievement())) {
+              <span class="text-[11px] font-medium text-[var(--pr-text-muted)]">· {{ achievementCoverage(programAchievement()) }}</span>
+            }
+          </div>
+        }
+      </div>
     </div>
 
     @if (aowProgress().length) {
@@ -703,7 +730,7 @@
                 <span class="ml-1 text-[11px] text-[var(--pr-text-muted)]">KPIs</span>
               </div>
 
-              <!-- Percent Badge -->
+              <!-- Percent Badge — KPIs reported, not achievement -->
               <div
                 class="inline-flex w-[48px] justify-center rounded-[6px] px-[6px] py-[2px] text-[11.5px] font-bold tabular-nums"
                 [ngClass]="{
@@ -713,6 +740,34 @@
                 }">
                 {{ percentOf(row) }}%
               </div>
+
+              <!--
+                P2-3296 AC3 — this Area of Work's achievement against its ToC targets, averaged
+                over its Intermediate Outcomes. Indicators with no usable target are excluded and
+                the coverage line says how many made it in.
+              -->
+              @if (row.achievement) {
+                <div
+                  class="flex w-[150px] shrink-0 flex-col items-end leading-tight"
+                  [prTooltip]="achievementTooltip(row.achievement)"
+                  prTooltipPosition="top">
+                  <!-- Label before value ("QA 10%", not "10% QA"): the other order runs the two
+                       figures together into one unreadable string. -->
+                  <span class="flex items-baseline gap-[10px] whitespace-nowrap">
+                    <span class="flex items-baseline gap-[4px]">
+                      <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">QA</span>
+                      <span class="text-[13px] font-bold tabular-nums text-[var(--pr-text-heading)]">{{ achievementLabel(row.achievement) }}</span>
+                    </span>
+                    <span class="flex items-baseline gap-[4px]">
+                      <span class="text-[10.5px] font-medium uppercase tracking-[0.02em] text-[var(--pr-text-subtle)]">Prel.</span>
+                      <span class="text-[13px] font-semibold tabular-nums text-[var(--pr-text-secondary)]">{{ preliminaryLabel(row.achievement) }}</span>
+                    </span>
+                  </span>
+                  @if (achievementCoverage(row.achievement)) {
+                    <span class="text-[10.5px] font-medium text-[var(--pr-text-muted)]">{{ achievementCoverage(row.achievement) }}</span>
+                  }
+                </div>
+              }
             </div>
           </div>
         }
