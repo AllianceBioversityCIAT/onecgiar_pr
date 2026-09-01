@@ -312,3 +312,48 @@ fourth that a successful save shows nothing.
 
 This is the same shape of gap that hid two defects in P2-3296 the same week: the assertions stopped
 one layer above the thing that was broken.
+
+---
+
+## Second correction — the audit missed the unification gap it was looking at
+
+**Added 2026-09-01, from Yecksin Zuñiga's independent surface-by-surface verification of P2-3220.**
+
+### Two doors, not one
+
+`innovation-dev-info` uploads through `POST_createUploadSessionP25`; `rd-evidences` and
+`bilateral/section-evidence` go through `POST_createUploadSession`.
+
+§1 of this report lists both methods, cites both, and reads them as an inventory fact. **They are
+the unification gap.** This story's scope asks to "make the shared SharePoint upload flow the
+default for any new evidence upload point", and P2-3220 states it plainly: *"unify the upload logic
+into a single reusable service so new forms cannot bypass SharePoint by accident."* Two entry points
+is precisely the thing that requirement exists to remove, and the audit walked past it.
+
+Beyond the two doors, each of the three surfaces reimplements the session loop, the progress
+interval, and the `link` / `sp_document_id` / `sp_file_name` assignment. The only shared code today
+is the two API-service methods themselves.
+
+**So AC1's "met" verdict in §1 is accurate and incomplete in the same breath:** every surface does
+route through SharePoint, and nothing enforces that the next one will.
+
+### What the independent pass confirmed
+
+Yecksin searched for upload surfaces **by behaviour** — `type="file"`, `FormData`, `files[0]` —
+rather than by what the ticket enumerates, and found none beyond the three, including in Results
+Framework Reporting. That is a stronger method than this audit's grep for `SharePointService`
+callers, because it would also catch a surface that bypassed the service entirely. AC4 holds.
+
+### 🛑 The version stamp cannot be used to tell what is deployed
+
+Measured the same afternoon: **the artifact prtest serves corresponds to no commit on the branch.**
+The sidebar stamp reads 16, yet a commit that is an ancestor of that bump appears in no chunk of the
+bundle — impossible in a clean build. It is a build assembled by hand to bring the environment up.
+
+Client and server are also out of step: the client stamp read 09:16 while the server was running
+code from 09:33.
+
+**Do not infer deployment from commit time or from the version stamp, in either direction.** The
+only reliable checks are finding the code inside the served artifact, or an observable behaviour
+only the new code can produce. This applies to the browser verification this report recommends —
+a failed check may be measuring the artifact, not the fix.
