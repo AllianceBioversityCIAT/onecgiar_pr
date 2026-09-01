@@ -323,6 +323,11 @@ describe('InnovationDevInfoComponent', () => {
       rolesSE: {
         readOnly: false
       },
+      // P2-3218: the component now tells the user when a save fails. Before this, the three
+      // failure paths were silent and the tests below passed while the user saw nothing.
+      alertsFe: {
+        show: jest.fn()
+      },
       dataControlSE: {
         currentResultSectionName: signal<string>('Innovation development information'),
         currentResult: {
@@ -1239,6 +1244,81 @@ describe('InnovationDevInfoComponent', () => {
         fixture.detectChanges();
         expect(developerFieldDescription()).toBe('');
       });
+    });
+  });
+
+  /**
+   * P2-3218. The three failure paths in `onSaveSection` used to be silent: a `console.error`, the
+   * spinner off, and nothing on screen. The user pressed Save, saw the spinner stop, and walked
+   * away believing the section was stored.
+   *
+   * The tests that already covered these paths asserted only that `savingSection` went false —
+   * which stayed true while the defect was live. These assert what the user actually gets.
+   */
+  describe('P2-3218 — a failed save has to reach the user, not just the console', () => {
+    beforeEach(() => {
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      (component as any).fieldsManagerSE = { isP25: () => true };
+      (component as any).api.dataControlSE.currentResult = { id: 1 };
+      (component as any).innovationDevInfoBody = { innovation_nature_id: 1, innovatonUse: { organization: [] } };
+      (component as any).evidencesBody = { evidences: [] };
+      mockApiService.alertsFe.show.mockClear();
+    });
+
+    const lastAlert = () => mockApiService.alertsFe.show.mock.calls.at(-1)?.[0];
+
+    it('tells the user when the SharePoint upload fails, and does not claim the section was saved', async () => {
+      jest.spyOn(component as any, 'uploadPendingFiles').mockRejectedValue(new Error('graph 503'));
+      const postEvidence = jest.spyOn(mockApiService.resultsSE, 'POST_createEvidenceDemandP25');
+
+      await component.onSaveSection();
+
+      expect(mockApiService.alertsFe.show).toHaveBeenCalledTimes(1);
+      expect(lastAlert().status).toBe('error');
+      expect(lastAlert().title).toMatch(/could not be stored/i);
+      // Nothing downstream may run: the files never reached SharePoint.
+      expect(postEvidence).not.toHaveBeenCalled();
+      expect((component as any).savingSection).toBe(false);
+    });
+
+    it('tells the user when registering the evidence fails', async () => {
+      jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue(undefined);
+      mockApiService.resultsSE.POST_createEvidenceDemandP25 = () => throwError(() => new Error('500'));
+
+      await component.onSaveSection();
+
+      expect(lastAlert().status).toBe('error');
+      expect(lastAlert().title).toMatch(/not saved/i);
+      expect((component as any).savingSection).toBe(false);
+    });
+
+    /**
+     * The wording matters here: the files ARE in SharePoint and the evidence row exists, only the
+     * section's own fields failed. Telling the user to re-attach would have them upload files that
+     * are already stored.
+     */
+    it('says the evidence survived when only the section fields fail', async () => {
+      jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue(undefined);
+      mockApiService.resultsSE.POST_createEvidenceDemandP25 = () => of({});
+      mockApiService.resultsSE.PATCH_innovationDevP25 = () => throwError(() => new Error('500'));
+
+      await component.onSaveSection();
+
+      expect(lastAlert().status).toBe('error');
+      expect(lastAlert().description).toMatch(/evidence was stored/i);
+      expect(lastAlert().description).not.toMatch(/re-attach/i);
+      expect((component as any).savingSection).toBe(false);
+    });
+
+    it('says nothing when the save succeeds', async () => {
+      jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue(undefined);
+      mockApiService.resultsSE.POST_createEvidenceDemandP25 = () => of({});
+      mockApiService.resultsSE.PATCH_innovationDevP25 = () => of({});
+      jest.spyOn(component as any, 'getSectionInformationp25').mockImplementation(() => undefined);
+
+      await component.onSaveSection();
+
+      expect(mockApiService.alertsFe.show).not.toHaveBeenCalled();
     });
   });
 });

@@ -201,6 +201,21 @@ export class InnovationDevInfoComponent {
     });
   }
 
+  /**
+   * P2-3218 — a save failure has to reach the user, not just the console.
+   *
+   * Same shape as the fix applied to the other two evidence surfaces in e014ee987, so the three
+   * upload points now react to failure identically instead of three different ways.
+   */
+  private showSaveError(title: string, description: string): void {
+    this.api.alertsFe.show({
+      id: 'innovation-dev-save-failed',
+      title,
+      description,
+      status: 'error'
+    });
+  }
+
   async onSaveSection() {
     this.savingSection = true;
     this.convertOrganizationsTosave();
@@ -212,10 +227,18 @@ export class InnovationDevInfoComponent {
       const resultId = (this.api.dataControlSE?.currentResult as any)?.result_id ?? (this.api.dataControlSE?.currentResult as any)?.id;
       (this.evidencesBody as any).result_id = resultId;
 
+      // P2-3218: this method had three failure paths and all three were silent — a console.error,
+      // the spinner off, and nothing on screen. The user pressed Save, saw the spinner stop, and
+      // walked away believing the section was stored. The same defect was fixed for the other two
+      // evidence surfaces in e014ee987 (P2-3220); this one was left out of that pass.
       try {
         await this.uploadPendingFiles();
       } catch (error) {
-        console.error('Error uploading files:', error);
+        console.error('[innovation-dev-info] SharePoint upload failed', error);
+        this.showSaveError(
+          'Your files could not be stored',
+          'The evidence was not uploaded to SharePoint, so nothing in this section was saved. Please re-attach the files and save again.'
+        );
         this.savingSection = false;
         return;
       }
@@ -228,13 +251,24 @@ export class InnovationDevInfoComponent {
               this.savingSection = false;
             },
             error: err => {
-              console.error(err);
+              console.error('[innovation-dev-info] saving the section failed', err);
+              // The files reached SharePoint and the evidence record was written; only the
+              // section's own fields failed. Saying so keeps the user from re-attaching files
+              // that are already stored.
+              this.showSaveError(
+                'This section was not saved',
+                'Your evidence was stored, but the rest of the section could not be saved. Please try saving again.'
+              );
               this.savingSection = false;
             }
           });
         },
         error: err => {
-          console.error(err);
+          console.error('[innovation-dev-info] registering the evidence failed', err);
+          this.showSaveError(
+            'Your evidence was not saved',
+            'The files were uploaded but could not be registered against this result, so this section was not saved. Please try saving again.'
+          );
           this.savingSection = false;
         }
       });
