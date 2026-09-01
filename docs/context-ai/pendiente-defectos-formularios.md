@@ -50,6 +50,9 @@ Arreglo: el guard usa `queryCameFromHydration`, la misma distinción que el camp
 `onContactBlur`. Tecleado y sin elegir = error en **todos** los portafolios; cargado = se guarda.
 102/102 en el spec de la sección; 3 casos nuevos que fallan contra el código anterior.
 
+Documentado en **P2-3545** (Bug, `To Be Deployed`, a nombre de Yeck): descripción en lenguaje llano
+con los pasos de comprobación, y el detalle técnico en el comentario `## 🛠 Technical pre-plan`.
+
 ### ❌ RETIRADO — 2. el guardado rechazado recargaba y borraba lo tecleado
 
 **Ya estaba arreglado** por Yeck el 31-ago 14:56, commit `034414b2c`. El handler de error ya no llama
@@ -67,6 +70,9 @@ escribir encima de lo que la IA acababa de guardar.
 
 Arreglo: `PATCH_saveDacScore` emite el mismo aviso (extraído a `notifySectionChanged()`).
 
+Documentado en **P2-3546** (Bug, `To Be Deployed`, a nombre de Yeck), con el mismo reparto de dos
+audiencias.
+
 ⚠️ **Apunte que queda, sin desarrollar:** con `onValidateAll` el aviso sale una vez por área guardada,
 o sea hasta 5 recargas seguidas de la sección. Es correcto pero derrochador. Y el recargar descarta
 ediciones sin guardar que la persona tuviera en la sección — ya pasaba con `POST_saveSession`, no lo
@@ -76,20 +82,40 @@ introduce este arreglo.
 `lead-contact-person-field.contract.cy.ts` fallan en `performance-refactor` desde antes de tocar nada
 (asertan `.fch_tag` / `fc-done` de `field-card`). Comprobado revirtiendo a HEAD: fallan igual.
 
-## 🔴 LOTE 2 — El peor de todos, y es bloqueante (backend, nuestro)
+## ✅ LOTE 2 — CERRADO: ya estaba arreglado, y el resto del bloque está cubierto
 
-Archivo: `onecgiar-pr-server/src/api/results/results.service.ts` ~4565-4569
+Arreglado por Yeck el 31-ago 14:47, commit **`ac6532c54`** (+37 en `results.service.ts`, +107 de test):
+el revisor construía su DTO con `is_attending_for_organization: false` a pelo, así que su "Save
+changes" escribía ese default sobre la respuesta del investigador. Ahora se lee el valor guardado y
+solo se sobrescribe si el payload del revisor trae uno propio. Ese commit ya **estrechó** el reporte
+original: las organizaciones **no** se borraban (`saveCapacityDevelopents` solo reescribe
+instituciones tras `if (institutions?.length)`).
 
-💾 **Que un revisor administrador pulse "Save changes" en el bloque de data standards BORRA las
-respuestas del investigador.** El payload del revisor no trae los campos del investigador y el update
-los sobrescribe con vacío. Caso real: un Capacity Sharing bilateral donde el investigador respondió
-"Were the trainees attending on behalf of an organization?" queda sin respuesta.
-Arreglo: escribir solo lo que viene informado en el payload.
+**Verificado el 1-sep que el arreglo cubre el bloque entero, no solo Capacity Sharing.** El save del
+revisor reparte por tipo de resultado en `_handleResultTypeUpdate` (`results.service.ts:4568`) y son
+cuatro ramas:
 
-**En el mismo archivo, y del mismo lote:** un resultado nuevo no se puede guardar hasta puntuar los 5
-Impact Areas, se pierde lo escrito, y el mensaje de error no dice qué falta (`:647-657` y hermanos
-`:667-676`, `:683-692`, `:704-716`, `:727-736`). Arreglo mínimo: que el mensaje nombre el Impact Area
-que falta. **No cambiar la regla de obligatoriedad** — eso es decisión de negocio.
+| Tipo | Escritor | ¿Escribe defaults sobre lo guardado? |
+|---|---|---|
+| Capacity Sharing (5) | `saveCapacityDevelopents` | No — arreglado en `ac6532c54` |
+| Innovation Development (7) | `updateInnovationDevPartial` | No — cada campo tras `!== undefined` (`innovation_dev.service.ts:745-762`) |
+| Policy Change (1) | `updatePolicyChangesPartial` | No — `!== undefined` + `save()` sobre la entidad cargada (`summary.service.ts:1179-1194`) |
+| Innovation Use (2) | `_updateInnovationUsePartial` | No, pero por suerte: ver abajo |
+
+**Innovation Use pasa `?? []` y `?? null`** (`results.service.ts:4824-4836`) — o sea sí manda defaults.
+No pierde datos únicamente porque **los tres escritores guardan por longitud**:
+`if (crtr?.actors?.length)`, `organization?.length`, `measures?.length`
+(`innovation-use.service.ts:417, 475, 539`); y el `innov_use_to_be_determined ?? null` no entra en la
+rama destructiva, que exige `=== true`.
+
+⚠️ **El único riesgo que queda es de API, no de pantalla, y no se desarrolla:** si el payload del
+revisor **no** trae `investment_projects`, la rama `else` de `results.service.ts:4858-4862` **desactiva
+todos los presupuestos** no-pooled del resultado (`_deleteProjectBudgetsForResult`). Desde el cajón de
+revisión no es alcanzable: el GET los devuelve (`getBilateralInnovationUseData` →
+`getInvestmentProjects`) y el cajón los reenvía con la misma clave mal escrita
+(`non_pooled_projetct_budget_id`), así que el ida y vuelta los conserva. Queda expuesto solo si otro
+cliente llama al endpoint sin esa clave, o por el fallback de DI cuando `InnovationUseService` no está.
+🛑 Innovation Use está congelado (stop de Ángel, 31-ago) y el cajón es de otra sesión: no se toca.
 
 ## ❌ LOTE 3 — RETIRADO: los dos hallazgos de Contributors & Partners no se sostienen
 
