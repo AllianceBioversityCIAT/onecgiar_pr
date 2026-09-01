@@ -15,6 +15,7 @@ import { LinkedResultRepository } from '../../results/linked-results/linked-resu
 import { LinkedResultsService } from '../../results/linked-results/linked-results.service';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
+import { ContributionConsistencyService } from './contribution-consistency.service';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 describe('ContributorsPartnersService', () => {
@@ -112,6 +113,22 @@ describe('ContributorsPartnersService', () => {
             findOne: jest.fn(),
             update: jest.fn(),
             save: jest.fn(),
+          },
+        },
+        {
+          // P2-2932. Stubbed to the quiet outcome so the existing assertions keep testing what
+          // they were written for; the check has its own suite.
+          provide: ContributionConsistencyService,
+          useValue: {
+            check: jest.fn().mockResolvedValue({
+              status: 'NOTHING_TO_COMPARE',
+              expected: null,
+              reported: null,
+              boxesCounted: 0,
+              boxesTotal: 0,
+              boxesOfAnotherType: 0,
+              defaultValue: null,
+            }),
           },
         },
         {
@@ -343,6 +360,16 @@ describe('ContributorsPartnersService', () => {
           is_lead_by_partner: true,
           has_innovation_link: true,
           linked_results: [1001, 1002],
+          // P2-2932 — stubbed to the quiet outcome above; the check has its own suite.
+          contribution_consistency: {
+            status: 'NOTHING_TO_COMPARE',
+            expected: null,
+            reported: null,
+            boxesCounted: 0,
+            boxesTotal: 0,
+            boxesOfAnotherType: 0,
+            defaultValue: null,
+          },
         },
         message: 'Contributors and Partners fetched successfully (P25)',
         status: HttpStatus.OK,
