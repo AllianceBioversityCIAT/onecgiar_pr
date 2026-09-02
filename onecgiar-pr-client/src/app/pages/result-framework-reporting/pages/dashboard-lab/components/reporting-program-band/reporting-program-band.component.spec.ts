@@ -247,6 +247,128 @@ describe('ReportingProgramBandComponent', () => {
     });
   });
 
+  // ── OSF-T-2c · collapsed action group must not overflow its own box ──────
+  // jsdom performs no layout, so this can only assert structure — the browser measurement at
+  // OSF-NFR-Responsive's five widths is the real gate (see design.md OSF-DD-15).
+  describe('collapsed action group overflow guard (OSF-T-2c)', () => {
+    const collapsedCta = () =>
+      Array.from(root().querySelectorAll('button')).find(
+        b => b.className.includes('pr-band-fade') && b.textContent?.includes('Report emerging result')
+      ) as HTMLButtonElement;
+
+    it("does not pin the CTA at its intrinsic width — the label truncates instead of forcing overflow", async () => {
+      await build({ showToolbar: true });
+      scrollTo(200);
+
+      const cta = collapsedCta();
+      expect(cta.className).not.toContain('shrink-0');
+      expect(cta.className).toContain('min-w-0');
+
+      const label = cta.querySelector('span:not(.pointer-events-none)') as HTMLElement;
+      expect(label.textContent?.trim()).toBe('Report emerging result');
+      expect(label.className).toContain('truncate');
+      expect(label.className).toContain('min-w-0');
+    });
+
+    it('keeps the CTA icon fixed-size so it never gets clipped by the truncating label', async () => {
+      await build({ showToolbar: true });
+      scrollTo(200);
+
+      const icon = collapsedCta().querySelector('ng-icon') as HTMLElement;
+      expect(icon.className).toContain('shrink-0');
+    });
+
+    it('keeps the tooltip overlay intact and unclipped by the band (not the cause of the overflow)', async () => {
+      await build({ showToolbar: true });
+      scrollTo(200);
+
+      const tooltip = collapsedCta().querySelector('.pointer-events-none') as HTMLElement;
+      expect(tooltip).toBeTruthy();
+      expect(tooltip.className).toContain('w-[220px]');
+      expect(tooltip.textContent).toContain('Report achievements');
+    });
+  });
+
+  // ── OSF-T-10 · the action group itself must not carry an automatic min-width ──────────────
+  // jsdom performs no layout, so this can only assert structure — the real gate is the page-level
+  // scrollWidth === clientWidth browser measurement at 768px with the band collapsed (execution.md).
+  // Without `min-w-0` on this ancestor, a flex item nested in another flex container keeps a
+  // min-content width equal to the sum of its children (back button + CTA) regardless of `ml-auto`,
+  // which is what let the group overflow the page by 47px at 768px despite the CTA's own
+  // `min-w-0`/`truncate` chain (OSF-T-2c) already being correctly composed.
+  describe('collapsed action group must allow its own box to shrink (OSF-T-10)', () => {
+    const collapsedGroup = () =>
+      root().querySelector('[data-testid="program-band-back-btn-collapsed"]')?.parentElement as HTMLElement;
+    const collapsedCta = () =>
+      Array.from(root().querySelectorAll('button')).find(
+        b => b.className.includes('pr-band-fade') && b.textContent?.includes('Report emerging result')
+      ) as HTMLButtonElement;
+
+    it('carries min-w-0 on the ml-auto action group so the CTA truncation chain can take effect', async () => {
+      await build({ showToolbar: true });
+      scrollTo(200);
+
+      const group = collapsedGroup();
+      expect(group.className).toContain('ml-auto');
+      expect(group.className).toContain('min-w-0');
+    });
+
+    it('does not regress the CTA shrink/truncate chain that OSF-T-2c composed', async () => {
+      await build({ showToolbar: true });
+      scrollTo(200);
+
+      expect(collapsedCta().className).toContain('min-w-0');
+      expect(collapsedCta().className).not.toContain('shrink-0');
+    });
+  });
+
+  // ── OSF-T-15 · at 900px the CTA is already truncated to its icon, so the Back button (193px,
+  // was `shrink-0`) becomes the binding constraint. It now carries the identical OSF-DD-15 chain
+  // as the CTA: `min-w-0` on the button, `shrink-0` on the icon, label in its own `min-w-0
+  // truncate` span. jsdom performs no layout — the real gate is the 900px element-level browser
+  // sweep in execution.md; this only guards the structural chain from regressing silently.
+  describe('collapsed Back button truncates its own label (OSF-T-15)', () => {
+    const collapsedBackBtn = () =>
+      root().querySelector('[data-testid="program-band-back-btn-collapsed"]') as HTMLButtonElement;
+
+    it('does not pin the Back button at its intrinsic width — it can shrink like the CTA', async () => {
+      await build({ showToolbar: true });
+      scrollTo(200);
+
+      const btn = collapsedBackBtn();
+      expect(btn.className).not.toContain('shrink-0');
+      expect(btn.className).toContain('min-w-0');
+    });
+
+    it('truncates the label in its own min-w-0 span instead of overflowing', async () => {
+      await build({ showToolbar: true });
+      scrollTo(200);
+
+      const label = collapsedBackBtn().querySelector('span') as HTMLElement;
+      expect(label.className).toContain('truncate');
+      expect(label.className).toContain('min-w-0');
+      expect(label.textContent).toBe(component.backLabel());
+    });
+
+    it('keeps the arrow icon fixed-size so it never gets clipped by the truncating label', async () => {
+      await build({ showToolbar: true });
+      scrollTo(200);
+
+      const icon = collapsedBackBtn().querySelector('ng-icon') as HTMLElement;
+      expect(icon.className).toContain('shrink-0');
+    });
+
+    it('still fires goBack() once the label can truncate', async () => {
+      await build({ showToolbar: true });
+      const spy = jest.spyOn(component, 'goBack');
+      scrollTo(200);
+
+      collapsedBackBtn().click();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // ── P2-3252 · global Expand all / Collapse all ────────────────────────────
   describe('expand all / collapse all', () => {
     const control = () =>

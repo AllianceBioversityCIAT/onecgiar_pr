@@ -459,6 +459,223 @@ describe('ResultsFrameworkReportingService', () => {
         debug: true,
       });
     });
+
+    // OSF-T-3: scope bucket query and additive `scopeBuckets` payload
+    // (OSF-DD-1/2/2b/2c/2d/3). These fixtures prove the JS assembly logic —
+    // grouping, the deterministic multi-AoW tie-break, the residual
+    // arithmetic, the clamp/log — never that the SQL itself selects the
+    // right rows from a real database. A wrong JOIN would still pass every
+    // one of these; the SQL is reported as unverified pending a real-DB run.
+    describe('OSF-T-3: scope buckets (OSF-DD-2/2b/2c/2d/3)', () => {
+      const scopeTocContext = {
+        reportingYear: 2025,
+        phaseUuid: 'PHASE-SCOPE',
+        versionId: 36,
+      };
+
+      const setupProgram = (workPackages: any[]) => {
+        mockClarisaInitiativesRepository.findOne.mockResolvedValue({
+          id: 42,
+          official_code: 'SP01',
+          name: 'Science Program One',
+          short_name: 'SP01',
+          portfolio_id: 3,
+        });
+        mockReportingTocContextService.resolve.mockResolvedValueOnce(
+          scopeTocContext,
+        );
+        mockTocResultsRepository.findWorkPackagesByProgram.mockResolvedValue(
+          workPackages,
+        );
+        mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
+          new Map(),
+        );
+        mockTocResultsRepository.countProgramLevelOutcomes.mockResolvedValue({
+          intermediateCount: 0,
+          eoi2030Count: 0,
+        });
+      };
+
+      /** Routes `dataSource.query` calls to a fixture by their distinctive SQL text. */
+      const mockQueriesByKind = (fixtures: {
+        resultsCount?: any[];
+        scope?: any[];
+        total?: any[];
+      }) => {
+        mockDataSource.query.mockImplementation(
+          (query: string, _params: unknown[]) => {
+            if (query.includes('results_by_inititiative')) {
+              return Promise.resolve(fixtures.total ?? []);
+            }
+            if (query.includes('result_scope')) {
+              return Promise.resolve(fixtures.scope ?? []);
+            }
+            if (query.includes('result_indicators_targets')) {
+              return Promise.resolve(fixtures.resultsCount ?? []);
+            }
+            return Promise.resolve([]);
+          },
+        );
+      };
+
+      it('OSF-AC-3 keystone: bucket totals sum exactly to the program total, per status and overall', async () => {
+        setupProgram([
+          {
+            id: 1,
+            code: 'AOW01',
+            name: 'Area One',
+            composeCode: 'AOW01',
+            year: 2025,
+          },
+        ]);
+
+        // Program total (independent of any ToC link): 3 results at status 1.
+        // Named buckets only account for 2 of them (one AoW, one
+        // Intermediate) — the third has no ToC link at all and must land in
+        // UNTAGGED via the residual, never a direct count (OSF-DD-3).
+        mockQueriesByKind({
+          total: [{ status_id: 1, result_count: 3 }],
+          scope: [
+            { bucket_key: 'AOW01', status_id: 1, result_count: 1 },
+            { bucket_key: 'INTERMEDIATE', status_id: 1, result_count: 1 },
+          ],
+        });
+
+        const result = await service.getGlobalUnitsByProgram(user, 'SP01');
+        expect(result.status).toBe(200);
+        const buckets = (result.response as any).scopeBuckets as Array<{
+          key: string;
+          kind: string;
+          byStatus: Record<number, number>;
+          total: number;
+        }>;
+
+        const byKey = new Map(buckets.map((b) => [b.key, b]));
+        expect(byKey.get('AOW01')).toMatchObject({ kind: 'aow', total: 1 });
+        expect(byKey.get('INTERMEDIATE')).toMatchObject({
+          kind: 'outcome',
+          total: 1,
+        });
+        expect(byKey.get('EOI_2030')).toMatchObject({
+          kind: 'outcome',
+          total: 0,
+        });
+        expect(byKey.get('UNTAGGED')).toMatchObject({
+          kind: 'untagged',
+          total: 1,
+        });
+
+        // Per-status reconciliation (OSF-AC-3).
+        const sumAtStatus1 = buckets.reduce(
+          (sum, b) => sum + (b.byStatus[1] ?? 0),
+          0,
+        );
+        expect(sumAtStatus1).toBe(3);
+
+        // Overall reconciliation.
+        const grandTotal = buckets.reduce((sum, b) => sum + b.total, 0);
+        expect(grandTotal).toBe(3);
+      });
+
+      it('single-homes the r.source population predicate across the scope-bucket and program-total queries (FIND-01)', async () => {
+        setupProgram([
+          {
+            id: 1,
+            code: 'AOW01',
+            name: 'Area One',
+            composeCode: 'AOW01',
+            year: 2025,
+          },
+        ]);
+        mockQueriesByKind({});
+
+        await service.getGlobalUnitsByProgram(user, 'SP01');
+
+        const scopeCall = mockDataSource.query.mock.calls.find(([q]) =>
+          q.includes('result_scope'),
+        );
+        const totalCall = mockDataSource.query.mock.calls.find(([q]) =>
+          q.includes('results_by_inititiative'),
+        );
+
+        expect(scopeCall).toBeDefined();
+        expect(totalCall).toBeDefined();
+        // Both queries filter on the same exported constant — the exact
+        // regression a bilateral ('API') result not entering the buckets
+        // protects against. `r.source IN (...)` is present in both texts and
+        // both parameter lists carry only the constant's own values.
+        expect(scopeCall![0]).toContain('r.source IN');
+        expect(totalCall![0]).toContain('r.source IN');
+        expect(scopeCall![1]).toEqual(expect.arrayContaining(['Result']));
+        expect(totalCall![1]).toEqual(expect.arrayContaining(['Result']));
+      });
+
+      it('OSF-AC-12: resultsCount.editing/submitted keep their names and values while gaining byStatus', async () => {
+        setupProgram([
+          {
+            id: 1,
+            code: 'AOW01',
+            name: 'Area One',
+            composeCode: 'AOW01',
+            year: 2025,
+          },
+        ]);
+        mockQueriesByKind({
+          resultsCount: [
+            { work_package_acronym: 'AOW01', status_id: 1, result_count: 4 },
+            { work_package_acronym: 'AOW01', status_id: 2, result_count: 2 },
+            { work_package_acronym: 'AOW01', status_id: 3, result_count: 7 },
+          ],
+        });
+
+        const result = await service.getGlobalUnitsByProgram(user, 'SP01');
+        const unit = (result.response as any).units[0];
+
+        expect(unit.resultsCount.editing).toBe(4);
+        expect(unit.resultsCount.submitted).toBe(7);
+        expect(unit.resultsCount.byStatus).toMatchObject({
+          1: 4,
+          2: 2,
+          3: 7,
+        });
+      });
+
+      it('clamps a negative UNTAGGED residual to 0 and logs a warning naming the bucket and status', async () => {
+        setupProgram([
+          {
+            id: 1,
+            code: 'AOW01',
+            name: 'Area One',
+            composeCode: 'AOW01',
+            year: 2025,
+          },
+        ]);
+        const warnSpy = jest
+          .spyOn((service as any)._logger, 'warn')
+          .mockImplementation(() => undefined);
+
+        // Program total under-counts relative to the named buckets — the
+        // two populations have drifted apart (a defect signal per OSF-DD-3).
+        mockQueriesByKind({
+          total: [{ status_id: 1, result_count: 1 }],
+          scope: [{ bucket_key: 'AOW01', status_id: 1, result_count: 5 }],
+        });
+
+        const result = await service.getGlobalUnitsByProgram(user, 'SP01');
+        const buckets = (result.response as any).scopeBuckets as Array<{
+          key: string;
+          byStatus: Record<number, number>;
+        }>;
+        const untagged = buckets.find((b) => b.key === 'UNTAGGED')!;
+
+        expect(untagged.byStatus[1]).toBe(0);
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('bucket=UNTAGGED status=1'),
+        );
+
+        warnSpy.mockRestore();
+      });
+    });
   });
 
   describe('getDashboardStats', () => {

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 import { ResultsService } from './results.service';
+import { W1_W2_RESULT_SOURCE_FILTER } from '../../shared/constants/w1-w2-result-source-filter.constant';
 import { ResultRepository } from './result.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultTypesService } from './result_types/result_types.service';
@@ -943,6 +944,33 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(otherSp.entityTypeCode).toBe(102);
     expect(otherSp.entityTypeName).toBe('Accelerator');
     expect(otherSp.versions).toHaveLength(0);
+  });
+
+  // OSF-T-3 (FIND-01 single-homing): `getScienceProgramProgress`'s
+  // `r.source` predicate MUST be the exact same exported constant the
+  // Overview's scope-bucket query filters on
+  // (`W1_W2_RESULT_SOURCE_FILTER`), not a value that merely happens to
+  // equal it. A test asserting only `fundingSource: ['Result']` would still
+  // pass the day someone re-inlines a literal here and the two W1/W2
+  // populations silently diverge again — so this asserts reference
+  // identity, not value equality.
+  it('single-homes the r.source population predicate with OSF-T-3 (identity, not just value)', async () => {
+    mockClarisaInitiativesRepository.find.mockResolvedValueOnce([]);
+    mockRoleByUserRepository.find.mockResolvedValueOnce([]);
+    mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered.mockResolvedValueOnce(
+      { results: [], total: 0 },
+    );
+
+    await resultService.getScienceProgramProgress(userTest);
+
+    const [, filtersArg] =
+      mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered.mock
+        .calls[0];
+
+    expect(filtersArg.fundingSource).toBe(W1_W2_RESULT_SOURCE_FILTER);
+    expect(
+      Object.is(filtersArg.fundingSource, W1_W2_RESULT_SOURCE_FILTER),
+    ).toBe(true);
   });
 
   it('should error when creating a new result with invalid result type', async () => {

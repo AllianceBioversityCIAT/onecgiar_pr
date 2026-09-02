@@ -22,6 +22,16 @@ import { throwServiceError } from '../../shared/utils/service-error.util';
 import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
 import type { TocResultResponse } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 import { rollUpChildren } from '../results/results-toc-results/repositories/toc-progress-rollup';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
+import { W1_W2_RESULT_SOURCE_FILTER } from '../../shared/constants/w1-w2-result-source-filter.constant';
+
+/** One entry of the additive `scopeBuckets[]` partition (design.md §5). */
+export interface ScopeBucketDto {
+  key: string;
+  kind: 'aow' | 'outcome' | 'untagged';
+  byStatus: Record<number, number>;
+  total: number;
+}
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -85,17 +95,25 @@ export class ResultsFrameworkReportingService {
           tocContext,
         );
 
-      const [resultCountsByUnit, programLevelOutcomes] = await Promise.all([
-        this.getResultsCountByUnitAndStatus(
-          initiative.id,
-          workPackages.map((u) => u.code),
-          tocContext,
-        ),
-        this._tocResultsRepository.countProgramLevelOutcomes(
-          initiative.official_code.toUpperCase(),
-          tocContext,
-        ),
-      ]);
+      const [resultCountsByUnit, programLevelOutcomes, scopeBuckets] =
+        await Promise.all([
+          this.getResultsCountByUnitAndStatus(
+            initiative.id,
+            workPackages.map((u) => u.code),
+            tocContext,
+          ),
+          this._tocResultsRepository.countProgramLevelOutcomes(
+            initiative.official_code.toUpperCase(),
+            tocContext,
+          ),
+          this.getScopeBuckets(initiative.id, workPackages, tocContext),
+        ]);
+
+      const allStatusIds = (
+        Object.values(ResultStatusData) as ResultStatusData[]
+      )
+        .map((s) => s.value)
+        .sort((a, b) => a - b);
 
       let totalTargetValue = 0;
       let totalActualValue = 0;
@@ -201,8 +219,14 @@ export class ResultsFrameworkReportingService {
             actualAchievedValueSum: totals.actualValue,
           },
           resultsCount: {
+            // KEPT — same name, same semantics, same INNER-join population
+            // (OSF-DD-2b). Widening the query's status filter to build
+            // `byStatus` does not change these two values (OSF-AC-12).
             editing: resultCountsByUnit.get(`${unitKey}_1`) ?? 0,
             submitted: resultCountsByUnit.get(`${unitKey}_3`) ?? 0,
+            byStatus: this.buildByStatusRecord(allStatusIds, (statusId) =>
+              resultCountsByUnit.get(`${unitKey}_${statusId}`),
+            ),
           },
         };
       });
@@ -224,6 +248,10 @@ export class ResultsFrameworkReportingService {
             year: tocContext.reportingYear,
           },
           units: filteredUnits,
+          // NEW additive field (OSF-R-2, OSF-R-4). Total partition of the
+          // program's W1/W2 results: every result belongs to exactly one
+          // bucket, and the buckets sum to the unfiltered total (OSF-AC-3).
+          scopeBuckets,
           intermediateOutcomes: {
             count: programLevelOutcomes.intermediateCount,
             hasData: programLevelOutcomes.intermediateCount > 0,
@@ -916,13 +944,16 @@ export class ResultsFrameworkReportingService {
       INNER JOIN 
         ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
           AND wp.year = ?
-      WHERE 
+      WHERE
         r.is_active = 1
-        AND r.status_id IN (1, 3)
         AND rtr.initiative_id = ?
         AND UPPER(wp.acronym) IN (${placeholders})
         AND tr.phase = ?
     `;
+    // `status_id` narrowing removed (OSF-DD-1/OSF-T-3): this INNER-join
+    // population and basis are otherwise UNCHANGED — `editing`/`submitted`
+    // keep their shipped meaning and values (OSF-AC-12) — but the caller now
+    // needs every status, not just 1/3, to build `resultsCount.byStatus`.
 
     const params: (string | number)[] = [
       tocContext.reportingYear,
@@ -946,6 +977,237 @@ export class ResultsFrameworkReportingService {
     }
 
     return countsMap;
+  }
+
+  /**
+   * OSF-DD-2 / OSF-DD-2b / OSF-DD-2c / OSF-DD-2d / OSF-DD-3 — the scope-bucket
+   * partition for `scopeBuckets[]`.
+   *
+   * Deliberately a **different join basis** than `getResultsCountByUnitAndStatus`:
+   * that method's INNER chain through `results_toc_result_indicators` /
+   * `result_indicators_targets` means "reported against an indicator target"
+   * (protected by OSF-AC-12). A scope filter needs "attributed to this ToC
+   * area", so the indicator chain is LEFT here — `results_toc_result` alone
+   * stays INNER, because a result with no ToC link at all has no area to
+   * resolve (OSF-DD-2b).
+   *
+   * `UNTAGGED` is never counted directly (OSF-DD-3): it is
+   * `programTotal[status] − Σ(named buckets)[status]`, computed against a
+   * `programTotal` drawn from the *same* population — same initiative, same
+   * `versionId`, same `r.source` predicate (OSF-DD-2c) — rather than a
+   * different endpoint's total, which is what the judgment round found
+   * disagreeing.
+   */
+  private async getScopeBuckets(
+    initiativeId: number,
+    workPackages: { code: string; name?: string }[],
+    tocContext: ReportingTocContext,
+  ): Promise<ScopeBucketDto[]> {
+    const sourcePlaceholders = W1_W2_RESULT_SOURCE_FILTER.map(() => '?').join(
+      ',',
+    );
+
+    // One result can touch more than one AoW (OSF-A-1, measured: 3.7%).
+    // `MIN(...)` is the deterministic tie-break OSF-DD-2d requires — the
+    // lowest acronym, stated rather than an accidental `MAX()`.
+    const scopeQuery = `
+      WITH result_scope AS (
+        SELECT
+          r.id AS result_id,
+          r.status_id AS status_id,
+          MIN(UPPER(wp.acronym)) AS aow_acronym,
+          MAX(CASE
+                WHEN wp.acronym IS NULL AND tr.wp_id IS NULL
+                  AND UPPER(tr.category) IN ('OUTPUT', 'OUTCOME')
+                THEN 1 ELSE 0
+              END) AS has_intermediate,
+          MAX(CASE
+                WHEN wp.acronym IS NULL AND tr.wp_id IS NULL
+                  AND UPPER(tr.category) = 'EOI'
+                THEN 1 ELSE 0
+              END) AS has_eoi
+        FROM
+          result r
+        INNER JOIN
+          results_toc_result rtr ON rtr.results_id = r.id
+            AND rtr.is_active = 1
+            AND rtr.initiative_id = ?
+        LEFT JOIN
+          ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
+            AND tr.is_active = 1
+            AND tr.phase = ?
+        LEFT JOIN
+          ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
+            AND wp.year = ?
+        WHERE
+          r.is_active = 1
+          AND r.source IN (${sourcePlaceholders})
+          AND r.version_id = ?
+        GROUP BY
+          r.id, r.status_id
+      )
+      SELECT
+        CASE
+          WHEN aow_acronym IS NOT NULL THEN aow_acronym
+          WHEN has_intermediate = 1 THEN 'INTERMEDIATE'
+          WHEN has_eoi = 1 THEN 'EOI_2030'
+          ELSE NULL
+        END AS bucket_key,
+        status_id,
+        COUNT(*) AS result_count
+      FROM
+        result_scope
+      GROUP BY
+        bucket_key, status_id
+    `;
+
+    const scopeParams: (string | number)[] = [
+      initiativeId,
+      tocContext.phaseUuid,
+      tocContext.reportingYear,
+      ...W1_W2_RESULT_SOURCE_FILTER,
+      tocContext.versionId,
+    ];
+
+    // The program total, independent of any ToC link — the population the
+    // residual is subtracted against. `results_by_inititiative` is the true
+    // initiative↔result membership table, unlike `results_toc_result` which
+    // only exists for results that have a ToC link at all.
+    const totalQuery = `
+      SELECT
+        r.status_id AS status_id,
+        COUNT(DISTINCT r.id) AS result_count
+      FROM
+        result r
+      INNER JOIN
+        results_by_inititiative rbi ON rbi.result_id = r.id
+          AND rbi.is_active = 1
+          AND rbi.inititiative_id = ?
+      WHERE
+        r.is_active = 1
+        AND r.source IN (${sourcePlaceholders})
+        AND r.version_id = ?
+      GROUP BY
+        r.status_id
+    `;
+
+    const totalParams: (string | number)[] = [
+      initiativeId,
+      ...W1_W2_RESULT_SOURCE_FILTER,
+      tocContext.versionId,
+    ];
+
+    const [scopeRows, totalRows] = await Promise.all([
+      this.dataSource.query(scopeQuery, scopeParams),
+      this.dataSource.query(totalQuery, totalParams),
+    ]);
+
+    const namedBucketCounts = new Map<string, Map<number, number>>();
+    for (const row of scopeRows as Array<{
+      bucket_key: string | null;
+      status_id: number | string;
+      result_count: number | string;
+    }>) {
+      const bucketKey = row.bucket_key;
+      if (!bucketKey) {
+        // Has a `results_toc_result` row (so it is part of the matched
+        // population) but resolves to none of AoW/Intermediate/EOI. It is
+        // not a named bucket — it falls into the UNTAGGED residual below,
+        // same as a result with no ToC link at all (OSF-DD-2b).
+        continue;
+      }
+      const statusId = Number(row.status_id);
+      const count = Number(row.result_count) || 0;
+      const byStatus = namedBucketCounts.get(bucketKey) ?? new Map();
+      byStatus.set(statusId, (byStatus.get(statusId) ?? 0) + count);
+      namedBucketCounts.set(bucketKey, byStatus);
+    }
+
+    const programTotalByStatus = new Map<number, number>();
+    for (const row of totalRows as Array<{
+      status_id: number | string;
+      result_count: number | string;
+    }>) {
+      programTotalByStatus.set(
+        Number(row.status_id),
+        Number(row.result_count) || 0,
+      );
+    }
+
+    const allStatusIds = (Object.values(ResultStatusData) as ResultStatusData[])
+      .map((s) => s.value)
+      .sort((a, b) => a - b);
+
+    const bucketDefinitions: Array<{
+      key: string;
+      kind: 'aow' | 'outcome';
+    }> = [
+      ...workPackages.map((wp) => ({
+        key: (wp.code ?? '').toUpperCase(),
+        kind: 'aow' as const,
+      })),
+      { key: 'INTERMEDIATE', kind: 'outcome' as const },
+      { key: 'EOI_2030', kind: 'outcome' as const },
+    ];
+
+    const namedBuckets: ScopeBucketDto[] = bucketDefinitions.map(
+      ({ key, kind }) => {
+        const counts = namedBucketCounts.get(key) ?? new Map<number, number>();
+        const byStatus = this.buildByStatusRecord(allStatusIds, (statusId) =>
+          counts.get(statusId),
+        );
+        const total = Object.values(byStatus).reduce((a, b) => a + b, 0);
+        return { key, kind, byStatus, total };
+      },
+    );
+
+    // OSF-DD-3 — the residual, never counted directly. A negative value
+    // means the two populations have drifted apart (a defect signal): clamp
+    // to 0 and log a warning naming the bucket and status rather than ship a
+    // wrong number.
+    const untaggedByStatus: Record<number, number> = {};
+    for (const statusId of allStatusIds) {
+      const namedSum = namedBuckets.reduce(
+        (sum, bucket) => sum + (bucket.byStatus[statusId] ?? 0),
+        0,
+      );
+      const programTotal = programTotalByStatus.get(statusId) ?? 0;
+      const residual = programTotal - namedSum;
+      if (residual < 0) {
+        this._logger.warn(
+          `[ResultsFramework] UNTAGGED residual negative for bucket=UNTAGGED status=${statusId} ` +
+            `(programTotal=${programTotal}, namedBucketsSum=${namedSum}) — clamped to 0. ` +
+            'The scope-bucket population and the program-total population have drifted apart.',
+        );
+      }
+      untaggedByStatus[statusId] = Math.max(residual, 0);
+    }
+    const untaggedTotal = Object.values(untaggedByStatus).reduce(
+      (a, b) => a + b,
+      0,
+    );
+
+    return [
+      ...namedBuckets,
+      {
+        key: 'UNTAGGED',
+        kind: 'untagged',
+        byStatus: untaggedByStatus,
+        total: untaggedTotal,
+      },
+    ];
+  }
+
+  /** Builds a `Record<statusId, number>` covering every known status. */
+  private buildByStatusRecord(
+    statusIds: number[],
+    getCount: (statusId: number) => number | undefined,
+  ): Record<number, number> {
+    const record: Record<number, number> = {};
+    for (const statusId of statusIds) {
+      record[statusId] = getCount(statusId) ?? 0;
+    }
+    return record;
   }
 
   private buildHttpError(status: number, message: string) {

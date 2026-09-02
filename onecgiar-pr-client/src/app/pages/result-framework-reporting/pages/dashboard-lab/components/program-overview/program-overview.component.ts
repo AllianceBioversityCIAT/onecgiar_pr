@@ -1,6 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, input, output, signal, viewChild } from '@angular/core';
 import { PrTooltipDirectiveModule } from '../../../../../../shared/directives/pr-tooltip-directive.module';
 import { NgClass } from '@angular/common';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronDown, lucideInfo } from '@ng-icons/lucide';
+import { HlmPopover, HlmPopoverContent, HlmPopoverPortal } from '@spartan/popover';
 import { PrVizChartComponent, EChartsOption, VizChartTableModel } from '../../../../../../shared/components/pr-viz-chart/pr-viz-chart.component';
 import { resolveChartTokens } from '../../../../../../shared/utils/chart-tokens.util';
 import {
@@ -29,7 +32,9 @@ import {
 } from './program-overview.charts';
 import type { TocMapModel } from '../../dashboard-lab.toc-map';
 // @akili-spec changes/overview-aow-progress-hero — the host exports this interface (design.md §3).
-import type { OverviewAowProgressRowRich } from '../../dashboard-lab.component';
+// @akili-spec changes/overview-aow-cross-filter — `OverviewScopeOption`, the scope control's option
+// shape; `OverviewScopeBreakdown`, the unfiltered per-scope breakdown (`OSF-T-7`).
+import type { OverviewAowProgressRowRich, OverviewScopeOption, OverviewScopeBreakdown } from '../../dashboard-lab.component';
 import type { ECElementEvent } from 'echarts/core';
 // @akili-spec changes/reporting-entry-hub — reuse the hub's centralised copy for the Report button's tooltip text.
 import { HUB_COPY } from '../reporting-entry-hub/hub-copy';
@@ -110,6 +115,32 @@ export interface OverviewCenterBar {
 }
 
 /**
+ * Short, user-facing scope codes (`OSF-T-14`, mockup `Main.dc.html`'s own `data()`) for the two
+ * outcome buckets and the untagged bucket — their raw keys (`INTERMEDIATE`/`EOI_2030`/`UNTAGGED`)
+ * are internal enum values, not codes a user recognises (`OSF-T-11`'s finding). AoW keys ARE
+ * already user-facing codes (`AOW01`…) and pass through unchanged.
+ */
+const SCOPE_DISPLAY_CODE: Readonly<Record<string, string>> = {
+  INTERMEDIATE: 'INT',
+  EOI_2030: '2030',
+  UNTAGGED: '—'
+};
+
+/**
+ * Single-homed short-code mapping (`OSF-DD-6` discipline, applied here per `OSF-T-14`) — the
+ * breakdown row's code cell AND `scopeTriggerCode()` both call this, so the row and the trigger
+ * chip can never drift apart the way `execution.md` §17 recorded (`scopeTriggerCode()` used to
+ * return the raw key, painting `INTERMEDIATE` at 900–1099px).
+ *
+ * DISPLAY ONLY: `row.key` / `selectScope(row.key)` / `PROGRAMME_RESULTS_QUERY_PARAM_MAP` / the
+ * `?scope=` value all keep using the RAW key — nothing here ever substitutes for it.
+ * @akili-spec changes/overview-aow-cross-filter
+ */
+export function overviewScopeDisplayCode(option: Pick<OverviewScopeOption, 'key' | 'kind'>): string {
+  return option.kind === 'aow' ? option.key : (SCOPE_DISPLAY_CODE[option.key] ?? option.key);
+}
+
+/**
  * A matrix for `app-pr-viz-chart`'s heatmap mode (`OVW-R-2`/`OVW-R-3`, design §3). `cells` is
  * sparse-friendly but the parent always emits one cell per `rows × cols` pair; `link: null` marks
  * a non-navigable cell (`Other` column, `Not specified` row — `OVW-DD-3`). `shownOf` is present
@@ -148,7 +179,17 @@ import { PrTabIntroComponent } from '../../../../../../shared/components/pr-tab-
 @Component({
   selector: 'app-program-overview',
   standalone: true,
-  imports: [NgClass, PrVizChartComponent, PrTooltipDirectiveModule, PrTabIntroComponent],
+  imports: [
+    NgClass,
+    PrVizChartComponent,
+    PrTooltipDirectiveModule,
+    PrTabIntroComponent,
+    NgIcon,
+    HlmPopover,
+    HlmPopoverContent,
+    HlmPopoverPortal
+  ],
+  providers: [provideIcons({ lucideChevronDown, lucideInfo })],
   templateUrl: './program-overview.component.html',
   styleUrls: ['./program-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -726,5 +767,266 @@ export class ProgramOverviewComponent {
     if (!model) return;
     const code = tocMapAowFromClick(event, model);
     if (code) this.openAow.emit(code);
+  }
+
+  // ── ToC-scope filter control (`changes/overview-aow-cross-filter`, `OSF-T-6`) ─────────────────────
+  //
+  // This component only RENDERS `scopeOptions`/`selectedScope` and EMITS `scopeChange` (`OSF-DD-4`
+  // no-derivation) — the host (`DashboardLabComponent`) owns partitioning, labels and the URL sync.
+  // `scopeGroups`/`scopeFlatKeys` below reshape the already-resolved `scopeOptions()` for rendering
+  // and keyboard order; they compute no NEW figures, matching the `richStats` exception's spirit but
+  // without summing anything (a raw group-by/flatten, not an aggregate).
+
+  /** Grouped, per `OSF-AC-2`'s pinned order: Areas of work → Strategic outcomes → Outside the ToC. */
+  readonly selectedScope = input<string | null>(null);
+  /** Display-ready options from the host's `scopeOptions` computed (`OSF-DD-4`). */
+  readonly scopeOptions = input<OverviewScopeOption[]>([]);
+  /**
+   * The unfiltered per-scope breakdown (`OSF-R-13`, `OSF-T-7`) — the host's `scopeBreakdown`
+   * computed. Rendered as-is: `rows` grouped for display (`breakdownGroups` below), `aowSubtotal`
+   * and `total` printed verbatim in the reconciliation sentence. This component sums nothing
+   * (`OSF-DD-4`).
+   * @akili-spec changes/overview-aow-cross-filter
+   */
+  readonly scopeBreakdown = input<OverviewScopeBreakdown>({ rows: [], aowSubtotal: 0, total: 0 });
+  /** Template-callable handle on the module-level pure function (`OSF-T-14`) — Angular templates
+   *  only resolve methods on the component instance, never a free function. */
+  readonly overviewScopeDisplayCode = overviewScopeDisplayCode;
+  /** Emits the chosen scope key, or `null` for "All areas and outcomes" (`OSF-R-1`). */
+  readonly scopeChange = output<string | null>();
+
+  /**
+   * Whether a scope is active — drives the `Program-wide` declaration (`OSF-R-5`), the no-plan hero
+   * treatment (`OSF-R-6`) and the breakdown's unfiltered-only gate (`OSF-R-13`).
+   * @akili-spec changes/overview-aow-cross-filter
+   */
+  readonly isFiltered = computed(() => this.selectedScope() !== null);
+
+  /**
+   * `OSF-R-6`/`OSF-AC-7`: the selected scope has no planned KPIs to measure — `richStats().total`
+   * is `0` either because `richRows()` came back empty (an outcome/untagged scope selected — no AoW
+   * row ever matches those keys, `filterRowsByScope` in the host) or because the single matched AoW
+   * row itself has no planned KPIs. Gated on `isFiltered()` so the pre-existing unfiltered empty
+   * state (`OSF-AC-1`) is untouched.
+   * @akili-spec changes/overview-aow-cross-filter
+   */
+  readonly heroNoPlan = computed(() => this.isFiltered() && this.richStats().total === 0);
+
+  private static readonly SCOPE_GROUP_LABEL: Record<OverviewScopeOption['kind'], string> = {
+    aow: 'Areas of work',
+    outcome: 'Strategic outcomes',
+    untagged: 'Outside the Theory of Change'
+  };
+  private static readonly SCOPE_GROUP_ORDER: OverviewScopeOption['kind'][] = ['aow', 'outcome', 'untagged'];
+  /** `outcome` has exactly two possible keys with a fixed, semantic order (design.md §5's label
+   *  table: `INTERMEDIATE` before `EOI_2030`) — unlike `aow`, whose order is the ToC's own and MUST
+   *  keep `scopeOptions()`'s relative order, not be re-sorted here. */
+  private static readonly OUTCOME_KEY_ORDER: readonly string[] = ['INTERMEDIATE', 'EOI_2030'];
+
+  /**
+   * Groups any `OverviewScopeOption[]` in the `OSF-AC-2` pinned order — group headers are never
+   * options, and empty groups are dropped. Shared by `scopeGroups` (the control's own options) and
+   * `breakdownGroups` (`OSF-T-7`, the per-scope breakdown's rows) — same grouping rule, two
+   * different option lists, so the order can never drift between the control and the breakdown.
+   */
+  private groupScopeOptions(options: OverviewScopeOption[]) {
+    return ProgramOverviewComponent.SCOPE_GROUP_ORDER.map(kind => {
+      const groupOptions = options.filter(o => o.kind === kind);
+      if (kind === 'outcome') {
+        groupOptions.sort(
+          (a, b) =>
+            ProgramOverviewComponent.OUTCOME_KEY_ORDER.indexOf(a.key) -
+            ProgramOverviewComponent.OUTCOME_KEY_ORDER.indexOf(b.key)
+        );
+      }
+      return {
+        kind,
+        label: ProgramOverviewComponent.SCOPE_GROUP_LABEL[kind],
+        options: groupOptions
+      };
+    }).filter(group => group.options.length > 0);
+  }
+
+  /** One row per non-empty group, in the `OSF-AC-2` order — group headers are never options. */
+  readonly scopeGroups = computed(() => this.groupScopeOptions(this.scopeOptions()));
+
+  /**
+   * `OSF-R-13`/`OSF-T-7`: `scopeBreakdown().rows` grouped the SAME way as the control's own options
+   * — a raw group-by, no new figure (`OSF-DD-4`). A group with an entry whose `count` is `0` still
+   * renders that row; only a group with NO entries is dropped (`groupScopeOptions`' own filter).
+   * @akili-spec changes/overview-aow-cross-filter
+   */
+  readonly breakdownGroups = computed(() => this.groupScopeOptions(this.scopeBreakdown().rows));
+
+  /**
+   * The keyboard/arrow order: "All areas and outcomes" first, then every option in group order —
+   * headers are simply never in this array, so `↓` from a group's last option lands on the next
+   * group's first OPTION by construction (`OSF-T-6` input-that-would-make-it-fail).
+   */
+  readonly scopeFlatKeys = computed<(string | null)[]>(() => [
+    null,
+    ...this.scopeGroups().flatMap(group => group.options.map(o => o.key))
+  ]);
+
+  readonly selectedScopeOption = computed(() => {
+    const key = this.selectedScope();
+    return key === null ? null : (this.scopeOptions().find(o => o.key === key) ?? null);
+  });
+
+  /** Falls back to the default label when the selected key is absent from THIS program's options
+   *  (`OSF-T-4`'s already-reset `overviewScope` reaching here as `null`, or a stale key mid-reset). */
+  readonly scopeTriggerLabel = computed(() => this.selectedScopeOption()?.name ?? 'All areas and outcomes');
+  /** `OSF-T-14` — routed through `overviewScopeDisplayCode` so the trigger chip never paints a raw
+   *  internal key again (`execution.md` §17's `INTERMEDIATE`-at-900–1099px finding). */
+  readonly scopeTriggerCode = computed(() => {
+    const option = this.selectedScopeOption();
+    return option ? overviewScopeDisplayCode(option) : null;
+  });
+
+  readonly scopeOpen = signal(false);
+  /** The option the arrow keys are currently on (`aria-activedescendant`); `null` = "All". */
+  readonly activeScopeKey = signal<string | null>(null);
+
+  private readonly scopeTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('scopeTrigger');
+  private readonly scopeListRef = viewChild<ElementRef<HTMLDivElement>>('scopeList');
+
+  constructor() {
+    // Moves DOM focus into the listbox once the popover's content is actually in the DOM — the
+    // portal attaches on the next tick, so a synchronous `.focus()` right after `scopeOpen.set(true)`
+    // would miss it (same `queueMicrotask` shape as the palette's `setFirstItemActive` effect).
+    effect(() => {
+      if (this.scopeOpen()) {
+        queueMicrotask(() => this.scopeListRef()?.nativeElement.focus());
+      }
+    });
+  }
+
+  toggleScopePopover(): void {
+    this.scopeOpen() ? this.closeScopePopover() : this.openScopePopover();
+  }
+
+  openScopePopover(): void {
+    if (this.scopeOpen()) return;
+    this.activeScopeKey.set(this.selectedScope());
+    this.scopeOpen.set(true);
+  }
+
+  /** `Escape` closes and returns focus to the trigger (`OSF-DD-13`); also used on select/outside-close. */
+  closeScopePopover(refocusTrigger = true): void {
+    if (!this.scopeOpen()) return;
+    this.scopeOpen.set(false);
+    if (refocusTrigger) {
+      queueMicrotask(() => this.scopeTriggerRef()?.nativeElement.focus());
+    }
+  }
+
+  /** Mirrors the overlay's own open/close (outside click, backdrop) back into `scopeOpen`. */
+  onScopeStateChanged(state: 'open' | 'closed'): void {
+    this.scopeOpen.set(state === 'open');
+  }
+
+  selectScope(key: string | null): void {
+    this.scopeChange.emit(key);
+    this.closeScopePopover();
+  }
+
+  /** `Enter`/`Space`/`↓` open the popover when it is closed (`OSF-DD-13` Keys row). */
+  onScopeTriggerKeydown(event: KeyboardEvent): void {
+    if (this.scopeOpen()) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.openScopePopover();
+    }
+  }
+
+  /**
+   * `↑`/`↓` move the active option and skip headers (they are not in `scopeFlatKeys`); `Enter`
+   * selects; `Escape` closes and restores focus to the trigger (`OSF-DD-13`).
+   */
+  onScopeListKeydown(event: KeyboardEvent): void {
+    const flat = this.scopeFlatKeys();
+    if (!flat.length) return;
+    const currentIndex = flat.indexOf(this.activeScopeKey());
+    switch (event.key) {
+      case 'ArrowDown': {
+        event.preventDefault();
+        this.activeScopeKey.set(flat[currentIndex < 0 ? 0 : Math.min(currentIndex + 1, flat.length - 1)]);
+        break;
+      }
+      case 'ArrowUp': {
+        event.preventDefault();
+        this.activeScopeKey.set(flat[currentIndex < 0 ? 0 : Math.max(currentIndex - 1, 0)]);
+        break;
+      }
+      case 'Home':
+        event.preventDefault();
+        this.activeScopeKey.set(flat[0]);
+        break;
+      case 'End':
+        event.preventDefault();
+        this.activeScopeKey.set(flat[flat.length - 1]);
+        break;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        this.selectScope(this.activeScopeKey());
+        break;
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        this.closeScopePopover();
+        break;
+    }
+  }
+
+  /** Stable id for `aria-activedescendant`/each option — `null` (the "All" row) gets a fixed suffix. */
+  scopeOptionId(key: string | null): string {
+    return `program-overview-scope-option-${key ?? 'all'}`;
+  }
+
+  /** Stable id linking the trigger's `aria-controls` to the listbox panel (`OSF-DD-13`'s Trigger
+   *  row) — Spartan's popover does not wire this itself, so it is set explicitly here, same fixed-id
+   *  precedent as `scopeOptionId`. Only one Overview scope control renders per page. */
+  readonly scopeListboxId = 'program-overview-scope-listbox';
+
+  /** The count folded into the accessible name, per `OSF-DD-13`'s Option row ("count exposed in the
+   *  accessible name"), not left to be inferred from adjacent visual text alone. */
+  scopeOptionAriaLabel(name: string, count: number): string {
+    return `${name}, ${count} result${count === 1 ? '' : 's'}`;
+  }
+
+  // ── Breakdown status bar (`OSF-T-13`, mockup drift — the 150px bar column `OSF-T-7` shipped
+  // without) ──────────────────────────────────────────────────────────────────────────────────
+  //
+  // Status ids match `OVERVIEW_STATUS_SLOTS` (host): Editing=1, In QA=2, Submitted=3 — the same
+  // three the mockup's own `editingStyle`/`submittedStyle`/`qaStyle` paint. `row.count` (already
+  // `bucket.total`, every status combined) is the denominator, exactly like the mockup's own
+  // `bucketTotal(r)` — Approved/Discontinued count toward the denominator but paint no segment, so
+  // the three segments do not have to sum to 100% width (`OAH-R-3` "honest at 1%", never
+  // percent-of-percent, mirrored from `completeSegmentWidth`/`inProgressSegmentWidth` above).
+
+  private breakdownSegmentWidth(row: OverviewScopeOption, statusId: number): number {
+    return row.count ? ((row.byStatus?.[statusId] ?? 0) / row.count) * 100 : 0;
+  }
+
+  breakdownEditingWidth(row: OverviewScopeOption): number {
+    return this.breakdownSegmentWidth(row, 1);
+  }
+
+  breakdownSubmittedWidth(row: OverviewScopeOption): number {
+    return this.breakdownSegmentWidth(row, 3);
+  }
+
+  breakdownQaWidth(row: OverviewScopeOption): number {
+    return this.breakdownSegmentWidth(row, 2);
+  }
+
+  /** Text alternative for the bar (`OAH-N-1` precedent, `:665`) — a roleless `<span>` is not exposed
+   *  as a text-alternative-bearing element, so `role="img"` + this label is what AT actually reads. */
+  breakdownBarTitle(row: OverviewScopeOption): string {
+    const editing = row.byStatus?.[1] ?? 0;
+    const submitted = row.byStatus?.[3] ?? 0;
+    const qa = row.byStatus?.[2] ?? 0;
+    return `${editing} Editing, ${submitted} Submitted, ${qa} In QA`;
   }
 }
