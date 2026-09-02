@@ -443,7 +443,97 @@ describe('ResultsKnowledgeProductsService — create with no CGSpace metadata (P
       user,
     );
     expect(res.status).toBe(HttpStatus.UNPROCESSABLE_ENTITY);
-    expect(res.message).toContain('A phase with a cgspace year of 1999');
     expect(unmatched.createOwnerResult).not.toHaveBeenCalled();
+  });
+
+  /**
+   * P2-3558 — the rejection is right, the wording was not: `A phase with a cgspace year of 1999 was
+   * not found` names an internal record, so the person cannot tell that their publication is from
+   * 1999 and that only 2026 and 2025 can be taken. These three lock the wording, not the guard.
+   */
+  describe('the wording of the year rejection (P2-3558)', () => {
+    const rejectionFor = async (metadataCG: any) => {
+      const { service } = build({ isAdmin: true });
+      const res: any = await service.create(
+        { result_data: { result_type_id: 6 }, metadataCG } as any,
+        user,
+      );
+      expect(res.status).toBe(HttpStatus.UNPROCESSABLE_ENTITY);
+      return res.message as string;
+    };
+
+    it('names the year of the publication and the years that can be reported', async () => {
+      const message = await rejectionFor({
+        online_year: 1999,
+        issue_year: 1999,
+      });
+
+      // The three things the person needs: their year, the accepted years, and what to do.
+      expect(message).toContain('This publication is from 1999');
+      expect(message).toContain(
+        `Only knowledge products published in ${ACTIVE_PHASE.cgspace_year} or ${EARLIER_PHASE.cgspace_year} can be reported`,
+      );
+      expect(message).toContain('CGSpace link');
+      expect(message).toContain('knowledge management team');
+
+      // And none of the internal vocabulary that made the old message unreadable.
+      expect(message).not.toContain('cgspace year');
+      expect(message).not.toContain('phase with a');
+    });
+
+    it('takes the accepted years from the phases walked, never from a literal', async () => {
+      // Same input, phases moved one year forward: the message must move with them.
+      const nextCycle = { ...ACTIVE_PHASE, cgspace_year: 2027 };
+      const nextEarlier = { ...EARLIER_PHASE, cgspace_year: 2026 };
+      const deps: any[] = new Array(26).fill(null);
+      deps[HANDLERS_ERROR] = {
+        returnErrorRes: ({ error }: any) => ({
+          response: error?.response ?? { error: true },
+          message: error?.message ?? 'INTERNAL_SERVER_ERROR',
+          status: error?.status ?? HttpStatus.INTERNAL_SERVER_ERROR,
+        }),
+      };
+      deps[RESULT_SERVICE] = {
+        createOwnerResult: jest
+          .fn()
+          .mockRejectedValue(new Error('reached createOwnerResult')),
+      };
+      deps[ROLE_BY_USER] = { isUserAdmin: jest.fn().mockResolvedValue(true) };
+      deps[VERSIONING] = {
+        $_findActivePhase: jest.fn().mockResolvedValue(nextCycle),
+        $_findPhase: jest.fn().mockResolvedValue(nextEarlier),
+      };
+      deps[GLOBAL_PARAMETER] = {
+        findOne: jest.fn().mockResolvedValue({ value: '80' }),
+      };
+      const service = new (ResultsKnowledgeProductsService as any)(
+        ...deps,
+      ) as ResultsKnowledgeProductsService;
+
+      const res: any = await service.create(
+        {
+          result_data: { result_type_id: 6 },
+          metadataCG: { online_year: 1999, issue_year: 1999 },
+        } as any,
+        user,
+      );
+
+      expect(res.message).toContain(
+        'Only knowledge products published in 2027 or 2026 can be reported',
+      );
+    });
+
+    it('says the publication year is missing instead of printing an empty year', async () => {
+      const message = await rejectionFor({
+        online_year: null,
+        issue_year: undefined,
+      });
+
+      expect(message).toContain(
+        'CGSpace does not report a publication year for this knowledge product',
+      );
+      expect(message).not.toContain('from null');
+      expect(message).not.toContain('from undefined');
+    });
   });
 });
