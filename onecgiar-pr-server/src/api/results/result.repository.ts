@@ -22,23 +22,38 @@ import { ReportParametersDto } from './dto/report-parameters.dto';
 import { BasicReportFiltersNormalized } from './dto/basic-report-filters.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
 
 /**
  * P2-3420 / P2-3421 — THE ONE PLACE that decides which Innovation Development results may be
  * linked from an Innovation Use result. Both W1/W2 creation surfaces (the ToC-linked form and the
  * emergent-result modal) read this list through the same endpoint, so the two can never drift.
  *
- * 🛑 PENDING BUSINESS ANSWER (Ángel, asked 26-ago-2026 on P2-3420 and restated on P2-3421): the
- * story asks for "Status = QA'd" AND "Status != Discontinued". A result carries ONE status, so the
- * second clause is either redundant (this reading) or points at the Annual-updating
- * continued/discontinued answer, which is a different field. Until that is answered we start with
- * exactly the states the module already uses for the same question in bilateral
- * (`type-innovation-use.component.ts`, QUALITY_ASSESSED_STATUS_ID = 2). Change THIS constant — and
- * nothing else — when the answer arrives; the audit's alternative reading is
- * `[QualityAssessed, Approved]` plus an `is_discontinued = 0` clause.
+ * ANSWERED 2-Sep-2026. Ángel Jarrín did not reply in a comment: he EDITED both story descriptions
+ * at 09:13, so the two twins now carry the same wording, and quoted Nicoleta the same minute:
+ *   "Los estados válidos para considerar una innovación como activa son únicamente QAed y Approved
+ *    (aplica tanto para W1/W2 como para W3/bilat). Los estados Submitted y Editing quedan
+ *    excluidos: Submitted = la innovación aún no ha pasado por QA. Editing = la innovación sigue en
+ *    borrador. Las innovaciones con estado Discontinued siguen incluyéndose, sin importar la fuente
+ *    de financiamiento."
+ *
+ * ⚠️ That Spanish settles the ambiguity this constant was parked on. The English AC reads
+ * "Discontinued innovations (any funding source): included regardless of status", which sounds like
+ * a second axis; the original says *"las innovaciones con ESTADO Discontinued … sin importar la
+ * FUENTE DE FINANCIAMIENTO"*. Discontinued is a STATUS here, and what is disregarded is the funding
+ * source — not the status. So this stays a plain `status_id` allow-list: no `is_discontinued`
+ * clause, and no W1/W2-vs-W3/bilateral branch, because the same three states apply to both.
+ *
+ * ⚠️ Submitted (3) was IN the rule until that edit — P2-3420 asked for "Active W1/W2 innovations:
+ * status = Submitted or QAed" from 1-Sep 16:07. It is now explicitly out. Do not restore it from an
+ * older reading of the story.
+ *
+ * Change THIS constant — and nothing else — if the set moves again.
  */
 export const QA_LINKABLE_INNOVATION_STATUS_IDS: number[] = [
-  2, // ResultStatusData.QualityAssessed
+  ResultStatusData.QualityAssessed.value, // 2 — QAed
+  ResultStatusData.Approved.value, // 6 — Approved (W3/bilateral and W1/W2 alike)
+  ResultStatusData.Discontinued.value, // 4 — retired innovations stay linkable on purpose
 ];
 
 @Injectable()
