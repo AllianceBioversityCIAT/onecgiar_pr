@@ -888,7 +888,7 @@ export class ReportingAowTableComponent {
   }
 
   isDefaultOpenHlo(): boolean {
-    return true;
+    return this.expandAll();
   }
 
   /**

@@ -1579,26 +1579,24 @@ describe('DashboardLabComponent — Reporting disclosure seed (P2-3251, per QA)'
     return fixture.componentInstance;
   }
 
-  it('seeds the disclosure switch open, so the AoW cards arrive expanded', async () => {
+  it('seeds the disclosure switch closed, so the AoW cards arrive collapsed', async () => {
     const component = await createComponent();
 
     // This is the value the grouped table receives as `[expandAll]`, and the table uses it as the
     // level default for both the AoW cards and their HLO sub-groups.
-    expect(component.reportingAllExpanded()).toBe(true);
-    // The toolbar label is written from this one; seeding it `false` while the cards are open made
-    // the first press a dead click (the press asks for the value already on screen).
-    expect(component.reportingAllOpen()).toBe(true);
+    expect(component.reportingAllExpanded()).toBe(false);
+    // The toolbar label is written from this one: with cards arriving closed, the toolbar reads Expand all.
+    expect(component.reportingAllOpen()).toBe(false);
   });
 
   // The seed and the toolbar are one mechanism, so this asserts it from the other side: arriving
-  // expanded means the FIRST press of the single Expand all / Collapse all control must COLLAPSE.
-  // Re-seeding to `false` flips this expectation, which is what makes it a lock and not a restatement.
-  it('makes the first press of the toolbar control collapse, not expand', async () => {
+  // collapsed means the FIRST press of the single Expand all / Collapse all control must EXPAND.
+  it('makes the first press of the toolbar control expand, not collapse', async () => {
     const component = await createComponent();
 
     component.toggleReportingExpandAll();
 
-    expect(component.reportingAllExpanded()).toBe(false);
+    expect(component.reportingAllExpanded()).toBe(true);
     // Every press is a real change for the table, even when the boolean repeats.
     expect(component.reportingExpandNonce()).toBe(1);
   });

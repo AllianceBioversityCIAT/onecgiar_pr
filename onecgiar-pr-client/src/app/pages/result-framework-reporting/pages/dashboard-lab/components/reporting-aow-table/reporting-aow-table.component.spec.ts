@@ -129,10 +129,18 @@ describe('ReportingAowTableComponent', () => {
 
   /**
    * Every card now starts collapsed (P18), so any DOM assertion about rows has to open one first.
-   * `false` is the AoW default the template passes to `toggle`.
+   * Also opens its HLO sub-groups so row-level DOM assertions find the rows.
    */
   const openAow = (code = 'AOW01') => {
     component.toggle(`aow::${code}`, false);
+    const g = component.groups().find(group => group.aow.code === code);
+    if (g) {
+      for (const hlo of component.hloGroupsOf(g)) {
+        if (!component.isOpen(hlo.key, component.isDefaultOpenHlo())) {
+          component.toggle(hlo.key, false);
+        }
+      }
+    }
     fixture.detectChanges();
   };
 
@@ -318,16 +326,16 @@ describe('ReportingAowTableComponent', () => {
       const outputBand = bands[0];
       expect(outputBand.groups.length).toBe(2);
 
-      // Initially open (default)
-      expect(component.isBandAllOpen(outputBand.groups)).toBe(true);
-
-      // Collapse all in band
-      component.toggleBand(outputBand.groups);
+      // Initially collapsed (default)
       expect(component.isBandAllOpen(outputBand.groups)).toBe(false);
 
       // Expand all in band
       component.toggleBand(outputBand.groups);
       expect(component.isBandAllOpen(outputBand.groups)).toBe(true);
+
+      // Collapse all in band
+      component.toggleBand(outputBand.groups);
+      expect(component.isBandAllOpen(outputBand.groups)).toBe(false);
     });
 
     it('sums target and achieved values for an HLO group', async () => {
@@ -777,7 +785,7 @@ describe('ReportingAowTableComponent', () => {
       await build([g]);
       openAow();
       const [first] = component.hloGroupsOf(g);
-      component.toggle(first.key, true);
+      component.toggle(first.key, false);
       fixture.detectChanges();
       expect(rows().length).toBe(1);
     });
@@ -908,9 +916,14 @@ describe('ReportingAowTableComponent', () => {
         );
       const headerFor = (code: string) => headers().find(b => b.textContent?.includes(code))!;
       const panelOf = (btn: HTMLButtonElement) => btn.parentElement!.querySelector('.pr-collapse--card')!;
-      const press = (code: string) => {
+      const press = (code: string, openHlo = true) => {
         headerFor(code).click();
         fixture.detectChanges();
+        if (openHlo) {
+          const hloBtn = panelOf(headerFor(code))?.querySelector('button[id^="hlo-group-"]') as HTMLButtonElement | null;
+          hloBtn?.click();
+          fixture.detectChanges();
+        }
       };
 
       // AC1 + AC2 — arriving collapsed must not cost the header's information.

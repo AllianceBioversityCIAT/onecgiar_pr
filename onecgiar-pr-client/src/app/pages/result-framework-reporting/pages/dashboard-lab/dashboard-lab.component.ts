@@ -926,8 +926,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         // Every programme opens with its Areas of Work EXPANDED, at QA's request on P2-3251
         // (28 Aug 2026). The switch is per programme, not a preference that follows the user from
         // the last SP they browsed.
-        this.reportingAllExpanded.set(true);
-        this.reportingAllOpen.set(true);
+        this.reportingAllExpanded.set(false);
+        this.reportingAllOpen.set(false);
         this.reportingExpandNonce.set(0);
         // Overview phase selector (design.md DD-5): a program switch always lands back on that
         // program's Open phase — a phase picked for the PREVIOUS program is not a valid selection
@@ -3181,13 +3181,13 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * cerradas"): this seed is a deliberate override of both, decided by Yeck on 1 Sep 2026. Do not
    * "correct" it back by reading the ticket — read the comment trail first.
    */
-  readonly reportingAllExpanded = signal(true);
+  readonly reportingAllExpanded = signal(false);
   /**
    * What the table reports back: every visible AoW card is open right now (overrides included).
    * The toolbar label is written from THIS, not from `reportingAllExpanded` — otherwise a user who
    * opened every card by hand got a press that changed nothing and a label that lied (QA: dead click).
    */
-  readonly reportingAllOpen = signal(true);
+  readonly reportingAllOpen = signal(false);
   /**
    * Press counter. `reportingAllExpanded` can legitimately be asked for the value it already holds
    * (everything opened by hand → the press means "collapse", i.e. `false`, which is where it already
