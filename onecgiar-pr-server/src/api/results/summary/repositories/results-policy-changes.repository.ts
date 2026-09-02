@@ -125,7 +125,12 @@ export class ResultsPolicyChangesRepository
       rpc.status_amount,
       rpc.linked_innovation_dev,
       rpc.linked_innovation_use,
-      rpc.result_related_engagement
+      rpc.result_related_engagement,
+      -- W-20260902-21: written by the PATCH since 78c7a5418 and never read back. This SELECT lists
+      -- its columns one by one, so a column missing here reaches the client as "200 without the key"
+      -- — the form asks for the number, saves it, and shows it empty on reload. It reads exactly
+      -- like an undeployed backend, which is what it was diagnosed as first.
+      rpc.actors_influenced
     FROM
     	results_policy_changes rpc
     WHERE 
