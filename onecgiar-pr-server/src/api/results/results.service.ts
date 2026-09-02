@@ -35,6 +35,15 @@ import {
   VersionProgressDto,
 } from './dto/science-program-progress.dto';
 import { Result, SourceEnum } from './entities/result.entity';
+// OSF-DD-2 (FIND-01) — single-homed with the OSF-T-3 scope-bucket population
+// so the two W1/W2 counts (this progress card and the Overview's scope
+// buckets) cannot drift apart. Change the constant, not this literal.
+// Imported from `shared/constants/` (not from
+// `results-framework-reporting.service.ts` directly) — that service imports
+// a command handler chain that imports `ResultsService` from this very
+// file, so importing the constant from there would reintroduce a circular
+// module dependency.
+import { W1_W2_RESULT_SOURCE_FILTER } from '../../shared/constants/w1-w2-result-source-filter.constant';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 import { YearRepository } from './years/year.repository';
 import { Year } from './years/entities/year.entity';
@@ -1797,7 +1806,9 @@ export class ResultsService {
     try {
       const filters: Record<string, number | number[] | string | string[]> = {
         portfolioId: 3,
-        fundingSource: ['Result'],
+        // The exact same array reference as OSF-T-3's scope-bucket query —
+        // not a re-inlined literal — so the two populations cannot diverge.
+        fundingSource: W1_W2_RESULT_SOURCE_FILTER as string[],
       };
 
       let effectiveVersionId = versionId;
