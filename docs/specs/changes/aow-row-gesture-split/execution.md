@@ -165,3 +165,38 @@ Pending for the archive sync:
 - `program-overview/CLAUDE.md` — add the gesture split (row + identity button filter; `Report`/`→` navigate) and the `aria-pressed`/`border-2` selected state. Its line references `:510`/`:588` for the skeleton and real row are now stale.
 - **CodeGraph re-index pending** — `program-overview.component.{html,ts}` changed substantially across both tasks.
 - Carried from `design.md` §8, still not this spec's scope: `reporting-aow-table`'s collapse leaves 20 focusable buttons tabbable while collapsed and `aria-hidden`. Same fix (`inert`), different file — for the default-branch apply pass.
+
+---
+
+## 5. Gate decisions at `RGS-T-2` — spec PAUSED at 2 of 4
+
+Two owner decisions taken at the `RGS-T-2` continue/pause gate, 2026-09-02.
+
+### 5.1 `RGS-T-3` deferred — file contention, not a blocker in the work itself
+
+**Decision: wait for the concurrent session to land.** `RGS-T-3` must move `.pr-collapse` out of `reporting-aow-table.component.scss` into a shared home (its DoD is explicit that the CSS is *moved*, never copy-pasted). At the gate, the other session in this checkout had just committed `a8098c318` — `[SPEC:quick/reporting-view-default-collapsed]`, changing that component's **collapse default** — and was holding **59 uncommitted insertions** in `reporting-aow-table.component.html`.
+
+Editing a file another session is actively rewriting, in order to relocate the very CSS whose behaviour they are changing, is an avoidable conflict. Two alternatives were offered and declined: starting anyway, and copying the CSS instead of moving it (which would have deviated from the DoD and needed recording as such).
+
+**Resume condition:** `reporting-aow-table` is committed and the working tree is clean. Then `/akili-resume` or `/akili-execute changes/aow-row-gesture-split` continues at `RGS-T-3`.
+
+### 5.2 `D8` added to `RGS-T-4` — owner-approved scope, not an advisory promoted by the Leader
+
+`RGS-T-2`'s Reviewer found that `RGS-DD-4` makes the *unselected* row's border `transparent`, leaving an unselected row's separation from the card resting entirely on `--pr-surface-ground` vs `--pr-surface-card` — and that **no defect class in `requirements.md` §9 covers "resting affordance lost"**, because D4 measures only the selected indicator.
+
+Per the Advisory-Never-Becomes-A-Task rule the Leader **did not** add this to `RGS-T-4` unilaterally; it was escalated as a possible spec gap and the owner approved it as scope. `RGS-T-4` now carries **`D8`**, deliberately shaped as a *recorded measurement, not a pass/fail gate* — there is no WCAG threshold for a resting container edge, since 1.4.11 governs the selected indicator that D4 already owns. `RGS-T-4`'s `D6` bullet also gained the Reviewer's re-measure warning: the 1px→2px border change adds 2px to the row's box at every breakpoint.
+
+`requirements.md` §9 itself is **not** amended — that would be a Pivot, and the owner chose the narrower route.
+
+### 5.3 State at pause
+
+| Task | Status | Commit |
+|---|---|---|
+| `RGS-T-1` | ✅ PASS (3 attempts) | `4537bd3ba` |
+| `RGS-T-2` | ✅ PASS (1 attempt) | `66c6e3b50` |
+| `RGS-T-3` | ⏸ not started — blocked on file contention (§5.1) | — |
+| `RGS-T-4` | ⏸ not started — depends on `T-2` + `T-3`; **pre-flight still unmet** | — |
+
+**`RGS-T-4`'s pre-flight remains unticked:** it needs a runnable app against a real Science Program, and it is the only gate for D4/D5/D6/D7 (+D8). `tasks.md` §6 is explicit — if that is unavailable, report BLOCKED rather than closing on jest alone, because jest is blind to four of this spec's seven defect classes.
+
+All agents for `RGS-T-1`/`RGS-T-2` were shut down at this gate; `RGS-T-3` starts with fresh Implementer and Reviewer.

@@ -81,14 +81,15 @@
 
 - **Type:** `tests` · **Size:** `M` · **Depends on:** `RGS-T-2`, `RGS-T-3` · **Blocks:** —
 - **Implements:** verification of `RGS-R-4`, `RGS-R-5`, `RGS-R-8`; `RGS-AC-3`, `RGS-AC-4`, `RGS-AC-5`, `RGS-AC-7`
-- **Design ref:** `requirements.md` §9 (D4, D5, D6, D7) · **Skills:** `orca-cli` · **Effort:** `high`
+- **Design ref:** `requirements.md` §9 (D4, D5, D6, D7) + **D8** (added at the `RGS-T-2` gate — see `execution.md`) · **Skills:** `orca-cli` · **Effort:** `high`
 - **Files:** `execution.md` only.
 - **Scope:** the only gate for the four defect classes jsdom cannot see.
 - **Definition of done:**
   - [ ] **D5 — focus ring:** focus the name button so `matches(':focus-visible')` is true, read computed `outline` and `boxShadow`. A non-`none` box-shadow carrying the ring is the pass.
   - [ ] **D4 — selected-state contrast:** sample computed colours, compute ratios by the WCAG relative-luminance formula, against **both** adjacent surfaces (the row fill and the card), each ≥3:1.
   - [ ] **D7 — collapsed section is genuinely unreachable:** with the section collapsed, walk the real tab order and confirm focus **never enters it**; expand and confirm access returns.
-  - [ ] **D6 — layout:** at 1600 / 1280 / 1100 / 900 / 768, scope on and off, `scrollWidth === clientWidth`, and the AoW name column never collapses. Record widths as numbers.
+  - [ ] **D6 — layout:** at 1600 / 1280 / 1100 / 900 / 768, scope on and off, `scrollWidth === clientWidth`, and the AoW name column never collapses. Record widths as numbers. **Treat 900 and 768 as a re-measure, not a formality:** `RGS-T-2` took the row's border from 1px to 2px in *both* branches, adding 2px to its rendered box at every breakpoint, and this component has already spent three tasks on overflow (`OSF-AC-9`/`AC-10`).
+  - [ ] **D8 — resting affordance (added 2026-09-02, owner-approved at the `RGS-T-2` gate).** `RGS-DD-4` makes the *unselected* row's border `transparent`, so an unselected row's separation from the card now rests entirely on `--pr-surface-ground` vs `--pr-surface-card`. D4 measures only the **selected** indicator, so nothing in `requirements.md` §9 covered this. Sample both surface colours and record the ratio as a number, in the same pass as D4. **This is not a pass/fail gate** — there is no WCAG threshold for a resting container edge (1.4.11 governs the selected *indicator*, which D4 already owns). Record the number and one deliberate visual judgement of whether rows still read as separate objects.
   - [ ] Every reading states **viewport, scope state, collapse state, and that loading finished**.
 - **Verification:** the recorded numbers are the verification.
 - **What disqualifies the evidence, and this list is earned:**
