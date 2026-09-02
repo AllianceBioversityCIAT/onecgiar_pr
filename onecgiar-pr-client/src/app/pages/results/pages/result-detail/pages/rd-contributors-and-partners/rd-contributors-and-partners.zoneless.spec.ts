@@ -67,6 +67,7 @@ describe('RdContributorsAndPartnersComponent — lead selects under zoneless cha
       },
       resultsSE: {
         GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
         GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
         GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
         GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
@@ -96,7 +97,7 @@ describe('RdContributorsAndPartnersComponent — lead selects under zoneless cha
         { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
         {
           provide: FieldsManagerService,
-          useValue: { isContributorsPartners2026: () => false, isP25: () => true, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+          useValue: { isContributorsPartners2026: () => false, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => true, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
         }
       ],
       schemas: [NO_ERRORS_SCHEMA]
@@ -208,6 +209,7 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
       },
       resultsSE: {
         GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
         GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
         GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
         GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
@@ -236,7 +238,7 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
         { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
         {
           provide: FieldsManagerService,
-          useValue: { isContributorsPartners2026: () => true, isP25: () => false, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+          useValue: { isContributorsPartners2026: () => true, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => false, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
         }
       ],
       schemas: [NO_ERRORS_SCHEMA]
@@ -484,6 +486,7 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
       },
       resultsSE: {
         GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
         GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
         GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
         GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] })),
@@ -514,7 +517,7 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
         {
           provide: FieldsManagerService,
           useValue: {
-            isContributorsPartners2026: () => is2026(),
+            isContributorsPartners2026: () => is2026(), isLeadContactPersonMandatory2026: () => false, fields: () => ({}),
             isP25: () => false,
             activeIndicatorsLength: () => 0,
             hasSelectedIndicator: () => false

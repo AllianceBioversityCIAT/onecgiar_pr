@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-02 · branch performance-refactor · d3dbdd6b0 (P2-3554 / P2-3553 QA verification)
+**Verified:** 2026-09-02 · branch performance-refactor · P2-2911 AC2 (Lead contact person moved in)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -328,13 +328,73 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   human gate (local stack + auth token + a real ToC-mapped P25 result are all required and were not
   available at doc-update time).
 
+## Lead contact person (P2-2911 AC2) — displayed here, still saved in General Information
+
+`<app-lead-contact-person-field>` renders right under the Lead center block
+(`html:272-280`, gated on `isCP2026()`), hydrated by `GET_leadContactPerson` (`component.ts:535`) and bound through the
+`leadContactBody` signal.
+
+- 🛑 **`[readOnly]="true"` is not cosmetic — this section has NO write path for the field.**
+  `UpdateContributorsPartnersDto` declares neither `lead_contact_person` nor
+  `lead_contact_person_data`, and `resolveContributorsPartnersSections`
+  (`contributors-partners.service.ts`) would not recognise them as a section, so anything added to
+  the PATCH body for them is dropped. The only writer is the General Information save
+  (`results.service.ts:901-902`), and it is a **full-body overwrite** — it cannot be reused for a
+  two-key patch without risking title / description / impact areas. An editable copy here would
+  therefore be a mandatory field that silently loses input.
+- ⚠️ **The value is read through the General Information GET**, because this section's own GET does
+  not echo it and `GET api/results/get/:id` (which fills `currentResultSignal()`) does not carry it
+  either — verified against prtest on 2026-09-02. That is one extra request per section entry, and
+  it shares `saveButtonSE.isGettingSection` with this section's own GET, so the global
+  section spinner may clear on whichever of the two returns first. The section's own skeleton is
+  driven by `rdPartnersSE.sectionLoading`, so what the user sees is unaffected.
+- ⚠️ **`leadContactBody` must be REASSIGNED, never mutated.** The field only reacts through
+  `ngOnChanges`, which fires on a reference change.
+- ⚠️ **The hook is `data-testid="cp-lead-contact-person"`, deliberately NOT `cp-field-…`.** The
+  `cp-field-<payload path>` convention makes `save-contract.cy.ts` assert the key travels in the
+  PATCH body — and this one must not, because the server would drop it.
+- ⚠️ **No `appFeedbackValidation` marker here on purpose.** General Information already contributes
+  this field to `someMandatoryFieldIncompleteResultDetail`; a second marker would double-count a
+  field the user cannot fix from this screen.
+- ⚠️ The shared field's clear (✕) button has no `readOnly` guard, so it can still blank the local
+  display. Nothing persists from this section, and the next entry re-hydrates. Do **not** guard it
+  in the shared component — that would change P2-3520 behaviour for General Information, IPSR and
+  Bilateral.
+
+## Pending / not built
+
+- **AC4 / AC5 / AC7** (contact auto-selected from the Lead center, no free-text search, only
+  contacts of that centre selectable) → **not built**: no centre → contact relation exists in the
+  data model. P2-2911 is `To Be Clarified`.
+- **Server half (Juan David):** carry `lead_contact_person` + `lead_contact_person_data` on the v2
+  Contributors & Partners GET/PATCH (`UpdateContributorsPartnersDto` +
+  `resolveContributorsPartnersSections` + a section-update branch writing
+  `result.lead_contact_person` / `lead_contact_person_id` through
+  `AdUserService.resolveOrCreateContact`, the pattern already at `results.service.ts:5190-5201`).
+  Until that lands the field **cannot** be removed from General Information — that save is its only
+  writer.
+- ⚠️ **There is NO green-check predicate to move.** `validation_general_information_P25` was
+  redefined by migration `1769009398774-UpdateGeneralInfoGreen.ts` and its body no longer contains
+  `lead_contact_person_id IS NOT NULL` (that conjunct existed only in the superseded
+  `1762528725798-createValidtionP25.ts:598`; the P22 function never had it). So the completeness
+  check does not require this field in either portfolio today. If AC3 ("the field is mandatory") is
+  to be enforced by the green check, the predicate has to be **added** to
+  `validation_contributor_partner_P25` — a decision plus a migration, both Juan David's.
+- ⚠️ If that predicate is added, note the old one keyed on the **AD foreign key**, not the name.
+  A legitimate free-text contact (every result older than migration `1751462633282`, and anything
+  reported through the W3/Bilateral API) has no FK, so `lead_contact_person_id IS NOT NULL` would
+  never turn those green — while this field's own `hasSelectedContact` counts a bare name as
+  complete. The two axes disagree; pick one deliberately.
+
 ## Hijos sin archivo propio
 | Componente | Qué hace | Trampa |
 |---|---|---|
 | `components/` | Chips y bloques de contribuidores/socios | Los dropdowns agrupados de admin tienen comportamiento propio: validar antes de cambiar bindings |
 
 ## Tests
-Tres suites: `*.component.spec.ts` (incl. el describe `LC-T-2` que renderiza el
+Cuatro suites (`*.lead-contact-person.spec.ts` cubre P2-2911 AC2 contra el DOM renderizado, con
+un stub que proyecta `[body]` para que la aserción sea sobre el binding y no sobre la propiedad).
+`*.component.spec.ts` (incl. el describe `LC-T-2` que renderiza el
 componente completo con el servicio REAL para probar que la nota vacía de Lead center nunca
 aparece y que el `app-pr-select` recibe el catálogo completo, y el describe `LC-T-4: Lead center
 (selectOptionEvent) wiring` que dispara el output real del `app-pr-select` vía

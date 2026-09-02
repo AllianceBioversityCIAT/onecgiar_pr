@@ -10,6 +10,16 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } from '../../../../../../shared/utils/avisa-initiative.util';
+import { User } from '../rd-general-information/models/userSearchResponse';
+
+/**
+ * Plain body shape `<app-lead-contact-person-field>` expects and mutates in place — it has no
+ * `@Output()`. See `custom-fields/lead-contact-person-field/CLAUDE.md`.
+ */
+interface LeadContactBody {
+  lead_contact_person: string | null;
+  lead_contact_person_data: User | null;
+}
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -89,6 +99,22 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
   // P2-3036: the 2026 redesign of this section applies only to phase 2026+. 2025 keeps the legacy copy/fields.
   isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
+
+  // ── P2-2911 AC2: "Lead contact person" displayed next to "Lead center" ─────────────────────────
+  /**
+   * Same gate General Information uses (`rd-general-information.component.ts:78`) so the asterisk /
+   * done-tag agree across both screens. It only paints the marker — the field does not validate.
+   */
+  isLeadContactPersonRequired = computed(() => this.fieldsManagerSE.isLeadContactPersonMandatory2026());
+
+  leadContactPersonNote =
+    'The Lead contact person recorded for this result. It is still entered and saved in the <strong>General Information</strong> section.';
+
+  /**
+   * Reassigned (never mutated) so `<app-lead-contact-person-field>`'s `ngOnChanges` — which only
+   * fires on a reference change — picks the loaded contact up. Hydrated by `GET_leadContactPerson`.
+   */
+  leadContactBody = signal<LeadContactBody>({ lead_contact_person: null, lead_contact_person_data: null });
 
   // P2-3063 / P2-3036 AC6 (2026, unplanned scenario): single mandatory Yes/No radio
   // "Did the Program invest financial resources in the achievement of this result?".
@@ -476,6 +502,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       next: ({ response }) => {
         this.api.dataControlSE.currentResult = response;
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
+        // P2-2911 AC2: chained here rather than in `ngOnInit` because the General Information GET is
+        // versioned by portfolio, and `currentResultSignal()` is not reliably populated yet on entry.
+        this.GET_leadContactPerson(activePortfolio === 'P25');
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
           this.contributingInitiativesList = filterOutAvisaInitiatives(response);
         });
@@ -483,6 +512,32 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         // P2-3131: AVISA (SGP-02) must not be selectable in the "Other(s) Science Program" dropdown either.
         this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(({ response }) => {
           this.allScienceProgramsList.set(filterOutAvisaInitiatives(response || []));
+        });
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
+  }
+
+  /**
+   * P2-2911 AC2 — read-only hydration for the "Lead contact person" display.
+   *
+   * This section's own GET does not echo `lead_contact_person` / `lead_contact_person_data`
+   * (`contributors-partners.service.ts#getContributorsPartnersByResultId` builds its response key by
+   * key and omits both), and `GET api/results/get/:id` — the call that fills
+   * `dataControlSE.currentResultSignal()` — does not carry them either (verified against prtest on
+   * 2026-09-02). The General Information GET is the only endpoint that returns the pair
+   * (`results.service.ts#getGeneralInformation`), so it is read here purely to display the value.
+   *
+   * ⚠️ Fails soft: this is a display. The section must load even if the call does not.
+   */
+  private GET_leadContactPerson(isP25: boolean) {
+    this.api.resultsSE.GET_generalInformationByResultId(isP25).subscribe({
+      next: ({ response }) => {
+        this.leadContactBody.set({
+          lead_contact_person: response?.lead_contact_person ?? null,
+          lead_contact_person_data: response?.lead_contact_person_data ?? null
         });
       },
       error: err => {

@@ -251,6 +251,34 @@
     }
   </div>
 
+  <!-- P2-2911 AC2: "Lead contact person" is DISPLAYED here, right under "Lead center".
+       🛑 Read-only on purpose, and still edited + saved in General Information. This section's
+       endpoint carries neither key: `UpdateContributorsPartnersDto` has no `lead_contact_person`
+       (and `resolveContributorsPartnersSections` would not recognise it as a section), and the GET
+       response is assembled field-by-field without them
+       (`contributors-partners.service.ts` — `getContributorsPartnersByResultId`). The only write
+       path for `result.lead_contact_person` / `lead_contact_person_id` is the General Information
+       save (`results.service.ts:901-902`), and that is a FULL-body overwrite — it cannot be reused
+       for a two-key patch without risking title/description/impact areas. So an EDITABLE copy here
+       would take input that Save silently drops.
+       AC4/AC5/AC7 (contact auto-selected from the Lead center, no free-text search) are NOT built:
+       no centre → contact relation exists in the data model, and the ticket is `To Be Clarified`.
+       ⚠️ No `appFeedbackValidation` marker here on purpose — General Information already contributes
+       this field to `someMandatoryFieldIncompleteResultDetail`, and a second marker would double-count
+       a field the user cannot fix from this screen.
+       🛑 Gated on `isCP2026()` — the PHASE YEAR of the open result, never the portfolio. The
+       relocation is part of the 2026 redesign of THIS section, and phase-2025 results live inside
+       portfolio P25 too, so a portfolio gate would have added a field to the legacy 2025 form. -->
+  @if (isCP2026()) {
+    <div class="mt-16" data-testid="cp-lead-contact-person">
+      <app-alert-status [description]="leadContactPersonNote"></app-alert-status>
+      <app-lead-contact-person-field
+        [body]="leadContactBody()"
+        [required]="isLeadContactPersonRequired()"
+        [readOnly]="true"></app-lead-contact-person-field>
+    </div>
+  }
+
   <div style="position: relative">
     <app-pr-multi-select
       data-testid="cp-field-bilateral_projects"
