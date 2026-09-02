@@ -184,6 +184,7 @@ JWT secret comes from `env.JWT_SKEY`. **Never log it**, never include it in erro
 - Single `DataSource` in `src/config/orm.config.ts` (`type: 'mysql'`, connection from env).
 - Entities are autoloaded from `src/api/**`, `src/auth/**`, `src/clarisa/**`, `src/toc/**`, `src/result-dashboard-bi/**` (`*.entity.{ts,js}`).
 - `synchronize: false` and `migrationsRun: false` — **schema changes only via migrations**.
+- 🛑 **WHO APPLIES THEM: the Jenkins deployment pipeline does, automatically, and they stay applied in the database.** Confirmed by Cristian Gamboa (who runs the deployment) on 2 Sep 2026. **Do NOT conclude otherwise from this repo** — three separate sessions have already got this wrong, because the code looks like it says the opposite: `migrationsRun: false` above, and the `RUN npm run migration:run` line in `Dockerfile` is **commented out**. The step lives in the job configuration, which is not in the repo. Consequence for planning: a normal deploy never leaves new code running against a database without its column, so **do not add defensive code for that case** — that is wasted complexity.
 
 ### Migration scripts (`package.json`)
 
