@@ -6,6 +6,15 @@ export class IpsrStep1Body {
   has_studies_links: boolean = false;
   innov_use_to_be_determined: boolean = false;
   innov_use_2030_to_be_determined: boolean = false;
+  /**
+   * P2-3295 §3 — why a 2030 projection inherited from the previous phase was changed. Declared here
+   * because `innovation-use-form` binds it in its template, and an Angular template IS typechecked
+   * against this model by `npm run build` (Jest and `tsc --noEmit` are not: they let a missing
+   * property through, which is exactly how it reached the build).
+   */
+  innov_use_2030_justification: string = null;
+  /** P2-3295 §3 — the projection reported in the previous phase, or null on first-time reporting. */
+  innovation_use_2030_previous: any = null;
   evidences_justification: string = '';
   readiness_level_explanation: string = '';
   is_discontinued: boolean = null;
