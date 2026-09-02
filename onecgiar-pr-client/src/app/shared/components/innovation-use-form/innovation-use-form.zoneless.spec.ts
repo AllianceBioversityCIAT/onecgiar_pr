@@ -74,7 +74,7 @@ describe('InnovationUseFormComponent (zoneless change detection) — validateYou
         provideZonelessChangeDetection(),
         { provide: ApiService, useValue: apiMock },
         { provide: TerminologyService, useValue: { t: () => 'term' } },
-        { provide: FieldsManagerService, useValue: { isP25: () => false } },
+        { provide: FieldsManagerService, useValue: { isP25: () => false, isInnovationUse2030Projection2026: () => false } },
         { provide: InnovationControlListService, useValue: { readinessLevelsList: [] } }
       ],
       schemas: [NO_ERRORS_SCHEMA]

@@ -52,6 +52,8 @@ describe('InnovationUseFormComponent', () => {
 
     fieldsManagerServiceMock = {
       isP25: jest.fn().mockReturnValue(false),
+      // P2-3295 §2: the projection question is gated on the same 2026 phase threshold as the rename.
+      isInnovationUse2030Projection2026: jest.fn().mockReturnValue(true),
       innovationUse2030ProjectionTooltip: jest.fn().mockReturnValue('')
     };
 
@@ -932,7 +934,11 @@ describe('InnovationUseFormComponent', () => {
   /**
    * P2-3295 — the 2030 block gets the projection tooltip from the 2026 phase on. The string itself lives on
    * `FieldsManagerService`, because `preventFieldRender()` only mirrors label/description/required and would
-   * drop a tooltip carried in `fields()`; what this asserts is that the template forwards it to the radio.
+   * drop a tooltip carried in `fields()`; what this asserts is that the template forwards it.
+   *
+   * ⚠️ It used to hang off the "This is yet to be determined" radio. That radio is one of the four
+   * sub-fields, not the question, and §2 of the story attaches the tooltip to the mandatory label
+   * "What is the projected innovation use by end of 2030?" — so that is where it is asserted now.
    */
   describe('2030 Use Projection tooltip binding', () => {
     /** The 2030 block only exists on the P25 branch, which is picked on the first render. */
@@ -946,16 +952,29 @@ describe('InnovationUseFormComponent', () => {
       // Refresh this view only: `fixture.detectChanges()` runs the app-wide checkNoChanges pass, which the
       // P25 branch trips on its own (`getUseLevelIndex()` settles from -1 on the second pass) — unrelated to P2-3295.
       fixture.changeDetectorRef.detectChanges();
-      return fixture.debugElement
-        .queryAll(By.css('app-pr-radio-button'))
-        .find(de => de.nativeElement.getAttribute('fieldRef') === '[innovation-use-form]-2030-to-be-determined');
+      return fixture.debugElement.query(By.css('[data-testid="iu-field-2030-projection-question"]'));
     };
 
-    it('forwards the projection tooltip to the 2030 radio for a 2026-phase result', () => {
-      const radio = renderP25With(TOOLTIP_2030);
+    it('forwards the projection tooltip to the projection question for a 2026-phase result', () => {
+      const question = renderP25With(TOOLTIP_2030);
 
-      expect(radio).toBeTruthy();
-      expect(radio.nativeElement.tooltip).toBe(TOOLTIP_2030);
+      expect(question).toBeTruthy();
+      expect(question.nativeElement.tooltip).toBe(TOOLTIP_2030);
+    });
+
+    it('renders the question verbatim, and mandatory', () => {
+      const question = renderP25With(TOOLTIP_2030);
+
+      expect(question.nativeElement.label).toBe('What is the projected innovation use by end of 2030?');
+      expect(question.nativeElement.required).toBe(true);
+    });
+
+    it('does NOT render the question for an earlier phase — that form stays as it is', () => {
+      fieldsManagerServiceMock.isInnovationUse2030Projection2026.mockReturnValue(false);
+
+      const question = renderP25With(TOOLTIP_2030);
+
+      expect(question).toBeNull();
     });
 
     it('forwards an empty tooltip for a 2025-phase result, so no \u24d8 button is painted', () => {

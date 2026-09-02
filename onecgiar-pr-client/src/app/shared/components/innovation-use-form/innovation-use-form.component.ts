@@ -174,6 +174,10 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     this.body.innovatonUse.measures.push(new Measure());
   }
 
+  /** Verbatim from P2-3295 §2 — QA reads the question back word for word, do not paraphrase. */
+
+  readonly innovationUse2030ProjectionQuestion = 'What is the projected innovation use by end of 2030?';
+
   addActor2030() {
     const body = this.body as any;
     if (!body.innovation_use_2030.actors) {
@@ -427,5 +431,4 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     if (level < 0) return false;
     return level >= 6;
   }
-
 }

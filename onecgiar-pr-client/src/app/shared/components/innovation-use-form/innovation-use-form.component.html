@@ -299,7 +299,8 @@
     [options]="this.innovationControlListSE.useLevelsList"
     [(ngModel)]="body.innovation_use_level_id"></app-pr-range-level>
 
-  <div appFeedbackValidation
+  <div
+    appFeedbackValidation
     labelText="How would you assess the current use level of the innovation?"
     [isComplete]="body.innovation_use_level_id !== null && body.innovation_use_level_id !== undefined"></div>
 
@@ -355,12 +356,26 @@
   <app-pr-radio-button
     [readOnly]="saving"
     fieldRef="[innovation-use-form]-2030-to-be-determined"
-    [tooltip]="this.fieldsManagerSE.innovationUse2030ProjectionTooltip()"
     [options]="[{ value: true, label: 'This is yet to be determined' }]"
     optionLabel="label"
     [(ngModel)]="body.innov_use_2030_to_be_determined"
     optionValue="value">
   </app-pr-radio-button>
+
+  <!--
+    P2-3295 §2 — the story asks for the projection to be introduced by its own mandatory label,
+    "What is the projected innovation use by end of 2030?", carrying the tooltip. Until now the
+    section only had its renamed heading (§1, on the fieldRef above) and the tooltip hung off the
+    "yet to be determined" radio, so the question QA reads back word for word was nowhere on screen.
+    2026 phase onwards only, like the rename it belongs to; earlier phases keep the form they have.
+  -->
+  @if (this.fieldsManagerSE.isInnovationUse2030Projection2026()) {
+    <app-pr-field-header
+      data-testid="iu-field-2030-projection-question"
+      [label]="innovationUse2030ProjectionQuestion"
+      [required]="true"
+      [tooltip]="this.fieldsManagerSE.innovationUse2030ProjectionTooltip()"></app-pr-field-header>
+  }
 
   <!-- 2030 to be determined Component -->
   @if (!body.innov_use_2030_to_be_determined || body.innov_use_2030_to_be_determined === null || body.innov_use_2030_to_be_determined === undefined) {

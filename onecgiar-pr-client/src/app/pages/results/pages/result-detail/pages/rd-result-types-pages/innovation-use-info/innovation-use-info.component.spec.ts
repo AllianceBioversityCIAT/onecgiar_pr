@@ -73,8 +73,9 @@ describe('InnovationUseInfoComponent', () => {
 
     mockFieldsManagerService = {
       isP25: jest.fn().mockReturnValue(false),
-      // Computed signal read by the innovation-use-form template (P2-3295). Empty string = no tooltip,
-      // which is the phase-2025 behaviour this suite exercises.
+      // Computed signals read by the innovation-use-form template (P2-3295). No tooltip and no
+      // projection question = the phase-2025 behaviour this suite exercises.
+      isInnovationUse2030Projection2026: signal(false),
       innovationUse2030ProjectionTooltip: signal('')
     };
 
