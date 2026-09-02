@@ -9,7 +9,7 @@
 | Depth | Lite (Bug Mode) |
 | Approval Mode | gated |
 | Started | 2026-09-02 |
-| Status | in progress — FOVL-T-1 PASS; FOVL-T-2 pending |
+| Status | in progress — FOVL-T-1 PASS; FOVL-T-2 `[~]` (Jest PASS, HITL outstanding) |
 
 ## 2. Task Execution History
 
@@ -46,6 +46,33 @@ None.
 
 Red regression is in place. FOVL-T-2 may now remove the allow-list entry and turn this case green.
 
+### FOVL-T-2 — Remove the Result Detail allow-list entry and confirm the strip
+
+| Field | Value |
+|---|---|
+| Final status | **[~] blocked on HITL** — code Reviewer PASS; FOVL-AC-2 not closed |
+| Date | 2026-09-02 |
+| Attempts | 1 |
+| Requirements | FOVL-R-1, FOVL-R-3, FOVL-AC-1, FOVL-AC-3 closed by Jest. FOVL-R-2 / FOVL-AC-2 still owed |
+| Design | FOVL-DD-1, FOVL-DD-2 |
+
+#### Attempt 1
+
+- **Files changed:** `footer.component.ts` (deleted `/result/result-detail/` allow-list entry; no `floating: false` leftover); `footer.component.spec.ts` (FOVL-AC-3 results-list mount; type-one-report still `isFloating`)
+- **Implementer verification:** `cd onecgiar-pr-client && npm run test -- --testPathPattern="footer.component.spec"` — 10/10 PASS, including FOVL-AC-1 now green. Lint clean.
+- **Not Done / Assumptions (verbatim):** No local dev server was running on `:4200` at the time of execution. HITL at `md` (900px) and ~1100px against `visual/wide-action-bar-correct.jpg` (click/Tab to Back / Next / Sync / Save draft) was not performed. Per spec FOVL-DD-2, Jest owns the mount gate; HITL owns the "unobstructed" class — the Jest gate is now green, but FOVL-AC-2 cannot be closed without a browser-level verification at the two specified widths.
+- **Reviewer (claude-sonnet-5-thinking-high):** `STATUS: PASS` — allow-list deletion matches FOVL-DD-1; new Jest cases match FOVL-R-3 / FOVL-AC-3; FOVL-AC-1 green. HITL excluded from this verdict per brief.
+- **ADVISORY:** none.
+
+#### Decisions
+
+- Skills kept: `angular-developer`, `ui-ux-pro-max`. Effort `medium`.
+- Task stays `[~]` until HITL closes FOVL-R-2. A Reviewer PASS does not waive an outstanding Not Done gap.
+
+#### Issues
+
+HITL not run — no authenticated Result Detail session available in this environment.
+
 ## 3. Summary
 
-Incomplete — FOVL-T-2 still pending.
+FOVL-T-1 complete. FOVL-T-2 code is in and Jest-green; FOVL-AC-2 (tablet unobstructed strip) still needs a browser check at 900px and ~1100px.

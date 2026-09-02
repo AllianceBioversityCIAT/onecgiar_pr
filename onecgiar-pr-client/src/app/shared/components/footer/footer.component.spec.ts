@@ -66,6 +66,22 @@ describe('FooterComponent', () => {
     expect(fixture.nativeElement.querySelector('.footer-blocker')).toBeNull();
   });
 
+  // FOVL-AC-3: listed non-detail path (Results list) must still mount the footer.
+  it('should render footer on results-list URL (FOVL-AC-3)', () => {
+    component.router = { url: '/result/results-outlet/results-list' } as Router;
+    const result = component.showIfRouteIsInList();
+    expect(result).toBe(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.footer')).not.toBeNull();
+  });
+
+  // FOVL-R-3: a remaining floating route must still set isFloating.
+  it('should set isFloating for type-one-report URL', () => {
+    component.router = { url: '/type-one-report' } as Router;
+    component.showIfRouteIsInList();
+    expect(component.isFloating).toBe(true);
+  });
+
   // P2-3145: the glossary link is the only way the Reporting Tool points at the
   // centralized CLARISA glossary, so both the label and the destination are asserted.
   it('should render the glossary link in the footer', () => {

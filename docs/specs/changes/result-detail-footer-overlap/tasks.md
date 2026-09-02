@@ -31,11 +31,11 @@
   - Input that would FAIL this check: current `footer.component.ts` still listing `/result/result-detail/` — the new test must fail on that input. If you cannot make it fail, the test is worthless.
 - **Done criteria:** new case exists; run log shows it red; no allow-list or SCSS change in this task; no secrets in fixtures.
 
-### FOVL-T-2 — Remove the Result Detail allow-list entry and confirm the strip
+### FOVL-T-2 — Remove the Result Detail allow-list entry and confirm the strip `[~]`
 
 - **Type:** `client | tests`
 - **Size:** S
-- **Status:** pending
+- **Status:** blocked — Jest green, HITL (FOVL-AC-2) outstanding
 - **Depends on:** FOVL-T-1
 - **Blocks:** none
 - **Skills:** `angular-developer`, `ui-ux-pro-max`
