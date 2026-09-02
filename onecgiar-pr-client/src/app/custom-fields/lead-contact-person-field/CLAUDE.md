@@ -1,6 +1,6 @@
 # lead-contact-person-field
 
-**Verified:** 2026-09-01 · branch performance-refactor · 181caa352
+**Verified:** 2026-09-02 · branch performance-refactor · P2-2911 AC2 (4th consumer added)
 
 ---
 
@@ -35,6 +35,10 @@ reporting surfaces, none of which own it.
 - `pages/ipsr/.../ipsr-general-information/ipsr-general-information.component.html:59`.
 - `pages/bilateral/components/section-general-info/section-general-info.component.html:45` — autosaves
   through the getter/setter body described above.
+- `pages/results/.../rd-contributors-and-partners/rd-contributors-and-partners.component.html:274`
+  — P2-2911 AC2, **`[readOnly]="true"` display only.** That section's endpoint carries neither
+  payload key, so it has no write path; the value is still entered and saved in General Information.
+  See that folder's `CLAUDE.md` for the full reasoning.
 
 ## Traps (⚠️ = already broke something)
 
@@ -61,6 +65,12 @@ reporting surfaces, none of which own it.
   email auto-select.
 - `changeDetection: Default` and `standalone: false` are deliberate; the field mutates plain objects
   the parent owns, which OnPush would not pick up.
+- ⚠️ **`readOnly` disables the input but NOT the clear (✕) button**, so a read-only consumer can
+  still have its `body` blanked by a click. Left as is on purpose: guarding it would change P2-3520
+  behaviour for the three editable consumers.
+- ⚠️ **`leadContactField` reads the `[general-info]-lead_contact_person` key** from
+  `FieldsManagerService` regardless of which section renders the field, so the label, description and
+  `required` flag come from that one entry for every consumer.
 
 ## Tests
 

@@ -39,6 +39,37 @@ export class PolicyChangeInfoComponent implements OnInit {
   policyChangeQuestions = new PolicyChangeQuestions();
   cantidad: string = '';
   relatedTo: string = '';
+
+  /**
+   * P2-2932 AC4 — `result_question_id` of "The capacity development of key actors in a policy
+   * process", the answer that makes the actor count meaningful. Its sibling, 50, is "Policy change".
+   *
+   * These ids are seeded rows in `result_questions`, not a CLARISA catalogue, so they are stable
+   * across environments and safe to reference — unlike `policy_type_id`, which CLARISA owns.
+   */
+  static readonly CAPACITY_OF_ACTORS_QUESTION_ID = 51;
+
+  /**
+   * Mirrors how "USD amount" and "Status" already appear only for policy type 1: the field is shown
+   * for the sub-category it belongs to and hidden otherwise.
+   */
+  showActorsInfluenced(): boolean {
+    return (
+      Number(this.relatedTo) ===
+      PolicyChangeInfoComponent.CAPACITY_OF_ACTORS_QUESTION_ID
+    );
+  }
+
+  /**
+   * Clearing on the way out matters: a stale count left behind on a result that is no longer about
+   * actors would be compared against the ToC contribution and warn about a figure the user can no
+   * longer see. Same reason `clearAmountWhenNotApplicable` exists for the USD amount.
+   */
+  clearActorsWhenNotApplicable(): void {
+    if (!this.showActorsInfluenced()) {
+      this.innovationUseInfoBody.actors_influenced = null;
+    }
+  }
   relatedToOptions = [
     { value: 'policy-change', label: 'Policy change' },
     { value: 'capacity-development', label: 'The capacity development of key actors in a policy process' }
@@ -129,6 +160,44 @@ export class PolicyChangeInfoComponent implements OnInit {
   }
 
   /**
+   * The reporting phase year of the OPEN RESULT, or `null` when it is not reliably known.
+   *
+   * 🛑 There is deliberately NO fallback to `dataControlSE.reportingCurrentPhase.phaseYear`
+   * (P2-3558). That is the OPEN phase of the reporting module (`data-control.service.ts:125`, today
+   * 2026) — a different thing from the phase of the result being viewed. The gate below asks "is
+   * THIS result a 2026+ result?", so falling back to the open phase answered a different question,
+   * and answered it wrongly in the one direction that hurts: it painted the 2026 guidance over a
+   * legacy result. The population makes that the wrong side to fail towards — measured on
+   * 2 Sep 2026, prtest holds 1516 results in the 2025 phase against 353 in 2026.
+   *
+   * The window is real, not theoretical: `result-detail.component.ts:69` and
+   * `current-result.service.ts:26` reset `currentResultSignal` to `{}` at the start of every load,
+   * while this section releases its own `[appSectionSkeleton]` from its OWN `GET_policyChanges()`
+   * and never waits on `GET_resultById`; and any non-404 failure of `GET_resultById`
+   * (`current-result.service.ts:65-69`) leaves the signal at `{}` PERMANENTLY, with the form on
+   * screen. Confirmed on screen for this very section: result 8501 (phase 2025) served with
+   * `phase_year: null` painted the 2026 guidance while the untouched sibling
+   * `innovation-dev-info` painted its legacy form.
+   *
+   * Same shape and same decision as the reference resolver
+   * `FieldsManagerService.currentResultPhaseYear` / `isPhaseYearAtLeast` (commit `8afb574f3`, eight
+   * sibling gates) and `innovation-use-form.component.ts` (commit `6efe11cba`, the ninth).
+   *
+   * The `typeof === 'number'` guard is part of the same decision: a year arriving as a string is a
+   * bad payload, and a bad payload gets the legacy wording.
+   */
+  private currentResultPhaseYear(): number | null {
+    const year = this.api?.dataControlSE?.currentResultSignal?.()?.phase_year;
+    return typeof year === 'number' ? year : null;
+  }
+
+  /** A phase gate is only ever `true` on a reliably known year — unknown means the legacy wording. */
+  private isPhaseYearAtLeast(threshold: number): boolean {
+    const year = this.currentResultPhaseYear();
+    return year !== null && year >= threshold;
+  }
+
+  /**
    * Phase-year gate, never a portfolio gate.
    *
    * `isP25()` would be wrong here: the P25 portfolio starts in 2025, so prtest holds phase-2025
@@ -137,12 +206,15 @@ export class PolicyChangeInfoComponent implements OnInit {
    * on its own once the result loads (zoneless change detection).
    *
    * The threshold is a local constant on purpose: `ReportingDesignYear` holds UI-*redesign*
-   * thresholds, and this is a guidance-wording threshold. Same reasoning and same shape as
-   * `rd-annual-updating.component.ts` (P2-3292), the sibling wording gate in this epic.
+   * thresholds, and this is a guidance-wording threshold.
+   *
+   * ⚠️ The year comes from {@link currentResultPhaseYear}, which does NOT consult the open
+   * reporting phase. `rd-annual-updating.component.ts` (P2-3292) still does and is no longer the
+   * shape to copy — see that method's own note; the reference is
+   * `FieldsManagerService.isPhaseYearAtLeast`.
    */
   private usesPolicyTypeGuidance2026(): boolean {
-    const phaseYear = this.api.dataControlSE.currentResultSignal()?.phase_year ?? this.api.dataControlSE.reportingCurrentPhase?.phaseYear;
-    return typeof phaseYear === 'number' && phaseYear >= POLICY_TYPE_GUIDANCE_FROM_PHASE_YEAR;
+    return this.isPhaseYearAtLeast(POLICY_TYPE_GUIDANCE_FROM_PHASE_YEAR);
   }
 
   onSaveSection() {

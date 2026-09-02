@@ -1,5 +1,7 @@
 # CLAUDE.md — `api/results/` (Result lifecycle & domain mega-module)
 
+**Verified:** 2026-09-02 · branch performance-refactor · 8c2990200
+
 This is the **module-level guide** for `api/results`. It complements:
 
 - [`../../CLAUDE.md`](../../CLAUDE.md) — source-tree patterns (auth, response envelope, base classes, anti-patterns).
@@ -282,6 +284,10 @@ Push the SQL into [`result.repository.ts`](./result.repository.ts) (or the sub-m
 - **New top-level folders here that aren't a result association** — if it's cross-cutting, it belongs under `../../shared/` or a sibling `api/<feature>/`.
 - **Coupling `summary/` to a specific consumer** — summary builders are read by both `bilateral` and `platform-report`. Don't bake bilateral-only assumptions in.
 - **Refactoring `results.service.ts` monolithically** — it's large by design (4.6k lines) because it owns the whole lifecycle. Extract narrow helpers as needed; don't shotgun-split it.
+- **Interpolating a caller-supplied value into repository SQL** (`` `r.id = ${id}` ``) — bind it:
+  `r.id = ?` plus `this.query(sql, [id])`, which is what lines 206/219/435/1353 already do. And pipe
+  the path param at the controller (`@Param('id', ParseIntPipe)`), so a non-number never travels down.
+  ⚠️ P2-3498 found this live on `getResultById`; the pattern still exists elsewhere in the file.
 - **Changing a migration that's already in `master`** — write a new one (the standard project rule).
 
 ---

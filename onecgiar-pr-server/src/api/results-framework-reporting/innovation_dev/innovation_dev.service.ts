@@ -8,6 +8,7 @@ import {
   CreateInnovationDevDtoV2,
   OptionV2,
   SubOptionV2,
+  TopLevelQuestionsV2,
 } from './dto/create-innovation_dev_v2.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { InnovationDevelopmentDto } from '../../results/dto/review-update.dto';
@@ -35,6 +36,18 @@ import { ResultAnswer } from '../../results/result-questions/entities/result-ans
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { InnovationUseService } from '../innovation-use/innovation-use.service';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
+
+/**
+ * One question inside a questionnaire group as the client echoes it back: the id of
+ * the selected radio option plus its options. Both are optional because the payload
+ * is whatever the GET served for the result's reporting phase (P2-3557), and the
+ * `qN` slots of `TopLevelQuestionsV2` cannot say so themselves without breaking
+ * assignability to the legacy V1 DTO.
+ */
+type QuestionV2 = {
+  radioButtonValue?: number;
+  options?: OptionV2[];
+};
 
 @Injectable()
 export class InnovationDevService {
@@ -134,77 +147,29 @@ export class InnovationDevService {
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
       // * SAVING INNOVATION AND SCALING
-      await this.saveOptionsAndSubOptions(
+      await this._saveNestedQuestionGroup(
         resultId,
         user.id,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q1
-          .radioButtonValue,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
-      );
-      await this.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q2
-          .radioButtonValue,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q2.options,
-      );
-      await this.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q3
-          .radioButtonValue,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q3.options,
-      );
-      await this.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q4
-          .radioButtonValue,
-        createInnovationDevDto?.responsible_innovation_and_scaling.q4.options,
+        createInnovationDevDto?.responsible_innovation_and_scaling,
       );
 
       // * SAVING INTELLECTUAL PROPERTY RIGHTS
-      await this.saveOptionsAndSubOptions(
+      await this._saveNestedQuestionGroup(
         resultId,
         user.id,
-        createInnovationDevDto?.intellectual_property_rights.q1
-          .radioButtonValue,
-        createInnovationDevDto?.intellectual_property_rights.q1.options,
-      );
-      await this.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.intellectual_property_rights.q2
-          .radioButtonValue,
-        createInnovationDevDto?.intellectual_property_rights.q2.options,
-      );
-      await this.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.intellectual_property_rights.q3
-          .radioButtonValue,
-        createInnovationDevDto?.intellectual_property_rights.q3.options,
-      );
-      await this.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
-        createInnovationDevDto?.intellectual_property_rights.q4
-          .radioButtonValue,
-        createInnovationDevDto?.intellectual_property_rights.q4.options,
+        createInnovationDevDto?.intellectual_property_rights,
       );
 
       // * SAVING DIVERSITY AND MEGATRENDS
-      await this.saveOptionsAndSubOptions(
+      await this._saveSingleQuestion(
         resultId,
         user.id,
-        createInnovationDevDto?.innovation_team_diversity.radioButtonValue,
-        createInnovationDevDto?.innovation_team_diversity.options,
+        createInnovationDevDto?.innovation_team_diversity,
       );
-      await this.saveOptionsAndSubOptions(
+      await this._saveSingleQuestion(
         resultId,
         user.id,
-        createInnovationDevDto?.megatrends.radioButtonValue,
-        createInnovationDevDto?.megatrends.options,
+        createInnovationDevDto?.megatrends,
       );
 
       // * Save Evidence
@@ -389,7 +354,7 @@ export class InnovationDevService {
 
       let scaling_studies_urls: string[] = [];
       if (
-        innDevExists.innovation_readiness_level_id >=
+        Number(innDevExists?.innovation_readiness_level_id) >=
         InnovationReadinessLevelByLevel.Level_6
       ) {
         const urls = await this._resultScalingStudyUrlsRepository.find({
@@ -426,7 +391,9 @@ export class InnovationDevService {
 
       return {
         response: {
-          ...this._normalizeInnovationDevRecord(innDevExists),
+          ...this._normalizeInnovationDevRecord(
+            innDevExists ?? this._emptyInnovationDevRecord(resultId),
+          ),
           pictures,
           innovatonUse,
           initiative_expected_investment,
@@ -444,6 +411,86 @@ export class InnovationDevService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  /**
+   * Saves every question a nested questionnaire group actually carries (P2-3557).
+   *
+   * The `qN` keys are SLOTS, not a guarantee: `responsibleInnovationAndScalingV2`
+   * pins them to `result_question_id` and serves only the slots the result's phase
+   * owns, so from the 2026 phase on `responsible_innovation_and_scaling` arrives
+   * with `q1`…`q3` and no `q4` — question 137 ("partners, policies and financial
+   * mechanisms") was retired with no replacement. The client echoes back exactly
+   * what the GET handed it, so naming the four slots one by one dereferenced an
+   * absent `q4` and the whole section save died with
+   * `Cannot read properties of undefined (reading 'radioButtonValue')`.
+   *
+   * Iterating the `qN` keys PRESENT in the payload keeps this independent of how
+   * many questions a group has: retiring or adding a slot needs no change here,
+   * in either group and in either direction.
+   *
+   * A slot the payload does not carry is left completely alone — see
+   * `_saveSingleQuestion` for why "absent" must mean "do not call".
+   */
+  private async _saveNestedQuestionGroup(
+    resultId: number,
+    user: number,
+    group: TopLevelQuestionsV2 | undefined | null,
+  ): Promise<void> {
+    if (group == null) return;
+
+    const slots = group as unknown as Record<string, QuestionV2>;
+    for (const slot of this._presentQuestionSlots(group)) {
+      await this._saveSingleQuestion(resultId, user, slots[slot]);
+    }
+  }
+
+  /**
+   * The `qN` slots the payload carries, ordered by N so the write order does not
+   * depend on key insertion order. Anything that is not a `qN` key (the group's own
+   * `radioButtonValue` / `options`, plus the question metadata the GET spreads in)
+   * is ignored.
+   */
+  private _presentQuestionSlots(group: TopLevelQuestionsV2): string[] {
+    const slots = group as unknown as Record<string, QuestionV2>;
+    return Object.keys(slots)
+      .filter((key) => /^q\d+$/.test(key) && slots[key] != null)
+      .sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
+  }
+
+  /**
+   * Saves one question's options, or does nothing at all when the question is not
+   * in the payload.
+   *
+   * "Absent means do not call" is deliberate, not defensive noise:
+   * `saveOptionsAndSubOptions` forces `answer_boolean = false` on every option that
+   * is not the selected radio (:527-537) and then deactivates the stored answers
+   * (:581 / :594, via `_deactivateOtherAnswers` / `_deactivateAllAnswers`). Handing
+   * it a question the client never sent would therefore wipe answers the user still
+   * has, not merely skip them. `options` undefined is also not survivable inside it
+   * — it iterates the array unguarded at :507 — so the guard has to live out here.
+   *
+   * An empty `options` array is a no-op inside that method too, so it is skipped
+   * for the same result with one query less. A present question with a null
+   * `radioButtonValue` still goes through, exactly as before: that is how clearing
+   * a radio is persisted.
+   */
+  private async _saveSingleQuestion(
+    resultId: number,
+    user: number,
+    question: QuestionV2 | undefined | null,
+  ): Promise<void> {
+    if (question == null) return;
+    if (!Array.isArray(question.options) || question.options.length === 0) {
+      return;
+    }
+
+    await this.saveOptionsAndSubOptions(
+      resultId,
+      user,
+      question.radioButtonValue,
+      question.options,
+    );
   }
 
   async saveOptionsAndSubOptions(
@@ -873,6 +920,45 @@ export class InnovationDevService {
     return Object.fromEntries(
       Object.entries(fields).filter(([, value]) => value !== undefined),
     ) as Partial<T>;
+  }
+
+  /**
+   * The `results_innovations_dev` row is only created the first time the section is SAVED
+   * (see `saveInnovationDev`), so a result whose Innovation Development section was never
+   * filled in has no row at all and `InnovationDevExists` returns `undefined`.
+   *
+   * ⚠️ Returning nothing for the section is not an option: everything else in the payload
+   * (evidences, budgets, anticipated users, lead center) lives in its own tables and does
+   * exist, and the client replaces its whole form model with `response`. So the empty case
+   * answers with the same key set, all null — the form renders blank but usable, and
+   * `result_innovation_dev_id: null` tells the client (and `saveInnovationDev`) that the
+   * row still has to be created.
+   */
+  private _emptyInnovationDevRecord(resultId: number) {
+    return {
+      result_innovation_dev_id: null,
+      short_title: null,
+      is_new_variety: null,
+      number_of_varieties: null,
+      innovation_developers: null,
+      innovation_collaborators: null,
+      readiness_level: null,
+      evidences_justification: null,
+      is_active: null,
+      created_date: null,
+      last_updated_date: null,
+      results_id: Number(resultId),
+      created_by: null,
+      last_updated_by: null,
+      innovation_characterization_id: null,
+      innovation_nature_id: null,
+      innovation_readiness_level_id: null,
+      innovation_acknowledgement: null,
+      innovation_pdf: null,
+      innovation_user_to_be_determined: null,
+      has_scaling_studies: null,
+      previous_irl: null,
+    };
   }
 
   private _normalizeInnovationDevRecord<T extends { is_new_variety?: unknown }>(

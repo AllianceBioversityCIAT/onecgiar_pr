@@ -1,6 +1,6 @@
 # type-innovation-dev (bilateral)
 
-**Verified:** 2026-09-01 · branch performance-refactor · 1899f4602
+**Verified:** 2026-09-02 · branch performance-refactor · f013c157b
 
 ## What it is
 Section 5 of the bilateral form: Innovation Development. Shows the **MDS** (3 mandatory fields) and
@@ -13,6 +13,8 @@ QA-verified via P2-3327).
   `BilateralApiService.GET_innovationDev` / `PATCH_innovationDev`. There is no bilateral-specific one.
 - State: `body` is the server's `CreateInnovationDevDto`. Saving goes through
   `BilateralAutoSaveService.schedulePayload('typeSpecific', …, { statusKey: 'type-specific' })`.
+- Load flag: `loaded = signal<boolean | null>(null)` — `null` in flight, `true` loaded, `false` failed.
+  **Every write is gated on `=== true`** at the single choke point `queueTypeSave()`.
 - Green check: `BilateralMdsTrackerService.setSectionFields('type-specific', …)`. **Three items only**:
   `nature`, `developers`, `readiness`. Everything else is full metadata and does not count.
 - Toggle: `BilateralExpandableStateService.get/setShowAllFields(resultId, 'type-specific')` — the
@@ -41,6 +43,28 @@ QA-verified via P2-3327).
   (`isReadyForScalingStudies`). The P25 portfolio also holds 2025-phase results, so a portfolio gate
   would strip the question from a 2025 result — which the epic's governing note (Ángel Jarrín,
   23-Aug-2026) forbids absolutely. An unresolved phase year counts as the current phase and hides it.
+- ⚠️ **NOTHING may be saved until `loaded() === true`** (P2-3558). `body` is built as `{}`, so a form
+  that never loaded is indistinguishable from a form the user emptied — and `buildPayload()` sends
+  `?? null` for every key. The GET answers a server-side exception with a real **HTTP 500** and the
+  interceptor rethrows it (`shared/interceptors/general-interceptor.service.ts:81-83`), so before the
+  flag `next` never ran, the form painted blank with no warning, and the first keystroke autosaved
+  `null` over the stored short title, innovation developers and readiness level. `null` blocks for the
+  same reason: the GET takes 240-620 ms on prtest against an 800 ms debounce. Add a new write path and
+  it MUST go through `queueTypeSave()`, never straight to `schedulePayload`.
+- ⚠️ **A failed load shows `app-alert-status status="error"` and disables Save** — reusing the widget
+  the section already had for its MDS note. It renders on `=== false` only: a naive `!loaded()` would
+  flash the error on every open while the GET is merely in flight. It sits OUTSIDE the note/button row,
+  whose two children are an acceptance criterion (P2-3327 AC2) a test pins.
+- ⚠️ **`reference_materials` is OMITTED from the payload when `body` holds no array — never sent as `[]`**
+  (P2-3557). The server returns early only for `null`/`undefined`
+  (`results/summary/innovation_dev.service.ts:99-101`) and de-activates every stored evidence of type 4
+  that any other value — `[]` included — leaves out (`:110-125`). Kept after P2-3558 closed the failed-load
+  route, because it is the key's real contract and not a workaround. A present array — `[]` from deleting
+  the last row included — is still sent, so real deletions still persist. Same fix as the pooled-funding
+  form (`0fca46d3a`, P2-3550 AC4). `scaling_studies_urls` needs no such guard: its writer only runs on a
+  truthy `.length` (`summary.service.ts:710-731`).
+- ⚠️ **The spec's `build()` runs the first change detection**, so `ngOnInit` fires and the default GET
+  mock leaves the component `loaded`. A test that creates the component without it can save nothing.
 - ⚠️ **Hiding the question does NOT remove the fields from the payload, on purpose.** The PO's note is
   explicit that "Remove" never means delete the data, so `buildPayload` still sends
   `has_scaling_studies` and `scaling_studies_urls`; a value written in an earlier phase must never be

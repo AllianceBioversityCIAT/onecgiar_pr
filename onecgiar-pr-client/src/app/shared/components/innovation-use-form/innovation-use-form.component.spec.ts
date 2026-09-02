@@ -795,12 +795,25 @@ describe('InnovationUseFormComponent', () => {
       expect(component.isScalingStudiesQuestionHidden()).toBe(false);
     });
 
-    it('falls back to reportingCurrentPhase.phaseYear when currentResultSignal has no phase_year', () => {
+    // P2-3558 — this used to assert `true`, i.e. it described the defect: with no `phase_year` on
+    // the result the gate read `reportingCurrentPhase.phaseYear`, the OPEN reporting phase (2026 in
+    // production), and hid the question on a legacy result. Same call the eight sibling gates in
+    // `FieldsManagerService` made, fixed in `8afb574f3`.
+    it('ignores reportingCurrentPhase.phaseYear when currentResultSignal has no phase_year', () => {
       apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({});
       apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: 2026 };
       component.body.innovation_use_level_id = 7;
 
-      expect(component.isScalingStudiesQuestionHidden()).toBe(true);
+      expect(component.isScalingStudiesQuestionHidden()).toBe(false);
+    });
+
+    // A year arriving as a string is a bad payload, and a bad payload gets the legacy form.
+    it('keeps the question visible when phase_year arrives as a string', () => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({ phase_year: '2026' });
+      apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: 2026 };
+      component.body.innovation_use_level_id = 7;
+
+      expect(component.isScalingStudiesQuestionHidden()).toBe(false);
     });
 
     // Scope lock (Yeck, 31-Aug-2026): P2-3535 covers the Innovation Use section only. IPSR
@@ -828,6 +841,90 @@ describe('InnovationUseFormComponent', () => {
         component.body.innovation_use_level_id = null;
 
         expect(component.isScalingStudiesQuestionHidden()).toBe(false);
+      });
+
+      // P2-3558 — the IPSR branch must not consult the open reporting phase either.
+      it('keeps the question visible at level 9 when the result carries no phase_year', () => {
+        apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue({});
+        apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: 2026 };
+        component.body.innovation_use_level_id = 9;
+
+        expect(component.isScalingStudiesQuestionHidden()).toBe(false);
+      });
+    });
+  });
+
+  /**
+   * P2-3558 — the SAME assertions, but against the RENDERED DOM.
+   *
+   * ⚠️ Zoneless: asserting on `isScalingStudiesQuestionHidden()` alone is not enough — the method
+   * is a plain class member and a test that reads it passes with the defect present as long as the
+   * mock nulls `reportingCurrentPhase`. These tests set `reportingCurrentPhase.phaseYear = 2026`,
+   * which is what production actually carries (`data-control.service.ts:125`), and then look for the
+   * radio in the DOM. The "no phase_year" case below FAILS on the pre-fix code.
+   */
+  describe('scaling-studies question in the rendered DOM', () => {
+    const SCALING_RADIO_FIELD_REF = '[innovation-use-form]-has-studies-links';
+    /** The whole scaling-studies block lives inside `@if (isP25() && !isIpsr)` (`.html:287`). */
+    const renderWith = ({ phaseYear, level, isIpsr = false }: { phaseYear?: unknown; level: number | null; isIpsr?: boolean }) => {
+      apiServiceMock.dataControlSE.currentResultSignal.mockReturnValue(phaseYear === undefined ? {} : { phase_year: phaseYear });
+      // The OPEN reporting phase, as production carries it — the value the removed fallback read.
+      apiServiceMock.dataControlSE.reportingCurrentPhase = { phaseYear: 2026 };
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      innovationControlListServiceMock.useLevelsList = [
+        { id: 5, level: 5 },
+        { id: 6, level: 6 },
+        { id: 9, level: 9 }
+      ];
+
+      fixture = TestBed.createComponent(InnovationUseFormComponent);
+      component = fixture.componentInstance;
+      component.body = new IpsrStep1Body();
+      component.body.innovation_use_level_id = level;
+      component.saving = false;
+      component.isIpsr = isIpsr;
+      // This view only: the app-wide checkNoChanges pass trips on the P25 branch on its own
+      // (`getUseLevelIndex()` settles from -1), unrelated to this gate.
+      fixture.changeDetectorRef.detectChanges();
+      fixture.changeDetectorRef.detectChanges();
+
+      return fixture.debugElement
+        .queryAll(By.css('app-pr-radio-button'))
+        .some(de => de.nativeElement.getAttribute('fieldRef') === SCALING_RADIO_FIELD_REF);
+    };
+
+    // 🛑 The regression test: FAILS on the pre-fix code, which resolved the year to the open
+    // reporting phase (2026) and painted no radio at all on a result whose year had not landed.
+    it('paints the radio when the result carries no phase_year, even with the open phase at 2026', () => {
+      expect(renderWith({ level: 9 })).toBe(true);
+    });
+
+    it('paints the radio for a 2025-phase result', () => {
+      expect(renderWith({ phaseYear: 2025, level: 9 })).toBe(true);
+    });
+
+    it('drops the radio for a 2026-phase result', () => {
+      expect(renderWith({ phaseYear: 2026, level: 9 })).toBe(false);
+    });
+
+    it('paints the radio when phase_year arrives as a string', () => {
+      expect(renderWith({ phaseYear: '2026', level: 9 })).toBe(true);
+    });
+
+    /**
+     * The IPSR Innovation Package step-1 host (`step-n1.component.html:26`, `[isIpsr]="true"`).
+     * ⚠️ The block that holds this question is fenced with `&& !this.isIpsr` (`.html:287`), so the
+     * IPSR host paints no scaling-studies radio in ANY phase — the `isIpsr` level-6 branch inside
+     * `isScalingStudiesQuestionHidden()` is unreachable from this template. These cases lock that
+     * the fix leaves the IPSR host exactly where it was.
+     */
+    describe('IPSR step 1 host ([isIpsr] = true)', () => {
+      it.each([
+        ['no phase_year', undefined],
+        ['a 2025 phase', 2025],
+        ['a 2026 phase', 2026]
+      ])('paints no scaling-studies radio with %s', (_label, phaseYear) => {
+        expect(renderWith({ phaseYear, level: 9, isIpsr: true })).toBe(false);
       });
     });
   });

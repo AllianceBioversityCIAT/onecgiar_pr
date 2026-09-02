@@ -62,16 +62,19 @@ describe('FieldsManagerService', () => {
       expect(service.isReportingFormGuidance2026()).toBe(false);
     });
 
-    it('is false when no phase year is known anywhere', () => {
+    it('is false when the result carries no year, with no open phase to lean on either', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = undefined as any;
       expect(service.isReportingFormGuidance2026()).toBe(false);
     });
 
-    it('falls back to the open reporting phase when the result carries no year', () => {
+    // P2-3558: this used to assert `true` — it was describing the defect. The open reporting
+    // phase is 2026, so the old fallback painted the NEW form over a result whose own phase is
+    // unknown, and 2025-phase results outnumber 2026 ones 1516 to 353 in prtest.
+    it('ignores the open reporting phase when the result carries no year — unknown means legacy', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
-      expect(service.isReportingFormGuidance2026()).toBe(true);
+      expect(service.isReportingFormGuidance2026()).toBe(false);
     });
 
     it('renames the description label only from 2026 on', () => {
@@ -119,13 +122,16 @@ describe('FieldsManagerService', () => {
       expect(service.isContributorsPartners2026()).toBe(true);
     });
 
-    it('falls back to the open reporting phase when the result carries no year', () => {
+    // P2-3558: this used to assert `true` — it was describing the defect. The open reporting
+    // phase is 2026, so the old fallback painted the NEW form over a result whose own phase is
+    // unknown, and 2025-phase results outnumber 2026 ones 1516 to 353 in prtest.
+    it('ignores the open reporting phase when the result carries no year — unknown means legacy', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
-      expect(service.isContributorsPartners2026()).toBe(true);
+      expect(service.isContributorsPartners2026()).toBe(false);
     });
 
-    it('is false when neither the result nor the open phase carries a year', () => {
+    it('is false when the result carries no year, with no open phase to lean on either', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = undefined as any;
       expect(service.isContributorsPartners2026()).toBe(false);
@@ -163,13 +169,16 @@ describe('FieldsManagerService', () => {
       expect(service.isGeographicLocation2026()).toBe(true);
     });
 
-    it('falls back to the open reporting phase when the result carries no year', () => {
+    // P2-3558: this used to assert `true` — it was describing the defect. The open reporting
+    // phase is 2026, so the old fallback painted the NEW form over a result whose own phase is
+    // unknown, and 2025-phase results outnumber 2026 ones 1516 to 353 in prtest.
+    it('ignores the open reporting phase when the result carries no year — unknown means legacy', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
-      expect(service.isGeographicLocation2026()).toBe(true);
+      expect(service.isGeographicLocation2026()).toBe(false);
     });
 
-    it('is false when neither the result nor the open phase carries a year', () => {
+    it('is false when the result carries no year, with no open phase to lean on either', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = undefined as any;
       expect(service.isGeographicLocation2026()).toBe(false);
@@ -209,13 +218,16 @@ describe('FieldsManagerService', () => {
       expect(service.isInnovationDevFormReduced2026()).toBe(true);
     });
 
-    it('falls back to the open reporting phase when the result carries no year', () => {
+    // P2-3558: this used to assert `true` — it was describing the defect. The open reporting
+    // phase is 2026, so the old fallback painted the NEW form over a result whose own phase is
+    // unknown, and 2025-phase results outnumber 2026 ones 1516 to 353 in prtest.
+    it('ignores the open reporting phase when the result carries no year — unknown means legacy', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
-      expect(service.isInnovationDevFormReduced2026()).toBe(true);
+      expect(service.isInnovationDevFormReduced2026()).toBe(false);
     });
 
-    it('is false when neither the result nor the open phase carries a year', () => {
+    it('is false when the result carries no year, with no open phase to lean on either', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = undefined as any;
       expect(service.isInnovationDevFormReduced2026()).toBe(false);
@@ -244,16 +256,61 @@ describe('FieldsManagerService', () => {
       expect(service.isInnovationDeveloperAutoFilled2026()).toBe(false);
     });
 
-    it('falls back to the open reporting phase when the result carries no year', () => {
+    // P2-3558: this used to assert `true` — it was describing the defect. The open reporting
+    // phase is 2026, so the old fallback painted the NEW form over a result whose own phase is
+    // unknown, and 2025-phase results outnumber 2026 ones 1516 to 353 in prtest.
+    it('ignores the open reporting phase when the result carries no year — unknown means legacy', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
-      expect(service.isInnovationDeveloperAutoFilled2026()).toBe(true);
+      expect(service.isInnovationDeveloperAutoFilled2026()).toBe(false);
     });
 
-    it('is false when neither the result nor the open phase carries a year', () => {
+    it('is false when the result carries no year, with no open phase to lean on either', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = undefined as any;
       expect(service.isInnovationDeveloperAutoFilled2026()).toBe(false);
+    });
+  });
+
+  /**
+   * P2-3550 (epic P2-3243). "Innovation reference materials" — the last block of Innovation
+   * Development — is dropped from the 2026 form, but the ticket's own rule keeps it for 2026 results
+   * that were created with the 2025 form (`is_replicated`).
+   *
+   * 🛑 The gate is the reporting phase YEAR, never the portfolio: the P25 portfolio starts in 2025,
+   * so `isP25()` would also strip the block from phase-2025 results, which the epic protects.
+   */
+  describe('isInnovationReferenceMaterialsRemoved2026', () => {
+    it('is true for a 2026-phase result created with the 2026 form', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026, is_replicated: 0 } as any);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(true);
+    });
+
+    it('is false for a 2026-phase result created with the 2025 form — it keeps its structure', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026, is_replicated: 1 } as any);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(false);
+    });
+
+    it('is false for a 2025-phase result even inside the P25 portfolio — the case a portfolio gate would break', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2025, is_replicated: 0 } as any);
+      expect(service.isP25()).toBe(true);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(false);
+    });
+
+    it('is true for a 2026-phase P22 result — the removal follows the phase, not the portfolio', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P22', phase_year: 2026, is_replicated: 0 } as any);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(true);
+    });
+
+    it("is false when phase_year arrives as a string, since '2026' >= 2026 would be a coercion", () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: '2026', is_replicated: 0 } as any);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(false);
+    });
+
+    it('is false when the result carries no year, with no open phase to lean on either', () => {
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+      dataControlSE.reportingCurrentPhase = undefined as any;
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(false);
     });
   });
 
@@ -284,16 +341,19 @@ describe('FieldsManagerService', () => {
       expect(service.isInnovationUse2030Projection2026()).toBe(false);
     });
 
-    it('is false when neither the result nor the open phase carries a year', () => {
+    it('is false when the result carries no year, with no open phase to lean on either', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = undefined as any;
       expect(service.isInnovationUse2030Projection2026()).toBe(false);
     });
 
-    it('falls back to the open reporting phase when the result carries no year', () => {
+    // P2-3558: this used to assert `true` — it was describing the defect. The open reporting
+    // phase is 2026, so the old fallback painted the NEW form over a result whose own phase is
+    // unknown, and 2025-phase results outnumber 2026 ones 1516 to 353 in prtest.
+    it('ignores the open reporting phase when the result carries no year — unknown means legacy', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
-      expect(service.isInnovationUse2030Projection2026()).toBe(true);
+      expect(service.isInnovationUse2030Projection2026()).toBe(false);
     });
 
     it('renames the 2030 block title from the 2026 phase on', () => {
@@ -340,13 +400,16 @@ describe('FieldsManagerService', () => {
       expect(service.fields()['[general-info]-lead_contact_person'].required).toBe(false);
     });
 
-    it('falls back to the open reporting phase when the result carries no year', () => {
+    // P2-3558: this used to assert `true` — it was describing the defect. The open reporting
+    // phase is 2026, so the old fallback painted the NEW form over a result whose own phase is
+    // unknown, and 2025-phase results outnumber 2026 ones 1516 to 353 in prtest.
+    it('ignores the open reporting phase when the result carries no year — unknown means legacy', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
-      expect(service.isLeadContactPersonMandatory2026()).toBe(true);
+      expect(service.isLeadContactPersonMandatory2026()).toBe(false);
     });
 
-    it('is false when no phase year is known anywhere', () => {
+    it('is false when the result carries no year, with no open phase to lean on either', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
       dataControlSE.reportingCurrentPhase = undefined as any;
       expect(service.isLeadContactPersonMandatory2026()).toBe(false);
@@ -942,6 +1005,104 @@ describe('FieldsManagerService', () => {
       dataControlSE.currentResultSignal.set({ portfolio: 'P22', result_type_id: 2 } as CurrentResult);
       const fields = service.fields();
       expect(fields['[geoscope-management]-has_extra_geo_scope'].hide).toBe(true);
+    });
+  });
+
+  /**
+   * P2-3558 — the phase gates must fail towards the LEGACY form, never towards the new one.
+   *
+   * All eight `*2026` gates used to read
+   * `currentResultSignal()?.phase_year ?? reportingCurrentPhase?.phaseYear`. The second operand is
+   * the OPEN reporting phase (2026 as of 2 Sep 2026), not the phase of the result on screen, so a
+   * result whose own year had not arrived was rendered with the 2026 form. Reachable two ways:
+   *   1. `result-detail.component.ts:69` / `current-result.service.ts:26` reset the signal to `{}`
+   *      on every load, while `rd-general-information` and `rd-evidences` release their own
+   *      `[appSectionSkeleton]` from their OWN GET — the form is live before the result lands.
+   *   2. `current-result.service.ts:65-69`: a non-404 failure of `GET_resultById` leaves the signal
+   *      at `{}` for good, with the form on screen.
+   * Measured population on 2 Sep 2026: 1516 results in the 2025 phase vs 353 in 2026 — failing to
+   * the new form is failing to the wrong side in most cases.
+   */
+  describe('phase gates fail towards the legacy form (P2-3558)', () => {
+    /** Every gate, with the payload each one needs to be `true` in a real 2026 phase. */
+    const gates: { name: string; call: () => boolean; truePayload: Record<string, unknown> }[] = [
+      { name: 'isContributorsPartners2026', call: () => service.isContributorsPartners2026(), truePayload: { portfolio: 'P25' } },
+      { name: 'isInnovationDevFormReduced2026', call: () => service.isInnovationDevFormReduced2026(), truePayload: { portfolio: 'P25' } },
+      { name: 'isInnovationUse2030Projection2026', call: () => service.isInnovationUse2030Projection2026(), truePayload: { portfolio: 'P25' } },
+      { name: 'isInnovationDeveloperAutoFilled2026', call: () => service.isInnovationDeveloperAutoFilled2026(), truePayload: { portfolio: 'P25' } },
+      {
+        name: 'isInnovationReferenceMaterialsRemoved2026',
+        call: () => service.isInnovationReferenceMaterialsRemoved2026(),
+        truePayload: { portfolio: 'P25', is_replicated: 0 }
+      },
+      { name: 'isGeographicLocation2026', call: () => service.isGeographicLocation2026(), truePayload: { portfolio: 'P25' } },
+      { name: 'isReportingFormGuidance2026', call: () => service.isReportingFormGuidance2026(), truePayload: { portfolio: 'P25' } },
+      { name: 'isLeadContactPersonMandatory2026', call: () => service.isLeadContactPersonMandatory2026(), truePayload: { portfolio: 'P25' } }
+    ];
+
+    describe.each(gates)('$name', ({ call, truePayload }) => {
+      it('is false while the result is still loading (`currentResultSignal` reset to {}), even with the 2026 phase open', () => {
+        dataControlSE.reportingCurrentPhase = { phaseYear: 2026, phaseName: 'Reporting 2026', phaseId: 36 } as any;
+        dataControlSE.currentResultSignal.set({} as any);
+        expect(call()).toBe(false);
+      });
+
+      it('is false after a failed GET_resultById leaves the result empty, even with the 2026 phase open', () => {
+        dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+        dataControlSE.currentResultSignal.set({ portfolio: 'P25' } as any);
+        expect(call()).toBe(false);
+      });
+
+      it('is false for a 2025-phase result while the 2026 phase is open', () => {
+        dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+        dataControlSE.currentResultSignal.set({ ...truePayload, phase_year: 2025 } as any);
+        expect(call()).toBe(false);
+      });
+
+      it('is true for a 2026-phase result — the redesign still ships', () => {
+        dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+        dataControlSE.currentResultSignal.set({ ...truePayload, phase_year: 2026 } as any);
+        expect(call()).toBe(true);
+      });
+    });
+
+    /**
+     * The two gates that decide more than the year keep deciding it. Uniforming them would be the
+     * regression this ticket is meant to avoid.
+     */
+    it('isInnovationReferenceMaterialsRemoved2026 still keeps the block for a 2026 result born under the 2025 form', () => {
+      dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026, is_replicated: 1 } as any);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(false);
+    });
+
+    it('isLeadContactPersonMandatory2026 still gates on the P25 portfolio, mirroring validation_general_information_P25', () => {
+      dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+      dataControlSE.currentResultSignal.set({ portfolio: 'P22', phase_year: 2026 } as any);
+      expect(service.isLeadContactPersonMandatory2026()).toBe(false);
+      dataControlSE.currentResultSignal.set({ portfolio: 'P25', phase_year: 2026 } as any);
+      expect(service.isLeadContactPersonMandatory2026()).toBe(true);
+    });
+
+    /** The other six deliberately ignore the portfolio: a 2026-phase P22 result gets the new form. */
+    it('the six portfolio-agnostic gates still follow the phase, not the portfolio', () => {
+      dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+      dataControlSE.currentResultSignal.set({ portfolio: 'P22', phase_year: 2026, is_replicated: 0 } as any);
+      expect(service.isContributorsPartners2026()).toBe(true);
+      expect(service.isInnovationDevFormReduced2026()).toBe(true);
+      expect(service.isInnovationUse2030Projection2026()).toBe(true);
+      expect(service.isInnovationDeveloperAutoFilled2026()).toBe(true);
+      expect(service.isInnovationReferenceMaterialsRemoved2026()).toBe(true);
+      expect(service.isGeographicLocation2026()).toBe(true);
+      expect(service.isReportingFormGuidance2026()).toBe(true);
+    });
+
+    /** The user-visible consequence of the reset window: the legacy label, not the 2026 one. */
+    it('renders the legacy Description label while the result is still loading', () => {
+      dataControlSE.reportingCurrentPhase = { phaseYear: 2026 } as any;
+      dataControlSE.currentResultSignal.set({} as any);
+      expect(service.fields()['[general-info]-description'].label).toBe('Description');
+      expect(service.fields()['[general-info]-lead_contact_person'].required).toBe(false);
     });
   });
 });

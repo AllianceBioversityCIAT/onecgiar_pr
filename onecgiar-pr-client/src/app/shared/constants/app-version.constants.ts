@@ -8,4 +8,4 @@
  * Bump it by one on every delivery meant to be verified in a testing environment. Nothing
  * generates it, so a stale value here makes the stamp lie.
  */
-export const APP_VERSION = '16';
+export const APP_VERSION = '25';

@@ -1,6 +1,6 @@
 # result-creator
 
-**Verified:** 2026-08-31 · branch performance-refactor · b224c27e4
+**Verified:** 2026-09-02 · branch performance-refactor · 2de8884cd
 
 ## Qué es
 La pantalla de **Report new result** del flujo Pool Funding (W1/W2): elegir nivel, escribir el
@@ -26,7 +26,7 @@ lee un documento y propone resultados candidatos — hoy solo los propone (ver T
 |---|---|---|
 | `result-ai-assistant/` | Modal del asistente: subida de archivo, loading, feedback, lista | El estado NO vive aquí, vive en `CreateResultManagementService` |
 | `result-ai-assistant/components/result-ai-item/` | Una tarjeta de resultado propuesto | ⚠️ ver la primera trampa |
-| `similar-results/` | Sugerencias contra duplicados | Las alimenta Elastic; la unicidad real la gatea MySQL al crear (`report-result-form.component.ts:421`) |
+| `similar-results/` | Sugerencias contra duplicados | Fed by our own `get/depth-search` since P2-3527 (Elastic's host stopped resolving). Real uniqueness is still gated by MySQL at create time (`report-result-form.component.ts:421`) |
 | `result-level-cards/`, `result-level-buttons/` | Selección de nivel | — |
 
 ## Trampas (⚠️ = ya rompió algo)
@@ -61,6 +61,20 @@ lee un documento y propone resultados candidatos — hoy solo los propone (ver T
   `phaseYear` tiene que leer antes `dataControlSE.reportingPhaseVersion()` (contador que
   `getCurrentPhases()` incrementa), o bajo zoneless se queda cacheado con el valor del primer paint.
   El fallback al año de calendario evita que la frase pinte `null` en ese primer frame.
+
+- ⚠️ **P2-3527 — the similar-results list is a MySQL `like '%…%'`, and it only stays usable because
+  of two guards.** `GET_depthSearch` (`results-api.service.ts`) hits
+  `api/results/get/depth-search/:title`, whose repository query
+  (`result.repository.ts` → `AllResultsLegacyNewByTitle`) **caps the page at 20 rows (50 max) and
+  orders exact title → prefix → rest**. Uncapped, `title like '%a%'` answered with ~10 360 rows /
+  8 MB in 4.2 s on prtest. Both callers also **debounce 500 ms** (`titleSearch$` here and in
+  `report-result-form`). 🛑 Do not remove the cap, the ordering or the debounce: the search fires
+  while the user types.
+- ⚠️ **A 404 from that route means "no matches", not a failure.** `GET_depthSearch` maps it to `[]`;
+  every other error propagates and lights up `depthSearchFailed`, which is the distinction P2-3526
+  is about. And `version_id` arrives as a **string** (MySQL bigint) — the service coerces it to a
+  number, otherwise `allPhases.find(p => p.id === version_id)` never matches and every suggestion
+  renders as "does not exist in this reporting phase" with Map-to-ToC disabled.
 
 ## Pendiente / Coming soon
 - **Crear un resultado desde el asistente de IA** → `P2-3433` (abierto, sin respuesta desde el

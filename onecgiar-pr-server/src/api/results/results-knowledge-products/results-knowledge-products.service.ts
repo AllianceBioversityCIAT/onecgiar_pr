@@ -841,6 +841,43 @@ export class ResultsKnowledgeProductsService {
     return { error, details };
   }
 
+  /**
+   * P2-3558: the rejection used to answer `A phase with a cgspace year of 2008 was not found`, which
+   * says nothing to the person reporting: it names an internal record instead of telling them that
+   * their publication is from 2008 and which years the system can take. Reads like the two sibling
+   * year rejections in `findOnCGSpace` (same zone, same remedy: check the link, then the Center's
+   * knowledge management team).
+   *
+   * `reportableYears` comes from the phase walk in `create`, never from a literal — a hardcoded year
+   * would be wrong from the first January after it was written.
+   */
+  private _yearOutsideReportingPhasesMessage(
+    publicationYear: number,
+    reportableYears: number[],
+  ): string {
+    const openYears = [...new Set(reportableYears)].sort((a, b) => b - a);
+
+    const publicationSentence = publicationYear
+      ? `This publication is from ${publicationYear} according to CGSpace.`
+      : 'CGSpace does not report a publication year for this knowledge product.';
+
+    const cycleSentence = openYears.length
+      ? `Only knowledge products published in ${StringUtils.join(
+          openYears.map(String),
+          ', ',
+          ' or ',
+        )} can be reported, because those are the reporting phases available.`
+      : 'It falls outside the reporting phases available.';
+
+    return (
+      `${publicationSentence} ${cycleSentence}<br><br>` +
+      'Kindly check that the CGSpace link you entered is the right one. ' +
+      'If the publication year in CGSpace is not correct, please contact your Center’s knowledge ' +
+      'management team to review this information in CGSpace; if the year is correct, this ' +
+      'publication cannot be reported as a knowledge product in this reporting cycle.'
+    );
+  }
+
   async create(
     resultsKnowledgeProductDto: ResultsKnowledgeProductDto,
     user: TokenDto,
@@ -899,12 +936,30 @@ export class ResultsKnowledgeProductsService {
       if (!resultsKnowledgeProductDto.id) {
         let versionId: number = null;
         const is_admin = await this._roleByUseRepository.isUserAdmin(user.id);
-        if (is_admin != undefined && Boolean(is_admin)) {
+        // Admins get the knowledge product filed in the phase whose cgspace year matches the
+        // publication year. That alignment needs CGSpace metadata: `metadataCG` is null whenever
+        // the knowledge product carries no metadata rows (`results-knowledge-products.mapper.ts`
+        // — `metadata.length ? {...} : null`), and it is simply absent when the payload never
+        // went through an MQAP lookup. With no publication year there is nothing to align to, so
+        // the alignment is skipped and `versionId` stays null — the same phase resolution a
+        // non-admin gets — instead of dereferencing null and answering 500.
+        if (
+          is_admin != undefined &&
+          Boolean(is_admin) &&
+          resultsKnowledgeProductDto.metadataCG
+        ) {
           let kpVersion = currentVersion;
 
           const cgspaceKPYear =
             resultsKnowledgeProductDto.metadataCG.online_year ??
             resultsKnowledgeProductDto.metadataCG.issue_year;
+
+          // P2-3558: the years walked here are exactly the years this rejection can accept, so the
+          // message quotes them instead of a hardcoded year that would go stale every January.
+          const reportableYears: number[] = [];
+          if (kpVersion?.cgspace_year != null) {
+            reportableYears.push(kpVersion.cgspace_year);
+          }
 
           while (
             kpVersion.previous_phase &&
@@ -913,13 +968,19 @@ export class ResultsKnowledgeProductsService {
             kpVersion = await this._versioningService.$_findPhase(
               kpVersion.previous_phase,
             );
+            if (kpVersion?.cgspace_year != null) {
+              reportableYears.push(kpVersion.cgspace_year);
+            }
           }
 
           if (kpVersion.cgspace_year != cgspaceKPYear) {
             throw this._handlersError.returnErrorRes({
               error: {
                 response: {},
-                message: `A phase with a cgspace year of ${cgspaceKPYear} was not found`,
+                message: this._yearOutsideReportingPhasesMessage(
+                  cgspaceKPYear,
+                  reportableYears,
+                ),
                 status: HttpStatus.UNPROCESSABLE_ENTITY,
               },
             });

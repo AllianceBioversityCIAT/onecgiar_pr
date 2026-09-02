@@ -1,5 +1,7 @@
-<div class="bps-selector">
-  <label class="bps-label">Reporting Project <span class="bps-required">*</span></label>
+<div class="bps-selector" [class.bps-selector--inline]="isInline()">
+  @if (!isInline()) {
+    <label class="bps-label">Reporting Project <span class="bps-required">*</span></label>
+  }
 
   @if (creationService.isLoadingProjects() && !creationService.selectedProject()) {
     <div class="bps-field bps-loading">Loading projects...</div>
@@ -48,7 +50,9 @@
     </div>
   }
 
-  @if (creationService.selectedProject(); as project) {
+  @if (isInline()) {
+    <!-- Section 0 already renders Project Summary / Project Description / Lead Center below. -->
+  } @else if (creationService.selectedProject(); as project) {
     <div class="bps-project-info">
       <div class="bps-info-section">
         <h4 class="bps-info-label">Project Summary</h4>

@@ -1,6 +1,6 @@
 # result-sections-sidebar
 
-**Verified:** 2026-08-26 · branch performance-refactor · 038dcd77b
+**Verified:** 2026-09-02 · branch performance-refactor · 300d9b560
 
 ## Qué es
 Segundo riel (240px, blanco) del detalle de resultado: lista de secciones con su green check,
@@ -15,6 +15,7 @@ Reemplaza al `panel-menu` legacy y al subárbol de secciones que vivía dentro d
   - `FieldsManagerService.portfolioAcronym() / isP25() / isP22()` — filtra la lista de secciones
   - `GreenChecksService.submit` — habilita Submit y AI review
   - `RolesService.isAdmin` — escape del gate de membresía
+  - `RolesService.readOnly` — **write lock**: oculta AI review (ver trampa P2-3558)
   - `ApiService.globalVariablesSE.get?.in_qa` — **switch global** de la ronda de QA
 - Escribe en: `SubmissionModalService.showModal`, `UnsubmitModalService.showModal`, `AiReviewService.onAIReviewClick()`.
 - Selector: `<app-result-sections-sidebar />`, standalone, OnPush.
@@ -28,6 +29,25 @@ Reemplaza al `panel-menu` legacy y al subárbol de secciones que vivía dentro d
   pero **sin template que la use**. Es la referencia de comportamiento, no código vivo.
 
 ## Trampas (⚠️ = ya rompió algo)
+- ⚠️ **P2-3558 — AI review is a WRITE action, and it ignored the write lock.** Applying a proposal
+  rewrites title / description / innovation short_title (`src/api/ai/ai.service.ts` `saveChanges`)
+  and validating an impact area rewrites the DAC tag + `result_impact_area_score`
+  (`updateDacScore`). Both `showAiReview` and `aiReviewDisabled` now read `RolesService.readOnly` —
+  the canonical lock, which also hides the save bar (`save-button.component.html:1`) and the bottom
+  bar (`section-bottom-bar.component.ts:118`). It fires on a **closed phase**
+  (`current-result.service.ts:37-41`, `is_phase_open === 0`), a **non-member**
+  (`roles.service.ts:129-131`), a **discontinued** result outside types 7/2, an **AVISA** result and
+  a **closed platform** — every one of which coexists with `status_id == 1`.
+  🛑 **And the client is the ONLY enforcement**, same as the QA rule below: `ai.controller.ts` carries
+  no `@UseGuards` and `api/ai/*` only passes `JwtMiddleware` (`app.module.ts:139-153`) — a valid
+  token is all the server asks for. It never checks role, membership or phase. Delete this gate and
+  nothing stops the write.
+- 🛑 **Do NOT add a `phase_year` gate to the AI review.** The backend is phase-agnostic:
+  `src/api/ai/**` has zero phase/version/portfolio branches and keys everything on `result_id` (the
+  per-phase row) or `session_id`; its only phase-aware dependency,
+  `results.service.ts` `getTocMetadata(..., phaseYear)`, takes the year from the viewed result's own
+  version. What closes an old phase to the button is `is_phase_open`, not the year — and a
+  **portfolio** gate would be worse still: 2025 and 2026 phases share portfolio P25.
 - ⚠️ **P2-3434 — Unsubmit perdió sus dos guardas al revampear** (regresó P2-328 y P2-383).
   El legacy envolvía **Submit Y Unsubmit** en el mismo gate de rol
   (`panel-menu.component.html:65-69`) y deshabilitaba Unsubmit en QA (`:88`). El revamp conservó

@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-31 · branch qa-development-2026-ss · 268cbc622 (LCD-T-2, LCD-T-3, LCD-T-4, merged with performance-refactor)
+**Verified:** 2026-09-02 · branch performance-refactor · P2-3420/P2-3421 (QA'd innovation link, single select)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -172,6 +172,24 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   feedback de capa 1, no un gate. El green check del backend **no** se tocó: sigue exigiendo ≥1 centro
   cualquiera (`results-validation-module.repository.ts:415-424`), sin filtro `from_toc`.
 
+- ⚠️ **An UNMAPPED 2026 result (`planned_result === false`) is a THIRD shape of this field, untested
+  until P2-3554/P2-3553.** `isCP2026()` is still `true`, but the `planned_result !== false` clause on
+  `html:100` sends it to the `@else`: the FLAT dropdown (`cp-field-contributing_center~flat`) is the only
+  centres control painted — dropdown 1 and `toc-other-centers` are both absent. Guards live in
+  `*.zoneless.spec.ts` ("…of an UNMAPPED 2026 result").
+  🛑 **Both QA tickets were filed against the legacy "previous design" front**
+  (`d11q2gkl6a1qr7.cloudfront.net`), whose bundle carries none of `cp-field-contributing_center~flat`,
+  `toc-other-centers`, `cp-centers-validation`, `cp-centers-mandatory-marker`. Neither reproduces on
+  prtest v21 (results 8961/8988: 14 options, `pr_label required`, inline message and marker all present).
+  Check WHICH front a report came from before treating it as live — the two are months apart.
+
+- ⚠️ **`ngOnInit` re-asks for the CLARISA catalogue (`centersSE.getData()`) — load-bearing, not noise
+  (P2-3554).** The catalogue is fetched once at bootstrap; one failed/empty response left `centers()`
+  empty for the whole session, so both dropdowns here AND the mandatory "Lead center" showed
+  "No information found" until a page reload (proved live: one 503 on `clarisa/centers/get/all` → 0
+  options in both, a single request attempt). `getData()` is a no-op once loaded. Every spec mocking
+  `CentersService` for this component needs `getData: jest.fn().mockResolvedValue([])`.
+
 - El escaneo de "N fields missing" del piso depende de la clase global `.section_container`
   — ver [`../../CLAUDE.md`](../../CLAUDE.md).
 
@@ -310,13 +328,110 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   human gate (local stack + auth token + a real ToC-mapped P25 result are all required and were not
   available at doc-update time).
 
+## El enlace a la innovación QA'd (P2-3420 / P2-3421) — TRES caminos, no dos
+
+Desde el 2-sep-2026 la pregunta enlazado/agrupado tiene **tres** ramas en el template, no dos:
+
+1. `showsQaInnovationLink()` — **Innovation use + fase ≥ 2026**. Texto **de la historia**
+   (`INNOVATION_LINK_QUESTION`, verbatim, QA lo lee palabra por palabra) y `app-pr-select`
+   **single** sobre el catálogo QA'd (`QaInnovationDevelopmentResultsService`): QAed(2),
+   Approved(6) y Discontinued(4), portfolio-wide, de la **fase anterior** (el filtro de fase es
+   del server, `result.repository.ts:getQaEdInnovationDevelopmentResults`). `optionLabel="display"`
+   porque el type-ahead de `app-pr-select` filtra **solo** por `optionLabel`: `display` ya viene
+   precalculado como `[Result ID] - [Result Title]`, y así se busca por id **y** por título.
+2. Tipos **2 (fase < 2026) y 7** — el `fieldRef` de siempre, multi-select legado. Intacto.
+3. El resto de tipologías bajo `isCP2026()` — `linkedResultQuestionLabel`. Intacto.
+
+⚠️ **Las dos preguntas comparten el MISMO dato guardado** (`results_innovations_use.has_innovation_link`
++ tabla `linked_result`), así que para Innovation use la pregunta de la historia **sustituye** a la
+genérica de P2-3112; no pueden convivir. Si Innovation use tuviera que enlazar además KPs o
+políticas, hace falta un campo aparte (pendiente de decisión, 2-sep-2026).
+
+⚠️ **El gate es de AÑO DE FASE y, aquí, un año desconocido cae al control LEGADO** — al contrario
+que en las pantallas de creación, donde un año sin resolver se trata como la fase abierta. En el
+detalle la sección se desenmascara con su propio GET y el resultado puede llegar después, así que
+fallar hacia el formulario nuevo pintaría el control nuevo sobre un resultado viejo. Mismo criterio
+que `FieldsManagerService.currentResultPhaseYear`.
+
+⚠️ **`qaInnovationOptions` inyecta la opción huérfana.** El catálogo solo lista lo enlazable HOY: un
+enlace guardado cuya innovación ya no cumple el filtro pintaría el select **vacío**, y guardar la
+sección lo borraría sin que el usuario toque nada. El getter añade el id guardado como opción,
+tomando el título del catálogo amplio que esta sección ya carga. Pasó de verdad: el resultado 8996
+tenía enlazado el 6153, que el catálogo QA'd no devuelve.
+
+- `linkedInnovationId` (getter/setter) mapea la selección única sobre el array `linked_results` — el
+  contrato del PATCH y del GET es compartido con las superficies multi-select, no se cambia.
+- `onQaInnovationLinkChange()` limpia el enlace al responder "No", y **solo** para esta rama.
+- El catálogo se pide por `effect()` (`ensureQaInnovationCatalogue`), solo cuando la rama aplica.
+- Tests: `rd-contributors-and-partners.innovation-link.spec.ts` (17).
+
+## Lead contact person (P2-2911 AC2) — displayed here, still saved in General Information
+
+`<app-lead-contact-person-field>` renders right under the Lead center block
+(`html:272-280`, gated on `isCP2026()`), hydrated by `GET_leadContactPerson` (`component.ts:535`) and bound through the
+`leadContactBody` signal.
+
+- 🛑 **`[readOnly]="true"` is not cosmetic — this section has NO write path for the field.**
+  `UpdateContributorsPartnersDto` declares neither `lead_contact_person` nor
+  `lead_contact_person_data`, and `resolveContributorsPartnersSections`
+  (`contributors-partners.service.ts`) would not recognise them as a section, so anything added to
+  the PATCH body for them is dropped. The only writer is the General Information save
+  (`results.service.ts:901-902`), and it is a **full-body overwrite** — it cannot be reused for a
+  two-key patch without risking title / description / impact areas. An editable copy here would
+  therefore be a mandatory field that silently loses input.
+- ⚠️ **The value is read through the General Information GET**, because this section's own GET does
+  not echo it and `GET api/results/get/:id` (which fills `currentResultSignal()`) does not carry it
+  either — verified against prtest on 2026-09-02. That is one extra request per section entry, and
+  it shares `saveButtonSE.isGettingSection` with this section's own GET, so the global
+  section spinner may clear on whichever of the two returns first. The section's own skeleton is
+  driven by `rdPartnersSE.sectionLoading`, so what the user sees is unaffected.
+- ⚠️ **`leadContactBody` must be REASSIGNED, never mutated.** The field only reacts through
+  `ngOnChanges`, which fires on a reference change.
+- ⚠️ **The hook is `data-testid="cp-lead-contact-person"`, deliberately NOT `cp-field-…`.** The
+  `cp-field-<payload path>` convention makes `save-contract.cy.ts` assert the key travels in the
+  PATCH body — and this one must not, because the server would drop it.
+- ⚠️ **No `appFeedbackValidation` marker here on purpose.** General Information already contributes
+  this field to `someMandatoryFieldIncompleteResultDetail`; a second marker would double-count a
+  field the user cannot fix from this screen.
+- ⚠️ The shared field's clear (✕) button has no `readOnly` guard, so it can still blank the local
+  display. Nothing persists from this section, and the next entry re-hydrates. Do **not** guard it
+  in the shared component — that would change P2-3520 behaviour for General Information, IPSR and
+  Bilateral.
+
+## Pending / not built
+
+- **AC4 / AC5 / AC7** (contact auto-selected from the Lead center, no free-text search, only
+  contacts of that centre selectable) → **not built**: no centre → contact relation exists in the
+  data model. P2-2911 is `To Be Clarified`.
+- **Server half (Juan David):** carry `lead_contact_person` + `lead_contact_person_data` on the v2
+  Contributors & Partners GET/PATCH (`UpdateContributorsPartnersDto` +
+  `resolveContributorsPartnersSections` + a section-update branch writing
+  `result.lead_contact_person` / `lead_contact_person_id` through
+  `AdUserService.resolveOrCreateContact`, the pattern already at `results.service.ts:5190-5201`).
+  Until that lands the field **cannot** be removed from General Information — that save is its only
+  writer.
+- ⚠️ **There is NO green-check predicate to move.** `validation_general_information_P25` was
+  redefined by migration `1769009398774-UpdateGeneralInfoGreen.ts` and its body no longer contains
+  `lead_contact_person_id IS NOT NULL` (that conjunct existed only in the superseded
+  `1762528725798-createValidtionP25.ts:598`; the P22 function never had it). So the completeness
+  check does not require this field in either portfolio today. If AC3 ("the field is mandatory") is
+  to be enforced by the green check, the predicate has to be **added** to
+  `validation_contributor_partner_P25` — a decision plus a migration, both Juan David's.
+- ⚠️ If that predicate is added, note the old one keyed on the **AD foreign key**, not the name.
+  A legitimate free-text contact (every result older than migration `1751462633282`, and anything
+  reported through the W3/Bilateral API) has no FK, so `lead_contact_person_id IS NOT NULL` would
+  never turn those green — while this field's own `hasSelectedContact` counts a bare name as
+  complete. The two axes disagree; pick one deliberately.
+
 ## Hijos sin archivo propio
 | Componente | Qué hace | Trampa |
 |---|---|---|
 | `components/` | Chips y bloques de contribuidores/socios | Los dropdowns agrupados de admin tienen comportamiento propio: validar antes de cambiar bindings |
 
 ## Tests
-Tres suites: `*.component.spec.ts` (incl. el describe `LC-T-2` que renderiza el
+Cuatro suites (`*.lead-contact-person.spec.ts` cubre P2-2911 AC2 contra el DOM renderizado, con
+un stub que proyecta `[body]` para que la aserción sea sobre el binding y no sobre la propiedad).
+`*.component.spec.ts` (incl. el describe `LC-T-2` que renderiza el
 componente completo con el servicio REAL para probar que la nota vacía de Lead center nunca
 aparece y que el `app-pr-select` recibe el catálogo completo, y el describe `LC-T-4: Lead center
 (selectOptionEvent) wiring` que dispara el output real del `app-pr-select` vía

@@ -51,6 +51,7 @@ describe('RdContributorsAndPartnersComponent', () => {
             }
           })
         ),
+        GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
         GET_AllWithoutResults: jest.fn().mockReturnValue(
           of({
             response: [
@@ -109,9 +110,9 @@ describe('RdContributorsAndPartnersComponent', () => {
         { provide: ChangeDetectorRef, useValue: mockChangeDetectorRef },
         { provide: InstitutionsService, useValue: {} },
         { provide: RolesService, useValue: {} },
-        { provide: CentersService, useValue: { centers: signal([]) } },
+        { provide: CentersService, useValue: { centers: signal([]), getData: jest.fn().mockResolvedValue([]) } },
         { provide: ResultLevelService, useValue: {} },
-        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => false, isP25: () => false } }
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => false, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => false } }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
@@ -670,7 +671,7 @@ describe('RdContributorsAndPartnersComponent', () => {
      * true`, which only happens via the `tocCenters` spread — that assertion is the proof.
      */
     it('LCD-AC-2: stamps a ToC-origin leading center AND a leading partner in one call (LCD-R-4/R-5/R-6)', () => {
-      (component as any).fieldsManagerSE = { isContributorsPartners2026: () => true };
+      (component as any).fieldsManagerSE = { isContributorsPartners2026: () => true , isLeadContactPersonMandatory2026: () => false, fields: () => ({})};
       mockRdPartnersSE.partnersBody.is_lead_by_partner = true;
       mockRdPartnersSE.leadCenterCode = 'C1';
       mockRdPartnersSE.leadPartnerId = 1;
@@ -886,7 +887,7 @@ describe('RdContributorsAndPartnersComponent', () => {
     const SINGLE_QUESTION =
       'Is this result linked or bundled with another CGIAR-reported result (such as innovation, KP, policy, etc.)?';
     const asPhase = (isCP2026: boolean) => {
-      (component as any).fieldsManagerSE = { isContributorsPartners2026: () => isCP2026, isP25: () => true };
+      (component as any).fieldsManagerSE = { isContributorsPartners2026: () => isCP2026, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => true };
     };
     const asResultType = (result_type_id: number) => {
       mockApiService.dataControlSE.currentResultSignal = signal({ result_type_id });
@@ -988,6 +989,7 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
             },
             resultsSE: {
               GET_resultById: jest.fn().mockReturnValue(of({ response: {} })),
+              GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
               GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
               // Matches the catalog seeded on `component.allScienceProgramsList` below — ngOnInit's real
               // GET_AllInitiatives() call (previously uncalled only because the missing GET_AllWithoutResults
@@ -1002,9 +1004,9 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
         { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn() } },
         { provide: InstitutionsService, useValue: {} },
         { provide: RolesService, useValue: {} },
-        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) } },
+        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG), getData: jest.fn().mockResolvedValue([]) } },
         { provide: ResultLevelService, useValue: {} },
-        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => true, isP25: () => true } }
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => true, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => true } }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     })
@@ -1136,6 +1138,7 @@ describe('RdContributorsAndPartnersComponent — Lead center full catalog render
       },
       resultsSE: {
         GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
         GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
         GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
         GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
@@ -1145,7 +1148,7 @@ describe('RdContributorsAndPartnersComponent — Lead center full catalog render
 
     // The CLARISA catalogue has NOT resolved yet when the component is created — mirrors the real
     // startup sequence and the P2-3190 fixture pattern in rd-contributors-and-partners.zoneless.spec.ts.
-    centersMock = { loadedCenters: new BehaviorSubject<boolean>(false), centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) };
+    centersMock = { loadedCenters: new BehaviorSubject<boolean>(false), centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG), getData: jest.fn().mockResolvedValue([]) };
 
     await TestBed.configureTestingModule({
       declarations: [RdContributorsAndPartnersComponent],
@@ -1164,7 +1167,7 @@ describe('RdContributorsAndPartnersComponent — Lead center full catalog render
         { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
         {
           provide: FieldsManagerService,
-          useValue: { isContributorsPartners2026: () => false, isP25: () => true, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+          useValue: { isContributorsPartners2026: () => false, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => true, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
         }
       ],
       schemas: [NO_ERRORS_SCHEMA]
@@ -1408,6 +1411,7 @@ describe('RdContributorsAndPartnersComponent — Suppress ToC "not found" notes 
       },
       resultsSE: {
         GET_resultById: jest.fn().mockReturnValue(of({ response: currentResult })),
+        GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
         GET_AllWithoutResults: jest.fn().mockReturnValue(of({ response: [] })),
         GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: SCIENCE_CATALOG })),
         GET_ClarisaProjects: jest.fn().mockReturnValue(of({ response: [] }))
@@ -1415,7 +1419,7 @@ describe('RdContributorsAndPartnersComponent — Suppress ToC "not found" notes 
       rolesSE: { readOnly: false, isAdmin: false, platformIsClosed: false }
     };
 
-    const centersMock = { loadedCenters: new BehaviorSubject<boolean>(true), centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) };
+    const centersMock = { loadedCenters: new BehaviorSubject<boolean>(true), centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG), getData: jest.fn().mockResolvedValue([]) };
 
     await TestBed.configureTestingModule({
       declarations: [RdContributorsAndPartnersComponent],
@@ -1434,7 +1438,7 @@ describe('RdContributorsAndPartnersComponent — Suppress ToC "not found" notes 
         { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
         {
           provide: FieldsManagerService,
-          useValue: { isContributorsPartners2026: () => true, isP25: () => true, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
+          useValue: { isContributorsPartners2026: () => true, isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => true, activeIndicatorsLength: () => 0, hasSelectedIndicator: () => false }
         }
       ],
       schemas: [NO_ERRORS_SCHEMA]
@@ -1591,6 +1595,7 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
             },
             resultsSE: {
               GET_resultById: jest.fn().mockReturnValue(of({ response: {} })),
+              GET_generalInformationByResultId: jest.fn().mockReturnValue(of({ response: {} })),
               PATCH_ContributorsPartners: jest.fn().mockReturnValue(of({}))
             }
           }
@@ -1601,9 +1606,9 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
         { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn() } },
         { provide: InstitutionsService, useValue: {} },
         { provide: RolesService, useValue: {} },
-        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) } },
+        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG), getData: jest.fn().mockResolvedValue([]) } },
         { provide: ResultLevelService, useValue: {} },
-        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => is2026(), isP25: () => true } }
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => is2026(), isLeadContactPersonMandatory2026: () => false, fields: () => ({}), isP25: () => true } }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     })

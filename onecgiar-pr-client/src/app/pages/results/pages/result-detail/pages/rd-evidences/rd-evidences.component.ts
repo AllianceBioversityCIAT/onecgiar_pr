@@ -5,6 +5,7 @@ import { InnovationControlListService } from '../../../../../../shared/services/
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { SharePointUploadService } from '../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 @Component({
   selector: 'app-rd-evidences',
   templateUrl: './rd-evidences.component.html',
@@ -26,6 +27,8 @@ export class RdEvidencesComponent implements OnInit, OnDestroy {
   private static readonly POLICY_STAGE_NUMBER_BY_ID: Readonly<Record<number, number>> = { 6: 1, 7: 2, 8: 3 };
 
   private readonly fieldsManagerSE = inject(FieldsManagerService);
+  /** P2-3220: the single shared path to SharePoint. Never call the session endpoints directly. */
+  private readonly sharePointUploadSE = inject(SharePointUploadService);
 
   /** `results_policy_changes.policy_stage_id` of the open result; null until the GET lands. */
   policyStageId: number | null = null;
@@ -265,57 +268,26 @@ export class RdEvidencesComponent implements OnInit, OnDestroy {
     });
   }
 
-  async getAndCalculateFilePercentage(response, evidenceIterator) {
-    const nextRange = response?.nextExpectedRanges[0];
-    const [startByte, totalBytes] = (nextRange?.split('-') || []).map(Number);
-    if (!totalBytes || !response.nextExpectedRanges?.length || evidenceIterator.percentage == 100) return;
-    const progressPercentage = (startByte / totalBytes) * 100;
-    evidenceIterator.percentage = progressPercentage.toFixed(0);
-  }
-
-  endLoadFile(intervalId, evidenceIterator) {
-    clearInterval(intervalId);
-    evidenceIterator.percentage = 100;
-  }
-
-  /** P2-3220: returns the names of the files whose SharePoint upload failed (empty when all went up). */
+  /**
+   * P2-3220: returns the names of the files whose SharePoint upload failed (empty when all went up).
+   *
+   * The sequence itself now lives in `SharePointUploadService`, which is the single place an
+   * evidence file reaches SharePoint. This section keeps re-uploading items that already carry a
+   * `link` (`skipAlreadyUploaded: false`) — that is its existing behaviour and the reason the
+   * option exists — and it renders a progress bar, hence `trackProgress`.
+   *
+   * Never throws: the section is saved either way (the file also travels in the multipart body of
+   * `POST_evidences`), but an evidence with no `link` and no `sp_*` metadata is not stored in
+   * SharePoint and the user has to be told instead of left believing the upload worked.
+   */
   async loadAllFiles(): Promise<string[]> {
-    const { evidences } = this.evidencesBody;
-    const failed: string[] = [];
-    let count = 0;
-    for (const evidenceIterator of evidences) {
-      if (evidenceIterator.file) count++;
-      if (!evidenceIterator?.file) continue;
-      try {
-        const { response: uploadUrl } = await this.api.resultsSE.POST_createUploadSession({
-          resultId: this.evidencesBody.result_id,
-          fileName: evidenceIterator?.file?.name,
-          count
-        });
-        const intervalId = setInterval(async () => {
-          try {
-            const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
-            if (response?.nextExpectedRanges[0]) this.getAndCalculateFilePercentage(response, evidenceIterator);
-          } catch (error) {
-            this.endLoadFile(intervalId, evidenceIterator);
-          }
-        }, 2000);
-        const response = await this.api.resultsSE.PUT_loadFileInUploadSession(evidenceIterator.file, uploadUrl);
-        this.endLoadFile(intervalId, evidenceIterator);
-        evidenceIterator.link = response?.webUrl;
-        evidenceIterator.sp_document_id = response?.id;
-        evidenceIterator.sp_file_name = response?.name;
-        evidenceIterator.sp_folder_path = response?.parentReference?.path.split('root:').pop();
-      } catch (error) {
-        // P2-3220: never fail silently. The section is saved either way (the file also travels in
-        // the multipart body of `POST_evidences`), but an evidence with no `link` and no `sp_*`
-        // metadata is not stored in SharePoint, and the user has to be told rather than left
-        // believing the upload worked.
-        failed.push(evidenceIterator?.file?.name ?? 'file');
-        console.error('[rd-evidences] SharePoint upload failed for', evidenceIterator?.file?.name, error);
-      }
-    }
-    return failed;
+    return this.sharePointUploadSE.uploadPending(this.evidencesBody.evidences, {
+      resultId: this.evidencesBody.result_id,
+      flow: 'evidences',
+      skipAlreadyUploaded: false,
+      trackProgress: true,
+      logLabel: 'rd-evidences'
+    });
   }
 
   async onSaveSection() {

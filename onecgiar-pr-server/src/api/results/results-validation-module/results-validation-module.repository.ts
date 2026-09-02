@@ -84,11 +84,23 @@ export class resultValidationRepository
         sections.push(ValidationMapsEnum.POLICY_CHANGE);
     }
     const query = queryValidation(sections);
+    /**
+     * P2-3552: a failing CALL must NOT be flattened into `null`.
+     *
+     * `null` is this method's way of saying "there is no such active result", and the service turns it into
+     * `404 Result not found`. Swallowing a SQL failure into the same `null` meant a broken procedure, a
+     * missing `validation_*` function or a duplicate section name (the batch procedure's temp table is keyed
+     * by `display_name`) all reported themselves as a missing result — a wrong diagnosis on the one endpoint
+     * whose whole job is to say whether the sections are complete. Log it and let it surface as a real error.
+     */
+    // A `CALL` answers with a nested array (one result set per statement), so the generic is
+    // `NewValidationsDto[][]` and the destructuring takes the first result set. It used to say
+    // `NewValidationsDto[]` and only typechecked because the swallowed `[null]` widened the union.
     const [resultValidations] = await this.dataSource
-      .query<NewValidationsDto[]>(query)
+      .query<NewValidationsDto[][]>(query)
       .catch((err) => {
         this._logger.error('Error querying result validations:', err);
-        return [null];
+        throw err;
       });
     return resultValidations;
   }

@@ -20,6 +20,16 @@ const LENGTH_OF_TRAINING_DESC = `<ul>
 
 const DELIVERY_METHOD_DESC = `If you selected 'In person' or 'Blended', please ensure that you have the correct selections for section 4. Geographic Location.`;
 
+/**
+ * P2-3556 — what the person reads when the section could not be fetched. Plain language on purpose:
+ * the only two things that matter to them are that nothing they type is being kept, and that what
+ * they reported before is untouched. Same copy as the sibling Innovation Development and Policy
+ * Change sections so the form never explains the same failure two different ways.
+ */
+const LOAD_ERROR_NOTE =
+  'We could not load the information saved for this section, so the fields below are empty and nothing typed here will be saved. ' +
+  'Please reload the page to try again — the information reported earlier has not been changed.';
+
 const ATTENDANCE_OPTIONS = [
   { id: true, name: 'Yes' },
   { id: false, name: 'No' },
@@ -51,6 +61,38 @@ export class TypeCapacitySharingComponent implements OnInit {
   readonly peopleTrainedDesc = PEOPLE_TRAINED_DESC;
   readonly lengthOfTrainingDesc = LENGTH_OF_TRAINING_DESC;
   readonly deliveryMethodDesc = DELIVERY_METHOD_DESC;
+  readonly loadErrorNote = LOAD_ERROR_NOTE;
+
+  /**
+   * P2-3556 — three-state load flag: `null` while the GET is still in flight, `true` once the
+   * server's body is in hand, `false` when the fetch failed. Same shape and the same
+   * "null means not loaded yet" contract the folder already uses for
+   * `hasLinkedResult = signal<boolean | null>(null)` (`../../section-contributors/section-contributors.component.ts:198`)
+   * and for `resultStatusId` (`../../../services/bilateral-creation.service.ts:351-357`).
+   *
+   * The error handler below already emptied `body` and published the checklist (P2-3355), but it did
+   * not stop the form from SAVING that empty body, and the server reads an empty body as a deletion:
+   *
+   * - the four participant counts are written as `female_using || 0` and friends
+   *   (`onecgiar-pr-server/src/api/results/summary/summary.service.ts:405-408` on the update branch,
+   *   `:420-424` on the insert branch), so a key that is simply ABSENT is stored as **0**;
+   * - `institutions` absent (or `[]`) falls into the `else` branch of `saveCapacityDevelopents`
+   *   (`summary.service.ts:433`, `:460-467`), which calls `updateGenericIstitutions(resultId, [], 3, …)`;
+   *   that runs `upDateAllInactiveRBI` — `set is_active = 0 … where result_id = ? and
+   *   institution_roles_id = ?` (`results_by_institutions/result_by_intitutions.repository.ts:606-650`)
+   *   — de-activating EVERY stored organization.
+   *
+   * So a save may only go out once the component knows what the server holds. `null` blocks for the
+   * same reason: the GET takes 240-620 ms on prtest against an 800 ms debounce, so an early edit
+   * could otherwise reach the PATCH before the body ever arrived.
+   *
+   * ⚠️ Unlike Policy Change, this GET never answers 404 for a result with no row —
+   * `getCapacityDevelopents` returns 200 with a null skeleton (`summary.service.ts:495-521`;
+   * measured on prtest 2-Sep-2026: `…/capacity-developent/get/result/999999` → `200
+   * {"result_capacity_development_id":null,…}`). Every error reaching the handler really is one
+   * (401 on an expired token, a 5xx, an Apache 403, a dropped connection), so none of them may write.
+   */
+  readonly loaded = signal<boolean | null>(null);
 
   readonly saving = computed(() => this.autoSave.fieldStatus()['type-specific'] === 'saving');
   showAllFields = signal(false);
@@ -86,10 +128,14 @@ export class TypeCapacitySharingComponent implements OnInit {
           );
         }
         this.hydrateTermCascade();
+        this.loaded.set(true);
         this.updateMds();
       },
       error: () => {
         this.body = {};
+        // P2-3556 — emptying the body was never enough on its own: the form went on autosaving it.
+        // See the `loaded` doc for what the server does with an empty capacity-sharing payload.
+        this.loaded.set(false);
         this.updateMds();
       },
     });
@@ -156,6 +202,14 @@ export class TypeCapacitySharingComponent implements OnInit {
   }
 
   private queueTypeSave(debounceMs = 800): void {
+    // P2-3556 — the single choke point every write of this section goes through (`onFieldChange`,
+    // `onSave`, and the three cascade/attendance handlers that all funnel into `onFieldChange`;
+    // nothing else calls `schedulePayload` here, and `BilateralApiService.PATCH_capacityDevelopment`
+    // has no other caller in the client). A section that does not know what the server holds cannot
+    // tell "empty because the user emptied it" from "empty because it never loaded", so it writes
+    // nothing at all rather than zeroing the counts and deleting the organizations it never read.
+    if (this.loaded() !== true) return;
+
     this.autoSave.schedulePayload('typeSpecific', { ...this.body }, {
       debounceMs,
       statusKey: 'type-specific',

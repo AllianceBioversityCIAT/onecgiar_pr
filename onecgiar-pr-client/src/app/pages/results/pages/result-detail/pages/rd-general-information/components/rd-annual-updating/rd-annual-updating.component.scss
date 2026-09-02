@@ -33,6 +33,11 @@
       flex-direction: column;
       gap: 2px;
 
+      // P2-3292 Step 2: prompt above the checklist, so it does not sit flush against the first box.
+      .discontinued_options__header {
+        margin-bottom: 8px;
+      }
+
       .discontinued_option {
         display: flex;
         align-items: center;

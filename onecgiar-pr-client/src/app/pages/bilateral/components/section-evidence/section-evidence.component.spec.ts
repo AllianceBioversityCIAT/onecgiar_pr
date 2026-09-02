@@ -4,6 +4,7 @@ import { of, throwError, Subject } from 'rxjs';
 
 import { SectionEvidenceComponent } from './section-evidence.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
+import { ResultsApiService } from '../../../../shared/services/api/results-api.service';
 import { BilateralApiService } from '../../../../shared/services/api/bilateral-api.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
@@ -70,6 +71,10 @@ describe('SectionEvidenceComponent', () => {
       imports: [SectionEvidenceComponent],
       providers: [
         { provide: ApiService, useValue: api },
+        // P2-3220: the upload sequence lives in `SharePointUploadService`, which injects
+        // `ResultsApiService` directly. Pointing it at the same mock keeps these tests
+        // exercising the real shared service instead of a stub of it.
+        { provide: ResultsApiService, useValue: api.resultsSE },
         { provide: BilateralApiService, useValue: bilateralApi },
         { provide: BilateralAutoSaveService, useValue: autoSave },
         { provide: BilateralCreationService, useValue: creation },
@@ -529,7 +534,7 @@ describe('SectionEvidenceComponent', () => {
       expect(api.resultsSE.POST_createUploadSession).toHaveBeenCalledWith({
         resultId: 101,
         fileName: 'a.pdf',
-        count: 0
+        count: 1
       });
       expect(evidence.link).toBe('http://sp/file');
       expect(evidence.sp_document_id).toBe('doc-1');
@@ -573,6 +578,25 @@ describe('SectionEvidenceComponent', () => {
       await component.saveSection();
       expect(evidence.link).toBeUndefined();
       expect(evidence.sp_folder_path).toBeUndefined();
+    });
+
+    /**
+     * P2-3220 — the case the in-component copy got wrong. The server names the SharePoint file
+     * `lastSharepointId + count`, so passing `count: 0` for every file (what this component did
+     * before it moved onto `SharePointUploadService`) wrote two files of the same save to the SAME
+     * name and the second overwrote the first. Reverting the migration turns this red: the old
+     * loop reports `[0, 0]`.
+     */
+    it('numbers each pending file so two uploads of one save cannot overwrite each other', async () => {
+      build();
+      component.evidenceBody.update(b => ({
+        ...b,
+        evidences: [{ id: 1, file: makeFile('a.pdf') }, { id: 2, file: makeFile('b.pdf') }]
+      }));
+      await component.saveSection();
+      const counts = api.resultsSE.POST_createUploadSession.mock.calls.map((call: any[]) => call[0].count);
+      expect(counts).toEqual([1, 2]);
+      expect(new Set(counts).size).toBe(2);
     });
 
     it('skips evidences that already have a link or no file', async () => {

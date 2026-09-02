@@ -6,8 +6,16 @@ visto en pantalla.** Son 17 commits de cuatro sesiones distintas. Este documento
 hay que mirarlos cuando el ambiente vuelva, para no dar vueltas ni abrir el resultado equivocado.
 
 **Antes de nada — ¿estás mirando el build correcto?** El sello del sidebar debe leer **v16 o
-superior**. Si lee menos, lo que sigue no está desplegado todavía y cualquier fallo que veas es de la
-versión vieja, no del cambio. (Detalle de la cadena de despliegue en `como-validar-un-despliegue-en-prtest.md`.)
+superior**, y **se lee del bundle servido** (`curl <host>/main.js | grep APP_VERSION`), nunca del
+sidebar renderizado. (Cadena de despliegue en `como-validar-un-despliegue-en-prtest.md`.)
+
+🛑 **Pero el 1-sep el sello dejó de ser suficiente, y conviene saberlo:** el artefacto servido decía
+**16** y sin embargo **no contenía el commit `7c0359753`, anterior al bump**. Eso es imposible en un
+checkout lineal, así que lo que servía prtest era **un artefacto ensamblado a mano** — sello de un
+commit, código de otro momento. **Consecuencia: no deducir por horas.** Que un cambio sea anterior al
+bump NO prueba que esté desplegado. Si una entrada sale negativa, antes de reportarla hay que
+distinguir *"el cambio está y falla"* de *"el cambio no está en este build"*, buscando una cadena
+literal suya dentro del chunk servido.
 
 ---
 
@@ -28,10 +36,15 @@ No hace falta crear ninguno. **Casi todo lo de hoy es un gate de fase, así que 
 abrir uno de 2025 y uno de 2026 y comparar** — la lectura del código no basta porque los dos ejes se
 leen igual.
 
+🛑 **CORREGIDO el 1-sep tras verificar contra la API. Los códigos que traía este documento estaban
+mal**, copiados de `estado-2026-08-27.md`, que se equivoca: decía que `8916` era Policy change de
+2026 y en realidad es **Innovation Development de fase 2025**; y que `8501` era de 2025 cuando es
+**Policy change de fase 2026**. 🛑 **No volver a ese documento a por códigos.**
+
 | Para qué | Fase 2026 | Fase 2025 |
 |---|---|---|
-| Policy change | `8916` | `8501` |
-| Innovation Development | `8927`, `8928`, `8929`, `8933` | `8548`, `8869` |
+| Policy change | `8501`, `8580`, `8594` | `6550`, `6598`, `6475` |
+| Innovation Development | `8560`, `8562`, `8563`, `8565` | `5921`, `6069`, `17` |
 | Bilateral creado a mano | `8967` | — |
 | Promovido desde borrador de IA | `8884` | — |
 | SP08, Reporting 2026, en *Editing* | `8842` | — |
@@ -39,19 +52,112 @@ leen igual.
 ⚠️ Los de Policy change e Innovation Development de 2025 **están dentro del portafolio P25**. Ese es
 justamente el caso que rompen los gates mal hechos, así que son los que hay que abrir.
 
+### 🥇 Cómo se abre un resultado — sin esto se pierde una hora
+
+**La URL del detalle NO funciona sin `?phase=<id>`.** Sin él la app pide
+`get/transform/<code>?phase=null`, recibe un 404 y **te devuelve a la lista de resultados sin decir
+nada**: parece que el resultado no existe.
+
+```
+https://prtest.ciat.cgiar.org/result/result-detail/<code>/<seccion>?phase=<id>
+                       Reporting 2026 → phase=36   ·   Reporting 2025 → phase=34
+```
+Secciones: `policy-change1-info` · `innovation-dev-info` · `general-information`.
+
+**No hace falta inyectar el token**: el navegador de Playwright conserva la sesión entre sesiones de
+agente. Compruébalo antes con `localStorage.getItem('token')` — y **si ya hay sesión, no la inyectes**,
+porque escribir la credencial en una llamada la deja en claro en la transcripción.
+
+### 🛑 Dos endpoints que producen falsos negativos (medidos el 1-sep)
+
+- **`api/results/get/<code>` puede devolver una versión de OTRA fase.** Consultado `8565` devolvió un
+  *Lead contact person* poblado mientras la pantalla, en fase 36, lo mostraba vacío. No era un fallo
+  de la app: era otra versión del mismo código. **Se distingue abriendo General Information de esa
+  misma fase**, o consultando por el **id interno**, no por el código.
+- **`api/results/get/transform/<code>?phase=` NO devuelve el resultado: devuelve solo el id interno**
+  (`"11033"`). Un bucle preguntándole por un campo da "vacío" para todos los códigos **porque esa
+  clave no existe en su respuesta**. Parece un patrón y no es nada.
+
 ---
 
 ## 🔴 Bloqueo y pérdida de datos — mirar primero
 
 ### §1 · El botón Save podía no existir · `03ae798eb`
 
-- **Dónde:** cualquier resultado abierto en modo edición → la barra inferior de la sección.
-- **Con qué probar:** `8842` (SP08, Reporting 2026, estado *Editing*), con un usuario que tenga
-  permiso de edición sobre él.
-- **Bien:** al entrar en la sección, el botón **Save** está ahí desde el primer momento.
-- **Mal:** la barra aparece sin botón, y solo se materializa después de tocar algo que provoque una
-  llamada al servidor. Se reportó como "intermitente"; en realidad era eso.
-- ⚠️ Probarlo **entrando en frío** (recarga completa de la página), no navegando desde otra sección.
+🛑 **Esta entrada estaba mal planteada y se reescribió el 1-sep-2026. Son DOS comprobaciones
+distintas, y solo la primera prueba el arreglo.** La redacción anterior pedía abrir el resultado "en
+frío, sin que ocurra ninguna otra petición" y dar por bueno el arreglo si el botón aparecía.
+
+**Por qué eso no vale, y es la razón que impide que alguien lo revierta por comodidad:**
+`shared/interceptors/general-interceptor.service.ts:26` llama a `viewRefreshSE.schedule()` en el
+`finalize` de **toda** petición HTTP, y abrir un resultado dispara decenas. Ese repintado global es
+justo lo que hacía el defecto intermitente. Así que **ver el botón no distingue "arreglado" de
+"tapado por el interceptor"**: la prueba saldría verde con el bug presente. El estado que la
+redacción pedía —una carga sin ninguna otra petición— **no existe en la aplicación real**.
+
+**(a) ¿Está el arreglo en el build que sirve el ambiente?** — es lo que prueba el arreglo.
+Se comprueba en el artefacto servido, con la técnica de abajo. Debe aparecer, textual:
+```js
+get readOnly() {  return this._readOnly();  }
+set readOnly(value) {  this._readOnly.set(value);  }
+```
+Si en su lugar hay un campo plano (`readOnly = !0`) y ningún getter, el arreglo **no** está
+desplegado y no tiene sentido mirar la pantalla.
+✅ Verificado el 1-sep-2026 sobre el build **v16**, en `chunk-QO6CGUC7.js`.
+
+**(b) ¿Sigue funcionando la pantalla?** — es **no-regresión**, no es la prueba del arreglo.
+Abrir un resultado en modo edición (`8842`, SP08, Reporting 2026, *Editing*) con un usuario con
+permiso, comprobar que el botón **Save** aparece y que **guarda**. Esto vale porque el cambio tocó un
+servicio global que leen 206 plantillas; no vale como confirmación de que el defecto se arregló.
+
+---
+
+### 🔧 Técnica reutilizable · verificar en el ARTEFACTO qué código hay desplegado
+
+Nació de §1 y sirve para cualquier cambio de cliente. **El sello `APP_VERSION` dice qué build es;
+esto dice qué código lleva dentro** — que es la pregunta que de verdad importa y que el sello no
+responde. No depende de horas de commit ni de bumps.
+
+1. `curl https://prtest.ciat.cgiar.org/main.js` y sacar los chunks: `grep -oE 'chunk-[A-Z0-9]+\.js'`.
+2. Bajarlos todos (son estáticos del front: **no** cuentan para el rate limit de la API).
+3. Localizar el chunk por **una cadena literal del archivo**, que la minificación no borra — un
+   mensaje, una descripción, un texto de UI. Ej.: `"Change lead and co-lead"` lleva a `RolesService`.
+4. Dentro, buscar la forma del cambio. **Los nombres de propiedades y métodos públicos no se
+   minifican** (las plantillas los usan), así que `get readOnly()`, `showScalingStudies` o
+   `_updatingLeadData` se leen tal cual.
+
+⚠️ **Y distingue entre servicios gemelos.** `updatingLeadData` existe en dos: el getter que aparece
+en `chunk-SJKKGG6Z.js` es de `_RdContributorsAndPartnersService` (P25 + IPSR), no del `RdPartnersService`
+de P22. Buscar el nombre a secas da un falso positivo; hay que mirar **de qué clase** es.
+
+---
+
+### 📌 Qué contiene realmente el build v16 (medido, 1-sep-2026)
+
+Estar commiteado antes del bump del sello **no** significa estar en el build. Medido por artefacto:
+
+| Commit | Hora | ¿En v16? | Cómo se comprobó |
+|---|---|---|---|
+| Commit | Hora | ¿Ancestro del sello 16? | ¿En v16? |
+|---|---|---|---|
+| `03ae798eb` botón Save | 08:36 | sí | ✅ **sí** — `get readOnly()` en `chunk-QO6CGUC7.js` |
+| `7c0359753` §6 escalamiento bilateral | 09:09 | **sí** | ❌ **no** — `showScalingStudies` en 0 de 59 chunks |
+| `491835a59` §7 `rd-partners` | 09:19 | **no** | ❌ no, y es lo esperado |
+
+🛑 **La fila del medio es una CONTRADICCIÓN, y es el dato importante.** El sello 16 lo pone
+`7d122002a` (09:16), y `7c0359753` (09:09) **es ancestro suyo** — comprobado con
+`git merge-base --is-ancestor`, no por la hora. Un build limpio marcado 16 **tiene que** contener ese
+código. No lo contiene. 👉 **El artefacto desplegado no corresponde a ningún commit de la rama**:
+lleva el sello de uno y el código de otro momento. Encaja con lo que dijo Cristian, que subió una
+versión a mano para levantar el ambiente.
+
+⚠️ **Que §7 falte NO prueba nada** — no es ancestro del sello, así que su ausencia es exactamente lo
+que se espera de un build correcto. La anomalía es solo §6. Cuidado con apilar las dos ausencias como
+si fueran dos pruebas: es una.
+
+👉 **Sobre este build no vale ninguna deducción por horas de commit**, ni por ancestría. Solo vale
+mirar el artefacto (cliente) o una prueba que solo el código nuevo pueda producir (server). §6 y §7
+quedan sin verificar hasta el v17.
 
 ### §2 · El Lead contact person se borraba solo al guardar · `54d52b365`
 
@@ -184,15 +290,41 @@ En los tres siguientes **la prueba es la comparación**. Ver solo el de 2026 no 
 
 ## Lo que NO se puede verificar todavía, y por qué
 
-🛑 **El estado del ambiente NO se mide con la home.** `prtest` puede responder **200** y aun así no
-dejarte entrar: el front son ficheros estáticos que se sirven por otra ruta. **Se mide contra
-`/api/results/get/all` con token** — y hasta que eso devuelva **200**, la verificación no empieza.
+🛑 **El estado del ambiente NO se mide con la home**, y **tampoco con un endpoint de negocio.**
+`prtest` puede responder **200** y aun así no dejarte entrar: el front son ficheros estáticos que se
+sirven por otra ruta. Pero la sonda que elegimos primero —`/api/results/get/all` con token— resultó
+ser **peor**: el 1-sep por la tarde ese endpoint devolvía **500 por un error de SQL** con el ambiente
+perfectamente arriba y el resto del backend respondiendo.
+
+**La sonda buena es un endpoint de CATÁLOGO**, que no depende de ninguna consulta compleja:
+
+```
+curl -s -o /dev/null -w '%{http_code}' -H "auth: $TOKEN" \
+  https://prtest-back.ciat.cgiar.org/clarisa/policy-stages/get/all
+```
+
+**200 ahí = hay ambiente.** La lección, que es lo que hay que recordar y no el endpoint concreto:
+**un endpoint de negocio puede estar roto sin que el ambiente lo esté**, así que un semáforo no se
+pone nunca sobre una consulta que puede fallar por su cuenta.
 
 > Medido el 1-sep a las 10:2x: `prtest` = **200**, `clarisatest-web` = **200**, pero
 > `/api/results/get/all` = **403 con token y sin token**, y el cuerpo es un
 > `<TITLE>403 Forbidden</TITLE>` de **Apache**, no un JSON de Nest. Es decir: hay servidor detrás
 > (ya no da `000`), pero la capa que está delante rechaza todo, incluido un endpoint conocido-bueno
 > con credencial válida. **El front carga y no hay login ni guardado.** Sigue siendo de Cristian/IT.
+
+✅ **CERRADO el 1-sep por la tarde: era una MIGRACIÓN DE SERVIDOR, no inestabilidad.**
+`cerberus.ciat.cgiar.org` resolvía a **`45.5.186.24`** toda la mañana y pasó a resolver a
+**`45.5.184.24`**. Eso explica los tres estados que se midieron (`000` → `403` de Apache → `000`)
+mucho mejor que cualquier hipótesis de caída, y confirma que **nada de esto lo causamos nosotros**:
+la caída estaba medida antes de las 07:54 y nuestro primer despliegue del día fue a las 08:37.
+**Quien lea mañana los tres estados sin este dato va a concluir que el ambiente es inestable, y no
+lo es.** Lo que sigue debajo se conserva porque describe cómo se midió, no porque siga vigente.
+
+⚠️ **Efecto colateral del cambio de IP, a tener en cuenta:** algunos entornos de shell **no
+alcanzan la IP nueva** aunque el DNS ya la resuelva (conexión al 443 en timeout, con Google y Jira
+respondiendo). Si `curl` da `000` pero el navegador entra, **el ambiente está bien y quien falla es
+la sonda** — medir por navegador y no por `curl`.
 
 🛑 **Y el ambiente es INTERMITENTE, no está recuperándose.** Medido a lo largo de la mañana: `000`
 (caído del todo) → `403` (servidor detrás, proxy cerrado) → `000` otra vez, front incluido, en menos

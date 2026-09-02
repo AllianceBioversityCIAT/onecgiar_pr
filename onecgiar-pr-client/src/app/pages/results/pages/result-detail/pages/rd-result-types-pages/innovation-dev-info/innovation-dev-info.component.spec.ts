@@ -25,7 +25,6 @@ import { FeedbackValidationDirective } from '../../../../../../../shared/directi
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { of, throwError } from 'rxjs';
-import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
@@ -36,8 +35,13 @@ import { TermPipe } from '../../../../../../../internationalization/term.pipe';
 import { signal } from '@angular/core';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
+import { SharePointUploadService } from '../../../../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 
 describe('InnovationDevInfoComponent', () => {
+  // P2-3220: the upload sequence moved to `SharePointUploadService`, which owns its own spec. What
+  // this suite checks is that the section delegates to it with the right options, and what it does
+  // with the list of failed file names that comes back.
+  const mockSharePointUploadService = { uploadPending: jest.fn().mockResolvedValue([]) };
   let component: InnovationDevInfoComponent;
   let fixture: ComponentFixture<InnovationDevInfoComponent>;
   let mockApiService: any;
@@ -299,6 +303,9 @@ describe('InnovationDevInfoComponent', () => {
   };
 
   beforeEach(async () => {
+    mockSharePointUploadService.uploadPending.mockReset();
+    mockSharePointUploadService.uploadPending.mockResolvedValue([]);
+
     mockApiService = {
       resultsSE: {
         GET_innovationDev: () => of({ response: mockGET_innovationDevResponse }),
@@ -322,6 +329,11 @@ describe('InnovationDevInfoComponent', () => {
       },
       rolesSE: {
         readOnly: false
+      },
+      // P2-3218: the component now tells the user when a save fails. Before this, the three
+      // failure paths were silent and the tests below passed while the user saw nothing.
+      alertsFe: {
+        show: jest.fn()
       },
       dataControlSE: {
         currentResultSectionName: signal<string>('Innovation development information'),
@@ -350,6 +362,9 @@ describe('InnovationDevInfoComponent', () => {
       isInnovationDevFormReduced2026: jest.fn(() => false),
       // P2-3272 Part 4: same default — the pre-2026 form keeps the guidance note and pre-fills nothing.
       isInnovationDeveloperAutoFilled2026: jest.fn(() => false),
+      // P2-3550: same default — the pre-2026 form still asks for "Innovation reference materials",
+      // and `buildSectionPayload()` reads this on every save.
+      isInnovationReferenceMaterialsRemoved2026: jest.fn(() => false),
       // `pr-input` / `pr-radio-button` resolve their label and required flag through this when a
       // `fieldRef` is set. An empty map is enough: no field in this section uses one.
       fields: jest.fn(() => ({}))
@@ -410,6 +425,10 @@ describe('InnovationDevInfoComponent', () => {
         {
           provide: DataControlService,
           useValue: mockDataControlService
+        },
+        {
+          provide: SharePointUploadService,
+          useValue: mockSharePointUploadService
         }
       ]
     }).compileComponents();
@@ -737,38 +756,21 @@ describe('InnovationDevInfoComponent', () => {
     });
   });
 
-  describe('uploadPendingFiles interval polling', () => {
-    it('should poll upload session and update percentage', async () => {
-      jest.useFakeTimers();
+  /**
+   * P2-3220 — the progress polling itself moved to `SharePointUploadService` (and its spec keeps
+   * the percentage cases). What has to stay pinned HERE is that this section still ASKS for it:
+   * `components/user-evidence/` renders the percentage and the animated bar
+   * (`user-evidence.component.html:68-77`), so `trackProgress: false` would silently freeze the
+   * progress bar at whatever it was.
+   */
+  describe('uploadPendingFiles — the progress bar this section renders', () => {
+    it('asks the shared service to track progress', async () => {
       (component as any).api.dataControlSE.currentResult = { result_id: 1 };
-      const evidence = { file: { name: 'test.pdf' }, link: null } as any;
-      (component as any).evidencesBody = { evidences: [evidence] } as any;
+      (component as any).evidencesBody = { evidences: [{ file: { name: 'test.pdf' }, link: null }] } as any;
 
-      // Mock GET_loadFileInUploadSession to return progress info
-      let pollCount = 0;
-      mockApiService.resultsSE.GET_loadFileInUploadSession = jest.fn(() => {
-        pollCount++;
-        if (pollCount === 1) {
-          return Promise.resolve({ nextExpectedRanges: ['50-100'] });
-        }
-        return Promise.reject(new Error('done'));
-      });
-      mockApiService.resultsSE.PUT_loadFileInUploadSession = jest.fn(() =>
-        Promise.resolve({ webUrl: 'https://file.com', id: 'id1', name: 'file.pdf', parentReference: { path: 'root:/folder' } })
-      );
+      await (component as any).uploadPendingFiles();
 
-      const uploadPromise = (component as any).uploadPendingFiles();
-
-      // Advance timer to trigger interval
-      jest.advanceTimersByTime(2000);
-      await Promise.resolve();
-      jest.advanceTimersByTime(2000);
-      await Promise.resolve();
-
-      await uploadPromise;
-
-      expect(evidence.link).toBe('https://file.com');
-      jest.useRealTimers();
+      expect(mockSharePointUploadService.uploadPending.mock.calls[0][1].trackProgress).toBe(true);
     });
   });
 
@@ -948,64 +950,70 @@ describe('InnovationDevInfoComponent', () => {
     });
   });
 
-  describe('uploadPendingFiles', () => {
-    it('should skip when evidences is not an array', async () => {
-      (component as any).evidencesBody = { evidences: null } as any;
-      await expect((component as any).uploadPendingFiles()).resolves.toBeUndefined();
+  /**
+   * P2-3220 — this section was the LAST of the three evidence surfaces still carrying its own copy
+   * of the upload sequence, and the only one calling `POST_createUploadSessionP25`. Two doors meant
+   * "every upload goes through the shared flow" was not something the code could enforce. These
+   * cases pin the OPTIONS, because each one reproduces a behaviour the old copy had; the sequence
+   * itself is covered by `sharepoint-upload.service.spec.ts`.
+   */
+  describe('uploadPendingFiles — delegates to the shared SharePoint service', () => {
+    const optionsOf = () => mockSharePointUploadService.uploadPending.mock.calls[0][1];
+
+    beforeEach(() => {
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      (component as any).evidencesBody = { evidences: [{ file: { name: 'test.pdf' }, link: null }] } as any;
     });
 
-    it('should skip evidences that already have a link', async () => {
-      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
-      (component as any).evidencesBody = {
-        evidences: [{ file: { name: 'test.pdf' }, link: 'existing-link' }]
-      } as any;
-      const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSessionP25');
-      await (component as any).uploadPendingFiles();
-      expect(spy).not.toHaveBeenCalled();
-    });
-
-    it('should skip evidences without a file', async () => {
-      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
-      (component as any).evidencesBody = {
-        evidences: [{ link: null, file: null }]
-      } as any;
-      const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSessionP25');
-      await (component as any).uploadPendingFiles();
-      expect(spy).not.toHaveBeenCalled();
-    });
-
-    it('should upload file and set link when evidence has file but no link', async () => {
-      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
-      const evidence = { file: { name: 'test.pdf' }, link: null };
-      (component as any).evidencesBody = { evidences: [evidence] } as any;
-
+    it('hands the evidences over instead of driving the upload itself', async () => {
       await (component as any).uploadPendingFiles();
 
-      expect(evidence.link).toBe('https://file-url.com');
-      expect((evidence as any).sp_document_id).toBe('file-id');
-      expect((evidence as any).sp_file_name).toBe('file.pdf');
+      expect(mockSharePointUploadService.uploadPending).toHaveBeenCalledTimes(1);
+      expect(mockSharePointUploadService.uploadPending.mock.calls[0][0]).toBe((component as any).evidencesBody.evidences);
+      // The component no longer knows which endpoint opens the session.
+      expect(mockApiService.resultsSE.PUT_loadFileInUploadSession).not.toHaveBeenCalled();
     });
 
-    it('should handle upload error and throw', async () => {
-      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
-      const evidence = { file: { name: 'test.pdf' }, link: null };
-      (component as any).evidencesBody = { evidences: [evidence] } as any;
-      mockApiService.resultsSE.PUT_loadFileInUploadSession = jest.fn(() => Promise.reject(new Error('Upload failed')));
+    /** The P25 door is the one this section has always used — asking for the other one is silent. */
+    it('asks for the innovation-development session, not the generic evidences one', async () => {
+      await (component as any).uploadPendingFiles();
 
-      await expect((component as any).uploadPendingFiles()).rejects.toThrow('Upload failed');
+      expect(optionsOf().flow).toBe('innovation-development');
     });
-  });
 
-  describe('onSaveSection uploadPendingFiles error', () => {
-    it('should stop saving when uploadPendingFiles throws', async () => {
-      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
-      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
-      const evidence = { file: { name: 'test.pdf' }, link: null };
-      (component as any).evidencesBody = { evidences: [evidence] } as any;
-      mockApiService.resultsSE.PUT_loadFileInUploadSession = jest.fn(() => Promise.reject(new Error('Upload error')));
+    it('keeps skipping evidences that are already in SharePoint (the old `!evidence.link` guard)', async () => {
+      await (component as any).uploadPendingFiles();
 
-      await component.onSaveSection();
-      expect(component.savingSection).toBeFalsy();
+      expect(optionsOf().skipAlreadyUploaded).toBe(true);
+    });
+
+    /**
+     * The reason this surface was migrated last. The old copy did
+     * `sp_file_name = response?.name || evidence.file.name`, and `user-evidence` gates the entire
+     * uploaded-file row on `sp_file_name` — without the fallback a nameless response drops the
+     * just-attached file back to the drag-and-drop box. The two surfaces migrated earlier never had
+     * it, so it travels as an explicit option rather than a changed default.
+     */
+    it('asks for the local-name fallback, which the other two surfaces must NOT get', async () => {
+      await (component as any).uploadPendingFiles();
+
+      expect(optionsOf().fallbackToLocalName).toBe(true);
+    });
+
+    it('passes the result id from either shape `currentResult` comes in', async () => {
+      await (component as any).uploadPendingFiles();
+      expect(optionsOf().resultId).toBe(1);
+
+      mockSharePointUploadService.uploadPending.mockClear();
+      (component as any).api.dataControlSE.currentResult = { id: 42 };
+      await (component as any).uploadPendingFiles();
+      expect(mockSharePointUploadService.uploadPending.mock.calls[0][1].resultId).toBe(42);
+    });
+
+    it('returns the failed file names the service reports, and never throws', async () => {
+      mockSharePointUploadService.uploadPending.mockResolvedValue(['test.pdf']);
+
+      await expect((component as any).uploadPendingFiles()).resolves.toEqual(['test.pdf']);
     });
   });
 
@@ -1204,6 +1212,35 @@ describe('InnovationDevInfoComponent', () => {
       });
     });
 
+    /**
+     * 🛑 OPEN DEFECT, seen on prtest 1-Sep-2026 with result 8560 (W-20260901-47) — NOT reproduced here.
+     *
+     * On screen the field stayed EMPTY while `currentResult.lead_contact_person` held a value, the
+     * gate returned true, and calling `applyInnovationDeveloperAutoFill()` by hand filled it
+     * correctly. So the method, the gate and the data are each fine; what fails is WHEN it runs.
+     *
+     * ⚠️ The first guess — "the contact lands after the section GET" — is NOT confirmed. Written as a
+     * test it PASSES against this same broken code, because changing the signal re-runs
+     * `OnChangePortfolio`, which reloads the section and re-applies the fill. A test that passes
+     * against the broken code is a test written to the author's assumption, so it was removed rather
+     * than kept as false comfort.
+     *
+     * Do NOT change the ordering on the strength of that guess. Next step is a browser session with
+     * the contact now stored on 8560: instrument when the GET's `next` fires against when the signal
+     * carries the contact — and cross-check whether the GATE changes value between load and render,
+     * which is the one of the three that has not been timed yet.
+     *
+     * ⚠️ A SECOND case was written here and also removed, and this is why, so nobody writes it again
+     * in three months and watches it go red: "a section reload must not discard what the reporter
+     * typed". It DOES fail — but against a pre-existing, already-accepted behaviour, not against this
+     * story. Changing `currentResultSignal()` re-runs `OnChangePortfolio`, which reloads the section
+     * and replaces `innovationDevInfoBody` with the server's copy, dropping unsaved edits. That is
+     * the same known side effect recorded for the AI Review reload in
+     * `docs/context-ai/2026-09-01-verificacion-pendiente.md` §3. Keeping it here would have hung
+     * somebody else's defect on this ticket and left CI red for every session.
+     */
+
+
     describe('phase 2025 and earlier', () => {
       beforeEach(() => gate(false));
 
@@ -1238,6 +1275,190 @@ describe('InnovationDevInfoComponent', () => {
         gate(true);
         fixture.detectChanges();
         expect(developerFieldDescription()).toBe('');
+      });
+    });
+  });
+
+  /**
+   * P2-3218. The three failure paths in `onSaveSection` used to be silent: a `console.error`, the
+   * spinner off, and nothing on screen. The user pressed Save, saw the spinner stop, and walked
+   * away believing the section was stored.
+   *
+   * The tests that already covered these paths asserted only that `savingSection` went false —
+   * which stayed true while the defect was live. These assert what the user actually gets.
+   */
+  describe('P2-3218 — a failed save has to reach the user, not just the console', () => {
+    beforeEach(() => {
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      // `buildSectionPayload()` also reads the P2-3550 gate, so the stub has to carry it.
+      (component as any).fieldsManagerSE = { isP25: () => true, isInnovationReferenceMaterialsRemoved2026: () => false };
+      (component as any).api.dataControlSE.currentResult = { id: 1 };
+      (component as any).innovationDevInfoBody = { innovation_nature_id: 1, innovatonUse: { organization: [] } };
+      (component as any).evidencesBody = { evidences: [] };
+      mockApiService.alertsFe.show.mockClear();
+    });
+
+    const lastAlert = () => mockApiService.alertsFe.show.mock.calls.at(-1)?.[0];
+
+    /**
+     * P2-3220 changed WHAT happens after a failed upload, not whether the user hears about it.
+     * The alert stays — and now names the files — but the rest of the section keeps saving: the
+     * file is lost either way (the 2026 endpoint reads only `jsonData`), and discarding everything
+     * else the user typed does not bring it back. Same contract as `rd-evidences`.
+     */
+    it('names the files that did not reach SharePoint, and still saves the rest of the section', async () => {
+      jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue(['plan.pdf', 'photo.png']);
+      const postEvidence = jest.spyOn(mockApiService.resultsSE, 'POST_createEvidenceDemandP25');
+      jest.spyOn(component as any, 'getSectionInformationp25').mockImplementation(() => undefined);
+
+      await component.onSaveSection();
+
+      expect(lastAlert().status).toBe('error');
+      expect(lastAlert().title).toMatch(/2 file\(s\) could not be stored/i);
+      expect(lastAlert().title).toContain('plan.pdf');
+      expect(lastAlert().title).toContain('photo.png');
+      expect(lastAlert().description).toMatch(/re-attach/i);
+      // The rest of the section is NOT thrown away because one file failed.
+      expect(postEvidence).toHaveBeenCalledTimes(1);
+      expect((component as any).savingSection).toBe(false);
+    });
+
+    it('says nothing about uploads when every file went up', async () => {
+      jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue([]);
+      jest.spyOn(component as any, 'getSectionInformationp25').mockImplementation(() => undefined);
+
+      await component.onSaveSection();
+
+      expect(mockApiService.alertsFe.show).not.toHaveBeenCalled();
+    });
+
+    it('tells the user when registering the evidence fails', async () => {
+      jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue([]);
+      mockApiService.resultsSE.POST_createEvidenceDemandP25 = () => throwError(() => new Error('500'));
+
+      await component.onSaveSection();
+
+      expect(lastAlert().status).toBe('error');
+      expect(lastAlert().title).toMatch(/not saved/i);
+      expect((component as any).savingSection).toBe(false);
+    });
+
+    /**
+     * The wording matters here: the files ARE in SharePoint and the evidence row exists, only the
+     * section's own fields failed. Telling the user to re-attach would have them upload files that
+     * are already stored.
+     */
+    it('says the evidence survived when only the section fields fail', async () => {
+      jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue([]);
+      mockApiService.resultsSE.POST_createEvidenceDemandP25 = () => of({});
+      mockApiService.resultsSE.PATCH_innovationDevP25 = () => throwError(() => new Error('500'));
+
+      await component.onSaveSection();
+
+      expect(lastAlert().status).toBe('error');
+      expect(lastAlert().description).toMatch(/evidence was stored/i);
+      expect(lastAlert().description).not.toMatch(/re-attach/i);
+      expect((component as any).savingSection).toBe(false);
+    });
+
+    it('says nothing when the save succeeds', async () => {
+      jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue([]);
+      mockApiService.resultsSE.POST_createEvidenceDemandP25 = () => of({});
+      mockApiService.resultsSE.PATCH_innovationDevP25 = () => of({});
+      jest.spyOn(component as any, 'getSectionInformationp25').mockImplementation(() => undefined);
+
+      await component.onSaveSection();
+
+      expect(mockApiService.alertsFe.show).not.toHaveBeenCalled();
+    });
+  });
+  /**
+   * P2-3550 (epic P2-3243). The "Innovation reference materials" block leaves the 2026 form, and
+   * AC4 says the stored links must survive. Those two are in tension: the server's `saveEvidence`
+   * only leaves stored evidence alone when the array is absent — with `[]` (or the model's default
+   * `[{ link: '' }]`) it de-activates every stored link of type 4. So the payload assertions below
+   * are the real subject of this ticket, not the render ones.
+   */
+  describe('P2-3550 — reference materials leave the 2026 form without deleting what is stored', () => {
+    const gate = (on: boolean) =>
+      jest.spyOn(component.fieldsManagerSE, 'isInnovationReferenceMaterialsRemoved2026').mockReturnValue(on as any);
+
+    describe('the rendered form', () => {
+      it('renders the block on a pre-2026 phase', () => {
+        gate(false);
+        fixture.detectChanges();
+        expect((fixture.nativeElement as HTMLElement).querySelector('app-innovation-links')).toBeTruthy();
+      });
+
+      it('drops the block, and with it its help text, from the 2026 form', () => {
+        gate(true);
+        fixture.detectChanges();
+        const el = fixture.nativeElement as HTMLElement;
+        expect(el.querySelector('app-innovation-links')).toBeNull();
+        expect(el.textContent).not.toMatch(/Innovation reference materials/i);
+        expect(el.textContent).not.toMatch(/Provide reference material\(s\) that describe the innovation/i);
+      });
+
+      it('leaves the neighbouring blocks untouched', () => {
+        gate(true);
+        fixture.detectChanges();
+        const el = fixture.nativeElement as HTMLElement;
+        expect(el.querySelector('app-estimates')).toBeTruthy();
+        expect(el.querySelector('app-innovation-team-diversity')).toBeTruthy();
+      });
+    });
+
+    describe('the save payload (AC4 — stored materials are not deleted, cleared or migrated)', () => {
+      beforeEach(() => {
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        (component as any).innovationDevInfoBody = {
+          innovation_nature_id: 1,
+          innovatonUse: { organization: [] },
+          reference_materials: [{ link: 'https://stored-material.org' }]
+        };
+        (component as any).evidencesBody = { evidences: [] };
+        jest.spyOn(component as any, 'getSectionInformation').mockImplementation(() => undefined);
+        jest.spyOn(component as any, 'getSectionInformationp25').mockImplementation(() => undefined);
+        jest.spyOn(component as any, 'uploadPendingFiles').mockResolvedValue([]);
+      });
+
+      const capture = async (isP25: boolean): Promise<Record<string, any>> => {
+        jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(isP25 as any);
+        const method = isP25 ? 'PATCH_innovationDevP25' : 'PATCH_innovationDev';
+        const spy = jest.spyOn(mockApiService.resultsSE, method).mockReturnValue(of({}));
+        await component.onSaveSection();
+        expect(spy).toHaveBeenCalledTimes(1);
+        return spy.mock.calls[0][0];
+      };
+
+      /**
+       * The load-bearing assertion of the whole ticket: `in`, not `toBeUndefined()`. A key present
+       * with `undefined` serialises out of the JSON body too, but the previous code sent the array
+       * itself — this is the case that turns red if the omission is reverted.
+       */
+      it('OMITS the key on the 2026 form — sending it empty would de-activate every stored link', async () => {
+        gate(true);
+        const payload = await capture(true);
+        expect('reference_materials' in payload).toBe(false);
+      });
+
+      it('omits it on the legacy PATCH route too, which shares the same server guard', async () => {
+        gate(true);
+        const payload = await capture(false);
+        expect('reference_materials' in payload).toBe(false);
+      });
+
+      it('still sends the stored links on a pre-2026 phase, where the block is edited as before', async () => {
+        gate(false);
+        const payload = await capture(true);
+        expect(payload['reference_materials']).toEqual([{ link: 'https://stored-material.org' }]);
+      });
+
+      it('drops nothing else from the payload when the block is hidden', async () => {
+        gate(true);
+        const payload = await capture(true);
+        expect(payload['innovation_nature_id']).toBe(1);
+        expect(payload).toHaveProperty('innovatonUse');
       });
     });
   });

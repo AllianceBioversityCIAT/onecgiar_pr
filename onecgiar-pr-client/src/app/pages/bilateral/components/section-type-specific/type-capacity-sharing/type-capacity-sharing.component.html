@@ -1,4 +1,17 @@
 <div class="tsf-fields">
+  <!--
+    P2-3556 — the fetch failed, so every field below is blank for a reason that has nothing to do
+    with what is stored. Autosave is off while `loaded()` is not true (see `queueTypeSave`) and this
+    says so, through the same `app-alert-status` the section already uses for its MDS note — no new
+    alert widget. Rendered only on `=== false`: `null` means the GET is still in flight, which is not
+    an error yet. Placed at the TOP of the field list, above the fields it explains; the sibling
+    Innovation Development section puts it under its note row only because that row is the first block
+    of its own template, whereas here the MDS note sits halfway down the form.
+  -->
+  @if (loaded() === false) {
+    <app-alert-status status="error" [description]="loadErrorNote"></app-alert-status>
+  }
+
   <!-- P2-3346/P2-3348: AC1 lists "Number of people trained" as ONE mandatory MDS field, and the hint
        below tells the user to fall back to "Unknown" when the gender split is unavailable. So the
        GROUP is mandatory — any one of the four counts satisfies it — while the individual inputs stay
@@ -120,7 +133,8 @@
 </div>
 
 <div class="tsf-actions">
-  <button class="tsf-save-btn" type="button" [disabled]="saving()" (click)="onSave()">
+  <!-- Disabled until the body has loaded: the button must not promise a save that `queueTypeSave` refuses. -->
+  <button class="tsf-save-btn" type="button" [disabled]="saving() || loaded() !== true" (click)="onSave()">
     <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
     {{ saving() ? 'Saving...' : 'Save' }}
   </button>

@@ -15,6 +15,17 @@
     </button>
   </div>
 
+  <!--
+    P2-3558 — the fetch failed, so every field below is blank for a reason that has nothing to do with
+    what is stored. Autosave is off while `loaded()` is not true (see `queueTypeSave`) and this says so,
+    through the same `app-alert-status` the section already uses for its MDS note — no new alert widget.
+    Rendered only on `=== false`: `null` means the GET is still in flight, which is not an error yet.
+    Kept OUTSIDE the note/button row above, whose two children are an acceptance criterion (P2-3327 AC2).
+  -->
+  @if (loaded() === false) {
+    <app-alert-status status="error" [description]="loadErrorNote"></app-alert-status>
+  }
+
   <!-- MDS block — exactly the three fields the story names, all required for bilateral. -->
   <app-pr-select
     [options]="innovationControlListSE.typeList"
@@ -224,7 +235,8 @@
 </div>
 
 <div class="tsf-actions">
-  <button class="tsf-save-btn" type="button" [disabled]="saving()" (click)="onSave()">
+  <!-- Disabled until the body has loaded: the button must not promise a save that `queueTypeSave` refuses. -->
+  <button class="tsf-save-btn" type="button" [disabled]="saving() || loaded() !== true" (click)="onSave()">
     <i class="material-icons-round">{{ saving() ? 'hourglass_empty' : 'save' }}</i>
     {{ saving() ? 'Saving...' : 'Save' }}
   </button>

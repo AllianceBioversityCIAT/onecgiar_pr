@@ -230,9 +230,30 @@ export class DataControlService {
     return inputs || selects;
   }
 
+  /**
+   * Collects the elements matching `selector` inside EVERY container matching `container`, deduplicated.
+   *
+   * 🛑 P2-3552: this used to be `document.querySelector(container)` — singular. `.section_container` is a
+   * GLOBAL class (`result-detail.component.scss:74` says so), and on the result-detail route between two and
+   * four elements carry it, in this document order:
+   *   1. the global announcement banner (`results-outlet.component.html:5`), which holds one `app-alert-status`
+   *      and therefore ZERO mandatory fields — rendered only when `globalVariablesSE.get.alert_global_info`;
+   *   2. the wrapper around the `<router-outlet>` (`results-outlet.component.html:7-10`), i.e. the whole screen;
+   *   3. `result-detail.component.html:22`;
+   *   4. `multiple-wps.component.html:5`, when the ToC tabs render.
+   * `querySelector` returns the FIRST, so whenever that banner is up the scan looked inside it, found nothing,
+   * and reported "0 fields missing" for the entire form — an empty alert panel on a form full of empty
+   * mandatory fields. Containers 2-4 nest, so the union has to be deduplicated by element or a field inside
+   * the ToC tabs would be counted (and listed) up to three times.
+   */
+  private mandatoryFieldsIn(container: string, selector: string): HTMLElement[] {
+    const found = new Set<HTMLElement>();
+    document.querySelectorAll(container).forEach(host => host.querySelectorAll(selector).forEach(el => found.add(el as HTMLElement)));
+    return [...found];
+  }
+
   someMandatoryFieldIncompleteResultDetail(container) {
-    const htmlContainer = document.querySelector(container);
-    if (!htmlContainer) {
+    if (!document.querySelector(container)) {
       if (this.fieldFeedbackList().length) this.fieldFeedbackList.set([]);
       return true;
     }
@@ -240,8 +261,7 @@ export class DataControlService {
     let incompleteInputs = 0;
     let incompleteSelects = 0;
     try {
-      incompleteInputs = Array.prototype.slice
-        .call(htmlContainer.querySelectorAll('.pr-input.mandatory .input-validation'))
+      incompleteInputs = this.mandatoryFieldsIn(container, '.pr-input.mandatory .input-validation')
         .filter((field: HTMLElement) => {
           const isEmpty = !field?.innerText;
           const label = this.mandatoryFieldLabel(field);
@@ -251,8 +271,7 @@ export class DataControlService {
           return isEmpty;
         }).length;
 
-      incompleteSelects = Array.prototype.slice
-        .call(htmlContainer.querySelectorAll('.pr-field.mandatory'))
+      incompleteSelects = this.mandatoryFieldsIn(container, '.pr-field.mandatory')
         .filter((field: HTMLElement) => {
           const isIncomplete = !field.classList.contains('complete');
           const label = this.mandatoryFieldLabel(field);

@@ -13,6 +13,8 @@ import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
 import { LinkedResultsService } from '../../results/linked-results/linked-results.service';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
+import { ContributionConsistencyService } from './contribution-consistency.service';
+import { ContributionBox } from '../../results/results-toc-results/achieved-value-derivation';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 import {
   throwServiceError,
@@ -34,6 +36,7 @@ export class ContributorsPartnersService {
     private readonly _linkedResultsService: LinkedResultsService,
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    private readonly _contributionConsistencyService: ContributionConsistencyService,
   ) {}
 
   async getContributorsPartnersByResultId(resultId: number) {
@@ -129,6 +132,20 @@ export class ContributorsPartnersService {
       hasInnovationLink = linkFlag;
       linkedResultIds = linkedIds ?? [];
 
+      // P2-2932. Fails soft on purpose: this is an advisory reading on a section that must load
+      // whether or not the check can run. A failure here must never cost the user their form.
+      let contributionConsistency = null;
+      try {
+        contributionConsistency =
+          await this._contributionConsistencyService.check(
+            result.id,
+            resultTypeId,
+            this.contributionBoxesOf(tocMapping.result_toc_result),
+          );
+      } catch (error) {
+        this._handlersError.returnErrorRes({ error, debug: true });
+      }
+
       return {
         response: {
           result_id: resultId,
@@ -145,6 +162,7 @@ export class ContributorsPartnersService {
           is_lead_by_partner: isLeadByPartner,
           has_innovation_link: hasInnovationLink,
           linked_results: linkedResultIds,
+          contribution_consistency: contributionConsistency,
         },
         message: 'Contributors and Partners fetched successfully (P25)',
         status: HttpStatus.OK,
@@ -152,6 +170,40 @@ export class ContributorsPartnersService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  /**
+   * P2-2932 — every contribution box on the result, one per mapped ToC indicator.
+   *
+   * The value lives three levels down: node → indicators[] → targets[]. Only the OWNER's node is
+   * read: the comparison is between what this reporter typed and what this reporter recorded in
+   * Section 4, not what contributing initiatives entered against their own sections.
+   *
+   * `indicatorResultTypeId` now carries the indicator's own category, joined from the ToC side in
+   * `getRTRPrimaryV2`. That is what makes the PO's mixed-type rule bite: a Capacity Sharing result
+   * that later picks up an Innovation Development indicator compares only its Capacity Sharing
+   * boxes, because Section 4 holds nothing to check the other one against.
+   *
+   * ⚠️ Null is passed through as undefined on purpose. An indicator whose `type_value` matches no
+   * known pattern is "cannot tell", not "another type" — comparing it is the safe direction, since
+   * dropping it would hide a real disagreement behind an unrecognised label.
+   */
+  private contributionBoxesOf(resultTocResult: any): ContributionBox[] {
+    const nodes = Array.isArray(resultTocResult)
+      ? resultTocResult
+      : resultTocResult
+        ? [resultTocResult]
+        : [];
+
+    return nodes.flatMap((node: any) =>
+      (node?.indicators ?? []).flatMap((indicator: any) =>
+        (indicator?.targets ?? []).map((target: any) => ({
+          contributingIndicator: target?.contributing_indicator,
+          indicatorResultTypeId:
+            indicator?.indicator_result_type_id ?? undefined,
+        })),
+      ),
+    );
   }
 
   async updateTocMappingV2(

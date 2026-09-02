@@ -150,6 +150,19 @@
               [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator"
               class="p-inputtext p-component"
               style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem" />
+
+            <!--
+              P2-2932: what the user typed here against what they reported in the type-specific
+              section. Advisory only — the value stays theirs and saving is never blocked. The one
+              exception the PO carved out is a Knowledge Product outside 0/1 (AC1), which reads as
+              an error; AC6 governs everything else and says the system must not block.
+            -->
+            @if (showContributionCheck()) {
+              <app-alert-status
+                [status]="contributionIsRejected() ? 'error' : 'warning'"
+                [description]="contributionCheckMessage()"
+                inlineStyles="margin: 10px 0 0 0;"></app-alert-status>
+            }
           </div>
         }
       }

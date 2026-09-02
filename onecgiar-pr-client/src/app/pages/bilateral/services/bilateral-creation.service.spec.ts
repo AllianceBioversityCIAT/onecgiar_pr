@@ -680,4 +680,111 @@ describe('BilateralCreationService', () => {
       setItem.mockRestore();
     });
   });
+  /**
+   * P2-3518 — re-pointing the lead W3/Bilateral project of an existing result.
+   *
+   * Two invariants live here, and both are load-bearing:
+   * 1. the Science Program selection survives (what a project change should do to it is an open
+   *    requirement question, so nothing decides it here);
+   * 2. the payload for `PATCH api/bilateral/center/contributors/:resultId` is the FULL list with
+   *    exactly one `is_lead: true` — `syncBilateralProjects` deactivates whatever is missing.
+   */
+  describe('setLeadProject / leadProjectSyncPayload (P2-3518)', () => {
+    const project = (id: number, shortName = `P${id}`) =>
+      ({
+        id,
+        shortName,
+        fullName: `${shortName} full name`,
+        summary: null,
+        description: null,
+        leadCenter: { id: 49, name: 'Center One', acronym: 'C01' },
+        sciencePrograms: []
+      }) as any;
+
+    it('re-points the lead project without clearing the Science Program', () => {
+      service.selectedProject.set(project(12));
+      service.selectedPrimarySp.set({ programId: 5, programCode: 'SP5', allocation: '100' });
+      service.selectedSecondarySps.set([{ programId: 6, programCode: 'SP6', allocation: '0' }]);
+
+      service.setLeadProject(project(77));
+
+      expect(service.selectedProject()?.id).toBe(77);
+      expect(service.resultProjectId()).toBe(77);
+      // ⚠️ `selectProject()` (the create wizard) nulls both of these. Reusing it here would blank
+      // the Science Program of a result that already reports against one.
+      expect(service.selectedPrimarySp()?.programId).toBe(5);
+      expect(service.selectedSecondarySps()).toEqual([{ programId: 6, programCode: 'SP6', allocation: '0' }]);
+    });
+
+    it('puts the new lead first and drops the old one from the linked projects', () => {
+      service.selectedProject.set(project(12));
+      service.resultContributingProjectIds.set([12, 30, 31]);
+      service.resultContributingProjects.set([
+        { id: 12, shortName: 'P12', fullName: 'P12 full name' },
+        { id: 30, shortName: 'P30', fullName: 'P30 full name' },
+        { id: 31, shortName: 'P31', fullName: 'P31 full name' }
+      ]);
+
+      service.setLeadProject(project(77, 'NEWPROJ'));
+
+      expect(service.resultContributingProjectIds()).toEqual([77, 30, 31]);
+      expect(service.resultContributingProjects()).toEqual([
+        { id: 77, shortName: 'NEWPROJ', fullName: 'NEWPROJ full name' },
+        { id: 30, shortName: 'P30', fullName: 'P30 full name' },
+        { id: 31, shortName: 'P31', fullName: 'P31 full name' }
+      ]);
+    });
+
+    it('does not duplicate a project that was already linked as a contributor', () => {
+      service.selectedProject.set(project(12));
+      service.resultContributingProjectIds.set([12, 77]);
+
+      service.setLeadProject(project(77));
+
+      expect(service.resultContributingProjectIds()).toEqual([77]);
+    });
+
+    // ⚠️ Regression lock. `syncContributingProjects` clears `is_lead` on every active row and then
+    // raises only the flagged ids (`bilateral-center.service.ts:900-918`). Sending more than one
+    // `is_lead: true`, or leaving a contributing project out, is how the lead link breaks.
+    it('builds a sync payload with the full list and exactly one lead', () => {
+      service.selectedProject.set(project(12));
+      service.resultContributingProjectIds.set([12, 30]);
+
+      service.setLeadProject(project(77));
+      const payload = service.leadProjectSyncPayload();
+
+      expect(payload).toEqual([
+        { project_id: 77, is_lead: true },
+        { project_id: 30, is_lead: false }
+      ]);
+      expect(payload.filter(p => p.is_lead)).toHaveLength(1);
+    });
+
+    it('still sends the lead when it is the only linked project', () => {
+      service.selectedProject.set(project(12));
+      service.resultContributingProjectIds.set([12]);
+
+      service.setLeadProject(project(77));
+
+      expect(service.leadProjectSyncPayload()).toEqual([{ project_id: 77, is_lead: true }]);
+    });
+
+    it('sends nothing when no project is selected, instead of an empty sync that unlinks everything', () => {
+      service.selectedProject.set(null);
+      service.resultContributingProjectIds.set([]);
+
+      expect(service.leadProjectSyncPayload()).toEqual([]);
+    });
+
+    it('ignores a project with no usable id rather than corrupting the linked list', () => {
+      service.selectedProject.set(project(12));
+      service.resultContributingProjectIds.set([12, 30]);
+
+      service.setLeadProject(project(0));
+
+      expect(service.resultProjectId()).toBeNull();
+      expect(service.resultContributingProjectIds()).toEqual([12, 30]);
+    });
+  });
 });

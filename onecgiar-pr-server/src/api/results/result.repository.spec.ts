@@ -455,3 +455,164 @@ describe('ResultRepository (unit)', () => {
     });
   });
 });
+
+/**
+ * P2-3498 — `getResultById` concatenated the path segment straight into the SQL
+ * (`r.id = ${id}`) and ran it through `this.query(queryData)` with no parameter list, so whatever
+ * arrived in the URL became part of the statement. The rest of this repository already binds
+ * (lines 206, 219, 435, 1353 …); this one method did not.
+ *
+ * Reached from `results.controller.ts` — `GET results/get/:id` → `results.service.ts`
+ * `findResultById` → here. Only this proved path is fixed; the ticket is explicit about not
+ * turning it into a sweep.
+ */
+describe('ResultRepository — getResultById binds the id (P2-3498)', () => {
+  let repo: ResultRepository;
+  let queryMock: jest.Mock;
+
+  const mockDataSource = {
+    createEntityManager: jest.fn(() => ({}) as any),
+  } as unknown as DataSource;
+
+  const mockHandlersError = {
+    returnErrorRepository: jest.fn(({ error }: any) => ({
+      response: { error: true },
+      message: `${error}`,
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+    })),
+  } as any;
+
+  /** What a path segment can carry when nothing parses it. */
+  const INJECTED = '1 OR 1=1 UNION SELECT 1 -- ' as unknown as number;
+
+  beforeEach(() => {
+    repo = new ResultRepository(mockDataSource, mockHandlersError);
+    queryMock = jest.fn().mockResolvedValue([]);
+    (repo as any).query = queryMock;
+  });
+
+  it('keeps the id out of the SQL text and hands it over as a bound parameter', async () => {
+    await repo.getResultById(INJECTED);
+
+    const [sql, params] = queryMock.mock.calls[0];
+
+    // The placeholder replaces the interpolation.
+    expect(sql).toContain('r.id = ?');
+    expect(sql).not.toContain('r.id = 1 OR');
+    // Nothing the caller sent may appear in the statement itself.
+    expect(sql).not.toContain('UNION SELECT');
+    expect(sql).not.toContain('1 OR 1=1');
+    // …it travels in the parameter list instead, where the driver escapes it.
+    expect(params).toEqual([INJECTED]);
+  });
+
+  it('always passes a parameter list, never a lone statement', async () => {
+    await repo.getResultById(1234);
+
+    expect(queryMock).toHaveBeenCalledTimes(1);
+    expect(queryMock).toHaveBeenCalledWith(expect.any(String), [1234]);
+    // The unbound call took a single argument; that is what regressing would look like.
+    expect(queryMock.mock.calls[0]).toHaveLength(2);
+  });
+
+  it('still returns the first row, and undefined when there is none', async () => {
+    queryMock.mockResolvedValueOnce([{ result_id: 7 }, { result_id: 8 }]);
+    await expect(repo.getResultById(7)).resolves.toEqual({ result_id: 7 });
+
+    queryMock.mockResolvedValueOnce([]);
+    await expect(repo.getResultById(9)).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * P2-3527 — the similar-results list of the result creator is served from MySQL again (the Elastic
+ * host stopped resolving). Uncapped, `title like '%a%'` answered with ~10 360 rows / 8 MB and the
+ * UI fires the search while the user types, so the cap and the relevance order are the contract.
+ */
+describe('ResultRepository — AllResultsLegacyNewByTitle (P2-3527)', () => {
+  let repo: ResultRepository;
+  let queryMock: jest.Mock;
+
+  const mockDataSource = {
+    createEntityManager: jest.fn(() => ({}) as any),
+  } as unknown as DataSource;
+
+  const mockHandlersError = {
+    returnErrorRepository: jest.fn(() => ({})),
+  } as any;
+
+  beforeEach(() => {
+    repo = new ResultRepository(mockDataSource, mockHandlersError);
+    queryMock = jest.fn().mockResolvedValue([]);
+    (repo as any).query = queryMock;
+  });
+
+  const sqlOf = () => queryMock.mock.calls[0][0] as string;
+  const paramsOf = () => queryMock.mock.calls[0][1] as any[];
+
+  it('caps the page at 20 rows by default', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate');
+
+    expect(sqlOf()).toContain('limit 20');
+  });
+
+  it('honours a caller limit but never above 50', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate', { limit: 5 });
+    expect(sqlOf()).toContain('limit 5');
+
+    queryMock.mockClear();
+    await repo.AllResultsLegacyNewByTitle('climate', { limit: 500 });
+    expect(sqlOf()).toContain('limit 50');
+  });
+
+  it('ignores a non-numeric limit instead of interpolating it', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate', {
+      limit: 'DROP' as unknown as number,
+    });
+
+    expect(sqlOf()).toContain('limit 20');
+    expect(sqlOf()).not.toContain('DROP');
+  });
+
+  it('orders exact titles first, then prefix matches', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate');
+
+    const sql = sqlOf();
+    expect(sql).toContain('when lower(q.title) = lower(?) then 0');
+    expect(sql).toContain('when lower(q.title) like lower(?) then 1');
+    expect(paramsOf()).toEqual([
+      '%climate%',
+      '',
+      '',
+      '%climate%',
+      'climate',
+      'climate%',
+    ]);
+  });
+
+  it('returns the columns the similar-results list renders', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate');
+
+    const sql = sqlOf();
+    // Without version_id the client cannot resolve the phase of a suggestion, and every row renders
+    // as "This result does not exist in this reporting phase" with Map-to-ToC disabled.
+    expect(sql).toContain('r.version_id');
+    expect(sql).toContain('null as version_id');
+    expect(sql).toContain('rt.name as type');
+    expect(sql).toContain('lr.indicator_type as type');
+  });
+
+  it('narrows only the legacy rows by indicator type', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate', { type: 'Innovation' });
+
+    expect(sqlOf()).toContain("(? = '' or lr.indicator_type = ?)");
+    expect(paramsOf()).toEqual([
+      '%climate%',
+      'Innovation',
+      'Innovation',
+      '%climate%',
+      'climate',
+      'climate%',
+    ]);
+  });
+});
