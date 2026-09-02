@@ -1,6 +1,6 @@
 # type-innovation-dev (bilateral)
 
-**Verified:** 2026-09-01 · branch performance-refactor · 1899f4602
+**Verified:** 2026-09-02 · branch performance-refactor · 2de8884cd
 
 ## What it is
 Section 5 of the bilateral form: Innovation Development. Shows the **MDS** (3 mandatory fields) and
@@ -41,6 +41,19 @@ QA-verified via P2-3327).
   (`isReadyForScalingStudies`). The P25 portfolio also holds 2025-phase results, so a portfolio gate
   would strip the question from a 2025 result — which the epic's governing note (Ángel Jarrín,
   23-Aug-2026) forbids absolutely. An unresolved phase year counts as the current phase and hides it.
+- ⚠️ **`reference_materials` is OMITTED from the payload when `body` holds no array — never sent as `[]`**
+  (P2-3557). The server returns early only for `null`/`undefined`
+  (`results/summary/innovation_dev.service.ts:99-101`) and de-activates every stored evidence of type 4
+  that any other value — `[]` included — leaves out (`:110-125`). `?? []` therefore deleted the stored
+  links whenever `body` never loaded: `loadData()` has **no error handler** and the GET answers a
+  server-side exception with HTTP 500, which the interceptor rethrows, so `body` stays `{}` and the
+  first keystroke autosaved a wipe. A present array — `[]` from deleting the last row included — is
+  still sent, so real deletions still persist. Same fix as the pooled-funding form (`0fca46d3a`,
+  P2-3550 AC4). `scaling_studies_urls` needs no such guard: its writer only runs on a truthy
+  `.length` (`summary.service.ts:710-731`).
+- ⚠️ **The other keys are still `?? null`, so a save after a failed GET blanks them** (short title,
+  developers, readiness…). Out of P2-3557's scope and not fixed here; it needs `loadData()` to refuse
+  to autosave until the body has actually loaded.
 - ⚠️ **Hiding the question does NOT remove the fields from the payload, on purpose.** The PO's note is
   explicit that "Remove" never means delete the data, so `buildPayload` still sends
   `has_scaling_studies` and `scaling_studies_urls`; a value written in an earlier phase must never be

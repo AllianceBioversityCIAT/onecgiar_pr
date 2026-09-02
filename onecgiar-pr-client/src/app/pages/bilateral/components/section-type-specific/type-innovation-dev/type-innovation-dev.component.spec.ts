@@ -345,6 +345,50 @@ describe('TypeInnovationDevComponent', () => {
       expect(payload.result_innovation_dev_id).toBe(9);
     });
 
+    /**
+     * P2-3557 — the server treats an ABSENT `reference_materials` as "leave the column alone" and any
+     * present value, `[]` included, as "de-activate every stored evidence of type 4 that is not in
+     * here" (`results/summary/innovation_dev.service.ts:99-125`). So these three cases assert the
+     * KEY's presence, never its value: `toBeUndefined()` would also pass against the old
+     * `reference_materials: this.body.reference_materials ?? []`, because a key holding `undefined`
+     * disappears from the JSON too.
+     */
+    describe('reference_materials is omitted, never emptied (P2-3557)', () => {
+      it('omits the key entirely when the body never loaded (failed or in-flight GET)', () => {
+        build();
+        component.body = {};
+        component.onSave();
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect('reference_materials' in payload).toBe(false);
+      });
+
+      it('omits the key when the body carries something that is not an array', () => {
+        build();
+        component.body = { reference_materials: null };
+        component.onSave();
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect('reference_materials' in payload).toBe(false);
+      });
+
+      it('still sends the links the user has on screen', () => {
+        build();
+        component.body = { reference_materials: [{ link: 'https://a.org' }, { link: 'https://b.org' }] };
+        component.onSave();
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect('reference_materials' in payload).toBe(true);
+        expect(payload.reference_materials).toEqual([{ link: 'https://a.org' }, { link: 'https://b.org' }]);
+      });
+
+      it('still sends an empty array once the user deletes the last link, so the deletion persists', () => {
+        build();
+        component.body = { reference_materials: [{ link: 'https://a.org' }] };
+        component.deleteReferenceMaterial(0);
+        const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+        expect('reference_materials' in payload).toBe(true);
+        expect(payload.reference_materials).toEqual([]);
+      });
+    });
+
     it('onSave queues an immediate save', () => {
       build();
       component.body = {};

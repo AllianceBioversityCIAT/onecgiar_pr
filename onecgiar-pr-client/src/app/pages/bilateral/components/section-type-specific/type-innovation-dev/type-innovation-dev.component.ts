@@ -176,7 +176,37 @@ export class TypeInnovationDevComponent implements OnInit {
     });
   }
 
+  /**
+   * P2-3557 — `reference_materials` is the one key of this payload where **absent and empty mean
+   * opposite things to the server**, so it can never be defaulted.
+   *
+   * `InnovationDevService.saveEvidence` returns early only for `null`/`undefined`
+   * (`onecgiar-pr-server/src/api/results/summary/innovation_dev.service.ts:99-101`); with any other
+   * value — `[]` included — it walks every stored evidence of `evidence_type_id = 4` and sets
+   * `is_active = 0` on the ones whose link is not in the payload (`:110-125`). The caller gates on
+   * the same contract before even reaching it (`summary.service.ts:679`).
+   *
+   * `?? []` therefore turned "we do not know what this result has" into "delete everything it has".
+   * That is reachable: `loadData()` has no error handler, and `GET summary/innovation-dev/get/result/:id`
+   * answers a server-side exception with **HTTP 500** (measured on prtest, 2-Sep-2026: `.../result/abc`
+   * → `500 {"response":{"error":true}}`), which the interceptor rethrows
+   * (`shared/interceptors/general-interceptor.service.ts:81-83`), so `next` never runs and `body`
+   * stays the `{}` it was constructed with. The empty form then autosaves on the first keystroke and
+   * wipes the stored links. The same hole opens for an edit that lands before the GET resolves
+   * (240-620 ms on prtest).
+   *
+   * So the key is **omitted** whenever the body carries no array, and sent untouched whenever it
+   * does — a user who deleted the last row still sends `[]` and still gets the deletion. Same
+   * undefined-vs-value contract, and the same destructuring guarantee that the key is absent from the
+   * JSON rather than present with `undefined`, as `buildSectionPayload()` in the pooled-funding form
+   * (`pages/results/.../innovation-dev-info/innovation-dev-info.component.ts`, commit `0fca46d3a`,
+   * P2-3550 AC4).
+   *
+   * ⚠️ `scaling_studies_urls` needs no such treatment: its writer only runs when
+   * `scaling_studies_urls?.length` is truthy (`summary.service.ts:710-731`), so `[]` is a no-op there.
+   */
   private buildPayload(): Record<string, unknown> {
+    const { reference_materials } = this.body as { reference_materials?: unknown };
     const payload: Record<string, unknown> = {
       short_title: this.body.short_title ?? null,
       innovation_characterization_id: this.body.innovation_characterization_id ?? null,
@@ -187,9 +217,9 @@ export class TypeInnovationDevComponent implements OnInit {
       number_of_varieties: this.body.number_of_varieties ?? null,
       innovation_collaborators: this.body.innovation_collaborators ?? null,
       evidences_justification: this.body.evidences_justification ?? null,
-      reference_materials: this.body.reference_materials ?? [],
       has_scaling_studies: this.body.has_scaling_studies ?? null,
-      scaling_studies_urls: this.body.scaling_studies_urls ?? []
+      scaling_studies_urls: this.body.scaling_studies_urls ?? [],
+      ...(Array.isArray(reference_materials) ? { reference_materials } : {})
     };
     // Omit null PK so the server can AUTO_INCREMENT on first create.
     if (this.body.result_innovation_dev_id != null) {
