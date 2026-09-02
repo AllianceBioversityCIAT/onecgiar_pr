@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-09-02 · branch performance-refactor · P2-2911 AC2 (Lead contact person moved in)
+**Verified:** 2026-09-02 · branch performance-refactor · P2-3420/P2-3421 (QA'd innovation link, single select)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -327,6 +327,43 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   🛑 **Not yet verified in a real browser** — this spec's E2E/manual walkthrough is an outstanding
   human gate (local stack + auth token + a real ToC-mapped P25 result are all required and were not
   available at doc-update time).
+
+## El enlace a la innovación QA'd (P2-3420 / P2-3421) — TRES caminos, no dos
+
+Desde el 2-sep-2026 la pregunta enlazado/agrupado tiene **tres** ramas en el template, no dos:
+
+1. `showsQaInnovationLink()` — **Innovation use + fase ≥ 2026**. Texto **de la historia**
+   (`INNOVATION_LINK_QUESTION`, verbatim, QA lo lee palabra por palabra) y `app-pr-select`
+   **single** sobre el catálogo QA'd (`QaInnovationDevelopmentResultsService`): QAed(2),
+   Approved(6) y Discontinued(4), portfolio-wide, de la **fase anterior** (el filtro de fase es
+   del server, `result.repository.ts:getQaEdInnovationDevelopmentResults`). `optionLabel="display"`
+   porque el type-ahead de `app-pr-select` filtra **solo** por `optionLabel`: `display` ya viene
+   precalculado como `[Result ID] - [Result Title]`, y así se busca por id **y** por título.
+2. Tipos **2 (fase < 2026) y 7** — el `fieldRef` de siempre, multi-select legado. Intacto.
+3. El resto de tipologías bajo `isCP2026()` — `linkedResultQuestionLabel`. Intacto.
+
+⚠️ **Las dos preguntas comparten el MISMO dato guardado** (`results_innovations_use.has_innovation_link`
++ tabla `linked_result`), así que para Innovation use la pregunta de la historia **sustituye** a la
+genérica de P2-3112; no pueden convivir. Si Innovation use tuviera que enlazar además KPs o
+políticas, hace falta un campo aparte (pendiente de decisión, 2-sep-2026).
+
+⚠️ **El gate es de AÑO DE FASE y, aquí, un año desconocido cae al control LEGADO** — al contrario
+que en las pantallas de creación, donde un año sin resolver se trata como la fase abierta. En el
+detalle la sección se desenmascara con su propio GET y el resultado puede llegar después, así que
+fallar hacia el formulario nuevo pintaría el control nuevo sobre un resultado viejo. Mismo criterio
+que `FieldsManagerService.currentResultPhaseYear`.
+
+⚠️ **`qaInnovationOptions` inyecta la opción huérfana.** El catálogo solo lista lo enlazable HOY: un
+enlace guardado cuya innovación ya no cumple el filtro pintaría el select **vacío**, y guardar la
+sección lo borraría sin que el usuario toque nada. El getter añade el id guardado como opción,
+tomando el título del catálogo amplio que esta sección ya carga. Pasó de verdad: el resultado 8996
+tenía enlazado el 6153, que el catálogo QA'd no devuelve.
+
+- `linkedInnovationId` (getter/setter) mapea la selección única sobre el array `linked_results` — el
+  contrato del PATCH y del GET es compartido con las superficies multi-select, no se cambia.
+- `onQaInnovationLinkChange()` limpia el enlace al responder "No", y **solo** para esta rama.
+- El catálogo se pide por `effect()` (`ensureQaInnovationCatalogue`), solo cuando la rama aplica.
+- Tests: `rd-contributors-and-partners.innovation-link.spec.ts` (17).
 
 ## Lead contact person (P2-2911 AC2) — displayed here, still saved in General Information
 
