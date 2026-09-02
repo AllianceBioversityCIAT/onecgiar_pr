@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { of } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { signal } from '@angular/core';
 
 import { TypeInnovationDevComponent } from './type-innovation-dev.component';
@@ -25,9 +25,16 @@ describe('TypeInnovationDevComponent', () => {
   let expandableState: any;
   let innovationControlListSE: any;
 
+  /**
+   * P2-3558 — `build()` now RUNS the first change detection, so `ngOnInit` fires and the default
+   * `GET_innovationDev` mock (which resolves synchronously) leaves the component `loaded`. Every save
+   * is gated on that flag, so a component that was never initialized can no longer save anything —
+   * which is the point of the fix, and would otherwise silently neuter every save assertion below.
+   */
   const build = () => {
     fixture = TestBed.createComponent(TypeInnovationDevComponent);
     component = fixture.componentInstance;
+    fixture.detectChanges();
     return component;
   };
 
@@ -119,6 +126,101 @@ describe('TypeInnovationDevComponent', () => {
       build();
       fixture.detectChanges();
       expect(component.body).toEqual({});
+    });
+
+    it('marks the section as loaded once the body is in hand', () => {
+      build();
+      expect(component.loaded()).toBe(true);
+    });
+
+    /**
+     * P2-3558 — the data-loss chain, cut at its root.
+     *
+     * `GET summary/innovation-dev/get/result/:id` answers a server-side exception with a real HTTP 500
+     * and the interceptor rethrows it (`shared/interceptors/general-interceptor.service.ts:81-83`), so
+     * `next` never ran and `body` stayed the `{}` it was constructed with. The form painted blank with
+     * no warning and `buildPayload()`'s `?? null` on every key turned the first keystroke into a wipe
+     * of the stored short title, innovation developers and readiness level.
+     *
+     * These assert on the ABSENCE of a request, which is the only thing that distinguishes the fix
+     * from the defect: the old code reached `schedulePayload` on every one of these paths.
+     */
+    describe('when the GET fails (P2-3558)', () => {
+      const failLoad = () => bilateralApi.GET_innovationDev.mockReturnValue(throwError(() => new Error('HTTP 500')));
+
+      it('leaves the section not loaded, with an empty body', () => {
+        failLoad();
+        build();
+        expect(component.loaded()).toBe(false);
+        expect(component.body).toEqual({});
+      });
+
+      it('sends NOTHING when the person types on a form that never loaded', () => {
+        failLoad();
+        build();
+        autoSave.schedulePayload.mockClear();
+
+        component.body.short_title = 'typed by the user';
+        component.onFieldChange();
+
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+      });
+
+      it('sends nothing when the person presses Save either', () => {
+        failLoad();
+        build();
+        autoSave.schedulePayload.mockClear();
+        component.onSave();
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+      });
+
+      it.each([['addReferenceMaterial'], ['deleteReferenceMaterial'], ['addScalingStudyUrl'], ['deleteScalingStudyUrl']])(
+        'sends nothing from %s, the other four write paths',
+        method => {
+          failLoad();
+          build();
+          component.body = { reference_materials: [{ link: 'a' }], scaling_studies_urls: ['a'] };
+          autoSave.schedulePayload.mockClear();
+
+          (component as any)[method](0);
+
+          expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+        }
+      );
+
+      // Same reason as the sibling section (P2-3355): publishing no checklist at all leaves the
+      // section at "0/0 fields", which reads as "nothing required here" instead of as incomplete.
+      it('still publishes the three unfilled MDS items, so the section stays honestly incomplete', () => {
+        failLoad();
+        build();
+        const fields = mdsTracker.setSectionFields.mock.calls.at(-1)[1];
+        expect(fields.map((f: any) => f.key)).toEqual(['nature', 'developers', 'readiness']);
+        expect(fields.every((f: any) => f.filled === false)).toBe(true);
+      });
+    });
+
+    /**
+     * P2-3558, the secondary window: on prtest the GET takes 240-620 ms against an 800 ms autosave
+     * debounce, so an edit could reach the PATCH before the body ever arrived — and a payload built
+     * from `{}` blanks the record exactly as a failed load does. `null` therefore blocks too.
+     */
+    describe('while the GET is still in flight (P2-3558)', () => {
+      it('sends nothing before the body arrives, and saves normally afterwards', () => {
+        const inFlight = new Subject<any>();
+        bilateralApi.GET_innovationDev.mockReturnValue(inFlight.asObservable());
+        build();
+
+        expect(component.loaded()).toBeNull();
+        component.body.short_title = 'typed too early';
+        component.onFieldChange();
+        expect(autoSave.schedulePayload).not.toHaveBeenCalled();
+
+        inFlight.next({ response: { short_title: 'stored', innovation_developers: 'D' } });
+        expect(component.loaded()).toBe(true);
+
+        component.onFieldChange();
+        expect(autoSave.schedulePayload).toHaveBeenCalledTimes(1);
+      });
     });
   });
 
@@ -389,6 +491,20 @@ describe('TypeInnovationDevComponent', () => {
       });
     });
 
+    // P2-3558 regression guard: the happy path must be untouched by the load gate.
+    it('saves normally once the body has loaded', () => {
+      bilateralApi.GET_innovationDev.mockReturnValue(of({ response: { short_title: 'stored', innovation_developers: 'D' } }));
+      build();
+      autoSave.schedulePayload.mockClear();
+
+      component.body.short_title = 'edited';
+      component.onFieldChange();
+
+      const [, payload] = autoSave.schedulePayload.mock.calls.at(-1);
+      expect(payload.short_title).toBe('edited');
+      expect(payload.innovation_developers).toBe('D');
+    });
+
     it('onSave queues an immediate save', () => {
       build();
       component.body = {};
@@ -444,6 +560,61 @@ describe('TypeInnovationDevComponent', () => {
       TestBed.resetTestingModule();
       makeMocks();
       await configure().compileComponents();
+    });
+
+    /**
+     * P2-3558 — the person must be TOLD. Before this, a failed load painted an ordinary empty form:
+     * indistinguishable from a result nobody had filled in yet, which is what made them start typing
+     * over a record they could not see.
+     */
+    describe('failed load (P2-3558)', () => {
+      const alerts = () =>
+        fixture.debugElement.queryAll(By.css('app-alert-status')).map(d => ({
+          status: read(d.componentInstance.status),
+          description: read(d.componentInstance.description)
+        }));
+      const saveButton = (): HTMLButtonElement => fixture.nativeElement.querySelector('.tsf-actions button');
+
+      it('renders an error note that says nothing typed will be saved', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(throwError(() => new Error('HTTP 500')));
+        render();
+
+        const error = alerts().find(a => a.status === 'error');
+        expect(error).toBeDefined();
+        expect(error.description).toContain('nothing typed here will be saved');
+        expect(error.description).toContain('reported earlier has not been changed');
+      });
+
+      it('keeps the MDS note in place — the error note is added, not swapped in', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(throwError(() => new Error('HTTP 500')));
+        render();
+        expect(alerts().map(a => a.status)).toEqual(['info', 'error']);
+      });
+
+      it('renders no error note on a successful load', () => {
+        render();
+        expect(alerts().map(a => a.status)).toEqual(['info']);
+      });
+
+      // A naive `@if (!loaded())` would flash the error note on every open, while the GET is normal
+      // and simply not back yet. The template asks for `=== false` on purpose.
+      it('renders no error note while the GET is still in flight — null is not an error', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(new Subject<any>().asObservable());
+        render();
+        expect(component.loaded()).toBeNull();
+        expect(alerts().map(a => a.status)).toEqual(['info']);
+      });
+
+      it('disables the Save button when the section could not load', () => {
+        bilateralApi.GET_innovationDev.mockReturnValue(throwError(() => new Error('HTTP 500')));
+        render();
+        expect(saveButton().disabled).toBe(true);
+      });
+
+      it('leaves the Save button enabled on the happy path', () => {
+        render();
+        expect(saveButton().disabled).toBe(false);
+      });
     });
 
     it('shows the MDS note with the exact wording the story requires', () => {
