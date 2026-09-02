@@ -130,6 +130,34 @@ describe('ResultHeaderComponent', () => {
     });
   });
 
+  // RSBL-R-1, RSBL-R-2, RSBL-R-6 / RSBL-AC-1, RSBL-AC-2, RSBL-AC-6. Fixture already carries
+  // initiative_official_code: 'SP04' and initiative_name: 'Multifunctional Landscapes' (do not
+  // swap in SP09 — that value is the legacy screenshot copy example only, not the live fixture).
+  describe('submitter (Science Program)', () => {
+    it('shows the Science Program as Submitter, code and name, without opening the ⓘ popover', async () => {
+      await build();
+
+      expect(q('[data-testid="result-header-submitter"]').textContent.trim()).toBe('SP04 - Multifunctional Landscapes');
+      expect(q('[data-testid="result-header-meta-popover"]')).toBeNull();
+    });
+
+    it('links the Submitter value to the program home in the same tab', async () => {
+      await build();
+      const link = q('[data-testid="result-header-submitter"]');
+
+      expect(link.getAttribute('routerLink') ?? link.getAttribute('href')).toBe('/result-framework-reporting/entity-details/SP04');
+      expect(link.getAttribute('target')).toBeNull();
+    });
+
+    it('gives the Submitter link an accessible name that includes "Submitter" and the official code', async () => {
+      await build();
+      const ariaLabel = q('[data-testid="result-header-submitter"]').getAttribute('aria-label');
+
+      expect(ariaLabel).toContain('Submitter');
+      expect(ariaLabel).toContain('SP04');
+    });
+  });
+
   describe('metadata popover', () => {
     it('is closed until the info button is clicked', async () => {
       await build();
