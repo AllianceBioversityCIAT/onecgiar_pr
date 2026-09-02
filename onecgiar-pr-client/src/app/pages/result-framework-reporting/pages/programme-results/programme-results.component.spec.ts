@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, signal } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Clipboard } from '@angular/cdk/clipboard';
@@ -78,6 +78,23 @@ const RAW_ITEMS: Record<string, unknown>[] = [
     create_last_name: 'Turing',
     created_date: '2026-03-01T00:00:00.000Z',
     // Bilateral, not AVISA, not Approved → opens in the review drawer, not Result Detail.
+    source_name: 'W3/Bilaterals',
+    lead_center: 'ILRI',
+    version_id: '11',
+    phase_name: 'Reporting 2026',
+    phase_year: 2026,
+    submitter: 'SP01'
+  },
+  {
+    id: 4,
+    result_code: '5004',
+    title: 'Historic capacity workshop',
+    result_type: 'Capacity sharing for development',
+    status_id: '3',
+    status_name: 'Submitted',
+    create_first_name: 'Alan',
+    create_last_name: 'Turing',
+    created_date: '2024-03-01T00:00:00.000Z',
     source_name: 'W3/Bilaterals',
     lead_center: 'ILRI',
     version_id: '12',
@@ -172,14 +189,20 @@ describe('ProgrammeResultsComponent', () => {
         },
         {
           provide: DataControlService,
-          useValue: { reportingCurrentPhase: { phaseYear: 2026, portfolioAcronym: 'P26' } }
+          useValue: {
+            reportingCurrentPhase: { phaseYear: 2026, phaseName: 'Reporting 2026', portfolioAcronym: 'P26' },
+            reportingPhaseVersion: signal(0)
+          }
         },
         {
           provide: ResultFrameworkReportingHomeService,
           useValue: {
             mySPsList: () => [{ initiativeCode: 'SP01', initiativeShortName: 'Multifunctional Landscapes', initiativeName: 'SP01 long' }],
             otherSPsList: () => [],
-            otherProjectsList: () => []
+            otherProjectsList: () => [],
+            overviewSelectedPhase: signal<string | null>(null),
+            overviewSelectedProgram: signal<string | null>(null),
+            overviewSelectedVersionId: signal<number | null>(null)
           }
         },
         {
@@ -214,7 +237,7 @@ describe('ProgrammeResultsComponent', () => {
     expect(component.programmeCode()).toBe('SP01');
     // submitter_id is the numeric initiative id resolved from the official code.
     expect(getAllResults).toHaveBeenCalledWith(2, expect.objectContaining({ submitter_id: '50', page: 1 }));
-    expect(component.data.rows().length).toBe(3);
+    expect(component.data.rows().length).toBe(4);
     expect(dataRows().length).toBe(3);
   });
 
@@ -317,21 +340,21 @@ describe('ProgrammeResultsComponent', () => {
     fixture.detectChanges();
 
     const labels = filterService().activeChips().map(chip => chip.label);
-    expect(labels).toEqual(['Search: bean', 'Status: Submitted']);
+    expect(labels).toEqual(['Search: bean', 'Phase: Reporting 2026', 'Status: Submitted']);
     expect(text()).toContain('Search: bean');
     expect(text()).toContain('Clear all');
 
     component.clearChip(filterService().activeChips()[0]);
     tick(300);
     expect(component.searchDraft()).toBe('');
-    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: Submitted']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026', 'Status: Submitted']);
   }));
 
   it('renders a Center chip when the center filter is set', () => {
     component.onCenterChange('IITA');
     fixture.detectChanges();
 
-    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Center: IITA']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026', 'Center: IITA']);
     expect(text()).toContain('Center: IITA');
   });
 
@@ -347,8 +370,11 @@ describe('ProgrammeResultsComponent', () => {
     tick(300);
 
     expect(component.searchDraft()).toBe('');
-    expect(filterService().hasActiveFilters()).toBe(false);
     expect(filterService().selectedCenter()).toBeNull();
+    expect(filterService().selectedStatus()).toBeNull();
+    expect(filterService().selectedCategory()).toBeNull();
+    expect(filterService().selectedOrigin()).toBeNull();
+    expect(filterService().selectedPhase()).toBe('Reporting 2026');
     expect(component.filteredRows().length).toBe(3);
   }));
 
@@ -396,12 +422,17 @@ describe('ProgrammeResultsComponent', () => {
 
   // ── URL ↔ filter bridge (RFD-R-1 / RFD-R-2) ──────────────────────────────────────────────
   it('(a) hydrates several params into filter state and chips, without rewriting the URL', () => {
-    setup(RAW_ITEMS, { category: 'Policy change', status: 'Submitted', center: 'IITA' });
+    setup(RAW_ITEMS, { phase: 'Reporting 2026', category: 'Policy change', status: 'Submitted', center: 'IITA' });
 
     expect(filterService().state()).toEqual(
       expect.objectContaining({ selectedStatus: 'Submitted', selectedCategory: 'Policy change', selectedCenter: 'IITA' })
     );
-    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: Submitted', 'Category: Policy change', 'Center: IITA']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual([
+      'Phase: Reporting 2026',
+      'Status: Submitted',
+      'Category: Policy change',
+      'Center: IITA'
+    ]);
     // Same result as picking the three values manually — matches the one row that has all three.
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002']);
     expect(dataRows().length).toBe(1);
@@ -411,17 +442,17 @@ describe('ProgrammeResultsComponent', () => {
   it('(b) a value matching no row shows its chip and the filtered-empty state, without throwing', () => {
     expect(() => setup(RAW_ITEMS, { status: 'Foo' })).not.toThrow();
 
-    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: Foo']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026', 'Status: Foo']);
     expect(component.isFilteredEmpty()).toBe(true);
     expect(text()).toContain('No results match these filters.');
   });
 
-  it('(c) no query params leaves the filters untouched and never rewrites the URL', () => {
+  it('(c) no query params defaults to the active phase and mirrors it to the URL', () => {
     setup(RAW_ITEMS, {});
 
-    expect(filterService().activeChips().length).toBe(0);
-    expect(filterService().hasActiveFilters()).toBe(false);
-    expect(router.navigate).not.toHaveBeenCalled();
+    expect(filterService().selectedPhase()).toBe('Reporting 2026');
+    expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2026']);
+    expect(filterService().hasActiveFilters()).toBe(true);
   });
 
   it('(d) a dropdown change mirrors into the URL with merge + replaceUrl', () => {
@@ -436,10 +467,10 @@ describe('ProgrammeResultsComponent', () => {
     expect(commands).toEqual([]);
     expect(extras.queryParamsHandling).toBe('merge');
     expect(extras.replaceUrl).toBe(true);
-    expect(extras.queryParams).toEqual({ phase: null, status: null, category: 'Policy change', origin: null, center: null });
+    expect(extras.queryParams).toEqual({ phase: 'Reporting 2026', status: null, category: 'Policy change', origin: null, center: null });
   });
 
-  it('(e) Clear all mirrors all five params back to null', () => {
+  it('(e) Clear all mirrors all other params back to null and retains the active phase', () => {
     setup(RAW_ITEMS, { category: 'Policy change', status: 'Submitted', center: 'IITA' });
     (router.navigate as jest.Mock).mockClear();
 
@@ -448,14 +479,14 @@ describe('ProgrammeResultsComponent', () => {
 
     expect(router.navigate).toHaveBeenCalledTimes(1);
     const [, extras] = (router.navigate as jest.Mock).mock.calls[0];
-    expect(extras.queryParams).toEqual({ phase: null, status: null, category: null, origin: null, center: null });
+    expect(extras.queryParams).toEqual({ phase: 'Reporting 2026', status: null, category: null, origin: null, center: null });
   });
 
   it('(f) a param pushed through the route updates state and does NOT trigger a mirror navigate (anti-loop)', () => {
     setup(RAW_ITEMS, {});
     (router.navigate as jest.Mock).mockClear();
 
-    pushQueryParams({ status: 'Submitted' });
+    pushQueryParams({ phase: 'Reporting 2026', status: 'Submitted' });
     fixture.detectChanges();
 
     expect(filterService().selectedStatus()).toBe('Submitted');
@@ -466,7 +497,7 @@ describe('ProgrammeResultsComponent', () => {
     setup(RAW_ITEMS, { status: 'submitted' });
 
     expect(component.filteredRows().map(row => row.code)).toEqual(['5002', '5003']);
-    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Status: submitted']);
+    expect(filterService().activeChips().map(chip => chip.label)).toEqual(['Phase: Reporting 2026', 'Status: submitted']);
     expect(text()).toContain('Status: submitted');
   });
 
@@ -474,17 +505,39 @@ describe('ProgrammeResultsComponent', () => {
     setup(RAW_ITEMS, {});
     (router.navigate as jest.Mock).mockClear();
 
-    component.onPhaseChange('Reporting 2026');
+    component.onPhaseChange('Reporting 2024');
     fixture.detectChanges();
 
-    expect(filterService().selectedPhase()).toBe('Reporting 2026');
-    expect(component.filteredRows().map(r => r.code)).toEqual(['5001', '5002']);
-    expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2026']);
+    expect(filterService().selectedPhase()).toBe('Reporting 2024');
+    expect(component.filteredRows().map(r => r.code)).toEqual(['5004']);
+    expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2024']);
     expect(router.navigate).toHaveBeenCalledWith([], expect.objectContaining({
-      queryParams: expect.objectContaining({ phase: 'Reporting 2026' }),
+      queryParams: expect.objectContaining({ phase: 'Reporting 2024' }),
       queryParamsHandling: 'merge',
       replaceUrl: true
     }));
+  });
+
+  it('(i) uses the phase selected in Overview when available for this program', () => {
+    setup(RAW_ITEMS, {});
+    const homeSE = TestBed.inject(ResultFrameworkReportingHomeService);
+    homeSE.overviewSelectedProgram.set('SP01');
+    homeSE.overviewSelectedPhase.set('Reporting 2024');
+    fixture.detectChanges();
+
+    expect(filterService().selectedPhase()).toBe('Reporting 2024');
+    expect(component.filteredRows().map(r => r.code)).toEqual(['5004']);
+    expect(filterService().activeChips().map(c => c.label)).toEqual(['Phase: Reporting 2024']);
+  });
+
+  it('labels the origin column and filter as Funding source', () => {
+    const originCol = component.optionalColumns.find(c => c.key === 'origin');
+    expect(originCol?.label).toBe('Funding source');
+
+    component.onOriginChange('W1/W2');
+    fixture.detectChanges();
+
+    expect(filterService().activeChips().map(c => c.label)).toContain('Funding source: W1/W2');
   });
 
   it('maps status ids to the fixed --pr-status-* token PAIRS, never a recombination', () => {

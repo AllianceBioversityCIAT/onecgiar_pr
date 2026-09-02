@@ -37,7 +37,8 @@ import {
   ProgrammeResultsFilterChip,
   ProgrammeResultsFilterService,
   buildCategoryFilterOptions,
-  buildStatusCounts
+  buildStatusCounts,
+  normalize
 } from './services/programme-results-filter.service';
 import { PROGRAMME_RESULTS_QUERY_PARAM_MAP } from './services/programme-results-query-params';
 
@@ -86,7 +87,7 @@ export const PGR_COLUMNS: readonly PgrColumnDef[] = [
   { key: 'status', label: 'Status', sortField: 'statusName', track: '120px', minPx: 120, optional: false },
   { key: 'createdBy', label: 'Created by', sortField: 'createdBy', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
   { key: 'created', label: 'Created', sortField: 'created', track: '100px', minPx: 100, optional: true },
-  { key: 'origin', label: 'Origin', sortField: 'origin', track: '120px', minPx: 120, optional: true },
+  { key: 'origin', label: 'Funding source', sortField: 'origin', track: '140px', minPx: 140, optional: true },
   { key: 'center', label: 'Center', sortField: 'center', track: 'minmax(140px,1fr)', minPx: 140, optional: true },
   { key: 'updated', label: 'Updated', sortField: 'updated', track: '100px', minPx: 100, optional: false }
 ];
@@ -508,7 +509,7 @@ export class ProgrammeResultsComponent {
 
   /** Full catalog, for the header/cell loops. */
   readonly allColumns = PGR_COLUMNS;
-  /** Only the four the Columns picker offers (Created by · Created · Origin · Center). */
+  /** Only the four the Columns picker offers (Created by · Created · Funding source · Center). */
   readonly optionalColumns = PGR_COLUMNS.filter(column => column.optional);
 
   /** Programme official code from the route (`entity-details/:entityId/results`). */
@@ -577,8 +578,8 @@ export class ProgrammeResultsComponent {
 
   /** The three states are MUTUALLY EXCLUSIVE, unlike the mockup's three independent blocks. */
   readonly hasRows = computed(() => this.filteredRows().length > 0);
-  readonly isFilteredEmpty = computed(() => !this.data.loading() && !this.filteredRows().length && this.filter.hasActiveFilters());
-  readonly isNothingYet = computed(() => !this.data.loading() && !this.filteredRows().length && !this.filter.hasActiveFilters());
+  readonly isFilteredEmpty = computed(() => !this.data.loading() && this.data.rows().length > 0 && !this.filteredRows().length);
+  readonly isNothingYet = computed(() => !this.data.loading() && this.data.rows().length === 0);
   readonly isFirstLoad = computed(() => this.data.loading() && !this.filteredRows().length);
 
   // ── Filter options ──────────────────────────────────────────────────────────────────────
@@ -642,6 +643,53 @@ export class ProgrammeResultsComponent {
     return this.dataControlSE.reportingCurrentPhase?.portfolioAcronym ?? '';
   }
 
+  /**
+   * Default phase to filter by: the phase selected in Overview (if matching this programme),
+   * or the active reporting phase from DataControlService / phaseOptions.
+   */
+  readonly defaultPhase = computed<string | null>(() => {
+    this.dataControlSE?.reportingPhaseVersion?.();
+    const code = this.programmeCode();
+    const overviewProgram = this.homeSE?.overviewSelectedProgram?.();
+    const isOverviewForThisProgram = overviewProgram && code && overviewProgram.toUpperCase() === code.toUpperCase();
+    const overviewPhase = isOverviewForThisProgram ? this.homeSE?.overviewSelectedPhase?.() : null;
+
+    const available = this.data.phaseOptions();
+
+    // 1. Overview selection if present for this program
+    if (overviewPhase) {
+      const match = available.find(p =>
+        normalize(p) === normalize(overviewPhase) ||
+        (overviewPhase && normalize(p).includes(normalize(overviewPhase))) ||
+        (overviewPhase && normalize(overviewPhase).includes(normalize(p)))
+      );
+      if (match) return match;
+      return overviewPhase;
+    }
+
+    // 2. Active reporting phase
+    const activePhaseName = this.dataControlSE?.reportingCurrentPhase?.phaseName;
+    const activePhaseYear = this.dataControlSE?.reportingCurrentPhase?.phaseYear;
+
+    if (available.length > 0) {
+      if (activePhaseName) {
+        const matchName = available.find(p => normalize(p) === normalize(activePhaseName));
+        if (matchName) return matchName;
+      }
+      if (activePhaseYear) {
+        const matchYear = available.find(p =>
+          normalize(p) === normalize(activePhaseYear) ||
+          normalize(p).includes(String(activePhaseYear)) ||
+          normalize(p) === normalize(`Phase ${activePhaseYear}`)
+        );
+        if (matchYear) return matchYear;
+      }
+      return available[0];
+    }
+
+    return activePhaseName || (activePhaseYear ? `Phase ${activePhaseYear}` : null);
+  });
+
   constructor() {
     effect(() => {
       const code = this.programmeCode();
@@ -667,9 +715,11 @@ export class ProgrammeResultsComponent {
     // back, reopening the exact hydrate ↔ mirror loop the equality guard exists to close.
     effect(() => {
       const params = this.queryParams();
+      const defPhase = this.defaultPhase();
 
       untracked(() => {
-        const phase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
+        const urlPhase = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase);
+        const phase = urlPhase !== null ? this.toFilterValue(urlPhase) : defPhase;
         const status = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.status);
         const category = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.category);
         const origin = params.get(PROGRAMME_RESULTS_QUERY_PARAM_MAP.origin);
@@ -725,12 +775,17 @@ export class ProgrammeResultsComponent {
   // ── Chips ───────────────────────────────────────────────────────────────────────────────
   clearChip(chip: ProgrammeResultsFilterChip): void {
     if (chip?.dimension === 'search') this.searchDraft.set('');
+    if (chip?.dimension === 'phase') {
+      this.filter.selectedPhase.set(this.defaultPhase());
+      return;
+    }
     this.filter.clearChip(chip);
   }
 
   clearAll(): void {
     this.searchDraft.set('');
     this.filter.clearAll();
+    this.filter.selectedPhase.set(this.defaultPhase());
   }
 
   // ── Single-select filters ───────────────────────────────────────────────────────────────
@@ -744,7 +799,8 @@ export class ProgrammeResultsComponent {
   }
 
   onPhaseChange(value: unknown): void {
-    this.filter.selectedPhase.set(this.toFilterValue(value));
+    const nextVal = this.toFilterValue(value);
+    this.filter.selectedPhase.set(nextVal ?? this.defaultPhase());
   }
 
   onStatusChange(value: unknown): void {

@@ -34,7 +34,7 @@ export interface ProgrammeResultsFilterOptions {
   ignoreStatus?: boolean;
 }
 
-function normalize(value: unknown): string {
+export function normalize(value: unknown): string {
   return value === null || value === undefined ? '' : String(value).trim().toLowerCase();
 }
 
@@ -155,14 +155,22 @@ export function matchesProgrammeResultFilters(
     return false;
   }
 
-  if (
-    state.selectedPhase &&
-    normalize(state.selectedPhase) !== normalize(row?.phaseName) &&
-    normalize(state.selectedPhase) !== normalize(row?.phaseYear) &&
-    normalize(state.selectedPhase) !== normalize(row?.versionId) &&
-    normalize(state.selectedPhase) !== normalize(`Phase ${row?.phaseYear}`)
-  ) {
-    return false;
+  if (state.selectedPhase) {
+    const sel = normalize(state.selectedPhase);
+    const pName = normalize(row?.phaseName);
+    const pYear = normalize(row?.phaseYear);
+    const vId = normalize(row?.versionId);
+    const pPhaseYear = normalize(`Phase ${row?.phaseYear}`);
+
+    const matches =
+      sel === pName ||
+      sel === pYear ||
+      sel === vId ||
+      sel === pPhaseYear ||
+      (pYear && (sel === pYear || sel.includes(pYear))) ||
+      (pName && (sel.includes(pName) || pName.includes(sel)));
+
+    if (!matches) return false;
   }
 
   if (!options.ignoreStatus && state.selectedStatus && normalize(state.selectedStatus) !== normalize(row?.statusName)) return false;
@@ -263,7 +271,7 @@ export class ProgrammeResultsFilterService {
       chips.push({ label: `Category: ${categoryLabel}`, dimension: 'category', value: category });
     }
     const origin = this.selectedOrigin();
-    if (origin) chips.push({ label: `Origin: ${origin}`, dimension: 'origin', value: origin });
+    if (origin) chips.push({ label: `Funding source: ${origin}`, dimension: 'origin', value: origin });
     const center = this.selectedCenter();
     if (center) chips.push({ label: `Center: ${center}`, dimension: 'center', value: center });
 

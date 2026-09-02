@@ -176,13 +176,13 @@
             (changed)="onCategoryChange($event)"></app-pr-filter-select>
         </div>
 
-        <!-- Origin — single-select (`source_name`: W1/W2 · W3/Bilaterals) -->
-        <div class="pgr-filter w-[130px]" aria-label="Filter by origin">
+        <!-- Funding source — single-select (`source_name`: W1/W2 · W3/Bilaterals) -->
+        <div class="pgr-filter w-[160px]" aria-label="Filter by funding source">
           <app-pr-filter-select
             [options]="originSelectOptions()"
             optionLabel="label"
             optionValue="value"
-            placeholder="Origin"
+            placeholder="Funding source"
             [ngModel]="selectValue(filter.selectedOrigin())"
             (changed)="onOriginChange($event)"></app-pr-filter-select>
         </div>

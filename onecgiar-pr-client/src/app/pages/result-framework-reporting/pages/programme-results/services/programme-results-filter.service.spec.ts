@@ -193,7 +193,7 @@ describe('ProgrammeResultsFilterService', () => {
         { label: 'Phase: Phase 2026', dimension: 'phase', value: 'Phase 2026' },
         { label: 'Status: Submitted', dimension: 'status', value: 'Submitted' },
         { label: 'Category: Policy change', dimension: 'category', value: 'Policy change' },
-        { label: 'Origin: W1/W2', dimension: 'origin', value: 'W1/W2' },
+        { label: 'Funding source: W1/W2', dimension: 'origin', value: 'W1/W2' },
         { label: 'Center: IITA', dimension: 'center', value: 'IITA' }
       ]);
       expect(service.hasActiveFilters()).toBe(true);

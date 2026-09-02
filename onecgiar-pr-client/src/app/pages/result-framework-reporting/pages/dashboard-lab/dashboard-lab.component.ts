@@ -933,6 +933,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         // program's Open phase — a phase picked for the PREVIOUS program is not a valid selection
         // for this one.
         this.selectedVersionId.set(null);
+        this.homeSE?.overviewSelectedPhase?.set(null);
+        this.homeSE?.overviewSelectedProgram?.set(null);
+        this.homeSE?.overviewSelectedVersionId?.set(null);
         // ToC-scope filter (`changes/overview-aow-cross-filter`, `OSF-DD-5`): a scope picked for
         // the PREVIOUS program is not a valid selection for this one — reset beside the Reporting
         // filters' own per-program reset above, not on every `selected()` identity churn.
@@ -1324,7 +1327,20 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
 
   /** Wires the Overview phase selector's `(selectOptionEvent)` to `selectedVersionId` (design.md DD-1). */
   onPhaseOptionSelected(option: { versionId: number } | null): void {
-    if (option?.versionId != null) this.selectedVersionId.set(option.versionId);
+    if (option?.versionId != null) {
+      this.selectedVersionId.set(option.versionId);
+      const sp = this.selected();
+      this.homeSE?.overviewSelectedProgram?.set(sp?.initiativeCode ?? null);
+      this.homeSE?.overviewSelectedVersionId?.set(option.versionId);
+      const phaseObj = this.reportingPhases().find(p => Number(p.id) === Number(option.versionId));
+      const phaseName = phaseObj?.phase_name || (phaseObj?.phase_year ? `Phase ${phaseObj.phase_year}` : String(option.versionId));
+      this.homeSE?.overviewSelectedPhase?.set(phaseName);
+    } else {
+      this.selectedVersionId.set(null);
+      this.homeSE?.overviewSelectedProgram?.set(null);
+      this.homeSE?.overviewSelectedVersionId?.set(null);
+      this.homeSE?.overviewSelectedPhase?.set(null);
+    }
   }
 
   /**
