@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ResultsCapacityDevelopmentsRepository } from '../../results/summary/repositories/results-capacity-developments.repository';
 import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
 import {
-  ComparisonResult,
   ContributionBox,
+  ResultComparison,
   compareResultTotal,
   defaultContributionFor,
 } from '../../results/results-toc-results/achieved-value-derivation';
@@ -41,7 +41,7 @@ export class ContributionConsistencyService {
     resultId: number,
     resultTypeId: number,
     boxes: readonly ContributionBox[],
-  ): Promise<ComparisonResult & { defaultValue: number | null }> {
+  ): Promise<ResultComparison & { defaultValue: number | null }> {
     const [capacityDevelopment, innovationUseActors] = await Promise.all([
       this.capacityDevelopmentOf(resultId),
       this.actorsOf(resultId),
