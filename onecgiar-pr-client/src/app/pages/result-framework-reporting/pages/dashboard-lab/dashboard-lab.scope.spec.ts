@@ -222,8 +222,8 @@ describe('DashboardLabComponent — ToC-scope filter (OSF-TEST-3)', () => {
       // Hand-computed from `PROGRAM_A.versions[0].statuses` (statusId 1→10, 3→5, everything else 0).
       expect(segments).toEqual([
         { key: 'not-started', count: 0, statusName: 'Pending Review', link: null },
-        { key: 'in-progress', count: 10, statusName: 'Editing', link: { status: 'Editing' } },
-        { key: 'submitted', count: 5, statusName: 'Submitted', link: { status: 'Submitted' } },
+        { key: 'in-progress', count: 10, statusName: 'Editing', link: { origin: 'W1/W2', status: 'Editing' } },
+        { key: 'submitted', count: 5, statusName: 'Submitted', link: { origin: 'W1/W2', status: 'Submitted' } },
         { key: 'in-qa', count: 0, statusName: 'Quality Assessed', link: null },
         { key: 'approved', count: 0, statusName: 'Approved', link: null }
       ]);

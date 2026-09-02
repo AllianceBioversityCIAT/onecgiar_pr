@@ -1488,7 +1488,8 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * stays byte-identical to before this spec (`OSF-AC-1`).
    */
   private buildOverviewStatusSegments(countOf: (statusId: number) => number, statusNameOf: (statusId: number) => string): OverviewStatusSegment[] {
-    const linkOf = (statusId: number, count: number): OverviewLink | null => (count > 0 ? { status: statusNameOf(statusId) } : null);
+    const linkOf = (statusId: number, count: number): OverviewLink | null =>
+      count > 0 ? { origin: 'W1/W2', status: statusNameOf(statusId) } : null;
     const segments: OverviewStatusSegment[] = OVERVIEW_STATUS_SLOTS.map(slot => {
       const count = countOf(slot.statusId);
       return {
@@ -1973,7 +1974,7 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
           c,
           value,
           // 'Other' (c === 3) aggregates statuses 4–8 and cannot be expressed as one `status`.
-          link: c === 3 ? null : { category: item.resultTypeName, status: cols[c] }
+          link: c === 3 ? null : { origin: 'W1/W2', category: item.resultTypeName, status: cols[c] }
         });
       });
     }
@@ -2195,6 +2196,9 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
    * `program-overview` emits a typed `OverviewLink` (`OVW-R-5`); this parent owns the actual
    * navigation. Fresh history entry — no `queryParamsHandling: 'merge'` — because Overview → Results
    * is real navigation, not a mirror of this page's own `aow/typ/st/q` filters (`OVW-DD-7`).
+   *
+   * Automatically propagates the effective Overview phase (`ODF-R-3`, `ODF-DD-2`) if not explicitly
+   * specified in the emitted link.
    */
   onOverviewLink(link: OverviewLink): void {
     const code = this.selected()?.initiativeCode;
@@ -2206,6 +2210,16 @@ export class DashboardLabComponent implements OnInit, OnDestroy {
         queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP[dimension]] = value;
       }
     });
+    if (!queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase]) {
+      const effectivePhase =
+        this.homeSE?.overviewSelectedPhase?.() ||
+        this.latestVersion(this.selected())?.phaseName ||
+        (this.latestVersion(this.selected())?.phaseYear ? `Phase ${this.latestVersion(this.selected())?.phaseYear}` : '') ||
+        this.dataControlSE?.reportingCurrentPhase?.phaseName;
+      if (effectivePhase) {
+        queryParams[PROGRAMME_RESULTS_QUERY_PARAM_MAP.phase] = effectivePhase;
+      }
+    }
     this.router.navigate(['/result-framework-reporting/entity-details', code, 'results'], { queryParams });
   }
 

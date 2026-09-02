@@ -251,7 +251,8 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
           useValue: {
             mySPsList: signal([]),
             otherSPsList: signal([program]),
-            otherProjectsList: signal([])
+            otherProjectsList: signal([]),
+            overviewSelectedPhase: signal<string | null>(null)
           }
         },
         { provide: ApiService, useValue: {} },
@@ -284,7 +285,7 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     const inQa = segments.find(s => s.key === 'in-qa');
 
     expect(inProgress?.statusName).toBe('Editing');
-    expect(inProgress?.link).toEqual({ status: 'Editing' });
+    expect(inProgress?.link).toEqual({ origin: 'W1/W2', status: 'Editing' });
     expect(inQa?.link).toBeNull();
   });
 
@@ -294,7 +295,7 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     const notStarted = component.overviewStatusSegments().find(s => s.key === 'not-started');
 
     expect(notStarted?.statusName).toBe('Pending Review');
-    expect(notStarted?.link).toEqual({ status: 'Pending Review' });
+    expect(notStarted?.link).toEqual({ origin: 'W1/W2', status: 'Pending Review' });
   });
 
   it('maps every one of the six status slots (incl. the appended discontinued slot) to its own statusName + link', async () => {
@@ -385,7 +386,7 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
 
     expect(navigate).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'results'], {
-      queryParams: { origin: 'W3/Bilaterals', center: 'IITA' }
+      queryParams: { origin: 'W3/Bilaterals', center: 'IITA', phase: 'Reporting' }
     });
   });
 
@@ -395,7 +396,29 @@ describe('DashboardLabComponent — overview link payloads + navigation (OVW-T-1
     component.onOverviewLink({ category: 'KP' });
 
     expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'results'], {
-      queryParams: { category: 'KP' }
+      queryParams: { category: 'KP', phase: 'Reporting' }
+    });
+  });
+
+  it('onOverviewLink preserves explicit link.phase when present (ODF-R-3)', async () => {
+    const component = await createComponent();
+    component.homeSE?.overviewSelectedPhase?.set('Reporting 2025');
+
+    component.onOverviewLink({ origin: 'W3/Bilaterals', center: 'IITA', phase: 'Reporting 2024' });
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'results'], {
+      queryParams: { origin: 'W3/Bilaterals', center: 'IITA', phase: 'Reporting 2024' }
+    });
+  });
+
+  it('onOverviewLink uses homeSE.overviewSelectedPhase when set (ODF-R-3, ODF-R-4)', async () => {
+    const component = await createComponent();
+    component.homeSE?.overviewSelectedPhase?.set('Reporting 2025');
+
+    component.onOverviewLink({ origin: 'W1/W2', status: 'Editing' });
+
+    expect(navigate).toHaveBeenCalledWith(['/result-framework-reporting/entity-details', 'SP02', 'results'], {
+      queryParams: { origin: 'W1/W2', status: 'Editing', phase: 'Reporting 2025' }
     });
   });
 
@@ -539,9 +562,9 @@ describe('DashboardLabComponent — overview heatmap matrices (OVW-T-3)', () => 
     expect(heatmap.cols).toEqual(['Editing', 'Quality Assessed', 'Submitted', 'Other']);
     expect(heatmap.cells.map(c => c.value)).toEqual([1, 2, 0, 3]);
 
-    expect(heatmap.cells.find(c => c.c === 0)?.link).toEqual({ category: 'Knowledge product', status: 'Editing' });
-    expect(heatmap.cells.find(c => c.c === 1)?.link).toEqual({ category: 'Knowledge product', status: 'Quality Assessed' });
-    expect(heatmap.cells.find(c => c.c === 2)?.link).toEqual({ category: 'Knowledge product', status: 'Submitted' });
+    expect(heatmap.cells.find(c => c.c === 0)?.link).toEqual({ origin: 'W1/W2', category: 'Knowledge product', status: 'Editing' });
+    expect(heatmap.cells.find(c => c.c === 1)?.link).toEqual({ origin: 'W1/W2', category: 'Knowledge product', status: 'Quality Assessed' });
+    expect(heatmap.cells.find(c => c.c === 2)?.link).toEqual({ origin: 'W1/W2', category: 'Knowledge product', status: 'Submitted' });
     // FAIL input: mapping 'Other' to {status:'Other'} instead of null turns this red.
     expect(heatmap.cells.find(c => c.c === 3)?.link).toBeNull();
   });
