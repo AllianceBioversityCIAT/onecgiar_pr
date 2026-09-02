@@ -1,5 +1,5 @@
 import { Component, DoCheck, OnDestroy, OnInit, NgZone, signal, computed } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Subject, Subscription, catchError, debounceTime, distinctUntilChanged, filter, map, merge, of, switchMap, takeUntil } from 'rxjs';
 import { internationalizationData } from '../../../../shared/data/internationalization-data';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
@@ -9,6 +9,14 @@ import { PhasesService } from '../../../../shared/services/global/phases.service
 import { CreateResultManagementService } from './services/create-result-management.service';
 import { TerminologyService } from '../../../../internationalization/terminology.service';
 import { filterOutAvisaFromGroupedInitiativeOptions, filterOutAvisaInitiatives } from '../../../../shared/utils/avisa-initiative.util';
+
+/**
+ * P2-3527 — the similar-results search and the uniqueness gate answer independently, so a slow
+ * similarity search never holds back the gate that enables Save.
+ */
+type TitleSearchEvent =
+  | { kind: 'gate'; exactTitleFound: boolean; titleCheckFailed: boolean }
+  | { kind: 'similar'; depthSearchList: any[]; depthSearchFailed: boolean };
 
 @Component({
   selector: 'app-result-creator',
@@ -33,6 +41,10 @@ export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
   /** Initial 4-deep serial chain (phases → roles → initiatives) still running. */
   loadingInitialData = signal(true);
   private phasesSub: Subscription | null = null;
+  private readonly titleSearch$ = new Subject<string>();
+  private readonly destroy$ = new Subject<void>();
+  /** Same window as ReportResultFormComponent: the search now hits our MySQL, not Elastic. */
+  private static readonly TITLE_SEARCH_DEBOUNCE_MS = 500;
   mqapJson: {};
   validating = false;
   /**
@@ -72,7 +84,11 @@ export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
     private router: Router,
     private phasesService: PhasesService,
     private readonly ngZone: NgZone
-  ) {}
+  ) {
+    // Wired here, not in ngOnInit: the title stream is pure RxJS plumbing and has to be listening
+    // before the first keystroke reaches depthSearch().
+    this.setupTitleSearch();
+  }
 
   ngOnInit(): void {
     this.loadingInitialData.set(true);
@@ -109,6 +125,8 @@ export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     this.phasesSub?.unsubscribe();
     this.phasesSub = null;
     if (this.trailingScanId !== null) {
@@ -231,38 +249,82 @@ export class ResultCreatorComponent implements OnInit, DoCheck, OnDestroy {
       return;
     }
 
-    // Both calls fire on every keystroke; surface that they are running (mirrors
+    // Both calls fire while the user types; surface that they are running (mirrors
     // ReportResultFormComponent.loadingDepthSearch) instead of leaving the user with a silent UI.
     this.loadingDepthSearch.set(true);
+    this.titleSearch$.next(title);
+  }
 
+  private setupTitleSearch(): void {
+    this.titleSearch$
+      .pipe(
+        filter(title => !!title?.trim()),
+        debounceTime(ResultCreatorComponent.TITLE_SEARCH_DEBOUNCE_MS),
+        distinctUntilChanged(),
+        switchMap(title => this.searchSimilarResultsWithTitleUniqueness(title)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(event => this.applyTitleSearchEvent(event));
+  }
+
+  /**
+   * P2-3527 — both halves are ours now: `get/depth-search` returns the similar-results list (it used
+   * to come from an Elastic host that no longer resolves) and `check-title-uniqueness` gates the
+   * exact title. They are merged, not chained, so neither waits for the other.
+   */
+  private searchSimilarResultsWithTitleUniqueness(title: string) {
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
 
-    this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe({
-      next: (response: any[]) => {
-        this.depthSearchFailed = false;
-        this.depthSearchList = response.map(result => ({
-          ...result,
-          phase: this.allPhases.find(phase => phase.id === result?.version_id)
-        }));
-      },
-      error: () => {
-        this.depthSearchFailed = true;
-        this.depthSearchList = [];
-      }
-    });
+    const similar$ = this.api.resultsSE.GET_depthSearch(title, legacyType).pipe(
+      map(response => ({
+        kind: 'similar' as const,
+        depthSearchList: this.mapDepthSearchResults(response),
+        depthSearchFailed: false
+      })),
+      catchError(() =>
+        of({
+          kind: 'similar' as const,
+          depthSearchList: [] as any[],
+          depthSearchFailed: true
+        })
+      )
+    );
 
-    this.api.resultsSE.GET_checkTitleUniqueness(title).subscribe({
-      next: resp => {
-        this.titleCheckFailed = false;
-        this.exactTitleFound = resp?.response?.isUnique === false;
-        this.loadingDepthSearch.set(false);
-      },
-      error: () => {
-        this.titleCheckFailed = true;
-        this.exactTitleFound = false;
-        this.loadingDepthSearch.set(false);
-      }
-    });
+    const gate$ = this.api.resultsSE.GET_checkTitleUniqueness(title).pipe(
+      map(resp => ({
+        kind: 'gate' as const,
+        exactTitleFound: resp?.response?.isUnique === false,
+        titleCheckFailed: false
+      })),
+      catchError(() =>
+        of({
+          kind: 'gate' as const,
+          exactTitleFound: false,
+          titleCheckFailed: true
+        })
+      )
+    );
+
+    return merge(similar$, gate$);
+  }
+
+  private applyTitleSearchEvent(event: TitleSearchEvent): void {
+    if (event.kind === 'similar') {
+      this.depthSearchList = event.depthSearchList;
+      this.depthSearchFailed = event.depthSearchFailed;
+      return;
+    }
+
+    this.exactTitleFound = event.exactTitleFound;
+    this.titleCheckFailed = event.titleCheckFailed;
+    this.loadingDepthSearch.set(false);
+  }
+
+  private mapDepthSearchResults(response: any[]) {
+    return (response ?? []).map(result => ({
+      ...result,
+      phase: this.allPhases.find(phase => phase.id === result?.version_id)
+    }));
   }
 
   getLegacyType(type: string, level: string): string {

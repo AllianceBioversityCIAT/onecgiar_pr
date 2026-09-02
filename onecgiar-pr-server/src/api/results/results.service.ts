@@ -1904,10 +1904,20 @@ export class ResultsService {
     }
   }
 
-  async findAllResultsLegacyNew(title: string) {
+  /**
+   * Similar-results list for the result creator. `type`/`limit` are optional and only narrow the
+   * search; the repository caps the page on its own when no limit is given (P2-3527).
+   */
+  async findAllResultsLegacyNew(
+    title: string,
+    options?: { type?: string; limit?: number },
+  ) {
     try {
       const results: DepthSearch[] =
-        await this._customResultRepository.AllResultsLegacyNewByTitle(title);
+        await this._customResultRepository.AllResultsLegacyNewByTitle(
+          title,
+          options,
+        );
       if (!results.length) {
         throw {
           response: {},

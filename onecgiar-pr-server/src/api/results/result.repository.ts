@@ -1312,47 +1312,92 @@ WHERE
     }
   }
 
-  async AllResultsLegacyNewByTitle(title: string) {
+  /**
+   * Similar-results search behind the result creator.
+   *
+   * Elastic used to serve that list; its host stopped resolving (P2-3527), so the search runs on
+   * MySQL again — which is where it lived before Elastic. Two guards make the MySQL version usable
+   * from a keystroke-driven UI:
+   *  - `limit` caps the page. Unbounded, `title like '%a%'` answers with ~10k rows / 8 MB.
+   *  - the ordering puts the exact title first, then prefix matches, then the rest, so the capped
+   *    page is the useful one instead of an arbitrary slice.
+   *
+   * `type` narrows only the legacy (pre-PRMS) rows, exactly as the Elastic query did: legacy rows
+   * carry an indicator type, current results are always eligible.
+   */
+  async AllResultsLegacyNewByTitle(
+    title: string,
+    options?: { type?: string; limit?: number },
+  ) {
+    const legacyType = (options?.type ?? '').trim();
+    const requestedLimit = Number(options?.limit);
+    // Interpolated below, so it is clamped to an integer here and never taken from the caller raw.
+    const limit =
+      Number.isFinite(requestedLimit) && requestedLimit > 0
+        ? Math.min(Math.trunc(requestedLimit), 50)
+        : 20;
     const queryData = `
-    (select 
-      lr.legacy_id as id,
-      lr.legacy_id as result_code,
-      lr.title,
-      lr.description,
-      lr.crp,
-      lr.\`year\`,
-      1 as legacy,
-      null as result_level_id,
-      null as result_type_name
-    from legacy_result lr
-    where lr.title like ?
-      and lr.is_migrated = 0)
-    union
-    (select 
-      r.id,
-      r.result_code,
-      r.title,
-      r.description,
-      ci.official_code as crp,
-      r.reported_year_id as \`year\`,
-      0 as legacy,
-      r.result_level_id,
-      rt.name as result_type_name
-    from \`result\` r 
-      inner join results_by_inititiative rbi on rbi.result_id = r.id
-                          and rbi.initiative_role_id = 1
-                          and rbi.is_active > 0
-      inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
-                          and ci.active > 0
-      inner join result_type rt on rt.id = r.result_type_id 
-    where r.is_active > 0
-      and r.title like ?)
+    select q.*
+    from (
+      (select
+        lr.legacy_id as id,
+        lr.legacy_id as result_code,
+        null as version_id,
+        lr.title,
+        lr.description,
+        lr.crp,
+        lr.\`year\`,
+        1 as legacy,
+        null as result_level_id,
+        lr.indicator_type as type,
+        null as result_type_name
+      from legacy_result lr
+      where lr.title like ?
+        and lr.is_migrated = 0
+        and (? = '' or lr.indicator_type = ?))
+      union
+      (select
+        r.id,
+        r.result_code,
+        r.version_id,
+        r.title,
+        r.description,
+        ci.official_code as crp,
+        r.reported_year_id as \`year\`,
+        0 as legacy,
+        r.result_level_id,
+        rt.name as type,
+        rt.name as result_type_name
+      from \`result\` r 
+        inner join results_by_inititiative rbi on rbi.result_id = r.id
+                            and rbi.initiative_role_id = 1
+                            and rbi.is_active > 0
+        inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id
+                            and ci.active > 0
+        inner join result_type rt on rt.id = r.result_type_id 
+      where r.is_active > 0
+        and r.title like ?)
+    ) q
+    order by
+      case
+        when lower(q.title) = lower(?) then 0
+        when lower(q.title) like lower(?) then 1
+        else 2
+      end,
+      q.legacy asc,
+      q.\`year\` desc,
+      q.title asc
+    limit ${limit}
     `;
 
     try {
       const results: DepthSearch[] = await this.query(queryData, [
         `%${title}%`,
+        legacyType,
+        legacyType,
         `%${title}%`,
+        title,
+        `${title}%`,
       ]);
       return results;
     } catch (error) {

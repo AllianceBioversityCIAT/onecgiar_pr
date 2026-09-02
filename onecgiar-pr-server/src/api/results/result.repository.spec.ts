@@ -523,3 +523,96 @@ describe('ResultRepository — getResultById binds the id (P2-3498)', () => {
     await expect(repo.getResultById(9)).resolves.toBeUndefined();
   });
 });
+
+/**
+ * P2-3527 — the similar-results list of the result creator is served from MySQL again (the Elastic
+ * host stopped resolving). Uncapped, `title like '%a%'` answered with ~10 360 rows / 8 MB and the
+ * UI fires the search while the user types, so the cap and the relevance order are the contract.
+ */
+describe('ResultRepository — AllResultsLegacyNewByTitle (P2-3527)', () => {
+  let repo: ResultRepository;
+  let queryMock: jest.Mock;
+
+  const mockDataSource = {
+    createEntityManager: jest.fn(() => ({}) as any),
+  } as unknown as DataSource;
+
+  const mockHandlersError = {
+    returnErrorRepository: jest.fn(() => ({})),
+  } as any;
+
+  beforeEach(() => {
+    repo = new ResultRepository(mockDataSource, mockHandlersError);
+    queryMock = jest.fn().mockResolvedValue([]);
+    (repo as any).query = queryMock;
+  });
+
+  const sqlOf = () => queryMock.mock.calls[0][0] as string;
+  const paramsOf = () => queryMock.mock.calls[0][1] as any[];
+
+  it('caps the page at 20 rows by default', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate');
+
+    expect(sqlOf()).toContain('limit 20');
+  });
+
+  it('honours a caller limit but never above 50', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate', { limit: 5 });
+    expect(sqlOf()).toContain('limit 5');
+
+    queryMock.mockClear();
+    await repo.AllResultsLegacyNewByTitle('climate', { limit: 500 });
+    expect(sqlOf()).toContain('limit 50');
+  });
+
+  it('ignores a non-numeric limit instead of interpolating it', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate', {
+      limit: 'DROP' as unknown as number,
+    });
+
+    expect(sqlOf()).toContain('limit 20');
+    expect(sqlOf()).not.toContain('DROP');
+  });
+
+  it('orders exact titles first, then prefix matches', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate');
+
+    const sql = sqlOf();
+    expect(sql).toContain('when lower(q.title) = lower(?) then 0');
+    expect(sql).toContain('when lower(q.title) like lower(?) then 1');
+    expect(paramsOf()).toEqual([
+      '%climate%',
+      '',
+      '',
+      '%climate%',
+      'climate',
+      'climate%',
+    ]);
+  });
+
+  it('returns the columns the similar-results list renders', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate');
+
+    const sql = sqlOf();
+    // Without version_id the client cannot resolve the phase of a suggestion, and every row renders
+    // as "This result does not exist in this reporting phase" with Map-to-ToC disabled.
+    expect(sql).toContain('r.version_id');
+    expect(sql).toContain('null as version_id');
+    expect(sql).toContain('rt.name as type');
+    expect(sql).toContain('lr.indicator_type as type');
+  });
+
+  it('narrows only the legacy rows by indicator type', async () => {
+    await repo.AllResultsLegacyNewByTitle('climate', { type: 'Innovation' });
+
+    expect(sqlOf()).toContain("(? = '' or lr.indicator_type = ?)");
+    expect(paramsOf()).toEqual([
+      '%climate%',
+      'Innovation',
+      'Innovation',
+      '%climate%',
+      'climate',
+      'climate%',
+    ]);
+  });
+});

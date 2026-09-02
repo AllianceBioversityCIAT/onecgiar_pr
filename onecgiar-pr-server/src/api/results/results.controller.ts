@@ -349,12 +349,42 @@ export class ResultsController {
   @ApiOperation({
     summary: 'Perform deep result search',
     description:
-      'Runs the legacy deep search pipeline using the provided title.',
+      'Similar-results search by title across current results and non-migrated legacy results. ' +
+      'Serves the "similar results" list of the result creator (P2-3527, replacing Elastic). ' +
+      'Exact title matches come first, then prefix matches; the page is capped (20 by default, 50 max). ' +
+      'Responds 404 with "Results Not Found" when nothing matches.',
   })
   @ApiParam({ name: 'title', type: String, required: true })
+  @ApiQuery({
+    name: 'type',
+    type: String,
+    required: false,
+    description:
+      'Legacy indicator type (Innovation, Policy, OICR). Narrows the legacy rows only.',
+  })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Maximum rows to return. Defaults to 20, capped at 50.',
+  })
   @ApiOkResponse({ description: 'Deep search results retrieved.' })
-  depthSearch(@Param('title') title: string) {
-    return this.resultsService.findAllResultsLegacyNew(title);
+  depthSearch(
+    @Param('title') title: string,
+    @Query('type') type?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit =
+      limit !== undefined && limit !== null ? Number(limit) : undefined;
+    const normalizedLimit =
+      typeof parsedLimit === 'number' && Number.isFinite(parsedLimit)
+        ? parsedLimit
+        : undefined;
+
+    return this.resultsService.findAllResultsLegacyNew(title, {
+      type,
+      limit: normalizedLimit,
+    });
   }
 
   @Get('get/institutions/all')

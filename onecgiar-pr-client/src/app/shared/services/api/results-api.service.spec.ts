@@ -142,67 +142,6 @@ describe('ResultsApiService', () => {
     });
   });
 
-  describe('GET_FindResultsElastic', () => {
-    it('should call GET_FindResultsElastic, send a POST request and map response correctly when search and type exists', done => {
-      const search = 'search';
-      const type = 'type';
-      mockResponse = {
-        hits: {
-          hits: [
-            {
-              _score: 0.8,
-              _id: 'id',
-              _index: 'index',
-              _source: {
-                id: 'id',
-                title: 'title',
-                description: 'description',
-                crp: 'crp',
-                countries: 'countries',
-                regions: 'regions',
-                year: 2023,
-                type: 'type',
-                is_legacy: 'is_legacy'
-              }
-            }
-          ],
-          total: undefined,
-          max_score: 0
-        },
-        took: 0,
-        timed_out: false,
-        _shards: undefined
-      };
-
-      service.GET_FindResultsElastic(search, type).subscribe(results => {
-        expect(results.length).toBeGreaterThanOrEqual(0);
-        if (results.length > 0) {
-          expect(results[0].probability).toEqual(mockResponse.hits.hits[0]._score);
-          expect(results[0]).toEqual({ probability: mockResponse.hits.hits[0]._score, ...mockResponse.hits.hits[0]._source });
-        }
-        done();
-      });
-
-      const req = httpMock.expectOne(`${environment.elastic.baseUrl}`);
-      expect(req.request.method).toBe('POST');
-
-      req.flush(mockResponse);
-    });
-
-    it('should call GET_FindResultsElastic, send a POST request, search and types are not received as parameters, and response hits.hits should not be in the response', done => {
-      service.GET_FindResultsElastic().subscribe(results => {
-        expect(results).toBeTruthy();
-        expect(results).toEqual([]);
-        done();
-      });
-
-      const req = httpMock.expectOne(`${environment.elastic.baseUrl}`);
-      expect(req.request.method).toBe('POST');
-
-      req.flush(mockResponse);
-    });
-  });
-
   describe('POST_resultCreateHeader', () => {
     it('should call POST_resultCreateHeader, send a POST request and should call isCreatingPipe', done => {
       const mockBody = {
@@ -467,17 +406,64 @@ describe('ResultsApiService', () => {
   });
 
   describe('GET_depthSearch', () => {
-    it('should call GET_depthSearch and return expected data', done => {
+    it('should call GET_depthSearch and unwrap the response array', done => {
       const title = 'title';
       service.GET_depthSearch(title).subscribe(response => {
-        expect(response).toEqual(mockResponse);
+        expect(response).toEqual([{ id: '1', title: 'title', legacy: '0', version_id: 5, is_legacy: false }]);
         done();
       });
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}get/depth-search/${title}`);
       expect(req.request.method).toBe('GET');
 
-      req.flush(mockResponse);
+      req.flush({ response: [{ id: '1', title: 'title', legacy: '0', version_id: '5' }] });
+    });
+
+    // P2-3527 — the backend takes the title as a path segment, so a title with a slash or a percent
+    // sign has to be encoded or the request never reaches the route.
+    it('encodes the title and forwards type and limit', done => {
+      service.GET_depthSearch('a/b 100%', 'Innovation', 10).subscribe(() => done());
+
+      const req = httpMock.expectOne(r => r.url === `${service.apiBaseUrl}get/depth-search/${encodeURIComponent('a/b 100%')}`);
+      expect(req.request.params.get('type')).toBe('Innovation');
+      expect(req.request.params.get('limit')).toBe('10');
+
+      req.flush({ response: [] });
+    });
+
+    // P2-3527 — the backend answers 404 when nothing matches. That is an empty list, not a failed
+    // search: turning it into an error would light up the "we could not check" warning (P2-3526).
+    it('treats the backend 404 as an empty list instead of an error', done => {
+      service.GET_depthSearch('nothing matches this').subscribe({
+        next: response => {
+          expect(response).toEqual([]);
+          done();
+        },
+        error: () => done.fail('404 must not surface as an error')
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}get/depth-search/nothing%20matches%20this`);
+      req.flush({ response: {}, message: 'Results Not Found' }, { status: 404, statusText: 'Not Found' });
+    });
+
+    // P2-3527 — MySQL bigints arrive as strings; the phase lookup compares with ===, so without the
+    // coercion every suggestion renders as "does not exist in this reporting phase".
+    it('coerces version_id to a number and derives is_legacy', done => {
+      service.GET_depthSearch('title').subscribe(response => {
+        expect(response[0].version_id).toBe(12);
+        expect(response[0].is_legacy).toBe(false);
+        expect(response[1].version_id).toBeNull();
+        expect(response[1].is_legacy).toBe(true);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}get/depth-search/title`);
+      req.flush({
+        response: [
+          { id: '1', legacy: '0', version_id: '12' },
+          { id: 'IN-2239', legacy: '1', version_id: null }
+        ]
+      });
     });
   });
 

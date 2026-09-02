@@ -151,7 +151,28 @@ describe('ResultsController', () => {
 
   it('depthSearch delegates to service', async () => {
     await controller.depthSearch('abc');
-    expect(mockService.findAllResultsLegacyNew).toHaveBeenCalledWith('abc');
+    expect(mockService.findAllResultsLegacyNew).toHaveBeenCalledWith('abc', {
+      type: undefined,
+      limit: undefined,
+    });
+  });
+
+  // P2-3527 — the similar-results list of the result creator calls this route with the legacy
+  // indicator type and its own page size.
+  it('depthSearch forwards the legacy type and a numeric limit', async () => {
+    await controller.depthSearch('abc', 'Innovation', '10');
+    expect(mockService.findAllResultsLegacyNew).toHaveBeenCalledWith('abc', {
+      type: 'Innovation',
+      limit: 10,
+    });
+  });
+
+  it('depthSearch drops a non-numeric limit', async () => {
+    await controller.depthSearch('abc', undefined, 'many');
+    expect(mockService.findAllResultsLegacyNew).toHaveBeenCalledWith('abc', {
+      type: undefined,
+      limit: undefined,
+    });
   });
 
   it('checkTitleUniqueness delegates to service with optional excludeResultId', async () => {

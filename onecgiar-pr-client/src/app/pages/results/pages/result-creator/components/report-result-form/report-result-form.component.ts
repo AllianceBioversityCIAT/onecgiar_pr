@@ -25,7 +25,7 @@ type TitleSearchEvent =
       blockingExactTitleFound: boolean;
       titleCheckFailed: boolean;
     }
-  | { kind: 'elastic'; depthSearchList: any[] };
+  | { kind: 'similar'; depthSearchList: any[] };
 
 @Component({
   selector: 'app-report-result-form',
@@ -481,7 +481,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   private applyTitleSearchEvent(event: TitleSearchEvent): void {
-    if (event.kind === 'elastic') {
+    if (event.kind === 'similar') {
       this.depthSearchList = event.depthSearchList;
       return;
     }
@@ -493,9 +493,11 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   /**
-   * Elastic powers similar-results suggestions; MySQL uniqueness gates create.
-   * Emits gate and elastic events independently so a slow Elastic response
-   * does not block the uniqueness gate or save button.
+   * Both halves are ours: `get/depth-search` returns the similar-results suggestions and
+   * `check-title-uniqueness` gates create. P2-3527 — the suggestions used to come from an Elastic
+   * host that stopped resolving, and the failure was swallowed into an empty list.
+   * Emits gate and similar-results events independently so a slow search does not block the
+   * uniqueness gate or the save button.
    */
   private searchResultsWithTitleUniqueness(title: string) {
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
@@ -520,20 +522,20 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
       )
     );
 
-    const elastic$ = this.api.resultsSE.GET_FindResultsElastic(title, legacyType).pipe(
+    const similar$ = this.api.resultsSE.GET_depthSearch(title, legacyType).pipe(
       map(response => ({
-        kind: 'elastic' as const,
+        kind: 'similar' as const,
         depthSearchList: this.mapDepthSearchResults(response)
       })),
       catchError(() =>
         of({
-          kind: 'elastic' as const,
+          kind: 'similar' as const,
           depthSearchList: []
         })
       )
     );
 
-    return merge(gate$, elastic$);
+    return merge(gate$, similar$);
   }
 
   private mapDepthSearchResults(response: any[]) {
