@@ -223,11 +223,63 @@ describe('PolicyChangeInfoComponent', () => {
       expect(renderedGuidance()).toContain(LEGACY_SENTENCE);
     });
 
-    it('falls back to the open reporting phase when the result carries no phase year', () => {
+    /**
+     * P2-3558 — this used to assert the 2026 sentence, i.e. it was describing the defect. With no
+     * `phase_year` on the result the gate read `reportingCurrentPhase.phaseYear`, the OPEN
+     * reporting phase (2026 in production), so a legacy result got the 2026 guidance. Confirmed on
+     * screen before the fix: result 8501 (phase 2025, internal id 10969) served with
+     * `phase_year: null` painted the 2026 wording, while the already-fixed sibling
+     * `innovation-dev-info` fell to its legacy form on the same intercepted payload.
+     *
+     * Tenth and last site of the pattern; the eight `FieldsManagerService` gates were fixed in
+     * `8afb574f3` and `innovation-use-form` in `6efe11cba`.
+     *
+     * ⚠️ This assertion reads the RENDERED grey box (`renderedGuidance()`), not the return
+     * value of the private method — zoneless change detection means a property-level assert would
+     * pass with the defect in place.
+     */
+    it('ignores the open reporting phase when the result carries no phase year — unknown means legacy', () => {
       mockApiService.dataControlSE.currentResultSignal.set({ result_type_id: 1 });
       mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2026;
 
-      expect(renderedGuidance()).toContain(GUIDANCE_2026_SENTENCE);
+      const painted = renderedGuidance();
+
+      expect(painted).toContain(LEGACY_SENTENCE);
+      expect(painted).not.toContain(GUIDANCE_2026_SENTENCE);
+    });
+
+    // The permanent variant of the same window: a non-404 `GET_resultById` failure leaves
+    // `currentResultSignal` at `{}` for good (`current-result.service.ts:65-69`), form on screen.
+    it('paints the legacy wording while the result is still an empty object, with the 2026 phase open', () => {
+      mockApiService.dataControlSE.currentResultSignal.set({});
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2026;
+
+      const painted = renderedGuidance();
+
+      expect(painted).toContain(LEGACY_SENTENCE);
+      expect(painted).not.toContain(GUIDANCE_2026_SENTENCE);
+    });
+
+    // Locks (P2-3558): the result's OWN year still decides, in both directions, with the open
+    // phase at 2026 exactly as production carries it (`data-control.service.ts:125`).
+    it('still paints the legacy wording for a 2025-phase result while the 2026 phase is open', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2026;
+      openResultOfPhase(2025);
+
+      const painted = renderedGuidance();
+
+      expect(painted).toContain(LEGACY_SENTENCE);
+      expect(painted).not.toContain(GUIDANCE_2026_SENTENCE);
+    });
+
+    it('still paints the 2026 wording for a 2026-phase result while the 2026 phase is open', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase.phaseYear = 2026;
+      openResultOfPhase(2026);
+
+      const painted = renderedGuidance();
+
+      expect(painted).toContain(GUIDANCE_2026_SENTENCE);
+      expect(painted).not.toContain(LEGACY_SENTENCE);
     });
 
     it('leaves the "Legal instrument" definition identical in both phases — P2-3261 never touched it', () => {
