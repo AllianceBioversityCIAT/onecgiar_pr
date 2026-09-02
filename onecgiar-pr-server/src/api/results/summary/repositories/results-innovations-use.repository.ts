@@ -181,8 +181,16 @@ export class ResultsInnovationsUseRepository
         riu.readiness_level_explanation,
         riu.innov_use_to_be_determined,
         riu.innov_use_2030_to_be_determined,
+        -- P2-3295 §3. 🛑 This SELECT lists its columns one by one: a column missing here is written
+        -- and never read back, which reaches the screen as an empty field after a reload with no
+        -- error anywhere (that is exactly what happened to Policy Change's actors_influenced).
+        riu.innov_use_2030_justification,
         ciul.level AS level,
-        r.is_discontinued
+        r.is_discontinued,
+        -- The joins below were already here and unused. This alias is what lets the read side offer
+        -- the projection the reporter entered in the previous phase without a second round trip to
+        -- resolve the phase.
+        previous_r.id AS previous_result_id
       FROM result r
       JOIN results_innovations_use riu
         ON riu.results_id = r.id

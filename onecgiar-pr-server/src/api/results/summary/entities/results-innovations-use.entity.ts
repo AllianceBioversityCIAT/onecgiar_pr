@@ -69,6 +69,18 @@ export class ResultsInnovationsUse {
   })
   readiness_level_explanation: string;
 
+  /**
+   * P2-3295 §3 — why a 2030 projection inherited from the previous phase was changed. Distinct from
+   * `readiness_level_explanation` (which justifies a DROP in readiness level): same shape, different
+   * question, so they cannot share a column.
+   */
+  @Column({
+    name: 'innov_use_2030_justification',
+    type: 'text',
+    nullable: true,
+  })
+  innov_use_2030_justification: string;
+
   @Column({
     name: 'innov_use_to_be_determined',
     type: 'tinyint',

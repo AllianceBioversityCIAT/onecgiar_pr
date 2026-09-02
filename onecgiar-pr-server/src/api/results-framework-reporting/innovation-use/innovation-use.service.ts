@@ -89,6 +89,7 @@ export class InnovationUseService {
         has_scaling_studies,
         scaling_studies_urls,
         innov_use_2030_to_be_determined,
+        innov_use_2030_justification,
         innov_use_to_be_determined,
         is_discontinued,
         discontinued_options,
@@ -179,6 +180,11 @@ export class InnovationUseService {
         resultExist.innov_use_to_be_determined = innov_use_to_be_determined;
         resultExist.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
+        // P2-3295 §3. `?? null` and not `|| null`: an empty string is the reporter clearing the box,
+        // and a missing key is a client that does not send this field at all — both mean "no
+        // justification", and neither must wipe a value the other surface just wrote.
+        resultExist.innov_use_2030_justification =
+          innov_use_2030_justification ?? null;
 
         if (innovation_use_level >= InnovationUseLevel.Level_6) {
           resultExist.readiness_level_explanation =
@@ -214,6 +220,8 @@ export class InnovationUseService {
         newInnUse.innov_use_to_be_determined = innov_use_to_be_determined;
         newInnUse.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
+        newInnUse.innov_use_2030_justification =
+          innov_use_2030_justification ?? null;
 
         if (innovation_use_level >= InnovationUseLevel.Level_6) {
           newInnUse.readiness_level_explanation =
@@ -670,6 +678,49 @@ export class InnovationUseService {
     };
   }
 
+  /**
+   * P2-3295 §3 — the 2030 projection of the SAME result in the previous reporting phase, or `null`
+   * when there is none (first-time reporting).
+   *
+   * Reuses the very readers the current phase uses, with the previous result's id, so the two
+   * projections can never be shaped differently on screen. Fails soft on purpose: an unreadable
+   * previous phase must not cost the reporter the section they came to fill in — the screen then
+   * behaves as first-time reporting, which is the safe side (fields editable, nothing locked).
+   */
+  private async getPreviousPhase2030Projection(previousResultId: unknown) {
+    const previousId = Number(previousResultId);
+    if (!Number.isFinite(previousId) || previousId <= 0) return null;
+
+    try {
+      const previous =
+        await this._resultsInnovationsUseRepository.InnovUseExists(previousId);
+      if (!previous) return null;
+
+      const [actors, organization, measures] = await Promise.all([
+        this.getActorsData(previousId),
+        this.getOrganizationsData(previousId),
+        this.getMeasuresData(previousId),
+      ]);
+
+      const isFuture = (row: any) => Number(row.section_id) === 2;
+
+      return {
+        result_id: previousId,
+        innov_use_2030_to_be_determined:
+          previous.innov_use_2030_to_be_determined ?? null,
+        actors: actors.filter(isFuture),
+        organization: organization.filter(isFuture),
+        measures: measures.filter(isFuture),
+      };
+    } catch (error) {
+      this.logger.error(
+        `P2-3295: could not read the previous-phase 2030 projection from result ${previousId}`,
+        error,
+      );
+      return null;
+    }
+  }
+
   async getInnovationUse(resultId: number) {
     try {
       const innDevExists =
@@ -708,6 +759,18 @@ export class InnovationUseService {
         measures: measures.filter((m) => Number(m.section_id) === 2),
       };
 
+      // P2-3295 §3 — the projection this result inherited from the previous reporting phase.
+      // `previous_result_id` rides along in `InnovUseExists` (the joins to `previous_phase` were
+      // already there, unused), so resolving the phase costs no extra round trip and the rule stays
+      // "the previous phase", never a hardcoded year.
+      // `null` means first-time reporting (Scenario A): the screen leaves the four sub-fields blank
+      // and editable. An object means Scenario B: previous values shown read-only until the reporter
+      // says they want to revise them.
+      const innovation_use_2030_previous =
+        await this.getPreviousPhase2030Projection(
+          (innDevExists as any).previous_result_id,
+        );
+
       const discontinued_options =
         await this._resultsInvestmentDiscontinuedOptionRepository.find({
           where: { result_id: resultId, is_active: true },
@@ -728,6 +791,7 @@ export class InnovationUseService {
         organization: organizations_current,
         measures: measures_current,
         innovation_use_2030,
+        innovation_use_2030_previous,
         investment_programs,
         investment_partners,
         investment_bilateral,
