@@ -27,6 +27,21 @@
     }
 
     <div class="discontinued_options" *ngIf="this.generalInfoBody.is_discontinued">
+      <!-- P2-3292 Step 2: the prompt above the reason checklist. 2026 branch only — up to 2025 the
+           lead-in is part of the second radio label ("...was discontinued, because:"), and Step 1
+           replaced that label with a bare "No", leaving the checklist with no prompt at all.
+           The label is a question, so [useColon]="false" (same trap as the header above). -->
+      @if (usesStatusTriggerWording) {
+        <div class="discontinued_options__header">
+          <app-pr-field-header
+            [label]="reasonsHeaderLabel"
+            [useColon]="false"
+            [description]="reasonsHeaderHint"
+            [showDescriptionLabel]="false">
+          </app-pr-field-header>
+        </div>
+      }
+
       @for (discontinuedOption of this.generalInfoBody.discontinued_options; track $index; let i = $index) {
         <div class="discontinued_option">
           <app-pr-checkbox [label]="discontinuedOption?.option" [(ngModel)]="discontinuedOption.value" [isStatic]="annualUpdatingEditable">

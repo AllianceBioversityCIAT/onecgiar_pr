@@ -1,11 +1,13 @@
 # rd-annual-updating
 
-**Verified:** 2026-08-31 · branch performance-refactor · 4ffec6d4a
+**Verified:** 2026-09-02 · branch performance-refactor · 1fef02f2a
 
 ## What it is
 The "Annual updating" block at the very top of General Information. It asks whether the innovation
 is still active / still receiving investment, and when the answer is "no" it collects the reasons
-(checkbox list, plus a free-text box for the "Other" reason).
+(checkbox list, plus a free-text box for the "Other" reason). From the 2026 phase on, Innovation
+Development uses the P2-3292 wording for both questions; every earlier phase and Innovation Use
+render exactly as they always did.
 
 ## Contract
 - `@Input() generalInfoBody: GeneralInfoBody` — two-way bound to `is_discontinued` (the stored
@@ -14,6 +16,8 @@ is still active / still receiving investment, and when the answer is "no" it col
 - `usesStatusTriggerWording: boolean` (readonly) — P2-3292 wording switch, resolved **once at
   construction**, same as `options` always was.
 - `headerLabel` / `options` — derived from `usesStatusTriggerWording`.
+- `reasonsHeaderLabel` / `reasonsHeaderHint` (readonly) — P2-3292 Step 2 prompt above the reason
+  checklist. Rendered only on the 2026 branch (template gate), never on the legacy one.
 - `annualUpdatingEditable` getter = `isPhaseOpen && rolesSE.access?.canDdit`; feeds every
   `[isStatic]` / `[disabled]` in the template (P2-2923).
 - Endpoint: `GET_globalNarratives('updated_innodev_guidance')` via `ResultsApiService`, in `ngOnInit`,
@@ -51,6 +55,20 @@ is still active / still receiving investment, and when the answer is "no" it col
   mid-tick (NG0100).
 - The outer `*ngIf` limits the whole block to result types **7** (Innovation Development) and
   **2** (Innovation Use). Only type 7 ever gets the 2026 wording.
+- ⚠️ **Step 1 left the reason checklist with no prompt on the 2026 branch.** Up to 2025 the lead-in
+  is part of the second radio label ("...investment was discontinued, because:"); Step 1 replaced
+  that label with a bare "No", so the checklist rendered headless. The Step 2 prompt
+  (`rd-annual-updating.component.html:34-43`) fills that gap and is gated on
+  `usesStatusTriggerWording` for exactly this reason — adding it to the legacy branch would print
+  the lead-in twice on 2025 results.
+- The Step 2 hint passes `[showDescriptionLabel]="false"`, otherwise `app-pr-field-header` prefixes
+  it with a bold `Description:` chip (`pr-field-header.component.ts:26-28`).
 
 ## Pending / Coming soon
-- Nothing disabled here. P2-3292's merge/split link is a separate step and is not in this component.
+Nothing is disabled here. What is still missing from P2-3292, and who owns it:
+| Piece | Owner | Why not here |
+|---|---|---|
+| The seven 2026 reason **texts** | Juan David Delgado | Rows of `investment_discontinued_option`; the table has no phase axis, so they must be new rows, never an `UPDATE` (see the pre-plan on P2-3292, 1-Sep). |
+| Step 3 merge / split links | Juan David Delgado | `linked_result` has no link-type discriminator, and no portfolio-wide QA'd innovation endpoint exists. |
+| Step 4 auto-lock / view-only | blocked on business | A/B question published on P2-3292 on 31-Aug (can a mistaken discontinuation be reopened?). Locking undoes the P2-2923 fix, so it waits for the answer. |
+| Green check rule | Juan David Delgado | MySQL `validation_<section>_<portfolio>` + `validate_sections_mapped_batch`. |

@@ -10,6 +10,8 @@ const INNOVATION_USE = 2;
 
 const STATUS_TRIGGER_LABEL = 'Is this innovation active and receiving investment?';
 const LEGACY_LABEL = 'Please indicate if the investment for this innovation was continued or discontinued';
+const REASONS_LABEL = 'What are the main reasons this innovation is inactive?';
+const REASONS_HINT = '(select all that apply)';
 
 describe('RdAnnualUpdatingComponent', () => {
   let component: RdAnnualUpdatingComponent;
@@ -56,6 +58,24 @@ describe('RdAnnualUpdatingComponent', () => {
     jest.spyOn(renderedFixture.componentInstance.api.resultsSE, 'GET_globalNarratives').mockReturnValue(of({ response: { value: '' } }));
     renderedFixture.detectChanges();
     return renderedFixture.nativeElement.querySelector('.header .pr_label').textContent.trim();
+  };
+
+  /**
+   * Renders the whole block with the discontinuation branch already answered, and hands back the
+   * root element so a test can assert on the reason checklist itself. Same `fixture.destroy()`
+   * precaution as `renderFor` (see the note there).
+   */
+  const renderChecklistFor = (currentResult: any, isDiscontinued: any = true): HTMLElement => {
+    fixture.destroy();
+    dataControlSE.currentResult = currentResult;
+    const renderedFixture = TestBed.createComponent(RdAnnualUpdatingComponent);
+    jest.spyOn(renderedFixture.componentInstance.api.resultsSE, 'GET_globalNarratives').mockReturnValue(of({ response: { value: '' } }));
+    renderedFixture.componentInstance.generalInfoBody.is_discontinued = isDiscontinued;
+    renderedFixture.componentInstance.generalInfoBody.discontinued_options = [
+      { investment_discontinued_option_id: 1, option: 'Some stored reason', value: false }
+    ];
+    renderedFixture.detectChanges();
+    return renderedFixture.nativeElement;
   };
 
   describe('isDiscontinuedOptionsTrue()', () => {
@@ -201,6 +221,69 @@ describe('RdAnnualUpdatingComponent', () => {
 
         expect(renderedLabel).toBe(`${LEGACY_LABEL}:`);
       });
+    });
+  });
+
+  /**
+   * P2-3292 Step 2 — the prompt above the reason checklist.
+   *
+   * Step 1 swapped the second radio label ("...investment was discontinued, because:") for a bare
+   * "No" on the 2026 branch, which left the checklist with no prompt at all. Step 2 words that
+   * prompt. Same phase-year gate as Step 1, so 2025 and Innovation Use must show nothing new.
+   *
+   * The reason TEXTS themselves are catalogue rows (`investment_discontinued_option`) and are not
+   * part of this delivery — only the prompt is.
+   */
+  describe('P2-3292 Step 2 — reason checklist prompt', () => {
+    const promptOf = (root: HTMLElement) => root.querySelector('.discontinued_options .pr_label');
+
+    it('asks for the reasons above the checklist on a 2026 Innovation Development result', () => {
+      const root = renderChecklistFor({ result_type_id: INNOVATION_DEVELOPMENT, phase_year: 2026, portfolio: 'P25' });
+
+      expect(promptOf(root)?.textContent?.trim()).toBe(REASONS_LABEL);
+    });
+
+    it('prints the prompt as a question, with no trailing colon', () => {
+      const root = renderChecklistFor({ result_type_id: INNOVATION_DEVELOPMENT, phase_year: 2026, portfolio: 'P25' });
+      const rendered = promptOf(root)?.textContent?.trim() ?? '';
+
+      expect(rendered.endsWith('?')).toBe(true);
+      expect(rendered).not.toContain('?:');
+    });
+
+    it('prints the "select all that apply" hint with no "Description:" chip in front of it', () => {
+      const root = renderChecklistFor({ result_type_id: INNOVATION_DEVELOPMENT, phase_year: 2026, portfolio: 'P25' });
+      const hint = root.querySelector('.discontinued_options .pr_description');
+
+      expect(hint?.textContent?.trim()).toBe(REASONS_HINT);
+      expect(hint?.textContent).not.toContain('Description:');
+    });
+
+    it('still renders the stored reason checkboxes underneath the prompt', () => {
+      const root = renderChecklistFor({ result_type_id: INNOVATION_DEVELOPMENT, phase_year: 2026, portfolio: 'P25' });
+
+      expect(root.querySelectorAll('.discontinued_options .discontinued_option').length).toBe(1);
+    });
+
+    it('adds nothing to a 2025 Innovation Development result — the checklist renders exactly as today', () => {
+      const root = renderChecklistFor({ result_type_id: INNOVATION_DEVELOPMENT, phase_year: 2025, portfolio: 'P25' });
+
+      expect(root.querySelector('.discontinued_options')).not.toBeNull();
+      expect(promptOf(root)).toBeNull();
+    });
+
+    it('adds nothing to Innovation Use, not even in the 2026 phase', () => {
+      const root = renderChecklistFor({ result_type_id: INNOVATION_USE, phase_year: 2026, portfolio: 'P25' });
+
+      expect(root.querySelector('.discontinued_options')).not.toBeNull();
+      expect(promptOf(root)).toBeNull();
+    });
+
+    it('shows no prompt while the innovation is still reported as active', () => {
+      const root = renderChecklistFor({ result_type_id: INNOVATION_DEVELOPMENT, phase_year: 2026, portfolio: 'P25' }, false);
+
+      expect(root.querySelector('.discontinued_options')).toBeNull();
+      expect(promptOf(root)).toBeNull();
     });
   });
 });

@@ -26,6 +26,18 @@ const STATUS_TRIGGER_HEADER_LABEL = 'Is this innovation active and receiving inv
 /** Wording every other case keeps verbatim: Innovation Use, and Innovation Development up to 2025. */
 const LEGACY_HEADER_LABEL = 'Please indicate if the investment for this innovation was continued or discontinued';
 
+/**
+ * Wording asked by P2-3292 Step 2 above the reason checklist, from the 2026 phase on.
+ *
+ * Only the 2026 branch needs it. Up to 2025 the lead-in lives inside the second radio label
+ * ("...investment was discontinued, because:"), and Step 1 replaced that label with a bare "No" —
+ * which left the checklist with no prompt at all on 2026 results.
+ */
+const REASONS_HEADER_LABEL = 'What are the main reasons this innovation is inactive?';
+
+/** Hint printed under the Step 2 prompt, worded as the story writes it. */
+const REASONS_HEADER_HINT = '(select all that apply)';
+
 @Component({
   selector: 'app-rd-annual-updating',
   templateUrl: './rd-annual-updating.component.html',
@@ -54,6 +66,14 @@ export class RdAnnualUpdatingComponent implements OnInit {
   readonly usesStatusTriggerWording: boolean = this.resolveStatusTriggerWording();
 
   headerLabel: string = this.usesStatusTriggerWording ? STATUS_TRIGGER_HEADER_LABEL : LEGACY_HEADER_LABEL;
+
+  /**
+   * P2-3292 Step 2 prompt for the reason checklist. Exposed unconditionally; the template renders it
+   * only on the 2026 branch (`usesStatusTriggerWording`), so 2025 and Innovation Use are untouched.
+   */
+  readonly reasonsHeaderLabel: string = REASONS_HEADER_LABEL;
+
+  readonly reasonsHeaderHint: string = REASONS_HEADER_HINT;
 
   options = this.usesStatusTriggerWording
     ? [
