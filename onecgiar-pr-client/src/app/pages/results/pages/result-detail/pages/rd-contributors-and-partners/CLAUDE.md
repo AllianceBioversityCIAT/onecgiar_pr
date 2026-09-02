@@ -1,6 +1,6 @@
 # rd-contributors-and-partners
 
-**Verified:** 2026-08-31 · branch qa-development-2026-ss · 268cbc622 (LCD-T-2, LCD-T-3, LCD-T-4, merged with performance-refactor)
+**Verified:** 2026-09-02 · branch performance-refactor · d3dbdd6b0 (P2-3554 / P2-3553 QA verification)
 
 ## Qué es
 Sección 2 del detalle de resultado. Programas científicos contribuyentes, centros CGIAR, socios
@@ -171,6 +171,24 @@ externos, proyectos bilaterales/W3, y la pregunta de resultado enlazado/agrupado
   "el usuario dejó sólo Other(s)", que es justo lo que el ticket persigue). No bloquea el Save draft — es
   feedback de capa 1, no un gate. El green check del backend **no** se tocó: sigue exigiendo ≥1 centro
   cualquiera (`results-validation-module.repository.ts:415-424`), sin filtro `from_toc`.
+
+- ⚠️ **An UNMAPPED 2026 result (`planned_result === false`) is a THIRD shape of this field, untested
+  until P2-3554/P2-3553.** `isCP2026()` is still `true`, but the `planned_result !== false` clause on
+  `html:100` sends it to the `@else`: the FLAT dropdown (`cp-field-contributing_center~flat`) is the only
+  centres control painted — dropdown 1 and `toc-other-centers` are both absent. Guards live in
+  `*.zoneless.spec.ts` ("…of an UNMAPPED 2026 result").
+  🛑 **Both QA tickets were filed against the legacy "previous design" front**
+  (`d11q2gkl6a1qr7.cloudfront.net`), whose bundle carries none of `cp-field-contributing_center~flat`,
+  `toc-other-centers`, `cp-centers-validation`, `cp-centers-mandatory-marker`. Neither reproduces on
+  prtest v21 (results 8961/8988: 14 options, `pr_label required`, inline message and marker all present).
+  Check WHICH front a report came from before treating it as live — the two are months apart.
+
+- ⚠️ **`ngOnInit` re-asks for the CLARISA catalogue (`centersSE.getData()`) — load-bearing, not noise
+  (P2-3554).** The catalogue is fetched once at bootstrap; one failed/empty response left `centers()`
+  empty for the whole session, so both dropdowns here AND the mandatory "Lead center" showed
+  "No information found" until a page reload (proved live: one 503 on `clarisa/centers/get/all` → 0
+  options in both, a single request attempt). `getData()` is a no-op once loaded. Every spec mocking
+  `CentersService` for this component needs `getData: jest.fn().mockResolvedValue([])`.
 
 - El escaneo de "N fields missing" del piso depende de la clase global `.section_container`
   — ver [`../../CLAUDE.md`](../../CLAUDE.md).

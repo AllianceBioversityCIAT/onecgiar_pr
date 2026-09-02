@@ -39,6 +39,12 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   ngOnInit() {
+    // P2-3554: the CLARISA centres catalogue is fetched once at app bootstrap. If that single attempt
+    // failed, EVERY centres dropdown on this section — "Contributing CGIAR Centers" and the mandatory
+    // "Lead center" — shows "No information found" for the rest of the session, so the section cannot be
+    // completed at all. `getData()` is a no-op once the catalogue is in memory, so this is the (cheap)
+    // recovery point: re-ask on entering the section that needs it.
+    this.centersSE.getData().catch(() => undefined);
     this.rdPartnersSE.resetState();
     this.rdPartnersSE.getSectionInformation();
     this.GET_AllWithoutResults();

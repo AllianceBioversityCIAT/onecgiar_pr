@@ -109,7 +109,7 @@ describe('RdContributorsAndPartnersComponent', () => {
         { provide: ChangeDetectorRef, useValue: mockChangeDetectorRef },
         { provide: InstitutionsService, useValue: {} },
         { provide: RolesService, useValue: {} },
-        { provide: CentersService, useValue: { centers: signal([]) } },
+        { provide: CentersService, useValue: { centers: signal([]), getData: jest.fn().mockResolvedValue([]) } },
         { provide: ResultLevelService, useValue: {} },
         { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => false, isP25: () => false } }
       ],
@@ -1002,7 +1002,7 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
         { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn() } },
         { provide: InstitutionsService, useValue: {} },
         { provide: RolesService, useValue: {} },
-        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) } },
+        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG), getData: jest.fn().mockResolvedValue([]) } },
         { provide: ResultLevelService, useValue: {} },
         { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => true, isP25: () => true } }
       ],
@@ -1145,7 +1145,7 @@ describe('RdContributorsAndPartnersComponent — Lead center full catalog render
 
     // The CLARISA catalogue has NOT resolved yet when the component is created — mirrors the real
     // startup sequence and the P2-3190 fixture pattern in rd-contributors-and-partners.zoneless.spec.ts.
-    centersMock = { loadedCenters: new BehaviorSubject<boolean>(false), centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) };
+    centersMock = { loadedCenters: new BehaviorSubject<boolean>(false), centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG), getData: jest.fn().mockResolvedValue([]) };
 
     await TestBed.configureTestingModule({
       declarations: [RdContributorsAndPartnersComponent],
@@ -1415,7 +1415,7 @@ describe('RdContributorsAndPartnersComponent — Suppress ToC "not found" notes 
       rolesSE: { readOnly: false, isAdmin: false, platformIsClosed: false }
     };
 
-    const centersMock = { loadedCenters: new BehaviorSubject<boolean>(true), centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) };
+    const centersMock = { loadedCenters: new BehaviorSubject<boolean>(true), centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG), getData: jest.fn().mockResolvedValue([]) };
 
     await TestBed.configureTestingModule({
       declarations: [RdContributorsAndPartnersComponent],
@@ -1601,7 +1601,7 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
         { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn() } },
         { provide: InstitutionsService, useValue: {} },
         { provide: RolesService, useValue: {} },
-        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG) } },
+        { provide: CentersService, useValue: { centersList: CENTERS_CATALOG, centers: signal(CENTERS_CATALOG), getData: jest.fn().mockResolvedValue([]) } },
         { provide: ResultLevelService, useValue: {} },
         { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => is2026(), isP25: () => true } }
       ],

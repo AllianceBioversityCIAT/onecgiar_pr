@@ -86,7 +86,11 @@ describe('RdContributorsAndPartnersComponent — lead selects under zoneless cha
           provide: InstitutionsService,
           useValue: { loadedInstitutions: new BehaviorSubject<boolean>(false), institutionsList: [], institutionsWithoutCentersList: [] }
         },
-        { provide: CentersService, useValue: { loadedCenters: new BehaviorSubject<boolean>(false), centersList, centers: signal(centersList) } },
+        {
+          provide: CentersService,
+          // `getData` is the P2-3554 catalogue re-fetch the component asks for on entry — a no-op once loaded.
+          useValue: { loadedCenters: new BehaviorSubject<boolean>(false), centersList, centers: signal(centersList), getData: jest.fn().mockResolvedValue([]) }
+        },
         { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
         { provide: ResultLevelService, useValue: { currentResultLevelId: 2 } },
         { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
@@ -212,7 +216,7 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
     };
 
     // The CLARISA catalogue has NOT resolved yet when the component is created.
-    centersMock = { centersList: [], centers: signal<any[]>([]), loadedCenters: new BehaviorSubject<boolean>(false) };
+    centersMock = { centersList: [], centers: signal<any[]>([]), loadedCenters: new BehaviorSubject<boolean>(false), getData: jest.fn().mockResolvedValue([]) };
 
     await TestBed.configureTestingModule({
       declarations: [RdContributorsAndPartnersComponent],
@@ -350,6 +354,42 @@ describe('RdContributorsAndPartnersComponent — CGIAR centers dropdown with a l
     expect(otherScienceEl?.querySelector('.pr_label')?.textContent?.trim()).toBe('Other(s) Science Program(s):');
   });
 
+  /**
+   * P2-3554 — the branch QA actually hit, and the one this suite never exercised: an UNMAPPED 2026 result
+   * (`result_toc_result.planned_result === false`, e.g. an emerging result). There the ToC split is not
+   * painted at all and the only centres control is the FLAT dropdown
+   * (`cp-field-contributing_center~flat`), whose options come straight from the catalogue.
+   *
+   * Measured on results 8961 and 8988 (both `planned_result: false`, phase 2026): QA saw
+   * "No information found" for every search term while the very same control worked on 8954 (a ToC-mapped
+   * result). The discriminator is the catalogue: whatever empties it empties THIS dropdown, and the
+   * mandatory "Lead center" with it, leaving the section impossible to complete.
+   */
+  it('offers the catalogue in the flat dropdown of an UNMAPPED 2026 result, once it arrives (P2-3554)', async () => {
+    rdPartnersSE.partnersBody.result_toc_result.planned_result = false;
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const flat = () => fixture.nativeElement.querySelector('[data-testid="cp-field-contributing_center~flat"]');
+    const flatEmptyState = () => flat()?.querySelector('.no_info')?.textContent?.trim() ?? null;
+
+    // The ToC split is not painted for an unmapped result: no dropdown 1, no "Other(s)" dropdown.
+    expect(flat()).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="cp-field-contributing_center"]')).toBeNull();
+    expect(otherCentersSelectEl()).toBeNull();
+
+    // Catalogue still missing → this is the exact string QA reported, on the exact control she was on.
+    expect(flatEmptyState()).toBe('No information found');
+
+    centersMock.centersList = CATALOG;
+    centersMock.centers.set(CATALOG);
+    centersMock.loadedCenters.next(true);
+    await fixture.whenStable();
+
+    expect(flatEmptyState()).toBeNull();
+  });
+
   it('rebuilds the ToC-derived dropdown too when the catalogue arrives after the ToC ids', async () => {
     // ToC resolved first (ids only), catalogue still missing → nothing to show.
     rdPartnersSE.tocReferenceCenterInstitutionIds.set([11, 33]);
@@ -464,7 +504,10 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
           provide: InstitutionsService,
           useValue: { loadedInstitutions: new BehaviorSubject<boolean>(false), institutionsList: [], institutionsWithoutCentersList: [] }
         },
-        { provide: CentersService, useValue: { centersList: CATALOG, centers: signal<any[]>(CATALOG), loadedCenters: new BehaviorSubject(true) } },
+        {
+          provide: CentersService,
+          useValue: { centersList: CATALOG, centers: signal<any[]>(CATALOG), loadedCenters: new BehaviorSubject(true), getData: jest.fn().mockResolvedValue([]) }
+        },
         { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
         { provide: ResultLevelService, useValue: { currentResultLevelId: 2 } },
         { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
@@ -600,6 +643,40 @@ describe('RdContributorsAndPartnersComponent — Contributing CGIAR Centers mand
 
       expect(isRequired('cp-field-contributing_center~flat')).toBe(true);
     });
+  });
+
+  /**
+   * P2-3553 — QA reported the field showing NONE of its three mandatory cues (no asterisk, no inline
+   * message, absent from the "N fields missing" list) on results 8961 / 8988. Both are UNMAPPED 2026
+   * results (`planned_result === false`), a THIRD rendering shape of this field that no test covered: it
+   * takes the flat dropdown while `isCP2026()` is still true, so neither the 2026 ToC-split tests nor the
+   * pre-2026 test above walked through it. All three cues are asserted together on purpose — they are
+   * three independent layers (`src/CLAUDE.md` §21.5) and each one can be lost without touching the others.
+   */
+  it('shows all three mandatory cues on an UNMAPPED 2026 result (P2-3553)', async () => {
+    rdPartnersSE.tocReferenceCenterInstitutionIds.set([]);
+    rdPartnersSE.partnersBody.result_toc_result.planned_result = false;
+    rdPartnersSE.partnersBody.contributing_center = [];
+    rdPartnersSE.otherCentersSelected = [];
+    await repaint();
+
+    const flat = fixture.nativeElement.querySelector('[data-testid="cp-field-contributing_center~flat"]');
+    expect(flat).toBeTruthy();
+
+    // 1 — the visible asterisk.
+    expect(flat.querySelector('.pr_label')?.classList.contains('required')).toBe(true);
+    // 2 — the inline validation message, under the plain wording (nothing from the ToC can be demanded).
+    expect(validationNoteText()).toBe('Please select at least one Contributing CGIAR Center.');
+    // 3 — the bottom bar's "N fields missing" list, via the REAL scan over the REAL DOM.
+    expect(markerFieldEl().classList.contains('complete')).toBe(false);
+    expect(scan().labels).toContain(PLAIN_LABEL);
+
+    // And it stops being reported once a centre is picked in that same flat dropdown.
+    rdPartnersSE.partnersBody.contributing_center = [CATALOG[0]] as any;
+    await repaint();
+    expect(markerFieldEl().classList.contains('complete')).toBe(true);
+    expect(validationNoteText()).toBeNull();
+    expect(scan().labels).not.toContain(PLAIN_LABEL);
   });
 
   // ⚠️ Two code paths render this dropdown; a rule added to only one silently misses the other.
