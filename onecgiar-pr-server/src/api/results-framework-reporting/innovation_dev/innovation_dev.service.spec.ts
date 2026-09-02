@@ -34,7 +34,11 @@ describe('InnovationDevService', () => {
   };
   let mockInnovationUseService: { saveAnticipatedInnoUser: jest.Mock };
   let mockResultRepository: { update: jest.Mock };
-  let mockResultAnswerRepository: { find: jest.Mock; save: jest.Mock };
+  let mockResultAnswerRepository: {
+    find: jest.Mock;
+    save: jest.Mock;
+    update: jest.Mock;
+  };
   let mockResultsByProjectsRepository: { find: jest.Mock };
 
   const userTest: TokenDto = {
@@ -73,6 +77,14 @@ describe('InnovationDevService', () => {
       mockResultsInnovationsDevRepository.save as jest.Mock
     ).mockResolvedValueOnce(updatedMock);
   };
+
+  /** One selectable option of a questionnaire question, as the client sends it back. */
+  const optionWithId = (result_question_id: number) => ({
+    result_question_id,
+    answer_boolean: true,
+    answer_text: null,
+    subOptions: [],
+  });
 
   const buildInnovationDevQuestions = () => ({
     responsible_innovation_and_scaling: {
@@ -120,6 +132,7 @@ describe('InnovationDevService', () => {
     mockResultAnswerRepository = {
       find: jest.fn().mockResolvedValue([]),
       save: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn().mockResolvedValue(undefined),
     };
     mockResultsByProjectsRepository = {
       find: jest.fn().mockResolvedValue([]),
@@ -580,6 +593,172 @@ describe('InnovationDevService', () => {
           innovation_nature: { code: 12 },
         }),
       );
+    });
+
+    /**
+     * P2-3557 — the reduced 2026 form is served WITHOUT `q4` in
+     * `responsible_innovation_and_scaling` (question 137 retired, no replacement), and
+     * the client echoes back exactly what the GET handed it. Naming the four slots one
+     * by one dereferenced the absent slot and killed the whole section save with a 500,
+     * so nothing after it ran either — not the evidence, not the investment.
+     *
+     * Measured on prtest 2 Sep 2026: 13 of 13 sampled phase-2026 Innovation Development
+     * results carry q1..q3 only; every phase-2025 one still carries q1..q4.
+     */
+    const buildReduced2026Questions = () => ({
+      responsible_innovation_and_scaling: {
+        q1: { radioButtonValue: 501, options: [optionWithId(501)] },
+        q2: { radioButtonValue: 502, options: [optionWithId(502)] },
+        q3: { radioButtonValue: 503, options: [optionWithId(503)] },
+        // no q4 — this is the shape the 2026 GET actually serves
+      },
+      intellectual_property_rights: {
+        q1: { radioButtonValue: 601, options: [optionWithId(601)] },
+        q2: { radioButtonValue: 602, options: [optionWithId(602)] },
+        q3: { radioButtonValue: 603, options: [optionWithId(603)] },
+        q4: { radioButtonValue: 604, options: [optionWithId(604)] },
+      },
+      innovation_team_diversity: {
+        radioButtonValue: 701,
+        options: [optionWithId(701)],
+      },
+      megatrends: { radioButtonValue: 801, options: [optionWithId(801)] },
+    });
+
+    it('saves the 2026 form that arrives without q4 instead of answering 500', async () => {
+      const mockCopy = createMockCopy();
+      setupPersistMocks(mockCopy, { ...mockCopy });
+
+      const result = await service.saveInnovationDev(
+        {
+          innovatonUse: { actors: [], organization: [], measures: [] },
+          reference_materials: [],
+          bilateral_expected_investment: [],
+          ...buildReduced2026Questions(),
+        } as any,
+        11031,
+        userTest,
+      );
+
+      // The exact failure seen on prtest for result 8563 / id 11031:
+      //   500 "Cannot read properties of undefined (reading 'radioButtonValue')"
+      expect(result.message).not.toMatch(/radioButtonValue/);
+      expect(result.status).toBe(HttpStatus.CREATED);
+    });
+
+    it('persists every question the 2026 payload carries and skips only the absent slot', async () => {
+      const mockCopy = createMockCopy();
+      setupPersistMocks(mockCopy, { ...mockCopy });
+
+      await service.saveInnovationDev(
+        {
+          innovatonUse: { actors: [], organization: [], measures: [] },
+          reference_materials: [],
+          bilateral_expected_investment: [],
+          ...buildReduced2026Questions(),
+        } as any,
+        11031,
+        userTest,
+      );
+
+      // 3 scaling + 4 IPR + diversity + megatrends = 9 questions, q4 of scaling excluded
+      const savedQuestionIds = (
+        mockResultAnswerRepository.save.mock.calls as any[][]
+      ).map(([answer]) => answer.result_question_id);
+
+      expect(savedQuestionIds.sort((a, b) => a - b)).toEqual([
+        501, 502, 503, 601, 602, 603, 604, 701, 801,
+      ]);
+    });
+
+    it('does not touch an absent question, so its stored answers survive the save', async () => {
+      const mockCopy = createMockCopy();
+      setupPersistMocks(mockCopy, { ...mockCopy });
+
+      const result = await service.saveInnovationDev(
+        {
+          innovatonUse: { actors: [], organization: [], measures: [] },
+          reference_materials: [],
+          bilateral_expected_investment: [],
+          ...buildReduced2026Questions(),
+        } as any,
+        11031,
+        userTest,
+      );
+
+      // Without this the assertions below pass vacuously on the broken code, which wrote
+      // nothing at all because it threw on the absent slot before reaching any question.
+      expect(result.status).toBe(HttpStatus.CREATED);
+
+      // An absent slot must produce no write of ANY kind for its questions: both write
+      // paths in saveOptionsAndSubOptions deactivate the stored answers of the question
+      // they touch, so calling it for a question the client never sent would delete
+      // answers the user still has rather than merely skipping it.
+      const touchedByUpdate = (
+        mockResultAnswerRepository.update.mock.calls as any[][]
+      ).map(([criteria]) => criteria.result_question_id);
+      const touchedBySave = (
+        mockResultAnswerRepository.save.mock.calls as any[][]
+      ).map(([answer]) => answer.result_question_id);
+
+      expect(touchedByUpdate).not.toContain(504);
+      expect(touchedBySave).not.toContain(504);
+      // and the questions that WERE sent are still written, so this is not a blanket skip
+      expect(touchedBySave).toContain(503);
+    });
+
+    it('survives a group that goes missing entirely, in either direction', async () => {
+      const mockCopy = createMockCopy();
+      setupPersistMocks(mockCopy, { ...mockCopy });
+
+      const result = await service.saveInnovationDev(
+        {
+          innovatonUse: { actors: [], organization: [], measures: [] },
+          reference_materials: [],
+          bilateral_expected_investment: [],
+          // megatrends is already hidden from the 2026 form on the client, and IPR is the
+          // group queued to lose a slot next (P2-3513): both must be survivable.
+          responsible_innovation_and_scaling: {
+            q1: { radioButtonValue: 501, options: [optionWithId(501)] },
+          },
+          intellectual_property_rights: undefined,
+          innovation_team_diversity: undefined,
+        } as any,
+        11031,
+        userTest,
+      );
+
+      expect(result.status).toBe(HttpStatus.CREATED);
+      expect(
+        (mockResultAnswerRepository.save.mock.calls as any[][]).map(
+          ([a]) => a.result_question_id,
+        ),
+      ).toEqual([501]);
+    });
+
+    it('saves a fifth slot if the questionnaire ever grows one', async () => {
+      const mockCopy = createMockCopy();
+      setupPersistMocks(mockCopy, { ...mockCopy });
+
+      await service.saveInnovationDev(
+        {
+          innovatonUse: { actors: [], organization: [], measures: [] },
+          reference_materials: [],
+          bilateral_expected_investment: [],
+          responsible_innovation_and_scaling: {
+            q1: { radioButtonValue: 501, options: [optionWithId(501)] },
+            q5: { radioButtonValue: 505, options: [optionWithId(505)] },
+          },
+        } as any,
+        11031,
+        userTest,
+      );
+
+      expect(
+        (mockResultAnswerRepository.save.mock.calls as any[][]).map(
+          ([a]) => a.result_question_id,
+        ),
+      ).toEqual([501, 505]);
     });
   });
 
