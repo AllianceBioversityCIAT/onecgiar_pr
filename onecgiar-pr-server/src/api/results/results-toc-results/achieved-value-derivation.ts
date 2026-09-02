@@ -128,6 +128,88 @@ export function deriveInnovationUseTotal(
   }, 0);
 }
 
+/**
+ * P2-2932 AC4 — which of Policy Change's three branches applies to a result.
+ *
+ * The sub-category is NOT `policy_type_id`. It is the answer to the result question "Is this result
+ * related to" (id 49), stored one row per option in `result_answers` with `answer_boolean` true on
+ * the chosen one:
+ *
+ * - **50** — "Policy change" → the contribution must be 1
+ * - **51** — "The capacity development of key actors in a policy process" → it must match the
+ *   number of actors influenced
+ *
+ * `policy_type_id = 1` ("Program, budget or investment") is a SEPARATE axis, and it is the one that
+ * already gates the USD amount field on screen.
+ */
+export const POLICY_QUESTION_POLICY_CHANGE = 50;
+export const POLICY_QUESTION_CAPACITY_OF_ACTORS = 51;
+
+/** CLARISA `clarisa_policy_type`: 1 Program, budget or investment · 2 Legal instrument · 3 Policy or strategy. */
+export const POLICY_TYPE_BUDGET_OR_INVESTMENT = 1;
+
+export interface PolicyChangeData {
+  /** The `result_question_id` answered true for question 49. */
+  answeredQuestionId?: number | null;
+  policy_type_id?: number | null;
+  /** USD, shown on screen only when `policy_type_id` is 1. */
+  amount?: number | string | null;
+  /** P2-2932 AC4: the count added by this story, meaningful only for answer 51. */
+  actors_influenced?: number | string | null;
+}
+
+/**
+ * A reported figure, or null when the box was never filled in.
+ *
+ * The empty check comes first because `Number(null)` and `Number('')` are both 0 — finite and
+ * non-negative — so a `Number.isFinite` guard alone would read an untouched actor count as "zero
+ * actors influenced" and warn against every real contribution. A reported 0 is kept: that is a
+ * figure someone entered.
+ */
+const readCount = (raw: number | string | null | undefined): number | null => {
+  if (raw === null || raw === undefined || String(raw).trim() === '') {
+    return null;
+  }
+
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+};
+
+/**
+ * The figure a Policy Change result should be compared against, or null when its Section 4 holds
+ * nothing to compare.
+ *
+ * 🛑 The budget branch wins over "Policy change → 1" when both apply, and this is a decision, not a
+ * reading of the AC. A result can answer 50 AND carry `policy_type_id = 1`, in which case AC4 asks
+ * for 1 and for the USD amount at once. The amount is the more specific statement — the reporter
+ * typed a concrete figure into Section 4 — and treating such a result as "1" would silently ignore
+ * it. Flagged with the PO; if the answer is the other way round, invert this one branch.
+ */
+export function derivePolicyChangeValue(
+  policyChange: PolicyChangeData | null | undefined,
+): number | null {
+  if (!policyChange) return null;
+
+  if (
+    Number(policyChange.policy_type_id) === POLICY_TYPE_BUDGET_OR_INVESTMENT
+  ) {
+    return readCount(policyChange.amount);
+  }
+
+  const answer = Number(policyChange.answeredQuestionId);
+
+  if (answer === POLICY_QUESTION_CAPACITY_OF_ACTORS) {
+    return readCount(policyChange.actors_influenced);
+  }
+
+  if (answer === POLICY_QUESTION_POLICY_CHANGE) {
+    return ONE_PER_RESULT;
+  }
+
+  // No sub-category answered yet: nothing to compare, per AC6.
+  return null;
+}
+
 export interface DerivationInput {
   /**
    * The type the RESULT was created as — not the type of the ToC indicator being compared.
@@ -141,6 +223,7 @@ export interface DerivationInput {
   resultTypeId: number;
   capacityDevelopment?: CapacityDevelopmentCounts | null;
   innovationUseActors?: readonly InnovationUseActor[] | null;
+  policyChange?: PolicyChangeData | null;
 }
 
 /**
@@ -195,11 +278,15 @@ export function deriveAchievedValue(
         value: deriveInnovationUseTotal(input.innovationUseActors),
       };
 
-    // Still undecided, and deliberately so. The rule needs a three-way contribution-type selector
-    // that does not exist in the form, and an "actors influenced" field that does not exist at all.
-    // Inventing a number here would put a fabricated figure in front of a reporter.
-    case ResultTypeEnum.POLICY_CHANGE:
-      return { derivable: false, reason: 'NO_CONTRIBUTION_TYPE_SELECTOR' };
+    case ResultTypeEnum.POLICY_CHANGE: {
+      const value = derivePolicyChangeValue(input.policyChange);
+
+      // Null means the sub-category has not been answered, or its figure is empty. AC6: nothing to
+      // compare, so nothing is said — rather than inventing a number for a reporter to react to.
+      return value === null
+        ? { derivable: false, reason: 'NO_CONTRIBUTION_TYPE_SELECTOR' }
+        : { derivable: true, value };
+    }
 
     default:
       // Every other type — Other outcome, Other output, Impact contribution, IPSR types — has no

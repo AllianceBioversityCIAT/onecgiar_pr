@@ -49,8 +49,25 @@
     optionValue="result_question_id"
     placeholder="Select an answer"
     [(ngModel)]="this.relatedTo"
-    (ngModelChange)="changeAnswerBoolean(this.relatedTo)">
+    (ngModelChange)="changeAnswerBoolean(this.relatedTo); clearActorsWhenNotApplicable()">
   </app-pr-select>
+
+  <!--
+    P2-2932 AC4: the count this sub-category is measured by. Shown only for "The capacity
+    development of key actors in a policy process" — the same pattern "USD amount" already follows
+    for policy type 1. Cleared when the answer changes, so a stale figure is never compared against
+    the ToC contribution behind the user's back.
+  -->
+  @if (showActorsInfluenced()) {
+    <app-pr-input
+      label="Number of key actors influenced"
+      type="number"
+      description="How many key actors were influenced in this policy process. This should match the contribution you report against the TOC indicator target."
+      placeholder="0"
+      [required]="false"
+      [(ngModel)]="innovationUseInfoBody.actors_influenced">
+    </app-pr-input>
+  }
 
   <!-- Don't delete this code, it's for future use
         <app-pr-radio-button [options]="this.relatedToEngagementOptions" optionLabel="label" optionValue="value"
