@@ -458,6 +458,54 @@ describe('DataControlService', () => {
       expect(service.fieldFeedbackList()).toEqual([]);
     });
 
+    it('P2-3552: scans every container, not just the first one in document order', () => {
+      // The global announcement banner carries `.section_container` too and holds no fields at all
+      // (`results-outlet.component.html:5`). Being FIRST in document order, `querySelector` picked it and the
+      // scan answered "nothing is missing" for the whole form.
+      dom = parser.parseFromString(
+        `
+      <div>
+        <div class="container"><app-alert-status></app-alert-status></div>
+        <div class="container">
+          <app-pr-select>
+            <span class="pr_label">Lead center</span>
+            <div class="pr-field mandatory"></div>
+          </app-pr-select>
+        </div>
+      </div>`,
+        'text/html'
+      );
+      dom.querySelector('.pr_label').innerText = 'Lead center';
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
+
+      expect(service.someMandatoryFieldIncompleteResultDetail('.container')).toBe(true);
+      expect(service.fieldFeedbackList()).toEqual(['Lead center']);
+    });
+
+    it('P2-3552: lists a field inside NESTED containers once, not once per container', () => {
+      // Containers 2-4 of the real page nest (outlet wrapper > result-detail > ToC tabs), so the union of
+      // matches has to be deduplicated by element.
+      dom = parser.parseFromString(
+        `
+      <div class="container">
+        <div class="container">
+          <app-pr-select>
+            <span class="pr_label">Lead center</span>
+            <div class="pr-field mandatory"></div>
+          </app-pr-select>
+        </div>
+      </div>`,
+        'text/html'
+      );
+      dom.querySelector('.pr_label').innerText = 'Lead center';
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
+
+      expect(service.someMandatoryFieldIncompleteResultDetail('.container')).toBe(true);
+      expect(service.fieldFeedbackList()).toEqual(['Lead center']);
+    });
+
     it('should set the title and currentSectionName', () => {
       const sectionName = 'Test Section';
       const title = 'Test Title';

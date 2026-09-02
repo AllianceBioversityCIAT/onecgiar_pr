@@ -7,7 +7,7 @@ import { LabReportFormComponent } from './lab-report-form.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
-import { signal } from '@angular/core';
+import { WritableSignal, signal } from '@angular/core';
 
 /**
  * The template is replaced with an empty one on purpose: these tests are about the rules the form
@@ -46,7 +46,7 @@ describe('LabReportFormComponent', () => {
 
   type SetupOptions = {
     phaseYear?: number;
-    centersService?: { getData: () => Promise<void>; centersList: any[] };
+    centersService?: { getData: () => Promise<any>; centersList: any[]; centers?: WritableSignal<any[]> };
   };
 
   async function setup(inputs: Record<string, any> = {}, phaseYearOrOptions?: number | SetupOptions) {
@@ -54,7 +54,10 @@ describe('LabReportFormComponent', () => {
       typeof phaseYearOrOptions === 'number' ? { phaseYear: phaseYearOrOptions } : (phaseYearOrOptions ?? {});
     api = makeApiMock(options.phaseYear);
     resultLevelSig = signal<any[]>([]);
-    const centersMock = options.centersService ?? { getData: () => Promise.resolve(), centersList: [] };
+    // P2-3554: the component reads `centers()`, the signal. The service writes it together with
+    // `centersList`, so a mock that carries only the plain array is not the service — and that gap is what
+    // let the stale-cache bug through unnoticed here.
+    const centersMock = options.centersService ?? { getData: () => Promise.resolve(), centersList: [], centers: signal<any[]>([]) };
 
     await TestBed.configureTestingModule({
       imports: [LabReportFormComponent],
@@ -485,7 +488,7 @@ describe('LabReportFormComponent', () => {
     it('KPAC-TEST-3 — browse selection auto-creates via POST_createResult after MQAP success', async () => {
       await setup(
         { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL } },
-        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter] } }
+        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter], centers: signal<any[]>([ilriCenter]) } }
       );
 
       component.onCgspaceItemSelected({ itemUrl: 'https://hdl.handle.net/10568/128401' });
@@ -499,7 +502,7 @@ describe('LabReportFormComponent', () => {
     it('KPAC-TEST-4 — validateHandle auto-creates on valid handle; invalid handle does not POST', async () => {
       await setup(
         { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL } },
-        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter] } }
+        { centersService: { getData: () => Promise.resolve(), centersList: [ilriCenter], centers: signal<any[]>([ilriCenter]) } }
       );
 
       component.patch('handler', 'https://hdl.handle.net/10568/128401');
@@ -539,7 +542,7 @@ describe('LabReportFormComponent', () => {
 
       await setup(
         { indicator: kpIndicator(), tocNode: { toc_result_id: 'toc-kp', result_level_id: OUTPUT_LEVEL } },
-        { centersService: { getData: () => getDataDeferred, centersList: [ilriCenter] } }
+        { centersService: { getData: () => getDataDeferred, centersList: [ilriCenter], centers: signal<any[]>([ilriCenter]) } }
       );
 
       component.onCgspaceItemSelected({ itemUrl: 'https://hdl.handle.net/10568/128401' });
@@ -554,6 +557,25 @@ describe('LabReportFormComponent', () => {
       const body = api.resultsSE.POST_createResult.mock.calls[0][0];
       expect(body.contributing_center.length).toBeGreaterThan(0);
       expect(body.contributing_center.some((c: { acronym: string }) => c.acronym === 'ILRI')).toBe(true);
+    });
+  });
+
+  describe('P2-3554: the centers dropdown when the CLARISA catalogue resolves LATE', () => {
+    // `otherCentersList` used to filter `centersSE.centersList`, a plain array and therefore not a reactive
+    // dependency: the `computed` kept the empty catalogue of its first evaluation, and with `tocCenters()` as
+    // its only real dependency it never recovered on a node that contributes no ToC centers.
+    it('rebuilds the list when the catalogue lands after the view was built', async () => {
+      const catalogue = signal<any[]>([]);
+      await setup({}, { centersService: { getData: () => Promise.resolve(), centersList: [], centers: catalogue } });
+
+      expect(component.otherCentersList()).toEqual([]);
+
+      catalogue.set([
+        { code: 'ABC', name: 'Alliance of Bioversity and CIAT', acronym: 'ABC', institutionId: 100 },
+        { code: 'CIP', name: 'International Potato Center', acronym: 'CIP', institutionId: 101 }
+      ]);
+
+      expect(component.otherCentersList().map((x: any) => x.code)).toEqual(['ABC', 'CIP']);
     });
   });
 });

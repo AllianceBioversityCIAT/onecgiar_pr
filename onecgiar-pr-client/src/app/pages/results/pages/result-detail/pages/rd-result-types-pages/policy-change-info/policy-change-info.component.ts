@@ -39,6 +39,37 @@ export class PolicyChangeInfoComponent implements OnInit {
   policyChangeQuestions = new PolicyChangeQuestions();
   cantidad: string = '';
   relatedTo: string = '';
+
+  /**
+   * P2-2932 AC4 — `result_question_id` of "The capacity development of key actors in a policy
+   * process", the answer that makes the actor count meaningful. Its sibling, 50, is "Policy change".
+   *
+   * These ids are seeded rows in `result_questions`, not a CLARISA catalogue, so they are stable
+   * across environments and safe to reference — unlike `policy_type_id`, which CLARISA owns.
+   */
+  static readonly CAPACITY_OF_ACTORS_QUESTION_ID = 51;
+
+  /**
+   * Mirrors how "USD amount" and "Status" already appear only for policy type 1: the field is shown
+   * for the sub-category it belongs to and hidden otherwise.
+   */
+  showActorsInfluenced(): boolean {
+    return (
+      Number(this.relatedTo) ===
+      PolicyChangeInfoComponent.CAPACITY_OF_ACTORS_QUESTION_ID
+    );
+  }
+
+  /**
+   * Clearing on the way out matters: a stale count left behind on a result that is no longer about
+   * actors would be compared against the ToC contribution and warn about a figure the user can no
+   * longer see. Same reason `clearAmountWhenNotApplicable` exists for the USD amount.
+   */
+  clearActorsWhenNotApplicable(): void {
+    if (!this.showActorsInfluenced()) {
+      this.innovationUseInfoBody.actors_influenced = null;
+    }
+  }
   relatedToOptions = [
     { value: 'policy-change', label: 'Policy change' },
     { value: 'capacity-development', label: 'The capacity development of key actors in a policy process' }

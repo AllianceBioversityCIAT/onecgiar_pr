@@ -3,6 +3,11 @@ export class InnovationUseInfoBody {
   public policy_type_id: number;
   public amount: number;
   public status_amount: number;
+  /**
+   * P2-2932 AC4 — the number of key actors influenced. Captured only when the answer to
+   * "Is this result related to" is question 51; null for every other sub-category.
+   */
+  public actors_influenced: number | null = null;
   public institutions: InstitutionsPCInterface[] = [];
   public result_related_engagement: boolean;
 }

@@ -375,4 +375,5 @@ describe('PolicyChangeInfoComponent', () => {
       expect(spyFindClassTenSeconds).toHaveBeenCalled();
     });
   });
+
 });
