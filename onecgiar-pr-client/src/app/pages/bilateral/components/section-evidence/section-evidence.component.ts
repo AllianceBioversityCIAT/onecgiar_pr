@@ -11,6 +11,7 @@ import { BilateralApiService } from '../../../../shared/services/api/bilateral-a
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
+import { SharePointUploadService } from '../../../../shared/services/sharepoint-upload/sharepoint-upload.service';
 import { BilateralEvidenceItem, BilateralEvidenceBody } from './section-evidence.model';
 import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
 
@@ -26,6 +27,7 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   readonly mdsTracker = inject(BilateralMdsTrackerService);
   private readonly bilateralApi = inject(BilateralApiService);
   private readonly autoSave = inject(BilateralAutoSaveService);
+  private readonly sharePointUploadSE = inject(SharePointUploadService);
 
   /**
    * P2-3520 / P2-3352 — the centre stops being able to edit the result once it leaves Editing.
@@ -419,41 +421,36 @@ export class SectionEvidenceComponent implements OnInit, OnDestroy {
   /**
    * P2-3220: uploads every pending file to SharePoint and returns how many failed.
    *
-   * ⚠️ Two bugs lived here. `POST_createUploadSession` resolves with the whole envelope
-   * (`{ response: uploadUrl, message, status }` — see the server's `ReturnResponseUtil.format`
-   * in `share-point.service.ts`), and this method used to assign that object straight to
-   * `uploadUrl`, so the PUT was sent to a stringified object instead of the upload URL and
-   * ALWAYS failed. The empty `catch` then swallowed it, so the evidence was saved with no
-   * `link` and no `sp_*` metadata and nobody was told. The file itself still reached the
-   * backend through the multipart body in `performSave`, so nothing was lost — but the
-   * evidence was never linked to SharePoint, which is the whole point of P2-3218.
+   * The sequence itself now lives in `SharePointUploadService`, the single place an evidence file
+   * reaches SharePoint. This section skips items that already carry a `link` and renders no
+   * progress bar, hence `skipAlreadyUploaded: true` / `trackProgress: false`.
+   *
+   * ⚠️ Two bugs lived in the copy this replaced, and the shared service is what keeps them fixed.
+   * `POST_createUploadSession` resolves with the whole envelope (`{ response: uploadUrl, message,
+   * status }` — see the server's `ReturnResponseUtil.format` in `share-point.service.ts`), and the
+   * old code assigned that object straight to `uploadUrl`, so the PUT went to a stringified object
+   * and ALWAYS failed. The empty `catch` then swallowed it, so the evidence was saved with no
+   * `link` and no `sp_*` metadata and nobody was told. The file itself still reached the backend
+   * through the multipart body in `performSave`, so nothing was lost — but the evidence was never
+   * linked to SharePoint, which is the whole point of P2-3218.
+   *
+   * ⚠️ It also passed `count: 0` for every file. The server builds the SharePoint filename as
+   * `lastSharepointId + count`, so two files in one save were written to the SAME name and the
+   * second overwrote the first. The shared service counts from 1 upwards, which fixes that.
    */
   private async uploadPendingFiles(): Promise<number> {
     const resultId = this.creationService.currentResultId();
     if (!resultId) return 0;
 
-    let failed = 0;
-    for (const evidence of this.evidences) {
-      if (!evidence.file || evidence.link) continue;
-      try {
-        const { response: uploadUrl } = await this.api.resultsSE.POST_createUploadSession({
-          resultId,
-          fileName: evidence.file.name,
-          count: 0
-        });
-        const response = await this.api.resultsSE.PUT_loadFileInUploadSession(evidence.file, uploadUrl);
-        evidence.link = response?.webUrl;
-        evidence.sp_document_id = response?.id;
-        evidence.sp_file_name = response?.name;
-        evidence.sp_folder_path = response?.parentReference?.path?.split('root:').pop();
-      } catch (error) {
-        // P2-3220: never fail silently. The save still goes ahead — the file travels in the
-        // multipart body too — but the user must know the file was not stored in SharePoint.
-        failed++;
-        console.error('[section-evidence] SharePoint upload failed for', evidence.file?.name, error);
-      }
-    }
-    return failed;
+    const failed = await this.sharePointUploadSE.uploadPending(this.evidences, {
+      resultId,
+      flow: 'evidences',
+      skipAlreadyUploaded: true,
+      trackProgress: false,
+      logLabel: 'section-evidence'
+    });
+
+    return failed.length;
   }
 
   // ── Confirm draft (add to local list, then persist) ─────────────────
